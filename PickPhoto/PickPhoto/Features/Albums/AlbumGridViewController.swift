@@ -4,7 +4,7 @@
 // T052: 앨범 탭 → 앨범 그리드 뷰 구현
 // - GridViewController 패턴 재사용
 // - 앨범 필터 적용된 PHFetchResult 사용
-// - Edge-to-edge + 커스텀 플로팅 UI (iOS 16~25)
+// - TabBarController의 FloatingOverlay 공유 (iOS 16~25)
 //
 // T053: 앨범에서 삭제 구현
 // - moveToTrash 연동
@@ -15,7 +15,7 @@ import AppCore
 
 /// 앨범 내 사진 그리드 뷰컨트롤러
 /// 특정 앨범의 사진만 표시하는 그리드
-/// Edge-to-edge 디자인 + 커스텀 플로팅 UI
+/// TabBarController의 FloatingOverlay를 공유하여 상태만 변경
 final class AlbumGridViewController: UIViewController {
 
     // MARK: - Constants
@@ -83,31 +83,6 @@ final class AlbumGridViewController: UIViewController {
         return view
     }()
 
-    /// 상단 플로팅 타이틀바 (뒤로가기 + 앨범 타이틀)
-    private lazy var titleBar: FloatingTitleBar = {
-        let bar = FloatingTitleBar()
-        bar.delegate = self
-        bar.showsBackButton = true
-        bar.isSelectButtonHidden = true // 앨범에서는 Select 숨김
-        bar.translatesAutoresizingMaskIntoConstraints = false
-        return bar
-    }()
-
-    /// 하단 플로팅 탭바
-    private lazy var tabBar: FloatingTabBar = {
-        let bar = FloatingTabBar()
-        bar.delegate = self
-        bar.selectedIndex = 1 // Albums 탭
-        bar.translatesAutoresizingMaskIntoConstraints = false
-        return bar
-    }()
-
-    /// 타이틀바 높이 제약조건
-    private var titleBarHeightConstraint: NSLayoutConstraint?
-
-    /// 탭바 높이 제약조건
-    private var tabBarHeightConstraint: NSLayoutConstraint?
-
     /// 커스텀 플로팅 UI 사용 여부 (iOS 26+에서는 false)
     private var useFloatingUI: Bool {
         if #available(iOS 26.0, *) {
@@ -166,7 +141,6 @@ final class AlbumGridViewController: UIViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
         setupUI()
-        setupFloatingUIIfNeeded()
         setupGestures()
         updateEmptyState()
 
@@ -185,6 +159,9 @@ final class AlbumGridViewController: UIViewController {
             // iOS 16~25: 시스템 바 숨김 유지
             navigationController?.setNavigationBarHidden(true, animated: animated)
             tabBarController?.tabBar.isHidden = true
+
+            // FloatingOverlay 상태 세팅 (공유 UI 사용)
+            configureFloatingOverlayForAlbum()
         } else {
             // iOS 26+: 시스템 바 표시
             navigationController?.setNavigationBarHidden(false, animated: animated)
@@ -195,13 +172,11 @@ final class AlbumGridViewController: UIViewController {
         super.viewDidLayoutSubviews()
         updateCellSize()
         updateContentInset()
-        updateFloatingUIHeights()
     }
 
     override func viewSafeAreaInsetsDidChange() {
         super.viewSafeAreaInsetsDidChange()
         updateContentInset()
-        updateFloatingUIHeights()
     }
 
     // MARK: - Setup
@@ -231,39 +206,27 @@ final class AlbumGridViewController: UIViewController {
         print("[AlbumGridViewController] Initialized with \(fetchResult.count) photos in '\(albumTitle)'")
     }
 
-    /// 플로팅 UI 설정 (iOS 16~25)
-    private func setupFloatingUIIfNeeded() {
-        guard useFloatingUI else { return }
+    /// FloatingOverlay 상태를 앨범 화면용으로 설정
+    /// - 타이틀: 앨범명
+    /// - 뒤로가기 버튼: 표시 + pop 액션
+    private func configureFloatingOverlayForAlbum() {
+        guard let tabBarController = tabBarController as? TabBarController,
+              let overlay = tabBarController.floatingOverlay else {
+            return
+        }
 
-        // 타이틀 설정
-        titleBar.title = albumTitle
+        // 타이틀 변경
+        overlay.titleBar.setTitle(albumTitle)
 
-        // 타이틀바 추가
-        view.addSubview(titleBar)
+        // 뒤로가기 버튼 표시 + pop 액션 설정
+        overlay.titleBar.setShowsBackButton(true) { [weak self] in
+            self?.navigationController?.popViewController(animated: true)
+        }
 
-        // 탭바 추가
-        view.addSubview(tabBar)
+        // Select 버튼 숨김 (앨범에서는 Select 모드 미지원)
+        overlay.titleBar.isSelectButtonHidden = true
 
-        // 초기 높이
-        let initialTitleBarHeight = FloatingTitleBar.totalHeight(safeAreaTop: 47)
-        let initialTabBarHeight = FloatingTabBar.totalHeight(safeAreaBottom: 34)
-
-        titleBarHeightConstraint = titleBar.heightAnchor.constraint(equalToConstant: initialTitleBarHeight)
-        tabBarHeightConstraint = tabBar.heightAnchor.constraint(equalToConstant: initialTabBarHeight)
-
-        NSLayoutConstraint.activate([
-            titleBar.topAnchor.constraint(equalTo: view.topAnchor),
-            titleBar.leadingAnchor.constraint(equalTo: view.leadingAnchor),
-            titleBar.trailingAnchor.constraint(equalTo: view.trailingAnchor),
-            titleBarHeightConstraint!,
-
-            tabBar.bottomAnchor.constraint(equalTo: view.bottomAnchor),
-            tabBar.leadingAnchor.constraint(equalTo: view.leadingAnchor),
-            tabBar.trailingAnchor.constraint(equalTo: view.trailingAnchor),
-            tabBarHeightConstraint!,
-        ])
-
-        print("[AlbumGridViewController] Floating UI added")
+        print("[AlbumGridViewController] FloatingOverlay configured for album: \(albumTitle)")
     }
 
     private func setupGestures() {
@@ -324,29 +287,21 @@ final class AlbumGridViewController: UIViewController {
     private func updateContentInset() {
         guard useFloatingUI else { return }
 
-        let topHeight = FloatingTitleBar.totalHeight(safeAreaTop: view.safeAreaInsets.top)
-        let bottomHeight = FloatingTabBar.totalHeight(safeAreaBottom: view.safeAreaInsets.bottom)
+        // TabBarController에서 오버레이 높이 가져오기
+        guard let tabBarController = tabBarController as? TabBarController,
+              let heights = tabBarController.getOverlayHeights() else {
+            return
+        }
 
         let inset = UIEdgeInsets(
-            top: topHeight,
+            top: heights.top,
             left: 0,
-            bottom: bottomHeight,
+            bottom: heights.bottom,
             right: 0
         )
 
         collectionView.contentInset = inset
         collectionView.scrollIndicatorInsets = inset
-    }
-
-    /// 플로팅 UI 높이 업데이트
-    private func updateFloatingUIHeights() {
-        guard useFloatingUI else { return }
-
-        let topHeight = FloatingTitleBar.totalHeight(safeAreaTop: view.safeAreaInsets.top)
-        let bottomHeight = FloatingTabBar.totalHeight(safeAreaBottom: view.safeAreaInsets.bottom)
-
-        titleBarHeightConstraint?.constant = topHeight
-        tabBarHeightConstraint?.constant = bottomHeight
     }
 
     private func thumbnailSize() -> CGSize {
@@ -529,43 +484,6 @@ extension AlbumGridViewController: UICollectionViewDataSourcePrefetching {
     func collectionView(_ collectionView: UICollectionView, cancelPrefetchingForItemsAt indexPaths: [IndexPath]) {
         let assetIDs = indexPaths.map { fetchResult.object(at: $0.item).localIdentifier }
         imagePipeline.stopPreheating(assetIDs: assetIDs)
-    }
-}
-
-// MARK: - FloatingTitleBarDelegate
-
-extension AlbumGridViewController: FloatingTitleBarDelegate {
-
-    func floatingTitleBarDidTapBack(_ titleBar: FloatingTitleBar) {
-        // 뒤로 가기
-        navigationController?.popViewController(animated: true)
-    }
-
-    func floatingTitleBarDidTapSelect(_ titleBar: FloatingTitleBar) {
-        // 앨범에서는 Select 모드 미지원 (숨겨져 있음)
-    }
-}
-
-// MARK: - FloatingTabBarDelegate
-
-extension AlbumGridViewController: FloatingTabBarDelegate {
-
-    func floatingTabBar(_ tabBar: FloatingTabBar, didSelectTabAt index: Int) {
-        // 탭 전환 시 먼저 pop
-        navigationController?.popViewController(animated: false)
-
-        // 그 후 TabBarController에서 탭 전환
-        if let tabBarController = tabBarController {
-            tabBarController.selectedIndex = index
-        }
-    }
-
-    func floatingTabBarDidTapCancel(_ tabBar: FloatingTabBar) {
-        // 앨범에서는 Select 모드 미지원
-    }
-
-    func floatingTabBarDidTapDelete(_ tabBar: FloatingTabBar) {
-        // 앨범에서는 Select 모드 미지원
     }
 }
 

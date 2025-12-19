@@ -119,22 +119,9 @@ final class AlbumsViewController: UIViewController {
         // 화면 표시 시 데이터 갱신 (휴지통 상태 등 반영)
         loadData()
 
-        // iOS 16~25: 플로팅 오버레이 표시 (push에서 돌아올 때)
-        if let tabBarController = tabBarController as? TabBarController {
-            tabBarController.floatingOverlay?.setOverlayHidden(false, animated: animated)
-        }
-    }
-
-    override func viewWillDisappear(_ animated: Bool) {
-        super.viewWillDisappear(animated)
-
-        // push로 다른 화면으로 이동 시 플로팅 오버레이 숨김
-        if isMovingFromParent == false && presentedViewController == nil {
-            // push로 이동하는 경우
-            if let tabBarController = tabBarController as? TabBarController {
-                tabBarController.floatingOverlay?.setOverlayHidden(true, animated: animated)
-            }
-        }
+        // iOS 16~25: FloatingOverlay 기본 상태 세팅
+        // (push에서 돌아올 때 앨범 화면 상태로 복원)
+        configureFloatingOverlayForAlbums()
     }
 
     override func viewDidLayoutSubviews() {
@@ -178,6 +165,26 @@ final class AlbumsViewController: UIViewController {
         trashStore.onStateChange { [weak self] _ in
             self?.updateTrashAlbum()
         }
+    }
+
+    /// FloatingOverlay 상태를 Albums 목록 화면용으로 설정
+    /// - 타이틀: "Albums"
+    /// - 뒤로가기 버튼: 숨김
+    /// - Select 버튼: 숨김
+    private func configureFloatingOverlayForAlbums() {
+        guard let tabBarController = tabBarController as? TabBarController,
+              let overlay = tabBarController.floatingOverlay else {
+            return
+        }
+
+        // 타이틀 복원
+        overlay.titleBar.setTitle("Albums")
+
+        // 뒤로가기 버튼 숨김
+        overlay.titleBar.setShowsBackButton(false)
+
+        // Select 버튼 숨김 (Albums 탭에서는 Select 모드 미지원)
+        overlay.titleBar.isSelectButtonHidden = true
     }
 
     // MARK: - Layout

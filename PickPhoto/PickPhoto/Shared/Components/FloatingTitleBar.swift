@@ -277,7 +277,7 @@ final class FloatingTitleBar: UIView {
 
     @objc private func backButtonTapped() {
         print("[FloatingTitleBar] Back button tapped")
-        delegate?.floatingTitleBarDidTapBack(self)
+        executeBackAction()
     }
 
     @objc private func selectButtonTapped() {
@@ -292,5 +292,33 @@ final class FloatingTitleBar: UIView {
     /// - Returns: 전체 타이틀바 높이
     static func totalHeight(safeAreaTop: CGFloat) -> CGFloat {
         return safeAreaTop + contentHeight + gradientExtension
+    }
+
+    // MARK: - Public Configuration Methods
+
+    /// 타이틀 변경 (push된 화면에서 앨범명 등으로 변경 시 사용)
+    /// - Parameter title: 새로운 타이틀
+    func setTitle(_ title: String) {
+        self.title = title
+    }
+
+    /// 뒤로가기 버튼 표시/숨김 설정 (push된 화면에서 사용)
+    /// - Parameters:
+    ///   - shows: 표시 여부
+    ///   - action: 뒤로가기 버튼 탭 시 실행할 클로저 (nil이면 delegate 호출)
+    private var backButtonAction: (() -> Void)?
+
+    func setShowsBackButton(_ shows: Bool, action: (() -> Void)? = nil) {
+        showsBackButton = shows
+        backButtonAction = action
+    }
+
+    /// 뒤로가기 버튼 액션 실행 (클로저 또는 delegate)
+    private func executeBackAction() {
+        if let action = backButtonAction {
+            action()
+        } else {
+            delegate?.floatingTitleBarDidTapBack(self)
+        }
     }
 }
