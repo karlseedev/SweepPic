@@ -32,6 +32,11 @@ struct HitchResult {
         return Double(longestHitch) * avgFrameTime * 1000
     }
 
+    /// 평균 프레임 시간 (ms)
+    var avgFrameTimeMs: Double {
+        return avgFrameTime * 1000
+    }
+
     func formatted() -> String {
         let ratioStr = String(format: "%.1f", hitchTimeRatio)
         let longestMs = String(format: "%.1f", longestHitchMs)

@@ -1,50 +1,56 @@
-# [PROJECT_NAME] Constitution
-<!-- Example: Spec Constitution, TaskFlow Constitution, etc. -->
+<!--
+Sync Impact Report
+==================
+Version change: 1.0.4 → 1.1.0
+Added: VI. 단계적 검증 (Incremental Validation) 원칙 추가
+Templates requiring updates: None
+Follow-up TODOs: None
+-->
+
+# PickPhoto Constitution
 
 ## Core Principles
 
-### [PRINCIPLE_1_NAME]
-<!-- Example: I. Library-First -->
-[PRINCIPLE_1_DESCRIPTION]
-<!-- Example: Every feature starts as a standalone library; Libraries must be self-contained, independently testable, documented; Clear purpose required - no organizational-only libraries -->
+### I. 대용량 전제 (Large-Scale Baseline)
 
-### [PRINCIPLE_2_NAME]
-<!-- Example: II. CLI Interface -->
-[PRINCIPLE_2_DESCRIPTION]
-<!-- Example: Every library exposes functionality via CLI; Text in/out protocol: stdin/args → stdout, errors → stderr; Support JSON + human-readable formats -->
+5만 장 라이브러리에서도 목표 UX/성능을 유지한다.
 
-### [PRINCIPLE_3_NAME]
-<!-- Example: III. Test-First (NON-NEGOTIABLE) -->
-[PRINCIPLE_3_DESCRIPTION]
-<!-- Example: TDD mandatory: Tests written → User approved → Tests fail → Then implement; Red-Green-Refactor cycle strictly enforced -->
+### II. 모션 품질 (Motion Quality)
 
-### [PRINCIPLE_4_NAME]
-<!-- Example: IV. Integration Testing -->
-[PRINCIPLE_4_DESCRIPTION]
-<!-- Example: Focus areas requiring integration tests: New library contract tests, Contract changes, Inter-service communication, Shared schemas -->
+iOS 기본 사진 앱 수준의 부드러운 스크롤과 전환 경험을 제공해야 한다.
 
-### [PRINCIPLE_5_NAME]
-<!-- Example: V. Observability, VI. Versioning & Breaking Changes, VII. Simplicity -->
-[PRINCIPLE_5_DESCRIPTION]
-<!-- Example: Text I/O ensures debuggability; Structured logging required; Or: MAJOR.MINOR.BUILD format; Or: Start simple, YAGNI principles -->
+### III. 핀치 줌 앵커 (Pinch-Zoom Anchor)
 
-## [SECTION_2_NAME]
-<!-- Example: Additional Constraints, Security Requirements, Performance Standards, etc. -->
+핀치 제스처 중심점 아래 콘텐츠가 앵커로 유지되어야 한다.
 
-[SECTION_2_CONTENT]
-<!-- Example: Technology stack requirements, compliance standards, deployment policies, etc. -->
+### IV. 삭제 안정성 (Delete Stability)
 
-## [SECTION_3_NAME]
-<!-- Example: Development Workflow, Review Process, Quality Gates, etc. -->
+삭제 후 UI가 안정적으로 수렴해야 한다.
+- 뷰어 삭제 시 "이전 사진 우선" 이동 규칙
+- 1단계(앱 내 휴지통 이동): 앱 자체 확인 팝업 없이 즉시 이동
+- 2단계(완전 삭제): iOS 시스템 팝업은 필수 (PhotoKit 제약)
 
-[SECTION_3_CONTENT]
-<!-- Example: Code review requirements, testing gates, deployment approval process, etc. -->
+### V. 메모리 제한 (Memory Limit)
+
+장시간 사용 후에도 메모리 상한 이내를 유지해야 한다.
+
+### VI. 단계적 검증 (Incremental Validation)
+
+모든 기능은 단계적으로 개발하고 검증한다. 각 단계는 독립적 가치와 테스트 가능성을 갖고, 다음 단계로 넘어가기 전에 사용성 검증을 완료한다.
+
+## Performance KPI
+
+| 항목 | 기준 | 출처 |
+|------|------|------|
+| 오표시 | 0 | 품질 필수 |
+| 메모리 상한 | 250MB | [BrowserStack](https://www.browserstack.com/guide/how-to-conduct-ios-performance-testing) |
+
+기타 성능 수치는 PRD에서 정의한다.
 
 ## Governance
-<!-- Example: Constitution supersedes all other practices; Amendments require documentation, approval, migration plan -->
 
-[GOVERNANCE_RULES]
-<!-- Example: All PRs/reviews must verify compliance; Complexity must be justified; Use [GUIDANCE_FILE] for runtime development guidance -->
+- 본 헌법은 모든 기능 구현에 우선한다
+- 헌법 위반 사항은 명시적 정당화와 문서화 필요
+- 성능 KPI는 Instruments로 측정 검증
 
-**Version**: [CONSTITUTION_VERSION] | **Ratified**: [RATIFICATION_DATE] | **Last Amended**: [LAST_AMENDED_DATE]
-<!-- Example: Version: 2.1.1 | Ratified: 2025-06-13 | Last Amended: 2025-07-16 -->
+**Version**: 1.1.0 | **Ratified**: 2025-12-16 | **Last Amended**: 2025-12-16

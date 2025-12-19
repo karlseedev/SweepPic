@@ -1,0 +1,47 @@
+# Swift/Xcode .gitignore
+
+# Build generated
+.build/
+DerivedData/
+build/
+*.swiftpm/
+Packages/
+
+# Xcode user data
+*.xcuserstate
+*.xccheckout
+*.xcscmblueprint
+xcuserdata/
+
+# AppCode
+.idea/
+
+# OS generated
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+Thumbs.db
+
+# Temporary files
+*.tmp
+*.swp
+*~
+
+# CocoaPods (if used)
+Pods/
+
+# Carthage (if used)
+Carthage/Build/
+
+# Swift Package Manager
+.swiftpm/xcode/package.xcworkspace/contents.xcworkspacedata
+
+# Derived data stored in project root
+.derivedData/
+
+# Logs
+*.log
+
+# Environment
+.env*

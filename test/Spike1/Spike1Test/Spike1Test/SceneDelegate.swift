@@ -16,7 +16,13 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         guard let windowScene = (scene as? UIWindowScene) else { return }
 
         window = UIWindow(windowScene: windowScene)
-        let viewController = GateMenuViewController()
+        let args = ProcessInfo.processInfo.arguments
+        let viewController: UIViewController
+        if args.contains("--gate3") {
+            viewController = Gate3ViewController()
+        } else {
+            viewController = GateMenuViewController()
+        }
         let navigationController = UINavigationController(rootViewController: viewController)
         window?.rootViewController = navigationController
         window?.makeKeyAndVisible()
@@ -52,4 +58,3 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
 
 
 }
-

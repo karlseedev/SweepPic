@@ -1,0 +1,541 @@
+// AlbumsViewController.swift
+// 앨범 목록 뷰컨트롤러
+//
+// T050: AlbumsViewController 생성
+// - 2열 그리드 레이아웃, iOS 사진 앱 스타일
+// - 스마트 앨범 + 사용자 앨범 + 휴지통 섹션
+//
+// T051: 휴지통 가상 앨범 추가
+// - TrashStore에서 휴지통 사진 수 조회
+
+import UIKit
+import Photos
+import AppCore
+
+/// 앨범 목록 뷰컨트롤러
+/// Albums 탭에서 앨범 목록을 표시
+final class AlbumsViewController: UIViewController {
+
+    // MARK: - Constants
+
+    /// 열 수
+    private static let columnCount: CGFloat = 2
+
+    /// 셀 간격
+    private static let cellSpacing: CGFloat = 16
+
+    /// 섹션 헤더 높이
+    private static let headerHeight: CGFloat = 44
+
+    // MARK: - UI Components
+
+    /// 컬렉션 뷰
+    private lazy var collectionView: UICollectionView = {
+        let cv = UICollectionView(frame: .zero, collectionViewLayout: createLayout())
+        cv.backgroundColor = .systemBackground
+        cv.translatesAutoresizingMaskIntoConstraints = false
+        cv.register(AlbumCell.self, forCellWithReuseIdentifier: AlbumCell.reuseIdentifier)
+        cv.register(
+            AlbumSectionHeaderView.self,
+            forSupplementaryViewOfKind: UICollectionView.elementKindSectionHeader,
+            withReuseIdentifier: AlbumSectionHeaderView.reuseIdentifier
+        )
+        cv.delegate = self
+        cv.dataSource = self
+        cv.alwaysBounceVertical = true
+        // T027-1f: Edge-to-edge 설정
+        cv.contentInsetAdjustmentBehavior = .never
+        return cv
+    }()
+
+    /// 빈 상태 뷰
+    private lazy var emptyStateView: EmptyStateView = {
+        let view = EmptyStateView()
+        view.configure(
+            icon: "rectangle.stack",
+            title: "앨범이 없습니다",
+            subtitle: "앨범을 생성하세요"
+        )
+        view.isHidden = true
+        view.translatesAutoresizingMaskIntoConstraints = false
+        return view
+    }()
+
+    // MARK: - Properties
+
+    /// 앨범 서비스
+    private let albumService: AlbumServiceProtocol
+
+    /// 휴지통 스토어
+    private let trashStore: TrashStoreProtocol
+
+    /// 스마트 앨범 목록
+    private var smartAlbums: [SmartAlbum] = []
+
+    /// 사용자 앨범 목록
+    private var userAlbums: [Album] = []
+
+    /// 휴지통 앨범 (T051)
+    private var trashAlbum: TrashAlbum?
+
+    /// 현재 셀 크기
+    private var currentCellSize: CGSize = .zero
+
+    // MARK: - Initialization
+
+    init(
+        albumService: AlbumServiceProtocol = AlbumService.shared,
+        trashStore: TrashStoreProtocol = TrashStore.shared
+    ) {
+        self.albumService = albumService
+        self.trashStore = trashStore
+        super.init(nibName: nil, bundle: nil)
+    }
+
+    required init?(coder: NSCoder) {
+        self.albumService = AlbumService.shared
+        self.trashStore = TrashStore.shared
+        super.init(coder: coder)
+    }
+
+    // MARK: - Lifecycle
+
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        setupUI()
+        setupObservers()
+        loadData()
+
+        // T027-1f: iOS 26+에서 시스템 바 사용
+        if #available(iOS 26.0, *) {
+            setContentScrollView(collectionView, for: .top)
+            setContentScrollView(collectionView, for: .bottom)
+            collectionView.contentInsetAdjustmentBehavior = .automatic
+        }
+    }
+
+    override func viewWillAppear(_ animated: Bool) {
+        super.viewWillAppear(animated)
+        // 화면 표시 시 데이터 갱신 (휴지통 상태 등 반영)
+        loadData()
+
+        // iOS 16~25: 플로팅 오버레이 표시 (push에서 돌아올 때)
+        if let tabBarController = tabBarController as? TabBarController {
+            tabBarController.floatingOverlay?.setOverlayHidden(false, animated: animated)
+        }
+    }
+
+    override func viewWillDisappear(_ animated: Bool) {
+        super.viewWillDisappear(animated)
+
+        // push로 다른 화면으로 이동 시 플로팅 오버레이 숨김
+        if isMovingFromParent == false && presentedViewController == nil {
+            // push로 이동하는 경우
+            if let tabBarController = tabBarController as? TabBarController {
+                tabBarController.floatingOverlay?.setOverlayHidden(true, animated: animated)
+            }
+        }
+    }
+
+    override func viewDidLayoutSubviews() {
+        super.viewDidLayoutSubviews()
+        updateCellSize()
+        updateContentInset()
+    }
+
+    override func viewSafeAreaInsetsDidChange() {
+        super.viewSafeAreaInsetsDidChange()
+        updateContentInset()
+    }
+
+    // MARK: - Setup
+
+    private func setupUI() {
+        view.backgroundColor = .systemBackground
+        title = "Albums"
+
+        // 컬렉션 뷰
+        view.addSubview(collectionView)
+        NSLayoutConstraint.activate([
+            collectionView.topAnchor.constraint(equalTo: view.topAnchor),
+            collectionView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+            collectionView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+            collectionView.bottomAnchor.constraint(equalTo: view.bottomAnchor)
+        ])
+
+        // 빈 상태 뷰
+        view.addSubview(emptyStateView)
+        NSLayoutConstraint.activate([
+            emptyStateView.centerXAnchor.constraint(equalTo: view.centerXAnchor),
+            emptyStateView.centerYAnchor.constraint(equalTo: view.centerYAnchor),
+            emptyStateView.leadingAnchor.constraint(greaterThanOrEqualTo: view.leadingAnchor, constant: 40),
+            emptyStateView.trailingAnchor.constraint(lessThanOrEqualTo: view.trailingAnchor, constant: -40)
+        ])
+    }
+
+    private func setupObservers() {
+        // 휴지통 상태 변경 감지
+        trashStore.onStateChange { [weak self] _ in
+            self?.updateTrashAlbum()
+        }
+    }
+
+    // MARK: - Layout
+
+    /// 2열 그리드 레이아웃 생성
+    private func createLayout() -> UICollectionViewLayout {
+        let layout = UICollectionViewCompositionalLayout { sectionIndex, environment in
+            let spacing = Self.cellSpacing
+            let columnCount = Self.columnCount
+
+            // 셀 크기 계산
+            let totalSpacing = spacing * (columnCount + 1) // 좌우 패딩 + 셀 간격
+            let availableWidth = environment.container.effectiveContentSize.width - totalSpacing
+            let cellWidth = floor(availableWidth / columnCount)
+
+            // 아이템 크기 (썸네일 + 라벨 높이)
+            let thumbnailHeight = cellWidth
+            let labelHeight: CGFloat = 40 // 제목 + 개수 라벨
+            let cellHeight = thumbnailHeight + labelHeight
+
+            // 아이템
+            let itemSize = NSCollectionLayoutSize(
+                widthDimension: .absolute(cellWidth),
+                heightDimension: .absolute(cellHeight)
+            )
+            let item = NSCollectionLayoutItem(layoutSize: itemSize)
+
+            // 그룹
+            let groupSize = NSCollectionLayoutSize(
+                widthDimension: .fractionalWidth(1.0),
+                heightDimension: .absolute(cellHeight)
+            )
+            let group = NSCollectionLayoutGroup.horizontal(
+                layoutSize: groupSize,
+                repeatingSubitem: item,
+                count: Int(columnCount)
+            )
+            group.interItemSpacing = .fixed(spacing)
+
+            // 섹션
+            let section = NSCollectionLayoutSection(group: group)
+            section.interGroupSpacing = spacing
+            section.contentInsets = NSDirectionalEdgeInsets(
+                top: spacing,
+                leading: spacing,
+                bottom: spacing,
+                trailing: spacing
+            )
+
+            // 섹션 헤더 (스마트 앨범, 사용자 앨범 섹션)
+            let albumSection = AlbumSection(rawValue: sectionIndex)
+            if albumSection?.headerTitle != nil {
+                let headerSize = NSCollectionLayoutSize(
+                    widthDimension: .fractionalWidth(1.0),
+                    heightDimension: .absolute(Self.headerHeight)
+                )
+                let header = NSCollectionLayoutBoundarySupplementaryItem(
+                    layoutSize: headerSize,
+                    elementKind: UICollectionView.elementKindSectionHeader,
+                    alignment: .top
+                )
+                section.boundarySupplementaryItems = [header]
+            }
+
+            return section
+        }
+
+        return layout
+    }
+
+    /// 셀 크기 업데이트
+    private func updateCellSize() {
+        let spacing = Self.cellSpacing
+        let columnCount = Self.columnCount
+        let totalSpacing = spacing * (columnCount + 1)
+        let availableWidth = view.bounds.width - totalSpacing
+        let cellWidth = floor(availableWidth / columnCount)
+
+        currentCellSize = CGSize(width: cellWidth, height: cellWidth)
+    }
+
+    /// contentInset 업데이트 (플로팅 UI 높이 반영)
+    private func updateContentInset() {
+        // iOS 26+에서는 시스템 자동 조정 사용
+        if #available(iOS 26.0, *) {
+            return
+        }
+
+        // TabBarController에서 오버레이 높이 가져오기
+        guard let tabBarController = tabBarController as? TabBarController,
+              let heights = tabBarController.getOverlayHeights() else {
+            let inset = UIEdgeInsets(
+                top: view.safeAreaInsets.top,
+                left: 0,
+                bottom: view.safeAreaInsets.bottom,
+                right: 0
+            )
+            collectionView.contentInset = inset
+            collectionView.scrollIndicatorInsets = inset
+            return
+        }
+
+        let inset = UIEdgeInsets(
+            top: heights.top,
+            left: 0,
+            bottom: heights.bottom,
+            right: 0
+        )
+
+        collectionView.contentInset = inset
+        collectionView.scrollIndicatorInsets = inset
+    }
+
+    // MARK: - Data Loading
+
+    /// 데이터 로드
+    private func loadData() {
+        // 스마트 앨범 조회
+        smartAlbums = albumService.fetchSmartAlbums()
+
+        // 사용자 앨범 조회
+        userAlbums = albumService.fetchUserAlbums()
+
+        // 휴지통 앨범 업데이트 (T051)
+        updateTrashAlbum()
+
+        // 빈 상태 업데이트
+        updateEmptyState()
+
+        // 컬렉션 뷰 리로드
+        collectionView.reloadData()
+
+        print("[AlbumsViewController] Loaded \(smartAlbums.count) smart albums, \(userAlbums.count) user albums")
+    }
+
+    /// 휴지통 앨범 업데이트 (T051)
+    private func updateTrashAlbum() {
+        let trashedCount = trashStore.trashedAssetIDs.count
+
+        if trashedCount > 0 {
+            // 키 에셋: 가장 최근 휴지통 사진
+            let keyAssetID = trashStore.trashedAssetIDs.first
+            trashAlbum = TrashAlbum(
+                assetCount: trashedCount,
+                keyAssetIdentifier: keyAssetID
+            )
+        } else {
+            trashAlbum = nil
+        }
+
+        // 휴지통 섹션만 리로드
+        if collectionView.numberOfSections > AlbumSection.trash.rawValue {
+            collectionView.reloadSections(IndexSet(integer: AlbumSection.trash.rawValue))
+        }
+    }
+
+    /// 빈 상태 업데이트
+    private func updateEmptyState() {
+        let isEmpty = smartAlbums.isEmpty && userAlbums.isEmpty && trashAlbum == nil
+        emptyStateView.isHidden = !isEmpty
+        collectionView.isHidden = isEmpty
+    }
+
+    // MARK: - Thumbnail Size
+
+    /// 썸네일 크기 (스케일 적용)
+    private func thumbnailSize() -> CGSize {
+        let scale = UIScreen.main.scale
+        return CGSize(
+            width: currentCellSize.width * scale,
+            height: currentCellSize.height * scale
+        )
+    }
+}
+
+// MARK: - UICollectionViewDataSource
+
+extension AlbumsViewController: UICollectionViewDataSource {
+
+    func numberOfSections(in collectionView: UICollectionView) -> Int {
+        return AlbumSection.allCases.count
+    }
+
+    func collectionView(_ collectionView: UICollectionView, numberOfItemsInSection section: Int) -> Int {
+        guard let albumSection = AlbumSection(rawValue: section) else { return 0 }
+
+        switch albumSection {
+        case .smartAlbums:
+            return smartAlbums.count
+        case .userAlbums:
+            return userAlbums.count
+        case .trash:
+            return trashAlbum != nil ? 1 : 0
+        }
+    }
+
+    func collectionView(_ collectionView: UICollectionView, cellForItemAt indexPath: IndexPath) -> UICollectionViewCell {
+        guard let cell = collectionView.dequeueReusableCell(
+            withReuseIdentifier: AlbumCell.reuseIdentifier,
+            for: indexPath
+        ) as? AlbumCell else {
+            return UICollectionViewCell()
+        }
+
+        guard let albumSection = AlbumSection(rawValue: indexPath.section) else {
+            return cell
+        }
+
+        let targetSize = thumbnailSize()
+
+        switch albumSection {
+        case .smartAlbums:
+            let smartAlbum = smartAlbums[indexPath.item]
+            cell.configure(smartAlbum: smartAlbum, targetSize: targetSize)
+
+        case .userAlbums:
+            let album = userAlbums[indexPath.item]
+            cell.configure(album: album, targetSize: targetSize)
+
+        case .trash:
+            if let trashAlbum = trashAlbum {
+                cell.configure(trashAlbum: trashAlbum, targetSize: targetSize)
+            }
+        }
+
+        return cell
+    }
+
+    func collectionView(
+        _ collectionView: UICollectionView,
+        viewForSupplementaryElementOfKind kind: String,
+        at indexPath: IndexPath
+    ) -> UICollectionReusableView {
+        guard kind == UICollectionView.elementKindSectionHeader,
+              let headerView = collectionView.dequeueReusableSupplementaryView(
+                ofKind: kind,
+                withReuseIdentifier: AlbumSectionHeaderView.reuseIdentifier,
+                for: indexPath
+              ) as? AlbumSectionHeaderView else {
+            return UICollectionReusableView()
+        }
+
+        if let albumSection = AlbumSection(rawValue: indexPath.section) {
+            headerView.configure(title: albumSection.headerTitle)
+        }
+
+        return headerView
+    }
+}
+
+// MARK: - UICollectionViewDelegate
+
+extension AlbumsViewController: UICollectionViewDelegate {
+
+    func collectionView(_ collectionView: UICollectionView, didSelectItemAt indexPath: IndexPath) {
+        guard let albumSection = AlbumSection(rawValue: indexPath.section) else { return }
+
+        switch albumSection {
+        case .smartAlbums:
+            let smartAlbum = smartAlbums[indexPath.item]
+            openAlbumGrid(smartAlbum: smartAlbum)
+
+        case .userAlbums:
+            let album = userAlbums[indexPath.item]
+            openAlbumGrid(album: album)
+
+        case .trash:
+            openTrashAlbum()
+        }
+    }
+
+    // MARK: - Navigation
+
+    /// 스마트 앨범 그리드 열기 (T052)
+    private func openAlbumGrid(smartAlbum: SmartAlbum) {
+        guard let fetchResult = albumService.fetchPhotosInSmartAlbum(type: smartAlbum.type) else {
+            print("[AlbumsViewController] Failed to fetch photos for smart album: \(smartAlbum.type)")
+            return
+        }
+
+        let albumGridVC = AlbumGridViewController(
+            albumTitle: smartAlbum.title,
+            fetchResult: fetchResult
+        )
+
+        navigationController?.pushViewController(albumGridVC, animated: true)
+
+        print("[AlbumsViewController] Opened smart album: \(smartAlbum.title)")
+    }
+
+    /// 사용자 앨범 그리드 열기 (T052)
+    private func openAlbumGrid(album: Album) {
+        guard let fetchResult = albumService.fetchPhotosInAlbum(albumID: album.id) else {
+            print("[AlbumsViewController] Failed to fetch photos for album: \(album.title)")
+            return
+        }
+
+        let albumGridVC = AlbumGridViewController(
+            albumTitle: album.title,
+            fetchResult: fetchResult
+        )
+
+        navigationController?.pushViewController(albumGridVC, animated: true)
+
+        print("[AlbumsViewController] Opened album: \(album.title)")
+    }
+
+    /// 휴지통 앨범 열기 (Phase 7에서 TrashAlbumViewController 사용)
+    private func openTrashAlbum() {
+        // Phase 7에서 TrashAlbumViewController 구현 예정
+        // 현재는 간단한 알림 표시
+        let alert = UIAlertController(
+            title: "휴지통",
+            message: "휴지통 기능은 Phase 7에서 구현됩니다.",
+            preferredStyle: .alert
+        )
+        alert.addAction(UIAlertAction(title: "확인", style: .default))
+        present(alert, animated: true)
+
+        print("[AlbumsViewController] Trash album tapped (Phase 7)")
+    }
+}
+
+// MARK: - AlbumSectionHeaderView
+
+/// 앨범 섹션 헤더 뷰
+final class AlbumSectionHeaderView: UICollectionReusableView {
+
+    static let reuseIdentifier = "AlbumSectionHeaderView"
+
+    private lazy var titleLabel: UILabel = {
+        let label = UILabel()
+        label.font = .systemFont(ofSize: 20, weight: .bold)
+        label.textColor = .label
+        label.translatesAutoresizingMaskIntoConstraints = false
+        return label
+    }()
+
+    override init(frame: CGRect) {
+        super.init(frame: frame)
+        setupUI()
+    }
+
+    required init?(coder: NSCoder) {
+        super.init(coder: coder)
+        setupUI()
+    }
+
+    private func setupUI() {
+        addSubview(titleLabel)
+        NSLayoutConstraint.activate([
+            titleLabel.leadingAnchor.constraint(equalTo: leadingAnchor),
+            titleLabel.trailingAnchor.constraint(equalTo: trailingAnchor),
+            titleLabel.bottomAnchor.constraint(equalTo: bottomAnchor, constant: -8)
+        ])
+    }
+
+    func configure(title: String?) {
+        titleLabel.text = title
+    }
+}

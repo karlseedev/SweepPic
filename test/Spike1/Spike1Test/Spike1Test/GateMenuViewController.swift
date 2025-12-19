@@ -43,28 +43,55 @@ final class GateMenuViewController: UIViewController {
 
         // Gate 2 Header
         let gate2Label = UILabel()
-        gate2Label.text = "Gate 2: Image Loading"
+        gate2Label.text = "Gate 2: Pipeline Test"
         gate2Label.font = .preferredFont(forTextStyle: .headline)
         gate2Label.textAlignment = .center
         stackView.addArrangedSubview(gate2Label)
 
-        // Gate 2 - Mock (현재 가능)
-        let gate2MockButton = createButton(
-            title: "Mock Provider",
-            subtitle: "랜덤 색상 이미지 + 2ms 지연",
-            color: .systemBlue,
-            action: #selector(openGate2Mock)
+        // Gate 2 - Baseline (Control)
+        let baselineButton = createButton(
+            title: "Baseline (Control)",
+            subtitle: "현행: opportunistic + prepareForReuse",
+            color: .systemGray,
+            action: #selector(openGate2Baseline)
         )
-        stackView.addArrangedSubview(gate2MockButton)
+        stackView.addArrangedSubview(baselineButton)
 
-        // Gate 2 - PhotoKit (실사진 필요)
-        let gate2PhotoKitButton = createButton(
-            title: "PhotoKit Provider",
-            subtitle: "실제 사진 라이브러리 (실기기 필요)",
-            color: .systemOrange,
-            action: #selector(openGate2PhotoKit)
+        // Gate 2 - Candidate A
+        let candidateAButton = createButton(
+            title: "후보 A",
+            subtitle: "fastFormat + didEndDisplaying",
+            color: .systemBlue,
+            action: #selector(openGate2CandidateA)
         )
-        stackView.addArrangedSubview(gate2PhotoKitButton)
+        stackView.addArrangedSubview(candidateAButton)
+
+        // Gate 2 - Candidate D (추천)
+        let candidateDButton = createButton(
+            title: "후보 D ⭐",
+            subtitle: "Adaptive 2-Stage (Photos 모방)",
+            color: .systemGreen,
+            action: #selector(openGate2CandidateD)
+        )
+        stackView.addArrangedSubview(candidateDButton)
+
+        // Gate 2 - Candidate B (원인 분리)
+        let candidateBButton = createButton(
+            title: "후보 B1~B4",
+            subtitle: "레버별 단계 테스트 (원인 분리)",
+            color: .systemOrange,
+            action: #selector(openGate2CandidateB)
+        )
+        stackView.addArrangedSubview(candidateBButton)
+
+        // Gate 2 - Candidate C (최후)
+        let candidateCButton = createButton(
+            title: "후보 C",
+            subtitle: "maxInFlight 8개 제한 (최후 안전장치)",
+            color: .systemRed,
+            action: #selector(openGate2CandidateC)
+        )
+        stackView.addArrangedSubview(candidateCButton)
 
         // Separator 2
         let separator2 = UIView()
@@ -118,15 +145,56 @@ final class GateMenuViewController: UIViewController {
         navigationController?.pushViewController(vc, animated: true)
     }
 
-    @objc private func openGate2Mock() {
-        let provider = MockImageProvider()
-        let vc = Gate2ViewController(provider: provider, name: "Mock")
+    // MARK: - Gate 2 Pipeline Test Actions
+
+    @objc private func openGate2Baseline() {
+        let provider = PhotoKitImageProvider()
+        let vc = Gate2ViewController(provider: provider, name: "PhotoKit", pipeline: .baseline)
         navigationController?.pushViewController(vc, animated: true)
     }
 
-    @objc private func openGate2PhotoKit() {
+    @objc private func openGate2CandidateA() {
         let provider = PhotoKitImageProvider()
-        let vc = Gate2ViewController(provider: provider, name: "PhotoKit")
+        let vc = Gate2ViewController(provider: provider, name: "PhotoKit", pipeline: .candidateA)
+        navigationController?.pushViewController(vc, animated: true)
+    }
+
+    @objc private func openGate2CandidateD() {
+        let provider = PhotoKitImageProvider()
+        let vc = Gate2ViewController(provider: provider, name: "PhotoKit", pipeline: .candidateD)
+        navigationController?.pushViewController(vc, animated: true)
+    }
+
+    @objc private func openGate2CandidateB() {
+        // B1~B4 선택 Alert
+        let alert = UIAlertController(title: "후보 B 선택", message: "레버별 단계 테스트", preferredStyle: .actionSheet)
+
+        alert.addAction(UIAlertAction(title: "B1: preheat OFF", style: .default) { [weak self] _ in
+            self?.openGate2Pipeline(.candidateB1)
+        })
+        alert.addAction(UIAlertAction(title: "B2: B1 + quality 30%", style: .default) { [weak self] _ in
+            self?.openGate2Pipeline(.candidateB2)
+        })
+        alert.addAction(UIAlertAction(title: "B3: B2 + fastFormat", style: .default) { [weak self] _ in
+            self?.openGate2Pipeline(.candidateB3)
+        })
+        alert.addAction(UIAlertAction(title: "B4: B3 + didEndDisplaying", style: .default) { [weak self] _ in
+            self?.openGate2Pipeline(.candidateB4)
+        })
+        alert.addAction(UIAlertAction(title: "취소", style: .cancel))
+
+        present(alert, animated: true)
+    }
+
+    @objc private func openGate2CandidateC() {
+        let provider = PhotoKitImageProvider()
+        let vc = Gate2ViewController(provider: provider, name: "PhotoKit", pipeline: .candidateC)
+        navigationController?.pushViewController(vc, animated: true)
+    }
+
+    private func openGate2Pipeline(_ pipeline: Gate2ViewController.PipelineCandidate) {
+        let provider = PhotoKitImageProvider()
+        let vc = Gate2ViewController(provider: provider, name: "PhotoKit", pipeline: pipeline)
         navigationController?.pushViewController(vc, animated: true)
     }
 

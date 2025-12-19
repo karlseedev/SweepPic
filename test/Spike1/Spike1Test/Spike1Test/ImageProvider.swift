@@ -3,6 +3,12 @@ import Photos
 
 // MARK: - ImageProvider Protocol
 
+/// Image result with degraded flag
+struct ImageResult {
+    let image: UIImage?
+    let isDegraded: Bool  // true = low-quality preview, false = final image
+}
+
 /// Abstraction for image loading - allows Mock vs PhotoKit switching
 protocol ImageProvider {
     var count: Int { get }
@@ -12,7 +18,7 @@ protocol ImageProvider {
     func requestImage(
         at index: Int,
         targetSize: CGSize,
-        completion: @escaping (UIImage?) -> Void
+        completion: @escaping (ImageResult) -> Void
     ) -> Cancellable?
 
     // Preheat (optional)
@@ -60,10 +66,10 @@ final class MockImageProvider: ImageProvider {
     func requestImage(
         at index: Int,
         targetSize: CGSize,
-        completion: @escaping (UIImage?) -> Void
+        completion: @escaping (ImageResult) -> Void
     ) -> Cancellable? {
         guard index >= 0 && index < count else {
-            completion(nil)
+            completion(ImageResult(image: nil, isDegraded: false))
             return nil
         }
 
@@ -79,7 +85,7 @@ final class MockImageProvider: ImageProvider {
 
             DispatchQueue.main.async {
                 guard !request.isCancelled else { return }
-                completion(image)
+                completion(ImageResult(image: image, isDegraded: false))  // Mock always returns final
             }
         }
 
@@ -145,6 +151,11 @@ final class PhotoKitImageProvider: ImageProvider {
     private var fetchResult: PHFetchResult<PHAsset>?
     private let imageManager = PHCachingImageManager()
 
+    /// Delivery mode for thumbnail loading (A/B test option)
+    /// - opportunistic: multiple callbacks (degraded + final), better UX but more UI churn
+    /// - fastFormat: single callback, faster but lower quality
+    var useFastFormat: Bool = false
+
     var count: Int {
         fetchResult?.count ?? 0
     }
@@ -167,7 +178,8 @@ final class PhotoKitImageProvider: ImageProvider {
         options.sortDescriptors = [NSSortDescriptor(key: "creationDate", ascending: false)]
 
         let start = CACurrentMediaTime()
-        fetchResult = PHAsset.fetchAssets(with: .image, options: options)
+        // Fetch all assets (photo + video + livePhoto) - no mediaType filter
+        fetchResult = PHAsset.fetchAssets(with: options)
         let elapsed = (CACurrentMediaTime() - start) * 1000
 
         completion(fetchResult?.count ?? 0, elapsed)
@@ -183,10 +195,10 @@ final class PhotoKitImageProvider: ImageProvider {
     func requestImage(
         at index: Int,
         targetSize: CGSize,
-        completion: @escaping (UIImage?) -> Void
+        completion: @escaping (ImageResult) -> Void
     ) -> Cancellable? {
         guard let fetchResult = fetchResult, index >= 0 && index < fetchResult.count else {
-            completion(nil)
+            completion(ImageResult(image: nil, isDegraded: false))
             return nil
         }
 
@@ -194,7 +206,7 @@ final class PhotoKitImageProvider: ImageProvider {
 
         let options = PHImageRequestOptions()
         options.isNetworkAccessAllowed = false
-        options.deliveryMode = .opportunistic
+        options.deliveryMode = useFastFormat ? .fastFormat : .opportunistic
         options.resizeMode = .fast
 
         let requestID = imageManager.requestImage(
@@ -202,8 +214,10 @@ final class PhotoKitImageProvider: ImageProvider {
             targetSize: targetSize,
             contentMode: .aspectFill,
             options: options
-        ) { image, _ in
-            completion(image)
+        ) { image, info in
+            // Check if this is degraded (low-quality preview) or final image
+            let isDegraded = (info?[PHImageResultIsDegradedKey] as? Bool) ?? false
+            completion(ImageResult(image: image, isDegraded: isDegraded))
         }
 
         return PhotoKitImageRequest(requestID: requestID, imageManager: imageManager)

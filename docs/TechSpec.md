@@ -1,6 +1,6 @@
 # PickPhoto Tech Spec (통합/개정안)
 
-> 본 문서는 [prd5.md](./prd5.md)의 요구사항을 구현하기 위한 기술 설계 문서입니다.
+> 본 문서는 [prd6.md](./prd6.md)의 요구사항을 구현하기 위한 기술 설계 문서입니다.
 > 원칙: PRD는 "무엇(요구사항/수용 기준)"을 고정하고, Tech Spec은 "어떻게(후보/가설/구현)"를 다룹니다.
 > **개발 전 스파이크**(Spike 0, 1)로 아키텍처 결정을 확정하고, **개발 단계별 게이트**(Gate 1~4)에서 세부 정책을 검증합니다.
 
@@ -10,7 +10,7 @@
 
 - 타깃: iOS 16+, iPhone 17 ProMotion(120Hz) / iPhone 12(최저 보장)
 - 데이터: 로컬 중심, 기본 정책 `isNetworkAccessAllowed = false`
-- MVP: All Photos + 앨범(사용자/일부 스마트) + 뷰어 + 삭제(즉시, 위 스와이프 포함) + 멀티선택
+- MVP: All Photos + 앨범(사용자/일부 스마트) + 뷰어 + 삭제(앱 내 휴지통, 위 스와이프 포함) + 멀티선택
 - 그리드 줌: `1열 / 3열 / 5열` 3단(Photos와 유사한 타입) 지원을 전제로 설계
 
 ---
@@ -154,25 +154,25 @@ Photos 앱 내부 옵션은 비공개이므로 A/B 테스트로 "유사 체감" 
 - 그리드(1/3/5열)별 `deliveryMode/resizeMode/targetSize` 정책
 - "저→고 교체(펌핑)" 허용 조건
 
-#### Gate 3: 핀치 줌 / 삭제
+#### Gate 3: 핀치 줌 / 휴지통
 
 - 핀치 모드 전환 임계값 및 히스테리시스(떨림 방지)
 - 변경 감지 업데이트 규칙 (부분 업데이트 vs 전체 리로드 조건)
 
-#### Gate 4: 성능 튜닝 (120Hz)
+#### Gate 4: 성능 튜닝 (120Hz) → ⏳ Mock 완료, 실사진 보류
 
 **ProMotion 정책**
 
 > 중요: ProMotion은 가변 주사율(10~120Hz)이며, 앱이 120Hz를 강제할 수는 없음.
 > **목표**: 시스템이 120Hz를 선택할 수 있도록 프레임 버짓(8.3ms) 준수를 보장
 
-| 후보 | 설명 |
-|------|------|
-| A) 상호작용 구간 최적화 | 스크롤/핀치/전환에서만 120 우선 + 병목 제거 중심 |
-| B) 전반 120 선호 | `preferredFrameRateRange` 넓게 적용 + 발열/배터리 트레이드오프 |
+**Mock 테스트 관찰 결과** (컬러 셀, 50k, 120Hz 실기기):
+- 2.0 ms/s (Good)
+- 시스템이 콘텐츠에 따라 자동으로 프레임 레이트 조절
+- **잠정 방향**: 시스템 자동 관리 (preferredFrameRateRange 별도 설정 불필요)
 
-확정할 것:
-- `preferredFrameRateRange` 적용 범위
+**실사진 + 120Hz 조합 테스트 후 재검토 필요**:
+- `preferredFrameRateRange` 적용 여부
 - 병목 분류 (메인 스레드/디코딩/레이아웃) 및 개선 우선순위
 
 ---
@@ -181,19 +181,23 @@ Photos 앱 내부 옵션은 비공개이므로 A/B 테스트로 "유사 체감" 
 
 - PhotoKit: `PHAsset`, `PHFetchResult`, `PHPhotoLibraryChangeObserver`
 - 이미지: `PHCachingImageManager` 중심
-- UI: `UICollectionView`(핵심 스크롤/뷰어 경로는 UIKit)
-- SwiftUI: 셸/설정 등 비핵심에 한해 하이브리드 가능
+- UI: `UICollectionView` (UIKit 기반)
+
+**UI 프레임워크 정책** (통일성 우선):
+- 기본: UIKit으로 구현
+- 예외: SwiftUI가 현저히 유리한 경우, 사용자 확인 후 부분적 하이브리드 허용
+- 판단 기준: "UIKit 대비 개발 효율 또는 UX 품질이 현저히 높을 때"
 
 ---
 
 ## 3. 아키텍처 경계(구현 관점)
 
-- `LibraryStore`: 권한/Fetch/Change observation, 정렬/필터 단일 소스
-- `AlbumStore`: 사용자 앨범/스마트 앨범 목록 및 앨범별 fetch
+- `PhotoLibraryService`: 권한/Fetch/Change observation, 정렬/필터 단일 소스
+- `AlbumService`: 사용자 앨범/스마트 앨범 목록 및 앨범별 fetch
 - `TimelineIndex`(MVP: All-only): `assetID ↔ indexPath`/앵커 점프 기반 마련(후속: Days/Months/Years 확장)
 - `ImagePipeline`: 요청/취소/코얼레싱/캐시/preheat 정책 단일화
 - `GridController`: 재사용/프리패치/멀티선택/핀치 줌/앵커 유지(이미지 요청은 `ImagePipeline`만)
-- `ViewerCoordinator`: 좌/우 탐색, 위 스와이프 삭제, 삭제 후 “이전 사진” 우선 이동
+- `ViewerCoordinator`: 좌/우 탐색, 위 스와이프 휴지통 이동, 이동 후 "이전 사진" 우선 전환
 
 ---
 
@@ -231,25 +235,77 @@ Photos 앱 내부 옵션은 비공개이므로 A/B 테스트로 "유사 체감" 
 
 ---
 
-## 6. 삭제(즉시) 구현 요건
+## 6. 삭제(앱 내 휴지통) 구현 요건
 
-- 삭제는 항상 라이브러리 삭제(`PHAssetChangeRequest.deleteAssets`)
-- 확인 UI 없음(즉시)
-- 삭제 가능: 그리드(단일/멀티) + 뷰어(위 스와이프)
-- 뷰어 삭제 후 이동: 이전 사진 우선 → 없으면 다음 → 없으면 그리드 복귀
+> iOS PhotoKit의 `deleteAssets()`는 시스템 확인 팝업을 강제로 표시합니다.
+> 빠른 정리 UX를 위해 **2단계 삭제**(앱 내 휴지통 → iOS 휴지통)를 도입합니다.
 
-### 6.1 권한 검증 (필수)
+### 6.1 2단계 삭제 아키텍처
+
+| 단계 | 동작 | 팝업 |
+|------|------|------|
+| 1단계: 앱 내 휴지통 | 로컬 상태만 변경 (PhotoKit 삭제 안함) | 없음 |
+| 2단계: 완전 삭제 | `PHAssetChangeRequest.deleteAssets` 호출 | iOS 시스템 팝업 (필수) |
+
+### 6.2 삭제 동작 정의
+
+| 항목 | 정책 |
+|------|------|
+| 삭제 위치 | 그리드(단일/멀티) + 뷰어(위 스와이프) |
+| 삭제 동작 | 앱 내 휴지통으로 이동 (PhotoKit 미삭제) |
+| 휴지통 사진 표시 | 그리드에서 **딤드(어둡게) 처리**하여 표시 |
+| 뷰어 이동 후 | 이전 사진 우선 → 없으면 다음 → 없으면 그리드 복귀 |
+| 복구 | 휴지통 앨범 → 뷰어 → 복구 버튼 |
+| 완전 삭제 | 휴지통 비우기/개별 완전삭제 → iOS "최근 삭제됨" |
+| 확인 팝업 | 앱 자체 확인 없음, **완전삭제 시 iOS 시스템 팝업만** (필수) |
+
+### 6.3 TrashStore 설계
 
 ```swift
-// PRD 5.3 삭제 안전장치
+// 앱 내 휴지통 상태 관리
+class TrashStore {
+    // 휴지통 상태 (파일 기반 저장 - 대용량 ID Set 대응)
+    private var trashedAssetIDs: Set<String>
+
+    // 1단계: 앱 내 휴지통 이동 (즉시, 팝업 없음)
+    func moveToTrash(assetIDs: [String])
+
+    // 복구 (즉시, 팝업 없음)
+    func restore(assetIDs: [String])
+
+    // 2단계: 완전 삭제 (iOS 시스템 팝업 표시됨)
+    func permanentlyDelete(assetIDs: [String]) async throws
+
+    // 휴지통 비우기 (iOS 시스템 팝업 표시됨)
+    func emptyTrash() async throws
+}
+```
+
+**저장 정책**:
+
+| 항목 | 정책 |
+|------|------|
+| 포맷 | JSON(Codable) 기본, 성능 이슈 시 바이너리 plist 전환 가능 |
+| 디바운스 | 삭제마다 즉시 저장 X, 배치/디바운스 적용 |
+| 스레드 | 백그라운드에서 파일 쓰기 (메인 스레드 블로킹 방지) |
+| 원자적 저장 | `Data.write(to:options:.atomic)` |
+| flush 시점 | 앱 종료/백그라운드 진입 시 |
+
+> **Note**: 성능 병목은 포맷(JSON vs plist)이 아니라 쓰기 방식. 디바운스/백그라운드 쓰기가 핵심.
+
+### 6.4 권한 검증 (필수)
+
+```swift
+// PRD 5.5 삭제 안전장치
 var canDelete: Bool {
-    PHPhotoLibrary.authorizationStatus(for: .readWrite) == .authorized
+    let status = PHPhotoLibrary.authorizationStatus(for: .readWrite)
+    return status == .authorized || status == .limited
 }
 ```
 
 | 권한 상태 | 동작 |
 |-----------|------|
-| `.authorized` (readWrite) | 삭제 UI 활성화 |
+| `.authorized` / `.limited` | 삭제 UI 활성화 |
 | 그 외 | 삭제 UI 비활성화 또는 권한 요청 안내 |
 
 ---
@@ -276,10 +332,10 @@ Sources/AppCore/
 ├── Services/
 │   ├── PhotoLibraryService.swift   # PhotoKit fetch/change observer
 │   ├── AlbumService.swift          # 앨범/스마트 앨범
-│   ├── ImagePipeline.swift         # 요청/취소/코얼레싱/캐시 정책
-│   └── DeletionService.swift       # 삭제 처리
+│   └── ImagePipeline.swift         # 요청/취소/코얼레싱/캐시 정책
 └── Stores/
-    ├── PermissionStore.swift
+    ├── TrashStore.swift            # 앱 내 휴지통 상태 관리
+    ├── PermissionStore.swift       # 권한 상태 관리
     └── AppStateStore.swift         # 백그라운드/메모리 관리
 ```
 
@@ -308,7 +364,7 @@ UI 레이어가 데이터 소스 구현에 의존하지 않도록 "드라이버"
 - `GridDataSourceDriver` 프로토콜
   - `assetID(at indexPath) -> String?`
   - `reloadVisibleRange(anchorAssetID: String?)`
-  - `applyDeletion(deletedAssetIDs: [String])`
+  - `applyTrashStateChange(trashedAssetIDs: Set<String>)` // 딤드 표시 업데이트
 
 구현:
 - **채택**: `BatchUpdatesDriver` — Spike 1에서 O(1) 스케일링 검증 완료
@@ -335,24 +391,30 @@ UI 레이어가 데이터 소스 구현에 의존하지 않도록 "드라이버"
 
 ### Step 1: Foundation
 
-1. 권한/Fetch/Change observation 파이프라인 구축(`LibraryStore`)
-2. 앨범 목록/앨범 fetch(`AlbumStore`)
+1. 권한/Fetch/Change observation 파이프라인 구축(`PhotoLibraryService`)
+2. 앨범 목록/앨범 fetch(`AlbumService`)
 3. `ImagePipeline` 기본 요청/취소/토큰 검증 규칙 구현(오표시 0의 기반)
-4. 삭제 처리(`DeletionService`) + 권한 게이트
+4. 휴지통 관리(`TrashStore`) + 권한 게이트
 
 ### Step 2: Grid (All Photos)
 
 1. `GridController` + 1/3/5열 레이아웃(기본은 3열)
 2. 프리패치/프리히트 연결(윈도우 파라미터는 임시값으로 시작하고 스파이크로 확정)
-3. 멀티선택 모드(Select) + 멀티 삭제
+3. 멀티선택 모드(Select) + 멀티 휴지통 이동
 
 ### Step 3: Viewer
 
 1. 좌/우 탐색
-2. 위 스와이프 삭제 + 삭제 후 “이전 사진” 우선 이동
+2. 위 스와이프 휴지통 이동 + 이동 후 "이전 사진" 우선 전환
 3. 전환/제스처 중 hitch 없는지 계측
 
-### Step 4: 게이트 검증 및 튜닝
+### Step 4: 휴지통 (Albums 탭)
+
+1. 휴지통 앨범 UI (Albums 탭 내)
+2. 복구/완전삭제 기능 (뷰어에서)
+3. 휴지통 비우기 (iOS 시스템 팝업 연동)
+
+### Step 5: 게이트 검증 및 튜닝
 
 1. ~~데이터 소스 검증~~ → **완료**: performBatchUpdates 채택 (Spike 1)
 2. preheat 정책 확정 및 파라미터 고정 (Gate 2)
@@ -368,5 +430,6 @@ UI 레이어가 데이터 소스 구현에 의존하지 않도록 "드라이버"
 | 1.0 | 2025-12-15 | 초안 작성 (prd4.md 기반) |
 | 2.0 | 2025-12-15 | prd5.md 연동: PRD 참조 변경, 윈도잉(C) 옵션 제거, 스파이크 구조를 Spike 0,1 + Gate 1~4로 재구성, 권한 검증 코드 추가 |
 | 2.1 | 2025-12-15 | Spike 1 재설계: "A/B 선택"에서 "기본안 검증 + Plan B 전환 조건" 구조로 변경, PHFetchResult 기반 설계 명시, 스냅샷 패턴이 핵심임을 강조 |
-| **2.2** | **2025-12-16** | **Spike 1 완료**: Plan B(performBatchUpdates) 채택 확정, Apple Hitch 기준(< 5 ms/s) 적용, Plan A vs B 비교 결과 추가 |
+| 2.2 | 2025-12-16 | Spike 1 완료: Plan B(performBatchUpdates) 채택 확정, Apple Hitch 기준(< 5 ms/s) 적용, Plan A vs B 비교 결과 추가 |
+| **3.0** | **2025-12-16** | **앱 내 휴지통**: 즉시 삭제 → 2단계 삭제(앱 내 휴지통 → iOS 휴지통), DeletionService → TrashService, 딤드 표시/복구 기능 추가, PRD 참조 prd6.md로 변경 |
 

@@ -297,12 +297,76 @@ Provider 패턴으로 Mock/PhotoKit 전환 가능하게 구현:
 - latency avg/p95/max (ms)
 - maxInFlight (동시 요청 최대치)
 
-## ⏳ 실기기 테스트 보류
+---
 
-| 항목 | 상태 | 비고 |
+## 실기기 테스트 결과 (38,241 photos, PhotoKit)
+
+### 테스트 환경
+
+| 항목 | 값 |
+|------|-----|
+| 기기 | iPhone 실기기 (60Hz) |
+| 사진 수 | 38,241장 |
+| Provider | PhotoKitImageProvider |
+| deliveryMode | .opportunistic |
+
+### 초기 결과 (scrollToItem 자동 스크롤)
+
+| 테스트 | hitch | 판정 |
+|--------|-------|------|
+| 자동 스크롤 (scrollToItem) | 50-70 ms/s | ❌ Critical |
+
+**원인 분석**:
+- `scrollToItem(animated:true)`은 비현실적인 테스트 방법
+- `.opportunistic` 모드의 다중 콜백 (degraded + final)
+- `scrollViewDidScroll`에서 `updateCachedAssets()` 과다 호출
+
+### 개선 후 결과
+
+| 테스트 방식 | hitch | req/s | 판정 |
+|-------------|-------|-------|------|
+| L1 Auto (2000 pt/s 등속) | 0.0 ms/s | ~12 | ✅ Good |
+| L2 Auto (flick 패턴) | 0.0 ms/s | ~52 | ✅ Good |
+| Manual (일반 스크롤) | 27.2 ms/s | ~57 | ❌ Critical |
+| Manual (극한 스크롤) | 158 ms/s | - | ❌ Critical |
+
+### 핵심 발견: Auto vs Manual 차이
+
+**프로그래매틱 스크롤 (Auto)**:
+- RunLoop 점유 없이 순차 실행
+- 이미지 디코딩이 프레임 사이에 완료
+- hitch 발생 안 함
+
+**터치 스크롤 (Manual)**:
+- RunLoop을 터치 이벤트가 점유
+- 이미지 디코딩과 이벤트 처리가 경쟁
+- "마이크로 스터터 누적" 패턴 발생
+- 개별 hitch는 작지만 누적되어 Critical
+
+### 적용한 개선사항
+
+| 개선 | 설명 | 효과 |
 |------|------|------|
-| PhotoKit Provider | **보류** | 실기기 + 실사진 라이브러리 필요 |
-| 50k 실사진 스크롤 | **보류** | Gate 2 PhotoKit 테스트 시 수행 |
+| 스로틀링 | `scrollViewDidScroll` 100ms 간격 제한 | 캐싱 업데이트 빈도 감소 |
+| 중복 제거 | `pendingIdentifiers: Set<String>` | 동일 셀 재요청 방지 |
+| 요청 취소 | `didEndDisplayingCell`에서 취소 | 불필요한 디코딩 감소 |
+| 품질 저하 | 스크롤 중 50% 썸네일 크기 | 디코딩 부하 감소 |
+
+### 결론 및 방향성
+
+1. **Auto 테스트의 한계**: 프로그래매틱 스크롤은 실제 터치 스크롤과 근본적으로 다름
+2. **핵심 전략**: 스크롤 중 품질 저하로 디코딩 부하 감소
+3. **후속 검증 필요**: 품질 저하 적용 후 Manual 테스트 재수행
+4. **추가 옵션**: 필요시 `maxInFlight` 조건부 제한 검토
+
+### 테스트 코드
+
+```
+Gate2ViewController.swift 주요 구현:
+- isScrolling 상태 추적 (isTracking/isDragging/isDecelerating)
+- lowQualityThumbnailSize (50% 크기)
+- upgradeVisibleCellsToHighQuality() (스크롤 정지 시 품질 업그레이드)
+```
 
 ---
 
@@ -319,6 +383,39 @@ Provider 패턴으로 Mock/PhotoKit 전환 가능하게 구현:
 
 **평균**: hitch 0.0 ms/s ✅ Good, drift 26px
 
+## Auto 테스트 결과 (10k)
+
+> 상세 결과: [spicktest2.md](spicktest2.md)
+
+### 테스트 조건
+
+- 전환 시퀀스: 3→1 → 1→3 → 3→5 → 5→3
+- 측정 위치: Top / Center / Bottom
+
+### 결과
+
+| 지표 | 값 | 비고 |
+|------|-----|------|
+| drift (avg/max) | **0px** | 앵커 완벽 유지 |
+| longest hitch | **16.7ms (1f)** | 1회 발생 |
+| dropped | 1 | - |
+| Apple(ms/s) max | 26.7~29.1 ms/s | 참고용 (짧은 구간 과대평가) |
+| Auto grade | **Warning** | - |
+
+### 측정 관점 (두 가지)
+
+1. **Apple Hitch Time Ratio (ms/s)**: 짧은 전환 구간에서 과대평가 가능 → 참고용
+2. **longest hitch (연속 드랍)**: 체감에 더 가까운 1차 지표
+
+### Gate 3 종료 기준
+
+| 지표 | 기준 | 현재 | 판정 |
+|------|------|------|------|
+| drift | max 20px 이내 | 0px | ✅ |
+| longest hitch | 2f 이상 반복 없을 것 | 1f 1회 | ✅ |
+
+**결론**: Warning 허용 기준으로 Gate 3 종료
+
 ## 확정 파라미터
 
 | 파라미터 | 값 | 비고 |
@@ -326,7 +423,7 @@ Provider 패턴으로 Mock/PhotoKit 전환 가능하게 구현:
 | zoomInThreshold | **0.85** | scale < 0.85 → 확대 (열 수 감소) |
 | zoomOutThreshold | **1.15** | scale > 1.15 → 축소 (열 수 증가) |
 | cooldown | **200ms** | 전환 간 최소 간격 |
-| 앵커 drift 허용 | **65px** | 1셀 이내 오차 허용 |
+| 앵커 drift 허용 | **0px** | Auto 테스트 실측값 (목표 20px 이내 달성) |
 
 ## 스케일링 분석
 
@@ -337,6 +434,12 @@ Provider 패턴으로 Mock/PhotoKit 전환 가능하게 구현:
 | 50k | 0.0 ms/s | 26px | ✅ |
 
 **결론**: CompositionalLayout이 가상화를 잘 처리하여 스케일 무관하게 일정한 성능
+
+## 후속 (Gate 4 권장사항)
+
+- ProMotion(120Hz) 실기기에서 longest hitch 확인
+- 이미지 로딩 포함 시 2f 이상 hitch 반복 여부 확인
+- 문제 발생 시 레이아웃 전환/애니메이션 방식 변경 검토
 
 ---
 
@@ -365,27 +468,107 @@ Provider 패턴으로 Mock/PhotoKit 전환 가능하게 구현:
 
 ---
 
-# 실기기 테스트 보류 목록
+# 실기기 테스트 현황
 
-| Gate | 테스트 항목 | 필요 조건 | 우선순위 |
-|------|------------|----------|----------|
-| Gate 2 | PhotoKit Provider 50k 스크롤 | 실기기 + 5만장 사진 | **높음** |
-| Gate 2 | 실사진 로딩 latency 측정 | 실기기 + 실사진 | **높음** |
-| Gate 4 | 실사진 + 120Hz 조합 테스트 | 실기기 + ProMotion | 중간 |
+| Gate | 테스트 항목 | 상태 | 결과 |
+|------|------------|------|------|
+| Gate 2 | PhotoKit Provider 스크롤 | ✅ 완료 | Manual Critical, 개선 진행 중 |
+| Gate 2 | 실사진 로딩 latency 측정 | ✅ 완료 | latency 측정 완료 |
+| Gate 4 | 실사진 + 120Hz 조합 테스트 | ⏳ 보류 | 실기기 + ProMotion 필요 |
 
-## 테스트 방법 (실기기 준비 후)
+## 테스트 방법
 
 1. Xcode에서 Spike1Test 앱을 실기기에 빌드
-2. Gate 2 → PhotoKit Provider 선택
-3. Test 버튼으로 자동 스크롤 테스트 실행
-4. 콘솔에서 결과 확인
+2. Gate 2 선택 (자동으로 PhotoKit Provider 사용)
+3. Manual: Start/Stop으로 수동 스크롤 측정
+4. Auto: L1(등속)/L2(flick) 자동 테스트
+5. 콘솔에서 결과 확인
 
 ```
-예상 출력:
-=== Gate 2: PhotoKit ===
-Items: 50000, Fetch time: XXms
+출력 예시:
+=== PhotoKit ===
+Items: 38241, Fetch time: XXms
 hitch: X.X ms/s [Good/Warning/Critical]
 req/s: XX | cancel/s: XX | complete/s: XX
 latency avg: XXms p95: XXms max: XXms
 maxInFlight: XX
 ```
+
+---
+
+# Gate 2 추가 테스트: 동영상 포함 (2024-12)
+
+## 테스트 배경
+
+기존 테스트에서 `PHAsset.fetchAssets(with: .image, options:)`로 **이미지만** fetch하여 테스트했으나, 실제 앱 스펙(FR-035)에서는 **동영상도 지원**해야 함.
+
+동영상 썸네일 생성 비용이 이미지보다 높을 수 있어 재테스트 필요.
+
+## 변경 사항
+
+```swift
+// 이전 (이미지만)
+fetchResult = PHAsset.fetchAssets(with: .image, options: options)
+
+// 변경 (전체 - 이미지 + 동영상 + Live Photo)
+fetchResult = PHAsset.fetchAssets(with: options)
+```
+
+## 테스트 환경
+
+- L1: 플릭+감속 패턴 6000 pt/s, 10초
+- L2: 플릭+감속 패턴 10000 pt/s, 10초 (극한 테스트)
+- Manual: 수동 스크롤
+
+## 테스트 결과
+
+### 기기 A (40,295 items - 이미지+동영상)
+
+| 테스트 | hitch | latency avg | latency p95 | 판정 |
+|--------|-------|-------------|-------------|------|
+| L1 (6000 pt/s) | 0.0 ms/s | 22.4ms | 94.5ms | ✅ Good |
+| L2 (10000 pt/s) | 0.0 ms/s | 64.6ms | 151.4ms | ✅ Good |
+| **Manual** | **17.4 ms/s** | 18.4ms | 56.7ms | ❌ Critical |
+
+### 기기 B (1,593 items - 동일 기종, 적은 사진)
+
+| 테스트 | hitch | latency avg | latency p95 | 판정 |
+|--------|-------|-------------|-------------|------|
+| L1 (6000 pt/s) | 0.0 ms/s | 25.9ms | 104.6ms | ✅ Good |
+| L2 (10000 pt/s) | 0.0 ms/s | 51.5ms | 138.8ms | ✅ Good |
+| **Manual** | **16.4 ms/s** | 25.4ms | 81.7ms | ❌ Critical |
+
+## 핵심 발견
+
+### 1. 동영상 포함 시 성능 영향
+
+| 항목 | 이전 (이미지만, 38k) | 현재 (동영상 포함, 40k) |
+|------|---------------------|------------------------|
+| Items | 38,241 | 40,295 (+5.4%) |
+| Manual hitch | 27.2 ms/s | 17.4 ms/s |
+| L1/L2 Auto | 0.0 ms/s | 0.0 ms/s |
+
+**동영상 추가로 인한 심각한 성능 저하 없음** (오히려 개선된 수치는 기기 차이일 가능성)
+
+### 2. Auto vs Manual 테스트 한계
+
+| 기기 | Items | L1/L2 | Manual |
+|------|-------|-------|--------|
+| 기기 A | 40,295 | 0.0 ✅ | 17.4 ❌ |
+| 기기 B | 1,593 | 0.0 ✅ | 16.4 ❌ |
+
+**사진 개수가 25배 차이나도 Manual 결과는 거의 동일** (17.4 vs 16.4 ms/s)
+
+### 3. Manual Critical의 원인
+
+**사진 개수 문제가 아님.** 원인은 **터치 이벤트 + 이미지 디코딩 경쟁**:
+
+- 프로그래매틱 스크롤 (Auto): RunLoop 점유 없음 → 디코딩이 프레임 사이에 완료 → hitch 없음
+- 터치 스크롤 (Manual): RunLoop을 터치 이벤트가 점유 → 디코딩과 경쟁 → "마이크로 스터터 누적"
+
+## 결론
+
+1. **동영상 포함해도 Auto 테스트 기준 통과** - 기존 전략(Plan B + 품질 저하) 유효
+2. **Auto 테스트는 hitch 측정에 한계** - latency/throughput 측정 용도로 활용
+3. **Manual Critical은 구조적 문제** - 추가 개선 필요 (더 작은 썸네일, 디코딩 스로틀링 강화 등)
+4. **실제 앱에서는 사용자 터치 패턴에 따라 체감 달라짐** - Manual 결과가 worst case 참고용
