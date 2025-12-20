@@ -125,6 +125,12 @@ public final class ImagePipeline: ImagePipelineProtocol {
         return options
     }()
 
+    /// [DEBUG] 이미지 completion 호출 횟수
+    private var imageCompletionCount: Int = 0
+
+    /// [DEBUG] 로딩 시작 시간 (첫 requestImage 호출 시점)
+    private var debugStartTime: CFTimeInterval = 0
+
     // MARK: - Initialization
 
     /// 비공개 초기화 (싱글톤)
@@ -162,6 +168,11 @@ public final class ImagePipeline: ImagePipelineProtocol {
     ) -> RequestToken {
         let assetID = asset.localIdentifier
 
+        // [DEBUG] 첫 요청 시 시작 시간 기록
+        if debugStartTime == 0 {
+            debugStartTime = CACurrentMediaTime()
+        }
+
         // 썸네일 옵션 사용 (빠른 로딩)
         // 이미지 요청
         let requestID = imageManager.requestImage(
@@ -169,12 +180,23 @@ public final class ImagePipeline: ImagePipelineProtocol {
             targetSize: targetSize,
             contentMode: contentMode,
             options: thumbnailOptions
-        ) { image, _ in
+        ) { [weak self] image, _ in
             // 메인 스레드에서 콜백
             let token = RequestToken(requestID: PHImageRequestID(0), assetID: assetID)
 
             // MVP에서는 저해상도도 전달하여 빠른 표시 지원
             DispatchQueue.main.async {
+                // [DEBUG] completion 호출 카운트
+                if let self = self {
+                    self.imageCompletionCount += 1
+                    let sinceStart = (CACurrentMediaTime() - self.debugStartTime) * 1000
+
+                    // 매 50번째에 로그
+                    if self.imageCompletionCount % 50 == 0 && sinceStart < 3000 {
+                        print("[Timing] imageCompletion 누적: \(self.imageCompletionCount)회, 현재: +\(String(format: "%.1f", sinceStart))ms")
+                    }
+                }
+
                 completion(image, token)
             }
         }
@@ -197,7 +219,14 @@ public final class ImagePipeline: ImagePipelineProtocol {
 
     /// 프리히트 시작
     public func preheat(assetIDs: [String], targetSize: CGSize) {
+        // [DEBUG] preheat 시간 측정
+        let preheatStart = CACurrentMediaTime()
+
         let assets = assetIDs.compactMap { fetchAsset(for: $0) }
+
+        let fetchEnd = CACurrentMediaTime()
+        let fetchMs = (fetchEnd - preheatStart) * 1000
+
         guard !assets.isEmpty else { return }
 
         imageManager.startCachingImages(
@@ -206,6 +235,14 @@ public final class ImagePipeline: ImagePipelineProtocol {
             contentMode: .aspectFill,
             options: thumbnailOptions
         )
+
+        let preheatEnd = CACurrentMediaTime()
+        let totalMs = (preheatEnd - preheatStart) * 1000
+
+        // 10ms 이상 걸린 경우만 로그
+        if totalMs > 10 {
+            print("[Timing] preheat: \(assetIDs.count)개 → fetch \(String(format: "%.1f", fetchMs))ms, 총 \(String(format: "%.1f", totalMs))ms, main=\(Thread.isMainThread)")
+        }
     }
 
     /// 프리히트 중지

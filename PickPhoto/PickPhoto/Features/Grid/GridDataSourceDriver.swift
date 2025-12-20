@@ -154,9 +154,17 @@ final class GridDataSourceDriver: NSObject, GridDataSourceDriverProtocol {
 
     /// 데이터 리로드
     func reloadData(completion: (() -> Void)? = nil) {
+        // [Timing] A) fetch 시작
+        let fetchStart = CACurrentMediaTime()
+
         fetchResult = photoLibraryService.fetchAllPhotos()
+
+        // [Timing] A) fetch 완료
+        let fetchEnd = CACurrentMediaTime()
+        let fetchMs = (fetchEnd - fetchStart) * 1000
+        print("[Timing] A) Fetch: \(String(format: "%.1f", fetchMs))ms (\(count) items)")
+
         invalidateCache()
-        print("[GridDataSourceDriver] Reloaded data: \(count) items")
         completion?()
     }
 

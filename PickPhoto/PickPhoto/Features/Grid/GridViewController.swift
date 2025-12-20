@@ -184,6 +184,32 @@ final class GridViewController: UIViewController {
         return remainder == 0 ? 0 : (columns - remainder)
     }
 
+    // MARK: - Timing (초기 로딩 측정용)
+
+    /// 로딩 시작 시간 (viewDidLoad 시점)
+    private var loadStartTime: CFTimeInterval = 0
+
+    /// 첫 레이아웃 완료 여부
+    private var hasLoggedFirstLayout: Bool = false
+
+    /// 첫 셀 표시 완료 여부
+    private var hasLoggedFirstCellDisplay: Bool = false
+
+    /// [DEBUG] cellForItemAt 호출 횟수 (초기 3초간)
+    private var cellForItemAtCount: Int = 0
+
+    /// [DEBUG] cellForItemAt 누적 시간 (초기 3초간)
+    private var cellForItemAtTotalTime: CFTimeInterval = 0
+
+    /// [DEBUG] 이미지 completion 호출 횟수 (초기 3초간)
+    private var imageCompletionCount: Int = 0
+
+    /// [DEBUG] cellForItemAt 내부 구간별 누적 시간
+    private var cellDequeueTime: CFTimeInterval = 0
+    private var cellAssetTime: CFTimeInterval = 0
+    private var cellTrashTime: CFTimeInterval = 0
+    private var cellConfigureTime: CFTimeInterval = 0
+
     // MARK: - Initialization
 
     /// 초기화
@@ -213,6 +239,11 @@ final class GridViewController: UIViewController {
 
     override func viewDidLoad() {
         super.viewDidLoad()
+
+        // [Timing] 로딩 시작 시간 기록
+        loadStartTime = CACurrentMediaTime()
+        print("[Timing] === 초기 로딩 시작 ===")
+
         setupUI()
         setupGestures()
         setupObservers()
@@ -230,9 +261,25 @@ final class GridViewController: UIViewController {
         }
     }
 
+    /// 초기 로드 완료 여부 (viewWillAppear 중복 reloadData 방지)
+    private var hasInitiallyLoaded: Bool = false
+
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
-        // 화면 표시 시 변경사항 반영
+
+        // [DEBUG] viewWillAppear 호출 시점
+        let vwaTime = CACurrentMediaTime()
+        let vwaMs = loadStartTime > 0 ? (vwaTime - loadStartTime) * 1000 : -1
+
+        // 초기 진입 시에는 loadData()에서 이미 reloadData() 호출했으므로 스킵
+        if !hasInitiallyLoaded {
+            hasInitiallyLoaded = true
+            print("[Timing] viewWillAppear: +\(String(format: "%.1f", vwaMs))ms (초기 진입 - reloadData 스킵)")
+            return
+        }
+
+        print("[Timing] viewWillAppear.reloadData: +\(String(format: "%.1f", vwaMs))ms")
+        // 화면 표시 시 변경사항 반영 (탭 전환 등)
         collectionView.reloadData()
     }
 
@@ -242,6 +289,14 @@ final class GridViewController: UIViewController {
         updateCellSize()
         // T027-1f: contentInset 업데이트 (플로팅 UI 높이 반영)
         updateContentInset()
+
+        // [Timing] C) 첫 레이아웃 완료 (1회만)
+        if !hasLoggedFirstLayout && loadStartTime > 0 {
+            hasLoggedFirstLayout = true
+            let layoutTime = CACurrentMediaTime()
+            let sinceStart = (layoutTime - loadStartTime) * 1000
+            print("[Timing] C) 첫 레이아웃 완료: +\(String(format: "%.1f", sinceStart))ms")
+        }
     }
 
     override func viewSafeAreaInsetsDidChange() {
@@ -318,15 +373,38 @@ final class GridViewController: UIViewController {
             // 빈 상태 업데이트
             self.updateEmptyState()
 
+            // [Timing] B) reloadData 호출 시점
+            let reloadStart = CACurrentMediaTime()
+            let sinceStart = (reloadStart - self.loadStartTime) * 1000
+            print("[Timing] B) reloadData 호출: +\(String(format: "%.1f", sinceStart))ms")
+
             // 컬렉션 뷰 리로드
             self.collectionView.reloadData()
+
+            // [Timing] B) reloadData 완료 (호출 자체는 즉시 리턴)
+            let reloadEnd = CACurrentMediaTime()
+            let reloadMs = (reloadEnd - reloadStart) * 1000
+            print("[Timing] B) reloadData 완료: \(String(format: "%.1f", reloadMs))ms (호출만)")
 
             // FR-003: 첫 진입 시 맨 아래(최신 사진)로 스크롤
             if !self.hasScrolledToBottom && self.dataSourceDriver.count > 0 {
                 self.hasScrolledToBottom = true
 
+                // [Timing] E0) main.async 스케줄 시점
+                let e0Time = CACurrentMediaTime()
+                let e0Ms = (e0Time - self.loadStartTime) * 1000
+                print("[Timing] E0) main.async 스케줄: +\(String(format: "%.1f", e0Ms))ms")
+
                 // 레이아웃이 완료된 후 스크롤 (다음 런루프에서 실행)
-                DispatchQueue.main.async {
+                DispatchQueue.main.async { [weak self] in
+                    guard let self = self else { return }
+
+                    // [Timing] E1) main.async 블록 실행 시작
+                    let e1Time = CACurrentMediaTime()
+                    let e1Ms = (e1Time - self.loadStartTime) * 1000
+                    let queueWaitMs = (e1Time - e0Time) * 1000
+                    print("[Timing] E1) main.async 실행 시작: +\(String(format: "%.1f", e1Ms))ms (큐 대기: \(String(format: "%.1f", queueWaitMs))ms)")
+
                     let lastIndex = self.dataSourceDriver.count - 1
                     let lastIndexPath = IndexPath(item: lastIndex, section: 0)
                     self.collectionView.scrollToItem(
@@ -334,7 +412,17 @@ final class GridViewController: UIViewController {
                         at: .bottom,
                         animated: false
                     )
-                    print("[GridViewController] Scrolled to bottom (FR-003): index \(lastIndex)")
+
+                    // [Timing] E2) scrollToItem 완료 시점
+                    let e2Time = CACurrentMediaTime()
+                    let e2Ms = (e2Time - self.loadStartTime) * 1000
+                    let scrollMs = (e2Time - e1Time) * 1000
+                    print("[Timing] E2) scrollToItem 완료: +\(String(format: "%.1f", e2Ms))ms (스크롤: \(String(format: "%.1f", scrollMs))ms)")
+                    print("[Timing] === 초기 로딩 완료 ===")
+
+                    // [DEBUG] 최종 통계 출력
+                    print("[Timing] 최종 통계: cellForItemAt \(self.cellForItemAtCount)회, 총 \(String(format: "%.1f", self.cellForItemAtTotalTime))ms")
+                    print("[Timing] 구간별: dequeue=\(String(format: "%.1f", self.cellDequeueTime*1000))ms, asset=\(String(format: "%.1f", self.cellAssetTime*1000))ms, trash=\(String(format: "%.1f", self.cellTrashTime*1000))ms, configure=\(String(format: "%.1f", self.cellConfigureTime*1000))ms")
                 }
             }
 
@@ -611,12 +699,23 @@ extension GridViewController: UICollectionViewDataSource {
     }
 
     func collectionView(_ collectionView: UICollectionView, cellForItemAt indexPath: IndexPath) -> UICollectionViewCell {
+        // [DEBUG] cellForItemAt 시간 측정 (초기 3초간)
+        let cellStart = CACurrentMediaTime()
+        let sinceStart = loadStartTime > 0 ? (cellStart - loadStartTime) * 1000 : -1
+        let isInitialPeriod = sinceStart >= 0 && sinceStart < 3000
+
+        // [DEBUG] 구간별 시간 측정용
+        var t0, t1, t2, t3, t4: CFTimeInterval
+        t0 = cellStart
+
         guard let cell = collectionView.dequeueReusableCell(
             withReuseIdentifier: PhotoCell.reuseIdentifier,
             for: indexPath
         ) as? PhotoCell else {
             return UICollectionViewCell()
         }
+
+        t1 = CACurrentMediaTime() // dequeue 완료
 
         // T027-2: 맨 위 행 빈 셀 처리
         let padding = paddingCellCount
@@ -634,7 +733,11 @@ extension GridViewController: UICollectionViewDataSource {
             return cell
         }
 
+        t2 = CACurrentMediaTime() // asset 조회 완료
+
         let isTrashed = trashStore.isTrashed(asset.localIdentifier)
+
+        t3 = CACurrentMediaTime() // trash 체크 완료
 
         // 셀 설정 (PHAsset 직접 전달 - 성능 최적화)
         cell.configure(
@@ -642,6 +745,25 @@ extension GridViewController: UICollectionViewDataSource {
             isTrashed: isTrashed,
             targetSize: thumbnailSize()
         )
+
+        t4 = CACurrentMediaTime() // configure 완료
+
+        // [DEBUG] 구간별 시간 누적
+        if isInitialPeriod {
+            cellDequeueTime += (t1 - t0)
+            cellAssetTime += (t2 - t1)
+            cellTrashTime += (t3 - t2)
+            cellConfigureTime += (t4 - t3)
+
+            let cellMs = (t4 - t0) * 1000
+            cellForItemAtCount += 1
+            cellForItemAtTotalTime += cellMs
+
+            // 매 10번째에 구간별 로그 출력
+            if cellForItemAtCount % 10 == 0 {
+                print("[Timing] cellForItemAt #\(cellForItemAtCount): dequeue=\(String(format: "%.1f", cellDequeueTime*1000))ms, asset=\(String(format: "%.1f", cellAssetTime*1000))ms, trash=\(String(format: "%.1f", cellTrashTime*1000))ms, configure=\(String(format: "%.1f", cellConfigureTime*1000))ms")
+            }
+        }
 
         // Select 모드일 때 선택 상태 표시 (T039, T045)
         if isSelectMode {
@@ -658,6 +780,16 @@ extension GridViewController: UICollectionViewDataSource {
 // MARK: - UICollectionViewDelegate
 
 extension GridViewController: UICollectionViewDelegate {
+
+    // [Timing] D) 첫 셀 표시 완료
+    func collectionView(_ collectionView: UICollectionView, willDisplay cell: UICollectionViewCell, forItemAt indexPath: IndexPath) {
+        if !hasLoggedFirstCellDisplay && loadStartTime > 0 {
+            hasLoggedFirstCellDisplay = true
+            let displayTime = CACurrentMediaTime()
+            let sinceStart = (displayTime - loadStartTime) * 1000
+            print("[Timing] D) 첫 셀 표시: +\(String(format: "%.1f", sinceStart))ms (indexPath: \(indexPath))")
+        }
+    }
 
     func collectionView(_ collectionView: UICollectionView, didSelectItemAt indexPath: IndexPath) {
         // T027-2: 빈 셀 탭 무시

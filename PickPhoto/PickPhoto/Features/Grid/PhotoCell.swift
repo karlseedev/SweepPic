@@ -25,6 +25,18 @@ final class PhotoCell: UICollectionViewCell {
     /// 딤드 오버레이 투명도 (FR-008: 65% opacity)
     private static let dimmedOverlayAlpha: CGFloat = 0.65
 
+    // MARK: - Debug Timing (static)
+
+    /// [DEBUG] requestImage 호출 횟수
+    static var requestImageCount: Int = 0
+    /// [DEBUG] requestImage 호출 누적 시간
+    static var requestImageTotalTime: Double = 0
+
+    /// [DEBUG] imageApply 호출 횟수
+    static var imageApplyCount: Int = 0
+    /// [DEBUG] imageApply 누적 시간
+    static var imageApplyTotalTime: Double = 0
+
     // MARK: - UI Components
 
     /// 썸네일 이미지 뷰
@@ -281,6 +293,9 @@ final class PhotoCell: UICollectionViewCell {
         let duration: TimeInterval? = mediaType == .video ? asset.duration : nil
         updateVideoBadge(mediaType: mediaType, duration: duration)
 
+        // [DEBUG] A) requestImage 호출 전후 시간 측정
+        let reqStart = CACurrentMediaTime()
+
         // 이미지 요청 (PHAsset 직접 전달 - 성능 최적화)
         currentRequestToken = ImagePipeline.shared.requestImage(
             for: asset,
@@ -296,8 +311,36 @@ final class PhotoCell: UICollectionViewCell {
                 return
             }
 
+            // [DEBUG] B) 이미지 적용 시간 측정
+            let applyStart = CACurrentMediaTime()
+
             // 이미지 설정
             self.imageView.image = image
+
+            let applyEnd = CACurrentMediaTime()
+            let applyMs = (applyEnd - applyStart) * 1000
+
+            // 누적 카운트 (static으로 공유)
+            PhotoCell.imageApplyCount += 1
+            PhotoCell.imageApplyTotalTime += applyMs
+
+            // 매 10번째에 로그
+            if PhotoCell.imageApplyCount % 10 == 0 {
+                print("[Timing] imageApply 누적: \(PhotoCell.imageApplyCount)회, 총 \(String(format: "%.1f", PhotoCell.imageApplyTotalTime))ms, 평균 \(String(format: "%.2f", PhotoCell.imageApplyTotalTime / Double(PhotoCell.imageApplyCount)))ms")
+            }
+        }
+
+        // [DEBUG] A) requestImage 호출 완료 시점
+        let reqEnd = CACurrentMediaTime()
+        let reqMs = (reqEnd - reqStart) * 1000
+
+        // 누적 카운트
+        PhotoCell.requestImageCount += 1
+        PhotoCell.requestImageTotalTime += reqMs
+
+        // 매 10번째에 로그
+        if PhotoCell.requestImageCount % 10 == 0 {
+            print("[Timing] requestImage 호출 누적: \(PhotoCell.requestImageCount)회, 총 \(String(format: "%.1f", PhotoCell.requestImageTotalTime))ms, 평균 \(String(format: "%.2f", PhotoCell.requestImageTotalTime / Double(PhotoCell.requestImageCount)))ms")
         }
     }
 
