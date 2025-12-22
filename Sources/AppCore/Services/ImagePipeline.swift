@@ -167,6 +167,119 @@ public final class ImagePipeline: ImagePipelineProtocol {
     private static var bgThreadPhotoKitCallCount = 0
     #endif
 
+    // MARK: - Pipeline Statistics (파이프라인 지표)
+
+    /// 통계 시작 시간
+    private var statsStartTime: CFTimeInterval = CACurrentMediaTime()
+
+    /// 통계 락
+    private let statsLock = NSLock()
+
+    /// requestImage 호출 횟수
+    private var requestCount: Int = 0
+
+    /// cancel 호출 횟수
+    private var cancelCount: Int = 0
+
+    /// completion 호출 횟수 (isDegraded=false만)
+    private var completeCount: Int = 0
+
+    /// isDegraded=true completion 횟수
+    private var degradedCount: Int = 0
+
+    /// 현재 진행 중인 요청 수 (maxInFlight 추적)
+    private var inFlightCount: Int = 0
+
+    /// 최대 동시 요청 수 (세션 중 최대값)
+    private var maxInFlightCount: Int = 0
+
+    /// completion latency 배열 (avg/p95/max 계산용)
+    private var latencies: [Double] = []
+
+    /// 요청 시작 시간 저장 (assetID → startTime)
+    private var requestStartTimes: [String: CFTimeInterval] = [:]
+
+    /// preheat 호출 횟수
+    private var preheatCount: Int = 0
+
+    /// preheat 총 에셋 수
+    private var preheatAssetCount: Int = 0
+
+    /// 통계 리셋 (앱 시작 시 호출)
+    public func resetStats() {
+        statsLock.withLock {
+            statsStartTime = CACurrentMediaTime()
+            requestCount = 0
+            cancelCount = 0
+            completeCount = 0
+            degradedCount = 0
+            inFlightCount = 0
+            maxInFlightCount = 0
+            latencies.removeAll()
+            requestStartTimes.removeAll()
+            preheatCount = 0
+            preheatAssetCount = 0
+        }
+    }
+
+    /// 파이프라인 설정값 로그 출력 (전/후 비교용)
+    /// 앱 시작 시 1회 호출하여 설정값 기록
+    public func logConfig() {
+        // 현재 deliveryMode 확인
+        let deliveryModeStr: String
+        switch thumbnailOptions.deliveryMode {
+        case .opportunistic:
+            deliveryModeStr = "opportunistic"
+        case .highQualityFormat:
+            deliveryModeStr = "highQualityFormat"
+        case .fastFormat:
+            deliveryModeStr = "fastFormat"
+        @unknown default:
+            deliveryModeStr = "unknown"
+        }
+
+        // cancelPolicy: 현재 prepareForReuse만 사용 (didEndDisplaying 미사용)
+        // R2Recovery: 현재 미구현
+        let cancelPolicy = "prepareForReuse"  // TODO: Gate2 적용 시 didEndDisplaying 추가
+        let r2Recovery = "disabled"           // TODO: Gate2 적용 시 enabled로 변경
+
+        FileLogger.log("[Config] deliveryMode: \(deliveryModeStr)")
+        FileLogger.log("[Config] cancelPolicy: \(cancelPolicy)")
+        FileLogger.log("[Config] R2Recovery: \(r2Recovery)")
+    }
+
+    /// 통계 로그 출력
+    public func logStats(label: String = "Pipeline Stats") {
+        statsLock.lock()
+        let elapsed = (CACurrentMediaTime() - statsStartTime)
+        let reqCount = requestCount
+        let canCount = cancelCount
+        let compCount = completeCount
+        let degCount = degradedCount
+        let maxInFlight = maxInFlightCount
+        let latencyCopy = latencies
+        let phCount = preheatCount
+        let phAssetCount = preheatAssetCount
+        statsLock.unlock()
+
+        // latency 계산
+        let avgLatency = latencyCopy.isEmpty ? 0 : latencyCopy.reduce(0, +) / Double(latencyCopy.count)
+        let sortedLatencies = latencyCopy.sorted()
+        let p95Index = sortedLatencies.isEmpty ? 0 : Int(Double(sortedLatencies.count) * 0.95)
+        let p95Latency = sortedLatencies.isEmpty ? 0 : sortedLatencies[min(p95Index, sortedLatencies.count - 1)]
+        let maxLatency = sortedLatencies.last ?? 0
+
+        // 초당 비율
+        let reqPerSec = elapsed > 0 ? Double(reqCount) / elapsed : 0
+        let canPerSec = elapsed > 0 ? Double(canCount) / elapsed : 0
+        let compPerSec = elapsed > 0 ? Double(compCount) / elapsed : 0
+
+        FileLogger.log("[\(label)] req: \(reqCount) (\(String(format: "%.1f", reqPerSec))/s), cancel: \(canCount) (\(String(format: "%.1f", canPerSec))/s), complete: \(compCount) (\(String(format: "%.1f", compPerSec))/s)")
+        FileLogger.log("[\(label)] degraded: \(degCount), maxInFlight: \(maxInFlight)")
+        FileLogger.log("[\(label)] latency avg: \(String(format: "%.1f", avgLatency))ms, p95: \(String(format: "%.1f", p95Latency))ms, max: \(String(format: "%.1f", maxLatency))ms")
+        FileLogger.log("[\(label)] preheat: \(phCount)회, 총 \(phAssetCount)개 에셋")
+    }
+
     // MARK: - Private Properties
 
     /// PHCachingImageManager 인스턴스
@@ -229,10 +342,35 @@ public final class ImagePipeline: ImagePipelineProtocol {
     ) -> Cancellable {
 
         let cancellable = CancellableToken()
+        let assetID = asset.localIdentifier
+        let requestStartTime = CACurrentMediaTime()
+
+        // [Stats] 요청 카운터 증가
+        statsLock.lock()
+        requestCount += 1
+        inFlightCount += 1
+        if inFlightCount > maxInFlightCount {
+            maxInFlightCount = inFlightCount
+        }
+        requestStartTimes[assetID] = requestStartTime
+        let currentReqCount = requestCount
+        statsLock.unlock()
+
+        // [Stats] 10/20/30회마다 로그
+        if currentReqCount == 10 || currentReqCount == 20 || currentReqCount == 30 {
+            let elapsed = (CACurrentMediaTime() - statsStartTime) * 1000
+            FileLogger.log("[Pipeline] requestImage #\(currentReqCount): +\(String(format: "%.1f", elapsed))ms")
+        }
 
         // 백그라운드 OperationQueue에서 PhotoKit 호출
         requestQueue.addOperation { [weak self] in
-            guard let self = self, !cancellable.isCancelled else { return }
+            guard let self = self, !cancellable.isCancelled else {
+                // [Stats] 취소된 경우 inFlight 감소
+                self?.statsLock.lock()
+                self?.inFlightCount -= 1
+                self?.statsLock.unlock()
+                return
+            }
 
             // [가드레일] 메인 스레드에서 PhotoKit 호출 감지
             #if DEBUG
@@ -250,12 +388,38 @@ public final class ImagePipeline: ImagePipelineProtocol {
                 targetSize: targetSize,
                 contentMode: contentMode,
                 options: self.thumbnailOptions
-            ) { image, info in
+            ) { [weak self] image, info in
+                guard let self = self else { return }
+
                 // 취소된 경우 무시
                 guard !cancellable.isCancelled else { return }
 
                 // isDegraded 확인 (저해상도 이미지 여부)
                 let isDegraded = (info?[PHImageResultIsDegradedKey] as? Bool) ?? false
+
+                // [Stats] completion 통계
+                self.statsLock.lock()
+                if isDegraded {
+                    self.degradedCount += 1
+                } else {
+                    self.completeCount += 1
+                    self.inFlightCount -= 1
+
+                    // latency 계산 (isDegraded=false일 때만)
+                    if let startTime = self.requestStartTimes[assetID] {
+                        let latency = (CACurrentMediaTime() - startTime) * 1000
+                        self.latencies.append(latency)
+                        self.requestStartTimes.removeValue(forKey: assetID)
+                    }
+                }
+                let currentCompleteCount = self.completeCount + self.degradedCount
+                statsLock.unlock()
+
+                // [Stats] 50회 도달 시점 로그
+                if currentCompleteCount == 50 {
+                    let elapsed = (CACurrentMediaTime() - self.statsStartTime) * 1000
+                    FileLogger.log("[Pipeline] completion #50 도달: +\(String(format: "%.1f", elapsed))ms")
+                }
 
                 // 메인 스레드에서 completion 호출
                 DispatchQueue.main.async {
@@ -268,6 +432,12 @@ public final class ImagePipeline: ImagePipelineProtocol {
             // - cancel()이 먼저 호출됐으면 즉시 취소 실행
             cancellable.setOnCancel { [weak self] in
                 self?.imageManager.cancelImageRequest(requestID)
+
+                // [Stats] 취소 카운터
+                self?.statsLock.lock()
+                self?.cancelCount += 1
+                self?.inFlightCount -= 1
+                self?.statsLock.unlock()
             }
         }
 
@@ -283,6 +453,12 @@ public final class ImagePipeline: ImagePipelineProtocol {
     /// - 백그라운드에서 실행
     public func preheatAssets(_ assets: [PHAsset], targetSize: CGSize) {
         guard !assets.isEmpty else { return }
+
+        // [Stats] preheat 통계
+        statsLock.lock()
+        preheatCount += 1
+        preheatAssetCount += assets.count
+        statsLock.unlock()
 
         // [가드레일] 메인 스레드에서 호출 시 경고
         #if DEBUG

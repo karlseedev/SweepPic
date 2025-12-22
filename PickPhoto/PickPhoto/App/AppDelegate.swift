@@ -7,6 +7,7 @@
 // - 백그라운드 전환 처리
 
 import UIKit
+import Photos
 import AppCore
 
 /// PickPhoto 앱의 AppDelegate
@@ -28,7 +29,56 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         // AppCore 초기화 로그
         print("[AppDelegate] PickPhoto started with AppCore \(AppCore.version)")
 
+        // [E) 환경 정보 로그] 전/후 비교용 메타 데이터
+        logEnvironmentInfo()
+
+        // [A) 파이프라인 설정값 로그] 전/후 비교용
+        ImagePipeline.shared.logConfig()
+
+        // 파이프라인 통계 리셋 (앱 시작 시)
+        ImagePipeline.shared.resetStats()
+
         return true
+    }
+
+    // MARK: - Environment Info Logging
+
+    /// 환경 정보 로그 (전/후 비교용 메타 데이터)
+    /// - Build configuration (Debug/Release)
+    /// - Low Power Mode on/off
+    /// - Photos 권한 상태 (authorized/limited/denied/notDetermined)
+    private func logEnvironmentInfo() {
+        // Build configuration
+        #if DEBUG
+        let buildConfig = "Debug"
+        #else
+        let buildConfig = "Release"
+        #endif
+
+        // Low Power Mode
+        let isLowPowerMode = ProcessInfo.processInfo.isLowPowerModeEnabled
+
+        // Photos 권한 상태
+        let photoAuthStatus: String
+        let status = PHPhotoLibrary.authorizationStatus(for: .readWrite)
+        switch status {
+        case .authorized:
+            photoAuthStatus = "authorized"
+        case .limited:
+            photoAuthStatus = "limited"
+        case .denied:
+            photoAuthStatus = "denied"
+        case .restricted:
+            photoAuthStatus = "restricted"
+        case .notDetermined:
+            photoAuthStatus = "notDetermined"
+        @unknown default:
+            photoAuthStatus = "unknown"
+        }
+
+        FileLogger.log("[Env] Build: \(buildConfig)")
+        FileLogger.log("[Env] LowPowerMode: \(isLowPowerMode ? "ON" : "OFF")")
+        FileLogger.log("[Env] PhotosAuth: \(photoAuthStatus)")
     }
 
     // MARK: - UISceneSession Lifecycle

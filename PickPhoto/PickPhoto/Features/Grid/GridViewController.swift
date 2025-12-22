@@ -232,6 +232,20 @@ final class GridViewController: UIViewController {
     private var cellTrashTime: CFTimeInterval = 0
     private var cellConfigureTime: CFTimeInterval = 0
 
+    // MARK: - Scroll Quality Monitoring (B: HitchMonitor)
+
+    /// 스크롤 히치 모니터 (Apple 방식)
+    private let hitchMonitor = HitchMonitor()
+
+    /// 첫 스크롤 완료 여부 (First Scroll 집계용)
+    private var hasCompletedFirstScroll: Bool = false
+
+    /// 첫 스크롤 시작 시간
+    private var firstScrollStartTime: CFTimeInterval = 0
+
+    /// 현재 스크롤 세션의 시작 시간 (구간 구분용)
+    private var currentScrollStartTime: CFTimeInterval = 0
+
     // MARK: - Initialization
 
     /// 초기화
@@ -688,6 +702,16 @@ final class GridViewController: UIViewController {
 
         // 스크롤 종료 타이머 취소
         scrollEndTimer?.invalidate()
+
+        // [B) HitchMonitor] 스크롤 시작 시 모니터링 시작
+        currentScrollStartTime = CACurrentMediaTime()
+        hitchMonitor.start()
+
+        // 첫 스크롤 시작 시간 기록
+        if !hasCompletedFirstScroll && firstScrollStartTime == 0 {
+            firstScrollStartTime = currentScrollStartTime
+            FileLogger.log("[Scroll] First scroll 시작: +\(String(format: "%.1f", (currentScrollStartTime - loadStartTime) * 1000))ms")
+        }
     }
 
     /// 스크롤 종료
@@ -695,12 +719,38 @@ final class GridViewController: UIViewController {
         // 디바운스 (100ms 후 실제 종료로 간주)
         scrollEndTimer?.invalidate()
         scrollEndTimer = Timer.scheduledTimer(withTimeInterval: 0.1, repeats: false) { [weak self] _ in
-            self?.isScrolling = false
+            guard let self = self else { return }
+            self.isScrolling = false
+
+            // [B) HitchMonitor] 스크롤 종료 시 결과 로그
+            let hitchResult = self.hitchMonitor.stop()
+            self.logScrollQuality(result: hitchResult)
+
+            // [C) First Scroll 집계] 첫 스크롤 완료 시 파이프라인 통계 로그
+            if !self.hasCompletedFirstScroll {
+                self.hasCompletedFirstScroll = true
+                let scrollDuration = (CACurrentMediaTime() - self.firstScrollStartTime) * 1000
+                FileLogger.log("[Scroll] First scroll 완료: \(String(format: "%.1f", scrollDuration))ms 동안 스크롤")
+
+                // 파이프라인 통계 (First Scroll 구간)
+                ImagePipeline.shared.logStats(label: "First Scroll")
+            }
 
             // Note: PHImageRequestOptions.deliveryMode = .opportunistic 모드에서는
             // 저해상도 → 고해상도가 자동으로 전달되므로 별도 리로드 불필요
             // reloadItems 호출 시 prepareForReuse()가 호출되어 이미지가 깜빡거림
         }
+    }
+
+    /// 스크롤 품질 로그 (HitchMonitor 결과)
+    /// - Parameter result: HitchResult
+    private func logScrollQuality(result: HitchResult) {
+        // 스크롤 유형 결정
+        // - 첫 스크롤이 아직 완료되지 않았으면 "L1 First"
+        // - 완료되었으면 "L2 Steady"
+        let scrollType = hasCompletedFirstScroll ? "L2 Steady" : "L1 First"
+
+        FileLogger.log("[Hitch] \(scrollType): \(result.formatted())")
     }
 
     // MARK: - Initial Display (B+A 조합 v2)
@@ -713,10 +763,10 @@ final class GridViewController: UIViewController {
         guard !hasFinishedInitialDisplay else { return }
         hasFinishedInitialDisplay = true
 
-        #if DEBUG
-        let elapsed = (CACurrentMediaTime() - loadStartTime) * 1000
-        FileLogger.log("[InitialDisplay] 완료 시작: +\(String(format: "%.1f", elapsed))ms (reason: \(reason), preloaded: \(preloadCompletedCount)/\(preloadTargetCount))")
-        #endif
+        // [Timing] E0: finishInitialDisplay 시작
+        let e0Time = CACurrentMediaTime()
+        let e0Ms = (e0Time - loadStartTime) * 1000
+        FileLogger.log("[Timing] E0) finishInitialDisplay 시작: +\(String(format: "%.1f", e0Ms))ms (reason: \(reason), preloaded: \(preloadCompletedCount)/\(preloadTargetCount))")
 
         // 1) 셀 표시 허용 → reloadData에서 실제 count 반환
         shouldShowItems = true
@@ -725,24 +775,36 @@ final class GridViewController: UIViewController {
         collectionView.reloadData()
         collectionView.layoutIfNeeded()
 
+        // [Timing] E1: reloadData + layoutIfNeeded 완료
+        let e1Time = CACurrentMediaTime()
+        let e0ToE1Ms = (e1Time - e0Time) * 1000
+        FileLogger.log("[Timing] E1) reloadData+layout 완료: +\(String(format: "%.1f", (e1Time - loadStartTime) * 1000))ms (E0→E1: \(String(format: "%.1f", e0ToE1Ms))ms)")
+
         // 3) 맨 아래로 스크롤 (FR-003: 최신 사진)
         scrollToBottomIfNeeded()
 
         // 4) 바닥 셀 구성 강제
         collectionView.layoutIfNeeded()
 
+        // [Timing] E2: scrollToItem + layoutIfNeeded 완료
+        let e2Time = CACurrentMediaTime()
+        let e1ToE2Ms = (e2Time - e1Time) * 1000
+        FileLogger.log("[Timing] E2) scrollToItem+layout 완료: +\(String(format: "%.1f", (e2Time - loadStartTime) * 1000))ms (E1→E2: \(String(format: "%.1f", e1ToE2Ms))ms)")
+
         // 5) reveal (fade-in)
         UIView.animate(withDuration: 0.15) {
             self.collectionView.alpha = 1
         }
 
-        // [Timing] 완료 시점
-        let finishTime = CACurrentMediaTime()
-        let finishMs = (finishTime - loadStartTime) * 1000
-        FileLogger.log("[Timing] === 초기 로딩 완료: +\(String(format: "%.1f", finishMs))ms (via \(reason)) ===")
+        // [Timing] 완료 시점 요약
+        let totalMs = (e2Time - loadStartTime) * 1000
+        FileLogger.log("[Timing] === 초기 로딩 완료: +\(String(format: "%.1f", totalMs))ms (E0→E1: \(String(format: "%.1f", e0ToE1Ms))ms, E1→E2: \(String(format: "%.1f", e1ToE2Ms))ms) ===")
 
         // [DEBUG] 최종 통계 출력
-        FileLogger.log("[Timing] 최종 통계: cellForItemAt \(cellForItemAtCount)회, 총 \(String(format: "%.1f", cellForItemAtTotalTime))ms")
+        FileLogger.log("[Timing] 최종 통계: cellForItemAt \(cellForItemAtCount)회, 총 \(String(format: "%.1f", cellForItemAtTotalTime))ms, 평균 \(String(format: "%.2f", cellForItemAtCount > 0 ? cellForItemAtTotalTime / Double(cellForItemAtCount) : 0))ms")
+
+        // [Pipeline] 파이프라인 통계 출력
+        ImagePipeline.shared.logStats(label: "Initial Load")
     }
 
     /// 맨 아래로 스크롤 (FR-003)

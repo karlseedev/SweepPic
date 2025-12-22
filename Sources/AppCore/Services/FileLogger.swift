@@ -53,7 +53,7 @@ public final class FileLogger {
         // 헤더 작성
         let header = """
         === PickPhoto Launch Log ===
-        Date: \(Date())
+        Date: \(formattedDate())
         Device: \(deviceInfo())
         ============================
 
@@ -108,5 +108,13 @@ public final class FileLogger {
             }
         }
         return machine
+    }
+
+    /// 로컬 시간대로 포맷된 날짜 문자열
+    private func formattedDate() -> String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd HH:mm:ss"
+        formatter.timeZone = TimeZone.current  // 로컬 시간대
+        return formatter.string(from: Date())
     }
 }
