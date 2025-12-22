@@ -159,6 +159,11 @@ final class GridViewController: UIViewController {
     /// 초기 표시 타임아웃 (100ms)
     private static let initialDisplayTimeout: TimeInterval = 0.1
 
+    /// 셀 표시 허용 여부 (B+A v2: finishInitialDisplay 전까지 false)
+    /// - false: numberOfItemsInSection이 0 반환 → 레이아웃 패스에서 셀 생성 차단
+    /// - true: 실제 count 반환 → 프리로드 완료 후 메모리 캐시 히트
+    private var shouldShowItems: Bool = false
+
     /// Select 모드 여부
     private(set) var isSelectMode: Bool = false
 
@@ -713,17 +718,20 @@ final class GridViewController: UIViewController {
         FileLogger.log("[InitialDisplay] 완료 시작: +\(String(format: "%.1f", elapsed))ms (reason: \(reason), preloaded: \(preloadCompletedCount)/\(preloadTargetCount))")
         #endif
 
-        // 1) UI 그리기 (프리로드된 메모리 캐시에서 히트)
+        // 1) 셀 표시 허용 → reloadData에서 실제 count 반환
+        shouldShowItems = true
+
+        // 2) UI 그리기 (프리로드된 메모리 캐시에서 히트)
         collectionView.reloadData()
         collectionView.layoutIfNeeded()
 
-        // 2) 맨 아래로 스크롤 (FR-003: 최신 사진)
+        // 3) 맨 아래로 스크롤 (FR-003: 최신 사진)
         scrollToBottomIfNeeded()
 
-        // 3) 바닥 셀 구성 강제
+        // 4) 바닥 셀 구성 강제
         collectionView.layoutIfNeeded()
 
-        // 4) reveal (fade-in)
+        // 5) reveal (fade-in)
         UIView.animate(withDuration: 0.15) {
             self.collectionView.alpha = 1
         }
@@ -766,9 +774,9 @@ final class GridViewController: UIViewController {
         let visibleRows = Int(ceil(collectionView.bounds.height / cellHeight))
         let columns = currentColumnCount.rawValue
 
-        // 1 screen 분량 (최소 12개, 최대 18개)
-        // 42개는 timeout에 지므로 12~18개로 축소
-        let targetCount = min(max(columns * visibleRows, 12), 18)
+        // 1 screen 분량 (12개 고정)
+        // 105ms에 11개 완료 실적 기준, 12개면 timeout 전에 preload complete 가능
+        let targetCount = min(12, totalCount)
 
         // 도착 위치 = 맨 아래 (최신 사진)
         let startIndex = max(0, totalCount - targetCount)
@@ -922,6 +930,10 @@ final class GridViewController: UIViewController {
 extension GridViewController: UICollectionViewDataSource {
 
     func collectionView(_ collectionView: UICollectionView, numberOfItemsInSection section: Int) -> Int {
+        // B+A v2: 프리로드 완료 전까지 셀 생성 차단
+        // shouldShowItems가 false면 0 반환 → UICollectionView 레이아웃 패스에서 셀 미생성
+        guard shouldShowItems else { return 0 }
+
         // 실제 사진 수 + 맨 위 행 빈 셀 수
         return dataSourceDriver.count + paddingCellCount
     }
