@@ -70,8 +70,11 @@ final class GridViewController: UIViewController {
     /// 핀치 줌 쿨다운 (T023: 200ms)
     private static let pinchCooldown: TimeInterval = 0.2
 
-    /// 스크롤 스로틀링 간격 (T025: 100ms)
-    private static let scrollThrottleInterval: TimeInterval = 0.1
+    /// 스크롤 스로틀링 간격 (Step 1: 200ms로 증가)
+    private static let scrollThrottleInterval: TimeInterval = 0.2
+
+    /// preheat 최대 셀 수 (Step 1: ±1 row = 6셀)
+    private static let maxPreheatCells: Int = 6
 
     /// 스크롤 중 썸네일 품질 저하 비율 (T025: 50%)
     private static let scrollingThumbnailScale: CGFloat = 0.5
@@ -86,8 +89,8 @@ final class GridViewController: UIViewController {
         cv.register(PhotoCell.self, forCellWithReuseIdentifier: PhotoCell.reuseIdentifier)
         cv.delegate = self
         cv.dataSource = self
-        // [A) preheat OFF 테스트] prefetchDataSource 비활성화
-        // cv.prefetchDataSource = self
+        // [Step 1] prefetchDataSource 복원 (±1 row, 200ms throttle)
+        cv.prefetchDataSource = self
         cv.alwaysBounceVertical = true
         // T027-1f: Edge-to-edge 설정
         // 플로팅 UI 사용 시 수동으로 contentInset 설정
@@ -1209,15 +1212,18 @@ extension GridViewController: UICollectionViewDelegate {
 extension GridViewController: UICollectionViewDataSourcePrefetching {
 
     func collectionView(_ collectionView: UICollectionView, prefetchItemsAt indexPaths: [IndexPath]) {
-        // 스크롤 스로틀링 (T025: 100ms 간격)
+        // 스크롤 스로틀링 (Step 1: 200ms 간격)
         if let lastTime = lastScrollTime,
            Date().timeIntervalSince(lastTime) < Self.scrollThrottleInterval {
             return
         }
         lastScrollTime = Date()
 
+        // [Step 1] preheat 범위 제한 (±1 row = 6셀)
+        let limitedIndexPaths = Array(indexPaths.prefix(Self.maxPreheatCells))
+
         // 프리히트할 에셋 ID
-        let assetIDs = dataSourceDriver.assetIDs(for: indexPaths)
+        let assetIDs = dataSourceDriver.assetIDs(for: limitedIndexPaths)
         guard !assetIDs.isEmpty else { return }
 
         // ImagePipeline preheat
