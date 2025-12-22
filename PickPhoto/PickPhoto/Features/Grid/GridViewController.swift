@@ -145,6 +145,9 @@ final class GridViewController: UIViewController {
     /// 첫 스크롤 완료 여부 (L1/L2 구분용)
     private var hasCompletedFirstScroll: Bool = false
 
+    /// 스크롤 중 placeholder 표시 카운트 (Gate 2 측정용)
+    private var placeholderShownCount: Int = 0
+
     /// 최초 로드 시 맨 아래로 스크롤 여부 (FR-003)
     private var hasScrolledToBottom: Bool = false
 
@@ -595,6 +598,12 @@ final class GridViewController: UIViewController {
         // Gate 2: HitchMonitor 시작
         hitchMonitor.start()
 
+        // Gate 2: Pipeline 통계 시작
+        ImagePipeline.shared.startStats()
+
+        // Gate 2: Placeholder 카운트 리셋
+        placeholderShownCount = 0
+
         // 스크롤 시작 로그
         let scrollType = hasCompletedFirstScroll ? "L2 Steady" : "L1 First"
         FileLogger.log("[Scroll] \(scrollType) START")
@@ -608,12 +617,23 @@ final class GridViewController: UIViewController {
             guard let self = self else { return }
             self.isScrolling = false
 
-            // Gate 2: HitchMonitor 중지 및 결과 로그
-            let result = self.hitchMonitor.stop()
             let scrollType = self.hasCompletedFirstScroll ? "L2 Steady" : "L1 First"
 
-            FileLogger.log("[Hitch] \(scrollType): \(result.formatted())")
-            FileLogger.log("[Scroll] \(scrollType) END (duration: \(String(format: "%.1f", result.durationSeconds))s)")
+            // Gate 2: HitchMonitor 중지 및 결과 로그
+            let hitchResult = self.hitchMonitor.stop()
+            FileLogger.log("[Hitch] \(scrollType): \(hitchResult.formatted())")
+
+            // Gate 2: Pipeline 통계 종료 및 로그
+            let pipelineStats = ImagePipeline.shared.stopStats()
+            for line in pipelineStats.formatted(label: scrollType) {
+                FileLogger.log(line)
+            }
+
+            // Gate 2: Placeholder 카운트 (스크롤 종료 시점)
+            let placeholderResult = self.countPlaceholders()
+            FileLogger.log("[Placeholder] \(scrollType): shownCount: \(self.placeholderShownCount), stillVisibleAtEnd: \(placeholderResult.stillVisible)")
+
+            FileLogger.log("[Scroll] \(scrollType) END (duration: \(String(format: "%.1f", hitchResult.durationSeconds))s)")
 
             // 첫 스크롤 완료 표시
             if !self.hasCompletedFirstScroll {
@@ -624,6 +644,20 @@ final class GridViewController: UIViewController {
             // 저해상도 → 고해상도가 자동으로 전달되므로 별도 리로드 불필요
             // reloadItems 호출 시 prepareForReuse()가 호출되어 이미지가 깜빡거림
         }
+    }
+
+    /// 화면에 보이는 placeholder 셀 카운트 (Gate 2 측정용)
+    private func countPlaceholders() -> (total: Int, stillVisible: Int) {
+        var stillVisible = 0
+
+        let visibleCells = collectionView.visibleCells.compactMap { $0 as? PhotoCell }
+        for cell in visibleCells {
+            if cell.isPlaceholder {
+                stillVisible += 1
+            }
+        }
+
+        return (visibleCells.count, stillVisible)
     }
 }
 
@@ -668,6 +702,12 @@ extension GridViewController: UICollectionViewDataSource {
             isTrashed: isTrashed,
             targetSize: thumbnailSize()
         )
+
+        // Gate 2: 스크롤 중 placeholder 표시 카운트
+        // configure 직후에는 이미지가 아직 없으므로 placeholder 상태
+        if isScrolling {
+            placeholderShownCount += 1
+        }
 
         // Select 모드일 때 선택 상태 표시 (T039, T045)
         if isSelectMode {

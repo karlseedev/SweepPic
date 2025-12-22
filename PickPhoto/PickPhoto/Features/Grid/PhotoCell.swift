@@ -103,6 +103,12 @@ final class PhotoCell: UICollectionViewCell {
     /// 휴지통 상태
     private(set) var isTrashed: Bool = false
 
+    /// placeholder 상태 (이미지 미로드)
+    /// Gate 2 측정용: 스크롤 종료 시 회색 셀 카운트에 사용
+    var isPlaceholder: Bool {
+        return imageView.image == nil && currentAssetID != nil
+    }
+
     /// 선택 상태 (T039에서 사용)
     var isSelectedForDeletion: Bool = false {
         didSet {
