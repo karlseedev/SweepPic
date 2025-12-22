@@ -37,6 +37,26 @@ final class PhotoCell: UICollectionViewCell {
     /// [DEBUG] imageApply 누적 시간
     static var imageApplyTotalTime: Double = 0
 
+    #if DEBUG
+    /// 첫 번째 이미지 할당 여부 (T_firstThumbnailVisible 측정용)
+    private static var hasLoggedFirstThumbnail = false
+    /// 이미지 할당 카운터 (visible count 측정용)
+    private static var imageApplyCounter: Int = 0
+    /// 캐시 히트로 할당된 카운터
+    private static var cacheHitApplyCounter: Int = 0
+    /// 카운터 락
+    private static let applyLock = NSLock()
+
+    /// 카운터 리셋 (앱 시작 시 호출)
+    static func resetApplyCounters() {
+        applyLock.withLock {
+            hasLoggedFirstThumbnail = false
+            imageApplyCounter = 0
+            cacheHitApplyCounter = 0
+        }
+    }
+    #endif
+
     // MARK: - UI Components
 
     /// 썸네일 이미지 뷰
@@ -316,6 +336,26 @@ final class PhotoCell: UICollectionViewCell {
         let scale = UIScreen.main.scale
         let pixelSize = CGSize(width: targetSize.width * scale, height: targetSize.height * scale)
 
+        // 0) 메모리 캐시에서 동기 로드 (즉시 반환)
+        // - 프리로드된 이미지가 있으면 셀 생성과 동시에 이미지 할당
+        if let memoryImage = MemoryThumbnailCache.shared.get(assetID: assetID, size: pixelSize) {
+            imageView.image = memoryImage
+
+            #if DEBUG
+            Self.applyLock.withLock {
+                Self.imageApplyCounter += 1
+                Self.cacheHitApplyCounter += 1
+
+                // 첫 번째 이미지 할당 시 T_firstThumbnailVisible 로그
+                if !Self.hasLoggedFirstThumbnail {
+                    Self.hasLoggedFirstThumbnail = true
+                    FileLogger.log("[PhotoCell] T_firstThumbnailVisible: 첫 이미지 할당 (메모리 캐시 히트)")
+                }
+            }
+            #endif
+            return // 메모리 캐시 히트 → 완료
+        }
+
         // 캐시 로드 ID 생성 (비동기 캐시 결과 검증용)
         let loadID = UUID()
         currentCacheLoadID = loadID
@@ -336,6 +376,26 @@ final class PhotoCell: UICollectionViewCell {
             if let cachedImage = cachedImage {
                 // 캐시 히트 → 이미지 표시 후 종료
                 self.imageView.image = cachedImage
+
+                #if DEBUG
+                Self.applyLock.withLock {
+                    Self.imageApplyCounter += 1
+                    Self.cacheHitApplyCounter += 1
+                    let count = Self.imageApplyCounter
+
+                    // 첫 번째 이미지 할당 시 T_firstThumbnailVisible 로그
+                    if !Self.hasLoggedFirstThumbnail {
+                        Self.hasLoggedFirstThumbnail = true
+                        FileLogger.log("[PhotoCell] T_firstThumbnailVisible: 첫 이미지 할당 (캐시 히트)")
+                    }
+
+                    // 20개마다 visible/hit 비율 로그
+                    if count == 20 || count == 50 {
+                        let hitRate = Double(Self.cacheHitApplyCounter) / Double(count) * 100
+                        FileLogger.log("[PhotoCell] 이미지 할당 #\(count): 캐시 히트율 \(String(format: "%.1f", hitRate))% (\(Self.cacheHitApplyCounter)/\(count))")
+                    }
+                }
+                #endif
                 return
             }
 
@@ -361,6 +421,26 @@ final class PhotoCell: UICollectionViewCell {
             if let image = image {
                 // 이미지 표시
                 self.imageView.image = image
+
+                #if DEBUG
+                Self.applyLock.withLock {
+                    Self.imageApplyCounter += 1
+                    // Pipeline에서 받은 건 캐시 미스
+                    let count = Self.imageApplyCounter
+
+                    // 첫 번째 이미지 할당 시 T_firstThumbnailVisible 로그
+                    if !Self.hasLoggedFirstThumbnail {
+                        Self.hasLoggedFirstThumbnail = true
+                        FileLogger.log("[PhotoCell] T_firstThumbnailVisible: 첫 이미지 할당 (Pipeline, isDegraded=\(isDegraded))")
+                    }
+
+                    // 20개마다 visible/hit 비율 로그
+                    if count == 20 || count == 50 {
+                        let hitRate = Double(Self.cacheHitApplyCounter) / Double(count) * 100
+                        FileLogger.log("[PhotoCell] 이미지 할당 #\(count): 캐시 히트율 \(String(format: "%.1f", hitRate))% (\(Self.cacheHitApplyCounter)/\(count))")
+                    }
+                }
+                #endif
 
                 // degraded가 아닌 최종 이미지만 캐시에 저장
                 if !isDegraded {

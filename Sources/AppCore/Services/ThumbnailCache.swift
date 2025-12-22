@@ -32,6 +32,32 @@ public final class ThumbnailCache {
     /// JPEG 압축 품질 (0.8 = 좋은 품질 + 적절한 크기)
     private let jpegQuality: CGFloat = 0.8
 
+    // MARK: - Debug Counters
+
+    #if DEBUG
+    /// 캐시 히트 카운터 (앱 시작 후 누적)
+    public private(set) static var hitCount: Int = 0
+    /// 캐시 미스 카운터 (앱 시작 후 누적)
+    public private(set) static var missCount: Int = 0
+    /// 카운터 락
+    private static let counterLock = NSLock()
+
+    /// 히트율 계산 (0.0 ~ 1.0)
+    public static var hitRate: Double {
+        let total = hitCount + missCount
+        guard total > 0 else { return 0 }
+        return Double(hitCount) / Double(total)
+    }
+
+    /// 카운터 리셋 (테스트용)
+    public static func resetCounters() {
+        counterLock.withLock {
+            hitCount = 0
+            missCount = 0
+        }
+    }
+    #endif
+
     // MARK: - Private Properties
 
     /// 캐시 디렉토리 URL
@@ -58,7 +84,7 @@ public final class ThumbnailCache {
         try? FileManager.default.createDirectory(at: cacheDirectory, withIntermediateDirectories: true)
 
         #if DEBUG
-        print("[ThumbnailCache] Cache directory: \(cacheDirectory.path)")
+        FileLogger.log("[ThumbnailCache] Cache directory: \(cacheDirectory.path)")
         #endif
     }
 
@@ -87,9 +113,32 @@ public final class ThumbnailCache {
             // 파일 존재 확인
             guard FileManager.default.fileExists(atPath: path.path),
                   let image = UIImage(contentsOfFile: path.path) else {
+                // 캐시 미스
+                #if DEBUG
+                Self.counterLock.withLock { Self.missCount += 1 }
+                let total = Self.hitCount + Self.missCount
+                if total <= 50 {
+                    FileLogger.log("[ThumbnailCache] MISS #\(total): \(assetID.prefix(8))...")
+                }
+                if total == 50 {
+                    FileLogger.log("[ThumbnailCache] === 첫 50셀 히트율: \(String(format: "%.1f", Self.hitRate * 100))% (hit=\(Self.hitCount), miss=\(Self.missCount)) ===")
+                }
+                #endif
                 DispatchQueue.main.async { completion(nil) }
                 return
             }
+
+            // 캐시 히트
+            #if DEBUG
+            Self.counterLock.withLock { Self.hitCount += 1 }
+            let total = Self.hitCount + Self.missCount
+            if total <= 50 {
+                FileLogger.log("[ThumbnailCache] HIT #\(total): \(assetID.prefix(8))...")
+            }
+            if total == 50 {
+                FileLogger.log("[ThumbnailCache] === 첫 50셀 히트율: \(String(format: "%.1f", Self.hitRate * 100))% (hit=\(Self.hitCount), miss=\(Self.missCount)) ===")
+            }
+            #endif
 
             // LRU: 접근 시 수정일 갱신 (touch)
             // - 가장 최근에 접근한 파일이 가장 나중에 삭제됨
@@ -108,6 +157,11 @@ public final class ThumbnailCache {
                 // iOS 14 이하: CGImage 접근으로 강제 디코딩
                 _ = image.cgImage
                 decodedImage = image
+            }
+
+            // 메모리 캐시에도 저장 (다음 접근 시 동기 반환 가능)
+            if let decoded = decodedImage {
+                MemoryThumbnailCache.shared.set(image: decoded, assetID: assetID, size: size)
             }
 
             DispatchQueue.main.async {
@@ -141,12 +195,12 @@ public final class ThumbnailCache {
                     #if DEBUG
                     let sizeKB = data.count / 1024
                     if sizeKB > 100 {
-                        print("[ThumbnailCache] Saved large file: \(sizeKB)KB")
+                        FileLogger.log("[ThumbnailCache] Saved large file: \(sizeKB)KB")
                     }
                     #endif
                 } catch {
                     #if DEBUG
-                    print("[ThumbnailCache] Save failed: \(error.localizedDescription)")
+                    FileLogger.log("[ThumbnailCache] Save failed: \(error.localizedDescription)")
                     #endif
                 }
             }
@@ -187,11 +241,11 @@ public final class ThumbnailCache {
                 }
 
                 #if DEBUG
-                print("[ThumbnailCache] Cleared all cache: \(files.count) files")
+                FileLogger.log("[ThumbnailCache] Cleared all cache: \(files.count) files")
                 #endif
             } catch {
                 #if DEBUG
-                print("[ThumbnailCache] Clear failed: \(error.localizedDescription)")
+                FileLogger.log("[ThumbnailCache] Clear failed: \(error.localizedDescription)")
                 #endif
             }
         }
@@ -251,7 +305,7 @@ public final class ThumbnailCache {
             #if DEBUG
             let usedMB = totalSize / (1024 * 1024)
             let maxMB = maxCacheSize / (1024 * 1024)
-            print("[ThumbnailCache] Cache size OK: \(usedMB)MB / \(maxMB)MB (\(files.count) files)")
+            FileLogger.log("[ThumbnailCache] Cache size OK: \(usedMB)MB / \(maxMB)MB (\(files.count) files)")
             #endif
             return
         }
@@ -279,7 +333,7 @@ public final class ThumbnailCache {
 
         #if DEBUG
         let afterMB = totalSize / (1024 * 1024)
-        print("[ThumbnailCache] Trimmed: \(beforeMB)MB → \(afterMB)MB, deleted \(deletedCount) files")
+        FileLogger.log("[ThumbnailCache] Trimmed: \(beforeMB)MB → \(afterMB)MB, deleted \(deletedCount) files")
         #endif
     }
 }

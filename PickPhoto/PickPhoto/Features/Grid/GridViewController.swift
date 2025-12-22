@@ -145,6 +145,18 @@ final class GridViewController: UIViewController {
     /// 초기 화면 프리히트 완료 여부 (v6: viewDidAppear에서 호출)
     private var hasPreheatedInitialScreen: Bool = false
 
+    /// 노출 게이트: collectionView reveal 완료 여부
+    private var hasRevealedGrid: Bool = false
+
+    /// 노출 게이트: reveal 타임아웃 (80ms)
+    private static let revealTimeout: TimeInterval = 0.08
+
+    /// 첫 화면 프리로드 완료 카운터
+    private var preloadCompletedCount: Int = 0
+
+    /// 첫 화면 프리로드 목표 개수 (약 2행 = 6~10개)
+    private static let preloadTargetCount: Int = 12
+
     /// Select 모드 여부
     private(set) var isSelectMode: Bool = false
 
@@ -245,7 +257,7 @@ final class GridViewController: UIViewController {
 
         // [Timing] 로딩 시작 시간 기록
         loadStartTime = CACurrentMediaTime()
-        print("[Timing] === 초기 로딩 시작 ===")
+        FileLogger.log("[Timing] === 초기 로딩 시작 ===")
 
         setupUI()
         setupGestures()
@@ -277,11 +289,11 @@ final class GridViewController: UIViewController {
         // 초기 진입 시에는 loadData()에서 이미 reloadData() 호출했으므로 스킵
         if !hasInitiallyLoaded {
             hasInitiallyLoaded = true
-            print("[Timing] viewWillAppear: +\(String(format: "%.1f", vwaMs))ms (초기 진입 - reloadData 스킵)")
+            FileLogger.log("[Timing] viewWillAppear: +\(String(format: "%.1f", vwaMs))ms (초기 진입 - reloadData 스킵)")
             return
         }
 
-        print("[Timing] viewWillAppear.reloadData: +\(String(format: "%.1f", vwaMs))ms")
+        FileLogger.log("[Timing] viewWillAppear.reloadData: +\(String(format: "%.1f", vwaMs))ms")
         // 화면 표시 시 변경사항 반영 (탭 전환 등)
         collectionView.reloadData()
     }
@@ -305,7 +317,7 @@ final class GridViewController: UIViewController {
             hasLoggedFirstLayout = true
             let layoutTime = CACurrentMediaTime()
             let sinceStart = (layoutTime - loadStartTime) * 1000
-            print("[Timing] C) 첫 레이아웃 완료: +\(String(format: "%.1f", sinceStart))ms")
+            FileLogger.log("[Timing] C) 첫 레이아웃 완료: +\(String(format: "%.1f", sinceStart))ms")
         }
     }
 
@@ -322,7 +334,8 @@ final class GridViewController: UIViewController {
         view.backgroundColor = .black
         title = "Photos"
 
-        // 컬렉션 뷰
+        // 컬렉션 뷰 (노출 게이트: 초기에 숨김)
+        collectionView.alpha = 0
         view.addSubview(collectionView)
         NSLayoutConstraint.activate([
             collectionView.topAnchor.constraint(equalTo: view.topAnchor),
@@ -386,7 +399,7 @@ final class GridViewController: UIViewController {
             // [Timing] B) reloadData 호출 시점
             let reloadStart = CACurrentMediaTime()
             let sinceStart = (reloadStart - self.loadStartTime) * 1000
-            print("[Timing] B) reloadData 호출: +\(String(format: "%.1f", sinceStart))ms")
+            FileLogger.log("[Timing] B) reloadData 호출: +\(String(format: "%.1f", sinceStart))ms")
 
             // 컬렉션 뷰 리로드
             self.collectionView.reloadData()
@@ -394,7 +407,7 @@ final class GridViewController: UIViewController {
             // [Timing] B) reloadData 완료 (호출 자체는 즉시 리턴)
             let reloadEnd = CACurrentMediaTime()
             let reloadMs = (reloadEnd - reloadStart) * 1000
-            print("[Timing] B) reloadData 완료: \(String(format: "%.1f", reloadMs))ms (호출만)")
+            FileLogger.log("[Timing] B) reloadData 완료: \(String(format: "%.1f", reloadMs))ms (호출만)")
 
             // FR-003: 첫 진입 시 맨 아래(최신 사진)로 스크롤
             if !self.hasScrolledToBottom && self.dataSourceDriver.count > 0 {
@@ -403,7 +416,17 @@ final class GridViewController: UIViewController {
                 // [Timing] E0) main.async 스케줄 시점
                 let e0Time = CACurrentMediaTime()
                 let e0Ms = (e0Time - self.loadStartTime) * 1000
-                print("[Timing] E0) main.async 스케줄: +\(String(format: "%.1f", e0Ms))ms")
+                FileLogger.log("[Timing] E0) main.async 스케줄: +\(String(format: "%.1f", e0Ms))ms")
+
+                // B안: scrollToItem 도착 위치 기반 프리로드
+                // 맨 아래(최신 사진)로 스크롤할 예정이므로, 해당 위치의 이미지를 미리 메모리에 로드
+                self.preloadInitialScreen()
+
+                // A안: reveal 타임아웃 설정 (80ms)
+                // 프리로드 완료 또는 타임아웃 중 먼저 발생하는 시점에 reveal
+                DispatchQueue.main.asyncAfter(deadline: .now() + Self.revealTimeout) { [weak self] in
+                    self?.revealGridIfNeeded(reason: "timeout")
+                }
 
                 // 레이아웃이 완료된 후 스크롤 (다음 런루프에서 실행)
                 DispatchQueue.main.async { [weak self] in
@@ -413,7 +436,7 @@ final class GridViewController: UIViewController {
                     let e1Time = CACurrentMediaTime()
                     let e1Ms = (e1Time - self.loadStartTime) * 1000
                     let queueWaitMs = (e1Time - e0Time) * 1000
-                    print("[Timing] E1) main.async 실행 시작: +\(String(format: "%.1f", e1Ms))ms (큐 대기: \(String(format: "%.1f", queueWaitMs))ms)")
+                    FileLogger.log("[Timing] E1) main.async 실행 시작: +\(String(format: "%.1f", e1Ms))ms (큐 대기: \(String(format: "%.1f", queueWaitMs))ms)")
 
                     let lastIndex = self.dataSourceDriver.count - 1
                     let lastIndexPath = IndexPath(item: lastIndex, section: 0)
@@ -427,12 +450,12 @@ final class GridViewController: UIViewController {
                     let e2Time = CACurrentMediaTime()
                     let e2Ms = (e2Time - self.loadStartTime) * 1000
                     let scrollMs = (e2Time - e1Time) * 1000
-                    print("[Timing] E2) scrollToItem 완료: +\(String(format: "%.1f", e2Ms))ms (스크롤: \(String(format: "%.1f", scrollMs))ms)")
-                    print("[Timing] === 초기 로딩 완료 ===")
+                    FileLogger.log("[Timing] E2) scrollToItem 완료: +\(String(format: "%.1f", e2Ms))ms (스크롤: \(String(format: "%.1f", scrollMs))ms)")
+                    FileLogger.log("[Timing] === 초기 로딩 완료 ===")
 
                     // [DEBUG] 최종 통계 출력
-                    print("[Timing] 최종 통계: cellForItemAt \(self.cellForItemAtCount)회, 총 \(String(format: "%.1f", self.cellForItemAtTotalTime))ms")
-                    print("[Timing] 구간별: dequeue=\(String(format: "%.1f", self.cellDequeueTime*1000))ms, asset=\(String(format: "%.1f", self.cellAssetTime*1000))ms, trash=\(String(format: "%.1f", self.cellTrashTime*1000))ms, configure=\(String(format: "%.1f", self.cellConfigureTime*1000))ms")
+                    FileLogger.log("[Timing] 최종 통계: cellForItemAt \(self.cellForItemAtCount)회, 총 \(String(format: "%.1f", self.cellForItemAtTotalTime))ms")
+                    FileLogger.log("[Timing] 구간별: dequeue=\(String(format: "%.1f", self.cellDequeueTime*1000))ms, asset=\(String(format: "%.1f", self.cellAssetTime*1000))ms, trash=\(String(format: "%.1f", self.cellTrashTime*1000))ms, configure=\(String(format: "%.1f", self.cellConfigureTime*1000))ms")
                 }
             }
 
@@ -748,6 +771,88 @@ final class GridViewController: UIViewController {
         print("[GridViewController] preheatInitialScreen: \(assets.count) assets")
     }
 
+    // MARK: - Initial Preload (B안: 메모리 프리로드)
+
+    /// 첫 화면 메모리 프리로드 (scrollToItem 도착 위치 기준)
+    /// - 그리드 노출 전에 호출되어 첫 화면 썸네일을 메모리에 준비
+    /// - 디스크 캐시에서 로드 → 메모리 캐시에 저장
+    private func preloadInitialScreen() {
+        let totalCount = dataSourceDriver.count
+        guard totalCount > 0 else { return }
+
+        // scrollToItem 도착 위치 = 맨 아래 (최신 사진)
+        // 맨 아래에서 위로 N개 (약 2~4행)
+        let targetCount = Self.preloadTargetCount
+        let startIndex = max(0, totalCount - targetCount)
+        let endIndex = totalCount - 1
+
+        // 픽셀 사이즈 계산
+        let scale = UIScreen.main.scale
+        let pixelSize = CGSize(
+            width: currentCellSize.width * scale,
+            height: currentCellSize.height * scale
+        )
+
+        #if DEBUG
+        FileLogger.log("[Preload] 시작: index \(startIndex)~\(endIndex) (\(endIndex - startIndex + 1)개)")
+        #endif
+
+        // 각 에셋에 대해 디스크 캐시 → 메모리 캐시 로드
+        for index in startIndex...endIndex {
+            let indexPath = IndexPath(item: index, section: 0)
+            guard let asset = dataSourceDriver.asset(at: indexPath) else { continue }
+
+            let assetID = asset.localIdentifier
+            let modDate = asset.modificationDate
+
+            // 이미 메모리에 있으면 스킵
+            if MemoryThumbnailCache.shared.get(assetID: assetID, size: pixelSize) != nil {
+                preloadCompleted()
+                continue
+            }
+
+            // 디스크 캐시에서 비동기 로드 (ThumbnailCache.load는 메모리에도 저장함)
+            ThumbnailCache.shared.load(
+                assetID: assetID,
+                modificationDate: modDate,
+                size: pixelSize
+            ) { [weak self] _ in
+                // 완료 시 카운터 증가
+                self?.preloadCompleted()
+            }
+        }
+    }
+
+    /// 프리로드 완료 카운터 증가 및 reveal 체크
+    private func preloadCompleted() {
+        preloadCompletedCount += 1
+
+        // 목표 개수 이상 완료되면 reveal
+        if preloadCompletedCount >= Self.preloadTargetCount {
+            revealGridIfNeeded(reason: "preload complete")
+        }
+    }
+
+    // MARK: - Reveal Gate (A안: 노출 게이트)
+
+    /// 그리드 reveal (fade-in)
+    /// - 중복 호출 방지
+    /// - reason: 디버그 로그용
+    private func revealGridIfNeeded(reason: String) {
+        guard !hasRevealedGrid else { return }
+        hasRevealedGrid = true
+
+        #if DEBUG
+        let elapsed = (CACurrentMediaTime() - loadStartTime) * 1000
+        FileLogger.log("[Reveal] 그리드 표시: +\(String(format: "%.1f", elapsed))ms (reason: \(reason), preloaded: \(preloadCompletedCount))")
+        #endif
+
+        // fade-in 애니메이션
+        UIView.animate(withDuration: 0.15) {
+            self.collectionView.alpha = 1
+        }
+    }
+
     /// IndexPath 배열을 확장 (앞뒤로 지정 개수만큼)
     private func extendIndexPaths(_ indexPaths: [IndexPath], by count: Int) -> [IndexPath] {
         guard !indexPaths.isEmpty else { return [] }
@@ -838,7 +943,7 @@ extension GridViewController: UICollectionViewDataSource {
 
             // 매 10번째에 구간별 로그 출력
             if cellForItemAtCount % 10 == 0 {
-                print("[Timing] cellForItemAt #\(cellForItemAtCount): dequeue=\(String(format: "%.1f", cellDequeueTime*1000))ms, asset=\(String(format: "%.1f", cellAssetTime*1000))ms, trash=\(String(format: "%.1f", cellTrashTime*1000))ms, configure=\(String(format: "%.1f", cellConfigureTime*1000))ms")
+                FileLogger.log("[Timing] cellForItemAt #\(cellForItemAtCount): dequeue=\(String(format: "%.1f", cellDequeueTime*1000))ms, asset=\(String(format: "%.1f", cellAssetTime*1000))ms, trash=\(String(format: "%.1f", cellTrashTime*1000))ms, configure=\(String(format: "%.1f", cellConfigureTime*1000))ms")
             }
         }
 
@@ -864,7 +969,7 @@ extension GridViewController: UICollectionViewDelegate {
             hasLoggedFirstCellDisplay = true
             let displayTime = CACurrentMediaTime()
             let sinceStart = (displayTime - loadStartTime) * 1000
-            print("[Timing] D) 첫 셀 표시: +\(String(format: "%.1f", sinceStart))ms (indexPath: \(indexPath))")
+            FileLogger.log("[Timing] D) 첫 셀 표시: +\(String(format: "%.1f", sinceStart))ms (indexPath: \(indexPath))")
         }
     }
 
