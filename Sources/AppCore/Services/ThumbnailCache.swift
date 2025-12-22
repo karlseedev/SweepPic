@@ -159,11 +159,6 @@ public final class ThumbnailCache {
                 decodedImage = image
             }
 
-            // 메모리 캐시에도 저장 (다음 접근 시 동기 반환 가능)
-            if let decoded = decodedImage {
-                MemoryThumbnailCache.shared.set(image: decoded, assetID: assetID, size: size)
-            }
-
             DispatchQueue.main.async {
                 completion(decodedImage)
             }

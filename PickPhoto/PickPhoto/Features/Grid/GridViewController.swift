@@ -145,18 +145,6 @@ final class GridViewController: UIViewController {
     /// 초기 화면 프리히트 완료 여부 (v6: viewDidAppear에서 호출)
     private var hasPreheatedInitialScreen: Bool = false
 
-    /// 노출 게이트: collectionView reveal 완료 여부
-    private var hasRevealedGrid: Bool = false
-
-    /// 노출 게이트: reveal 타임아웃 (80ms)
-    private static let revealTimeout: TimeInterval = 0.08
-
-    /// 첫 화면 프리로드 완료 카운터
-    private var preloadCompletedCount: Int = 0
-
-    /// 첫 화면 프리로드 목표 개수 (약 2행 = 6~10개)
-    private static let preloadTargetCount: Int = 12
-
     /// Select 모드 여부
     private(set) var isSelectMode: Bool = false
 
@@ -334,8 +322,7 @@ final class GridViewController: UIViewController {
         view.backgroundColor = .black
         title = "Photos"
 
-        // 컬렉션 뷰 (노출 게이트: 초기에 숨김)
-        collectionView.alpha = 0
+        // 컬렉션 뷰
         view.addSubview(collectionView)
         NSLayoutConstraint.activate([
             collectionView.topAnchor.constraint(equalTo: view.topAnchor),
@@ -417,16 +404,6 @@ final class GridViewController: UIViewController {
                 let e0Time = CACurrentMediaTime()
                 let e0Ms = (e0Time - self.loadStartTime) * 1000
                 FileLogger.log("[Timing] E0) main.async 스케줄: +\(String(format: "%.1f", e0Ms))ms")
-
-                // B안: scrollToItem 도착 위치 기반 프리로드
-                // 맨 아래(최신 사진)로 스크롤할 예정이므로, 해당 위치의 이미지를 미리 메모리에 로드
-                self.preloadInitialScreen()
-
-                // A안: reveal 타임아웃 설정 (80ms)
-                // 프리로드 완료 또는 타임아웃 중 먼저 발생하는 시점에 reveal
-                DispatchQueue.main.asyncAfter(deadline: .now() + Self.revealTimeout) { [weak self] in
-                    self?.revealGridIfNeeded(reason: "timeout")
-                }
 
                 // 레이아웃이 완료된 후 스크롤 (다음 런루프에서 실행)
                 DispatchQueue.main.async { [weak self] in
@@ -769,88 +746,6 @@ final class GridViewController: UIViewController {
         }
 
         print("[GridViewController] preheatInitialScreen: \(assets.count) assets")
-    }
-
-    // MARK: - Initial Preload (B안: 메모리 프리로드)
-
-    /// 첫 화면 메모리 프리로드 (scrollToItem 도착 위치 기준)
-    /// - 그리드 노출 전에 호출되어 첫 화면 썸네일을 메모리에 준비
-    /// - 디스크 캐시에서 로드 → 메모리 캐시에 저장
-    private func preloadInitialScreen() {
-        let totalCount = dataSourceDriver.count
-        guard totalCount > 0 else { return }
-
-        // scrollToItem 도착 위치 = 맨 아래 (최신 사진)
-        // 맨 아래에서 위로 N개 (약 2~4행)
-        let targetCount = Self.preloadTargetCount
-        let startIndex = max(0, totalCount - targetCount)
-        let endIndex = totalCount - 1
-
-        // 픽셀 사이즈 계산
-        let scale = UIScreen.main.scale
-        let pixelSize = CGSize(
-            width: currentCellSize.width * scale,
-            height: currentCellSize.height * scale
-        )
-
-        #if DEBUG
-        FileLogger.log("[Preload] 시작: index \(startIndex)~\(endIndex) (\(endIndex - startIndex + 1)개)")
-        #endif
-
-        // 각 에셋에 대해 디스크 캐시 → 메모리 캐시 로드
-        for index in startIndex...endIndex {
-            let indexPath = IndexPath(item: index, section: 0)
-            guard let asset = dataSourceDriver.asset(at: indexPath) else { continue }
-
-            let assetID = asset.localIdentifier
-            let modDate = asset.modificationDate
-
-            // 이미 메모리에 있으면 스킵
-            if MemoryThumbnailCache.shared.get(assetID: assetID, size: pixelSize) != nil {
-                preloadCompleted()
-                continue
-            }
-
-            // 디스크 캐시에서 비동기 로드 (ThumbnailCache.load는 메모리에도 저장함)
-            ThumbnailCache.shared.load(
-                assetID: assetID,
-                modificationDate: modDate,
-                size: pixelSize
-            ) { [weak self] _ in
-                // 완료 시 카운터 증가
-                self?.preloadCompleted()
-            }
-        }
-    }
-
-    /// 프리로드 완료 카운터 증가 및 reveal 체크
-    private func preloadCompleted() {
-        preloadCompletedCount += 1
-
-        // 목표 개수 이상 완료되면 reveal
-        if preloadCompletedCount >= Self.preloadTargetCount {
-            revealGridIfNeeded(reason: "preload complete")
-        }
-    }
-
-    // MARK: - Reveal Gate (A안: 노출 게이트)
-
-    /// 그리드 reveal (fade-in)
-    /// - 중복 호출 방지
-    /// - reason: 디버그 로그용
-    private func revealGridIfNeeded(reason: String) {
-        guard !hasRevealedGrid else { return }
-        hasRevealedGrid = true
-
-        #if DEBUG
-        let elapsed = (CACurrentMediaTime() - loadStartTime) * 1000
-        FileLogger.log("[Reveal] 그리드 표시: +\(String(format: "%.1f", elapsed))ms (reason: \(reason), preloaded: \(preloadCompletedCount))")
-        #endif
-
-        // fade-in 애니메이션
-        UIView.animate(withDuration: 0.15) {
-            self.collectionView.alpha = 1
-        }
     }
 
     /// IndexPath 배열을 확장 (앞뒤로 지정 개수만큼)

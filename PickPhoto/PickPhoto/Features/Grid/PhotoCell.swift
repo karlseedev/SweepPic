@@ -336,26 +336,6 @@ final class PhotoCell: UICollectionViewCell {
         let scale = UIScreen.main.scale
         let pixelSize = CGSize(width: targetSize.width * scale, height: targetSize.height * scale)
 
-        // 0) 메모리 캐시에서 동기 로드 (즉시 반환)
-        // - 프리로드된 이미지가 있으면 셀 생성과 동시에 이미지 할당
-        if let memoryImage = MemoryThumbnailCache.shared.get(assetID: assetID, size: pixelSize) {
-            imageView.image = memoryImage
-
-            #if DEBUG
-            Self.applyLock.withLock {
-                Self.imageApplyCounter += 1
-                Self.cacheHitApplyCounter += 1
-
-                // 첫 번째 이미지 할당 시 T_firstThumbnailVisible 로그
-                if !Self.hasLoggedFirstThumbnail {
-                    Self.hasLoggedFirstThumbnail = true
-                    FileLogger.log("[PhotoCell] T_firstThumbnailVisible: 첫 이미지 할당 (메모리 캐시 히트)")
-                }
-            }
-            #endif
-            return // 메모리 캐시 히트 → 완료
-        }
-
         // 캐시 로드 ID 생성 (비동기 캐시 결과 검증용)
         let loadID = UUID()
         currentCacheLoadID = loadID
