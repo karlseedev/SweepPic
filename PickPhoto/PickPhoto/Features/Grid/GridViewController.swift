@@ -145,6 +145,20 @@ final class GridViewController: UIViewController {
     /// 초기 화면 프리히트 완료 여부 (v6: viewDidAppear에서 호출)
     private var hasPreheatedInitialScreen: Bool = false
 
+    // MARK: - Initial Display State (B+A 조합 v2)
+
+    /// 초기 표시 완료 여부 (단일 상태 - finishInitialDisplay에서만 변경)
+    private var hasFinishedInitialDisplay: Bool = false
+
+    /// 프리로드 완료 카운터
+    private var preloadCompletedCount: Int = 0
+
+    /// 프리로드 목표 개수 (visible 기반 동적 계산)
+    private var preloadTargetCount: Int = 0
+
+    /// 초기 표시 타임아웃 (100ms)
+    private static let initialDisplayTimeout: TimeInterval = 0.1
+
     /// Select 모드 여부
     private(set) var isSelectMode: Bool = false
 
@@ -250,7 +264,8 @@ final class GridViewController: UIViewController {
         setupUI()
         setupGestures()
         setupObservers()
-        loadData()
+        // loadData()는 viewDidLayoutSubviews에서 startInitialDisplay()로 호출
+        // (레이아웃 확정 후에만 실행해야 size=0 버그 방지)
 
         // T027-1f: 플로팅 UI 사용 시에는 setContentScrollView 불필요
         // (시스템 바가 숨겨져 있으므로)
@@ -264,8 +279,8 @@ final class GridViewController: UIViewController {
         }
     }
 
-    /// 초기 로드 완료 여부 (viewWillAppear 중복 reloadData 방지)
-    private var hasInitiallyLoaded: Bool = false
+    /// 초기 표시 트리거 여부 (viewDidLayoutSubviews에서 1회만 실행)
+    private var hasTriggeredInitialDisplay: Bool = false
 
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
@@ -274,9 +289,8 @@ final class GridViewController: UIViewController {
         let vwaTime = CACurrentMediaTime()
         let vwaMs = loadStartTime > 0 ? (vwaTime - loadStartTime) * 1000 : -1
 
-        // 초기 진입 시에는 loadData()에서 이미 reloadData() 호출했으므로 스킵
-        if !hasInitiallyLoaded {
-            hasInitiallyLoaded = true
+        // 초기 진입 시에는 startInitialDisplay()에서 처리하므로 스킵
+        if !hasFinishedInitialDisplay {
             FileLogger.log("[Timing] viewWillAppear: +\(String(format: "%.1f", vwaMs))ms (초기 진입 - reloadData 스킵)")
             return
         }
@@ -299,6 +313,13 @@ final class GridViewController: UIViewController {
         updateCellSize()
         // T027-1f: contentInset 업데이트 (플로팅 UI 높이 반영)
         updateContentInset()
+
+        // B+A v2: 레이아웃 확정 후 1회만 초기 표시 시작
+        // (currentCellSize가 확정된 후에만 프리로드/reloadData 실행)
+        if !hasTriggeredInitialDisplay && currentCellSize != .zero {
+            hasTriggeredInitialDisplay = true
+            startInitialDisplay()
+        }
 
         // [Timing] C) 첫 레이아웃 완료 (1회만)
         if !hasLoggedFirstLayout && loadStartTime > 0 {
@@ -375,68 +396,47 @@ final class GridViewController: UIViewController {
         selectionManager.delegate = self
     }
 
-    /// 데이터 로드
-    private func loadData() {
+    /// B+A v2: 초기 표시 시작 (레이아웃 확정 후 1회만 호출)
+    /// - collectionView 숨김
+    /// - 데이터 로드 (PHFetchResult)
+    /// - 프리로드 (디스크 → 메모리)
+    /// - 타임아웃 예약
+    private func startInitialDisplay() {
+        #if DEBUG
+        let startMs = (CACurrentMediaTime() - loadStartTime) * 1000
+        FileLogger.log("[InitialDisplay] 시작: +\(String(format: "%.1f", startMs))ms, cellSize=\(Int(currentCellSize.width))x\(Int(currentCellSize.height))pt")
+        #endif
+
+        // 1) 노출 게이트 - collectionView 숨김
+        collectionView.alpha = 0
+
+        // 2) 데이터 로드 (PHFetchResult만 가져옴, UI는 아직 안 그림)
         dataSourceDriver.reloadData { [weak self] in
             guard let self = self else { return }
 
             // 빈 상태 업데이트
             self.updateEmptyState()
 
-            // [Timing] B) reloadData 호출 시점
-            let reloadStart = CACurrentMediaTime()
-            let sinceStart = (reloadStart - self.loadStartTime) * 1000
-            FileLogger.log("[Timing] B) reloadData 호출: +\(String(format: "%.1f", sinceStart))ms")
-
-            // 컬렉션 뷰 리로드
-            self.collectionView.reloadData()
-
-            // [Timing] B) reloadData 완료 (호출 자체는 즉시 리턴)
-            let reloadEnd = CACurrentMediaTime()
-            let reloadMs = (reloadEnd - reloadStart) * 1000
-            FileLogger.log("[Timing] B) reloadData 완료: \(String(format: "%.1f", reloadMs))ms (호출만)")
-
-            // FR-003: 첫 진입 시 맨 아래(최신 사진)로 스크롤
-            if !self.hasScrolledToBottom && self.dataSourceDriver.count > 0 {
-                self.hasScrolledToBottom = true
-
-                // [Timing] E0) main.async 스케줄 시점
-                let e0Time = CACurrentMediaTime()
-                let e0Ms = (e0Time - self.loadStartTime) * 1000
-                FileLogger.log("[Timing] E0) main.async 스케줄: +\(String(format: "%.1f", e0Ms))ms")
-
-                // 레이아웃이 완료된 후 스크롤 (다음 런루프에서 실행)
-                DispatchQueue.main.async { [weak self] in
-                    guard let self = self else { return }
-
-                    // [Timing] E1) main.async 블록 실행 시작
-                    let e1Time = CACurrentMediaTime()
-                    let e1Ms = (e1Time - self.loadStartTime) * 1000
-                    let queueWaitMs = (e1Time - e0Time) * 1000
-                    FileLogger.log("[Timing] E1) main.async 실행 시작: +\(String(format: "%.1f", e1Ms))ms (큐 대기: \(String(format: "%.1f", queueWaitMs))ms)")
-
-                    let lastIndex = self.dataSourceDriver.count - 1
-                    let lastIndexPath = IndexPath(item: lastIndex, section: 0)
-                    self.collectionView.scrollToItem(
-                        at: lastIndexPath,
-                        at: .bottom,
-                        animated: false
-                    )
-
-                    // [Timing] E2) scrollToItem 완료 시점
-                    let e2Time = CACurrentMediaTime()
-                    let e2Ms = (e2Time - self.loadStartTime) * 1000
-                    let scrollMs = (e2Time - e1Time) * 1000
-                    FileLogger.log("[Timing] E2) scrollToItem 완료: +\(String(format: "%.1f", e2Ms))ms (스크롤: \(String(format: "%.1f", scrollMs))ms)")
-                    FileLogger.log("[Timing] === 초기 로딩 완료 ===")
-
-                    // [DEBUG] 최종 통계 출력
-                    FileLogger.log("[Timing] 최종 통계: cellForItemAt \(self.cellForItemAtCount)회, 총 \(String(format: "%.1f", self.cellForItemAtTotalTime))ms")
-                    FileLogger.log("[Timing] 구간별: dequeue=\(String(format: "%.1f", self.cellDequeueTime*1000))ms, asset=\(String(format: "%.1f", self.cellAssetTime*1000))ms, trash=\(String(format: "%.1f", self.cellTrashTime*1000))ms, configure=\(String(format: "%.1f", self.cellConfigureTime*1000))ms")
-                }
+            let count = self.dataSourceDriver.count
+            guard count > 0 else {
+                // 사진 없음 → 바로 완료
+                self.finishInitialDisplay(reason: "empty")
+                return
             }
 
-            print("[GridViewController] Data loaded: \(self.dataSourceDriver.count) items")
+            #if DEBUG
+            let dataMs = (CACurrentMediaTime() - self.loadStartTime) * 1000
+            FileLogger.log("[InitialDisplay] 데이터 로드 완료: +\(String(format: "%.1f", dataMs))ms, \(count)장")
+            #endif
+
+            // 3) 타임아웃 설정 (100ms)
+            DispatchQueue.main.asyncAfter(deadline: .now() + Self.initialDisplayTimeout) { [weak self] in
+                self?.finishInitialDisplay(reason: "timeout")
+            }
+
+            // 4) 프리로드 시작 (디스크 → 메모리)
+            // 프리로드 완료 시 finishInitialDisplay 호출
+            self.startInitialPreload()
         }
     }
 
@@ -695,6 +695,157 @@ final class GridViewController: UIViewController {
             // Note: PHImageRequestOptions.deliveryMode = .opportunistic 모드에서는
             // 저해상도 → 고해상도가 자동으로 전달되므로 별도 리로드 불필요
             // reloadItems 호출 시 prepareForReuse()가 호출되어 이미지가 깜빡거림
+        }
+    }
+
+    // MARK: - Initial Display (B+A 조합 v2)
+
+    /// 단일 완료 경로 - 모든 초기 표시 로직이 여기로 수렴
+    /// 순서: reloadData → layoutIfNeeded → scrollToBottom → layoutIfNeeded → reveal
+    /// - Parameter reason: 완료 이유 (preload complete, timeout 등)
+    private func finishInitialDisplay(reason: String) {
+        // 중복 호출 방지 (단일 상태)
+        guard !hasFinishedInitialDisplay else { return }
+        hasFinishedInitialDisplay = true
+
+        #if DEBUG
+        let elapsed = (CACurrentMediaTime() - loadStartTime) * 1000
+        FileLogger.log("[InitialDisplay] 완료 시작: +\(String(format: "%.1f", elapsed))ms (reason: \(reason), preloaded: \(preloadCompletedCount)/\(preloadTargetCount))")
+        #endif
+
+        // 1) UI 그리기 (프리로드된 메모리 캐시에서 히트)
+        collectionView.reloadData()
+        collectionView.layoutIfNeeded()
+
+        // 2) 맨 아래로 스크롤 (FR-003: 최신 사진)
+        scrollToBottomIfNeeded()
+
+        // 3) 바닥 셀 구성 강제
+        collectionView.layoutIfNeeded()
+
+        // 4) reveal (fade-in)
+        UIView.animate(withDuration: 0.15) {
+            self.collectionView.alpha = 1
+        }
+
+        // [Timing] 완료 시점
+        let finishTime = CACurrentMediaTime()
+        let finishMs = (finishTime - loadStartTime) * 1000
+        FileLogger.log("[Timing] === 초기 로딩 완료: +\(String(format: "%.1f", finishMs))ms (via \(reason)) ===")
+
+        // [DEBUG] 최종 통계 출력
+        FileLogger.log("[Timing] 최종 통계: cellForItemAt \(cellForItemAtCount)회, 총 \(String(format: "%.1f", cellForItemAtTotalTime))ms")
+    }
+
+    /// 맨 아래로 스크롤 (FR-003)
+    private func scrollToBottomIfNeeded() {
+        let totalCount = dataSourceDriver.count
+        guard totalCount > 0 else { return }
+
+        // padding 적용된 마지막 인덱스
+        let lastIndex = totalCount - 1 + paddingCellCount
+        let lastIndexPath = IndexPath(item: lastIndex, section: 0)
+
+        collectionView.scrollToItem(
+            at: lastIndexPath,
+            at: .bottom,
+            animated: false
+        )
+    }
+
+    /// 프리로드 범위 계산 (visible 기반)
+    /// - Returns: (시작 인덱스, 개수)
+    private func calculatePreloadRange() -> (startIndex: Int, count: Int) {
+        let totalCount = dataSourceDriver.count
+        guard totalCount > 0 else { return (0, 0) }
+
+        // 현재 레이아웃 기준 visible 계산
+        let cellHeight = currentCellSize.height + Self.cellSpacing
+        guard cellHeight > 0 else { return (0, min(12, totalCount)) }
+
+        let visibleRows = Int(ceil(collectionView.bounds.height / cellHeight))
+        let columns = currentColumnCount.rawValue
+
+        // 1 screen 분량 (최소 12개, 최대 18개)
+        // 42개는 timeout에 지므로 12~18개로 축소
+        let targetCount = min(max(columns * visibleRows, 12), 18)
+
+        // 도착 위치 = 맨 아래 (최신 사진)
+        let startIndex = max(0, totalCount - targetCount)
+        let actualCount = totalCount - startIndex
+
+        return (startIndex, actualCount)
+    }
+
+    /// 첫 화면 프리로드 시작 (디스크 → 메모리)
+    private func startInitialPreload() {
+        // 방어: currentCellSize가 0이면 다음 런루프에서 재시도
+        guard currentCellSize != .zero else {
+            #if DEBUG
+            FileLogger.log("[Preload] currentCellSize==0, 다음 런루프에서 재시도")
+            #endif
+            DispatchQueue.main.async { [weak self] in
+                self?.startInitialPreload()
+            }
+            return
+        }
+
+        let (startIndex, count) = calculatePreloadRange()
+        guard count > 0 else {
+            finishInitialDisplay(reason: "empty")
+            return
+        }
+
+        preloadTargetCount = count
+        preloadCompletedCount = 0
+
+        // pixelSize는 thumbnailSize()와 동일하게 계산 (pt × scale)
+        // PhotoCell에서도 동일한 값을 사용해야 메모리 캐시 히트
+        let pixelSize = thumbnailSize()
+
+        #if DEBUG
+        // 검증 로그: 프리로드에서 사용하는 pixelSize
+        FileLogger.log("[Preload] 시작: index \(startIndex)~\(startIndex + count - 1) (\(count)개), pixelSize=\(Int(pixelSize.width))x\(Int(pixelSize.height))px")
+        #endif
+
+        // 각 에셋에 대해 디스크 캐시 → 메모리 캐시 로드
+        for i in 0..<count {
+            let indexPath = IndexPath(item: startIndex + i, section: 0)
+            guard let asset = dataSourceDriver.asset(at: indexPath) else {
+                onPreloadCompleted()
+                continue
+            }
+
+            let assetID = asset.localIdentifier
+
+            // 이미 메모리에 있으면 스킵
+            if MemoryThumbnailCache.shared.get(assetID: assetID, pixelSize: pixelSize) != nil {
+                onPreloadCompleted()
+                continue
+            }
+
+            // 디스크 캐시에서 비동기 로드
+            ThumbnailCache.shared.load(
+                assetID: assetID,
+                modificationDate: asset.modificationDate,
+                size: pixelSize
+            ) { [weak self] image in
+                // 메모리 캐시에 저장
+                if let image = image {
+                    MemoryThumbnailCache.shared.set(image: image, assetID: assetID, pixelSize: pixelSize)
+                }
+                self?.onPreloadCompleted()
+            }
+        }
+    }
+
+    /// 프리로드 완료 콜백
+    private func onPreloadCompleted() {
+        preloadCompletedCount += 1
+
+        // 목표 도달 시 finish
+        if preloadCompletedCount >= preloadTargetCount {
+            finishInitialDisplay(reason: "preload complete")
         }
     }
 

@@ -332,9 +332,36 @@ final class PhotoCell: UICollectionViewCell {
         let duration: TimeInterval? = mediaType == .video ? asset.duration : nil
         updateVideoBadge(mediaType: mediaType, duration: duration)
 
-        // targetSize를 픽셀 단위로 변환 (pt × scale)
-        let scale = UIScreen.main.scale
-        let pixelSize = CGSize(width: targetSize.width * scale, height: targetSize.height * scale)
+        // targetSize는 이미 픽셀 단위 (thumbnailSize()가 pt × scale 반환)
+        // 여기서 다시 scale을 곱하면 이중 곱셈 버그 발생
+        let pixelSize = targetSize
+
+        #if DEBUG
+        // 검증 로그: PhotoCell에서 조회하는 pixelSize (1회만)
+        if Self.imageApplyCounter == 0 {
+            FileLogger.log("[PhotoCell] 메모리 캐시 조회 pixelSize: \(Int(pixelSize.width))x\(Int(pixelSize.height))px")
+        }
+        #endif
+
+        // B+A v2: 0) 메모리 캐시에서 동기 로드 (즉시 반환)
+        // - 프리로드된 이미지가 있으면 셀 생성과 동시에 이미지 할당
+        if let memoryImage = MemoryThumbnailCache.shared.get(assetID: assetID, pixelSize: pixelSize) {
+            imageView.image = memoryImage
+
+            #if DEBUG
+            Self.applyLock.withLock {
+                Self.imageApplyCounter += 1
+                Self.cacheHitApplyCounter += 1
+
+                // 첫 번째 이미지 할당 시 T_firstThumbnailVisible 로그
+                if !Self.hasLoggedFirstThumbnail {
+                    Self.hasLoggedFirstThumbnail = true
+                    FileLogger.log("[PhotoCell] T_firstThumbnailVisible: 첫 이미지 할당 (메모리 캐시 히트)")
+                }
+            }
+            #endif
+            return // 메모리 캐시 히트 → 완료
+        }
 
         // 캐시 로드 ID 생성 (비동기 캐시 결과 검증용)
         let loadID = UUID()
