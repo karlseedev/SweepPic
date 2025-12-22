@@ -109,7 +109,8 @@ final class Gate2ViewController: UIViewController {
     /// 파이프라인 후보 (gate2-pipeline-test.md 참조)
     enum PipelineCandidate: String, CaseIterable {
         case baseline = "Baseline"      // 현행 (Control)
-        case candidateA = "A"           // fastFormat + didEndDisplaying
+        case candidateA = "A"           // fastFormat + didEndDisplaying + R2만
+        case candidateA_R1R2 = "A+R1R2" // fastFormat + didEndDisplaying + R1+R2
         case candidateD = "D"           // Adaptive 2-Stage
         case candidateB1 = "B1"         // preheat OFF only
         case candidateB2 = "B2"         // B1 + quality 30%
@@ -120,7 +121,8 @@ final class Gate2ViewController: UIViewController {
         var description: String {
             switch self {
             case .baseline: return "현행 (opportunistic, prepareForReuse)"
-            case .candidateA: return "fastFormat + didEndDisplaying"
+            case .candidateA: return "fastFormat + didEndDisplaying + R2만"
+            case .candidateA_R1R2: return "fastFormat + didEndDisplaying + R1+R2"
             case .candidateD: return "Adaptive 2-Stage (Photos 모방)"
             case .candidateB1: return "preheat 스크롤 중 OFF"
             case .candidateB2: return "B1 + quality 30%"
@@ -138,6 +140,7 @@ final class Gate2ViewController: UIViewController {
     private var maxInFlight: Int = 0  // 0 = unlimited
     private var currentInFlight: Int = 0
     private var upgradeAfterScroll: Bool = false  // Candidate D: 정지 후 100% 업그레이드
+    private var useR1Recovery: Bool = false  // R1: willDisplay 기반 자동 복구
 
     // MARK: - Init
 
@@ -165,13 +168,24 @@ final class Gate2ViewController: UIViewController {
             upgradeAfterScroll = false
 
         case .candidateA:
-            // fastFormat + didEndDisplaying
+            // fastFormat + didEndDisplaying + R2만
             useFastFormat = true
             useDidEndDisplayingCancel = true
             preheatMode = .on
             scrollQualityScale = 0.5
             maxInFlight = 0
             upgradeAfterScroll = false
+            useR1Recovery = false  // R2만
+
+        case .candidateA_R1R2:
+            // fastFormat + didEndDisplaying + R1+R2
+            useFastFormat = true
+            useDidEndDisplayingCancel = true
+            preheatMode = .on
+            scrollQualityScale = 0.5
+            maxInFlight = 0
+            upgradeAfterScroll = false
+            useR1Recovery = true  // R1+R2
 
         case .candidateD:
             // Adaptive 2-Stage (Photos 모방)
@@ -1002,6 +1016,15 @@ extension Gate2ViewController: UICollectionViewDataSource {
 // MARK: - UICollectionViewDelegate
 
 extension Gate2ViewController: UICollectionViewDelegate {
+
+    // MARK: - 스크롤 시작 시 R2 타이머 취소
+    // 정지 후 예약된 R2(200ms)가 다음 스크롤 중(또는 감속 중)에 뒤늦게 실행되는 것을 방지
+    func scrollViewWillBeginDragging(_ scrollView: UIScrollView) {
+        isScrolling = true
+        r2DebounceTimer?.invalidate()
+        r2DebounceTimer = nil
+    }
+
     func scrollViewDidScroll(_ scrollView: UIScrollView) {
         // Track scrolling state
         isScrolling = scrollView.isTracking || scrollView.isDragging || scrollView.isDecelerating
@@ -1147,15 +1170,15 @@ extension Gate2ViewController: UICollectionViewDelegate {
         }
     }
 
-    // MARK: - R1: willDisplay 기반 자동 복구 (Gate 2 Contract)
-    // 계약: 가시 셀은 "요청이 없으면 반드시 요청이 걸린다"
-    // 계약: 재스크롤 없이도 정지 상태에서 복구된다
+    // MARK: - R1: willDisplay 기반 자동 복구 (조건부)
+    // useR1Recovery가 true일 때만 동작 (candidateA_R1R2)
 
     func collectionView(_ collectionView: UICollectionView, willDisplay cell: UICollectionViewCell, forItemAt indexPath: IndexPath) {
+        // R1 비활성화 시 skip
+        guard useR1Recovery else { return }
         guard let imageCell = cell as? ImageCell else { return }
 
         // R1 조건: 셀이 placeholder 상태(이미지 nil)이고, 요청이 진행 중이 아니면 재요청
-        // 이 로직은 didEndDisplaying에서 취소된 후 다시 화면에 들어온 셀을 복구한다
         let identifier = provider.identifier(at: indexPath.item)
 
         // 이미 이미지가 있으면 skip (정상 상태)

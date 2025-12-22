@@ -106,8 +106,14 @@ final class PhotoCell: UICollectionViewCell {
 
     // MARK: - Properties
 
-    /// 현재 이미지 요청 토큰
+    /// 현재 이미지 요청 토큰 (레거시 API용)
     private var currentRequestToken: RequestToken?
+
+    /// 현재 이미지 요청 (새 API - Cancellable)
+    private var currentCancellable: Cancellable?
+
+    /// 비동기 캐시 로드 ID (캐시 로드 취소/검증용)
+    private var currentCacheLoadID: UUID?
 
     /// 현재 표시 중인 에셋 ID
     private(set) var currentAssetID: String?
@@ -141,6 +147,13 @@ final class PhotoCell: UICollectionViewCell {
 
         // 이전 요청 취소 (오표시 방지)
         cancelCurrentRequest()
+
+        // 새 API 요청 취소
+        currentCancellable?.cancel()
+        currentCancellable = nil
+
+        // 캐시 로드 ID 초기화 (비동기 캐시 결과 무시)
+        currentCacheLoadID = nil
 
         // 상태 초기화
         imageView.image = nil
@@ -246,23 +259,29 @@ final class PhotoCell: UICollectionViewCell {
         videoIconView.isHidden = true
     }
 
-    /// 셀 설정 (PHAsset 직접 전달 - 성능 최적화)
+    /// 셀 설정 (PHAsset 직접 전달 - v6 최적화)
+    /// - 디스크 캐시 우선 확인 → 캐시 미스 시 ImagePipeline 요청
+    /// - targetSize는 point 단위 (내부에서 픽셀로 변환)
     /// - Parameters:
     ///   - asset: 표시할 PHAsset
     ///   - isTrashed: 휴지통 상태
-    ///   - targetSize: 썸네일 목표 크기
+    ///   - targetSize: 썸네일 목표 크기 (point 단위)
     func configure(
         asset: PHAsset,
         isTrashed: Bool,
         targetSize: CGSize
     ) {
         let assetID = asset.localIdentifier
+        let modDate = asset.modificationDate
 
         // 동일한 에셋이면 무시
         guard currentAssetID != assetID else { return }
 
         // 이전 요청 취소
         cancelCurrentRequest()
+        currentCancellable?.cancel()
+        currentCancellable = nil
+        currentCacheLoadID = nil
 
         // 새 에셋 ID 설정
         currentAssetID = assetID
@@ -293,72 +312,83 @@ final class PhotoCell: UICollectionViewCell {
         let duration: TimeInterval? = mediaType == .video ? asset.duration : nil
         updateVideoBadge(mediaType: mediaType, duration: duration)
 
-        // [DEBUG] A) requestImage 호출 전후 시간 측정
-        let reqStart = CACurrentMediaTime()
+        // targetSize를 픽셀 단위로 변환 (pt × scale)
+        let scale = UIScreen.main.scale
+        let pixelSize = CGSize(width: targetSize.width * scale, height: targetSize.height * scale)
 
-        // 이미지 요청 (PHAsset 직접 전달 - 성능 최적화)
-        currentRequestToken = ImagePipeline.shared.requestImage(
-            for: asset,
-            targetSize: targetSize,
-            contentMode: .aspectFill
-        ) { [weak self] image, token in
+        // 캐시 로드 ID 생성 (비동기 캐시 결과 검증용)
+        let loadID = UUID()
+        currentCacheLoadID = loadID
+
+        // 1) 디스크 캐시에서 비동기 로드 (백그라운드 predecode)
+        ThumbnailCache.shared.load(
+            assetID: assetID,
+            modificationDate: modDate,
+            size: pixelSize
+        ) { [weak self] cachedImage in
+            // 메인 스레드에서 호출됨
             guard let self = self else { return }
 
-            // 토큰 검증 (오표시 방지)
-            // 요청 후 셀이 재사용되었을 수 있으므로 assetID 확인
-            guard self.currentAssetID == token.assetID,
-                  !token.isCancelled else {
+            // 셀 재사용 또는 캐시 로드 ID 변경 체크
+            guard self.currentAssetID == assetID,
+                  self.currentCacheLoadID == loadID else { return }
+
+            if let cachedImage = cachedImage {
+                // 캐시 히트 → 이미지 표시 후 종료
+                self.imageView.image = cachedImage
                 return
             }
 
-            // [DEBUG] B) 이미지 적용 시간 측정
-            let applyStart = CACurrentMediaTime()
-
-            // 이미지 설정
-            self.imageView.image = image
-
-            let applyEnd = CACurrentMediaTime()
-            let applyMs = (applyEnd - applyStart) * 1000
-
-            // 누적 카운트 (static으로 공유)
-            PhotoCell.imageApplyCount += 1
-            PhotoCell.imageApplyTotalTime += applyMs
-
-            // 매 10번째에 로그
-            if PhotoCell.imageApplyCount % 10 == 0 {
-                print("[Timing] imageApply 누적: \(PhotoCell.imageApplyCount)회, 총 \(String(format: "%.1f", PhotoCell.imageApplyTotalTime))ms, 평균 \(String(format: "%.2f", PhotoCell.imageApplyTotalTime / Double(PhotoCell.imageApplyCount)))ms")
-            }
+            // 2) 캐시 미스 → ImagePipeline 요청
+            self.requestFromPipeline(asset: asset, pixelSize: pixelSize, modDate: modDate)
         }
+    }
 
-        // [DEBUG] A) requestImage 호출 완료 시점
-        let reqEnd = CACurrentMediaTime()
-        let reqMs = (reqEnd - reqStart) * 1000
+    /// ImagePipeline에서 이미지 요청 (캐시 미스 시 호출)
+    private func requestFromPipeline(asset: PHAsset, pixelSize: CGSize, modDate: Date?) {
+        let assetID = asset.localIdentifier
 
-        // 누적 카운트
-        PhotoCell.requestImageCount += 1
-        PhotoCell.requestImageTotalTime += reqMs
+        currentCancellable = ImagePipeline.shared.requestImage(
+            for: asset,
+            targetSize: pixelSize,
+            contentMode: .aspectFill
+        ) { [weak self] image, isDegraded in
+            guard let self = self else { return }
 
-        // 매 10번째에 로그
-        if PhotoCell.requestImageCount % 10 == 0 {
-            print("[Timing] requestImage 호출 누적: \(PhotoCell.requestImageCount)회, 총 \(String(format: "%.1f", PhotoCell.requestImageTotalTime))ms, 평균 \(String(format: "%.2f", PhotoCell.requestImageTotalTime / Double(PhotoCell.requestImageCount)))ms")
+            // 셀 재사용 체크
+            guard self.currentAssetID == assetID else { return }
+
+            if let image = image {
+                // 이미지 표시
+                self.imageView.image = image
+
+                // degraded가 아닌 최종 이미지만 캐시에 저장
+                if !isDegraded {
+                    ThumbnailCache.shared.save(
+                        image: image,
+                        assetID: assetID,
+                        modificationDate: modDate,
+                        size: pixelSize
+                    )
+                }
+            }
         }
     }
 
     /// 셀 설정 (assetID 기반 - 레거시 호환)
+    /// - Note: 새 코드는 PHAsset 기반 configure(asset:...) 사용 권장
     /// - Parameters:
     ///   - assetID: 표시할 에셋 ID
     ///   - isTrashed: 휴지통 상태
     ///   - mediaType: 미디어 타입
     ///   - duration: 비디오 duration (초, 비디오인 경우만)
     ///   - targetSize: 썸네일 목표 크기
-    ///   - imagePipeline: 이미지 파이프라인
     func configure(
         assetID: String,
         isTrashed: Bool,
         mediaType: MediaType = .photo,
         duration: TimeInterval? = nil,
-        targetSize: CGSize,
-        imagePipeline: ImagePipelineProtocol = ImagePipeline.shared
+        targetSize: CGSize
     ) {
         // 동일한 에셋이면 무시
         guard currentAssetID != assetID else { return }
@@ -376,8 +406,8 @@ final class PhotoCell: UICollectionViewCell {
         // 비디오 배지 업데이트 (T067)
         updateVideoBadge(mediaType: mediaType, duration: duration)
 
-        // 이미지 요청
-        currentRequestToken = imagePipeline.requestImage(
+        // 이미지 요청 (레거시 API 사용)
+        currentRequestToken = ImagePipeline.shared.requestImage(
             for: assetID,
             targetSize: targetSize,
             contentMode: .aspectFill

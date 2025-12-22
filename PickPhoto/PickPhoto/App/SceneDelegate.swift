@@ -62,6 +62,11 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
     func sceneDidBecomeActive(_ scene: UIScene) {
         // 앱이 활성 상태가 될 때 처리
         print("[SceneDelegate] Scene became active")
+
+        // v6: 백그라운드에서 캐시 트림 (용량 관리)
+        DispatchQueue.global(qos: .utility).async {
+            ThumbnailCache.shared.trimIfNeeded()
+        }
     }
 
     /// Scene이 비활성화될 때 호출

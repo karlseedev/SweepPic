@@ -57,14 +57,23 @@ final class GateMenuViewController: UIViewController {
         )
         stackView.addArrangedSubview(baselineButton)
 
-        // Gate 2 - Candidate A
+        // Gate 2 - Candidate A (R2만)
         let candidateAButton = createButton(
-            title: "후보 A",
-            subtitle: "fastFormat + didEndDisplaying",
+            title: "후보 A (R2만)",
+            subtitle: "fastFormat + didEndDisplaying + R2",
             color: .systemBlue,
             action: #selector(openGate2CandidateA)
         )
         stackView.addArrangedSubview(candidateAButton)
+
+        // Gate 2 - Candidate A + R1R2
+        let candidateA_R1R2Button = createButton(
+            title: "후보 A (R1+R2)",
+            subtitle: "fastFormat + didEndDisplaying + R1+R2",
+            color: .systemTeal,
+            action: #selector(openGate2CandidateA_R1R2)
+        )
+        stackView.addArrangedSubview(candidateA_R1R2Button)
 
         // Gate 2 - Candidate D (추천)
         let candidateDButton = createButton(
@@ -156,6 +165,12 @@ final class GateMenuViewController: UIViewController {
     @objc private func openGate2CandidateA() {
         let provider = PhotoKitImageProvider()
         let vc = Gate2ViewController(provider: provider, name: "PhotoKit", pipeline: .candidateA)
+        navigationController?.pushViewController(vc, animated: true)
+    }
+
+    @objc private func openGate2CandidateA_R1R2() {
+        let provider = PhotoKitImageProvider()
+        let vc = Gate2ViewController(provider: provider, name: "PhotoKit", pipeline: .candidateA_R1R2)
         navigationController?.pushViewController(vc, animated: true)
     }
 

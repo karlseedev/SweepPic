@@ -633,8 +633,8 @@ final class PhotoPageViewController: UIViewController {
         return gesture
     }()
 
-    /// 이미지 요청 토큰
-    private var requestToken: RequestToken?
+    /// 이미지 요청 토큰 (v6: Cancellable)
+    private var requestCancellable: Cancellable?
 
     /// 원본 이미지 크기 (aspect fit 계산용)
     private var imageSize: CGSize = .zero
@@ -691,7 +691,7 @@ final class PhotoPageViewController: UIViewController {
             height: view.bounds.height * scale * 2
         )
 
-        requestToken = ImagePipeline.shared.requestImage(
+        requestCancellable = ImagePipeline.shared.requestImage(
             for: asset,
             targetSize: targetSize,
             contentMode: .aspectFit

@@ -142,6 +142,9 @@ final class GridViewController: UIViewController {
     /// 최초 로드 시 맨 아래로 스크롤 여부 (FR-003)
     private var hasScrolledToBottom: Bool = false
 
+    /// 초기 화면 프리히트 완료 여부 (v6: viewDidAppear에서 호출)
+    private var hasPreheatedInitialScreen: Bool = false
+
     /// Select 모드 여부
     private(set) var isSelectMode: Bool = false
 
@@ -281,6 +284,13 @@ final class GridViewController: UIViewController {
         print("[Timing] viewWillAppear.reloadData: +\(String(format: "%.1f", vwaMs))ms")
         // 화면 표시 시 변경사항 반영 (탭 전환 등)
         collectionView.reloadData()
+    }
+
+    override func viewDidAppear(_ animated: Bool) {
+        super.viewDidAppear(animated)
+
+        // v6: visible indexPaths가 확실히 채워진 시점에 초기 프리히트
+        preheatInitialScreen()
     }
 
     override func viewDidLayoutSubviews() {
@@ -686,6 +696,73 @@ final class GridViewController: UIViewController {
             // 저해상도 → 고해상도가 자동으로 전달되므로 별도 리로드 불필요
             // reloadItems 호출 시 prepareForReuse()가 호출되어 이미지가 깜빡거림
         }
+    }
+
+    // MARK: - Initial Preheat (v6)
+
+    /// 첫 화면 프리히트 (viewDidAppear 이후 호출 - visible 보장)
+    /// - visible indexPaths가 확실히 채워진 시점에 호출
+    /// - +1 화면 반경까지 프리히트
+    private func preheatInitialScreen() {
+        guard !hasPreheatedInitialScreen else { return }
+        hasPreheatedInitialScreen = true
+
+        // 정확한 pixelSize (pt × scale)
+        let scale = UIScreen.main.scale
+        let targetSize = CGSize(
+            width: currentCellSize.width * scale,
+            height: currentCellSize.height * scale
+        )
+
+        // viewDidAppear 이후이므로 visible indexPaths 확실히 존재
+        let visibleIndexPaths = collectionView.indexPathsForVisibleItems
+        guard !visibleIndexPaths.isEmpty else {
+            // 만약을 위한 fallback
+            hasPreheatedInitialScreen = false
+            print("[GridViewController] preheatInitialScreen: visible empty, will retry")
+            return
+        }
+
+        // padding 오프셋 적용하여 실제 asset indexPaths 변환
+        let padding = paddingCellCount
+        let assetIndexPaths = visibleIndexPaths.compactMap { indexPath -> IndexPath? in
+            guard indexPath.item >= padding else { return nil }
+            return IndexPath(item: indexPath.item - padding, section: indexPath.section)
+        }
+
+        // +1 화면 반경 (약 21개 셀 = 7행 × 3열)
+        let extendedIndexPaths = extendIndexPaths(assetIndexPaths, by: 21)
+
+        // PHAsset 배열 가져오기
+        let assets = extendedIndexPaths.compactMap { dataSourceDriver.asset(at: $0) }
+        guard !assets.isEmpty else {
+            print("[GridViewController] preheatInitialScreen: no assets to preheat")
+            return
+        }
+
+        // 백그라운드에서 프리히트 (v6: 메인 스레드 블로킹 방지)
+        DispatchQueue.global(qos: .userInitiated).async {
+            ImagePipeline.shared.preheatAssets(assets, targetSize: targetSize)
+        }
+
+        print("[GridViewController] preheatInitialScreen: \(assets.count) assets")
+    }
+
+    /// IndexPath 배열을 확장 (앞뒤로 지정 개수만큼)
+    private func extendIndexPaths(_ indexPaths: [IndexPath], by count: Int) -> [IndexPath] {
+        guard !indexPaths.isEmpty else { return [] }
+
+        let sortedItems = indexPaths.map { $0.item }.sorted()
+        guard let minItem = sortedItems.first,
+              let maxItem = sortedItems.last else { return indexPaths }
+
+        // 확장 범위 계산
+        let extendedMin = max(0, minItem - count)
+        let extendedMax = min(dataSourceDriver.count - 1, maxItem + count)
+
+        guard extendedMin <= extendedMax else { return indexPaths }
+
+        return (extendedMin...extendedMax).map { IndexPath(item: $0, section: 0) }
     }
 }
 
