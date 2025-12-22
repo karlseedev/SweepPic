@@ -7,6 +7,7 @@
 // - 백그라운드 전환 처리
 
 import UIKit
+import Photos
 import AppCore
 
 /// PickPhoto 앱의 AppDelegate
@@ -28,7 +29,54 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         // AppCore 초기화 로그
         print("[AppDelegate] PickPhoto started with AppCore \(AppCore.version)")
 
+        // Gate 2 측정용 환경 정보 로깅
+        logEnvironmentInfo()
+
+        // 파이프라인 설정 로깅
+        ImagePipeline.shared.logConfig()
+
         return true
+    }
+
+    // MARK: - Debug Logging
+
+    /// 환경 정보 로깅 (Gate 2 측정용)
+    private func logEnvironmentInfo() {
+        #if DEBUG
+        let buildConfig = "Debug"
+        #else
+        let buildConfig = "Release"
+        #endif
+
+        FileLogger.log("[Env] Build: \(buildConfig)")
+
+        // Low Power Mode
+        let isLowPowerMode = ProcessInfo.processInfo.isLowPowerModeEnabled
+        FileLogger.log("[Env] LowPowerMode: \(isLowPowerMode ? "ON" : "OFF")")
+
+        // Photos Authorization
+        let photoAuthStatus: String
+        switch PHPhotoLibrary.authorizationStatus(for: .readWrite) {
+        case .authorized: photoAuthStatus = "authorized"
+        case .limited: photoAuthStatus = "limited"
+        case .denied: photoAuthStatus = "denied"
+        case .restricted: photoAuthStatus = "restricted"
+        case .notDetermined: photoAuthStatus = "notDetermined"
+        @unknown default: photoAuthStatus = "unknown"
+        }
+        FileLogger.log("[Env] PhotosAuth: \(photoAuthStatus)")
+
+        // Device Info
+        var systemInfo = utsname()
+        uname(&systemInfo)
+        let machine = withUnsafePointer(to: &systemInfo.machine) {
+            $0.withMemoryRebound(to: CChar.self, capacity: 1) {
+                String(validatingUTF8: $0) ?? "Unknown"
+            }
+        }
+        let iosVersion = UIDevice.current.systemVersion
+        let maxFPS = UIScreen.main.maximumFramesPerSecond
+        FileLogger.log("[Device] \(machine), iOS \(iosVersion), \(maxFPS)fps")
     }
 
     // MARK: - UISceneSession Lifecycle

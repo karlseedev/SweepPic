@@ -139,6 +139,12 @@ final class GridViewController: UIViewController {
     /// 스크롤 종료 감지 타이머
     private var scrollEndTimer: Timer?
 
+    /// Hitch 모니터 (Gate 2 측정용)
+    private let hitchMonitor = HitchMonitor()
+
+    /// 첫 스크롤 완료 여부 (L1/L2 구분용)
+    private var hasCompletedFirstScroll: Bool = false
+
     /// 최초 로드 시 맨 아래로 스크롤 여부 (FR-003)
     private var hasScrolledToBottom: Bool = false
 
@@ -585,6 +591,13 @@ final class GridViewController: UIViewController {
 
         // 스크롤 종료 타이머 취소
         scrollEndTimer?.invalidate()
+
+        // Gate 2: HitchMonitor 시작
+        hitchMonitor.start()
+
+        // 스크롤 시작 로그
+        let scrollType = hasCompletedFirstScroll ? "L2 Steady" : "L1 First"
+        FileLogger.log("[Scroll] \(scrollType) START")
     }
 
     /// 스크롤 종료
@@ -592,7 +605,20 @@ final class GridViewController: UIViewController {
         // 디바운스 (100ms 후 실제 종료로 간주)
         scrollEndTimer?.invalidate()
         scrollEndTimer = Timer.scheduledTimer(withTimeInterval: 0.1, repeats: false) { [weak self] _ in
-            self?.isScrolling = false
+            guard let self = self else { return }
+            self.isScrolling = false
+
+            // Gate 2: HitchMonitor 중지 및 결과 로그
+            let result = self.hitchMonitor.stop()
+            let scrollType = self.hasCompletedFirstScroll ? "L2 Steady" : "L1 First"
+
+            FileLogger.log("[Hitch] \(scrollType): \(result.formatted())")
+            FileLogger.log("[Scroll] \(scrollType) END (duration: \(String(format: "%.1f", result.durationSeconds))s)")
+
+            // 첫 스크롤 완료 표시
+            if !self.hasCompletedFirstScroll {
+                self.hasCompletedFirstScroll = true
+            }
 
             // Note: PHImageRequestOptions.deliveryMode = .opportunistic 모드에서는
             // 저해상도 → 고해상도가 자동으로 전달되므로 별도 리로드 불필요

@@ -272,4 +272,15 @@ public final class ImagePipeline: ImagePipelineProtocol {
 
         return asset
     }
+
+    // MARK: - Debug Logging
+
+    /// 파이프라인 설정 로그 출력
+    public func logConfig() {
+        #if DEBUG
+        FileLogger.log("[Config] deliveryMode: opportunistic")
+        FileLogger.log("[Config] cancelPolicy: prepareForReuse")
+        FileLogger.log("[Config] R2Recovery: disabled")
+        #endif
+    }
 }
