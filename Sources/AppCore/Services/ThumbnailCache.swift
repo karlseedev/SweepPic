@@ -128,8 +128,9 @@ public final class ThumbnailCache {
                 return
             }
 
-            // 캐시 히트
-            #if DEBUG
+            // 캐시 히트 (스크롤 중 로그 비활성화 - hitch 방지)
+            // 원복: git checkout a5414d4 -- Sources/AppCore/Services/ThumbnailCache.swift
+            #if false  // DEBUG 로그 임시 비활성화
             Self.counterLock.withLock { Self.hitCount += 1 }
             let total = Self.hitCount + Self.missCount
             if total <= 50 {

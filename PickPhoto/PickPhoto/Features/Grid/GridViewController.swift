@@ -86,7 +86,8 @@ final class GridViewController: UIViewController {
         cv.register(PhotoCell.self, forCellWithReuseIdentifier: PhotoCell.reuseIdentifier)
         cv.delegate = self
         cv.dataSource = self
-        cv.prefetchDataSource = self
+        // [A) preheat OFF 테스트] prefetchDataSource 비활성화
+        // cv.prefetchDataSource = self
         cv.alwaysBounceVertical = true
         // T027-1f: Edge-to-edge 설정
         // 플로팅 UI 사용 시 수동으로 contentInset 설정
@@ -322,8 +323,9 @@ final class GridViewController: UIViewController {
     override func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
 
+        // [A) preheat OFF 테스트] 초기 프리히트 비활성화
         // v6: visible indexPaths가 확실히 채워진 시점에 초기 프리히트
-        preheatInitialScreen()
+        // preheatInitialScreen()
     }
 
     override func viewDidLayoutSubviews() {
@@ -736,9 +738,49 @@ final class GridViewController: UIViewController {
                 ImagePipeline.shared.logStats(label: "First Scroll")
             }
 
+            // [preheat 최적화] 스크롤 정지 후 1회 preheat
+            // - 스크롤 중에는 OFF (hitch 방지)
+            // - 정지 후에만 visible + 1화면 범위 캐싱
+            self.preheatAfterScrollStop()
+
             // Note: PHImageRequestOptions.deliveryMode = .opportunistic 모드에서는
             // 저해상도 → 고해상도가 자동으로 전달되므로 별도 리로드 불필요
             // reloadItems 호출 시 prepareForReuse()가 호출되어 이미지가 깜빡거림
+        }
+    }
+
+    /// 스크롤 정지 후 preheat (1회)
+    /// - visible + 1화면 범위만 캐싱
+    /// - 백그라운드에서 실행하여 메인 스레드 부하 최소화
+    private func preheatAfterScrollStop() {
+        // 현재 visible indexPaths
+        let visibleIndexPaths = collectionView.indexPathsForVisibleItems
+        guard !visibleIndexPaths.isEmpty else { return }
+
+        // padding 오프셋 적용하여 실제 asset indexPaths 변환
+        let padding = paddingCellCount
+        let assetIndexPaths = visibleIndexPaths.compactMap { indexPath -> IndexPath? in
+            guard indexPath.item >= padding else { return nil }
+            return IndexPath(item: indexPath.item - padding, section: indexPath.section)
+        }
+
+        // +1 화면 반경 (약 21개 셀 = 7행 × 3열)
+        let extendedIndexPaths = extendIndexPaths(assetIndexPaths, by: 21)
+
+        // PHAsset 배열 가져오기
+        let assets = extendedIndexPaths.compactMap { dataSourceDriver.asset(at: $0) }
+        guard !assets.isEmpty else { return }
+
+        // 정확한 pixelSize (pt × scale)
+        let scale = UIScreen.main.scale
+        let targetSize = CGSize(
+            width: currentCellSize.width * scale,
+            height: currentCellSize.height * scale
+        )
+
+        // 백그라운드에서 preheat (메인 스레드 부하 방지)
+        DispatchQueue.global(qos: .userInitiated).async {
+            ImagePipeline.shared.preheatAssets(assets, targetSize: targetSize)
         }
     }
 
@@ -1061,10 +1103,12 @@ extension GridViewController: UICollectionViewDataSource {
             cellForItemAtCount += 1
             cellForItemAtTotalTime += cellMs
 
-            // 매 10번째에 구간별 로그 출력
-            if cellForItemAtCount % 10 == 0 {
-                FileLogger.log("[Timing] cellForItemAt #\(cellForItemAtCount): dequeue=\(String(format: "%.1f", cellDequeueTime*1000))ms, asset=\(String(format: "%.1f", cellAssetTime*1000))ms, trash=\(String(format: "%.1f", cellTrashTime*1000))ms, configure=\(String(format: "%.1f", cellConfigureTime*1000))ms")
-            }
+            // 스크롤 중 로그 비활성화 - hitch 방지
+            // 원복: git checkout a5414d4 -- PickPhoto/PickPhoto/Features/Grid/GridViewController.swift
+            // 매 10번째에 구간별 로그 출력 (임시 비활성화)
+            // if cellForItemAtCount % 10 == 0 {
+            //     FileLogger.log("[Timing] cellForItemAt #\(cellForItemAtCount): ...")
+            // }
         }
 
         // Select 모드일 때 선택 상태 표시 (T039, T045)

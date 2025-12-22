@@ -336,7 +336,9 @@ final class PhotoCell: UICollectionViewCell {
         // 여기서 다시 scale을 곱하면 이중 곱셈 버그 발생
         let pixelSize = targetSize
 
-        #if DEBUG
+        // 스크롤 중 로그 비활성화 - hitch 방지
+        // 원복: git checkout a5414d4 -- PickPhoto/PickPhoto/Features/Grid/PhotoCell.swift
+        #if false  // DEBUG 로그 임시 비활성화
         // 검증 로그: PhotoCell에서 조회하는 pixelSize (1회만)
         if Self.imageApplyCounter == 0 {
             FileLogger.log("[PhotoCell] 메모리 캐시 조회 pixelSize: \(Int(pixelSize.width))x\(Int(pixelSize.height))px")
@@ -348,7 +350,7 @@ final class PhotoCell: UICollectionViewCell {
         if let memoryImage = MemoryThumbnailCache.shared.get(assetID: assetID, pixelSize: pixelSize) {
             imageView.image = memoryImage
 
-            #if DEBUG
+            #if false  // DEBUG 로그 임시 비활성화
             Self.applyLock.withLock {
                 Self.imageApplyCounter += 1
                 Self.cacheHitApplyCounter += 1
@@ -384,7 +386,7 @@ final class PhotoCell: UICollectionViewCell {
                 // 캐시 히트 → 이미지 표시 후 종료
                 self.imageView.image = cachedImage
 
-                #if DEBUG
+                #if false  // DEBUG 로그 임시 비활성화
                 Self.applyLock.withLock {
                     Self.imageApplyCounter += 1
                     Self.cacheHitApplyCounter += 1
@@ -429,7 +431,7 @@ final class PhotoCell: UICollectionViewCell {
                 // 이미지 표시
                 self.imageView.image = image
 
-                #if DEBUG
+                #if false  // DEBUG 로그 임시 비활성화
                 Self.applyLock.withLock {
                     Self.imageApplyCounter += 1
                     // Pipeline에서 받은 건 캐시 미스
