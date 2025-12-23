@@ -208,15 +208,11 @@ final class ViewerViewController: UIViewController {
     // MARK: - Lifecycle
 
     override func viewDidLoad() {
-        let startTime = CFAbsoluteTimeGetCurrent()
-        print("[ViewerVC.Timing] viewDidLoad 시작")
         super.viewDidLoad()
         setupUI()
         setupGestures()
         setupSwipeDeleteHandler()
         displayInitialPhoto()
-        let elapsed = (CFAbsoluteTimeGetCurrent() - startTime) * 1000
-        print("[ViewerVC.Timing] viewDidLoad 완료: \(String(format: "%.1f", elapsed))ms")
     }
 
     override func viewWillDisappear(_ animated: Bool) {
@@ -338,14 +334,7 @@ final class ViewerViewController: UIViewController {
 
     /// 초기 사진 표시
     private func displayInitialPhoto() {
-        let startTime = CFAbsoluteTimeGetCurrent()
-        print("[ViewerVC.Timing] displayInitialPhoto 시작")
-        guard let photoVC = createPhotoViewController(at: currentIndex) else {
-            print("[ViewerVC.Timing] displayInitialPhoto 실패: photoVC 생성 불가")
-            return
-        }
-        let createElapsed = (CFAbsoluteTimeGetCurrent() - startTime) * 1000
-        print("[ViewerVC.Timing] createPhotoViewController 완료: \(String(format: "%.1f", createElapsed))ms")
+        guard let photoVC = createPhotoViewController(at: currentIndex) else { return }
 
         pageViewController.setViewControllers(
             [photoVC],
@@ -353,8 +342,6 @@ final class ViewerViewController: UIViewController {
             animated: false,
             completion: nil
         )
-        let elapsed = (CFAbsoluteTimeGetCurrent() - startTime) * 1000
-        print("[ViewerVC.Timing] displayInitialPhoto 완료: \(String(format: "%.1f", elapsed))ms")
     }
 
     // MARK: - Actions
@@ -676,13 +663,9 @@ final class PhotoPageViewController: UIViewController {
     // MARK: - Lifecycle
 
     override func viewDidLoad() {
-        let startTime = CFAbsoluteTimeGetCurrent()
-        print("[PhotoPageVC.Timing] viewDidLoad 시작, index: \(index)")
         super.viewDidLoad()
         setupUI()
         loadImage()
-        let elapsed = (CFAbsoluteTimeGetCurrent() - startTime) * 1000
-        print("[PhotoPageVC.Timing] viewDidLoad 완료: \(String(format: "%.1f", elapsed))ms, index: \(index)")
     }
 
     override func viewDidLayoutSubviews() {
@@ -710,26 +693,18 @@ final class PhotoPageViewController: UIViewController {
 
     /// 이미지 로드
     private func loadImage() {
-        let startTime = CFAbsoluteTimeGetCurrent()
-        let assetID = asset.localIdentifier
-        print("[PhotoPageVC.Timing] loadImage 호출, index: \(index), assetID: \(assetID.prefix(8))...")
-
         // 화면 크기에 맞는 해상도 요청 (전체 해상도는 메모리 과다 사용)
         let scale = UIScreen.main.scale
         let targetSize = CGSize(
             width: view.bounds.width * scale * 2,
             height: view.bounds.height * scale * 2
         )
-        print("[PhotoPageVC.Timing] loadImage targetSize: \(targetSize), assetID: \(assetID.prefix(8))...")
 
         requestCancellable = ImagePipeline.shared.requestImage(
             for: asset,
             targetSize: targetSize,
             contentMode: .aspectFit
-        ) { [weak self] image, isDegraded in
-            let elapsed = (CFAbsoluteTimeGetCurrent() - startTime) * 1000
-            let imageInfo = image.map { "size: \($0.size)" } ?? "nil"
-            print("[PhotoPageVC.Timing] loadImage completion: \(String(format: "%.1f", elapsed))ms, isDegraded: \(isDegraded), image: \(imageInfo), index: \(self?.index ?? -1)")
+        ) { [weak self] image, _ in
             guard let self = self, let image = image else { return }
             self.imageView.image = image
             self.imageSize = image.size
