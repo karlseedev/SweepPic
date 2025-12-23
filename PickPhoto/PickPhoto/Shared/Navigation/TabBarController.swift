@@ -23,6 +23,9 @@ class TabBarController: UITabBarController {
     /// Albums 탭 NavigationController
     private var albumsNav: UINavigationController?
 
+    /// Trash 탭 NavigationController
+    private var trashNav: UINavigationController?
+
     /// 커스텀 플로팅 UI 사용 여부
     /// iOS 26+에서는 false (시스템 기본 사용)
     private var useFloatingUI: Bool {
@@ -80,10 +83,20 @@ class TabBarController: UITabBarController {
         )
         self.albumsNav = albumsNavController
 
-        // 탭 뷰컨트롤러 설정
-        viewControllers = [photosNavController, albumsNavController]
+        // Trash 탭 (휴지통)
+        let trashVC = TrashAlbumViewController()
+        let trashNavController = UINavigationController(rootViewController: trashVC)
+        trashNavController.tabBarItem = UITabBarItem(
+            title: "Trash",
+            image: UIImage(systemName: "trash"),
+            selectedImage: UIImage(systemName: "trash.fill")
+        )
+        self.trashNav = trashNavController
 
-        print("[TabBarController] Tabs configured: Photos, Albums")
+        // 탭 뷰컨트롤러 설정
+        viewControllers = [photosNavController, albumsNavController, trashNavController]
+
+        print("[TabBarController] Tabs configured: Photos, Albums, Trash")
     }
 
     /// 플로팅 UI 설정 (iOS 16~25)
@@ -122,6 +135,7 @@ class TabBarController: UITabBarController {
             // 각 탭의 네비바 숨김 (루트에서 일관 통제)
             photosNav?.setNavigationBarHidden(true, animated: false)
             albumsNav?.setNavigationBarHidden(true, animated: false)
+            trashNav?.setNavigationBarHidden(true, animated: false)
 
             print("[TabBarController] System bars hidden (using floating UI)")
         } else {

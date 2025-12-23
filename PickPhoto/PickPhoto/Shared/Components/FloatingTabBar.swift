@@ -13,7 +13,7 @@ import UIKit
 /// 탭 선택 및 Select 모드 이벤트 전달
 protocol FloatingTabBarDelegate: AnyObject {
     /// 탭 선택 시 호출
-    /// - Parameter index: 선택된 탭 인덱스 (0: Photos, 1: Albums)
+    /// - Parameter index: 선택된 탭 인덱스 (0: Photos, 1: Albums, 2: Trash)
     func floatingTabBar(_ tabBar: FloatingTabBar, didSelectTabAt index: Int)
 
     /// Select 모드에서 Cancel 버튼 탭
@@ -43,8 +43,8 @@ final class FloatingTabBar: UIView {
     /// 캡슐 높이
     static let capsuleHeight: CGFloat = 49
 
-    /// 캡슐 좌우 패딩
-    private static let capsulePadding: CGFloat = 80
+    /// 캡슐 좌우 패딩 (3개 탭에 맞게 조정)
+    private static let capsulePadding: CGFloat = 40
 
     /// 캡슐 코너 반경
     private static let capsuleCornerRadius: CGFloat = 24.5
@@ -106,6 +106,17 @@ final class FloatingTabBar: UIView {
             image: UIImage(systemName: "rectangle.stack"),
             selectedImage: UIImage(systemName: "rectangle.stack.fill"),
             tag: 1
+        )
+        return button
+    }()
+
+    /// Trash 탭 버튼
+    private lazy var trashButton: UIButton = {
+        let button = createTabButton(
+            title: "Trash",
+            image: UIImage(systemName: "trash"),
+            selectedImage: UIImage(systemName: "trash.fill"),
+            tag: 2
         )
         return button
     }()
@@ -208,6 +219,7 @@ final class FloatingTabBar: UIView {
 
         tabStackView.addArrangedSubview(photosButton)
         tabStackView.addArrangedSubview(albumsButton)
+        tabStackView.addArrangedSubview(trashButton)
 
         // Select 모드 캡슐 추가
         addSubview(selectContainer)
@@ -292,6 +304,11 @@ final class FloatingTabBar: UIView {
         if albumsButton.bounds.contains(albumsPoint) {
             return albumsButton
         }
+        // Trash 버튼 체크
+        let trashPoint = convert(point, to: trashButton)
+        if trashButton.bounds.contains(trashPoint) {
+            return trashButton
+        }
 
         // 나머지 딤드 영역은 터치 차단
         return self
@@ -330,9 +347,14 @@ final class FloatingTabBar: UIView {
         albumsButton.isSelected = (selectedIndex == 1)
         albumsButton.alpha = (selectedIndex == 1) ? 1.0 : 0.6
 
+        // Trash 버튼 상태 업데이트
+        trashButton.isSelected = (selectedIndex == 2)
+        trashButton.alpha = (selectedIndex == 2) ? 1.0 : 0.6
+
         // Configuration 업데이트로 이미지 변경
         updateButtonConfiguration(photosButton, isSelected: selectedIndex == 0)
         updateButtonConfiguration(albumsButton, isSelected: selectedIndex == 1)
+        updateButtonConfiguration(trashButton, isSelected: selectedIndex == 2)
     }
 
     private func updateButtonConfiguration(_ button: UIButton, isSelected: Bool) {

@@ -190,6 +190,10 @@ final class ViewerCoordinator: ViewerCoordinatorProtocol {
 
     /// 모드에 따라 필터링된 인덱스 배열 생성
     private func buildFilteredIndices() {
+        // [Timing] 시작
+        let startTime = CACurrentMediaTime()
+        print("[ViewerCoordinator] buildFilteredIndices() 시작")
+
         filteredIndices.removeAll()
 
         for i in 0..<fetchResult.count {
@@ -210,7 +214,9 @@ final class ViewerCoordinator: ViewerCoordinatorProtocol {
             }
         }
 
-        print("[ViewerCoordinator] Mode: \(viewerMode), Filtered count: \(filteredIndices.count) / \(fetchResult.count)")
+        // [Timing] 완료
+        let elapsed = (CACurrentMediaTime() - startTime) * 1000
+        print("[ViewerCoordinator] buildFilteredIndices() 완료: \(String(format: "%.1f", elapsed))ms, Mode: \(viewerMode), Count: \(filteredIndices.count)/\(fetchResult.count)")
     }
 }
 

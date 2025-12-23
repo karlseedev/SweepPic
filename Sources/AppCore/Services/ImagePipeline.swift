@@ -362,8 +362,17 @@ public final class ImagePipeline: ImagePipelineProtocol {
             FileLogger.log("[Pipeline] requestImage #\(currentReqCount): +\(String(format: "%.1f", elapsed))ms")
         }
 
+        // [진단 #1] enqueue 시점: 요청 진입 + 당시 백로그 상태
+        let queueBacklog = requestQueue.operationCount
+        FileLogger.log("[Pipeline.Enqueue] req#\(currentReqCount), assetID: \(assetID.prefix(8))..., backlog: \(queueBacklog), inFlight: \(inFlightCount)")
+
         // 백그라운드 OperationQueue에서 PhotoKit 호출
         requestQueue.addOperation { [weak self] in
+            // [진단 #2] operation 시작 시점: 큐 대기 시간
+            let opStartTime = CACurrentMediaTime()
+            let queueMs = (opStartTime - requestStartTime) * 1000
+            FileLogger.log("[Pipeline.OpStart] assetID: \(assetID.prefix(8))..., queueMs: \(String(format: "%.1f", queueMs))")
+
             guard let self = self, !cancellable.isCancelled else {
                 // [Stats] 취소된 경우 inFlight 감소
                 self?.statsLock.lock()
@@ -394,8 +403,16 @@ public final class ImagePipeline: ImagePipelineProtocol {
                 // 취소된 경우 무시
                 guard !cancellable.isCancelled else { return }
 
-                // isDegraded 확인 (저해상도 이미지 여부)
+                // [진단 #3] PhotoKit 콜백 시점: 시간 분리 + info 상태
+                let cbTime = CACurrentMediaTime()
+                let totalMs = (cbTime - requestStartTime) * 1000
+                let photoKitMs = (cbTime - opStartTime) * 1000
                 let isDegraded = (info?[PHImageResultIsDegradedKey] as? Bool) ?? false
+                let isInCloud = (info?[PHImageResultIsInCloudKey] as? Bool) ?? false
+                let isCancelled = (info?[PHImageCancelledKey] as? Bool) ?? false
+                let error = info?[PHImageErrorKey] as? Error
+
+                FileLogger.log("[Pipeline.Callback] assetID: \(assetID.prefix(8))..., totalMs: \(String(format: "%.1f", totalMs)), queueMs: \(String(format: "%.1f", queueMs)), photoKitMs: \(String(format: "%.1f", photoKitMs)), degraded: \(isDegraded), inCloud: \(isInCloud), cancelled: \(isCancelled), error: \(error?.localizedDescription ?? "nil")")
 
                 // [Stats] completion 통계
                 self.statsLock.lock()

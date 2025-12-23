@@ -81,6 +81,7 @@ final class TrashAlbumViewController: UIViewController {
             title: "휴지통이 비어 있습니다",
             subtitle: nil
         )
+        view.useDarkTheme()  // 검정 배경에서 사용
         view.isHidden = true
         view.translatesAutoresizingMaskIntoConstraints = false
         return view
@@ -224,10 +225,10 @@ final class TrashAlbumViewController: UIViewController {
         emptyButton.isEnabled = !trashedAssets.isEmpty
     }
 
-    /// FloatingOverlay 상태를 휴지통 화면용으로 설정
-    /// - 타이틀: "휴지통"
-    /// - 뒤로가기 버튼: 표시 + pop 액션
-    /// - TODO: "비우기" 버튼 추가 필요
+    /// FloatingOverlay 상태를 휴지통 탭용으로 설정
+    /// - 타이틀: "Trash"
+    /// - 뒤로가기 버튼: 숨김 (별도 탭이므로)
+    /// - 오른쪽 버튼: "비우기" (휴지통이 비어있지 않을 때만 표시)
     private func configureFloatingOverlayForTrash() {
         guard let tabBarController = tabBarController as? TabBarController,
               let overlay = tabBarController.floatingOverlay else {
@@ -235,17 +236,21 @@ final class TrashAlbumViewController: UIViewController {
         }
 
         // 타이틀 변경
-        overlay.titleBar.setTitle("휴지통")
+        overlay.titleBar.setTitle("Trash")
 
-        // 뒤로가기 버튼 표시 + pop 액션 설정
-        overlay.titleBar.setShowsBackButton(true) { [weak self] in
-            self?.navigationController?.popViewController(animated: true)
+        // 뒤로가기 버튼 숨김 (별도 탭이므로)
+        overlay.titleBar.setShowsBackButton(false, action: nil)
+
+        // "비우기" 버튼 설정 (휴지통이 비어있지 않을 때)
+        if !trashedAssets.isEmpty {
+            overlay.titleBar.setRightButton(title: "비우기", color: .systemRed) { [weak self] in
+                self?.emptyTrashButtonTapped()
+            }
+        } else {
+            overlay.titleBar.isSelectButtonHidden = true
         }
 
-        // Select 버튼 숨김 (휴지통에서는 Select 모드 미지원)
-        overlay.titleBar.isSelectButtonHidden = true
-
-        print("[TrashAlbumViewController] FloatingOverlay configured for trash")
+        print("[TrashAlbumViewController] FloatingOverlay configured for trash tab")
     }
 
     private func setupGestures() {
@@ -268,6 +273,8 @@ final class TrashAlbumViewController: UIViewController {
     /// 휴지통 사진 로드
     /// TrashStore.trashedAssetIDs 기반으로 PHAsset 조회
     private func loadTrashedAssets() {
+        let startTime = CFAbsoluteTimeGetCurrent()
+
         trashedAssetIDSet = trashStore.trashedAssetIDs
 
         if trashedAssetIDSet.isEmpty {
@@ -280,26 +287,46 @@ final class TrashAlbumViewController: UIViewController {
 
             let fetchResult = PHAsset.fetchAssets(withLocalIdentifiers: Array(trashedAssetIDSet), options: options)
 
+            let fetchTime = CFAbsoluteTimeGetCurrent()
+
             // 배열로 변환
             var assets: [PHAsset] = []
             fetchResult.enumerateObjects { asset, _, _ in
                 assets.append(asset)
             }
 
-            // 생성일 기준 내림차순 정렬 (최신 사진이 먼저)
-            trashedAssets = assets.sorted { ($0.creationDate ?? .distantPast) > ($1.creationDate ?? .distantPast) }
+            let enumerateTime = CFAbsoluteTimeGetCurrent()
+
+            // 생성일 기준 오름차순 정렬 (최신 사진이 아래, 아이폰 기본 사진앱과 동일)
+            trashedAssets = assets.sorted { ($0.creationDate ?? .distantPast) < ($1.creationDate ?? .distantPast) }
+
+            let sortTime = CFAbsoluteTimeGetCurrent()
+
+            print("[TrashAlbumViewController.Timing] fetch: \(String(format: "%.1f", (fetchTime - startTime) * 1000))ms, enumerate: \(String(format: "%.1f", (enumerateTime - fetchTime) * 1000))ms, sort: \(String(format: "%.1f", (sortTime - enumerateTime) * 1000))ms")
         }
+
+        let dataLoadTime = CFAbsoluteTimeGetCurrent()
 
         // UI 업데이트
         collectionView.reloadData()
+
+        let reloadTime = CFAbsoluteTimeGetCurrent()
+
         updateEmptyState()
 
-        // 시스템 네비바 버튼 상태 업데이트 (iOS 26+)
-        if !useFloatingUI {
+        // 버튼 상태 업데이트
+        if useFloatingUI {
+            // iOS 16~25: FloatingUI 비우기 버튼 상태 갱신
+            updateFloatingEmptyButton()
+        } else {
+            // iOS 26+: 시스템 네비바 버튼 상태 업데이트
             navigationItem.rightBarButtonItem?.isEnabled = !trashedAssets.isEmpty
         }
 
+        let endTime = CFAbsoluteTimeGetCurrent()
+
         print("[TrashAlbumViewController] Loaded \(trashedAssets.count) trashed assets")
+        print("[TrashAlbumViewController.Timing] dataLoad: \(String(format: "%.1f", (dataLoadTime - startTime) * 1000))ms, reloadData: \(String(format: "%.1f", (reloadTime - dataLoadTime) * 1000))ms, total: \(String(format: "%.1f", (endTime - startTime) * 1000))ms")
     }
 
     // MARK: - Layout
@@ -384,6 +411,22 @@ final class TrashAlbumViewController: UIViewController {
         let isEmpty = trashedAssets.isEmpty
         emptyStateView.isHidden = !isEmpty
         collectionView.isHidden = isEmpty
+    }
+
+    /// FloatingUI 비우기 버튼 상태 업데이트
+    private func updateFloatingEmptyButton() {
+        guard let tabBarController = tabBarController as? TabBarController,
+              let overlay = tabBarController.floatingOverlay else {
+            return
+        }
+
+        if !trashedAssets.isEmpty {
+            overlay.titleBar.setRightButton(title: "비우기", color: .systemRed) { [weak self] in
+                self?.emptyTrashButtonTapped()
+            }
+        } else {
+            overlay.titleBar.isSelectButtonHidden = true
+        }
     }
 
     // MARK: - Actions
@@ -564,10 +607,26 @@ extension TrashAlbumViewController: UICollectionViewDelegate {
     func collectionView(_ collectionView: UICollectionView, didSelectItemAt indexPath: IndexPath) {
         guard indexPath.item < trashedAssets.count else { return }
 
+        // 클릭한 에셋
+        let selectedAsset = trashedAssets[indexPath.item]
+        let selectedAssetID = selectedAsset.localIdentifier
+
         // 뷰어 코디네이터 생성 (휴지통 전용)
         // trashedAssets 배열을 기반으로 PHFetchResult 생성
+        // 정렬 옵션 추가: 최신 사진이 아래 (아이폰 기본 사진앱과 동일)
         let assetIDs = trashedAssets.map { $0.localIdentifier }
-        let fetchResult = PHAsset.fetchAssets(withLocalIdentifiers: assetIDs, options: nil)
+        let fetchOptions = PHFetchOptions()
+        fetchOptions.sortDescriptors = [NSSortDescriptor(key: "creationDate", ascending: true)]
+        let fetchResult = PHAsset.fetchAssets(withLocalIdentifiers: assetIDs, options: fetchOptions)
+
+        // PHFetchResult에서 선택한 에셋의 실제 인덱스 찾기
+        var actualIndex = 0
+        fetchResult.enumerateObjects { asset, index, stop in
+            if asset.localIdentifier == selectedAssetID {
+                actualIndex = index
+                stop.pointee = true
+            }
+        }
 
         let coordinator = ViewerCoordinator(
             fetchResult: fetchResult,
@@ -578,14 +637,14 @@ extension TrashAlbumViewController: UICollectionViewDelegate {
         // 뷰어 뷰컨트롤러 생성 (휴지통 모드)
         let viewerVC = ViewerViewController(
             coordinator: coordinator,
-            startIndex: indexPath.item,
+            startIndex: actualIndex,
             mode: .trash
         )
         viewerVC.delegate = self
 
         present(viewerVC, animated: true)
 
-        print("[TrashAlbumViewController] Opening viewer at index \(indexPath.item), mode: .trash")
+        print("[TrashAlbumViewController] Opening viewer - tapped: \(indexPath.item), actualIndex: \(actualIndex), assetID: \(selectedAssetID.prefix(8))...")
     }
 }
 
@@ -622,19 +681,32 @@ extension TrashAlbumViewController: ViewerViewControllerDelegate {
 
     /// 복구 요청 (T056)
     func viewerDidRequestRestore(assetID: String) {
+        let startTime = CFAbsoluteTimeGetCurrent()
+
         trashStore.restore(assetIDs: [assetID])
         // loadTrashedAssets()는 onStateChange 콜백으로 자동 호출됨
 
+        let trashStoreTime = CFAbsoluteTimeGetCurrent()
+
         print("[TrashAlbumViewController] Restored: \(assetID.prefix(8))...")
+        print("[TrashAlbumViewController.Timing] trashStore: \(String(format: "%.1f", (trashStoreTime - startTime) * 1000))ms")
     }
 
     /// 완전 삭제 요청 (T057)
+    /// 비동기 작업 - 삭제 완료 후 뷰어에 알림
     func viewerDidRequestPermanentDelete(assetID: String) {
         Task {
             do {
                 try await trashStore.permanentlyDelete(assetIDs: [assetID])
                 // loadTrashedAssets()는 onStateChange 콜백으로 자동 호출됨
                 print("[TrashAlbumViewController] Permanently deleted: \(assetID.prefix(8))...")
+
+                // 삭제 완료 후 뷰어에 알림 (메인 스레드에서)
+                await MainActor.run {
+                    if let viewerVC = self.presentedViewController as? ViewerViewController {
+                        viewerVC.handleDeleteComplete()
+                    }
+                }
             } catch {
                 print("[TrashAlbumViewController] Failed to permanently delete: \(error)")
             }

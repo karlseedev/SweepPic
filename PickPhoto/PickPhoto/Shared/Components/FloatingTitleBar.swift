@@ -321,4 +321,48 @@ final class FloatingTitleBar: UIView {
             delegate?.floatingTitleBarDidTapBack(self)
         }
     }
+
+    // MARK: - Custom Right Button
+
+    /// 커스텀 오른쪽 버튼 액션
+    private var rightButtonAction: (() -> Void)?
+
+    /// 커스텀 오른쪽 버튼 설정 (Select 버튼 대체)
+    /// - Parameters:
+    ///   - title: 버튼 타이틀
+    ///   - color: 버튼 색상 (기본: 흰색)
+    ///   - action: 버튼 탭 시 실행할 클로저
+    func setRightButton(title: String, color: UIColor = .white, action: @escaping () -> Void) {
+        var config = UIButton.Configuration.plain()
+        config.title = title
+        config.baseForegroundColor = color
+        config.contentInsets = NSDirectionalEdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16)
+        selectButton.configuration = config
+        selectButton.isHidden = false
+        rightButtonAction = action
+
+        // 기존 액션 제거 후 새 액션 연결
+        selectButton.removeTarget(self, action: #selector(selectButtonTapped), for: .touchUpInside)
+        selectButton.removeTarget(self, action: #selector(rightButtonTapped), for: .touchUpInside)
+        selectButton.addTarget(self, action: #selector(rightButtonTapped), for: .touchUpInside)
+    }
+
+    /// 오른쪽 버튼을 Select 버튼으로 복원
+    func resetToSelectButton() {
+        var config = UIButton.Configuration.plain()
+        config.title = "Select"
+        config.baseForegroundColor = .white
+        config.contentInsets = NSDirectionalEdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16)
+        selectButton.configuration = config
+        rightButtonAction = nil
+
+        // 액션 복원
+        selectButton.removeTarget(self, action: #selector(rightButtonTapped), for: .touchUpInside)
+        selectButton.addTarget(self, action: #selector(selectButtonTapped), for: .touchUpInside)
+    }
+
+    @objc private func rightButtonTapped() {
+        print("[FloatingTitleBar] Right button tapped")
+        rightButtonAction?()
+    }
 }

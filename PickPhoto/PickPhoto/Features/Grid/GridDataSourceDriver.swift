@@ -195,7 +195,21 @@ final class GridDataSourceDriver: NSObject, GridDataSourceDriverProtocol {
             return
         }
 
-        // 배치 업데이트 수행 (Spike 1에서 검증된 방식)
+        // 삭제가 포함된 경우 reloadData 사용 (performBatchUpdates와 reloadItems 충돌 방지)
+        // permanentlyDelete 시 TrashStore.onStateChange와 PHPhotoLibraryChangeObserver가
+        // 거의 동시에 호출되어 충돌 발생 가능
+        if let removed = changes.removedIndexes, !removed.isEmpty {
+            self.fetchResult = changes.fetchResultAfterChanges
+            invalidateCache()
+            collectionView.reloadData()
+
+            let newAnchorIndexPath = anchorAssetID.flatMap { indexPath(for: $0) }
+            completion?(newAnchorIndexPath)
+            print("[GridDataSourceDriver] Used reloadData for deletion (count: \(removed.count))")
+            return
+        }
+
+        // 배치 업데이트 수행 (삭제가 없는 경우만)
         collectionView.performBatchUpdates({
             // 삭제된 항목
             if let removed = changes.removedIndexes, !removed.isEmpty {
@@ -277,6 +291,10 @@ final class GridDataSourceDriver: NSObject, GridDataSourceDriverProtocol {
     /// 캐시 빌드
     /// 대용량 데이터에서 빠른 조회를 위해 캐시 생성
     private func buildCache() {
+        // [Timing] 시작
+        let startTime = CACurrentMediaTime()
+        print("[GridDataSourceDriver] buildCache() 시작")
+
         guard let fetchResult = fetchResult else { return }
 
         assetIDToIndexCache.removeAll(keepingCapacity: true)
@@ -289,7 +307,10 @@ final class GridDataSourceDriver: NSObject, GridDataSourceDriverProtocol {
         }
 
         isCacheValid = true
-        print("[GridDataSourceDriver] Cache built: \(assetIDToIndexCache.count) items")
+
+        // [Timing] 완료
+        let elapsed = (CACurrentMediaTime() - startTime) * 1000
+        print("[GridDataSourceDriver] buildCache() 완료: \(String(format: "%.1f", elapsed))ms, Count: \(assetIDToIndexCache.count)")
     }
 
     /// 캐시 무효화

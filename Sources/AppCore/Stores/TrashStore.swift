@@ -127,17 +127,26 @@ public final class TrashStore: TrashStoreProtocol {
     public func restore(assetIDs: [String]) {
         guard !assetIDs.isEmpty else { return }
 
+        let startTime = CFAbsoluteTimeGetCurrent()
+
         for assetID in assetIDs {
             state.restore(assetID)
         }
 
+        let stateUpdateTime = CFAbsoluteTimeGetCurrent()
+
         // 즉시 저장
         saveState()
+
+        let saveTime = CFAbsoluteTimeGetCurrent()
 
         // 변경 알림
         notifyChange()
 
+        let notifyTime = CFAbsoluteTimeGetCurrent()
+
         print("[TrashStore] Restored: \(assetIDs.count) items")
+        print("[TrashStore.Timing] stateUpdate: \(String(format: "%.1f", (stateUpdateTime - startTime) * 1000))ms, save: \(String(format: "%.1f", (saveTime - stateUpdateTime) * 1000))ms, notify: \(String(format: "%.1f", (notifyTime - saveTime) * 1000))ms")
     }
 
     /// 사진을 완전히 삭제 (iOS 휴지통으로 이동)

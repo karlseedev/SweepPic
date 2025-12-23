@@ -106,6 +106,7 @@ final class GridViewController: UIViewController {
             title: "사진이 없습니다",
             subtitle: "사진을 촬영하거나 가져오세요"
         )
+        view.useDarkTheme()  // 검정 배경에서 사용
         view.isHidden = true
         view.translatesAutoresizingMaskIntoConstraints = false
         return view
@@ -1277,24 +1278,39 @@ extension GridViewController: ViewerViewControllerDelegate {
 
     /// 사진 복구 요청 (휴지통에서 복원)
     func viewerDidRequestRestore(assetID: String) {
+        let startTime = CFAbsoluteTimeGetCurrent()
+
         // TrashStore에서 복구 (즉시 저장됨)
         trashStore.restore(assetIDs: [assetID])
+
+        let trashStoreTime = CFAbsoluteTimeGetCurrent()
 
         // 그리드 셀 업데이트 (딤드 제거)
         if let indexPath = dataSourceDriver.indexPath(for: assetID) {
             collectionView.reloadItems(at: [indexPath])
         }
 
+        let uiUpdateTime = CFAbsoluteTimeGetCurrent()
+
         print("[GridViewController] Restored: \(assetID.prefix(8))...")
+        print("[GridViewController.Timing] trashStore: \(String(format: "%.1f", (trashStoreTime - startTime) * 1000))ms, uiUpdate: \(String(format: "%.1f", (uiUpdateTime - trashStoreTime) * 1000))ms, total: \(String(format: "%.1f", (uiUpdateTime - startTime) * 1000))ms")
     }
 
     /// 사진 완전삭제 요청 (iOS 휴지통으로 이동)
+    /// 비동기 작업 - 삭제 완료 후 뷰어에 알림
     func viewerDidRequestPermanentDelete(assetID: String) {
         // TrashStore에서 완전삭제 (iOS 시스템 팝업 표시)
         Task {
             do {
                 try await trashStore.permanentlyDelete(assetIDs: [assetID])
                 print("[GridViewController] Permanently deleted: \(assetID.prefix(8))...")
+
+                // 삭제 완료 후 뷰어에 알림 (메인 스레드에서)
+                await MainActor.run {
+                    if let viewerVC = self.presentedViewController as? ViewerViewController {
+                        viewerVC.handleDeleteComplete()
+                    }
+                }
             } catch {
                 print("[GridViewController] Failed to permanently delete: \(error)")
             }

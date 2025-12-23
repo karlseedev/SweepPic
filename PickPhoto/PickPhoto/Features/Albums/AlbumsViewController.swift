@@ -3,10 +3,7 @@
 //
 // T050: AlbumsViewController 생성
 // - 2열 그리드 레이아웃, iOS 사진 앱 스타일
-// - 스마트 앨범 + 사용자 앨범 + 휴지통 섹션
-//
-// T051: 휴지통 가상 앨범 추가
-// - TrashStore에서 휴지통 사진 수 조회
+// - 스마트 앨범 + 사용자 앨범 섹션
 
 import UIKit
 import Photos
@@ -66,35 +63,24 @@ final class AlbumsViewController: UIViewController {
     /// 앨범 서비스
     private let albumService: AlbumServiceProtocol
 
-    /// 휴지통 스토어
-    private let trashStore: TrashStoreProtocol
-
     /// 스마트 앨범 목록
     private var smartAlbums: [SmartAlbum] = []
 
     /// 사용자 앨범 목록
     private var userAlbums: [Album] = []
 
-    /// 휴지통 앨범 (T051)
-    private var trashAlbum: TrashAlbum?
-
     /// 현재 셀 크기
     private var currentCellSize: CGSize = .zero
 
     // MARK: - Initialization
 
-    init(
-        albumService: AlbumServiceProtocol = AlbumService.shared,
-        trashStore: TrashStoreProtocol = TrashStore.shared
-    ) {
+    init(albumService: AlbumServiceProtocol = AlbumService.shared) {
         self.albumService = albumService
-        self.trashStore = trashStore
         super.init(nibName: nil, bundle: nil)
     }
 
     required init?(coder: NSCoder) {
         self.albumService = AlbumService.shared
-        self.trashStore = TrashStore.shared
         super.init(coder: coder)
     }
 
@@ -161,10 +147,12 @@ final class AlbumsViewController: UIViewController {
     }
 
     private func setupObservers() {
-        // 휴지통 상태 변경 감지
-        trashStore.onStateChange { [weak self] _ in
-            self?.updateTrashAlbum()
-        }
+        // PhotoKit 변경 감지 (앨범 추가/삭제 등)
+        PHPhotoLibrary.shared().register(self)
+    }
+
+    deinit {
+        PHPhotoLibrary.shared().unregisterChangeObserver(self)
     }
 
     /// FloatingOverlay 상태를 Albums 목록 화면용으로 설정
@@ -308,9 +296,6 @@ final class AlbumsViewController: UIViewController {
         // 사용자 앨범 조회
         userAlbums = albumService.fetchUserAlbums()
 
-        // 휴지통 앨범 업데이트 (T051)
-        updateTrashAlbum()
-
         // 빈 상태 업데이트
         updateEmptyState()
 
@@ -320,30 +305,9 @@ final class AlbumsViewController: UIViewController {
         print("[AlbumsViewController] Loaded \(smartAlbums.count) smart albums, \(userAlbums.count) user albums")
     }
 
-    /// 휴지통 앨범 업데이트 (T051)
-    private func updateTrashAlbum() {
-        let trashedCount = trashStore.trashedAssetIDs.count
-
-        if trashedCount > 0 {
-            // 키 에셋: 가장 최근 휴지통 사진
-            let keyAssetID = trashStore.trashedAssetIDs.first
-            trashAlbum = TrashAlbum(
-                assetCount: trashedCount,
-                keyAssetIdentifier: keyAssetID
-            )
-        } else {
-            trashAlbum = nil
-        }
-
-        // 휴지통 섹션만 리로드
-        if collectionView.numberOfSections > AlbumSection.trash.rawValue {
-            collectionView.reloadSections(IndexSet(integer: AlbumSection.trash.rawValue))
-        }
-    }
-
     /// 빈 상태 업데이트
     private func updateEmptyState() {
-        let isEmpty = smartAlbums.isEmpty && userAlbums.isEmpty && trashAlbum == nil
+        let isEmpty = smartAlbums.isEmpty && userAlbums.isEmpty
         emptyStateView.isHidden = !isEmpty
         collectionView.isHidden = isEmpty
     }
@@ -376,8 +340,6 @@ extension AlbumsViewController: UICollectionViewDataSource {
             return smartAlbums.count
         case .userAlbums:
             return userAlbums.count
-        case .trash:
-            return trashAlbum != nil ? 1 : 0
         }
     }
 
@@ -403,11 +365,6 @@ extension AlbumsViewController: UICollectionViewDataSource {
         case .userAlbums:
             let album = userAlbums[indexPath.item]
             cell.configure(album: album, targetSize: targetSize)
-
-        case .trash:
-            if let trashAlbum = trashAlbum {
-                cell.configure(trashAlbum: trashAlbum, targetSize: targetSize)
-            }
         }
 
         return cell
@@ -450,9 +407,6 @@ extension AlbumsViewController: UICollectionViewDelegate {
         case .userAlbums:
             let album = userAlbums[indexPath.item]
             openAlbumGrid(album: album)
-
-        case .trash:
-            openTrashAlbum()
         }
     }
 
@@ -490,14 +444,6 @@ extension AlbumsViewController: UICollectionViewDelegate {
         navigationController?.pushViewController(albumGridVC, animated: true)
 
         print("[AlbumsViewController] Opened album: \(album.title)")
-    }
-
-    /// 휴지통 앨범 열기 (T055)
-    private func openTrashAlbum() {
-        let trashVC = TrashAlbumViewController()
-        navigationController?.pushViewController(trashVC, animated: true)
-
-        print("[AlbumsViewController] Opened trash album")
     }
 }
 
@@ -537,5 +483,20 @@ final class AlbumSectionHeaderView: UICollectionReusableView {
 
     func configure(title: String?) {
         titleLabel.text = title
+    }
+}
+
+// MARK: - PHPhotoLibraryChangeObserver
+
+extension AlbumsViewController: PHPhotoLibraryChangeObserver {
+
+    /// PhotoKit 변경 감지
+    /// 앨범 추가/삭제, 사진 변경 등 감지하여 UI 갱신
+    nonisolated func photoLibraryDidChange(_ changeInstance: PHChange) {
+        // 메인 스레드에서 UI 업데이트
+        DispatchQueue.main.async { [weak self] in
+            self?.loadData()
+            print("[AlbumsViewController] PhotoLibrary changed, reloading data")
+        }
     }
 }

@@ -149,6 +149,14 @@ class EmptyStateView: UIView {
         onActionButtonTap = nil
     }
 
+    /// 다크 테마 설정 (검정 배경에서 사용)
+    /// 텍스트 색상을 흰색 계열로 변경
+    func useDarkTheme() {
+        titleLabel.textColor = .white
+        subtitleLabel.textColor = .lightGray
+        iconImageView.tintColor = .gray
+    }
+
     // MARK: - Actions
 
     @objc private func actionButtonTapped() {

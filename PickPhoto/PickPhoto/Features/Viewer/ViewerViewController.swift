@@ -208,11 +208,15 @@ final class ViewerViewController: UIViewController {
     // MARK: - Lifecycle
 
     override func viewDidLoad() {
+        let startTime = CFAbsoluteTimeGetCurrent()
+        print("[ViewerVC.Timing] viewDidLoad 시작")
         super.viewDidLoad()
         setupUI()
         setupGestures()
         setupSwipeDeleteHandler()
         displayInitialPhoto()
+        let elapsed = (CFAbsoluteTimeGetCurrent() - startTime) * 1000
+        print("[ViewerVC.Timing] viewDidLoad 완료: \(String(format: "%.1f", elapsed))ms")
     }
 
     override func viewWillDisappear(_ animated: Bool) {
@@ -334,7 +338,14 @@ final class ViewerViewController: UIViewController {
 
     /// 초기 사진 표시
     private func displayInitialPhoto() {
-        guard let photoVC = createPhotoViewController(at: currentIndex) else { return }
+        let startTime = CFAbsoluteTimeGetCurrent()
+        print("[ViewerVC.Timing] displayInitialPhoto 시작")
+        guard let photoVC = createPhotoViewController(at: currentIndex) else {
+            print("[ViewerVC.Timing] displayInitialPhoto 실패: photoVC 생성 불가")
+            return
+        }
+        let createElapsed = (CFAbsoluteTimeGetCurrent() - startTime) * 1000
+        print("[ViewerVC.Timing] createPhotoViewController 완료: \(String(format: "%.1f", createElapsed))ms")
 
         pageViewController.setViewControllers(
             [photoVC],
@@ -342,6 +353,8 @@ final class ViewerViewController: UIViewController {
             animated: false,
             completion: nil
         )
+        let elapsed = (CFAbsoluteTimeGetCurrent() - startTime) * 1000
+        print("[ViewerVC.Timing] displayInitialPhoto 완료: \(String(format: "%.1f", elapsed))ms")
     }
 
     // MARK: - Actions
@@ -382,6 +395,8 @@ final class ViewerViewController: UIViewController {
     }
 
     /// 완전삭제 버튼 탭 (휴지통 모드)
+    /// 주의: permanentDelete는 비동기 작업이므로 moveToNextAfterDelete()를 여기서 호출하지 않음
+    /// 삭제 완료 후 delegate에서 handleDeleteComplete()를 호출해야 함
     @objc private func permanentDeleteButtonTapped() {
         guard let assetID = coordinator.assetID(at: currentIndex) else { return }
 
@@ -389,10 +404,17 @@ final class ViewerViewController: UIViewController {
         let generator = UIImpactFeedbackGenerator(style: .heavy)
         generator.impactOccurred()
 
-        // 완전삭제 요청
+        // 완전삭제 요청 (비동기 - iOS 시스템 팝업 대기)
+        // 삭제 완료 후 delegate에서 handleDeleteComplete() 호출 필요
         delegate?.viewerDidRequestPermanentDelete(assetID: assetID)
 
-        // 다음 사진으로 이동
+        // 비동기 작업이므로 여기서 moveToNextAfterDelete() 호출하지 않음
+        // TrashAlbumViewController에서 삭제 완료 후 handleDeleteComplete() 호출
+    }
+
+    /// 삭제 완료 후 호출 (외부에서 호출)
+    /// permanentDelete가 비동기이므로 삭제 완료 후 이 메서드를 호출해야 함
+    func handleDeleteComplete() {
         moveToNextAfterDelete()
     }
 
@@ -654,9 +676,13 @@ final class PhotoPageViewController: UIViewController {
     // MARK: - Lifecycle
 
     override func viewDidLoad() {
+        let startTime = CFAbsoluteTimeGetCurrent()
+        print("[PhotoPageVC.Timing] viewDidLoad 시작, index: \(index)")
         super.viewDidLoad()
         setupUI()
         loadImage()
+        let elapsed = (CFAbsoluteTimeGetCurrent() - startTime) * 1000
+        print("[PhotoPageVC.Timing] viewDidLoad 완료: \(String(format: "%.1f", elapsed))ms, index: \(index)")
     }
 
     override func viewDidLayoutSubviews() {
@@ -684,18 +710,26 @@ final class PhotoPageViewController: UIViewController {
 
     /// 이미지 로드
     private func loadImage() {
+        let startTime = CFAbsoluteTimeGetCurrent()
+        let assetID = asset.localIdentifier
+        print("[PhotoPageVC.Timing] loadImage 호출, index: \(index), assetID: \(assetID.prefix(8))...")
+
         // 화면 크기에 맞는 해상도 요청 (전체 해상도는 메모리 과다 사용)
         let scale = UIScreen.main.scale
         let targetSize = CGSize(
             width: view.bounds.width * scale * 2,
             height: view.bounds.height * scale * 2
         )
+        print("[PhotoPageVC.Timing] loadImage targetSize: \(targetSize), assetID: \(assetID.prefix(8))...")
 
         requestCancellable = ImagePipeline.shared.requestImage(
             for: asset,
             targetSize: targetSize,
             contentMode: .aspectFit
-        ) { [weak self] image, _ in
+        ) { [weak self] image, isDegraded in
+            let elapsed = (CFAbsoluteTimeGetCurrent() - startTime) * 1000
+            let imageInfo = image.map { "size: \($0.size)" } ?? "nil"
+            print("[PhotoPageVC.Timing] loadImage completion: \(String(format: "%.1f", elapsed))ms, isDegraded: \(isDegraded), image: \(imageInfo), index: \(self?.index ?? -1)")
             guard let self = self, let image = image else { return }
             self.imageView.image = image
             self.imageSize = image.size

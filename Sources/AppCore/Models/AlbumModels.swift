@@ -200,15 +200,11 @@ public enum AlbumSection: Int, CaseIterable {
     /// 사용자 앨범 (직접 생성)
     case userAlbums = 1
 
-    /// 앱 내 휴지통 (가상 앨범)
-    case trash = 2
-
     /// 섹션 헤더 제목
     public var headerTitle: String? {
         switch self {
         case .smartAlbums: return "미디어 유형"
         case .userAlbums: return "나의 앨범"
-        case .trash: return nil // 휴지통은 별도 헤더 없음
         }
     }
 }
