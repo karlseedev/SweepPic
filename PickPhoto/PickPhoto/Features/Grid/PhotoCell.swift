@@ -68,6 +68,30 @@ final class PhotoCell: UICollectionViewCell {
     /// Pipeline 콜백이 버려진 횟수 (assetID mismatch)
     private static var pipelineMismatchCount: Int = 0
 
+    // MARK: - Disk Save Deduplication (세션 내 중복 저장 방지)
+
+    /// 저장 완료된 캐시 키 Set (동기 디스크 I/O 없이 중복 체크)
+    /// - 키 형식: "assetID_modTimestamp_width_height"
+    /// - 앱 재실행 시 초기화됨 (세션 내 중복 억제만)
+    private static var savedCacheKeys: Set<String> = []
+    private static let savedCacheKeysLock = NSLock()
+
+    /// 캐시 키 생성 (ThumbnailCache.cachePath와 동일한 로직)
+    private static func makeCacheKey(assetID: String, modDate: Date?, size: CGSize) -> String {
+        let modString = modDate.map { String($0.timeIntervalSince1970) } ?? "nil"
+        return "\(assetID)_\(modString)_\(Int(size.width))_\(Int(size.height))"
+    }
+
+    /// 캐시 키가 이미 저장되었는지 확인 (락 없이 호출 금지)
+    private static func hasSaved(key: String) -> Bool {
+        return savedCacheKeys.contains(key)
+    }
+
+    /// 캐시 키를 저장됨으로 표시
+    private static func markSaved(key: String) {
+        savedCacheKeys.insert(key)
+    }
+
     /// 통계 리셋
     static func resetMismatchStats() {
         mismatchLock.withLock {
@@ -315,10 +339,12 @@ final class PhotoCell: UICollectionViewCell {
     ///   - asset: 표시할 PHAsset
     ///   - isTrashed: 휴지통 상태
     ///   - targetSize: 썸네일 목표 크기 (point 단위)
+    ///   - isFullSizeRequest: 100% 크기 요청 여부 (디스크 캐시 저장 조건)
     func configure(
         asset: PHAsset,
         isTrashed: Bool,
-        targetSize: CGSize
+        targetSize: CGSize,
+        isFullSizeRequest: Bool = true
     ) {
         let assetID = asset.localIdentifier
         let modDate = asset.modificationDate
@@ -401,7 +427,7 @@ final class PhotoCell: UICollectionViewCell {
         // - Pipeline의 degraded first-paint가 디스크 로드보다 빠름
         //
         // 메모리 캐시 미스 시 바로 ImagePipeline 요청
-        requestFromPipeline(asset: asset, pixelSize: pixelSize, modDate: modDate)
+        requestFromPipeline(asset: asset, pixelSize: pixelSize, modDate: modDate, isFullSizeRequest: isFullSizeRequest)
         return
 
         // [Dead Code] 아래 디스크 캐시 로드 경로는 더 이상 사용되지 않음
@@ -455,12 +481,14 @@ final class PhotoCell: UICollectionViewCell {
             }
 
             // 2) 캐시 미스 → ImagePipeline 요청
-            self.requestFromPipeline(asset: asset, pixelSize: pixelSize, modDate: modDate)
+            // Dead code 경로이므로 isFullSizeRequest=true (디스크 캐시 경로는 프리로드용)
+            self.requestFromPipeline(asset: asset, pixelSize: pixelSize, modDate: modDate, isFullSizeRequest: true)
         }
     }
 
     /// ImagePipeline에서 이미지 요청 (캐시 미스 시 호출)
-    private func requestFromPipeline(asset: PHAsset, pixelSize: CGSize, modDate: Date?) {
+    /// - isFullSizeRequest: 100% 크기 요청 시 true (디스크 캐시 저장 조건)
+    private func requestFromPipeline(asset: PHAsset, pixelSize: CGSize, modDate: Date?, isFullSizeRequest: Bool) {
         let assetID = asset.localIdentifier
 
         currentCancellable = ImagePipeline.shared.requestImage(
@@ -502,14 +530,32 @@ final class PhotoCell: UICollectionViewCell {
                 #endif
 
                 // degraded가 아닌 최종 이미지만 캐시에 저장
-                if !isDegraded {
-                    FileLogger.log("[DiskSave] \(assetID.prefix(8))... final saved")
-                    ThumbnailCache.shared.save(
-                        image: image,
-                        assetID: assetID,
-                        modificationDate: modDate,
-                        size: pixelSize
-                    )
+                // [Phase 1] 디스크 캐시 저장 조건:
+                // 1. isDegraded=false (최종 이미지)
+                // 2. isFullSizeRequest=true (스크롤 중 50%는 저장 안 함 - 정책 일치)
+                // 3. 중복 저장 방지 (메모리 Set - 동기 디스크 I/O 없음)
+                if !isDegraded && isFullSizeRequest {
+                    let cacheKey = Self.makeCacheKey(assetID: assetID, modDate: modDate, size: pixelSize)
+
+                    // 세션 내 중복 저장 방지 (메모리 Set 기반)
+                    Self.savedCacheKeysLock.lock()
+                    let alreadySaved = Self.hasSaved(key: cacheKey)
+                    if !alreadySaved {
+                        Self.markSaved(key: cacheKey)
+                    }
+                    Self.savedCacheKeysLock.unlock()
+
+                    if !alreadySaved {
+                        #if DEBUG
+                        FileLogger.log("[DiskSave] \(assetID.prefix(8))... final saved")
+                        #endif
+                        ThumbnailCache.shared.save(
+                            image: image,
+                            assetID: assetID,
+                            modificationDate: modDate,
+                            size: pixelSize
+                        )
+                    }
                 }
             }
         }

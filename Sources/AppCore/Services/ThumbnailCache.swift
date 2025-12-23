@@ -203,6 +203,18 @@ public final class ThumbnailCache {
         }
     }
 
+    /// 캐시 존재 여부 확인 (동기 - 빠른 파일 체크만)
+    /// - 중복 저장 방지용
+    /// - Parameters:
+    ///   - assetID: 에셋 ID
+    ///   - modificationDate: 에셋 수정일
+    ///   - size: 이미지 크기
+    /// - Returns: 캐시 파일 존재 여부
+    public func exists(assetID: String, modificationDate: Date?, size: CGSize) -> Bool {
+        let path = cachePath(assetID: assetID, modDate: modificationDate, size: size)
+        return FileManager.default.fileExists(atPath: path.path)
+    }
+
     /// 특정 에셋의 캐시 삭제
     /// - Note: 해시 기반 파일명이라 assetID로 직접 매칭 불가
     /// - 현재는 LRU trim에 의존하여 자연 회수됨

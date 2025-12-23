@@ -801,9 +801,13 @@ final class GridViewController: UIViewController {
         MemoryThumbnailCache.shared.logStats(label: scrollType)
         PhotoCell.logMismatchStats(label: scrollType)
 
+        // [Pipeline Stats] 구간별 파이프라인 통계 출력 (L2에서도 확인 가능하도록)
+        ImagePipeline.shared.logStats(label: scrollType)
+
         // 통계 리셋 (다음 구간을 위해)
         MemoryThumbnailCache.shared.resetStats()
         PhotoCell.resetMismatchStats()
+        ImagePipeline.shared.resetStats()
     }
 
     // MARK: - Initial Display (B+A 조합 v2)
@@ -1106,10 +1110,12 @@ extension GridViewController: UICollectionViewDataSource {
         t3 = CACurrentMediaTime() // trash 체크 완료
 
         // 셀 설정 (PHAsset 직접 전달 - 성능 최적화)
+        // isFullSizeRequest: 스크롤 중이 아닐 때만 true (디스크 캐시 저장 조건)
         cell.configure(
             asset: asset,
             isTrashed: isTrashed,
-            targetSize: thumbnailSize()
+            targetSize: thumbnailSize(),
+            isFullSizeRequest: !isScrolling
         )
 
         t4 = CACurrentMediaTime() // configure 완료
