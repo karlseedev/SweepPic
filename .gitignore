@@ -13,6 +13,9 @@ Packages/
 *.xcscmblueprint
 xcuserdata/
 
+# Xcode app data containers (simulator data)
+*.xcappdata
+
 # AppCode
 .idea/
 
