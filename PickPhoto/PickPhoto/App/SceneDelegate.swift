@@ -10,6 +10,7 @@
 // - 백그라운드/포그라운드 전환 처리
 
 import UIKit
+import Photos
 import AppCore
 
 /// PickPhoto 앱의 SceneDelegate
@@ -81,7 +82,28 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
     func sceneWillEnterForeground(_ scene: UIScene) {
         // T015: 포그라운드 진입 시 AppStateStore 처리
         AppStateStore.shared.handleForegroundTransition()
+
+        // T060: 외부 삭제 처리 - PhotoKit에서 삭제된 사진을 TrashState에서 제거
+        cleanupInvalidTrashedAssets()
+
         print("[SceneDelegate] Scene will enter foreground")
+    }
+
+    /// T060: 휴지통에서 외부 삭제된 사진 정리
+    /// PhotoKit에서 더 이상 존재하지 않는 사진을 TrashState에서 제거
+    private func cleanupInvalidTrashedAssets() {
+        let trashedIDs = TrashStore.shared.trashedAssetIDs
+        guard !trashedIDs.isEmpty else { return }
+
+        // PhotoKit에서 유효한 ID만 조회 (Set → Array 변환)
+        let fetchResult = PHAsset.fetchAssets(withLocalIdentifiers: Array(trashedIDs), options: nil)
+        var validIDs = Set<String>()
+        fetchResult.enumerateObjects { asset, _, _ in
+            validIDs.insert(asset.localIdentifier)
+        }
+
+        // 유효하지 않은 ID 제거
+        TrashStore.shared.removeInvalidAssets(validAssetIDs: validIDs)
     }
 
     /// Scene이 백그라운드로 진입할 때 호출

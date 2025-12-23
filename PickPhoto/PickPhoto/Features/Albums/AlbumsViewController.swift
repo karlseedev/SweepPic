@@ -492,19 +492,12 @@ extension AlbumsViewController: UICollectionViewDelegate {
         print("[AlbumsViewController] Opened album: \(album.title)")
     }
 
-    /// 휴지통 앨범 열기 (Phase 7에서 TrashAlbumViewController 사용)
+    /// 휴지통 앨범 열기 (T055)
     private func openTrashAlbum() {
-        // Phase 7에서 TrashAlbumViewController 구현 예정
-        // 현재는 간단한 알림 표시
-        let alert = UIAlertController(
-            title: "휴지통",
-            message: "휴지통 기능은 Phase 7에서 구현됩니다.",
-            preferredStyle: .alert
-        )
-        alert.addAction(UIAlertAction(title: "확인", style: .default))
-        present(alert, animated: true)
+        let trashVC = TrashAlbumViewController()
+        navigationController?.pushViewController(trashVC, animated: true)
 
-        print("[AlbumsViewController] Trash album tapped (Phase 7)")
+        print("[AlbumsViewController] Opened trash album")
     }
 }
 

@@ -1,0 +1,95 @@
+=== PickPhoto Launch Log ===
+Date: 2025-12-23 16:19:27
+Device: iPhone14,2
+============================
+[+4.6ms] [Env] Build: Debug
+[+4.7ms] [Env] LowPowerMode: OFF
+[+4.7ms] [Env] PhotosAuth: authorized
+[+4.8ms] [Config] deliveryMode: opportunistic
+[+4.8ms] [Config] cancelPolicy: prepareForReuse
+[+4.8ms] [Config] R2Recovery: disabled
+[+52.2ms] [Timing] === 초기 로딩 시작 ===
+[+83.3ms] [Timing] viewWillAppear: +31.1ms (초기 진입 - reloadData 스킵)
+[+86.3ms] [InitialDisplay] 시작: +34.1ms, cellSize=128x128pt
+[+94.3ms] [InitialDisplay] 데이터 로드 완료: +42.1ms, 3480장
+[+94.4ms] [Preload] 시작: index 3468~3479 (12개), pixelSize=384x384px
+[+96.8ms] [MemoryCache] 초기화: countLimit=100, costLimit=50MB
+[+96.9ms] [ThumbnailCache] Cache directory: /var/mobile/Containers/Data/Application/DD350E9C-48B0-4A57-B714-8B2C75312730/Library/Caches/Thumbnails
+[+97.0ms] [Timing] C) 첫 레이아웃 완료: +44.8ms
+[+116.8ms] [Preload] DISK HIT: F3EC02C8...
+[+120.9ms] [Preload] DISK HIT: 0655447F...
+[+124.7ms] [Preload] DISK HIT: 699CA480...
+[+128.1ms] [Preload] DISK HIT: E5D2A7F7...
+[+131.9ms] [Preload] DISK HIT: 61F383D4...
+[+135.5ms] [Preload] DISK HIT: 97EEA684...
+[+140.3ms] [Preload] DISK HIT: B2F48D66...
+[+143.9ms] [Preload] DISK HIT: F00FD4BC...
+[+147.5ms] [Preload] DISK HIT: 70ACEA88...
+[+151.2ms] [Preload] DISK HIT: 6907A28F...
+[+154.9ms] [Preload] DISK HIT: C2E6BD92...
+[+159.3ms] [Preload] DISK HIT: E70BD01F...
+[+159.4ms] [Timing] E0) finishInitialDisplay 시작: +107.2ms (reason: preload complete, preloaded: 12/12)
+[+164.6ms] [Timing] D) 첫 셀 표시: +112.4ms (indexPath: [0, 0])
+[+167.8ms] [Pipeline] requestImage #10: +163.0ms
+[+173.2ms] [Timing] E1) reloadData+layout 완료: +121.0ms (E0→E1: 13.8ms)
+[+174.5ms] [Pipeline] requestImage #20: +169.7ms
+[+183.9ms] [Timing] E2) scrollToItem+layout 완료: +131.7ms (E1→E2: 10.7ms)
+[+184.3ms] [Timing] === 초기 로딩 완료: +131.7ms (E0→E1: 13.8ms, E1→E2: 10.7ms) ===
+[+184.3ms] [Timing] 최종 통계: cellForItemAt 36회, 총 16.3ms, 평균 0.45ms
+[+184.5ms] [Initial Load] req: 24 (133.7/s), cancel: 0 (0.0/s), complete: 0 (0.0/s)
+[+184.5ms] [Initial Load] degraded: 24, maxInFlight: 24
+[+184.5ms] [Initial Load] latency avg: 0.0ms, p95: 0.0ms, max: 0.0ms
+[+184.5ms] [Initial Load] preheat: 0회, 총 0개 에셋
+[+184.5ms] [Initial Load] memHit: 12, memMiss: 36, hitRate: 25.0%
+[+184.5ms] [Initial Load] diskCacheMismatch: 0, pipelineMismatch: 0
+[+184.5ms] [Initial Load] grayShown: 24, grayResolved: 12, pending: 12
+[+191.5ms] [DiskSave] A840013B... final saved
+[+192.9ms] [DiskSave] D09698F4... final saved
+[+199.4ms] [DiskSave] 0A25503D... final saved
+[+199.8ms] [DiskSave] 82553ABE... final saved
+[+205.7ms] [ThumbnailCache] Saved large file: 103KB
+[+206.3ms] [DiskSave] BE958103... final saved
+[+207.3ms] [DiskSave] CCA79422... final saved
+[+213.2ms] [DiskSave] 0CD8E42E... final saved
+[+216.7ms] [DiskSave] D00E016A... final saved
+[+220.4ms] [DiskSave] C7D21B0F... final saved
+[+224.1ms] [DiskSave] 8CA4A43A... final saved
+[+226.9ms] [DiskSave] 449AF67B... final saved
+[+230.0ms] [DiskSave] 5EAAFB80... final saved
+[+235.2ms] [DiskSave] 81F73D90... final saved
+[+239.7ms] [DiskSave] EAE44FA4... final saved
+[+244.0ms] [DiskSave] 0E65C2BC... final saved
+[+248.9ms] [DiskSave] 35161155... final saved
+[+251.0ms] [DiskSave] 8557C2F2... final saved
+[+257.8ms] [DiskSave] 8D29E8B5... final saved
+[+260.3ms] [DiskSave] C686BEAA... final saved
+[+263.6ms] [DiskSave] EFCDAD54... final saved
+[+267.3ms] [DiskSave] 2D6F2F10... final saved
+[+271.1ms] [DiskSave] 6A03D5D4... final saved
+[+277.3ms] [DiskSave] B72E5653... final saved
+[+324.2ms] [DiskSave] EB31907C... final saved
+[+372.4ms] [ThumbnailCache] Cache size OK: 99MB / 100MB (4126 files)
+[+1130.0ms] [Scroll] First scroll 시작: +1077.5ms
+[+1140.5ms] [Pipeline] completion #50 도달: +1135.7ms
+[+1147.1ms] [Pipeline] requestImage #30: +1142.3ms
+[+13268.4ms] [Hitch] L1 First: hitch: 24.4 ms/s [Critical], dropped: 21, longest: 2 (26.9ms)
+[+13268.5ms] [L1 First] memHit: 0, memMiss: 6410, hitRate: 0.0%
+[+13268.6ms] [L1 First] diskCacheMismatch: 0, pipelineMismatch: 0
+[+13268.6ms] [L1 First] grayShown: 5761, grayResolved: 6434, pending: -673
+[+13302.0ms] [L1 First] req: 6434 (485.1/s), cancel: 6378 (480.8/s), complete: 6417 (483.8/s)
+[+13302.1ms] [L1 First] degraded: 6434, maxInFlight: 24
+[+13302.1ms] [L1 First] latency avg: 6.7ms, p95: 13.3ms, max: 147.9ms
+[+13302.1ms] [L1 First] preheat: 0회, 총 0개 에셋
+[+13302.1ms] [Scroll] First scroll 완료: 12172.7ms 동안 스크롤
+[+14214.6ms] [Pipeline] requestImage #10: +912.5ms
+[+14301.6ms] [Pipeline] requestImage #20: +999.5ms
+[+14373.1ms] [Pipeline] completion #50 도달: +1071.0ms
+[+14417.2ms] [Pipeline] requestImage #30: +1115.1ms
+[+18935.5ms] [Hitch] L2 Steady: hitch: 12.8 ms/s [Critical], dropped: 3, longest: 1 (13.2ms)
+[+18935.6ms] [L2 Steady] memHit: 0, memMiss: 3267, hitRate: 0.0%
+[+18935.6ms] [L2 Steady] diskCacheMismatch: 0, pipelineMismatch: 0
+[+18935.6ms] [L2 Steady] grayShown: 3054, grayResolved: 3267, pending: -213
+[+18957.1ms] [L2 Steady] req: 3267 (579.9/s), cancel: 3262 (579.0/s), complete: 3266 (579.7/s)
+[+18957.1ms] [L2 Steady] degraded: 3267, maxInFlight: 0
+[+18957.2ms] [L2 Steady] latency avg: 5.3ms, p95: 8.8ms, max: 14.1ms
+[+18957.2ms] [L2 Steady] preheat: 1회, 총 39개 에셋

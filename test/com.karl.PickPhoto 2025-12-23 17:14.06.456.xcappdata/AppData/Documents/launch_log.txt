@@ -1,0 +1,64 @@
+=== PickPhoto Launch Log ===
+Date: 2025-12-23 17:13:42
+Device: iPhone14,2
+============================
+[+7.8ms] [Env] Build: Release
+[+7.8ms] [Env] LowPowerMode: OFF
+[+7.8ms] [Env] PhotosAuth: authorized
+[+8.0ms] [Config] deliveryMode: opportunistic
+[+8.0ms] [Config] cancelPolicy: prepareForReuse
+[+8.0ms] [Config] R2Recovery: disabled
+[+71.0ms] [Timing] === 초기 로딩 시작 ===
+[+103.3ms] [Timing] viewWillAppear: +32.2ms (초기 진입 - reloadData 스킵)
+[+145.1ms] [Timing] C) 첫 레이아웃 완료: +74.1ms
+[+166.3ms] [Preload] DISK HIT: F3EC02C8...
+[+171.2ms] [Preload] DISK HIT: 0655447F...
+[+175.4ms] [Preload] DISK HIT: 699CA480...
+[+179.6ms] [Preload] DISK HIT: E5D2A7F7...
+[+183.9ms] [Preload] DISK HIT: 61F383D4...
+[+187.8ms] [Preload] DISK HIT: 97EEA684...
+[+192.6ms] [Preload] DISK HIT: B2F48D66...
+[+196.8ms] [Preload] DISK HIT: F00FD4BC...
+[+201.0ms] [Preload] DISK HIT: 70ACEA88...
+[+205.0ms] [Preload] DISK HIT: 6907A28F...
+[+209.1ms] [Preload] DISK HIT: C2E6BD92...
+[+213.3ms] [Preload] DISK HIT: E70BD01F...
+[+213.4ms] [Timing] E0) finishInitialDisplay 시작: +142.3ms (reason: preload complete, preloaded: 12/12)
+[+218.3ms] [Timing] D) 첫 셀 표시: +147.3ms (indexPath: [0, 0])
+[+221.4ms] [Pipeline] requestImage #10: +213.4ms
+[+226.7ms] [Timing] E1) reloadData+layout 완료: +155.7ms (E0→E1: 13.3ms)
+[+227.9ms] [Pipeline] requestImage #20: +219.8ms
+[+236.9ms] [Timing] E2) scrollToItem+layout 완료: +165.9ms (E1→E2: 10.2ms)
+[+237.2ms] [Timing] === 초기 로딩 완료: +165.9ms (E0→E1: 13.3ms, E1→E2: 10.2ms) ===
+[+237.2ms] [Timing] 최종 통계: cellForItemAt 36회, 총 15.4ms, 평균 0.43ms
+[+237.2ms] [Initial Load] req: 24 (104.7/s), cancel: 0 (0.0/s), complete: 0 (0.0/s)
+[+237.2ms] [Initial Load] degraded: 24, maxInFlight: 24
+[+237.2ms] [Initial Load] latency avg: 0.0ms, p95: 0.0ms, max: 0.0ms
+[+237.2ms] [Initial Load] preheat: 0회, 총 0개 에셋
+[+237.2ms] [Initial Load] memHit: 12, memMiss: 36, hitRate: 25.0%
+[+237.2ms] [Initial Load] diskCacheMismatch: 0, pipelineMismatch: 0
+[+237.2ms] [Initial Load] grayShown: 24, grayResolved: 12, pending: 12
+[+1686.3ms] [Scroll] First scroll 시작: +1615.0ms
+[+1705.1ms] [Pipeline] completion #50 도달: +1697.0ms
+[+1736.6ms] [Pipeline] requestImage #30: +1728.6ms
+[+9566.0ms] [Hitch] L1 First: hitch: 12.7 ms/s [Critical], dropped: 8, longest: 2 (27.0ms)
+[+9566.1ms] [L1 First] memHit: 0, memMiss: 636, hitRate: 0.0%
+[+9566.1ms] [L1 First] diskCacheMismatch: 0, pipelineMismatch: 0
+[+9566.1ms] [L1 First] grayShown: 181, grayResolved: 660, pending: -479
+[+9566.4ms] [L1 First] req: 660 (69.1/s), cancel: 618 (64.7/s), complete: 660 (69.1/s)
+[+9566.4ms] [L1 First] degraded: 660, maxInFlight: 24
+[+9566.5ms] [L1 First] latency avg: 6.7ms, p95: 8.6ms, max: 146.4ms
+[+9566.5ms] [L1 First] preheat: 0회, 총 0개 에셋
+[+9566.6ms] [Scroll] First scroll 완료: 7880.6ms 동안 스크롤
+[+11561.7ms] [Pipeline] requestImage #10: +1995.2ms
+[+11704.1ms] [Pipeline] requestImage #20: +2137.6ms
+[+11773.4ms] [Pipeline] completion #50 도달: +2206.9ms
+[+11798.1ms] [Pipeline] requestImage #30: +2231.6ms
+[+16758.2ms] [Hitch] L2 Steady: hitch: 37.3 ms/s [Critical], dropped: 18, longest: 2 (27.5ms)
+[+16758.4ms] [L2 Steady] memHit: 0, memMiss: 2886, hitRate: 0.0%
+[+16758.4ms] [L2 Steady] diskCacheMismatch: 0, pipelineMismatch: 0
+[+16758.4ms] [L2 Steady] grayShown: 2670, grayResolved: 2886, pending: -216
+[+16759.2ms] [L2 Steady] req: 2886 (401.3/s), cancel: 2876 (399.9/s), complete: 2886 (401.3/s)
+[+16759.2ms] [L2 Steady] degraded: 2886, maxInFlight: 0
+[+16759.3ms] [L2 Steady] latency avg: 5.1ms, p95: 8.6ms, max: 13.7ms
+[+16759.3ms] [L2 Steady] preheat: 1회, 총 66개 에셋
