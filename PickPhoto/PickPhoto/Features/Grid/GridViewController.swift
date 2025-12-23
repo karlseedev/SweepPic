@@ -799,6 +799,7 @@ final class GridViewController: UIViewController {
         // [Cache Stats] 구간별 캐시 통계 출력
         MemoryThumbnailCache.shared.logStats(label: scrollType)
         PhotoCell.logMismatchStats(label: scrollType)
+        PhotoCell.logGrayCellStats(label: scrollType)
 
         // [Pipeline Stats] 구간별 파이프라인 통계 출력 (L2에서도 확인 가능하도록)
         ImagePipeline.shared.logStats(label: scrollType)
@@ -806,6 +807,7 @@ final class GridViewController: UIViewController {
         // 통계 리셋 (다음 구간을 위해)
         MemoryThumbnailCache.shared.resetStats()
         PhotoCell.resetMismatchStats()
+        PhotoCell.resetGrayCellStats()
         ImagePipeline.shared.resetStats()
     }
 
@@ -865,9 +867,11 @@ final class GridViewController: UIViewController {
         // [Cache Stats] 초기 로드 캐시 통계 출력
         MemoryThumbnailCache.shared.logStats(label: "Initial Load")
         PhotoCell.logMismatchStats(label: "Initial Load")
+        PhotoCell.logGrayCellStats(label: "Initial Load")
 
         // 통계 리셋 (스크롤 구간용으로 리셋)
         MemoryThumbnailCache.shared.resetStats()
+        PhotoCell.resetGrayCellStats()
         PhotoCell.resetMismatchStats()
     }
 
@@ -1162,6 +1166,11 @@ extension GridViewController: UICollectionViewDelegate {
             let sinceStart = (displayTime - loadStartTime) * 1000
             FileLogger.log("[Timing] D) 첫 셀 표시: +\(String(format: "%.1f", sinceStart))ms (indexPath: \(indexPath))")
         }
+
+        // 회색 셀 측정: 화면에 표시되는 순간 이미지가 nil이면 카운트
+        if let photoCell = cell as? PhotoCell, photoCell.isShowingGray {
+            PhotoCell.incrementGrayShown()
+        }
     }
 
     func collectionView(_ collectionView: UICollectionView, didSelectItemAt indexPath: IndexPath) {
@@ -1236,15 +1245,14 @@ extension GridViewController: UICollectionViewDelegate {
 extension GridViewController: UICollectionViewDataSourcePrefetching {
 
     func collectionView(_ collectionView: UICollectionView, prefetchItemsAt indexPaths: [IndexPath]) {
-        // [P0 실험] 스크롤 중 preheat 완전 제거
-        // - preheatAfterScrollStop()이 정지 후 preheat 담당
-        // - 여기서의 preheat는 중복 + 동기 fetchAsset 비용 발생
-        // - 원복: git checkout HEAD -- GridViewController.swift
+        // [P0] 스크롤 중 preheat 완전 제거
+        // - 근거: hitch 63% 개선 (40.7 → 15.0 ms/s), 회색 셀 차이 없음
+        // - preheatAfterScrollStop()이 스크롤 정지 후 preheat 담당
         return
     }
 
     func collectionView(_ collectionView: UICollectionView, cancelPrefetchingForItemsAt indexPaths: [IndexPath]) {
-        // [P0 실험] prefetch preheat 제거에 따라 cancel도 불필요
+        // [P0] prefetch preheat 제거에 따라 cancel도 불필요
         return
     }
 }

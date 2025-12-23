@@ -110,6 +110,60 @@ final class PhotoCell: UICollectionViewCell {
         FileLogger.log("[\(label)] diskCacheMismatch: \(diskMismatch), pipelineMismatch: \(pipelineMismatch)")
     }
 
+    // MARK: - Gray Cell Statistics (회색 셀 측정)
+
+    /// 회색 셀 통계 락
+    private static let grayCellLock = NSLock()
+
+    /// 회색 셀 표시 횟수 (configure 시 imageView.image == nil)
+    private static var grayShownCount: Int = 0
+
+    /// 회색 셀 해소 횟수 (이미지가 세팅됨)
+    private static var grayResolvedCount: Int = 0
+
+    /// 회색 셀 통계 리셋
+    static func resetGrayCellStats() {
+        grayCellLock.withLock {
+            grayShownCount = 0
+            grayResolvedCount = 0
+        }
+    }
+
+    /// 회색 셀 통계 조회
+    static func getGrayCellStats() -> (shown: Int, resolved: Int) {
+        grayCellLock.lock()
+        let shown = grayShownCount
+        let resolved = grayResolvedCount
+        grayCellLock.unlock()
+        return (shown, resolved)
+    }
+
+    /// 회색 셀 표시 카운트 증가 (willDisplay에서 호출)
+    static func incrementGrayShown() {
+        grayCellLock.withLock {
+            grayShownCount += 1
+        }
+    }
+
+    /// 현재 이미지가 nil인지 확인 (willDisplay에서 회색 셀 체크용)
+    var isShowingGray: Bool {
+        return imageView.image == nil
+    }
+
+    /// 회색 셀 해소 카운트 증가 (내부용)
+    private static func incrementGrayResolved() {
+        grayCellLock.withLock {
+            grayResolvedCount += 1
+        }
+    }
+
+    /// 회색 셀 통계 로그 출력
+    static func logGrayCellStats(label: String = "PhotoCell") {
+        let stats = getGrayCellStats()
+        let pending = stats.shown - stats.resolved
+        FileLogger.log("[\(label)] grayShown: \(stats.shown), grayResolved: \(stats.resolved), pending: \(pending)")
+    }
+
     // MARK: - UI Components
 
     /// 썸네일 이미지 뷰
@@ -230,6 +284,7 @@ final class PhotoCell: UICollectionViewCell {
 
         // 상태 초기화
         imageView.image = nil
+        // 회색 셀 카운트는 willDisplay에서 측정 (화면에 실제 노출될 때만)
         currentAssetID = nil
         isTrashed = false
         isSelectedForDeletion = false
@@ -403,7 +458,9 @@ final class PhotoCell: UICollectionViewCell {
         // B+A v2: 0) 메모리 캐시에서 동기 로드 (즉시 반환)
         // - 프리로드된 이미지가 있으면 셀 생성과 동시에 이미지 할당
         if let memoryImage = MemoryThumbnailCache.shared.get(assetID: assetID, pixelSize: pixelSize) {
+            let wasNil = imageView.image == nil
             imageView.image = memoryImage
+            if wasNil { Self.incrementGrayResolved() }  // nil → non-nil 전환 시에만
 
             #if false  // DEBUG 로그 임시 비활성화
             Self.applyLock.withLock {
@@ -507,7 +564,9 @@ final class PhotoCell: UICollectionViewCell {
 
             if let image = image {
                 // 이미지 표시
+                let wasNil = self.imageView.image == nil
                 self.imageView.image = image
+                if wasNil { Self.incrementGrayResolved() }  // nil → non-nil 전환 시에만
 
                 #if false  // DEBUG 로그 임시 비활성화
                 Self.applyLock.withLock {
@@ -608,7 +667,9 @@ final class PhotoCell: UICollectionViewCell {
             }
 
             // 이미지 설정
+            let wasNil = self.imageView.image == nil
             self.imageView.image = image
+            if wasNil { Self.incrementGrayResolved() }  // nil → non-nil 전환 시에만
         }
     }
 
