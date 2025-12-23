@@ -57,6 +57,35 @@ final class PhotoCell: UICollectionViewCell {
     }
     #endif
 
+    // MARK: - Mismatch Statistics (스크롤 중 버려진 작업 추적)
+
+    /// 통계 락
+    private static let mismatchLock = NSLock()
+
+    /// 디스크 캐시 콜백이 버려진 횟수 (cacheLoadID mismatch)
+    private static var diskCacheMismatchCount: Int = 0
+
+    /// Pipeline 콜백이 버려진 횟수 (assetID mismatch)
+    private static var pipelineMismatchCount: Int = 0
+
+    /// 통계 리셋
+    static func resetMismatchStats() {
+        mismatchLock.withLock {
+            diskCacheMismatchCount = 0
+            pipelineMismatchCount = 0
+        }
+    }
+
+    /// 통계 로그 출력
+    static func logMismatchStats(label: String = "PhotoCell") {
+        mismatchLock.lock()
+        let diskMismatch = diskCacheMismatchCount
+        let pipelineMismatch = pipelineMismatchCount
+        mismatchLock.unlock()
+
+        FileLogger.log("[\(label)] diskCacheMismatch: \(diskMismatch), pipelineMismatch: \(pipelineMismatch)")
+    }
+
     // MARK: - UI Components
 
     /// 썸네일 이미지 뷰
@@ -365,6 +394,19 @@ final class PhotoCell: UICollectionViewCell {
             return // 메모리 캐시 히트 → 완료
         }
 
+        // [설계 정책] 스크롤 중 디스크 캐시 스킵
+        // - 디스크 캐시는 "초기 프리로드 전용" (GridViewController.startInitialPreload에서만 사용)
+        // - 스크롤 중에는 메모리 → Pipeline 직접 연결 (디스크 I/O 지연으로 인한 회색 썸네일 방지)
+        // - 근거: 2025-12-22 테스트, skipDiskCache=true → 회색 거의 사라짐 (test/251222test-v7-diskoff.md)
+        // - Pipeline의 degraded first-paint가 디스크 로드보다 빠름
+        //
+        // 메모리 캐시 미스 시 바로 ImagePipeline 요청
+        requestFromPipeline(asset: asset, pixelSize: pixelSize, modDate: modDate)
+        return
+
+        // [Dead Code] 아래 디스크 캐시 로드 경로는 더 이상 사용되지 않음
+        // 필요 시 위 return 문을 제거하고 이 블록을 활성화
+
         // 캐시 로드 ID 생성 (비동기 캐시 결과 검증용)
         let loadID = UUID()
         currentCacheLoadID = loadID
@@ -380,7 +422,11 @@ final class PhotoCell: UICollectionViewCell {
 
             // 셀 재사용 또는 캐시 로드 ID 변경 체크
             guard self.currentAssetID == assetID,
-                  self.currentCacheLoadID == loadID else { return }
+                  self.currentCacheLoadID == loadID else {
+                // [Stats] 디스크 캐시 콜백 버려짐 (스크롤 중 헛일)
+                Self.mismatchLock.withLock { Self.diskCacheMismatchCount += 1 }
+                return
+            }
 
             if let cachedImage = cachedImage {
                 // 캐시 히트 → 이미지 표시 후 종료
@@ -425,7 +471,11 @@ final class PhotoCell: UICollectionViewCell {
             guard let self = self else { return }
 
             // 셀 재사용 체크
-            guard self.currentAssetID == assetID else { return }
+            guard self.currentAssetID == assetID else {
+                // [Stats] Pipeline 콜백 버려짐 (스크롤 중 헛일)
+                Self.mismatchLock.withLock { Self.pipelineMismatchCount += 1 }
+                return
+            }
 
             if let image = image {
                 // 이미지 표시
@@ -453,6 +503,7 @@ final class PhotoCell: UICollectionViewCell {
 
                 // degraded가 아닌 최종 이미지만 캐시에 저장
                 if !isDegraded {
+                    FileLogger.log("[DiskSave] \(assetID.prefix(8))... final saved")
                     ThumbnailCache.shared.save(
                         image: image,
                         assetID: assetID,

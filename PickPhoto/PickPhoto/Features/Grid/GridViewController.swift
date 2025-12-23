@@ -796,6 +796,14 @@ final class GridViewController: UIViewController {
         let scrollType = hasCompletedFirstScroll ? "L2 Steady" : "L1 First"
 
         FileLogger.log("[Hitch] \(scrollType): \(result.formatted())")
+
+        // [Cache Stats] 구간별 캐시 통계 출력
+        MemoryThumbnailCache.shared.logStats(label: scrollType)
+        PhotoCell.logMismatchStats(label: scrollType)
+
+        // 통계 리셋 (다음 구간을 위해)
+        MemoryThumbnailCache.shared.resetStats()
+        PhotoCell.resetMismatchStats()
     }
 
     // MARK: - Initial Display (B+A 조합 v2)
@@ -850,6 +858,14 @@ final class GridViewController: UIViewController {
 
         // [Pipeline] 파이프라인 통계 출력
         ImagePipeline.shared.logStats(label: "Initial Load")
+
+        // [Cache Stats] 초기 로드 캐시 통계 출력
+        MemoryThumbnailCache.shared.logStats(label: "Initial Load")
+        PhotoCell.logMismatchStats(label: "Initial Load")
+
+        // 통계 리셋 (스크롤 구간용으로 리셋)
+        MemoryThumbnailCache.shared.resetStats()
+        PhotoCell.resetMismatchStats()
     }
 
     /// 맨 아래로 스크롤 (FR-003)
@@ -947,7 +963,10 @@ final class GridViewController: UIViewController {
             ) { [weak self] image in
                 // 메모리 캐시에 저장
                 if let image = image {
+                    FileLogger.log("[Preload] DISK HIT: \(assetID.prefix(8))...")
                     MemoryThumbnailCache.shared.set(image: image, assetID: assetID, pixelSize: pixelSize)
+                } else {
+                    FileLogger.log("[Preload] DISK MISS: \(assetID.prefix(8))...")
                 }
                 self?.onPreloadCompleted()
             }

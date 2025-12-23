@@ -21,6 +21,42 @@ public final class MemoryThumbnailCache {
     /// 공유 인스턴스
     public static let shared = MemoryThumbnailCache()
 
+    // MARK: - Statistics (구간별 집계)
+
+    /// 통계 락
+    private let statsLock = NSLock()
+
+    /// 구간 시작 시간
+    private var statsStartTime: CFTimeInterval = CACurrentMediaTime()
+
+    /// 히트 카운터 (구간별)
+    private var hitCount: Int = 0
+
+    /// 미스 카운터 (구간별)
+    private var missCount: Int = 0
+
+    /// 통계 리셋 (구간 시작 시 호출)
+    public func resetStats() {
+        statsLock.withLock {
+            statsStartTime = CACurrentMediaTime()
+            hitCount = 0
+            missCount = 0
+        }
+    }
+
+    /// 통계 로그 출력
+    public func logStats(label: String = "MemoryCache") {
+        statsLock.lock()
+        let hit = hitCount
+        let miss = missCount
+        statsLock.unlock()
+
+        let total = hit + miss
+        let hitRate = total > 0 ? Double(hit) / Double(total) * 100 : 0
+
+        FileLogger.log("[\(label)] memHit: \(hit), memMiss: \(miss), hitRate: \(String(format: "%.1f", hitRate))%")
+    }
+
     // MARK: - Private Properties
 
     /// NSCache (메모리 압박 시 자동 해제)
@@ -49,7 +85,18 @@ public final class MemoryThumbnailCache {
     /// - Returns: 캐시된 이미지 또는 nil
     public func get(assetID: String, pixelSize: CGSize) -> UIImage? {
         let key = cacheKey(assetID: assetID, pixelSize: pixelSize)
-        return cache.object(forKey: key)
+        let image = cache.object(forKey: key)
+
+        // 통계 업데이트
+        statsLock.lock()
+        if image != nil {
+            hitCount += 1
+        } else {
+            missCount += 1
+        }
+        statsLock.unlock()
+
+        return image
     }
 
     /// 저장 (프리로드 완료 시)
