@@ -731,14 +731,13 @@ final class GridViewController: UIViewController {
             let hitchResult = self.hitchMonitor.stop()
             self.logScrollQuality(result: hitchResult)
 
-            // [C) First Scroll 집계] 첫 스크롤 완료 시 파이프라인 통계 로그
+            // [C) First Scroll 완료 마킹]
+            // - 통계는 logScrollQuality()에서 [L1 First] 라벨로 이미 출력됨
+            // - 여기서는 완료 시점과 duration만 기록
             if !self.hasCompletedFirstScroll {
                 self.hasCompletedFirstScroll = true
                 let scrollDuration = (CACurrentMediaTime() - self.firstScrollStartTime) * 1000
                 FileLogger.log("[Scroll] First scroll 완료: \(String(format: "%.1f", scrollDuration))ms 동안 스크롤")
-
-                // 파이프라인 통계 (First Scroll 구간)
-                ImagePipeline.shared.logStats(label: "First Scroll")
             }
 
             // [preheat 최적화] 스크롤 정지 후 1회 preheat
@@ -1237,33 +1236,16 @@ extension GridViewController: UICollectionViewDelegate {
 extension GridViewController: UICollectionViewDataSourcePrefetching {
 
     func collectionView(_ collectionView: UICollectionView, prefetchItemsAt indexPaths: [IndexPath]) {
-        // 스크롤 스로틀링 (Step 1: 200ms 간격)
-        if let lastTime = lastScrollTime,
-           Date().timeIntervalSince(lastTime) < Self.scrollThrottleInterval {
-            return
-        }
-        lastScrollTime = Date()
-
-        // [Step 1] preheat 범위 제한 (±1 row = 6셀)
-        let limitedIndexPaths = Array(indexPaths.prefix(Self.maxPreheatCells))
-
-        // 프리히트할 에셋 ID
-        let assetIDs = dataSourceDriver.assetIDs(for: limitedIndexPaths)
-        guard !assetIDs.isEmpty else { return }
-
-        // ImagePipeline preheat
-        imagePipeline.preheat(
-            assetIDs: assetIDs,
-            targetSize: thumbnailSize(forScrolling: true) // 스크롤 중이므로 저품질
-        )
+        // [P0 실험] 스크롤 중 preheat 완전 제거
+        // - preheatAfterScrollStop()이 정지 후 preheat 담당
+        // - 여기서의 preheat는 중복 + 동기 fetchAsset 비용 발생
+        // - 원복: git checkout HEAD -- GridViewController.swift
+        return
     }
 
     func collectionView(_ collectionView: UICollectionView, cancelPrefetchingForItemsAt indexPaths: [IndexPath]) {
-        // 프리히트 취소
-        let assetIDs = dataSourceDriver.assetIDs(for: indexPaths)
-        guard !assetIDs.isEmpty else { return }
-
-        imagePipeline.stopPreheating(assetIDs: assetIDs)
+        // [P0 실험] prefetch preheat 제거에 따라 cancel도 불필요
+        return
     }
 }
 
