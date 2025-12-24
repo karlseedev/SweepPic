@@ -468,6 +468,10 @@ final class ViewerViewController: UIViewController {
             return
         }
 
+        // 이동 방향 결정: 이전 사진으로 갔으면 reverse, 다음으로 갔으면 forward
+        // (currentIndex 업데이트 전에 비교해야 함)
+        let direction: UIPageViewController.NavigationDirection = (nextIndex < currentIndex) ? .reverse : .forward
+
         currentIndex = nextIndex
 
         // 새 뷰 컨트롤러 생성 및 표시
@@ -475,9 +479,6 @@ final class ViewerViewController: UIViewController {
             dismissWithFadeOut()
             return
         }
-
-        // 이전 사진 방향으로 애니메이션 (이전 사진 우선이므로 reverse)
-        let direction: UIPageViewController.NavigationDirection = .reverse
         pageViewController.setViewControllers(
             [photoVC],
             direction: direction,
