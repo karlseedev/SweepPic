@@ -121,6 +121,9 @@ final class TrashAlbumViewController: UIViewController {
     /// 핀치 줌 앵커 에셋 ID
     private var pinchAnchorAssetID: String?
 
+    /// 초기 스크롤 완료 여부 (맨 아래로 스크롤)
+    private var didInitialScroll: Bool = false
+
     // MARK: - Initialization
 
     init(
@@ -327,6 +330,21 @@ final class TrashAlbumViewController: UIViewController {
 
         print("[TrashAlbumViewController] Loaded \(trashedAssets.count) trashed assets")
         print("[TrashAlbumViewController.Timing] dataLoad: \(String(format: "%.1f", (dataLoadTime - startTime) * 1000))ms, reloadData: \(String(format: "%.1f", (reloadTime - dataLoadTime) * 1000))ms, total: \(String(format: "%.1f", (endTime - startTime) * 1000))ms")
+
+        // 초기 로드 시 맨 아래로 스크롤 (최신 사진부터 보기)
+        if !didInitialScroll {
+            didInitialScroll = true
+            collectionView.layoutIfNeeded()
+            scrollToBottomIfNeeded()
+        }
+    }
+
+    /// 맨 아래로 스크롤 (최신 사진부터 보기)
+    private func scrollToBottomIfNeeded() {
+        guard !trashedAssets.isEmpty else { return }
+        let lastIndex = trashedAssets.count - 1
+        let lastIndexPath = IndexPath(item: lastIndex, section: 0)
+        collectionView.scrollToItem(at: lastIndexPath, at: .bottom, animated: false)
     }
 
     // MARK: - Layout

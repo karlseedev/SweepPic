@@ -117,6 +117,9 @@ final class AlbumGridViewController: UIViewController {
     /// 핀치 줌 앵커 에셋 ID
     private var pinchAnchorAssetID: String?
 
+    /// 초기 스크롤 완료 여부 (맨 아래로 스크롤)
+    private var didInitialScroll: Bool = false
+
     // MARK: - Initialization
 
     init(
@@ -172,6 +175,12 @@ final class AlbumGridViewController: UIViewController {
         super.viewDidLayoutSubviews()
         updateCellSize()
         updateContentInset()
+
+        // 초기 로드 시 맨 아래로 스크롤 (최신 사진부터 보기)
+        if !didInitialScroll && fetchResult.count > 0 {
+            didInitialScroll = true
+            scrollToBottomIfNeeded()
+        }
     }
 
     override func viewSafeAreaInsetsDidChange() {
@@ -281,6 +290,14 @@ final class AlbumGridViewController: UIViewController {
         let cellWidth = floor(availableWidth / columnCount)
 
         currentCellSize = CGSize(width: cellWidth, height: cellWidth)
+    }
+
+    /// 맨 아래로 스크롤 (최신 사진부터 보기)
+    private func scrollToBottomIfNeeded() {
+        guard fetchResult.count > 0 else { return }
+        let lastIndex = fetchResult.count - 1
+        let lastIndexPath = IndexPath(item: lastIndex, section: 0)
+        collectionView.scrollToItem(at: lastIndexPath, at: .bottom, animated: false)
     }
 
     /// contentInset 업데이트 (플로팅 UI 높이 반영)
