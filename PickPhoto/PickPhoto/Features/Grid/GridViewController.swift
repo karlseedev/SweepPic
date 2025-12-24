@@ -1245,7 +1245,9 @@ extension GridViewController: UICollectionViewDelegate {
         // 현재는 기본 전환 사용 (fullScreen + crossDissolve)
 
         // 뷰어 표시
-        present(viewerVC, animated: true)
+        // NOTE: 기본 crossDissolve 전환은 큰 Grid 화면 스냅샷/렌더로 첫 진입 시 1초 이상 메인 스레드 히치가 발생할 수 있어
+        // 시스템 전환을 끄고(instant present) Viewer 내부에서 가벼운 페이드 인을 수행한다.
+        present(viewerVC, animated: false)
 
         print("[GridViewController] Opening viewer at filtered index \(filteredIndex) (original: \(indexPath.item)), mode: \(mode)")
     }

@@ -615,7 +615,7 @@ extension TrashAlbumViewController: UICollectionViewDelegate {
         )
         viewerVC.delegate = self
 
-        present(viewerVC, animated: true)
+        present(viewerVC, animated: false)
 
         print("[TrashAlbumViewController] Opening viewer - tapped: \(indexPath.item), actualIndex: \(actualIndex), assetID: \(selectedAssetID.prefix(8))...")
     }

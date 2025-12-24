@@ -69,10 +69,19 @@ final class ViewerCoordinator: ViewerCoordinatorProtocol {
     /// 뷰어 모드 (일반/휴지통)
     private let viewerMode: ViewerMode
 
-    /// 필터링된 원본 인덱스 배열
-    /// - normal 모드: 휴지통에 없는 사진의 인덱스
-    /// - trash 모드: 휴지통에 있는 사진의 인덱스
-    private var filteredIndices: [Int] = []
+    /// 필터링 인덱스 매핑
+    /// - 핵심 목표: 전체 fetchResult를 O(n)으로 스캔하지 않고(라이브러리 큰 경우 1초+ 히치),
+    ///   trashedAssetIDs(보통 소수)만 기반으로 매핑을 구성
+    private enum IndexMapping {
+        /// normal 모드 + trashedIDs 비었음: 0..<count를 따로 만들지 않고 identity로 처리
+        case identity(totalOriginal: Int)
+        /// normal 모드 + 일부 제외: 원본 인덱스에서 제외할 인덱스만 보관(정렬됨)
+        case normal(totalOriginal: Int, excludedOriginalIndices: [Int])
+        /// trash 모드: 포함할 원본 인덱스만 보관(정렬됨)
+        case trash(originalIndices: [Int])
+    }
+
+    private var indexMapping: IndexMapping = .identity(totalOriginal: 0)
 
     /// 에셋 ID → 필터링된 인덱스 캐시
     private var indexCache: [String: Int] = [:]
@@ -81,7 +90,14 @@ final class ViewerCoordinator: ViewerCoordinatorProtocol {
 
     /// 전체 사진 수 (필터링된 개수)
     var totalCount: Int {
-        filteredIndices.count
+        switch indexMapping {
+        case .identity(let totalOriginal):
+            return totalOriginal
+        case .normal(let totalOriginal, let excluded):
+            return max(0, totalOriginal - excluded.count)
+        case .trash(let originalIndices):
+            return originalIndices.count
+        }
     }
 
     // MARK: - Initialization
@@ -101,15 +117,14 @@ final class ViewerCoordinator: ViewerCoordinatorProtocol {
         self.viewerMode = viewerMode
 
         // 모드에 따라 인덱스 필터링
-        buildFilteredIndices()
+        rebuildIndexMapping()
     }
 
     // MARK: - ViewerCoordinatorProtocol Implementation
 
     /// 인덱스에 해당하는 PHAsset 반환 (필터링된 인덱스 기준)
     func asset(at index: Int) -> PHAsset? {
-        guard index >= 0 && index < filteredIndices.count else { return nil }
-        let originalIndex = filteredIndices[index]
+        guard let originalIndex = originalIndex(forFilteredIndex: index) else { return nil }
         return fetchResult.object(at: originalIndex)
     }
 
@@ -123,7 +138,7 @@ final class ViewerCoordinator: ViewerCoordinatorProtocol {
         // 캐시 확인
         if let cachedIndex = indexCache[assetID] {
             // 캐시 유효성 검증
-            if cachedIndex < filteredIndices.count,
+            if cachedIndex < totalCount,
                let asset = asset(at: cachedIndex),
                asset.localIdentifier == assetID {
                 return cachedIndex
@@ -131,7 +146,7 @@ final class ViewerCoordinator: ViewerCoordinatorProtocol {
         }
 
         // 순차 검색
-        for i in 0..<filteredIndices.count {
+        for i in 0..<totalCount {
             if let asset = asset(at: i),
                asset.localIdentifier == assetID {
                 indexCache[assetID] = i
@@ -177,46 +192,171 @@ final class ViewerCoordinator: ViewerCoordinatorProtocol {
     /// - Parameter originalIndex: 원본 인덱스
     /// - Returns: 필터링된 인덱스 또는 nil
     func filteredIndex(from originalIndex: Int) -> Int? {
-        return filteredIndices.firstIndex(of: originalIndex)
+        guard originalIndex >= 0 && originalIndex < fetchResult.count else { return nil }
+
+        switch indexMapping {
+        case .identity:
+            return originalIndex
+
+        case .trash(let originals):
+            let i = Self.lowerBound(originals, originalIndex)
+            return (i < originals.count && originals[i] == originalIndex) ? i : nil
+
+        case .normal(let totalOriginal, let excluded):
+            guard totalOriginal == fetchResult.count else { return nil }
+            if Self.containsSorted(excluded, originalIndex) { return nil }
+            let excludedBefore = Self.lowerBound(excluded, originalIndex)
+            return originalIndex - excludedBefore
+        }
     }
 
     /// 삭제/복구 후 필터링 인덱스 갱신
     func refreshFilteredIndices() {
-        buildFilteredIndices()
+        rebuildIndexMapping()
         indexCache.removeAll()
     }
 
     // MARK: - Private Methods
 
-    /// 모드에 따라 필터링된 인덱스 배열 생성
-    private func buildFilteredIndices() {
-        // [Timing] 시작
+    /// 모드에 따라 인덱스 매핑 구성
+    /// - 정상 모드(휴지통 비어있음)는 O(1)로 끝나도록 최적화
+    private func rebuildIndexMapping() {
         let startTime = CACurrentMediaTime()
-        print("[ViewerCoordinator] buildFilteredIndices() 시작")
 
-        filteredIndices.removeAll()
+        let trashedIDs = trashStore.trashedAssetIDs
+        let totalOriginal = fetchResult.count
 
-        for i in 0..<fetchResult.count {
-            let asset = fetchResult.object(at: i)
-            let isTrashed = trashStore.isTrashed(asset.localIdentifier)
+        switch viewerMode {
+        case .normal:
+            if trashedIDs.isEmpty {
+                indexMapping = .identity(totalOriginal: totalOriginal)
+            } else {
+                var excluded: [Int] = []
+                excluded.reserveCapacity(trashedIDs.count)
 
-            switch viewerMode {
-            case .normal:
-                // 일반 모드: 휴지통에 없는 사진만
-                if !isTrashed {
-                    filteredIndices.append(i)
+                for trashedID in trashedIDs {
+                    let result = PHAsset.fetchAssets(withLocalIdentifiers: [trashedID], options: nil)
+                    guard let asset = result.firstObject else { continue }
+                    let idx = fetchResult.index(of: asset)
+                    if idx != NSNotFound {
+                        excluded.append(idx)
+                    }
                 }
-            case .trash:
-                // 휴지통 모드: 휴지통에 있는 사진만
-                if isTrashed {
-                    filteredIndices.append(i)
+
+                excluded.sort()
+                excluded = Self.dedupSorted(excluded)
+                indexMapping = .normal(totalOriginal: totalOriginal, excludedOriginalIndices: excluded)
+            }
+
+        case .trash:
+            guard !trashedIDs.isEmpty else {
+                indexMapping = .trash(originalIndices: [])
+                break
+            }
+
+            // 최적화: 이미 fetchResult 자체가 휴지통 에셋만 포함하는 경우(identity) 빠른 경로
+            if totalOriginal == trashedIDs.count {
+                let sampleCount = min(10, totalOriginal)
+                var allTrashed = true
+                if sampleCount > 0 {
+                    for i in 0..<sampleCount {
+                        let asset = fetchResult.object(at: i)
+                        if !trashedIDs.contains(asset.localIdentifier) {
+                            allTrashed = false
+                            break
+                        }
+                    }
+                }
+                if allTrashed {
+                    indexMapping = .identity(totalOriginal: totalOriginal)
+                    break
                 }
             }
+
+            var originals: [Int] = []
+            originals.reserveCapacity(trashedIDs.count)
+            for trashedID in trashedIDs {
+                let result = PHAsset.fetchAssets(withLocalIdentifiers: [trashedID], options: nil)
+                guard let asset = result.firstObject else { continue }
+                let idx = fetchResult.index(of: asset)
+                if idx != NSNotFound {
+                    originals.append(idx)
+                }
+            }
+            originals.sort()
+            originals = Self.dedupSorted(originals)
+            indexMapping = .trash(originalIndices: originals)
         }
 
-        // [Timing] 완료
         let elapsed = (CACurrentMediaTime() - startTime) * 1000
-        print("[ViewerCoordinator] buildFilteredIndices() 완료: \(String(format: "%.1f", elapsed))ms, Mode: \(viewerMode), Count: \(filteredIndices.count)/\(fetchResult.count)")
+        print("[ViewerCoordinator] rebuildIndexMapping() 완료: \(String(format: "%.1f", elapsed))ms, Mode: \(viewerMode), totalOriginal: \(totalOriginal), trashedIDs: \(trashedIDs.count)")
+    }
+
+    /// 필터링된 인덱스를 원본 인덱스로 변환
+    private func originalIndex(forFilteredIndex filteredIndex: Int) -> Int? {
+        guard filteredIndex >= 0 else { return nil }
+
+        switch indexMapping {
+        case .identity(let totalOriginal):
+            guard filteredIndex < totalOriginal else { return nil }
+            return filteredIndex
+
+        case .trash(let originals):
+            guard filteredIndex < originals.count else { return nil }
+            return originals[filteredIndex]
+
+        case .normal(let totalOriginal, let excluded):
+            let totalFiltered = max(0, totalOriginal - excluded.count)
+            guard filteredIndex < totalFiltered else { return nil }
+
+            // 제외 인덱스만큼 원본 인덱스를 앞으로 이동 (excluded가 보통 소수라 O(m)로 충분)
+            var original = filteredIndex
+            for ex in excluded {
+                if ex <= original {
+                    original += 1
+                } else {
+                    break
+                }
+            }
+            guard original >= 0 && original < totalOriginal else { return nil }
+            return original
+        }
+    }
+
+    // MARK: - Small Helpers
+
+    private static func lowerBound(_ a: [Int], _ x: Int) -> Int {
+        var l = 0
+        var r = a.count
+        while l < r {
+            let m = (l + r) / 2
+            if a[m] < x {
+                l = m + 1
+            } else {
+                r = m
+            }
+        }
+        return l
+    }
+
+    private static func containsSorted(_ a: [Int], _ x: Int) -> Bool {
+        let i = lowerBound(a, x)
+        return i < a.count && a[i] == x
+    }
+
+    private static func dedupSorted(_ a: [Int]) -> [Int] {
+        guard !a.isEmpty else { return [] }
+        var out: [Int] = []
+        out.reserveCapacity(a.count)
+        var last = a[0]
+        out.append(last)
+        for v in a.dropFirst() {
+            if v != last {
+                out.append(v)
+                last = v
+            }
+        }
+        return out
     }
 }
 

@@ -466,7 +466,7 @@ extension AlbumGridViewController: UICollectionViewDelegate {
         )
         viewerVC.delegate = self
 
-        present(viewerVC, animated: true)
+        present(viewerVC, animated: false)
 
         print("[AlbumGridViewController] Opening viewer at index \(filteredIndex), mode: \(mode)")
     }

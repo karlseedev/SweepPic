@@ -183,6 +183,9 @@ final class ViewerViewController: UIViewController {
     /// 드래그 시작 위치
     private var dragStartY: CGFloat = 0
 
+    /// 최초 표시 페이드 인 적용 여부 (시스템 전환 대신 사용)
+    private var didPerformInitialFadeIn: Bool = false
+
     // MARK: - Initialization
 
     /// 초기화
@@ -213,6 +216,26 @@ final class ViewerViewController: UIViewController {
         setupGestures()
         setupSwipeDeleteHandler()
         displayInitialPhoto()
+    }
+
+    override func viewWillAppear(_ animated: Bool) {
+        super.viewWillAppear(animated)
+
+        // 시스템 모달 전환(animated: true) 대신, present(animated: false) + 가벼운 페이드 인 사용
+        if isBeingPresented && !didPerformInitialFadeIn {
+            view.alpha = 0
+        }
+    }
+
+    override func viewDidAppear(_ animated: Bool) {
+        super.viewDidAppear(animated)
+
+        if isBeingPresented && !didPerformInitialFadeIn {
+            didPerformInitialFadeIn = true
+            UIView.animate(withDuration: 0.18, delay: 0, options: [.curveEaseOut, .allowUserInteraction]) {
+                self.view.alpha = 1
+            }
+        }
     }
 
     override func viewWillDisappear(_ animated: Bool) {
@@ -348,7 +371,7 @@ final class ViewerViewController: UIViewController {
 
     /// 닫기 버튼 탭
     @objc private func closeButtonTapped() {
-        dismiss(animated: true)
+        dismissWithFadeOut()
     }
 
     /// 삭제 버튼 탭 (일반 모드)
@@ -435,13 +458,13 @@ final class ViewerViewController: UIViewController {
 
         // 모든 사진이 삭제되면 닫기
         if newTotalCount == 0 {
-            dismiss(animated: true)
+            dismissWithFadeOut()
             return
         }
 
         // 범위 확인
         guard nextIndex >= 0 && nextIndex < newTotalCount else {
-            dismiss(animated: true)
+            dismissWithFadeOut()
             return
         }
 
@@ -449,7 +472,7 @@ final class ViewerViewController: UIViewController {
 
         // 새 뷰 컨트롤러 생성 및 표시
         guard let photoVC = createPhotoViewController(at: currentIndex) else {
-            dismiss(animated: true)
+            dismissWithFadeOut()
             return
         }
 
@@ -517,6 +540,17 @@ final class ViewerViewController: UIViewController {
         }, completion: { _ in
             self.dismiss(animated: false)
         })
+    }
+
+    private func dismissWithFadeOut() {
+        guard !isDismissing else { return }
+        isDismissing = true
+
+        UIView.animate(withDuration: 0.15, delay: 0, options: [.curveEaseIn, .beginFromCurrentState, .allowUserInteraction]) {
+            self.view.alpha = 0
+        } completion: { _ in
+            self.dismiss(animated: false)
+        }
     }
 
     // MARK: - Helpers
@@ -648,6 +682,9 @@ final class PhotoPageViewController: UIViewController {
     /// 원본 이미지 크기 (aspect fit 계산용)
     private var imageSize: CGSize = .zero
 
+    /// 마지막 요청 targetSize (중복 요청 방지)
+    private var lastRequestedTargetSize: CGSize = .zero
+
     // MARK: - Initialization
 
     init(asset: PHAsset, index: Int) {
@@ -665,13 +702,17 @@ final class PhotoPageViewController: UIViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
         setupUI()
-        loadImage()
     }
 
     override func viewDidLayoutSubviews() {
         super.viewDidLayoutSubviews()
         scrollView.frame = view.bounds
+        requestImageForCurrentBoundsIfNeeded()
         updateImageLayout()
+    }
+
+    deinit {
+        requestCancellable?.cancel()
     }
 
     // MARK: - Setup
@@ -691,15 +732,26 @@ final class PhotoPageViewController: UIViewController {
         scrollView.addGestureRecognizer(doubleTapGesture)
     }
 
-    /// 이미지 로드
-    private func loadImage() {
-        // 화면 크기에 맞는 해상도 요청 (전체 해상도는 메모리 과다 사용)
+    /// 이미지 요청
+    /// - 첫 모달 진입 시점에는 page 내부 VC의 bounds가 0인 경우가 있어, 0-size 요청이 들어가면
+    ///   PhotoKit이 사실상 원본급 이미지를 내려주며 디코딩 비용으로 UI가 잠깐 멈출 수 있음.
+    /// - bounds가 확정된 뒤 1회 요청하고, 사이즈가 바뀌면 재요청.
+    private func requestImageForCurrentBoundsIfNeeded() {
         let scale = UIScreen.main.scale
+        let boundsSize = view.bounds.size
+        let containerSize = (boundsSize.width > 0 && boundsSize.height > 0) ? boundsSize : UIScreen.main.bounds.size
+
+        // 최적화: 화면 픽셀 크기면 1:1 매핑으로 충분 (×2 제거)
         let targetSize = CGSize(
-            width: view.bounds.width * scale * 2,
-            height: view.bounds.height * scale * 2
+            width: ceil(containerSize.width * scale),
+            height: ceil(containerSize.height * scale)
         )
 
+        guard targetSize.width > 0, targetSize.height > 0 else { return }
+        guard targetSize != lastRequestedTargetSize else { return }
+        lastRequestedTargetSize = targetSize
+
+        requestCancellable?.cancel()
         requestCancellable = ImagePipeline.shared.requestImage(
             for: asset,
             targetSize: targetSize,
