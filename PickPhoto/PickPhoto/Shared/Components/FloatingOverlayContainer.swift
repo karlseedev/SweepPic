@@ -274,7 +274,8 @@ extension FloatingOverlayContainer: FloatingTitleBarDelegate {
 
 extension FloatingOverlayContainer: FloatingTabBarDelegate {
     func floatingTabBar(_ tabBar: FloatingTabBar, didSelectTabAt index: Int) {
-        selectedTabIndex = index
+        // 타이틀 갱신은 탭 전환 완료 후 TabBarController가 처리
+        // (selectedTabIndex를 여기서 바꾸면 타이틀이 먼저 바뀌고 화면이 나중에 바뀌는 문제 발생)
         delegate?.floatingOverlay(self, didSelectTabAt: index)
     }
 

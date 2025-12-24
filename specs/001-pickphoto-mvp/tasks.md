@@ -173,7 +173,7 @@
 
 ---
 
-## Phase 7: User Story 5 - 앱 내 휴지통 관리 (Priority: P5)
+## Phase 7: User Story 5 - 앱 내 휴지통 관리 (Priority: P5) ✅ 완료
 
 **목표**: 휴지통에서 삭제 예정 사진 확인, 복구 또는 완전 삭제(iOS 휴지통으로 이동)
 
@@ -181,13 +181,13 @@
 
 ### User Story 5 구현
 
-- [ ] T054 [US5] TrashAlbum 구조체 생성 (휴지통용 가상 앨범) - Sources/AppCore/Models/AlbumModels.swift
-- [ ] T055 [US5] TrashAlbumViewController 생성 (휴지통 전용 그리드, 빈 상태 표시) - PickPhoto/PickPhoto/Features/Albums/TrashAlbumViewController.swift
-- [ ] T056 [US5] "복구" 액션 구현 (TrashStore.restore → 딤드 효과 제거) - 휴지통 뷰어
-- [ ] T057 [US5] "완전삭제" 액션 구현 (TrashStore.permanentlyDelete → PHPhotoLibrary.performChanges로 iOS 시스템 팝업) - 휴지통 뷰어
-- [ ] T058 [US5] "비우기" 버튼 구현 (TrashStore.emptyTrash → 일괄 삭제 iOS 시스템 팝업) - TrashAlbumViewController
-- [ ] T059 [US5] 휴지통 비었을 때 빈 상태 표시 ("휴지통이 비어 있습니다") - TrashAlbumViewController
-- [ ] T060 [US5] 외부 삭제 처리 (PHAsset 더 이상 존재하지 않으면 TrashState에서 자동 제거) - TrashStore
+- [X] T054 [US5] TrashAlbum 구조체 생성 → 하단 탭으로 대체 (별도 Trash 탭)
+- [X] T055 [US5] TrashAlbumViewController 생성 (휴지통 전용 그리드, 빈 상태 표시) - PickPhoto/PickPhoto/Features/Albums/TrashAlbumViewController.swift
+- [X] T056 [US5] "복구" 액션 구현 (TrashStore.restore → 딤드 효과 제거) - 휴지통 뷰어
+- [X] T057 [US5] "완전삭제" 액션 구현 (TrashStore.permanentlyDelete → PHPhotoLibrary.performChanges로 iOS 시스템 팝업) - 휴지통 뷰어
+- [X] T058 [US5] "비우기" 버튼 구현 (TrashStore.emptyTrash → 일괄 삭제 iOS 시스템 팝업) - TrashAlbumViewController
+- [X] T059 [US5] 휴지통 비었을 때 빈 상태 표시 ("휴지통이 비어 있습니다") - TrashAlbumViewController
+- [X] T060 [US5] 외부 삭제 처리 (PHAsset 더 이상 존재하지 않으면 TrashState에서 자동 제거) - TrashStore
 
 **체크포인트**: User Story 1-5 모두 독립적으로 동작
 - FR-021~FR-026 검증 가능

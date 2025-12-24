@@ -2,6 +2,28 @@
 
 스크롤 성능 테스트 결과를 비교/추적하는 문서입니다.
 
+> **📁 파일 분리 안내:**
+> - 원본 로그 데이터는 `LogsDetailN.md`에 분리되어 있습니다 (현재: LogsDetail1.md)
+> - 각 파일이 2000줄 초과 시 다음 번호 파일에 저장 (1 → 2 → 3 → ...)
+> - 각 로그는 `<!-- LOG_ID: [식별자] -->` 주석으로 검색 가능합니다
+> - **새 테스트 추가 시:** 요약은 이 파일에, 원본 로그는 최신 `LogsDetailN.md`에 따로 저장하세요
+
+---
+
+## 종합 비교표
+
+| 버전 | 사진 수 | 시간 | L1 hitch | L2 hitch | L1 gray | L2 gray | 비고 |
+|------|---------|------|----------|----------|---------|---------|------|
+| **P0 (기준점)** | 3500 | 16:25 | 15.0 | 29.8 | 90 | 7038 | 기준 |
+| P0+Phase7 | 3500 | 23:12 | 18.1 (+21%) | 33.6 (+13%) | 521 | 2440 | |
+| P0+Phase7 | 3500 | 23:17 | 22.8 (+52%) | 37.1 (+24%) | 537 | 5424 | |
+| P0+Phase7 | 4만 | 23:08 | 16.2 | 25.6 | 139 | 18972 | |
+| P0+Phase7 | 4만 | 23:15 | 12.5 | 16.2 | 429 | 5603 | |
+| P0+Phase7 | 4만 | 23:23 | 19.2 | 32.3 | 544 | 10382 | |
+
+> **목표:** L1/L2 hitch < 10 ms/s (Warning 이하)
+> **현재:** 모든 테스트 Critical (>10 ms/s)
+
 ---
 
 ## 테스트 방식
@@ -86,77 +108,250 @@ Xcode에서 Run (⌘R) 후 디버거가 연결된 상태로 테스트합니다.
 | latency p95 | 9.6ms | - |
 | latency max | 17.1ms | - |
 
-<details>
-<summary>원본 로그</summary>
+<!-- 원본 로그: LogsDetail1.md - LOG_ID: P0_16-25_3500 -->
 
-```
-=== PickPhoto Launch Log ===
-Date: 2025-12-23 16:25:25
-Device: iPhone14,2
-============================
-[+4.5ms] [Env] Build: Release
-[+4.6ms] [Env] LowPowerMode: OFF
-[+4.6ms] [Env] PhotosAuth: authorized
-[+4.8ms] [Config] deliveryMode: opportunistic
-[+4.8ms] [Config] cancelPolicy: prepareForReuse
-[+4.8ms] [Config] R2Recovery: disabled
-[+64.4ms] [Timing] === 초기 로딩 시작 ===
-[+97.3ms] [Timing] viewWillAppear: +33.0ms (초기 진입 - reloadData 스킵)
-[+111.3ms] [Timing] C) 첫 레이아웃 완료: +47.0ms
-[+130.4ms] [Preload] DISK HIT: F3EC02C8...
-[+134.6ms] [Preload] DISK HIT: 0655447F...
-[+138.7ms] [Preload] DISK HIT: 699CA480...
-[+142.2ms] [Preload] DISK HIT: E5D2A7F7...
-[+145.8ms] [Preload] DISK HIT: 61F383D4...
-[+149.6ms] [Preload] DISK HIT: 97EEA684...
-[+153.7ms] [Preload] DISK HIT: B2F48D66...
-[+157.4ms] [Preload] DISK HIT: F00FD4BC...
-[+160.7ms] [Preload] DISK HIT: 70ACEA88...
-[+164.3ms] [Preload] DISK HIT: 6907A28F...
-[+167.7ms] [Preload] DISK HIT: C2E6BD92...
-[+171.3ms] [Preload] DISK HIT: E70BD01F...
-[+171.4ms] [Timing] E0) finishInitialDisplay 시작: +107.0ms (reason: preload complete, preloaded: 12/12)
-[+176.6ms] [Timing] D) 첫 셀 표시: +112.2ms (indexPath: [0, 0])
-[+179.6ms] [Pipeline] requestImage #10: +174.8ms
-[+184.9ms] [Timing] E1) reloadData+layout 완료: +120.6ms (E0→E1: 13.6ms)
-[+185.9ms] [Pipeline] requestImage #20: +181.1ms
-[+194.6ms] [Timing] E2) scrollToItem+layout 완료: +130.2ms (E1→E2: 9.6ms)
-[+194.7ms] [Timing] === 초기 로딩 완료: +130.2ms (E0→E1: 13.6ms, E1→E2: 9.6ms) ===
-[+194.7ms] [Timing] 최종 통계: cellForItemAt 36회, 총 15.6ms, 평균 0.43ms
-[+194.7ms] [Initial Load] req: 24 (126.4/s), cancel: 0 (0.0/s), complete: 0 (0.0/s)
-[+194.7ms] [Initial Load] degraded: 20, maxInFlight: 24
-[+194.7ms] [Initial Load] latency avg: 0.0ms, p95: 0.0ms, max: 0.0ms
-[+194.7ms] [Initial Load] preheat: 0회, 총 0개 에셋
-[+194.7ms] [Initial Load] memHit: 12, memMiss: 36, hitRate: 25.0%
-[+194.7ms] [Initial Load] diskCacheMismatch: 0, pipelineMismatch: 0
-[+194.7ms] [Initial Load] grayShown: 24, grayResolved: 12, pending: 12
-[+1898.8ms] [Scroll] First scroll 시작: +1834.1ms
-[+1916.7ms] [Pipeline] completion #50 도달: +1911.9ms
-[+1940.3ms] [Pipeline] requestImage #30: +1935.6ms
-[+10245.0ms] [Hitch] L1 First: hitch: 15.0 ms/s [Critical], dropped: 11, longest: 2 (27.1ms)
-[+10245.1ms] [L1 First] memHit: 0, memMiss: 549, hitRate: 0.0%
-[+10245.1ms] [L1 First] diskCacheMismatch: 0, pipelineMismatch: 0
-[+10245.2ms] [L1 First] grayShown: 90, grayResolved: 573, pending: -483
-[+10245.4ms] [L1 First] req: 573 (56.0/s), cancel: 531 (51.9/s), complete: 573 (56.0/s)
-[+10245.5ms] [L1 First] degraded: 573, maxInFlight: 24
-[+10245.5ms] [L1 First] latency avg: 7.4ms, p95: 9.2ms, max: 145.5ms
-[+10245.5ms] [L1 First] preheat: 0회, 총 0개 에셋
-[+10245.6ms] [Scroll] First scroll 완료: 8347.3ms 동안 스크롤
-[+11221.0ms] [Pipeline] requestImage #10: +975.4ms
-[+11294.6ms] [Pipeline] requestImage #20: +1049.0ms
-[+11325.8ms] [Pipeline] completion #50 도달: +1080.3ms
-[+11394.2ms] [Pipeline] requestImage #30: +1148.6ms
-[+24812.5ms] [Hitch] L2 Steady: hitch: 29.8 ms/s [Critical], dropped: 32, longest: 2 (26.6ms)
-[+24812.6ms] [L2 Steady] memHit: 0, memMiss: 7762, hitRate: 0.0%
-[+24812.7ms] [L2 Steady] diskCacheMismatch: 0, pipelineMismatch: 0
-[+24812.7ms] [L2 Steady] grayShown: 7038, grayResolved: 7762, pending: -724
-[+24814.7ms] [L2 Steady] req: 7762 (532.8/s), cancel: 7750 (532.0/s), complete: 7761 (532.8/s)
-[+24814.8ms] [L2 Steady] degraded: 7762, maxInFlight: 0
-[+24814.8ms] [L2 Steady] latency avg: 5.5ms, p95: 9.6ms, max: 17.1ms
-[+24814.9ms] [L2 Steady] preheat: 1회, 총 66개 에셋
-```
+---
 
-</details>
+## P0+Phase7 (2025-12-23 23:17) - 3500장 (재측정)
+
+**조건:** P0 + Phase7 (휴지통 관리), Release 빌드, iPhone 13 Pro, iOS 18, 사진 3500장, 미연결테스트
+
+### 요약
+
+| 구간 | 시나리오 | 스크롤 시간 |
+|------|----------|-------------|
+| L1 First | 일상 스크롤 (사진 찾는 정도) | 7.0초 |
+| L2 Steady | 극한 스크롤 (회색 확인용) | 11.5초 |
+
+### Initial Load
+
+| grayShown | grayResolved | pending |
+|-----------|--------------|---------|
+| 24 | 12 | 12 |
+
+### L1 First (일상 스크롤)
+
+| 지표 | 값 | vs 이전(23:12) |
+|------|-----|----------------|
+| hitch | 22.8 ms/s | +26% (18.1) ❌ |
+| dropped | 14 | - |
+| grayShown | 537 | +3% (521) |
+| grayResolved | 918 | - |
+| pending | -381 | 정상 |
+| req/s | 104.7 | - |
+| cancel/s | 99.9 | - |
+| latency avg | 6.0ms | - |
+| latency p95 | 8.3ms | - |
+| latency max | 108.6ms | - |
+
+### L2 Steady (극한 스크롤)
+
+| 지표 | 값 | vs 이전(23:12) |
+|------|-----|----------------|
+| hitch | 37.1 ms/s | +10% (33.6) ❌ |
+| dropped | 35 | - |
+| grayShown | 5424 | +122% (2440) ❌ |
+| grayResolved | 5895 | - |
+| pending | -471 | 정상 |
+| req/s | 513.6 | - |
+| cancel/s | 512.0 | - |
+| latency avg | 5.8ms | - |
+| latency p95 | 9.8ms | - |
+| latency max | 55.7ms | - |
+
+<!-- 원본 로그: LogsDetail1.md - LOG_ID: P0+Phase7_23-17_3500 -->
+
+---
+
+## P0+Phase7 (2025-12-23 23:12) - 3500장 (첫 측정)
+
+**조건:** P0 + Phase7 (휴지통 관리), Release 빌드, iPhone 13 Pro, iOS 18, 사진 3500장, 미연결테스트
+
+### 요약
+
+| 구간 | 시나리오 | 스크롤 시간 |
+|------|----------|-------------|
+| L1 First | 일상 스크롤 (사진 찾는 정도) | 8.3초 |
+| L2 Steady | 극한 스크롤 (회색 확인용) | 7.1초 |
+
+### Initial Load
+
+| grayShown | grayResolved | pending |
+|-----------|--------------|---------|
+| 24 | 12 | 12 |
+
+### L1 First (일상 스크롤)
+
+| 지표 | 값 | vs 기준점 |
+|------|-----|-----------|
+| hitch | 18.1 ms/s | +21% (15.0) ❌ |
+| dropped | 15 | +36% (11) |
+| grayShown | 521 | +479% (90) ❌ |
+| grayResolved | 881 | - |
+| pending | -360 | 정상 |
+| req/s | 80.4 | - |
+| cancel/s | 76.6 | - |
+| latency avg | 6.0ms | - |
+| latency p95 | 9.5ms | - |
+| latency max | 110.7ms | - |
+
+### L2 Steady (극한 스크롤)
+
+| 지표 | 값 | vs 기준점 |
+|------|-----|-----------|
+| hitch | 33.6 ms/s | +13% (29.8) ❌ |
+| dropped | 15 | -53% (32) |
+| grayShown | 2440 | -65% (7038) ✅ |
+| grayResolved | 2686 | - |
+| pending | -246 | 정상 |
+| req/s | 377.6 | - |
+| cancel/s | 376.2 | - |
+| latency avg | 8.4ms | - |
+| latency p95 | 18.6ms | - |
+| latency max | 27.5ms | - |
+
+<!-- 원본 로그: LogsDetail1.md - LOG_ID: P0+Phase7_23-12_3500 -->
+
+---
+
+## P0+Phase7 (2025-12-23 23:23) - 4만장
+
+**조건:** P0 + Phase7 (휴지통 관리), Release 빌드, iPhone 13 Pro, iOS 18, 사진 4만장, 미연결테스트
+
+### 요약
+
+| 구간 | 시나리오 | 스크롤 시간 |
+|------|----------|-------------|
+| L1 First | 일상 스크롤 (사진 찾는 정도) | 8.9초 |
+| L2 Steady | 극한 스크롤 (회색 확인용) | 20.1초 |
+
+### L1 First (일상 스크롤)
+
+| 지표 | 값 |
+|------|-----|
+| hitch | 19.2 ms/s |
+| dropped | 15 |
+| grayShown | 544 |
+| req/s | 91.7 |
+| latency avg | 6.5ms |
+| latency p95 | 15.1ms |
+
+### L2 Steady (극한 스크롤)
+
+| 지표 | 값 |
+|------|-----|
+| hitch | 32.3 ms/s |
+| dropped | 58 |
+| grayShown | 10382 |
+| req/s | 554.6 |
+| latency avg | 13.6ms |
+| latency p95 | 28.3ms |
+
+<!-- 원본 로그: LogsDetail1.md - LOG_ID: P0+Phase7_23-23_40000 -->
+
+---
+
+## P0+Phase7 (2025-12-23 23:15) - 4만장
+
+**조건:** P0 + Phase7 (휴지통 관리), Release 빌드, iPhone 13 Pro, iOS 18, 사진 4만장, 미연결테스트
+
+### 요약
+
+| 구간 | 시나리오 | 스크롤 시간 |
+|------|----------|-------------|
+| L1 First | 일상 스크롤 (사진 찾는 정도) | 7.7초 |
+| L2 Steady | 극한 스크롤 (회색 확인용) | 11.2초 |
+
+### Initial Load
+
+| grayShown | grayResolved | pending |
+|-----------|--------------|---------|
+| 24 | 12 | 12 |
+
+### L1 First (일상 스크롤)
+
+| 지표 | 값 | vs 이전(23:08) |
+|------|-----|----------------|
+| hitch | 12.5 ms/s | -23% (16.2) ✅ |
+| dropped | 7 | - |
+| grayShown | 429 | +209% (139) |
+| grayResolved | 827 | - |
+| pending | -398 | 정상 |
+| req/s | 75.1 | - |
+| cancel/s | 71.2 | - |
+| latency avg | 6.4ms | - |
+| latency p95 | 12.4ms | - |
+| latency max | 165.5ms | - |
+
+### L2 Steady (극한 스크롤)
+
+| 지표 | 값 | vs 이전(23:08) |
+|------|-----|----------------|
+| hitch | 16.2 ms/s | -37% (25.6) ✅ |
+| dropped | 6 | - |
+| grayShown | 5603 | -70% (18972) |
+| grayResolved | 6048 | - |
+| pending | -445 | 정상 |
+| req/s | 542.4 | - |
+| cancel/s | 541.5 | - |
+| latency avg | 16.8ms | - |
+| latency p95 | 35.4ms | - |
+| latency max | 66.4ms | - |
+
+<!-- 원본 로그: LogsDetail1.md - LOG_ID: P0+Phase7_23-15_40000 -->
+
+---
+
+## P0+Phase7 (2025-12-23 23:08) - 4만장 (첫 측정)
+
+**조건:** P0 + Phase7 (휴지통 관리), Release 빌드, iPhone 13 Pro, iOS 18, 사진 4만장, 미연결테스트
+
+> ⚠️ 동일 조건 재측정(23:15)과 큰 차이 - 테스트 변동성 존재
+
+### 요약
+
+| 구간 | 시나리오 | 스크롤 시간 |
+|------|----------|-------------|
+| L1 First | 일상 스크롤 (사진 찾는 정도) | 8.8초 |
+| L2 Steady | 극한 스크롤 (회색 확인용) | 20.4초 |
+
+### Initial Load
+
+| grayShown | grayResolved | pending |
+|-----------|--------------|---------|
+| 24 | 12 | 12 |
+
+### L1 First (일상 스크롤)
+
+| 지표 | 값 | vs 기준점 |
+|------|-----|-----------|
+| hitch | 16.2 ms/s | +8% (15.0) |
+| dropped | 12 | - |
+| grayShown | 139 | (비교불가) |
+| grayResolved | 554 | - |
+| pending | -415 | 정상 |
+| req/s | 43.5 | - |
+| cancel/s | 40.2 | - |
+| latency avg | 7.8ms | - |
+| latency p95 | 17.7ms | - |
+| latency max | 171.9ms | - |
+
+### L2 Steady (극한 스크롤)
+
+| 지표 | 값 | vs 기준점 |
+|------|-----|-----------|
+| hitch | 25.6 ms/s | -14% (29.8) |
+| dropped | 31 | - |
+| grayShown | 18972 | (비교불가) |
+| grayResolved | 20014 | - |
+| pending | -1042 | 정상 |
+| req/s | 982.4 | - |
+| cancel/s | 981.4 | - |
+| latency avg | 18.0ms | - |
+| latency p95 | 32.9ms | - |
+| latency max | 149.7ms | - |
+
+<!-- 원본 로그: LogsDetail1.md - LOG_ID: P0+Phase7_23-08_40000 -->
 
 ---
 
@@ -183,15 +378,10 @@ Device: iPhone14,2
 | hitch | X ms/s | +/-% |
 | grayShown | X | +/-% |
 
-<details>
-<summary>원본 로그</summary>
-
-\`\`\`
-(로그 붙여넣기)
-\`\`\`
-
-</details>
+<!-- 원본 로그: LogsDetail1.md - LOG_ID: [식별자] -->
 ```
+
+> **원본 로그 추가 시:** LogsDetail1.md에 `<!-- LOG_ID: [식별자] -->` 주석과 함께 로그를 추가하세요.
 
 ---
 

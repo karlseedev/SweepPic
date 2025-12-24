@@ -313,6 +313,9 @@ final class GridViewController: UIViewController {
         let vwaTime = CACurrentMediaTime()
         let vwaMs = loadStartTime > 0 ? (vwaTime - loadStartTime) * 1000 : -1
 
+        // iOS 16~25: FloatingOverlay 상태 복원 (다른 탭에서 돌아올 때)
+        configureFloatingOverlayForPhotos()
+
         // 초기 진입 시에는 startInitialDisplay()에서 처리하므로 스킵
         if !hasFinishedInitialDisplay {
             FileLogger.log("[Timing] viewWillAppear: +\(String(format: "%.1f", vwaMs))ms (초기 진입 - reloadData 스킵)")
@@ -322,6 +325,27 @@ final class GridViewController: UIViewController {
         FileLogger.log("[Timing] viewWillAppear.reloadData: +\(String(format: "%.1f", vwaMs))ms")
         // 화면 표시 시 변경사항 반영 (탭 전환 등)
         collectionView.reloadData()
+    }
+
+    /// FloatingOverlay 상태를 Photos 탭용으로 복원
+    /// - 타이틀: "Photos"
+    /// - 뒤로가기 버튼: 숨김
+    /// - 오른쪽 버튼: "Select"으로 복원
+    private func configureFloatingOverlayForPhotos() {
+        guard let tabBarController = tabBarController as? TabBarController,
+              let overlay = tabBarController.floatingOverlay else {
+            return
+        }
+
+        // 타이틀 복원
+        overlay.titleBar.setTitle("Photos")
+
+        // 뒤로가기 버튼 숨김
+        overlay.titleBar.setShowsBackButton(false)
+
+        // Select 버튼으로 복원 (휴지통의 "비우기" 버튼에서 복원)
+        overlay.titleBar.resetToSelectButton()
+        overlay.titleBar.isSelectButtonHidden = false
     }
 
     override func viewDidAppear(_ animated: Bool) {

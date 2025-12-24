@@ -11,8 +11,19 @@
 		CB9721BB2EF3D12300F85BF4 /* BlurUIKit in Frameworks */ = {isa = PBXBuildFile; productRef = CB9721BA2EF3D12300F85BF4 /* BlurUIKit */; };
 /* End PBXBuildFile section */
 
+/* Begin PBXContainerItemProxy section */
+		CBAB3B202EFAE2CB00548282 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = CB9721492EF2D2AB00F85BF4 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = CB9721502EF2D2AB00F85BF4;
+			remoteInfo = PickPhoto;
+		};
+/* End PBXContainerItemProxy section */
+
 /* Begin PBXFileReference section */
 		CB9721512EF2D2AB00F85BF4 /* PickPhoto.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = PickPhoto.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		CBAB3B1A2EFAE2CB00548282 /* PickPhotoUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = PickPhotoUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -34,6 +45,11 @@
 			path = PickPhoto;
 			sourceTree = "<group>";
 		};
+		CBAB3B1B2EFAE2CB00548282 /* PickPhotoUITests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = PickPhotoUITests;
+			sourceTree = "<group>";
+		};
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -46,6 +62,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		CBAB3B172EFAE2CB00548282 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
@@ -53,6 +76,7 @@
 			isa = PBXGroup;
 			children = (
 				CB9721532EF2D2AB00F85BF4 /* PickPhoto */,
+				CBAB3B1B2EFAE2CB00548282 /* PickPhotoUITests */,
 				CB9721522EF2D2AB00F85BF4 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -61,6 +85,7 @@
 			isa = PBXGroup;
 			children = (
 				CB9721512EF2D2AB00F85BF4 /* PickPhoto.app */,
+				CBAB3B1A2EFAE2CB00548282 /* PickPhotoUITests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -92,6 +117,29 @@
 			productReference = CB9721512EF2D2AB00F85BF4 /* PickPhoto.app */;
 			productType = "com.apple.product-type.application";
 		};
+		CBAB3B192EFAE2CB00548282 /* PickPhotoUITests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = CBAB3B222EFAE2CB00548282 /* Build configuration list for PBXNativeTarget "PickPhotoUITests" */;
+			buildPhases = (
+				CBAB3B162EFAE2CB00548282 /* Sources */,
+				CBAB3B172EFAE2CB00548282 /* Frameworks */,
+				CBAB3B182EFAE2CB00548282 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				CBAB3B212EFAE2CB00548282 /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				CBAB3B1B2EFAE2CB00548282 /* PickPhotoUITests */,
+			);
+			name = PickPhotoUITests;
+			packageProductDependencies = (
+			);
+			productName = PickPhotoUITests;
+			productReference = CBAB3B1A2EFAE2CB00548282 /* PickPhotoUITests.xctest */;
+			productType = "com.apple.product-type.bundle.ui-testing";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -104,6 +152,10 @@
 				TargetAttributes = {
 					CB9721502EF2D2AB00F85BF4 = {
 						CreatedOnToolsVersion = 26.0.1;
+					};
+					CBAB3B192EFAE2CB00548282 = {
+						CreatedOnToolsVersion = 26.0.1;
+						TestTargetID = CB9721502EF2D2AB00F85BF4;
 					};
 				};
 			};
@@ -126,12 +178,20 @@
 			projectRoot = "";
 			targets = (
 				CB9721502EF2D2AB00F85BF4 /* PickPhoto */,
+				CBAB3B192EFAE2CB00548282 /* PickPhotoUITests */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
 		CB97214F2EF2D2AB00F85BF4 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		CBAB3B182EFAE2CB00548282 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -148,7 +208,22 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		CBAB3B162EFAE2CB00548282 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		CBAB3B212EFAE2CB00548282 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = CB9721502EF2D2AB00F85BF4 /* PickPhoto */;
+			targetProxy = CBAB3B202EFAE2CB00548282 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
 		CB9721652EF2D2AB00F85BF4 /* Debug */ = {
@@ -336,6 +411,48 @@
 			};
 			name = Release;
 		};
+		CBAB3B232EFAE2CB00548282 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 7YD5497HFS;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.karl.PickPhotoUITests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = PickPhoto;
+			};
+			name = Debug;
+		};
+		CBAB3B242EFAE2CB00548282 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 7YD5497HFS;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.karl.PickPhotoUITests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = PickPhoto;
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -353,6 +470,15 @@
 			buildConfigurations = (
 				CB9721652EF2D2AB00F85BF4 /* Debug */,
 				CB9721662EF2D2AB00F85BF4 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		CBAB3B222EFAE2CB00548282 /* Build configuration list for PBXNativeTarget "PickPhotoUITests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				CBAB3B232EFAE2CB00548282 /* Debug */,
+				CBAB3B242EFAE2CB00548282 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

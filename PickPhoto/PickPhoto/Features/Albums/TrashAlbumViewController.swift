@@ -432,23 +432,10 @@ final class TrashAlbumViewController: UIViewController {
     // MARK: - Actions
 
     /// "비우기" 버튼 탭 (T058)
-    /// 확인 얼럿 → 일괄 삭제 → iOS 시스템 팝업
+    /// 바로 iOS 시스템 팝업으로 일괄 삭제 (확인 얼럿 생략 - iOS 팝업이 확인 역할)
     @objc private func emptyTrashButtonTapped() {
         guard !trashedAssets.isEmpty else { return }
-
-        let count = trashedAssets.count
-        let alert = UIAlertController(
-            title: "휴지통 비우기",
-            message: "\(count)장의 사진을 완전히 삭제하시겠습니까?\n삭제된 사진은 복구할 수 없습니다.",
-            preferredStyle: .alert
-        )
-
-        alert.addAction(UIAlertAction(title: "취소", style: .cancel))
-        alert.addAction(UIAlertAction(title: "삭제", style: .destructive) { [weak self] _ in
-            self?.performEmptyTrash()
-        })
-
-        present(alert, animated: true)
+        performEmptyTrash()
     }
 
     /// 휴지통 비우기 실행
@@ -457,25 +444,11 @@ final class TrashAlbumViewController: UIViewController {
             do {
                 try await trashStore.emptyTrash()
                 print("[TrashAlbumViewController] Trash emptied successfully")
-
-                // 성공 시 뒤로 가기 (휴지통이 비었으므로)
-                await MainActor.run {
-                    navigationController?.popViewController(animated: true)
-                }
             } catch {
-                print("[TrashAlbumViewController] Failed to empty trash: \(error)")
-
-                // 에러 표시
-                await MainActor.run {
-                    let errorAlert = UIAlertController(
-                        title: "오류",
-                        message: "휴지통을 비우는 중 오류가 발생했습니다.",
-                        preferredStyle: .alert
-                    )
-                    errorAlert.addAction(UIAlertAction(title: "확인", style: .default))
-                    present(errorAlert, animated: true)
-                }
+                // 취소 또는 오류 시 조용히 무시 (사진이 그대로 남아있음)
+                print("[TrashAlbumViewController] Empty trash cancelled or failed: \(error)")
             }
+            // 성공/실패 무관하게 UI 갱신 (onStateChange 콜백으로 처리됨)
         }
     }
 
