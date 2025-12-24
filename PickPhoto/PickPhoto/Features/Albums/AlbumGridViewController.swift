@@ -120,6 +120,16 @@ final class AlbumGridViewController: UIViewController {
     /// 초기 스크롤 완료 여부 (맨 아래로 스크롤)
     private var didInitialScroll: Bool = false
 
+    /// 맨 위 행 빈 셀 개수 (3의 배수가 아닐 시 맨 위 행에 빈 셀)
+    /// 최신 사진(맨 아래) 기준 꽉 차게 정렬
+    private var paddingCellCount: Int {
+        let totalCount = fetchResult.count
+        guard totalCount > 0 else { return 0 }
+        let columns = currentColumnCount.rawValue
+        let remainder = totalCount % columns
+        return remainder == 0 ? 0 : (columns - remainder)
+    }
+
     // MARK: - Initialization
 
     init(
@@ -295,7 +305,8 @@ final class AlbumGridViewController: UIViewController {
     /// 맨 아래로 스크롤 (최신 사진부터 보기)
     private func scrollToBottomIfNeeded() {
         guard fetchResult.count > 0 else { return }
-        let lastIndex = fetchResult.count - 1
+        // padding 적용된 마지막 인덱스
+        let lastIndex = fetchResult.count - 1 + paddingCellCount
         let lastIndexPath = IndexPath(item: lastIndex, section: 0)
         collectionView.scrollToItem(at: lastIndexPath, at: .bottom, animated: false)
     }
@@ -415,7 +426,8 @@ final class AlbumGridViewController: UIViewController {
     private func indexPath(for assetID: String) -> IndexPath? {
         for i in 0..<fetchResult.count {
             if fetchResult.object(at: i).localIdentifier == assetID {
-                return IndexPath(item: i, section: 0)
+                // padding 오프셋 적용
+                return IndexPath(item: i + paddingCellCount, section: 0)
             }
         }
         return nil
@@ -427,10 +439,22 @@ final class AlbumGridViewController: UIViewController {
 extension AlbumGridViewController: UICollectionViewDataSource {
 
     func collectionView(_ collectionView: UICollectionView, numberOfItemsInSection section: Int) -> Int {
-        return fetchResult.count
+        return fetchResult.count + paddingCellCount
     }
 
     func collectionView(_ collectionView: UICollectionView, cellForItemAt indexPath: IndexPath) -> UICollectionViewCell {
+        let padding = paddingCellCount
+
+        // 빈 셀 (맨 위 행 패딩)
+        if indexPath.item < padding {
+            let cell = collectionView.dequeueReusableCell(
+                withReuseIdentifier: PhotoCell.reuseIdentifier,
+                for: indexPath
+            ) as? PhotoCell ?? PhotoCell()
+            cell.configureAsEmpty()
+            return cell
+        }
+
         guard let cell = collectionView.dequeueReusableCell(
             withReuseIdentifier: PhotoCell.reuseIdentifier,
             for: indexPath
@@ -438,7 +462,9 @@ extension AlbumGridViewController: UICollectionViewDataSource {
             return UICollectionViewCell()
         }
 
-        let asset = fetchResult.object(at: indexPath.item)
+        // 실제 에셋 인덱스 계산 (padding 오프셋 적용)
+        let assetIndex = indexPath.item - padding
+        let asset = fetchResult.object(at: assetIndex)
         let isTrashed = trashStore.isTrashed(asset.localIdentifier)
 
         cell.configure(
@@ -456,7 +482,14 @@ extension AlbumGridViewController: UICollectionViewDataSource {
 extension AlbumGridViewController: UICollectionViewDelegate {
 
     func collectionView(_ collectionView: UICollectionView, didSelectItemAt indexPath: IndexPath) {
-        let asset = fetchResult.object(at: indexPath.item)
+        let padding = paddingCellCount
+
+        // 빈 셀 탭 무시
+        guard indexPath.item >= padding else { return }
+
+        // 실제 에셋 인덱스 계산
+        let assetIndex = indexPath.item - padding
+        let asset = fetchResult.object(at: assetIndex)
         let isTrashed = trashStore.isTrashed(asset.localIdentifier)
 
         // 뷰어 모드 결정
@@ -470,8 +503,8 @@ extension AlbumGridViewController: UICollectionViewDelegate {
         )
 
         // 필터링된 인덱스 계산
-        guard let filteredIndex = coordinator.filteredIndex(from: indexPath.item) else {
-            print("[AlbumGridViewController] Failed to find filtered index for \(indexPath.item)")
+        guard let filteredIndex = coordinator.filteredIndex(from: assetIndex) else {
+            print("[AlbumGridViewController] Failed to find filtered index for \(assetIndex)")
             return
         }
 
@@ -494,12 +527,25 @@ extension AlbumGridViewController: UICollectionViewDelegate {
 extension AlbumGridViewController: UICollectionViewDataSourcePrefetching {
 
     func collectionView(_ collectionView: UICollectionView, prefetchItemsAt indexPaths: [IndexPath]) {
-        let assetIDs = indexPaths.map { fetchResult.object(at: $0.item).localIdentifier }
+        let padding = paddingCellCount
+        // padding 셀 제외하고 실제 에셋만 prefetch
+        let assetIDs = indexPaths.compactMap { indexPath -> String? in
+            guard indexPath.item >= padding else { return nil }
+            let assetIndex = indexPath.item - padding
+            guard assetIndex < fetchResult.count else { return nil }
+            return fetchResult.object(at: assetIndex).localIdentifier
+        }
         imagePipeline.preheat(assetIDs: assetIDs, targetSize: thumbnailSize())
     }
 
     func collectionView(_ collectionView: UICollectionView, cancelPrefetchingForItemsAt indexPaths: [IndexPath]) {
-        let assetIDs = indexPaths.map { fetchResult.object(at: $0.item).localIdentifier }
+        let padding = paddingCellCount
+        let assetIDs = indexPaths.compactMap { indexPath -> String? in
+            guard indexPath.item >= padding else { return nil }
+            let assetIndex = indexPath.item - padding
+            guard assetIndex < fetchResult.count else { return nil }
+            return fetchResult.object(at: assetIndex).localIdentifier
+        }
         imagePipeline.stopPreheating(assetIDs: assetIDs)
     }
 }

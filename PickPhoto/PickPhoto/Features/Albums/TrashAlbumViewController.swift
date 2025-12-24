@@ -124,6 +124,16 @@ final class TrashAlbumViewController: UIViewController {
     /// 초기 스크롤 완료 여부 (맨 아래로 스크롤)
     private var didInitialScroll: Bool = false
 
+    /// 맨 위 행 빈 셀 개수 (3의 배수가 아닐 시 맨 위 행에 빈 셀)
+    /// 최신 사진(맨 아래) 기준 꽉 차게 정렬
+    private var paddingCellCount: Int {
+        let totalCount = trashedAssets.count
+        guard totalCount > 0 else { return 0 }
+        let columns = currentColumnCount.rawValue
+        let remainder = totalCount % columns
+        return remainder == 0 ? 0 : (columns - remainder)
+    }
+
     // MARK: - Initialization
 
     init(
@@ -342,7 +352,8 @@ final class TrashAlbumViewController: UIViewController {
     /// 맨 아래로 스크롤 (최신 사진부터 보기)
     private func scrollToBottomIfNeeded() {
         guard !trashedAssets.isEmpty else { return }
-        let lastIndex = trashedAssets.count - 1
+        // padding 적용된 마지막 인덱스
+        let lastIndex = trashedAssets.count - 1 + paddingCellCount
         let lastIndexPath = IndexPath(item: lastIndex, section: 0)
         collectionView.scrollToItem(at: lastIndexPath, at: .bottom, animated: false)
     }
@@ -563,10 +574,22 @@ final class TrashAlbumViewController: UIViewController {
 extension TrashAlbumViewController: UICollectionViewDataSource {
 
     func collectionView(_ collectionView: UICollectionView, numberOfItemsInSection section: Int) -> Int {
-        return trashedAssets.count
+        return trashedAssets.count + paddingCellCount
     }
 
     func collectionView(_ collectionView: UICollectionView, cellForItemAt indexPath: IndexPath) -> UICollectionViewCell {
+        let padding = paddingCellCount
+
+        // 빈 셀 (맨 위 행 패딩)
+        if indexPath.item < padding {
+            let cell = collectionView.dequeueReusableCell(
+                withReuseIdentifier: PhotoCell.reuseIdentifier,
+                for: indexPath
+            ) as? PhotoCell ?? PhotoCell()
+            cell.configureAsEmpty()
+            return cell
+        }
+
         guard let cell = collectionView.dequeueReusableCell(
             withReuseIdentifier: PhotoCell.reuseIdentifier,
             for: indexPath
@@ -574,11 +597,13 @@ extension TrashAlbumViewController: UICollectionViewDataSource {
             return UICollectionViewCell()
         }
 
-        guard indexPath.item < trashedAssets.count else {
+        // 실제 에셋 인덱스 계산 (padding 오프셋 적용)
+        let assetIndex = indexPath.item - padding
+        guard assetIndex < trashedAssets.count else {
             return cell
         }
 
-        let asset = trashedAssets[indexPath.item]
+        let asset = trashedAssets[assetIndex]
 
         // 휴지통 내에서는 딤드 표시 안 함 (모두 삭제 대상이므로 정상 표시)
         cell.configure(
@@ -596,10 +621,17 @@ extension TrashAlbumViewController: UICollectionViewDataSource {
 extension TrashAlbumViewController: UICollectionViewDelegate {
 
     func collectionView(_ collectionView: UICollectionView, didSelectItemAt indexPath: IndexPath) {
-        guard indexPath.item < trashedAssets.count else { return }
+        let padding = paddingCellCount
+
+        // 빈 셀 탭 무시
+        guard indexPath.item >= padding else { return }
+
+        // 실제 에셋 인덱스 계산
+        let assetIndex = indexPath.item - padding
+        guard assetIndex < trashedAssets.count else { return }
 
         // 클릭한 에셋
-        let selectedAsset = trashedAssets[indexPath.item]
+        let selectedAsset = trashedAssets[assetIndex]
         let selectedAssetID = selectedAsset.localIdentifier
 
         // 뷰어 코디네이터 생성 (휴지통 전용)
@@ -644,17 +676,24 @@ extension TrashAlbumViewController: UICollectionViewDelegate {
 extension TrashAlbumViewController: UICollectionViewDataSourcePrefetching {
 
     func collectionView(_ collectionView: UICollectionView, prefetchItemsAt indexPaths: [IndexPath]) {
+        let padding = paddingCellCount
+        // padding 셀 제외하고 실제 에셋만 prefetch
         let assetIDs = indexPaths.compactMap { indexPath -> String? in
-            guard indexPath.item < trashedAssets.count else { return nil }
-            return trashedAssets[indexPath.item].localIdentifier
+            guard indexPath.item >= padding else { return nil }
+            let assetIndex = indexPath.item - padding
+            guard assetIndex < trashedAssets.count else { return nil }
+            return trashedAssets[assetIndex].localIdentifier
         }
         imagePipeline.preheat(assetIDs: assetIDs, targetSize: thumbnailSize())
     }
 
     func collectionView(_ collectionView: UICollectionView, cancelPrefetchingForItemsAt indexPaths: [IndexPath]) {
+        let padding = paddingCellCount
         let assetIDs = indexPaths.compactMap { indexPath -> String? in
-            guard indexPath.item < trashedAssets.count else { return nil }
-            return trashedAssets[indexPath.item].localIdentifier
+            guard indexPath.item >= padding else { return nil }
+            let assetIndex = indexPath.item - padding
+            guard assetIndex < trashedAssets.count else { return nil }
+            return trashedAssets[assetIndex].localIdentifier
         }
         imagePipeline.stopPreheating(assetIDs: assetIDs)
     }
