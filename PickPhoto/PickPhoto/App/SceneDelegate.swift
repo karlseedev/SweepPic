@@ -44,6 +44,10 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         // T065에서 권한 체크 후 적절한 ViewController 표시 로직 추가 예정
         let tabBarController = TabBarController()
         window.rootViewController = tabBarController
+
+        // TODO: 다크모드 강제 (테스트용, 확정 후 제거 또는 유지 결정)
+        window.overrideUserInterfaceStyle = .dark
+
         window.makeKeyAndVisible()
 
         self.window = window

@@ -461,6 +461,28 @@ final class GridViewController: UIViewController {
 
         // SelectionManager 델리게이트 설정 (T037)
         selectionManager.delegate = self
+
+        // AutoScrollTester 스크롤 시작/끝 알림 수신 (성능 측정 트리거)
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(handleAutoScrollDidBegin),
+            name: AutoScrollTester.didBeginScrollingNotification,
+            object: nil
+        )
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(handleAutoScrollDidEnd),
+            name: AutoScrollTester.didEndScrollingNotification,
+            object: nil
+        )
+    }
+
+    @objc private func handleAutoScrollDidBegin() {
+        scrollDidBegin()
+    }
+
+    @objc private func handleAutoScrollDidEnd() {
+        scrollDidEnd()
     }
 
     /// B+A v2: 초기 표시 시작 (레이아웃 확정 후 1회만 호출)

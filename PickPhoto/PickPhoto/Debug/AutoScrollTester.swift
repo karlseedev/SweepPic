@@ -13,6 +13,7 @@
 //
 
 import UIKit
+import AppCore
 
 /// 자동 스크롤 테스터 - CADisplayLink로 contentOffset 직접 제어
 /// 수동 극한 스크롤보다 더 정밀하고 재현 가능한 테스트 제공
@@ -51,6 +52,35 @@ final class AutoScrollTester {
         }
     }
 
+    /// 스크롤 프로파일 (연속 vs 버스트)
+    enum ScrollProfile {
+        /// 연속 스크롤 (기존 방식)
+        case continuous
+        /// 플릭 리듬: 버스트(빠른 스크롤) + 휴지(정지/감속) 반복
+        /// - burstDuration: 버스트 지속 시간 (초)
+        /// - restDuration: 휴지 지속 시간 (초)
+        /// - restSpeedRatio: 휴지 중 속도 비율 (0.0 = 완전 정지, 0.3 = 30% 속도로 감속)
+        case burst(burstDuration: TimeInterval, restDuration: TimeInterval, restSpeedRatio: CGFloat)
+
+        /// 수동 극한 스크롤 시뮬레이션 프리셋
+        /// flick ~0.25초 + 손가락 재터치 ~0.12초
+        static var manualExtreme: ScrollProfile {
+            .burst(burstDuration: 0.25, restDuration: 0.12, restSpeedRatio: 0.15)
+        }
+
+        /// 일상 스크롤 시뮬레이션 프리셋
+        /// flick ~0.4초 + 여유있는 휴지 ~0.2초
+        static var manualNormal: ScrollProfile {
+            .burst(burstDuration: 0.4, restDuration: 0.2, restSpeedRatio: 0.1)
+        }
+    }
+
+    // MARK: - Notifications
+
+    /// 스크롤 시작/끝 알림 (GridViewController에서 수신하여 측정 트리거)
+    static let didBeginScrollingNotification = Notification.Name("AutoScrollTester.didBeginScrolling")
+    static let didEndScrollingNotification = Notification.Name("AutoScrollTester.didEndScrolling")
+
     // MARK: - Launch Arguments
 
     enum LaunchArgument {
@@ -83,6 +113,9 @@ final class AutoScrollTester {
 
     /// 속도 변조 주파수 (Hz)
     private var speedOscillationFrequency: CGFloat = 0
+
+    /// 스크롤 프로파일 (연속 vs 버스트)
+    private var scrollProfile: ScrollProfile = .continuous
 
     /// 스크롤 방향
     private var direction: Direction = .up
@@ -124,8 +157,9 @@ final class AutoScrollTester {
     ///   - speed: 속도 프리셋
     ///   - duration: 지속 시간 (초)
     ///   - boundaryBehavior: 경계 도달 시 동작
-    ///   - oscillationAmplitude: 속도 변조 진폭 (0~1)
-    ///   - oscillationFrequency: 속도 변조 주파수 (Hz)
+    ///   - profile: 스크롤 프로파일 (연속 vs 버스트)
+    ///   - oscillationAmplitude: 속도 변조 진폭 (0~1) - continuous 모드에서만 사용
+    ///   - oscillationFrequency: 속도 변조 주파수 (Hz) - continuous 모드에서만 사용
     ///   - completion: 완료 시 콜백
     func start(
         scrollView: UIScrollView,
@@ -133,6 +167,7 @@ final class AutoScrollTester {
         speed: SpeedPreset = .extreme,
         duration: TimeInterval = 15,
         boundaryBehavior: BoundaryBehavior = .reverse,
+        profile: ScrollProfile = .continuous,
         oscillationAmplitude: CGFloat = 0,
         oscillationFrequency: CGFloat = 0,
         completion: (() -> Void)? = nil
@@ -145,19 +180,29 @@ final class AutoScrollTester {
         self.speed = speed.pointsPerSecond
         self.duration = duration
         self.boundaryBehavior = boundaryBehavior
+        self.scrollProfile = profile
         self.speedOscillationAmplitude = max(0, min(1, oscillationAmplitude))
         self.speedOscillationFrequency = max(0, oscillationFrequency)
         self.completion = completion
         self.isRunning = true
 
-        print("=== AutoScrollTester 시작 ===")
-        print("속도: \(self.speed) pt/s")
-        print("방향: \(direction)")
-        print("지속시간: \(duration)초")
-        print("경계동작: \(boundaryBehavior)")
-        if self.speedOscillationAmplitude > 0 && self.speedOscillationFrequency > 0 {
-            print("속도변조: amplitude=\(self.speedOscillationAmplitude), frequency=\(self.speedOscillationFrequency)Hz")
+        FileLogger.log("[AutoScroll] === 시작 ===")
+        FileLogger.log("[AutoScroll] 속도: \(self.speed) pt/s, 방향: \(direction), 지속: \(duration)초, 경계: \(boundaryBehavior)")
+
+        // 프로파일 로깅
+        switch profile {
+        case .continuous:
+            if self.speedOscillationAmplitude > 0 && self.speedOscillationFrequency > 0 {
+                FileLogger.log("[AutoScroll] 프로파일: continuous, 속도변조: amplitude=\(self.speedOscillationAmplitude), frequency=\(self.speedOscillationFrequency)Hz")
+            } else {
+                FileLogger.log("[AutoScroll] 프로파일: continuous (일정 속도)")
+            }
+        case .burst(let burstDuration, let restDuration, let restSpeedRatio):
+            FileLogger.log("[AutoScroll] 프로파일: burst (flick 리듬), burst=\(String(format: "%.2f", burstDuration))초, rest=\(String(format: "%.2f", restDuration))초, restRatio=\(String(format: "%.0f", restSpeedRatio * 100))%")
         }
+
+        // 스크롤 측정 시작 알림
+        NotificationCenter.default.post(name: AutoScrollTester.didBeginScrollingNotification, object: nil)
 
         // CADisplayLink 생성 및 시작
         displayLink = CADisplayLink(target: self, selector: #selector(handleDisplayLink(_:)))
@@ -218,7 +263,10 @@ final class AutoScrollTester {
 
         if activeStartTime > 0 {
             let elapsed = CACurrentMediaTime() - activeStartTime
-            print("=== AutoScrollTester 중지: \(String(format: "%.2f", elapsed))초 경과 ===")
+            FileLogger.log("[AutoScroll] === 중지: \(String(format: "%.2f", elapsed))초 경과 ===")
+
+            // 스크롤 측정 종료 알림
+            NotificationCenter.default.post(name: AutoScrollTester.didEndScrollingNotification, object: nil)
         }
 
         runStartTime = 0
@@ -264,14 +312,35 @@ final class AutoScrollTester {
         let deltaTime = max(0, min(rawDeltaTime, 0.05))
         lastFrameTime = currentTime
 
-        // 이동량 계산
+        // 이동량 계산 - 프로파일에 따라 속도 결정
         let effectiveSpeed: CGFloat
-        if speedOscillationAmplitude > 0, speedOscillationFrequency > 0 {
-            let phase = 2 * Double.pi * Double(speedOscillationFrequency) * elapsed
-            let multiplier = 1 + Double(speedOscillationAmplitude) * sin(phase)
-            effectiveSpeed = max(0, speed * CGFloat(multiplier))
-        } else {
-            effectiveSpeed = speed
+        switch scrollProfile {
+        case .continuous:
+            // 연속 모드: 기존 oscillation 로직
+            if speedOscillationAmplitude > 0, speedOscillationFrequency > 0 {
+                let phase = 2 * Double.pi * Double(speedOscillationFrequency) * elapsed
+                let multiplier = 1 + Double(speedOscillationAmplitude) * sin(phase)
+                effectiveSpeed = max(0, speed * CGFloat(multiplier))
+            } else {
+                effectiveSpeed = speed
+            }
+
+        case .burst(let burstDuration, let restDuration, let restSpeedRatio):
+            // 버스트 모드: flick 리듬 시뮬레이션
+            let cycleLength = burstDuration + restDuration
+            let cyclePosition = elapsed.truncatingRemainder(dividingBy: cycleLength)
+            let isInBurst = cyclePosition < burstDuration
+
+            if isInBurst {
+                // 버스트 구간: full speed (약간의 변동 추가하여 자연스럽게)
+                let burstPhase = cyclePosition / burstDuration  // 0~1
+                // 버스트 시작은 빠르고 끝은 약간 감속 (실제 flick 패턴)
+                let burstMultiplier = 1.0 - 0.2 * burstPhase  // 1.0 → 0.8
+                effectiveSpeed = speed * CGFloat(burstMultiplier)
+            } else {
+                // 휴지 구간: 감속/정지 (파이프라인이 catch-up 할 시간)
+                effectiveSpeed = speed * restSpeedRatio
+            }
         }
         let delta = effectiveSpeed * deltaTime
 
@@ -295,7 +364,7 @@ final class AutoScrollTester {
         if (direction == .up && isAtMin) || (direction == .down && isAtMax) {
             switch boundaryBehavior {
             case .stop:
-                print("경계 도달 - 스크롤 중지")
+                FileLogger.log("[AutoScroll] 경계 도달 - 스크롤 중지")
                 let completion = completion
                 stop(clearCompletion: true)
                 completion?()
@@ -406,15 +475,43 @@ extension UIScrollView {
         if AutoScrollTester.shared.isRunning {
             AutoScrollTester.shared.stop()
         } else {
-            // L2 극한 스크롤 테스트 시작 (15초)
-            self.startExtremeScrollTest(
-                direction: .up,
-                speed: .extreme,
-                duration: 15,
-                boundaryBehavior: .reverse,
-                oscillationAmplitude: 0.25,
-                oscillationFrequency: 3
-            )
+            // L1 + L2 시퀀스 테스트 시작
+            startL1L2TestSequence()
         }
+    }
+
+    /// L1 + L2 테스트 시퀀스
+    /// 1. L1 스크롤 (3초): 일상 스크롤, burst 프로파일 (flick 리듬)
+    /// 2. 정지 (1초): 터치 홀드 시뮬레이션
+    /// 3. L2 스크롤 (8초): 극한 스크롤, burst 프로파일 (빠른 flick 리듬)
+    private func startL1L2TestSequence() {
+        // L1: 일상 스크롤 (3초)
+        // burst 프로파일: 0.4초 flick + 0.2초 휴지, 휴지 중 10% 속도
+        AutoScrollTester.shared.start(
+            scrollView: self,
+            direction: .up,
+            speed: .custom(8000),  // 기준 속도 (버스트 중 평균 ~7200 pt/s)
+            duration: 3,
+            boundaryBehavior: .reverse,
+            profile: .manualNormal,  // burst(0.4초, 0.2초, 10%)
+            completion: { [weak self] in
+                // L1 완료 → 정지 (1초) → L2 시작
+                DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+                    guard let self = self else { return }
+                    // L2: 극한 스크롤 (8초)
+                    // burst 프로파일: 0.25초 flick + 0.12초 휴지, 휴지 중 15% 속도
+                    // 수동 극한 ~580 req/s 재현 목표
+                    AutoScrollTester.shared.start(
+                        scrollView: self,
+                        direction: .up,
+                        speed: .custom(30000),  // 기준 속도 (버스트 중 평균 ~27000 pt/s)
+                        duration: 8,
+                        boundaryBehavior: .reverse,
+                        profile: .manualExtreme,  // burst(0.25초, 0.12초, 15%)
+                        completion: nil
+                    )
+                }
+            }
+        )
     }
 }

@@ -167,49 +167,86 @@ final class PickPhotoUITests: XCTestCase {
         options.iterationCount = 5
 
         measure(metrics: [XCTOSSignpostMetric.scrollingAndDecelerationMetric]) {
-            collection.swipeUp(velocity: XCUIGestureVelocity(8000))
-            collection.swipeUp(velocity: XCUIGestureVelocity(8000))
-            collection.swipeUp(velocity: XCUIGestureVelocity(8000))
+            collection.swipeDown(velocity: XCUIGestureVelocity(8000))
+            collection.swipeDown(velocity: XCUIGestureVelocity(8000))
+            collection.swipeDown(velocity: XCUIGestureVelocity(8000))
         }
     }
 
-    /// L1 시뮬레이션 (일상 스크롤 - 약 8초)
+    /// L1 + L2 시퀀스 테스트
+    /// L1: 3초, velocity 8000 (일상 스크롤)
+    /// pause: 1초
+    /// L2: 8초, velocity 30000 (극한 스크롤)
     @MainActor
-    func testL1Scroll() throws {
+    func testL1L2Sequence() throws {
         let collection = app.collectionViews.firstMatch
 
-        print("=== L1 일상 스크롤 시작 ===")
-        let startTime = Date()
+        // === L1: 일상 스크롤 (3초, velocity 8000) ===
+        print("=== L1 시작: 3초, velocity 8000 ===")
+        let l1Start = Date()
+        let l1Duration: TimeInterval = 3.0
+        let l1Velocity = XCUIGestureVelocity(8000)
 
-        // 중간 속도로 8초 동안 스크롤
-        let targetDuration: TimeInterval = 8.0
-        let velocity = XCUIGestureVelocity(3000)
-
-        while Date().timeIntervalSince(startTime) < targetDuration {
-            collection.swipeUp(velocity: velocity)
+        while Date().timeIntervalSince(l1Start) < l1Duration {
+            collection.swipeDown(velocity: l1Velocity)  // 오래된 사진으로 스크롤
         }
+        print("=== L1 완료: \(Date().timeIntervalSince(l1Start))초 ===")
 
-        let elapsed = Date().timeIntervalSince(startTime)
-        print("=== L1 완료: \(elapsed)초 ===")
+        // === Pause: 1초 ===
+        print("=== Pause: 1초 ===")
+        Thread.sleep(forTimeInterval: 1.0)
+
+        // === L2: 극한 스크롤 (8초, velocity 30000) ===
+        print("=== L2 시작: 8초, velocity 30000 ===")
+        let l2Start = Date()
+        let l2Duration: TimeInterval = 8.0
+        let l2Velocity = XCUIGestureVelocity(30000)
+
+        while Date().timeIntervalSince(l2Start) < l2Duration {
+            collection.swipeDown(velocity: l2Velocity)  // 오래된 사진으로 스크롤
+        }
+        print("=== L2 완료: \(Date().timeIntervalSince(l2Start))초 ===")
+
+        // 총 소요 시간
+        let totalElapsed = Date().timeIntervalSince(l1Start)
+        print("=== 전체 완료: \(totalElapsed)초 ===")
     }
 
-    /// L2 시뮬레이션 (극한 스크롤 - 약 15초)
+    /// L1 + L2 시퀀스 (좌표 기반 드래그 버전)
+    /// swipe 대신 press(thenDragTo:) 사용 - 더 정밀한 제어
     @MainActor
-    func testL2Scroll() throws {
+    func testL1L2SequenceWithDrag() throws {
         let collection = app.collectionViews.firstMatch
 
-        print("=== L2 극한 스크롤 시작 ===")
-        let startTime = Date()
+        // === L1: 일상 스크롤 (3초, velocity 8000) ===
+        print("=== L1 시작: 3초, velocity 8000 (drag) ===")
+        let l1Start = Date()
+        let l1Duration: TimeInterval = 3.0
 
-        // 극한 속도로 15초 동안 스크롤
-        let targetDuration: TimeInterval = 15.0
-        let velocity = XCUIGestureVelocity(8000)
-
-        while Date().timeIntervalSince(startTime) < targetDuration {
-            collection.swipeUp(velocity: velocity)
+        while Date().timeIntervalSince(l1Start) < l1Duration {
+            let startCoord = collection.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.7))
+            let endCoord = collection.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.3))
+            startCoord.press(forDuration: 0.01, thenDragTo: endCoord, withVelocity: 8000, thenHoldForDuration: 0)
         }
+        print("=== L1 완료: \(Date().timeIntervalSince(l1Start))초 ===")
 
-        let elapsed = Date().timeIntervalSince(startTime)
-        print("=== L2 완료: \(elapsed)초 ===")
+        // === Pause: 1초 ===
+        print("=== Pause: 1초 ===")
+        Thread.sleep(forTimeInterval: 1.0)
+
+        // === L2: 극한 스크롤 (8초, velocity 30000) ===
+        print("=== L2 시작: 8초, velocity 30000 (drag) ===")
+        let l2Start = Date()
+        let l2Duration: TimeInterval = 8.0
+
+        while Date().timeIntervalSince(l2Start) < l2Duration {
+            let startCoord = collection.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.7))
+            let endCoord = collection.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.3))
+            startCoord.press(forDuration: 0.01, thenDragTo: endCoord, withVelocity: 30000, thenHoldForDuration: 0)
+        }
+        print("=== L2 완료: \(Date().timeIntervalSince(l2Start))초 ===")
+
+        let totalElapsed = Date().timeIntervalSince(l1Start)
+        print("=== 전체 완료: \(totalElapsed)초 ===")
     }
 }
