@@ -179,11 +179,15 @@ final class FloatingOverlayContainer: UIView {
         // 탭 인덱스에 따른 타이틀 변경
         switch selectedTabIndex {
         case 0:
-            titleBar.title = "Photos"
+            // ⚠️ 사진보관함 명칭 변경 시 동시 수정 필요:
+            // - TabBarController.swift, GridViewController.swift, FloatingOverlayContainer.swift (여기), FloatingTitleBar.swift
+            titleBar.title = "사진보관함"
             // Photos 탭에서는 Select 버튼 표시
             titleBar.isSelectButtonHidden = false
         case 1:
-            titleBar.title = "Albums"
+            // ⚠️ 앨범 명칭 변경 시 동시 수정 필요:
+            // - TabBarController.swift, AlbumsViewController.swift, FloatingOverlayContainer.swift (여기)
+            titleBar.title = "앨범"
             // Albums 탭에서는 Select 버튼 숨김 (Phase 6까지)
             // TODO: Phase 6에서 Albums 그리드 구현 시 활성화
             titleBar.isSelectButtonHidden = true

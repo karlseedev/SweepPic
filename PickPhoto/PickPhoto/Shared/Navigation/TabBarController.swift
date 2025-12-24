@@ -64,30 +64,42 @@ class TabBarController: UITabBarController {
     /// 탭 설정
     private func setupTabs() {
         // Photos 탭 (All Photos 그리드)
+        // ⚠️ 사진보관함 명칭 변경 시 동시 수정 필요:
+        // - TabBarController.swift: tabBarItem.title (여기)
+        // - GridViewController.swift: title, setTitle()
+        // - FloatingOverlayContainer.swift: titleBar.title
+        // - FloatingTitleBar.swift: title 기본값
         let photosVC = GridViewController()
         let photosNavController = UINavigationController(rootViewController: photosVC)
         photosNavController.tabBarItem = UITabBarItem(
-            title: "Photos",
+            title: "사진보관함",
             image: UIImage(systemName: "photo.on.rectangle"),
             selectedImage: UIImage(systemName: "photo.on.rectangle.fill")
         )
         self.photosNav = photosNavController
 
         // Albums 탭 (앨범 목록)
+        // ⚠️ 앨범 명칭 변경 시 동시 수정 필요:
+        // - TabBarController.swift: tabBarItem.title (여기)
+        // - AlbumsViewController.swift: title, setTitle()
+        // - FloatingOverlayContainer.swift: titleBar.title
         let albumsVC = AlbumsViewController()
         let albumsNavController = UINavigationController(rootViewController: albumsVC)
         albumsNavController.tabBarItem = UITabBarItem(
-            title: "Albums",
+            title: "앨범",
             image: UIImage(systemName: "rectangle.stack"),
             selectedImage: UIImage(systemName: "rectangle.stack.fill")
         )
         self.albumsNav = albumsNavController
 
         // Trash 탭 (휴지통)
+        // ⚠️ 휴지통 명칭 변경 시 동시 수정 필요:
+        // - TabBarController.swift: tabBarItem.title (여기)
+        // - TrashAlbumViewController.swift: title, setTitle()
         let trashVC = TrashAlbumViewController()
         let trashNavController = UINavigationController(rootViewController: trashVC)
         trashNavController.tabBarItem = UITabBarItem(
-            title: "Trash",
+            title: "PickPhoto 휴지통",
             image: UIImage(systemName: "trash"),
             selectedImage: UIImage(systemName: "trash.fill")
         )

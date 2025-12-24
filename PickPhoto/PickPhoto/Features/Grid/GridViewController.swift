@@ -288,6 +288,10 @@ final class GridViewController: UIViewController {
         setupUI()
         setupGestures()
         setupObservers()
+
+        if AutoScrollTester.shouldInstallGestureByLaunchArguments {
+            collectionView.setupAutoScrollGesture()
+        }
         // loadData()는 viewDidLayoutSubviews에서 startInitialDisplay()로 호출
         // (레이아웃 확정 후에만 실행해야 size=0 버그 방지)
 
@@ -337,8 +341,12 @@ final class GridViewController: UIViewController {
             return
         }
 
-        // 타이틀 복원
-        overlay.titleBar.setTitle("Photos")
+        // ⚠️ 사진보관함 명칭 변경 시 동시 수정 필요:
+        // - TabBarController.swift: tabBarItem.title
+        // - GridViewController.swift: title, setTitle() (여기)
+        // - FloatingOverlayContainer.swift: titleBar.title
+        // - FloatingTitleBar.swift: title 기본값
+        overlay.titleBar.setTitle("사진보관함")
 
         // 뒤로가기 버튼 숨김
         overlay.titleBar.setShowsBackButton(false)
@@ -350,6 +358,8 @@ final class GridViewController: UIViewController {
 
     override func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
+
+        AutoScrollTester.shared.startIfRequestedByLaunchArguments(scrollView: collectionView)
 
         // [A) preheat OFF 테스트] 초기 프리히트 비활성화
         // v6: visible indexPaths가 확실히 채워진 시점에 초기 프리히트
@@ -390,7 +400,12 @@ final class GridViewController: UIViewController {
     /// UI 설정
     private func setupUI() {
         view.backgroundColor = .black
-        title = "Photos"
+        // ⚠️ 사진보관함 명칭 변경 시 동시 수정 필요:
+        // - TabBarController.swift: tabBarItem.title
+        // - GridViewController.swift: title (여기), setTitle()
+        // - FloatingOverlayContainer.swift: titleBar.title
+        // - FloatingTitleBar.swift: title 기본값
+        title = "사진보관함"
 
         // 컬렉션 뷰
         view.addSubview(collectionView)
@@ -426,6 +441,9 @@ final class GridViewController: UIViewController {
         dragGesture.isEnabled = false // 기본 비활성화, Select 모드 진입 시 활성화
         collectionView.addGestureRecognizer(dragGesture)
         dragSelectGesture = dragGesture
+
+        // 자동 스크롤 테스트 제스처 (3손가락 탭)
+        collectionView.setupAutoScrollGesture()
     }
 
     /// 옵저버 설정 (T026, T037)

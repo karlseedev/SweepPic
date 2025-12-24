@@ -48,7 +48,9 @@ final class FloatingTitleBar: UIView {
     weak var delegate: FloatingTitleBarDelegate?
 
     /// 현재 타이틀 텍스트
-    var title: String = "Photos" {
+    // ⚠️ 사진보관함 명칭 변경 시 동시 수정 필요:
+    // - TabBarController.swift, GridViewController.swift, FloatingOverlayContainer.swift, FloatingTitleBar.swift (여기)
+    var title: String = "사진보관함" {
         didSet {
             titleLabel.text = title
         }

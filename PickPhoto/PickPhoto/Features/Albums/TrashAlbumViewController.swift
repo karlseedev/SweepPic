@@ -199,7 +199,10 @@ final class TrashAlbumViewController: UIViewController {
 
     private func setupUI() {
         view.backgroundColor = .black
-        title = "휴지통"
+        // ⚠️ 휴지통 명칭 변경 시 동시 수정 필요:
+        // - TabBarController.swift: tabBarItem.title
+        // - TrashAlbumViewController.swift: title (여기), setTitle()
+        title = "PickPhoto 휴지통"
 
         // 컬렉션 뷰
         view.addSubview(collectionView)
@@ -239,7 +242,7 @@ final class TrashAlbumViewController: UIViewController {
     }
 
     /// FloatingOverlay 상태를 휴지통 탭용으로 설정
-    /// - 타이틀: "Trash"
+    /// - 타이틀: "PickPhoto 휴지통"
     /// - 뒤로가기 버튼: 숨김 (별도 탭이므로)
     /// - 오른쪽 버튼: "비우기" (휴지통이 비어있지 않을 때만 표시)
     private func configureFloatingOverlayForTrash() {
@@ -248,8 +251,10 @@ final class TrashAlbumViewController: UIViewController {
             return
         }
 
-        // 타이틀 변경
-        overlay.titleBar.setTitle("Trash")
+        // ⚠️ 휴지통 명칭 변경 시 동시 수정 필요:
+        // - TabBarController.swift: tabBarItem.title
+        // - TrashAlbumViewController.swift: title, setTitle() (여기)
+        overlay.titleBar.setTitle("PickPhoto 휴지통")
 
         // 뒤로가기 버튼 숨김 (별도 탭이므로)
         overlay.titleBar.setShowsBackButton(false, action: nil)

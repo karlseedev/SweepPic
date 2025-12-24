@@ -125,7 +125,11 @@ final class AlbumsViewController: UIViewController {
 
     private func setupUI() {
         view.backgroundColor = .systemBackground
-        title = "Albums"
+        // ⚠️ 앨범 명칭 변경 시 동시 수정 필요:
+        // - TabBarController.swift: tabBarItem.title
+        // - AlbumsViewController.swift: title (여기), setTitle()
+        // - FloatingOverlayContainer.swift: titleBar.title
+        title = "앨범"
 
         // 컬렉션 뷰
         view.addSubview(collectionView)
@@ -165,8 +169,11 @@ final class AlbumsViewController: UIViewController {
             return
         }
 
-        // 타이틀 복원
-        overlay.titleBar.setTitle("Albums")
+        // ⚠️ 앨범 명칭 변경 시 동시 수정 필요:
+        // - TabBarController.swift: tabBarItem.title
+        // - AlbumsViewController.swift: title, setTitle() (여기)
+        // - FloatingOverlayContainer.swift: titleBar.title
+        overlay.titleBar.setTitle("앨범")
 
         // 뒤로가기 버튼 숨김
         overlay.titleBar.setShowsBackButton(false)
