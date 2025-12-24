@@ -14,6 +14,9 @@ final class PickPhotoUITests: XCTestCase {
     override func setUpWithError() throws {
         continueAfterFailure = false
 
+        // waitForQuiescence 비활성화 - Release에서도 Debug와 동일한 스크롤 강도 유지
+        app.launchEnvironment["XCUIApplicationWaitForQuiescence"] = "NO"
+
         app.launch()
 
         // 앱이 완전히 로드될 때까지 대기
@@ -221,9 +224,10 @@ final class PickPhotoUITests: XCTestCase {
         let l1Start = Date()
         let l1Duration: TimeInterval = 3.0
 
+        // 손가락: 위(0.3) → 아래(0.7) = swipeDown = 오래된 사진으로 스크롤
         while Date().timeIntervalSince(l1Start) < l1Duration {
-            let startCoord = collection.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.7))
-            let endCoord = collection.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.3))
+            let startCoord = collection.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.3))
+            let endCoord = collection.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.7))
             startCoord.press(forDuration: 0.01, thenDragTo: endCoord, withVelocity: 8000, thenHoldForDuration: 0)
         }
         print("=== L1 완료: \(Date().timeIntervalSince(l1Start))초 ===")
@@ -237,9 +241,10 @@ final class PickPhotoUITests: XCTestCase {
         let l2Start = Date()
         let l2Duration: TimeInterval = 8.0
 
+        // 손가락: 위(0.3) → 아래(0.7) = swipeDown = 오래된 사진으로 스크롤
         while Date().timeIntervalSince(l2Start) < l2Duration {
-            let startCoord = collection.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.7))
-            let endCoord = collection.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.3))
+            let startCoord = collection.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.3))
+            let endCoord = collection.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.7))
             startCoord.press(forDuration: 0.01, thenDragTo: endCoord, withVelocity: 30000, thenHoldForDuration: 0)
         }
         print("=== L2 완료: \(Date().timeIntervalSince(l2Start))초 ===")
