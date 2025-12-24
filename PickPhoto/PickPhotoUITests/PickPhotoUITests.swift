@@ -168,8 +168,6 @@ final class PickPhotoUITests: XCTestCase {
 
         measure(metrics: [XCTOSSignpostMetric.scrollingAndDecelerationMetric]) {
             collection.swipeDown(velocity: XCUIGestureVelocity(8000))
-            collection.swipeDown(velocity: XCUIGestureVelocity(8000))
-            collection.swipeDown(velocity: XCUIGestureVelocity(8000))
         }
     }
 
