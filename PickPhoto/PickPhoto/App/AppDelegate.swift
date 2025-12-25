@@ -29,6 +29,14 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         // AppCore 초기화 로그
         print("[AppDelegate] PickPhoto started with AppCore \(AppCore.version)")
 
+        // [DEBUG] Launch arguments 로깅 (AutoScrollTester 디버깅용)
+        let args = ProcessInfo.processInfo.arguments
+        FileLogger.log("[LaunchArgs] didFinishLaunching: count=\(args.count)")
+        FileLogger.log("[LaunchArgs] --auto-scroll: \(args.contains("--auto-scroll"))")
+        if args.contains("--auto-scroll") {
+            FileLogger.log("[LaunchArgs] ALL: \(args)")
+        }
+
         // [E) 환경 정보 로그] 전/후 비교용 메타 데이터
         logEnvironmentInfo()
 

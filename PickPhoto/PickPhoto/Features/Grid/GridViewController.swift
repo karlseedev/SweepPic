@@ -359,6 +359,10 @@ final class GridViewController: UIViewController {
     override func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
 
+        // 런치 아규먼트 로깅 (디버깅용)
+        let args = ProcessInfo.processInfo.arguments
+        FileLogger.log("[LaunchArgs] count=\(args.count), contains --auto-scroll: \(args.contains("--auto-scroll"))")
+
         AutoScrollTester.shared.startIfRequestedByLaunchArguments(scrollView: collectionView)
 
         // [A) preheat OFF 테스트] 초기 프리히트 비활성화

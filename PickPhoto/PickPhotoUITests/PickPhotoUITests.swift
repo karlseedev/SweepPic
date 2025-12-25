@@ -11,11 +11,43 @@ final class PickPhotoUITests: XCTestCase {
 
     let app = XCUIApplication()
 
+    /// 앱이 이미 실행되었는지 여부
+    private var hasLaunched = false
+
     override func setUpWithError() throws {
         continueAfterFailure = false
 
-        // waitForQuiescence 비활성화 - Release에서도 Debug와 동일한 스크롤 강도 유지
-        app.launchEnvironment["XCUIApplicationWaitForQuiescence"] = "NO"
+        // testAutoScrollTester는 별도의 launchArguments로 시작해야 하므로 스킵
+        if name.contains("testAutoScrollTester") {
+            launchAppWithAutoScroll()
+        } else {
+            launchAppIfNeeded()
+        }
+    }
+
+    /// 앱을 실행하고 CollectionView가 나타날 때까지 대기
+    private func launchAppIfNeeded() {
+        guard !hasLaunched else { return }
+        hasLaunched = true
+
+        app.launch()
+
+        // 앱이 완전히 로드될 때까지 대기
+        let collection = app.collectionViews.firstMatch
+        XCTAssertTrue(collection.waitForExistence(timeout: 10), "CollectionView가 나타나지 않음")
+    }
+
+    /// AutoScrollTester용 앱 실행 (launchArguments 포함)
+    private func launchAppWithAutoScroll() {
+        hasLaunched = true
+
+        app.launchArguments = [
+            "--auto-scroll",
+            "--auto-scroll-speed=12000",
+            "--auto-scroll-duration=12",
+            "--auto-scroll-direction=down",
+            "--auto-scroll-boundary=reverse"
+        ]
 
         app.launch()
 
@@ -159,6 +191,24 @@ final class PickPhotoUITests: XCTestCase {
         }
     }
 
+    // MARK: - AutoScrollTester 테스트
+
+    /// AutoScrollTester로 극한 스크롤 테스트 (CADisplayLink 기반)
+    /// - 런치 아규먼트로 자동 스크롤 활성화
+    /// - XCUITest의 waitForQuiescence 문제 없이 고속 스크롤 가능
+    @MainActor
+    func testAutoScrollTester() throws {
+        // setUpWithError()에서 launchAppWithAutoScroll()로 앱 시작됨
+        // AutoScrollTester가 viewDidAppear에서 자동 시작됨
+
+        print("=== AutoScrollTester 테스트 시작 (launchArguments로 자동 시작) ===")
+
+        // AutoScrollTester duration(12초) + 여유
+        Thread.sleep(forTimeInterval: 15)
+
+        print("=== AutoScrollTester 테스트 완료 ===")
+    }
+
     // MARK: - 성능 측정 테스트 (XCTMetric 사용)
 
     /// Hitch 측정 포함 스크롤 테스트 (실제 기기에서만 동작)
@@ -169,9 +219,10 @@ final class PickPhotoUITests: XCTestCase {
         let options = XCTMeasureOptions()
         options.iterationCount = 5
 
-        measure(metrics: [XCTOSSignpostMetric.scrollingAndDecelerationMetric]) {
+        // options를 measure에 전달해야 iterationCount가 적용됨
+        measure(options: options, block: {
             collection.swipeDown(velocity: XCUIGestureVelocity(8000))
-        }
+        })
     }
 
     /// L1 + L2 시퀀스 테스트
