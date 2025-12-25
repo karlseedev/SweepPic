@@ -12,11 +12,11 @@
 
 ## 종합 비교표
 
-| 테스트 방식 | 빌드 | hitch (L1) | hitch (L2) | fps | req/s | gray | 비고 |
-|-------------|------|------------|------------|-----|-------|------|------|
-| 수동 극한 (기준) | Release | 15.0~22.8 | 29.8~37.1 | - | 500~580 | 5000~7000 | 참고용 |
-| XCUITest swipe | Release | 0.0 | 6.9~15.9 | 117~119 | 21~30 | 10~11 | 부하 부족 |
-| AutoScrollTester | Debug | 3.5 | - | 119.5 | 272.9 | 3321 | 단일 구간 |
+| 테스트 방식 | 빌드 | velocity | hitch | fps | req/s | 비고 |
+|-------------|------|----------|-------|-----|-------|------|
+| 수동 극한 (기준) | Release | - | 15~37 | - | 500~580 | 참고용 |
+| XCUITest swipe | Release | 8000 | 0~17.1 | 117~119 | 19~26 | 변동 큼 |
+| AutoScrollTester | Debug | 12000 pt/s | 3.5 | 119.5 | 272.9 | 단일 구간 |
 
 > **목표:** 수동 스크롤과 유사한 hitch 패턴 재현
 > **현재:** XCUITest swipe가 hitch 패턴은 유사하나 req/s 부족
@@ -35,9 +35,8 @@ XCUITest의 `swipeDown(velocity:)`로 스크롤 자동화.
 - **req/s가 21~30으로 매우 낮음** (수동 극한 500~580 대비)
 
 **설정:**
-- L1: 3초, velocity 8000
-- pause: 1초
-- L2: 8초, velocity 30000
+- L1~L4: velocity 8000 (동일)
+- 총 11초 스크롤 (3초 + pause 1초 + 8초)
 
 ---
 
@@ -59,41 +58,45 @@ CADisplayLink 기반 contentOffset 직접 조작.
 
 ---
 
-## XCUITest swipe (2025-12-24 00:22)
+## XCUITest swipe (2025-12-25 22:26) - 4회 측정
 
 **조건:** Release 빌드, iPhone 13 Pro, iOS 18, 사진 3465장, XCUITest
 
-### 요약
+### 결과
 
-| 구간 | 시나리오 | 스크롤 시간 |
-|------|----------|-------------|
-| L1 First | 일상 스크롤 (3초) | 3.4초 |
-| L2 Steady (1) | 극한 스크롤 | 5.1초 |
-| L2 Steady (2) | 극한 스크롤 | 3.9초 |
-| L2 Steady (3) | 극한 스크롤 | 3.9초 |
+| 구간 | velocity | hitch | fps | req/s |
+|------|----------|-------|-----|-------|
+| L1 | 8000 | 0.0 ms/s [Good] | 119.7 | 23.4 |
+| L2 | 8000 | 17.1 ms/s [Critical] | 117.7 | 19.2 |
+| L3 | 8000 | 7.1 ms/s [Warning] | 117.5 | 25.7 |
+| L4 | 8000 | 0.0 ms/s [Good] | 119.7 | 26.2 |
 
-### L1 First
+> **관찰:** 동일한 velocity 8000인데 hitch가 0→17.1→7.1→0으로 변동. req/s는 19~26.
 
-| 지표 | 값 | 판정 |
-|------|-----|------|
-| hitch | 0.0 ms/s | Good |
-| fps | 119.7 | 120Hz 정상 |
-| dropped | 0 | - |
-| grayShown | 11 | 매우 적음 |
-| req/s | 21.2 | **부하 부족** |
-| latency avg | 16.6ms | - |
+<!-- 원본 로그: LogsAutoRaw1.md - LOG_ID: XCUITest_22-26_v8000 -->
 
-### L2 Steady (3회 측정)
+---
 
-| 측정 | hitch | fps | req/s | dropped |
-|------|-------|-----|-------|---------|
-| 1회 | 6.9 ms/s [Warning] | 117.3 | 23.1 | 3 |
-| 2회 | 15.9 ms/s [Critical] | 117.9 | 30.1 | 7 |
-| 3회 | 0.0 ms/s [Good] | 119.7 | 30.4 | 0 |
+## XCUITest swipe (2025-12-25 23:32) - 8회 측정
 
-> **관찰:** hitch가 0.0~15.9로 변동이 큼. req/s가 21~30으로 부하 부족.
+**조건:** Release 빌드, iPhone 13 Pro, iOS 18, 사진 3465장, XCUITest
 
-<!-- 원본 로그: LogsAutoRaw1.md - LOG_ID: XCUITest_00-22_swipe -->
+### 결과
+
+| 구간 | velocity | hitch | fps | req/s |
+|------|----------|-------|-----|-------|
+| L1 | 8000 | 0.0 ms/s [Good] | 119.7 | 22.4 |
+| L2 | 8000 | 14.9 ms/s [Critical] | 118.0 | 20.2 |
+| L3 | 8000 | 4.8 ms/s [Good] | 117.4 | 26.0 |
+| L4 | 8000 | 4.8 ms/s [Good] | 117.7 | 26.5 |
+| L5 | 8000 | 17.4 ms/s [Critical] | 117.6 | 26.1 |
+| L6 | 8000 | 14.6 ms/s [Critical] | 118.0 | 26.1 |
+| L7 | 8000 | 14.1 ms/s [Critical] | 118.1 | 26.8 |
+| L8 | 8000 | 0.0 ms/s [Good] | 119.7 | 25.3 |
+
+> **관찰:** hitch 패턴 0→14.9→4.8→4.8→17.4→14.6→14.1→0. Good 3회, Critical 4회. 동일 조건에서 큰 변동.
+
+<!-- 원본 로그: LogsAutoRaw1.md - LOG_ID: XCUITest_23-32_v8000_8x -->
 
 ---
 

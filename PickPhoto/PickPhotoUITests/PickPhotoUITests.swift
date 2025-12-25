@@ -248,11 +248,11 @@ final class PickPhotoUITests: XCTestCase {
         print("=== Pause: 1초 ===")
         Thread.sleep(forTimeInterval: 1.0)
 
-        // === L2: 극한 스크롤 (8초, velocity 30000) ===
-        print("=== L2 시작: 8초, velocity 30000 ===")
+        // === L2~L8: 스크롤 (24초, velocity 8000) ===
+        print("=== L2 시작: 24초, velocity 8000 ===")
         let l2Start = Date()
-        let l2Duration: TimeInterval = 8.0
-        let l2Velocity = XCUIGestureVelocity(30000)
+        let l2Duration: TimeInterval = 24.0  // 8번 측정을 위해 늘림
+        let l2Velocity = XCUIGestureVelocity(8000)
 
         while Date().timeIntervalSince(l2Start) < l2Duration {
             collection.swipeDown(velocity: l2Velocity)  // 오래된 사진으로 스크롤

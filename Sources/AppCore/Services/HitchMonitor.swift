@@ -67,7 +67,10 @@ public struct HitchResult {
     public func formatted() -> String {
         let ratioStr = String(format: "%.1f", hitchTimeRatio)
         let longestMs = String(format: "%.1f", longestHitchMs)
-        return "hitch: \(ratioStr) ms/s [\(appleGrade)], dropped: \(droppedFrames), longest: \(longestHitch) (\(longestMs)ms)"
+        let fps = durationSeconds > 0 ? Double(renderedFrames) / durationSeconds : 0
+        let fpsStr = String(format: "%.1f", fps)
+        let avgFrameMsStr = String(format: "%.2f", avgFrameTimeMs)
+        return "hitch: \(ratioStr) ms/s [\(appleGrade)], fps: \(fpsStr) (avg \(avgFrameMsStr)ms), frames: \(renderedFrames), dropped: \(droppedFrames), longest: \(longestHitch) (\(longestMs)ms)"
     }
 }
 
@@ -140,6 +143,9 @@ public final class HitchMonitor {
 
         // DisplayLink 시작
         displayLink = CADisplayLink(target: self, selector: #selector(displayLinkFired(_:)))
+        if #available(iOS 15.0, *) {
+            displayLink?.preferredFrameRateRange = CAFrameRateRange(minimum: 60, maximum: 120, preferred: 120)
+        }
         displayLink?.add(to: .main, forMode: .common)
     }
 
