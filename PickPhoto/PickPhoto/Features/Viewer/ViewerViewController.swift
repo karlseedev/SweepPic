@@ -852,30 +852,26 @@ final class PhotoPageViewController: UIViewController {
     }
 
     /// 이미지 뷰를 스크롤 뷰 중앙에 정렬
-    /// - P3: contentInset이 실제로 변경될 때만 적용
+    /// - contentInset 대신 frame.origin 조정 (줌 중 contentOffset 보정 불필요)
     private func centerImageView() {
         let scrollViewSize = scrollView.bounds.size
-        let contentSize = scrollView.contentSize
+        var frameToCenter = imageView.frame
 
-        // 줌 상태에서의 실제 이미지 크기
-        let scaledWidth = contentSize.width * scrollView.zoomScale
-        let scaledHeight = contentSize.height * scrollView.zoomScale
-
-        // 중앙 정렬을 위한 inset 계산
-        let horizontalInset = max(0, (scrollViewSize.width - scaledWidth) / 2)
-        let verticalInset = max(0, (scrollViewSize.height - scaledHeight) / 2)
-
-        let newInset = UIEdgeInsets(
-            top: verticalInset,
-            left: horizontalInset,
-            bottom: verticalInset,
-            right: horizontalInset
-        )
-
-        // P3: 값이 실제로 변경될 때만 적용 (불필요한 레이아웃 트리거 방지)
-        if scrollView.contentInset != newInset {
-            scrollView.contentInset = newInset
+        // 수평 중앙 정렬: 이미지가 화면보다 작으면 중앙에 배치
+        if frameToCenter.size.width < scrollViewSize.width {
+            frameToCenter.origin.x = (scrollViewSize.width - frameToCenter.size.width) / 2
+        } else {
+            frameToCenter.origin.x = 0
         }
+
+        // 수직 중앙 정렬: 이미지가 화면보다 작으면 중앙에 배치
+        if frameToCenter.size.height < scrollViewSize.height {
+            frameToCenter.origin.y = (scrollViewSize.height - frameToCenter.size.height) / 2
+        } else {
+            frameToCenter.origin.y = 0
+        }
+
+        imageView.frame = frameToCenter
     }
 
     // MARK: - Double Tap Zoom (T033)
