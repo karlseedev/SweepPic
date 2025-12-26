@@ -225,42 +225,30 @@ final class PickPhotoUITests: XCTestCase {
         })
     }
 
-    /// L1 + L2 시퀀스 테스트
-    /// L1: 3초, velocity 8000 (일상 스크롤)
-    /// pause: 1초
-    /// L2: 8초, velocity 30000 (극한 스크롤)
+    /// L1~L10 시퀀스 테스트
+    /// velocity 1000 ~ 10000 (1000씩 증가)
     @MainActor
     func testL1L2Sequence() throws {
         let collection = app.collectionViews.firstMatch
+        let startTime = Date()
 
-        // === L1: 일상 스크롤 (3초, velocity 8000) ===
-        print("=== L1 시작: 3초, velocity 8000 ===")
-        let l1Start = Date()
-        let l1Duration: TimeInterval = 3.0
-        let l1Velocity = XCUIGestureVelocity(8000)
+        // velocity 1000, 2000, ..., 10000 (10회)
+        let velocities = [1000, 2000, 3000, 4000, 5000, 6000, 7000, 8000, 9000, 10000]
 
-        while Date().timeIntervalSince(l1Start) < l1Duration {
-            collection.swipeDown(velocity: l1Velocity)  // 오래된 사진으로 스크롤
+        for (index, velocity) in velocities.enumerated() {
+            let segmentStart = Date()
+            let segmentDuration: TimeInterval = 3.5  // 각 구간 3.5초 (측정 구간 ~3초 + 여유)
+
+            print("=== L\(index + 1) 시작: velocity \(velocity) ===")
+
+            while Date().timeIntervalSince(segmentStart) < segmentDuration {
+                collection.swipeDown(velocity: XCUIGestureVelocity(CGFloat(velocity)))
+            }
+
+            print("=== L\(index + 1) 완료: \(Date().timeIntervalSince(segmentStart))초 ===")
         }
-        print("=== L1 완료: \(Date().timeIntervalSince(l1Start))초 ===")
 
-        // === Pause: 1초 ===
-        print("=== Pause: 1초 ===")
-        Thread.sleep(forTimeInterval: 1.0)
-
-        // === L2~L8: 스크롤 (24초, velocity 8000) ===
-        print("=== L2 시작: 24초, velocity 8000 ===")
-        let l2Start = Date()
-        let l2Duration: TimeInterval = 24.0  // 8번 측정을 위해 늘림
-        let l2Velocity = XCUIGestureVelocity(8000)
-
-        while Date().timeIntervalSince(l2Start) < l2Duration {
-            collection.swipeDown(velocity: l2Velocity)  // 오래된 사진으로 스크롤
-        }
-        print("=== L2 완료: \(Date().timeIntervalSince(l2Start))초 ===")
-
-        // 총 소요 시간
-        let totalElapsed = Date().timeIntervalSince(l1Start)
+        let totalElapsed = Date().timeIntervalSince(startTime)
         print("=== 전체 완료: \(totalElapsed)초 ===")
     }
 
