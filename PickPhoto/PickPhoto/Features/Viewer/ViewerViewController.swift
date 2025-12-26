@@ -696,9 +696,6 @@ final class PhotoPageViewController: UIViewController {
     /// - scrollViewWillBeginZooming에서 true, scrollViewDidEndZooming에서 false
     private var isZoomInteractionActive = false
 
-    /// 디버그 로그 활성화
-    private let debugZoom = true
-
     // MARK: - Initialization
 
     init(asset: PHAsset, index: Int) {
@@ -725,7 +722,6 @@ final class PhotoPageViewController: UIViewController {
         // 줌 인터랙션 중에는 레이아웃 갱신을 보류 (줌 완료 후 수행)
         // isZoomInteractionActive는 isZooming보다 먼저 true가 되어 첫 프레임부터 보호
         if isZoomInteractionActive {
-            if debugZoom { print("[ZOOM] viewDidLayoutSubviews - 보류 (isZoomInteractionActive=true)") }
             needsLayoutUpdateAfterZoom = true
         } else {
             requestImageForCurrentBoundsIfNeeded()
@@ -786,7 +782,6 @@ final class PhotoPageViewController: UIViewController {
 
             // 줌 인터랙션 중에는 레이아웃 업데이트 보류 (줌 완료 후 수행)
             if self.isZoomInteractionActive {
-                if self.debugZoom { print("[ZOOM] 이미지 콜백 - 보류 (isZoomInteractionActive=true, isDegraded=\(isDegraded))") }
                 self.needsLayoutUpdateAfterZoom = true
                 return
             }
@@ -865,33 +860,27 @@ final class PhotoPageViewController: UIViewController {
         centerImageView()
     }
 
-    /// 이미지 뷰를 스크롤 뷰 중앙에 정렬 (contentInset 기반 + offset 보정)
-    /// - imageView.frame.origin은 항상 .zero 유지
-    /// - contentInset으로만 중앙 정렬
-    /// - inset 변경 시 contentOffset 보정하여 핀치 앵커 유지
+    /// 이미지 뷰를 스크롤 뷰 중앙에 정렬
+    /// - contentInset 대신 frame.origin 조정 (줌 중 contentOffset 보정 불필요)
     private func centerImageView() {
-        let bounds = scrollView.bounds.size
-        let content = scrollView.contentSize
+        let scrollViewSize = scrollView.bounds.size
+        var frameToCenter = imageView.frame
 
-        // 줌된 콘텐츠 크기 계산
-        let scaledWidth = content.width * scrollView.zoomScale
-        let scaledHeight = content.height * scrollView.zoomScale
+        // 수평 중앙 정렬: 이미지가 화면보다 작으면 중앙에 배치
+        if frameToCenter.size.width < scrollViewSize.width {
+            frameToCenter.origin.x = (scrollViewSize.width - frameToCenter.size.width) / 2
+        } else {
+            frameToCenter.origin.x = 0
+        }
 
-        // 중앙 정렬을 위한 inset 계산
-        let insetX = max((bounds.width - scaledWidth) * 0.5, 0)
-        let insetY = max((bounds.height - scaledHeight) * 0.5, 0)
-        let newInset = UIEdgeInsets(top: insetY, left: insetX, bottom: insetY, right: insetX)
+        // 수직 중앙 정렬: 이미지가 화면보다 작으면 중앙에 배치
+        if frameToCenter.size.height < scrollViewSize.height {
+            frameToCenter.origin.y = (scrollViewSize.height - frameToCenter.size.height) / 2
+        } else {
+            frameToCenter.origin.y = 0
+        }
 
-        // 변경이 없으면 스킵
-        guard scrollView.contentInset != newInset else { return }
-
-        // offset 보정 (핀치 앵커 유지)
-        let deltaX = newInset.left - scrollView.contentInset.left
-        let deltaY = newInset.top - scrollView.contentInset.top
-
-        scrollView.contentInset = newInset
-        scrollView.contentOffset.x -= deltaX
-        scrollView.contentOffset.y -= deltaY
+        imageView.frame = frameToCenter
     }
 
     // MARK: - Double Tap Zoom (T033)
@@ -928,25 +917,18 @@ extension PhotoPageViewController: UIScrollViewDelegate {
 
     /// 줌 시작 직전 - 플래그 설정 (isZooming보다 먼저 호출됨)
     func scrollViewWillBeginZooming(_ scrollView: UIScrollView, with view: UIView?) {
-        if debugZoom { print("[ZOOM] WillBeginZooming - scale=\(scrollView.zoomScale)") }
         isZoomInteractionActive = true
     }
 
     func scrollViewDidZoom(_ scrollView: UIScrollView) {
-        // 첫 몇 프레임만 로그 (너무 많으면 생략)
-        if debugZoom && scrollView.zoomScale < 1.1 {
-            print("[ZOOM] DidZoom - scale=\(String(format: "%.3f", scrollView.zoomScale)), origin=\(imageView.frame.origin)")
-        }
         centerImageView()
     }
 
     /// 줌 완료 시 - 플래그 해제 및 보류된 레이아웃 갱신 수행
     func scrollViewDidEndZooming(_ scrollView: UIScrollView, with view: UIView?, atScale scale: CGFloat) {
-        if debugZoom { print("[ZOOM] DidEndZooming - scale=\(scale), needsUpdate=\(needsLayoutUpdateAfterZoom)") }
         isZoomInteractionActive = false
 
         if needsLayoutUpdateAfterZoom {
-            if debugZoom { print("[ZOOM] 보류된 레이아웃 갱신 수행") }
             requestImageForCurrentBoundsIfNeeded()
             updateImageLayoutPreservingZoom()
             needsLayoutUpdateAfterZoom = false
