@@ -692,6 +692,10 @@ final class PhotoPageViewController: UIViewController {
     /// P4: 줌 동작 중 보류된 레이아웃 갱신 필요 여부
     private var needsLayoutUpdateAfterZoom = false
 
+    /// 줌 인터랙션 활성화 플래그 (isZooming보다 먼저 true가 됨)
+    /// - scrollViewWillBeginZooming에서 true, scrollViewDidEndZooming에서 false
+    private var isZoomInteractionActive = false
+
     // MARK: - Initialization
 
     init(asset: PHAsset, index: Int) {
@@ -715,8 +719,9 @@ final class PhotoPageViewController: UIViewController {
         super.viewDidLayoutSubviews()
         scrollView.frame = view.bounds
 
-        // P4: 줌 동작 중에는 레이아웃 갱신을 보류하고, 줌 완료 후 수행
-        if scrollView.isZooming || scrollView.isZoomBouncing {
+        // 줌 인터랙션 중에는 레이아웃 갱신을 보류 (줌 완료 후 수행)
+        // isZoomInteractionActive는 isZooming보다 먼저 true가 되어 첫 프레임부터 보호
+        if isZoomInteractionActive {
             needsLayoutUpdateAfterZoom = true
         } else {
             requestImageForCurrentBoundsIfNeeded()
@@ -775,6 +780,12 @@ final class PhotoPageViewController: UIViewController {
             self.imageView.image = image
             self.imageSize = image.size  // 항상 갱신 (High fix)
 
+            // 줌 인터랙션 중에는 레이아웃 업데이트 보류 (줌 완료 후 수행)
+            if self.isZoomInteractionActive {
+                self.needsLayoutUpdateAfterZoom = true
+                return
+            }
+
             if isDegraded {
                 // 저해상도: 초기 레이아웃만 적용 (아직 안 잡힌 경우)
                 if !self.hasAppliedInitialLayout {
@@ -819,14 +830,12 @@ final class PhotoPageViewController: UIViewController {
 
     /// 이미지 레이아웃 업데이트 (줌 보존 버전)
     /// - 이미지 교체 시 현재 줌 스케일을 유지하면서 레이아웃만 업데이트
+    /// - zoomScale 재설정 금지 (줌 중 끊김 방지)
     private func updateImageLayoutPreservingZoom() {
         guard imageSize.width > 0 && imageSize.height > 0 else { return }
 
         let scrollViewSize = scrollView.bounds.size
         guard scrollViewSize.width > 0 && scrollViewSize.height > 0 else { return }
-
-        // 현재 줌 스케일 보존
-        let currentZoom = scrollView.zoomScale
 
         // aspect fit 크기 계산
         let widthRatio = scrollViewSize.width / imageSize.width
@@ -842,8 +851,8 @@ final class PhotoPageViewController: UIViewController {
         // 스크롤 뷰 콘텐츠 크기 설정
         scrollView.contentSize = CGSize(width: fitWidth, height: fitHeight)
 
-        // 줌 스케일 재적용 (contentSize 변경 후 정합성 유지)
-        scrollView.zoomScale = currentZoom
+        // zoomScale 재설정 제거 - 줌 중 끊김의 주요 원인
+        // scrollView.zoomScale = currentZoom
 
         // 플래그 갱신 (회전 등에서 updateImageLayout 호출 시 리셋 방지)
         hasAppliedInitialLayout = true
@@ -906,12 +915,19 @@ extension PhotoPageViewController: UIScrollViewDelegate {
         return imageView
     }
 
+    /// 줌 시작 직전 - 플래그 설정 (isZooming보다 먼저 호출됨)
+    func scrollViewWillBeginZooming(_ scrollView: UIScrollView, with view: UIView?) {
+        isZoomInteractionActive = true
+    }
+
     func scrollViewDidZoom(_ scrollView: UIScrollView) {
         centerImageView()
     }
 
-    /// P4: 줌 완료 시 보류된 레이아웃 갱신 수행
+    /// 줌 완료 시 - 플래그 해제 및 보류된 레이아웃 갱신 수행
     func scrollViewDidEndZooming(_ scrollView: UIScrollView, with view: UIView?, atScale scale: CGFloat) {
+        isZoomInteractionActive = false
+
         if needsLayoutUpdateAfterZoom {
             requestImageForCurrentBoundsIfNeeded()
             updateImageLayoutPreservingZoom()
