@@ -686,6 +686,12 @@ final class PhotoPageViewController: UIViewController {
     /// 마지막 요청 targetSize (중복 요청 방지)
     private var lastRequestedTargetSize: CGSize = .zero
 
+    /// P0: 초기 레이아웃 적용 여부 (1회만 zoomScale = 1.0 수행)
+    private var hasAppliedInitialLayout = false
+
+    /// P4: 줌 동작 중 보류된 레이아웃 갱신 필요 여부
+    private var needsLayoutUpdateAfterZoom = false
+
     // MARK: - Initialization
 
     init(asset: PHAsset, index: Int) {
@@ -708,8 +714,14 @@ final class PhotoPageViewController: UIViewController {
     override func viewDidLayoutSubviews() {
         super.viewDidLayoutSubviews()
         scrollView.frame = view.bounds
-        requestImageForCurrentBoundsIfNeeded()
-        updateImageLayout()
+
+        // P4: 줌 동작 중에는 레이아웃 갱신을 보류하고, 줌 완료 후 수행
+        if scrollView.isZooming || scrollView.isZoomBouncing {
+            needsLayoutUpdateAfterZoom = true
+        } else {
+            requestImageForCurrentBoundsIfNeeded()
+            updateImageLayout()
+        }
     }
 
     deinit {
@@ -757,15 +769,22 @@ final class PhotoPageViewController: UIViewController {
             for: asset,
             targetSize: targetSize,
             contentMode: .aspectFit
-        ) { [weak self] image, _ in
+        ) { [weak self] image, isDegraded in
             guard let self = self, let image = image else { return }
+
+            // P1/P2: isDegraded일 때는 image만 교체 (줌 보존)
+            // isDegraded == false일 때만 레이아웃 업데이트 (고해상도 확정 시)
             self.imageView.image = image
-            self.imageSize = image.size
-            self.updateImageLayout()
+
+            if !isDegraded {
+                self.imageSize = image.size
+                self.updateImageLayoutPreservingZoom()
+            }
         }
     }
 
     /// 이미지 레이아웃 업데이트 (frame 기반)
+    /// - 초기 1회에만 zoomScale = 1.0 수행 (P0)
     private func updateImageLayout() {
         guard imageSize.width > 0 && imageSize.height > 0 else { return }
 
@@ -786,12 +805,42 @@ final class PhotoPageViewController: UIViewController {
         // 스크롤 뷰 콘텐츠 크기 설정
         scrollView.contentSize = CGSize(width: fitWidth, height: fitHeight)
 
-        // 줌 스케일 리셋 및 중앙 정렬
-        scrollView.zoomScale = 1.0
+        // P0: 초기 1회에만 줌 스케일 리셋
+        if !hasAppliedInitialLayout {
+            scrollView.zoomScale = 1.0
+            hasAppliedInitialLayout = true
+        }
+        centerImageView()
+    }
+
+    /// 이미지 레이아웃 업데이트 (줌 보존 버전)
+    /// - 이미지 교체 시 현재 줌 스케일을 유지하면서 레이아웃만 업데이트
+    private func updateImageLayoutPreservingZoom() {
+        guard imageSize.width > 0 && imageSize.height > 0 else { return }
+
+        let scrollViewSize = scrollView.bounds.size
+        guard scrollViewSize.width > 0 && scrollViewSize.height > 0 else { return }
+
+        // aspect fit 크기 계산
+        let widthRatio = scrollViewSize.width / imageSize.width
+        let heightRatio = scrollViewSize.height / imageSize.height
+        let ratio = min(widthRatio, heightRatio)
+
+        let fitWidth = imageSize.width * ratio
+        let fitHeight = imageSize.height * ratio
+
+        // 이미지 뷰 크기 설정
+        imageView.frame = CGRect(x: 0, y: 0, width: fitWidth, height: fitHeight)
+
+        // 스크롤 뷰 콘텐츠 크기 설정
+        scrollView.contentSize = CGSize(width: fitWidth, height: fitHeight)
+
+        // zoomScale 유지 (리셋하지 않음)
         centerImageView()
     }
 
     /// 이미지 뷰를 스크롤 뷰 중앙에 정렬
+    /// - P3: contentInset이 실제로 변경될 때만 적용
     private func centerImageView() {
         let scrollViewSize = scrollView.bounds.size
         let contentSize = scrollView.contentSize
@@ -804,12 +853,17 @@ final class PhotoPageViewController: UIViewController {
         let horizontalInset = max(0, (scrollViewSize.width - scaledWidth) / 2)
         let verticalInset = max(0, (scrollViewSize.height - scaledHeight) / 2)
 
-        scrollView.contentInset = UIEdgeInsets(
+        let newInset = UIEdgeInsets(
             top: verticalInset,
             left: horizontalInset,
             bottom: verticalInset,
             right: horizontalInset
         )
+
+        // P3: 값이 실제로 변경될 때만 적용 (불필요한 레이아웃 트리거 방지)
+        if scrollView.contentInset != newInset {
+            scrollView.contentInset = newInset
+        }
     }
 
     // MARK: - Double Tap Zoom (T033)
@@ -843,5 +897,14 @@ extension PhotoPageViewController: UIScrollViewDelegate {
 
     func scrollViewDidZoom(_ scrollView: UIScrollView) {
         centerImageView()
+    }
+
+    /// P4: 줌 완료 시 보류된 레이아웃 갱신 수행
+    func scrollViewDidEndZooming(_ scrollView: UIScrollView, with view: UIView?, atScale scale: CGFloat) {
+        if needsLayoutUpdateAfterZoom {
+            requestImageForCurrentBoundsIfNeeded()
+            updateImageLayoutPreservingZoom()
+            needsLayoutUpdateAfterZoom = false
+        }
     }
 }
