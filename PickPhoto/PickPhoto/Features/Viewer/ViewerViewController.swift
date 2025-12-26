@@ -696,6 +696,9 @@ final class PhotoPageViewController: UIViewController {
     /// - scrollViewWillBeginZooming에서 true, scrollViewDidEndZooming에서 false
     private var isZoomInteractionActive = false
 
+    /// 디버그 로그 활성화
+    private let debugZoom = true
+
     // MARK: - Initialization
 
     init(asset: PHAsset, index: Int) {
@@ -917,18 +920,25 @@ extension PhotoPageViewController: UIScrollViewDelegate {
 
     /// 줌 시작 직전 - 플래그 설정 (isZooming보다 먼저 호출됨)
     func scrollViewWillBeginZooming(_ scrollView: UIScrollView, with view: UIView?) {
+        if debugZoom { print("[ZOOM] WillBegin - scale=\(String(format: "%.3f", scrollView.zoomScale)), origin=\(imageView.frame.origin)") }
         isZoomInteractionActive = true
     }
 
     func scrollViewDidZoom(_ scrollView: UIScrollView) {
+        // 첫 몇 프레임만 로그
+        if debugZoom && scrollView.zoomScale < 1.15 {
+            print("[ZOOM] DidZoom - scale=\(String(format: "%.3f", scrollView.zoomScale)), origin=\(imageView.frame.origin)")
+        }
         centerImageView()
     }
 
     /// 줌 완료 시 - 플래그 해제 및 보류된 레이아웃 갱신 수행
     func scrollViewDidEndZooming(_ scrollView: UIScrollView, with view: UIView?, atScale scale: CGFloat) {
+        if debugZoom { print("[ZOOM] DidEnd - scale=\(String(format: "%.3f", scale)), origin=\(imageView.frame.origin), needsUpdate=\(needsLayoutUpdateAfterZoom)") }
         isZoomInteractionActive = false
 
         if needsLayoutUpdateAfterZoom {
+            if debugZoom { print("[ZOOM] 보류된 갱신 수행") }
             requestImageForCurrentBoundsIfNeeded()
             updateImageLayoutPreservingZoom()
             needsLayoutUpdateAfterZoom = false
