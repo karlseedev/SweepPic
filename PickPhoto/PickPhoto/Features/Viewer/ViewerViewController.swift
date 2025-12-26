@@ -659,7 +659,8 @@ final class PhotoPageViewController: UIViewController {
         sv.showsHorizontalScrollIndicator = false
         sv.showsVerticalScrollIndicator = false
         sv.contentInsetAdjustmentBehavior = .never
-        sv.bouncesZoom = true
+        // 줌 스케일이 min/max를 넘으며 튀는 현상 방지
+        sv.bouncesZoom = false
         return sv
     }()
 
@@ -824,11 +825,12 @@ final class PhotoPageViewController: UIViewController {
         scrollView.contentSize = CGSize(width: fitWidth, height: fitHeight)
 
         // P0: 초기 1회에만 줌 스케일 리셋
+        let preserveOffset = hasAppliedInitialLayout
         if !hasAppliedInitialLayout {
             scrollView.zoomScale = 1.0
-            hasAppliedInitialLayout = true
         }
-        centerImageView()
+        hasAppliedInitialLayout = true
+        updateContentInsetForCentering(preserveOffset: preserveOffset)
     }
 
     /// 이미지 레이아웃 업데이트 (줌 보존 버전)
@@ -858,32 +860,38 @@ final class PhotoPageViewController: UIViewController {
         // scrollView.zoomScale = currentZoom
 
         // 플래그 갱신 (회전 등에서 updateImageLayout 호출 시 리셋 방지)
+        let preserveOffset = hasAppliedInitialLayout
         hasAppliedInitialLayout = true
-
-        centerImageView()
+        updateContentInsetForCentering(preserveOffset: preserveOffset)
     }
 
-    /// 이미지 뷰를 스크롤 뷰 중앙에 정렬
-    /// - contentInset 대신 frame.origin 조정 (줌 중 contentOffset 보정 불필요)
-    private func centerImageView() {
+    /// contentInset으로 중앙 정렬하고, 필요 시 contentOffset 보정
+    private func updateContentInsetForCentering(preserveOffset: Bool) {
         let scrollViewSize = scrollView.bounds.size
-        var frameToCenter = imageView.frame
+        let contentSize = imageView.frame.size
 
-        // 수평 중앙 정렬: 이미지가 화면보다 작으면 중앙에 배치
-        if frameToCenter.size.width < scrollViewSize.width {
-            frameToCenter.origin.x = (scrollViewSize.width - frameToCenter.size.width) / 2
+        let horizontalInset = max(0, (scrollViewSize.width - contentSize.width) / 2)
+        let verticalInset = max(0, (scrollViewSize.height - contentSize.height) / 2)
+        let newInset = UIEdgeInsets(
+            top: verticalInset,
+            left: horizontalInset,
+            bottom: verticalInset,
+            right: horizontalInset
+        )
+
+        let oldInset = scrollView.contentInset
+        guard oldInset != newInset else { return }
+
+        if preserveOffset {
+            let offset = scrollView.contentOffset
+            let deltaX = newInset.left - oldInset.left
+            let deltaY = newInset.top - oldInset.top
+            scrollView.contentInset = newInset
+            scrollView.contentOffset = CGPoint(x: offset.x - deltaX, y: offset.y - deltaY)
         } else {
-            frameToCenter.origin.x = 0
+            scrollView.contentInset = newInset
+            scrollView.contentOffset = CGPoint(x: -newInset.left, y: -newInset.top)
         }
-
-        // 수직 중앙 정렬: 이미지가 화면보다 작으면 중앙에 배치
-        if frameToCenter.size.height < scrollViewSize.height {
-            frameToCenter.origin.y = (scrollViewSize.height - frameToCenter.size.height) / 2
-        } else {
-            frameToCenter.origin.y = 0
-        }
-
-        imageView.frame = frameToCenter
     }
 
     // MARK: - Double Tap Zoom (T033)
@@ -929,7 +937,7 @@ extension PhotoPageViewController: UIScrollViewDelegate {
         if debugZoom && scrollView.zoomScale < 1.15 {
             print("[ZOOM] DidZoom - scale=\(String(format: "%.3f", scrollView.zoomScale)), origin=\(imageView.frame.origin)")
         }
-        centerImageView()
+        updateContentInsetForCentering(preserveOffset: true)
     }
 
     /// 줌 완료 시 - 플래그 해제 및 보류된 레이아웃 갱신 수행
