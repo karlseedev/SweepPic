@@ -775,6 +775,12 @@ final class PhotoPageViewController: UIViewController {
             self.imageView.image = image
             self.imageSize = image.size  // 항상 갱신 (High fix)
 
+            // 줌 중에는 레이아웃 업데이트 보류 (줌 완료 후 수행)
+            if self.scrollView.isZooming || self.scrollView.isZoomBouncing {
+                self.needsLayoutUpdateAfterZoom = true
+                return
+            }
+
             if isDegraded {
                 // 저해상도: 초기 레이아웃만 적용 (아직 안 잡힌 경우)
                 if !self.hasAppliedInitialLayout {
@@ -907,11 +913,16 @@ extension PhotoPageViewController: UIScrollViewDelegate {
     }
 
     func scrollViewDidZoom(_ scrollView: UIScrollView) {
-        centerImageView()
+        // 줌 중에는 centerImageView() 호출 안 함 (임계값 스냅 방지)
+        // 줌 완료 후 scrollViewDidEndZooming에서 처리
     }
 
-    /// P4: 줌 완료 시 보류된 레이아웃 갱신 수행
+    /// 줌 완료 시 중앙 정렬 및 보류된 레이아웃 갱신 수행
     func scrollViewDidEndZooming(_ scrollView: UIScrollView, with view: UIView?, atScale scale: CGFloat) {
+        // 줌 완료 후 중앙 정렬 (항상)
+        centerImageView()
+
+        // 보류된 레이아웃 갱신이 있으면 수행
         if needsLayoutUpdateAfterZoom {
             requestImageForCurrentBoundsIfNeeded()
             updateImageLayoutPreservingZoom()
