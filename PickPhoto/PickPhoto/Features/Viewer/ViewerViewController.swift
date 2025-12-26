@@ -772,12 +772,16 @@ final class PhotoPageViewController: UIViewController {
         ) { [weak self] image, isDegraded in
             guard let self = self, let image = image else { return }
 
-            // P1/P2: isDegraded일 때는 image만 교체 (줌 보존)
-            // isDegraded == false일 때만 레이아웃 업데이트 (고해상도 확정 시)
             self.imageView.image = image
+            self.imageSize = image.size  // 항상 갱신 (High fix)
 
-            if !isDegraded {
-                self.imageSize = image.size
+            if isDegraded {
+                // 저해상도: 초기 레이아웃만 적용 (아직 안 잡힌 경우)
+                if !self.hasAppliedInitialLayout {
+                    self.updateImageLayout()
+                }
+            } else {
+                // 고해상도 확정: 줌 보존하며 레이아웃 업데이트
                 self.updateImageLayoutPreservingZoom()
             }
         }
@@ -821,6 +825,9 @@ final class PhotoPageViewController: UIViewController {
         let scrollViewSize = scrollView.bounds.size
         guard scrollViewSize.width > 0 && scrollViewSize.height > 0 else { return }
 
+        // 현재 줌 스케일 보존
+        let currentZoom = scrollView.zoomScale
+
         // aspect fit 크기 계산
         let widthRatio = scrollViewSize.width / imageSize.width
         let heightRatio = scrollViewSize.height / imageSize.height
@@ -835,7 +842,12 @@ final class PhotoPageViewController: UIViewController {
         // 스크롤 뷰 콘텐츠 크기 설정
         scrollView.contentSize = CGSize(width: fitWidth, height: fitHeight)
 
-        // zoomScale 유지 (리셋하지 않음)
+        // 줌 스케일 재적용 (contentSize 변경 후 정합성 유지)
+        scrollView.zoomScale = currentZoom
+
+        // 플래그 갱신 (회전 등에서 updateImageLayout 호출 시 리셋 방지)
+        hasAppliedInitialLayout = true
+
         centerImageView()
     }
 
@@ -870,6 +882,9 @@ final class PhotoPageViewController: UIViewController {
 
     /// 더블탭 줌 처리
     @objc private func handleDoubleTap(_ gesture: UITapGestureRecognizer) {
+        // 더블탭 시 보류된 레이아웃 갱신 해제 (edge case 방지)
+        needsLayoutUpdateAfterZoom = false
+
         if scrollView.zoomScale > Self.minZoomScale {
             // 줌 아웃
             scrollView.setZoomScale(Self.minZoomScale, animated: true)
