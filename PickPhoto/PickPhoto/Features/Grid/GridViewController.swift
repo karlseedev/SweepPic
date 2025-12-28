@@ -404,12 +404,12 @@ final class GridViewController: UIViewController {
     /// UI 설정
     private func setupUI() {
         view.backgroundColor = .black
-        // ⚠️ 사진보관함 명칭 변경 시 동시 수정 필요:
-        // - TabBarController.swift: tabBarItem.title
-        // - GridViewController.swift: title (여기), setTitle()
+        // ⚠️ 상단 타이틀 명칭 변경 시 동시 수정 필요:
+        // - GridViewController.swift: navigationItem.title (여기), setTitle()
         // - FloatingOverlayContainer.swift: titleBar.title
         // - FloatingTitleBar.swift: title 기본값
-        title = "사진보관함"
+        // 주의: title 대신 navigationItem.title 사용 (tabBarItem.title 덮어쓰기 방지)
+        navigationItem.title = "사진보관함"
 
         // 컬렉션 뷰
         view.addSubview(collectionView)

@@ -72,7 +72,7 @@ class TabBarController: UITabBarController {
         let photosVC = GridViewController()
         let photosNavController = UINavigationController(rootViewController: photosVC)
         photosNavController.tabBarItem = UITabBarItem(
-            title: "사진보관함",
+            title: "보관함",
             image: UIImage(systemName: "photo.on.rectangle"),
             selectedImage: UIImage(systemName: "photo.on.rectangle.fill")
         )
@@ -99,7 +99,7 @@ class TabBarController: UITabBarController {
         let trashVC = TrashAlbumViewController()
         let trashNavController = UINavigationController(rootViewController: trashVC)
         trashNavController.tabBarItem = UITabBarItem(
-            title: "PickPhoto 휴지통",
+            title: "휴지통",
             image: UIImage(systemName: "trash"),
             selectedImage: UIImage(systemName: "trash.fill")
         )

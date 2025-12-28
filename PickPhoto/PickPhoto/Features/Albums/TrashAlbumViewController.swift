@@ -199,10 +199,10 @@ final class TrashAlbumViewController: UIViewController {
 
     private func setupUI() {
         view.backgroundColor = .black
-        // ⚠️ 휴지통 명칭 변경 시 동시 수정 필요:
-        // - TabBarController.swift: tabBarItem.title
-        // - TrashAlbumViewController.swift: title (여기), setTitle()
-        title = "PickPhoto 휴지통"
+        // ⚠️ 상단 타이틀 명칭 변경 시 동시 수정 필요:
+        // - TrashAlbumViewController.swift: navigationItem.title (여기), setTitle()
+        // 주의: title 대신 navigationItem.title 사용 (tabBarItem.title 덮어쓰기 방지)
+        navigationItem.title = "PickPhoto 휴지통"
 
         // 컬렉션 뷰
         view.addSubview(collectionView)
