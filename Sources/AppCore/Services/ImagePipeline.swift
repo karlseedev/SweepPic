@@ -6,7 +6,9 @@
 // - 레이스 안전한 Cancellable 토큰
 // - 메인 스레드 PhotoKit 호출 감지 (가드레일)
 
+#if canImport(UIKit)
 import UIKit
+#endif
 import Photos
 
 // MARK: - Cancellable Protocol

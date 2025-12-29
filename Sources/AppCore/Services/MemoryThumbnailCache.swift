@@ -6,7 +6,9 @@
 // - cellForItemAt에서 동기 조회로 즉시 이미지 할당
 // - 모든 키는 픽셀(px) 단위로 통일
 
+#if canImport(UIKit)
 import UIKit
+#endif
 
 // MARK: - MemoryThumbnailCache
 

@@ -10,7 +10,9 @@
 //
 // 참고: WWDC20 "Eliminate animation hitches with XCTest"
 
+#if canImport(UIKit)
 import UIKit
+#endif
 import QuartzCore
 
 // MARK: - HitchResult

@@ -8,7 +8,9 @@
 // - LRU: 접근 시 touch (수정일 갱신)
 // - 구캐시 회수 정책: LRU trim으로 자연 회수
 
+#if canImport(UIKit)
 import UIKit
+#endif
 import CryptoKit
 
 // MARK: - ThumbnailCache

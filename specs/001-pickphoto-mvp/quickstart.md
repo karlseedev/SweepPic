@@ -37,12 +37,14 @@ cd /Users/karl/Project/Photos/iOS
 
 ### 2. Build Swift Package
 
-```bash
-# AppCore 패키지 빌드
-swift build
+> **참고**: AppCore 패키지는 iOS 전용(UIKit, PhotoKit 사용)이므로 `swift build` 대신 Xcode 빌드를 권장합니다.
 
-# 테스트 실행
-swift test
+```bash
+# Xcode 빌드 (권장)
+xcodebuild -project PickPhoto/PickPhoto.xcodeproj -scheme PickPhoto -destination 'platform=iOS Simulator,name=iPhone 15' build
+
+# 또는 iOS 시뮬레이터 SDK로 패키지 빌드
+xcodebuild -scheme AppCore -destination 'generic/platform=iOS Simulator' build
 ```
 
 ### 3. Open in Xcode
@@ -128,12 +130,13 @@ open test/Spike1/Spike1Test/Spike1Test.xcodeproj
 ### Unit Tests
 
 ```bash
-# AppCore 패키지 테스트
-swift test
-
-# Xcode에서 테스트
+# Xcode에서 테스트 (권장)
 xcodebuild test -project PickPhoto/PickPhoto.xcodeproj \
     -scheme PickPhoto \
+    -destination 'platform=iOS Simulator,name=iPhone 15'
+
+# 또는 iOS 시뮬레이터 SDK로 패키지 테스트
+xcodebuild test -scheme AppCore \
     -destination 'platform=iOS Simulator,name=iPhone 15'
 ```
 
