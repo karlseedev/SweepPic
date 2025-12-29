@@ -158,6 +158,9 @@ class TabBarController: UITabBarController {
             // 네비바 표시 + Select 버튼 추가
             setupNavigationBarForSystemMode()
 
+            // iOS 26+: 탭바 위에 삭제하기 버튼 (UITabAccessory)
+            setupTabAccessoryForSystemMode()
+
             print("[TabBarController] System bars visible (iOS 26+)")
         }
     }
@@ -193,6 +196,43 @@ class TabBarController: UITabBarController {
 
         // 틴트 색상 (시스템 블루)
         tabBar.tintColor = .systemBlue
+    }
+
+    /// iOS 26+ 탭바 위에 삭제하기 버튼 배치 (UITabAccessory)
+    private func setupTabAccessoryForSystemMode() {
+        guard !useFloatingUI else { return }
+
+        if #available(iOS 26.0, *) {
+            // 삭제하기 버튼 컨테이너
+            let buttonContainer = UIView()
+            buttonContainer.translatesAutoresizingMaskIntoConstraints = false
+
+            // 삭제하기 버튼
+            var config = UIButton.Configuration.plain()
+            config.image = UIImage(systemName: "trash.slash.fill")
+            config.baseForegroundColor = .systemRed
+            config.preferredSymbolConfigurationForImage = UIImage.SymbolConfiguration(pointSize: 20, weight: .medium)
+
+            let emptyTrashButton = UIButton(configuration: config)
+            emptyTrashButton.accessibilityLabel = "삭제하기"
+            emptyTrashButton.translatesAutoresizingMaskIntoConstraints = false
+
+            buttonContainer.addSubview(emptyTrashButton)
+
+            NSLayoutConstraint.activate([
+                buttonContainer.heightAnchor.constraint(equalToConstant: 56),
+                emptyTrashButton.centerXAnchor.constraint(equalTo: buttonContainer.centerXAnchor),
+                emptyTrashButton.centerYAnchor.constraint(equalTo: buttonContainer.centerYAnchor),
+                emptyTrashButton.widthAnchor.constraint(equalToConstant: 56),
+                emptyTrashButton.heightAnchor.constraint(equalToConstant: 56),
+            ])
+
+            // UITabAccessory 생성 및 설정
+            let accessory = UITabAccessory(contentView: buttonContainer)
+            self.bottomAccessory = accessory
+
+            print("[TabBarController] UITabAccessory (삭제하기 버튼) added")
+        }
     }
 
     // MARK: - Actions
