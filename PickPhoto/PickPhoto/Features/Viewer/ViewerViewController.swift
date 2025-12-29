@@ -781,6 +781,8 @@ final class PhotoPageViewController: UIViewController {
         ) { [weak self] image, isDegraded in
             guard let self = self, let image = image else { return }
 
+            print("[Viewer] isDegraded=\(isDegraded), size=\(image.size), target=\(targetSize)")
+
             self.imageView.image = image
             self.imageSize = image.size  // 항상 갱신 (High fix)
 
