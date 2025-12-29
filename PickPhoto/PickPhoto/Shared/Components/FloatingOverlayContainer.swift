@@ -264,6 +264,22 @@ final class FloatingOverlayContainer: UIView {
             isHidden = hidden
         }
     }
+
+    /// 타이틀바만 숨김 (iOS 26+에서 시스템 네비바 사용 시)
+    /// 하단 탭바만 플로팅으로 표시
+    func hideTitleBar() {
+        titleBar.isHidden = true
+        titleBarHeightConstraint?.constant = 0
+        print("[FloatingOverlayContainer] TitleBar hidden (using system navigation bar)")
+    }
+
+    /// 타이틀바 표시
+    func showTitleBar() {
+        titleBar.isHidden = false
+        let height = FloatingTitleBar.totalHeight(safeAreaTop: safeAreaTop)
+        titleBarHeightConstraint?.constant = height
+        print("[FloatingOverlayContainer] TitleBar shown")
+    }
 }
 
 // MARK: - FloatingTitleBarDelegate
