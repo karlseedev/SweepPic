@@ -67,20 +67,22 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
     // MARK: - T065: Permission Check
 
     /// 권한 상태에 따른 루트 뷰컨트롤러 설정
+    /// FR-033: Limited도 Denied와 동일하게 설정 앱 이동 안내 화면 표시
     private func configureRootViewController() {
         let permissionState = PermissionStore.shared.currentStatus
 
         switch permissionState {
-        case .authorized, .limited:
-            // 권한 있음 → TabBarController 표시
+        case .authorized:
+            // 전체 접근 권한 있음 → TabBarController 표시
             showMainInterface()
 
         case .notDetermined:
             // 권한 요청 전 → PermissionViewController 표시
             showPermissionViewController()
 
-        case .denied, .restricted:
-            // 권한 거부됨 → PermissionViewController 표시 (설정 안내)
+        case .denied, .restricted, .limited:
+            // 권한 거부/제한됨 → PermissionViewController 표시 (설정 안내)
+            // FR-033: Limited도 Denied와 동일하게 처리
             showPermissionViewController()
         }
 
@@ -91,8 +93,6 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
     private func showMainInterface() {
         // 이미 TabBarController가 표시되어 있으면 무시
         if window?.rootViewController is TabBarController {
-            // 제한 접근 배너 업데이트
-            updateLimitedAccessBanner()
             return
         }
 
@@ -110,9 +110,6 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
                 window.rootViewController = tabBarController
             }
         }
-
-        // 제한 접근 배너 업데이트
-        updateLimitedAccessBanner()
 
         // 권한 뷰컨트롤러 해제
         permissionViewController = nil
@@ -164,33 +161,23 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
     }
 
     /// 권한 상태 변경 처리
+    /// FR-033: Limited도 Denied와 동일하게 설정 안내 화면 표시
     /// - Parameter status: 새 권한 상태
     private func handlePermissionChange(_ status: PermissionState) {
         switch status {
-        case .authorized, .limited:
-            // 권한 승인됨 → 메인 인터페이스로 전환
+        case .authorized:
+            // 전체 접근 권한 승인됨 → 메인 인터페이스로 전환
             showMainInterface()
 
-        case .denied, .restricted:
-            // 권한 거부됨 → 권한 화면으로 전환 (설정 안내)
+        case .denied, .restricted, .limited:
+            // 권한 거부/제한됨 → 권한 화면으로 전환 (설정 안내)
+            // FR-033: Limited도 Denied와 동일하게 처리
             showPermissionViewController()
 
         case .notDetermined:
             // 일반적으로 발생하지 않음 (이미 요청됨)
             break
         }
-    }
-
-    /// 제한 접근 배너 업데이트
-    private func updateLimitedAccessBanner() {
-        // TabBarController에서 GridViewController 찾아서 배너 업데이트
-        guard let tabBarController = window?.rootViewController as? TabBarController,
-              let navController = tabBarController.viewControllers?.first as? UINavigationController,
-              let gridVC = navController.viewControllers.first as? GridViewController else {
-            return
-        }
-
-        gridVC.updateLimitedAccessBanner()
     }
 
     /// Scene이 연결 해제될 때 호출

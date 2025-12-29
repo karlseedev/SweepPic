@@ -25,7 +25,8 @@
 // - 탭으로 선택, 드래그로 연속 선택
 // - 일괄 삭제 구현
 //
-// T064: 제한 접근 배너 구현 ("더 많은 사진 선택")
+// T064: (FR-033 변경) Limited도 Denied와 동일하게 PermissionViewController 표시
+//       → limitedAccessBanner 제거됨
 
 import UIKit
 import Photos
@@ -115,60 +116,8 @@ final class GridViewController: UIViewController {
         return view
     }()
 
-    /// T064: 제한 접근 배너 (Limited 권한일 때 표시)
-    /// "더 많은 사진 선택" - 탭하면 PHPicker로 추가 사진 선택 가능
-    private lazy var limitedAccessBanner: UIView = {
-        let banner = UIView()
-        banner.backgroundColor = .systemBlue.withAlphaComponent(0.9)
-        banner.translatesAutoresizingMaskIntoConstraints = false
-        banner.isHidden = true
-
-        // 아이콘
-        let iconImageView = UIImageView()
-        iconImageView.translatesAutoresizingMaskIntoConstraints = false
-        iconImageView.image = UIImage(systemName: "photo.badge.plus")
-        iconImageView.tintColor = .white
-        iconImageView.contentMode = .scaleAspectFit
-
-        // 라벨
-        let label = UILabel()
-        label.translatesAutoresizingMaskIntoConstraints = false
-        label.text = "더 많은 사진 선택"
-        label.font = .systemFont(ofSize: 14, weight: .medium)
-        label.textColor = .white
-
-        // 화살표
-        let arrowImageView = UIImageView()
-        arrowImageView.translatesAutoresizingMaskIntoConstraints = false
-        arrowImageView.image = UIImage(systemName: "chevron.right")
-        arrowImageView.tintColor = .white.withAlphaComponent(0.7)
-        arrowImageView.contentMode = .scaleAspectFit
-
-        banner.addSubview(iconImageView)
-        banner.addSubview(label)
-        banner.addSubview(arrowImageView)
-
-        NSLayoutConstraint.activate([
-            iconImageView.leadingAnchor.constraint(equalTo: banner.leadingAnchor, constant: 16),
-            iconImageView.centerYAnchor.constraint(equalTo: banner.centerYAnchor),
-            iconImageView.widthAnchor.constraint(equalToConstant: 20),
-            iconImageView.heightAnchor.constraint(equalToConstant: 20),
-
-            label.leadingAnchor.constraint(equalTo: iconImageView.trailingAnchor, constant: 8),
-            label.centerYAnchor.constraint(equalTo: banner.centerYAnchor),
-
-            arrowImageView.trailingAnchor.constraint(equalTo: banner.trailingAnchor, constant: -16),
-            arrowImageView.centerYAnchor.constraint(equalTo: banner.centerYAnchor),
-            arrowImageView.widthAnchor.constraint(equalToConstant: 12),
-            arrowImageView.heightAnchor.constraint(equalToConstant: 12)
-        ])
-
-        // 탭 제스처 추가
-        let tapGesture = UITapGestureRecognizer(target: self, action: #selector(limitedAccessBannerTapped))
-        banner.addGestureRecognizer(tapGesture)
-
-        return banner
-    }()
+    // T064: (FR-033 변경) limitedAccessBanner 제거됨
+    // Limited도 Denied와 동일하게 PermissionViewController에서 처리
 
     // MARK: - Properties
 
@@ -487,49 +436,13 @@ final class GridViewController: UIViewController {
             emptyStateView.trailingAnchor.constraint(lessThanOrEqualTo: view.trailingAnchor, constant: -40)
         ])
 
-        // T064: 제한 접근 배너 (상단에 표시)
-        view.addSubview(limitedAccessBanner)
-        NSLayoutConstraint.activate([
-            limitedAccessBanner.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor),
-            limitedAccessBanner.leadingAnchor.constraint(equalTo: view.leadingAnchor),
-            limitedAccessBanner.trailingAnchor.constraint(equalTo: view.trailingAnchor),
-            limitedAccessBanner.heightAnchor.constraint(equalToConstant: 44)
-        ])
+        // T064: (FR-033 변경) limitedAccessBanner 제거됨
+        // Limited도 Denied와 동일하게 PermissionViewController에서 처리
     }
 
-    // MARK: - T064: Limited Access Banner
-
-    /// 제한 접근 배너 탭 처리
-    /// iOS 14+ Limited Library 선택 UI를 통해 추가 사진 선택
-    @objc private func limitedAccessBannerTapped() {
-        print("[GridViewController] Limited access banner tapped")
-
-        // iOS 15+: PHPhotoLibrary.shared().presentLimitedLibraryPicker(from:)
-        // iOS 14: PHPicker 사용
-        if #available(iOS 15, *) {
-            PHPhotoLibrary.shared().presentLimitedLibraryPicker(from: self)
-        } else {
-            // iOS 14: 설정 앱으로 이동 안내
-            // (presentLimitedLibraryPicker는 iOS 15+에서만 사용 가능)
-            guard let settingsURL = URL(string: UIApplication.openSettingsURLString) else { return }
-            UIApplication.shared.open(settingsURL)
-        }
-    }
-
-    /// 제한 접근 배너 표시/숨김 업데이트
-    /// PermissionStore의 상태에 따라 배너 표시 여부 결정
-    func updateLimitedAccessBanner() {
-        let isLimited = PermissionStore.shared.isLimited
-        limitedAccessBanner.isHidden = !isLimited
-
-        if isLimited {
-            // 배너가 표시되면 collectionView의 상단 inset 조정
-            var currentInset = collectionView.contentInset
-            currentInset.top += 44 // 배너 높이
-            collectionView.contentInset = currentInset
-            print("[GridViewController] Limited access banner shown")
-        }
-    }
+    // MARK: - T064: (FR-033 변경) Limited Access Banner 제거됨
+    // Limited도 Denied와 동일하게 PermissionViewController에서 처리
+    // limitedAccessBannerTapped(), updateLimitedAccessBanner() 함수 제거됨
 
     /// 제스처 설정 (T023, T040)
     private func setupGestures() {
@@ -1071,8 +984,9 @@ final class GridViewController: UIViewController {
         let cellHeight = currentCellSize.height + Self.cellSpacing
         guard cellHeight > 0 else { return (0, min(12, totalCount)) }
 
-        let visibleRows = Int(ceil(collectionView.bounds.height / cellHeight))
-        let columns = currentColumnCount.rawValue
+        // Note: visibleRows, columns는 동적 계산용으로 예약됨 (현재 12개 고정)
+        // let visibleRows = Int(ceil(collectionView.bounds.height / cellHeight))
+        // let columns = currentColumnCount.rawValue
 
         // 1 screen 분량 (12개 고정)
         // 105ms에 11개 완료 실적 기준, 12개면 timeout 전에 preload complete 가능

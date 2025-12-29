@@ -192,6 +192,7 @@ final class PermissionViewController: UIViewController {
     // MARK: - UI Update
 
     /// 권한 상태에 따른 UI 업데이트
+    /// FR-033: Limited도 Denied와 동일하게 설정 안내 화면 표시
     /// - Parameter state: 권한 상태
     private func updateUI(for state: PermissionState) {
         currentState = state
@@ -201,12 +202,13 @@ final class PermissionViewController: UIViewController {
             // T062: 권한 요청 전 - "사진 접근 허용" 버튼 표시
             showRequestUI()
 
-        case .denied, .restricted:
+        case .denied, .restricted, .limited:
             // T063: 거부/제한 상태 - "설정 열기" 버튼 표시
-            showDeniedUI(isRestricted: state == .restricted)
+            // FR-033: Limited도 Denied와 동일하게 처리
+            showDeniedUI(isRestricted: state == .restricted, isLimited: state == .limited)
 
-        case .authorized, .limited:
-            // 권한 있음 - 이 화면이 표시되면 안 됨
+        case .authorized:
+            // 전체 접근 권한 있음 - 이 화면이 표시되면 안 됨
             // 델리게이트가 화면 전환 처리
             print("[PermissionVC] Already authorized, should transition to main")
             delegate?.permissionViewControllerDidGrantAccess(self)
@@ -220,8 +222,8 @@ final class PermissionViewController: UIViewController {
         iconImageView.image = UIImage(systemName: "photo.on.rectangle.angled", withConfiguration: config)
         iconImageView.tintColor = .systemBlue
 
-        titleLabel.text = "사진에 접근하려면\n권한이 필요합니다"
-        descriptionLabel.text = "PickPhoto는 사진을 탐색하고 정리하기 위해\n사진 라이브러리에 접근해야 합니다."
+        titleLabel.text = "앱을 이용하려면\n전체 사진 접근 권한이\n필요합니다"
+        descriptionLabel.text = "PickPhoto는 사진을 탐색하고 정리하기 위해\n모든 사진 라이브러리에 접근해야 합니다."
         actionButton.setTitle("사진 접근 허용", for: .normal)
         actionButton.backgroundColor = .systemBlue
         secondaryLabel.isHidden = true
@@ -229,9 +231,12 @@ final class PermissionViewController: UIViewController {
         print("[PermissionVC] Showing request UI")
     }
 
-    /// T063: 거부 상태 UI 표시
-    /// - Parameter isRestricted: 보호자 통제 등으로 제한된 경우 true
-    private func showDeniedUI(isRestricted: Bool) {
+    /// T063: 거부/제한 상태 UI 표시
+    /// FR-033: Limited도 Denied와 동일하게 설정 안내 화면 표시
+    /// - Parameters:
+    ///   - isRestricted: 보호자 통제 등으로 제한된 경우 true
+    ///   - isLimited: 선택한 사진만 접근 가능한 경우 true (Denied와 동일하게 처리)
+    private func showDeniedUI(isRestricted: Bool, isLimited: Bool = false) {
         // 아이콘 변경
         let config = UIImage.SymbolConfiguration(pointSize: 80, weight: .light)
         iconImageView.image = UIImage(systemName: "exclamationmark.triangle", withConfiguration: config)
@@ -244,18 +249,17 @@ final class PermissionViewController: UIViewController {
             actionButton.setTitle("설정 열기", for: .normal)
             actionButton.backgroundColor = .systemGray
             secondaryLabel.text = "설정 > 스크린 타임에서 제한을 해제할 수 있습니다."
+            secondaryLabel.isHidden = false
         } else {
-            // 사용자가 거부함
-            titleLabel.text = "사진 접근이\n거부되었습니다"
-            descriptionLabel.text = "PickPhoto를 사용하려면\n설정에서 사진 접근을 허용해 주세요."
+            // 사용자가 거부함 또는 선택한 사진만 허용 (동일하게 처리)
+            titleLabel.text = "앱을 이용하려면\n전체 사진 접근 권한이\n필요합니다"
+            descriptionLabel.text = "PickPhoto는 전체 사진 라이브러리에\n접근해야 정상적으로 동작합니다.\n설정에서 '전체 접근 허용'을 선택해 주세요."
             actionButton.setTitle("설정 열기", for: .normal)
             actionButton.backgroundColor = .systemBlue
-            secondaryLabel.text = "설정 > PickPhoto > 사진에서 권한을 변경할 수 있습니다."
+            secondaryLabel.isHidden = true
         }
 
-        secondaryLabel.isHidden = false
-
-        print("[PermissionVC] Showing denied UI (isRestricted: \(isRestricted))")
+        print("[PermissionVC] Showing denied UI (isRestricted: \(isRestricted), isLimited: \(isLimited))")
     }
 
     // MARK: - Actions
@@ -267,11 +271,11 @@ final class PermissionViewController: UIViewController {
             // T062: 시스템 권한 다이얼로그 트리거
             requestPhotoAccess()
 
-        case .denied, .restricted:
-            // T063: 설정 앱 열기
+        case .denied, .restricted, .limited:
+            // T063: 설정 앱 열기 (FR-033: Limited도 동일하게 처리)
             openSettings()
 
-        case .authorized, .limited:
+        case .authorized:
             // 이 상태에서는 호출되지 않아야 함
             delegate?.permissionViewControllerDidGrantAccess(self)
         }

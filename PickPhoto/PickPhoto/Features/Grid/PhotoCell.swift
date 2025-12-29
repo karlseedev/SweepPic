@@ -22,8 +22,8 @@ final class PhotoCell: UICollectionViewCell {
     /// 재사용 식별자
     static let reuseIdentifier = "PhotoCell"
 
-    /// 딤드 오버레이 투명도 (FR-008: 65% opacity)
-    private static let dimmedOverlayAlpha: CGFloat = 0.65
+    /// 딤드 오버레이 투명도 (FR-008: 50% dark red opacity)
+    private static let dimmedOverlayAlpha: CGFloat = 0.50
 
     // MARK: - Debug Timing (static)
 
@@ -176,10 +176,11 @@ final class PhotoCell: UICollectionViewCell {
         return iv
     }()
 
-    /// 딤드 오버레이 뷰 (휴지통 사진용)
+    /// 딤드 오버레이 뷰 (휴지통 사진용) - 다크레드 50%
     private let dimmedOverlayView: UIView = {
         let view = UIView()
-        view.backgroundColor = .black
+        // Dark Red (#8B0000)
+        view.backgroundColor = UIColor(red: 0.545, green: 0, blue: 0, alpha: 1)
         view.alpha = 0
         view.isHidden = true
         view.translatesAutoresizingMaskIntoConstraints = false
@@ -485,11 +486,10 @@ final class PhotoCell: UICollectionViewCell {
         //
         // 메모리 캐시 미스 시 바로 ImagePipeline 요청
         requestFromPipeline(asset: asset, pixelSize: pixelSize, modDate: modDate, isFullSizeRequest: isFullSizeRequest)
-        return
 
-        // [Dead Code] 아래 디스크 캐시 로드 경로는 더 이상 사용되지 않음
-        // 필요 시 위 return 문을 제거하고 이 블록을 활성화
-
+        // [Dead Code] 디스크 캐시 로드 경로 - 비활성화됨
+        // 필요 시 위 requestFromPipeline 호출을 제거하고 #if false를 #if true로 변경
+        #if false
         // 캐시 로드 ID 생성 (비동기 캐시 결과 검증용)
         let loadID = UUID()
         currentCacheLoadID = loadID
@@ -514,33 +514,13 @@ final class PhotoCell: UICollectionViewCell {
             if let cachedImage = cachedImage {
                 // 캐시 히트 → 이미지 표시 후 종료
                 self.imageView.image = cachedImage
-
-                #if false  // DEBUG 로그 임시 비활성화
-                Self.applyLock.withLock {
-                    Self.imageApplyCounter += 1
-                    Self.cacheHitApplyCounter += 1
-                    let count = Self.imageApplyCounter
-
-                    // 첫 번째 이미지 할당 시 T_firstThumbnailVisible 로그
-                    if !Self.hasLoggedFirstThumbnail {
-                        Self.hasLoggedFirstThumbnail = true
-                        FileLogger.log("[PhotoCell] T_firstThumbnailVisible: 첫 이미지 할당 (캐시 히트)")
-                    }
-
-                    // 20개마다 visible/hit 비율 로그
-                    if count == 20 || count == 50 {
-                        let hitRate = Double(Self.cacheHitApplyCounter) / Double(count) * 100
-                        FileLogger.log("[PhotoCell] 이미지 할당 #\(count): 캐시 히트율 \(String(format: "%.1f", hitRate))% (\(Self.cacheHitApplyCounter)/\(count))")
-                    }
-                }
-                #endif
                 return
             }
 
             // 2) 캐시 미스 → ImagePipeline 요청
-            // Dead code 경로이므로 isFullSizeRequest=true (디스크 캐시 경로는 프리로드용)
             self.requestFromPipeline(asset: asset, pixelSize: pixelSize, modDate: modDate, isFullSizeRequest: true)
         }
+        #endif
     }
 
     /// ImagePipeline에서 이미지 요청 (캐시 미스 시 호출)
