@@ -681,6 +681,15 @@ final class PhotoPageViewController: UIViewController {
     /// 이미지 요청 토큰 (v6: Cancellable)
     private var requestCancellable: Cancellable?
 
+    /// 원본 이미지 요청 토큰
+    private var fullSizeRequestCancellable: Cancellable?
+
+    /// 원본 이미지 로드 완료 여부
+    private var hasLoadedFullSize = false
+
+    /// 이미지 요청 시작 시간 (디버그용)
+    private var imageRequestStartTime: CFAbsoluteTime = 0
+
     /// 원본 이미지 크기 (aspect fit 계산용)
     private var imageSize: CGSize = .zero
 
@@ -773,32 +782,64 @@ final class PhotoPageViewController: UIViewController {
         guard targetSize != lastRequestedTargetSize else { return }
         lastRequestedTargetSize = targetSize
 
+        // 시간 측정 시작
+        imageRequestStartTime = CFAbsoluteTimeGetCurrent()
+        hasLoadedFullSize = false
+        print("[Viewer] 🚀 요청 시작 (quality: .high)")
+
         requestCancellable?.cancel()
         requestCancellable = ImagePipeline.shared.requestImage(
             for: asset,
             targetSize: targetSize,
-            contentMode: .aspectFit
+            contentMode: .aspectFit,
+            quality: .high  // 뷰어용 고품질
         ) { [weak self] image, isDegraded in
             guard let self = self, let image = image else { return }
 
-            print("[Viewer] isDegraded=\(isDegraded), size=\(image.size), target=\(targetSize)")
+            // 1차 로딩 시간 측정
+            let elapsed = (CFAbsoluteTimeGetCurrent() - self.imageRequestStartTime) * 1000
+            print("[Viewer] 1️⃣ 화면크기: \(Int(elapsed))ms, size=\(image.size)")
 
             self.imageView.image = image
-            self.imageSize = image.size  // 항상 갱신 (High fix)
+            self.imageSize = image.size
 
-            // 줌 인터랙션 중에는 레이아웃 업데이트 보류 (줌 완료 후 수행)
+            // 줌 인터랙션 중에는 레이아웃 업데이트 보류
             if self.isZoomInteractionActive {
                 self.needsLayoutUpdateAfterZoom = true
-                return
+            } else {
+                self.updateImageLayout()
             }
 
-            if isDegraded {
-                // 저해상도: 초기 레이아웃만 적용 (아직 안 잡힌 경우)
-                if !self.hasAppliedInitialLayout {
-                    self.updateImageLayout()
-                }
+            // 원본 이미지 요청 (2차)
+            if !self.hasLoadedFullSize {
+                self.requestFullSizeImage()
+            }
+        }
+    }
+
+    /// 원본 이미지 요청 (줌용)
+    private func requestFullSizeImage() {
+        fullSizeRequestCancellable?.cancel()
+        fullSizeRequestCancellable = ImagePipeline.shared.requestImage(
+            for: asset,
+            targetSize: PHImageManagerMaximumSize,
+            contentMode: .aspectFit,
+            quality: .high  // 원본 고품질
+        ) { [weak self] image, isDegraded in
+            guard let self = self, let image = image, !isDegraded else { return }
+
+            // 2차 로딩 시간 측정
+            let elapsed = (CFAbsoluteTimeGetCurrent() - self.imageRequestStartTime) * 1000
+            print("[Viewer] 2️⃣ 원본: \(Int(elapsed))ms, size=\(image.size)")
+
+            self.hasLoadedFullSize = true
+            self.imageView.image = image
+            self.imageSize = image.size
+
+            // 줌 인터랙션 중이면 보류
+            if self.isZoomInteractionActive {
+                self.needsLayoutUpdateAfterZoom = true
             } else {
-                // 고해상도 확정: 줌 보존하며 레이아웃 업데이트
                 self.updateImageLayoutPreservingZoom()
             }
         }

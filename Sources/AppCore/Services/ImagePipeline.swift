@@ -99,6 +99,16 @@ public final class RequestToken: @unchecked Sendable {
     }
 }
 
+// MARK: - ImageQuality
+
+/// 이미지 품질 옵션
+/// - fast: 빠른 로딩 우선 (그리드 썸네일용)
+/// - high: 고품질 우선 (뷰어용)
+public enum ImageQuality {
+    case fast   // .opportunistic + .fast (기본값)
+    case high   // .highQualityFormat + .exact
+}
+
 // MARK: - ImagePipelineProtocol
 
 /// 이미지 파이프라인 프로토콜
@@ -110,12 +120,14 @@ public protocol ImagePipelineProtocol: AnyObject {
     ///   - asset: 요청할 PHAsset
     ///   - targetSize: 목표 크기 (픽셀 단위)
     ///   - contentMode: 컨텐츠 모드
+    ///   - quality: 이미지 품질 (기본값: .fast)
     ///   - completion: 완료 콜백 (메인 스레드에서 호출, isDegraded: 저해상도 여부)
     /// - Returns: 취소 가능한 토큰
     func requestImage(
         for asset: PHAsset,
         targetSize: CGSize,
         contentMode: PHImageContentMode,
+        quality: ImageQuality,
         completion: @escaping (UIImage?, Bool) -> Void
     ) -> Cancellable
 
@@ -340,12 +352,16 @@ public final class ImagePipeline: ImagePipelineProtocol {
         for asset: PHAsset,
         targetSize: CGSize,
         contentMode: PHImageContentMode = .aspectFill,
+        quality: ImageQuality = .fast,
         completion: @escaping (UIImage?, Bool) -> Void
     ) -> Cancellable {
 
         let cancellable = CancellableToken()
         let assetID = asset.localIdentifier
         let requestStartTime = CACurrentMediaTime()
+
+        // 품질에 따른 옵션 선택
+        let options = (quality == .high) ? fullSizeOptions : thumbnailOptions
 
         // [Stats] 요청 카운터 증가
         statsLock.lock()
@@ -390,7 +406,7 @@ public final class ImagePipeline: ImagePipelineProtocol {
                 for: asset,
                 targetSize: targetSize,
                 contentMode: contentMode,
-                options: self.thumbnailOptions
+                options: options
             ) { [weak self] image, info in
                 guard let self = self else { return }
 
