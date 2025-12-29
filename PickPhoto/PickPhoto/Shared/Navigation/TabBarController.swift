@@ -178,6 +178,18 @@ class TabBarController: UITabBarController {
         }
 
         // Albums 탭은 Phase 6까지 Select 버튼 없음
+
+        // Trash 탭에 삭제하기(휴지통 비우기) 버튼 추가
+        if let trashVC = trashNav?.viewControllers.first as? TrashAlbumViewController {
+            let emptyTrashButton = UIBarButtonItem(
+                title: "삭제하기",
+                style: .plain,
+                target: self,
+                action: #selector(systemEmptyTrashButtonTapped)
+            )
+            emptyTrashButton.tintColor = .systemRed
+            trashVC.navigationItem.rightBarButtonItem = emptyTrashButton
+        }
     }
 
     /// 시스템 외관 설정 (iOS 26+)
@@ -203,6 +215,15 @@ class TabBarController: UITabBarController {
         // GridViewController에 Select 모드 진입 알림
         if let photosVC = photosNav?.viewControllers.first as? GridViewController {
             photosVC.enterSelectMode()
+        }
+    }
+
+    /// 시스템 네비바의 삭제하기 버튼 탭 (iOS 26+)
+    @objc private func systemEmptyTrashButtonTapped() {
+        print("[TabBarController] System Empty Trash button tapped")
+        // TrashAlbumViewController에 휴지통 비우기 알림
+        if let trashVC = trashNav?.viewControllers.first as? TrashAlbumViewController {
+            trashVC.emptyTrash()
         }
     }
 
