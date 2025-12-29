@@ -239,9 +239,20 @@ protocol TrashStoreProtocol {
 }
 
 // ImagePipeline
+enum ImageQuality {
+    case fast   // 그리드 썸네일용 (opportunistic + fast)
+    case high   // 뷰어용 (highQualityFormat + exact)
+}
+
 protocol ImagePipelineProtocol {
-    func requestImage(for assetID: String, targetSize: CGSize, completion: @escaping (UIImage?) -> Void) -> RequestToken
-    func cancelRequest(_ token: RequestToken)
+    func requestImage(
+        for asset: PHAsset,
+        targetSize: CGSize,
+        contentMode: PHImageContentMode,
+        quality: ImageQuality,  // 기본값: .fast
+        completion: @escaping (UIImage?, Bool) -> Void
+    ) -> Cancellable
+    func cancelRequest(_ cancellable: Cancellable)
     func preheat(assetIDs: [String], targetSize: CGSize)
     func stopPreheating(assetIDs: [String])
 }
