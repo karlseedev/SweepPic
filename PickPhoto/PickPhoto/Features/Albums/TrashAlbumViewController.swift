@@ -124,6 +124,23 @@ final class TrashAlbumViewController: UIViewController {
     /// 초기 스크롤 완료 여부 (맨 아래로 스크롤)
     private var didInitialScroll: Bool = false
 
+    // MARK: - Initial Display Properties
+
+    /// 초기 표시 완료 여부
+    private var hasFinishedInitialDisplay: Bool = false
+
+    /// 프리로드 목표 개수
+    private var preloadTargetCount: Int = 0
+
+    /// 프리로드 완료 개수 (Atomic 접근)
+    private var preloadCompletedCount: Int = 0
+
+    /// 프리로드 스레드 안전성
+    private let preloadLock = NSLock()
+
+    /// 타임아웃 플래그
+    private var preloadTimedOut: Bool = false
+
     /// 맨 위 행 빈 셀 개수 (3의 배수가 아닐 시 맨 위 행에 빈 셀)
     /// 최신 사진(맨 아래) 기준 꽉 차게 정렬
     private var paddingCellCount: Int {
@@ -156,7 +173,18 @@ final class TrashAlbumViewController: UIViewController {
         setupUI()
         setupGestures()
         setupObservers()
+
+        // 노출 게이팅: 프리로드 완료까지 숨김
+        collectionView.alpha = 0
+
+        // 백그라운드에서 데이터 로드
         loadTrashedAssets()
+
+        // 타임아웃 (200ms - 안정적)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) { [weak self] in
+            self?.preloadTimedOut = true
+            self?.finishInitialDisplayIfNeeded(reason: "timeout")
+        }
 
         // iOS 26+: 시스템 UI 사용
         if #available(iOS 26.0, *) {
@@ -288,7 +316,7 @@ final class TrashAlbumViewController: UIViewController {
 
     // MARK: - Data Loading
 
-    /// 휴지통 사진 로드
+    /// 휴지통 사진 로드 (백그라운드에서 fetch/정렬)
     /// TrashStore.trashedAssetIDs 기반으로 PHAsset 조회
     private func loadTrashedAssets() {
         let startTime = CFAbsoluteTimeGetCurrent()
@@ -297,17 +325,30 @@ final class TrashAlbumViewController: UIViewController {
 
         if trashedAssetIDSet.isEmpty {
             trashedAssets = []
-        } else {
-            // PHAsset 조회 (Set → Array 변환)
+            DispatchQueue.main.async { [weak self] in
+                self?.onDataLoaded(startTime: startTime)
+            }
+            return
+        }
+
+        // 백그라운드에서 fetch/정렬 수행 (메인 스레드 블로킹 방지)
+        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
+            guard let self = self else { return }
+
+            // PhotoKit 정렬 옵션 사용 (sorted 제거)
             let options = PHFetchOptions()
             options.includeHiddenAssets = false
             options.includeAllBurstAssets = false
+            options.sortDescriptors = [NSSortDescriptor(key: "creationDate", ascending: true)]
 
-            let fetchResult = PHAsset.fetchAssets(withLocalIdentifiers: Array(trashedAssetIDSet), options: options)
+            let fetchResult = PHAsset.fetchAssets(
+                withLocalIdentifiers: Array(self.trashedAssetIDSet),
+                options: options
+            )
 
             let fetchTime = CFAbsoluteTimeGetCurrent()
 
-            // 배열로 변환
+            // 배열로 변환 (백그라운드)
             var assets: [PHAsset] = []
             fetchResult.enumerateObjects { asset, _, _ in
                 assets.append(asset)
@@ -315,24 +356,27 @@ final class TrashAlbumViewController: UIViewController {
 
             let enumerateTime = CFAbsoluteTimeGetCurrent()
 
-            // 생성일 기준 오름차순 정렬 (최신 사진이 아래, 아이폰 기본 사진앱과 동일)
-            trashedAssets = assets.sorted { ($0.creationDate ?? .distantPast) < ($1.creationDate ?? .distantPast) }
+            print("[TrashAlbumViewController.Timing] fetch: \(String(format: "%.1f", (fetchTime - startTime) * 1000))ms, enumerate: \(String(format: "%.1f", (enumerateTime - fetchTime) * 1000))ms (background)")
 
-            let sortTime = CFAbsoluteTimeGetCurrent()
-
-            print("[TrashAlbumViewController.Timing] fetch: \(String(format: "%.1f", (fetchTime - startTime) * 1000))ms, enumerate: \(String(format: "%.1f", (enumerateTime - fetchTime) * 1000))ms, sort: \(String(format: "%.1f", (sortTime - enumerateTime) * 1000))ms")
+            // 메인 스레드에서 UI 업데이트
+            DispatchQueue.main.async {
+                self.trashedAssets = assets
+                self.onDataLoaded(startTime: startTime)
+            }
         }
+    }
 
-        let dataLoadTime = CFAbsoluteTimeGetCurrent()
+    /// 데이터 로드 완료 후 호출 (메인 스레드)
+    private func onDataLoaded(startTime: CFAbsoluteTime) {
+        let reloadStartTime = CFAbsoluteTimeGetCurrent()
 
-        // UI 업데이트
         collectionView.reloadData()
 
         let reloadTime = CFAbsoluteTimeGetCurrent()
 
         updateEmptyState()
 
-        // 버튼 상태 업데이트
+        // 버튼 상태 업데이트 (iOS 버전별 분기 유지)
         if useFloatingUI {
             // iOS 16~25: FloatingUI 비우기 버튼 상태 갱신
             updateFloatingEmptyButton()
@@ -344,13 +388,11 @@ final class TrashAlbumViewController: UIViewController {
         let endTime = CFAbsoluteTimeGetCurrent()
 
         print("[TrashAlbumViewController] Loaded \(trashedAssets.count) trashed assets")
-        print("[TrashAlbumViewController.Timing] dataLoad: \(String(format: "%.1f", (dataLoadTime - startTime) * 1000))ms, reloadData: \(String(format: "%.1f", (reloadTime - dataLoadTime) * 1000))ms, total: \(String(format: "%.1f", (endTime - startTime) * 1000))ms")
+        print("[TrashAlbumViewController.Timing] reloadData: \(String(format: "%.1f", (reloadTime - reloadStartTime) * 1000))ms, total: \(String(format: "%.1f", (endTime - startTime) * 1000))ms")
 
-        // 초기 로드 시 맨 아래로 스크롤 (최신 사진부터 보기)
-        if !didInitialScroll {
-            didInitialScroll = true
-            collectionView.layoutIfNeeded()
-            scrollToBottomIfNeeded()
+        // 프리로드 시작 (초기 로드 시에만)
+        if !hasFinishedInitialDisplay {
+            startInitialPreload()
         }
     }
 
@@ -361,6 +403,127 @@ final class TrashAlbumViewController: UIViewController {
         let lastIndex = trashedAssets.count - 1 + paddingCellCount
         let lastIndexPath = IndexPath(item: lastIndex, section: 0)
         collectionView.scrollToItem(at: lastIndexPath, at: .bottom, animated: false)
+    }
+
+    // MARK: - Initial Display
+
+    /// 첫 화면 프리로드 범위 계산 (맨 아래 12개)
+    private func calculatePreloadRange() -> (startIndex: Int, count: Int) {
+        let totalCount = trashedAssets.count
+        guard totalCount > 0 else { return (0, 0) }
+
+        let targetCount = min(12, totalCount)  // 3열 × 4행
+        let startIndex = max(0, totalCount - targetCount)
+        return (startIndex, targetCount)
+    }
+
+    /// 초기 프리로드 시작 (디스크 → 메모리 + preheat)
+    private func startInitialPreload() {
+        guard currentCellSize != .zero else {
+            // 레이아웃 완료 후 재시도
+            DispatchQueue.main.async { [weak self] in
+                self?.startInitialPreload()
+            }
+            return
+        }
+
+        let (startIndex, count) = calculatePreloadRange()
+        guard count > 0 else {
+            finishInitialDisplayIfNeeded(reason: "empty")
+            return
+        }
+
+        preloadLock.lock()
+        preloadTargetCount = count
+        preloadCompletedCount = 0
+        preloadLock.unlock()
+
+        let pixelSize = thumbnailSize()
+
+        // 프리로드 대상 에셋 추출
+        var preloadAssets: [PHAsset] = []
+        for i in 0..<count {
+            let assetIndex = startIndex + i
+            guard assetIndex < trashedAssets.count else { continue }
+            preloadAssets.append(trashedAssets[assetIndex])
+        }
+
+        // PHCachingImageManager preheat (디스크 캐시 미스 대비)
+        DispatchQueue.global(qos: .userInitiated).async {
+            ImagePipeline.shared.preheatAssets(preloadAssets, targetSize: pixelSize)
+        }
+
+        // 디스크 → 메모리 캐시 로드 (병렬)
+        for asset in preloadAssets {
+            let assetID = asset.localIdentifier
+
+            // 메모리 캐시 히트 시 스킵
+            if MemoryThumbnailCache.shared.get(assetID: assetID, pixelSize: pixelSize) != nil {
+                incrementPreloadCount()
+                continue
+            }
+
+            // 디스크 캐시 로드
+            ThumbnailCache.shared.load(
+                assetID: assetID,
+                modificationDate: asset.modificationDate,
+                size: pixelSize
+            ) { [weak self] image in
+                if let image = image {
+                    MemoryThumbnailCache.shared.set(
+                        image: image,
+                        assetID: assetID,
+                        pixelSize: pixelSize
+                    )
+                }
+                self?.incrementPreloadCount()
+            }
+        }
+
+        print("[TrashAlbumViewController] Preload started: \(count) assets")
+    }
+
+    /// 프리로드 카운터 증가 (스레드 안전)
+    private func incrementPreloadCount() {
+        preloadLock.lock()
+        preloadCompletedCount += 1
+        let completed = preloadCompletedCount
+        let target = preloadTargetCount
+        preloadLock.unlock()
+
+        if completed >= target {
+            DispatchQueue.main.async { [weak self] in
+                self?.finishInitialDisplayIfNeeded(reason: "preload complete")
+            }
+        }
+    }
+
+    /// 초기 표시 완료 (단일 경로)
+    private func finishInitialDisplayIfNeeded(reason: String) {
+        guard !hasFinishedInitialDisplay else { return }
+
+        preloadLock.lock()
+        let completed = preloadCompletedCount
+        let target = preloadTargetCount
+        preloadLock.unlock()
+
+        guard completed >= target || preloadTimedOut else { return }
+
+        hasFinishedInitialDisplay = true
+
+        // 레이아웃 + 스크롤 (1회만, 표시 직전)
+        if !didInitialScroll {
+            didInitialScroll = true
+            collectionView.layoutIfNeeded()
+            scrollToBottomIfNeeded()
+        }
+
+        // UI 표시 (fade-in)
+        UIView.animate(withDuration: 0.15) {
+            self.collectionView.alpha = 1
+        }
+
+        print("[TrashAlbumViewController] Initial display: \(reason), preloaded: \(completed)/\(target)")
     }
 
     // MARK: - Layout
