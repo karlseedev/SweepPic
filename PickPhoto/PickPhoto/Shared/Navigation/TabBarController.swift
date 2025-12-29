@@ -286,4 +286,12 @@ extension TabBarController: FloatingOverlayContainerDelegate {
             photosVC.deleteSelectedPhotos()
         }
     }
+
+    func floatingOverlayDidTapEmptyTrash(_ container: FloatingOverlayContainer) {
+        print("[TabBarController] Empty Trash tapped via floating UI")
+        // TrashAlbumViewController에 휴지통 비우기 알림
+        if let trashVC = trashNav?.viewControllers.first as? TrashAlbumViewController {
+            trashVC.emptyTrash()
+        }
+    }
 }

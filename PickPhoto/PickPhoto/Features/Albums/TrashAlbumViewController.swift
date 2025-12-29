@@ -635,6 +635,13 @@ final class TrashAlbumViewController: UIViewController {
         performEmptyTrash()
     }
 
+    /// 휴지통 비우기 (외부에서 호출 가능)
+    /// FloatingTabBar의 삭제하기 버튼에서 호출
+    func emptyTrash() {
+        guard !trashedAssets.isEmpty else { return }
+        performEmptyTrash()
+    }
+
     /// 휴지통 비우기 실행
     private func performEmptyTrash() {
         Task {

@@ -21,6 +21,9 @@ protocol FloatingTabBarDelegate: AnyObject {
 
     /// Select 모드에서 Delete 버튼 탭
     func floatingTabBarDidTapDelete(_ tabBar: FloatingTabBar)
+
+    /// 휴지통 비우기(삭제하기) 버튼 탭
+    func floatingTabBarDidTapEmptyTrash(_ tabBar: FloatingTabBar)
 }
 
 /// 탭바 모드
@@ -141,6 +144,54 @@ final class FloatingTabBar: UIView {
             selectedImage: UIImage(systemName: "trash.fill"),
             tag: 2
         )
+        return button
+    }()
+
+    // MARK: - UI Components (Empty Trash Button - 원형)
+
+    /// 삭제하기 버튼 그림자 컨테이너 (원형)
+    private lazy var emptyTrashShadowView: UIView = {
+        let view = UIView()
+        view.layer.cornerRadius = Self.capsuleHeight / 2
+        view.layer.shadowColor = UIColor.black.cgColor
+        view.layer.shadowOpacity = 0.25
+        view.layer.shadowRadius = 12
+        view.layer.shadowOffset = CGSize(width: 0, height: 6)
+        view.translatesAutoresizingMaskIntoConstraints = false
+        return view
+    }()
+
+    /// 삭제하기 버튼 컨테이너 (블러 배경, 원형)
+    private lazy var emptyTrashContainer: UIVisualEffectView = {
+        let effect = UIBlurEffect(style: .systemThinMaterialDark)
+        let view = UIVisualEffectView(effect: effect)
+        view.layer.cornerRadius = Self.capsuleHeight / 2
+        view.layer.borderWidth = 0.5
+        view.layer.borderColor = UIColor.white.withAlphaComponent(0.15).cgColor
+        view.clipsToBounds = true
+        view.translatesAutoresizingMaskIntoConstraints = false
+        return view
+    }()
+
+    /// 삭제하기 버튼 배경 오버레이
+    private lazy var emptyTrashBackgroundView: UIView = {
+        let view = UIView()
+        view.backgroundColor = UIColor(white: 0.12, alpha: 0.5)
+        view.isUserInteractionEnabled = false
+        view.translatesAutoresizingMaskIntoConstraints = false
+        return view
+    }()
+
+    /// 삭제하기 버튼 (휴지통 비우기)
+    private lazy var emptyTrashButton: UIButton = {
+        var config = UIButton.Configuration.plain()
+        config.image = UIImage(systemName: "trash.slash.fill")
+        config.baseForegroundColor = .systemRed
+        config.preferredSymbolConfigurationForImage = UIImage.SymbolConfiguration(pointSize: 20, weight: .medium)
+        let button = UIButton(configuration: config)
+        button.accessibilityLabel = "삭제하기"
+        button.addTarget(self, action: #selector(emptyTrashButtonTapped), for: .touchUpInside)
+        button.translatesAutoresizingMaskIntoConstraints = false
         return button
     }()
 
@@ -272,6 +323,12 @@ final class FloatingTabBar: UIView {
         tabStackView.addArrangedSubview(albumsButton)
         tabStackView.addArrangedSubview(trashButton)
 
+        // 삭제하기 원형 버튼 추가 (탭바 우측)
+        addSubview(emptyTrashShadowView)
+        emptyTrashShadowView.addSubview(emptyTrashContainer)
+        emptyTrashContainer.contentView.addSubview(emptyTrashBackgroundView)
+        emptyTrashContainer.contentView.addSubview(emptyTrashButton)
+
         // Select 모드 캡슐 추가
         addSubview(selectShadowView)
         selectShadowView.addSubview(selectContainer)
@@ -312,6 +369,27 @@ final class FloatingTabBar: UIView {
             tabStackView.trailingAnchor.constraint(equalTo: capsuleContainer.contentView.trailingAnchor, constant: -6),
             tabStackView.bottomAnchor.constraint(equalTo: capsuleContainer.contentView.bottomAnchor),
 
+            // 삭제하기 원형 버튼: 탭바 우측에 배치
+            emptyTrashShadowView.topAnchor.constraint(equalTo: topAnchor),
+            emptyTrashShadowView.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -Self.capsulePadding),
+            emptyTrashShadowView.widthAnchor.constraint(equalToConstant: Self.capsuleHeight),
+            emptyTrashShadowView.heightAnchor.constraint(equalToConstant: Self.capsuleHeight),
+
+            emptyTrashContainer.topAnchor.constraint(equalTo: emptyTrashShadowView.topAnchor),
+            emptyTrashContainer.leadingAnchor.constraint(equalTo: emptyTrashShadowView.leadingAnchor),
+            emptyTrashContainer.trailingAnchor.constraint(equalTo: emptyTrashShadowView.trailingAnchor),
+            emptyTrashContainer.bottomAnchor.constraint(equalTo: emptyTrashShadowView.bottomAnchor),
+
+            emptyTrashBackgroundView.topAnchor.constraint(equalTo: emptyTrashContainer.contentView.topAnchor),
+            emptyTrashBackgroundView.leadingAnchor.constraint(equalTo: emptyTrashContainer.contentView.leadingAnchor),
+            emptyTrashBackgroundView.trailingAnchor.constraint(equalTo: emptyTrashContainer.contentView.trailingAnchor),
+            emptyTrashBackgroundView.bottomAnchor.constraint(equalTo: emptyTrashContainer.contentView.bottomAnchor),
+
+            emptyTrashButton.topAnchor.constraint(equalTo: emptyTrashContainer.contentView.topAnchor),
+            emptyTrashButton.leadingAnchor.constraint(equalTo: emptyTrashContainer.contentView.leadingAnchor),
+            emptyTrashButton.trailingAnchor.constraint(equalTo: emptyTrashContainer.contentView.trailingAnchor),
+            emptyTrashButton.bottomAnchor.constraint(equalTo: emptyTrashContainer.contentView.bottomAnchor),
+
             // Select 모드 캡슐: 일반 모드와 동일 위치
             selectShadowView.centerXAnchor.constraint(equalTo: centerXAnchor),
             selectShadowView.topAnchor.constraint(equalTo: topAnchor),
@@ -349,6 +427,10 @@ final class FloatingTabBar: UIView {
         selectShadowView.layer.shadowPath = UIBezierPath(
             roundedRect: selectShadowView.bounds,
             cornerRadius: Self.capsuleCornerRadius
+        ).cgPath
+        // 원형 삭제하기 버튼 그림자 경로 (원형)
+        emptyTrashShadowView.layer.shadowPath = UIBezierPath(
+            ovalIn: emptyTrashShadowView.bounds
         ).cgPath
     }
 
@@ -388,6 +470,11 @@ final class FloatingTabBar: UIView {
         let trashPoint = convert(point, to: trashButton)
         if trashButton.bounds.contains(trashPoint) {
             return trashButton
+        }
+        // 삭제하기 원형 버튼 체크
+        let emptyTrashPoint = convert(point, to: emptyTrashButton)
+        if emptyTrashButton.bounds.contains(emptyTrashPoint) {
+            return emptyTrashButton
         }
 
         // 나머지 딤드 영역은 터치 차단
@@ -461,6 +548,11 @@ final class FloatingTabBar: UIView {
     @objc private func deleteButtonTapped() {
         print("[FloatingTabBar] Delete tapped")
         delegate?.floatingTabBarDidTapDelete(self)
+    }
+
+    @objc private func emptyTrashButtonTapped() {
+        print("[FloatingTabBar] Empty Trash tapped")
+        delegate?.floatingTabBarDidTapEmptyTrash(self)
     }
 
     // MARK: - Public Methods

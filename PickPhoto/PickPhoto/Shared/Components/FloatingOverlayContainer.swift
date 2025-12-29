@@ -23,6 +23,9 @@ protocol FloatingOverlayContainerDelegate: AnyObject {
 
     /// Select 모드에서 Delete 버튼 탭
     func floatingOverlayDidTapDelete(_ container: FloatingOverlayContainer)
+
+    /// 휴지통 비우기(삭제하기) 버튼 탭
+    func floatingOverlayDidTapEmptyTrash(_ container: FloatingOverlayContainer)
 }
 
 /// 플로팅 오버레이 컨테이너
@@ -305,5 +308,9 @@ extension FloatingOverlayContainer: FloatingTabBarDelegate {
 
     func floatingTabBarDidTapDelete(_ tabBar: FloatingTabBar) {
         delegate?.floatingOverlayDidTapDelete(self)
+    }
+
+    func floatingTabBarDidTapEmptyTrash(_ tabBar: FloatingTabBar) {
+        delegate?.floatingOverlayDidTapEmptyTrash(self)
     }
 }
