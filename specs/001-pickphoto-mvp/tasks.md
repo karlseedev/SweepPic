@@ -195,7 +195,7 @@
 
 ---
 
-## Phase 8: User Story 6 - 권한 관리 (Priority: P6)
+## Phase 8: User Story 6 - 권한 관리 (Priority: P6) ✅ 완료
 
 **목표**: 앱 최초 실행 시 권한 요청, 권한 상태에 따른 적절한 UI 표시
 
@@ -203,14 +203,14 @@
 
 ### User Story 6 구현
 
-- [ ] T061 [US6] PermissionViewController 생성 (권한 요청 UI) - PickPhoto/PickPhoto/Features/Permissions/PermissionViewController.swift
-- [ ] T062 [US6] "사진 접근 허용" 버튼 구현 (시스템 권한 다이얼로그 트리거) - PermissionViewController
-- [ ] T063 [US6] 거부 상태 UI 구현 ("설정에서 권한을 허용해주세요" + "설정 열기" 버튼) - PermissionViewController
-- [ ] T064 [US6] 제한 접근 배너 구현 ("더 많은 사진 선택") - GridViewController
-- [ ] T065 [US6] SceneDelegate에 권한 체크 추가 (미승인 시 PermissionViewController 표시) - SceneDelegate
-- [ ] T066 [US6] 앱 실행 중 권한 변경 처리 (PHPhotoLibrary 권한 변경 감지) - SceneDelegate
+- [X] T061 [US6] PermissionViewController 생성 (권한 요청 UI) - PickPhoto/PickPhoto/Features/Permissions/PermissionViewController.swift
+- [X] T062 [US6] "사진 접근 허용" 버튼 구현 (시스템 권한 다이얼로그 트리거) - PermissionViewController
+- [X] T063 [US6] 거부 상태 UI 구현 ("설정에서 권한을 허용해주세요" + "설정 열기" 버튼) - PermissionViewController
+- [X] T064 [US6] 제한 접근 배너 구현 ("더 많은 사진 선택") - GridViewController
+- [X] T065 [US6] SceneDelegate에 권한 체크 추가 (미승인 시 PermissionViewController 표시) - SceneDelegate
+- [X] T066 [US6] 앱 실행 중 권한 변경 처리 (PHPhotoLibrary 권한 변경 감지) - SceneDelegate
 
-**체크포인트**: 6개 User Story 모두 완전히 동작
+**체크포인트**: 6개 User Story 모두 완전히 동작 ✅
 - FR-032~FR-034 검증 가능
 
 ---
