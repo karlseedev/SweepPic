@@ -290,12 +290,11 @@ final class FloatingTabBar: UIView {
 
     private func setupConstraints() {
         NSLayoutConstraint.activate([
-            // 일반 모드 캡슐: 중앙 정렬
+            // 일반 모드 캡슐: 중앙 정렬, 화면 너비의 60%
             capsuleShadowView.centerXAnchor.constraint(equalTo: centerXAnchor),
             capsuleShadowView.topAnchor.constraint(equalTo: topAnchor),
             capsuleShadowView.heightAnchor.constraint(equalToConstant: Self.capsuleHeight),
-            capsuleShadowView.leadingAnchor.constraint(greaterThanOrEqualTo: leadingAnchor, constant: Self.capsulePadding),
-            capsuleShadowView.trailingAnchor.constraint(lessThanOrEqualTo: trailingAnchor, constant: -Self.capsulePadding),
+            capsuleShadowView.widthAnchor.constraint(equalTo: widthAnchor, multiplier: 0.6),
 
             capsuleContainer.topAnchor.constraint(equalTo: capsuleShadowView.topAnchor),
             capsuleContainer.leadingAnchor.constraint(equalTo: capsuleShadowView.leadingAnchor),
