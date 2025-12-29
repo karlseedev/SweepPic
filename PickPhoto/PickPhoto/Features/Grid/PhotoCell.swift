@@ -232,6 +232,22 @@ final class PhotoCell: UICollectionViewCell {
     /// 그라데이션 레이어 (비디오 배지용)
     private var gradientLayer: CAGradientLayer?
 
+    /// T073: iCloud 전용 사진 아이콘 (우측 상단 구름 아이콘)
+    private let iCloudIconView: UIImageView = {
+        let iv = UIImageView()
+        iv.contentMode = .scaleAspectFit
+        iv.tintColor = .white
+        iv.isHidden = true
+        iv.translatesAutoresizingMaskIntoConstraints = false
+        iv.image = UIImage(systemName: "icloud.and.arrow.down")
+        // 그림자 효과 (가독성 향상)
+        iv.layer.shadowColor = UIColor.black.cgColor
+        iv.layer.shadowOffset = CGSize(width: 0, height: 1)
+        iv.layer.shadowRadius = 2
+        iv.layer.shadowOpacity = 0.5
+        return iv
+    }()
+
     // MARK: - Properties
 
     /// 현재 이미지 요청 토큰 (레거시 API용)
@@ -297,6 +313,7 @@ final class PhotoCell: UICollectionViewCell {
         videoDurationLabel.isHidden = true
         videoIconView.isHidden = true
         videoGradientView.isHidden = true
+        iCloudIconView.isHidden = true
     }
 
     override func layoutSubviews() {
@@ -371,6 +388,15 @@ final class PhotoCell: UICollectionViewCell {
             selectionCheckmarkView.widthAnchor.constraint(equalToConstant: 24),
             selectionCheckmarkView.heightAnchor.constraint(equalToConstant: 24)
         ])
+
+        // T073: iCloud 전용 사진 아이콘 (우측 상단)
+        contentView.addSubview(iCloudIconView)
+        NSLayoutConstraint.activate([
+            iCloudIconView.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -4),
+            iCloudIconView.topAnchor.constraint(equalTo: contentView.topAnchor, constant: 4),
+            iCloudIconView.widthAnchor.constraint(equalToConstant: 16),
+            iCloudIconView.heightAnchor.constraint(equalToConstant: 16)
+        ])
     }
 
     // MARK: - Configuration
@@ -386,6 +412,7 @@ final class PhotoCell: UICollectionViewCell {
         selectionCheckmarkView.isHidden = true
         videoDurationLabel.isHidden = true
         videoIconView.isHidden = true
+        iCloudIconView.isHidden = true
     }
 
     /// 셀 설정 (PHAsset 직접 전달 - v6 최적화)
@@ -442,6 +469,9 @@ final class PhotoCell: UICollectionViewCell {
         // 비디오 배지 업데이트 (T067)
         let duration: TimeInterval? = mediaType == .video ? asset.duration : nil
         updateVideoBadge(mediaType: mediaType, duration: duration)
+
+        // T073: iCloud 전용 사진 아이콘 업데이트
+        updateiCloudBadge(asset: asset)
 
         // targetSize는 이미 픽셀 단위 (thumbnailSize()가 pt × scale 반환)
         // 여기서 다시 scale을 곱하면 이중 곱셈 버그 발생
@@ -720,6 +750,20 @@ final class PhotoCell: UICollectionViewCell {
         } else {
             return String(format: "%d:%02d", minutes, seconds)
         }
+    }
+
+    /// T073: iCloud 전용 사진 배지 업데이트
+    /// sourceType이 .typeCloudShared 또는 .typeiTunesSynced가 아니면서
+    /// 로컬에 원본이 없는 경우 iCloud 아이콘 표시
+    /// - Parameter asset: 확인할 PHAsset
+    private func updateiCloudBadge(asset: PHAsset) {
+        // PHAsset의 sourceType으로 iCloud 전용 여부 확인
+        // sourceType은 옵션 세트이므로 로컬 소스가 없는지 확인
+        // .typeUserLibrary가 없으면 iCloud에만 있는 것으로 간주
+        let isLocallyAvailable = asset.sourceType.contains(.typeUserLibrary)
+        let isiCloudOnly = !isLocallyAvailable
+
+        iCloudIconView.isHidden = !isiCloudOnly
     }
 }
 

@@ -221,16 +221,16 @@
 
 ### 미디어 타입 지원
 
-- [ ] T067 [P] 비디오 썸네일 표시 구현 (재생 아이콘 + duration 배지), FR-035 기준 - PhotoCell
-- [ ] T068 [P] Live Photo 표시 구현 (정지 이미지, 배지 없음), FR-036 기준 - PhotoCell
-- [ ] T069 비디오 첫 프레임 표시 구현 (재생 미지원) - ViewerViewController
+- [X] T067 [P] 비디오 썸네일 표시 구현 (재생 아이콘 + duration 배지), FR-035 기준 - PhotoCell
+- [X] T068 [P] Live Photo 표시 구현 (정지 이미지, 배지 없음), FR-036 기준 - PhotoCell
+- [X] T069 비디오 첫 프레임 표시 구현 (재생 미지원) - ViewerViewController
 
 ### 엣지 케이스
 
-- [ ] T070 [P] 사진 0장 빈 상태 구현 ("사진이 없습니다") - GridViewController
-- [ ] T071 [P] 앨범 내 사진 0장 빈 상태 구현 - 앨범 그리드
-- [ ] T072 메모리 경고 처리 구현 (ImagePipeline 캐시 해제) - AppStateStore
-- [ ] T073 iCloud 전용 사진 placeholder 표시 구현 - PhotoCell
+- [X] T070 [P] 사진 0장 빈 상태 구현 ("사진이 없습니다") - GridViewController
+- [X] T071 [P] 앨범 내 사진 0장 빈 상태 구현 - 앨범 그리드
+- [X] T072 메모리 경고 처리 구현 (ImagePipeline 캐시 해제) - AppStateStore
+- [X] T073 iCloud 전용 사진 placeholder 표시 구현 - PhotoCell
 
 ### 성능 검증
 
