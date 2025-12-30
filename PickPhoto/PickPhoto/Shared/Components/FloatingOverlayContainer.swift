@@ -208,7 +208,13 @@ final class FloatingOverlayContainer: UIView {
     /// GridViewController에서 호출
     func enterSelectMode() {
         isSelectMode = true
-        tabBar.setMode(.select(count: 0), animated: true)
+        // 타이틀바: Cancel 버튼으로 변경
+        titleBar.enterSelectMode { [weak self] in
+            guard let self = self else { return }
+            self.delegate?.floatingOverlayDidTapCancel(self)
+        }
+        // 탭바: Select 모드 UI로 전환
+        tabBar.enterSelectMode(animated: true)
         print("[FloatingOverlayContainer] Entered select mode")
     }
 
@@ -216,7 +222,10 @@ final class FloatingOverlayContainer: UIView {
     /// GridViewController에서 Cancel/Delete 완료 후 호출
     func exitSelectMode() {
         isSelectMode = false
-        tabBar.setMode(.normal, animated: true)
+        // 타이틀바: Select 버튼으로 복원
+        titleBar.exitSelectMode()
+        // 탭바: 일반 모드로 복원
+        tabBar.exitSelectMode(animated: true)
         print("[FloatingOverlayContainer] Exited select mode")
     }
 
@@ -300,10 +309,6 @@ extension FloatingOverlayContainer: FloatingTabBarDelegate {
         // 타이틀 갱신은 탭 전환 완료 후 TabBarController가 처리
         // (selectedTabIndex를 여기서 바꾸면 타이틀이 먼저 바뀌고 화면이 나중에 바뀌는 문제 발생)
         delegate?.floatingOverlay(self, didSelectTabAt: index)
-    }
-
-    func floatingTabBarDidTapCancel(_ tabBar: FloatingTabBar) {
-        delegate?.floatingOverlayDidTapCancel(self)
     }
 
     func floatingTabBarDidTapDelete(_ tabBar: FloatingTabBar) {

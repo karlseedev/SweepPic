@@ -289,7 +289,7 @@ final class TrashAlbumViewController: UIViewController {
 
         // "비우기" 버튼 설정 (휴지통이 비어있지 않을 때)
         if !trashedAssets.isEmpty {
-            overlay.titleBar.setRightButton(title: "비우기", color: .systemRed) { [weak self] in
+            overlay.titleBar.setRightButton(title: "비우기", backgroundColor: .systemRed) { [weak self] in
                 self?.emptyTrashButtonTapped()
             }
         } else {
@@ -620,7 +620,7 @@ final class TrashAlbumViewController: UIViewController {
         }
 
         if !trashedAssets.isEmpty {
-            overlay.titleBar.setRightButton(title: "비우기", color: .systemRed) { [weak self] in
+            overlay.titleBar.setRightButton(title: "비우기", backgroundColor: .systemRed) { [weak self] in
                 self?.emptyTrashButtonTapped()
             }
         } else {

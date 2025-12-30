@@ -1477,7 +1477,7 @@ extension GridViewController {
 
         // 선택 개수 라벨 (UILabel을 customView로 사용)
         let countLabel = UILabel()
-        countLabel.text = "0개 선택됨"
+        countLabel.text = "항목 선택"
         countLabel.font = .systemFont(ofSize: 17)
         countLabel.textColor = .label
         countLabel.sizeToFit()
@@ -1919,7 +1919,8 @@ extension GridViewController: SelectionManagerDelegate {
         // 툴바 라벨 업데이트
         if let countItem = selectionCountBarItem,
            let label = countItem.customView as? UILabel {
-            label.text = "\(count)개 선택됨"
+            // 0개: "항목 선택", 1개 이상: "N개 항목 선택됨"
+            label.text = count > 0 ? "\(count)개 항목 선택됨" : "항목 선택"
             label.sizeToFit()
         }
 

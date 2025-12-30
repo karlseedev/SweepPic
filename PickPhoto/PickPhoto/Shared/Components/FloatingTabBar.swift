@@ -16,22 +16,11 @@ protocol FloatingTabBarDelegate: AnyObject {
     /// - Parameter index: 선택된 탭 인덱스 (0: Photos, 1: Albums, 2: Trash)
     func floatingTabBar(_ tabBar: FloatingTabBar, didSelectTabAt index: Int)
 
-    /// Select 모드에서 Cancel 버튼 탭
-    func floatingTabBarDidTapCancel(_ tabBar: FloatingTabBar)
-
     /// Select 모드에서 Delete 버튼 탭
     func floatingTabBarDidTapDelete(_ tabBar: FloatingTabBar)
 
     /// 휴지통 비우기(삭제하기) 버튼 탭
     func floatingTabBarDidTapEmptyTrash(_ tabBar: FloatingTabBar)
-}
-
-/// 탭바 모드
-enum FloatingTabBarMode {
-    /// 일반 모드: 탭 버튼 표시 (Photos/Albums)
-    case normal
-    /// Select 모드: Cancel/선택 개수/Delete 표시
-    case select(count: Int)
 }
 
 /// 하단 플로팅 캡슐 탭바
@@ -66,8 +55,8 @@ final class FloatingTabBar: UIView {
         }
     }
 
-    /// 현재 모드 (일반/Select)
-    private(set) var mode: FloatingTabBarMode = .normal
+    /// 현재 Select 모드 여부
+    private(set) var isSelectMode: Bool = false
 
     // MARK: - UI Components (Normal Mode)
 
@@ -197,97 +186,53 @@ final class FloatingTabBar: UIView {
 
     // MARK: - UI Components (Select Mode)
 
-    /// Select 모드 그림자 컨테이너
-    private lazy var selectShadowView: UIView = {
-        let view = UIView()
-        view.layer.cornerRadius = Self.capsuleCornerRadius
-        view.layer.shadowColor = UIColor.black.cgColor
-        view.layer.shadowOpacity = 0.25
-        view.layer.shadowRadius = 12
-        view.layer.shadowOffset = CGSize(width: 0, height: 6)
-        view.translatesAutoresizingMaskIntoConstraints = false
-        view.isHidden = true
-        return view
-    }()
-
-    /// Select 모드 컨테이너
-    private lazy var selectContainer: UIVisualEffectView = {
-        let effect = UIBlurEffect(style: .systemThinMaterialDark)
-        let view = UIVisualEffectView(effect: effect)
-        view.layer.cornerRadius = Self.capsuleCornerRadius
-        view.layer.borderWidth = 0.5
-        view.layer.borderColor = UIColor.white.withAlphaComponent(0.15).cgColor
-        view.clipsToBounds = true
-        view.translatesAutoresizingMaskIntoConstraints = false
-        view.isHidden = true
-        return view
-    }()
-
-    /// Select 모드 배경 오버레이
-    private lazy var selectBackgroundView: UIView = {
-        let view = UIView()
-        view.backgroundColor = UIColor(white: 0.12, alpha: 0.5)
-        view.isUserInteractionEnabled = false
-        view.translatesAutoresizingMaskIntoConstraints = false
-        return view
-    }()
-
-    /// Select 모드 스택뷰
-    private lazy var selectStackView: UIStackView = {
-        let stack = UIStackView()
-        stack.axis = .horizontal
-        stack.distribution = .equalSpacing
-        stack.alignment = .center
-        stack.translatesAutoresizingMaskIntoConstraints = false
-        return stack
-    }()
-
-    /// Cancel 버튼
-    private lazy var cancelButton: UIButton = {
-        var config = UIButton.Configuration.plain()
-        config.title = "Cancel"
-        config.baseForegroundColor = .white
-        config.titleTextAttributesTransformer = Self.tabTitleTransformer()
-        config.contentInsets = NSDirectionalEdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16)
-        let button = UIButton(configuration: config)
-        button.addTarget(self, action: #selector(cancelButtonTapped), for: .touchUpInside)
-        return button
-    }()
-
-    /// 선택 개수 라벨
+    /// 선택 개수 라벨 (순수 텍스트)
     private lazy var selectionCountLabel: UILabel = {
         let label = UILabel()
-        label.text = "0개 선택됨"
+        label.text = "항목 선택"
         label.textColor = .white
-        label.font = .systemFont(ofSize: 13, weight: .medium)
+        label.font = .systemFont(ofSize: 17, weight: .regular)
         label.textAlignment = .center
         return label
     }()
 
-    /// Delete 버튼
+    /// Delete 버튼 (캡슐 + 틴티드 스타일)
     private lazy var deleteButton: UIButton = {
-        var config = UIButton.Configuration.plain()
+        var config = UIButton.Configuration.filled()
         config.title = "Delete"
-        config.baseForegroundColor = .systemRed
-        config.titleTextAttributesTransformer = Self.tabTitleTransformer()
+        // 빨간색 반투명 배경 + 흰색 텍스트
+        config.baseBackgroundColor = UIColor.systemRed.withAlphaComponent(0.3)
+        config.baseForegroundColor = .white
+        config.cornerStyle = .capsule
         config.contentInsets = NSDirectionalEdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16)
         let button = UIButton(configuration: config)
         button.addTarget(self, action: #selector(deleteButtonTapped), for: .touchUpInside)
         return button
     }()
 
+    /// Select 모드 컨테이너 (선택개수 + Delete)
+    private lazy var selectModeContainer: UIView = {
+        let view = UIView()
+        view.backgroundColor = .clear
+        view.isHidden = true
+        view.translatesAutoresizingMaskIntoConstraints = false
+        return view
+    }()
+
     /// 그라데이션 딤 레이어 (하단에서 상단으로 자연스럽게 페이드, 블러 없음)
     private lazy var gradientLayer: CAGradientLayer = {
         let layer = CAGradientLayer()
-        // 상단: 완전 투명 → 중간(0.5): 60% → 하단: 60% 유지
+        // 상단: 투명 → 70% 지점: 60% 도달 → 하단: 60% 유지
+        // 균등한 알파 변화로 부드러운 전환
         layer.colors = [
             UIColor.clear.cgColor,
-            UIColor.black.withAlphaComponent(Self.maxDimAlpha * 0.5).cgColor,
+            UIColor.black.withAlphaComponent(Self.maxDimAlpha * 0.33).cgColor,
+            UIColor.black.withAlphaComponent(Self.maxDimAlpha * 0.66).cgColor,
             UIColor.black.withAlphaComponent(Self.maxDimAlpha).cgColor,
             UIColor.black.withAlphaComponent(Self.maxDimAlpha).cgColor
         ]
-        // 0.5 지점에서 최대 딤, 이후 유지
-        layer.locations = [0, 0.25, 0.5, 1.0]
+        // 0~70% 구간에서 균등하게 전환, 70~100%는 유지
+        layer.locations = [0, 0.23, 0.47, 0.7, 1.0]
         layer.startPoint = CGPoint(x: 0.5, y: 0)
         layer.endPoint = CGPoint(x: 0.5, y: 1)
         return layer
@@ -328,15 +273,12 @@ final class FloatingTabBar: UIView {
         emptyTrashContainer.contentView.addSubview(emptyTrashButton)
         emptyTrashShadowView.isHidden = true  // 비활성화
 
-        // Select 모드 캡슐 추가
-        addSubview(selectShadowView)
-        selectShadowView.addSubview(selectContainer)
-        selectContainer.contentView.addSubview(selectBackgroundView)
-        selectContainer.contentView.addSubview(selectStackView)
-
-        selectStackView.addArrangedSubview(cancelButton)
-        selectStackView.addArrangedSubview(selectionCountLabel)
-        selectStackView.addArrangedSubview(deleteButton)
+        // Select 모드 컨테이너 추가 (선택개수 + Delete)
+        addSubview(selectModeContainer)
+        selectModeContainer.addSubview(selectionCountLabel)
+        selectModeContainer.addSubview(deleteButton)
+        selectionCountLabel.translatesAutoresizingMaskIntoConstraints = false
+        deleteButton.translatesAutoresizingMaskIntoConstraints = false
 
         setupConstraints()
         updateTabSelection()
@@ -389,28 +331,19 @@ final class FloatingTabBar: UIView {
             emptyTrashButton.trailingAnchor.constraint(equalTo: emptyTrashContainer.contentView.trailingAnchor),
             emptyTrashButton.bottomAnchor.constraint(equalTo: emptyTrashContainer.contentView.bottomAnchor),
 
-            // Select 모드 캡슐: 일반 모드와 동일 위치
-            selectShadowView.centerXAnchor.constraint(equalTo: centerXAnchor),
-            selectShadowView.topAnchor.constraint(equalTo: topAnchor),
-            selectShadowView.heightAnchor.constraint(equalToConstant: Self.capsuleHeight),
-            selectShadowView.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 16),
-            selectShadowView.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -16),
+            // Select 모드 컨테이너: 전체 너비
+            selectModeContainer.topAnchor.constraint(equalTo: topAnchor),
+            selectModeContainer.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 16),
+            selectModeContainer.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -16),
+            selectModeContainer.heightAnchor.constraint(equalToConstant: Self.capsuleHeight),
 
-            selectContainer.topAnchor.constraint(equalTo: selectShadowView.topAnchor),
-            selectContainer.leadingAnchor.constraint(equalTo: selectShadowView.leadingAnchor),
-            selectContainer.trailingAnchor.constraint(equalTo: selectShadowView.trailingAnchor),
-            selectContainer.bottomAnchor.constraint(equalTo: selectShadowView.bottomAnchor),
+            // 선택개수 라벨: 중앙
+            selectionCountLabel.centerXAnchor.constraint(equalTo: selectModeContainer.centerXAnchor),
+            selectionCountLabel.centerYAnchor.constraint(equalTo: selectModeContainer.centerYAnchor),
 
-            // Select 스택뷰: 캡슐 내부
-            selectBackgroundView.topAnchor.constraint(equalTo: selectContainer.contentView.topAnchor),
-            selectBackgroundView.leadingAnchor.constraint(equalTo: selectContainer.contentView.leadingAnchor),
-            selectBackgroundView.trailingAnchor.constraint(equalTo: selectContainer.contentView.trailingAnchor),
-            selectBackgroundView.bottomAnchor.constraint(equalTo: selectContainer.contentView.bottomAnchor),
-
-            selectStackView.topAnchor.constraint(equalTo: selectContainer.contentView.topAnchor),
-            selectStackView.leadingAnchor.constraint(equalTo: selectContainer.contentView.leadingAnchor, constant: 6),
-            selectStackView.trailingAnchor.constraint(equalTo: selectContainer.contentView.trailingAnchor, constant: -6),
-            selectStackView.bottomAnchor.constraint(equalTo: selectContainer.contentView.bottomAnchor),
+            // Delete 버튼: 우측
+            deleteButton.trailingAnchor.constraint(equalTo: selectModeContainer.trailingAnchor),
+            deleteButton.centerYAnchor.constraint(equalTo: selectModeContainer.centerYAnchor),
         ])
     }
 
@@ -421,10 +354,6 @@ final class FloatingTabBar: UIView {
         gradientLayer.frame = bounds
         capsuleShadowView.layer.shadowPath = UIBezierPath(
             roundedRect: capsuleShadowView.bounds,
-            cornerRadius: Self.capsuleCornerRadius
-        ).cgPath
-        selectShadowView.layer.shadowPath = UIBezierPath(
-            roundedRect: selectShadowView.bounds,
             cornerRadius: Self.capsuleCornerRadius
         ).cgPath
         // 원형 삭제하기 버튼 그림자 경로 (원형)
@@ -439,12 +368,7 @@ final class FloatingTabBar: UIView {
     /// 기본 사진 앱과 동일하게 딤드 영역에서는 스크롤 불가
     override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
         // Select 모드일 때
-        if !selectShadowView.isHidden {
-            // Cancel 버튼 체크
-            let cancelPoint = convert(point, to: cancelButton)
-            if cancelButton.bounds.contains(cancelPoint) {
-                return cancelButton
-            }
+        if isSelectMode {
             // Delete 버튼 체크
             let deletePoint = convert(point, to: deleteButton)
             if deleteButton.bounds.contains(deletePoint) {
@@ -539,11 +463,6 @@ final class FloatingTabBar: UIView {
         delegate?.floatingTabBar(self, didSelectTabAt: index)
     }
 
-    @objc private func cancelButtonTapped() {
-        print("[FloatingTabBar] Cancel tapped")
-        delegate?.floatingTabBarDidTapCancel(self)
-    }
-
     @objc private func deleteButtonTapped() {
         print("[FloatingTabBar] Delete tapped")
         delegate?.floatingTabBarDidTapDelete(self)
@@ -556,56 +475,62 @@ final class FloatingTabBar: UIView {
 
     // MARK: - Public Methods
 
-    /// 모드 설정 (일반/Select)
-    /// - Parameter mode: 새로운 모드
+    /// Select 모드 진입
     /// - Parameter animated: 애니메이션 여부
-    func setMode(_ mode: FloatingTabBarMode, animated: Bool = true) {
-        self.mode = mode
-
-        let isSelectMode: Bool
-        switch mode {
-        case .normal:
-            isSelectMode = false
-        case .select(let count):
-            isSelectMode = true
-            selectionCountLabel.text = "\(count)개 선택됨"
-            // Delete 버튼 활성화/비활성화
-            deleteButton.isEnabled = count > 0
-            deleteButton.alpha = count > 0 ? 1.0 : 0.5
-        }
+    func enterSelectMode(animated: Bool = true) {
+        isSelectMode = true
+        selectionCountLabel.text = "항목 선택"
+        deleteButton.isEnabled = false
+        deleteButton.alpha = 0.5
 
         if animated {
-            if isSelectMode {
-                selectShadowView.isHidden = false
-                selectContainer.isHidden = false
-                selectShadowView.alpha = 0
-            } else {
-                capsuleShadowView.isHidden = false
-                capsuleShadowView.alpha = 0
-            }
+            selectModeContainer.isHidden = false
+            selectModeContainer.alpha = 0
             UIView.animate(withDuration: 0.25) {
-                self.capsuleShadowView.alpha = isSelectMode ? 0 : 1
-                self.selectShadowView.alpha = isSelectMode ? 1 : 0
+                self.capsuleShadowView.alpha = 0
+                self.selectModeContainer.alpha = 1
             } completion: { _ in
-                self.capsuleShadowView.isHidden = isSelectMode
-                self.selectShadowView.isHidden = !isSelectMode
-                self.selectContainer.isHidden = !isSelectMode
+                self.capsuleShadowView.isHidden = true
             }
         } else {
-            capsuleShadowView.isHidden = isSelectMode
-            capsuleShadowView.alpha = isSelectMode ? 0 : 1
-            selectShadowView.isHidden = !isSelectMode
-            selectShadowView.alpha = isSelectMode ? 1 : 0
-            selectContainer.isHidden = !isSelectMode
+            capsuleShadowView.isHidden = true
+            capsuleShadowView.alpha = 0
+            selectModeContainer.isHidden = false
+            selectModeContainer.alpha = 1
         }
 
-        print("[FloatingTabBar] Mode changed to: \(isSelectMode ? "select" : "normal")")
+        print("[FloatingTabBar] Entered select mode")
+    }
+
+    /// Select 모드 종료
+    /// - Parameter animated: 애니메이션 여부
+    func exitSelectMode(animated: Bool = true) {
+        isSelectMode = false
+
+        if animated {
+            capsuleShadowView.isHidden = false
+            capsuleShadowView.alpha = 0
+            UIView.animate(withDuration: 0.25) {
+                self.capsuleShadowView.alpha = 1
+                self.selectModeContainer.alpha = 0
+            } completion: { _ in
+                self.selectModeContainer.isHidden = true
+            }
+        } else {
+            capsuleShadowView.isHidden = false
+            capsuleShadowView.alpha = 1
+            selectModeContainer.isHidden = true
+            selectModeContainer.alpha = 0
+        }
+
+        print("[FloatingTabBar] Exited select mode")
     }
 
     /// 선택 개수 업데이트 (Select 모드에서)
     /// - Parameter count: 선택된 사진 개수
     func updateSelectionCount(_ count: Int) {
-        selectionCountLabel.text = "\(count)개 선택됨"
+        // 0개: "항목 선택", 1개 이상: "N개 항목 선택됨"
+        selectionCountLabel.text = count > 0 ? "\(count)개 항목 선택됨" : "항목 선택"
         deleteButton.isEnabled = count > 0
         deleteButton.alpha = count > 0 ? 1.0 : 0.5
     }
@@ -614,7 +539,8 @@ final class FloatingTabBar: UIView {
     /// - Parameter safeAreaBottom: 하단 safe area inset
     /// - Returns: 전체 탭바 높이
     static func totalHeight(safeAreaBottom: CGFloat) -> CGFloat {
-        return capsuleHeight + safeAreaBottom + 8 // 8pt 상단 여백
+        // 캡슐 하단이 홈 인디케이터 바로 위에 위치
+        return capsuleHeight + safeAreaBottom
     }
 
     private static func tabTitleTransformer() -> UIConfigurationTextAttributesTransformer {

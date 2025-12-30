@@ -144,19 +144,18 @@ final class FloatingTitleBar: UIView {
         return label
     }()
 
-    /// Select 버튼
+    /// Select 버튼 (캡슐 + 틴티드 스타일)
     private lazy var selectButton: UIButton = {
-        var config = UIButton.Configuration.plain()
+        var config = UIButton.Configuration.filled()
         config.title = "Select"
+        // 파란색 반투명 배경 + 흰색 텍스트
+        config.baseBackgroundColor = UIColor.systemBlue.withAlphaComponent(0.3)
         config.baseForegroundColor = .white
+        // 캡슐 형태
+        config.cornerStyle = .capsule
         // 터치 영역 최소 44pt 보장
         config.contentInsets = NSDirectionalEdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16)
         let button = UIButton(configuration: config)
-        // 그림자 효과로 가독성 향상
-        button.layer.shadowColor = UIColor.black.cgColor
-        button.layer.shadowOffset = CGSize(width: 0, height: 1)
-        button.layer.shadowOpacity = 0.3
-        button.layer.shadowRadius = 2
         button.addTarget(self, action: #selector(selectButtonTapped), for: .touchUpInside)
         button.translatesAutoresizingMaskIntoConstraints = false
         return button
@@ -332,12 +331,15 @@ final class FloatingTitleBar: UIView {
     /// 커스텀 오른쪽 버튼 설정 (Select 버튼 대체)
     /// - Parameters:
     ///   - title: 버튼 타이틀
-    ///   - color: 버튼 색상 (기본: 흰색)
+    ///   - backgroundColor: 버튼 배경색 (반투명 적용됨)
     ///   - action: 버튼 탭 시 실행할 클로저
-    func setRightButton(title: String, color: UIColor = .white, action: @escaping () -> Void) {
-        var config = UIButton.Configuration.plain()
+    func setRightButton(title: String, backgroundColor: UIColor = .systemBlue, action: @escaping () -> Void) {
+        var config = UIButton.Configuration.filled()
         config.title = title
-        config.baseForegroundColor = color
+        // 캡슐 + 틴티드 스타일
+        config.baseBackgroundColor = backgroundColor.withAlphaComponent(0.3)
+        config.baseForegroundColor = .white
+        config.cornerStyle = .capsule
         config.contentInsets = NSDirectionalEdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16)
         selectButton.configuration = config
         selectButton.isHidden = false
@@ -349,11 +351,14 @@ final class FloatingTitleBar: UIView {
         selectButton.addTarget(self, action: #selector(rightButtonTapped), for: .touchUpInside)
     }
 
-    /// 오른쪽 버튼을 Select 버튼으로 복원
+    /// 오른쪽 버튼을 Select 버튼으로 복원 (캡슐 + 틴티드 스타일)
     func resetToSelectButton() {
-        var config = UIButton.Configuration.plain()
+        var config = UIButton.Configuration.filled()
         config.title = "Select"
+        // 파란색 반투명 배경 + 흰색 텍스트
+        config.baseBackgroundColor = UIColor.systemBlue.withAlphaComponent(0.3)
         config.baseForegroundColor = .white
+        config.cornerStyle = .capsule
         config.contentInsets = NSDirectionalEdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16)
         selectButton.configuration = config
         rightButtonAction = nil
@@ -361,6 +366,19 @@ final class FloatingTitleBar: UIView {
         // 액션 복원
         selectButton.removeTarget(self, action: #selector(rightButtonTapped), for: .touchUpInside)
         selectButton.addTarget(self, action: #selector(selectButtonTapped), for: .touchUpInside)
+    }
+
+    /// Select 모드 진입 - Cancel 버튼으로 변경
+    /// - Parameter cancelAction: Cancel 버튼 탭 시 실행할 클로저
+    func enterSelectMode(cancelAction: @escaping () -> Void) {
+        setRightButton(title: "Cancel", backgroundColor: .systemBlue, action: cancelAction)
+        print("[FloatingTitleBar] Entered select mode - showing Cancel button")
+    }
+
+    /// Select 모드 종료 - Select 버튼으로 복원
+    func exitSelectMode() {
+        resetToSelectButton()
+        print("[FloatingTitleBar] Exited select mode - showing Select button")
     }
 
     @objc private func rightButtonTapped() {
