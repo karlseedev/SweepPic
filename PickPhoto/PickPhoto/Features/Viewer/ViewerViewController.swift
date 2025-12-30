@@ -218,8 +218,12 @@ final class ViewerViewController: UIViewController {
         self.viewerMode = mode
         super.init(nibName: nil, bundle: nil)
 
-        // Push 시 TabBar 숨김
-        hidesBottomBarWhenPushed = true
+        // iOS 16~25: hidesBottomBarWhenPushed 사용 안 함 (자동 복원 차단)
+        // iOS 26+: 시스템 UX 유지
+        if #available(iOS 26.0, *) {
+            hidesBottomBarWhenPushed = true
+        }
+        // else: 기본값 false 유지 (iOS 16~25에서 자동 복원 문제 방지)
     }
 
     required init?(coder: NSCoder) {
@@ -239,10 +243,8 @@ final class ViewerViewController: UIViewController {
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
 
-        // iOS 16~25: FloatingOverlay 숨김 (Push 방식이므로 직접 숨김 필요)
-        if let tabBarController = tabBarController as? TabBarController {
-            tabBarController.floatingOverlay?.isHidden = true
-        }
+        // FloatingOverlay 가시성은 TabBarController의 UINavigationControllerDelegate가 관리
+        // (BarsVisibilityControlling 프로토콜 기반)
 
         // iOS 26+: navigationController 존재 확인 후 시스템 UI 설정
         if #available(iOS 26.0, *) {
@@ -264,15 +266,11 @@ final class ViewerViewController: UIViewController {
     override func viewWillDisappear(_ animated: Bool) {
         super.viewWillDisappear(animated)
 
-        // iOS 16~25: FloatingOverlay 다시 표시
-        if let tabBarController = tabBarController as? TabBarController {
-            tabBarController.floatingOverlay?.isHidden = false
-        }
+        // FloatingOverlay 가시성은 TabBarController의 UINavigationControllerDelegate가 관리
+        // (BarsVisibilityControlling 프로토콜 기반 - pop 시 자동으로 다음 VC 정책 적용)
 
-        // iOS 26+: 툴바 숨김 복구 (다른 화면에 영향 방지)
-        if #available(iOS 26.0, *) {
-            navigationController?.setToolbarHidden(true, animated: false)
-        }
+        // 툴바 숨김은 TabBarController의 applyBarsVisibilityPolicy에서 처리
+        // (다음 VC의 prefersToolbarHidden 정책에 따라 자동 적용)
 
         // 현재 표시 중인 사진 ID 전달
         let currentAssetID = coordinator.assetID(at: currentIndex)
@@ -1199,4 +1197,14 @@ extension PhotoPageViewController: UIScrollViewDelegate {
             needsLayoutUpdateAfterZoom = false
         }
     }
+}
+
+// MARK: - BarsVisibilityControlling
+
+extension ViewerViewController: BarsVisibilityControlling {
+    /// Viewer에서는 floatingOverlay 숨김 (전체화면 뷰어이므로)
+    var prefersFloatingOverlayHidden: Bool? { true }
+
+    // prefersSystemTabBarHidden: nil (TabBarController 기본 정책)
+    // prefersToolbarHidden: nil (TabBarController 기본 정책, iOS 26에서는 setupSystemToolbar에서 별도 관리)
 }

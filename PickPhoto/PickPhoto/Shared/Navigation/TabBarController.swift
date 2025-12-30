@@ -76,6 +76,7 @@ class TabBarController: UITabBarController {
             image: UIImage(systemName: "photo.on.rectangle"),
             selectedImage: UIImage(systemName: "photo.on.rectangle.fill")
         )
+        photosNavController.delegate = self  // BarsVisibilityPolicy 적용을 위한 delegate
         self.photosNav = photosNavController
 
         // Albums 탭 (앨범 목록)
@@ -90,6 +91,7 @@ class TabBarController: UITabBarController {
             image: UIImage(systemName: "rectangle.stack"),
             selectedImage: UIImage(systemName: "rectangle.stack.fill")
         )
+        albumsNavController.delegate = self  // BarsVisibilityPolicy 적용을 위한 delegate
         self.albumsNav = albumsNavController
 
         // Trash 탭 (휴지통)
@@ -103,6 +105,7 @@ class TabBarController: UITabBarController {
             image: UIImage(systemName: "trash"),
             selectedImage: UIImage(systemName: "trash.fill")
         )
+        trashNavController.delegate = self  // BarsVisibilityPolicy 적용을 위한 delegate
         self.trashNav = trashNavController
 
         // 탭 뷰컨트롤러 설정
@@ -293,5 +296,56 @@ extension TabBarController: FloatingOverlayContainerDelegate {
         if let trashVC = trashNav?.viewControllers.first as? TrashAlbumViewController {
             trashVC.emptyTrash()
         }
+    }
+}
+
+// MARK: - UINavigationControllerDelegate (BarsVisibilityPolicy)
+
+extension TabBarController: UINavigationControllerDelegate {
+
+    /// 네비게이션 전환 시 Bar 가시성 정책 적용
+    /// - willShow에서 전달되는 viewController는 "곧 보여질 VC"로 정확한 대상
+    /// - topViewController는 전환 중에는 아직 이전 VC일 수 있음
+    func navigationController(
+        _ navigationController: UINavigationController,
+        willShow viewController: UIViewController,
+        animated: Bool
+    ) {
+        applyBarsVisibilityPolicy(for: viewController, in: navigationController)
+    }
+
+    /// Bar 가시성 정책 적용
+    /// - BarsVisibilityControlling 프로토콜 채택 VC: 명시적 정책 적용
+    /// - 미채택 VC: TabBarController 기본 정책 적용
+    private func applyBarsVisibilityPolicy(
+        for viewController: UIViewController,
+        in navigationController: UINavigationController
+    ) {
+        let policy = viewController as? BarsVisibilityControlling
+
+        if useFloatingUI {
+            // ===== iOS 16~25 =====
+            // 시스템 탭바: 항상 숨김 (floatingTabBar 사용)
+            tabBar.isHidden = true
+
+            // floatingOverlay: 정책이 있으면 적용, nil이면 기본 정책(표시)
+            if let floatingOverlay = floatingOverlay {
+                floatingOverlay.isHidden = policy?.prefersFloatingOverlayHidden ?? false
+            }
+        } else {
+            // ===== iOS 26+ =====
+            // 시스템 탭바: 항상 표시 강제 (자동 복원 문제 방어)
+            tabBar.isHidden = false
+            // floatingOverlay는 iOS 26에서 nil이므로 처리 불필요
+        }
+
+        // 툴바: 정책이 있으면 적용, nil이면 기본 정책(숨김)
+        let hideToolbar = policy?.prefersToolbarHidden ?? true
+        navigationController.setToolbarHidden(hideToolbar, animated: false)
+
+        // 디버그 로그
+        let vcName = String(describing: type(of: viewController))
+        let hasPolicy = policy != nil
+        print("[TabBarController] BarsVisibilityPolicy applied for \(vcName) (hasPolicy: \(hasPolicy))")
     }
 }

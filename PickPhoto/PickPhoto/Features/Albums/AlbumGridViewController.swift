@@ -171,7 +171,7 @@ final class AlbumGridViewController: UIViewController {
         if useFloatingUI {
             // iOS 16~25: 시스템 바 숨김 유지
             navigationController?.setNavigationBarHidden(true, animated: animated)
-            tabBarController?.tabBar.isHidden = true
+            // tabBar.isHidden은 TabBarController의 BarsVisibilityPolicy에서 관리
 
             // FloatingOverlay 상태 세팅 (공유 UI 사용)
             configureFloatingOverlayForAlbum()
