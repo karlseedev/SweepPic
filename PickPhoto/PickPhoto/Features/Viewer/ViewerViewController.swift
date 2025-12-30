@@ -637,7 +637,8 @@ final class PhotoPageViewController: UIViewController {
     private static let fallbackMaxZoomScale: CGFloat = 4.0
 
     /// 최대 줌 스케일 상한 (메모리 보호)
-    private static let maxZoomScaleLimit: CGFloat = 20.0
+    /// - 기본 사진 앱 수준의 확대를 위해 충분히 높게 설정
+    private static let maxZoomScaleLimit: CGFloat = 50.0
 
     /// 더블탭 줌 스케일
     private static let doubleTapZoomScale: CGFloat = 2.5
@@ -749,8 +750,9 @@ final class PhotoPageViewController: UIViewController {
     // MARK: - Zoom Scale
 
     /// 이미지 해상도 기반 최대 줌 스케일 계산
-    /// - 원본 픽셀을 1:1로 볼 수 있는 배율 반환
-    /// - 최소 fallbackMaxZoomScale(4배), 최대 maxZoomScaleLimit(20배) 보장
+    /// - 원본 픽셀을 화면 포인트에 1:1로 볼 수 있는 배율 반환 (기본 사진 앱과 동일)
+    /// - Retina 3x 디스플레이에서는 원본 1픽셀 = 화면 9픽셀로 표시
+    /// - 최소 fallbackMaxZoomScale(4배), 최대 maxZoomScaleLimit(50배) 보장
     private func calculateMaxZoomScale(for imageSize: CGSize) -> CGFloat {
         let containerSize = scrollView.bounds.size
         guard imageSize.width > 0, imageSize.height > 0,
@@ -762,12 +764,15 @@ final class PhotoPageViewController: UIViewController {
         let fitRatio = min(containerSize.width / imageSize.width,
                            containerSize.height / imageSize.height)
 
-        // 원본 픽셀까지 확대 = 1 / fitRatio
-        // 예: 4032x3024 이미지가 393pt 화면에 fit되면 fitRatio ≈ 0.097
-        //     → 1/0.097 ≈ 10.3배까지 확대해야 원본 픽셀 1:1
-        let calculatedScale = 1.0 / fitRatio
+        // 기본 사진 앱처럼 원본 픽셀을 화면 포인트에 1:1로 매핑
+        // screenScale을 곱해서 Retina 디스플레이에서도 충분히 확대 가능하게 함
+        // 예: 4032x3024 이미지, 393pt 화면, 3x 디스플레이
+        //     fitRatio ≈ 0.097, screenScale = 3.0
+        //     → 3.0/0.097 ≈ 30.9배까지 확대 가능
+        let screenScale = UIScreen.main.scale
+        let calculatedScale = screenScale / fitRatio
 
-        // 최소 4배, 최대 20배로 클램프
+        // 최소 4배, 최대 50배로 클램프
         return max(Self.fallbackMaxZoomScale, min(calculatedScale, Self.maxZoomScaleLimit))
     }
 
