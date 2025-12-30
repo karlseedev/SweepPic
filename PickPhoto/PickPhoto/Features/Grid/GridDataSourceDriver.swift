@@ -209,22 +209,65 @@ final class GridDataSourceDriver: NSObject, GridDataSourceDriverProtocol {
             return
         }
 
-        // 안전한 업데이트: 항상 reloadData() 사용
-        // performBatchUpdates는 백그라운드 복귀, 동영상 촬영 등에서 데이터 불일치 크래시 발생
-        // - PHChange가 부분 변경만 보고하지만 실제 데이터는 더 많이 변경됨
-        // - numberOfItemsInSection과 fetchResult.count가 불일치
-        // reloadData()는 약간의 성능 손실이 있지만 안정성 보장
-        self.fetchResult = changes.fetchResultAfterChanges
-        invalidateCache()
-        collectionView.reloadData()
-
-        let newAnchorIndexPath = anchorAssetID.flatMap { indexPath(for: $0) }
-        completion?(newAnchorIndexPath)
-
+        // 데이터 일관성 검증: 배치 업데이트 전에 예상 결과와 실제 결과 비교
+        // 백그라운드 복귀 시 fetchResult가 이미 갱신된 경우 불일치 발생 가능
+        let currentCount = fetchResult.count
+        let afterCount = changes.fetchResultAfterChanges.count
         let insertedCount = changes.insertedIndexes?.count ?? 0
         let removedCount = changes.removedIndexes?.count ?? 0
-        let changedCount = changes.changedIndexes?.count ?? 0
-        print("[GridDataSourceDriver] Applied change with reloadData - Inserted: \(insertedCount), Removed: \(removedCount), Changed: \(changedCount)")
+        let expectedAfterCount = currentCount + insertedCount - removedCount
+
+        if expectedAfterCount != afterCount {
+            // 불일치 감지: reloadData로 안전하게 처리
+            self.fetchResult = changes.fetchResultAfterChanges
+            invalidateCache()
+            collectionView.reloadData()
+
+            let newAnchorIndexPath = anchorAssetID.flatMap { indexPath(for: $0) }
+            completion?(newAnchorIndexPath)
+            print("[GridDataSourceDriver] Used reloadData due to count mismatch (expected: \(expectedAfterCount), actual: \(afterCount))")
+            return
+        }
+
+        // 배치 업데이트 수행 (삭제가 없고, 데이터 일관성이 검증된 경우만)
+        collectionView.performBatchUpdates({
+            // 삭제된 항목
+            if let removed = changes.removedIndexes, !removed.isEmpty {
+                collectionView.deleteItems(at: removed.map { IndexPath(item: $0, section: 0) })
+            }
+
+            // 삽입된 항목
+            if let inserted = changes.insertedIndexes, !inserted.isEmpty {
+                collectionView.insertItems(at: inserted.map { IndexPath(item: $0, section: 0) })
+            }
+
+            // 이동된 항목
+            changes.enumerateMoves { fromIndex, toIndex in
+                collectionView.moveItem(
+                    at: IndexPath(item: fromIndex, section: 0),
+                    to: IndexPath(item: toIndex, section: 0)
+                )
+            }
+
+            // fetchResult 업데이트
+            self.fetchResult = changes.fetchResultAfterChanges
+
+        }, completion: { [weak self] _ in
+            // 캐시 무효화
+            self?.invalidateCache()
+
+            // 변경된 항목 리로드
+            if let changed = changes.changedIndexes, !changed.isEmpty {
+                let indexPaths = changed.map { IndexPath(item: $0, section: 0) }
+                collectionView.reloadItems(at: indexPaths)
+            }
+
+            // 앵커 위치 찾기
+            let newAnchorIndexPath = anchorAssetID.flatMap { self?.indexPath(for: $0) }
+            completion?(newAnchorIndexPath)
+        })
+
+        print("[GridDataSourceDriver] Applied change - Removed: \(changes.removedIndexes?.count ?? 0), Inserted: \(changes.insertedIndexes?.count ?? 0)")
     }
 
     /// 휴지통 상태 변경 적용
