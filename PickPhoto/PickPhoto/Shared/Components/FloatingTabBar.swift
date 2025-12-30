@@ -53,7 +53,7 @@ final class FloatingTabBar: UIView {
     private static let capsuleCornerRadius: CGFloat = capsuleHeight / 2
 
     /// 최대 딤 알파 (하단은 블러 없이 딤만 적용, 가장 어두운 부분 60%)
-    private static let maxDimAlpha: CGFloat = 0.2
+    private static let maxDimAlpha: CGFloat = 0.6
 
     // MARK: - Properties
 
@@ -279,17 +279,15 @@ final class FloatingTabBar: UIView {
     /// 그라데이션 딤 레이어 (하단에서 상단으로 자연스럽게 페이드, 블러 없음)
     private lazy var gradientLayer: CAGradientLayer = {
         let layer = CAGradientLayer()
-        // 상단: 완전 투명 → 하단: 더 진한 딤
-        // 자연스러운 그라데이션을 위해 중간점 추가
+        // 상단: 완전 투명 → 중간(0.5): 60% → 하단: 60% 유지
         layer.colors = [
             UIColor.clear.cgColor,
-            UIColor.black.withAlphaComponent(Self.maxDimAlpha * 0.1).cgColor,
-            UIColor.black.withAlphaComponent(Self.maxDimAlpha * 0.3).cgColor,
-            UIColor.black.withAlphaComponent(Self.maxDimAlpha * 0.7).cgColor,
+            UIColor.black.withAlphaComponent(Self.maxDimAlpha * 0.5).cgColor,
+            UIColor.black.withAlphaComponent(Self.maxDimAlpha).cgColor,
             UIColor.black.withAlphaComponent(Self.maxDimAlpha).cgColor
         ]
-        // 시작부분이 아주 자연스럽게 페이드인
-        layer.locations = [0, 0.25, 0.5, 0.75, 1.0]
+        // 0.5 지점에서 최대 딤, 이후 유지
+        layer.locations = [0, 0.25, 0.5, 1.0]
         layer.startPoint = CGPoint(x: 0.5, y: 0)
         layer.endPoint = CGPoint(x: 0.5, y: 1)
         return layer
