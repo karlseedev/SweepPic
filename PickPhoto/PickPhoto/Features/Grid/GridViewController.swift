@@ -201,6 +201,11 @@ final class GridViewController: UIViewController {
     /// 자동 스크롤 타이머 (화면 가장자리 드래그 시)
     private var autoScrollTimer: Timer?
 
+    // MARK: - iOS 26+ Select Mode UI (시스템 UI 사용)
+
+    /// iOS 26+ 툴바의 선택 개수 라벨 (동적 업데이트용)
+    private var selectionCountBarItem: UIBarButtonItem?
+
     /// 자동 스크롤 영역 높이 (화면 상단/하단)
     private static let autoScrollEdgeHeight: CGFloat = 60
 
@@ -1434,9 +1439,14 @@ extension GridViewController {
         guard !isSelectMode else { return }
         isSelectMode = true
 
-        // 플로팅 오버레이에 Select 모드 진입 알림
-        if let tabBarController = tabBarController as? TabBarController {
-            tabBarController.floatingOverlay?.enterSelectMode()
+        // iOS 26+: 시스템 UI 사용
+        if #available(iOS 26.0, *) {
+            enterSelectModeSystemUI()
+        } else {
+            // iOS 16~25: 플로팅 오버레이에 Select 모드 진입 알림
+            if let tabBarController = tabBarController as? TabBarController {
+                tabBarController.floatingOverlay?.enterSelectMode()
+            }
         }
 
         // 드래그 선택 제스처 활성화 (T040)
@@ -1448,15 +1458,75 @@ extension GridViewController {
         print("[GridViewController] Entered select mode")
     }
 
+    /// iOS 26+ Select 모드 진입 - 시스템 UI 사용
+    @available(iOS 26.0, *)
+    private func enterSelectModeSystemUI() {
+        // 1. 네비바 우측에 Cancel 버튼 (텍스트로 표시)
+        navigationItem.rightBarButtonItem = UIBarButtonItem(
+            title: "Cancel",
+            style: .plain,
+            target: self,
+            action: #selector(cancelSelectModeTapped)
+        )
+
+        // 2. 탭바 숨기기
+        tabBarController?.tabBar.isHidden = true
+
+        // 3. 툴바 아이템 설정: [flexSpace, 선택개수, flexSpace, Delete]
+        let flexSpace1 = UIBarButtonItem(barButtonSystemItem: .flexibleSpace, target: nil, action: nil)
+
+        // 선택 개수 라벨 (UILabel을 customView로 사용)
+        let countLabel = UILabel()
+        countLabel.text = "0개 선택됨"
+        countLabel.font = .systemFont(ofSize: 17)
+        countLabel.textColor = .label
+        countLabel.sizeToFit()
+        let countItem = UIBarButtonItem(customView: countLabel)
+        selectionCountBarItem = countItem
+
+        let flexSpace2 = UIBarButtonItem(barButtonSystemItem: .flexibleSpace, target: nil, action: nil)
+
+        // Delete 버튼 (빨간색)
+        let deleteItem = UIBarButtonItem(
+            title: "Delete",
+            style: .plain,
+            target: self,
+            action: #selector(deleteSelectModeTapped)
+        )
+        deleteItem.tintColor = .systemRed
+
+        toolbarItems = [flexSpace1, countItem, flexSpace2, deleteItem]
+
+        // 4. 툴바 표시
+        navigationController?.setToolbarHidden(false, animated: true)
+
+        print("[GridViewController] iOS 26+ system UI select mode entered")
+    }
+
+    /// iOS 26+ Cancel 버튼 탭 핸들러
+    @objc private func cancelSelectModeTapped() {
+        exitSelectMode()
+    }
+
+    /// iOS 26+ Delete 버튼 탭 핸들러
+    @objc private func deleteSelectModeTapped() {
+        deleteSelectedPhotos()
+    }
+
     /// Select 모드 종료 (T038)
     /// TabBarController에서 호출 (Cancel 버튼 탭 시)
     func exitSelectMode() {
         guard isSelectMode else { return }
         isSelectMode = false
 
-        // 플로팅 오버레이에 Select 모드 종료 알림
-        if let tabBarController = tabBarController as? TabBarController {
-            tabBarController.floatingOverlay?.exitSelectMode()
+        // iOS 26+: 시스템 UI 원복
+        if #available(iOS 26.0, *) {
+            exitSelectModeSystemUI()
+        } else {
+            // iOS 16~25: 플로팅 오버레이에 Select 모드 종료 알림
+            if let tabBarController = tabBarController as? TabBarController {
+                tabBarController.floatingOverlay?.exitSelectMode()
+            }
         }
 
         // 드래그 선택 제스처 비활성화 (T040)
@@ -1469,6 +1539,35 @@ extension GridViewController {
         collectionView.reloadData()
 
         print("[GridViewController] Exited select mode")
+    }
+
+    /// iOS 26+ Select 모드 종료 - 시스템 UI 원복
+    @available(iOS 26.0, *)
+    private func exitSelectModeSystemUI() {
+        // 1. 네비바 우측에 Select 버튼 복원
+        navigationItem.rightBarButtonItem = UIBarButtonItem(
+            title: "Select",
+            style: .plain,
+            target: self,
+            action: #selector(selectButtonTapped)
+        )
+
+        // 2. 탭바 다시 표시
+        tabBarController?.tabBar.isHidden = false
+
+        // 3. 툴바 숨기기
+        navigationController?.setToolbarHidden(true, animated: true)
+
+        // 4. 툴바 아이템 참조 해제
+        selectionCountBarItem = nil
+        toolbarItems = nil
+
+        print("[GridViewController] iOS 26+ system UI select mode exited")
+    }
+
+    /// iOS 26+ Select 버튼 탭 핸들러
+    @objc private func selectButtonTapped() {
+        enterSelectMode()
     }
 
     /// 선택된 사진 삭제 (T043)
@@ -1800,11 +1899,32 @@ extension GridViewController: SelectionManagerDelegate {
 
     /// 선택 개수 변경 시 호출 (T042)
     func selectionManager(_ manager: SelectionManager, selectionCountDidChange count: Int) {
-        // 플로팅 오버레이에 선택 개수 업데이트
-        if let tabBarController = tabBarController as? TabBarController {
-            tabBarController.floatingOverlay?.updateSelectionCount(count)
+        // iOS 26+: 시스템 툴바 라벨 업데이트
+        if #available(iOS 26.0, *) {
+            updateSelectionCountSystemUI(count)
+        } else {
+            // iOS 16~25: 플로팅 오버레이에 선택 개수 업데이트
+            if let tabBarController = tabBarController as? TabBarController {
+                tabBarController.floatingOverlay?.updateSelectionCount(count)
+            }
         }
 
         print("[GridViewController] Selection count: \(count)")
+    }
+
+    /// iOS 26+ 선택 개수 업데이트 - 시스템 툴바 라벨
+    @available(iOS 26.0, *)
+    private func updateSelectionCountSystemUI(_ count: Int) {
+        // 툴바 라벨 업데이트
+        if let countItem = selectionCountBarItem,
+           let label = countItem.customView as? UILabel {
+            label.text = "\(count)개 선택됨"
+            label.sizeToFit()
+        }
+
+        // Delete 버튼 활성화/비활성화
+        if let deleteItem = toolbarItems?.last {
+            deleteItem.isEnabled = count > 0
+        }
     }
 }
