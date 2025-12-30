@@ -391,6 +391,40 @@ iOS Vision 프레임워크 통일:
 - **기능 전체는 동일하게 작동** (버튼, 비교 화면, 삭제 등 모두 사용 가능)
 - 테두리만 정적으로 대체 (애니메이션 불필요)
 
+### NFR-204: iOS 버전별 UI
+
+| iOS 버전 | UI 구현 방식 |
+|----------|-------------|
+| iOS 16~25 | 커스텀 플로팅 UI (FloatingTitleBar/TabBar) |
+| iOS 26+ | 시스템 네비바/툴바 (Liquid Glass 자동 적용) |
+
+**화면 전환 방식:**
+- 뷰어: Navigation Push 사용 → 시스템 뒤로가기 버튼 자동 생성
+- 얼굴 비교 화면: Navigation Push 사용 → 시스템 뒤로가기 버튼 자동 생성
+
+**유사사진정리버튼 (FR-203):**
+- iOS 26+: `navigationItem.rightBarButtonItem`으로 표시
+- 배지(숫자): `UIBarButtonItem(customView:)` 사용 또는 타이틀로 대체 ("유사 5장")
+
+**얼굴 비교 화면 (FR-205):**
+- 헤더: 시스템 네비바 사용
+  - 뒤로: Navigation Push로 시스템 자동 생성
+  - 타이틀: `navigationItem.title = "인물 1 (5장)"`
+  - 순환: `UIBarButtonItem(image: UIImage(systemName: "arrow.trianglehead.2.clockwise.rotate.90"))`
+- 하단바: 시스템 툴바 사용
+  - Cancel: `UIBarButtonItem(title: "Cancel")`
+  - Delete: `UIBarButtonItem(title: "Delete")`
+  - 선택 개수: `navigationItem.title`에 표시 또는 `UIBarButtonItem(customView: UILabel)`
+
+**iOS 26+ 분기 코드 패턴:**
+```swift
+if #available(iOS 26.0, *) {
+    // 시스템 네비바/툴바 사용
+} else {
+    // 커스텀 플로팅 UI 사용
+}
+```
+
 ---
 
 ## 4. 적용 범위
@@ -541,3 +575,4 @@ iOS Vision 프레임워크 통일:
 | 1.3 | 2025-01-01 | 얼굴 크롭 규칙 상세화(30% 여백, 정사각형, 수평 유지), + 버튼 겹침 처리 알고리즘, 테두리 애니메이션 최적화, 다중 그룹 처리, 인물 순환 시 사진 기준 선택 유지, TrashStore 동기화 명시, 성능 목표 60/120fps, 테스트 케이스 TC-227~232 추가 |
 | 1.4 | 2025-01-01 | 범위 ±7 일관성 수정(뷰어 조건/테스트/마일스톤), 그리드 범위 경계 클램핑 규칙 추가, 5% 미만 얼굴 미검출 취급 명시, VoiceOver 제외→대체 조건 명확화, 하단바 선택 개수 기준 명시(전체 사진) |
 | 1.5 | 2025-01-01 | 분석 이미지 해상도 명시(그리드: 썸네일, 뷰어: 원본), 결과 불일치 처리 규칙, 테두리 탭→탭한 사진 뷰어 이동 명시, 얼굴 개수 불일치 처리(해당 인물 비교에서 제외), 동일 인물 중복 감지 처리(감지된 얼굴 그대로), 추후 업그레이드 경로 수정(faceprint→feature vector) |
+| 1.6 | 2025-12-30 | NFR-204 iOS 버전별 UI 추가: iOS 26+ 시스템 네비바/툴바 사용, Navigation Push 방식 명시, 유사사진정리버튼/얼굴 비교 화면 시스템 UI 구현 상세 |
