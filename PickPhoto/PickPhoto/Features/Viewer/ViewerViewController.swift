@@ -218,14 +218,8 @@ final class ViewerViewController: UIViewController {
         self.viewerMode = mode
         super.init(nibName: nil, bundle: nil)
 
-        // iOS 16~25: 전체 화면 모달 스타일
-        // iOS 26+: NavigationController에서 처리하므로 설정 불필요
-        if #available(iOS 26.0, *) {
-            // NavigationController가 modalPresentationStyle 관리
-        } else {
-            modalPresentationStyle = .fullScreen
-            modalTransitionStyle = .crossDissolve
-        }
+        // Push 시 TabBar 숨김
+        hidesBottomBarWhenPushed = true
     }
 
     required init?(coder: NSCoder) {
@@ -245,14 +239,14 @@ final class ViewerViewController: UIViewController {
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
 
+        // iOS 16~25: FloatingOverlay 숨김 (Push 방식이므로 직접 숨김 필요)
+        if let tabBarController = tabBarController as? TabBarController {
+            tabBarController.floatingOverlay?.isHidden = true
+        }
+
         // iOS 26+: navigationController 존재 확인 후 시스템 UI 설정
         if #available(iOS 26.0, *) {
             setupSystemUIIfNeeded()
-        }
-
-        // iOS 16~25: 시스템 모달 전환(animated: true) 대신, present(animated: false) + 가벼운 페이드 인 사용
-        if !useSystemUI && isBeingPresented && !didPerformInitialFadeIn {
-            view.alpha = 0
         }
     }
 
@@ -269,6 +263,11 @@ final class ViewerViewController: UIViewController {
 
     override func viewWillDisappear(_ animated: Bool) {
         super.viewWillDisappear(animated)
+
+        // iOS 16~25: FloatingOverlay 다시 표시
+        if let tabBarController = tabBarController as? TabBarController {
+            tabBarController.floatingOverlay?.isHidden = false
+        }
 
         // iOS 26+: 툴바 숨김 복구 (다른 화면에 영향 방지)
         if #available(iOS 26.0, *) {
@@ -317,27 +316,28 @@ final class ViewerViewController: UIViewController {
         // iOS 26+: viewWillAppear에서 시스템 UI 설정 (navigationController 필요)
         if !useSystemUI {
             setupActionButtons()
-            setupCloseButton()
+            setupBackButton()
         }
     }
 
-    /// iOS 16~25 전용 닫기 버튼 설정
-    private func setupCloseButton() {
-        let closeButton = UIButton(type: .system)
-        closeButton.translatesAutoresizingMaskIntoConstraints = false
-        let config = UIImage.SymbolConfiguration(pointSize: 20, weight: .medium)
-        closeButton.setImage(UIImage(systemName: "xmark", withConfiguration: config), for: .normal)
-        closeButton.tintColor = .white
-        closeButton.backgroundColor = UIColor.black.withAlphaComponent(0.5)
-        closeButton.layer.cornerRadius = 18
-        closeButton.addTarget(self, action: #selector(closeButtonTapped), for: .touchUpInside)
+    /// iOS 16~25 전용 뒤로가기 버튼 설정
+    /// Push 전환 방식이지만 네비바는 숨긴 상태로 유지하고 커스텀 버튼 사용
+    private func setupBackButton() {
+        let backButton = UIButton(type: .system)
+        backButton.translatesAutoresizingMaskIntoConstraints = false
+        let config = UIImage.SymbolConfiguration(pointSize: 20, weight: .semibold)
+        backButton.setImage(UIImage(systemName: "chevron.backward", withConfiguration: config), for: .normal)
+        backButton.tintColor = .white
+        backButton.backgroundColor = UIColor.black.withAlphaComponent(0.5)
+        backButton.layer.cornerRadius = 18
+        backButton.addTarget(self, action: #selector(backButtonTapped), for: .touchUpInside)
 
-        view.addSubview(closeButton)
+        view.addSubview(backButton)
         NSLayoutConstraint.activate([
-            closeButton.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 16),
-            closeButton.leadingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.leadingAnchor, constant: 16),
-            closeButton.widthAnchor.constraint(equalToConstant: 36),
-            closeButton.heightAnchor.constraint(equalToConstant: 36)
+            backButton.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 16),
+            backButton.leadingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.leadingAnchor, constant: 16),
+            backButton.widthAnchor.constraint(equalToConstant: 36),
+            backButton.heightAnchor.constraint(equalToConstant: 36)
         ])
     }
 
@@ -409,8 +409,8 @@ final class ViewerViewController: UIViewController {
 
     // MARK: - Actions
 
-    /// 닫기 버튼 탭
-    @objc private func closeButtonTapped() {
+    /// 뒤로가기 버튼 탭
+    @objc private func backButtonTapped() {
         dismissWithFadeOut()
     }
 
@@ -581,29 +581,30 @@ final class ViewerViewController: UIViewController {
         }
     }
 
-    /// 애니메이션과 함께 닫기
+    /// 애니메이션과 함께 닫기 (Push → Pop)
     private func dismissWithAnimation() {
         guard !isDismissing else { return }
         isDismissing = true
 
         if #available(iOS 26.0, *) {
-            // iOS 26: 페이드 아웃 후 dismiss (transform 없으므로 충돌 없음)
+            // iOS 26: 페이드 아웃 후 pop
             UIView.animate(withDuration: 0.15) {
                 self.backgroundView.alpha = 0
             } completion: { _ in
-                self.navigationController?.dismiss(animated: false)
+                self.navigationController?.popViewController(animated: false)
             }
         } else {
-            // iOS 16~25: 기존 커스텀 애니메이션
+            // iOS 16~25: 기존 커스텀 애니메이션 후 pop
             UIView.animate(withDuration: 0.25, animations: {
                 self.backgroundView.alpha = 0
                 self.pageViewController.view.transform = CGAffineTransform(translationX: 0, y: self.view.bounds.height)
             }, completion: { _ in
-                self.dismiss(animated: false)
+                self.navigationController?.popViewController(animated: false)
             })
         }
     }
 
+    /// 페이드 아웃으로 닫기 (Push → Pop)
     private func dismissWithFadeOut() {
         guard !isDismissing else { return }
         isDismissing = true
@@ -611,7 +612,7 @@ final class ViewerViewController: UIViewController {
         UIView.animate(withDuration: 0.15, delay: 0, options: [.curveEaseIn, .beginFromCurrentState, .allowUserInteraction]) {
             self.view.alpha = 0
         } completion: { _ in
-            self.dismiss(animated: false)
+            self.navigationController?.popViewController(animated: false)
         }
     }
 
@@ -632,14 +633,7 @@ final class ViewerViewController: UIViewController {
     /// iOS 26+ 시스템 네비게이션 바 설정
     @available(iOS 26.0, *)
     private func setupSystemNavigationBar() {
-        // 닫기 버튼 (시스템 close)
-        navigationItem.leftBarButtonItem = UIBarButtonItem(
-            systemItem: .close,
-            primaryAction: UIAction { [weak self] _ in
-                self?.dismissViewer()
-            }
-        )
-
+        // Push 방식이므로 leftBarButtonItem 설정 없이 시스템 백버튼 자동 사용
         // 투명 배경 (사진 위에 Liquid Glass 효과)
         navigationController?.navigationBar.isTranslucent = true
     }
@@ -703,11 +697,11 @@ final class ViewerViewController: UIViewController {
         toolbarItems = [restoreItem, flexSpace, permanentDeleteItem]
     }
 
-    /// 뷰어 닫기 (iOS 버전별 경로 통일)
+    /// 뷰어 닫기 (Push → Pop, iOS 버전별 경로 통일)
     private func dismissViewer() {
         if #available(iOS 26.0, *) {
-            // iOS 26+: NavigationController dismiss
-            navigationController?.dismiss(animated: true)
+            // iOS 26+: 시스템 pop
+            navigationController?.popViewController(animated: true)
         } else {
             // iOS 16~25: 기존 페이드 아웃
             dismissWithFadeOut()

@@ -155,6 +155,11 @@ final class FloatingOverlayContainer: UIView {
 
     /// 오버레이 컨테이너 자체는 터치 통과, 자식 뷰(타이틀바/탭바)가 처리
     override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+        // 숨김 상태면 터치 통과 (UIView 기본 동작 복원)
+        if isHidden {
+            return nil
+        }
+
         // 타이틀바 영역 체크
         if titleBar.frame.contains(point) {
             let titleBarPoint = convert(point, to: titleBar)

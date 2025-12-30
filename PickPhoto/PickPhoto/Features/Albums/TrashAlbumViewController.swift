@@ -842,14 +842,8 @@ extension TrashAlbumViewController: UICollectionViewDelegate {
         )
         viewerVC.delegate = self
 
-        // iOS 26+: UINavigationController로 감싸서 시스템 UI 사용
-        if #available(iOS 26.0, *) {
-            let nav = UINavigationController(rootViewController: viewerVC)
-            nav.modalPresentationStyle = .fullScreen
-            present(nav, animated: false)
-        } else {
-            present(viewerVC, animated: false)
-        }
+        // Push 방식으로 뷰어 표시 (모든 iOS 버전 공통)
+        navigationController?.pushViewController(viewerVC, animated: true)
 
         print("[TrashAlbumViewController] Opening viewer - tapped: \(indexPath.item), actualIndex: \(actualIndex), assetID: \(selectedAssetID.prefix(8))...")
     }
@@ -916,8 +910,9 @@ extension TrashAlbumViewController: ViewerViewControllerDelegate {
                 print("[TrashAlbumViewController] Permanently deleted: \(assetID.prefix(8))...")
 
                 // 삭제 완료 후 뷰어에 알림 (메인 스레드에서)
+                // Push 방식이므로 navigationController에서 확인
                 await MainActor.run {
-                    if let viewerVC = self.presentedViewController as? ViewerViewController {
+                    if let viewerVC = self.navigationController?.topViewController as? ViewerViewController {
                         viewerVC.handleDeleteComplete()
                     }
                 }

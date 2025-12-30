@@ -45,11 +45,8 @@ let viewerVC = ViewerViewController(
 )
 viewerVC.delegate = self
 
-// TODO: T032 줌 전환 애니메이션은 Phase 9에서 iOS 사진 앱 수준으로 구현 예정
-// 현재는 기본 전환 사용 (fullScreen + crossDissolve)
-
-// 뷰어 표시
-present(viewerVC, animated: false)
+// 뷰어 표시 (push 방식)
+navigationController?.pushViewController(viewerVC, animated: true)
 ```
 
 ### 2.2 앨범 목록 → 앨범 그리드 (AlbumsViewController.swift)
@@ -74,7 +71,7 @@ private func openAlbumGrid(smartAlbum: SmartAlbum) {
 
 ## 3. iOS 18+ 적용 방법
 
-### 3.1 그리드 → 뷰어 (present)
+### 3.1 그리드 → 뷰어 (push)
 
 > **중요**: 아래는 **통합 예시**입니다. 스와이프 후 돌아오기를 지원하는 완전한 버전이므로,
 > 이 코드 하나만 사용하세요. 별도의 "기본 적용" 버전을 추가로 복붙하지 마세요.
@@ -92,9 +89,6 @@ viewerVC.delegate = self
 if #available(iOS 18.0, *) {
     // ⚠️ iOS 18에서는 ViewerViewController의 커스텀 페이드 애니메이션 비활성화 필요
     viewerVC.disableCustomFadeAnimation = true
-
-    // ⚠️ iOS 18에서는 modalTransitionStyle 설정하지 않음 (preferredTransition과 충돌 방지)
-    // 기존: viewerVC.modalTransitionStyle = .crossDissolve  ← 제거 또는 주석 처리
 
     viewerVC.preferredTransition = .zoom(sourceViewProvider: { [weak self] context in
         guard let self = self,
@@ -127,14 +121,10 @@ if #available(iOS 18.0, *) {
 
         return cell.imageView
     })
-
-    // 뷰어 표시 (animated: true 필수)
-    present(viewerVC, animated: true)
-} else {
-    // iOS 16~17: 기존 방식 유지
-    viewerVC.modalTransitionStyle = .crossDissolve
-    present(viewerVC, animated: true)
 }
+
+// 뷰어 표시 (push 방식)
+navigationController?.pushViewController(viewerVC, animated: true)
 ```
 
 ### 3.2 앨범 목록 → 앨범 그리드 (push)
@@ -266,21 +256,16 @@ func dismissWithFadeOut() {
 }
 ```
 
-### 4.2 modalTransitionStyle 충돌 방지
+### 4.2 push vs present
 
-`modalTransitionStyle = .crossDissolve`가 설정되어 있으면 `preferredTransition`과 충돌합니다.
+뷰어는 현재 **push 방식**을 사용합니다. `preferredTransition`은 push/present 모두 지원합니다.
 
-**규칙:**
-- iOS 18+: `modalTransitionStyle` 설정하지 않음 (기본값 유지)
-- iOS 16~17: 기존대로 `.crossDissolve` 사용 가능
+| 방식 | 장점 | UI |
+|------|------|-----|
+| push | 네비게이션 스택 관리, 뒤로가기 제스처 자동 | 뒤로가기 버튼 |
+| present | 독립적인 모달 | 닫기/done 버튼 |
 
-```swift
-if #available(iOS 18.0, *) {
-    // modalTransitionStyle 설정 생략 (preferredTransition 사용)
-} else {
-    viewerVC.modalTransitionStyle = .crossDissolve
-}
-```
+> **참고**: `modalTransitionStyle`은 present 방식에서만 관련됩니다. push 방식에서는 무시됩니다.
 
 ### 4.3 sourceViewProvider nil 반환 규칙
 
@@ -369,13 +354,9 @@ if #available(iOS 18.0, *) {
     // iOS 18+ (iOS 26 포함): 네이티브 zoom transition
     viewerVC.disableCustomFadeAnimation = true
     viewerVC.preferredTransition = .zoom(sourceViewProvider: { ... })
-    present(viewerVC, animated: true)
-} else {
-    // iOS 16~17: 커스텀 구현 또는 기본 전환
-    // TODO: 출시 전 ZoomAnimator 구현
-    viewerVC.modalTransitionStyle = .crossDissolve
-    present(viewerVC, animated: true)
 }
+// push는 iOS 버전 상관없이 동일
+navigationController?.pushViewController(viewerVC, animated: true)
 ```
 
 ### 조합 매트릭스
@@ -497,7 +478,7 @@ if #available(iOS 18.0, *) {
 
 | 전환 | 소스 화면 | 목적지 화면 | 소스 뷰 | 방식 |
 |------|----------|------------|---------|------|
-| 그리드 → 뷰어 | `GridViewController` | `ViewerViewController` | `PhotoCell.imageView` | present |
+| 그리드 → 뷰어 | `GridViewController` | `ViewerViewController` | `PhotoCell.imageView` | push |
 | 앨범 목록 → 앨범 그리드 | `AlbumsViewController` | `AlbumGridViewController` | `AlbumCell.thumbnailImageView` | push |
-| 앨범 그리드 → 뷰어 | `AlbumGridViewController` | `ViewerViewController` | `PhotoCell.imageView` | present |
-| 휴지통 → 뷰어 | `TrashAlbumViewController` | `ViewerViewController` | `PhotoCell.imageView` | present |
+| 앨범 그리드 → 뷰어 | `AlbumGridViewController` | `ViewerViewController` | `PhotoCell.imageView` | push |
+| 휴지통 → 뷰어 | `TrashAlbumViewController` | `ViewerViewController` | `PhotoCell.imageView` | push |
