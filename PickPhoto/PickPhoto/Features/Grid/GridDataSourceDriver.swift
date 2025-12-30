@@ -209,7 +209,27 @@ final class GridDataSourceDriver: NSObject, GridDataSourceDriverProtocol {
             return
         }
 
-        // 배치 업데이트 수행 (삭제가 없는 경우만)
+        // 데이터 일관성 검증: 배치 업데이트 전에 예상 결과와 실제 결과 비교
+        // 백그라운드 복귀 시 fetchResult가 이미 갱신된 경우 불일치 발생 가능
+        let currentCount = fetchResult.count
+        let afterCount = changes.fetchResultAfterChanges.count
+        let insertedCount = changes.insertedIndexes?.count ?? 0
+        let removedCount = changes.removedIndexes?.count ?? 0
+        let expectedAfterCount = currentCount + insertedCount - removedCount
+
+        if expectedAfterCount != afterCount {
+            // 불일치 감지: reloadData로 안전하게 처리
+            self.fetchResult = changes.fetchResultAfterChanges
+            invalidateCache()
+            collectionView.reloadData()
+
+            let newAnchorIndexPath = anchorAssetID.flatMap { indexPath(for: $0) }
+            completion?(newAnchorIndexPath)
+            print("[GridDataSourceDriver] Used reloadData due to count mismatch (expected: \(expectedAfterCount), actual: \(afterCount))")
+            return
+        }
+
+        // 배치 업데이트 수행 (삭제가 없고, 데이터 일관성이 검증된 경우만)
         collectionView.performBatchUpdates({
             // 삭제된 항목
             if let removed = changes.removedIndexes, !removed.isEmpty {
