@@ -323,11 +323,12 @@ final class FloatingTabBar: UIView {
         tabStackView.addArrangedSubview(albumsButton)
         tabStackView.addArrangedSubview(trashButton)
 
-        // 삭제하기 원형 버튼 추가 (탭바 우측)
+        // 삭제하기 원형 버튼 추가 (탭바 우측) - 현재 비활성화
         addSubview(emptyTrashShadowView)
         emptyTrashShadowView.addSubview(emptyTrashContainer)
         emptyTrashContainer.contentView.addSubview(emptyTrashBackgroundView)
         emptyTrashContainer.contentView.addSubview(emptyTrashButton)
+        emptyTrashShadowView.isHidden = true  // 비활성화
 
         // Select 모드 캡슐 추가
         addSubview(selectShadowView)
