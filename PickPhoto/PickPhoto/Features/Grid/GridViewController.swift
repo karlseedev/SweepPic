@@ -1482,6 +1482,7 @@ extension GridViewController {
         countLabel.textColor = .label
         countLabel.sizeToFit()
         let countItem = UIBarButtonItem(customView: countLabel)
+        countItem.hidesSharedBackground = true  // iOS 26 Liquid Glass 배경 제거
         selectionCountBarItem = countItem
 
         let flexSpace2 = UIBarButtonItem(barButtonSystemItem: .flexibleSpace, target: nil, action: nil)
