@@ -65,9 +65,6 @@ final class ViewerViewController: UIViewController {
     /// 아래 스와이프 닫기 임계값 (화면 높이의 %)
     private static let dismissThreshold: CGFloat = 0.15
 
-    /// 최대 줌 스케일
-    private static let maxZoomScale: CGFloat = 4.0
-
     // MARK: - Properties
 
     /// 델리게이트
@@ -636,8 +633,11 @@ final class PhotoPageViewController: UIViewController {
     /// 최소 줌 스케일
     private static let minZoomScale: CGFloat = 1.0
 
-    /// 최대 줌 스케일
-    private static let maxZoomScale: CGFloat = 4.0
+    /// 이미지 크기 알 수 없을 때 기본 최대 줌 스케일
+    private static let fallbackMaxZoomScale: CGFloat = 4.0
+
+    /// 최대 줌 스케일 상한 (메모리 보호)
+    private static let maxZoomScaleLimit: CGFloat = 20.0
 
     /// 더블탭 줌 스케일
     private static let doubleTapZoomScale: CGFloat = 2.5
@@ -655,7 +655,7 @@ final class PhotoPageViewController: UIViewController {
         let sv = UIScrollView()
         sv.delegate = self
         sv.minimumZoomScale = Self.minZoomScale
-        sv.maximumZoomScale = Self.maxZoomScale
+        sv.maximumZoomScale = Self.fallbackMaxZoomScale
         sv.showsHorizontalScrollIndicator = false
         sv.showsVerticalScrollIndicator = false
         sv.contentInsetAdjustmentBehavior = .never
@@ -744,6 +744,41 @@ final class PhotoPageViewController: UIViewController {
 
     deinit {
         requestCancellable?.cancel()
+    }
+
+    // MARK: - Zoom Scale
+
+    /// 이미지 해상도 기반 최대 줌 스케일 계산
+    /// - 원본 픽셀을 1:1로 볼 수 있는 배율 반환
+    /// - 최소 fallbackMaxZoomScale(4배), 최대 maxZoomScaleLimit(20배) 보장
+    private func calculateMaxZoomScale(for imageSize: CGSize) -> CGFloat {
+        let containerSize = scrollView.bounds.size
+        guard imageSize.width > 0, imageSize.height > 0,
+              containerSize.width > 0, containerSize.height > 0 else {
+            return Self.fallbackMaxZoomScale
+        }
+
+        // aspect fit 시 축소 비율 계산
+        let fitRatio = min(containerSize.width / imageSize.width,
+                           containerSize.height / imageSize.height)
+
+        // 원본 픽셀까지 확대 = 1 / fitRatio
+        // 예: 4032x3024 이미지가 393pt 화면에 fit되면 fitRatio ≈ 0.097
+        //     → 1/0.097 ≈ 10.3배까지 확대해야 원본 픽셀 1:1
+        let calculatedScale = 1.0 / fitRatio
+
+        // 최소 4배, 최대 20배로 클램프
+        return max(Self.fallbackMaxZoomScale, min(calculatedScale, Self.maxZoomScaleLimit))
+    }
+
+    /// 현재 이미지 크기에 맞게 최대 줌 스케일 업데이트
+    private func updateMaxZoomScale() {
+        let newMaxScale = calculateMaxZoomScale(for: imageSize)
+        scrollView.maximumZoomScale = newMaxScale
+
+        if debugZoom {
+            print("[Zoom] maxScale=\(String(format: "%.1f", newMaxScale))x (image=\(Int(imageSize.width))×\(Int(imageSize.height)))")
+        }
     }
 
     // MARK: - Setup
@@ -873,6 +908,10 @@ final class PhotoPageViewController: UIViewController {
             scrollView.zoomScale = 1.0
         }
         hasAppliedInitialLayout = true
+
+        // 이미지 해상도에 맞게 최대 줌 스케일 업데이트
+        updateMaxZoomScale()
+
         updateContentInsetForCentering(preserveOffset: preserveOffset)
     }
 
@@ -901,6 +940,9 @@ final class PhotoPageViewController: UIViewController {
 
         // zoomScale 재설정 제거 - 줌 중 끊김의 주요 원인
         // scrollView.zoomScale = currentZoom
+
+        // 원본 이미지 로드 시 해상도에 맞게 최대 줌 스케일 업데이트
+        updateMaxZoomScale()
 
         // 플래그 갱신 (회전 등에서 updateImageLayout 호출 시 리셋 방지)
         let preserveOffset = hasAppliedInitialLayout
