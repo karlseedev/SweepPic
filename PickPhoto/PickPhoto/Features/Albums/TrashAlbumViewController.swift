@@ -611,8 +611,10 @@ final class TrashAlbumViewController: UIViewController {
     }
 
     /// FloatingUI 비우기 버튼 상태 업데이트
+    /// 주의: 현재 탭이 휴지통 탭일 때만 버튼 변경 (공유 UI이므로 다른 탭일 때 변경하면 안 됨)
     private func updateFloatingEmptyButton() {
         guard let tabBarController = tabBarController as? TabBarController,
+              tabBarController.selectedIndex == 2,  // 휴지통 탭 인덱스일 때만 변경
               let overlay = tabBarController.floatingOverlay else {
             return
         }
