@@ -1205,6 +1205,12 @@ extension ViewerViewController: BarsVisibilityControlling {
     /// Viewer에서는 floatingOverlay 숨김 (전체화면 뷰어이므로)
     var prefersFloatingOverlayHidden: Bool? { true }
 
-    // prefersSystemTabBarHidden: nil (TabBarController 기본 정책)
-    // prefersToolbarHidden: nil (TabBarController 기본 정책, iOS 26에서는 setupSystemToolbar에서 별도 관리)
+    /// iOS 26: 시스템 툴바 표시 (삭제/복구 버튼)
+    /// iOS 16~25: 기본 정책 (커스텀 버튼 사용하므로 시스템 툴바 불필요)
+    var prefersToolbarHidden: Bool? {
+        if #available(iOS 26.0, *) {
+            return false  // iOS 26: 툴바 표시
+        }
+        return nil  // iOS 16~25: 기본 정책 (숨김)
+    }
 }
