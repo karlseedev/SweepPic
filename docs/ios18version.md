@@ -34,7 +34,7 @@ viewController.preferredTransition = .zoom(sourceViewProvider: { context in
 
 ## 2. 현재 코드 상태
 
-### 위치: GridViewController.swift (1302~1315줄)
+### 2.1 그리드 → 뷰어 (GridViewController.swift)
 
 ```swift
 // 뷰어 뷰컨트롤러 생성
@@ -52,14 +52,29 @@ viewerVC.delegate = self
 present(viewerVC, animated: false)
 ```
 
-### 문제점
-- `animated: false`로 즉시 표시
-- 줌 전환 애니메이션 없음
+### 2.2 앨범 목록 → 앨범 그리드 (AlbumsViewController.swift)
+
+```swift
+// 스마트 앨범 열기
+private func openAlbumGrid(smartAlbum: SmartAlbum) {
+    let albumGridVC = AlbumGridViewController(
+        albumTitle: smartAlbum.title,
+        fetchResult: fetchResult
+    )
+    navigationController?.pushViewController(albumGridVC, animated: true)
+}
+```
+
+### 2.3 문제점
+- 그리드→뷰어: `animated: false`로 즉시 표시, 줌 전환 없음
+- 앨범→그리드: 기본 push 애니메이션만 사용, 썸네일에서 확대되는 느낌 없음
 - 사진 앱과 다른 UX
 
 ---
 
 ## 3. iOS 18+ 적용 방법
+
+### 3.1 그리드 → 뷰어 (present)
 
 > **중요**: 아래는 **통합 예시**입니다. 스와이프 후 돌아오기를 지원하는 완전한 버전이므로,
 > 이 코드 하나만 사용하세요. 별도의 "기본 적용" 버전을 추가로 복붙하지 마세요.
@@ -121,6 +136,78 @@ if #available(iOS 18.0, *) {
     present(viewerVC, animated: true)
 }
 ```
+
+### 3.2 앨범 목록 → 앨범 그리드 (push)
+
+> **참고**: Navigation push도 동일하게 `preferredTransition` 사용 가능합니다.
+> 뒤로가기 버튼 + 스와이프 dismiss가 자동 지원됩니다.
+
+```swift
+// AlbumsViewController.swift - openAlbumGrid()
+
+let albumGridVC = AlbumGridViewController(
+    albumTitle: smartAlbum.title,
+    fetchResult: fetchResult
+)
+
+// iOS 18+: 네이티브 zoom transition
+if #available(iOS 18.0, *) {
+    albumGridVC.preferredTransition = .zoom(sourceViewProvider: { [weak self, weak collectionView] context in
+        guard let self = self,
+              let collectionView = collectionView else {
+            return nil
+        }
+
+        guard let albumGrid = context.zoomedViewController as? AlbumGridViewController else {
+            return nil
+        }
+
+        // 앨범 제목으로 해당 셀 찾기
+        let indexPath = self.findIndexPath(for: albumGrid.albumTitle)
+
+        guard let indexPath = indexPath,
+              let cell = collectionView.cellForItem(at: indexPath) as? AlbumCell else {
+            return nil
+        }
+
+        guard cell.hasLoadedImage else {
+            return nil
+        }
+
+        return cell.thumbnailImageView
+    })
+}
+
+navigationController?.pushViewController(albumGridVC, animated: true)
+```
+
+**AlbumsViewController에 헬퍼 메서드 추가:**
+
+```swift
+private func findIndexPath(for albumTitle: String) -> IndexPath? {
+    if let index = smartAlbums.firstIndex(where: { $0.title == albumTitle }) {
+        return IndexPath(item: index, section: AlbumSection.smartAlbums.rawValue)
+    }
+    if let index = userAlbums.firstIndex(where: { $0.title == albumTitle }) {
+        return IndexPath(item: index, section: AlbumSection.userAlbums.rawValue)
+    }
+    return nil
+}
+```
+
+### 3.3 휴지통 / 앨범 그리드 → 뷰어
+
+> **3.1과 동일한 패턴 적용**. 데이터 소스에 맞게 인덱스 찾기 로직만 조정.
+
+| 화면 | 인덱스 찾기 방식 |
+|------|-----------------|
+| GridViewController | `coordinator.originalIndex(from: viewer.currentIndex)` |
+| TrashAlbumViewController | `trashedAssets.firstIndex(where: { $0.localIdentifier == assetID })` |
+| AlbumGridViewController | GridViewController와 동일 |
+
+**공통 고려사항:**
+- padding 셀 있으면 `+ paddingCellCount` 적용
+- iOS 26+에서 UINavigationController 래핑 시 `context.zoomedViewController`가 nav이므로 내부 viewController 추출 필요
 
 ---
 
@@ -339,14 +426,28 @@ if #available(iOS 18.0, *) {
 
 ### MVP (iOS 18+ 우선)
 
+**그리드 → 뷰어:**
 - [ ] GridViewController에 `preferredTransition` 적용
 - [ ] PhotoCell에서 `imageView` 접근 가능하도록 확인
 - [ ] PhotoCell에 `hasLoadedImage` 속성 추가
 - [ ] ViewerViewController에서 `currentIndex` read-only 공개
 - [ ] ViewerViewController에 `disableCustomFadeAnimation` 플래그 추가
 - [ ] 기존 커스텀 페이드 로직에 플래그 체크 추가
-- [ ] 스와이프 후 돌아오기 테스트
+
+**앨범 목록 → 앨범 그리드:**
+- [ ] AlbumsViewController에 `preferredTransition` 적용
+- [ ] AlbumsViewController에 `findIndexPath(for:)` 헬퍼 추가
+- [ ] AlbumCell에서 `thumbnailImageView` 접근 가능하도록 확인
+- [ ] AlbumCell에 `hasLoadedImage` 속성 추가
+
+**기타 화면 → 뷰어 (3.1 동일 패턴):**
+- [ ] AlbumGridViewController에 `preferredTransition` 적용
+- [ ] TrashAlbumViewController에 `preferredTransition` 적용
+
+**공통 테스트:**
+- [ ] 스와이프 후 돌아오기 테스트 (뷰어, 앨범 그리드)
 - [ ] 성능 테스트 (hitch 없는지 확인)
+- [ ] iOS 18, 26 시뮬레이터 테스트
 
 ### 출시 전 (iOS 16~17 지원)
 
@@ -361,12 +462,17 @@ if #available(iOS 18.0, *) {
 
 | 파일 | 수정 내용 |
 |------|----------|
+| **그리드 → 뷰어** | |
 | `GridViewController.swift` | preferredTransition 적용, 버전 분기 |
 | `PhotoCell.swift` | `imageView` 접근자, `hasLoadedImage` 속성 추가 |
 | `ViewerViewController.swift` | `currentIndex` 공개, `disableCustomFadeAnimation` 플래그 |
 | `ViewerCoordinator.swift` | `originalIndex(from:)` 메서드 확인 |
-| `AlbumGridViewController.swift` | 동일한 패턴 적용 |
-| `TrashAlbumViewController.swift` | 동일한 패턴 적용 |
+| **앨범 목록 → 앨범 그리드** | |
+| `AlbumsViewController.swift` | preferredTransition 적용, `findIndexPath(for:)` 헬퍼 추가 |
+| `AlbumCell.swift` | `thumbnailImageView` 접근자, `hasLoadedImage` 속성 추가 |
+| **기타 (3.1 동일 패턴)** | |
+| `AlbumGridViewController.swift` | preferredTransition 적용 |
+| `TrashAlbumViewController.swift` | preferredTransition 적용 |
 
 ---
 
@@ -384,3 +490,14 @@ if #available(iOS 18.0, *) {
 - **최소 지원 버전**: iOS 16+
 - **네이티브 API 지원**: iOS 18+
 - **프로젝트 브랜치**: 001-pickphoto-mvp
+
+---
+
+## 12. 적용 대상 요약
+
+| 전환 | 소스 화면 | 목적지 화면 | 소스 뷰 | 방식 |
+|------|----------|------------|---------|------|
+| 그리드 → 뷰어 | `GridViewController` | `ViewerViewController` | `PhotoCell.imageView` | present |
+| 앨범 목록 → 앨범 그리드 | `AlbumsViewController` | `AlbumGridViewController` | `AlbumCell.thumbnailImageView` | push |
+| 앨범 그리드 → 뷰어 | `AlbumGridViewController` | `ViewerViewController` | `PhotoCell.imageView` | present |
+| 휴지통 → 뷰어 | `TrashAlbumViewController` | `ViewerViewController` | `PhotoCell.imageView` | present |
