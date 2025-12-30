@@ -36,11 +36,24 @@
 - 정렬/재배치 없음 (원래 위치 그대로)
 - 사용자가 스와이프로 다시 복원 가능
 
+#### 빨간 딤드 상태 지속성
+- TrashStore가 파일로 저장됨 (`TrashState.json`)
+- **앱 재실행 후에도 휴지통 상태 유지**
+- 이전 세션에서 삭제한 항목도 그리드에 빨간 딤드로 표시
+- 복원하거나 완전 삭제할 때까지 유지
+
+#### 빨간 딤드 사진 탭 → 뷰어 동작
+- 빨간 딤드 사진 탭 시 **ViewerMode.trash**로 뷰어 진입
+- 삭제 버튼 대신 **복구/완전삭제 버튼** 표시
+- 복구: TrashStore에서 제거 → 딤드 해제
+- 완전삭제: iOS 시스템 휴지통으로 이동 (시스템 팝업)
+
 #### 제스처 사양
 - **방향**: 양방향 (←/→) 모두 동작
 - **시작 위치**: 섬네일 위에서 시작해야 인식 (빈 영역에서 시작한 스와이프는 무시)
 - **시작 조건**: 수평선(0°) 기준 ±15° 이내인 경우 스와이프로 인식, 그 외는 스크롤
-  - 계산: `angle = atan2(abs(velocity.y), abs(velocity.x))`, angle < 15°이면 스와이프
+  - **최소 이동 거리**: 10pt 이상 이동 후 각도 판정 (초기 미세 움직임 오판 방지)
+  - 계산: `translation >= 10pt` 후 `angle = atan2(abs(velocity.y), abs(velocity.x))`, angle < 15°이면 스와이프
 - **확정 조건** (OR):
   - 스와이프 거리 ≥ 섬네일 너비의 50%
   - 스와이프 속도 ≥ 800pt/s
@@ -176,6 +189,12 @@
 - 파일 시스템 오류
 - 앱 강제 종료 타이밍
 
+#### 동시/연속 토글 처리 (셀별 잠금)
+- **애니메이션 중인 셀에만 추가 제스처 무시**
+- 다른 셀은 자유롭게 조작 가능 (여러 사진 연속 삭제 허용)
+- 같은 셀에 대한 연속 토글(삭제→즉시복원)만 방지
+- 애니메이션 완료 후 해당 셀 잠금 해제
+
 ---
 
 ## 비기능 요구사항
@@ -196,6 +215,7 @@
 - **VoiceOver 활성화 감지 시 스와이프/투 핑거 탭 제스처 비활성화**
   - `UIAccessibility.isVoiceOverRunning` 체크
   - VoiceOver 시스템 제스처와 충돌 방지
+  - **전역 override**: 모든 화면에서 적용 (AlbumGridViewController 포함)
 - 대체 방법: 선택 모드를 통한 삭제 (GridViewController)
 - AlbumGridViewController는 선택 모드가 없으므로 뷰어 진입 후 삭제 버튼 사용
 - **향후 고려** (2차 범위 외):
@@ -209,18 +229,21 @@
 ### 스와이프 제스처 구현
 ```swift
 // UIPanGestureRecognizer 사용
-// gestureRecognizerShouldBegin에서 각도 체크:
-//   let angle = atan2(abs(velocity.y), abs(velocity.x))
-//   return angle < (15.0 * .pi / 180.0) // 수평 ±15° 이내만 인식
+// gestureRecognizerShouldBegin에서:
+//   1. 최소 이동 거리 체크 (10pt 이상)
+//   2. 각도 판정: angle = atan2(abs(velocity.y), abs(velocity.x))
+//   3. return angle < (15.0 * .pi / 180.0) // 수평 ±15° 이내만 인식
 // .changed에서 translation으로 딤드 영역 업데이트
 // .ended에서 거리/속도 체크 후 확정/취소
 ```
 
 ### 투 핑거 탭 제스처 구현
 ```swift
-// UITapGestureRecognizer (numberOfTouchesRequired = 2) 사용
-// 또는 커스텀 제스처로 시간/거리 조건 체크
-// 두 손가락 위치가 같은 섬네일인지 확인
+// iOS 기본 UITapGestureRecognizer 사용
+let twoFingerTap = UITapGestureRecognizer()
+twoFingerTap.numberOfTouchesRequired = 2
+// iOS가 핀치 줌과 자동 구분
+// 두 손가락 위치가 같은 섬네일인지만 확인
 ```
 
 ### 딤드 애니메이션
@@ -324,16 +347,16 @@
 
 ### Phase 1: 스와이프 삭제/복원
 - UIPanGestureRecognizer 추가
-- 각도/거리/속도 판정 로직
+- 최소 이동 거리(10pt) + 각도/거리/속도 판정 로직
 - 대상 셀 고정 로직
+- 셀별 잠금 로직 (애니메이션 중 중복 제스처 방지)
 - 딤드 커튼 애니메이션
 - TrashStore 연동 (낙관적 업데이트)
 - 햅틱 피드백
 
 ### Phase 2: 투 핑거 탭 삭제/복원
-- 투 핑거 탭 제스처 추가
+- iOS 기본 UITapGestureRecognizer(numberOfTouchesRequired: 2) 추가
 - 같은 섬네일 체크 로직
-- 핀치 줌과 구분 로직 (스케일 임계값 포함)
 - 딤드 페이드 애니메이션
 - TrashStore 연동 (낙관적 업데이트)
 - 햅틱 피드백
@@ -359,3 +382,4 @@
 | 1.3 | 2024-12-30 | 삭제 후 그리드 상태 명시, 앨범 삭제=휴지통 이동, 핀치 줌 스케일 임계값(1.05배), 열 수별 조정 필요 명시, VoiceOver 비활성화, FR-106 TrashStore 실패 시 롤백 패턴 추가 |
 | 1.4 | 2024-12-30 | 열 수별 동작 명시: 1/3/5열 모두 동작, 5열 투 핑거 탭은 자연스럽게 실패 허용 |
 | 1.5 | 2024-12-30 | FR-102 iOS 기본 제스처 인식기 사용으로 단순화, FR-103 휴지통 탭 시각 표현 명시, FR-105 충돌 방지 메커니즘 추가, NFR-101 성능 측정 조건, 애니메이션 duration 명시, TC-115/116 추가 |
+| 1.6 | 2024-12-30 | 빨간 딤드 상태 지속성/뷰어 동작 명시, 최소 이동 거리(10pt) 조건 추가, 셀별 잠금 로직 추가, VoiceOver 전역 override 명시, 기술 설계/마일스톤 iOS 기본 인식기로 통일 |
