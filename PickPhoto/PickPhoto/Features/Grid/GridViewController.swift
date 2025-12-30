@@ -758,7 +758,8 @@ final class GridViewController: UIViewController {
         dataSourceDriver.applyChange(
             change,
             to: collectionView,
-            anchorAssetID: nil
+            anchorAssetID: nil,
+            columns: currentColumnCount.rawValue
         ) { [weak self] _ in
             self?.updateEmptyState()
         }

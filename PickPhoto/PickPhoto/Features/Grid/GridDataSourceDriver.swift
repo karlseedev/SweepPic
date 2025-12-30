@@ -43,11 +43,13 @@ protocol GridDataSourceDriverProtocol: AnyObject {
     ///   - changeInstance: PHChange 인스턴스
     ///   - collectionView: 업데이트할 컬렉션뷰
     ///   - anchorAssetID: 유지할 앵커 에셋 ID (핀치 줌 시 사용)
+    ///   - columns: 현재 열 수 (padding 계산용)
     ///   - completion: 완료 콜백 (새로운 앵커 IndexPath 전달)
     func applyChange(
         _ changeInstance: PHChange,
         to collectionView: UICollectionView,
         anchorAssetID: String?,
+        columns: Int,
         completion: ((IndexPath?) -> Void)?
     )
 
@@ -174,8 +176,11 @@ final class GridDataSourceDriver: NSObject, GridDataSourceDriverProtocol {
         _ changeInstance: PHChange,
         to collectionView: UICollectionView,
         anchorAssetID: String?,
+        columns: Int,
         completion: ((IndexPath?) -> Void)?
     ) {
+        // 메인 스레드 보장 (reloadData, performBatchUpdates는 메인 스레드에서만 호출 가능)
+        dispatchPrecondition(condition: .onQueue(.main))
         guard let fetchResult = fetchResult,
               let changes = changeInstance.changeDetails(for: fetchResult) else {
             completion?(nil)
@@ -226,6 +231,24 @@ final class GridDataSourceDriver: NSObject, GridDataSourceDriverProtocol {
             let newAnchorIndexPath = anchorAssetID.flatMap { indexPath(for: $0) }
             completion?(newAnchorIndexPath)
             print("[GridDataSourceDriver] Used reloadData due to count mismatch (expected: \(expectedAfterCount), actual: \(afterCount))")
+            return
+        }
+
+        // 패딩 셀 변동 감지: numberOfItemsInSection이 count + padding을 반환하므로
+        // padding이 변하면 performBatchUpdates가 실패함 (가상 셀 변화 미반영)
+        // padding = count % columns == 0 ? 0 : (columns - count % columns)
+        let beforePadding = currentCount % columns == 0 ? 0 : (columns - currentCount % columns)
+        let afterPadding = afterCount % columns == 0 ? 0 : (columns - afterCount % columns)
+
+        if beforePadding != afterPadding {
+            // 패딩 변동 시 reloadData로 안전하게 처리
+            self.fetchResult = changes.fetchResultAfterChanges
+            invalidateCache()
+            collectionView.reloadData()
+
+            let newAnchorIndexPath = anchorAssetID.flatMap { indexPath(for: $0) }
+            completion?(newAnchorIndexPath)
+            print("[GridDataSourceDriver] Used reloadData due to padding change (before: \(beforePadding), after: \(afterPadding))")
             return
         }
 
