@@ -516,7 +516,14 @@ extension AlbumGridViewController: UICollectionViewDelegate {
         )
         viewerVC.delegate = self
 
-        present(viewerVC, animated: false)
+        // iOS 26+: UINavigationController로 감싸서 시스템 UI 사용
+        if #available(iOS 26.0, *) {
+            let nav = UINavigationController(rootViewController: viewerVC)
+            nav.modalPresentationStyle = .fullScreen
+            present(nav, animated: false)
+        } else {
+            present(viewerVC, animated: false)
+        }
 
         print("[AlbumGridViewController] Opening viewer at index \(filteredIndex), mode: \(mode)")
     }

@@ -1312,7 +1312,15 @@ extension GridViewController: UICollectionViewDelegate {
         // 뷰어 표시
         // NOTE: 기본 crossDissolve 전환은 큰 Grid 화면 스냅샷/렌더로 첫 진입 시 1초 이상 메인 스레드 히치가 발생할 수 있어
         // 시스템 전환을 끄고(instant present) Viewer 내부에서 가벼운 페이드 인을 수행한다.
-        present(viewerVC, animated: false)
+        if #available(iOS 26.0, *) {
+            // iOS 26+: UINavigationController로 감싸서 시스템 UI 사용
+            let nav = UINavigationController(rootViewController: viewerVC)
+            nav.modalPresentationStyle = .fullScreen
+            present(nav, animated: false)
+        } else {
+            // iOS 16~25: 기존 방식
+            present(viewerVC, animated: false)
+        }
 
         print("[GridViewController] Opening viewer at filtered index \(filteredIndex) (original: \(indexPath.item)), mode: \(mode)")
     }

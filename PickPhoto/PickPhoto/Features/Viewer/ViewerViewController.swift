@@ -183,6 +183,28 @@ final class ViewerViewController: UIViewController {
     /// 최초 표시 페이드 인 적용 여부 (시스템 전환 대신 사용)
     private var didPerformInitialFadeIn: Bool = false
 
+    // MARK: - iOS 26+ System UI Properties
+
+    /// iOS 26+ 시스템 UI 사용 여부
+    private var useSystemUI: Bool {
+        if #available(iOS 26.0, *) {
+            return true
+        }
+        return false
+    }
+
+    /// iOS 26+ 시스템 UI 설정 완료 여부 (중복 설정 방지)
+    private var didSetupSystemUI: Bool = false
+
+    /// iOS 26+ 툴바 삭제 버튼 참조
+    private var toolbarDeleteItem: UIBarButtonItem?
+
+    /// iOS 26+ 툴바 복구 버튼 참조
+    private var toolbarRestoreItem: UIBarButtonItem?
+
+    /// iOS 26+ 툴바 완전삭제 버튼 참조
+    private var toolbarPermanentDeleteItem: UIBarButtonItem?
+
     // MARK: - Initialization
 
     /// 초기화
@@ -196,9 +218,14 @@ final class ViewerViewController: UIViewController {
         self.viewerMode = mode
         super.init(nibName: nil, bundle: nil)
 
-        // 전체 화면 모달 스타일
-        modalPresentationStyle = .fullScreen
-        modalTransitionStyle = .crossDissolve
+        // iOS 16~25: 전체 화면 모달 스타일
+        // iOS 26+: NavigationController에서 처리하므로 설정 불필요
+        if #available(iOS 26.0, *) {
+            // NavigationController가 modalPresentationStyle 관리
+        } else {
+            modalPresentationStyle = .fullScreen
+            modalTransitionStyle = .crossDissolve
+        }
     }
 
     required init?(coder: NSCoder) {
@@ -218,8 +245,13 @@ final class ViewerViewController: UIViewController {
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
 
-        // 시스템 모달 전환(animated: true) 대신, present(animated: false) + 가벼운 페이드 인 사용
-        if isBeingPresented && !didPerformInitialFadeIn {
+        // iOS 26+: navigationController 존재 확인 후 시스템 UI 설정
+        if #available(iOS 26.0, *) {
+            setupSystemUIIfNeeded()
+        }
+
+        // iOS 16~25: 시스템 모달 전환(animated: true) 대신, present(animated: false) + 가벼운 페이드 인 사용
+        if !useSystemUI && isBeingPresented && !didPerformInitialFadeIn {
             view.alpha = 0
         }
     }
@@ -237,6 +269,11 @@ final class ViewerViewController: UIViewController {
 
     override func viewWillDisappear(_ animated: Bool) {
         super.viewWillDisappear(animated)
+
+        // iOS 26+: 툴바 숨김 복구 (다른 화면에 영향 방지)
+        if #available(iOS 26.0, *) {
+            navigationController?.setToolbarHidden(true, animated: false)
+        }
 
         // 현재 표시 중인 사진 ID 전달
         let currentAssetID = coordinator.assetID(at: currentIndex)
@@ -276,10 +313,16 @@ final class ViewerViewController: UIViewController {
         ])
         pageViewController.didMove(toParent: self)
 
-        // 모드에 따라 버튼 추가
-        setupActionButtons()
+        // iOS 16~25: 커스텀 버튼 추가
+        // iOS 26+: viewWillAppear에서 시스템 UI 설정 (navigationController 필요)
+        if !useSystemUI {
+            setupActionButtons()
+            setupCloseButton()
+        }
+    }
 
-        // 닫기 버튼
+    /// iOS 16~25 전용 닫기 버튼 설정
+    private func setupCloseButton() {
         let closeButton = UIButton(type: .system)
         closeButton.translatesAutoresizingMaskIntoConstraints = false
         let config = UIImage.SymbolConfiguration(pointSize: 20, weight: .medium)
@@ -498,13 +541,16 @@ final class ViewerViewController: UIViewController {
         case .changed:
             // 아래로만 드래그 가능
             let offsetY = max(0, translation.y - dragStartY)
-
-            // 배경 투명도 조절
             let progress = min(offsetY / view.bounds.height, 1.0)
-            backgroundView.alpha = 1.0 - progress * 0.5
 
-            // 페이지 뷰 위치 이동
-            pageViewController.view.transform = CGAffineTransform(translationX: 0, y: offsetY)
+            if #available(iOS 26.0, *) {
+                // iOS 26: 배경 투명도만 조절 (transform 생략으로 dismiss 충돌 방지)
+                backgroundView.alpha = 1.0 - progress * 0.5
+            } else {
+                // iOS 16~25: 기존 드래그 애니메이션
+                backgroundView.alpha = 1.0 - progress * 0.5
+                pageViewController.view.transform = CGAffineTransform(translationX: 0, y: offsetY)
+            }
 
         case .ended, .cancelled:
             let offsetY = translation.y - dragStartY
@@ -516,9 +562,17 @@ final class ViewerViewController: UIViewController {
                 dismissWithAnimation()
             } else {
                 // 원위치로 복귀
-                UIView.animate(withDuration: 0.2) {
-                    self.backgroundView.alpha = 1.0
-                    self.pageViewController.view.transform = .identity
+                if #available(iOS 26.0, *) {
+                    // iOS 26: 배경 투명도만 복귀 (transform 미사용)
+                    UIView.animate(withDuration: 0.2) {
+                        self.backgroundView.alpha = 1.0
+                    }
+                } else {
+                    // iOS 16~25: 배경 + transform 복귀
+                    UIView.animate(withDuration: 0.2) {
+                        self.backgroundView.alpha = 1.0
+                        self.pageViewController.view.transform = .identity
+                    }
                 }
             }
 
@@ -532,12 +586,22 @@ final class ViewerViewController: UIViewController {
         guard !isDismissing else { return }
         isDismissing = true
 
-        UIView.animate(withDuration: 0.25, animations: {
-            self.backgroundView.alpha = 0
-            self.pageViewController.view.transform = CGAffineTransform(translationX: 0, y: self.view.bounds.height)
-        }, completion: { _ in
-            self.dismiss(animated: false)
-        })
+        if #available(iOS 26.0, *) {
+            // iOS 26: 페이드 아웃 후 dismiss (transform 없으므로 충돌 없음)
+            UIView.animate(withDuration: 0.15) {
+                self.backgroundView.alpha = 0
+            } completion: { _ in
+                self.navigationController?.dismiss(animated: false)
+            }
+        } else {
+            // iOS 16~25: 기존 커스텀 애니메이션
+            UIView.animate(withDuration: 0.25, animations: {
+                self.backgroundView.alpha = 0
+                self.pageViewController.view.transform = CGAffineTransform(translationX: 0, y: self.view.bounds.height)
+            }, completion: { _ in
+                self.dismiss(animated: false)
+            })
+        }
     }
 
     private func dismissWithFadeOut() {
@@ -548,6 +612,105 @@ final class ViewerViewController: UIViewController {
             self.view.alpha = 0
         } completion: { _ in
             self.dismiss(animated: false)
+        }
+    }
+
+    // MARK: - iOS 26+ System UI Setup
+
+    /// iOS 26+ 시스템 UI 설정 (1회만 실행)
+    @available(iOS 26.0, *)
+    private func setupSystemUIIfNeeded() {
+        guard !didSetupSystemUI else { return }
+        guard navigationController != nil else { return }
+
+        didSetupSystemUI = true
+
+        setupSystemNavigationBar()
+        setupSystemToolbar()
+    }
+
+    /// iOS 26+ 시스템 네비게이션 바 설정
+    @available(iOS 26.0, *)
+    private func setupSystemNavigationBar() {
+        // 닫기 버튼 (시스템 close)
+        navigationItem.leftBarButtonItem = UIBarButtonItem(
+            systemItem: .close,
+            primaryAction: UIAction { [weak self] _ in
+                self?.dismissViewer()
+            }
+        )
+
+        // 투명 배경 (사진 위에 Liquid Glass 효과)
+        navigationController?.navigationBar.isTranslucent = true
+    }
+
+    /// iOS 26+ 시스템 툴바 설정
+    @available(iOS 26.0, *)
+    private func setupSystemToolbar() {
+        navigationController?.setToolbarHidden(false, animated: false)
+        navigationController?.toolbar.isTranslucent = true
+
+        switch viewerMode {
+        case .normal:
+            setupNormalModeToolbar()
+        case .trash:
+            setupTrashModeToolbar()
+        }
+    }
+
+    /// iOS 26+ 일반 모드 툴바 (삭제 버튼)
+    @available(iOS 26.0, *)
+    private func setupNormalModeToolbar() {
+        let flexSpace = UIBarButtonItem(systemItem: .flexibleSpace)
+
+        let deleteItem = UIBarButtonItem(
+            systemItem: .trash,
+            primaryAction: UIAction { [weak self] _ in
+                self?.deleteButtonTapped()
+            }
+        )
+        deleteItem.tintColor = .systemRed
+        toolbarDeleteItem = deleteItem
+
+        toolbarItems = [flexSpace, deleteItem, flexSpace]
+    }
+
+    /// iOS 26+ 휴지통 모드 툴바 (복구 + 완전삭제)
+    @available(iOS 26.0, *)
+    private func setupTrashModeToolbar() {
+        let flexSpace = UIBarButtonItem(systemItem: .flexibleSpace)
+
+        // 복구 버튼
+        let restoreItem = UIBarButtonItem(
+            title: "복구",
+            primaryAction: UIAction { [weak self] _ in
+                self?.restoreButtonTapped()
+            }
+        )
+        restoreItem.tintColor = .systemGreen
+        toolbarRestoreItem = restoreItem
+
+        // 완전삭제 버튼
+        let permanentDeleteItem = UIBarButtonItem(
+            title: "삭제",
+            primaryAction: UIAction { [weak self] _ in
+                self?.permanentDeleteButtonTapped()
+            }
+        )
+        permanentDeleteItem.tintColor = .systemRed
+        toolbarPermanentDeleteItem = permanentDeleteItem
+
+        toolbarItems = [restoreItem, flexSpace, permanentDeleteItem]
+    }
+
+    /// 뷰어 닫기 (iOS 버전별 경로 통일)
+    private func dismissViewer() {
+        if #available(iOS 26.0, *) {
+            // iOS 26+: NavigationController dismiss
+            navigationController?.dismiss(animated: true)
+        } else {
+            // iOS 16~25: 기존 페이드 아웃
+            dismissWithFadeOut()
         }
     }
 
