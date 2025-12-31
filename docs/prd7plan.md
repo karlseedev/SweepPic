@@ -7,7 +7,7 @@
 
 | 파일 | 변경 내용 | 추가 줄수 |
 |------|-----------|----------|
-| `GridViewController+Gestures.swift` | **SwipeDeleteState 구조체 + 모든 제스처 로직** | ~300줄 |
+| `GridGestures.swift` | **SwipeDeleteState 구조체 + 모든 제스처 로직** | ~300줄 |
 | `GridViewController.swift` | `var swipeDeleteState` 1줄 + `setupSwipeDeleteGestures()` 호출 1줄 | ~2줄 |
 | `PhotoCell.swift` | 진행도 기반 딤드 애니메이션, 셀별 잠금 | ~100줄 |
 | `TrashStore.swift` | completion handler API 추가 (FR-106 필수) | ~40줄 |
@@ -24,7 +24,7 @@ Features/Grid/
 ├── GridViewController.swift           (~900줄) - 메인
 ├── GridViewController+SelectMode.swift (~500줄) - Select 모드
 ├── GridViewController+Scroll.swift    (~400줄) - 스크롤/초기표시
-└── GridViewController+Gestures.swift  (~200줄→500줄) - 제스처 ← PRD7 여기에 구현
+└── GridGestures.swift  (~200줄→500줄) - 제스처 ← PRD7 여기에 구현
 ```
 
 ### 아키텍처 결정: 단순 복제
@@ -116,7 +116,7 @@ func restore(_ assetID: String, completion: @escaping (Result<Void, Error>) -> V
 var swipeDeleteState = SwipeDeleteState()
 ```
 
-#### GridViewController+Gestures.swift - 나머지 전부
+#### GridGestures.swift - 나머지 전부
 ```swift
 // MARK: - Swipe Delete State
 
@@ -251,7 +251,7 @@ func gestureRecognizerShouldBegin(_ gestureRecognizer: UIGestureRecognizer) -> B
 ```
 ※ 제스처 등록은 Phase 1의 setupSwipeDeleteGestures()에서 완료
 
-파일: GridViewController+Gestures.swift
+파일: GridGestures.swift
 
 extension GridViewController {
     @objc func handleTwoFingerTap(_ gesture: UITapGestureRecognizer) {
@@ -324,7 +324,7 @@ func fadeDimmed(toTrashed: Bool, duration: TimeInterval = 0.15, completion: (() 
 ### T3-1: VoiceOver 감지
 ```
 파일: GridViewController.swift (Observer 등록)
-      GridViewController+Gestures.swift (제스처 활성화/비활성화)
+      GridGestures.swift (제스처 활성화/비활성화)
 
 viewDidLoad():
   NotificationCenter.default.addObserver(
@@ -339,7 +339,7 @@ viewDidLoad():
     updateSwipeDeleteGestureEnabled()
 }
 
-// GridViewController+Gestures.swift에 구현
+// GridGestures.swift에 구현
 func updateSwipeDeleteGestureEnabled() {
     let disabled = UIAccessibility.isVoiceOverRunning || isSelectMode
     swipeDeleteState.swipeGesture?.isEnabled = !disabled
@@ -352,7 +352,7 @@ func updateSwipeDeleteGestureEnabled() {
 ⚠️ UIGestureRecognizer.state는 읽기 전용 → 직접 설정 불가
 → 활성 셀 추적 + 수동 취소 애니메이션
 
-GridViewController+Gestures.swift에 추가:
+GridGestures.swift에 추가:
 
 /// 진행 중인 스와이프 취소 (백그라운드 진입 등)
 func cancelActiveSwipe() {
@@ -413,7 +413,7 @@ GridViewController의 제스처 로직을 복제:
 
 ### T3-4: TrashStore 실패 시 롤백 (FR-106 필수)
 ```
-GridViewController+Gestures.swift에 롤백 메서드 추가:
+GridGestures.swift에 롤백 메서드 추가:
 
 /// 스와이프 롤백 처리
 func rollbackSwipeCell() {
@@ -499,7 +499,7 @@ if gestureRecognizer == swipeDeleteState.swipeGesture {
 | 0 | ToastView.swift (신규) | ~60줄 |
 | 0 | TrashStore.swift (completion API) | ~40줄 |
 | 0 | PhotoCell.swift | ~100줄 |
-| 1~2 | GridViewController+Gestures.swift | ~300줄 |
+| 1~2 | GridGestures.swift | ~300줄 |
 | 1~2 | GridViewController.swift | **~2줄** |
 | 3 | AlbumGridViewController.swift | ~200줄 |
 | **합계** | | **~720줄** |
@@ -509,7 +509,7 @@ if gestureRecognizer == swipeDeleteState.swipeGesture {
 | 파일 | 분할 직후 | PRD7 후 | 증가 |
 |------|----------|---------|------|
 | GridViewController.swift | ~900줄 | ~902줄 | **+2줄** |
-| GridViewController+Gestures.swift | ~200줄 | ~450줄 | +250줄 |
+| GridGestures.swift | ~200줄 | ~450줄 | +250줄 |
 | AlbumGridViewController.swift | 기존 | +200줄 | +200줄 |
 
 ---
