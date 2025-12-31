@@ -67,12 +67,7 @@ final class GridViewController: UIViewController {
         }
     }
 
-    /// 핀치 줌 임계값 (T023)
-    private static let pinchZoomInThreshold: CGFloat = 1.15  // 확대 시
-    private static let pinchZoomOutThreshold: CGFloat = 0.85 // 축소 시
-
-    /// 핀치 줌 쿨다운 (T023: 200ms)
-    private static let pinchCooldown: TimeInterval = 0.2
+    // Pinch Zoom 상수 → GridGestures.swift로 이동됨
 
     /// 스크롤 스로틀링 간격 (Step 1: 200ms로 증가) (extension에서 접근 필요)
     static let scrollThrottleInterval: TimeInterval = 0.2
@@ -136,11 +131,11 @@ final class GridViewController: UIViewController {
     /// 현재 셀 크기 (캐시) (extension에서 접근 필요)
     var currentCellSize: CGSize = .zero
 
-    /// 핀치 줌 마지막 실행 시간 (쿨다운용)
-    private var lastPinchZoomTime: Date?
+    /// 핀치 줌 마지막 실행 시간 (쿨다운용) (extension에서 접근 필요)
+    var lastPinchZoomTime: Date?
 
-    /// 핀치 줌 앵커 에셋 ID
-    private var pinchAnchorAssetID: String?
+    /// 핀치 줌 앵커 에셋 ID (extension에서 접근 필요)
+    var pinchAnchorAssetID: String?
 
     /// 스크롤 스로틀링 마지막 시간
     private var lastScrollTime: Date?
@@ -532,10 +527,10 @@ final class GridViewController: UIViewController {
 
     // MARK: - Layout
 
-    /// CompositionalLayout 생성
+    /// CompositionalLayout 생성 (extension에서 접근 필요)
     /// - Parameter columns: 열 수
     /// - Returns: UICollectionViewLayout
-    private func createLayout(columns: ColumnCount) -> UICollectionViewLayout {
+    func createLayout(columns: ColumnCount) -> UICollectionViewLayout {
         let layout = UICollectionViewCompositionalLayout { _, environment in
             let spacing = Self.cellSpacing
             let columnCount = CGFloat(columns.rawValue)
@@ -576,8 +571,8 @@ final class GridViewController: UIViewController {
         return layout
     }
 
-    /// 셀 크기 업데이트
-    private func updateCellSize() {
+    /// 셀 크기 업데이트 (extension에서 접근 필요)
+    func updateCellSize() {
         let spacing = Self.cellSpacing
         let columnCount = CGFloat(currentColumnCount.rawValue)
         let totalSpacing = spacing * (columnCount - 1)
@@ -642,97 +637,7 @@ final class GridViewController: UIViewController {
         }
     }
 
-    // MARK: - Pinch Zoom (T023)
-
-    /// 핀치 줌 제스처 핸들러
-    @objc private func handlePinchGesture(_ gesture: UIPinchGestureRecognizer) {
-        switch gesture.state {
-        case .began:
-            // 앵커 에셋 ID 저장 (핀치 시작 위치의 셀)
-            let location = gesture.location(in: collectionView)
-            if let indexPath = collectionView.indexPathForItem(at: location) {
-                pinchAnchorAssetID = dataSourceDriver.assetID(at: indexPath)
-            }
-
-        case .changed:
-            // 쿨다운 체크 (200ms)
-            if let lastTime = lastPinchZoomTime,
-               Date().timeIntervalSince(lastTime) < Self.pinchCooldown {
-                return
-            }
-
-            // 임계값 체크
-            let scale = gesture.scale
-
-            var newColumnCount: ColumnCount?
-
-            if scale > Self.pinchZoomInThreshold {
-                // 확대 (열 수 감소)
-                newColumnCount = currentColumnCount.zoomIn
-            } else if scale < Self.pinchZoomOutThreshold {
-                // 축소 (열 수 증가)
-                newColumnCount = currentColumnCount.zoomOut
-            }
-
-            // 열 수가 변경되면 레이아웃 업데이트
-            if let newCount = newColumnCount, newCount != currentColumnCount {
-                performZoom(to: newCount)
-                gesture.scale = 1.0 // 스케일 리셋
-            }
-
-        case .ended, .cancelled:
-            pinchAnchorAssetID = nil
-
-        default:
-            break
-        }
-    }
-
-    /// 줌 수행
-    /// - Parameter columns: 새 열 수
-    private func performZoom(to columns: ColumnCount) {
-        // 쿨다운 시간 기록
-        lastPinchZoomTime = Date()
-
-        // 현재 앵커 IndexPath 저장
-        let anchorIndexPath: IndexPath?
-        if let anchorID = pinchAnchorAssetID {
-            anchorIndexPath = dataSourceDriver.indexPath(for: anchorID)
-        } else {
-            // 앵커가 없으면 화면 중앙 셀 사용
-            let centerPoint = CGPoint(
-                x: collectionView.bounds.midX,
-                y: collectionView.bounds.midY + collectionView.contentOffset.y
-            )
-            anchorIndexPath = collectionView.indexPathForItem(at: centerPoint)
-        }
-
-        // 열 수 업데이트
-        currentColumnCount = columns
-        updateCellSize()
-
-        // 레이아웃 애니메이션
-        UIView.animate(withDuration: 0.25) { [weak self] in
-            guard let self = self else { return }
-
-            // 새 레이아웃 적용
-            self.collectionView.setCollectionViewLayout(
-                self.createLayout(columns: columns),
-                animated: false
-            )
-
-            // 앵커 위치로 스크롤 (drift 0px 목표)
-            if let indexPath = anchorIndexPath {
-                self.collectionView.scrollToItem(
-                    at: indexPath,
-                    at: .centeredVertically,
-                    animated: false
-                )
-            }
-        }
-
-        print("[GridViewController] Zoom to \(columns.rawValue) columns")
-    }
+    // Pinch Zoom 코드 → GridGestures.swift로 이동됨
 
     // MARK: - Library Change (T026)
 
