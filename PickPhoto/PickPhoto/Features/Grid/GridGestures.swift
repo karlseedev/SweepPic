@@ -250,6 +250,15 @@ extension GridViewController {
         swipeDeleteState.twoFingerTapGesture?.isEnabled = enabled
     }
 
+    /// 진행 중인 스와이프 취소 (백그라운드 진입 등)
+    func cancelActiveSwipe() {
+        guard let cell = swipeDeleteState.targetCell else { return }
+        cell.cancelDimmedAnimation {
+            cell.isAnimating = false
+        }
+        swipeDeleteState.reset()
+    }
+
     // MARK: - Swipe Delete Handler
 
     /// 스와이프 삭제 제스처 핸들러

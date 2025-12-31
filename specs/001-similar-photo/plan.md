@@ -12,6 +12,8 @@
 - **유사 사진 분류**: VNGenerateImageFeaturePrintRequest + 거리 10.0 이하
 - **인물 매칭**: 위치 기반 (x좌표 우선) + Feature Print 검증 (0.6/1.0 임계값)
 - **그룹 유형**: 유사사진썸네일그룹(분석 범위 내 전체) / 유사사진정리그룹(최대 8장)
+- **좌표 변환**: Vision boundingBox Y축 반전 (`y = 1 - boundingBox.maxY`)
+- **얼굴 크롭**: 30% 여백, 정사각형, 이미지 경계 클램핑
 
 ### 유사사진썸네일그룹 판정 조건
 그리드 테두리/뷰어 버튼 표시 여부 결정 (모든 조건 충족 필요):
@@ -31,6 +33,22 @@
 **Performance Goals**: 그리드 스크롤 네이티브 주사율 유지 (60Hz/120Hz), 1초 내 테두리 표시, 0.5초 내 얼굴 버튼 표시
 **Constraints**: 5만 장 라이브러리에서도 성능 유지, 메모리 효율적 관리
 **Scale/Scope**: 앞뒤 7장 범위 분석, 최대 5개 얼굴 + 버튼
+**Feature Print Resolution**: 480×480 (성능과 정확도 균형)
+
+### 처리 시간 목표 (상세)
+| 작업 | 목표 | 비고 |
+|------|------|------|
+| Feature Print 생성 | 50ms 이하 | 480×480 해상도 |
+| 얼굴 감지 | 30ms 이하 | VNDetectFaceRectanglesRequest |
+| 얼굴 크롭 Feature Print | 30ms 이하 | 크롭된 이미지 |
+| 거리 계산 | 1ms 이하 | computeDistance |
+
+### 동시 처리 제한
+| 컨텍스트 | 동시 분석 수 | 이유 |
+|----------|-------------|------|
+| 그리드 | 5개 | 메모리 관리, 스크롤 성능 |
+| 뷰어 | 3개 | 빠른 응답 필요 |
+| 얼굴 비교 검증 | 백그라운드 | UX 블로킹 방지 |
 
 ## Constitution Check
 
@@ -99,7 +117,8 @@ PickPhoto/PickPhoto/
 │   │   └── FacePlusButtonOverlay.swift # NEW: 얼굴 + 버튼 오버레이
 │   └── FaceComparison/                 # NEW: 얼굴 비교 화면
 │       ├── FaceComparisonViewController.swift
-│       ├── FaceCropCell.swift          # 경고 배지 표시 포함
+│       ├── FaceCropCell.swift          # 경고 배지 (⚠️) 표시 포함
+│       ├── MatchWarningBanner.swift    # NEW: 경고 헤더 UI (신뢰도 낮음 시)
 │       └── PersonCycleManager.swift    # 크로스페이드 0.3초
 └── Shared/
     └── Components/

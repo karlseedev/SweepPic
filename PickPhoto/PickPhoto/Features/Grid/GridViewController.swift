@@ -519,6 +519,22 @@ final class GridViewController: UIViewController {
             name: AutoScrollTester.didEndScrollingNotification,
             object: nil
         )
+
+        // PRD7: VoiceOver 상태 변경 감지
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(voiceOverStatusChanged),
+            name: UIAccessibility.voiceOverStatusDidChangeNotification,
+            object: nil
+        )
+
+        // PRD7: 앱 백그라운드 진입 시 스와이프 취소
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(appDidEnterBackground),
+            name: UIApplication.didEnterBackgroundNotification,
+            object: nil
+        )
     }
 
     @objc private func handleAutoScrollDidBegin() {
@@ -527,6 +543,16 @@ final class GridViewController: UIViewController {
 
     @objc private func handleAutoScrollDidEnd() {
         scrollDidEnd()
+    }
+
+    /// PRD7: VoiceOver 상태 변경 시 스와이프 제스처 활성화/비활성화
+    @objc private func voiceOverStatusChanged() {
+        updateSwipeDeleteGestureEnabled()
+    }
+
+    /// PRD7: 앱 백그라운드 진입 시 활성 스와이프 취소
+    @objc private func appDidEnterBackground() {
+        cancelActiveSwipe()
     }
 
     // startInitialDisplay() → GridScroll.swift로 이동됨
