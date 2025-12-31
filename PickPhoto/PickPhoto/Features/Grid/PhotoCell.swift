@@ -23,7 +23,7 @@ final class PhotoCell: UICollectionViewCell {
     static let reuseIdentifier = "PhotoCell"
 
     /// 딤드 오버레이 투명도 (FR-008: 50% dark red opacity)
-    private static let dimmedOverlayAlpha: CGFloat = 0.50
+    private static let dimmedOverlayAlpha: CGFloat = 0.60
 
     // MARK: - Debug Timing (static)
 
@@ -190,11 +190,11 @@ final class PhotoCell: UICollectionViewCell {
         return iv
     }()
 
-    /// 딤드 오버레이 뷰 (휴지통 사진용) - 다크레드 50%
+    /// 딤드 오버레이 뷰 (휴지통 사진용) - 마룬 50%
     private let dimmedOverlayView: UIView = {
         let view = UIView()
-        // Dark Red (#8B0000)
-        view.backgroundColor = UIColor(red: 0.545, green: 0, blue: 0, alpha: 1)
+        // Maroon (#800000)
+        view.backgroundColor = UIColor(red: 0.5, green: 0, blue: 0, alpha: 1)
         view.alpha = 0
         view.isHidden = true
         view.translatesAutoresizingMaskIntoConstraints = false
