@@ -151,9 +151,39 @@ extension GridViewController {
                     animated: false
                 )
             }
+        } completion: { [weak self] _ in
+            // 줌 애니메이션 완료 후 visible cells 고해상도 재요청
+            self?.refreshVisibleCellsAfterZoom()
         }
 
         print("[GridViewController] Zoom to \(columns.rawValue) columns")
+    }
+
+    /// 줌 후 visible cells에 고해상도 썸네일 재요청
+    /// - 스크롤 중이면 스킵 (스크롤 완료 후 자연스럽게 재로드됨)
+    /// - targetSize가 커질 때만 재요청 (PhotoCell에서 판단)
+    private func refreshVisibleCellsAfterZoom() {
+        // 안전 가드 1: 스크롤 중이면 스킵
+        if isScrolling || collectionView.isDragging || collectionView.isDecelerating {
+            return
+        }
+
+        let targetSize = thumbnailSize(forScrolling: false)
+
+        for indexPath in collectionView.indexPathsForVisibleItems {
+            // padding 셀 제외
+            guard indexPath.item >= paddingCellCount else { continue }
+
+            // 실제 에셋 인덱스
+            let assetIndexPath = IndexPath(item: indexPath.item - paddingCellCount, section: 0)
+            guard let asset = dataSourceDriver.asset(at: assetIndexPath),
+                  let cell = collectionView.cellForItem(at: indexPath) as? PhotoCell else {
+                continue
+            }
+
+            // 고해상도 재요청 (targetSize 비교는 PhotoCell에서 수행)
+            cell.refreshImageIfNeeded(asset: asset, targetSize: targetSize)
+        }
     }
 }
 

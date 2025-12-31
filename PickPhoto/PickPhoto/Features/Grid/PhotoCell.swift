@@ -276,6 +276,9 @@ final class PhotoCell: UICollectionViewCell {
     /// 현재 표시 중인 에셋 ID
     private(set) var currentAssetID: String?
 
+    /// 현재 로드된 썸네일 크기 (핀치줌 후 고해상도 재요청 판단용)
+    private var currentTargetSize: CGSize = .zero
+
     /// 휴지통 상태
     private(set) var isTrashed: Bool = false
 
@@ -477,8 +480,9 @@ final class PhotoCell: UICollectionViewCell {
         currentCancellable = nil
         currentCacheLoadID = nil
 
-        // 새 에셋 ID 설정
+        // 새 에셋 ID 및 크기 설정
         currentAssetID = assetID
+        currentTargetSize = targetSize
         self.isTrashed = isTrashed
 
         // 빈 셀에서 복원 시 배경색 복구
@@ -687,8 +691,9 @@ final class PhotoCell: UICollectionViewCell {
         // 이전 요청 취소
         cancelCurrentRequest()
 
-        // 새 에셋 ID 설정
+        // 새 에셋 ID 및 크기 설정
         currentAssetID = assetID
+        currentTargetSize = targetSize
         self.isTrashed = isTrashed
 
         // 딤드 오버레이 업데이트 (T027)
@@ -996,5 +1001,51 @@ extension PhotoCell {
         CATransaction.setDisableActions(true)
         mask.path = UIBezierPath(rect: rect).cgPath
         CATransaction.commit()
+    }
+
+    // MARK: - Pinch Zoom 후 고해상도 재요청
+
+    /// 핀치줌으로 셀이 커졌을 때 고해상도 썸네일 재요청
+    /// - Parameters:
+    ///   - asset: PHAsset
+    ///   - targetSize: 새로운 타겟 크기
+    /// - Note: 같은 assetID여도 targetSize가 커지면 재요청
+    func refreshImageIfNeeded(asset: PHAsset, targetSize: CGSize) {
+        let assetID = asset.localIdentifier
+
+        // 다른 에셋이면 configure 호출 (일반적인 경우 아님)
+        guard currentAssetID == assetID else {
+            configure(
+                asset: asset,
+                isTrashed: isTrashed,
+                targetSize: targetSize
+            )
+            return
+        }
+
+        // targetSize가 커졌을 때만 재요청 (축소 시에는 기존 이미지 사용)
+        let needsHigherRes = targetSize.width > currentTargetSize.width ||
+                             targetSize.height > currentTargetSize.height
+        guard needsHigherRes else { return }
+
+        // 크기 업데이트
+        currentTargetSize = targetSize
+
+        // 고해상도 이미지 요청 (ImagePipeline 사용)
+        currentCancellable = ImagePipeline.shared.requestImage(
+            for: asset,
+            targetSize: targetSize,
+            contentMode: .aspectFill
+        ) { [weak self] image, isDegraded in
+            guard let self = self else { return }
+
+            // 셀이 재사용되었으면 무시
+            guard self.currentAssetID == assetID else { return }
+
+            if let image = image {
+                self.imageView.image = image
+            }
+            // 실패 시 기존 이미지 유지
+        }
     }
 }
