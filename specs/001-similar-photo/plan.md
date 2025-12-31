@@ -70,7 +70,10 @@ Sources/AppCore/
 │   ├── SimilarCleanupGroup.swift      # NEW: 얼굴 비교 화면용 그룹 (최대 8장)
 │   ├── FaceRegion.swift               # NEW: 얼굴 영역 (boundingBox, 크기비율)
 │   ├── PersonComparison.swift         # NEW: 인물별 얼굴 크롭 목록 및 선택 상태
-│   └── MatchConfidence.swift          # NEW: 매칭 신뢰도 (high/medium/low)
+│   ├── MatchConfidence.swift          # NEW: 매칭 신뢰도 (high/medium/low)
+│   ├── CroppedFace.swift              # NEW: 얼굴 크롭 이미지 + Feature Print + 인물 번호
+│   ├── FaceMatch.swift                # NEW: 인물 매칭 결과 (거리, 신뢰도)
+│   └── ValidationResult.swift         # NEW: 검증 결과 (isValid, 불일치 목록)
 ├── Services/
 │   ├── PhotoLibraryService.swift      # 기존
 │   ├── ImagePipeline.swift            # 기존

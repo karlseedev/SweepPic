@@ -461,10 +461,90 @@ extension GridViewController {
         ToastView.show("저장 실패. 다시 시도해주세요", in: view.window)
     }
 
-    // MARK: - Two Finger Tap Handler (Phase 2)
+    // MARK: - PRD7: Two Finger Tap Delete/Restore (FR-102)
 
-    /// 투 핑거 탭 제스처 핸들러 (Phase 2에서 구현)
+    /// 투 핑거 탭 제스처 핸들러
     @objc func handleTwoFingerTap(_ gesture: UITapGestureRecognizer) {
-        // Phase 2에서 구현
+        guard gesture.state == .ended else { return }
+
+        // 두 터치 위치 확인
+        let touch0 = gesture.location(ofTouch: 0, in: collectionView)
+        let touch1 = gesture.location(ofTouch: 1, in: collectionView)
+
+        // 같은 셀인지 확인
+        guard let ip0 = collectionView.indexPathForItem(at: touch0),
+              let ip1 = collectionView.indexPathForItem(at: touch1),
+              ip0 == ip1 else {
+            return
+        }
+
+        // 패딩 셀 방어
+        guard ip0.item >= paddingCellCount else { return }
+
+        // 에셋 ID 가져오기 (패딩 오프셋 적용)
+        let actualIndex = ip0.item - paddingCellCount
+        guard let assetID = dataSourceDriver.assetID(at: IndexPath(item: actualIndex, section: 0)) else {
+            return
+        }
+
+        // 셀 가져오기 및 잠금 체크
+        guard let cell = collectionView.cellForItem(at: ip0) as? PhotoCell,
+              !cell.isAnimating else {
+            return
+        }
+
+        // 삭제/복원 실행
+        cell.isAnimating = true
+        let isTrashed = cell.isTrashed
+        let toTrashed = !isTrashed
+
+        // 페이드 애니메이션
+        cell.fadeDimmed(toTrashed: toTrashed) { [weak self] in
+            guard let self = self else {
+                cell.isAnimating = false
+                return
+            }
+
+            // TrashStore 호출 (completion handler 사용)
+            if toTrashed {
+                self.trashStore.moveToTrash(assetID) { [weak self] result in
+                    self?.handleTwoFingerTapResult(result, cell: cell, originalTrashed: isTrashed)
+                }
+            } else {
+                self.trashStore.restore(assetID) { [weak self] result in
+                    self?.handleTwoFingerTapResult(result, cell: cell, originalTrashed: isTrashed)
+                }
+            }
+        }
+    }
+
+    /// 투 핑거 탭 TrashStore 결과 처리
+    private func handleTwoFingerTapResult(
+        _ result: Result<Void, TrashStoreError>,
+        cell: PhotoCell,
+        originalTrashed: Bool
+    ) {
+        switch result {
+        case .success:
+            HapticFeedback.light()
+            cell.isAnimating = false
+
+        case .failure:
+            rollbackTwoFingerTapCell(cell: cell, toOriginalTrashed: originalTrashed)
+        }
+    }
+
+    /// 투 핑거 탭 롤백 처리
+    private func rollbackTwoFingerTapCell(cell: PhotoCell, toOriginalTrashed: Bool) {
+        // UI 롤백 애니메이션
+        cell.fadeDimmed(toTrashed: toOriginalTrashed) {
+            cell.isAnimating = false
+        }
+
+        // 에러 햅틱
+        HapticFeedback.error()
+
+        // 토스트 메시지
+        ToastView.show("저장 실패. 다시 시도해주세요", in: view.window)
     }
 }
