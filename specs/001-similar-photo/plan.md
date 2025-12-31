@@ -11,7 +11,7 @@
 ### 핵심 알고리즘
 - **유사 사진 분류**: VNGenerateImageFeaturePrintRequest + 거리 10.0 이하
 - **인물 매칭**: 위치 기반 (x좌표 우선) + Feature Print 검증 (0.6/1.0 임계값)
-- **그룹 유형**: 유사사진썸네일그룹(무제한) / 유사사진정리그룹(최대 8장)
+- **그룹 유형**: 유사사진썸네일그룹(분석 범위 내 전체) / 유사사진정리그룹(최대 8장)
 
 ### 유사사진썸네일그룹 판정 조건
 그리드 테두리/뷰어 버튼 표시 여부 결정 (모든 조건 충족 필요):
@@ -84,7 +84,9 @@ Sources/AppCore/
 PickPhoto/PickPhoto/
 ├── Features/
 │   ├── Grid/
-│   │   ├── GridViewController.swift    # 수정: 테두리 애니메이션 추가
+│   │   ├── GridViewController.swift    # 기존 (분할 후 메인)
+│   │   ├── GridScroll.swift            # 수정: 스크롤 멈춤 감지 + 유사사진 분석 트리거
+│   │   ├── GridSimilarPhoto.swift      # NEW: 유사사진 테두리 관리 (~200줄)
 │   │   ├── PhotoCell.swift             # 수정: 테두리 레이어 추가
 │   │   └── SimilarBorderLayer.swift    # NEW: 빛 회전 애니메이션
 │   ├── Viewer/
