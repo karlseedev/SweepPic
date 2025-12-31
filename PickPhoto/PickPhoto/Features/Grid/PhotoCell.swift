@@ -970,14 +970,14 @@ extension PhotoCell {
         let rect: CGRect
         if isTrashed {
             // 복원 중: 손가락이 빨간 딤드를 밀어냄
-            // 스와이프 방향 반대쪽에서 시작해서 줄어듦
+            // 딤드가 손가락 방향으로 밀려나는 느낌
             switch direction {
             case .right:
-                // 오른쪽 스와이프 → 딤드가 왼쪽에서 줄어듦
-                rect = CGRect(x: 0, y: 0, width: width - swipeWidth, height: height)
-            case .left:
-                // 왼쪽 스와이프 → 딤드가 오른쪽에서 줄어듦
+                // 오른쪽 스와이프 → 딤드가 오른쪽으로 밀려남 (왼쪽부터 사라짐)
                 rect = CGRect(x: swipeWidth, y: 0, width: width - swipeWidth, height: height)
+            case .left:
+                // 왼쪽 스와이프 → 딤드가 왼쪽으로 밀려남 (오른쪽부터 사라짐)
+                rect = CGRect(x: 0, y: 0, width: width - swipeWidth, height: height)
             }
         } else {
             // 삭제 중: 손가락 뒤에서 빨간 딤드가 따라옴
