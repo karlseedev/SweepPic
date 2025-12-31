@@ -84,11 +84,13 @@ Sources/AppCore/
 PickPhoto/PickPhoto/
 ├── Features/
 │   ├── Grid/
-│   │   ├── GridViewController.swift    # 기존 (분할 후 메인)
-│   │   ├── GridScroll.swift            # 수정: 스크롤 멈춤 감지 + 유사사진 분석 트리거
-│   │   ├── GridSimilarPhoto.swift      # NEW: 유사사진 테두리 관리 (~200줄)
+│   │   ├── GridViewController.swift    # 분할 후 메인 (~905줄)
+│   │   ├── GridSelectMode.swift        # NEW: Select 모드 분리 (251231file)
+│   │   ├── GridScroll.swift            # NEW: 스크롤/초기표시 분리 (251231file) + PRD8 트리거
+│   │   ├── GridGestures.swift          # NEW: 제스처 분리 (251231file) + PRD7 예정
+│   │   ├── GridSimilarPhoto.swift      # NEW: 유사사진 테두리 관리 [PRD8]
 │   │   ├── PhotoCell.swift             # 수정: 테두리 레이어 추가
-│   │   └── SimilarBorderLayer.swift    # NEW: 빛 회전 애니메이션
+│   │   └── SimilarBorderLayer.swift    # NEW: 빛 회전 애니메이션 [PRD8]
 │   ├── Viewer/
 │   │   ├── ViewerViewController.swift  # 수정: 유사사진정리버튼 추가
 │   │   └── FacePlusButtonOverlay.swift # NEW: 얼굴 + 버튼 오버레이
