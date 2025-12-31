@@ -292,6 +292,14 @@ final class ViewerCoordinator: ViewerCoordinatorProtocol {
         print("[ViewerCoordinator] rebuildIndexMapping() 완료: \(String(format: "%.1f", elapsed))ms, Mode: \(viewerMode), totalOriginal: \(totalOriginal), trashedIDs: \(trashedIDs.count)")
     }
 
+    // MARK: - iOS 18+ Zoom Transition Support
+
+    /// 필터링된 인덱스를 원본 인덱스로 변환 (public 접근용)
+    /// iOS 18+ zoom transition의 sourceViewProvider에서 외부 접근 필요
+    func originalIndex(from filteredIndex: Int) -> Int? {
+        return originalIndex(forFilteredIndex: filteredIndex)
+    }
+
     /// 필터링된 인덱스를 원본 인덱스로 변환
     private func originalIndex(forFilteredIndex filteredIndex: Int) -> Int? {
         guard filteredIndex >= 0 else { return nil }

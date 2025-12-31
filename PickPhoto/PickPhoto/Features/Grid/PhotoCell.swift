@@ -150,6 +150,20 @@ final class PhotoCell: UICollectionViewCell {
         return imageView.image == nil
     }
 
+    // MARK: - iOS 18+ Zoom Transition Support
+
+    /// 실제 이미지가 로드되었는지 확인 (placeholder가 아닌 경우)
+    /// iOS 18+ zoom transition에서 sourceViewProvider가 품질 체크에 사용
+    var hasLoadedImage: Bool {
+        return imageView.image != nil
+    }
+
+    /// 썸네일 이미지 뷰 접근자 (읽기 전용)
+    /// iOS 18+ zoom transition의 sourceViewProvider에서 줌 시작점으로 사용
+    var thumbnailImageView: UIImageView {
+        return imageView
+    }
+
     /// 회색 셀 해소 카운트 증가 (내부용)
     private static func incrementGrayResolved() {
         grayCellLock.withLock {

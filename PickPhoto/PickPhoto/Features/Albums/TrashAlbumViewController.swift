@@ -842,6 +842,48 @@ extension TrashAlbumViewController: UICollectionViewDelegate {
         )
         viewerVC.delegate = self
 
+        // iOS 18+: 네이티브 zoom transition
+        if #available(iOS 18.0, *) {
+            // iOS 18에서는 ViewerViewController의 커스텀 페이드 애니메이션 비활성화 (이중 애니메이션 방지)
+            viewerVC.disableCustomFadeAnimation = true
+
+            viewerVC.preferredTransition = .zoom(sourceViewProvider: { [weak self, weak coordinator] context in
+                guard let self = self,
+                      let coordinator = coordinator,
+                      let viewer = context.zoomedViewController as? ViewerViewController else {
+                    return nil
+                }
+
+                // 뷰어의 현재 인덱스 (fetchResult 기준)
+                let currentIndex = viewer.currentIndex
+
+                // fetchResult에서 현재 에셋 ID 가져오기
+                guard let assetID = coordinator.assetID(at: currentIndex) else {
+                    return nil
+                }
+
+                // trashedAssets에서 해당 에셋의 인덱스 찾기
+                guard let assetIndex = self.trashedAssets.firstIndex(where: { $0.localIdentifier == assetID }) else {
+                    return nil
+                }
+
+                // padding 셀 적용하여 실제 collectionView indexPath 계산
+                let cellIndexPath = IndexPath(item: assetIndex + self.paddingCellCount, section: 0)
+
+                // 셀이 화면에 없으면 nil 반환 (중앙에서 줌 fallback)
+                guard let cell = self.collectionView.cellForItem(at: cellIndexPath) as? PhotoCell else {
+                    return nil
+                }
+
+                // placeholder가 아닌 실제 이미지가 로드된 경우에만 줌 전환
+                guard cell.hasLoadedImage else {
+                    return nil  // 이미지 미로드 시 중앙에서 줌 (fallback)
+                }
+
+                return cell.thumbnailImageView
+            })
+        }
+
         // Push 방식으로 뷰어 표시 (모든 iOS 버전 공통)
         navigationController?.pushViewController(viewerVC, animated: true)
 

@@ -85,6 +85,20 @@ final class AlbumCell: UICollectionViewCell {
     /// 현재 설정된 에셋 ID (재사용 검증용)
     private var currentAssetID: String?
 
+    // MARK: - iOS 18+ Zoom Transition Support
+
+    /// 실제 이미지가 로드되었는지 확인 (placeholder가 아닌 경우)
+    /// iOS 18+ zoom transition에서 sourceViewProvider가 품질 체크에 사용
+    var hasLoadedImage: Bool {
+        return thumbnailImageView.image != nil && !thumbnailImageView.isHidden
+    }
+
+    /// 앨범 썸네일 이미지 뷰 접근자 (읽기 전용)
+    /// iOS 18+ zoom transition의 sourceViewProvider에서 줌 시작점으로 사용
+    var albumThumbnailImageView: UIImageView {
+        return thumbnailImageView
+    }
+
     // MARK: - Initialization
 
     override init(frame: CGRect) {

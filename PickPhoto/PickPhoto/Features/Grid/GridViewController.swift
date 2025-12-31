@@ -1306,13 +1306,44 @@ extension GridViewController: UICollectionViewDelegate {
         )
         viewerVC.delegate = self
 
-        // TODO: T032 줌 전환 애니메이션은 Phase 9에서 iOS 사진 앱 수준으로 구현 예정
-        // 현재는 기본 전환 사용 (fullScreen + crossDissolve)
+        // iOS 18+: 네이티브 zoom transition
+        if #available(iOS 18.0, *) {
+            // iOS 18에서는 ViewerViewController의 커스텀 페이드 애니메이션 비활성화 (이중 애니메이션 방지)
+            viewerVC.disableCustomFadeAnimation = true
 
-        // 뷰어 표시
-        // NOTE: 기본 crossDissolve 전환은 큰 Grid 화면 스냅샷/렌더로 첫 진입 시 1초 이상 메인 스레드 히치가 발생할 수 있어
-        // 시스템 전환을 끄고(instant present) Viewer 내부에서 가벼운 페이드 인을 수행한다.
-        // Push 방식으로 뷰어 표시 (모든 iOS 버전 공통)
+            viewerVC.preferredTransition = .zoom(sourceViewProvider: { [weak self, weak coordinator] context in
+                guard let self = self,
+                      let coordinator = coordinator,
+                      let viewer = context.zoomedViewController as? ViewerViewController else {
+                    return nil
+                }
+
+                // 뷰어의 현재 인덱스 (필터링된 인덱스)
+                let currentFilteredIndex = viewer.currentIndex
+
+                // 필터링된 인덱스 → 원본 인덱스 변환
+                guard let originalIndex = coordinator.originalIndex(from: currentFilteredIndex) else {
+                    return nil  // 인덱스 변환 실패 시 중앙에서 줌
+                }
+
+                // padding 셀 적용하여 실제 collectionView indexPath 계산
+                let cellIndexPath = IndexPath(item: originalIndex + self.paddingCellCount, section: 0)
+
+                // 셀이 화면에 없으면 nil 반환 (중앙에서 줌 fallback)
+                guard let cell = self.collectionView.cellForItem(at: cellIndexPath) as? PhotoCell else {
+                    return nil
+                }
+
+                // placeholder가 아닌 실제 이미지가 로드된 경우에만 줌 전환
+                guard cell.hasLoadedImage else {
+                    return nil  // 이미지 미로드 시 중앙에서 줌 (fallback)
+                }
+
+                return cell.thumbnailImageView
+            })
+        }
+
+        // 뷰어 표시 (push 방식)
         navigationController?.pushViewController(viewerVC, animated: true)
 
         print("[GridViewController] Opening viewer at filtered index \(filteredIndex) (original: \(indexPath.item)), mode: \(mode)")

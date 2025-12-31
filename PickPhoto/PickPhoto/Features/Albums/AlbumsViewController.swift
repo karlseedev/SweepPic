@@ -431,6 +431,32 @@ extension AlbumsViewController: UICollectionViewDelegate {
             fetchResult: fetchResult
         )
 
+        // iOS 18+: 네이티브 zoom transition
+        if #available(iOS 18.0, *) {
+            albumGridVC.preferredTransition = .zoom(sourceViewProvider: { [weak self, weak collectionView] context in
+                guard let self = self,
+                      let collectionView = collectionView else {
+                    return nil
+                }
+
+                guard let albumGrid = context.zoomedViewController as? AlbumGridViewController else {
+                    return nil
+                }
+
+                // 앨범 제목으로 해당 셀 찾기
+                guard let indexPath = self.findIndexPath(for: albumGrid.albumTitle),
+                      let cell = collectionView.cellForItem(at: indexPath) as? AlbumCell else {
+                    return nil
+                }
+
+                guard cell.hasLoadedImage else {
+                    return nil
+                }
+
+                return cell.albumThumbnailImageView
+            })
+        }
+
         navigationController?.pushViewController(albumGridVC, animated: true)
 
         print("[AlbumsViewController] Opened smart album: \(smartAlbum.title)")
@@ -448,9 +474,51 @@ extension AlbumsViewController: UICollectionViewDelegate {
             fetchResult: fetchResult
         )
 
+        // iOS 18+: 네이티브 zoom transition
+        if #available(iOS 18.0, *) {
+            albumGridVC.preferredTransition = .zoom(sourceViewProvider: { [weak self, weak collectionView] context in
+                guard let self = self,
+                      let collectionView = collectionView else {
+                    return nil
+                }
+
+                guard let albumGrid = context.zoomedViewController as? AlbumGridViewController else {
+                    return nil
+                }
+
+                // 앨범 제목으로 해당 셀 찾기
+                guard let indexPath = self.findIndexPath(for: albumGrid.albumTitle),
+                      let cell = collectionView.cellForItem(at: indexPath) as? AlbumCell else {
+                    return nil
+                }
+
+                guard cell.hasLoadedImage else {
+                    return nil
+                }
+
+                return cell.albumThumbnailImageView
+            })
+        }
+
         navigationController?.pushViewController(albumGridVC, animated: true)
 
         print("[AlbumsViewController] Opened album: \(album.title)")
+    }
+
+    // MARK: - iOS 18+ Zoom Transition Helper
+
+    /// 앨범 제목으로 해당 셀의 IndexPath 찾기
+    /// iOS 18+ zoom transition의 sourceViewProvider에서 사용
+    private func findIndexPath(for albumTitle: String) -> IndexPath? {
+        // 스마트 앨범에서 검색
+        if let index = smartAlbums.firstIndex(where: { $0.title == albumTitle }) {
+            return IndexPath(item: index, section: AlbumSection.smartAlbums.rawValue)
+        }
+        // 사용자 앨범에서 검색
+        if let index = userAlbums.firstIndex(where: { $0.title == albumTitle }) {
+            return IndexPath(item: index, section: AlbumSection.userAlbums.rawValue)
+        }
+        return nil
     }
 }
 

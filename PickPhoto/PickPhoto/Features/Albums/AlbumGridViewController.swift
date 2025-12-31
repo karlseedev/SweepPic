@@ -94,7 +94,8 @@ final class AlbumGridViewController: UIViewController {
     // MARK: - Properties
 
     /// 앨범 제목
-    private let albumTitle: String
+    /// iOS 18+ zoom transition의 sourceViewProvider에서 외부 접근 필요
+    let albumTitle: String
 
     /// 앨범 내 사진 fetch result
     private let fetchResult: PHFetchResult<PHAsset>
@@ -515,6 +516,43 @@ extension AlbumGridViewController: UICollectionViewDelegate {
             mode: mode
         )
         viewerVC.delegate = self
+
+        // iOS 18+: 네이티브 zoom transition
+        if #available(iOS 18.0, *) {
+            // iOS 18에서는 ViewerViewController의 커스텀 페이드 애니메이션 비활성화 (이중 애니메이션 방지)
+            viewerVC.disableCustomFadeAnimation = true
+
+            viewerVC.preferredTransition = .zoom(sourceViewProvider: { [weak self, weak coordinator] context in
+                guard let self = self,
+                      let coordinator = coordinator,
+                      let viewer = context.zoomedViewController as? ViewerViewController else {
+                    return nil
+                }
+
+                // 뷰어의 현재 인덱스 (필터링된 인덱스)
+                let currentFilteredIndex = viewer.currentIndex
+
+                // 필터링된 인덱스 → 원본 인덱스 변환
+                guard let originalIndex = coordinator.originalIndex(from: currentFilteredIndex) else {
+                    return nil  // 인덱스 변환 실패 시 중앙에서 줌
+                }
+
+                // padding 셀 적용하여 실제 collectionView indexPath 계산
+                let cellIndexPath = IndexPath(item: originalIndex + self.paddingCellCount, section: 0)
+
+                // 셀이 화면에 없으면 nil 반환 (중앙에서 줌 fallback)
+                guard let cell = self.collectionView.cellForItem(at: cellIndexPath) as? PhotoCell else {
+                    return nil
+                }
+
+                // placeholder가 아닌 실제 이미지가 로드된 경우에만 줌 전환
+                guard cell.hasLoadedImage else {
+                    return nil  // 이미지 미로드 시 중앙에서 줌 (fallback)
+                }
+
+                return cell.thumbnailImageView
+            })
+        }
 
         // Push 방식으로 뷰어 표시 (모든 iOS 버전 공통)
         navigationController?.pushViewController(viewerVC, animated: true)

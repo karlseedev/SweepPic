@@ -80,7 +80,8 @@ final class ViewerViewController: UIViewController {
     private var swipeDeleteHandler: SwipeDeleteHandler?
 
     /// 현재 표시 중인 인덱스
-    private var currentIndex: Int
+    /// iOS 18+ zoom transition의 sourceViewProvider에서 외부 접근 필요
+    private(set) var currentIndex: Int
 
     /// 페이지 뷰 컨트롤러
     private lazy var pageViewController: UIPageViewController = {
@@ -182,6 +183,10 @@ final class ViewerViewController: UIViewController {
 
     /// 최초 표시 페이드 인 적용 여부 (시스템 전환 대신 사용)
     private var didPerformInitialFadeIn: Bool = false
+
+    /// iOS 18+ zoom transition 사용 시 커스텀 페이드 애니메이션 비활성화 플래그
+    /// preferredTransition = .zoom 설정 시 true로 설정해야 이중 애니메이션 방지
+    var disableCustomFadeAnimation: Bool = false
 
     // MARK: - iOS 26+ System UI Properties
 
@@ -607,10 +612,16 @@ final class ViewerViewController: UIViewController {
         guard !isDismissing else { return }
         isDismissing = true
 
-        UIView.animate(withDuration: 0.15, delay: 0, options: [.curveEaseIn, .beginFromCurrentState, .allowUserInteraction]) {
-            self.view.alpha = 0
-        } completion: { _ in
-            self.navigationController?.popViewController(animated: false)
+        if disableCustomFadeAnimation {
+            // iOS 18+: preferredTransition이 줌 아웃 처리
+            navigationController?.popViewController(animated: true)
+        } else {
+            // iOS 16~17: 기존 페이드 아웃 후 pop
+            UIView.animate(withDuration: 0.15, delay: 0, options: [.curveEaseIn, .beginFromCurrentState, .allowUserInteraction]) {
+                self.view.alpha = 0
+            } completion: { _ in
+                self.navigationController?.popViewController(animated: false)
+            }
         }
     }
 
