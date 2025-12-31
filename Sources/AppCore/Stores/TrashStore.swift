@@ -8,9 +8,36 @@
 // - permanentlyDelete
 // - emptyTrash
 // - 파일 기반 저장
+//
+// PRD7: 그리드 즉시 삭제/복원
+// - completion handler API 추가 (실패 시 롤백 지원)
 
 import Foundation
 import Photos
+
+// MARK: - TrashStoreError (PRD7)
+
+/// TrashStore 에러 타입
+/// completion handler API에서 실패 시 반환
+public enum TrashStoreError: Error, LocalizedError {
+    /// 디스크 공간 부족
+    case diskSpaceFull
+    /// 파일 시스템 오류
+    case fileSystemError(Error)
+    /// JSON 인코딩 실패
+    case encodingFailed(Error)
+
+    public var errorDescription: String? {
+        switch self {
+        case .diskSpaceFull:
+            return "디스크 공간이 부족합니다"
+        case .fileSystemError(let error):
+            return "파일 저장 실패: \(error.localizedDescription)"
+        case .encodingFailed(let error):
+            return "데이터 인코딩 실패: \(error.localizedDescription)"
+        }
+    }
+}
 
 // MARK: - TrashStoreProtocol (T013)
 
@@ -36,6 +63,22 @@ public protocol TrashStoreProtocol: AnyObject {
     /// 사진을 휴지통에서 복구
     /// - Parameter assetIDs: 복구할 사진 ID 배열
     func restore(assetIDs: [String])
+
+    // MARK: - PRD7: Completion Handler API
+
+    /// 사진을 휴지통으로 이동 (completion handler 버전)
+    /// 제스처 기반 삭제에서 실패 시 롤백을 위해 사용
+    /// - Parameters:
+    ///   - assetID: 이동할 사진 ID
+    ///   - completion: 완료 콜백 (메인 스레드에서 호출)
+    func moveToTrash(_ assetID: String, completion: @escaping (Result<Void, TrashStoreError>) -> Void)
+
+    /// 사진을 휴지통에서 복구 (completion handler 버전)
+    /// 제스처 기반 복원에서 실패 시 롤백을 위해 사용
+    /// - Parameters:
+    ///   - assetID: 복구할 사진 ID
+    ///   - completion: 완료 콜백 (메인 스레드에서 호출)
+    func restore(_ assetID: String, completion: @escaping (Result<Void, TrashStoreError>) -> Void)
 
     /// 사진을 완전히 삭제 (iOS 휴지통으로 이동)
     /// - Parameter assetIDs: 삭제할 사진 ID 배열
@@ -149,6 +192,66 @@ public final class TrashStore: TrashStoreProtocol {
         print("[TrashStore.Timing] stateUpdate: \(String(format: "%.1f", (stateUpdateTime - startTime) * 1000))ms, save: \(String(format: "%.1f", (saveTime - stateUpdateTime) * 1000))ms, notify: \(String(format: "%.1f", (notifyTime - saveTime) * 1000))ms")
     }
 
+    // MARK: - PRD7: Completion Handler API
+
+    /// 사진을 휴지통으로 이동 (completion handler 버전)
+    /// 제스처 기반 삭제에서 실패 시 롤백을 위해 사용
+    /// - Parameters:
+    ///   - assetID: 이동할 사진 ID
+    ///   - completion: 완료 콜백 (메인 스레드에서 호출)
+    public func moveToTrash(_ assetID: String, completion: @escaping (Result<Void, TrashStoreError>) -> Void) {
+        // 상태 업데이트
+        state.moveToTrash(assetID)
+
+        // 저장 (에러 반환 가능)
+        saveStateWithCompletion { [weak self] result in
+            switch result {
+            case .success:
+                self?.notifyChange()
+                print("[TrashStore] Moved to trash with completion: \(assetID.prefix(8))...")
+                DispatchQueue.main.async {
+                    completion(.success(()))
+                }
+            case .failure(let error):
+                // 롤백: 상태 복원
+                self?.state.restore(assetID)
+                print("[TrashStore] Failed to move to trash, rolled back: \(error)")
+                DispatchQueue.main.async {
+                    completion(.failure(error))
+                }
+            }
+        }
+    }
+
+    /// 사진을 휴지통에서 복구 (completion handler 버전)
+    /// 제스처 기반 복원에서 실패 시 롤백을 위해 사용
+    /// - Parameters:
+    ///   - assetID: 복구할 사진 ID
+    ///   - completion: 완료 콜백 (메인 스레드에서 호출)
+    public func restore(_ assetID: String, completion: @escaping (Result<Void, TrashStoreError>) -> Void) {
+        // 상태 업데이트
+        state.restore(assetID)
+
+        // 저장 (에러 반환 가능)
+        saveStateWithCompletion { [weak self] result in
+            switch result {
+            case .success:
+                self?.notifyChange()
+                print("[TrashStore] Restored with completion: \(assetID.prefix(8))...")
+                DispatchQueue.main.async {
+                    completion(.success(()))
+                }
+            case .failure(let error):
+                // 롤백: 상태 복원
+                self?.state.moveToTrash(assetID)
+                print("[TrashStore] Failed to restore, rolled back: \(error)")
+                DispatchQueue.main.async {
+                    completion(.failure(error))
+                }
+            }
+        }
+    }
+
     /// 사진을 완전히 삭제 (iOS 휴지통으로 이동)
     /// iOS 시스템 팝업이 표시됨
     public func permanentlyDelete(assetIDs: [String]) async throws {
@@ -239,6 +342,36 @@ public final class TrashStore: TrashStoreProtocol {
                 print("[TrashStore] State saved (\(self.state.trashedCount) items)")
             } catch {
                 print("[TrashStore] Failed to save state: \(error)")
+            }
+        }
+    }
+
+    /// 상태 저장 (completion handler 버전)
+    /// PRD7: 제스처 삭제/복원에서 실패 시 롤백을 위해 에러 반환
+    private func saveStateWithCompletion(completion: @escaping (Result<Void, TrashStoreError>) -> Void) {
+        saveQueue.async { [weak self] in
+            guard let self = self else { return }
+
+            do {
+                // 디스크 공간 체크 (대략적인 체크)
+                let fileManager = FileManager.default
+                if let attributes = try? fileManager.attributesOfFileSystem(forPath: NSHomeDirectory()),
+                   let freeSpace = attributes[.systemFreeSize] as? Int64,
+                   freeSpace < 10_000_000 { // 10MB 미만이면 공간 부족으로 판단
+                    completion(.failure(.diskSpaceFull))
+                    return
+                }
+
+                let encoder = JSONEncoder()
+                encoder.dateEncodingStrategy = .iso8601
+                let data = try encoder.encode(self.state)
+                try data.write(to: self.trashStateURL, options: .atomic)
+                print("[TrashStore] State saved with completion (\(self.state.trashedCount) items)")
+                completion(.success(()))
+            } catch let error as EncodingError {
+                completion(.failure(.encodingFailed(error)))
+            } catch {
+                completion(.failure(.fileSystemError(error)))
             }
         }
     }

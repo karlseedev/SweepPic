@@ -286,6 +286,28 @@ final class PhotoCell: UICollectionViewCell {
         }
     }
 
+    // MARK: - PRD7: Swipe Delete Animation Properties
+
+    /// 스와이프 방향
+    enum SwipeDirection {
+        case left
+        case right
+    }
+
+    /// 셀별 애니메이션 잠금 (PRD7: 연속 토글 방지)
+    /// 애니메이션 중인 셀에는 추가 제스처를 무시
+    var isAnimating: Bool = false
+
+    /// 딤드 마스크 레이어 (커튼 효과용)
+    /// 스와이프 진행도에 따라 빨간 딤드가 채워지거나 걷히는 효과
+    private var dimmedMaskLayer: CAShapeLayer?
+
+    /// 현재 스와이프 진행도 (0.0 ~ 1.0)
+    private var currentSwipeProgress: CGFloat = 0
+
+    /// 현재 스와이프 방향
+    private var currentSwipeDirection: SwipeDirection = .right
+
     // MARK: - Initialization
 
     override init(frame: CGRect) {
@@ -799,5 +821,181 @@ extension PhotoCell {
         if isSelectedForDeletion {
             accessibilityTraits.insert(.selected)
         }
+    }
+}
+
+// MARK: - PRD7: Swipe Delete Animation
+
+extension PhotoCell {
+
+    /// 스와이프 진행도에 따른 딤드 업데이트
+    /// - Parameters:
+    ///   - progress: 스와이프 진행도 (0.0 ~ 1.0)
+    ///   - direction: 스와이프 방향
+    ///   - isTrashed: 현재 휴지통 상태 (삭제/복원 방향 결정)
+    func setDimmedProgress(_ progress: CGFloat, direction: SwipeDirection, isTrashed: Bool) {
+        currentSwipeProgress = max(0, min(1, progress))
+        currentSwipeDirection = direction
+
+        // 마스크 레이어 초기화 (최초 호출 시)
+        if dimmedMaskLayer == nil {
+            setupDimmedMaskLayer()
+        }
+
+        // 딤드 오버레이 표시
+        dimmedOverlayView.isHidden = false
+        dimmedOverlayView.alpha = Self.dimmedOverlayAlpha
+
+        // 마스크 업데이트
+        updateDimmedMask(progress: currentSwipeProgress, direction: direction, isTrashed: isTrashed)
+    }
+
+    /// 딤드 애니메이션 확정 (스와이프 성공)
+    /// - Parameters:
+    ///   - toTrashed: 최종 휴지통 상태
+    ///   - completion: 완료 콜백
+    func confirmDimmedAnimation(toTrashed: Bool, completion: @escaping () -> Void) {
+        // 나머지 영역 빠르게 채움/걷힘
+        UIView.animate(withDuration: 0.15, delay: 0, options: .curveEaseOut) { [weak self] in
+            guard let self = self else { return }
+
+            if toTrashed {
+                // 삭제 확정: 전체 딤드
+                self.dimmedMaskLayer?.removeFromSuperlayer()
+                self.dimmedMaskLayer = nil
+                self.dimmedOverlayView.alpha = Self.dimmedOverlayAlpha
+            } else {
+                // 복원 확정: 딤드 제거
+                self.dimmedOverlayView.alpha = 0
+            }
+        } completion: { [weak self] _ in
+            guard let self = self else { return }
+
+            // 마스크 레이어 정리
+            self.dimmedMaskLayer?.removeFromSuperlayer()
+            self.dimmedMaskLayer = nil
+
+            // 최종 상태 설정
+            self.isTrashed = toTrashed
+            self.dimmedOverlayView.isHidden = !toTrashed
+            self.dimmedOverlayView.alpha = toTrashed ? Self.dimmedOverlayAlpha : 0
+
+            completion()
+        }
+    }
+
+    /// 딤드 애니메이션 취소 (스와이프 취소)
+    /// - Parameter completion: 완료 콜백
+    func cancelDimmedAnimation(completion: @escaping () -> Void) {
+        // 원래 상태로 복귀 (spring animation)
+        UIView.animate(
+            withDuration: 0.2,
+            delay: 0,
+            usingSpringWithDamping: 0.8,
+            initialSpringVelocity: 0.5,
+            options: []
+        ) { [weak self] in
+            guard let self = self else { return }
+
+            if self.isTrashed {
+                // 원래 삭제 상태: 전체 딤드로 복귀
+                self.dimmedMaskLayer?.removeFromSuperlayer()
+                self.dimmedMaskLayer = nil
+                self.dimmedOverlayView.alpha = Self.dimmedOverlayAlpha
+            } else {
+                // 원래 정상 상태: 딤드 제거
+                self.dimmedOverlayView.alpha = 0
+            }
+        } completion: { [weak self] _ in
+            guard let self = self else { return }
+
+            // 마스크 레이어 정리
+            self.dimmedMaskLayer?.removeFromSuperlayer()
+            self.dimmedMaskLayer = nil
+
+            // 원래 상태로 복원
+            self.dimmedOverlayView.isHidden = !self.isTrashed
+            self.dimmedOverlayView.alpha = self.isTrashed ? Self.dimmedOverlayAlpha : 0
+
+            completion()
+        }
+    }
+
+    /// 투 핑거 탭용 페이드 애니메이션
+    /// - Parameters:
+    ///   - toTrashed: 최종 휴지통 상태
+    ///   - completion: 완료 콜백
+    func fadeDimmed(toTrashed: Bool, completion: (() -> Void)? = nil) {
+        dimmedOverlayView.isHidden = false
+
+        UIView.animate(withDuration: 0.15) { [weak self] in
+            guard let self = self else { return }
+            self.dimmedOverlayView.alpha = toTrashed ? Self.dimmedOverlayAlpha : 0
+        } completion: { [weak self] _ in
+            guard let self = self else { return }
+
+            self.isTrashed = toTrashed
+            if !toTrashed {
+                self.dimmedOverlayView.isHidden = true
+            }
+
+            completion?()
+        }
+    }
+
+    // MARK: - Private Animation Helpers
+
+    /// 딤드 마스크 레이어 초기화
+    private func setupDimmedMaskLayer() {
+        let mask = CAShapeLayer()
+        mask.fillColor = UIColor.black.cgColor
+        dimmedOverlayView.layer.mask = mask
+        dimmedMaskLayer = mask
+    }
+
+    /// 딤드 마스크 업데이트 (스와이프 진행도에 따라)
+    /// - Parameters:
+    ///   - progress: 진행도 (0.0 ~ 1.0)
+    ///   - direction: 스와이프 방향
+    ///   - isTrashed: 현재 휴지통 상태
+    private func updateDimmedMask(progress: CGFloat, direction: SwipeDirection, isTrashed: Bool) {
+        guard let mask = dimmedMaskLayer else { return }
+
+        let bounds = dimmedOverlayView.bounds
+        let width = bounds.width
+        let height = bounds.height
+
+        // 스와이프 거리 계산
+        let swipeWidth = width * progress
+
+        let rect: CGRect
+        if isTrashed {
+            // 복원 중: 손가락이 빨간 딤드를 밀어냄
+            // 스와이프 방향 반대쪽에서 시작해서 줄어듦
+            switch direction {
+            case .right:
+                // 오른쪽 스와이프 → 딤드가 왼쪽에서 줄어듦
+                rect = CGRect(x: 0, y: 0, width: width - swipeWidth, height: height)
+            case .left:
+                // 왼쪽 스와이프 → 딤드가 오른쪽에서 줄어듦
+                rect = CGRect(x: swipeWidth, y: 0, width: width - swipeWidth, height: height)
+            }
+        } else {
+            // 삭제 중: 손가락 뒤에서 빨간 딤드가 따라옴
+            switch direction {
+            case .right:
+                // 오른쪽 스와이프 → 딤드가 왼쪽에서 채워짐
+                rect = CGRect(x: 0, y: 0, width: swipeWidth, height: height)
+            case .left:
+                // 왼쪽 스와이프 → 딤드가 오른쪽에서 채워짐
+                rect = CGRect(x: width - swipeWidth, y: 0, width: swipeWidth, height: height)
+            }
+        }
+
+        // 마스크 적용 (애니메이션 없이 즉시)
+        CATransaction.begin()
+        CATransaction.setDisableActions(true)
+        mask.path = UIBezierPath(rect: rect).cgPath
+        CATransaction.commit()
     }
 }
