@@ -157,6 +157,10 @@ final class GridViewController: UIViewController {
     /// 뷰어 닫힘 후 스크롤할 에셋 ID
     private var pendingScrollAssetID: String?
 
+    /// 뷰어 복귀 후 사용자가 스크롤했는지 여부
+    /// - true이면 applyPendingViewerReturn()에서 강제 스크롤 skip
+    private var didUserScrollAfterReturn: Bool = false
+
     // MARK: - Initial Display State (B+A 조합 v2)
 
     /// 초기 표시 완료 여부 (단일 상태 - finishInitialDisplay에서만 변경) (extension에서 접근 필요)
@@ -967,6 +971,10 @@ extension GridViewController: UICollectionViewDelegate {
 
     func scrollViewWillBeginDragging(_: UIScrollView) {
         scrollDidBegin()
+
+        // 사용자가 스크롤 시작하면 pending 스크롤 취소 (롤백 방지)
+        pendingScrollAssetID = nil
+        didUserScrollAfterReturn = true
     }
 
     func scrollViewDidEndDragging(_: UIScrollView, willDecelerate decelerate: Bool) {
@@ -1063,14 +1071,27 @@ extension GridViewController: ViewerViewControllerDelegate {
     func viewerWillClose(currentAssetID: String?) {
         // 스크롤 위치만 저장 (전환 완료 후 처리)
         pendingScrollAssetID = currentAssetID
+        // 사용자 스크롤 플래그 초기화
+        didUserScrollAfterReturn = false
     }
 
     /// 뷰어 닫힘 후 대기 중인 작업 처리 (전환 완료 후 호출)
     /// - reloadData() 제거: 변경은 viewerDidRequest*에서 이미 reloadItems() 처리됨
     /// - scroll만 수행하여 깜빡임 방지
+    /// - 사용자가 이미 스크롤 중이면 강제 스크롤 skip (롤백 방지)
     private func applyPendingViewerReturn() {
         guard let assetID = pendingScrollAssetID else { return }
         pendingScrollAssetID = nil
+
+        // 안전 가드 1: 사용자가 복귀 후 스크롤했으면 skip
+        if didUserScrollAfterReturn {
+            return
+        }
+
+        // 안전 가드 2: 현재 스크롤 중이면 skip
+        if collectionView.isDragging || collectionView.isDecelerating {
+            return
+        }
 
         // iOS 사진 앱처럼: 마지막 보던 사진이 화면에 없으면 해당 위치로 스크롤
         guard let indexPath = dataSourceDriver.indexPath(for: assetID) else { return }

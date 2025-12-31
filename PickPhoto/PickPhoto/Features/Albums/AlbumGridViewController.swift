@@ -134,6 +134,10 @@ final class AlbumGridViewController: UIViewController {
     /// 뷰어 닫힘 후 스크롤할 에셋 ID
     private var pendingScrollAssetID: String?
 
+    /// 뷰어 복귀 후 사용자가 스크롤했는지 여부
+    /// - true이면 applyPendingViewerReturn()에서 강제 스크롤 skip
+    private var didUserScrollAfterReturn: Bool = false
+
     /// 맨 위 행 빈 셀 개수 (3의 배수가 아닐 시 맨 위 행에 빈 셀)
     /// 최신 사진(맨 아래) 기준 꽉 차게 정렬
     private var paddingCellCount: Int {
@@ -653,6 +657,14 @@ extension AlbumGridViewController: UICollectionViewDelegate {
 
         print("[AlbumGridViewController] Opening viewer at index \(filteredIndex), mode: \(mode)")
     }
+
+    // MARK: - UIScrollViewDelegate (스크롤 롤백 방지)
+
+    func scrollViewWillBeginDragging(_ scrollView: UIScrollView) {
+        // 사용자가 스크롤 시작하면 pending 스크롤 취소 (롤백 방지)
+        pendingScrollAssetID = nil
+        didUserScrollAfterReturn = true
+    }
 }
 
 // MARK: - UICollectionViewDataSourcePrefetching
@@ -725,14 +737,27 @@ extension AlbumGridViewController: ViewerViewControllerDelegate {
     func viewerWillClose(currentAssetID: String?) {
         // 스크롤 위치만 저장 (전환 완료 후 처리)
         pendingScrollAssetID = currentAssetID
+        // 사용자 스크롤 플래그 초기화
+        didUserScrollAfterReturn = false
     }
 
     /// 뷰어 닫힘 후 대기 중인 작업 처리 (전환 완료 후 호출)
     /// - reloadData() 제거: 변경은 viewerDidRequest*에서 이미 reloadItems() 처리됨
     /// - scroll만 수행하여 깜빡임 방지
+    /// - 사용자가 이미 스크롤 중이면 강제 스크롤 skip (롤백 방지)
     private func applyPendingViewerReturn() {
         guard let assetID = pendingScrollAssetID else { return }
         pendingScrollAssetID = nil
+
+        // 안전 가드 1: 사용자가 복귀 후 스크롤했으면 skip
+        if didUserScrollAfterReturn {
+            return
+        }
+
+        // 안전 가드 2: 현재 스크롤 중이면 skip
+        if collectionView.isDragging || collectionView.isDecelerating {
+            return
+        }
 
         guard let indexPath = indexPath(for: assetID) else { return }
 
