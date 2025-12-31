@@ -189,6 +189,9 @@ final class GridViewController: UIViewController {
     /// PRD7: 스와이프 삭제 상태 (extension에서 stored property 불가 → 구조체)
     var swipeDeleteState = SwipeDeleteState()
 
+    /// PRD7: 이전 휴지통 상태 (changedIDs 계산용)
+    private var lastTrashedIDs: Set<String> = []
+
     /// 드래그 선택 시작 시점의 인덱스 (T040) (extension에서 접근 필요)
     var dragSelectStartIndex: Int?
 
@@ -686,11 +689,41 @@ final class GridViewController: UIViewController {
     }
 
     /// 휴지통 상태 변경 처리
+    /// PRD7: reloadItems 대신 변경된 셀만 직접 업데이트 (깜빡임 방지)
     private func handleTrashStateChange(_ trashedAssetIDs: Set<String>) {
-        dataSourceDriver.applyTrashStateChange(
-            trashedAssetIDs: trashedAssetIDs,
-            to: collectionView
-        )
+        // 변경된 ID 계산 (이전 상태와의 차이)
+        let changedIDs = lastTrashedIDs.symmetricDifference(trashedAssetIDs)
+        lastTrashedIDs = trashedAssetIDs
+
+        // 변경된 ID가 없으면 무시
+        guard !changedIDs.isEmpty else { return }
+
+        // 보이는 셀 중 변경된 것만 업데이트
+        for indexPath in collectionView.indexPathsForVisibleItems {
+            // padding 보정하여 실제 assetID 계산
+            let actualIndex = indexPath.item - paddingCellCount
+            guard actualIndex >= 0 else { continue }
+
+            guard let assetID = dataSourceDriver.assetID(at: IndexPath(item: actualIndex, section: 0)) else {
+                continue
+            }
+
+            // 변경된 ID가 아니면 스킵
+            guard changedIDs.contains(assetID) else { continue }
+
+            // 셀 가져오기
+            guard let cell = collectionView.cellForItem(at: indexPath) as? PhotoCell else {
+                continue
+            }
+
+            // 애니메이션 중인 셀은 스킵 (스와이프/투핑거탭 진행 중)
+            guard !cell.isAnimating else { continue }
+
+            // 딤드 상태만 업데이트 (이미지 리로드 없이)
+            cell.updateTrashState(trashedAssetIDs.contains(assetID))
+        }
+
+        print("[GridViewController] Updated \(changedIDs.count) changed cells (no reloadItems)")
     }
 
     // MARK: - Empty State (T070)

@@ -1,8 +1,14 @@
 # PRD 8 알고리즘 상세: 유사 사진 분류 및 동일 인물 매칭
 
-**버전**: 1.0
+**버전**: 1.1
 **작성일**: 2025-12-31
 **관련 문서**: [PRD 8](./prd8.md), [Spec](../specs/001-similar-photo/spec.md)
+
+> **참조 안내**: 이 문서는 prd8.md의 **알고리즘 구현 상세**를 다룹니다.
+> 비즈니스 규칙(그룹 정의, 인물 번호 부여 규칙, 얼굴 크기 필터 등)은 **prd8.md 참조**.
+> - 그룹 유형 정의: prd8.md §2.1.6
+> - 인물 번호 부여 순서: prd8.md §2.4.4
+> - 얼굴 크기 필터 (5%): prd8.md §2.4.2
 
 ---
 
@@ -220,6 +226,9 @@ func filterGroupsWithFaces(groups: [[PHAsset]]) async -> [[PHAsset]] {
 
 #### 구현 코드
 
+> **주의**: 이 함수는 prd8.md §2.4.4의 전체 규칙 중 **위치 기반 정렬** 부분만 담당합니다.
+> 전체 흐름(5% 크기 필터 → 크기순 상위 5개 → 위치순 재정렬)은 prd8.md §2.4.4 참조.
+
 ```swift
 struct DetectedFace {
     let observation: VNFaceObservation
@@ -227,9 +236,10 @@ struct DetectedFace {
     var personIndex: Int = 0
 }
 
+/// 위치 기반 인물 번호 부여 (prd8.md §2.4.4의 Step 3~4)
+/// - 사전 조건: 이미 5% 필터 및 크기순 상위 5개 선택이 완료된 faces
 func assignPersonIndicesByPosition(faces: [DetectedFace]) -> [DetectedFace] {
-    // x좌표 순 정렬 (왼쪽 → 오른쪽)
-    // 같은 x좌표면 y좌표 순 (위 → 아래, Vision 좌표계 고려)
+    // Step 3: 위치순 재정렬 (좌→우, 위→아래)
     let sorted = faces.sorted { face1, face2 in
         if abs(face1.boundingBox.origin.x - face2.boundingBox.origin.x) > 0.05 {
             return face1.boundingBox.origin.x < face2.boundingBox.origin.x
@@ -237,7 +247,7 @@ func assignPersonIndicesByPosition(faces: [DetectedFace]) -> [DetectedFace] {
         return face1.boundingBox.origin.y > face2.boundingBox.origin.y
     }
 
-    // 인물 번호 부여
+    // Step 4: 인물 번호 부여
     return sorted.enumerated().map { index, face in
         var newFace = face
         newFace.personIndex = index + 1
@@ -632,7 +642,9 @@ MVP에서는 캐싱 없이 실시간 분석. 성능 이슈 발생 시:
 | ALG-001 | 연속 촬영 5장 (거리 < 10) | 1개 그룹 (5장) |
 | ALG-002 | 연속 촬영 5장 중 1장 풍경 | 1개 그룹 (4장) |
 | ALG-003 | 유사 3장 + 다른 3장 (거리 > 10) | 그룹 없음 (3장 미만) |
-| ALG-004 | 유사 4장 + 다른 4장 | 2개 그룹? or 1개 그룹? (거리에 따라) |
+| ALG-004 | 현재 사진 기준, 앞뒤 7장 중 유사 4장 + 다른 4장 | 1개 그룹 (현재 사진 포함 유사 4장) |
+
+> **ALG-004 참고**: 현재 사진 기준 분석이므로, 현재 사진과 거리 10.0 이하인 사진들만 그룹에 포함됨.
 
 ### 8.2 동일 인물 매칭 테스트
 

@@ -126,6 +126,9 @@ final class AlbumGridViewController: UIViewController {
     /// 스와이프 삭제 상태 (GridViewController와 동일한 구조체 사용)
     private var swipeDeleteState = SwipeDeleteState()
 
+    /// PRD7: 이전 휴지통 상태 (changedIDs 계산용)
+    private var lastTrashedIDs: Set<String> = []
+
     // MARK: - Pending Viewer Return (iOS 18+ Zoom Transition 안정화)
 
     /// 뷰어 닫힘 후 스크롤할 에셋 ID
@@ -166,6 +169,7 @@ final class AlbumGridViewController: UIViewController {
         super.viewDidLoad()
         setupUI()
         setupGestures()
+        setupObservers()
         updateEmptyState()
 
         // iOS 26+: 시스템 UI 사용
@@ -174,6 +178,50 @@ final class AlbumGridViewController: UIViewController {
             setContentScrollView(collectionView, for: .bottom)
             collectionView.contentInsetAdjustmentBehavior = .automatic
         }
+    }
+
+    /// PRD7: Observer 설정
+    private func setupObservers() {
+        // TrashStore 변경 감지 (GridViewController와 동일)
+        trashStore.onStateChange { [weak self] trashedAssetIDs in
+            self?.handleTrashStateChange(trashedAssetIDs)
+        }
+    }
+
+    /// 휴지통 상태 변경 처리
+    /// PRD7: reloadItems 대신 변경된 셀만 직접 업데이트 (깜빡임 방지)
+    private func handleTrashStateChange(_ trashedAssetIDs: Set<String>) {
+        // 변경된 ID 계산 (이전 상태와의 차이)
+        let changedIDs = lastTrashedIDs.symmetricDifference(trashedAssetIDs)
+        lastTrashedIDs = trashedAssetIDs
+
+        // 변경된 ID가 없으면 무시
+        guard !changedIDs.isEmpty else { return }
+
+        // 보이는 셀 중 변경된 것만 업데이트
+        for indexPath in collectionView.indexPathsForVisibleItems {
+            // padding 보정하여 실제 assetID 계산
+            let actualIndex = indexPath.item - paddingCellCount
+            guard actualIndex >= 0, actualIndex < fetchResult.count else { continue }
+
+            let assetID = fetchResult.object(at: actualIndex).localIdentifier
+
+            // 변경된 ID가 아니면 스킵
+            guard changedIDs.contains(assetID) else { continue }
+
+            // 셀 가져오기
+            guard let cell = collectionView.cellForItem(at: indexPath) as? PhotoCell else {
+                continue
+            }
+
+            // 애니메이션 중인 셀은 스킵 (스와이프/투핑거탭 진행 중)
+            guard !cell.isAnimating else { continue }
+
+            // 딤드 상태만 업데이트 (이미지 리로드 없이)
+            cell.updateTrashState(trashedAssetIDs.contains(assetID))
+        }
+
+        print("[AlbumGridViewController] Updated \(changedIDs.count) changed cells (no reloadItems)")
     }
 
     override func viewWillAppear(_ animated: Bool) {

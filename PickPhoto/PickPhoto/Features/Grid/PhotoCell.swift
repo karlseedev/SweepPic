@@ -736,7 +736,6 @@ final class PhotoCell: UICollectionViewCell {
         }
     }
 
-    /// 딤드 오버레이 업데이트 (T027)
     private func updateDimmedOverlay() {
         if isTrashed {
             dimmedOverlayView.isHidden = false
