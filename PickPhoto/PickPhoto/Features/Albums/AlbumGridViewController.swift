@@ -447,12 +447,20 @@ final class AlbumGridViewController: UIViewController {
 
     // MARK: - Pinch Zoom
 
+    /// collectionView indexPath → assetID 변환 (padding 보정)
+    private func assetIDForCollectionIndexPath(_ indexPath: IndexPath) -> String? {
+        let assetIndex = indexPath.item - paddingCellCount
+        guard assetIndex >= 0, assetIndex < fetchResult.count else { return nil }
+        return fetchResult.object(at: assetIndex).localIdentifier
+    }
+
     @objc private func handlePinchGesture(_ gesture: UIPinchGestureRecognizer) {
         switch gesture.state {
         case .began:
+            // 앵커 에셋 ID 저장 (padding 보정)
             let location = gesture.location(in: collectionView)
             if let indexPath = collectionView.indexPathForItem(at: location) {
-                pinchAnchorAssetID = fetchResult.object(at: indexPath.item).localIdentifier
+                pinchAnchorAssetID = assetIDForCollectionIndexPath(indexPath)
             }
 
         case .changed:
@@ -486,19 +494,26 @@ final class AlbumGridViewController: UIViewController {
     private func performZoom(to columns: ColumnCount) {
         lastPinchZoomTime = Date()
 
-        let anchorIndexPath: IndexPath?
-        if let anchorID = pinchAnchorAssetID {
-            anchorIndexPath = indexPath(for: anchorID)
-        } else {
+        // 1. 앵커 assetID 저장 (현재 padding 기준, column 변경 전)
+        let anchorAssetID: String? = {
+            if let id = pinchAnchorAssetID { return id }
+            // 앵커가 없으면 화면 중앙 셀 사용
             let centerPoint = CGPoint(
                 x: collectionView.bounds.midX,
                 y: collectionView.bounds.midY + collectionView.contentOffset.y
             )
-            anchorIndexPath = collectionView.indexPathForItem(at: centerPoint)
-        }
+            if let centerIndexPath = collectionView.indexPathForItem(at: centerPoint) {
+                return assetIDForCollectionIndexPath(centerIndexPath)
+            }
+            return nil
+        }()
 
+        // 2. 열 수 업데이트 (paddingCellCount도 변경됨)
         currentColumnCount = columns
         updateCellSize()
+
+        // 3. 새 padding 기준으로 anchorIndexPath 계산
+        let anchorIndexPath = anchorAssetID.flatMap { indexPath(for: $0) }
 
         UIView.animate(withDuration: 0.25) { [weak self] in
             guard let self = self else { return }

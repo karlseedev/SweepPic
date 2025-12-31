@@ -64,16 +64,31 @@ extension GridViewController {
     /// 핀치 줌 쿨다운 (T023: 200ms)
     static let pinchCooldown: TimeInterval = 0.2
 
+    // MARK: - Pinch Zoom Helper Methods
+
+    /// collectionView indexPath → assetID 변환 (padding 보정)
+    private func assetIDForCollectionIndexPath(_ indexPath: IndexPath) -> String? {
+        guard indexPath.item >= paddingCellCount else { return nil }
+        let assetIndexPath = IndexPath(item: indexPath.item - paddingCellCount, section: indexPath.section)
+        return dataSourceDriver.assetID(at: assetIndexPath)
+    }
+
+    /// assetID → collectionView indexPath 변환 (padding 보정)
+    private func collectionIndexPath(for assetID: String) -> IndexPath? {
+        guard let assetIndexPath = dataSourceDriver.indexPath(for: assetID) else { return nil }
+        return IndexPath(item: assetIndexPath.item + paddingCellCount, section: assetIndexPath.section)
+    }
+
     // MARK: - Pinch Zoom Methods
 
     /// 핀치 줌 제스처 핸들러
     @objc func handlePinchGesture(_ gesture: UIPinchGestureRecognizer) {
         switch gesture.state {
         case .began:
-            // 앵커 에셋 ID 저장 (핀치 시작 위치의 셀)
+            // 앵커 에셋 ID 저장 (핀치 시작 위치의 셀, padding 보정)
             let location = gesture.location(in: collectionView)
             if let indexPath = collectionView.indexPathForItem(at: location) {
-                pinchAnchorAssetID = dataSourceDriver.assetID(at: indexPath)
+                pinchAnchorAssetID = assetIDForCollectionIndexPath(indexPath)
             }
 
         case .changed:
@@ -116,22 +131,26 @@ extension GridViewController {
         // 쿨다운 시간 기록
         lastPinchZoomTime = Date()
 
-        // 현재 앵커 IndexPath 저장
-        let anchorIndexPath: IndexPath?
-        if let anchorID = pinchAnchorAssetID {
-            anchorIndexPath = dataSourceDriver.indexPath(for: anchorID)
-        } else {
+        // 1. 앵커 assetID 저장 (현재 padding 기준, column 변경 전)
+        let anchorAssetID: String? = {
+            if let id = pinchAnchorAssetID { return id }
             // 앵커가 없으면 화면 중앙 셀 사용
             let centerPoint = CGPoint(
                 x: collectionView.bounds.midX,
                 y: collectionView.bounds.midY + collectionView.contentOffset.y
             )
-            anchorIndexPath = collectionView.indexPathForItem(at: centerPoint)
-        }
+            if let centerIndexPath = collectionView.indexPathForItem(at: centerPoint) {
+                return assetIDForCollectionIndexPath(centerIndexPath)
+            }
+            return nil
+        }()
 
-        // 열 수 업데이트
+        // 2. 열 수 업데이트 (paddingCellCount도 변경됨)
         currentColumnCount = columns
         updateCellSize()
+
+        // 3. 새 padding 기준으로 anchorIndexPath 계산
+        let anchorIndexPath = anchorAssetID.flatMap { collectionIndexPath(for: $0) }
 
         // 레이아웃 애니메이션
         UIView.animate(withDuration: 0.25) { [weak self] in
