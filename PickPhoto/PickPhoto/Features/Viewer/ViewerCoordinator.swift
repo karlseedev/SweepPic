@@ -219,77 +219,56 @@ final class ViewerCoordinator: ViewerCoordinatorProtocol {
     // MARK: - Private Methods
 
     /// 모드에 따라 인덱스 매핑 구성
-    /// - 정상 모드(휴지통 비어있음)는 O(1)로 끝나도록 최적화
+    /// - 단일 패스 최적화: PhotoKit 반복 호출 제거, fetchResult 1회 순회
+    /// - trashedIDs.contains()는 Set이므로 O(1)
     private func rebuildIndexMapping() {
         let startTime = CACurrentMediaTime()
 
         let trashedIDs = trashStore.trashedAssetIDs
         let totalOriginal = fetchResult.count
 
-        switch viewerMode {
-        case .normal:
-            if trashedIDs.isEmpty {
-                indexMapping = .identity(totalOriginal: totalOriginal)
-            } else {
-                var excluded: [Int] = []
-                excluded.reserveCapacity(trashedIDs.count)
-
-                for trashedID in trashedIDs {
-                    let result = PHAsset.fetchAssets(withLocalIdentifiers: [trashedID], options: nil)
-                    guard let asset = result.firstObject else { continue }
-                    let idx = fetchResult.index(of: asset)
-                    if idx != NSNotFound {
-                        excluded.append(idx)
-                    }
-                }
-
-                excluded.sort()
-                excluded = Self.dedupSorted(excluded)
-                indexMapping = .normal(totalOriginal: totalOriginal, excludedOriginalIndices: excluded)
-            }
-
-        case .trash:
-            guard !trashedIDs.isEmpty else {
-                indexMapping = .trash(originalIndices: [])
-                break
-            }
-
-            // 최적화: 이미 fetchResult 자체가 휴지통 에셋만 포함하는 경우(identity) 빠른 경로
-            if totalOriginal == trashedIDs.count {
-                let sampleCount = min(10, totalOriginal)
-                var allTrashed = true
-                if sampleCount > 0 {
-                    for i in 0..<sampleCount {
-                        let asset = fetchResult.object(at: i)
-                        if !trashedIDs.contains(asset.localIdentifier) {
-                            allTrashed = false
-                            break
-                        }
-                    }
-                }
-                if allTrashed {
-                    indexMapping = .identity(totalOriginal: totalOriginal)
-                    break
-                }
-            }
-
-            var originals: [Int] = []
-            originals.reserveCapacity(trashedIDs.count)
-            for trashedID in trashedIDs {
-                let result = PHAsset.fetchAssets(withLocalIdentifiers: [trashedID], options: nil)
-                guard let asset = result.firstObject else { continue }
-                let idx = fetchResult.index(of: asset)
-                if idx != NSNotFound {
-                    originals.append(idx)
-                }
-            }
-            originals.sort()
-            originals = Self.dedupSorted(originals)
-            indexMapping = .trash(originalIndices: originals)
+        // 휴지통 비어있으면 빠른 경로
+        if trashedIDs.isEmpty {
+            indexMapping = (viewerMode == .trash)
+                ? .trash(originalIndices: [])
+                : .identity(totalOriginal: totalOriginal)
+            logRebuildComplete(startTime, totalOriginal, trashedIDs.count)
+            return
         }
 
+        // ✅ 단일 패스: fetchResult 1회 순회, PhotoKit 추가 호출 없음
+        var matchedIndices: [Int] = []
+        matchedIndices.reserveCapacity(trashedIDs.count)
+
+        fetchResult.enumerateObjects { asset, index, _ in
+            if trashedIDs.contains(asset.localIdentifier) {
+                matchedIndices.append(index)
+            }
+        }
+
+        switch viewerMode {
+        case .normal:
+            // 제외 인덱스 = matchedIndices (휴지통에 있는 사진 제외)
+            indexMapping = matchedIndices.isEmpty
+                ? .identity(totalOriginal: totalOriginal)
+                : .normal(totalOriginal: totalOriginal, excludedOriginalIndices: matchedIndices)
+
+        case .trash:
+            // 전부 휴지통이면 identity, 일부만이면 trash 인덱스
+            if matchedIndices.count == totalOriginal {
+                indexMapping = .identity(totalOriginal: totalOriginal)
+            } else {
+                indexMapping = .trash(originalIndices: matchedIndices)
+            }
+        }
+
+        logRebuildComplete(startTime, totalOriginal, trashedIDs.count)
+    }
+
+    /// rebuildIndexMapping 완료 로그
+    private func logRebuildComplete(_ startTime: CFAbsoluteTime, _ totalOriginal: Int, _ trashedCount: Int) {
         let elapsed = (CACurrentMediaTime() - startTime) * 1000
-        print("[ViewerCoordinator] rebuildIndexMapping() 완료: \(String(format: "%.1f", elapsed))ms, Mode: \(viewerMode), totalOriginal: \(totalOriginal), trashedIDs: \(trashedIDs.count)")
+        print("[ViewerCoordinator] rebuildIndexMapping() 완료: \(String(format: "%.1f", elapsed))ms, Mode: \(viewerMode), totalOriginal: \(totalOriginal), trashedIDs: \(trashedCount)")
     }
 
     // MARK: - iOS 18+ Zoom Transition Support

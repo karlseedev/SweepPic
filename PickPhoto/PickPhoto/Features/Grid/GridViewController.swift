@@ -157,6 +157,11 @@ final class GridViewController: UIViewController {
     /// 초기 화면 프리히트 완료 여부 (v6: viewDidAppear에서 호출)
     private var hasPreheatedInitialScreen: Bool = false
 
+    // MARK: - Pending Viewer Return (iOS 18+ Zoom Transition 안정화)
+
+    /// 뷰어 닫힘 후 스크롤할 에셋 ID
+    private var pendingScrollAssetID: String?
+
     // MARK: - Initial Display State (B+A 조합 v2)
 
     /// 초기 표시 완료 여부 (단일 상태 - finishInitialDisplay에서만 변경)
@@ -338,6 +343,15 @@ final class GridViewController: UIViewController {
             return
         }
 
+        // iOS 18+ Zoom Transition 안정화: 전환 중이면 completion에서 처리
+        if let coordinator = transitionCoordinator {
+            coordinator.animate(alongsideTransition: nil) { [weak self] _ in
+                self?.applyPendingViewerReturn()
+            }
+            FileLogger.log("[Timing] viewWillAppear: +\(String(format: "%.1f", vwaMs))ms (전환 중 - completion 예약)")
+            return
+        }
+
         FileLogger.log("[Timing] viewWillAppear.reloadData: +\(String(format: "%.1f", vwaMs))ms")
         // 화면 표시 시 변경사항 반영 (탭 전환 등)
         collectionView.reloadData()
@@ -370,6 +384,9 @@ final class GridViewController: UIViewController {
 
     override func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
+
+        // iOS 18+ Zoom Transition 안정화: fallback (transitionCoordinator 없을 때)
+        applyPendingViewerReturn()
 
         // 런치 아규먼트 로깅 (디버깅용)
         let args = ProcessInfo.processInfo.arguments
@@ -1274,6 +1291,9 @@ extension GridViewController: UICollectionViewDelegate {
             return
         }
 
+        // [Timing] 줌 전환 시작 전 랙 측정
+        let t0 = CACurrentMediaTime()
+
         // 실제 에셋 인덱스 계산
         let assetIndexPath = IndexPath(item: indexPath.item - padding, section: indexPath.section)
 
@@ -1285,6 +1305,8 @@ extension GridViewController: UICollectionViewDelegate {
         // 뷰어 모드 결정 (휴지통 사진은 trash 모드)
         let mode: ViewerMode = isTrashed ? .trash : .normal
 
+        let t1 = CACurrentMediaTime()
+
         // 뷰어 코디네이터 생성 (모드에 따라 필터링됨)
         let coordinator = ViewerCoordinator(
             fetchResult: fetchResult,
@@ -1292,11 +1314,15 @@ extension GridViewController: UICollectionViewDelegate {
             viewerMode: mode
         )
 
+        let t2 = CACurrentMediaTime()
+
         // 원본 인덱스를 필터링된 인덱스로 변환 (padding 제외한 실제 인덱스 사용)
         guard let filteredIndex = coordinator.filteredIndex(from: assetIndexPath.item) else {
             print("[GridViewController] Failed to find filtered index for \(assetIndexPath.item)")
             return
         }
+
+        let t3 = CACurrentMediaTime()
 
         // 뷰어 뷰컨트롤러 생성
         let viewerVC = ViewerViewController(
@@ -1305,6 +1331,8 @@ extension GridViewController: UICollectionViewDelegate {
             mode: mode
         )
         viewerVC.delegate = self
+
+        let t4 = CACurrentMediaTime()
 
         // iOS 18+: 네이티브 zoom transition
         if #available(iOS 18.0, *) {
@@ -1339,13 +1367,28 @@ extension GridViewController: UICollectionViewDelegate {
                     return nil  // 이미지 미로드 시 중앙에서 줌 (fallback)
                 }
 
+                // [DEBUG] 계단현상 원인 분석: 썸네일 vs 화면 픽셀 크기 비교
+                let imageSize = cell.thumbnailImageView.image?.size ?? .zero
+                let screenScale = UIScreen.main.scale
+                let screenPixelSize = CGSize(
+                    width: self.view.bounds.width * screenScale,
+                    height: self.view.bounds.height * screenScale
+                )
+                print("[ZoomTransition] imageSize: \(Int(imageSize.width))x\(Int(imageSize.height))px, screenPixelSize: \(Int(screenPixelSize.width))x\(Int(screenPixelSize.height))px, scale: \(screenScale)x")
+
                 return cell.thumbnailImageView
             })
         }
 
+        let t5 = CACurrentMediaTime()
+
         // 뷰어 표시 (push 방식)
         navigationController?.pushViewController(viewerVC, animated: true)
 
+        let t6 = CACurrentMediaTime()
+
+        // [Timing] 각 단계별 소요 시간 출력
+        print("[Zoom Timing] 준비: \(String(format: "%.1f", (t1-t0)*1000))ms, Coordinator: \(String(format: "%.1f", (t2-t1)*1000))ms, filteredIndex: \(String(format: "%.1f", (t3-t2)*1000))ms, ViewerVC: \(String(format: "%.1f", (t4-t3)*1000))ms, transition설정: \(String(format: "%.1f", (t5-t4)*1000))ms, push: \(String(format: "%.1f", (t6-t5)*1000))ms, 총: \(String(format: "%.1f", (t6-t0)*1000))ms")
         print("[GridViewController] Opening viewer at filtered index \(filteredIndex) (original: \(indexPath.item)), mode: \(mode)")
     }
 
@@ -1442,23 +1485,29 @@ extension GridViewController: ViewerViewControllerDelegate {
     }
 
     /// 뷰어가 닫힐 때 호출
+    /// iOS 18+ Zoom Transition 안정화: 전환 중 reloadData/scrollToItem 금지
+    /// 실제 처리는 전환 완료 후 applyPendingViewerReturn()에서 수행
     func viewerWillClose(currentAssetID: String?) {
-        // 그리드 갱신 (딤드 상태 등 반영)
-        collectionView.reloadData()
+        // 스크롤 위치만 저장 (전환 완료 후 처리)
+        pendingScrollAssetID = currentAssetID
+    }
+
+    /// 뷰어 닫힘 후 대기 중인 작업 처리 (전환 완료 후 호출)
+    /// - reloadData() 제거: 변경은 viewerDidRequest*에서 이미 reloadItems() 처리됨
+    /// - scroll만 수행하여 깜빡임 방지
+    private func applyPendingViewerReturn() {
+        guard let assetID = pendingScrollAssetID else { return }
+        pendingScrollAssetID = nil
 
         // iOS 사진 앱처럼: 마지막 보던 사진이 화면에 없으면 해당 위치로 스크롤
-        if let assetID = currentAssetID,
-           let indexPath = dataSourceDriver.indexPath(for: assetID) {
+        guard let indexPath = dataSourceDriver.indexPath(for: assetID) else { return }
 
-            // 현재 보이는 셀인지 확인
-            let visibleIndexPaths = collectionView.indexPathsForVisibleItems
-            if !visibleIndexPaths.contains(indexPath) {
-                // 화면에 없으면 스크롤 (중앙에 위치하도록)
-                collectionView.scrollToItem(at: indexPath, at: .centeredVertically, animated: false)
-            }
+        // 현재 보이는 셀인지 확인
+        let visibleIndexPaths = collectionView.indexPathsForVisibleItems
+        if !visibleIndexPaths.contains(indexPath) {
+            // 화면에 없으면 스크롤 (중앙에 위치하도록)
+            collectionView.scrollToItem(at: indexPath, at: .centeredVertically, animated: false)
         }
-
-        print("[GridViewController] Viewer closed, last asset: \(currentAssetID?.prefix(8) ?? "nil")...")
     }
 }
 
