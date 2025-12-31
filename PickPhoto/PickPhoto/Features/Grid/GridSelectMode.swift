@@ -36,6 +36,9 @@ extension GridViewController {
         // 드래그 선택 제스처 활성화 (T040)
         dragSelectGesture?.isEnabled = true
 
+        // PRD7: 스와이프/투핑거탭 제스처 비활성화
+        updateSwipeDeleteGestureEnabled()
+
         // 컬렉션 뷰 리로드 (선택 UI 표시를 위해)
         collectionView.reloadData()
 
@@ -116,6 +119,9 @@ extension GridViewController {
 
         // 드래그 선택 제스처 비활성화 (T040)
         dragSelectGesture?.isEnabled = false
+
+        // PRD7: 스와이프/투핑거탭 제스처 활성화
+        updateSwipeDeleteGestureEnabled()
 
         // 선택 상태 초기화 (T037)
         selectionManager.clearSelection()

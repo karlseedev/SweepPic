@@ -186,6 +186,9 @@ final class GridViewController: UIViewController {
     /// 드래그 선택용 팬 제스처 (T040) (extension에서 접근 필요)
     var dragSelectGesture: UIPanGestureRecognizer?
 
+    /// PRD7: 스와이프 삭제 상태 (extension에서 stored property 불가 → 구조체)
+    var swipeDeleteState = SwipeDeleteState()
+
     /// 드래그 선택 시작 시점의 인덱스 (T040) (extension에서 접근 필요)
     var dragSelectStartIndex: Int?
 
@@ -479,6 +482,9 @@ final class GridViewController: UIViewController {
         dragGesture.isEnabled = false // 기본 비활성화, Select 모드 진입 시 활성화
         collectionView.addGestureRecognizer(dragGesture)
         dragSelectGesture = dragGesture
+
+        // PRD7: 스와이프/투핑거탭 제스처 (GridGestures.swift에서 구현)
+        setupSwipeDeleteGestures()
 
         // 자동 스크롤 테스트 제스처 (3손가락 탭)
         collectionView.setupAutoScrollGesture()
