@@ -1,6 +1,6 @@
 # PRD 9 알고리즘 상세: 유사 사진 분류 및 동일 인물 매칭
 
-**버전**: 1.1
+**버전**: 1.2
 **작성일**: 2026-01-01
 **관련 문서**: [PRD 9](./prd9.md), [Spec](../specs/001-similar-photo/spec.md)
 
@@ -343,7 +343,21 @@ notAnalyzed ──→ analyzing ──→ analyzed(inGroup: Bool)
 - 뷰어에서 analyzed 사진 접근 → 캐시에서 CachedFace 조회 → 즉시 +버튼 표시
 ```
 
-**재분석 시 캐시 갱신 규칙:**
+**뷰어 분석 요청 시 범위 처리:**
+```
+1. 범위 내 notAnalyzed 사진만 대상
+   - 기존 analyzed 사진은 유지 (재분석 없음)
+   - notAnalyzed만 analyzing으로 전환
+
+2. 분석 완료 후 그룹 재계산
+   - 기존 그룹에 새 멤버 편입 가능
+   - 유효 인물 슬롯 재계산
+   - CachedFace.isValidSlot 갱신
+
+3. evictIfNeeded() 호출 (500장 초과 시 LRU eviction)
+```
+
+**재분석 시 캐시 갱신 규칙 (그리드 스크롤 재분석):**
 ```
 1. prepareForReanalysis(assetIDs:) 호출
    - 범위 내 사진의 기존 그룹에서 제거
@@ -1055,23 +1069,38 @@ func cropFaceRegion(from image: CGImage, boundingBox: CGRect) -> CGImage? {
 
     // 30% 여백 추가
     let padding = max(faceRect.width, faceRect.height) * 0.3
-    var expandedRect = faceRect.insetBy(dx: -padding, dy: -padding)
+    let expandedRect = faceRect.insetBy(dx: -padding, dy: -padding)
 
     // 정사각형으로 조정
     let size = max(expandedRect.width, expandedRect.height)
-    expandedRect = CGRect(
-        x: expandedRect.midX - size / 2,
-        y: expandedRect.midY - size / 2,
+    let centerX = expandedRect.midX
+    let centerY = expandedRect.midY
+
+    var squareRect = CGRect(
+        x: centerX - size / 2,
+        y: centerY - size / 2,
         width: size,
         height: size
     )
 
-    // 이미지 경계 클램핑
-    expandedRect = expandedRect.intersection(
-        CGRect(x: 0, y: 0, width: imageWidth, height: imageHeight)
-    )
+    // 이미지 경계 밖이면 → 정사각형 유지하며 축소 (옵션 C)
+    let imageBounds = CGRect(x: 0, y: 0, width: imageWidth, height: imageHeight)
+    if !imageBounds.contains(squareRect) {
+        // 중심 고정, 경계 내 최대 정사각형 크기 계산
+        let maxSize = min(
+            min(centerX, imageWidth - centerX) * 2,
+            min(centerY, imageHeight - centerY) * 2,
+            size  // 원래 크기를 초과하지 않음
+        )
+        squareRect = CGRect(
+            x: centerX - maxSize / 2,
+            y: centerY - maxSize / 2,
+            width: maxSize,
+            height: maxSize
+        )
+    }
 
-    return image.cropping(to: expandedRect)
+    return image.cropping(to: squareRect)
 }
 ```
 
@@ -1195,3 +1224,4 @@ func cropFaceRegion(from image: CGImage, boundingBox: CGRect) -> CGImage? {
 |------|------|----------|
 | 1.0 | 2026-01-01 | prd8algorithm 기반 신규 작성: CachedFace 구조 도입, 뷰어 얼굴 분석 제거(캐시 참조), 좌표 변환 함수 추가, 캐시 테스트 케이스 추가 |
 | 1.1 | 2026-01-01 | 로직 보완: SimilarityCache에 LRU eviction 로직 추가(evictIfNeeded, recalculateValidPersonIndices), prepareForReanalysis() 추가(재분석 시 old group 정리), getExpectedViewerSize() 추가(iPad 분할 모드 반영) |
+| 1.2 | 2026-01-01 | 구현 명세 보완: §3.5 뷰어 분석 요청 시 범위 처리 명확화(notAnalyzed만 분석), §6.1 얼굴 크롭 코드 수정(정사각형 유지, 경계 내 최대 크기로 축소) |
