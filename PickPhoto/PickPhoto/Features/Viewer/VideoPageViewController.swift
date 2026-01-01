@@ -9,6 +9,7 @@
 import UIKit
 import Photos
 import AVKit
+import AVFoundation
 import AppCore
 
 // MARK: - VideoPageViewController
@@ -78,8 +79,30 @@ final class VideoPageViewController: UIViewController {
 
     override func viewDidLoad() {
         super.viewDidLoad()
+        setupAudioSession()
         setupUI()
         requestVideo()
+    }
+
+    // MARK: - Audio Session
+
+    /// 오디오 세션 설정
+    /// - 동영상 소리 재생을 위해 .playback 카테고리 설정
+    /// - 무음 모드에서도 소리 재생 가능
+    private func setupAudioSession() {
+        do {
+            let audioSession = AVAudioSession.sharedInstance()
+            try audioSession.setCategory(.playback, mode: .moviePlayback)
+            try audioSession.setActive(true)
+
+            if debugVideo {
+                print("[Video] Audio session configured for playback")
+            }
+        } catch {
+            if debugVideo {
+                print("[Video] Failed to configure audio session: \(error)")
+            }
+        }
     }
 
     override func viewDidAppear(_ animated: Bool) {
