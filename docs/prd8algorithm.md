@@ -1,14 +1,18 @@
 # PRD 8 알고리즘 상세: 유사 사진 분류 및 동일 인물 매칭
 
-**버전**: 1.1
-**작성일**: 2025-12-31
+**버전**: 1.8
+**작성일**: 2026-01-01
 **관련 문서**: [PRD 8](./prd8.md), [Spec](../specs/001-similar-photo/spec.md)
 
-> **참조 안내**: 이 문서는 prd8.md의 **알고리즘 구현 상세**를 다룹니다.
-> 비즈니스 규칙(그룹 정의, 인물 번호 부여 규칙, 얼굴 크기 필터 등)은 **prd8.md 참조**.
+> **문서 역할 (How)**: 이 문서는 **어떻게** 구현할지를 정의합니다.
+> - 알고리즘 흐름, 구현 코드, 자료구조, 성능 고려사항
+> - 비즈니스 규칙(What/Why)은 [prd8.md](./prd8.md) 참조
+>
+> **비즈니스 규칙 참조:**
 > - 그룹 유형 정의: prd8.md §2.1.6
 > - 인물 번호 부여 순서: prd8.md §2.4.4
 > - 얼굴 크기 필터 (5%): prd8.md §2.4.2
+> - 검증 임계값/경고 UI: prd8.md §2.7
 
 ---
 
@@ -44,7 +48,7 @@
 ## 3. 유사 사진 분류 알고리즘
 
 > **그룹 유형**: prd8.md §2.1.6에 두 가지 그룹이 정의됨
-> - **유사사진썸네일그룹**: 그리드 테두리/뷰어 버튼 표시용 (여러 그룹 가능)
+> - **유사사진썸네일그룹**: 그리드 테두리/뷰어 버튼 표시용 (여러 유사사진썸네일그룹 가능)
 > - **유사사진정리그룹**: 얼굴 비교 화면용 (최대 8장)
 >
 > 이 섹션의 알고리즘은 **유사사진썸네일그룹** 생성에 사용됨.
@@ -52,15 +56,17 @@
 
 ### 3.1 목표
 
-분석 범위 내 사진들을 **유사사진썸네일그룹**들로 분류 (여러 그룹 가능)
+분석 범위 내 사진들을 **유사사진썸네일그룹**들로 분류 (여러 유사사진썸네일그룹 가능)
 
 ### 3.2 입력/출력
 
 ```
 입력: 분석 범위의 사진 리스트 (시간순 정렬)
   - 그리드: 화면에 보이는 사진 + 앞뒤 7장 확장
-  - 뷰어: 현재 사진 기준 앞뒤 7장
-출력: 유사사진썸네일그룹들 (각 그룹 최소 3장, 여러 그룹 가능)
+  - (뷰어에서는 그리드 분석 결과 재사용, 재분석 없음)
+출력: 유사사진썸네일그룹들
+  - 각 그룹 조건: 5% 이상 유효 얼굴 사진 3장 이상 + 유효 인물 슬롯 1개 이상
+  - 여러 유사사진썸네일그룹 가능
 ```
 
 ### 3.3 알고리즘 흐름
@@ -83,16 +89,16 @@
 └─────────────────────────────────────────────────────────────┘
                               ↓
 ┌─────────────────────────────────────────────────────────────┐
-│  Step 3: 인접 사진 간 Feature Print 거리 10.0 기준 그룹 분리  │
+│  Step 3: 인접 사진 간 Feature Print 거리 10.0 기준 유사사진썸네일그룹 분리  │
 │                                                              │
 │  결과: [유사사진썸네일그룹 A: 1,2,3,4]  [유사사진썸네일그룹 B: 5,6,7] │
 └─────────────────────────────────────────────────────────────┘
                               ↓
 ┌─────────────────────────────────────────────────────────────┐
-│  Step 4: 얼굴 필터링                                         │
+│  Step 4: 5% 이상 유효 얼굴 필터링 + 인물 슬롯 검증            │
 │                                                              │
-│  유사사진썸네일그룹 A (4장) → 얼굴 있는 사진: 4장 → 유효 (3장 이상) │
-│  유사사진썸네일그룹 B (3장) → 얼굴 있는 사진: 2장 → 무효 (3장 미만) │
+│  유사사진썸네일그룹 A (4장) → 5% 이상 유효 얼굴 4장, 인물1 슬롯 3장 → 유효 │
+│  유사사진썸네일그룹 B (3장) → 5% 이상 유효 얼굴 3장, 유효 슬롯 없음 → 무효 │
 │                                                              │
 │  최종 결과: [유사사진썸네일그룹 A: 1,2,3,4]                    │
 └─────────────────────────────────────────────────────────────┘
@@ -110,7 +116,122 @@
 
 **임계값: 10.0** (PRD 기준, 추후 조정 가능)
 
-### 3.5 구현 코드
+### 3.5 분석 상태 모델
+
+그리드와 뷰어 간 분석 결과 공유를 위한 상태 모델:
+
+```swift
+/// 사진별 분석 상태
+enum SimilarityAnalysisState {
+    case notAnalyzed                              // 분석 범위 밖이었음
+    case analyzing                                // 분석 진행 중
+    case analyzed(inGroup: Bool, groupID: String?) // 분석 완료
+}
+
+/// 분석 결과 캐시
+class SimilarityCache {
+    // asset ID → 분석 상태
+    private var states: [String: SimilarityAnalysisState] = [:]
+
+    // group ID → 멤버 asset ID 목록 (그룹 전체 멤버 저장)
+    private var groups: [String: [String]] = [:]
+
+    // asset ID → 유효 인물 번호 (해당 사진의 5% 이상 유효 얼굴 인물 슬롯)
+    private var assetEligiblePersonIndices: [String: Set<Int>] = [:]
+
+    // groupID → 유효 인물 슬롯 (2장 이상)
+    private var groupValidPersonIndices: [String: Set<Int>] = [:]
+
+    // 분석 완료 콜백 (뷰어에서 구독)
+    private var completionHandlers: [String: [(SimilarityAnalysisState) -> Void]] = [:]
+
+    func getState(for assetID: String) -> SimilarityAnalysisState {
+        return states[assetID] ?? .notAnalyzed
+    }
+
+    func setState(_ state: SimilarityAnalysisState, for assetID: String) {
+        states[assetID] = state
+
+        // 분석 완료 시 구독자에게 알림
+        if case .analyzed = state {
+            completionHandlers[assetID]?.forEach { $0(state) }
+            completionHandlers[assetID] = nil
+        }
+    }
+
+    func getGroupMembers(groupID: String) -> [String] {
+        return groups[groupID] ?? []
+    }
+
+    func setGroupMembers(_ members: [String], for groupID: String) {
+        groups[groupID] = members
+    }
+
+    func removeFromGroup(assetID: String, groupID: String) {
+        groups[groupID]?.removeAll { $0 == assetID }
+    }
+
+    func invalidateGroup(groupID: String) {
+        // 그룹 멤버들의 상태를 false로 변경
+        for assetID in groups[groupID] ?? [] {
+            states[assetID] = .analyzed(inGroup: false, groupID: nil)
+            assetEligiblePersonIndices.removeValue(forKey: assetID)
+        }
+        groups.removeValue(forKey: groupID)
+        groupValidPersonIndices.removeValue(forKey: groupID)
+    }
+
+    // 사진별 유효 인물 번호 저장/조회
+    func setAssetEligiblePersonIndices(_ indices: Set<Int>, for assetID: String) {
+        assetEligiblePersonIndices[assetID] = indices
+    }
+
+    func getAssetEligiblePersonIndices(for assetID: String) -> Set<Int> {
+        return assetEligiblePersonIndices[assetID] ?? []
+    }
+
+    // 그룹별 유효 인물 슬롯 저장/조회
+    func setGroupValidPersonIndices(_ indices: Set<Int>, for groupID: String) {
+        groupValidPersonIndices[groupID] = indices
+    }
+
+    func getGroupValidPersonIndices(for groupID: String) -> Set<Int> {
+        return groupValidPersonIndices[groupID] ?? []
+    }
+
+    func observeCompletion(for assetID: String, handler: @escaping (SimilarityAnalysisState) -> Void) {
+        // 이미 분석 완료된 경우 즉시 콜백
+        if case .analyzed = states[assetID] {
+            handler(states[assetID]!)
+            return
+        }
+
+        // 진행 중이면 콜백 등록
+        if completionHandlers[assetID] == nil {
+            completionHandlers[assetID] = []
+        }
+        completionHandlers[assetID]?.append(handler)
+    }
+}
+```
+
+**상태 전이:**
+```
+notAnalyzed ──→ analyzing ──→ analyzed(inGroup: Bool)
+(범위 밖)       (분석 중)       (완료)
+
+- 그리드 스크롤 멈춤 → 범위 내 사진들 analyzing으로 전환
+- 분석 완료 → analyzed로 전환 (유효 인물 번호 저장, 유효 인물 슬롯 계산)
+- 뷰어에서 notAnalyzed 사진 접근 → 그리드에 분석 요청 → analyzing
+```
+
+**재분석 시 캐시 갱신 규칙:**
+- 분석 범위가 달라지면 범위 내 사진들을 새로 분석
+- 기존 상태를 완전히 덮어씀 (인접 거리 계산 결과가 달라질 수 있음)
+- 새 그룹 생성 시 groups에 멤버 목록 저장
+- 삭제 시 그룹 멤버 수 확인 → 3장 미만이면 invalidateGroup() 호출
+
+### 3.6 구현 코드
 
 ```swift
 // Step 1: Feature Print 생성
@@ -167,24 +288,161 @@ func groupSimilarPhotos(
     return groups
 }
 
-// Step 4: 얼굴 필터링
-func filterGroupsWithFaces(groups: [[PHAsset]]) async -> [[PHAsset]] {
+// Step 4: 5% 이상 유효 얼굴 필터링 + 인물 슬롯 검증
+// viewerSize = UIScreen.main.bounds.size (뷰어 기본 표시 기준)
+func isEligibleFace(boundingBox: CGRect, imageSize: CGSize, viewerSize: CGSize) -> Bool {
+    let scale = min(viewerSize.width / imageSize.width, viewerSize.height / imageSize.height)
+    let faceWidthOnScreen = boundingBox.width * imageSize.width * scale
+    return faceWidthOnScreen >= viewerSize.width * 0.05
+}
+
+/// 얼굴 감지 → 5% 이상 유효 얼굴 필터 → 크기순 상위 5개 → 위치순 인물 번호 부여
+func detectEligibleFaces(in asset: PHAsset, viewerSize: CGSize) async throws -> [DetectedFace] {
+    let faces = try await detectFaces(in: asset) // VNDetectFaceRectanglesRequest
+    let imageSize = await loadImageSize(asset)
+
+    // 5% 이상 유효 얼굴만 필터링
+    let eligibleFaces = faces.filter {
+        isEligibleFace(boundingBox: $0.boundingBox, imageSize: imageSize, viewerSize: viewerSize)
+    }
+
+    let topFiveBySize = eligibleFaces.sorted {
+        max($0.boundingBox.width, $0.boundingBox.height) >
+        max($1.boundingBox.width, $1.boundingBox.height)
+    }.prefix(5)
+
+    return assignPersonIndicesByPosition(faces: Array(topFiveBySize))
+}
+
+/// 5% 이상 유효 얼굴 3장 이상 + 유효 인물 슬롯 1개 이상인 그룹만 유지
+/// cache: 분석 결과 저장용 캐시 (사진별 유효 인물 번호, 그룹별 유효 슬롯)
+func filterGroupsWithEligibleFaces(
+    groups: [[PHAsset]],
+    viewerSize: CGSize,
+    cache: SimilarityCache
+) async throws -> [[PHAsset]] {
     var filteredGroups: [[PHAsset]] = []
 
     for group in groups {
-        var assetsWithFaces: [PHAsset] = []
+        let groupID = UUID().uuidString
+        var assetsWithSlots: [(asset: PHAsset, personIndices: Set<Int>)] = []
+
+        // 그룹 내 모든 사진 ID 추적 (탈락 사진 상태 업데이트용)
+        let allAssetIDs = Set(group.map { $0.localIdentifier })
+
         for asset in group {
-            if await hasFace(asset) {
-                assetsWithFaces.append(asset)
+            let faces = try await detectEligibleFaces(in: asset, viewerSize: viewerSize)
+            let indices = Set(faces.map(\.personIndex))
+            if !indices.isEmpty {
+                assetsWithSlots.append((asset: asset, personIndices: indices))
+                // 캐시에 사진별 5% 이상 유효 인물 번호 저장
+                cache.setAssetEligiblePersonIndices(indices, for: asset.localIdentifier)
             }
         }
-        if assetsWithFaces.count >= 3 {
-            filteredGroups.append(assetsWithFaces)
+
+        var slotCounts: [Int: Int] = [:]
+        for entry in assetsWithSlots {
+            for index in entry.personIndices {
+                slotCounts[index, default: 0] += 1
+            }
+        }
+        let validSlots = Set(slotCounts.filter { $0.value >= 2 }.map { $0.key })
+
+        let validAssets = assetsWithSlots.filter { !$0.personIndices.isDisjoint(with: validSlots) }
+        let validAssetIDs = Set(validAssets.map { $0.asset.localIdentifier })
+
+        if validAssets.count >= 3 && !validSlots.isEmpty {
+            filteredGroups.append(validAssets.map(\.asset))
+
+            // 캐시에 그룹별 유효 인물 슬롯 저장
+            cache.setGroupValidPersonIndices(validSlots, for: groupID)
+
+            // 캐시에 그룹 멤버 저장 + 유효 멤버 상태 업데이트
+            let memberIDs = validAssets.map { $0.asset.localIdentifier }
+            cache.setGroupMembers(memberIDs, for: groupID)
+            for entry in validAssets {
+                cache.setState(.analyzed(inGroup: true, groupID: groupID), for: entry.asset.localIdentifier)
+            }
+        }
+
+        // 탈락한 사진 상태 업데이트 (얼굴 없음, 유효 슬롯 미충족 등)
+        let excludedAssetIDs = allAssetIDs.subtracting(validAssetIDs)
+        for assetID in excludedAssetIDs {
+            cache.setState(.analyzed(inGroup: false, groupID: nil), for: assetID)
         }
     }
 
     return filteredGroups
 }
+```
+
+### 3.7 유사사진정리그룹 선택 알고리즘
+
+유사사진썸네일그룹에서 최대 8장을 선택하여 유사사진정리그룹 생성:
+
+```swift
+/// 유사사진정리그룹 선택 (최대 8장, 현재 사진 중심)
+/// - thumbnailGroup: 유사사진썸네일그룹 (시간순 정렬)
+/// - currentIndex: 현재 사진의 그룹 내 인덱스
+/// - maxCount: 최대 선택 개수 (기본 8)
+/// - Returns: 선택된 사진들 (원래 순서 유지)
+func selectComparisonGroup(
+    from thumbnailGroup: [PHAsset],
+    currentIndex: Int,
+    maxCount: Int = 8
+) -> [PHAsset] {
+    guard !thumbnailGroup.isEmpty else { return [] }
+    guard currentIndex >= 0 && currentIndex < thumbnailGroup.count else { return [] }
+
+    // 8장 이하면 전체 반환
+    if thumbnailGroup.count <= maxCount {
+        return thumbnailGroup
+    }
+
+    // Step 1: 거리순으로 인덱스 선택 (동일 거리면 앞쪽 우선)
+    var selectedIndices: [Int] = [currentIndex]
+    var front = currentIndex - 1
+    var back = currentIndex + 1
+
+    while selectedIndices.count < maxCount {
+        // 앞쪽 먼저 (동일 거리면 앞쪽 우선)
+        if front >= 0 {
+            selectedIndices.append(front)
+            front -= 1
+        }
+
+        // 뒤쪽
+        if selectedIndices.count < maxCount && back < thumbnailGroup.count {
+            selectedIndices.append(back)
+            back += 1
+        }
+
+        // 더 이상 선택할 사진이 없으면 종료
+        if front < 0 && back >= thumbnailGroup.count {
+            break
+        }
+    }
+
+    // Step 2: 원래 순서로 정렬 (시간순 유지)
+    let sortedIndices = selectedIndices.sorted()
+
+    // Step 3: 해당 인덱스의 사진들 반환
+    return sortedIndices.map { thumbnailGroup[$0] }
+}
+```
+
+**사용 예시:**
+```swift
+// 유사사진썸네일그룹 12장, 현재 사진이 5번째(인덱스 4)
+let thumbnailGroup = [photo1, photo2, ..., photo12]
+let currentIndex = 4  // 5번째 사진
+
+let comparisonGroup = selectComparisonGroup(
+    from: thumbnailGroup,
+    currentIndex: currentIndex
+)
+// 결과: [photo1, photo2, photo3, photo4, photo5, photo6, photo7, photo8]
+// (인덱스 0~7, 즉 1~8번째 사진)
 ```
 
 ---
@@ -233,6 +491,29 @@ func filterGroupsWithFaces(groups: [[PHAsset]]) async -> [[PHAsset]] {
 └─────────────────────────────────────────────────────────────┘
 ```
 
+#### 좌표계 명시
+
+**Vision Framework 좌표계:**
+- 정규화 좌표: 0.0 ~ 1.0
+- 원점: **좌하단** (화면 좌표계와 반대)
+- origin.x: 0(왼쪽) → 1(오른쪽)
+- origin.y: 0(아래) → 1(위)
+
+**정렬 규칙:**
+- X 정렬: `origin.x` 오름차순 (왼쪽 → 오른쪽)
+- Y 정렬 (tie-break): `origin.y` 내림차순 (위쪽 → 아래쪽)
+- Tie-break 임계값: X 차이가 **0.05 이하**일 때 Y 정렬 적용
+
+**시뮬레이션 (2열 구도):**
+```
+화면 표시:        Vision 좌표:
+[A] [B]          A(x=0.2, y=0.7)  B(x=0.7, y=0.7)
+[C] [D]          C(x=0.2, y=0.3)  D(x=0.7, y=0.3)
+
+정렬 결과: A → C → B → D
+(왼쪽 열 위→아래, 오른쪽 열 위→아래)
+```
+
 #### 구현 코드
 
 > **주의**: 이 함수는 prd8.md §2.4.4의 전체 규칙 중 **위치 기반 정렬** 부분만 담당합니다.
@@ -241,19 +522,22 @@ func filterGroupsWithFaces(groups: [[PHAsset]]) async -> [[PHAsset]] {
 ```swift
 struct DetectedFace {
     let observation: VNFaceObservation
-    let boundingBox: CGRect
+    let boundingBox: CGRect  // Vision 정규화 좌표 (원점 좌하단)
     var personIndex: Int = 0
 }
 
 /// 위치 기반 인물 번호 부여 (prd8.md §2.4.4의 Step 3~4)
 /// - 사전 조건: 이미 5% 필터 및 크기순 상위 5개 선택이 완료된 faces
+/// - 좌표계: Vision 정규화 좌표 (0~1, 원점 좌하단)
 func assignPersonIndicesByPosition(faces: [DetectedFace]) -> [DetectedFace] {
     // Step 3: 위치순 재정렬 (좌→우, 위→아래)
     let sorted = faces.sorted { face1, face2 in
+        // X 차이가 0.05 초과면 X 기준 정렬
         if abs(face1.boundingBox.origin.x - face2.boundingBox.origin.x) > 0.05 {
-            return face1.boundingBox.origin.x < face2.boundingBox.origin.x
+            return face1.boundingBox.origin.x < face2.boundingBox.origin.x  // 왼쪽 먼저
         }
-        return face1.boundingBox.origin.y > face2.boundingBox.origin.y
+        // X가 거의 같으면 Y 기준 (Vision 좌표계에서 y가 클수록 위)
+        return face1.boundingBox.origin.y > face2.boundingBox.origin.y  // 위쪽 먼저
     }
 
     // Step 4: 인물 번호 부여
@@ -276,13 +560,8 @@ func assignPersonIndicesByPosition(faces: [DetectedFace]) -> [DetectedFace] {
 
 #### 거리 임계값 (얼굴 크롭 비교)
 
-| 거리 | 의미 | 신뢰도 |
-|------|------|--------|
-| 0~0.6 | 같은 인물 확실 | 높음 (High) |
-| 0.6~1.0 | 같은 인물 가능성 높음 | 중간 (Medium) |
-| 1.0+ | 다른 인물 가능성 | 낮음 (Low) |
-
-**참고**: 이미지 전체 비교(10.0)와 얼굴 크롭 비교(1.0)의 임계값이 다름
+**임계값 정의:** prd8.md §2.7.2 참조
+- 구현 시 `MatchConfidence` enum으로 분류 (아래 코드 참조)
 
 #### 알고리즘
 
@@ -525,34 +804,11 @@ func validatePersonMatching(
 
 ### 5.3 검증 시점
 
-| 시점 | 방식 | 설명 |
-|------|------|------|
-| + 버튼 탭 시 | 동기 | 위치 기반 매칭 즉시 수행 |
-| 얼굴 비교 화면 진입 후 | 비동기 | Feature Print 검증 백그라운드 수행 |
-| 검증 완료 시 | UI 업데이트 | 경고 필요시 배지/알림 표시 |
+**검증 타이밍:** prd8.md §2.7.5 참조
 
 ### 5.4 경고 UI
 
-#### 전체 경고 (헤더)
-```
-┌─────────────────────────────────────────────────────────────┐
-│  ⚠️ 인물 매칭 확인 필요                                      │
-│                                                              │
-│  일부 사진에서 다른 사람이 포함되었을 수 있습니다.            │
-│  아래 표시된 사진을 확인해주세요.                             │
-│                                                              │
-│  [확인]                                                      │
-└─────────────────────────────────────────────────────────────┘
-```
-
-#### 개별 사진 경고 (셀)
-```
-┌──────────────┐
-│   얼굴 크롭   │
-│              │
-│         ⚠️  │ ← 우측 하단 경고 배지
-└──────────────┘
-```
+**경고 UI 스펙:** prd8.md §2.7.3 (전체 경고), §2.7.4 (개별 배지) 참조
 
 ### 5.5 검증 결과 활용
 
@@ -605,12 +861,8 @@ func cropFaceRegion(from image: CGImage, boundingBox: CGRect) -> CGImage? {
 
 ### 6.2 크롭 규칙 요약
 
-| 항목 | 값 |
-|------|-----|
-| 여백 | bounding box 크기의 30% |
-| 비율 | 정사각형 (1:1) |
-| 회전 | 수평 유지 (MVP) |
-| 경계 처리 | 이미지 범위 내로 클램핑 |
+**규칙 정의:** prd8.md §2.5.4 참조
+- 위 코드의 `cropFaceRegion` 함수가 규칙을 구현
 
 ---
 
@@ -629,8 +881,8 @@ func cropFaceRegion(from image: CGImage, boundingBox: CGRect) -> CGImage? {
 
 | 컨텍스트 | 동시 분석 수 | 이유 |
 |----------|-------------|------|
-| 그리드 | 5개 | 메모리 관리, 스크롤 성능 |
-| 뷰어 | 3개 | 빠른 응답 필요 |
+| 그리드 (유사사진썸네일그룹 분석) | 5개 | 메모리 관리, 스크롤 성능 |
+| 뷰어 (얼굴 위치 감지) | 1개 | 현재 사진만 분석 |
 | 얼굴 비교 검증 | 백그라운드 | UX 블로킹 방지 |
 
 ### 7.3 캐싱 전략 (Phase 7)
@@ -702,3 +954,19 @@ MVP에서는 캐싱 없이 실시간 분석. 성능 이슈 발생 시:
 - [Fritz.ai - Image Similarity using Vision](https://fritz.ai/compute-image-similarity-using-computer-vision-in-ios/)
 - [Apple WWDC 2019 - Image Similarity](https://developer.apple.com/la/videos/play/wwdc2019/222/)
 - [Apple WWDC 2021 - Vision Updates](https://developer.apple.com/videos/play/wwdc2021/10040/)
+
+---
+
+## 11. 변경 이력
+
+| 버전 | 날짜 | 변경 내용 |
+|------|------|----------|
+| 1.0 | 2025-01-01 | 초안 작성 |
+| 1.1 | 2025-12-31 | 분석 상태 모델 추가, 캐시 구조(groups 딕셔너리) 추가 |
+| 1.2 | 2026-01-01 | 좌표계 명시(Vision 원점 좌하단), tie-break 임계값 0.05 |
+| 1.3 | 2026-01-01 | 5% 이상 유효 얼굴 필터링 로직 추가, 캐시에 assetEligiblePersonIndices/groupValidPersonIndices 추가 |
+| 1.4 | 2026-01-01 | 캐시 저장 로직 보완: filterGroupsWithEligibleFaces에 캐시 저장 코드 추가, SimilarityCache에 set/get 함수 추가 |
+| 1.5 | 2026-01-01 | 용어 통일: "eligible face" → "5% 이상 유효 얼굴"로 치환 |
+| 1.6 | 2026-01-01 | 탈락 사진 상태 업데이트 로직 추가, 입력/출력 정의에 그룹 조건 명시 |
+| 1.7 | 2026-01-01 | 문서 역할(How) 명시, prd8.md 참조 추가 |
+| 1.8 | 2026-01-01 | 문서 간 중복 정리: §4.4 거리 임계값→prd8.md §2.7.2 참조, §5.3 검증 시점→§2.7.5 참조, §5.4 경고 UI→§2.7.3/§2.7.4 참조, §6.2 크롭 규칙→§2.5.4 참조 |
