@@ -1,22 +1,26 @@
 // VideoPageViewController.swift
 // 개별 동영상을 표시하는 페이지 뷰 컨트롤러
 //
-// AVPlayerViewController 기반 동영상 재생
-// - 자동 재생 (음소거로 시작)
-// - 핀치 줌: Aspect Fit ↔ Aspect Fill 토글 (iOS 16+ 기본 지원)
-// - iCloud 다운로드 자동 처리
+// AVPlayer + AVPlayerLayer 기반 동영상 재생
+// - 포스터 먼저 표시 → isReadyForDisplay 후 전환 (검은 화면 방지)
+// - UIScrollView 기반 핀치줌/더블탭 줌
+// - ViewerViewController가 요청 트리거 (인접 페이지 다운로드 방지)
 
 import UIKit
 import Photos
-import AVKit
 import AVFoundation
 import AppCore
 
 // MARK: - VideoPageViewController
 
 /// 개별 동영상을 표시하는 페이지 뷰 컨트롤러
-/// AVPlayerViewController 기반 인라인 재생 지원
+/// AVPlayer + AVPlayerLayer 기반, UIScrollView로 핀치줌 지원
 final class VideoPageViewController: UIViewController {
+
+    // MARK: - Constants
+
+    /// 더블탭 줌 스케일
+    private static let doubleTapZoomScale: CGFloat = 2.5
 
     // MARK: - Properties
 
@@ -26,29 +30,56 @@ final class VideoPageViewController: UIViewController {
     /// 인덱스 (페이지 전환 추적용)
     let index: Int
 
-    /// AVPlayerViewController (child VC로 embed)
-    private var playerViewController: AVPlayerViewController?
+    /// 줌을 위한 UIScrollView
+    private lazy var scrollView: UIScrollView = {
+        let sv = UIScrollView()
+        sv.delegate = self
+        sv.minimumZoomScale = 1.0
+        sv.maximumZoomScale = 4.0  // 초기값, 비디오 로드 후 동적 계산
+        sv.showsHorizontalScrollIndicator = false
+        sv.showsVerticalScrollIndicator = false
+        sv.contentInsetAdjustmentBehavior = .never
+        sv.bouncesZoom = true
+        return sv
+    }()
+
+    /// PlayerLayerView (layerClass = AVPlayerLayer)
+    private lazy var playerLayerView: PlayerLayerView = {
+        let view = PlayerLayerView()
+        return view
+    }()
 
     /// AVPlayer 인스턴스
     private var player: AVPlayer?
 
-    /// 비디오 요청 취소 토큰
-    private var requestCancellable: Cancellable?
+    /// KVO 관찰자 - isReadyForDisplay
+    private var readyForDisplayObserver: NSKeyValueObservation?
 
-    /// 자동 재생 활성화 여부
-    /// - viewDidAppear에서 true일 때만 자동 재생 시작
+    /// KVO 관찰자 - AVPlayerItem.status
+    private var statusObserver: NSKeyValueObservation?
+
+    /// 썸네일 요청 취소 토큰
+    private var thumbnailRequestCancellable: Cancellable?
+
+    /// 비디오 요청 취소 토큰
+    private var videoRequestCancellable: Cancellable?
+
+    /// 비디오 표시 크기 (preferredTransform 적용된 크기)
+    private var videoDisplaySize: CGSize = .zero
+
+    /// 줌 상태 플래그 (레이아웃 업데이트 방지)
+    private var isZoomInteractionActive = false
+
+    /// 자동 재생 플래그
     private var shouldAutoPlay = true
 
-    /// 로딩 인디케이터
-    private lazy var loadingIndicator: UIActivityIndicatorView = {
-        let indicator = UIActivityIndicatorView(style: .large)
-        indicator.color = .white
-        indicator.hidesWhenStopped = true
-        indicator.translatesAutoresizingMaskIntoConstraints = false
-        return indicator
-    }()
+    /// 비디오 요청 완료 여부 (중복 요청 방지)
+    private var hasRequestedVideo = false
 
-    /// 에러 표시 레이블
+    /// 첫 프레임 표시 완료 여부 (KVO 중복 호출 방지)
+    private var hasShownFirstFrame = false
+
+    /// 에러 레이블
     private lazy var errorLabel: UILabel = {
         let label = UILabel()
         label.textColor = .white
@@ -81,14 +112,39 @@ final class VideoPageViewController: UIViewController {
         super.viewDidLoad()
         setupAudioSession()
         setupUI()
-        requestVideo()
+        setupGestures()
+        loadPoster()
+    }
+
+    override func viewDidLayoutSubviews() {
+        super.viewDidLayoutSubviews()
+
+        // 줌 중에는 레이아웃 업데이트 보류
+        guard !isZoomInteractionActive else { return }
+
+        scrollView.frame = view.bounds
+        updateVideoLayout()
+    }
+
+    override func viewWillDisappear(_ animated: Bool) {
+        super.viewWillDisappear(animated)
+        pause()
+        cancelVideoRequest()
+    }
+
+    deinit {
+        cleanupPlayer()
+        thumbnailRequestCancellable?.cancel()
+        videoRequestCancellable?.cancel()
+
+        if debugVideo {
+            print("[Video] deinit - index: \(index)")
+        }
     }
 
     // MARK: - Audio Session
 
     /// 오디오 세션 설정
-    /// - 동영상 소리 재생을 위해 .playback 카테고리 설정
-    /// - 무음 모드에서도 소리 재생 가능
     private func setupAudioSession() {
         do {
             let audioSession = AVAudioSession.sharedInstance()
@@ -105,47 +161,19 @@ final class VideoPageViewController: UIViewController {
         }
     }
 
-    override func viewDidAppear(_ animated: Bool) {
-        super.viewDidAppear(animated)
-
-        // 자동 재생 시작 (음소거)
-        if shouldAutoPlay {
-            play(muted: true)
-        }
-    }
-
-    override func viewWillDisappear(_ animated: Bool) {
-        super.viewWillDisappear(animated)
-
-        // 페이지 전환 시 정지
-        pause()
-    }
-
-    deinit {
-        // 리소스 정리
-        requestCancellable?.cancel()
-        player?.pause()
-        player = nil
-
-        if debugVideo {
-            print("[Video] deinit - index: \(index)")
-        }
-    }
-
     // MARK: - Setup
 
     /// UI 설정
     private func setupUI() {
         view.backgroundColor = .black
 
-        // 로딩 인디케이터
-        view.addSubview(loadingIndicator)
-        NSLayoutConstraint.activate([
-            loadingIndicator.centerXAnchor.constraint(equalTo: view.centerXAnchor),
-            loadingIndicator.centerYAnchor.constraint(equalTo: view.centerYAnchor)
-        ])
+        // ScrollView 추가
+        view.addSubview(scrollView)
 
-        // 에러 레이블
+        // PlayerLayerView 추가 (scrollView 내부)
+        scrollView.addSubview(playerLayerView)
+
+        // 에러 레이블 (scrollView 위)
         view.addSubview(errorLabel)
         NSLayoutConstraint.activate([
             errorLabel.centerXAnchor.constraint(equalTo: view.centerXAnchor),
@@ -155,66 +183,59 @@ final class VideoPageViewController: UIViewController {
         ])
     }
 
-    /// AVPlayerViewController embed
-    private func setupPlayerViewController(with playerItem: AVPlayerItem) {
-        // AVPlayer 생성
-        let player = AVPlayer(playerItem: playerItem)
-        self.player = player
+    /// 제스처 설정
+    private func setupGestures() {
+        // 더블탭 → 줌 토글
+        let doubleTapGesture = UITapGestureRecognizer(target: self, action: #selector(handleDoubleTap(_:)))
+        doubleTapGesture.numberOfTapsRequired = 2
+        scrollView.addGestureRecognizer(doubleTapGesture)
 
-        // 기본 음소거로 시작 (기본 사진 앱 동작)
-        player.isMuted = true
+        // scrollView의 pan 제스처 delegate 설정 (제스처 충돌 방지)
+        scrollView.panGestureRecognizer.delegate = self
+    }
 
-        // AVPlayerViewController 생성
-        let playerVC = AVPlayerViewController()
-        playerVC.player = player
+    // MARK: - Poster Loading
 
-        // 인라인 재생 설정 (전체화면 전환 비활성화)
-        playerVC.entersFullScreenWhenPlaybackBegins = false
-        playerVC.exitsFullScreenWhenPlaybackEnds = false
+    /// 포스터 이미지 로드
+    private func loadPoster() {
+        let targetSize = CGSize(
+            width: view.bounds.width * UIScreen.main.scale,
+            height: view.bounds.height * UIScreen.main.scale
+        )
 
-        // iOS 16+: 줌 지원 (Aspect Fit ↔ Aspect Fill 토글)
-        // AVPlayerViewController 기본 제공 기능
+        thumbnailRequestCancellable = ImagePipeline.shared.requestImage(
+            for: asset,
+            targetSize: targetSize,
+            contentMode: .aspectFit
+        ) { [weak self] image, info in
+            guard let self = self, let image = image else { return }
 
-        // Child VC로 추가
-        addChild(playerVC)
-        view.addSubview(playerVC.view)
+            self.playerLayerView.setPoster(image)
 
-        // 오토레이아웃 설정 (회전/세이프에어리어 대응)
-        playerVC.view.translatesAutoresizingMaskIntoConstraints = false
-        NSLayoutConstraint.activate([
-            playerVC.view.topAnchor.constraint(equalTo: view.topAnchor),
-            playerVC.view.leadingAnchor.constraint(equalTo: view.leadingAnchor),
-            playerVC.view.trailingAnchor.constraint(equalTo: view.trailingAnchor),
-            playerVC.view.bottomAnchor.constraint(equalTo: view.bottomAnchor)
-        ])
-
-        playerVC.didMove(toParent: self)
-        playerViewController = playerVC
-
-        // 로딩 인디케이터 숨김
-        loadingIndicator.stopAnimating()
-
-        if debugVideo {
-            print("[Video] Player setup complete - index: \(index)")
+            if self.debugVideo {
+                print("[Video] Poster loaded - index: \(self.index)")
+            }
         }
     }
 
-    // MARK: - Video Request
+    // MARK: - Video Request (ViewerViewController가 호출)
 
-    /// 비디오 요청
-    private func requestVideo() {
-        loadingIndicator.startAnimating()
+    /// 비디오 요청 (ViewerViewController가 호출)
+    /// - 인접 페이지가 아닌 현재 페이지에서만 호출됨을 보장
+    func requestVideoIfNeeded() {
+        guard !hasRequestedVideo else { return }
+
+        hasRequestedVideo = true
+        playerLayerView.loadingIndicator.startAnimating()
         errorLabel.isHidden = true
 
         if debugVideo {
             print("[Video] Requesting video - index: \(index), asset: \(asset.localIdentifier.prefix(8))...")
         }
 
-        // VideoPipeline을 통해 AVPlayerItem 요청
-        requestCancellable = VideoPipeline.shared.requestPlayerItem(
+        videoRequestCancellable = VideoPipeline.shared.requestPlayerItem(
             for: asset,
             progressHandler: { [weak self] progress in
-                // iCloud 다운로드 진행률 (필요시 UI 표시)
                 if self?.debugVideo == true {
                     print("[Video] Download progress: \(Int(progress * 100))%")
                 }
@@ -222,52 +243,269 @@ final class VideoPageViewController: UIViewController {
             completion: { [weak self] playerItem, info in
                 guard let self = self else { return }
 
-                // 에러 처리
-                if let error = VideoPipeline.error(from: info) {
-                    self.showError(error.localizedDescription)
-                    return
-                }
-
                 // 취소된 경우
                 if VideoPipeline.isCancelled(from: info) {
+                    self.hasRequestedVideo = false
                     if self.debugVideo {
-                        print("[Video] Request cancelled")
+                        print("[Video] Request cancelled - index: \(self.index)")
                     }
                     return
                 }
 
-                // playerItem이 없는 경우
+                // 에러 처리
+                if let error = VideoPipeline.error(from: info) {
+                    self.hasRequestedVideo = false
+                    self.showError(error.localizedDescription)
+                    return
+                }
+
                 guard let playerItem = playerItem else {
+                    self.hasRequestedVideo = false
                     self.showError("동영상을 로드할 수 없습니다")
                     return
                 }
 
-                // AVPlayerViewController 설정
-                self.setupPlayerViewController(with: playerItem)
-
-                // viewDidAppear가 이미 호출된 경우 자동 재생
-                if self.isViewLoaded && self.view.window != nil && self.shouldAutoPlay {
-                    self.play(muted: true)
-                }
+                self.setupPlayer(with: playerItem)
             }
         )
     }
 
+    /// 비디오 요청 취소 (페이지 이탈 시)
+    private func cancelVideoRequest() {
+        videoRequestCancellable?.cancel()
+        videoRequestCancellable = nil
+        hasRequestedVideo = false
+    }
+
+    // MARK: - Player Setup
+
+    /// AVPlayer 설정
+    private func setupPlayer(with playerItem: AVPlayerItem) {
+        let player = AVPlayer(playerItem: playerItem)
+        self.player = player
+
+        // 기본 음소거로 시작
+        player.isMuted = true
+
+        // PlayerLayerView에 플레이어 연결
+        playerLayerView.player = player
+
+        // KVO 설정
+        setupKVO()
+
+        // 비디오 표시 크기 가져오기
+        fetchVideoDisplaySize(from: playerItem)
+
+        if debugVideo {
+            print("[Video] Player setup complete - index: \(index)")
+        }
+    }
+
+    // MARK: - KVO
+
+    /// KVO 설정
+    private func setupKVO() {
+        // AVPlayerLayer.isReadyForDisplay 관찰
+        readyForDisplayObserver = playerLayerView.playerLayer.observe(
+            \.isReadyForDisplay,
+            options: [.initial, .new]
+        ) { [weak self] layer, _ in
+            guard let self = self, layer.isReadyForDisplay else { return }
+
+            DispatchQueue.main.async {
+                self.onReadyForDisplay()
+            }
+        }
+
+        // AVPlayerItem.status 관찰 (에러 처리용)
+        statusObserver = player?.currentItem?.observe(
+            \.status,
+            options: [.initial, .new]
+        ) { [weak self] item, _ in
+            guard let self = self else { return }
+
+            if item.status == .failed {
+                DispatchQueue.main.async {
+                    self.showError(item.error?.localizedDescription ?? "재생 실패")
+                }
+            }
+        }
+    }
+
+    /// 첫 프레임 표시 준비 완료
+    private func onReadyForDisplay() {
+        // 중복 호출 방지
+        guard !hasShownFirstFrame else { return }
+        hasShownFirstFrame = true
+
+        // 포스터 fade-out
+        playerLayerView.hidePoster(animated: true)
+        playerLayerView.loadingIndicator.stopAnimating()
+
+        // 자동 재생
+        if shouldAutoPlay {
+            player?.play()
+        }
+
+        if debugVideo {
+            print("[Video] Ready for display - index: \(index)")
+        }
+    }
+
+    /// KVO 해제
+    private func removeKVO() {
+        readyForDisplayObserver?.invalidate()
+        readyForDisplayObserver = nil
+        statusObserver?.invalidate()
+        statusObserver = nil
+    }
+
+    // MARK: - Video Display Size
+
+    /// 비디오 표시 크기 가져오기 (preferredTransform 적용)
+    private func fetchVideoDisplaySize(from playerItem: AVPlayerItem) {
+        Task {
+            guard let track = try? await playerItem.asset.loadTracks(withMediaType: .video).first else {
+                return
+            }
+
+            let naturalSize = try? await track.load(.naturalSize)
+            let transform = try? await track.load(.preferredTransform)
+
+            guard let size = naturalSize else { return }
+
+            await MainActor.run {
+                if let transform = transform {
+                    let transformedSize = size.applying(transform)
+                    self.videoDisplaySize = CGSize(
+                        width: abs(transformedSize.width),
+                        height: abs(transformedSize.height)
+                    )
+                } else {
+                    self.videoDisplaySize = size
+                }
+
+                self.scrollView.maximumZoomScale = self.calculateMaxZoomScale()
+                self.updateVideoLayout()
+
+                if self.debugVideo {
+                    print("[Video] Display size: \(self.videoDisplaySize) - index: \(self.index)")
+                }
+            }
+        }
+    }
+
+    /// 최대 줌 스케일 계산
+    private func calculateMaxZoomScale() -> CGFloat {
+        let containerSize = scrollView.bounds.size
+        guard videoDisplaySize.width > 0, videoDisplaySize.height > 0,
+              containerSize.width > 0, containerSize.height > 0 else {
+            return 4.0
+        }
+
+        let fitRatio = min(containerSize.width / videoDisplaySize.width,
+                           containerSize.height / videoDisplaySize.height)
+        let screenScale = UIScreen.main.scale
+        let calculatedScale = screenScale / fitRatio
+
+        return max(4.0, min(calculatedScale, 50.0))
+    }
+
+    // MARK: - Layout
+
+    /// 비디오 레이아웃 업데이트
+    private func updateVideoLayout() {
+        guard videoDisplaySize.width > 0, videoDisplaySize.height > 0 else {
+            // 비디오 사이즈 없으면 전체 화면
+            playerLayerView.frame = scrollView.bounds
+            scrollView.contentSize = scrollView.bounds.size
+            return
+        }
+
+        let scrollViewSize = scrollView.bounds.size
+        guard scrollViewSize.width > 0, scrollViewSize.height > 0 else { return }
+
+        // aspect fit 크기 계산
+        let widthRatio = scrollViewSize.width / videoDisplaySize.width
+        let heightRatio = scrollViewSize.height / videoDisplaySize.height
+        let ratio = min(widthRatio, heightRatio)
+
+        let fitWidth = videoDisplaySize.width * ratio
+        let fitHeight = videoDisplaySize.height * ratio
+
+        playerLayerView.frame = CGRect(x: 0, y: 0, width: fitWidth, height: fitHeight)
+        scrollView.contentSize = CGSize(width: fitWidth, height: fitHeight)
+
+        updateContentInsetForCentering()
+    }
+
+    /// 컨텐츠 중앙 정렬을 위한 inset 업데이트
+    private func updateContentInsetForCentering() {
+        let scrollViewSize = scrollView.bounds.size
+        let contentSize = scrollView.contentSize
+
+        let horizontalInset = max(0, (scrollViewSize.width - contentSize.width) / 2)
+        let verticalInset = max(0, (scrollViewSize.height - contentSize.height) / 2)
+
+        scrollView.contentInset = UIEdgeInsets(
+            top: verticalInset,
+            left: horizontalInset,
+            bottom: verticalInset,
+            right: horizontalInset
+        )
+    }
+
+    // MARK: - Double Tap Zoom
+
+    /// 더블탭 제스처 처리
+    @objc private func handleDoubleTap(_ gesture: UITapGestureRecognizer) {
+        if scrollView.zoomScale > 1.0 {
+            scrollView.setZoomScale(1.0, animated: true)
+        } else {
+            let location = gesture.location(in: playerLayerView)
+            let zoomRect = CGRect(
+                x: location.x - (scrollView.bounds.width / Self.doubleTapZoomScale / 2),
+                y: location.y - (scrollView.bounds.height / Self.doubleTapZoomScale / 2),
+                width: scrollView.bounds.width / Self.doubleTapZoomScale,
+                height: scrollView.bounds.height / Self.doubleTapZoomScale
+            )
+            scrollView.zoom(to: zoomRect, animated: true)
+        }
+    }
+
+    // MARK: - Error Handling
+
     /// 에러 표시
     private func showError(_ message: String) {
-        loadingIndicator.stopAnimating()
+        playerLayerView.loadingIndicator.stopAnimating()
         errorLabel.text = message
         errorLabel.isHidden = false
 
         if debugVideo {
-            print("[Video] Error: \(message)")
+            print("[Video] Error: \(message) - index: \(index)")
         }
     }
 
-    // MARK: - Playback Control
+    // MARK: - Cleanup
+
+    /// 플레이어 정리
+    private func cleanupPlayer() {
+        removeKVO()
+        player?.pause()
+        player?.replaceCurrentItem(with: nil)
+        playerLayerView.player = nil
+        player = nil
+        hasShownFirstFrame = false
+    }
+
+    // MARK: - Public API
+
+    /// 줌 상태 확인
+    var isZoomed: Bool {
+        scrollView.zoomScale > 1.0
+    }
 
     /// 재생 시작
-    /// - Parameter muted: 음소거 여부 (기본: true)
     func play(muted: Bool = true) {
         guard let player = player else { return }
 
@@ -299,8 +537,51 @@ final class VideoPageViewController: UIViewController {
     }
 
     /// 자동 재생 비활성화
-    /// - 페이지 전환 시 이전 페이지의 자동 재생 방지
     func disableAutoPlay() {
         shouldAutoPlay = false
+    }
+}
+
+// MARK: - UIScrollViewDelegate
+
+extension VideoPageViewController: UIScrollViewDelegate {
+
+    func viewForZooming(in scrollView: UIScrollView) -> UIView? {
+        return playerLayerView
+    }
+
+    func scrollViewWillBeginZooming(_ scrollView: UIScrollView, with view: UIView?) {
+        isZoomInteractionActive = true
+    }
+
+    func scrollViewDidZoom(_ scrollView: UIScrollView) {
+        updateContentInsetForCentering()
+    }
+
+    func scrollViewDidEndZooming(_ scrollView: UIScrollView, with view: UIView?, atScale scale: CGFloat) {
+        isZoomInteractionActive = false
+    }
+}
+
+// MARK: - UIGestureRecognizerDelegate
+
+extension VideoPageViewController: UIGestureRecognizerDelegate {
+
+    /// 페이지 스와이프와 UIScrollView pan 충돌 방지
+    func gestureRecognizerShouldBegin(_ gestureRecognizer: UIGestureRecognizer) -> Bool {
+        guard gestureRecognizer == scrollView.panGestureRecognizer else {
+            return true
+        }
+
+        // 줌 상태가 아니면 수평 스와이프는 페이지 전환 우선
+        if scrollView.zoomScale <= 1.0 {
+            let velocity = scrollView.panGestureRecognizer.velocity(in: scrollView)
+            // 수평 움직임이 더 크면 페이지 스와이프로
+            if abs(velocity.x) > abs(velocity.y) {
+                return false
+            }
+        }
+
+        return true
     }
 }
