@@ -13,16 +13,16 @@
 
 | 카테고리 | 통과 | 미통과 | 통과율 |
 |---------|------|--------|--------|
-| Requirement Completeness | 0 | 10 | 0% |
-| Requirement Clarity | 5 | 3 | 63% |
+| Requirement Completeness | 1 | 9 | 10% |
+| Requirement Clarity | 7 | 1 | 88% |
 | Requirement Consistency | 5 | 1 | 83% |
-| Acceptance Criteria Quality | 0 | 5 | 0% |
+| Acceptance Criteria Quality | 2 | 3 | 40% |
 | Scenario Coverage | 1 | 6 | 14% |
 | Edge Case Coverage | 2 | 4 | 33% |
 | Non-Functional Requirements | 0 | 6 | 0% |
-| Dependencies & Assumptions | 2 | 3 | 40% |
+| Dependencies & Assumptions | 3 | 2 | 60% |
 | Ambiguities & Conflicts | 3 | 1 | 75% |
-| **Total** | **18** | **39** | **32%** |
+| **Total** | **24** | **33** | **42%** |
 
 ---
 
@@ -44,8 +44,8 @@
   - ❌ **누락**: "최대 5개"만 명시, 6개 이상 얼굴 시 선택 기준 미정의
 - [ ] CHK008 - 테두리 애니메이션의 시각적 사양(색상, 두께, 속도)이 정의되어 있는가? [Gap]
   - ❌ **부분 정의**: research.md에 "흰색 그라데이션, 시계방향" 있으나 spec에 없음
-- [ ] CHK009 - 경고 배지의 시각적 디자인 사양이 명세되어 있는가? [Gap]
-  - ❌ **누락**: 배지 크기, 색상, 위치 미정의
+- [x] CHK009 - ~~경고 배지의 시각적 디자인 사양이 명세되어 있는가?~~ [삭제됨]
+  - ✅ **해당 없음**: 인물 매칭 경고 기능 삭제됨 (Feature Print 기반 매칭으로 변경)
 - [ ] CHK010 - 분석 진행 중 로딩 인디케이터 요구사항이 있는가? [Gap]
   - ❌ **누락**: 캐시 miss 시 분석 대기 중 UI 피드백 미정의
 
@@ -61,11 +61,11 @@
   - ✅ **data-model.md §4**: "거리순 선택 (동일 거리면 앞쪽 우선)" - 인덱스 거리
 - [x] CHK014 - "앞뒤 7장 범위"가 인덱스 기준인지 화면 표시 기준인지 명확한가? [Clarity, Spec §FR-001]
   - ✅ **spec.md FR-001**: "화면에 보이는 사진 기준 앞뒤 7장"
-- [ ] CHK015 - "즉시 표시"의 구체적인 시간 임계값이 정의되어 있는가? [Ambiguity, Spec §SC-002]
-  - ❌ **누락**: "즉시"의 수치적 정의 없음 (예: <100ms)
+- [x] CHK015 - "즉시 표시"의 구체적인 시간 임계값이 정의되어 있는가? [Ambiguity, Spec §SC-002]
+  - ✅ **정의됨**: spec.md SC-002 "100ms 이내"로 수치적 정의 완료
 - [x] CHK016 - 얼굴 위치 기준(좌→우, 위→아래)의 동점 처리 규칙이 명시되어 있는가? [Clarity, Spec §FR-019]
   - ✅ **research.md §3**: "X좌표 오름차순, X 동일 시 Y 내림차순"
-- [ ] CHK017 - "30% 여백"이 bounding box 기준인지 얼굴 크기 기준인지 명확한가? [Clarity, Spec §FR-024]
+- [x] CHK017 - "30% 여백"이 bounding box 기준인지 얼굴 크기 기준인지 명확한가? [Clarity, Spec §FR-024]
   - ✅ **research.md §6**: "bounding box 너비/높이 각각 30% 추가"
 - [ ] CHK018 - 인물 순환 시 "다음 인물"의 순서 결정 규칙이 정의되어 있는가? [Ambiguity, Spec §FR-023]
   - ❌ **누락**: 인물 번호 순인지, 원형 순환인지 미정의
@@ -78,8 +78,8 @@
   - ✅ **일관됨**: 0.3초 디바운싱 + 0.7초 분석 여유 = 1초 이내 목표
 - [x] CHK020 - 유효 슬롯 정의(2장 이상)와 그룹 최소 크기(3장)가 논리적으로 일관되는가? [Consistency, Spec §FR-005, §FR-003]
   - ✅ **일관됨**: 3장 그룹에서 동일 인물 2장 이상 가능
-- [x] CHK021 - 검증 거리 임계값(1.0)과 유사도 거리 임계값(10.0)이 동일한 단위인가? [Consistency, Spec §FR-002, §FR-030]
-  - ✅ **일관됨**: 10.0은 이미지 전체 FeaturePrint, 1.0은 얼굴 크롭 FeaturePrint (다른 측정 대상)
+- [x] CHK021 - 매칭 거리 임계값(1.0)과 유사도 거리 임계값(10.0)이 동일한 단위인가? [Consistency, Spec §FR-002, §FR-030]
+  - ✅ **일관됨**: 10.0은 이미지 전체 FeaturePrint, 1.0은 얼굴 크롭 FeaturePrint 매칭 (다른 측정 대상)
 - [ ] CHK022 - VoiceOver 비활성화 요구사항과 접근성 표준이 일관되는가? [Consistency, Spec §FR-036]
   - ⚠️ **검토 필요**: research.md에 근거 있으나 WCAG 표준과의 일관성 검토 필요
 - [x] CHK023 - 캐시 재사용(FR-012)과 notAnalyzed 분석 요청(FR-013)이 상호 배타적으로 정의되어 있는가? [Consistency]
@@ -91,10 +91,10 @@
 
 ## Acceptance Criteria Quality
 
-- [ ] CHK025 - 모든 성공 기준(SC-001~SC-007)이 객관적으로 측정 가능한가? [Measurability]
-  - ❌ **부분 통과**: SC-006 측정 불가, 나머지는 측정 가능
-- [ ] CHK026 - "인물 매칭 경고를 통해 다른 사람 사진 삭제 실수율을 감소"가 측정 방법 없이 정의되어 있는가? [Measurability, Spec §SC-006]
-  - ❌ **누락**: 실수율 측정 방법, 기준선, 목표치 미정의
+- [x] CHK025 - 모든 성공 기준(SC-001~SC-007)이 객관적으로 측정 가능한가? [Measurability]
+  - ✅ **통과**: SC-006 0.5초 이내로 변경되어 모든 SC 측정 가능
+- [x] CHK026 - "+버튼 탭 후 0.5초 이내 얼굴 비교 화면 표시"가 측정 가능하게 정의되어 있는가? [Measurability, Spec §SC-006]
+  - ✅ **측정 가능**: Feature Print 비교 시간 0.5초 이내로 명확히 정의됨
 - [ ] CHK027 - "메모리 누수가 발생하지 않는다"의 검증 방법이 정의되어 있는가? [Measurability, Spec §SC-007]
   - ❌ **부분 정의**: quickstart.md에 Xcode Memory 언급, 구체적 임계값 미정의
 - [ ] CHK028 - "3탭 이내로 원하는 사진을 삭제"의 시작점이 명확히 정의되어 있는가? [Measurability, Spec §SC-005]
@@ -167,8 +167,8 @@
   - ✅ **정의됨**: plan.md Technical Context "iOS 16+"
 - [ ] CHK052 - PHCachingImageManager와의 통합 요구사항이 정의되어 있는가? [Dependency, Gap]
   - ❌ **부분 정의**: Primary Dependencies에 언급만, 구체적 통합 방식 미정의
-- [ ] CHK053 - "연속 촬영 시 사람들의 위치가 거의 변하지 않는다" 가정의 허용 오차가 정의되어 있는가? [Assumption, Spec §Assumptions]
-  - ❌ **부분 정의**: research.md "~90% 정확도" 언급, 구체적 오차 범위 미정의
+- [x] CHK053 - ~~"연속 촬영 시 사람들의 위치가 거의 변하지 않는다" 가정~~ [삭제됨]
+  - ✅ **해당 없음**: Feature Print 기반 매칭으로 변경되어 위치 기반 가정 불필요
 
 ---
 
@@ -190,8 +190,8 @@
 ### 🔴 Critical Gaps (즉시 보완 필요)
 
 1. **CHK001**: 분석 실패 시 동작 미정의
-2. **CHK015**: "즉시 표시" 수치적 정의 없음
-3. **CHK026**: SC-006 측정 방법 없음
+2. **CHK015**: "즉시 표시" 수치적 정의 없음 → spec.md에서 100ms 이내로 정의됨 ✅
+3. ~~**CHK026**: SC-006 측정 방법 없음~~ → 0.5초 이내로 변경됨 ✅
 4. **CHK031**: 권한 거부 시 동작 미정의
 
 ### 🟡 Important Gaps (구현 전 보완 권장)

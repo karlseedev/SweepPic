@@ -15,7 +15,7 @@
 **Testing**: XCTest, UI Testing
 **Target Platform**: iOS 16+
 **Project Type**: Mobile (iOS)
-**Performance Goals**: 그리드 60fps/120fps(ProMotion) 스크롤 유지, 테두리 표시 1초 이내, 캐시 hit 시 +버튼 즉시 표시
+**Performance Goals**: 그리드 60fps/120fps(ProMotion) 스크롤 유지, 테두리 표시 1초 이내, +버튼 탭 후 0.5초 이내 얼굴 비교 화면 표시
 **Constraints**: 캐시 500장 이내, 동시 분석 최대 5개, 5만장 이상 라이브러리 지원
 **Scale/Scope**: 그리드 뷰, 뷰어, 얼굴 비교 화면 3개 화면 + 기존 UI 통합
 
