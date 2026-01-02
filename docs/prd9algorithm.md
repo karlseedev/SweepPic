@@ -1,8 +1,8 @@
 # PRD 9 알고리즘 상세: 유사 사진 분류 및 동일 인물 매칭
 
-**버전**: 1.2
-**작성일**: 2026-01-01
-**관련 문서**: [PRD 9](./prd9.md), [Spec](../specs/001-similar-photo/spec.md)
+**버전**: 1.3
+**작성일**: 2026-01-02
+**관련 문서**: [PRD 9](./prd9.md), [Spec](../specs/002-similar-photo/spec.md)
 
 > **문서 역할 (How)**: 이 문서는 **어떻게** 구현할지를 정의합니다.
 > - 알고리즘 흐름, 구현 코드, 자료구조, 성능 고려사항
@@ -680,94 +680,46 @@ let comparisonGroup = selectComparisonGroup(
 
 유사사진정리그룹 내에서 "인물 1"이 항상 같은 사람이 되도록 매칭
 
-### 4.2 방식 비교
+### 4.2 방식 선택
 
-| 방식 | 정확도 | 속도 | 복잡도 |
-|------|--------|------|--------|
-| 위치 기반 (MVP) | ~90% | 빠름 | 낮음 |
-| Feature Print 기반 | ~98% | 느림 | 중간 |
-| 하이브리드 (권장) | ~98% | 중간 | 중간 |
+**Feature Print 기반 매칭 사용**
 
-### 4.3 위치 기반 매칭 (1차)
+| 방식 | 정확도 | 속도 | 채택 |
+|------|--------|------|------|
+| 위치 기반 | ~90% | 즉시 | ❌ 부정확 |
+| **Feature Print 기반** | ~98% | ~0.5초 | ✅ **채택** |
 
-#### 원리
-연속 촬영 시 사람들의 위치가 거의 변하지 않는다는 가정
+**선택 이유:**
+- 위치 기반은 빠르지만 사람들이 위치를 바꾸면 틀림
+- Feature Print는 0.5초 로딩이 있지만 정확함
+- +버튼 탭 시점에서 사용자는 로딩을 수용 가능
+- 틀린 결과를 보여주고 경고하는 것보다, 처음부터 정확하게 보여주는 게 나은 UX
 
-#### 알고리즘
+### 4.3 인물 번호 부여 (위치 기반)
 
-```
-┌─────────────────────────────────────────────────────────────┐
-│  기준 사진 (현재 뷰어에서 보고 있는 사진)                     │
-│                                                              │
-│  ┌─────┐ ┌─────┐ ┌─────┐                                    │
-│  │ 👤  │ │ 👤  │ │ 👤  │                                    │
-│  │x=100│ │x=300│ │x=500│                                    │
-│  └─────┘ └─────┘ └─────┘                                    │
-│     ↓        ↓        ↓                                      │
-│  x좌표 순 정렬 → 인물 1, 인물 2, 인물 3                       │
-└─────────────────────────────────────────────────────────────┘
-                              ↓
-┌─────────────────────────────────────────────────────────────┐
-│  다른 사진들도 동일하게 x좌표 순 정렬                         │
-│                                                              │
-│  사진 A: [인물1] [인물2] [인물3]                             │
-│  사진 B: [인물1] [인물2] [인물3]                             │
-│  사진 C: [인물1] [인물2] [인물3]                             │
-│                                                              │
-│  → 같은 순서 위치 = 같은 인물로 가정                         │
-└─────────────────────────────────────────────────────────────┘
-```
+> **참고**: 인물 번호는 위치 기반으로 부여하지만, 실제 인물 매칭은 Feature Print로 수행합니다.
 
-#### 좌표계 명시
+얼굴 위치(좌→우, 위→아래)로 인물 번호를 부여합니다.
+이 번호는 +버튼 표시 순서와 "인물 N" 라벨에 사용됩니다.
 
 **Vision Framework 좌표계:**
 - 정규화 좌표: 0.0 ~ 1.0
 - 원점: **좌하단** (화면 좌표계와 반대)
-- origin.x: 0(왼쪽) → 1(오른쪽)
-- origin.y: 0(아래) → 1(위)
 
 **정렬 규칙:**
 - X 정렬: `origin.x` 오름차순 (왼쪽 → 오른쪽)
 - Y 정렬 (tie-break): `origin.y` 내림차순 (위쪽 → 아래쪽)
 - Tie-break 임계값: X 차이가 **0.05 이하**일 때 Y 정렬 적용
 
-**시뮬레이션 (2열 구도):**
-```
-화면 표시:        Vision 좌표:
-[A] [B]          A(x=0.2, y=0.7)  B(x=0.7, y=0.7)
-[C] [D]          C(x=0.2, y=0.3)  D(x=0.7, y=0.3)
-
-정렬 결과: A → C → B → D
-(왼쪽 열 위→아래, 오른쪽 열 위→아래)
-```
-
-#### 구현 코드
-
-> **주의**: 이 함수는 prd9.md §2.4.4의 전체 규칙 중 **위치 기반 정렬** 부분만 담당합니다.
-> 전체 흐름(5% 크기 필터 → 크기순 상위 5개 → 위치순 재정렬)은 prd9.md §2.4.4 참조.
-
 ```swift
-struct DetectedFace {
-    let observation: VNFaceObservation
-    let boundingBox: CGRect  // Vision 정규화 좌표 (원점 좌하단)
-    var personIndex: Int = 0
-}
-
-/// 위치 기반 인물 번호 부여 (prd9.md §2.4.4의 Step 3~4)
-/// - 사전 조건: 이미 5% 필터 및 크기순 상위 5개 선택이 완료된 faces
-/// - 좌표계: Vision 정규화 좌표 (0~1, 원점 좌하단)
+/// 위치 기반 인물 번호 부여
 func assignPersonIndicesByPosition(faces: [DetectedFace]) -> [DetectedFace] {
-    // Step 3: 위치순 재정렬 (좌→우, 위→아래)
     let sorted = faces.sorted { face1, face2 in
-        // X 차이가 0.05 초과면 X 기준 정렬
         if abs(face1.boundingBox.origin.x - face2.boundingBox.origin.x) > 0.05 {
-            return face1.boundingBox.origin.x < face2.boundingBox.origin.x  // 왼쪽 먼저
+            return face1.boundingBox.origin.x < face2.boundingBox.origin.x
         }
-        // X가 거의 같으면 Y 기준 (Vision 좌표계에서 y가 클수록 위)
-        return face1.boundingBox.origin.y > face2.boundingBox.origin.y  // 위쪽 먼저
+        return face1.boundingBox.origin.y > face2.boundingBox.origin.y
     }
-
-    // Step 4: 인물 번호 부여
     return sorted.enumerated().map { index, face in
         var newFace = face
         newFace.personIndex = index + 1
@@ -776,277 +728,127 @@ func assignPersonIndicesByPosition(faces: [DetectedFace]) -> [DetectedFace] {
 }
 ```
 
-#### 한계
-- 사람들이 위치를 바꾸면 틀림
-- 일부 사진에서 얼굴이 가려지면 순서가 밀림
+### 4.4 Feature Print 기반 인물 매칭
 
-### 4.4 Feature Print 기반 검증 (2차)
++버튼 탭 시 기준 얼굴과 다른 사진의 얼굴을 Feature Print로 비교합니다.
 
-#### 원리
-얼굴 크롭 이미지의 Feature Print를 비교하여 같은 인물인지 확인
+#### 거리 임계값
 
-#### 거리 임계값 (얼굴 크롭 비교)
+| 거리 | 판정 | 처리 |
+|------|------|------|
+| < 1.0 | 동일 인물 | 비교 그리드에 포함 |
+| >= 1.0 | 다른 인물 | **비교 그리드에서 제외** |
 
-**임계값 정의:** prd9.md §2.7.2 참조
-- 구현 시 `MatchConfidence` enum으로 분류 (아래 코드 참조)
-
-#### 알고리즘
+#### 알고리즘 흐름
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│  Step 1: 기준 사진에서 얼굴 크롭 및 Feature Print 생성        │
-│                                                              │
-│  기준 사진 A:                                                │
-│  ┌─────┐ ┌─────┐ ┌─────┐                                    │
-│  │ 👤  │ │ 👤  │ │ 👤  │                                    │
-│  │FP-1 │ │FP-2 │ │FP-3 │  ← 각 얼굴 크롭 후 Feature Print    │
-│  └─────┘ └─────┘ └─────┘                                    │
-└─────────────────────────────────────────────────────────────┘
-                              ↓
-┌─────────────────────────────────────────────────────────────┐
-│  Step 2: 다른 사진에서 각 인물과 가장 유사한 얼굴 찾기        │
-│                                                              │
-│  사진 B의 얼굴들: [FP-a] [FP-b] [FP-c]                       │
-│                                                              │
-│  인물 1 (FP-1) 매칭:                                         │
-│  - FP-1 ↔ FP-a: 0.3 ✓ (최소)                                │
-│  - FP-1 ↔ FP-b: 0.8                                         │
-│  - FP-1 ↔ FP-c: 1.2                                         │
-│  → 인물 1 = FP-a                                            │
-│                                                              │
-│  인물 2 (FP-2) 매칭:                                         │
-│  - FP-2 ↔ FP-b: 0.2 ✓ (최소, FP-a 제외)                     │
-│  - FP-2 ↔ FP-c: 1.1                                         │
-│  → 인물 2 = FP-b                                            │
-│                                                              │
-│  인물 3 (FP-3) 매칭:                                         │
-│  - FP-3 ↔ FP-c: 0.4 ✓ (남은 것)                             │
-│  → 인물 3 = FP-c                                            │
+│  +버튼 탭 (인물 N 선택)                                       │
+│         ↓                                                    │
+│  로딩 스피너 표시                                             │
+│         ↓                                                    │
+│  기준 얼굴 크롭 → Feature Print 생성                          │
+│         ↓                                                    │
+│  유사사진정리그룹 내 각 사진:                                  │
+│    - 동일 위치(personIndex=N) 얼굴 크롭                       │
+│    - Feature Print 생성 및 거리 계산                         │
+│    - 거리 < 1.0 → 포함                                       │
+│    - 거리 >= 1.0 → 제외                                      │
+│         ↓                                                    │
+│  같은 인물만 비교 그리드에 표시 (~0.5초)                       │
 └─────────────────────────────────────────────────────────────┘
 ```
 
 #### 구현 코드
 
 ```swift
-struct FaceMatch {
+struct FaceMatchResult {
+    let asset: PHAsset
     let personIndex: Int
-    let faceObservation: VNFaceObservation
-    let featurePrint: VNFeaturePrintObservation
     let distance: Float
-    let confidence: MatchConfidence
+    let isMatch: Bool  // distance < 1.0
 }
 
-enum MatchConfidence {
-    case high    // 거리 < 0.6
-    case medium  // 0.6 <= 거리 < 1.0
-    case low     // 거리 >= 1.0
-}
+/// Feature Print 기반 인물 매칭
+/// - referenceFace: 기준 사진의 선택된 얼굴
+/// - targetPhotos: 비교 대상 사진들
+/// - personIndex: 선택된 인물 번호
+/// - Returns: 같은 인물로 판정된 사진만 반환
+func matchPersonWithFeaturePrint(
+    referenceFace: CroppedFace,
+    targetPhotos: [PHAsset],
+    personIndex: Int,
+    cache: SimilarityCache
+) async throws -> [FaceMatchResult] {
 
-func matchFacesWithFeaturePrint(
-    referenceFaces: [CroppedFace],  // 기준 사진의 얼굴들 (이미 인물 번호 부여됨)
-    targetFaces: [CroppedFace]       // 비교 사진의 얼굴들
-) throws -> [FaceMatch] {
+    var results: [FaceMatchResult] = []
 
-    var matches: [FaceMatch] = []
-    var usedTargetIndices: Set<Int> = []
-
-    // 각 기준 얼굴에 대해
-    for refFace in referenceFaces {
-        var bestMatch: (index: Int, distance: Float)? = nil
-
-        // 모든 타겟 얼굴과 거리 계산
-        for (targetIndex, targetFace) in targetFaces.enumerated() {
-            // 이미 매칭된 얼굴은 스킵
-            if usedTargetIndices.contains(targetIndex) { continue }
-
-            var distance: Float = 0
-            try refFace.featurePrint.computeDistance(&distance, to: targetFace.featurePrint)
-
-            if bestMatch == nil || distance < bestMatch!.distance {
-                bestMatch = (targetIndex, distance)
-            }
+    for photo in targetPhotos {
+        // 캐시에서 해당 인물 번호의 얼굴 조회
+        let faces = cache.getFaces(for: photo.localIdentifier)
+        guard let targetFace = faces.first(where: { $0.personIndex == personIndex }) else {
+            // 해당 인물 없음 → 제외
+            continue
         }
 
-        // 가장 가까운 얼굴을 해당 인물로 매칭
-        if let match = bestMatch {
-            usedTargetIndices.insert(match.index)
+        // 얼굴 크롭 및 Feature Print 생성
+        let targetCropped = try await cropFace(from: photo, boundingBox: targetFace.boundingBox)
+        let targetFeaturePrint = try await generateFeaturePrint(for: targetCropped)
 
-            let confidence: MatchConfidence
-            switch match.distance {
-            case ..<0.6: confidence = .high
-            case 0.6..<1.0: confidence = .medium
-            default: confidence = .low
-            }
+        // 거리 계산
+        var distance: Float = 0
+        try referenceFace.featurePrint.computeDistance(&distance, to: targetFeaturePrint)
 
-            matches.append(FaceMatch(
-                personIndex: refFace.personIndex,
-                faceObservation: targetFaces[match.index].observation,
-                featurePrint: targetFaces[match.index].featurePrint,
-                distance: match.distance,
-                confidence: confidence
+        let isMatch = distance < 1.0
+
+        if isMatch {
+            results.append(FaceMatchResult(
+                asset: photo,
+                personIndex: personIndex,
+                distance: distance,
+                isMatch: true
             ))
         }
+        // 거리 >= 1.0인 사진은 결과에 포함하지 않음 (자동 제외)
     }
 
-    return matches
+    return results
 }
-```
-
-### 4.5 하이브리드 방식 (권장)
-
-#### 전략
-```
-1차: 위치 기반 매칭 (빠른 초기 매칭)
-2차: Feature Print 검증 (정확도 확인)
-3차: 신뢰도 낮으면 사용자 경고
-```
-
-#### 전체 흐름
-
-```
-┌─────────────────────────────────────────────────────────────┐
-│  유사사진썸네일그룹 사진 진입 (뷰어)                          │
-│         ↓                                                    │
-│  캐시에서 CachedFace 조회                                     │
-│         ↓                                                    │
-│  isValidSlot=true인 얼굴에 +버튼 자동 표시                    │
-│         ↓                                                    │
-│  + 버튼 탭 (인물 N 선택)                                      │
-│         ↓                                                    │
-│  유사사진정리그룹 생성 (최대 8장, 인덱스 거리순)                │
-│         ↓                                                    │
-│  ┌─────────────────────────────────────────────────────┐    │
-│  │ Phase 1: 위치 기반 매칭 (캐시 참조)                  │    │
-│  │   - 각 사진의 CachedFace에서 해당 personIndex 얼굴   │    │
-│  │   - 캐시된 boundingBox로 얼굴 크롭                   │    │
-│  │   - 결과: 각 사진의 "인물 N" 얼굴 위치 결정          │    │
-│  └─────────────────────────────────────────────────────┘    │
-│         ↓                                                    │
-│  얼굴 비교 화면 표시 (즉시)                                   │
-│         ↓                                                    │
-│  ┌─────────────────────────────────────────────────────┐    │
-│  │ Phase 2: Feature Print 검증 (백그라운드)             │    │
-│  │   - 선택된 인물의 모든 얼굴 크롭                     │    │
-│  │   - 기준 얼굴 vs 각 사진 얼굴 Feature Print 거리     │    │
-│  │   - 거리 > 1.0인 쌍이 있으면 경고 플래그 설정        │    │
-│  └─────────────────────────────────────────────────────┘    │
-│         ↓                                                    │
-│  ┌─────────────────────────────────────────────────────┐    │
-│  │ Phase 3: 경고 표시 (필요시)                          │    │
-│  │   ⚠️ "일부 사진에서 다른 인물이 포함되었을 수 있음"  │    │
-│  │   - 해당 사진에 경고 배지 표시                       │    │
-│  │   - 사용자가 확인 후 진행 가능                       │    │
-│  └─────────────────────────────────────────────────────┘    │
-└─────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## 5. 자동 검증 방법
+## 5. 인물 판정 결과 처리
 
-### 5.1 검증 목표
+### 5.1 판정 기준
 
-위치 기반 매칭이 올바른지 자동으로 확인
+| 거리 | 판정 | 처리 |
+|------|------|------|
+| < 1.0 | 동일 인물 | 비교 그리드에 포함 |
+| >= 1.0 | 다른 인물 | 비교 그리드에서 **자동 제외** |
 
-### 5.2 검증 알고리즘
+### 5.2 제외된 사진 처리
 
-```swift
-struct ValidationResult {
-    let isValid: Bool
-    let overallConfidence: MatchConfidence
-    let mismatchedPhotos: [PHAsset]  // 신뢰도 낮은 사진들
-    let details: [PhotoValidation]
-}
+- 다른 인물로 판정된 사진은 비교 그리드에 표시하지 않음
+- 별도 경고 UI 없음 (사용자가 보면 바로 알 수 있으므로)
+- 헤더의 "인물 N (M장)"에서 M은 실제 표시되는 사진 수
 
-struct PhotoValidation {
-    let asset: PHAsset
-    let personIndex: Int
-    let distance: Float
-    let confidence: MatchConfidence
-}
+### 5.3 예시
 
-func validatePersonMatching(
-    referencePhoto: PHAsset,
-    referenceFaces: [CroppedFace],
-    groupPhotos: [PHAsset],
-    personIndex: Int
-) async throws -> ValidationResult {
-
-    guard personIndex <= referenceFaces.count else {
-        throw ValidationError.invalidPersonIndex
-    }
-
-    let referenceFace = referenceFaces[personIndex - 1]
-    var details: [PhotoValidation] = []
-    var mismatchedPhotos: [PHAsset] = []
-
-    for photo in groupPhotos where photo != referencePhoto {
-        // 해당 사진에서 얼굴 감지 및 위치 기반 매칭
-        let faces = try await detectAndCropFaces(in: photo)
-        let sortedFaces = assignPersonIndicesByPosition(faces)
-
-        // 해당 인물 번호의 얼굴 찾기
-        guard let targetFace = sortedFaces.first(where: { $0.personIndex == personIndex }) else {
-            // 인물 미검출 → 비교에서 제외
-            continue
-        }
-
-        // Feature Print 거리 계산
-        var distance: Float = 0
-        try referenceFace.featurePrint.computeDistance(&distance, to: targetFace.featurePrint)
-
-        let confidence: MatchConfidence
-        switch distance {
-        case ..<0.6: confidence = .high
-        case 0.6..<1.0: confidence = .medium
-        default: confidence = .low
-        }
-
-        details.append(PhotoValidation(
-            asset: photo,
-            personIndex: personIndex,
-            distance: distance,
-            confidence: confidence
-        ))
-
-        if confidence == .low {
-            mismatchedPhotos.append(photo)
-        }
-    }
-
-    // 전체 신뢰도 계산
-    let overallConfidence: MatchConfidence
-    if mismatchedPhotos.isEmpty {
-        let avgDistance = details.map(\.distance).reduce(0, +) / Float(details.count)
-        overallConfidence = avgDistance < 0.6 ? .high : .medium
-    } else {
-        overallConfidence = .low
-    }
-
-    return ValidationResult(
-        isValid: mismatchedPhotos.isEmpty,
-        overallConfidence: overallConfidence,
-        mismatchedPhotos: mismatchedPhotos,
-        details: details
-    )
-}
 ```
+유사사진정리그룹: 8장
+인물 2 선택 후 Feature Print 비교:
+- 사진 1: 거리 0.3 → 포함
+- 사진 2: 거리 0.5 → 포함
+- 사진 3: 거리 0.4 → 포함
+- 사진 4: 거리 1.2 → 제외 (다른 인물)
+- 사진 5: 거리 0.6 → 포함
+- 사진 6: 거리 0.8 → 포함
+- 사진 7: 미검출 → 제외
+- 사진 8: 거리 0.4 → 포함
 
-### 5.3 검증 시점
-
-**검증 타이밍:** prd9.md §2.7.5 참조
-
-### 5.4 경고 UI
-
-**경고 UI 스펙:** prd9.md §2.7.3 (전체 경고), §2.7.4 (개별 배지) 참조
-
-### 5.5 검증 결과 활용
-
-| 신뢰도 | 처리 |
-|--------|------|
-| 높음 (High) | 정상 표시, 경고 없음 |
-| 중간 (Medium) | 정상 표시, 경고 없음 (임계값 근접 알림 옵션) |
-| 낮음 (Low) | 경고 배지 표시, 사용자 확인 요청 |
+결과: "인물 2 (6장)" 표시, 6장만 비교 그리드에 표시
+```
 
 ---
 
@@ -1225,3 +1027,4 @@ func cropFaceRegion(from image: CGImage, boundingBox: CGRect) -> CGImage? {
 | 1.0 | 2026-01-01 | prd8algorithm 기반 신규 작성: CachedFace 구조 도입, 뷰어 얼굴 분석 제거(캐시 참조), 좌표 변환 함수 추가, 캐시 테스트 케이스 추가 |
 | 1.1 | 2026-01-01 | 로직 보완: SimilarityCache에 LRU eviction 로직 추가(evictIfNeeded, recalculateValidPersonIndices), prepareForReanalysis() 추가(재분석 시 old group 정리), getExpectedViewerSize() 추가(iPad 분할 모드 반영) |
 | 1.2 | 2026-01-01 | 구현 명세 보완: §3.5 뷰어 분석 요청 시 범위 처리 명확화(notAnalyzed만 분석), §6.1 얼굴 크롭 코드 수정(정사각형 유지, 경계 내 최대 크기로 축소) |
+| 1.3 | 2026-01-02 | 인물 매칭 방식 변경: 하이브리드(위치 기반 + 백그라운드 검증) → Feature Print 기반 직접 매칭. §4.2 방식 선택 재작성, §4.3 위치 기반 → 인물 번호 부여로 축소, §4.4 Feature Print 기반 인물 매칭으로 재작성, §4.5 하이브리드 방식 삭제, §5 자동 검증 → 인물 판정 결과 처리로 단순화 |
