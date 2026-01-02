@@ -107,21 +107,22 @@ extension GridViewController {
             // - 정지 후에만 visible + 1화면 범위 캐싱
             self.preheatAfterScrollStop()
 
-            // [고품질 업그레이드] 스크롤 중 .scrolling 품질로 로드된 셀을 .fast로 업그레이드
-            self.upgradeVisibleCellsToHighQuality()
-
             // [--log-thumb] 스크롤 종료 0.2초 후 visible 셀 해상도 검사
             if FileLogger.logThumbEnabled {
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) { [weak self] in
                     self?.logVisibleCellResolution()
                 }
             }
+
+            // Note: PHImageRequestOptions.deliveryMode = .opportunistic 모드에서는
+            // 저해상도 → 고해상도가 자동으로 전달되므로 별도 리로드 불필요
+            // reloadItems 호출 시 prepareForReuse()가 호출되어 이미지가 깜빡거림
         }
     }
 
     /// [--log-thumb] visible 셀의 실제 이미지 해상도 vs 기대 해상도 로그
     private func logVisibleCellResolution() {
-        let expectedSize = thumbnailSize()  // 항상 100% 크기
+        let expectedSize = thumbnailSize(forScrolling: false)  // 스크롤 정지 상태의 기대 크기
         let visibleCells = collectionView.visibleCells.compactMap { $0 as? PhotoCell }
 
         var underSizedCount = 0
@@ -153,37 +154,6 @@ extension GridViewController {
                 let ratio = expectedSize.width > 0 ? Double(imgPx) / Double(expectedSize.width) * 100 : 0
                 FileLogger.log("[Thumb:Check] cell[\(i)] img=\(imgPx)px (\(String(format: "%.0f", ratio))% of expected)")
             }
-        }
-    }
-
-    /// 스크롤 정지 후 visible 셀 고품질 업그레이드
-    /// - needsHighQualityUpgrade가 true인 셀만 .fast 품질로 재요청
-    /// - 스크롤 중 .scrolling으로 로드된 저품질 이미지를 고품질로 교체
-    private func upgradeVisibleCellsToHighQuality() {
-        let visibleCells = collectionView.visibleCells.compactMap { $0 as? PhotoCell }
-        let targetSize = thumbnailSize()
-        var upgradeCount = 0
-
-        for (index, cell) in collectionView.visibleCells.enumerated() {
-            guard let photoCell = cell as? PhotoCell,
-                  photoCell.needsHighQualityUpgrade else { continue }
-
-            // 해당 셀의 indexPath와 asset 가져오기
-            guard let indexPath = collectionView.indexPath(for: cell) else { continue }
-
-            // padding 셀 제외
-            guard indexPath.item >= paddingCellCount else { continue }
-
-            let assetIndexPath = IndexPath(item: indexPath.item - paddingCellCount, section: 0)
-            guard let asset = dataSourceDriver.asset(at: assetIndexPath) else { continue }
-
-            // 고품질 업그레이드 요청
-            photoCell.requestHighQualityUpgrade(asset: asset, targetSize: targetSize)
-            upgradeCount += 1
-        }
-
-        if FileLogger.logThumbEnabled && upgradeCount > 0 {
-            FileLogger.log("[Thumb:Upgrade] 스크롤 정지 후 \(upgradeCount)개 셀 고품질 업그레이드 요청")
         }
     }
 

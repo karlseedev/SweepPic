@@ -102,13 +102,11 @@ public final class RequestToken: @unchecked Sendable {
 // MARK: - ImageQuality
 
 /// 이미지 품질 옵션
-/// - fast: 빠른 로딩 우선 (그리드 썸네일용, 기본값)
-/// - scrolling: 스크롤 중 최소 품질 (저품질 1회만, 고해상도 디코딩 안 함)
+/// - fast: 빠른 로딩 우선 (그리드 썸네일용)
 /// - high: 고품질 우선 (뷰어용)
 public enum ImageQuality {
-    case fast       // .opportunistic + .fast (기본값)
-    case scrolling  // .fastFormat + .fast (스크롤 중 - 저품질 1회만)
-    case high       // .highQualityFormat + .exact
+    case fast   // .opportunistic + .fast (기본값)
+    case high   // .highQualityFormat + .exact
 }
 
 // MARK: - ImagePipelineProtocol
@@ -337,18 +335,6 @@ public final class ImagePipeline: ImagePipelineProtocol {
         return options
     }()
 
-    /// 스크롤 중 요청 옵션 (최소 품질, 빠른 응답)
-    /// - .fastFormat: 저품질 1회만 전달 (고해상도 디코딩 안 함)
-    /// - 스크롤 성능 최적화: CPU/IO 부하 최소화
-    private lazy var scrollingOptions: PHImageRequestOptions = {
-        let options = PHImageRequestOptions()
-        options.deliveryMode = .fastFormat  // 저품질 1회만
-        options.resizeMode = .fast
-        options.isNetworkAccessAllowed = false
-        options.isSynchronous = false
-        return options
-    }()
-
     // MARK: - Initialization
 
     /// 비공개 초기화 (싱글톤)
@@ -375,15 +361,7 @@ public final class ImagePipeline: ImagePipelineProtocol {
         let requestStartTime = CACurrentMediaTime()
 
         // 품질에 따른 옵션 선택
-        let options: PHImageRequestOptions
-        switch quality {
-        case .high:
-            options = fullSizeOptions
-        case .scrolling:
-            options = scrollingOptions
-        case .fast:
-            options = thumbnailOptions
-        }
+        let options = (quality == .high) ? fullSizeOptions : thumbnailOptions
 
         // [Stats] 요청 카운터 증가
         statsLock.lock()

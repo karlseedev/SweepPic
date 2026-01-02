@@ -187,7 +187,7 @@ extension GridViewController {
             return
         }
 
-        let targetSize = thumbnailSize()
+        let targetSize = thumbnailSize(forScrolling: false)
 
         for indexPath in collectionView.indexPathsForVisibleItems {
             // padding 셀 제외
