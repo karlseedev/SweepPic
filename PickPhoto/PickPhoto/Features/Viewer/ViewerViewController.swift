@@ -184,6 +184,9 @@ final class ViewerViewController: UIViewController {
     /// 최초 표시 페이드 인 적용 여부 (시스템 전환 대신 사용)
     private var didPerformInitialFadeIn: Bool = false
 
+    /// 디버그 로그 활성화
+    private let debugViewer = true
+
     /// iOS 18+ zoom transition 사용 시 커스텀 페이드 애니메이션 비활성화 플래그
     /// preferredTransition = .zoom 설정 시 true로 설정해야 이중 애니메이션 방지
     var disableCustomFadeAnimation: Bool = false
@@ -774,8 +777,22 @@ extension ViewerViewController: UIPageViewControllerDataSource {
 
 extension ViewerViewController: UIPageViewControllerDelegate {
 
+    func pageViewController(_ pageViewController: UIPageViewController, willTransitionTo pendingViewControllers: [UIViewController]) {
+        guard debugViewer else { return }
+        let now = CACurrentMediaTime()
+        let pendingIndex = pendingViewControllers.first.flatMap { index(from: $0) }
+        print("[Viewer] ➡️ willTransition - from: \(currentIndex), to: \(pendingIndex.map(String.init) ?? "nil"), t=\(String(format: "%.3f", now))")
+    }
+
     func pageViewController(_ pageViewController: UIPageViewController, didFinishAnimating finished: Bool, previousViewControllers: [UIViewController], transitionCompleted completed: Bool) {
         // 전환 완료 시에만 처리
+        if debugViewer {
+            let now = CACurrentMediaTime()
+            let prevIndex = previousViewControllers.first.flatMap { index(from: $0) }
+            let nextIndex = pageViewController.viewControllers?.first.flatMap { index(from: $0) }
+            print("[Viewer] ✅ didFinishAnimating - completed=\(completed), prev=\(prevIndex.map(String.init) ?? "nil"), next=\(nextIndex.map(String.init) ?? "nil"), t=\(String(format: "%.3f", now))")
+        }
+
         guard completed else { return }
 
         // 현재 표시 중인 VC에서 인덱스 추출

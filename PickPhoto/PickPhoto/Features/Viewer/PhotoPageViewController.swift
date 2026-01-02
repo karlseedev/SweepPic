@@ -97,6 +97,12 @@ final class PhotoPageViewController: UIViewController {
     /// 디버그 로그 활성화
     private let debugZoom = true
 
+    /// 사진 로딩 디버그 로그 활성화
+    private let debugPhoto = true
+
+    /// 초기 레이아웃 정보 로그 여부 (로그 스팸 방지)
+    private var hasLoggedInitialLayoutInfo = false
+
     // MARK: - Initialization
 
     init(asset: PHAsset, index: Int) {
@@ -119,6 +125,14 @@ final class PhotoPageViewController: UIViewController {
     override func viewDidLayoutSubviews() {
         super.viewDidLayoutSubviews()
         scrollView.frame = view.bounds
+
+        if debugPhoto {
+            print("[Photo] 📐 viewDidLayoutSubviews - index: \(index), bounds: \(view.bounds.size)")
+            if !hasLoggedInitialLayoutInfo {
+                hasLoggedInitialLayoutInfo = true
+                print("[Photo] 🎨 backgroundColor - index: \(index), color: \(String(describing: view.backgroundColor))")
+            }
+        }
 
         // 줌 인터랙션 중에는 레이아웃 갱신을 보류 (줌 완료 후 수행)
         // isZoomInteractionActive는 isZooming보다 먼저 true가 되어 첫 프레임부터 보호
@@ -206,13 +220,21 @@ final class PhotoPageViewController: UIViewController {
         )
 
         guard targetSize.width > 0, targetSize.height > 0 else { return }
-        guard targetSize != lastRequestedTargetSize else { return }
+        guard targetSize != lastRequestedTargetSize else {
+            if debugPhoto {
+                print("[Photo] ⏭️ 중복 요청 스킵 - index: \(index)")
+            }
+            return
+        }
         lastRequestedTargetSize = targetSize
 
         // 시간 측정 시작
         imageRequestStartTime = CFAbsoluteTimeGetCurrent()
         hasLoadedFullSize = false
-        print("[Viewer] 🚀 요청 시작 (quality: .high)")
+
+        if debugPhoto {
+            print("[Photo] 🚀 이미지 요청 시작 - index: \(index), targetSize: \(targetSize)")
+        }
 
         requestCancellable?.cancel()
         requestCancellable = ImagePipeline.shared.requestImage(
@@ -225,7 +247,10 @@ final class PhotoPageViewController: UIViewController {
 
             // 1차 로딩 시간 측정
             let elapsed = (CFAbsoluteTimeGetCurrent() - self.imageRequestStartTime) * 1000
-            print("[Viewer] 1️⃣ 화면크기: \(Int(elapsed))ms, size=\(image.size)")
+
+            if self.debugPhoto {
+                print("[Photo] 🖼️ 이미지 로드 완료 - index: \(self.index), \(Int(elapsed))ms, size=\(image.size), degraded=\(isDegraded)")
+            }
 
             self.imageView.image = image
             self.imageSize = image.size
@@ -233,7 +258,13 @@ final class PhotoPageViewController: UIViewController {
             // 줌 인터랙션 중에는 레이아웃 업데이트 보류
             if self.isZoomInteractionActive {
                 self.needsLayoutUpdateAfterZoom = true
+                if self.debugPhoto {
+                    print("[Photo] ⏸️ 레이아웃 보류 (줌 중) - index: \(self.index)")
+                }
             } else {
+                if self.debugPhoto {
+                    print("[Photo] 📏 updateImageLayout 호출 - index: \(self.index)")
+                }
                 self.updateImageLayout()
             }
 
@@ -246,6 +277,10 @@ final class PhotoPageViewController: UIViewController {
 
     /// 원본 이미지 요청 (줌용)
     private func requestFullSizeImage() {
+        if debugPhoto {
+            let now = CACurrentMediaTime()
+            print("[Viewer] 2️⃣ 원본 요청 시작 - index: \(index), t=\(String(format: "%.3f", now))")
+        }
         fullSizeRequestCancellable?.cancel()
         fullSizeRequestCancellable = ImagePipeline.shared.requestImage(
             for: asset,
@@ -257,7 +292,8 @@ final class PhotoPageViewController: UIViewController {
 
             // 2차 로딩 시간 측정
             let elapsed = (CFAbsoluteTimeGetCurrent() - self.imageRequestStartTime) * 1000
-            print("[Viewer] 2️⃣ 원본: \(Int(elapsed))ms, size=\(image.size)")
+            let now = CACurrentMediaTime()
+            print("[Viewer] 2️⃣ 원본: \(Int(elapsed))ms, size=\(image.size), t=\(String(format: "%.3f", now))")
 
             self.hasLoadedFullSize = true
             self.imageView.image = image
@@ -267,6 +303,9 @@ final class PhotoPageViewController: UIViewController {
             if self.isZoomInteractionActive {
                 self.needsLayoutUpdateAfterZoom = true
             } else {
+                if self.debugPhoto {
+                    print("[Photo] 📏 updateImageLayoutPreservingZoom 호출 - index: \(self.index)")
+                }
                 self.updateImageLayoutPreservingZoom()
             }
         }
@@ -288,11 +327,19 @@ final class PhotoPageViewController: UIViewController {
         let fitWidth = imageSize.width * ratio
         let fitHeight = imageSize.height * ratio
 
+        let oldFrame = imageView.frame
+
         // 이미지 뷰 크기 설정
         imageView.frame = CGRect(x: 0, y: 0, width: fitWidth, height: fitHeight)
 
         // 스크롤 뷰 콘텐츠 크기 설정
         scrollView.contentSize = CGSize(width: fitWidth, height: fitHeight)
+
+        if debugPhoto && oldFrame != imageView.frame {
+            print("[Photo] 📦 frame 변경 - index: \(index), old: \(oldFrame), new: \(imageView.frame)")
+            let emptyVertical = max(0, scrollViewSize.height - fitHeight)
+            print("[Photo] 🧱 emptyVertical - index: \(index), empty=\(String(format: "%.1f", emptyVertical))")
+        }
 
         // P0: 초기 1회에만 줌 스케일 리셋
         let preserveOffset = hasAppliedInitialLayout
@@ -368,6 +415,10 @@ final class PhotoPageViewController: UIViewController {
         } else {
             scrollView.contentInset = newInset
             scrollView.contentOffset = CGPoint(x: -newInset.left, y: -newInset.top)
+        }
+
+        if debugPhoto {
+            print("[Photo] 🧭 contentInset - index: \(index), inset=\(newInset), offset=\(scrollView.contentOffset)")
         }
     }
 

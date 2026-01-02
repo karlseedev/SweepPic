@@ -190,30 +190,39 @@ final class VideoPageViewController: UIViewController {
         doubleTapGesture.numberOfTapsRequired = 2
         scrollView.addGestureRecognizer(doubleTapGesture)
 
-        // scrollView의 pan 제스처 delegate 설정 (제스처 충돌 방지)
-        scrollView.panGestureRecognizer.delegate = self
+        // Note: UIScrollView의 내장 panGestureRecognizer.delegate는 변경 불가
+        // 제스처 충돌 방지는 scrollViewDidScroll에서 처리
     }
 
     // MARK: - Poster Loading
 
     /// 포스터 이미지 로드
     private func loadPoster() {
+        if debugVideo {
+            print("[Video] 🖼️ loadPoster() called - index: \(index)")
+        }
+
+        // bounds가 아직 설정되지 않은 경우 기본 크기 사용
+        let screenSize = UIScreen.main.bounds.size
+        let width = view.bounds.width > 0 ? view.bounds.width : screenSize.width
+        let height = view.bounds.height > 0 ? view.bounds.height : screenSize.height
+
         let targetSize = CGSize(
-            width: view.bounds.width * UIScreen.main.scale,
-            height: view.bounds.height * UIScreen.main.scale
+            width: width * UIScreen.main.scale,
+            height: height * UIScreen.main.scale
         )
 
         thumbnailRequestCancellable = ImagePipeline.shared.requestImage(
             for: asset,
             targetSize: targetSize,
             contentMode: .aspectFit
-        ) { [weak self] image, info in
+        ) { [weak self] image, isDegraded in
             guard let self = self, let image = image else { return }
 
             self.playerLayerView.setPoster(image)
 
             if self.debugVideo {
-                print("[Video] Poster loaded - index: \(self.index)")
+                print("[Video] 🖼️ Poster loaded - index: \(self.index), degraded: \(isDegraded), size: \(image.size)")
             }
         }
     }
@@ -223,6 +232,18 @@ final class VideoPageViewController: UIViewController {
     /// 비디오 요청 (ViewerViewController가 호출)
     /// - 인접 페이지가 아닌 현재 페이지에서만 호출됨을 보장
     func requestVideoIfNeeded() {
+        // 이미 첫 프레임이 표시됐으면 재요청 불필요 (취소 후 재진입 시)
+        guard !hasShownFirstFrame else {
+            if debugVideo {
+                print("[Video] ⏭️ Skip request (already shown) - index: \(index)")
+            }
+            // 플레이어가 있으면 재생 재개
+            if player != nil {
+                player?.play()
+            }
+            return
+        }
+
         guard !hasRequestedVideo else { return }
 
         hasRequestedVideo = true
@@ -230,7 +251,10 @@ final class VideoPageViewController: UIViewController {
         errorLabel.isHidden = true
 
         if debugVideo {
+            // 호출 스택 추적 (디버그용)
+            let callStack = Thread.callStackSymbols.prefix(6).joined(separator: "\n")
             print("[Video] Requesting video - index: \(index), asset: \(asset.localIdentifier.prefix(8))...")
+            print("[Video] Call stack:\n\(callStack)")
         }
 
         videoRequestCancellable = VideoPipeline.shared.requestPlayerItem(
@@ -272,9 +296,17 @@ final class VideoPageViewController: UIViewController {
 
     /// 비디오 요청 취소 (페이지 이탈 시)
     private func cancelVideoRequest() {
+        let hadRequest = videoRequestCancellable != nil
         videoRequestCancellable?.cancel()
         videoRequestCancellable = nil
         hasRequestedVideo = false
+
+        // 로딩 인디케이터 중지 (이전에 누락됨!)
+        playerLayerView.loadingIndicator.stopAnimating()
+
+        if debugVideo && hadRequest {
+            print("[Video] ⏹️ Request cancelled & indicator stopped - index: \(index)")
+        }
     }
 
     // MARK: - Player Setup
@@ -305,12 +337,22 @@ final class VideoPageViewController: UIViewController {
 
     /// KVO 설정
     private func setupKVO() {
+        if debugVideo {
+            print("[Video] 🔍 KVO setup started - index: \(index)")
+        }
+
         // AVPlayerLayer.isReadyForDisplay 관찰
         readyForDisplayObserver = playerLayerView.playerLayer.observe(
             \.isReadyForDisplay,
             options: [.initial, .new]
         ) { [weak self] layer, _ in
-            guard let self = self, layer.isReadyForDisplay else { return }
+            guard let self = self else { return }
+
+            if self.debugVideo {
+                print("[Video] 🔍 KVO isReadyForDisplay: \(layer.isReadyForDisplay) - index: \(self.index)")
+            }
+
+            guard layer.isReadyForDisplay else { return }
 
             DispatchQueue.main.async {
                 self.onReadyForDisplay()
@@ -324,6 +366,10 @@ final class VideoPageViewController: UIViewController {
         ) { [weak self] item, _ in
             guard let self = self else { return }
 
+            if self.debugVideo {
+                print("[Video] 🔍 KVO playerItem.status: \(item.status.rawValue) - index: \(self.index)")
+            }
+
             if item.status == .failed {
                 DispatchQueue.main.async {
                     self.showError(item.error?.localizedDescription ?? "재생 실패")
@@ -335,7 +381,12 @@ final class VideoPageViewController: UIViewController {
     /// 첫 프레임 표시 준비 완료
     private func onReadyForDisplay() {
         // 중복 호출 방지
-        guard !hasShownFirstFrame else { return }
+        guard !hasShownFirstFrame else {
+            if debugVideo {
+                print("[Video] ⚠️ onReadyForDisplay skipped (already shown) - index: \(index)")
+            }
+            return
+        }
         hasShownFirstFrame = true
 
         // 포스터 fade-out
@@ -348,7 +399,7 @@ final class VideoPageViewController: UIViewController {
         }
 
         if debugVideo {
-            print("[Video] Ready for display - index: \(index)")
+            print("[Video] ✅ Ready for display, indicator stopped - index: \(index)")
         }
     }
 
@@ -567,21 +618,7 @@ extension VideoPageViewController: UIScrollViewDelegate {
 
 extension VideoPageViewController: UIGestureRecognizerDelegate {
 
-    /// 페이지 스와이프와 UIScrollView pan 충돌 방지
-    func gestureRecognizerShouldBegin(_ gestureRecognizer: UIGestureRecognizer) -> Bool {
-        guard gestureRecognizer == scrollView.panGestureRecognizer else {
-            return true
-        }
-
-        // 줌 상태가 아니면 수평 스와이프는 페이지 전환 우선
-        if scrollView.zoomScale <= 1.0 {
-            let velocity = scrollView.panGestureRecognizer.velocity(in: scrollView)
-            // 수평 움직임이 더 크면 페이지 스와이프로
-            if abs(velocity.x) > abs(velocity.y) {
-                return false
-            }
-        }
-
-        return true
-    }
+    // Note: UIScrollView의 내장 panGestureRecognizer.delegate는 변경 불가
+    // 페이지 스와이프 충돌은 UIPageViewController가 자동 처리
+    // (zoomScale=1일 때 scrollView가 스크롤할 내용이 없으므로 페이지 스와이프로 전달됨)
 }
