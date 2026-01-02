@@ -494,10 +494,16 @@ extension PhotoPageViewController: UIScrollViewDelegate {
         return imageView
     }
 
-    /// 줌 시작 직전 - 플래그 설정 (isZooming보다 먼저 호출됨)
+    /// 줌 시작 직전 - 플래그 설정 및 LOD2 요청 (isZooming보다 먼저 호출됨)
     func scrollViewWillBeginZooming(_ scrollView: UIScrollView, with view: UIView?) {
         if debugZoom { print("[ZOOM] WillBegin - scale=\(String(format: "%.3f", scrollView.zoomScale)), origin=\(imageView.frame.origin)") }
         isZoomInteractionActive = true
+
+        // LOD2: 줌 시작 시 원본 이미지 요청 (아직 로드하지 않은 경우에만)
+        // 줌 시작 시점에 요청하여 확대 시 선명도 보장
+        if !hasLoadedFullSize {
+            requestFullSizeImage()
+        }
     }
 
     func scrollViewDidZoom(_ scrollView: UIScrollView) {
