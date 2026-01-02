@@ -781,10 +781,17 @@ extension ViewerViewController: UIPageViewControllerDataSource {
 extension ViewerViewController: UIPageViewControllerDelegate {
 
     func pageViewController(_ pageViewController: UIPageViewController, willTransitionTo pendingViewControllers: [UIViewController]) {
-        guard debugViewer else { return }
-        let now = CACurrentMediaTime()
-        let pendingIndex = pendingViewControllers.first.flatMap { index(from: $0) }
-        print("[Viewer] ➡️ willTransition - from: \(currentIndex), to: \(pendingIndex.map(String.init) ?? "nil"), t=\(String(format: "%.3f", now))")
+        if debugViewer {
+            let now = CACurrentMediaTime()
+            let pendingIndex = pendingViewControllers.first.flatMap { index(from: $0) }
+            print("[Viewer] ➡️ willTransition - from: \(currentIndex), to: \(pendingIndex.map(String.init) ?? "nil"), t=\(String(format: "%.3f", now))")
+        }
+
+        // LOD 파이프라인: 전환 시작 시 현재 페이지의 고품질 요청 취소
+        // (전환 중에는 LOD0 포스터만 사용, 전환 완료 후 LOD1 다시 요청)
+        if let currentVC = pageViewController.viewControllers?.first as? PhotoPageViewController {
+            currentVC.cancelHighQualityImageRequests()
+        }
     }
 
     func pageViewController(_ pageViewController: UIPageViewController, didFinishAnimating finished: Bool, previousViewControllers: [UIViewController], transitionCompleted completed: Bool) {
