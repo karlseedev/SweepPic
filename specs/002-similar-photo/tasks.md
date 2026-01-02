@@ -35,27 +35,31 @@
 
 **⚠️ CRITICAL**: User Story 작업 전 반드시 완료해야 함
 
-### 데이터 모델
+### 데이터 모델 (T002~T006)
 
 - [ ] T002 [P] SimilarityAnalysisState 열거형 생성 in `Features/SimilarPhoto/Models/SimilarityAnalysisState.swift`
 - [ ] T003 [P] CachedFace 구조체 생성 in `Features/SimilarPhoto/Models/CachedFace.swift`
-- [ ] T004 [P] SimilarThumbnailGroup 구조체 생성 in `Features/SimilarPhoto/Models/SimilarPhotoGroup.swift`
-- [ ] T005 [P] ComparisonGroup 구조체 생성 in `Features/SimilarPhoto/Models/SimilarPhotoGroup.swift`
-- [ ] T006 [P] AnalysisRequest 구조체 생성 in `Features/SimilarPhoto/Models/AnalysisRequest.swift`
-- [ ] T007 [P] FaceMatch 구조체 생성 in `Features/SimilarPhoto/Models/FaceMatch.swift`
+- [ ] T004 [P] SimilarThumbnailGroup + ComparisonGroup 구조체 생성 in `Features/SimilarPhoto/Models/SimilarPhotoGroup.swift`
+- [ ] T005 [P] AnalysisRequest 구조체 생성 in `Features/SimilarPhoto/Models/AnalysisRequest.swift`
+- [ ] T006 [P] FaceMatch 구조체 생성 in `Features/SimilarPhoto/Models/FaceMatch.swift`
 
-### 분석 엔진
+### 분석 엔진 - 유틸리티 (T007~T009)
 
-- [ ] T008 SimilarityAnalyzer 클래스 생성 - VNGenerateImageFeaturePrintRequest 기반 유사도 분석 in `Features/SimilarPhoto/Analysis/SimilarityAnalyzer.swift`
-- [ ] T009 FaceDetector 클래스 생성 - VNDetectFaceRectanglesRequest 기반 얼굴 감지 in `Features/SimilarPhoto/Analysis/FaceDetector.swift`
-- [ ] T010 SimilarityCache 클래스 생성 - LRU 캐시 (500장), 메모리 경고 처리, 과열 동시성 제한 in `Features/SimilarPhoto/Analysis/SimilarityCache.swift`
+- [ ] T007 [P] SimilarityImageLoader 생성 - PHImageManager 480px aspectFit 이미지 로딩 in `Features/SimilarPhoto/Analysis/SimilarityImageLoader.swift`
+- [ ] T008 [P] FaceCropper 생성 - bounding box + 30% 여백 + 정사각형 크롭 in `Features/SimilarPhoto/Analysis/FaceCropper.swift`
+- [ ] T009 [P] SimilarityAnalysisQueue 생성 - FIFO 큐, 동시 5개(과열 시 2개), 취소 처리 in `Features/SimilarPhoto/Analysis/SimilarityAnalysisQueue.swift`
 
-### 시스템 상태 처리
+### 분석 엔진 - 핵심 (T010~T012)
 
-- [ ] T011 메모리 경고 시 캐시 50% LRU 제거 구현 in `Features/SimilarPhoto/Analysis/SimilarityCache.swift`
-- [ ] T012 디바이스 과열 시 동시 분석 5개→2개 제한 구현 in `Features/SimilarPhoto/Analysis/SimilarityAnalyzer.swift`
-- [ ] T013 백그라운드 전환 시 분석 취소 구현 in `Features/SimilarPhoto/Analysis/SimilarityAnalyzer.swift`
-- [ ] T014 PHPhotoLibraryChangeObserver 연동 - 캐시 무효화 in `Features/SimilarPhoto/Analysis/SimilarityCache.swift`
+- [ ] T010 SimilarityAnalyzer 생성 - VNGenerateImageFeaturePrintRequest 유사도 분석 in `Features/SimilarPhoto/Analysis/SimilarityAnalyzer.swift`
+- [ ] T011 FaceDetector 생성 - VNDetectFaceRectanglesRequest 얼굴 감지, 5% 필터 in `Features/SimilarPhoto/Analysis/FaceDetector.swift`
+- [ ] T012 SimilarityCache 생성 - LRU 500장, 상태 관리, 완료 콜백 in `Features/SimilarPhoto/Analysis/SimilarityCache.swift`
+
+### 시스템 상태 처리 (T013~T015)
+
+- [ ] T013 [P] 메모리 경고 시 캐시 50% LRU 제거 + 과열 시 동시 분석 제한 in `Features/SimilarPhoto/Analysis/SimilarityCache.swift`, `SimilarityAnalysisQueue.swift`
+- [ ] T014 [P] 백그라운드 전환 시 분석 취소 in `Features/SimilarPhoto/Analysis/SimilarityAnalysisQueue.swift`
+- [ ] T015 [P] PHPhotoLibraryChangeObserver 연동 - 캐시 무효화 in `Features/SimilarPhoto/Analysis/SimilarityCache.swift`
 
 **Checkpoint**: 분석 엔진 완료 - User Story 구현 가능
 
@@ -67,24 +71,17 @@
 
 **Independent Test**: 그리드에서 스크롤 후 멈추면 유사 사진에 테두리가 표시되는지 확인
 
-### UI 컴포넌트
+### UI 컴포넌트 (T020~T021)
 
-- [ ] T015 [P] [US1] BorderAnimationLayer 생성 - CAShapeLayer + 빛 도는 애니메이션 (흰색 그라데이션, 시계방향 회전, 1.5초 주기) in `Features/SimilarPhoto/UI/BorderAnimationLayer.swift`
-- [ ] T016 [P] [US1] 정적 테두리 대체 구현 - 모션 감소 설정 시 흰색 2pt 실선 in `Features/SimilarPhoto/UI/BorderAnimationLayer.swift`
+- [ ] T020 [P] [US1] BorderAnimationLayer 생성 - CAShapeLayer + 빛 도는 애니메이션 (흰색 그라데이션, 시계방향 회전, 1.5초 주기) + 모션 감소 시 정적 테두리(흰색 2pt) in `Features/SimilarPhoto/UI/BorderAnimationLayer.swift`
 
-### GridViewController 통합
+### GridViewController 통합 (T021~T025)
 
-- [ ] T017 [US1] 스크롤 멈춤 감지 + 0.3초 디바운싱 구현 in `Features/Grid/GridViewController.swift`
-- [ ] T018 [US1] 분석 범위 결정 (화면 내 사진 ±7장) 로직 구현 in `Features/Grid/GridViewController.swift`
-- [ ] T019 [US1] SimilarityAnalyzer 호출 및 결과 처리 in `Features/Grid/GridViewController.swift`
-- [ ] T020 [US1] 유사 사진 셀에 BorderAnimationLayer 적용 in `Features/Grid/GridViewController.swift`
-- [ ] T021 [US1] 스크롤 재개 시 분석 취소 + 테두리 제거 in `Features/Grid/GridViewController.swift`
-- [ ] T022 [US1] 테두리 있는 사진 탭 시 뷰어 이동 처리 in `Features/Grid/GridViewController.swift`
-
-### 접근성 처리
-
-- [ ] T023 [US1] VoiceOver 활성화 시 기능 비활성화 체크 in `Features/Grid/GridViewController.swift`
-- [ ] T024 [US1] 선택 모드일 때 기능 비활성화 체크 in `Features/Grid/GridViewController.swift`
+- [ ] T021 [US1] 스크롤 멈춤 감지 + 0.3초 디바운싱 + 분석 범위 결정 (화면 ±7장) in `Features/Grid/GridViewController.swift`
+- [ ] T022 [US1] SimilarityAnalyzer 호출 및 결과 처리 + 유사 사진 셀에 BorderAnimationLayer 적용 in `Features/Grid/GridViewController.swift`
+- [ ] T023 [US1] 스크롤 재개 시 분석 취소 + 테두리 제거 in `Features/Grid/GridViewController.swift`
+- [ ] T024 [US1] 테두리 있는 사진 탭 시 뷰어 이동 처리 in `Features/Grid/GridViewController.swift`
+- [ ] T025 [US1] VoiceOver/선택 모드/휴지통 화면에서 기능 비활성화 체크 in `Features/Grid/GridViewController.swift`
 
 **Checkpoint**: 그리드 테두리 표시 완료 - 독립 테스트 가능
 
@@ -96,25 +93,17 @@
 
 **Independent Test**: 유사 사진 뷰어에서 + 버튼 표시 및 탭으로 얼굴 비교 화면 진입 테스트 가능
 
-### UI 컴포넌트
+### UI 컴포넌트 (T030~T031)
 
-- [ ] T025 [P] [US2] FaceButtonOverlay 생성 - 얼굴 위치에 + 버튼 표시 (최대 5개) in `Features/SimilarPhoto/UI/FaceButtonOverlay.swift`
-- [ ] T026 [P] [US2] AnalysisLoadingIndicator 생성 - 분석 중 로딩 표시 in `Features/SimilarPhoto/UI/AnalysisLoadingIndicator.swift`
+- [ ] T030 [P] [US2] FaceButtonOverlay 생성 - Vision→UIKit 좌표 변환, 얼굴 위치에 + 버튼 표시, 겹침 방지, 최대 5개 (6개 이상 시 크기순), 인물 번호 부여 (좌→우, 위→아래) in `Features/SimilarPhoto/UI/FaceButtonOverlay.swift`
+- [ ] T031 [P] [US2] AnalysisLoadingIndicator 생성 - 분석 중 로딩 표시 in `Features/SimilarPhoto/UI/AnalysisLoadingIndicator.swift`
 
-### ViewerViewController 통합
+### ViewerViewController 통합 (T032~T035)
 
-- [ ] T027 [US2] 캐시 hit 시 +버튼 즉시 표시 (100ms 이내) in `Features/Viewer/ViewerViewController.swift`
-- [ ] T028 [US2] 캐시 miss 시 분석 요청 + 로딩 인디케이터 표시 in `Features/Viewer/ViewerViewController.swift`
-- [ ] T029 [US2] 분석 완료 후 +버튼 표시 (0.5초 이내) in `Features/Viewer/ViewerViewController.swift`
-- [ ] T030 [US2] Vision 좌표 → UIKit 좌표 변환 구현 in `Features/SimilarPhoto/UI/FaceButtonOverlay.swift`
-- [ ] T031 [US2] +버튼 겹침 방지 위치 조정 로직 in `Features/SimilarPhoto/UI/FaceButtonOverlay.swift`
-- [ ] T032 [US2] 6개 이상 얼굴 시 크기순 상위 5개 선택 로직 in `Features/SimilarPhoto/UI/FaceButtonOverlay.swift`
-- [ ] T033 [US2] 인물 번호 부여 (좌→우, 위→아래 순) in `Features/SimilarPhoto/UI/FaceButtonOverlay.swift`
-
-### 화면 회전/멀티윈도우
-
-- [ ] T034 [US2] 화면 회전 시 +버튼 위치 재계산 (viewWillTransition) in `Features/Viewer/ViewerViewController.swift`
-- [ ] T035 [US2] iPad 멀티윈도우 지원 - 윈도우 크기 변경 시 +버튼 위치 재계산 in `Features/Viewer/ViewerViewController.swift`
+- [ ] T032 [US2] 캐시 hit 시 +버튼 즉시 표시 (100ms 이내) in `Features/Viewer/ViewerViewController.swift`
+- [ ] T033 [US2] 캐시 miss 시 분석 요청 + 로딩 인디케이터 + 완료 후 +버튼 표시 (0.5초 이내) in `Features/Viewer/ViewerViewController.swift`
+- [ ] T034 [US2] 화면 회전/iPad 멀티윈도우 시 +버튼 위치 재계산 (viewWillTransition) in `Features/Viewer/ViewerViewController.swift`
+- [ ] T035 [US2] +버튼 탭 시 FaceComparisonViewController 표시 in `Features/Viewer/ViewerViewController.swift`
 
 **Checkpoint**: 뷰어 +버튼 표시 완료 - 독립 테스트 가능
 
@@ -126,36 +115,21 @@
 
 **Independent Test**: 얼굴 비교 화면에서 사진 선택 후 삭제하여 휴지통 이동 테스트 가능
 
-### FaceComparisonViewController
+### FaceComparisonViewController (T040~T046)
 
-- [ ] T036 [US3] FaceComparisonViewController 생성 - 2열 정사각형 그리드 레이아웃 in `Features/SimilarPhoto/UI/FaceComparisonViewController.swift`
-- [ ] T037 [US3] ComparisonGroup 생성 - 거리순 최대 8장 선택 알고리즘 in `Features/SimilarPhoto/UI/FaceComparisonViewController.swift`
-- [ ] T038 [US3] 헤더 "인물 N (M장)" 표시 구현 in `Features/SimilarPhoto/UI/FaceComparisonViewController.swift`
-- [ ] T039 [US3] 얼굴 크롭 구현 - bounding box + 30% 여백 + 정사각형 in `Features/SimilarPhoto/UI/FaceComparisonViewController.swift`
-- [ ] T040 [US3] 사진 탭 선택/해제 + 체크마크 표시 in `Features/SimilarPhoto/UI/FaceComparisonViewController.swift`
+- [ ] T040 [US3] FaceComparisonViewController 생성 - 2열 정사각형 그리드 레이아웃 in `Features/SimilarPhoto/UI/FaceComparisonViewController.swift`
+- [ ] T041 [US3] ComparisonGroup 생성 알고리즘 - 거리순 최대 8장 선택 in `Features/SimilarPhoto/UI/FaceComparisonViewController.swift`
+- [ ] T042 [US3] +버튼 탭 시 Feature Print 비교 (거리 1.0 기준) + 로딩 스피너 in `Features/SimilarPhoto/UI/FaceComparisonViewController.swift`
+- [ ] T043 [US3] FaceCropper로 얼굴 크롭 + 2열 그리드 표시 in `Features/SimilarPhoto/UI/FaceComparisonViewController.swift`
+- [ ] T044 [US3] 헤더 "인물 N (M장)" + 순환 버튼(↻) 구현 - 인물 번호 오름차순 원형 순환, 선택 상태 유지 in `Features/SimilarPhoto/UI/FaceComparisonViewController.swift`
+- [ ] T045 [US3] 사진 탭 선택/해제 + 체크마크 + 하단바 (Cancel, 선택 개수, Delete) in `Features/SimilarPhoto/UI/FaceComparisonViewController.swift`
+- [ ] T046 [US3] Delete 탭 시 TrashStore로 이동 + 뷰어 복귀 in `Features/SimilarPhoto/UI/FaceComparisonViewController.swift`
 
-### 인물 순환
+### 삭제 후 처리 (T047~T049)
 
-- [ ] T041 [US3] 순환 버튼(↻) 구현 - 인물 번호 오름차순, 원형 순환 in `Features/SimilarPhoto/UI/FaceComparisonViewController.swift`
-- [ ] T042 [US3] 인물 전환 시 선택 상태 유지 in `Features/SimilarPhoto/UI/FaceComparisonViewController.swift`
-
-### Feature Print 인물 매칭
-
-- [ ] T043 [US3] +버튼 탭 시 Feature Print 비교로 동일 인물 필터링 (거리 1.0 기준) in `Features/SimilarPhoto/UI/FaceComparisonViewController.swift`
-- [ ] T044 [US3] FaceMatch 경고 표시 (거리 >= 1.0) in `Features/SimilarPhoto/UI/FaceComparisonViewController.swift`
-
-### 하단바 및 삭제
-
-- [ ] T045 [US3] 하단바 구현 - Cancel, 선택 개수, Delete 버튼 (FloatingTabBar 재사용) in `Features/SimilarPhoto/UI/FaceComparisonViewController.swift`
-- [ ] T046 [US3] Delete 탭 시 TrashStore로 사진 이동 in `Features/SimilarPhoto/UI/FaceComparisonViewController.swift`
-- [ ] T047 [US3] 삭제 후 뷰어 복귀 처리 in `Features/SimilarPhoto/UI/FaceComparisonViewController.swift`
-
-### 삭제 후 그룹 처리
-
-- [ ] T048 [US3] 현재 사진 삭제 시 이전 사진으로 이동 (없으면 다음) in `Features/Viewer/ViewerViewController.swift`
-- [ ] T049 [US3] 모든 사진 삭제 시 뷰어 닫고 그리드 복귀 in `Features/Viewer/ViewerViewController.swift`
-- [ ] T050 [US3] 그룹 멤버 3장 미만 시 그룹 무효화 + 테두리/+버튼 제거 in `Features/SimilarPhoto/Analysis/SimilarityCache.swift`
-- [ ] T051 [US3] Undo 기능 통합 - 기존 TrashStore Undo와 동일 in `Stores/TrashStore.swift`
+- [ ] T047 [US3] 현재 사진 삭제 시 이전/다음 사진 이동 + 모든 사진 삭제 시 그리드 복귀 in `Features/Viewer/ViewerViewController.swift`
+- [ ] T048 [US3] 그룹 멤버 3장 미만 시 그룹 무효화 + 테두리/+버튼 제거 in `Features/SimilarPhoto/Analysis/SimilarityCache.swift`
+- [ ] T049 [US3] Undo 기능 통합 - 기존 TrashStore와 동일 in `Stores/TrashStore.swift`
 
 **Checkpoint**: 얼굴 비교 및 삭제 완료 - 핵심 MVP 완성
 
@@ -167,9 +141,7 @@
 
 **Independent Test**: 토글 버튼으로 + 버튼 숨김/보임 전환 테스트 가능
 
-- [ ] T052 [US4] eye/eye.slash 토글 버튼 구현 in `Features/Viewer/ViewerViewController.swift`
-- [ ] T053 [US4] +버튼 숨김/보임 상태 관리 in `Features/Viewer/ViewerViewController.swift`
-- [ ] T054 [US4] 다른 사진으로 스와이프 후 복귀 시 보임 상태 리셋 in `Features/Viewer/ViewerViewController.swift`
+- [ ] T050 [US4] eye/eye.slash 토글 버튼 + 상태 관리 + 스와이프 복귀 시 보임 리셋 in `Features/Viewer/ViewerViewController.swift`
 
 **Checkpoint**: 오버레이 토글 완료
 
@@ -179,26 +151,20 @@
 
 **Purpose**: 성능 최적화 및 품질 개선
 
-### 성능 최적화
+### 성능 검증 (T060~T062)
 
-- [ ] T055 [P] 그리드 스크롤 60fps/120fps(ProMotion) 유지 검증 in `Features/Grid/GridViewController.swift`
-- [ ] T056 [P] 테두리 표시 1초 이내 성능 검증 in `Features/SimilarPhoto/UI/BorderAnimationLayer.swift`
-- [ ] T057 [P] +버튼 탭 후 0.5초 이내 얼굴 비교 화면 표시 검증 in `Features/SimilarPhoto/UI/FaceComparisonViewController.swift`
-- [ ] T058 [P] 캐시 메모리 누수 검증 (Instruments Leaks) in `Features/SimilarPhoto/Analysis/SimilarityCache.swift`
+- [ ] T060 [P] 그리드 60fps/120fps(ProMotion) + 테두리 1초 이내 표시 검증 in `Features/Grid/GridViewController.swift`
+- [ ] T061 [P] +버튼 탭 후 0.5초 이내 얼굴 비교 화면 표시 검증 in `Features/SimilarPhoto/UI/FaceComparisonViewController.swift`
+- [ ] T062 [P] 캐시 메모리 누수 검증 (Instruments Leaks) in `Features/SimilarPhoto/Analysis/SimilarityCache.swift`
 
-### 에러 처리
+### 에러 처리 (T063~T064)
 
-- [ ] T059 [P] Vision API 오류 시 silent failure 처리 in `Features/SimilarPhoto/Analysis/SimilarityAnalyzer.swift`
-- [ ] T060 [P] 이미지 로드 실패 시 분석 스킵 처리 in `Features/SimilarPhoto/Analysis/SimilarityAnalyzer.swift`
-- [ ] T061 [P] 분석 타임아웃 3초 구현 in `Features/SimilarPhoto/Analysis/SimilarityAnalyzer.swift`
+- [ ] T063 [P] Vision API 오류/이미지 로드 실패 시 silent failure 처리 in `Features/SimilarPhoto/Analysis/SimilarityAnalyzer.swift`
+- [ ] T064 [P] 분석 타임아웃 3초 구현 in `Features/SimilarPhoto/Analysis/SimilarityAnalysisQueue.swift`
 
-### 휴지통 제외
+### quickstart.md 검증 (T065)
 
-- [ ] T062 휴지통 화면에서 기능 비활성화 체크 in `Features/Grid/GridViewController.swift`
-
-### quickstart.md 검증
-
-- [ ] T063 quickstart.md 기능 테스트 체크리스트 수행
+- [ ] T065 quickstart.md 기능 테스트 체크리스트 수행
 
 ---
 
@@ -228,47 +194,24 @@ Phase 2 (Foundational)
 - **US3**: US2 완료 후 (+버튼에서 얼굴 비교 화면 진입)
 - **US4**: Phase 2 완료 후 (US2와 병렬 가능하나, US2 UI 필요)
 
-### Within Each User Story
-
-- UI 컴포넌트 먼저 생성
-- ViewController 통합
-- 접근성/예외 처리
-
 ### Parallel Opportunities
 
 **Phase 2 병렬 실행 가능:**
 ```
-T002, T003, T004, T005, T006, T007 (모든 모델)
+T002~T006 (모든 모델)
+T007~T009 (유틸리티)
+T013~T015 (시스템 상태)
 ```
 
-**US1 병렬 실행 가능:**
+**US1/US2 병렬 실행 가능:**
 ```
-T015, T016 (BorderAnimationLayer)
-```
-
-**US2 병렬 실행 가능:**
-```
-T025, T026 (FaceButtonOverlay, AnalysisLoadingIndicator)
+T020 (BorderAnimationLayer)
+T030, T031 (FaceButtonOverlay, AnalysisLoadingIndicator)
 ```
 
 **Phase 7 병렬 실행 가능:**
 ```
-T055, T056, T057, T058 (성능 검증)
-T059, T060, T061 (에러 처리)
-```
-
----
-
-## Parallel Example: Phase 2 Models
-
-```bash
-# 모든 모델을 동시에 생성:
-Task: "SimilarityAnalysisState 열거형 생성 in Features/SimilarPhoto/Models/SimilarityAnalysisState.swift"
-Task: "CachedFace 구조체 생성 in Features/SimilarPhoto/Models/CachedFace.swift"
-Task: "SimilarThumbnailGroup 구조체 생성 in Features/SimilarPhoto/Models/SimilarPhotoGroup.swift"
-Task: "ComparisonGroup 구조체 생성 in Features/SimilarPhoto/Models/SimilarPhotoGroup.swift"
-Task: "AnalysisRequest 구조체 생성 in Features/SimilarPhoto/Models/AnalysisRequest.swift"
-Task: "FaceMatch 구조체 생성 in Features/SimilarPhoto/Models/FaceMatch.swift"
+T060~T064 (성능/에러 처리)
 ```
 
 ---
@@ -310,13 +253,22 @@ Task: "FaceMatch 구조체 생성 in Features/SimilarPhoto/Models/FaceMatch.swif
 
 | 항목 | 수량 |
 |------|------|
-| **총 태스크** | 63개 |
+| **총 태스크** | 46개 |
 | Phase 1 (Setup) | 1개 |
-| Phase 2 (Foundational) | 13개 |
-| US1 (그리드 테두리) | 10개 |
-| US2 (뷰어 +버튼) | 11개 |
-| US3 (얼굴 비교/삭제) | 16개 |
-| US4 (오버레이 토글) | 3개 |
-| Phase 7 (Polish) | 9개 |
-| **병렬 가능 태스크** | 23개 |
-| **MVP 범위** | US1 + US2 + US3 (50개 태스크) |
+| Phase 2 (Foundational) | 14개 |
+| US1 (그리드 테두리) | 6개 |
+| US2 (뷰어 +버튼) | 6개 |
+| US3 (얼굴 비교/삭제) | 10개 |
+| US4 (오버레이 토글) | 1개 |
+| Phase 7 (Polish) | 6개 |
+| **병렬 가능 태스크** | 18개 |
+| **MVP 범위** | US1 + US2 + US3 (37개 태스크) |
+
+---
+
+## 변경 이력
+
+| 버전 | 날짜 | 변경 내용 |
+|------|------|----------|
+| 1.0 | 2026-01-02 | 초안 생성 (63개 태스크) |
+| 1.1 | 2026-01-02 | 파일 구조 개선 (SimilarityAnalysisQueue, SimilarityImageLoader, FaceCropper 분리), 태스크 병합 (46개로 축소), 태스크 번호 그룹화 (T0xx, T02x, T03x...) |

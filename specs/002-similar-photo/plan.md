@@ -61,8 +61,11 @@ PickPhoto/PickPhoto/
 │   └── SimilarPhoto/                     # 신규 모듈
 │       ├── Analysis/
 │       │   ├── SimilarityAnalyzer.swift       # 유사도 분석 (Vision)
+│       │   ├── SimilarityAnalysisQueue.swift  # 분석 큐/동시성 관리 (FIFO, 5개/2개)
+│       │   ├── SimilarityImageLoader.swift    # 480px aspectFit 이미지 로딩
 │       │   ├── FaceDetector.swift             # 얼굴 감지 (Vision)
-│       │   └── SimilarityCache.swift          # 분석 결과 캐시
+│       │   ├── FaceCropper.swift              # 얼굴 크롭 (30% 여백, 정사각형)
+│       │   └── SimilarityCache.swift          # 분석 결과 캐시 (LRU 500장)
 │       ├── UI/
 │       │   ├── BorderAnimationLayer.swift     # 테두리 애니메이션 (정적 테두리 포함)
 │       │   ├── FaceButtonOverlay.swift        # +버튼 오버레이
