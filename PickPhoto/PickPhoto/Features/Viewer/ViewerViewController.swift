@@ -97,6 +97,14 @@ final class ViewerViewController: UIViewController {
     /// 마지막 스크롤 로그 시간 (쓰로틀용)
     private var lastPageScrollLogTime: CFTimeInterval = 0
 
+    // MARK: - Phase 2: LOD1 디바운스
+
+    /// LOD1 디바운스 타이머 (150ms)
+    private var lod1DebounceTimer: Timer?
+
+    /// LOD1 디바운스 지연 시간
+    private static let lod1DebounceDelay: TimeInterval = 0.15
+
     /// 페이지 뷰 컨트롤러
     private lazy var pageViewController: UIPageViewController = {
         let pvc = UIPageViewController(
@@ -829,6 +837,10 @@ extension ViewerViewController: UIPageViewControllerDelegate {
         transitionId += 1
         isTransitioning = true
 
+        // Phase 2: LOD1 디바운스 타이머 취소 (빠른 스와이프 시 LOD1 스킵)
+        lod1DebounceTimer?.invalidate()
+        lod1DebounceTimer = nil
+
         guard debugViewer else { return }
         let now = CACurrentMediaTime()
         let pendingIndex = pendingViewControllers.first.flatMap { index(from: $0) }
@@ -886,6 +898,27 @@ extension ViewerViewController: UIPageViewControllerDelegate {
         // (인접 페이지 다운로드 방지를 위해 전환 완료 시점에 요청)
         if let videoVC = currentVC as? VideoPageViewController {
             videoVC.requestVideoIfNeeded()
+        }
+
+        // Phase 2: LOD1 디바운스 (150ms 후 원본 요청)
+        scheduleLOD1Request()
+    }
+
+    /// LOD1 요청 스케줄링 (150ms 디바운스)
+    /// - 빠른 스와이프 시 LOD1 요청 스킵
+    /// - 정지 상태에서만 원본 이미지 로드
+    private func scheduleLOD1Request() {
+        lod1DebounceTimer?.invalidate()
+        lod1DebounceTimer = Timer.scheduledTimer(withTimeInterval: Self.lod1DebounceDelay, repeats: false) { [weak self] _ in
+            guard let self = self else { return }
+
+            // 현재 페이지가 PhotoPageViewController면 LOD1 요청
+            if let photoVC = self.pageViewController.viewControllers?.first as? PhotoPageViewController {
+                if self.debugViewer {
+                    print("[Viewer] 🔍 LOD1 디바운스 완료 - index: \(photoVC.index)")
+                }
+                photoVC.requestHighQualityImage()
+            }
         }
     }
 }

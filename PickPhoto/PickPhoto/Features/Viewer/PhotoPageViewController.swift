@@ -325,12 +325,21 @@ final class PhotoPageViewController: UIViewController {
             // imageSize는 applyInitialLayout에서 PHAsset 기반으로 이미 설정됨
             // → 여기서 덮어쓰지 않음 (maxZoomScale 보존)
 
-            // 원본 이미지 요청 (LOD1)
-            if !isDegraded {
-                // .fast에서 고품질 이미지가 왔으면 원본 요청
-                self.requestFullSizeImage()
-            }
+            // Phase 2: LOD1은 ViewerViewController에서 디바운스 후 호출
+            // (전환 중 디코딩 부하 방지)
         }
+    }
+
+    /// LOD1 원본 이미지 요청 (외부 호출용)
+    /// - ViewerViewController에서 didFinishAnimating + 150ms 후 호출
+    func requestHighQualityImage() {
+        guard !hasLoadedFullSize else {
+            if debugPhoto {
+                print("[Photo] ⏭️ LOD1 스킵 (이미 로드됨) - index: \(index)")
+            }
+            return
+        }
+        requestFullSizeImage()
     }
 
     /// 이미지 요청
