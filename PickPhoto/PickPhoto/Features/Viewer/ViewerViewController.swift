@@ -83,6 +83,20 @@ final class ViewerViewController: UIViewController {
     /// iOS 18+ zoom transition의 sourceViewProvider에서 외부 접근 필요
     private(set) var currentIndex: Int
 
+    // MARK: - Debug: PageScroll 분석용
+
+    /// 페이지 스크롤뷰 참조
+    private weak var pageScrollView: UIScrollView?
+
+    /// 전환 ID (각 전환을 구분)
+    private var transitionId: Int = 0
+
+    /// 전환 중 여부
+    private var isTransitioning = false
+
+    /// 마지막 스크롤 로그 시간 (쓰로틀용)
+    private var lastPageScrollLogTime: CFTimeInterval = 0
+
     /// 페이지 뷰 컨트롤러
     private lazy var pageViewController: UIPageViewController = {
         let pvc = UIPageViewController(
@@ -412,11 +426,8 @@ final class ViewerViewController: UIViewController {
             completion: nil
         )
 
-        // LOD1: 초기 페이지에 고품질 이미지/비디오 요청
-        // viewDidLoad에서 LOD0(포스터)가 먼저 로드되고, 여기서 LOD1 트리거
-        if let photoVC = pageVC as? PhotoPageViewController {
-            photoVC.requestHighQualityImage()
-        } else if let videoVC = pageVC as? VideoPageViewController {
+        // 초기 페이지가 VideoPageViewController면 비디오 요청 트리거
+        if let videoVC = pageVC as? VideoPageViewController {
             videoVC.requestVideoIfNeeded()
         }
     }
@@ -776,31 +787,80 @@ extension ViewerViewController: UIPageViewControllerDataSource {
     }
 }
 
+// MARK: - Debug: PageScroll 분석
+
+extension ViewerViewController {
+
+    /// 페이지 스크롤뷰에 로거 연결
+    private func attachPageScrollLoggerIfNeeded() {
+        guard pageScrollView == nil else { return }
+        if let sv = pageViewController.view.subviews.first(where: { $0 is UIScrollView }) as? UIScrollView {
+            pageScrollView = sv
+            sv.panGestureRecognizer.addTarget(self, action: #selector(handlePageScrollPan(_:)))
+            if debugViewer {
+                print("[PageScroll] attach - frame=\(sv.frame), contentSize=\(sv.contentSize)")
+            }
+        }
+    }
+
+    /// 페이지 스크롤 진행률 로깅
+    @objc private func handlePageScrollPan(_ gesture: UIPanGestureRecognizer) {
+        guard debugViewer, let sv = pageScrollView else { return }
+        guard isTransitioning else { return }
+
+        let now = CACurrentMediaTime()
+        if now - lastPageScrollLogTime < 0.05 { return } // 50ms 쓰로틀
+        lastPageScrollLogTime = now
+
+        let w = sv.bounds.width
+        let offsetX = sv.contentOffset.x
+        let progress = w > 0 ? (offsetX - w) / w : 0
+        print("[PageScroll] tid=\(transitionId) state=\(gesture.state.rawValue) offsetX=\(String(format: "%.1f", offsetX)) progress=\(String(format: "%.2f", progress))")
+    }
+}
+
 // MARK: - UIPageViewControllerDelegate
 
 extension ViewerViewController: UIPageViewControllerDelegate {
 
     func pageViewController(_ pageViewController: UIPageViewController, willTransitionTo pendingViewControllers: [UIViewController]) {
-        if debugViewer {
-            let now = CACurrentMediaTime()
-            let pendingIndex = pendingViewControllers.first.flatMap { index(from: $0) }
-            print("[Viewer] ➡️ willTransition - from: \(currentIndex), to: \(pendingIndex.map(String.init) ?? "nil"), t=\(String(format: "%.3f", now))")
-        }
+        // 스크롤 로거 연결
+        attachPageScrollLoggerIfNeeded()
+        transitionId += 1
+        isTransitioning = true
 
-        // LOD 파이프라인: 전환 시작 시 현재 페이지의 고품질 요청 취소
-        // (전환 중에는 LOD0 포스터만 사용, 전환 완료 후 LOD1 다시 요청)
-        if let currentVC = pageViewController.viewControllers?.first as? PhotoPageViewController {
-            currentVC.cancelHighQualityImageRequests()
+        guard debugViewer else { return }
+        let now = CACurrentMediaTime()
+        let pendingIndex = pendingViewControllers.first.flatMap { index(from: $0) }
+        print("[Viewer] ➡️ willTransition - tid=\(transitionId), from: \(currentIndex), to: \(pendingIndex.map(String.init) ?? "nil"), t=\(String(format: "%.3f", now))")
+
+        // 현재/다음 페이지 스냅샷
+        if let current = pageViewController.viewControllers?.first as? PhotoPageViewController {
+            current.debugSnapshot(tag: "current@will", transitionId: transitionId)
+        }
+        if let pending = pendingViewControllers.first as? PhotoPageViewController {
+            pending.debugSnapshot(tag: "pending@will", transitionId: transitionId)
+            let tid = transitionId
+            DispatchQueue.main.async {
+                pending.debugSnapshot(tag: "pending@nextRunLoop", transitionId: tid)
+            }
         }
     }
 
     func pageViewController(_ pageViewController: UIPageViewController, didFinishAnimating finished: Bool, previousViewControllers: [UIViewController], transitionCompleted completed: Bool) {
+        isTransitioning = false
+
         // 전환 완료 시에만 처리
         if debugViewer {
             let now = CACurrentMediaTime()
             let prevIndex = previousViewControllers.first.flatMap { index(from: $0) }
             let nextIndex = pageViewController.viewControllers?.first.flatMap { index(from: $0) }
-            print("[Viewer] ✅ didFinishAnimating - completed=\(completed), prev=\(prevIndex.map(String.init) ?? "nil"), next=\(nextIndex.map(String.init) ?? "nil"), t=\(String(format: "%.3f", now))")
+            print("[Viewer] ✅ didFinishAnimating - tid=\(transitionId), completed=\(completed), prev=\(prevIndex.map(String.init) ?? "nil"), next=\(nextIndex.map(String.init) ?? "nil"), t=\(String(format: "%.3f", now))")
+
+            // 현재 페이지 스냅샷
+            if let current = pageViewController.viewControllers?.first as? PhotoPageViewController {
+                current.debugSnapshot(tag: "current@finish", transitionId: transitionId)
+            }
         }
 
         guard completed else { return }
@@ -822,11 +882,9 @@ extension ViewerViewController: UIPageViewControllerDelegate {
             }
         }
 
-        // LOD1: 전환 완료 후 현재 페이지에 고품질 이미지 요청
-        // 사진: requestHighQualityImage() / 동영상: requestVideoIfNeeded()
-        if let photoVC = currentVC as? PhotoPageViewController {
-            photoVC.requestHighQualityImage()
-        } else if let videoVC = currentVC as? VideoPageViewController {
+        // 현재 페이지가 VideoPageViewController면 비디오 요청 트리거
+        // (인접 페이지 다운로드 방지를 위해 전환 완료 시점에 요청)
+        if let videoVC = currentVC as? VideoPageViewController {
             videoVC.requestVideoIfNeeded()
         }
     }
