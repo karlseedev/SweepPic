@@ -408,6 +408,11 @@ final class ViewerViewController: UIViewController {
             animated: false,
             completion: nil
         )
+
+        // 초기 페이지가 VideoPageViewController면 비디오 요청 트리거
+        if let videoVC = pageVC as? VideoPageViewController {
+            videoVC.requestVideoIfNeeded()
+        }
     }
 
     // MARK: - Actions
@@ -788,6 +793,12 @@ extension ViewerViewController: UIPageViewControllerDelegate {
             if let videoVC = previousVC as? VideoPageViewController {
                 videoVC.pause()
             }
+        }
+
+        // 현재 페이지가 VideoPageViewController면 비디오 요청 트리거
+        // (인접 페이지 다운로드 방지를 위해 전환 완료 시점에 요청)
+        if let videoVC = currentVC as? VideoPageViewController {
+            videoVC.requestVideoIfNeeded()
         }
     }
 }
