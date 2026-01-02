@@ -16,7 +16,7 @@
 **Target Platform**: iOS 16+
 **Project Type**: Mobile (iOS)
 **Performance Goals**: 그리드 60fps/120fps(ProMotion) 스크롤 유지, 테두리 표시 1초 이내, +버튼 탭 후 0.5초 이내 얼굴 비교 화면 표시
-**Constraints**: 캐시 500장 이내, 동시 분석 최대 5개, 5만장 이상 라이브러리 지원
+**Constraints**: 캐시 500장 이내 (메모리 전용), 동시 분석 최대 5개 (과열 시 2개), 분석 타임아웃 3초, 5만장 이상 라이브러리 지원
 **Scale/Scope**: 그리드 뷰, 뷰어, 얼굴 비교 화면 3개 화면 + 기존 UI 통합
 
 ## Constitution Check
@@ -64,8 +64,9 @@ PickPhoto/PickPhoto/
 │       │   ├── FaceDetector.swift             # 얼굴 감지 (Vision)
 │       │   └── SimilarityCache.swift          # 분석 결과 캐시
 │       ├── UI/
-│       │   ├── BorderAnimationLayer.swift     # 테두리 애니메이션
+│       │   ├── BorderAnimationLayer.swift     # 테두리 애니메이션 (정적 테두리 포함)
 │       │   ├── FaceButtonOverlay.swift        # +버튼 오버레이
+│       │   ├── AnalysisLoadingIndicator.swift # 분석 중 로딩 인디케이터
 │       │   └── FaceComparisonViewController.swift  # 얼굴 비교 화면
 │       └── Models/
 │           ├── SimilarPhotoGroup.swift        # 유사사진그룹 모델
@@ -82,3 +83,20 @@ PickPhoto/PickPhoto/
 ## Complexity Tracking
 
 > Constitution 위반 사항 없음 - 기존 앱 구조에 모듈 추가 방식으로 복잡도 최소화
+
+### 시스템 상태 처리 (spec.md 참조)
+
+| 상태 | 처리 |
+|------|------|
+| 메모리 경고 | 캐시 50% LRU 제거 |
+| 디바이스 과열 | 동시 분석 5개→2개 제한 |
+| 백그라운드 전환 | 분석 취소, 캐시 유지 |
+| 외부 라이브러리 변경 | 해당 캐시 무효화 |
+| 권한 거부 | 기능 비활성화 |
+
+### 접근성 처리
+
+| 설정 | 처리 |
+|------|------|
+| VoiceOver | 기능 전체 비활성화 |
+| 모션 감소 | 정적 테두리로 대체 (흰색 2pt 실선) |
