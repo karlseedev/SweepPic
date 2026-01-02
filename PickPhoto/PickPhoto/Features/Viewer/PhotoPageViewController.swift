@@ -120,6 +120,10 @@ final class PhotoPageViewController: UIViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
         setupUI()
+
+        // LOD0: viewDidLoad에서 즉시 포스터 로드 (전환 시작 전에 이미지 준비)
+        // bounds가 0일 수 있으므로 UIScreen.main.bounds를 fallback으로 사용
+        requestPosterImage()
     }
 
     override func viewDidLayoutSubviews() {
@@ -134,12 +138,11 @@ final class PhotoPageViewController: UIViewController {
             }
         }
 
-        // 줌 인터랙션 중에는 레이아웃 갱신을 보류 (줌 완료 후 수행)
-        // isZoomInteractionActive는 isZooming보다 먼저 true가 되어 첫 프레임부터 보호
+        // LOD 파이프라인: 이미지 요청은 viewDidLoad(LOD0), didFinishAnimating(LOD1)에서 수행
+        // viewDidLayoutSubviews에서는 레이아웃만 업데이트 (전환 중 요청 방지)
         if isZoomInteractionActive {
             needsLayoutUpdateAfterZoom = true
         } else {
-            requestImageForCurrentBoundsIfNeeded()
             updateImageLayout()
         }
     }
@@ -191,7 +194,8 @@ final class PhotoPageViewController: UIViewController {
 
     /// UI 설정
     private func setupUI() {
-        view.backgroundColor = .clear
+        // LOD 파이프라인: 검정 배경으로 인접 페이지 레이아웃 변경 비침 방지
+        view.backgroundColor = .black
 
         // 스크롤 뷰 (frame 기반)
         view.addSubview(scrollView)
@@ -204,36 +208,29 @@ final class PhotoPageViewController: UIViewController {
         scrollView.addGestureRecognizer(doubleTapGesture)
     }
 
-    /// 이미지 요청
-    /// - 첫 모달 진입 시점에는 page 내부 VC의 bounds가 0인 경우가 있어, 0-size 요청이 들어가면
-    ///   PhotoKit이 사실상 원본급 이미지를 내려주며 디코딩 비용으로 UI가 잠깐 멈출 수 있음.
-    /// - bounds가 확정된 뒤 1회 요청하고, 사이즈가 바뀌면 재요청.
-    private func requestImageForCurrentBoundsIfNeeded() {
+    // MARK: - LOD Pipeline
+
+    /// LOD0: 포스터 이미지 요청 (viewDidLoad에서 호출)
+    /// - .fast 품질로 즉시 표시 (degraded 허용)
+    /// - bounds가 0일 수 있으므로 UIScreen.main.bounds를 fallback으로 사용
+    private func requestPosterImage() {
         let scale = UIScreen.main.scale
         let boundsSize = view.bounds.size
         let containerSize = (boundsSize.width > 0 && boundsSize.height > 0) ? boundsSize : UIScreen.main.bounds.size
 
-        // 최적화: 화면 픽셀 크기면 1:1 매핑으로 충분 (×2 제거)
+        // 물리 픽셀 크기로 요청 (레티나 디스플레이 선명도 보장)
         let targetSize = CGSize(
             width: ceil(containerSize.width * scale),
             height: ceil(containerSize.height * scale)
         )
 
         guard targetSize.width > 0, targetSize.height > 0 else { return }
-        guard targetSize != lastRequestedTargetSize else {
-            if debugPhoto {
-                print("[Photo] ⏭️ 중복 요청 스킵 - index: \(index)")
-            }
-            return
-        }
-        lastRequestedTargetSize = targetSize
 
         // 시간 측정 시작
         imageRequestStartTime = CFAbsoluteTimeGetCurrent()
-        hasLoadedFullSize = false
 
         if debugPhoto {
-            print("[Photo] 🚀 이미지 요청 시작 - index: \(index), targetSize: \(targetSize)")
+            print("[Photo] 🚀 LOD0 포스터 요청 - index: \(index), targetSize: \(targetSize)")
         }
 
         requestCancellable?.cancel()
@@ -241,15 +238,14 @@ final class PhotoPageViewController: UIViewController {
             for: asset,
             targetSize: targetSize,
             contentMode: .aspectFit,
-            quality: .high  // 뷰어용 고품질
+            quality: .fast  // LOD0: 즉시 표시 (opportunistic, degraded 허용)
         ) { [weak self] image, isDegraded in
             guard let self = self, let image = image else { return }
 
-            // 1차 로딩 시간 측정
             let elapsed = (CFAbsoluteTimeGetCurrent() - self.imageRequestStartTime) * 1000
 
             if self.debugPhoto {
-                print("[Photo] 🖼️ 이미지 로드 완료 - index: \(self.index), \(Int(elapsed))ms, size=\(image.size), degraded=\(isDegraded)")
+                print("[Photo] 🖼️ LOD0 완료 - index: \(self.index), \(Int(elapsed))ms, size=\(image.size), degraded=\(isDegraded)")
             }
 
             self.imageView.image = image
@@ -258,20 +254,64 @@ final class PhotoPageViewController: UIViewController {
             // 줌 인터랙션 중에는 레이아웃 업데이트 보류
             if self.isZoomInteractionActive {
                 self.needsLayoutUpdateAfterZoom = true
-                if self.debugPhoto {
-                    print("[Photo] ⏸️ 레이아웃 보류 (줌 중) - index: \(self.index)")
-                }
             } else {
-                if self.debugPhoto {
-                    print("[Photo] 📏 updateImageLayout 호출 - index: \(self.index)")
-                }
                 self.updateImageLayout()
             }
 
-            // 원본 이미지 요청 (2차)
-            if !self.hasLoadedFullSize {
-                self.requestFullSizeImage()
+            // LOD0에서는 원본 요청하지 않음 (Phase 2: LOD1, Phase 3: LOD2에서 처리)
+        }
+    }
+
+    /// LOD1: 고품질 이미지 요청 (didFinishAnimating 후 호출)
+    /// - .high 품질로 선명한 이미지 로드
+    /// - 현재 페이지만 요청 (인접 페이지는 요청하지 않음)
+    func requestHighQualityImage() {
+        let scale = UIScreen.main.scale
+        let boundsSize = view.bounds.size
+        let containerSize = (boundsSize.width > 0 && boundsSize.height > 0) ? boundsSize : UIScreen.main.bounds.size
+
+        let targetSize = CGSize(
+            width: ceil(containerSize.width * scale),
+            height: ceil(containerSize.height * scale)
+        )
+
+        guard targetSize.width > 0, targetSize.height > 0 else { return }
+
+        if debugPhoto {
+            print("[Photo] 🔷 LOD1 고품질 요청 - index: \(index), targetSize: \(targetSize)")
+        }
+
+        requestCancellable?.cancel()
+        requestCancellable = ImagePipeline.shared.requestImage(
+            for: asset,
+            targetSize: targetSize,
+            contentMode: .aspectFit,
+            quality: .high  // LOD1: 고품질
+        ) { [weak self] image, isDegraded in
+            guard let self = self, let image = image else { return }
+
+            if self.debugPhoto {
+                print("[Photo] 🔷 LOD1 완료 - index: \(self.index), size=\(image.size), degraded=\(isDegraded)")
             }
+
+            self.imageView.image = image
+            self.imageSize = image.size
+
+            if self.isZoomInteractionActive {
+                self.needsLayoutUpdateAfterZoom = true
+            } else {
+                self.updateImageLayoutPreservingZoom()
+            }
+        }
+    }
+
+    /// 고품질 이미지 요청 취소 (전환 시작 시 호출)
+    func cancelHighQualityImageRequests() {
+        fullSizeRequestCancellable?.cancel()
+        fullSizeRequestCancellable = nil
+
+        if debugPhoto {
+            print("[Photo] ❌ 고품질 요청 취소 - index: \(index)")
         }
     }
 
@@ -475,7 +515,7 @@ extension PhotoPageViewController: UIScrollViewDelegate {
 
         if needsLayoutUpdateAfterZoom {
             if debugZoom { print("[ZOOM] 보류된 갱신 수행") }
-            requestImageForCurrentBoundsIfNeeded()
+            // LOD 파이프라인: 줌 완료 후에는 레이아웃만 업데이트 (이미지 재요청 불필요)
             updateImageLayoutPreservingZoom()
             needsLayoutUpdateAfterZoom = false
         }
