@@ -440,6 +440,16 @@ public final class ImagePipeline: ImagePipelineProtocol {
                     FileLogger.log("[Pipeline] completion #50 도달: +\(String(format: "%.1f", elapsed))ms")
                 }
 
+                // [--log-thumb] 파이프라인 응답 상세 로그 (샘플링: 20개마다)
+                if FileLogger.logThumbEnabled && (currentCompleteCount <= 3 || currentCompleteCount % 20 == 0) {
+                    if let img = image {
+                        let imgPx = Int(img.size.width * img.scale)
+                        let imgPy = Int(img.size.height * img.scale)
+                        let ratio = targetSize.width > 0 ? Double(imgPx) / Double(targetSize.width) * 100 : 0
+                        FileLogger.log("[Pipeline] #\(currentCompleteCount) target=\(Int(targetSize.width))x\(Int(targetSize.height))px → img=\(imgPx)x\(imgPy)px (\(String(format: "%.0f", ratio))%), degraded=\(isDegraded)")
+                    }
+                }
+
                 // 메인 스레드에서 completion 호출
                 DispatchQueue.main.async {
                     guard !cancellable.isCancelled else { return }

@@ -107,9 +107,53 @@ extension GridViewController {
             // - 정지 후에만 visible + 1화면 범위 캐싱
             self.preheatAfterScrollStop()
 
+            // [--log-thumb] 스크롤 종료 0.2초 후 visible 셀 해상도 검사
+            if FileLogger.logThumbEnabled {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) { [weak self] in
+                    self?.logVisibleCellResolution()
+                }
+            }
+
             // Note: PHImageRequestOptions.deliveryMode = .opportunistic 모드에서는
             // 저해상도 → 고해상도가 자동으로 전달되므로 별도 리로드 불필요
             // reloadItems 호출 시 prepareForReuse()가 호출되어 이미지가 깜빡거림
+        }
+    }
+
+    /// [--log-thumb] visible 셀의 실제 이미지 해상도 vs 기대 해상도 로그
+    private func logVisibleCellResolution() {
+        let expectedSize = thumbnailSize(forScrolling: false)  // 스크롤 정지 상태의 기대 크기
+        let visibleCells = collectionView.visibleCells.compactMap { $0 as? PhotoCell }
+
+        var underSizedCount = 0
+        var matchCount = 0
+        var totalCount = 0
+
+        for cell in visibleCells {
+            guard let image = cell.thumbnailImageView.image else { continue }
+            totalCount += 1
+
+            let imgPx = image.size.width * image.scale
+            let expectedPx = expectedSize.width
+
+            // 이미지가 기대 크기의 90% 미만이면 undersized
+            if imgPx < expectedPx * 0.9 {
+                underSizedCount += 1
+            } else {
+                matchCount += 1
+            }
+        }
+
+        let expectedPxInt = Int(expectedSize.width)
+        FileLogger.log("[Thumb:Check] 스크롤 종료 후: expected=\(expectedPxInt)px, total=\(totalCount), match=\(matchCount), underSized=\(underSizedCount)")
+
+        // 샘플로 처음 3개 셀의 상세 정보
+        for (i, cell) in visibleCells.prefix(3).enumerated() {
+            if let image = cell.thumbnailImageView.image {
+                let imgPx = Int(image.size.width * image.scale)
+                let ratio = expectedSize.width > 0 ? Double(imgPx) / Double(expectedSize.width) * 100 : 0
+                FileLogger.log("[Thumb:Check] cell[\(i)] img=\(imgPx)px (\(String(format: "%.0f", ratio))% of expected)")
+            }
         }
     }
 

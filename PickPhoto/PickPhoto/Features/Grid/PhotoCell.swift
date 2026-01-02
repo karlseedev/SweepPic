@@ -37,6 +37,11 @@ final class PhotoCell: UICollectionViewCell {
     /// [DEBUG] imageApply 누적 시간
     static var imageApplyTotalTime: Double = 0
 
+    /// [--log-thumb] configure 호출 횟수 (샘플링 로그용)
+    static var configureCallCount: Int = 0
+    /// [--log-thumb] pipeline 응답 횟수 (샘플링 로그용)
+    static var pipelineResponseCount: Int = 0
+
     #if DEBUG
     /// 첫 번째 이미지 할당 여부 (T_firstThumbnailVisible 측정용)
     private static var hasLoggedFirstThumbnail = false
@@ -517,6 +522,14 @@ final class PhotoCell: UICollectionViewCell {
         // 여기서 다시 scale을 곱하면 이중 곱셈 버그 발생
         let pixelSize = targetSize
 
+        // [--log-thumb] 썸네일 요청 로그 (샘플링: 10개마다)
+        if FileLogger.logThumbEnabled {
+            Self.configureCallCount += 1
+            if Self.configureCallCount <= 5 || Self.configureCallCount % 10 == 0 {
+                FileLogger.log("[Thumb:Req] #\(Self.configureCallCount) target=\(Int(pixelSize.width))x\(Int(pixelSize.height))px, fullSize=\(isFullSizeRequest)")
+            }
+        }
+
         // 스크롤 중 로그 비활성화 - hitch 방지
         // 원복: git checkout a5414d4 -- PickPhoto/PickPhoto/Features/Grid/PhotoCell.swift
         #if false  // DEBUG 로그 임시 비활성화
@@ -617,6 +630,16 @@ final class PhotoCell: UICollectionViewCell {
                 let wasNil = self.imageView.image == nil
                 self.imageView.image = image
                 if wasNil { Self.incrementGrayResolved() }  // nil → non-nil 전환 시에만
+
+                // [--log-thumb] 파이프라인 응답 로그 (샘플링: 10개마다)
+                if FileLogger.logThumbEnabled {
+                    Self.pipelineResponseCount += 1
+                    if Self.pipelineResponseCount <= 5 || Self.pipelineResponseCount % 10 == 0 {
+                        let imgPx = Int(image.size.width * image.scale)
+                        let imgPy = Int(image.size.height * image.scale)
+                        FileLogger.log("[Thumb:Res] #\(Self.pipelineResponseCount) img=\(imgPx)x\(imgPy)px, target=\(Int(pixelSize.width))x\(Int(pixelSize.height))px, degraded=\(isDegraded)")
+                    }
+                }
 
                 #if false  // DEBUG 로그 임시 비활성화
                 Self.applyLock.withLock {

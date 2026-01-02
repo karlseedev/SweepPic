@@ -18,6 +18,11 @@ public final class FileLogger {
     /// 공유 인스턴스
     public static let shared = FileLogger()
 
+    // MARK: - Launch Arguments (디버그 플래그)
+
+    /// --log-thumb: 썸네일 해상도 디버그 로그 활성화
+    public static let logThumbEnabled: Bool = CommandLine.arguments.contains("--log-thumb")
+
     // MARK: - Properties
 
     /// 로그 파일 URL
