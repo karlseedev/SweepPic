@@ -412,8 +412,11 @@ final class ViewerViewController: UIViewController {
             completion: nil
         )
 
-        // 초기 페이지가 VideoPageViewController면 비디오 요청 트리거
-        if let videoVC = pageVC as? VideoPageViewController {
+        // LOD1: 초기 페이지에 고품질 이미지/비디오 요청
+        // viewDidLoad에서 LOD0(포스터)가 먼저 로드되고, 여기서 LOD1 트리거
+        if let photoVC = pageVC as? PhotoPageViewController {
+            photoVC.requestHighQualityImage()
+        } else if let videoVC = pageVC as? VideoPageViewController {
             videoVC.requestVideoIfNeeded()
         }
     }
@@ -812,9 +815,11 @@ extension ViewerViewController: UIPageViewControllerDelegate {
             }
         }
 
-        // 현재 페이지가 VideoPageViewController면 비디오 요청 트리거
-        // (인접 페이지 다운로드 방지를 위해 전환 완료 시점에 요청)
-        if let videoVC = currentVC as? VideoPageViewController {
+        // LOD1: 전환 완료 후 현재 페이지에 고품질 이미지 요청
+        // 사진: requestHighQualityImage() / 동영상: requestVideoIfNeeded()
+        if let photoVC = currentVC as? PhotoPageViewController {
+            photoVC.requestHighQualityImage()
+        } else if let videoVC = currentVC as? VideoPageViewController {
             videoVC.requestVideoIfNeeded()
         }
     }
