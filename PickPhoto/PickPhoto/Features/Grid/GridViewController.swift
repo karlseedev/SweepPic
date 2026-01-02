@@ -75,8 +75,7 @@ final class GridViewController: UIViewController {
     /// preheat 최대 셀 수 (Step 1: ±1 row = 6셀) (extension에서 접근 필요)
     static let maxPreheatCells: Int = 6
 
-    /// 스크롤 중 썸네일 품질 저하 비율 (T025: 50%) (extension에서 접근 필요)
-    static let scrollingThumbnailScale: CGFloat = 0.5
+    // Note: scrollingThumbnailScale 제거됨 - 품질은 ImageQuality로 제어
 
     // MARK: - UI Components
 
@@ -657,23 +656,16 @@ final class GridViewController: UIViewController {
         print("[GridViewController] ContentInset updated - top: \(heights.top), bottom: \(heights.bottom)")
     }
 
-    /// 현재 썸네일 크기 반환 (스크롤 상태에 따라 품질 저하 적용) (extension에서 접근 필요)
-    func thumbnailSize(forScrolling: Bool = false) -> CGSize {
+    /// 현재 썸네일 크기 반환 (항상 100% - 품질은 ImageQuality로 제어) (extension에서 접근 필요)
+    /// - Note: 스크롤 중 해상도 저하는 더 이상 여기서 하지 않음
+    ///         대신 ImageQuality.scrolling으로 품질만 제어 (크기는 동일)
+    func thumbnailSize() -> CGSize {
         let baseSize = currentCellSize
         let scale = UIScreen.main.scale
-
-        if forScrolling || isScrolling {
-            // T025: 스크롤 중 50% 크기
-            return CGSize(
-                width: baseSize.width * scale * Self.scrollingThumbnailScale,
-                height: baseSize.height * scale * Self.scrollingThumbnailScale
-            )
-        } else {
-            return CGSize(
-                width: baseSize.width * scale,
-                height: baseSize.height * scale
-            )
-        }
+        return CGSize(
+            width: baseSize.width * scale,
+            height: baseSize.height * scale
+        )
     }
 
     // Pinch Zoom 코드 → GridGestures.swift로 이동됨
@@ -798,11 +790,13 @@ extension GridViewController: UICollectionViewDataSource {
 
         // 셀 설정 (PHAsset 직접 전달 - 성능 최적화)
         // isFullSizeRequest: 스크롤 중이 아닐 때만 true (디스크 캐시 저장 조건)
+        // 스크롤 중: .scrolling (빠른 저품질), 정지: .fast (일반 품질)
+        let quality: ImageQuality = isScrolling ? .scrolling : .fast
         cell.configure(
             asset: asset,
             isTrashed: isTrashed,
             targetSize: thumbnailSize(),
-            isFullSizeRequest: !isScrolling
+            quality: quality
         )
 
         t4 = CACurrentMediaTime() // configure 완료

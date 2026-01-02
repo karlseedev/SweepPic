@@ -284,6 +284,17 @@ final class PhotoCell: UICollectionViewCell {
     /// 현재 로드된 썸네일 크기 (핀치줌 후 고해상도 재요청 판단용)
     private var currentTargetSize: CGSize = .zero
 
+    /// 마지막 요청 품질 (스크롤 정지 후 업그레이드 판단용)
+    private(set) var lastRequestQuality: ImageQuality = .fast
+
+    /// 마지막 응답이 degraded였는지 (업그레이드 필요 여부)
+    private(set) var lastIsDegraded: Bool = false
+
+    /// 고품질 업그레이드가 필요한지 (스크롤 정지 후 확인용)
+    var needsHighQualityUpgrade: Bool {
+        return lastRequestQuality == .scrolling || lastIsDegraded
+    }
+
     /// 휴지통 상태
     private(set) var isTrashed: Bool = false
 
@@ -349,6 +360,8 @@ final class PhotoCell: UICollectionViewCell {
         currentAssetID = nil
         isTrashed = false
         isSelectedForDeletion = false
+        lastRequestQuality = .fast
+        lastIsDegraded = false
 
         // UI 초기화
         dimmedOverlayView.isHidden = true
@@ -465,13 +478,13 @@ final class PhotoCell: UICollectionViewCell {
     /// - Parameters:
     ///   - asset: 표시할 PHAsset
     ///   - isTrashed: 휴지통 상태
-    ///   - targetSize: 썸네일 목표 크기 (point 단위)
-    ///   - isFullSizeRequest: 100% 크기 요청 여부 (디스크 캐시 저장 조건)
+    ///   - targetSize: 썸네일 목표 크기 (픽셀 단위)
+    ///   - quality: 이미지 품질 (스크롤 중: .scrolling, 정지: .fast)
     func configure(
         asset: PHAsset,
         isTrashed: Bool,
         targetSize: CGSize,
-        isFullSizeRequest: Bool = true
+        quality: ImageQuality = .fast
     ) {
         let assetID = asset.localIdentifier
         let modDate = asset.modificationDate
@@ -489,6 +502,7 @@ final class PhotoCell: UICollectionViewCell {
         currentAssetID = assetID
         currentTargetSize = targetSize
         self.isTrashed = isTrashed
+        self.lastRequestQuality = quality
 
         // 빈 셀에서 복원 시 배경색 복구
         imageView.backgroundColor = .systemGray6
@@ -526,7 +540,7 @@ final class PhotoCell: UICollectionViewCell {
         if FileLogger.logThumbEnabled {
             Self.configureCallCount += 1
             if Self.configureCallCount <= 5 || Self.configureCallCount % 10 == 0 {
-                FileLogger.log("[Thumb:Req] #\(Self.configureCallCount) target=\(Int(pixelSize.width))x\(Int(pixelSize.height))px, fullSize=\(isFullSizeRequest)")
+                FileLogger.log("[Thumb:Req] #\(Self.configureCallCount) target=\(Int(pixelSize.width))x\(Int(pixelSize.height))px, quality=\(quality)")
             }
         }
 
@@ -568,7 +582,7 @@ final class PhotoCell: UICollectionViewCell {
         // - Pipeline의 degraded first-paint가 디스크 로드보다 빠름
         //
         // 메모리 캐시 미스 시 바로 ImagePipeline 요청
-        requestFromPipeline(asset: asset, pixelSize: pixelSize, modDate: modDate, isFullSizeRequest: isFullSizeRequest)
+        requestFromPipeline(asset: asset, pixelSize: pixelSize, modDate: modDate, quality: quality)
 
         // [Dead Code] 디스크 캐시 로드 경로 - 비활성화됨
         // 필요 시 위 requestFromPipeline 호출을 제거하고 #if false를 #if true로 변경
@@ -607,14 +621,15 @@ final class PhotoCell: UICollectionViewCell {
     }
 
     /// ImagePipeline에서 이미지 요청 (캐시 미스 시 호출)
-    /// - isFullSizeRequest: 100% 크기 요청 시 true (디스크 캐시 저장 조건)
-    private func requestFromPipeline(asset: PHAsset, pixelSize: CGSize, modDate: Date?, isFullSizeRequest: Bool) {
+    /// - quality: 요청 품질 (.scrolling: 빠른 저품질, .fast: 일반, .high: 고품질)
+    private func requestFromPipeline(asset: PHAsset, pixelSize: CGSize, modDate: Date?, quality: ImageQuality) {
         let assetID = asset.localIdentifier
 
         currentCancellable = ImagePipeline.shared.requestImage(
             for: asset,
             targetSize: pixelSize,
-            contentMode: .aspectFill
+            contentMode: .aspectFill,
+            quality: quality
         ) { [weak self] image, isDegraded in
             guard let self = self else { return }
 
@@ -624,6 +639,9 @@ final class PhotoCell: UICollectionViewCell {
                 Self.mismatchLock.withLock { Self.pipelineMismatchCount += 1 }
                 return
             }
+
+            // 마지막 degraded 상태 저장 (업그레이드 판단용)
+            self.lastIsDegraded = isDegraded
 
             if let image = image {
                 // 이미지 표시
@@ -637,7 +655,7 @@ final class PhotoCell: UICollectionViewCell {
                     if Self.pipelineResponseCount <= 5 || Self.pipelineResponseCount % 10 == 0 {
                         let imgPx = Int(image.size.width * image.scale)
                         let imgPy = Int(image.size.height * image.scale)
-                        FileLogger.log("[Thumb:Res] #\(Self.pipelineResponseCount) img=\(imgPx)x\(imgPy)px, target=\(Int(pixelSize.width))x\(Int(pixelSize.height))px, degraded=\(isDegraded)")
+                        FileLogger.log("[Thumb:Res] #\(Self.pipelineResponseCount) img=\(imgPx)x\(imgPy)px, target=\(Int(pixelSize.width))x\(Int(pixelSize.height))px, quality=\(quality), degraded=\(isDegraded)")
                     }
                 }
 
@@ -664,9 +682,9 @@ final class PhotoCell: UICollectionViewCell {
                 // degraded가 아닌 최종 이미지만 캐시에 저장
                 // [Phase 1] 디스크 캐시 저장 조건:
                 // 1. isDegraded=false (최종 이미지)
-                // 2. isFullSizeRequest=true (스크롤 중 50%는 저장 안 함 - 정책 일치)
+                // 2. quality != .scrolling (스크롤 중 저품질은 저장 안 함)
                 // 3. 중복 저장 방지 (메모리 Set - 동기 디스크 I/O 없음)
-                if !isDegraded && isFullSizeRequest {
+                if !isDegraded && quality != .scrolling {
                     let cacheKey = Self.makeCacheKey(assetID: assetID, modDate: modDate, size: pixelSize)
 
                     // 세션 내 중복 저장 방지 (메모리 Set 기반)
@@ -1069,6 +1087,46 @@ extension PhotoCell {
                 self.imageView.image = image
             }
             // 실패 시 기존 이미지 유지
+        }
+    }
+
+    /// 고품질 업그레이드 요청 (스크롤 정지 후 호출)
+    /// - needsHighQualityUpgrade가 true인 셀에서만 호출
+    /// - 스크롤 중 .scrolling 품질로 로드된 이미지를 .fast 품질로 업그레이드
+    func requestHighQualityUpgrade(asset: PHAsset, targetSize: CGSize) {
+        let assetID = asset.localIdentifier
+
+        // 동일한 에셋인지 확인
+        guard currentAssetID == assetID else { return }
+
+        // 이미 고품질이면 스킵
+        guard needsHighQualityUpgrade else { return }
+
+        // 품질 업그레이드
+        lastRequestQuality = .fast
+        let modDate = asset.modificationDate
+
+        currentCancellable?.cancel()
+        currentCancellable = ImagePipeline.shared.requestImage(
+            for: asset,
+            targetSize: targetSize,
+            contentMode: .aspectFill,
+            quality: .fast  // 고품질로 재요청
+        ) { [weak self] image, isDegraded in
+            guard let self = self else { return }
+            guard self.currentAssetID == assetID else { return }
+
+            self.lastIsDegraded = isDegraded
+
+            if let image = image {
+                self.imageView.image = image
+
+                // [--log-thumb] 업그레이드 로그
+                if FileLogger.logThumbEnabled && !isDegraded {
+                    let imgPx = Int(image.size.width * image.scale)
+                    FileLogger.log("[Thumb:Upgrade] img=\(imgPx)px upgraded")
+                }
+            }
         }
     }
 }
