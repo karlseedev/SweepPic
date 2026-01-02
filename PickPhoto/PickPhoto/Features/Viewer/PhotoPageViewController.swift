@@ -125,10 +125,15 @@ final class PhotoPageViewController: UIViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
         setupUI()
+
         if debugPhoto {
             let now = CACurrentMediaTime()
             print("[Photo] 📦 viewDidLoad - index: \(index), t=\(String(format: "%.3f", now)), since init: \(String(format: "%.1f", (now - createdAt) * 1000))ms")
         }
+
+        // Phase 1: 즉시 레이아웃 + LOD0 요청
+        applyInitialLayout()
+        requestLOD0Image()
     }
 
     override func viewDidLayoutSubviews() {
@@ -143,14 +148,20 @@ final class PhotoPageViewController: UIViewController {
             }
         }
 
-        // 줌 인터랙션 중에는 레이아웃 갱신을 보류 (줌 완료 후 수행)
-        // isZoomInteractionActive는 isZooming보다 먼저 true가 되어 첫 프레임부터 보호
+        // Phase 1: 초기 레이아웃이 아직 안 됐으면 적용 (fallback)
+        if !hasAppliedInitialLayout {
+            applyInitialLayout()
+            requestLOD0Image()
+        }
+
+        // 줌 중에는 레이아웃 변경 보류
         if isZoomInteractionActive {
             needsLayoutUpdateAfterZoom = true
-        } else {
-            requestImageForCurrentBoundsIfNeeded()
-            updateImageLayout()
+            return
         }
+
+        // 이미 레이아웃 적용됨 → 레이아웃 변경 없음 (이미지만 교체됨)
+        // requestImageForCurrentBoundsIfNeeded() 제거 - LOD0에서 이미 요청됨
     }
 
     deinit {
@@ -220,6 +231,106 @@ final class PhotoPageViewController: UIViewController {
 
         // 더블탭 제스처
         scrollView.addGestureRecognizer(doubleTapGesture)
+    }
+
+    // MARK: - Phase 1: Early Layout & LOD0
+
+    /// PHAsset 비율 기반 레이아웃 (1회만 실행)
+    /// - willTransition 시점에 frame이 확정되어 있어야 검은 영역 방지
+    private func applyInitialLayout() {
+        guard !hasAppliedInitialLayout else { return }
+
+        let assetWidth = CGFloat(asset.pixelWidth)
+        let assetHeight = CGFloat(asset.pixelHeight)
+        guard assetWidth > 0, assetHeight > 0 else { return }
+
+        // bounds가 0일 수 있으므로 UIScreen.main.bounds fallback
+        let containerSize = view.bounds.size.width > 0
+            ? view.bounds.size
+            : UIScreen.main.bounds.size
+
+        // aspect fit 계산
+        let assetRatio = assetWidth / assetHeight
+        let containerRatio = containerSize.width / containerSize.height
+
+        let fitSize: CGSize
+        if assetRatio > containerRatio {
+            // 가로가 더 넓은 이미지 → width에 맞춤
+            fitSize = CGSize(width: containerSize.width,
+                            height: containerSize.width / assetRatio)
+        } else {
+            // 세로가 더 긴 이미지 → height에 맞춤
+            fitSize = CGSize(width: containerSize.height * assetRatio,
+                            height: containerSize.height)
+        }
+
+        // frame 확정
+        imageView.frame = CGRect(origin: .zero, size: fitSize)
+        scrollView.contentSize = fitSize
+
+        // 중앙 정렬
+        let hInset = max(0, (containerSize.width - fitSize.width) / 2)
+        let vInset = max(0, (containerSize.height - fitSize.height) / 2)
+        scrollView.contentInset = UIEdgeInsets(top: vInset, left: hInset,
+                                               bottom: vInset, right: hInset)
+        scrollView.contentOffset = CGPoint(x: -hInset, y: -vInset)
+
+        // PHAsset 해상도로 maxZoomScale 미리 계산
+        imageSize = CGSize(width: assetWidth, height: assetHeight)
+        updateMaxZoomScale()
+
+        hasAppliedInitialLayout = true
+
+        if debugPhoto {
+            print("[Photo] 🎯 applyInitialLayout - index: \(index), asset=\(Int(assetWidth))×\(Int(assetHeight)), fit=\(fitSize)")
+        }
+    }
+
+    /// LOD0 즉시 요청 (.fast, opportunistic → degraded 먼저 표시)
+    private func requestLOD0Image() {
+        let screenSize = UIScreen.main.bounds.size
+        let scale = UIScreen.main.scale
+        let targetSize = CGSize(width: screenSize.width * scale,
+                               height: screenSize.height * scale)
+
+        guard targetSize.width > 0, targetSize.height > 0 else { return }
+
+        // 시간 측정 시작
+        imageRequestStartTime = CFAbsoluteTimeGetCurrent()
+        hasLoadedFullSize = false
+
+        if debugPhoto {
+            let now = CACurrentMediaTime()
+            print("[Photo] 🚀 LOD0 요청 - index: \(index), t=\(String(format: "%.3f", now)), targetSize=\(targetSize)")
+        }
+
+        requestCancellable?.cancel()
+        requestCancellable = ImagePipeline.shared.requestImage(
+            for: asset,
+            targetSize: targetSize,
+            contentMode: .aspectFit,
+            quality: .fast  // opportunistic → degraded 먼저 표시
+        ) { [weak self] image, isDegraded in
+            guard let self = self, let image = image else { return }
+
+            let elapsed = (CFAbsoluteTimeGetCurrent() - self.imageRequestStartTime) * 1000
+
+            if self.debugPhoto {
+                let now = CACurrentMediaTime()
+                print("[Photo] ✅ LOD0 완료 - index: \(self.index), \(Int(elapsed))ms, degraded=\(isDegraded), since init: \(String(format: "%.0f", (now - self.createdAt) * 1000))ms")
+            }
+
+            // 이미지만 교체 (레이아웃 변경 없음!)
+            self.imageView.image = image
+            // imageSize는 applyInitialLayout에서 PHAsset 기반으로 이미 설정됨
+            // → 여기서 덮어쓰지 않음 (maxZoomScale 보존)
+
+            // 원본 이미지 요청 (LOD1)
+            if !isDegraded {
+                // .fast에서 고품질 이미지가 왔으면 원본 요청
+                self.requestFullSizeImage()
+            }
+        }
     }
 
     /// 이미지 요청
@@ -295,11 +406,12 @@ final class PhotoPageViewController: UIViewController {
         }
     }
 
-    /// 원본 이미지 요청 (줌용)
+    /// 원본 이미지 요청 (LOD1 - 줌용 고해상도)
+    /// - Phase 1: 이미지만 교체, 레이아웃 변경 없음
     private func requestFullSizeImage() {
         if debugPhoto {
             let now = CACurrentMediaTime()
-            print("[Viewer] 2️⃣ 원본 요청 시작 - index: \(index), t=\(String(format: "%.3f", now))")
+            print("[Photo] 🔍 LOD1 원본 요청 - index: \(index), t=\(String(format: "%.3f", now))")
         }
         fullSizeRequestCancellable?.cancel()
         fullSizeRequestCancellable = ImagePipeline.shared.requestImage(
@@ -310,24 +422,18 @@ final class PhotoPageViewController: UIViewController {
         ) { [weak self] image, isDegraded in
             guard let self = self, let image = image, !isDegraded else { return }
 
-            // 2차 로딩 시간 측정
             let elapsed = (CFAbsoluteTimeGetCurrent() - self.imageRequestStartTime) * 1000
-            let now = CACurrentMediaTime()
-            print("[Viewer] 2️⃣ 원본: \(Int(elapsed))ms, size=\(image.size), t=\(String(format: "%.3f", now))")
+
+            if self.debugPhoto {
+                print("[Photo] ✅ LOD1 완료 - index: \(self.index), \(Int(elapsed))ms, size=\(image.size)")
+            }
 
             self.hasLoadedFullSize = true
-            self.imageView.image = image
-            self.imageSize = image.size
 
-            // 줌 인터랙션 중이면 보류
-            if self.isZoomInteractionActive {
-                self.needsLayoutUpdateAfterZoom = true
-            } else {
-                if self.debugPhoto {
-                    print("[Photo] 📏 updateImageLayoutPreservingZoom 호출 - index: \(self.index)")
-                }
-                self.updateImageLayoutPreservingZoom()
-            }
+            // 이미지만 교체 (레이아웃 변경 없음!)
+            self.imageView.image = image
+            // imageSize는 applyInitialLayout에서 PHAsset 기반으로 설정됨
+            // → 여기서 덮어쓰지 않음 (레이아웃 안정성 보장)
         }
     }
 
@@ -488,16 +594,11 @@ extension PhotoPageViewController: UIScrollViewDelegate {
         updateContentInsetForCentering(preserveOffset: true)
     }
 
-    /// 줌 완료 시 - 플래그 해제 및 보류된 레이아웃 갱신 수행
+    /// 줌 완료 시 - 플래그 해제
+    /// Phase 1: 레이아웃은 applyInitialLayout에서 1회 확정, 이후 변경 없음
     func scrollViewDidEndZooming(_ scrollView: UIScrollView, with view: UIView?, atScale scale: CGFloat) {
-        if debugZoom { print("[ZOOM] DidEnd - scale=\(String(format: "%.3f", scale)), origin=\(imageView.frame.origin), needsUpdate=\(needsLayoutUpdateAfterZoom)") }
+        if debugZoom { print("[ZOOM] DidEnd - scale=\(String(format: "%.3f", scale)), origin=\(imageView.frame.origin)") }
         isZoomInteractionActive = false
-
-        if needsLayoutUpdateAfterZoom {
-            if debugZoom { print("[ZOOM] 보류된 갱신 수행") }
-            requestImageForCurrentBoundsIfNeeded()
-            updateImageLayoutPreservingZoom()
-            needsLayoutUpdateAfterZoom = false
-        }
+        needsLayoutUpdateAfterZoom = false
     }
 }
