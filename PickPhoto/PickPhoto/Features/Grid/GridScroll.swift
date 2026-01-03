@@ -107,17 +107,53 @@ extension GridViewController {
             // - 정지 후에만 visible + 1화면 범위 캐싱
             self.preheatAfterScrollStop()
 
+            // [R2] 스크롤 정지 후 visible 셀 고해상도 업그레이드
+            // - 스크롤 중 50% 크기로 요청된 셀을 100% 크기로 재요청
+            // - Gate2 spike test에서 검증된 R2 정지 복구 패턴
+            // - .opportunistic은 같은 targetSize 내에서만 저→고 자동 업그레이드
+            // - 다른 targetSize(50%→100%)로의 업그레이드는 명시적 재요청 필요
+            self.upgradeVisibleCellsToHighQuality()
+
             // [--log-thumb] 스크롤 종료 0.2초 후 visible 셀 해상도 검사
             if FileLogger.logThumbEnabled {
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) { [weak self] in
                     self?.logVisibleCellResolution()
                 }
             }
-
-            // Note: PHImageRequestOptions.deliveryMode = .opportunistic 모드에서는
-            // 저해상도 → 고해상도가 자동으로 전달되므로 별도 리로드 불필요
-            // reloadItems 호출 시 prepareForReuse()가 호출되어 이미지가 깜빡거림
         }
+    }
+
+    /// [R2] visible 셀을 고해상도로 업그레이드
+    /// - 스크롤 중 50% 크기로 요청된 셀을 100% 크기로 재요청
+    /// - Gate2 spike test R2 정지 복구 패턴 구현
+    private func upgradeVisibleCellsToHighQuality() {
+        let fullSize = thumbnailSize(forScrolling: false)  // 100% 크기
+        let visibleCells = collectionView.visibleCells
+        let padding = paddingCellCount
+
+        var upgradedCount = 0
+
+        for cell in visibleCells {
+            guard let photoCell = cell as? PhotoCell,
+                  let indexPath = collectionView.indexPath(for: cell) else { continue }
+
+            // padding 셀은 스킵
+            guard indexPath.item >= padding else { continue }
+
+            // asset 가져오기
+            let assetIndex = IndexPath(item: indexPath.item - padding, section: indexPath.section)
+            guard let asset = dataSourceDriver.asset(at: assetIndex) else { continue }
+
+            // 고해상도로 재요청 (내부에서 크기 비교하여 필요 시에만 요청)
+            photoCell.refreshImageIfNeeded(asset: asset, targetSize: fullSize)
+            upgradedCount += 1
+        }
+
+        #if DEBUG
+        if FileLogger.logThumbEnabled {
+            FileLogger.log("[R2] 고해상도 업그레이드: \(upgradedCount)개 셀, targetSize=\(Int(fullSize.width))px")
+        }
+        #endif
     }
 
     /// [--log-thumb] visible 셀의 실제 이미지 해상도 vs 기대 해상도 로그
