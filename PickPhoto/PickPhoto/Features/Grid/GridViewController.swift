@@ -224,6 +224,17 @@ final class GridViewController: UIViewController {
     /// 자동 스크롤 속도 (포인트/초) (extension에서 접근 필요)
     static let autoScrollSpeed: CGFloat = 400
 
+    // MARK: - R2 로그 측정용 (extension에서 접근 필요)
+
+    /// 마지막 스크롤 velocity (Y축, pt/s)
+    var lastScrollVelocityY: CGFloat = 0
+
+    /// 스크롤 시퀀스 (로그 매칭용)
+    var scrollSeq: Int = 0
+
+    /// 마지막 스크롤 종료 시간 (R2 응답 시간 계산용)
+    var lastScrollEndTime: CFTimeInterval = 0
+
     /// 맨 위 행 빈 셀 개수 (T027-2: 3의 배수가 아닐 시 맨 위 행에 빈 셀)
     /// 최신 사진(맨 아래) 기준 꽉 차게 정렬
     /// (extension에서 접근 필요)
@@ -975,6 +986,19 @@ extension GridViewController: UICollectionViewDelegate {
         // 사용자가 스크롤 시작하면 pending 스크롤 취소 (롤백 방지)
         pendingScrollAssetID = nil
         didUserScrollAfterReturn = true
+    }
+
+    func scrollViewWillEndDragging(
+        _ scrollView: UIScrollView,
+        withVelocity velocity: CGPoint,
+        targetContentOffset: UnsafeMutablePointer<CGPoint>
+    ) {
+        // velocity 저장 (로그용)
+        // Note: UIScrollView velocity는 이미 pt/s 단위
+        lastScrollVelocityY = abs(velocity.y)
+
+        // 스크롤 시퀀스 증가
+        scrollSeq += 1
     }
 
     func scrollViewDidEndDragging(_: UIScrollView, willDecelerate decelerate: Bool) {

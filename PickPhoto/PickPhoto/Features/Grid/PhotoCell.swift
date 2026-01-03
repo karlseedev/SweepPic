@@ -1026,14 +1026,18 @@ extension PhotoCell {
         CATransaction.commit()
     }
 
-    // MARK: - Pinch Zoom 후 고해상도 재요청
+    // MARK: - 고해상도 재요청 (R2 업그레이드)
 
-    /// 핀치줌으로 셀이 커졌을 때 고해상도 썸네일 재요청
+    /// 고해상도 업그레이드가 필요한 경우 이미지 재요청
+    /// - 핀치줌으로 셀이 커졌을 때
+    /// - 스크롤 정지 후 R2 업그레이드 시
     /// - Parameters:
-    ///   - asset: PHAsset
-    ///   - targetSize: 새로운 타겟 크기
+    ///   - asset: 대상 에셋
+    ///   - targetSize: 목표 크기
+    /// - Returns: 실제로 업그레이드 요청을 했으면 true, 스킵했으면 false
     /// - Note: 같은 assetID여도 targetSize가 커지면 재요청
-    func refreshImageIfNeeded(asset: PHAsset, targetSize: CGSize) {
+    @discardableResult
+    func refreshImageIfNeeded(asset: PHAsset, targetSize: CGSize) -> Bool {
         let assetID = asset.localIdentifier
 
         // 다른 에셋이면 configure 호출 (일반적인 경우 아님)
@@ -1043,13 +1047,13 @@ extension PhotoCell {
                 isTrashed: isTrashed,
                 targetSize: targetSize
             )
-            return
+            return true  // configure 호출함
         }
 
         // targetSize가 커졌을 때만 재요청 (축소 시에는 기존 이미지 사용)
         let needsHigherRes = targetSize.width > currentTargetSize.width ||
                              targetSize.height > currentTargetSize.height
-        guard needsHigherRes else { return }
+        guard needsHigherRes else { return false }  // 이미 충분한 해상도
 
         // 크기 업데이트
         currentTargetSize = targetSize
@@ -1073,5 +1077,6 @@ extension PhotoCell {
             }
             // degraded 무시, 실패 시 기존 이미지 유지
         }
+        return true  // 업그레이드 요청함
     }
 }

@@ -107,17 +107,32 @@ extension GridViewController {
             // - 정지 후에만 visible + 1화면 범위 캐싱
             self.preheatAfterScrollStop()
 
+            // [R2 로그] 스크롤 종료 시간 및 시퀀스 저장
+            self.lastScrollEndTime = CACurrentMediaTime()
+            let currentSeq = self.scrollSeq
+            let velocity = Int(self.lastScrollVelocityY)
+
+            // [R2:Timing] 로그
+            if FileLogger.logThumbEnabled {
+                FileLogger.log("[R2:Timing] seq=\(currentSeq), velocity=\(velocity)pt/s, 디바운스=100ms")
+            }
+
             // [R2] 스크롤 정지 후 visible 셀 고해상도 업그레이드
             // - 스크롤 중 50% 크기로 요청된 셀을 100% 크기로 재요청
             // - Gate2 spike test에서 검증된 R2 정지 복구 패턴
             // - .opportunistic은 같은 targetSize 내에서만 저→고 자동 업그레이드
             // - 다른 targetSize(50%→100%)로의 업그레이드는 명시적 재요청 필요
-            self.upgradeVisibleCellsToHighQuality()
+            self.upgradeVisibleCellsToHighQuality(scrollSeq: currentSeq, scrollEndTime: self.lastScrollEndTime)
 
-            // [--log-thumb] 스크롤 종료 0.2초 후 visible 셀 해상도 검사
+            // [--log-thumb] 스크롤 종료 후 visible 셀 해상도 검사 (2회: 0.2s, 0.6s)
             if FileLogger.logThumbEnabled {
+                // 0.2초 후 첫 번째 체크
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) { [weak self] in
-                    self?.logVisibleCellResolution()
+                    self?.logVisibleCellResolution(seq: currentSeq, timing: "0.2s", velocity: velocity)
+                }
+                // 0.6초 후 두 번째 체크 (수렴 확인)
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) { [weak self] in
+                    self?.logVisibleCellResolution(seq: currentSeq, timing: "0.6s", velocity: velocity)
                 }
             }
         }
@@ -126,11 +141,15 @@ extension GridViewController {
     /// [R2] visible 셀을 고해상도로 업그레이드
     /// - 스크롤 중 50% 크기로 요청된 셀을 100% 크기로 재요청
     /// - Gate2 spike test R2 정지 복구 패턴 구현
-    private func upgradeVisibleCellsToHighQuality() {
+    /// - Parameters:
+    ///   - scrollSeq: 스크롤 시퀀스 (로그 매칭용)
+    ///   - scrollEndTime: 스크롤 종료 시간 (응답 시간 계산용)
+    private func upgradeVisibleCellsToHighQuality(scrollSeq: Int, scrollEndTime: CFTimeInterval) {
         let fullSize = thumbnailSize(forScrolling: false)  // 100% 크기
         let visibleCells = collectionView.visibleCells
         let padding = paddingCellCount
 
+        var visibleCount = 0
         var upgradedCount = 0
 
         for cell in visibleCells {
@@ -140,24 +159,32 @@ extension GridViewController {
             // padding 셀은 스킵
             guard indexPath.item >= padding else { continue }
 
+            visibleCount += 1
+
             // asset 가져오기
             let assetIndex = IndexPath(item: indexPath.item - padding, section: indexPath.section)
             guard let asset = dataSourceDriver.asset(at: assetIndex) else { continue }
 
             // 고해상도로 재요청 (내부에서 크기 비교하여 필요 시에만 요청)
-            photoCell.refreshImageIfNeeded(asset: asset, targetSize: fullSize)
-            upgradedCount += 1
+            // TODO: Phase 1에서 scrollEndTime/scrollSeq 파라미터 추가
+            if photoCell.refreshImageIfNeeded(asset: asset, targetSize: fullSize) {
+                upgradedCount += 1
+            }
         }
 
-        #if DEBUG
         if FileLogger.logThumbEnabled {
-            FileLogger.log("[R2] 고해상도 업그레이드: \(upgradedCount)개 셀, targetSize=\(Int(fullSize.width))px")
+            FileLogger.log("[R2] seq=\(scrollSeq), visible=\(visibleCount), upgraded=\(upgradedCount)")
         }
-        #endif
     }
 
     /// [--log-thumb] visible 셀의 실제 이미지 해상도 vs 기대 해상도 로그
-    private func logVisibleCellResolution() {
+    /// - Parameters:
+    ///   - seq: 스크롤 시퀀스 번호 (로그 매칭용)
+    ///   - timing: 체크 시점 문자열 (예: "0.2s", "0.6s")
+    ///   - velocity: 스크롤 종료 시 velocity (pt/s)
+    private func logVisibleCellResolution(seq: Int, timing: String, velocity: Int) {
+        guard FileLogger.logThumbEnabled else { return }
+
         let expectedSize = thumbnailSize(forScrolling: false)  // 스크롤 정지 상태의 기대 크기
         let visibleCells = collectionView.visibleCells.compactMap { $0 as? PhotoCell }
 
@@ -180,17 +207,8 @@ extension GridViewController {
             }
         }
 
-        let expectedPxInt = Int(expectedSize.width)
-        FileLogger.log("[Thumb:Check] 스크롤 종료 후: expected=\(expectedPxInt)px, total=\(totalCount), match=\(matchCount), underSized=\(underSizedCount)")
-
-        // 샘플로 처음 3개 셀의 상세 정보
-        for (i, cell) in visibleCells.prefix(3).enumerated() {
-            if let image = cell.thumbnailImageView.image {
-                let imgPx = Int(image.size.width * image.scale)
-                let ratio = expectedSize.width > 0 ? Double(imgPx) / Double(expectedSize.width) * 100 : 0
-                FileLogger.log("[Thumb:Check] cell[\(i)] img=\(imgPx)px (\(String(format: "%.0f", ratio))% of expected)")
-            }
-        }
+        // 로그 형식: [Thumb:Check] seq=5, t=0.2s, velocity=3200, underSized=10/24
+        FileLogger.log("[Thumb:Check] seq=\(seq), t=\(timing), velocity=\(velocity), underSized=\(underSizedCount)/\(totalCount)")
     }
 
     /// 스크롤 정지 후 preheat (1회)
