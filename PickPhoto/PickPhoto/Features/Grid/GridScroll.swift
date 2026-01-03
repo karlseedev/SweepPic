@@ -83,9 +83,10 @@ extension GridViewController {
 
     /// 스크롤 종료
     func scrollDidEnd() {
-        // 디바운스 (100ms 후 실제 종료로 간주)
+        // [Phase 1] 디바운스 50ms (100ms → 50ms)
+        // - 스크롤 정지 후 R2 업그레이드 시작을 50ms 앞당김
         scrollEndTimer?.invalidate()
-        scrollEndTimer = Timer.scheduledTimer(withTimeInterval: 0.1, repeats: false) { [weak self] _ in
+        scrollEndTimer = Timer.scheduledTimer(withTimeInterval: 0.05, repeats: false) { [weak self] _ in
             guard let self = self else { return }
             self.isScrolling = false
 
@@ -115,7 +116,7 @@ extension GridViewController {
 
             // [R2:Timing] 로그
             if FileLogger.logThumbEnabled {
-                FileLogger.log("[R2:Timing] seq=\(currentSeq), velocity=\(velocity)pt/s, 디바운스=100ms")
+                FileLogger.log("[R2:Timing] seq=\(currentSeq), velocity=\(velocity)pt/s, 디바운스=50ms")
             }
 
             // [R2] 스크롤 정지 후 visible 셀 고해상도 업그레이드

@@ -1072,8 +1072,22 @@ extension PhotoCell {
             // [R2] 고해상도 업그레이드 시에는 final만 적용
             // - degraded를 적용하면 기존 이미지(50%)보다 품질이 떨어질 수 있음
             // - final만 적용하면 50% → 100%로 부드럽게 전환
+            // [Phase 1] CrossFade: 50% → 100% 전환이 눈에 띄지 않도록
             if let image = image, !isDegraded {
-                self.imageView.image = image
+                // 이미 이미지가 있고, 화면에 보이는 경우에만 CrossFade
+                if self.imageView.image != nil && self.imageView.window != nil {
+                    UIView.transition(
+                        with: self.imageView,
+                        duration: 0.15,
+                        options: .transitionCrossDissolve,
+                        animations: {
+                            self.imageView.image = image
+                        },
+                        completion: nil
+                    )
+                } else {
+                    self.imageView.image = image
+                }
             }
             // degraded 무시, 실패 시 기존 이미지 유지
         }
