@@ -224,7 +224,13 @@ extension GridViewController {
         guard !isDecelerationPreheatScheduled else { return }
         isDecelerationPreheatScheduled = true
 
-        let fullSize = thumbnailSize(forScrolling: false)  // 100%
+        // [버그 수정] thumbnailSize(forScrolling: false)는 isScrolling 체크로 50% 반환
+        // 여기서는 강제로 100% 크기 계산 (스크롤 중에도 100% preheat 필요)
+        let scale = UIScreen.main.scale
+        let fullSize = CGSize(
+            width: currentCellSize.width * scale,
+            height: currentCellSize.height * scale
+        )
 
         // targetOffset 기준 visible 영역 계산
         let targetRect = CGRect(

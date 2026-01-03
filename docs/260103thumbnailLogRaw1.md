@@ -290,3 +290,50 @@
 ```
 
 ---
+
+<!-- LOG_ID: 260103_phase2_1_bug -->
+## Phase 2 테스트 1 (2026-01-03 23:57) - 버그 있음
+
+**조건:**
+- 기기: iPhone 13 Pro (iPhone14,2)
+- 빌드: Release
+- 디바운스: 50ms
+- CrossFade: 0.15s
+- Preheat: 있음 (⚠️ 버그: 192px/50%로 요청됨)
+
+**⚠️ 버그:** `thumbnailSize(forScrolling: false)`가 `isScrolling` 체크로 50% 반환
+
+### R2 관련 로그
+
+```
+[+1523.6ms] [Preheat:Decel] seq=1, 21개 에셋, targetSize=192px
+[+1574.8ms] [R2:Timing] seq=2, velocity=3808pt/s, 디바운스=50ms
+[+1783.2ms] [Thumb:Check] seq=2, t=0.2s, velocity=3808, underSized=12/21
+[+2200.9ms] [Thumb:Check] seq=2, t=0.6s, velocity=3808, underSized=1/21
+[+3551.6ms] [R2:Timing] seq=5, velocity=5119pt/s, 디바운스=50ms
+[+3752.6ms] [Thumb:Check] seq=5, t=0.2s, velocity=5119, underSized=0/21
+[+4182.4ms] [Thumb:Check] seq=5, t=0.6s, velocity=5119, underSized=0/21
+[+4924.4ms] [R2:Timing] seq=7, velocity=3304pt/s, 디바운스=50ms
+[+5133.4ms] [Thumb:Check] seq=7, t=0.2s, velocity=3304, underSized=0/24
+[+5546.6ms] [Thumb:Check] seq=7, t=0.6s, velocity=3304, underSized=0/24
+[+6574.4ms] [R2:Timing] seq=10, velocity=10513pt/s, 디바운스=50ms
+[+6783.5ms] [Thumb:Check] seq=10, t=0.2s, velocity=10513, underSized=18/21
+[+7200.2ms] [Thumb:Check] seq=10, t=0.6s, velocity=10513, underSized=0/21
+[+8183.5ms] [R2:Timing] seq=13, velocity=8222pt/s, 디바운스=50ms
+[+8389.0ms] [Thumb:Check] seq=13, t=0.2s, velocity=8222, underSized=20/24
+[+8800.3ms] [Thumb:Check] seq=13, t=0.6s, velocity=8222, underSized=0/24
+[+9742.0ms] [R2:Timing] seq=16, velocity=6337pt/s, 디바운스=50ms
+[+9948.8ms] [Thumb:Check] seq=16, t=0.2s, velocity=6337, underSized=2/24
+[+10362.2ms] [Thumb:Check] seq=16, t=0.6s, velocity=6337, underSized=0/24
+[+12192.1ms] [R2:Timing] seq=22, velocity=20434pt/s, 디바운스=50ms
+[+12400.5ms] [Thumb:Check] seq=22, t=0.2s, velocity=20434, underSized=18/24
+[+12815.7ms] [Thumb:Check] seq=22, t=0.6s, velocity=20434, underSized=0/24
+[+14550.5ms] [R2:Timing] seq=27, velocity=10161pt/s, 디바운스=50ms
+[+14758.6ms] [Thumb:Check] seq=27, t=0.2s, velocity=10161, underSized=19/21
+[+15165.8ms] [Thumb:Check] seq=27, t=0.6s, velocity=10161, underSized=0/21
+[+16676.0ms] [R2:Timing] seq=32, velocity=10246pt/s, 디바운스=50ms
+[+16882.8ms] [Thumb:Check] seq=32, t=0.2s, velocity=10246, underSized=12/24
+[+17299.5ms] [Thumb:Check] seq=32, t=0.6s, velocity=10246, underSized=0/24
+```
+
+---
