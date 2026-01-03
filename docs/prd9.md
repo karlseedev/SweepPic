@@ -687,12 +687,16 @@ func convertToViewerCoordinates(
 **파일 구조:**
 ```
 PickPhoto/PickPhoto/
-├── Shared/FeatureFlags.swift                      # 플래그 정의
-├── Features/Grid/
-│   └── GridViewController+SimilarPhoto.swift      # 그리드 Extension
-├── Features/Viewer/
-│   └── ViewerViewController+SimilarPhoto.swift    # 뷰어 Extension
-└── Features/SimilarPhoto/                         # 신규 모듈
+├── Shared/
+│   └── FeatureFlags.swift                         # 플래그 정의
+├── Features/
+│   ├── Grid/
+│   │   ├── GridViewController.swift               # 기존 (최소 수정)
+│   │   └── GridViewController+SimilarPhoto.swift  # 신규 Extension
+│   ├── Viewer/
+│   │   ├── ViewerViewController.swift             # 기존 (최소 수정)
+│   │   └── ViewerViewController+SimilarPhoto.swift # 신규 Extension
+│   └── SimilarPhoto/                              # 신규 모듈
 ```
 
 **기능 끄기:** `FeatureFlags.isSimilarPhotoEnabled = false` (1줄)

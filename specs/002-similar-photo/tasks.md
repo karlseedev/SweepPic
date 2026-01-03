@@ -254,7 +254,7 @@ T060~T064 (성능/에러 처리)
 
 | 항목 | 수량 |
 |------|------|
-| **총 태스크** | 47개 |
+| **총 태스크** | 45개 |
 | Phase 1 (Setup) | 2개 |
 | Phase 2 (Foundational) | 14개 |
 | US1 (그리드 테두리) | 6개 |
@@ -273,4 +273,4 @@ T060~T064 (성능/에러 처리)
 |------|------|----------|
 | 1.0 | 2026-01-02 | 초안 생성 (63개 태스크) |
 | 1.1 | 2026-01-02 | 파일 구조 개선 (SimilarityAnalysisQueue, SimilarityImageLoader, FaceCropper 분리), 태스크 병합 (46개로 축소), 태스크 번호 그룹화 (T0xx, T02x, T03x...) |
-| 1.2 | 2026-01-03 | Feature Flag 추가 (T000), Extension 파일 분리 (GridViewController+SimilarPhoto.swift, ViewerViewController+SimilarPhoto.swift), 총 47개 태스크 |
+| 1.2 | 2026-01-03 | Feature Flag 추가 (T000), Extension 파일 분리 (GridViewController+SimilarPhoto.swift, ViewerViewController+SimilarPhoto.swift), 총 45개 태스크 |
