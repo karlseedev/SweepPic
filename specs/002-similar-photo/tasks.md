@@ -23,8 +23,9 @@
 
 ## Phase 1: Setup (프로젝트 구조)
 
-**Purpose**: SimilarPhoto 모듈 디렉토리 생성 및 기본 구조
+**Purpose**: Feature Flag 및 SimilarPhoto 모듈 디렉토리 생성
 
+- [ ] T000 FeatureFlags.swift 생성 - `isSimilarPhotoEnabled` 플래그 정의 in `PickPhoto/PickPhoto/Shared/FeatureFlags.swift`
 - [ ] T001 SimilarPhoto 모듈 디렉토리 구조 생성 in `PickPhoto/PickPhoto/Features/SimilarPhoto/{Analysis,UI,Models}/`
 
 ---
@@ -77,11 +78,11 @@
 
 ### GridViewController 통합 (T021~T025)
 
-- [ ] T021 [US1] 스크롤 멈춤 감지 + 0.3초 디바운싱 + 분석 범위 결정 (화면 ±7장) in `Features/Grid/GridViewController.swift`
-- [ ] T022 [US1] SimilarityAnalyzer 호출 및 결과 처리 + 유사 사진 셀에 BorderAnimationLayer 적용 in `Features/Grid/GridViewController.swift`
-- [ ] T023 [US1] 스크롤 재개 시 분석 취소 + 테두리 제거 in `Features/Grid/GridViewController.swift`
-- [ ] T024 [US1] 테두리 있는 사진 탭 시 뷰어 이동 처리 in `Features/Grid/GridViewController.swift`
-- [ ] T025 [US1] VoiceOver/선택 모드/휴지통 화면에서 기능 비활성화 체크 in `Features/Grid/GridViewController.swift`
+- [ ] T021 [US1] GridViewController+SimilarPhoto.swift Extension 생성 + 스크롤 멈춤 감지 + 0.3초 디바운싱 + 분석 범위 결정 (화면 ±7장) in `Features/Grid/GridViewController+SimilarPhoto.swift`
+- [ ] T022 [US1] SimilarityAnalyzer 호출 및 결과 처리 + 유사 사진 셀에 BorderAnimationLayer 적용 in `Features/Grid/GridViewController+SimilarPhoto.swift`
+- [ ] T023 [US1] 스크롤 재개 시 분석 취소 + 테두리 제거 in `Features/Grid/GridViewController+SimilarPhoto.swift`
+- [ ] T024 [US1] 테두리 있는 사진 탭 시 뷰어 이동 처리 in `Features/Grid/GridViewController+SimilarPhoto.swift`
+- [ ] T025 [US1] VoiceOver/선택 모드/휴지통 화면 + FeatureFlags 체크 in `Features/Grid/GridViewController+SimilarPhoto.swift`
 
 **Checkpoint**: 그리드 테두리 표시 완료 - 독립 테스트 가능
 
@@ -100,10 +101,10 @@
 
 ### ViewerViewController 통합 (T032~T035)
 
-- [ ] T032 [US2] 캐시 hit 시 +버튼 즉시 표시 (100ms 이내) in `Features/Viewer/ViewerViewController.swift`
-- [ ] T033 [US2] 캐시 miss 시 분석 요청 + 로딩 인디케이터 + 완료 후 +버튼 표시 (0.5초 이내) in `Features/Viewer/ViewerViewController.swift`
-- [ ] T034 [US2] 화면 회전/iPad 멀티윈도우 시 +버튼 위치 재계산 (viewWillTransition) in `Features/Viewer/ViewerViewController.swift`
-- [ ] T035 [US2] +버튼 탭 시 FaceComparisonViewController 표시 in `Features/Viewer/ViewerViewController.swift`
+- [ ] T032 [US2] ViewerViewController+SimilarPhoto.swift Extension 생성 + 캐시 hit 시 +버튼 즉시 표시 (100ms 이내) in `Features/Viewer/ViewerViewController+SimilarPhoto.swift`
+- [ ] T033 [US2] 캐시 miss 시 분석 요청 + 로딩 인디케이터 + 완료 후 +버튼 표시 (0.5초 이내) in `Features/Viewer/ViewerViewController+SimilarPhoto.swift`
+- [ ] T034 [US2] 화면 회전/iPad 멀티윈도우 시 +버튼 위치 재계산 (viewWillTransition) in `Features/Viewer/ViewerViewController+SimilarPhoto.swift`
+- [ ] T035 [US2] +버튼 탭 시 FaceComparisonViewController 표시 in `Features/Viewer/ViewerViewController+SimilarPhoto.swift`
 
 **Checkpoint**: 뷰어 +버튼 표시 완료 - 독립 테스트 가능
 
@@ -127,7 +128,7 @@
 
 ### 삭제 후 처리 (T047~T049)
 
-- [ ] T047 [US3] 현재 사진 삭제 시 이전/다음 사진 이동 + 모든 사진 삭제 시 그리드 복귀 in `Features/Viewer/ViewerViewController.swift`
+- [ ] T047 [US3] 현재 사진 삭제 시 이전/다음 사진 이동 + 모든 사진 삭제 시 그리드 복귀 in `Features/Viewer/ViewerViewController+SimilarPhoto.swift`
 - [ ] T048 [US3] 그룹 멤버 3장 미만 시 그룹 무효화 + 테두리/+버튼 제거 in `Features/SimilarPhoto/Analysis/SimilarityCache.swift`
 - [ ] T049 [US3] Undo 기능 통합 - 기존 TrashStore와 동일 in `Stores/TrashStore.swift`
 
@@ -141,7 +142,7 @@
 
 **Independent Test**: 토글 버튼으로 + 버튼 숨김/보임 전환 테스트 가능
 
-- [ ] T050 [US4] eye/eye.slash 토글 버튼 + 상태 관리 + 스와이프 복귀 시 보임 리셋 in `Features/Viewer/ViewerViewController.swift`
+- [ ] T050 [US4] eye/eye.slash 토글 버튼 + 상태 관리 + 스와이프 복귀 시 보임 리셋 in `Features/Viewer/ViewerViewController+SimilarPhoto.swift`
 
 **Checkpoint**: 오버레이 토글 완료
 
@@ -153,7 +154,7 @@
 
 ### 성능 검증 (T060~T062)
 
-- [ ] T060 [P] 그리드 60fps/120fps(ProMotion) + 테두리 1초 이내 표시 검증 in `Features/Grid/GridViewController.swift`
+- [ ] T060 [P] 그리드 60fps/120fps(ProMotion) + 테두리 1초 이내 표시 검증 in `Features/Grid/GridViewController+SimilarPhoto.swift`
 - [ ] T061 [P] +버튼 탭 후 0.5초 이내 얼굴 비교 화면 표시 검증 in `Features/SimilarPhoto/UI/FaceComparisonViewController.swift`
 - [ ] T062 [P] 캐시 메모리 누수 검증 (Instruments Leaks) in `Features/SimilarPhoto/Analysis/SimilarityCache.swift`
 
@@ -253,8 +254,8 @@ T060~T064 (성능/에러 처리)
 
 | 항목 | 수량 |
 |------|------|
-| **총 태스크** | 46개 |
-| Phase 1 (Setup) | 1개 |
+| **총 태스크** | 47개 |
+| Phase 1 (Setup) | 2개 |
 | Phase 2 (Foundational) | 14개 |
 | US1 (그리드 테두리) | 6개 |
 | US2 (뷰어 +버튼) | 6개 |
@@ -272,3 +273,4 @@ T060~T064 (성능/에러 처리)
 |------|------|----------|
 | 1.0 | 2026-01-02 | 초안 생성 (63개 태스크) |
 | 1.1 | 2026-01-02 | 파일 구조 개선 (SimilarityAnalysisQueue, SimilarityImageLoader, FaceCropper 분리), 태스크 병합 (46개로 축소), 태스크 번호 그룹화 (T0xx, T02x, T03x...) |
+| 1.2 | 2026-01-03 | Feature Flag 추가 (T000), Extension 파일 분리 (GridViewController+SimilarPhoto.swift, ViewerViewController+SimilarPhoto.swift), 총 47개 태스크 |

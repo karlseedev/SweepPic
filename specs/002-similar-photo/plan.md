@@ -53,11 +53,15 @@ specs/002-similar-photo/
 
 ```text
 PickPhoto/PickPhoto/
+├── Shared/
+│   └── FeatureFlags.swift                # 신규 - Feature Flag 정의
 ├── Features/
 │   ├── Grid/
-│   │   └── GridViewController.swift      # 기존 - 테두리 표시 추가
+│   │   ├── GridViewController.swift      # 기존 - 최소 수정 (플래그 체크만)
+│   │   └── GridViewController+SimilarPhoto.swift  # 신규 Extension
 │   ├── Viewer/
-│   │   └── ViewerViewController.swift    # 기존 - +버튼 오버레이 추가
+│   │   ├── ViewerViewController.swift    # 기존 - 최소 수정 (플래그 체크만)
+│   │   └── ViewerViewController+SimilarPhoto.swift # 신규 Extension
 │   └── SimilarPhoto/                     # 신규 모듈
 │       ├── Analysis/
 │       │   ├── SimilarityAnalyzer.swift       # 유사도 분석 (Vision)

@@ -674,7 +674,30 @@ func convertToViewerCoordinates(
 4. 새 분석 결과로 그룹 재생성
 ```
 
-### NFR-203: 접근성
+### NFR-203: 개발/테스트 지원 (Feature Flag)
+
+**목적:** 기능을 1줄 수정으로 완전히 끄고 켤 수 있는 구조
+
+| 요구사항 | 설명 |
+|----------|------|
+| Feature Flag | `FeatureFlags.isSimilarPhotoEnabled`로 기능 제어 |
+| 비활성화 시 | 그리드 테두리, 뷰어 +버튼, 얼굴 비교 화면 모두 비활성화 |
+| 코드 분리 | Extension 파일로 분리하여 기존 파일 수정 최소화 |
+
+**파일 구조:**
+```
+PickPhoto/PickPhoto/
+├── Shared/FeatureFlags.swift                      # 플래그 정의
+├── Features/Grid/
+│   └── GridViewController+SimilarPhoto.swift      # 그리드 Extension
+├── Features/Viewer/
+│   └── ViewerViewController+SimilarPhoto.swift    # 뷰어 Extension
+└── Features/SimilarPhoto/                         # 신규 모듈
+```
+
+**기능 끄기:** `FeatureFlags.isSimilarPhotoEnabled = false` (1줄)
+
+### NFR-204: 접근성
 
 **VoiceOver 활성화 시:**
 - 유사사진정리 기능 **전체 비활성화** (§4.2 참조)
@@ -690,7 +713,7 @@ func convertToViewerCoordinates(
 - 테두리 애니메이션 → 정적 테두리로 대체
 - 화면 전환 애니메이션 최소화
 
-### NFR-204: iOS 버전별 UI
+### NFR-205: iOS 버전별 UI
 
 | iOS 버전 | UI 구현 방식 |
 |----------|-------------|

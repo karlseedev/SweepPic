@@ -205,6 +205,29 @@
 
 ### Non-Functional Requirements
 
+#### 개발/테스트 지원 (Feature Flag)
+
+- **NFR-DEV-001**: 유사 사진 정리 기능은 Feature Flag(`FeatureFlags.isSimilarPhotoEnabled`)로 제어한다
+- **NFR-DEV-002**: 플래그가 `false`일 때 기능이 완전히 비활성화되며, 기존 앱 동작에 영향을 주지 않는다
+- **NFR-DEV-003**: 기능 관련 코드는 Extension 파일로 분리하여 기존 파일의 수정을 최소화한다
+
+**파일 구조:**
+```
+PickPhoto/PickPhoto/
+├── Shared/
+│   └── FeatureFlags.swift                         # Feature Flag 정의
+├── Features/
+│   ├── Grid/
+│   │   ├── GridViewController.swift               # 기존 (최소 수정)
+│   │   └── GridViewController+SimilarPhoto.swift  # 신규 Extension
+│   ├── Viewer/
+│   │   ├── ViewerViewController.swift             # 기존 (최소 수정)
+│   │   └── ViewerViewController+SimilarPhoto.swift # 신규 Extension
+│   └── SimilarPhoto/                              # 신규 모듈 전체
+```
+
+**기능 끄기:** `FeatureFlags.isSimilarPhotoEnabled = false` (1줄 수정)
+
 #### 성능 설계 근거
 
 - **동시 분석 5개 제한**: Vision API 호출당 약 50MB 메모리 사용, 5개 동시 분석 시 최대 250MB로 저사양 기기(2GB RAM) 안정성 확보
