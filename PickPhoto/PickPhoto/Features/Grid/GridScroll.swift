@@ -213,6 +213,63 @@ extension GridViewController {
         FileLogger.log("[Thumb:Check] seq=\(seq), t=\(timing), velocity=\(velocity), underSized=\(underSizedCount)/\(totalCount)")
     }
 
+    // MARK: - Phase 2: 감속 중 preheat
+
+    /// [Phase 2] 감속 중 100% preheat 선행
+    /// - 스크롤이 감속하는 동안 목표 위치의 셀들을 미리 100% 캐싱
+    /// - 스크롤 정지 시점에 이미 캐시가 준비되어 즉시 전환
+    /// - Parameter targetOffset: scrollViewWillEndDragging의 targetContentOffset
+    func preheatForDeceleration(targetOffset: CGPoint) {
+        // 중복 호출 방지
+        guard !isDecelerationPreheatScheduled else { return }
+        isDecelerationPreheatScheduled = true
+
+        let fullSize = thumbnailSize(forScrolling: false)  // 100%
+
+        // targetOffset 기준 visible 영역 계산
+        let targetRect = CGRect(
+            origin: targetOffset,
+            size: collectionView.bounds.size
+        )
+
+        // 해당 영역의 layoutAttributes 가져오기
+        guard let layoutAttributes = collectionView.collectionViewLayout
+            .layoutAttributesForElements(in: targetRect) else {
+            isDecelerationPreheatScheduled = false
+            return
+        }
+
+        // padding 적용하여 asset indexPaths 변환
+        let padding = paddingCellCount
+        let assetIndexPaths = layoutAttributes.compactMap { attr -> IndexPath? in
+            guard attr.indexPath.item >= padding else { return nil }
+            return IndexPath(item: attr.indexPath.item - padding, section: 0)
+        }
+
+        // PHAsset 배열 가져오기
+        let assets = assetIndexPaths.compactMap { dataSourceDriver.asset(at: $0) }
+        guard !assets.isEmpty else {
+            isDecelerationPreheatScheduled = false
+            return
+        }
+
+        // [Phase 2 로그]
+        if FileLogger.logThumbEnabled {
+            FileLogger.log("[Preheat:Decel] seq=\(scrollSeq), \(assets.count)개 에셋, targetSize=\(Int(fullSize.width))px")
+        }
+
+        // 백그라운드에서 preheat
+        DispatchQueue.global(qos: .userInitiated).async {
+            ImagePipeline.shared.preheatAssets(assets, targetSize: fullSize)
+        }
+
+        // 타이머 기반 플래그 리셋 (0.3초 후)
+        // preheat가 오래 걸려도 다음 스크롤에서 스킵되지 않도록
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { [weak self] in
+            self?.isDecelerationPreheatScheduled = false
+        }
+    }
+
     /// 스크롤 정지 후 preheat (1회)
     /// - visible + 1화면 범위만 캐싱
     /// - 백그라운드에서 실행하여 메인 스레드 부하 최소화

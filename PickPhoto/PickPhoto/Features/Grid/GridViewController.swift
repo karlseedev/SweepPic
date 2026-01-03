@@ -245,6 +245,9 @@ final class GridViewController: UIViewController {
     /// 마지막 스크롤 종료 시간 (R2 응답 시간 계산용)
     var lastScrollEndTime: CFTimeInterval = 0
 
+    /// [Phase 2] 감속 중 preheat 플래그 (중복 호출 방지)
+    var isDecelerationPreheatScheduled = false
+
     /// 맨 위 행 빈 셀 개수 (T027-2: 3의 배수가 아닐 시 맨 위 행에 빈 셀)
     /// 최신 사진(맨 아래) 기준 꽉 차게 정렬
     /// (extension에서 접근 필요)
@@ -1037,6 +1040,10 @@ extension GridViewController: UICollectionViewDelegate {
 
         // 스크롤 시퀀스 증가
         scrollSeq += 1
+
+        // [Phase 2] 감속 시작 시점에 100% preheat 선행
+        // - 목표 위치의 셀들을 미리 캐싱하여 정지 시 즉시 전환
+        preheatForDeceleration(targetOffset: targetContentOffset.pointee)
     }
 
     func scrollViewDidEndDragging(_: UIScrollView, willDecelerate decelerate: Bool) {
