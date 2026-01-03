@@ -83,31 +83,49 @@ func refreshImageIfNeeded(asset: PHAsset, targetSize: CGSize)
 **변경**:
 ```swift
 @discardableResult
-func refreshImageIfNeeded(asset: PHAsset, targetSize: CGSize) -> Bool {
+func refreshImageIfNeeded(
+    asset: PHAsset,
+    targetSize: CGSize,
+    scrollEndTime: CFTimeInterval,  // R2 응답 시간 계산용
+    scrollSeq: Int                   // 로그 매칭용
+) -> Bool {
     // ...
     guard needsHigherRes else { return false }  // 스킵
-    // ...
+
+    // 콜백 내에서 sinceEnd 계산
+    let sinceEnd = (CACurrentMediaTime() - scrollEndTime) * 1000
+    FileLogger.log("[R2:Response] seq=\(scrollSeq), sinceEnd=\(Int(sinceEnd))ms, CrossFade=\(appliedCrossFade)")
+
     return true  // 실제 요청함
 }
 ```
 
-**효과**: 실제 업그레이드 요청 수 정확히 카운트
+**효과**:
+- 실제 업그레이드 요청 수 정확히 카운트
+- scrollEndTime/seq를 파라미터로 받아 스코프 문제 해결
 
 ---
 
 ### Phase 2: 감속 중 preheat (속도 본격 개선)
 
-#### 2-1. velocity 저장 변수 추가
+#### 2-1. 스크롤 상태 변수 추가
 
 **파일**: `GridViewController.swift`
 
 ```swift
 /// 마지막 스크롤 velocity (Y축, pt/s)
+/// Note: UIScrollView velocity는 이미 pt/s 단위로 제공됨
 private var lastScrollVelocityY: CGFloat = 0
 
 /// 스크롤 시퀀스 (로그 매칭용)
 private var scrollSeq: Int = 0
+
+/// 마지막 스크롤 종료 시간 (R2 응답 시간 계산용)
+private var lastScrollEndTime: CFTimeInterval = 0
 ```
+
+**Note**: `lastScrollEndTime`은 `scrollDidEnd()` 디바운스 완료 시점에 저장하고,
+`refreshImageIfNeeded()`에 `scrollEndTime`과 `seq`를 파라미터로 전달하여 PhotoCell에서 사용.
 
 ---
 
@@ -122,7 +140,8 @@ func scrollViewWillEndDragging(
     targetContentOffset: UnsafeMutablePointer<CGPoint>
 ) {
     // velocity 저장 (로그용)
-    lastScrollVelocityY = abs(velocity.y * 1000)  // pt/s 변환
+    // Note: UIScrollView velocity는 이미 pt/s 단위
+    lastScrollVelocityY = abs(velocity.y)
 
     // 스크롤 시퀀스 증가
     scrollSeq += 1
@@ -184,11 +203,14 @@ private func preheatForDeceleration(targetOffset: CGPoint) {
     #endif
 
     // 백그라운드에서 preheat
-    DispatchQueue.global(qos: .userInitiated).async { [weak self] in
+    DispatchQueue.global(qos: .userInitiated).async {
         ImagePipeline.shared.preheatAssets(assets, targetSize: fullSize)
-        DispatchQueue.main.async {
-            self?.isDecelerationPreheatScheduled = false
-        }
+    }
+
+    // 타이머 기반 플래그 리셋 (0.3초 후)
+    // preheat가 오래 걸려도 다음 스크롤에서 스킵되지 않도록
+    DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { [weak self] in
+        self?.isDecelerationPreheatScheduled = false
     }
 }
 ```
@@ -225,8 +247,11 @@ private func preheatForDeceleration(targetOffset: CGPoint) {
 
 ```
 [Preheat:Decel] seq=5, 24개 에셋, targetSize=384px
-[R2:Response] seq=5, sinceEnd=35ms, CrossFade=true, cacheHit=true
+[R2:Response] seq=5, sinceEnd=35ms, CrossFade=true
 ```
+
+**Note**: `cacheHit` 판단은 현재 구현에 없으므로 로그에서 제외.
+Phase 2 적용 후 `sinceEnd` 시간이 단축되면 캐시 히트로 간주.
 
 ---
 
@@ -352,3 +377,14 @@ FileLogger.log("[R2:Response] seq=\(seq), sinceEnd=\(Int(sinceEnd))ms, CrossFade
 - 현재 R2 구현: `GridScroll.swift` (line 126-157)
 - 현재 preheat: `preheatAfterScrollStop()` (line 163-193)
 - 속도 분류 기준: GPT 제안 (<1500, >5000)
+
+---
+
+## 피드백 반영 내역
+
+| 피드백 | 수정 내용 |
+|--------|----------|
+| scrollSeq/scrollEndTime 스코프 | `lastScrollEndTime` 변수 추가, `refreshImageIfNeeded`에 파라미터 전달 |
+| velocity 단위 | `*1000` 제거 (UIScrollView velocity는 이미 pt/s) |
+| cacheHit 로그 | 제거 (판단 로직 없음, sinceEnd 시간으로 간접 판단) |
+| preheat 플래그 리셋 | 타이머 기반 해제 (0.3초 후) 추가 |
