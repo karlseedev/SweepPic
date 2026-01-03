@@ -1065,10 +1065,13 @@ extension PhotoCell {
             // 셀이 재사용되었으면 무시
             guard self.currentAssetID == assetID else { return }
 
-            if let image = image {
+            // [R2] 고해상도 업그레이드 시에는 final만 적용
+            // - degraded를 적용하면 기존 이미지(50%)보다 품질이 떨어질 수 있음
+            // - final만 적용하면 50% → 100%로 부드럽게 전환
+            if let image = image, !isDegraded {
                 self.imageView.image = image
             }
-            // 실패 시 기존 이미지 유지
+            // degraded 무시, 실패 시 기존 이미지 유지
         }
     }
 }
