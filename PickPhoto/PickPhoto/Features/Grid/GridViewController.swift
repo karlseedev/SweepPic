@@ -226,8 +226,18 @@ final class GridViewController: UIViewController {
 
     // MARK: - R2 로그 측정용 (extension에서 접근 필요)
 
-    /// 마지막 스크롤 velocity (Y축, pt/s)
-    var lastScrollVelocityY: CGFloat = 0
+    /// 스크롤 중 peak velocity (Y축, pt/s)
+    /// - scrollViewDidScroll에서 실시간 계산
+    /// - 손가락으로 멈추든, 플릭으로 멈추든 스크롤 중 최대 속도 측정
+    var peakScrollVelocityY: CGFloat = 0
+
+    /// scrollViewWillEndDragging의 velocity (Y축, pt/s)
+    /// - 시스템이 계산한 종료 속도 (peak 보완용)
+    var lastEndVelocityY: CGFloat = 0
+
+    /// velocity 계산용 이전 offset/time
+    private var lastScrollOffset: CGFloat = 0
+    private var lastVelocityCalcTime: CFTimeInterval = 0
 
     /// 스크롤 시퀀스 (로그 매칭용)
     var scrollSeq: Int = 0
@@ -980,12 +990,39 @@ extension GridViewController: UICollectionViewDelegate {
         print("[GridViewController] Opening viewer at filtered index \(filteredIndex) (original: \(indexPath.item)), mode: \(mode)")
     }
 
-    func scrollViewWillBeginDragging(_: UIScrollView) {
+    func scrollViewWillBeginDragging(_ scrollView: UIScrollView) {
         scrollDidBegin()
 
         // 사용자가 스크롤 시작하면 pending 스크롤 취소 (롤백 방지)
         pendingScrollAssetID = nil
         didUserScrollAfterReturn = true
+
+        // [R2] peak velocity 리셋 및 초기값 설정
+        // 감속 중에 터치해서 멈춘 경우: peak 유지 (이전 스크롤 속도 보존)
+        // 완전히 정지 후 새 스크롤: peak 리셋
+        if !scrollView.isDecelerating {
+            peakScrollVelocityY = 0
+        }
+        lastScrollOffset = scrollView.contentOffset.y
+        lastVelocityCalcTime = CACurrentMediaTime()
+    }
+
+    func scrollViewDidScroll(_ scrollView: UIScrollView) {
+        // [R2] 실시간 velocity 계산 (스크롤 중 최대 속도 측정)
+        let currentOffset = scrollView.contentOffset.y
+        let currentTime = CACurrentMediaTime()
+        let deltaTime = currentTime - lastVelocityCalcTime
+
+        // 최소 시간 간격: 120Hz(8.3ms)에서도 동작하도록 5ms로 설정
+        if deltaTime > 0.005 {
+            let velocity = abs(currentOffset - lastScrollOffset) / deltaTime
+            // peak velocity 갱신
+            if velocity > peakScrollVelocityY {
+                peakScrollVelocityY = velocity
+            }
+            lastScrollOffset = currentOffset
+            lastVelocityCalcTime = currentTime
+        }
     }
 
     func scrollViewWillEndDragging(
@@ -993,16 +1030,19 @@ extension GridViewController: UICollectionViewDelegate {
         withVelocity velocity: CGPoint,
         targetContentOffset: UnsafeMutablePointer<CGPoint>
     ) {
-        // velocity 저장 (로그용)
-        // Note: UIScrollView velocity는 이미 pt/s 단위
-        lastScrollVelocityY = abs(velocity.y)
+        // 시스템이 계산한 velocity로 peak 보완 (플릭 시 신뢰성 높음)
+        let systemVelocity = abs(velocity.y)  // velocity.y는 pt/s 단위
+        lastEndVelocityY = systemVelocity
+        peakScrollVelocityY = max(peakScrollVelocityY, systemVelocity)
 
         // 스크롤 시퀀스 증가
         scrollSeq += 1
     }
 
     func scrollViewDidEndDragging(_: UIScrollView, willDecelerate decelerate: Bool) {
+        // 손가락으로 멈춘 경우 (decelerate=false)도 scrollSeq 증가
         if !decelerate {
+            scrollSeq += 1
             scrollDidEnd()
         }
     }

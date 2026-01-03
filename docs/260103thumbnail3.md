@@ -83,26 +83,17 @@ func refreshImageIfNeeded(asset: PHAsset, targetSize: CGSize)
 **변경**:
 ```swift
 @discardableResult
-func refreshImageIfNeeded(
-    asset: PHAsset,
-    targetSize: CGSize,
-    scrollEndTime: CFTimeInterval,  // R2 응답 시간 계산용
-    scrollSeq: Int                   // 로그 매칭용
-) -> Bool {
+func refreshImageIfNeeded(asset: PHAsset, targetSize: CGSize) -> Bool {
     // ...
     guard needsHigherRes else { return false }  // 스킵
-
-    // 콜백 내에서 sinceEnd 계산
-    let sinceEnd = (CACurrentMediaTime() - scrollEndTime) * 1000
-    FileLogger.log("[R2:Response] seq=\(scrollSeq), sinceEnd=\(Int(sinceEnd))ms, CrossFade=\(appliedCrossFade)")
-
+    // 이미지 요청 로직...
     return true  // 실제 요청함
 }
 ```
 
 **효과**:
 - 실제 업그레이드 요청 수 정확히 카운트
-- scrollEndTime/seq를 파라미터로 받아 스코프 문제 해결
+- 시그니처는 기존 유지 (파라미터 추가 없음)
 
 ---
 
@@ -113,25 +104,31 @@ func refreshImageIfNeeded(
 **파일**: `GridViewController.swift`
 
 ```swift
-/// 마지막 스크롤 velocity (Y축, pt/s)
-/// Note: UIScrollView velocity는 이미 pt/s 단위로 제공됨
-private var lastScrollVelocityY: CGFloat = 0
+/// 스크롤 중 peak velocity (Y축, pt/s)
+var peakScrollVelocityY: CGFloat = 0
+
+/// scrollViewWillEndDragging의 velocity (Y축, pt/s)
+var lastEndVelocityY: CGFloat = 0
+
+/// velocity 계산용 이전 offset/time
+private var lastScrollOffset: CGFloat = 0
+private var lastVelocityCalcTime: CFTimeInterval = 0
 
 /// 스크롤 시퀀스 (로그 매칭용)
-private var scrollSeq: Int = 0
+var scrollSeq: Int = 0
 
 /// 마지막 스크롤 종료 시간 (R2 응답 시간 계산용)
-private var lastScrollEndTime: CFTimeInterval = 0
+var lastScrollEndTime: CFTimeInterval = 0
 ```
 
-**Note**: `lastScrollEndTime`은 `scrollDidEnd()` 디바운스 완료 시점에 저장하고,
-`refreshImageIfNeeded()`에 `scrollEndTime`과 `seq`를 파라미터로 전달하여 PhotoCell에서 사용.
+**Note**: 로그에서 velocity는 `max(peakScrollVelocityY, lastEndVelocityY)`를 사용.
+`refreshImageIfNeeded()`는 기존 시그니처 유지 (파라미터 추가 없음).
 
 ---
 
 #### 2-2. scrollViewWillEndDragging 구현
 
-**파일**: `GridScroll.swift`
+**파일**: `GridViewController.swift` (UIScrollViewDelegate)
 
 ```swift
 func scrollViewWillEndDragging(
@@ -140,14 +137,15 @@ func scrollViewWillEndDragging(
     targetContentOffset: UnsafeMutablePointer<CGPoint>
 ) {
     // velocity 저장 (로그용)
-    // Note: UIScrollView velocity는 이미 pt/s 단위
-    lastScrollVelocityY = abs(velocity.y)
+    let systemVelocity = abs(velocity.y)
+    lastEndVelocityY = systemVelocity
+    peakScrollVelocityY = max(peakScrollVelocityY, systemVelocity)
 
     // 스크롤 시퀀스 증가
     scrollSeq += 1
 
-    // 감속 시작 시점에 100% preheat 선행
-    preheatForDeceleration(targetOffset: targetContentOffset.pointee)
+    // [Phase 2] 감속 시작 시점에 100% preheat 선행
+    // preheatForDeceleration(targetOffset: targetContentOffset.pointee)
 }
 ```
 
@@ -196,6 +194,7 @@ private func preheatForDeceleration(targetOffset: CGPoint) {
         return
     }
 
+    // ⚠️ Debug 빌드에서만 로그 출력 (Release 미연결테스트에서는 안 보임)
     #if DEBUG
     if FileLogger.logThumbEnabled {
         FileLogger.log("[Preheat:Decel] seq=\(scrollSeq), \(assets.count)개 에셋, targetSize=\(Int(fullSize.width))px")
@@ -221,13 +220,14 @@ private func preheatForDeceleration(targetOffset: CGPoint) {
 
 ## 로그 수집 계획
 
-### 속도 분류 기준
+### 속도 분류 기준 (2026-01-03 실측 반영)
 
 | 분류 | 조건 | 용도 |
 |------|------|------|
-| **Slow** | velocity < 1500 pt/s | 기준선 (문제 없음 확인) |
-| **Fast** | velocity > 5000 pt/s | 개선 대상 |
-| 중간 | 1500~5000 | 제외 (노이즈 방지) |
+| **Slow** | velocity < 10000 pt/s | 짧은 스크롤 |
+| **Fast** | velocity > 10000 pt/s | 긴 스크롤 (개선 대상) |
+
+> **Note**: 실측 결과 일반 스크롤도 7000~28000 pt/s 범위. 기존 기준(1500/5000)은 너무 낮음.
 
 ---
 
@@ -314,42 +314,43 @@ FileLogger.log("[R2:Response] seq=\(seq), sinceEnd=\(Int(sinceEnd))ms, CrossFade
 
 ---
 
-## 예상 개선 효과
+## 예상 개선 효과 (2026-01-03 실측 반영)
 
-### Slow 스크롤 (velocity < 1500)
+### Slow 스크롤 (velocity < 10000 pt/s)
 
 | 단계 | underSized @0.2s | underSized @0.6s | 체감 |
 |------|-----------------|-----------------|------|
-| 현재 | 0~5 | 0 | 괜찮음 |
-| Phase 1 | 0~5 | 0 | 동일 |
-| Phase 2 | 0~5 | 0 | 동일 |
+| **Baseline (실측)** | 50~67% (12~14개) | **0** | 괜찮음 |
+| Phase 1 | 40~60% | 0 | CrossFade로 부드럽게 |
+| Phase 2 | 20~40% | 0 | 더 빠르게 |
 
-**→ Slow는 이미 문제 없음**
+**→ Slow는 이미 @0.6s에서 완료. CrossFade로 체감 개선**
 
 ---
 
-### Fast 스크롤 (velocity > 5000)
+### Fast 스크롤 (velocity > 10000 pt/s)
 
-| 단계 | underSized @0.2s | underSized @0.6s | R2 응답시간 | CrossFade | 체감 |
-|------|-----------------|-----------------|------------|-----------|------|
-| **현재** | 15~24 | 5~10 | ~150ms | ❌ | 티남 |
-| **Phase 1** | 15~24 | 5~10 | ~150ms | ✅ | 부드러움 |
-| **Phase 2** | 5~10 | 0~3 | ~30ms | ✅ | 빠르고 부드러움 |
+| 단계 | underSized @0.2s | underSized @0.6s | CrossFade | 체감 |
+|------|-----------------|-----------------|-----------|------|
+| **Baseline (실측)** | 14~79% (3~19개) | **0** | ❌ | 전환이 티남 |
+| **Phase 1 (예상)** | 10~70% | 0 | ✅ | 부드러움 |
+| **Phase 2 (예상)** | **5~30%** | 0 | ✅ | 빠르고 부드러움 |
 
-**→ Fast가 개선 대상, Phase 2에서 본격 개선**
+**→ @0.6s는 이미 0. Phase 1은 시각적 개선, Phase 2는 @0.2s 개선**
 
 ---
 
 ## 핵심 측정 지표 (Fast 기준)
 
-| 지표 | 현재 | Phase 1 목표 | Phase 2 목표 |
-|------|------|-------------|-------------|
+| 지표 | Baseline (실측) | Phase 1 목표 | Phase 2 목표 |
+|------|----------------|-------------|-------------|
 | 디바운스 | 100ms | **50ms** | 50ms |
-| R2 응답시간 (평균) | ~150ms | ~150ms | **<50ms** |
-| underSized @0.2s | 15~24 | 15~24 | **<10** |
-| underSized @0.6s | 5~10 | 5~10 | **<3** |
-| Preheat 캐시 히트율 | 0% | 0% | **>70%** |
+| underSized @0.2s | 14~79% | 10~70% | **5~30%** |
+| underSized @0.6s | **0** ✅ | 0 | 0 |
 | CrossFade 적용 | ❌ | ✅ | ✅ |
+
+> **핵심 인사이트**: 기존 예상(@0.6s에서 5~10개 남음)과 달리, 실측에서는 이미 @0.6s=0 달성.
+> Phase 1/2의 목표는 **@0.2s 시점의 underSized 감소**와 **CrossFade로 시각적 부드러움**.
 
 ---
 
@@ -376,7 +377,7 @@ FileLogger.log("[R2:Response] seq=\(seq), sinceEnd=\(Int(sinceEnd))ms, CrossFade
 - Gate2 spike test: R1+R2 복구 로직 (`test/gate2-pipeline-test.md`)
 - 현재 R2 구현: `GridScroll.swift` (line 126-157)
 - 현재 preheat: `preheatAfterScrollStop()` (line 163-193)
-- 속도 분류 기준: GPT 제안 (<1500, >5000)
+- 속도 분류 기준: 실측 반영 (<10000, >10000)
 
 ---
 
@@ -384,7 +385,12 @@ FileLogger.log("[R2:Response] seq=\(seq), sinceEnd=\(Int(sinceEnd))ms, CrossFade
 
 | 피드백 | 수정 내용 |
 |--------|----------|
-| scrollSeq/scrollEndTime 스코프 | `lastScrollEndTime` 변수 추가, `refreshImageIfNeeded`에 파라미터 전달 |
+| scrollSeq/scrollEndTime 스코프 | `lastScrollEndTime` 변수 추가 |
 | velocity 단위 | `*1000` 제거 (UIScrollView velocity는 이미 pt/s) |
 | cacheHit 로그 | 제거 (판단 로직 없음, sinceEnd 시간으로 간접 판단) |
 | preheat 플래그 리셋 | 타이머 기반 해제 (0.3초 후) 추가 |
+| 변수명 불일치 (GPT 피드백) | `lastScrollVelocityY` → `peakScrollVelocityY` + `lastEndVelocityY` |
+| 파일 위치 불일치 (GPT 피드백) | `scrollViewWillEndDragging` 파일: GridScroll → GridViewController |
+| 시그니처 불일치 (GPT 피드백) | `refreshImageIfNeeded` 파라미터 추가 제거 (기존 유지) |
+| 속도 분류 기준 (GPT 피드백) | <1500/>5000 → <10000/>10000 (실측 반영) |
+| Preheat:Decel 로그 (GPT 피드백) | Debug에서만 출력됨 명시 |

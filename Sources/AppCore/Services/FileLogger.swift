@@ -21,7 +21,8 @@ public final class FileLogger {
     // MARK: - Launch Arguments (디버그 플래그)
 
     /// --log-thumb: 썸네일 해상도 디버그 로그 활성화
-    public static let logThumbEnabled: Bool = CommandLine.arguments.contains("--log-thumb")
+    /// ⚠️ 임시 활성화: 미연결테스트용 (테스트 후 원복 필요)
+    public static let logThumbEnabled: Bool = true  // CommandLine.arguments.contains("--log-thumb")
 
     // MARK: - Properties
 

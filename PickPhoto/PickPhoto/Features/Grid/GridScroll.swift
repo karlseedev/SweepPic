@@ -110,7 +110,8 @@ extension GridViewController {
             // [R2 로그] 스크롤 종료 시간 및 시퀀스 저장
             self.lastScrollEndTime = CACurrentMediaTime()
             let currentSeq = self.scrollSeq
-            let velocity = Int(self.lastScrollVelocityY)
+            // 스크롤 중 peak velocity 사용 (손가락으로 멈추든 플릭으로 멈추든 측정됨)
+            let velocity = Int(max(self.peakScrollVelocityY, self.lastEndVelocityY))
 
             // [R2:Timing] 로그
             if FileLogger.logThumbEnabled {
