@@ -94,6 +94,21 @@ final class VideoPageViewController: UIViewController {
     /// 디버그 로그 활성화
     private let debugVideo = true
 
+    /// 비디오 컨트롤 오버레이
+    private lazy var controlsOverlay: VideoControlsOverlay = {
+        let overlay = VideoControlsOverlay()
+        overlay.translatesAutoresizingMaskIntoConstraints = false
+        overlay.delegate = self
+        return overlay
+    }()
+
+    /// 더블탭 제스처 (싱글탭과 충돌 방지용으로 참조 필요)
+    private lazy var doubleTapGesture: UITapGestureRecognizer = {
+        let gesture = UITapGestureRecognizer(target: self, action: #selector(handleDoubleTap(_:)))
+        gesture.numberOfTapsRequired = 2
+        return gesture
+    }()
+
     // MARK: - Initialization
 
     init(asset: PHAsset, index: Int) {
@@ -181,17 +196,35 @@ final class VideoPageViewController: UIViewController {
             errorLabel.leadingAnchor.constraint(greaterThanOrEqualTo: view.leadingAnchor, constant: 20),
             errorLabel.trailingAnchor.constraint(lessThanOrEqualTo: view.trailingAnchor, constant: -20)
         ])
+
+        // 컨트롤 오버레이 (scrollView 위)
+        view.addSubview(controlsOverlay)
+        NSLayoutConstraint.activate([
+            controlsOverlay.topAnchor.constraint(equalTo: view.topAnchor),
+            controlsOverlay.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+            controlsOverlay.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+            controlsOverlay.bottomAnchor.constraint(equalTo: view.bottomAnchor)
+        ])
     }
 
     /// 제스처 설정
     private func setupGestures() {
         // 더블탭 → 줌 토글
-        let doubleTapGesture = UITapGestureRecognizer(target: self, action: #selector(handleDoubleTap(_:)))
-        doubleTapGesture.numberOfTapsRequired = 2
         scrollView.addGestureRecognizer(doubleTapGesture)
+
+        // 싱글탭 → 컨트롤 토글
+        let singleTapGesture = UITapGestureRecognizer(target: self, action: #selector(handleSingleTap))
+        singleTapGesture.numberOfTapsRequired = 1
+        singleTapGesture.require(toFail: doubleTapGesture)  // 더블탭 우선
+        view.addGestureRecognizer(singleTapGesture)
 
         // Note: UIScrollView의 내장 panGestureRecognizer.delegate는 변경 불가
         // 제스처 충돌 방지는 scrollViewDidScroll에서 처리
+    }
+
+    /// 싱글탭 제스처 처리 - 컨트롤 토글
+    @objc private func handleSingleTap() {
+        controlsOverlay.toggle()
     }
 
     // MARK: - Poster Loading
@@ -328,6 +361,10 @@ final class VideoPageViewController: UIViewController {
         // 비디오 표시 크기 가져오기
         fetchVideoDisplaySize(from: playerItem)
 
+        // 컨트롤 오버레이 연결
+        controlsOverlay.configure(with: player)
+        controlsOverlay.updateMuteState(isMuted: true)
+
         if debugVideo {
             print("[Video] Player setup complete - index: \(index)")
         }
@@ -396,6 +433,7 @@ final class VideoPageViewController: UIViewController {
         // 자동 재생
         if shouldAutoPlay {
             player?.play()
+            controlsOverlay.updatePlayPauseState(isPlaying: true)
         }
 
         if debugVideo {
@@ -542,6 +580,7 @@ final class VideoPageViewController: UIViewController {
     /// 플레이어 정리
     private func cleanupPlayer() {
         removeKVO()
+        controlsOverlay.cleanup()
         player?.pause()
         player?.replaceCurrentItem(with: nil)
         playerLayerView.player = nil
@@ -562,6 +601,8 @@ final class VideoPageViewController: UIViewController {
 
         player.isMuted = muted
         player.play()
+        controlsOverlay.updatePlayPauseState(isPlaying: true)
+        controlsOverlay.updateMuteState(isMuted: muted)
 
         if debugVideo {
             print("[Video] Play - muted: \(muted), index: \(index)")
@@ -571,6 +612,7 @@ final class VideoPageViewController: UIViewController {
     /// 재생 일시정지
     func pause() {
         player?.pause()
+        controlsOverlay.updatePlayPauseState(isPlaying: false)
 
         if debugVideo {
             print("[Video] Pause - index: \(index)")
@@ -581,6 +623,7 @@ final class VideoPageViewController: UIViewController {
     func stop() {
         player?.pause()
         player?.seek(to: .zero)
+        controlsOverlay.updatePlayPauseState(isPlaying: false)
 
         if debugVideo {
             print("[Video] Stop - index: \(index)")
@@ -603,6 +646,8 @@ extension VideoPageViewController: UIScrollViewDelegate {
 
     func scrollViewWillBeginZooming(_ scrollView: UIScrollView, with view: UIView?) {
         isZoomInteractionActive = true
+        // 줌 시작 시 컨트롤 숨김
+        controlsOverlay.hide(animated: true)
     }
 
     func scrollViewDidZoom(_ scrollView: UIScrollView) {
@@ -621,4 +666,57 @@ extension VideoPageViewController: UIGestureRecognizerDelegate {
     // Note: UIScrollView의 내장 panGestureRecognizer.delegate는 변경 불가
     // 페이지 스와이프 충돌은 UIPageViewController가 자동 처리
     // (zoomScale=1일 때 scrollView가 스크롤할 내용이 없으므로 페이지 스와이프로 전달됨)
+}
+
+// MARK: - VideoControlsOverlayDelegate
+
+extension VideoPageViewController: VideoControlsOverlayDelegate {
+
+    /// 재생 요청
+    func controlsDidRequestPlay() {
+        guard let player = player else { return }
+
+        player.play()
+        controlsOverlay.updatePlayPauseState(isPlaying: true)
+
+        if debugVideo {
+            print("[Video] Controls requested play - index: \(index)")
+        }
+    }
+
+    /// 일시정지 요청
+    func controlsDidRequestPause() {
+        guard let player = player else { return }
+
+        player.pause()
+        controlsOverlay.updatePlayPauseState(isPlaying: false)
+
+        if debugVideo {
+            print("[Video] Controls requested pause - index: \(index)")
+        }
+    }
+
+    /// 시킹 요청
+    func controlsDidRequestSeek(to time: CMTime) {
+        guard let player = player else { return }
+
+        player.seek(to: time, toleranceBefore: .zero, toleranceAfter: .zero)
+
+        if debugVideo {
+            let seconds = CMTimeGetSeconds(time)
+            print("[Video] Controls requested seek to \(String(format: "%.1f", seconds))s - index: \(index)")
+        }
+    }
+
+    /// 음소거 토글 요청
+    func controlsDidRequestMute(_ muted: Bool) {
+        guard let player = player else { return }
+
+        player.isMuted = muted
+        controlsOverlay.updateMuteState(isMuted: muted)
+
+        if debugVideo {
+            print("[Video] Controls requested mute: \(muted) - index: \(index)")
+        }
+    }
 }
