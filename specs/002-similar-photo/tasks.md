@@ -74,15 +74,15 @@
 
 ### UI 컴포넌트 (T020~T021)
 
-- [ ] T020 [P] [US1] BorderAnimationLayer 생성 - CAShapeLayer + 빛 도는 애니메이션 (흰색 그라데이션, 시계방향 회전, 1.5초 주기) + 모션 감소 시 정적 테두리(흰색 2pt) in `Features/SimilarPhoto/UI/BorderAnimationLayer.swift`
+- [x] T020 [P] [US1] BorderAnimationLayer 생성 - CAShapeLayer + 빛 도는 애니메이션 (흰색 그라데이션, 시계방향 회전, 1.5초 주기) + 모션 감소 시 정적 테두리(흰색 2pt) in `Features/SimilarPhoto/UI/BorderAnimationLayer.swift`
 
 ### GridViewController 통합 (T021~T025)
 
-- [ ] T021 [US1] GridViewController+SimilarPhoto.swift Extension 생성 + 스크롤 멈춤 감지 + 0.3초 디바운싱 + 분석 범위 결정 (화면 ±7장) in `Features/Grid/GridViewController+SimilarPhoto.swift`
-- [ ] T022 [US1] SimilarityAnalyzer 호출 및 결과 처리 + 유사 사진 셀에 BorderAnimationLayer 적용 in `Features/Grid/GridViewController+SimilarPhoto.swift`
-- [ ] T023 [US1] 스크롤 재개 시 분석 취소 + 테두리 제거 in `Features/Grid/GridViewController+SimilarPhoto.swift`
-- [ ] T024 [US1] 테두리 있는 사진 탭 시 뷰어 이동 처리 in `Features/Grid/GridViewController+SimilarPhoto.swift`
-- [ ] T025 [US1] VoiceOver/선택 모드/휴지통 화면 + FeatureFlags 체크 in `Features/Grid/GridViewController+SimilarPhoto.swift`
+- [x] T021 [US1] GridViewController+SimilarPhoto.swift Extension 생성 + 스크롤 멈춤 감지 + 0.3초 디바운싱 + 분석 범위 결정 (화면 ±7장) in `Features/Grid/GridViewController+SimilarPhoto.swift`
+- [x] T022 [US1] SimilarityAnalyzer 호출 및 결과 처리 + 유사 사진 셀에 BorderAnimationLayer 적용 in `Features/Grid/GridViewController+SimilarPhoto.swift`
+- [x] T023 [US1] 스크롤 재개 시 분석 취소 + 테두리 제거 in `Features/Grid/GridViewController+SimilarPhoto.swift`
+- [x] T024 [US1] 테두리 있는 사진 탭 시 뷰어 이동 처리 in `Features/Grid/GridViewController+SimilarPhoto.swift`
+- [x] T025 [US1] VoiceOver/선택 모드/휴지통 화면 + FeatureFlags 체크 in `Features/Grid/GridViewController+SimilarPhoto.swift`
 
 **Checkpoint**: 그리드 테두리 표시 완료 - 독립 테스트 가능
 

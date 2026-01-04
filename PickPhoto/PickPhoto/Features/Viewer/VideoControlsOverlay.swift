@@ -51,7 +51,7 @@ final class VideoControlsOverlay: UIView {
     private static let horizontalPadding: CGFloat = 16
 
     /// 하단 여백 (Safe Area 위)
-    private static let bottomPadding: CGFloat = 16
+    private static let bottomPadding: CGFloat = 56
 
     /// 버튼과 타임라인 간격
     private static let buttonTimelineSpacing: CGFloat = 8
@@ -81,6 +81,9 @@ final class VideoControlsOverlay: UIView {
 
     /// 슬라이더 드래그 중 여부
     private var isSliderDragging: Bool = false
+
+    /// 스크러빙 전 재생 상태 (드래그 종료 후 복원용)
+    private var wasPlayingBeforeScrubbing: Bool = false
 
     /// 재생 중 여부 (UI 업데이트용)
     private var isPlaying: Bool = false
@@ -477,9 +480,11 @@ final class VideoControlsOverlay: UIView {
         startAutoHideTimer()
     }
 
-    /// 슬라이더 값 변경
+    /// 슬라이더 값 변경 (드래그 중 실시간 스크러빙)
     @objc private func sliderValueChanged(_ slider: UISlider) {
-        // 시킹은 터치 종료 시 수행
+        let seconds = Double(slider.value)
+        let time = CMTime(seconds: seconds, preferredTimescale: CMTimeScale(NSEC_PER_SEC))
+        delegate?.controlsDidRequestSeek(to: time)
     }
 
     /// 슬라이더 터치 시작
@@ -487,8 +492,14 @@ final class VideoControlsOverlay: UIView {
         isSliderDragging = true
         cancelAutoHideTimer()
 
+        // 스크러빙 시작 시 재생 상태 저장 후 일시정지
+        wasPlayingBeforeScrubbing = isPlaying
+        if isPlaying {
+            delegate?.controlsDidRequestPause()
+        }
+
         if debugControls {
-            print("[Controls] slider drag started")
+            print("[Controls] slider drag started, wasPlaying: \(wasPlayingBeforeScrubbing)")
         }
     }
 
@@ -496,17 +507,19 @@ final class VideoControlsOverlay: UIView {
     @objc private func sliderTouchUp() {
         isSliderDragging = false
 
+        // 최종 위치로 seek
         let seconds = Double(timelineSlider.value)
         let time = CMTime(seconds: seconds, preferredTimescale: CMTimeScale(NSEC_PER_SEC))
         delegate?.controlsDidRequestSeek(to: time)
 
-        // 자동 숨김 타이머 재시작
-        if isPlaying {
+        // 스크러빙 전 재생 중이었으면 재생 재개
+        if wasPlayingBeforeScrubbing {
+            delegate?.controlsDidRequestPlay()
             startAutoHideTimer()
         }
 
         if debugControls {
-            print("[Controls] slider drag ended, seek to: \(seconds)s")
+            print("[Controls] slider drag ended, seek to: \(seconds)s, resumePlay: \(wasPlayingBeforeScrubbing)")
         }
     }
 
