@@ -42,7 +42,7 @@ final class VideoControlsOverlay: UIView {
     // MARK: - Constants
 
     /// 버튼 크기
-    private static let buttonSize: CGFloat = 44
+    private static let buttonSize: CGFloat = 22
 
     /// 타임라인 높이
     private static let timelineHeight: CGFloat = 4
@@ -109,7 +109,7 @@ final class VideoControlsOverlay: UIView {
         button.translatesAutoresizingMaskIntoConstraints = false
 
         // SF Symbol 설정
-        let config = UIImage.SymbolConfiguration(pointSize: 24, weight: .medium)
+        let config = UIImage.SymbolConfiguration(pointSize: 12, weight: .medium)
         let image = UIImage(systemName: "play.fill", withConfiguration: config)
         button.setImage(image, for: .normal)
         button.tintColor = .white
@@ -130,7 +130,7 @@ final class VideoControlsOverlay: UIView {
         button.translatesAutoresizingMaskIntoConstraints = false
 
         // SF Symbol 설정 (기본: 음소거)
-        let config = UIImage.SymbolConfiguration(pointSize: 24, weight: .medium)
+        let config = UIImage.SymbolConfiguration(pointSize: 12, weight: .medium)
         let image = UIImage(systemName: "speaker.slash.fill", withConfiguration: config)
         button.setImage(image, for: .normal)
         button.tintColor = .white
@@ -441,7 +441,7 @@ final class VideoControlsOverlay: UIView {
 
     /// 재생/일시정지 버튼 업데이트
     private func updatePlayPauseButton(isPlaying: Bool) {
-        let config = UIImage.SymbolConfiguration(pointSize: 24, weight: .medium)
+        let config = UIImage.SymbolConfiguration(pointSize: 12, weight: .medium)
         let imageName = isPlaying ? "pause.fill" : "play.fill"
         let image = UIImage(systemName: imageName, withConfiguration: config)
         playPauseButton.setImage(image, for: .normal)
@@ -449,7 +449,7 @@ final class VideoControlsOverlay: UIView {
 
     /// 음소거 버튼 업데이트
     private func updateMuteButton(isMuted: Bool) {
-        let config = UIImage.SymbolConfiguration(pointSize: 24, weight: .medium)
+        let config = UIImage.SymbolConfiguration(pointSize: 12, weight: .medium)
         let imageName = isMuted ? "speaker.slash.fill" : "speaker.fill"
         let image = UIImage(systemName: imageName, withConfiguration: config)
         muteButton.setImage(image, for: .normal)

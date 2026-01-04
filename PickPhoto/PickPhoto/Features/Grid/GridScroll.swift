@@ -79,9 +79,6 @@ extension GridViewController {
             firstScrollStartTime = currentScrollStartTime
             FileLogger.log("[Scroll] First scroll 시작: +\(String(format: "%.1f", (currentScrollStartTime - loadStartTime) * 1000))ms")
         }
-
-        // [SimilarPhoto] 스크롤 시작 시 분석 취소 및 테두리 제거 (T023)
-        similarPhotoScrollDidBegin()
     }
 
     /// 스크롤 종료
@@ -140,9 +137,6 @@ extension GridViewController {
                     self?.logVisibleCellResolution(seq: currentSeq, timing: "0.6s", velocity: velocity)
                 }
             }
-
-            // [SimilarPhoto] 스크롤 종료 시 유사 사진 분석 트리거 (T021)
-            self.similarPhotoScrollDidEnd()
         }
     }
 
