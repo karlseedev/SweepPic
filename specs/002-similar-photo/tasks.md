@@ -25,8 +25,8 @@
 
 **Purpose**: Feature Flag 및 SimilarPhoto 모듈 디렉토리 생성
 
-- [ ] T000 FeatureFlags.swift 생성 - `isSimilarPhotoEnabled` 플래그 정의 in `PickPhoto/PickPhoto/Shared/FeatureFlags.swift`
-- [ ] T001 SimilarPhoto 모듈 디렉토리 구조 생성 in `PickPhoto/PickPhoto/Features/SimilarPhoto/{Analysis,UI,Models}/`
+- [x] T000 FeatureFlags.swift 생성 - `isSimilarPhotoEnabled` 플래그 정의 in `PickPhoto/PickPhoto/Shared/FeatureFlags.swift`
+- [x] T001 SimilarPhoto 모듈 디렉토리 구조 생성 in `PickPhoto/PickPhoto/Features/SimilarPhoto/{Analysis,UI,Models}/`
 
 ---
 
@@ -38,29 +38,29 @@
 
 ### 데이터 모델 (T002~T006)
 
-- [ ] T002 [P] SimilarityAnalysisState 열거형 생성 in `Features/SimilarPhoto/Models/SimilarityAnalysisState.swift`
-- [ ] T003 [P] CachedFace 구조체 생성 in `Features/SimilarPhoto/Models/CachedFace.swift`
-- [ ] T004 [P] SimilarThumbnailGroup + ComparisonGroup 구조체 생성 in `Features/SimilarPhoto/Models/SimilarPhotoGroup.swift`
-- [ ] T005 [P] AnalysisRequest 구조체 생성 in `Features/SimilarPhoto/Models/AnalysisRequest.swift`
-- [ ] T006 [P] FaceMatch 구조체 생성 in `Features/SimilarPhoto/Models/FaceMatch.swift`
+- [x] T002 [P] SimilarityAnalysisState 열거형 생성 in `Features/SimilarPhoto/Models/SimilarityAnalysisState.swift`
+- [x] T003 [P] CachedFace 구조체 생성 in `Features/SimilarPhoto/Models/CachedFace.swift`
+- [x] T004 [P] SimilarThumbnailGroup + ComparisonGroup 구조체 생성 in `Features/SimilarPhoto/Models/SimilarPhotoGroup.swift`
+- [x] T005 [P] AnalysisRequest 구조체 생성 in `Features/SimilarPhoto/Models/AnalysisRequest.swift`
+- [x] T006 [P] FaceMatch 구조체 생성 in `Features/SimilarPhoto/Models/FaceMatch.swift`
 
 ### 분석 엔진 - 유틸리티 (T007~T009)
 
-- [ ] T007 [P] SimilarityImageLoader 생성 - PHImageManager 480px aspectFit 이미지 로딩 in `Features/SimilarPhoto/Analysis/SimilarityImageLoader.swift`
-- [ ] T008 [P] FaceCropper 생성 - bounding box + 30% 여백 + 정사각형 크롭 in `Features/SimilarPhoto/Analysis/FaceCropper.swift`
-- [ ] T009 [P] SimilarityAnalysisQueue 생성 - FIFO 큐, 동시 5개(과열 시 2개), 취소 처리 in `Features/SimilarPhoto/Analysis/SimilarityAnalysisQueue.swift`
+- [x] T007 [P] SimilarityImageLoader 생성 - PHImageManager 480px aspectFit 이미지 로딩 in `Features/SimilarPhoto/Analysis/SimilarityImageLoader.swift`
+- [x] T008 [P] FaceCropper 생성 - bounding box + 30% 여백 + 정사각형 크롭 in `Features/SimilarPhoto/Analysis/FaceCropper.swift`
+- [x] T009 [P] SimilarityAnalysisQueue 생성 - FIFO 큐, 동시 5개(과열 시 2개), 취소 처리 in `Features/SimilarPhoto/Analysis/SimilarityAnalysisQueue.swift`
 
 ### 분석 엔진 - 핵심 (T010~T012)
 
-- [ ] T010 SimilarityAnalyzer 생성 - VNGenerateImageFeaturePrintRequest 유사도 분석 in `Features/SimilarPhoto/Analysis/SimilarityAnalyzer.swift`
-- [ ] T011 FaceDetector 생성 - VNDetectFaceRectanglesRequest 얼굴 감지, 5% 필터 in `Features/SimilarPhoto/Analysis/FaceDetector.swift`
-- [ ] T012 SimilarityCache 생성 - LRU 500장, 상태 관리, 완료 콜백 in `Features/SimilarPhoto/Analysis/SimilarityCache.swift`
+- [x] T010 SimilarityAnalyzer 생성 - VNGenerateImageFeaturePrintRequest 유사도 분석 in `Features/SimilarPhoto/Analysis/SimilarityAnalyzer.swift`
+- [x] T011 FaceDetector 생성 - VNDetectFaceRectanglesRequest 얼굴 감지, 5% 필터 in `Features/SimilarPhoto/Analysis/FaceDetector.swift`
+- [x] T012 SimilarityCache 생성 - LRU 500장, 상태 관리, 완료 콜백 in `Features/SimilarPhoto/Analysis/SimilarityCache.swift`
 
 ### 시스템 상태 처리 (T013~T015)
 
-- [ ] T013 [P] 메모리 경고 시 캐시 50% LRU 제거 + 과열 시 동시 분석 제한 in `Features/SimilarPhoto/Analysis/SimilarityCache.swift`, `SimilarityAnalysisQueue.swift`
-- [ ] T014 [P] 백그라운드 전환 시 분석 취소 in `Features/SimilarPhoto/Analysis/SimilarityAnalysisQueue.swift`
-- [ ] T015 [P] PHPhotoLibraryChangeObserver 연동 - 캐시 무효화 in `Features/SimilarPhoto/Analysis/SimilarityCache.swift`
+- [x] T013 [P] 메모리 경고 시 캐시 50% LRU 제거 + 과열 시 동시 분석 제한 in `Features/SimilarPhoto/Analysis/SimilarityCache.swift`, `SimilarityAnalysisQueue.swift`
+- [x] T014 [P] 백그라운드 전환 시 분석 취소 in `Features/SimilarPhoto/Analysis/SimilarityAnalysisQueue.swift`
+- [x] T015 [P] PHPhotoLibraryChangeObserver 연동 - 캐시 무효화 in `Features/SimilarPhoto/Analysis/SimilarityCache.swift`
 
 **Checkpoint**: 분석 엔진 완료 - User Story 구현 가능
 
