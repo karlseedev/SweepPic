@@ -203,10 +203,8 @@ extension ViewerViewController {
         // VoiceOver 확인
         guard !UIAccessibility.isVoiceOverRunning else { return false }
 
-        // 휴지통 모드 확인 (viewerMode가 .trash이면 비활성화)
-        // 주의: viewerMode는 private이므로 다른 방법 필요
-        // 여기서는 coordinator 타입으로 확인
-        // (휴지통 coordinator와 일반 coordinator를 구분할 수 없으면 무시)
+        // 휴지통 모드 확인 (FR-037: 휴지통 화면에서는 유사사진정리 기능 비활성화)
+        guard viewerMode != .trash else { return false }
 
         return true
     }

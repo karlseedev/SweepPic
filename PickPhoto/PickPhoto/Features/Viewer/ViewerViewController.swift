@@ -71,7 +71,8 @@ final class ViewerViewController: UIViewController {
     weak var delegate: ViewerViewControllerDelegate?
 
     /// 현재 모드 (일반/휴지통)
-    private let viewerMode: ViewerMode
+    /// Extension에서 접근 가능하도록 internal 접근 레벨
+    let viewerMode: ViewerMode
 
     /// Coordinator (네비게이션 및 데이터 관리)
     /// Extension에서 접근 가능하도록 internal 접근 레벨
