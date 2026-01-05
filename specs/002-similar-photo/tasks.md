@@ -25,9 +25,9 @@
 
 **Purpose**: Feature Flag 및 기본 디렉토리 구조 생성
 
-- [ ] T001 FeatureFlags.swift 생성 - `isSimilarPhotoEnabled` 플래그 정의 in `PickPhoto/PickPhoto/Shared/FeatureFlags.swift`
-- [ ] T002 [P] SimilarPhoto 모듈 디렉토리 구조 생성 in `PickPhoto/PickPhoto/Features/SimilarPhoto/` (Analysis/, UI/, Models/ 하위 폴더)
-- [ ] T003 SimilarPhoto 모듈을 Xcode 프로젝트에 추가 in `PickPhoto/PickPhoto.xcodeproj`
+- [X] T001 FeatureFlags.swift 생성 - `isSimilarPhotoEnabled` 플래그 정의 in `PickPhoto/PickPhoto/Shared/FeatureFlags.swift`
+- [X] T002 [P] SimilarPhoto 모듈 디렉토리 구조 생성 in `PickPhoto/PickPhoto/Features/SimilarPhoto/` (Analysis/, UI/, Models/ 하위 폴더)
+- [X] T003 SimilarPhoto 모듈을 Xcode 프로젝트에 추가 in `PickPhoto/PickPhoto.xcodeproj`
   - PBXGroup에 Features/SimilarPhoto/ 폴더 구조 추가
   - 신규 Swift 파일들을 Build Phases > Compile Sources에 등록
   - Extension 파일들(GridViewController+SimilarPhoto, ViewerViewController+SimilarPhoto) 등록
