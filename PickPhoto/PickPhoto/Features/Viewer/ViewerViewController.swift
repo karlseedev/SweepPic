@@ -564,7 +564,11 @@ final class ViewerViewController: UIViewController {
             [pageVC],
             direction: direction,
             animated: true,
-            completion: nil
+            completion: { [weak self] _ in
+                // 삭제 후 이동 시에도 유사 사진 오버레이 업데이트
+                // (setViewControllers는 pageViewController delegate를 호출하지 않으므로 수동 호출)
+                self?.updateSimilarPhotoOverlay()
+            }
         )
     }
 
