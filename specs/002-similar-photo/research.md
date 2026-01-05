@@ -62,7 +62,7 @@
 
 ### Rationale
 - 연속 촬영 사진은 구도가 거의 동일 → 위치 기반 매칭 ~90% 정확도
-- Feature Print 검증으로 불일치 사진에 경고 표시
+- Feature Print 검증으로 불일치 사진은 비교 그리드에서 자동 제외 (spec FR-030)
 - 빠른 초기 표시 + 백그라운드 검증으로 UX 최적화
 
 ### Alternatives Considered
@@ -74,7 +74,7 @@
 
 ### Key Implementation Details
 - 위치 정렬: X좌표 오름차순, X 동일 시 Y 내림차순
-- 검증 임계값: 얼굴 크롭 Feature Print 거리 **1.0 이상**이면 경고
+- 제외 임계값: 얼굴 크롭 Feature Print 거리 **1.0 이상**이면 다른 인물로 판정하여 비교 그리드에서 제외
 - 인물 번호: 좌→우, 위→아래 순서
 
 ---

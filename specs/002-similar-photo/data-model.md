@@ -191,7 +191,7 @@ class SimilarityCache {
 | getFaces(for:) | 사진별 CachedFace 조회 | O(1) |
 | getValidSlotFaces(for:) | 유효 슬롯 얼굴만 조회 | O(n) |
 | evictIfNeeded() | LRU eviction 수행 | O(n) |
-| invalidateGroup(groupID:) | 그룹 전체 무효화 | O(m) |
+| invalidateGroup(groupID:) | 그룹 삭제, 멤버가 다른 유효 그룹에 속해있으면 inGroup 유지 | O(m × g) |
 
 ---
 
@@ -222,7 +222,7 @@ enum AnalysisSource {
 
 ## 7. FaceMatch
 
-인물 매칭 검증 결과
+인물 매칭 검증 결과 (spec FR-029, FR-030)
 
 ### Definition
 
@@ -231,22 +231,17 @@ struct FaceMatch {
     let assetID: String
     let personIndex: Int
     let distance: Float
-    let confidence: MatchConfidence
-}
 
-enum MatchConfidence {
-    case high    // 거리 < 0.6
-    case medium  // 0.6 <= 거리 < 1.0
-    case low     // 거리 >= 1.0 (경고 표시)
+    /// Feature Print 거리 1.0 미만이면 동일 인물로 판정
+    var isSamePerson: Bool { distance < 1.0 }
 }
 ```
 
-### UI Behavior by Confidence
-| 신뢰도 | 거리 범위 | UI 표시 |
-|--------|----------|---------|
-| high | < 0.6 | 정상 표시 |
-| medium | 0.6 ~ 1.0 | 정상 표시 |
-| low | >= 1.0 | 경고 배지 표시 |
+### Filtering Rule (spec FR-030)
+| 거리 범위 | 판정 | 처리 |
+|----------|------|------|
+| < 1.0 | 동일 인물 | 비교 그리드에 포함 |
+| >= 1.0 | 다른 인물 | 비교 그리드에서 **자동 제외** |
 
 ---
 
