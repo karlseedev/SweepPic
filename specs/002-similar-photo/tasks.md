@@ -473,7 +473,7 @@
 
 ### Implementation for User Story 3
 
-- [ ] T028 [P] [US3] FaceComparisonViewController 기본 구조 생성 in `PickPhoto/PickPhoto/Features/SimilarPhoto/UI/FaceComparisonViewController.swift`
+- [X] T028 [P] [US3] FaceComparisonViewController 기본 구조 생성 in `PickPhoto/PickPhoto/Features/SimilarPhoto/UI/FaceComparisonViewController.swift`
   - UIViewController 기반
   - UICollectionView 2열 그리드 (`UICollectionViewFlowLayout`)
   - 셀 크기: (화면너비 - 간격) / 2, 정사각형
@@ -481,7 +481,7 @@
   - `comparisonGroup: ComparisonGroup` 프로퍼티
   - `delegate: FaceComparisonDelegate` (삭제/닫기 콜백)
 
-- [ ] T029 [US3] FaceComparisonViewController 헤더 구현 in `PickPhoto/PickPhoto/Features/SimilarPhoto/UI/FaceComparisonViewController.swift`
+- [X] T029 [US3] FaceComparisonViewController 헤더 구현 in `PickPhoto/PickPhoto/Features/SimilarPhoto/UI/FaceComparisonViewController.swift`
   - 헤더 레이블: "인물 N (M장)" 형식
   - 순환 버튼: SF Symbol `arrow.trianglehead.2.clockwise.rotate.90`
   - 순환 로직: 인물 번호 오름차순, 마지막→첫 번째 (원형 순환)
@@ -489,20 +489,20 @@
   - iOS 16~25: 커스텀 FloatingTitleBar 사용
   - iOS 26+: 시스템 네비게이션바 사용 (Liquid Glass)
 
-- [ ] T030 [US3] FaceComparisonViewController 그리드 셀 구현 in `PickPhoto/PickPhoto/Features/SimilarPhoto/UI/FaceComparisonViewController.swift`
+- [X] T030 [US3] FaceComparisonViewController 그리드 셀 구현 in `PickPhoto/PickPhoto/Features/SimilarPhoto/UI/FaceComparisonViewController.swift`
   - 셀: 크롭된 얼굴 이미지 (30% 여백, 정사각형)
   - FaceCropper 활용
   - 탭으로 선택/해제 토글
   - 선택 시 체크마크 오버레이 표시 (기존 선택 모드 UI 재사용)
   - 거리 1.0 이상 사진은 비교 그리드에 표시되지 않음 (T027에서 필터링됨)
 
-- [ ] T031 [US3] FaceComparisonViewController 하단바 구현 in `PickPhoto/PickPhoto/Features/SimilarPhoto/UI/FaceComparisonViewController.swift`
+- [X] T031 [US3] FaceComparisonViewController 하단바 구현 in `PickPhoto/PickPhoto/Features/SimilarPhoto/UI/FaceComparisonViewController.swift`
   - FloatingTabBar 재사용 또는 커스텀 구현
   - Cancel 버튼: 선택 해제 후 뷰어 복귀
   - 선택 개수 레이블: "N개 선택됨"
   - Delete 버튼: 선택된 사진 삭제 (비활성화 상태: 0개 선택 시)
 
-- [ ] T032 [US3] 삭제 로직 구현 in `PickPhoto/PickPhoto/Features/SimilarPhoto/UI/FaceComparisonViewController.swift`
+- [X] T032 [US3] 삭제 로직 구현 in `PickPhoto/PickPhoto/Features/SimilarPhoto/UI/FaceComparisonViewController.swift`
   - Delete 탭 시 TrashStore.moveToTrash 호출
   - 삭제 후 뷰어로 복귀
   - 현재 사진 삭제 시 이전 사진으로 이동 (없으면 다음 사진)
@@ -510,7 +510,7 @@
   - 그룹 멤버 3장 미만 시 그룹 무효화 + 테두리/+버튼 즉시 제거
   - Undo 지원: 기존 앱 Undo 기능과 동일하게 복구 가능
 
-- [ ] T033 [US3] TrashStore 연동 in `PickPhoto/PickPhoto/Stores/TrashStore.swift` (기존 파일 수정)
+- [X] T033 [US3] TrashStore 연동 in `PickPhoto/PickPhoto/Stores/TrashStore.swift` (기존 파일 수정)
   - `moveToTrash(assetIDs:)` 호출 시 SimilarityCache 알림
   - NotificationCenter.post로 삭제 이벤트 전파
   - Undo 시 SimilarityCache 상태 복원

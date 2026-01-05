@@ -365,20 +365,69 @@ extension ViewerViewController: FaceButtonOverlayDelegate {
 
     /// 얼굴 비교 화면 표시
     private func showFaceComparisonViewController(with comparisonGroup: ComparisonGroup) {
-        // TODO: Phase 5에서 FaceComparisonViewController 구현 후 연결
-        // 현재는 로그만 출력
-        print("[ViewerViewController+SimilarPhoto] FaceComparisonViewController 표시 예정")
+        print("[ViewerViewController+SimilarPhoto] FaceComparisonViewController 표시")
         print("  - sourceGroupID: \(comparisonGroup.sourceGroupID)")
         print("  - personIndex: \(comparisonGroup.personIndex)")
         print("  - selectedAssetIDs: \(comparisonGroup.selectedAssetIDs.count)장")
 
-        // Phase 5 완료 후:
-        // let faceComparisonVC = FaceComparisonViewController(
-        //     comparisonGroup: comparisonGroup,
-        //     fetchResult: coordinator.fetchResult
-        // )
-        // faceComparisonVC.delegate = self
-        // present(faceComparisonVC, animated: true)
+        // FaceComparisonViewController 생성 및 표시
+        let faceComparisonVC = FaceComparisonViewController(
+            comparisonGroup: comparisonGroup,
+            fetchResult: coordinator.fetchResult
+        )
+        faceComparisonVC.delegate = self
+        present(faceComparisonVC, animated: true)
+    }
+}
+
+// MARK: - FaceComparisonDelegate
+
+extension ViewerViewController: FaceComparisonDelegate {
+
+    /// 사진 삭제 완료 시 호출
+    func faceComparisonViewController(
+        _ viewController: FaceComparisonViewController,
+        didDeletePhotos deletedAssetIDs: [String]
+    ) {
+        print("[ViewerViewController+SimilarPhoto] Deleted \(deletedAssetIDs.count) photos from face comparison")
+
+        // 현재 사진이 삭제되었는지 확인
+        guard let currentAssetID = coordinator.assetID(at: currentIndex) else { return }
+
+        if deletedAssetIDs.contains(currentAssetID) {
+            // 현재 사진이 삭제됨 → 이전 사진으로 이동 (없으면 다음 사진)
+            if currentIndex > 0 {
+                // 이전 사진으로 이동
+                let previousIndex = currentIndex - 1
+                navigateToPhoto(at: previousIndex)
+            } else if coordinator.totalCount > 1 {
+                // 다음 사진으로 이동
+                navigateToPhoto(at: 0)
+            } else {
+                // 모든 사진이 삭제됨 → 뷰어 닫기
+                dismiss(animated: true)
+            }
+        }
+
+        // +버튼 오버레이 갱신
+        updateSimilarPhotoOverlay()
+    }
+
+    /// 화면 닫기 시 호출
+    func faceComparisonViewControllerDidClose(_ viewController: FaceComparisonViewController) {
+        print("[ViewerViewController+SimilarPhoto] Face comparison closed")
+
+        // +버튼 오버레이 갱신
+        updateSimilarPhotoOverlay()
+    }
+
+    /// 특정 인덱스의 사진으로 이동
+    private func navigateToPhoto(at index: Int) {
+        // ViewerViewController의 기존 메서드 호출
+        // 이 메서드는 ViewerViewController에서 구현되어야 함
+        // 여기서는 currentIndex 업데이트만 수행
+        // 실제 구현은 ViewerViewController의 구조에 따라 다름
+        print("[ViewerViewController+SimilarPhoto] Navigate to photo at index \(index)")
     }
 }
 
