@@ -468,7 +468,7 @@
 - 헤더: "인물 N (M장)" 형식
 - 순환 버튼으로 다음 인물 전환 (선택 상태 유지)
 - 사진 탭으로 선택/해제 토글, 체크마크 표시
-- Delete 탭 시 휴지통 이동 + 뷰어 복귀
+- Delete 탭 시 휴지통 이동 + 그리드 복귀
 - 기존 Undo 기능과 통합
 
 ### Implementation for User Story 3
@@ -498,15 +498,13 @@
 
 - [X] T031 [US3] FaceComparisonViewController 하단바 구현 in `PickPhoto/PickPhoto/Features/SimilarPhoto/UI/FaceComparisonViewController.swift`
   - FloatingTabBar 재사용 또는 커스텀 구현
-  - Cancel 버튼: 선택 해제 후 뷰어 복귀
+  - Cancel 버튼: 선택 해제 후 뷰어로 복귀
   - 선택 개수 레이블: "N개 선택됨"
   - Delete 버튼: 선택된 사진 삭제 (비활성화 상태: 0개 선택 시)
 
 - [X] T032 [US3] 삭제 로직 구현 in `PickPhoto/PickPhoto/Features/SimilarPhoto/UI/FaceComparisonViewController.swift`
   - Delete 탭 시 TrashStore.moveToTrash 호출
-  - 삭제 후 뷰어로 복귀
-  - 현재 사진 삭제 시 이전 사진으로 이동 (없으면 다음 사진)
-  - 모든 사진 삭제 시 뷰어 닫고 그리드로 복귀
+  - 삭제 후 그리드로 복귀 (뷰어와 얼굴 비교 화면 모두 닫힘)
   - 그룹 멤버 3장 미만 시 그룹 무효화 + 테두리/+버튼 즉시 제거
   - Undo 지원: 기존 앱 Undo 기능과 동일하게 복구 가능
 
@@ -515,7 +513,7 @@
   - NotificationCenter.post로 삭제 이벤트 전파
   - Undo 시 SimilarityCache 상태 복원
 
-**Checkpoint**: 얼굴 비교 화면에서 사진 비교 → 선택 → 삭제 → 뷰어 복귀 가능
+**Checkpoint**: 얼굴 비교 화면에서 사진 비교 → 선택 → 삭제 → 그리드 복귀 가능
 
 ---
 
