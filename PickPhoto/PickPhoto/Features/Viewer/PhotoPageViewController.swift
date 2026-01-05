@@ -8,6 +8,18 @@ import UIKit
 import Photos
 import AppCore
 
+// MARK: - Zoom Notifications
+
+extension Notification.Name {
+    /// 사진 줌 변경 시 (줌 중)
+    /// userInfo: ["zoomScale": CGFloat, "contentOffset": CGPoint, "imageSize": CGSize, "viewFrame": CGRect]
+    static let photoDidZoom = Notification.Name("photoDidZoom")
+
+    /// 사진 줌 완료 시
+    /// userInfo: ["zoomScale": CGFloat, "contentOffset": CGPoint, "imageSize": CGSize, "viewFrame": CGRect]
+    static let photoDidEndZoom = Notification.Name("photoDidEndZoom")
+}
+
 // MARK: - PhotoPageViewController
 
 /// 개별 사진을 표시하는 페이지 뷰 컨트롤러
@@ -601,6 +613,13 @@ extension PhotoPageViewController: UIScrollViewDelegate {
             print("[ZOOM] DidZoom - scale=\(String(format: "%.3f", scrollView.zoomScale)), origin=\(imageView.frame.origin)")
         }
         updateContentInsetForCentering(preserveOffset: true)
+
+        // 줌 변경 알림 (FaceButtonOverlay 숨김용)
+        NotificationCenter.default.post(
+            name: .photoDidZoom,
+            object: self,
+            userInfo: makeZoomUserInfo()
+        )
     }
 
     /// 줌 완료 시 - 플래그 해제
@@ -609,5 +628,23 @@ extension PhotoPageViewController: UIScrollViewDelegate {
         if debugZoom { print("[ZOOM] DidEnd - scale=\(String(format: "%.3f", scale)), origin=\(imageView.frame.origin)") }
         isZoomInteractionActive = false
         needsLayoutUpdateAfterZoom = false
+
+        // 줌 완료 알림 (FaceButtonOverlay 재표시용)
+        NotificationCenter.default.post(
+            name: .photoDidEndZoom,
+            object: self,
+            userInfo: makeZoomUserInfo()
+        )
+    }
+
+    /// 줌 알림용 userInfo 생성
+    private func makeZoomUserInfo() -> [String: Any] {
+        return [
+            "zoomScale": scrollView.zoomScale,
+            "contentOffset": scrollView.contentOffset,
+            "imageSize": imageSize,
+            "viewFrame": view.frame,
+            "imageViewFrame": imageView.frame
+        ]
     }
 }

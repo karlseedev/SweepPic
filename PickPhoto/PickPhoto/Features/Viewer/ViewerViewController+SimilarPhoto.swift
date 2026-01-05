@@ -37,6 +37,11 @@ extension ViewerViewController {
         static var analysisObserver = "analysisObserver"
         static var isSimilarPhotoSetup = "isSimilarPhotoSetup"
         static var currentAnalyzingAssetID = "currentAnalyzingAssetID"
+        // Zoom 관련
+        static var zoomObserver = "zoomObserver"
+        static var zoomEndObserver = "zoomEndObserver"
+        static var zoomDebounceTimer = "zoomDebounceTimer"
+        static var lastZoomInfo = "lastZoomInfo"
     }
 
     // MARK: - Associated Properties
@@ -91,6 +96,46 @@ extension ViewerViewController {
         }
     }
 
+    /// 줌 변경 알림 옵저버
+    private var zoomObserver: NSObjectProtocol? {
+        get {
+            objc_getAssociatedObject(self, &AssociatedKeys.zoomObserver) as? NSObjectProtocol
+        }
+        set {
+            objc_setAssociatedObject(self, &AssociatedKeys.zoomObserver, newValue, .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
+        }
+    }
+
+    /// 줌 완료 알림 옵저버
+    private var zoomEndObserver: NSObjectProtocol? {
+        get {
+            objc_getAssociatedObject(self, &AssociatedKeys.zoomEndObserver) as? NSObjectProtocol
+        }
+        set {
+            objc_setAssociatedObject(self, &AssociatedKeys.zoomEndObserver, newValue, .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
+        }
+    }
+
+    /// 줌 디바운스 타이머
+    private var zoomDebounceTimer: Timer? {
+        get {
+            objc_getAssociatedObject(self, &AssociatedKeys.zoomDebounceTimer) as? Timer
+        }
+        set {
+            objc_setAssociatedObject(self, &AssociatedKeys.zoomDebounceTimer, newValue, .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
+        }
+    }
+
+    /// 마지막 줌 정보 (버튼 위치 재계산용)
+    private var lastZoomInfo: [String: Any]? {
+        get {
+            objc_getAssociatedObject(self, &AssociatedKeys.lastZoomInfo) as? [String: Any]
+        }
+        set {
+            objc_setAssociatedObject(self, &AssociatedKeys.lastZoomInfo, newValue, .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
+        }
+    }
+
     // MARK: - Public Methods (ViewerViewController에서 호출)
 
     /// 유사 사진 기능 설정
@@ -109,6 +154,9 @@ extension ViewerViewController {
 
         // 분석 완료 알림 구독
         setupAnalysisObserver()
+
+        // 줌 알림 구독
+        setupZoomObserver()
     }
 
     /// 뷰어가 표시될 때 호출
@@ -138,6 +186,20 @@ extension ViewerViewController {
             NotificationCenter.default.removeObserver(observer)
             analysisObserver = nil
         }
+
+        // 줌 옵저버 제거
+        if let observer = zoomObserver {
+            NotificationCenter.default.removeObserver(observer)
+            zoomObserver = nil
+        }
+        if let observer = zoomEndObserver {
+            NotificationCenter.default.removeObserver(observer)
+            zoomEndObserver = nil
+        }
+
+        // 타이머 정리
+        zoomDebounceTimer?.invalidate()
+        zoomDebounceTimer = nil
 
         // UI 제거
         faceButtonOverlay?.removeFromSuperview()
@@ -191,6 +253,71 @@ extension ViewerViewController {
         ) { [weak self] notification in
             self?.handleAnalysisComplete(notification)
         }
+    }
+
+    /// 줌 알림 옵저버 설정
+    private func setupZoomObserver() {
+        // 줌 중 → 버튼 숨김
+        zoomObserver = NotificationCenter.default.addObserver(
+            forName: .photoDidZoom,
+            object: nil,
+            queue: .main
+        ) { [weak self] notification in
+            self?.handleZoom(notification)
+        }
+
+        // 줌 완료 → 디바운스 후 버튼 재표시
+        zoomEndObserver = NotificationCenter.default.addObserver(
+            forName: .photoDidEndZoom,
+            object: nil,
+            queue: .main
+        ) { [weak self] notification in
+            self?.handleZoomEnd(notification)
+        }
+    }
+
+    // MARK: - Private Methods - Zoom Handling
+
+    /// 줌 중 처리 - 버튼 즉시 숨김
+    private func handleZoom(_ notification: Notification) {
+        // 타이머 취소 (연속 줌 시 재표시 방지)
+        zoomDebounceTimer?.invalidate()
+        zoomDebounceTimer = nil
+
+        // 줌 정보 저장
+        lastZoomInfo = notification.userInfo as? [String: Any]
+
+        // 버튼 숨김 (애니메이션 없이 즉시)
+        faceButtonOverlay?.hideButtonsImmediately()
+    }
+
+    /// 줌 완료 처리 - 디바운스 후 버튼 재표시
+    private func handleZoomEnd(_ notification: Notification) {
+        // 줌 정보 저장
+        lastZoomInfo = notification.userInfo as? [String: Any]
+
+        // 디바운스 타이머 (0.3초 후 버튼 재표시)
+        zoomDebounceTimer?.invalidate()
+        zoomDebounceTimer = Timer.scheduledTimer(withTimeInterval: 0.3, repeats: false) { [weak self] _ in
+            self?.showButtonsAfterZoom()
+        }
+    }
+
+    /// 줌 완료 후 버튼 재표시
+    private func showButtonsAfterZoom() {
+        guard let zoomInfo = lastZoomInfo,
+              let zoomScale = zoomInfo["zoomScale"] as? CGFloat,
+              let contentOffset = zoomInfo["contentOffset"] as? CGPoint,
+              let imageViewFrame = zoomInfo["imageViewFrame"] as? CGRect else {
+            return
+        }
+
+        // 버튼 재표시 (줌 상태 기반 위치 계산)
+        faceButtonOverlay?.showButtonsWithZoom(
+            zoomScale: zoomScale,
+            contentOffset: contentOffset,
+            imageViewFrame: imageViewFrame
+        )
     }
 
     // MARK: - Private Methods - Feature Check

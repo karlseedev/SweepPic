@@ -217,6 +217,101 @@ final class FaceButtonOverlay: UIView {
         })
     }
 
+    /// 모든 +버튼을 즉시 숨깁니다 (애니메이션 없음).
+    /// 줌 시작 시 호출
+    func hideButtonsImmediately() {
+        for button in faceButtons {
+            button.alpha = 0
+        }
+    }
+
+    /// 줌 상태 기반으로 +버튼을 재표시합니다.
+    ///
+    /// - Parameters:
+    ///   - zoomScale: 현재 줌 스케일
+    ///   - contentOffset: 스크롤뷰 오프셋
+    ///   - imageViewFrame: 확대된 이미지뷰 프레임
+    func showButtonsWithZoom(zoomScale: CGFloat, contentOffset: CGPoint, imageViewFrame: CGRect) {
+        // 숨김 상태면 무시
+        guard !isOverlayHidden else { return }
+
+        // 현재 얼굴 정보가 없으면 무시
+        guard !currentFaces.isEmpty else { return }
+
+        // 유효 슬롯 얼굴만 필터링 & 크기순 상위 5개
+        let validFaces = currentFaces.filter { $0.isValidSlot }.topBySize(Constants.maxButtons)
+        guard !validFaces.isEmpty else { return }
+
+        // 기존 버튼 위치만 업데이트 (버튼 개수가 같으면 재사용)
+        var placedPositions: [CGPoint] = []
+
+        for (index, face) in validFaces.enumerated() {
+            // 줌 상태 기반 위치 계산
+            var position = calculateZoomedPosition(
+                for: face,
+                zoomScale: zoomScale,
+                contentOffset: contentOffset,
+                imageViewFrame: imageViewFrame
+            )
+
+            // 겹침 방지 조정
+            position = adjustForCollision(
+                position: position,
+                placedPositions: placedPositions,
+                viewerFrame: bounds
+            )
+
+            placedPositions.append(position)
+
+            // 기존 버튼 재사용 또는 새로 생성
+            if index < faceButtons.count {
+                let button = faceButtons[index]
+                button.frame = CGRect(
+                    x: position.x - Constants.buttonRadius,
+                    y: position.y - Constants.buttonRadius,
+                    width: Constants.buttonDiameter,
+                    height: Constants.buttonDiameter
+                )
+            }
+        }
+
+        // 페이드인 애니메이션
+        UIView.animate(withDuration: Constants.animationDuration) {
+            for button in self.faceButtons {
+                button.alpha = 1
+            }
+        }
+    }
+
+    /// 줌 상태 기반 버튼 위치 계산
+    ///
+    /// - Parameters:
+    ///   - face: 얼굴 정보
+    ///   - zoomScale: 현재 줌 스케일
+    ///   - contentOffset: 스크롤뷰 오프셋
+    ///   - imageViewFrame: 확대된 이미지뷰 프레임
+    /// - Returns: 화면상의 버튼 위치
+    private func calculateZoomedPosition(
+        for face: CachedFace,
+        zoomScale: CGFloat,
+        contentOffset: CGPoint,
+        imageViewFrame: CGRect
+    ) -> CGPoint {
+        // 얼굴의 정규화 좌표 (Vision 좌표계)
+        let boundingBox = face.boundingBox
+
+        // imageViewFrame 기준으로 얼굴 위치 계산 (확대된 상태)
+        // Vision 좌표를 UIKit 좌표로 변환
+        let x = boundingBox.origin.x * imageViewFrame.width + imageViewFrame.origin.x
+        let y = (1 - boundingBox.origin.y - boundingBox.height) * imageViewFrame.height + imageViewFrame.origin.y
+
+        // 버튼 위치 = 얼굴 위 중앙 - contentOffset (스크롤 보정)
+        let buttonX = x + (boundingBox.width * imageViewFrame.width) / 2 - contentOffset.x
+        let buttonY = y - Constants.buttonRadius - contentOffset.y
+
+        return CGPoint(x: buttonX, y: buttonY)
+    }
+
     /// 레이아웃 업데이트 (화면 회전 시)
     ///
     /// - Parameter viewerFrame: 새 뷰어 프레임
