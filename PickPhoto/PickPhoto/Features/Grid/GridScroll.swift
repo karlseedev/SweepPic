@@ -79,6 +79,9 @@ extension GridViewController {
             firstScrollStartTime = currentScrollStartTime
             FileLogger.log("[Scroll] First scroll 시작: +\(String(format: "%.1f", (currentScrollStartTime - loadStartTime) * 1000))ms")
         }
+
+        // [SimilarPhoto] 스크롤 시작 시 분석 취소 및 테두리 숨김
+        handleSimilarPhotoScrollStart()
     }
 
     /// 스크롤 종료
@@ -125,6 +128,9 @@ extension GridViewController {
             // - .opportunistic은 같은 targetSize 내에서만 저→고 자동 업그레이드
             // - 다른 targetSize(50%→100%)로의 업그레이드는 명시적 재요청 필요
             self.upgradeVisibleCellsToHighQuality(scrollSeq: currentSeq, scrollEndTime: self.lastScrollEndTime)
+
+            // [SimilarPhoto] 스크롤 종료 시 분석 시작 (0.3초 디바운싱)
+            self.handleSimilarPhotoScrollEnd()
 
             // [--log-thumb] 스크롤 종료 후 visible 셀 해상도 검사 (2회: 0.2s, 0.6s)
             if FileLogger.logThumbEnabled {

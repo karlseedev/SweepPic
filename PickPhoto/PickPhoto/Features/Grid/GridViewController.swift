@@ -566,6 +566,9 @@ final class GridViewController: UIViewController {
             name: UIApplication.didEnterBackgroundNotification,
             object: nil
         )
+
+        // [SimilarPhoto] 유사 사진 기능 옵저버 설정 (T019)
+        setupSimilarPhotoObserver()
     }
 
     @objc private func handleAutoScrollDidBegin() {
@@ -858,6 +861,9 @@ extension GridViewController: UICollectionViewDataSource {
             cell.isSelectedForDeletion = false
         }
 
+        // [SimilarPhoto] 테두리 애니메이션 구성 (T020)
+        configureSimilarPhotoBorder(for: cell, at: indexPath)
+
         return cell
     }
 }
@@ -879,6 +885,15 @@ extension GridViewController: UICollectionViewDelegate {
         if let photoCell = cell as? PhotoCell, photoCell.isShowingGray {
             PhotoCell.incrementGrayShown()
         }
+    }
+
+    /// 셀이 화면에서 사라질 때 호출
+    /// - [SimilarPhoto] 테두리 레이어 제거 (메모리 최적화)
+    func collectionView(_ collectionView: UICollectionView, didEndDisplaying cell: UICollectionViewCell, forItemAt indexPath: IndexPath) {
+        guard let photoCell = cell as? PhotoCell else { return }
+
+        // [SimilarPhoto] 테두리 레이어 제거 (T021)
+        removeSimilarPhotoBorder(from: photoCell)
     }
 
     func collectionView(_ collectionView: UICollectionView, didSelectItemAt indexPath: IndexPath) {
@@ -1090,6 +1105,9 @@ extension GridViewController: ViewerViewControllerDelegate {
         if let indexPath = dataSourceDriver.indexPath(for: assetID) {
             collectionView.reloadItems(at: [indexPath])
         }
+
+        // [SimilarPhoto] 그룹 무효화 처리 (T022)
+        handleSimilarPhotoAssetDeleted(assetID: assetID)
 
         print("[GridViewController] Moved to trash: \(assetID.prefix(8))...")
     }

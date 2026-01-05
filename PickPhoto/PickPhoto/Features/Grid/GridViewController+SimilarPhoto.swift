@@ -1,0 +1,471 @@
+//
+//  GridViewController+SimilarPhoto.swift
+//  PickPhoto
+//
+//  Created by Claude on 2026/01/05.
+//
+//  유사 사진 기능 관련 GridViewController Extension
+//  - 스크롤 멈춤 시 분석 트리거 (0.3초 디바운싱)
+//  - 분석 완료 시 BorderAnimationLayer 표시
+//  - 스크롤 재개 시 분석 취소 및 테두리 제거
+//  - 셀 레이어 관리 (T021)
+//  - 그룹 무효화 처리 (T022)
+//
+
+import UIKit
+import Photos
+
+// MARK: - Similar Photo Properties
+
+/// 유사 사진 기능에 필요한 stored properties를 위한 Associated Keys
+private enum SimilarPhotoAssociatedKeys {
+    /// 분석 디바운스 타이머
+    static var debounceWorkItem = "similarPhoto_debounceWorkItem"
+    /// 현재 분석 중인 범위
+    static var currentAnalysisRange = "similarPhoto_currentAnalysisRange"
+    /// 분석 완료 옵저버
+    static var analysisObserver = "similarPhoto_analysisObserver"
+    /// 그룹 테두리 표시 중인 assetID 집합
+    static var borderedAssetIDs = "similarPhoto_borderedAssetIDs"
+    /// 테두리 레이어 재사용 풀
+    static var borderLayerPool = "similarPhoto_borderLayerPool"
+    /// 삭제 옵저버 (그룹 무효화 처리용)
+    static var trashObserver = "similarPhoto_trashObserver"
+}
+
+// MARK: - GridViewController+SimilarPhoto
+
+extension GridViewController {
+
+    // MARK: - Constants
+
+    /// 유사 사진 관련 상수
+    private enum SimilarPhotoConstants {
+        /// 스크롤 멈춤 후 분석 시작 전 디바운싱 시간 (초)
+        static let debounceInterval: TimeInterval = 0.3
+    }
+
+    // MARK: - Associated Properties
+
+    /// 디바운스 작업 항목
+    private var debounceWorkItem: DispatchWorkItem? {
+        get { objc_getAssociatedObject(self, &SimilarPhotoAssociatedKeys.debounceWorkItem) as? DispatchWorkItem }
+        set { objc_setAssociatedObject(self, &SimilarPhotoAssociatedKeys.debounceWorkItem, newValue, .OBJC_ASSOCIATION_RETAIN_NONATOMIC) }
+    }
+
+    /// 현재 분석 중인 범위
+    private var currentAnalysisRange: ClosedRange<Int>? {
+        get { objc_getAssociatedObject(self, &SimilarPhotoAssociatedKeys.currentAnalysisRange) as? ClosedRange<Int> }
+        set { objc_setAssociatedObject(self, &SimilarPhotoAssociatedKeys.currentAnalysisRange, newValue, .OBJC_ASSOCIATION_RETAIN_NONATOMIC) }
+    }
+
+    /// 분석 완료 옵저버
+    private var analysisObserver: NSObjectProtocol? {
+        get { objc_getAssociatedObject(self, &SimilarPhotoAssociatedKeys.analysisObserver) as? NSObjectProtocol }
+        set { objc_setAssociatedObject(self, &SimilarPhotoAssociatedKeys.analysisObserver, newValue, .OBJC_ASSOCIATION_RETAIN_NONATOMIC) }
+    }
+
+    /// 테두리 표시 중인 assetID 집합
+    private var borderedAssetIDs: Set<String> {
+        get { (objc_getAssociatedObject(self, &SimilarPhotoAssociatedKeys.borderedAssetIDs) as? Set<String>) ?? [] }
+        set { objc_setAssociatedObject(self, &SimilarPhotoAssociatedKeys.borderedAssetIDs, newValue, .OBJC_ASSOCIATION_RETAIN_NONATOMIC) }
+    }
+
+    /// 테두리 레이어 재사용 풀
+    private var borderLayerPool: [BorderAnimationLayer] {
+        get { (objc_getAssociatedObject(self, &SimilarPhotoAssociatedKeys.borderLayerPool) as? [BorderAnimationLayer]) ?? [] }
+        set { objc_setAssociatedObject(self, &SimilarPhotoAssociatedKeys.borderLayerPool, newValue, .OBJC_ASSOCIATION_RETAIN_NONATOMIC) }
+    }
+
+    /// 삭제 옵저버 (그룹 무효화 처리용)
+    private var trashObserver: NSObjectProtocol? {
+        get { objc_getAssociatedObject(self, &SimilarPhotoAssociatedKeys.trashObserver) as? NSObjectProtocol }
+        set { objc_setAssociatedObject(self, &SimilarPhotoAssociatedKeys.trashObserver, newValue, .OBJC_ASSOCIATION_RETAIN_NONATOMIC) }
+    }
+
+    // MARK: - Setup (T019)
+
+    /// 유사 사진 기능 옵저버 설정
+    /// - GridViewController.viewDidLoad()에서 호출
+    func setupSimilarPhotoObserver() {
+        // Feature Flag 체크
+        guard FeatureFlags.isSimilarPhotoEnabled else {
+            print("[SimilarPhoto] Feature disabled")
+            return
+        }
+
+        // 분석 완료 알림 구독
+        analysisObserver = NotificationCenter.default.addObserver(
+            forName: .similarPhotoAnalysisComplete,
+            object: nil,
+            queue: .main
+        ) { [weak self] notification in
+            self?.handleAnalysisComplete(notification)
+        }
+
+        // 삭제 이벤트 알림 구독 (그룹 무효화 처리용)
+        // TrashStore의 onStateChange와 별개로, 분석 범위 내 삭제 감지용
+        trashObserver = NotificationCenter.default.addObserver(
+            forName: UIApplication.didBecomeActiveNotification,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            // 앱 활성화 시 테두리 상태 검증
+            self?.validateBorderedCells()
+        }
+
+        print("[SimilarPhoto] Observer setup complete")
+    }
+
+    /// 옵저버 해제
+    /// - GridViewController.deinit에서 호출 권장
+    func removeSimilarPhotoObserver() {
+        if let observer = analysisObserver {
+            NotificationCenter.default.removeObserver(observer)
+            analysisObserver = nil
+        }
+        if let observer = trashObserver {
+            NotificationCenter.default.removeObserver(observer)
+            trashObserver = nil
+        }
+    }
+
+    // MARK: - Scroll Event Handling (T019)
+
+    /// 스크롤 시작 시 호출
+    /// - 진행 중인 분석 취소
+    /// - 테두리 애니메이션 숨김
+    func handleSimilarPhotoScrollStart() {
+        // Feature Flag 및 비활성화 조건 체크
+        guard shouldEnableSimilarPhoto() else { return }
+
+        // 디바운스 작업 취소
+        debounceWorkItem?.cancel()
+        debounceWorkItem = nil
+
+        // 분석 취소 (grid 소스만)
+        SimilarityAnalysisQueue.shared.cancel(source: .grid)
+
+        // 현재 분석 범위 초기화
+        currentAnalysisRange = nil
+
+        // 모든 테두리 숨김 (스크롤 중에는 테두리 미표시)
+        hideAllBorders()
+    }
+
+    /// 스크롤 종료 시 호출
+    /// - 0.3초 디바운싱 후 분석 시작
+    func handleSimilarPhotoScrollEnd() {
+        // Feature Flag 및 비활성화 조건 체크
+        guard shouldEnableSimilarPhoto() else { return }
+
+        // 기존 디바운스 작업 취소
+        debounceWorkItem?.cancel()
+
+        // 새 디바운스 작업 생성
+        let workItem = DispatchWorkItem { [weak self] in
+            self?.startAnalysis()
+        }
+        debounceWorkItem = workItem
+
+        // 0.3초 후 분석 시작
+        DispatchQueue.main.asyncAfter(
+            deadline: .now() + SimilarPhotoConstants.debounceInterval,
+            execute: workItem
+        )
+    }
+
+    // MARK: - Analysis (T019)
+
+    /// 분석 시작
+    /// - 화면에 보이는 셀 범위 + 앞뒤 7장 확장
+    private func startAnalysis() {
+        guard let fetchResult = dataSourceDriver.fetchResult else {
+            print("[SimilarPhoto] No fetch result available")
+            return
+        }
+
+        // 분석 범위 계산
+        let range = calculateAnalysisRange()
+        guard let analysisRange = range else {
+            print("[SimilarPhoto] Invalid analysis range")
+            return
+        }
+
+        // 현재 분석 범위 저장
+        currentAnalysisRange = analysisRange
+
+        print("[SimilarPhoto] Starting analysis for range: \(analysisRange)")
+
+        // 분석 요청 (비동기)
+        Task {
+            let groupIDs = await SimilarityAnalysisQueue.shared.formGroupsForRange(
+                analysisRange,
+                source: .grid,
+                fetchResult: fetchResult
+            )
+            print("[SimilarPhoto] Analysis complete, found \(groupIDs.count) groups")
+        }
+    }
+
+    /// 분석 범위 계산
+    /// - 화면에 보이는 셀의 인덱스 범위 + 앞뒤 7장 확장
+    /// - Returns: 분석 범위 (ClosedRange<Int>) 또는 nil
+    private func calculateAnalysisRange() -> ClosedRange<Int>? {
+        let visibleIndexPaths = collectionView.indexPathsForVisibleItems
+
+        guard !visibleIndexPaths.isEmpty else { return nil }
+
+        // padding 셀 제외하고 실제 인덱스 계산
+        let padding = paddingCellCount
+        let actualIndices = visibleIndexPaths
+            .map { $0.item - padding }
+            .filter { $0 >= 0 }
+
+        guard let minIndex = actualIndices.min(),
+              let maxIndex = actualIndices.max() else {
+            return nil
+        }
+
+        // 앞뒤 7장 확장
+        let extension_count = SimilarityConstants.analysisRangeExtension
+        let totalCount = dataSourceDriver.count
+
+        let lowerBound = max(0, minIndex - extension_count)
+        let upperBound = min(totalCount - 1, maxIndex + extension_count)
+
+        guard lowerBound <= upperBound else { return nil }
+
+        return lowerBound...upperBound
+    }
+
+    // MARK: - Analysis Complete Handler (T019)
+
+    /// 분석 완료 알림 처리
+    /// - Parameter notification: 분석 완료 알림
+    private func handleAnalysisComplete(_ notification: Notification) {
+        guard let userInfo = notification.userInfo,
+              let groupIDs = userInfo["groupIDs"] as? [String],
+              let analyzedAssetIDs = userInfo["analyzedAssetIDs"] as? [String] else {
+            return
+        }
+
+        print("[SimilarPhoto] Received analysis complete - groups: \(groupIDs.count), assets: \(analyzedAssetIDs.count)")
+
+        // 그룹이 없으면 해당 범위 테두리 모두 제거
+        if groupIDs.isEmpty {
+            // 분석된 assetID들의 테두리 제거
+            for assetID in analyzedAssetIDs {
+                borderedAssetIDs.remove(assetID)
+            }
+            updateVisibleCellBorders()
+            return
+        }
+
+        // 그룹에 속한 assetID들에 테두리 표시
+        Task {
+            var newBorderedIDs = Set<String>()
+
+            for groupID in groupIDs {
+                let members = await SimilarityCache.shared.getGroupMembers(groupID: groupID)
+                newBorderedIDs.formUnion(members)
+            }
+
+            await MainActor.run {
+                // 기존 테두리와 병합 (분석 범위 외 기존 테두리 유지)
+                self.borderedAssetIDs.formUnion(newBorderedIDs)
+                self.updateVisibleCellBorders()
+            }
+        }
+    }
+
+    // MARK: - Border Management (T021)
+
+    /// 보이는 셀들의 테두리 상태 업데이트
+    private func updateVisibleCellBorders() {
+        let visibleIndexPaths = collectionView.indexPathsForVisibleItems
+        let padding = paddingCellCount
+
+        for indexPath in visibleIndexPaths {
+            // padding 셀 제외
+            let actualIndex = indexPath.item - padding
+            guard actualIndex >= 0 else { continue }
+
+            let actualIndexPath = IndexPath(item: actualIndex, section: 0)
+            guard let assetID = dataSourceDriver.assetID(at: actualIndexPath) else { continue }
+            guard let cell = collectionView.cellForItem(at: indexPath) as? PhotoCell else { continue }
+
+            if borderedAssetIDs.contains(assetID) {
+                // 테두리 표시
+                showBorder(on: cell)
+            } else {
+                // 테두리 제거
+                hideBorder(on: cell)
+            }
+        }
+    }
+
+    /// 셀에 테두리 표시
+    /// - Parameter cell: 테두리를 표시할 PhotoCell
+    private func showBorder(on cell: PhotoCell) {
+        // 기존 테두리 레이어 찾기
+        if let existingLayer = cell.contentView.layer.sublayers?.first(where: { $0 is BorderAnimationLayer }) as? BorderAnimationLayer {
+            existingLayer.frame = cell.contentView.bounds
+            existingLayer.startAnimation()
+            return
+        }
+
+        // 새 레이어 생성 또는 풀에서 가져오기
+        let borderLayer: BorderAnimationLayer
+        if var pool = borderLayerPool as [BorderAnimationLayer]?, !pool.isEmpty {
+            borderLayer = pool.removeFirst()
+            borderLayerPool = pool
+        } else {
+            borderLayer = BorderAnimationLayer()
+        }
+
+        borderLayer.frame = cell.contentView.bounds
+        cell.contentView.layer.addSublayer(borderLayer)
+        borderLayer.startAnimation()
+    }
+
+    /// 셀에서 테두리 제거
+    /// - Parameter cell: 테두리를 제거할 PhotoCell
+    private func hideBorder(on cell: PhotoCell) {
+        guard let borderLayer = cell.contentView.layer.sublayers?.first(where: { $0 is BorderAnimationLayer }) as? BorderAnimationLayer else {
+            return
+        }
+
+        borderLayer.stopAnimation()
+        borderLayer.removeFromSuperlayer()
+
+        // 풀에 반환
+        var pool = borderLayerPool
+        if pool.count < 20 { // 최대 20개까지 풀링
+            pool.append(borderLayer)
+            borderLayerPool = pool
+        }
+    }
+
+    /// 모든 테두리 숨김
+    private func hideAllBorders() {
+        for cell in collectionView.visibleCells {
+            guard let photoCell = cell as? PhotoCell else { continue }
+            hideBorder(on: photoCell)
+        }
+    }
+
+    /// 셀이 화면에 나타날 때 테두리 레이어 추가/갱신
+    /// - Parameters:
+    ///   - cell: 표시될 셀
+    ///   - indexPath: 셀의 인덱스 경로
+    func configureSimilarPhotoBorder(for cell: PhotoCell, at indexPath: IndexPath) {
+        // Feature Flag 체크
+        guard shouldEnableSimilarPhoto() else { return }
+
+        // 스크롤 중이면 테두리 미표시
+        guard !isScrolling else {
+            hideBorder(on: cell)
+            return
+        }
+
+        // padding 셀 제외
+        let actualIndex = indexPath.item - paddingCellCount
+        guard actualIndex >= 0 else {
+            hideBorder(on: cell)
+            return
+        }
+
+        let actualIndexPath = IndexPath(item: actualIndex, section: 0)
+        guard let assetID = dataSourceDriver.assetID(at: actualIndexPath) else {
+            hideBorder(on: cell)
+            return
+        }
+
+        if borderedAssetIDs.contains(assetID) {
+            showBorder(on: cell)
+        } else {
+            hideBorder(on: cell)
+        }
+    }
+
+    /// 셀이 화면에서 사라질 때 테두리 레이어 제거
+    /// - Parameter cell: 사라지는 셀
+    func removeSimilarPhotoBorder(from cell: PhotoCell) {
+        hideBorder(on: cell)
+    }
+
+    // MARK: - Group Invalidation (T022)
+
+    /// 삭제로 인한 그룹 무효화 처리
+    /// - 삭제 후 그룹 멤버 3장 미만 시 테두리 즉시 제거
+    /// - 삭제 후 즉시 재분석하지 않고 다음 스크롤 멈춤 시 자동 재분석
+    func handleSimilarPhotoAssetDeleted(assetID: String) {
+        // 해당 assetID의 테두리 제거
+        borderedAssetIDs.remove(assetID)
+
+        // 해당 assetID가 속한 그룹 확인 및 무효화 처리
+        Task {
+            let state = await SimilarityCache.shared.getState(for: assetID)
+
+            if case .analyzed(true, let groupID?) = state {
+                // 그룹에서 멤버 제거
+                let isGroupStillValid = await SimilarityCache.shared.removeMemberFromGroup(assetID, groupID: groupID)
+
+                if !isGroupStillValid {
+                    // 그룹이 무효화됨 - 해당 그룹의 모든 멤버 테두리 제거
+                    await MainActor.run {
+                        // 그룹 멤버들의 테두리 상태 갱신 (그룹이 무효화되었으므로 제거)
+                        // 실제로는 SimilarityCache.invalidateGroup에서 처리됨
+                        self.updateVisibleCellBorders()
+                    }
+                }
+            }
+        }
+    }
+
+    /// 테두리 표시 중인 셀들의 유효성 검증
+    /// - 그룹이 무효화된 셀의 테두리 제거
+    private func validateBorderedCells() {
+        Task {
+            var invalidAssetIDs = Set<String>()
+
+            for assetID in borderedAssetIDs {
+                let state = await SimilarityCache.shared.getState(for: assetID)
+
+                // 그룹에 속하지 않으면 테두리 제거 대상
+                if case .analyzed(false, _) = state {
+                    invalidAssetIDs.insert(assetID)
+                } else if case .notAnalyzed = state {
+                    invalidAssetIDs.insert(assetID)
+                }
+            }
+
+            if !invalidAssetIDs.isEmpty {
+                await MainActor.run {
+                    self.borderedAssetIDs.subtract(invalidAssetIDs)
+                    self.updateVisibleCellBorders()
+                }
+            }
+        }
+    }
+
+    // MARK: - Private Helpers
+
+    /// 유사 사진 기능 활성화 여부 확인
+    /// - Returns: 기능 활성화 여부
+    private func shouldEnableSimilarPhoto() -> Bool {
+        // Feature Flag 체크
+        guard FeatureFlags.isSimilarPhotoEnabled else { return false }
+
+        // VoiceOver 활성화 시 비활성화
+        guard !UIAccessibility.isVoiceOverRunning else { return false }
+
+        // 선택 모드 시 비활성화
+        guard !isSelectMode else { return false }
+
+        // 휴지통 화면 시 비활성화 (휴지통은 별도 탭이므로 GridViewController에서는 해당 없음)
+
+        return true
+    }
+}

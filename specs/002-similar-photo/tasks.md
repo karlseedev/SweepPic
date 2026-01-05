@@ -343,7 +343,7 @@
 
 ### Implementation for User Story 1
 
-- [ ] T018 [P] [US1] BorderAnimationLayer 클래스 생성 in `PickPhoto/PickPhoto/Features/SimilarPhoto/UI/BorderAnimationLayer.swift`
+- [X] T018 [P] [US1] BorderAnimationLayer 클래스 생성 in `PickPhoto/PickPhoto/Features/SimilarPhoto/UI/BorderAnimationLayer.swift`
   - `CAShapeLayer` + `CAKeyframeAnimation`
   - 사각형 path, 흰색 그라데이션
   - 시계방향 회전, **1.5초 주기**
@@ -352,7 +352,7 @@
   - `startAnimation()`, `stopAnimation()`, `showStaticBorder()` 메서드
   - 모든 셀 **동일한 위상으로 동기화** (CACurrentMediaTime 기준)
 
-- [ ] T019 [US1] GridViewController+SimilarPhoto.swift Extension 생성 in `PickPhoto/PickPhoto/Features/Grid/GridViewController+SimilarPhoto.swift`
+- [X] T019 [US1] GridViewController+SimilarPhoto.swift Extension 생성 in `PickPhoto/PickPhoto/Features/Grid/GridViewController+SimilarPhoto.swift`
   - FeatureFlag 체크 (`FeatureFlags.isSimilarPhotoEnabled`)
   - VoiceOver 활성화 시 기능 비활성화 (`UIAccessibility.isVoiceOverRunning`)
   - 선택 모드 시 기능 비활성화
@@ -369,19 +369,19 @@
   - `scrollViewWillBeginDragging` 시 분석 취소 및 테두리 제거
   - `collectionView(_:didSelectItemAt:)` 에서 테두리 있는 셀 탭 시 뷰어 이동 처리
 
-- [ ] T020 [US1] GridViewController 기존 파일에 최소 수정 in `PickPhoto/PickPhoto/Features/Grid/GridViewController.swift`
+- [X] T020 [US1] GridViewController 기존 파일에 최소 수정 in `PickPhoto/PickPhoto/Features/Grid/GridViewController.swift`
   - Extension 메서드 호출만 추가
   - `viewDidLoad`에서 `setupSimilarPhotoObserver()` 호출
   - `scrollViewDidEndDecelerating`에서 `handleScrollEnd()` 호출
   - `scrollViewWillBeginDragging`에서 `handleScrollStart()` 호출
   - 셀 구성 시 `configureBorderAnimation(for:)` 호출
 
-- [ ] T021 [US1] 셀 레이어 관리 in `PickPhoto/PickPhoto/Features/Grid/GridViewController+SimilarPhoto.swift`
+- [X] T021 [US1] 셀 레이어 관리 in `PickPhoto/PickPhoto/Features/Grid/GridViewController+SimilarPhoto.swift`
   - `collectionView(_:willDisplay:forItemAt:)` - 테두리 레이어 추가/갱신
   - `collectionView(_:didEndDisplaying:forItemAt:)` - 테두리 레이어 제거 (메모리 최적화)
   - 테두리 레이어 재사용 풀 관리
 
-- [ ] T022 [US1] 그룹 무효화 처리 in `PickPhoto/PickPhoto/Features/Grid/GridViewController+SimilarPhoto.swift`
+- [X] T022 [US1] 그룹 무효화 처리 in `PickPhoto/PickPhoto/Features/Grid/GridViewController+SimilarPhoto.swift`
   - 삭제 후 그룹 멤버 3장 미만 시 테두리 즉시 제거
   - SimilarityCache.invalidateGroup 호출 연동
   - NotificationCenter로 삭제 이벤트 감지
