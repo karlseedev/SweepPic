@@ -122,11 +122,11 @@ final class FaceButtonOverlay: UIView {
         isUserInteractionEnabled = true
         backgroundColor = .clear
 
-        // 토글 버튼 추가 (화면 우측 하단) - T034
+        // 토글 버튼 추가 (화면 우측 상단, 뒤로가기 버튼과 같은 높이) - T034
         addSubview(toggleButton)
         NSLayoutConstraint.activate([
+            toggleButton.topAnchor.constraint(equalTo: safeAreaLayoutGuide.topAnchor, constant: 16),
             toggleButton.trailingAnchor.constraint(equalTo: safeAreaLayoutGuide.trailingAnchor, constant: -16),
-            toggleButton.bottomAnchor.constraint(equalTo: safeAreaLayoutGuide.bottomAnchor, constant: -100),
             toggleButton.widthAnchor.constraint(equalToConstant: 36),
             toggleButton.heightAnchor.constraint(equalToConstant: 36)
         ])

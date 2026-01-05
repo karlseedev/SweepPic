@@ -202,20 +202,28 @@ final class SimilarityAnalyzer {
 
         var distances: [Float?] = []
 
+        // [DEBUG] Feature Print nil 개수 확인
+        let nilCount = featurePrints.filter { $0 == nil }.count
+        print("[SimilarityAnalyzer] Feature Prints: \(featurePrints.count)개, nil: \(nilCount)개")
+
         for i in 0..<(featurePrints.count - 1) {
             guard let fp1 = featurePrints[i],
                   let fp2 = featurePrints[i + 1] else {
                 // Feature Print가 nil이면 거리도 nil
                 distances.append(nil)
+                print("[SimilarityAnalyzer] Distance[\(i)]: nil (Feature Print 없음)")
                 continue
             }
 
             do {
                 let distance = try computeDistance(fp1, fp2)
                 distances.append(distance)
+                // [DEBUG] 거리 값 로그
+                print("[SimilarityAnalyzer] Distance[\(i)]: \(distance)")
             } catch {
                 // 계산 실패 시 nil
                 distances.append(nil)
+                print("[SimilarityAnalyzer] Distance[\(i)]: nil (계산 실패: \(error))")
             }
         }
 
@@ -245,6 +253,9 @@ final class SimilarityAnalyzer {
         // 인접 거리 계산
         let distances = calculateAdjacentDistances(featurePrints)
 
+        // [DEBUG] Threshold 로그
+        print("[SimilarityAnalyzer] formGroups - threshold: \(threshold), iOS version: \(ProcessInfo.processInfo.operatingSystemVersion.majorVersion)")
+
         var groups: [[String]] = []
         var currentGroup: [String] = [photoIDs[0]]
 
@@ -253,6 +264,10 @@ final class SimilarityAnalyzer {
 
             // nil이거나 threshold 초과하면 그룹 분리
             if distance == nil || distance! > threshold {
+                // [DEBUG] 그룹 분리 로그
+                if let d = distance {
+                    print("[SimilarityAnalyzer] 그룹 분리: distance \(d) > threshold \(threshold)")
+                }
                 // 현재 그룹이 최소 크기 이상이면 저장
                 if currentGroup.count >= SimilarityConstants.minGroupSize {
                     groups.append(currentGroup)
@@ -268,6 +283,12 @@ final class SimilarityAnalyzer {
         // 마지막 그룹 처리
         if currentGroup.count >= SimilarityConstants.minGroupSize {
             groups.append(currentGroup)
+        }
+
+        // [DEBUG] 최종 그룹 결과 로그
+        print("[SimilarityAnalyzer] formGroups 결과: \(groups.count)개 그룹")
+        for (idx, group) in groups.enumerated() {
+            print("[SimilarityAnalyzer]   그룹[\(idx)]: \(group.count)장")
         }
 
         return groups
