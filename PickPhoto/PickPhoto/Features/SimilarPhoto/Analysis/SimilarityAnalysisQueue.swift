@@ -185,30 +185,37 @@ final class SimilarityAnalysisQueue {
             // 그룹 내 사진 가져오기
             let groupPhotos = photos.filter { groupAssetIDs.contains($0.localIdentifier) }
 
-            // 각 사진에서 얼굴 감지
-            var photoFacesMap: [String: [CachedFace]] = [:]
+            // 각 사진에서 얼굴 감지 (Raw 결과 수집)
+            var rawFacesMap: [String: [DetectedFace]] = [:]
 
             for photo in groupPhotos {
                 do {
                     let faces = try await faceDetector.detectFaces(in: photo, viewerSize: viewerSize)
-                    let cachedFaces = assignPersonIndices(faces: faces)
-                    photoFacesMap[photo.localIdentifier] = cachedFaces
+                    rawFacesMap[photo.localIdentifier] = faces
                 } catch {
                     // 얼굴 감지 실패 시 빈 배열
-                    photoFacesMap[photo.localIdentifier] = []
+                    rawFacesMap[photo.localIdentifier] = []
                 }
             }
 
-            // 유효 슬롯 계산
-            var slotCounts: [Int: Int] = [:]
-            for (_, faces) in photoFacesMap {
+            // 그룹 단위로 일관된 personIndex 할당 (위치 기반 매칭)
+            let photoFacesMap = assignPersonIndicesForGroup(
+                rawFacesMap: rawFacesMap,
+                assetIDs: groupAssetIDs
+            )
+
+            // 유효 슬롯 계산: 같은 personIndex가 2장 이상의 사진에서 나타나야 함
+            // 주의: 기존 로직은 "같은 personIndex를 가진 얼굴 총 개수"였으나,
+            //       이제는 "같은 personIndex가 나타나는 사진 수"로 변경
+            var slotPhotoCount: [Int: Set<String>] = [:]
+            for (assetID, faces) in photoFacesMap {
                 for face in faces {
-                    slotCounts[face.personIndex, default: 0] += 1
+                    slotPhotoCount[face.personIndex, default: []].insert(assetID)
                 }
             }
 
-            let validSlots = Set(slotCounts.filter {
-                $0.value >= SimilarityConstants.minPhotosPerSlot
+            let validSlots = Set(slotPhotoCount.filter {
+                $0.value.count >= SimilarityConstants.minPhotosPerSlot
             }.keys)
 
             // T014.7: 캐시 저장 요청 (T010 호출)
@@ -296,15 +303,107 @@ final class SimilarityAnalysisQueue {
 
     // MARK: - Private Methods - Face Processing
 
-    /// 감지된 얼굴에 인물 번호를 부여합니다.
+    /// 그룹 단위로 일관된 인물 번호를 부여합니다.
+    ///
+    /// 연속 촬영 사진에서 동일 위치의 얼굴은 같은 인물로 매칭합니다.
+    /// 첫 번째 사진(얼굴이 있는)의 얼굴 위치를 기준 슬롯으로 설정하고,
+    /// 다른 사진의 얼굴은 가장 가까운 슬롯에 매핑합니다.
+    ///
+    /// - Parameters:
+    ///   - rawFacesMap: 사진별 감지된 얼굴 (assetID → [DetectedFace])
+    ///   - assetIDs: 그룹 멤버 순서 (분석 순서)
+    /// - Returns: 일관된 personIndex가 부여된 CachedFace 맵
+    private func assignPersonIndicesForGroup(
+        rawFacesMap: [String: [DetectedFace]],
+        assetIDs: [String]
+    ) -> [String: [CachedFace]] {
+
+        // 기준 슬롯 정의: 첫 번째 얼굴 있는 사진의 얼굴 위치들
+        var referenceSlots: [(index: Int, center: CGPoint)] = []
+
+        // 얼굴이 있는 첫 번째 사진 찾기
+        for assetID in assetIDs {
+            guard let faces = rawFacesMap[assetID], !faces.isEmpty else { continue }
+
+            // 위치 정렬 (X 오름차순, Y 내림차순)
+            let sorted = sortFacesByPosition(faces)
+
+            // 기준 슬롯 설정
+            for (idx, face) in sorted.enumerated() {
+                let center = CGPoint(
+                    x: face.boundingBox.midX,
+                    y: face.boundingBox.midY
+                )
+                referenceSlots.append((index: idx + 1, center: center))
+            }
+            break
+        }
+
+        // 기준 슬롯이 없으면 빈 결과 반환
+        guard !referenceSlots.isEmpty else {
+            // 모든 사진에 얼굴 없음 → 빈 CachedFace 배열로 반환
+            var result: [String: [CachedFace]] = [:]
+            for assetID in assetIDs {
+                result[assetID] = []
+            }
+            return result
+        }
+
+        // 각 사진의 얼굴을 기준 슬롯에 매핑
+        var result: [String: [CachedFace]] = [:]
+        let positionThreshold: CGFloat = 0.15  // 위치 허용 오차 (정규화 좌표 기준)
+
+        for assetID in assetIDs {
+            guard let faces = rawFacesMap[assetID] else {
+                result[assetID] = []
+                continue
+            }
+
+            var cachedFaces: [CachedFace] = []
+
+            for face in faces {
+                let faceCenter = CGPoint(
+                    x: face.boundingBox.midX,
+                    y: face.boundingBox.midY
+                )
+
+                // 가장 가까운 기준 슬롯 찾기
+                var bestSlot: Int? = nil
+                var bestDistance: CGFloat = .infinity
+
+                for slot in referenceSlots {
+                    let distance = hypot(faceCenter.x - slot.center.x, faceCenter.y - slot.center.y)
+                    if distance < bestDistance && distance < positionThreshold {
+                        bestDistance = distance
+                        bestSlot = slot.index
+                    }
+                }
+
+                // 매칭되는 슬롯이 없으면 이 얼굴은 스킵 (유효 슬롯에 포함되지 않음)
+                // 연속 촬영이 아닌 사진에서 다른 위치의 얼굴은 무시
+                guard let personIndex = bestSlot else { continue }
+
+                cachedFaces.append(CachedFace(
+                    boundingBox: face.boundingBox,
+                    personIndex: personIndex,
+                    isValidSlot: false  // 나중에 갱신
+                ))
+            }
+
+            result[assetID] = cachedFaces
+        }
+
+        return result
+    }
+
+    /// 얼굴을 위치 기준으로 정렬합니다.
     ///
     /// 정렬 기준: X좌표 오름차순 (좌→우), X 동일 시 Y좌표 내림차순 (위→아래)
     ///
-    /// - Parameter faces: 감지된 얼굴 배열
-    /// - Returns: 인물 번호가 부여된 CachedFace 배열
-    private func assignPersonIndices(faces: [DetectedFace]) -> [CachedFace] {
-        // Vision 좌표 기준 정렬
-        let sorted = faces.sorted { face1, face2 in
+    /// - Parameter faces: 정렬할 얼굴 배열
+    /// - Returns: 정렬된 얼굴 배열
+    private func sortFacesByPosition(_ faces: [DetectedFace]) -> [DetectedFace] {
+        return faces.sorted { face1, face2 in
             let xDiff = abs(face1.boundingBox.origin.x - face2.boundingBox.origin.x)
 
             if xDiff > 0.05 {
@@ -315,6 +414,16 @@ final class SimilarityAnalysisQueue {
                 return face1.boundingBox.origin.y > face2.boundingBox.origin.y
             }
         }
+    }
+
+    /// 감지된 얼굴에 인물 번호를 부여합니다. (단일 사진용, 레거시)
+    ///
+    /// 정렬 기준: X좌표 오름차순 (좌→우), X 동일 시 Y좌표 내림차순 (위→아래)
+    ///
+    /// - Parameter faces: 감지된 얼굴 배열
+    /// - Returns: 인물 번호가 부여된 CachedFace 배열
+    private func assignPersonIndices(faces: [DetectedFace]) -> [CachedFace] {
+        let sorted = sortFacesByPosition(faces)
 
         return sorted.enumerated().map { index, face in
             CachedFace(

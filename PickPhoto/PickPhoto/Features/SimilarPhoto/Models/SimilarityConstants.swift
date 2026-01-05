@@ -9,6 +9,11 @@
 //  유사 사진 분석 기능에서 사용되는 상수들을 정의하는 열거형입니다.
 //  여러 클래스에서 참조되는 공용 상수 파일입니다.
 //
+//  iOS 버전별 Feature Print 거리 범위:
+//  - iOS 16 (Revision 1): 2048개 비정규화 벡터, 거리 범위 0.0 ~ 40.0
+//  - iOS 17+ (Revision 2): 768개 정규화 벡터, 거리 범위 0.0 ~ 2.0
+//  참고: https://github.com/verny-tran/PhotoClustering
+//
 
 import Foundation
 import CoreGraphics
@@ -21,11 +26,32 @@ enum SimilarityConstants: Sendable {
 
     // MARK: - Feature Print Analysis
 
-    /// Feature Print 거리 임계값
-    nonisolated static let similarityThreshold: Float = 10.0
+    /// Feature Print 거리 임계값 (iOS 버전에 따라 다름)
+    ///
+    /// - iOS 16: 거리 범위 0~40, 임계값 10.0
+    /// - iOS 17+: 거리 범위 0~2, 임계값 0.5
+    ///
+    /// Vision Framework의 VNFeaturePrintObservation은 iOS 17에서
+    /// 정규화된 768차원 벡터로 변경되어 거리 범위가 크게 축소됨
+    nonisolated static var similarityThreshold: Float {
+        if #available(iOS 17.0, *) {
+            return 0.5  // iOS 17+: 정규화 벡터, 거리 범위 0~2
+        } else {
+            return 10.0 // iOS 16: 비정규화 벡터, 거리 범위 0~40
+        }
+    }
 
-    /// 인물 매칭 임계값
-    nonisolated static let personMatchThreshold: Float = 1.0
+    /// 인물 매칭 임계값 (얼굴 크롭 Feature Print 비교용)
+    ///
+    /// - iOS 16: 임계값 1.0
+    /// - iOS 17+: 임계값 0.1 (정규화 벡터 기준)
+    nonisolated static var personMatchThreshold: Float {
+        if #available(iOS 17.0, *) {
+            return 0.1  // iOS 17+: 정규화 벡터
+        } else {
+            return 1.0  // iOS 16: 비정규화 벡터
+        }
+    }
 
     // MARK: - Group Validation
 
