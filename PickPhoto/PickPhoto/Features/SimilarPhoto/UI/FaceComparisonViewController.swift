@@ -248,6 +248,9 @@ final class FaceComparisonViewController: UIViewController {
 
     /// UI 구성
     private func setupUI() {
+        // 하단바를 먼저 설정해야 컬렉션 뷰 제약을 걸 수 있음
+        setupBottomBar()
+
         // iOS 16~25: 커스텀 타이틀바
         if #available(iOS 26.0, *) {
             // iOS 26+는 viewWillAppear에서 시스템 네비게이션바 설정
@@ -256,8 +259,6 @@ final class FaceComparisonViewController: UIViewController {
             setupCustomTitleBar()
             setupCollectionViewWithCustomNav()
         }
-
-        setupBottomBar()
     }
 
     /// 커스텀 타이틀바 설정 (iOS 16~25)
@@ -271,7 +272,8 @@ final class FaceComparisonViewController: UIViewController {
             titleBar.topAnchor.constraint(equalTo: view.topAnchor),
             titleBar.leadingAnchor.constraint(equalTo: view.leadingAnchor),
             titleBar.trailingAnchor.constraint(equalTo: view.trailingAnchor),
-            titleBar.heightAnchor.constraint(equalToConstant: view.safeAreaInsets.top + 44 + 15)
+            // SafeArea Top + 44pt 높이 확보 (배경은 topAnchor까지 확장됨)
+            titleBar.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 44)
         ])
 
         customTitleBar = titleBar
@@ -280,25 +282,28 @@ final class FaceComparisonViewController: UIViewController {
 
     /// 컬렉션 뷰 설정 (커스텀 네비게이션)
     private func setupCollectionViewWithCustomNav() {
-        view.addSubview(collectionView)
+        view.insertSubview(collectionView, belowSubview: bottomBarContainer)
 
         NSLayoutConstraint.activate([
-            collectionView.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor),
+            // 커스텀 타이틀바 바로 아래부터 시작
+            collectionView.topAnchor.constraint(equalTo: customTitleBar!.bottomAnchor),
             collectionView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
             collectionView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
-            collectionView.bottomAnchor.constraint(equalTo: view.bottomAnchor, constant: -Self.bottomBarHeight - view.safeAreaInsets.bottom)
+            // 하단바 바로 위까지 (겹침 방지)
+            collectionView.bottomAnchor.constraint(equalTo: bottomBarContainer.topAnchor)
         ])
     }
 
     /// 컬렉션 뷰 설정 (시스템 네비게이션)
     private func setupCollectionViewWithSystemNav() {
-        view.addSubview(collectionView)
+        view.insertSubview(collectionView, belowSubview: bottomBarContainer)
 
         NSLayoutConstraint.activate([
             collectionView.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor),
             collectionView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
             collectionView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
-            collectionView.bottomAnchor.constraint(equalTo: view.bottomAnchor, constant: -Self.bottomBarHeight - view.safeAreaInsets.bottom)
+            // 하단바 바로 위까지 (겹침 방지)
+            collectionView.bottomAnchor.constraint(equalTo: bottomBarContainer.topAnchor)
         ])
     }
 
@@ -328,11 +333,11 @@ final class FaceComparisonViewController: UIViewController {
         bottomBarContainer.addSubview(deleteButton)
 
         NSLayoutConstraint.activate([
-            // 하단바 컨테이너
+            // 하단바 컨테이너: SafeArea Bottom 위로 56pt부터 시작해서 화면 끝까지
             bottomBarContainer.leadingAnchor.constraint(equalTo: view.leadingAnchor),
             bottomBarContainer.trailingAnchor.constraint(equalTo: view.trailingAnchor),
             bottomBarContainer.bottomAnchor.constraint(equalTo: view.bottomAnchor),
-            bottomBarContainer.heightAnchor.constraint(equalToConstant: Self.bottomBarHeight + view.safeAreaInsets.bottom),
+            bottomBarContainer.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor, constant: -Self.bottomBarHeight),
 
             // 블러 효과
             bottomBarBlur.topAnchor.constraint(equalTo: bottomBarContainer.topAnchor),
@@ -340,15 +345,15 @@ final class FaceComparisonViewController: UIViewController {
             bottomBarBlur.trailingAnchor.constraint(equalTo: bottomBarContainer.trailingAnchor),
             bottomBarBlur.bottomAnchor.constraint(equalTo: bottomBarContainer.bottomAnchor),
 
-            // Cancel 버튼 (좌측)
+            // Cancel 버튼 (좌측) - 컨테이너 Top 기준
             cancelButton.leadingAnchor.constraint(equalTo: bottomBarContainer.leadingAnchor, constant: 16),
             cancelButton.topAnchor.constraint(equalTo: bottomBarContainer.topAnchor, constant: 8),
 
-            // 선택 개수 라벨 (중앙)
+            // 선택 개수 라벨 (중앙) - 컨테이너 Top 기준
             selectionCountLabel.centerXAnchor.constraint(equalTo: bottomBarContainer.centerXAnchor),
             selectionCountLabel.topAnchor.constraint(equalTo: bottomBarContainer.topAnchor, constant: 16),
 
-            // Delete 버튼 (우측)
+            // Delete 버튼 (우측) - 컨테이너 Top 기준
             deleteButton.trailingAnchor.constraint(equalTo: bottomBarContainer.trailingAnchor, constant: -16),
             deleteButton.topAnchor.constraint(equalTo: bottomBarContainer.topAnchor, constant: 8)
         ])
@@ -661,10 +666,7 @@ extension FaceComparisonViewController: UICollectionViewDelegateFlowLayout {
         layout collectionViewLayout: UICollectionViewLayout,
         referenceSizeForHeaderInSection section: Int
     ) -> CGSize {
-        // iOS 16~25: 헤더 표시
-        if #unavailable(iOS 26.0) {
-            return CGSize(width: collectionView.bounds.width, height: 50)
-        }
+        // 상단에 별도 타이틀바(Custom/System)가 있으므로 컬렉션뷰 헤더는 사용하지 않음
         return .zero
     }
 
