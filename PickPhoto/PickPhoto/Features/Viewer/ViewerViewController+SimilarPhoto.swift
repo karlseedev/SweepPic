@@ -385,49 +385,27 @@ extension ViewerViewController: FaceButtonOverlayDelegate {
 extension ViewerViewController: FaceComparisonDelegate {
 
     /// 사진 삭제 완료 시 호출
+    /// FaceComparisonViewController를 닫고 그리드로 복귀
     func faceComparisonViewController(
         _ viewController: FaceComparisonViewController,
         didDeletePhotos deletedAssetIDs: [String]
     ) {
         print("[ViewerViewController+SimilarPhoto] Deleted \(deletedAssetIDs.count) photos from face comparison")
+        print("[ViewerViewController+SimilarPhoto] Dismissing FaceComparison and popping to grid")
 
-        // 현재 사진이 삭제되었는지 확인
-        guard let currentAssetID = coordinator.assetID(at: currentIndex) else { return }
-
-        if deletedAssetIDs.contains(currentAssetID) {
-            // 현재 사진이 삭제됨 → 이전 사진으로 이동 (없으면 다음 사진)
-            if currentIndex > 0 {
-                // 이전 사진으로 이동
-                let previousIndex = currentIndex - 1
-                navigateToPhoto(at: previousIndex)
-            } else if coordinator.totalCount > 1 {
-                // 다음 사진으로 이동
-                navigateToPhoto(at: 0)
-            } else {
-                // 모든 사진이 삭제됨 → 뷰어 닫기
-                dismiss(animated: true)
-            }
+        // FaceComparisonViewController 닫기 (modal)
+        viewController.dismiss(animated: false) { [weak self] in
+            // ViewerViewController는 push되었으므로 pop으로 그리드 복귀
+            self?.navigationController?.popViewController(animated: true)
         }
-
-        // +버튼 오버레이 갱신
-        updateSimilarPhotoOverlay()
     }
 
-    /// 화면 닫기 시 호출
+    /// 화면 닫기 시 호출 (Cancel 버튼)
     func faceComparisonViewControllerDidClose(_ viewController: FaceComparisonViewController) {
         print("[ViewerViewController+SimilarPhoto] Face comparison closed")
 
         // +버튼 오버레이 갱신
         updateSimilarPhotoOverlay()
-    }
-
-    /// 특정 인덱스의 사진으로 이동
-    private func navigateToPhoto(at index: Int) {
-        // ViewerViewController의 기존 메서드 호출
-        // 이 메서드는 ViewerViewController에서 구현되어야 함
-        // 여기서는 currentIndex 업데이트만 수행
-        // 실제 구현은 ViewerViewController의 구조에 따라 다름
-        print("[ViewerViewController+SimilarPhoto] Navigate to photo at index \(index)")
     }
 }
 

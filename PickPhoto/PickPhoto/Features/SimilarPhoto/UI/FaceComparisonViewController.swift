@@ -477,11 +477,8 @@ final class FaceComparisonViewController: UIViewController {
             // 선택 상태 초기화
             selectedAssetIDs.removeAll()
 
-            // 화면 닫기 및 델리게이트 호출
-            dismiss(animated: true) { [weak self] in
-                guard let self = self else { return }
-                self.delegate?.faceComparisonViewController(self, didDeletePhotos: deletedIDs)
-            }
+            // delegate에게 삭제 완료 알림 (delegate가 화면 전환 처리)
+            delegate?.faceComparisonViewController(self, didDeletePhotos: deletedIDs)
         }
     }
 
