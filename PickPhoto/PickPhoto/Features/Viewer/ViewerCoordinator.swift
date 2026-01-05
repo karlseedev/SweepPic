@@ -21,6 +21,9 @@ protocol ViewerCoordinatorProtocol: AnyObject {
     /// 전체 사진 수
     var totalCount: Int { get }
 
+    /// 사진 fetch 결과 (유사 사진 분석용)
+    var fetchResult: PHFetchResult<PHAsset>? { get }
+
     /// 인덱스에 해당하는 PHAsset 반환
     /// - Parameter index: 인덱스
     /// - Returns: PHAsset 또는 nil
@@ -60,8 +63,11 @@ final class ViewerCoordinator: ViewerCoordinatorProtocol {
 
     // MARK: - Properties
 
-    /// 사진 fetch 결과
-    private let fetchResult: PHFetchResult<PHAsset>
+    /// 사진 fetch 결과 (내부 저장용, non-optional)
+    private let _fetchResult: PHFetchResult<PHAsset>
+
+    /// 사진 fetch 결과 (프로토콜 요구사항, 유사 사진 분석용으로 외부 접근 허용)
+    var fetchResult: PHFetchResult<PHAsset>? { _fetchResult }
 
     /// 휴지통 스토어
     private let trashStore: TrashStoreProtocol
@@ -112,7 +118,7 @@ final class ViewerCoordinator: ViewerCoordinatorProtocol {
         trashStore: TrashStoreProtocol = TrashStore.shared,
         viewerMode: ViewerMode = .normal
     ) {
-        self.fetchResult = fetchResult
+        self._fetchResult = fetchResult
         self.trashStore = trashStore
         self.viewerMode = viewerMode
 
@@ -125,7 +131,7 @@ final class ViewerCoordinator: ViewerCoordinatorProtocol {
     /// 인덱스에 해당하는 PHAsset 반환 (필터링된 인덱스 기준)
     func asset(at index: Int) -> PHAsset? {
         guard let originalIndex = originalIndex(forFilteredIndex: index) else { return nil }
-        return fetchResult.object(at: originalIndex)
+        return _fetchResult.object(at: originalIndex)
     }
 
     /// 인덱스에 해당하는 에셋 ID 반환 (필터링된 인덱스 기준)
@@ -192,7 +198,7 @@ final class ViewerCoordinator: ViewerCoordinatorProtocol {
     /// - Parameter originalIndex: 원본 인덱스
     /// - Returns: 필터링된 인덱스 또는 nil
     func filteredIndex(from originalIndex: Int) -> Int? {
-        guard originalIndex >= 0 && originalIndex < fetchResult.count else { return nil }
+        guard originalIndex >= 0 && originalIndex < _fetchResult.count else { return nil }
 
         switch indexMapping {
         case .identity:
@@ -203,7 +209,7 @@ final class ViewerCoordinator: ViewerCoordinatorProtocol {
             return (i < originals.count && originals[i] == originalIndex) ? i : nil
 
         case .normal(let totalOriginal, let excluded):
-            guard totalOriginal == fetchResult.count else { return nil }
+            guard totalOriginal == _fetchResult.count else { return nil }
             if Self.containsSorted(excluded, originalIndex) { return nil }
             let excludedBefore = Self.lowerBound(excluded, originalIndex)
             return originalIndex - excludedBefore
@@ -225,7 +231,7 @@ final class ViewerCoordinator: ViewerCoordinatorProtocol {
         let startTime = CACurrentMediaTime()
 
         let trashedIDs = trashStore.trashedAssetIDs
-        let totalOriginal = fetchResult.count
+        let totalOriginal = _fetchResult.count
 
         // 휴지통 비어있으면 빠른 경로
         if trashedIDs.isEmpty {
@@ -240,7 +246,7 @@ final class ViewerCoordinator: ViewerCoordinatorProtocol {
         var matchedIndices: [Int] = []
         matchedIndices.reserveCapacity(trashedIDs.count)
 
-        fetchResult.enumerateObjects { asset, index, _ in
+        _fetchResult.enumerateObjects { asset, index, _ in
             if trashedIDs.contains(asset.localIdentifier) {
                 matchedIndices.append(index)
             }

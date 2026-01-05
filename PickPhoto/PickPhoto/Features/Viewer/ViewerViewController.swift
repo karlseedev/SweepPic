@@ -74,7 +74,8 @@ final class ViewerViewController: UIViewController {
     private let viewerMode: ViewerMode
 
     /// Coordinator (네비게이션 및 데이터 관리)
-    private let coordinator: ViewerCoordinatorProtocol
+    /// Extension에서 접근 가능하도록 internal 접근 레벨
+    let coordinator: ViewerCoordinatorProtocol
 
     /// 스와이프 삭제 핸들러
     private var swipeDeleteHandler: SwipeDeleteHandler?
@@ -268,6 +269,9 @@ final class ViewerViewController: UIViewController {
         setupGestures()
         setupSwipeDeleteHandler()
         displayInitialPhoto()
+
+        // T026: 유사 사진 기능 설정
+        setupSimilarPhotoFeature()
     }
 
     override func viewWillAppear(_ animated: Bool) {
@@ -291,6 +295,9 @@ final class ViewerViewController: UIViewController {
                 self.view.alpha = 1
             }
         }
+
+        // T026: 유사 사진 오버레이 표시
+        showSimilarPhotoOverlay()
     }
 
     override func viewWillDisappear(_ animated: Bool) {
@@ -902,6 +909,9 @@ extension ViewerViewController: UIPageViewControllerDelegate {
 
         // Phase 2: LOD1 디바운스 (150ms 후 원본 요청)
         scheduleLOD1Request()
+
+        // T026: 유사 사진 오버레이 업데이트 (스와이프로 다른 사진 이동 시)
+        updateSimilarPhotoOverlay()
     }
 
     /// LOD1 요청 스케줄링 (150ms 디바운스)

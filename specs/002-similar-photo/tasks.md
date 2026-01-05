@@ -406,7 +406,7 @@
 
 ### Implementation for User Story 2
 
-- [ ] T023 [P] [US2] FaceButtonOverlay 클래스 생성 in `PickPhoto/PickPhoto/Features/SimilarPhoto/UI/FaceButtonOverlay.swift`
+- [X] T023 [P] [US2] FaceButtonOverlay 클래스 생성 in `PickPhoto/PickPhoto/Features/SimilarPhoto/UI/FaceButtonOverlay.swift`
   - UIView 기반 오버레이
   - +버튼: SF Symbol `plus.circle.fill`, 탭 제스처
   - 최대 **5개** 버튼 (얼굴 크기순 상위)
@@ -417,13 +417,13 @@
   - 화면 회전 시 위치 재계산 (`viewWillTransition` 대응)
   - iPad 멀티윈도우 대응
 
-- [ ] T024 [P] [US2] AnalysisLoadingIndicator 생성 in `PickPhoto/PickPhoto/Features/SimilarPhoto/UI/AnalysisLoadingIndicator.swift`
+- [X] T024 [P] [US2] AnalysisLoadingIndicator 생성 in `PickPhoto/PickPhoto/Features/SimilarPhoto/UI/AnalysisLoadingIndicator.swift`
   - UIActivityIndicatorView 기반
   - 분석 중(notAnalyzed → analyzing) 상태에서 표시
   - 분석 완료 시 자동 숨김
   - `show()`, `hide()` 메서드
 
-- [ ] T025 [US2] ViewerViewController+SimilarPhoto.swift Extension 생성 in `PickPhoto/PickPhoto/Features/Viewer/ViewerViewController+SimilarPhoto.swift`
+- [X] T025 [US2] ViewerViewController+SimilarPhoto.swift Extension 생성 in `PickPhoto/PickPhoto/Features/Viewer/ViewerViewController+SimilarPhoto.swift`
   - FeatureFlag 체크
   - VoiceOver/선택모드/휴지통 시 비활성화
   - 뷰어 진입 시 캐시 조회 (`SimilarityCache.getState(for:)`)
@@ -441,13 +441,13 @@
   - +버튼 탭 핸들러: FaceComparisonViewController 표시
   - 스와이프로 다른 사진 이동 시 +버튼 갱신 (`pageViewController(_:didFinishAnimating:)`)
 
-- [ ] T026 [US2] ViewerViewController 기존 파일에 최소 수정 in `PickPhoto/PickPhoto/Features/Viewer/ViewerViewController.swift`
+- [X] T026 [US2] ViewerViewController 기존 파일에 최소 수정 in `PickPhoto/PickPhoto/Features/Viewer/ViewerViewController.swift`
   - Extension 메서드 호출만 추가
   - `viewDidAppear`에서 `showSimilarPhotoOverlay()` 호출
   - 스와이프 완료 시 `updateSimilarPhotoOverlay()` 호출
   - FaceButtonOverlay와 AnalysisLoadingIndicator를 subview로 추가
 
-- [ ] T027 [US2] +버튼 탭 → 인물 매칭 로직 in `PickPhoto/PickPhoto/Features/Viewer/ViewerViewController+SimilarPhoto.swift`
+- [X] T027 [US2] +버튼 탭 → 인물 매칭 로직 in `PickPhoto/PickPhoto/Features/Viewer/ViewerViewController+SimilarPhoto.swift`
   - 탭된 얼굴의 `personIndex` 확인
   - ComparisonGroup 생성: 현재 사진 기준 거리순 **최대 8장**
   - Feature Print 비교로 동일 인물 필터링 (거리 **1.0 이상** 제외)
