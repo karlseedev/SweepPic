@@ -44,11 +44,11 @@
 
 ### 2.1 데이터 모델
 
-- [ ] T004 [P] SimilarityAnalysisState 열거형 생성 in `PickPhoto/PickPhoto/Features/SimilarPhoto/Models/SimilarityAnalysisState.swift`
+- [X] T004 [P] SimilarityAnalysisState 열거형 생성 in `PickPhoto/PickPhoto/Features/SimilarPhoto/Models/SimilarityAnalysisState.swift`
   - `notAnalyzed`, `analyzing`, `analyzed(inGroup: Bool, groupID: String?)` 케이스
   - 상태 전환 유효성 검증 메서드
 
-- [ ] T004.1 [P] SimilarityConstants 열거형 생성 in `PickPhoto/PickPhoto/Features/SimilarPhoto/Models/SimilarityConstants.swift`
+- [X] T004.1 [P] SimilarityConstants 열거형 생성 in `PickPhoto/PickPhoto/Features/SimilarPhoto/Models/SimilarityConstants.swift`
   - **공용 상수 파일** (여러 클래스에서 참조)
   - `similarityThreshold: Float = 10.0` - Feature Print 거리 임계값
   - `minGroupSize: Int = 3` - 최소 그룹 크기
@@ -63,7 +63,7 @@
   - `maxConcurrentAnalysis: Int = 5` - 동시 분석 제한 (기본)
   - `maxConcurrentAnalysisThermal: Int = 2` - 동시 분석 제한 (과열 시)
 
-- [ ] T004.2 [P] AsyncSemaphore 유틸리티 생성 in `PickPhoto/PickPhoto/Features/SimilarPhoto/Utils/AsyncSemaphore.swift`
+- [X] T004.2 [P] AsyncSemaphore 유틸리티 생성 in `PickPhoto/PickPhoto/Features/SimilarPhoto/Utils/AsyncSemaphore.swift`
   - Swift Concurrency 환경에서 동시성 제한을 위한 세마포어
   - `init(value: Int)` - 초기 동시 실행 가능 수
   - `wait() async` - 슬롯 획득 대기
@@ -72,13 +72,13 @@
   - 내부 구현: continuation 큐 + 카운터 관리
   - T014.2에서 Feature Print 병렬 생성 시 사용
 
-- [ ] T005 [P] CachedFace 구조체 생성 in `PickPhoto/PickPhoto/Features/SimilarPhoto/Models/CachedFace.swift`
+- [X] T005 [P] CachedFace 구조체 생성 in `PickPhoto/PickPhoto/Features/SimilarPhoto/Models/CachedFace.swift`
   - `boundingBox: CGRect` (Vision 정규화 좌표 0~1)
   - `personIndex: Int` (위치 기반 인물 번호, >= 1)
   - `isValidSlot: Bool` (그룹 내 2장 이상 감지 여부)
   - Vision → UIKit 좌표 변환 유틸리티 메서드
 
-- [ ] T006 [P] SimilarThumbnailGroup + ComparisonGroup 구조체 생성 in `PickPhoto/PickPhoto/Features/SimilarPhoto/Models/SimilarPhotoGroup.swift`
+- [X] T006 [P] SimilarThumbnailGroup + ComparisonGroup 구조체 생성 in `PickPhoto/PickPhoto/Features/SimilarPhoto/Models/SimilarPhotoGroup.swift`
   - **SimilarThumbnailGroup** (유사사진썸네일그룹 - 크기 제한 없음):
     - `groupID: String` (UUID)
     - `memberAssetIDs: [String]` (>= 3개)
@@ -94,14 +94,14 @@
     - 유효 인물 슬롯: `SimilarityCache.groupValidPersonIndices`
     - 사진별 얼굴: `SimilarityCache.assetFaces`
 
-- [ ] T007 [P] FaceMatch 구조체 생성 in `PickPhoto/PickPhoto/Features/SimilarPhoto/Models/FaceMatch.swift`
+- [X] T007 [P] FaceMatch 구조체 생성 in `PickPhoto/PickPhoto/Features/SimilarPhoto/Models/FaceMatch.swift`
   - `assetID: String`
   - `personIndex: Int`
   - `distance: Float`
   - `isSamePerson: Bool` computed property (거리 < 1.0이면 true)
   - 거리 >= 1.0이면 다른 인물로 판정하여 비교 그리드에서 제외 (spec FR-030)
 
-- [ ] T008 [P] AnalysisRequest 구조체 생성 in `PickPhoto/PickPhoto/Features/SimilarPhoto/Models/AnalysisRequest.swift`
+- [X] T008 [P] AnalysisRequest 구조체 생성 in `PickPhoto/PickPhoto/Features/SimilarPhoto/Models/AnalysisRequest.swift`
   - `assetID: String`
   - `source: AnalysisSource` (.grid, .viewer)
   - `range: ClosedRange<Int>`
@@ -109,7 +109,7 @@
 
 ### 2.2 분석 엔진
 
-- [ ] T009 SimilarityCache 클래스 생성 in `PickPhoto/PickPhoto/Features/SimilarPhoto/Analysis/SimilarityCache.swift`
+- [X] T009 SimilarityCache 클래스 생성 in `PickPhoto/PickPhoto/Features/SimilarPhoto/Analysis/SimilarityCache.swift`
   - `states: [String: SimilarityAnalysisState]` - 사진별 상태
   - `groups: [String: SimilarThumbnailGroup]` - 그룹 관리
   - `assetFaces: [String: [CachedFace]]` - 사진별 얼굴 캐시
@@ -131,7 +131,7 @@
     - 상태 → `analyzing`
   - 메모리 경고 시 50% LRU 제거 (`handleMemoryWarning()`)
 
-- [ ] T010 그룹 유효성 필터링 및 상태 갱신 **(Gate Keeper)** in `PickPhoto/PickPhoto/Features/SimilarPhoto/Analysis/SimilarityCache.swift`
+- [X] T010 그룹 유효성 필터링 및 상태 갱신 **(Gate Keeper)** in `PickPhoto/PickPhoto/Features/SimilarPhoto/Analysis/SimilarityCache.swift`
   - **`addGroupIfValid()` 메서드** - T014.7에서 호출됨
   - **역할**: 최종 유효성 검증 후 저장/거부 결정 (T014.6 결과 검증)
   - 입력 파라미터:
@@ -148,14 +148,14 @@
   - **invalid 그룹이 캐시에 남지 않도록 보장**
   - 반환값: `String?` (저장된 groupID 또는 nil)
 
-- [ ] T011 SimilarityImageLoader 클래스 생성 in `PickPhoto/PickPhoto/Features/SimilarPhoto/Analysis/SimilarityImageLoader.swift`
+- [X] T011 SimilarityImageLoader 클래스 생성 in `PickPhoto/PickPhoto/Features/SimilarPhoto/Analysis/SimilarityImageLoader.swift`
   - PHCachingImageManager 활용
   - 분석용 이미지: **긴 변 480px** 이하, `contentMode = .aspectFit`
   - `loadImage(for:completion:)` 메서드
   - 패딩/크롭 금지, 원본 비율 유지
   - 타임아웃: **3초**
 
-- [ ] T012 SimilarityAnalyzer 클래스 생성 in `PickPhoto/PickPhoto/Features/SimilarPhoto/Analysis/SimilarityAnalyzer.swift`
+- [X] T012 SimilarityAnalyzer 클래스 생성 in `PickPhoto/PickPhoto/Features/SimilarPhoto/Analysis/SimilarityAnalyzer.swift`
   - **순수 계산만 담당** (로딩/큐 제어 안함)
   - `VNGenerateImageFeaturePrintRequest` 활용
   - `computeDistance(_:to:)` 로 유사도 계산
@@ -163,7 +163,7 @@
   - `generateFeaturePrint(for:completion:)` 메서드
   - `compareFeaturePrints(_:_:) -> Float` 메서드
 
-- [ ] T013 SimilarityAnalysisQueue 클래스 생성 in `PickPhoto/PickPhoto/Features/SimilarPhoto/Analysis/SimilarityAnalysisQueue.swift`
+- [X] T013 SimilarityAnalysisQueue 클래스 생성 in `PickPhoto/PickPhoto/Features/SimilarPhoto/Analysis/SimilarityAnalysisQueue.swift`
   - FIFO 큐 관리
   - 동시 분석: **최대 5개** (기본), **2개** (과열 시) - `SimilarityConstants` 참조
   - `thermalState` 모니터링 (.serious/.critical 시 제한)
@@ -182,16 +182,16 @@
     - **빈 결과 정책**: groupIDs가 빈 배열이어도 알림 발송 (테두리 제거 트리거)
   - 그리드/뷰어에서 해당 알림 구독하여 UI 갱신
 
-- [ ] T014 분석 파이프라인 통합 - `formGroupsForRange()` 메서드 in `PickPhoto/PickPhoto/Features/SimilarPhoto/Analysis/SimilarityAnalysisQueue.swift`
+- [X] T014 분석 파이프라인 통합 - `formGroupsForRange()` 메서드 in `PickPhoto/PickPhoto/Features/SimilarPhoto/Analysis/SimilarityAnalysisQueue.swift`
   > **⭐ 핵심 알고리즘**: research.md §10.5 Algorithm Steps, §10.10 Swift Implementation 참조
 
-  - [ ] **T014.1** 분석 준비 (범위는 호출자가 전달)
+  - [X] **T014.1** 분석 준비 (범위는 호출자가 전달)
     - 입력: `range: ClosedRange<Int>` (GridViewController T019에서 계산하여 전달)
     - 분석 대상 사진 fetch: `fetchPhotos(in: range)`
     - **`cache.prepareForReanalysis(assetIDs:)`** 호출 - 기존 그룹 정리 (T009)
     - 최소 분석 대상 검증: `photos.count >= SimilarityConstants.minGroupSize`
 
-  - [ ] **T014.2** Feature Print 병렬 생성 (동시성 제한 + 에러 흡수)
+  - [X] **T014.2** Feature Print 병렬 생성 (동시성 제한 + 에러 흡수)
     - **`withTaskGroup`** (non-throwing) + **AsyncSemaphore** (T004.2) 사용
     - **에러 흡수 방식**: 개별 실패는 nil 처리 후 진행 (전체 취소 방지)
     - 동시 분석 제한:
@@ -220,13 +220,13 @@
     - 타임아웃: `SimilarityConstants.analysisTimeout` (3초)
     - 결과: `[VNFeaturePrintObservation?]` (순서 보장, 실패 시 nil)
 
-  - [ ] **T014.3** 인접 거리 계산
+  - [X] **T014.3** 인접 거리 계산
     - `calculateAdjacentDistances(featurePrints:)` private 메서드
     - `featurePrints[i].computeDistance(&distance, to: featurePrints[i+1])`
     - 결과: `distances: [Float?]` (n-1개, 실패 지점은 nil)
     - 복잡도: O(n)
 
-  - [ ] **T014.4** 그룹 분리 알고리즘 ⭐ 핵심
+  - [X] **T014.4** 그룹 분리 알고리즘 ⭐ 핵심
     - `splitIntoGroups(photos:distances:threshold:)` private 메서드
     - **알고리즘** (research.md §10.5 Phase 3):
       ```
@@ -247,7 +247,7 @@
     - **실패 처리**: nil 거리 만나면 그룹 분리, 실패 사진은 `analyzed(inGroup: false)` 설정
     - 결과: `[[PHAsset]]` (유사 그룹 배열)
 
-  - [ ] **T014.5** 얼굴 감지 + 5% 필터 + 인물 번호 부여
+  - [X] **T014.5** 얼굴 감지 + 5% 필터 + 인물 번호 부여
     - 각 그룹의 각 사진에 대해:
     - **viewerSize 산출**: `getExpectedViewerSize()` 호출
       - `windowScene.windows.first?.bounds.size` (iPad 분할 모드 반영)
@@ -263,19 +263,19 @@
     - `assignPersonIndices(faces:)` → 좌→우, 위→아래 순서
     - 결과: `photoFacesMap: [String: [CachedFace]]`
 
-  - [ ] **T014.6** 유효 슬롯 계산 (계산만 수행, 검증은 T010)
+  - [X] **T014.6** 유효 슬롯 계산 (계산만 수행, 검증은 T010)
     - 인물 슬롯별 사진 수 집계: `slotCounts: [Int: Int]`
     - 유효 슬롯 판정: `count >= SimilarityConstants.minPhotosPerSlot` (2)
     - 결과: `validSlots: Set<Int>`, `photoFacesMap`
     - **유효성 검증은 T010(캐시 Gate Keeper)에 위임**
 
-  - [ ] **T014.7** 캐시 저장 요청 (T010 호출)
+  - [X] **T014.7** 캐시 저장 요청 (T010 호출)
     - `cache.addGroupIfValid(members:validSlots:photoFaces:)` 호출
     - T010이 최종 검증 + T015 병합 처리 후 저장/거부
     - 반환된 groupID 수집 (nil이면 무효 그룹)
     - `cache.evictIfNeeded()` 호출 (LRU 제한)
 
-  - [ ] **T014.8** UI 알림 발송 (발송만 수행, 정의는 T013)
+  - [X] **T014.8** UI 알림 발송 (발송만 수행, 정의는 T013)
     - **분석 완료 알림** (항상 발송, 유효 그룹 0개여도 발송):
       ```swift
       NotificationCenter.default.post(
@@ -292,7 +292,7 @@
     - GridViewController: groupIDs 기반 테두리 표시/제거
     - ViewerViewController: +버튼 표시 준비
 
-- [ ] T015 범위 겹침 그룹 병합 in `PickPhoto/PickPhoto/Features/SimilarPhoto/Analysis/SimilarityCache.swift`
+- [X] T015 범위 겹침 그룹 병합 in `PickPhoto/PickPhoto/Features/SimilarPhoto/Analysis/SimilarityCache.swift`
   - **호출 시점**: T010 `addGroupIfValid()` 내부에서 저장 직전 호출
   - **호출자**: `SimilarityCache.addGroupIfValid()` → `mergeOverlappingGroups()`
   - 연속 범위 분석이므로 동일 사진이 여러 그룹에 속하지 않도록 보장
@@ -304,7 +304,7 @@
     - validPersonIndices 재계산
   - 반환값: 병합된 멤버 목록, 병합된 validSlots
 
-- [ ] T016 FaceDetector 클래스 생성 in `PickPhoto/PickPhoto/Features/SimilarPhoto/Analysis/FaceDetector.swift`
+- [X] T016 FaceDetector 클래스 생성 in `PickPhoto/PickPhoto/Features/SimilarPhoto/Analysis/FaceDetector.swift`
   - `VNDetectFaceRectanglesRequest` 활용
   - **간소화된 시그니처** (T014.5와 일치):
     ```swift
@@ -318,7 +318,7 @@
   - Vision 정규화 좌표 반환 (0~1, 원점 좌하단)
   - 인물 번호 부여는 T014.5에서 `assignPersonIndices()` 호출로 처리
 
-- [ ] T017 FaceCropper 유틸리티 생성 in `PickPhoto/PickPhoto/Features/SimilarPhoto/Analysis/FaceCropper.swift`
+- [X] T017 FaceCropper 유틸리티 생성 in `PickPhoto/PickPhoto/Features/SimilarPhoto/Analysis/FaceCropper.swift`
   - bounding box + **30% 여백** 추가
   - **1:1 정사각형** 조정
   - 경계 처리: 중심 고정, 경계 내 최대 크기로 축소
