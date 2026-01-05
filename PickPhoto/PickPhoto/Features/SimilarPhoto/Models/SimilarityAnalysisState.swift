@@ -22,7 +22,7 @@ import Foundation
 /// 각 사진은 분석 범위에 들어오면 analyzing 상태가 되고,
 /// 분석이 완료되면 analyzed 상태로 전환됩니다.
 /// 캐시에서 제거(eviction)되면 다시 notAnalyzed 상태로 돌아갑니다.
-enum SimilarityAnalysisState: Equatable {
+enum SimilarityAnalysisState: Equatable, Sendable {
 
     // MARK: - Cases
 

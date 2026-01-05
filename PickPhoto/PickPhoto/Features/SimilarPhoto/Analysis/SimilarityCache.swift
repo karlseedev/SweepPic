@@ -6,9 +6,13 @@
 //  Copyright © 2026 PickPhoto. All rights reserved.
 //
 //  Description:
-//  유사 사진 분석 결과를 메모리에 캐시하는 클래스입니다.
+//  유사 사진 분석 결과를 메모리에 캐시하는 Actor입니다.
 //  사진별 분석 상태, 얼굴 정보, 그룹 정보를 관리하며,
 //  LRU(Least Recently Used) 정책으로 메모리 사용량을 제한합니다.
+//
+//  Thread Safety:
+//  Actor 기반으로 구현되어 있어 모든 프로퍼티 접근이 thread-safe합니다.
+//  호출 시 await 키워드가 필요합니다.
 //
 //  Source of Truth:
 //  - 그룹 멤버: groups[groupID].memberAssetIDs
@@ -19,13 +23,13 @@
 import Foundation
 import UIKit
 
-/// 유사 사진 분석 결과 캐시
+/// 유사 사진 분석 결과 캐시 (Actor)
 ///
 /// 그리드에서 분석된 결과를 저장하여 뷰어에서 재분석 없이 재사용합니다.
 /// 최대 500장까지 캐시하며, 초과 시 LRU 정책으로 오래된 항목부터 제거합니다.
 ///
-/// - Important: 이 클래스는 thread-safe하지 않습니다. 호출자가 동기화를 관리해야 합니다.
-final class SimilarityCache {
+/// - Important: Actor 기반이므로 모든 메서드 호출 시 `await` 키워드가 필요합니다.
+actor SimilarityCache {
 
     // MARK: - Singleton
 
@@ -52,6 +56,9 @@ final class SimilarityCache {
     /// 최대 캐시 크기
     private let maxSize: Int
 
+    /// 메모리 경고 옵저버 토큰
+    private var memoryWarningObserver: NSObjectProtocol?
+
     // MARK: - Initialization
 
     /// 캐시를 초기화합니다.
@@ -59,7 +66,12 @@ final class SimilarityCache {
     /// - Parameter maxSize: 최대 캐시 크기 (기본값: SimilarityConstants.maxCacheSize)
     init(maxSize: Int = SimilarityConstants.maxCacheSize) {
         self.maxSize = maxSize
-        setupMemoryWarningObserver()
+
+        // NotificationCenter 옵저버 설정 (nonisolated 컨텍스트에서 설정)
+        // Actor 초기화 후 별도로 설정
+        Task { @MainActor in
+            await self.setupMemoryWarningObserver()
+        }
     }
 
     // MARK: - State Management
@@ -427,7 +439,7 @@ final class SimilarityCache {
 
         // 모든 멤버 수집
         var mergedMemberSet = newMemberSet
-        var mergedSlots = newSlots
+        let mergedSlots = newSlots
 
         for groupID in overlappingGroupIDs {
             if let group = groups[groupID] {
@@ -493,7 +505,7 @@ final class SimilarityCache {
 
         // 그룹에서 제거
         if case .analyzed(true, let groupID?) = states[oldestAssetID] {
-            removeMemberFromGroup(oldestAssetID, groupID: groupID)
+            _ = removeMemberFromGroup(oldestAssetID, groupID: groupID)
         }
 
         // 데이터 제거
@@ -516,16 +528,16 @@ final class SimilarityCache {
 
     /// 메모리 경고 옵저버를 설정합니다.
     private func setupMemoryWarningObserver() {
-        NotificationCenter.default.addObserver(
-            self,
-            selector: #selector(didReceiveMemoryWarning),
-            name: UIApplication.didReceiveMemoryWarningNotification,
-            object: nil
-        )
-    }
-
-    @objc private func didReceiveMemoryWarning() {
-        handleMemoryWarning()
+        memoryWarningObserver = NotificationCenter.default.addObserver(
+            forName: UIApplication.didReceiveMemoryWarningNotification,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            guard let self = self else { return }
+            Task {
+                await self.handleMemoryWarning()
+            }
+        }
     }
 
     // MARK: - Clear
@@ -554,6 +566,8 @@ final class SimilarityCache {
     }
 
     deinit {
-        NotificationCenter.default.removeObserver(self)
+        if let observer = memoryWarningObserver {
+            NotificationCenter.default.removeObserver(observer)
+        }
     }
 }

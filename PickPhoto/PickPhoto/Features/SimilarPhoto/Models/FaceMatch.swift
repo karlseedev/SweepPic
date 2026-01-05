@@ -20,7 +20,7 @@ import Foundation
 ///
 /// +버튼 탭 후 비교 화면에서 동일 인물 여부를 검증하는 데 사용됩니다.
 /// Feature Print 거리가 1.0 미만이면 동일 인물, 이상이면 다른 인물로 판정합니다.
-struct FaceMatch: Equatable, Hashable {
+struct FaceMatch: Equatable, Hashable, Sendable {
 
     // MARK: - Properties
 
@@ -79,7 +79,7 @@ struct FaceMatch: Equatable, Hashable {
 // MARK: - Match Confidence
 
 /// 인물 매칭 신뢰도 수준
-enum MatchConfidence: Int, Comparable {
+enum MatchConfidence: Int, Comparable, Sendable {
     /// 매우 높은 신뢰도 (거리 < 0.3)
     case veryHigh = 4
 

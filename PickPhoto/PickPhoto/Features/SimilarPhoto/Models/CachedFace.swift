@@ -22,7 +22,7 @@ import UIKit
 ///
 /// SimilarityCache에 저장되어 뷰어에서 +버튼 표시 시 재사용됩니다.
 /// 그리드에서 분석된 결과가 뷰어에서 재분석 없이 사용됩니다.
-struct CachedFace: Equatable, Hashable {
+struct CachedFace: Equatable, Hashable, Sendable {
 
     // MARK: - Properties
 

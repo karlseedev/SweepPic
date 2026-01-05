@@ -155,7 +155,7 @@ final class SimilarityAnalysisQueue {
         let assetIDs = photos.map { $0.localIdentifier }
 
         // 기존 그룹 정리 (재분석 시)
-        cache.prepareForReanalysis(assetIDs: Set(assetIDs))
+        await cache.prepareForReanalysis(assetIDs: Set(assetIDs))
 
         // T014.2: Feature Print 병렬 생성
         let featurePrints = await generateFeaturePrints(for: photos)
@@ -171,7 +171,7 @@ final class SimilarityAnalysisQueue {
         if rawGroups.isEmpty {
             // 분석된 사진들 상태 업데이트
             for assetID in assetIDs {
-                cache.setState(.analyzed(inGroup: false, groupID: nil), for: assetID)
+                await cache.setState(.analyzed(inGroup: false, groupID: nil), for: assetID)
             }
             postAnalysisComplete(range: range, groupIDs: [], analyzedAssetIDs: assetIDs)
             return []
@@ -212,7 +212,7 @@ final class SimilarityAnalysisQueue {
             }.keys)
 
             // T014.7: 캐시 저장 요청 (T010 호출)
-            if let groupID = cache.addGroupIfValid(
+            if let groupID = await cache.addGroupIfValid(
                 members: groupAssetIDs,
                 validSlots: validSlots,
                 photoFaces: photoFacesMap
@@ -222,12 +222,12 @@ final class SimilarityAnalysisQueue {
         }
 
         // LRU eviction
-        cache.evictIfNeeded()
+        await cache.evictIfNeeded()
 
         // 그룹에 속하지 않은 사진들 상태 업데이트
         let groupedAssetIDs = Set(rawGroups.flatMap { $0 })
         for assetID in assetIDs where !groupedAssetIDs.contains(assetID) {
-            cache.setState(.analyzed(inGroup: false, groupID: nil), for: assetID)
+            await cache.setState(.analyzed(inGroup: false, groupID: nil), for: assetID)
         }
 
         // T014.8: UI 알림 발송

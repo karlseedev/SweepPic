@@ -19,7 +19,7 @@ import Foundation
 /// 분석 요청의 출처를 나타내는 열거형
 ///
 /// 분석 요청이 어디서 발생했는지에 따라 취소 규칙이 달라집니다.
-enum AnalysisSource: String, Equatable {
+enum AnalysisSource: String, Equatable, Sendable {
     /// 그리드 스크롤 멈춤에서 발생한 요청
     /// - 스크롤 재개 시 취소됨
     case grid
@@ -33,7 +33,7 @@ enum AnalysisSource: String, Equatable {
 ///
 /// SimilarityAnalysisQueue에서 분석 작업을 관리할 때 사용됩니다.
 /// 각 요청은 고유 ID, 대상 사진, 소스, 분석 범위를 포함합니다.
-struct AnalysisRequest: Equatable, Hashable, Identifiable {
+struct AnalysisRequest: Equatable, Hashable, Identifiable, Sendable {
 
     // MARK: - Properties
 
