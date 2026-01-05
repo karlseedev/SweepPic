@@ -115,6 +115,25 @@ extension GridViewController {
         }
 
         print("[SimilarPhoto] Observer setup complete")
+
+        // 첫 화면 로드 시 분석 시작 (데이터 로드 완료 대기)
+        triggerInitialAnalysis()
+    }
+
+    /// 첫 화면 로드 시 분석 트리거
+    /// - fetchResult 로드 완료 후 분석 시작
+    private func triggerInitialAnalysis() {
+        // 0.5초 후 분석 시작 (fetchResult 로드 및 collectionView 레이아웃 완료 대기)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
+            guard let self = self else { return }
+
+            // 스크롤 중이 아니고, 기능 활성화 상태인지 확인
+            guard self.shouldEnableSimilarPhoto() else { return }
+            guard !self.isScrolling else { return }
+
+            print("[SimilarPhoto] Triggering initial analysis")
+            self.startAnalysis()
+        }
     }
 
     /// 옵저버 해제
