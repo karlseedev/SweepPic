@@ -81,6 +81,10 @@ final class FaceButtonOverlay: UIView {
     /// 토글 상태 (eye/eye.slash)
     private var isOverlayHidden: Bool = false
 
+    /// 마지막 줌 정보 (토글 시 위치 복원용)
+    /// zoomScale, contentOffset, imageViewFrame 저장
+    private var lastZoomInfo: (zoomScale: CGFloat, contentOffset: CGPoint, imageViewFrame: CGRect)?
+
     /// 토글 버튼
     private lazy var toggleButton: UIButton = {
         let button = UIButton(type: .system)
@@ -232,6 +236,9 @@ final class FaceButtonOverlay: UIView {
     ///   - contentOffset: 스크롤뷰 오프셋
     ///   - imageViewFrame: 확대된 이미지뷰 프레임
     func showButtonsWithZoom(zoomScale: CGFloat, contentOffset: CGPoint, imageViewFrame: CGRect) {
+        // 줌 정보 항상 저장 (토글 시 사용)
+        lastZoomInfo = (zoomScale, contentOffset, imageViewFrame)
+
         // 숨김 상태면 무시
         guard !isOverlayHidden else { return }
 
@@ -325,6 +332,7 @@ final class FaceButtonOverlay: UIView {
     /// 오버레이 상태 초기화 (다른 사진으로 스와이프 시)
     func resetState() {
         isOverlayHidden = false
+        lastZoomInfo = nil  // 줌 정보 초기화
         updateToggleIcon()
         removeAllButtons()
         toggleButton.isHidden = true
@@ -451,7 +459,17 @@ final class FaceButtonOverlay: UIView {
         } else {
             // 버튼 다시 표시 (기존 얼굴로)
             if !currentFaces.isEmpty {
-                showButtons(for: currentFaces, imageSize: currentImageSize, viewerFrame: bounds)
+                // 줌 상태가 있으면 줌 기반 위치로 표시
+                if let zoomInfo = lastZoomInfo, zoomInfo.zoomScale > 1.0 {
+                    showButtonsWithZoom(
+                        zoomScale: zoomInfo.zoomScale,
+                        contentOffset: zoomInfo.contentOffset,
+                        imageViewFrame: zoomInfo.imageViewFrame
+                    )
+                } else {
+                    // 1x 스케일이면 기본 위치로 표시
+                    showButtons(for: currentFaces, imageSize: currentImageSize, viewerFrame: bounds)
+                }
             }
         }
     }

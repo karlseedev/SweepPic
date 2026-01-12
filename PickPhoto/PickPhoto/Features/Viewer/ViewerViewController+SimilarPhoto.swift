@@ -42,6 +42,9 @@ extension ViewerViewController {
         static var zoomEndObserver = "zoomEndObserver"
         static var zoomDebounceTimer = "zoomDebounceTimer"
         static var lastZoomInfo = "lastZoomInfo"
+        // Scroll (패닝) 관련
+        static var scrollObserver = "scrollObserver"
+        static var scrollEndObserver = "scrollEndObserver"
     }
 
     // MARK: - Associated Properties
@@ -136,6 +139,26 @@ extension ViewerViewController {
         }
     }
 
+    /// 스크롤(패닝) 알림 옵저버
+    private var scrollObserver: NSObjectProtocol? {
+        get {
+            objc_getAssociatedObject(self, &AssociatedKeys.scrollObserver) as? NSObjectProtocol
+        }
+        set {
+            objc_setAssociatedObject(self, &AssociatedKeys.scrollObserver, newValue, .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
+        }
+    }
+
+    /// 스크롤(패닝) 완료 알림 옵저버
+    private var scrollEndObserver: NSObjectProtocol? {
+        get {
+            objc_getAssociatedObject(self, &AssociatedKeys.scrollEndObserver) as? NSObjectProtocol
+        }
+        set {
+            objc_setAssociatedObject(self, &AssociatedKeys.scrollEndObserver, newValue, .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
+        }
+    }
+
     // MARK: - Public Methods (ViewerViewController에서 호출)
 
     /// 유사 사진 기능 설정
@@ -195,6 +218,16 @@ extension ViewerViewController {
         if let observer = zoomEndObserver {
             NotificationCenter.default.removeObserver(observer)
             zoomEndObserver = nil
+        }
+
+        // 스크롤 옵저버 제거
+        if let observer = scrollObserver {
+            NotificationCenter.default.removeObserver(observer)
+            scrollObserver = nil
+        }
+        if let observer = scrollEndObserver {
+            NotificationCenter.default.removeObserver(observer)
+            scrollEndObserver = nil
         }
 
         // 타이머 정리
@@ -273,6 +306,24 @@ extension ViewerViewController {
             queue: .main
         ) { [weak self] notification in
             self?.handleZoomEnd(notification)
+        }
+
+        // 스크롤(패닝) 중 → 버튼 숨김 (줌과 동일하게 처리)
+        scrollObserver = NotificationCenter.default.addObserver(
+            forName: .photoDidScroll,
+            object: nil,
+            queue: .main
+        ) { [weak self] notification in
+            self?.handleZoom(notification)  // 줌 핸들러 재사용
+        }
+
+        // 스크롤(패닝) 완료 → 디바운스 후 버튼 재표시
+        scrollEndObserver = NotificationCenter.default.addObserver(
+            forName: .photoDidEndScroll,
+            object: nil,
+            queue: .main
+        ) { [weak self] notification in
+            self?.handleZoomEnd(notification)  // 줌 핸들러 재사용
         }
     }
 

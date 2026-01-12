@@ -8,7 +8,7 @@ import UIKit
 import Photos
 import AppCore
 
-// MARK: - Zoom Notifications
+// MARK: - Zoom & Scroll Notifications
 
 extension Notification.Name {
     /// 사진 줌 변경 시 (줌 중)
@@ -18,6 +18,14 @@ extension Notification.Name {
     /// 사진 줌 완료 시
     /// userInfo: ["zoomScale": CGFloat, "contentOffset": CGPoint, "imageSize": CGSize, "viewFrame": CGRect]
     static let photoDidEndZoom = Notification.Name("photoDidEndZoom")
+
+    /// 확대 상태에서 스크롤(패닝) 시
+    /// userInfo: ["zoomScale": CGFloat, "contentOffset": CGPoint, "imageSize": CGSize, "viewFrame": CGRect]
+    static let photoDidScroll = Notification.Name("photoDidScroll")
+
+    /// 확대 상태에서 스크롤(패닝) 완료 시
+    /// userInfo: ["zoomScale": CGFloat, "contentOffset": CGPoint, "imageSize": CGSize, "viewFrame": CGRect]
+    static let photoDidEndScroll = Notification.Name("photoDidEndScroll")
 }
 
 // MARK: - PhotoPageViewController
@@ -646,5 +654,43 @@ extension PhotoPageViewController: UIScrollViewDelegate {
             "viewFrame": view.frame,
             "imageViewFrame": imageView.frame
         ]
+    }
+
+    // MARK: - Scroll (Panning) in Zoomed State
+
+    /// 스크롤 중 (확대 상태에서 패닝)
+    func scrollViewDidScroll(_ scrollView: UIScrollView) {
+        // 줌 중이거나 1x 스케일이면 무시 (줌은 별도 처리)
+        guard !scrollView.isZooming && scrollView.zoomScale > 1.0 else { return }
+
+        // 스크롤 알림 (FaceButtonOverlay 숨김용)
+        NotificationCenter.default.post(
+            name: .photoDidScroll,
+            object: self,
+            userInfo: makeZoomUserInfo()
+        )
+    }
+
+    /// 드래그 종료 시
+    func scrollViewDidEndDragging(_ scrollView: UIScrollView, willDecelerate decelerate: Bool) {
+        // 감속 없이 바로 멈추면 여기서 재표시
+        guard scrollView.zoomScale > 1.0 && !decelerate else { return }
+
+        NotificationCenter.default.post(
+            name: .photoDidEndScroll,
+            object: self,
+            userInfo: makeZoomUserInfo()
+        )
+    }
+
+    /// 감속 완료 시 (스크롤 완전히 멈춤)
+    func scrollViewDidEndDecelerating(_ scrollView: UIScrollView) {
+        guard scrollView.zoomScale > 1.0 else { return }
+
+        NotificationCenter.default.post(
+            name: .photoDidEndScroll,
+            object: self,
+            userInfo: makeZoomUserInfo()
+        )
     }
 }
