@@ -585,10 +585,6 @@ extension FaceComparisonViewController: UICollectionViewDataSource {
         boundingBox: CGRect,
         completion: @escaping (UIImage?) -> Void
     ) {
-        // 셀 크기 계산 (2열)
-        let cellWidth = (view.bounds.width - Self.gridSpacing) / 2
-        let targetSize = CGSize(width: cellWidth * UIScreen.main.scale, height: cellWidth * UIScreen.main.scale)
-
         let options = PHImageRequestOptions()
         options.deliveryMode = .highQualityFormat
         options.resizeMode = .exact

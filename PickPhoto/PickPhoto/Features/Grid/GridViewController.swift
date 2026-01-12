@@ -182,7 +182,7 @@ final class GridViewController: UIViewController {
     var shouldShowItems: Bool = false
 
     /// Select 모드 여부 (extension에서 setter 접근 필요)
-    internal(set) var isSelectMode: Bool = false
+    var isSelectMode: Bool = false
 
     /// 선택 관리자 (T037) (extension에서 접근 필요)
     let selectionManager = SelectionManager()

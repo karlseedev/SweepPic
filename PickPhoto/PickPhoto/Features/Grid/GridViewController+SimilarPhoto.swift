@@ -20,17 +20,17 @@ import Photos
 /// 유사 사진 기능에 필요한 stored properties를 위한 Associated Keys
 private enum SimilarPhotoAssociatedKeys {
     /// 분석 디바운스 타이머
-    static var debounceWorkItem = "similarPhoto_debounceWorkItem"
+    static var debounceWorkItem: UInt8 = 0
     /// 현재 분석 중인 범위
-    static var currentAnalysisRange = "similarPhoto_currentAnalysisRange"
+    static var currentAnalysisRange: UInt8 = 0
     /// 분석 완료 옵저버
-    static var analysisObserver = "similarPhoto_analysisObserver"
+    static var analysisObserver: UInt8 = 0
     /// 그룹 테두리 표시 중인 assetID 집합
-    static var borderedAssetIDs = "similarPhoto_borderedAssetIDs"
+    static var borderedAssetIDs: UInt8 = 0
     /// 테두리 레이어 재사용 풀
-    static var borderLayerPool = "similarPhoto_borderLayerPool"
+    static var borderLayerPool: UInt8 = 0
     /// 삭제 옵저버 (그룹 무효화 처리용)
-    static var trashObserver = "similarPhoto_trashObserver"
+    static var trashObserver: UInt8 = 0
 }
 
 // MARK: - GridViewController+SimilarPhoto

@@ -32,19 +32,19 @@ extension ViewerViewController {
 
     /// Associated 객체 키 정의
     private enum AssociatedKeys {
-        static var faceButtonOverlay = "faceButtonOverlay"
-        static var loadingIndicator = "loadingIndicator"
-        static var analysisObserver = "analysisObserver"
-        static var isSimilarPhotoSetup = "isSimilarPhotoSetup"
-        static var currentAnalyzingAssetID = "currentAnalyzingAssetID"
+        static var faceButtonOverlay: UInt8 = 0
+        static var loadingIndicator: UInt8 = 0
+        static var analysisObserver: UInt8 = 0
+        static var isSimilarPhotoSetup: UInt8 = 0
+        static var currentAnalyzingAssetID: UInt8 = 0
         // Zoom 관련
-        static var zoomObserver = "zoomObserver"
-        static var zoomEndObserver = "zoomEndObserver"
-        static var zoomDebounceTimer = "zoomDebounceTimer"
-        static var lastZoomInfo = "lastZoomInfo"
+        static var zoomObserver: UInt8 = 0
+        static var zoomEndObserver: UInt8 = 0
+        static var zoomDebounceTimer: UInt8 = 0
+        static var lastZoomInfo: UInt8 = 0
         // Scroll (패닝) 관련
-        static var scrollObserver = "scrollObserver"
-        static var scrollEndObserver = "scrollEndObserver"
+        static var scrollObserver: UInt8 = 0
+        static var scrollEndObserver: UInt8 = 0
     }
 
     // MARK: - Associated Properties

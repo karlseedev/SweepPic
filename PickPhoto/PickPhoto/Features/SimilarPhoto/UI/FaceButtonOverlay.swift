@@ -373,7 +373,7 @@ final class FaceButtonOverlay: UIView {
         placedPositions: [CGPoint],
         viewerFrame: CGRect
     ) -> CGPoint {
-        var adjustedPosition = position
+        let adjustedPosition = position
 
         // 겹침 확인
         func hasCollision(_ pos: CGPoint) -> Bool {

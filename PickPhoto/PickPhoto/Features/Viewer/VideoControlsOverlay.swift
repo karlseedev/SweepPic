@@ -402,12 +402,17 @@ final class VideoControlsOverlay: UIView {
 
     /// Duration 로드 완료 옵저버 설정
     private func setupDurationObserver() {
-        guard let playerItem = player?.currentItem else { return }
+        guard let asset = player?.currentItem?.asset else { return }
 
-        // duration이 로드되면 업데이트
-        playerItem.asset.loadValuesAsynchronously(forKeys: ["duration"]) { [weak self] in
-            DispatchQueue.main.async {
-                self?.updateDuration()
+        // duration이 로드되면 업데이트 (iOS 16+ async/await)
+        Task { [weak self] in
+            do {
+                _ = try await asset.load(.duration)
+                await MainActor.run {
+                    self?.updateDuration()
+                }
+            } catch {
+                // duration 로드 실패는 치명적이지 않으므로 무시
             }
         }
     }
