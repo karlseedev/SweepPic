@@ -701,3 +701,120 @@ override func layoutSubviews() {
 - [iOS 26 Liquid Glass: Comprehensive Reference](https://medium.com/@madebyluddy/overview-37b3685227aa)
 - [Designing custom UI with Liquid Glass on iOS 26 - Donny Wals](https://www.donnywals.com/designing-custom-ui-with-liquid-glass-on-ios-26/)
 - [WWDC25 - Meet Liquid Glass](https://developer.apple.com/videos/play/wwdc2025/219/)
+
+---
+
+## 추가 고려사항
+
+### Select 모드 체크마크 UI
+
+Select 모드에서 선택된 아이템을 표시하는 체크마크 UI도 Liquid Glass 스타일 일관성을 맞출지 검토 필요:
+- 현재: 단색 원형 체크마크
+- 변경 옵션: Glass 스타일 체크마크 (블러 + 테두리)
+
+> 우선순위 낮음. Phase 1~4 완료 후 필요시 검토.
+
+---
+
+## Phase 5 (옵션): Vibrancy 효과 적용
+
+> **전제조건**: Phase 1~4 완료 후 진행
+
+### 개요
+
+현재 아이콘 가독성을 위해 그림자(`applyIconShadow`)를 사용하지만, `UIVibrancyEffectView`를 활용하면 더 세련된 유리 질감을 표현할 수 있음.
+
+### 현재 방식 vs Vibrancy 방식
+
+| 항목 | 현재 (그림자) | Vibrancy |
+|------|--------------|----------|
+| 구현 복잡도 | 낮음 | 높음 |
+| 시각적 효과 | 아이콘 뒤에 그림자 | 배경에 반응하는 반투명 효과 |
+| 아이콘 색상 제어 | 자유로움 | 제한적 (vibrancy가 색상 결정) |
+| Liquid Glass 느낌 | 보통 | 높음 |
+
+### 구현 방법
+
+```swift
+/// Vibrancy 효과가 적용된 Glass 버튼
+final class VibrancyGlassButton: UIButton {
+
+    private let blurView: UIVisualEffectView
+    private let vibrancyView: UIVisualEffectView
+    private let iconImageView: UIImageView
+
+    init() {
+        // 블러 효과
+        let blurEffect = UIBlurEffect(style: LiquidGlassStyle.blurStyle)
+        self.blurView = UIVisualEffectView(effect: blurEffect)
+
+        // Vibrancy 효과 (블러 위에 적용)
+        let vibrancyEffect = UIVibrancyEffect(blurEffect: blurEffect, style: .label)
+        self.vibrancyView = UIVisualEffectView(effect: vibrancyEffect)
+
+        // 아이콘 이미지뷰 (vibrancy 내부에 배치)
+        self.iconImageView = UIImageView()
+        iconImageView.contentMode = .scaleAspectFit
+
+        super.init(frame: .zero)
+        setupViews()
+    }
+
+    required init?(coder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+
+    private func setupViews() {
+        // 계층 구조: button > blurView > vibrancyView > iconImageView
+        blurView.isUserInteractionEnabled = false
+        vibrancyView.isUserInteractionEnabled = false
+
+        insertSubview(blurView, at: 0)
+        blurView.contentView.addSubview(vibrancyView)
+        vibrancyView.contentView.addSubview(iconImageView)
+
+        // 테두리
+        layer.borderWidth = LiquidGlassStyle.borderWidth
+        layer.borderColor = UIColor.white.withAlphaComponent(LiquidGlassStyle.borderAlpha).cgColor
+    }
+
+    override func layoutSubviews() {
+        super.layoutSubviews()
+        let cornerRadius = bounds.height / 2
+
+        blurView.frame = bounds
+        blurView.layer.cornerRadius = cornerRadius
+
+        vibrancyView.frame = blurView.contentView.bounds
+
+        // 아이콘 중앙 배치
+        let iconSize: CGFloat = 22
+        iconImageView.frame = CGRect(
+            x: (vibrancyView.contentView.bounds.width - iconSize) / 2,
+            y: (vibrancyView.contentView.bounds.height - iconSize) / 2,
+            width: iconSize,
+            height: iconSize
+        )
+
+        layer.cornerRadius = cornerRadius
+    }
+
+    func setIcon(_ systemName: String, pointSize: CGFloat = 22) {
+        let config = UIImage.SymbolConfiguration(pointSize: pointSize, weight: .medium)
+        iconImageView.image = UIImage(systemName: systemName, withConfiguration: config)
+    }
+}
+```
+
+### 적용 대상
+
+Vibrancy 효과는 다음 버튼에 선택적으로 적용 가능:
+- [ ] 백 버튼 (tint 없는 순수 glass)
+- [ ] 액션 버튼 (삭제/복구) - tint와 조합 필요
+- [ ] Select 버튼
+
+### 주의사항
+
+1. **색상 제어 제한**: Vibrancy 효과 내부의 아이콘은 시스템이 색상을 결정하므로 `tintColor` 설정이 무시될 수 있음
+2. **tint 오버레이와 조합**: 빨간색/초록색 tint가 필요한 버튼에는 vibrancy + tint 조합이 복잡해질 수 있음
+3. **테스트 필수**: 다양한 배경에서 가독성 테스트 필요

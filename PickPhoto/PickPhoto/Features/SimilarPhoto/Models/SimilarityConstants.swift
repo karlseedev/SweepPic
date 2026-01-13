@@ -77,7 +77,7 @@ enum SimilarityConstants: Sendable {
     // MARK: - Face Detection
 
     /// 유효 얼굴 최소 비율 (화면 너비 대비)
-    nonisolated static let minFaceWidthRatio: CGFloat = 0.05
+    nonisolated static let minFaceWidthRatio: CGFloat = 0.04
 
     /// 사진당 최대 얼굴 수
     nonisolated static let maxFacesPerPhoto: Int = 5
