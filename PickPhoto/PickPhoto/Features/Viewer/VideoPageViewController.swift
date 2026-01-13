@@ -22,6 +22,9 @@ final class VideoPageViewController: UIViewController {
     /// 더블탭 줌 스케일
     private static let doubleTapZoomScale: CGFloat = 2.5
 
+    /// 휴지통 사진용 마룬 배경색 (#800000)
+    private static let maroonBackgroundColor = UIColor(red: 0.5, green: 0, blue: 0, alpha: 1)
+
     // MARK: - Properties
 
     /// 표시할 PHAsset
@@ -109,17 +112,11 @@ final class VideoPageViewController: UIViewController {
         return gesture
     }()
 
-    // MARK: - Trashed Border (휴지통 사진 표시)
+    // MARK: - Trashed Background (휴지통 사진 표시)
 
-    /// 휴지통 테두리 표시 여부 (보관함/앨범 뷰어에서만 true)
-    private var showTrashedBorder: Bool = false
-
-    /// 휴지통 테두리 오버레이 (마룬 10pt 테두리)
-    private lazy var trashedBorderOverlay: TrashedBorderOverlay = {
-        let overlay = TrashedBorderOverlay()
-        overlay.translatesAutoresizingMaskIntoConstraints = false
-        return overlay
-    }()
+    /// 휴지통 배경 표시 여부 (보관함/앨범 뷰어에서만 true)
+    /// - 휴지통 사진은 상하단 레터박스 영역이 마룬색으로 표시됨
+    private var showTrashedBackground: Bool = false
 
     // MARK: - Initialization
 
@@ -127,11 +124,11 @@ final class VideoPageViewController: UIViewController {
     /// - Parameters:
     ///   - asset: 표시할 PHAsset
     ///   - index: 인덱스
-    ///   - showTrashedBorder: 휴지통 테두리 표시 여부 (기본값 false)
-    init(asset: PHAsset, index: Int, showTrashedBorder: Bool = false) {
+    ///   - showTrashedBackground: 휴지통 배경 표시 여부 (기본값 false)
+    init(asset: PHAsset, index: Int, showTrashedBackground: Bool = false) {
         self.asset = asset
         self.index = index
-        self.showTrashedBorder = showTrashedBorder
+        self.showTrashedBackground = showTrashedBackground
         super.init(nibName: nil, bundle: nil)
     }
 
@@ -198,7 +195,8 @@ final class VideoPageViewController: UIViewController {
 
     /// UI 설정
     private func setupUI() {
-        view.backgroundColor = .black
+        // 휴지통 사진이면 마룬 배경, 아니면 검은색 배경
+        view.backgroundColor = showTrashedBackground ? Self.maroonBackgroundColor : .black
 
         // ScrollView 추가
         view.addSubview(scrollView)
@@ -223,27 +221,19 @@ final class VideoPageViewController: UIViewController {
             controlsOverlay.trailingAnchor.constraint(equalTo: view.trailingAnchor),
             controlsOverlay.bottomAnchor.constraint(equalTo: view.bottomAnchor)
         ])
-
-        // 휴지통 테두리 오버레이 (컨트롤 오버레이 위에 배치)
-        view.addSubview(trashedBorderOverlay)
-        NSLayoutConstraint.activate([
-            trashedBorderOverlay.topAnchor.constraint(equalTo: view.topAnchor),
-            trashedBorderOverlay.leadingAnchor.constraint(equalTo: view.leadingAnchor),
-            trashedBorderOverlay.trailingAnchor.constraint(equalTo: view.trailingAnchor),
-            trashedBorderOverlay.bottomAnchor.constraint(equalTo: view.bottomAnchor)
-        ])
-
-        // 초기 테두리 표시 상태 설정
-        trashedBorderOverlay.setVisible(showTrashedBorder, animated: false)
     }
 
     // MARK: - Public API (Trashed State)
 
-    /// 휴지통 상태 업데이트 (복구 시 테두리 즉시 제거용)
+    /// 휴지통 상태 업데이트 (복구 시 배경색 즉시 변경)
     /// - Parameter isTrashed: 휴지통 상태 여부
     func updateTrashedState(isTrashed: Bool) {
-        showTrashedBorder = isTrashed
-        trashedBorderOverlay.setVisible(isTrashed, animated: true)
+        showTrashedBackground = isTrashed
+
+        // 배경색 애니메이션 변경
+        UIView.animate(withDuration: 0.2) {
+            self.view.backgroundColor = isTrashed ? Self.maroonBackgroundColor : .black
+        }
     }
 
     /// 제스처 설정

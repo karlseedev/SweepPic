@@ -859,16 +859,16 @@ final class ViewerViewController: UIViewController {
     private func createPageViewController(at index: Int) -> UIViewController? {
         guard let asset = coordinator.asset(at: index) else { return nil }
 
-        // 보관함(.normal)에서만 테두리 표시, 휴지통 탭에서는 표시 안 함
-        let showTrashedBorder = (viewerMode == .normal) && coordinator.isTrashed(at: index)
+        // 보관함(.normal)에서만 배경색 변경, 휴지통 탭에서는 검은색 유지
+        let showTrashedBackground = (viewerMode == .normal) && coordinator.isTrashed(at: index)
 
         switch asset.mediaType {
         case .video:
             // 동영상: VideoPageViewController
-            return VideoPageViewController(asset: asset, index: index, showTrashedBorder: showTrashedBorder)
+            return VideoPageViewController(asset: asset, index: index, showTrashedBackground: showTrashedBackground)
         default:
             // 사진/기타: PhotoPageViewController
-            return PhotoPageViewController(asset: asset, index: index, showTrashedBorder: showTrashedBorder)
+            return PhotoPageViewController(asset: asset, index: index, showTrashedBackground: showTrashedBackground)
         }
     }
 

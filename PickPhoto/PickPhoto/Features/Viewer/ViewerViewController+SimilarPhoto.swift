@@ -384,6 +384,9 @@ extension ViewerViewController {
         // 휴지통 모드 확인 (FR-037: 휴지통 화면에서는 유사사진정리 기능 비활성화)
         guard viewerMode != .trash else { return false }
 
+        // 휴지통 사진 확인 (보관함/앨범에서 휴지통 사진을 .normal 모드로 열어도 비활성화)
+        guard !coordinator.isTrashed(at: currentIndex) else { return false }
+
         return true
     }
 
