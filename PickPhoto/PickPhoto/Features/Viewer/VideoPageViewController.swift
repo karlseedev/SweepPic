@@ -22,8 +22,8 @@ final class VideoPageViewController: UIViewController {
     /// 더블탭 줌 스케일
     private static let doubleTapZoomScale: CGFloat = 2.5
 
-    /// 휴지통 사진용 마룬 배경색 (#800000)
-    private static let maroonBackgroundColor = UIColor(red: 0.5, green: 0, blue: 0, alpha: 1)
+    /// 휴지통 사진용 마룬 배경색 (#621C1C)
+    private static let maroonBackgroundColor = UIColor(red: 0.384, green: 0.110, blue: 0.110, alpha: 1)
 
     // MARK: - Properties
 
