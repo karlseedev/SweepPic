@@ -199,10 +199,11 @@ final class SimilarityAnalysisQueue {
                 }
             }
 
-            // 그룹 단위로 일관된 personIndex 할당 (위치 기반 매칭)
-            let photoFacesMap = assignPersonIndicesForGroup(
+            // 그룹 단위로 일관된 personIndex 할당 (위치 + Feature Print 이중 검증)
+            let photoFacesMap = await assignPersonIndicesForGroup(
                 rawFacesMap: rawFacesMap,
-                assetIDs: groupAssetIDs
+                assetIDs: groupAssetIDs,
+                photos: groupPhotos
             )
 
             // 유효 슬롯 계산: 같은 personIndex가 2장 이상의 사진에서 나타나야 함
@@ -332,45 +333,76 @@ final class SimilarityAnalysisQueue {
 
     // MARK: - Private Methods - Face Processing
 
+    /// 기준 슬롯 정보 (위치 + Feature Print)
+    private struct ReferenceSlot {
+        let index: Int
+        let center: CGPoint
+        let boundingBox: CGRect
+        let featurePrint: VNFeaturePrintObservation?
+    }
+
     /// 그룹 단위로 일관된 인물 번호를 부여합니다.
     ///
-    /// 연속 촬영 사진에서 동일 위치의 얼굴은 같은 인물로 매칭합니다.
-    /// 첫 번째 사진(얼굴이 있는)의 얼굴 위치를 기준 슬롯으로 설정하고,
-    /// 다른 사진의 얼굴은 가장 가까운 슬롯에 매핑합니다.
+    /// 연속 촬영 사진에서 동일 위치 + 동일 얼굴의 사람을 같은 인물로 매칭합니다.
+    /// 첫 번째 사진(얼굴이 있는)의 얼굴 위치와 Feature Print를 기준 슬롯으로 설정하고,
+    /// 다른 사진의 얼굴은 위치 + Feature Print 이중 검증으로 매핑합니다.
     ///
     /// - Parameters:
     ///   - rawFacesMap: 사진별 감지된 얼굴 (assetID → [DetectedFace])
     ///   - assetIDs: 그룹 멤버 순서 (분석 순서)
+    ///   - photos: PHAsset 배열 (이미지 로딩용)
     /// - Returns: 일관된 personIndex가 부여된 CachedFace 맵
     private func assignPersonIndicesForGroup(
         rawFacesMap: [String: [DetectedFace]],
-        assetIDs: [String]
-    ) -> [String: [CachedFace]] {
+        assetIDs: [String],
+        photos: [PHAsset]
+    ) async -> [String: [CachedFace]] {
 
-        // 기준 슬롯 정의: 첫 번째 얼굴 있는 사진의 얼굴 위치들
-        var referenceSlots: [(index: Int, center: CGPoint)] = []
+        // assetID → PHAsset 매핑
+        let photoMap = Dictionary(uniqueKeysWithValues: photos.map { ($0.localIdentifier, $0) })
+
+        // 기준 슬롯 정의: 첫 번째 얼굴 있는 사진의 얼굴 위치 + Feature Print
+        var referenceSlots: [ReferenceSlot] = []
+        var referenceAssetID: String? = nil
 
         // 얼굴이 있는 첫 번째 사진 찾기
         for assetID in assetIDs {
             guard let faces = rawFacesMap[assetID], !faces.isEmpty else { continue }
+            guard let photo = photoMap[assetID] else { continue }
 
             // 위치 정렬 (X 오름차순, Y 내림차순)
             let sorted = sortFacesByPosition(faces)
 
-            // 기준 슬롯 설정
+            // 이미지 로드
+            guard let cgImage = try? await imageLoader.loadImage(for: photo) else { continue }
+
+            // 기준 슬롯 설정 (위치 + Feature Print)
             for (idx, face) in sorted.enumerated() {
                 let center = CGPoint(
                     x: face.boundingBox.midX,
                     y: face.boundingBox.midY
                 )
-                referenceSlots.append((index: idx + 1, center: center))
+
+                // 얼굴 크롭 후 Feature Print 생성
+                var featurePrint: VNFeaturePrintObservation? = nil
+                if let croppedFace = try? FaceCropper.cropFace(from: cgImage, boundingBox: face.boundingBox) {
+                    featurePrint = try? await analyzer.generateFeaturePrint(for: croppedFace)
+                }
+
+                referenceSlots.append(ReferenceSlot(
+                    index: idx + 1,
+                    center: center,
+                    boundingBox: face.boundingBox,
+                    featurePrint: featurePrint
+                ))
             }
+
+            referenceAssetID = assetID
             break
         }
 
         // 기준 슬롯이 없으면 빈 결과 반환
         guard !referenceSlots.isEmpty else {
-            // 모든 사진에 얼굴 없음 → 빈 CachedFace 배열로 반환
             var result: [String: [CachedFace]] = [:]
             for assetID in assetIDs {
                 result[assetID] = []
@@ -381,11 +413,33 @@ final class SimilarityAnalysisQueue {
         // 각 사진의 얼굴을 기준 슬롯에 매핑
         var result: [String: [CachedFace]] = [:]
         let positionThreshold: CGFloat = 0.15  // 위치 허용 오차 (정규화 좌표 기준)
+        let featurePrintThreshold = SimilarityConstants.personMatchThreshold
 
         for assetID in assetIDs {
             guard let faces = rawFacesMap[assetID] else {
                 result[assetID] = []
                 continue
+            }
+
+            // 기준 사진은 Feature Print 비교 없이 바로 매칭
+            if assetID == referenceAssetID {
+                let sorted = sortFacesByPosition(faces)
+                var cachedFaces: [CachedFace] = []
+                for (idx, face) in sorted.enumerated() {
+                    cachedFaces.append(CachedFace(
+                        boundingBox: face.boundingBox,
+                        personIndex: idx + 1,
+                        isValidSlot: false
+                    ))
+                }
+                result[assetID] = cachedFaces
+                continue
+            }
+
+            // 이미지 로드 (Feature Print 비교용)
+            var cgImage: CGImage? = nil
+            if let photo = photoMap[assetID] {
+                cgImage = try? await imageLoader.loadImage(for: photo)
             }
 
             var cachedFaces: [CachedFace] = []
@@ -396,26 +450,58 @@ final class SimilarityAnalysisQueue {
                     y: face.boundingBox.midY
                 )
 
-                // 가장 가까운 기준 슬롯 찾기
-                var bestSlot: Int? = nil
-                var bestDistance: CGFloat = .infinity
+                // 1단계: 위치 기반으로 후보 슬롯 찾기
+                var candidateSlots: [(slot: ReferenceSlot, posDistance: CGFloat)] = []
 
                 for slot in referenceSlots {
-                    let distance = hypot(faceCenter.x - slot.center.x, faceCenter.y - slot.center.y)
-                    if distance < bestDistance && distance < positionThreshold {
-                        bestDistance = distance
-                        bestSlot = slot.index
+                    let posDistance = hypot(faceCenter.x - slot.center.x, faceCenter.y - slot.center.y)
+                    if posDistance < positionThreshold {
+                        candidateSlots.append((slot: slot, posDistance: posDistance))
                     }
                 }
 
-                // 매칭되는 슬롯이 없으면 이 얼굴은 스킵 (유효 슬롯에 포함되지 않음)
-                // 연속 촬영이 아닌 사진에서 다른 위치의 얼굴은 무시
+                // 후보가 없으면 스킵
+                guard !candidateSlots.isEmpty else { continue }
+
+                // 2단계: Feature Print 비교로 최종 매칭
+                var bestSlot: Int? = nil
+                var bestScore: Float = .infinity
+
+                for candidate in candidateSlots {
+                    // Feature Print가 없으면 위치만으로 판단 (fallback)
+                    guard let refFP = candidate.slot.featurePrint,
+                          let image = cgImage,
+                          let croppedFace = try? FaceCropper.cropFace(from: image, boundingBox: face.boundingBox),
+                          let faceFP = try? await analyzer.generateFeaturePrint(for: croppedFace) else {
+                        // Feature Print 비교 불가 시, 위치 거리가 가장 가까운 것 선택
+                        if Float(candidate.posDistance) < bestScore {
+                            bestScore = Float(candidate.posDistance)
+                            bestSlot = candidate.slot.index
+                        }
+                        continue
+                    }
+
+                    // Feature Print 거리 계산
+                    guard let fpDistance = try? analyzer.computeDistance(faceFP, refFP) else { continue }
+
+                    // Feature Print 임계값 검사
+                    if fpDistance < featurePrintThreshold {
+                        // Feature Print 거리가 더 좋은 후보 선택
+                        if fpDistance < bestScore {
+                            bestScore = fpDistance
+                            bestSlot = candidate.slot.index
+                        }
+                    }
+                    // Feature Print 임계값 초과 시 이 후보는 제외됨
+                }
+
+                // 매칭되는 슬롯이 없으면 스킵
                 guard let personIndex = bestSlot else { continue }
 
                 cachedFaces.append(CachedFace(
                     boundingBox: face.boundingBox,
                     personIndex: personIndex,
-                    isValidSlot: false  // 나중에 갱신
+                    isValidSlot: false
                 ))
             }
 
