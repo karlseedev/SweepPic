@@ -219,9 +219,29 @@ final class SimilarityAnalysisQueue {
                 $0.value.count >= SimilarityConstants.minPhotosPerSlot
             }.keys)
 
+            // ========== 유효 슬롯 얼굴이 있는 사진만 그룹에 포함 (prd9algorithm.md §3.7) ==========
+            // 유효 슬롯에 해당하는 얼굴이 있는 사진만 그룹 멤버로 인정
+            let validMembers = groupAssetIDs.filter { assetID in
+                guard let faces = photoFacesMap[assetID] else { return false }
+                return faces.contains { validSlots.contains($0.personIndex) }
+            }
+
+            // 그룹 내 탈락 사진 상태 업데이트 (얼굴 없음 또는 유효 슬롯 미충족)
+            let excludedFromGroup = Set(groupAssetIDs).subtracting(validMembers)
+            for assetID in excludedFromGroup {
+                await cache.setState(.analyzed(inGroup: false, groupID: nil), for: assetID)
+                // 탈락 사진의 얼굴 데이터도 캐시에 저장 (뷰어에서 활용 가능)
+                if let faces = photoFacesMap[assetID] {
+                    await cache.setFaces(faces, for: assetID)
+                }
+            }
+            // ==============================================================================
+
             // T014.7: 캐시 저장 요청 (T010 호출)
+            // validMembers 전달 (유효 슬롯 얼굴 보유 사진만)
+            // 참고: addGroupIfValid 내부에서 조건 미충족 시 members를 inGroup:false로 정리함
             if let groupID = await cache.addGroupIfValid(
-                members: groupAssetIDs,
+                members: validMembers,
                 validSlots: validSlots,
                 photoFaces: photoFacesMap
             ) {

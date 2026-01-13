@@ -91,6 +91,15 @@ final class SimilarityAnalyzer {
         // Feature Print 요청 생성
         let request = VNGenerateImageFeaturePrintRequest()
 
+        // iOS 버전별 Revision 명시적 지정 (iOS 26 호환성)
+        // - iOS 17+: Revision2 (768개 정규화 벡터, 거리 범위 0.0 ~ 2.0)
+        // - iOS 16-: Revision1 (2048개 비정규화 벡터, 거리 범위 0.0 ~ 40.0)
+        if #available(iOS 17.0, *) {
+            request.revision = VNGenerateImageFeaturePrintRequestRevision2
+        } else {
+            request.revision = VNGenerateImageFeaturePrintRequestRevision1
+        }
+
         // 이미지 핸들러 생성 및 실행
         let handler = VNImageRequestHandler(cgImage: image, options: [:])
 
