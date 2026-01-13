@@ -129,8 +129,22 @@ final class PhotoPageViewController: UIViewController {
     // MARK: - Trashed Background (휴지통 사진 표시)
 
     /// 휴지통 배경 표시 여부 (보관함/앨범 뷰어에서만 true)
-    /// - 휴지통 사진은 상하단 레터박스 영역이 마룬색으로 표시됨
+    /// - 휴지통 사진은 좌우 그라데이션 배경으로 표시됨 (블랙 → 마룬 → 블랙)
     private var showTrashedBackground: Bool = false
+
+    /// 휴지통 그라데이션 레이어 (좌우: 블랙 → 마룬 → 블랙)
+    private lazy var trashedGradientLayer: CAGradientLayer = {
+        let layer = CAGradientLayer()
+        layer.colors = [
+            UIColor.black.cgColor,
+            Self.maroonBackgroundColor.cgColor,
+            UIColor.black.cgColor
+        ]
+        layer.locations = [0.0, 0.5, 1.0]
+        layer.startPoint = CGPoint(x: 0, y: 0.5)  // 좌측 중앙
+        layer.endPoint = CGPoint(x: 1, y: 0.5)    // 우측 중앙
+        return layer
+    }()
 
     // MARK: - Initialization
 
@@ -174,6 +188,11 @@ final class PhotoPageViewController: UIViewController {
     override func viewDidLayoutSubviews() {
         super.viewDidLayoutSubviews()
         scrollView.frame = view.bounds
+
+        // 그라데이션 레이어 프레임 업데이트 (회전 대응)
+        if showTrashedBackground {
+            trashedGradientLayer.frame = view.bounds
+        }
 
         if debugPhoto {
             print("[Photo] 📐 viewDidLayoutSubviews - index: \(index), bounds: \(view.bounds.size)")
@@ -255,8 +274,13 @@ final class PhotoPageViewController: UIViewController {
 
     /// UI 설정
     private func setupUI() {
-        // 휴지통 사진이면 마룬 배경, 아니면 검은색 배경
-        view.backgroundColor = showTrashedBackground ? Self.maroonBackgroundColor : .black
+        view.backgroundColor = .black
+
+        // 휴지통 사진이면 그라데이션 배경 추가
+        if showTrashedBackground {
+            trashedGradientLayer.frame = view.bounds
+            view.layer.insertSublayer(trashedGradientLayer, at: 0)
+        }
 
         // 스크롤 뷰 (frame 기반)
         view.addSubview(scrollView)
@@ -271,14 +295,36 @@ final class PhotoPageViewController: UIViewController {
 
     // MARK: - Public API (Trashed State)
 
-    /// 휴지통 상태 업데이트 (복구 시 배경색 즉시 변경)
+    /// 휴지통 상태 업데이트 (복구 시 그라데이션 즉시 변경)
     /// - Parameter isTrashed: 휴지통 상태 여부
     func updateTrashedState(isTrashed: Bool) {
         showTrashedBackground = isTrashed
 
-        // 배경색 애니메이션 변경
-        UIView.animate(withDuration: 0.2) {
-            self.view.backgroundColor = isTrashed ? Self.maroonBackgroundColor : .black
+        if isTrashed {
+            // 그라데이션 추가
+            trashedGradientLayer.frame = view.bounds
+            trashedGradientLayer.opacity = 0
+            view.layer.insertSublayer(trashedGradientLayer, at: 0)
+
+            // 페이드인 애니메이션
+            let animation = CABasicAnimation(keyPath: "opacity")
+            animation.fromValue = 0
+            animation.toValue = 1
+            animation.duration = 0.2
+            trashedGradientLayer.add(animation, forKey: "fadeIn")
+            trashedGradientLayer.opacity = 1
+        } else {
+            // 페이드아웃 후 제거
+            let animation = CABasicAnimation(keyPath: "opacity")
+            animation.fromValue = 1
+            animation.toValue = 0
+            animation.duration = 0.2
+            trashedGradientLayer.add(animation, forKey: "fadeOut")
+            trashedGradientLayer.opacity = 0
+
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) { [weak self] in
+                self?.trashedGradientLayer.removeFromSuperlayer()
+            }
         }
     }
 
