@@ -51,7 +51,7 @@ iOS 16~25에서 사용하는 커스텀 UI (FloatingTabBar, FloatingTitleBar, Vie
 
 ## Phase 1: FloatingTabBar.swift Liquid Glass 스타일 적용
 
-**파일**: `/Users/karl/Project/Photos/iOS/PickPhoto/PickPhoto/Shared/Components/FloatingTabBar.swift`
+**파일**: `PickPhoto/PickPhoto/Shared/Components/FloatingTabBar.swift`
 
 ### 1.1 블러 효과 변경
 ```swift
@@ -115,7 +115,7 @@ private static let maxDimAlpha: CGFloat = 0.45
 
 ## Phase 2: FloatingTitleBar.swift Liquid Glass 스타일 적용
 
-**파일**: `/Users/karl/Project/Photos/iOS/PickPhoto/PickPhoto/Shared/Components/FloatingTitleBar.swift`
+**파일**: `PickPhoto/PickPhoto/Shared/Components/FloatingTitleBar.swift`
 
 ### 2.1 블러 효과 변경
 ```swift
@@ -247,7 +247,7 @@ private lazy var selectButton: GlassButton = {
 
 ## Phase 3: ViewerViewController.swift 버튼 Liquid Glass 스타일
 
-**파일**: `/Users/karl/Project/Photos/iOS/PickPhoto/PickPhoto/Features/Viewer/ViewerViewController.swift`
+**파일**: `PickPhoto/PickPhoto/Features/Viewer/ViewerViewController.swift`
 
 ### 3.1 삭제/복구/완전삭제 버튼 스타일 변경
 
@@ -255,34 +255,20 @@ private lazy var selectButton: GlassButton = {
 // 현재: 단색 반투명 배경
 button.backgroundColor = UIColor.systemRed.withAlphaComponent(0.9)
 
-// 변경 → Glass 스타일 (블러 + tint)
-private func createGlassActionButton(tintColor: UIColor, icon: String) -> UIButton {
-    let button = UIButton(type: .system)
+// 변경 → GlassButton 서브클래스 사용
+```
+
+#### GlassButton 활용
+
+`GlassButton` 서브클래스를 사용하여 모든 버튼을 일관되게 생성합니다:
+
+```swift
+/// Glass 스타일 액션 버튼 생성 헬퍼
+private func createGlassActionButton(tintColor: UIColor, icon: String) -> GlassButton {
+    let button = GlassButton(tintColor: tintColor, useCapsuleStyle: false)
     button.translatesAutoresizingMaskIntoConstraints = false
-    let cornerRadius = Self.deleteButtonSize / 2
 
-    // 블러 배경 (LiquidGlassStyle 팩토리 사용)
-    let blurView = LiquidGlassStyle.createBlurView(cornerRadius: cornerRadius)
-    blurView.autoresizingMask = [.flexibleWidth, .flexibleHeight]
-    blurView.frame = button.bounds
-    button.insertSubview(blurView, at: 0)
-
-    // tint 오버레이 (LiquidGlassStyle 팩토리 사용)
-    let tintView = LiquidGlassStyle.createTintOverlay(color: tintColor, cornerRadius: cornerRadius)
-    tintView.autoresizingMask = [.flexibleWidth, .flexibleHeight]
-    tintView.frame = blurView.contentView.bounds
-    blurView.contentView.addSubview(tintView)
-
-    // 스펙큘러 하이라이트 (유리 광택감)
-    LiquidGlassStyle.addSpecularHighlight(to: blurView.contentView, cornerRadius: cornerRadius)
-
-    // 테두리 (LiquidGlassStyle 상수 사용 - borderAlpha: 0.25)
-    LiquidGlassStyle.applyBorder(to: button.layer, cornerRadius: cornerRadius)
-
-    // 그림자 (LiquidGlassStyle 상수 사용)
-    LiquidGlassStyle.applyShadow(to: button.layer)
-
-    // 아이콘 (actionButtonIconSize: 22pt)
+    // 아이콘 설정
     let config = UIImage.SymbolConfiguration(
         pointSize: LiquidGlassStyle.actionButtonIconSize,
         weight: .medium
@@ -291,7 +277,7 @@ private func createGlassActionButton(tintColor: UIColor, icon: String) -> UIButt
     button.setImage(image, for: .normal)
     button.tintColor = .white
 
-    // 아이콘 그림자 (반투명 배경에서 가독성 확보)
+    // 아이콘 그림자 적용
     if let imageView = button.imageView {
         LiquidGlassStyle.applyIconShadow(to: imageView)
     }
@@ -301,59 +287,58 @@ private func createGlassActionButton(tintColor: UIColor, icon: String) -> UIButt
 ```
 
 ### 3.2 버튼 생성 코드 변경
+
 ```swift
 // 삭제 버튼
-private lazy var deleteButton: UIButton = {
+private lazy var deleteButton: GlassButton = {
     return createGlassActionButton(tintColor: .systemRed, icon: "trash.fill")
 }()
 
 // 복구 버튼
-private lazy var restoreButton: UIButton = {
+private lazy var restoreButton: GlassButton = {
     return createGlassActionButton(tintColor: .systemGreen, icon: "arrow.uturn.backward")
 }()
 
 // 완전삭제 버튼
-private lazy var permanentDeleteButton: UIButton = {
+private lazy var permanentDeleteButton: GlassButton = {
     return createGlassActionButton(tintColor: .systemRed, icon: "trash.fill")
 }()
 ```
 
 ### 3.3 백 버튼 Glass 스타일
+
 ```swift
 // 현재
 button.backgroundColor = UIColor.black.withAlphaComponent(0.5)
 
-// 변경 → Glass 스타일
-private func setupBackButton() {
-    let backButton = UIButton(type: .system)
-    backButton.translatesAutoresizingMaskIntoConstraints = false
-    let cornerRadius: CGFloat = 18
+// 변경 → GlassButton 서브클래스 사용 (tintColor: .clear로 tint 없음)
+```
 
-    // 블러 배경 (LiquidGlassStyle 팩토리 사용)
-    let blurView = LiquidGlassStyle.createBlurView(cornerRadius: cornerRadius)
-    blurView.autoresizingMask = [.flexibleWidth, .flexibleHeight]
-    blurView.frame = backButton.bounds
-    backButton.insertSubview(blurView, at: 0)
+#### 백 버튼 구현
 
-    // 스펙큘러 하이라이트 (유리 광택감)
-    LiquidGlassStyle.addSpecularHighlight(to: blurView.contentView, cornerRadius: cornerRadius)
+```swift
+private lazy var backButton: GlassButton = {
+    // tint 없는 순수한 glass 스타일
+    let button = GlassButton(tintColor: .clear, useCapsuleStyle: false)
+    button.translatesAutoresizingMaskIntoConstraints = false
 
-    // 테두리 (LiquidGlassStyle 상수 사용 - borderAlpha: 0.25)
-    LiquidGlassStyle.applyBorder(to: backButton.layer, cornerRadius: cornerRadius)
-
-    // 아이콘 (backButtonIconSize: 20pt)
+    // 아이콘 설정 (backButtonIconSize: 20pt)
     let config = UIImage.SymbolConfiguration(
         pointSize: LiquidGlassStyle.backButtonIconSize,
         weight: .semibold
     )
-    backButton.setImage(UIImage(systemName: "chevron.backward", withConfiguration: config), for: .normal)
-    backButton.tintColor = .white
+    button.setImage(UIImage(systemName: "chevron.backward", withConfiguration: config), for: .normal)
+    button.tintColor = .white
 
-    // 아이콘 그림자 (반투명 배경에서 가독성 확보)
-    if let imageView = backButton.imageView {
+    // 아이콘 그림자 적용
+    if let imageView = button.imageView {
         LiquidGlassStyle.applyIconShadow(to: imageView)
     }
 
+    return button
+}()
+
+private func setupBackButton() {
     view.addSubview(backButton)
     NSLayoutConstraint.activate([
         backButton.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 16),
@@ -364,17 +349,88 @@ private func setupBackButton() {
 }
 ```
 
+> **Note**: 백 버튼은 `tintColor: .clear`를 사용하여 tint 오버레이 없이 순수한 glass 스타일만 적용합니다.
+
 ---
 
 ## Phase 4: Select 모드 툴바 Glass 스타일
 
 ### 4.1 FloatingTabBar Select 모드 Delete 버튼
+
 ```swift
 // 현재
 config.baseBackgroundColor = UIColor.systemRed.withAlphaComponent(0.3)
 
-// 변경 → Glass 스타일
-// UIVisualEffectView 블러 + red tint 오버레이
+// 변경 → GlassButton 서브클래스 사용
+```
+
+#### 구현 방법
+
+Select 모드 Delete 버튼도 `GlassButton` 서브클래스를 활용합니다:
+
+```swift
+// FloatingTabBar.swift에서 Select 모드 Delete 버튼 생성
+private lazy var selectModeDeleteButton: GlassButton = {
+    let button = GlassButton(tintColor: .systemRed, useCapsuleStyle: false)
+    button.translatesAutoresizingMaskIntoConstraints = false
+
+    // 아이콘 설정
+    let config = UIImage.SymbolConfiguration(
+        pointSize: LiquidGlassStyle.actionButtonIconSize,
+        weight: .medium
+    )
+    let image = UIImage(systemName: "trash.fill", withConfiguration: config)
+    button.setImage(image, for: .normal)
+    button.tintColor = .white
+
+    // 아이콘 그림자 적용
+    if let imageView = button.imageView {
+        LiquidGlassStyle.applyIconShadow(to: imageView)
+    }
+
+    return button
+}()
+```
+
+### 4.2 Select 모드 Share 버튼
+
+```swift
+private lazy var selectModeShareButton: GlassButton = {
+    let button = GlassButton(tintColor: .systemBlue, useCapsuleStyle: false)
+    button.translatesAutoresizingMaskIntoConstraints = false
+
+    let config = UIImage.SymbolConfiguration(
+        pointSize: LiquidGlassStyle.actionButtonIconSize,
+        weight: .medium
+    )
+    let image = UIImage(systemName: "square.and.arrow.up", withConfiguration: config)
+    button.setImage(image, for: .normal)
+    button.tintColor = .white
+
+    if let imageView = button.imageView {
+        LiquidGlassStyle.applyIconShadow(to: imageView)
+    }
+
+    return button
+}()
+```
+
+### 4.3 Select 모드 레이아웃
+
+```swift
+// Select 모드 진입 시 버튼 전환
+func enterSelectMode() {
+    // 기존 탭 버튼 숨김
+    tabButtonStackView.isHidden = true
+
+    // Select 모드 버튼 표시
+    selectModeStackView.isHidden = false
+}
+
+func exitSelectMode() {
+    tabButtonStackView.isHidden = false
+    selectModeStackView.isHidden = true
+}
 ```
 
 ---
@@ -560,25 +616,26 @@ override func layoutSubviews() {
 | **블러** | `.systemThinMaterialDark` | `.systemUltraThinMaterialDark` |
 | **배경 오버레이** | `alpha: 0.5` | `alpha: 0.15` |
 | **테두리** | `white 15%` | `white 25%` |
-| **그림자** | `12pt blur, 6pt offset` | `16pt blur, 4pt offset` |
+| **그림자** | `12pt blur, 6pt offset` | `16pt blur, 4pt offset` + shadowPath |
 | **탭 아이콘** | 18pt | 24pt |
 | **액션 버튼 아이콘** | 22pt | 22pt (유지) |
 | **백 버튼 아이콘** | 20pt | 20pt (유지) |
 | **딤 그라데이션** | 최대 60% | 최대 45% |
-| **버튼 배경** | 단색 반투명 | 블러 + tint |
-| **스펙큘러 하이라이트** | 없음 | 상단 그라데이션 (alpha 0.08~0.12) |
-| **아이콘 대비 보정** | 없음 | 약한 아이콘 그림자 or vibrancy |
+| **버튼 배경** | 단색 반투명 | `GlassButton` 서브클래스 (블러 + tint) |
+| **스펙큘러 하이라이트** | 없음 | 버튼만 - 상단 그라데이션 (alpha 0.12) |
+| **아이콘 대비 보정** | 없음 | 버튼만 - 약한 아이콘 그림자 (blur 3, alpha 0.35) |
 
 ---
 
 ## 구현 순서
 
 1. **Phase 0**: `LiquidGlassStyle.swift` 생성 (스타일 상수 중앙화)
-2. **Phase 1**: `FloatingTabBar.swift` 스타일 변경
-3. **Phase 2**: `FloatingTitleBar.swift` 스타일 변경
-4. **Phase 3**: `ViewerViewController.swift` 버튼 스타일 변경
-5. **Phase 4**: Select 모드 UI 스타일 변경
-6. **테스트**: iOS 16~25 시뮬레이터에서 확인
+2. **Phase 0.5**: `GlassButton.swift` 생성 (재사용 가능한 버튼 서브클래스)
+3. **Phase 1**: `FloatingTabBar.swift` 스타일 변경
+4. **Phase 2**: `FloatingTitleBar.swift` 스타일 변경
+5. **Phase 3**: `ViewerViewController.swift` 버튼 스타일 변경
+6. **Phase 4**: Select 모드 UI 스타일 변경
+7. **테스트**: iOS 16~25 시뮬레이터에서 확인 (아래 체크리스트 참조)
 
 ---
 
@@ -586,10 +643,11 @@ override func layoutSubviews() {
 
 | 파일 | 작업 |
 |------|------|
-| **신규** `LiquidGlassStyle.swift` | 스타일 상수 및 팩토리 메서드 |
+| **신규** `Shared/Styles/LiquidGlassStyle.swift` | 스타일 상수 및 팩토리 메서드 |
+| **신규** `Shared/Components/GlassButton.swift` | 재사용 가능한 Glass 스타일 버튼 서브클래스 |
 | `FloatingTabBar.swift` | 블러, 배경, 테두리, 그림자, 아이콘 크기 변경 |
-| `FloatingTitleBar.swift` | 블러, 그라데이션, Select 버튼 스타일 변경 |
-| `ViewerViewController.swift` | 삭제/복구/백 버튼 Glass 스타일 변경 |
+| `FloatingTitleBar.swift` | 블러, 그라데이션, Select 버튼 → GlassButton 교체 |
+| `ViewerViewController.swift` | 삭제/복구/백 버튼 → GlassButton 교체 |
 
 ---
 
@@ -598,6 +656,43 @@ override func layoutSubviews() {
 - `TabBarController.swift` - iOS 26 분기 로직 그대로 유지
 - `FloatingOverlayContainer.swift` - 컨테이너 구조 그대로 유지
 - `BarsVisibilityControlling.swift` - 그대로 유지
+
+---
+
+## 테스트 체크리스트
+
+### 시각적 테스트
+
+- [ ] **블러 투명도**: 배경 이미지가 기존보다 더 잘 보이는지 확인
+- [ ] **테두리 선명도**: 0.25 alpha 테두리가 유리 경계처럼 보이는지 확인
+- [ ] **스펙큘러 하이라이트**: 버튼 상단에 미묘한 광택이 보이는지 확인
+- [ ] **아이콘 가독성**: 반투명 배경에서 아이콘 그림자가 대비를 높이는지 확인
+
+### 배경 색상별 테스트
+
+- [ ] **어두운 배경**: 밤 사진, 검정 배경에서 버튼 가독성
+- [ ] **밝은 배경**: 하늘, 흰 벽 사진에서 버튼 가독성
+- [ ] **다채로운 배경**: 다양한 색상이 포함된 사진에서 전체적인 조화
+
+### 기능 테스트
+
+- [ ] **버튼 터치 반응**: GlassButton 터치 영역이 정상 동작하는지
+- [ ] **Select 모드 전환**: 진입/퇴장 시 버튼이 올바르게 표시/숨김
+- [ ] **화면 회전**: 가로/세로 전환 시 레이아웃 깨짐 없음
+- [ ] **기기별 테스트**: iPhone SE ~ iPhone 15 Pro Max 다양한 화면 크기
+
+### 성능 테스트
+
+- [ ] **메모리**: 스펙큘러 하이라이트 레이어 누적 없음 (Instruments로 확인)
+- [ ] **스크롤 성능**: 그리드 뷰 스크롤 시 프레임 드랍 없음
+- [ ] **shadowPath 효과**: 그림자 렌더링 성능 저하 없음
+
+### iOS 버전별 테스트
+
+- [ ] **iOS 16**: 최소 지원 버전에서 정상 동작
+- [ ] **iOS 17**: 중간 버전 확인
+- [ ] **iOS 18**: 최신 안정 버전 확인
+- [ ] **iOS 26**: 시스템 UI 사용 (변경 없음) 확인
 
 ---
 

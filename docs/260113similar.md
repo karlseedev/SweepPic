@@ -58,22 +58,23 @@ for assetID in excludedAssetIDs {
 ### 3.1 인과관계 구조
 
 ```
-[근본 원인]
-assignPersonIndicesForGroup의 0.15 임계값
-→ 사람이 조금만 움직여도 위치 매칭 실패
-→ CachedFace에 저장되지 않음 (continue)
-→ photoFacesMap[assetID] = [] (빈 배열)
-
-        ↓
-
-[결과적 원인]
-빈 CachedFace를 가진 사진도 그룹 멤버로 포함됨
+[핵심 원인]
+그룹 멤버 필터링 누락
+→ 유효 슬롯 얼굴이 없는 사진도 그룹에 포함됨
 → inGroup: true로 설정
 → 그리드에서 테두리 표시
 → 뷰어에서 +버튼 없음 (validFaces가 비어있으므로)
+
+        ↑ (기여 요인)
+
+[기여 요인 - 추후 개선]
+assignPersonIndicesForGroup의 0.15 임계값
+→ 사람이 조금만 움직여도 위치 매칭 실패
+→ CachedFace에 저장되지 않음 (continue)
+→ photoFacesMap[assetID]가 빈 배열 또는 nil
 ```
 
-### 3.2 근본 원인: 위치 매칭 과도하게 엄격 (0.15 임계값)
+### 3.2 기여 요인: 위치 매칭 과도하게 엄격 (0.15 임계값) - 추후 개선
 
 **현재 구현** (`SimilarityAnalysisQueue.swift:362-384`):
 
@@ -106,7 +107,7 @@ private func assignPersonIndicesForGroup(...) -> [String: [CachedFace]] {
 - 멀쩡한 얼굴 데이터가 CachedFace에 저장되지 않음
 - 결과적으로 유효 슬롯 얼굴이 없는 것으로 판단됨
 
-### 3.3 결과적 원인: 그룹 멤버 필터링 누락
+### 3.3 핵심 원인: 그룹 멤버 필터링 누락
 
 **현재 구현** (`SimilarityAnalysisQueue.swift:222-228`):
 
@@ -148,14 +149,17 @@ validSlots = {1} (인물 1만 유효)
 
 ## 4. 수정 계획
 
-### 4.1 수정 우선순위
+### 4.1 수정 범위
 
-| 순서 | 문제 | 수정 내용 | 이유 |
-|------|------|-----------|------|
-| **1** | 0.15 임계값 | 매칭 실패 시 새 슬롯 생성 | 근본 원인 - 얼굴 데이터가 버려지는 문제 |
-| **2** | 그룹 멤버 필터링 | validMembers로 필터링 | 구조적 보완 - 여전히 얼굴 없는 사진 존재 가능 |
+| 구분 | 문제 | 수정 내용 | 적용 여부 |
+|------|------|-----------|-----------|
+| **핵심 수정** | 그룹 멤버 필터링 누락 | validMembers로 필터링 | ✅ 적용 |
+| 추후 개선 | 0.15 임계값 | 매칭 실패 시 새 슬롯 생성 | ⏸️ 보류 (Phase 7+) |
 
-### 4.2 수정 1: 위치 매칭 유연화 (근본 원인)
+> **결정 근거**: 핵심 수정만으로 "테두리 있는 사진 = +버튼 표시되는 사진" 일관성이 보장됩니다.
+> 0.15 임계값 수정은 인물 번호 혼란 등 부작용 위험이 있어 추후 검토합니다.
+
+### 4.2 참고: 위치 매칭 유연화 (보류 - Phase 7+)
 
 **수정 위치**: `SimilarityAnalysisQueue.swift` - `assignPersonIndicesForGroup`
 
@@ -185,7 +189,7 @@ cachedFaces.append(CachedFace(
 ))
 ```
 
-### 4.3 수정 2: 그룹 멤버 필터링 (결과적 원인)
+### 4.3 핵심 수정: 그룹 멤버 필터링
 
 **수정 위치**: `SimilarityAnalysisQueue.swift` - `formGroupsForRange`
 
@@ -227,15 +231,15 @@ for groupAssetIDs in rawGroups {
 
 **예시 (동일 케이스):**
 ```
-수정 1 적용 후:
-- D: 위치 매칭 실패해도 새 슬롯(인물 3)으로 CachedFace 저장
-- 하지만 인물 3은 1장뿐이므로 유효 슬롯 아님
+groupAssetIDs = [A, B, C, D, E]
+validSlots = {1}
 
-수정 2 적용 후:
-- validMembers = [A, B, C] (유효 슬롯 얼굴 있음)
-- excludedFromGroup = [D, E]
-- D, E → inGroup: false 설정 (테두리 미표시)
-- A, B, C → inGroup: true 설정 (테두리 표시)
+핵심 수정 적용 후:
+1. validMembers 필터링: [A, B, C] (유효 슬롯 얼굴 있음)
+2. excludedFromGroup = [D, E]
+3. D, E → inGroup: false 설정 (테두리 미표시)
+4. addGroupIfValid(members: [A,B,C], ...) 호출
+5. A, B, C → inGroup: true 설정 (테두리 표시)
 
 결과:
 - 그리드: A, B, C만 테두리 표시
@@ -250,10 +254,29 @@ for groupAssetIDs in rawGroups {
 | 케이스 | 상황 | 결과 |
 |--------|------|------|
 | 1 | validMembers 3장 이상 | 그룹 생성, excludedFromGroup은 inGroup:false |
-| 2 | validMembers 2장 | excludedFromGroup → inGroup:false, validMembers → addGroupIfValid 내부에서 inGroup:false |
-| 3 | validSlots 비어있음 | 모두 excludedFromGroup → inGroup:false |
+| 2 | validMembers 2장 | excludedFromGroup → inGroup:false, validMembers → **addGroupIfValid 내부에서 inGroup:false** |
+| 3 | validSlots 비어있음 | validMembers 비어있음 → **addGroupIfValid 내부에서 inGroup:false** |
 | 4 | 모든 사진이 유효 | excludedFromGroup 없음, 모두 그룹에 포함 |
-| 5 | 사람이 많이 움직인 연속 촬영 | 수정 1로 새 슬롯 생성, 유효 슬롯 판정은 정상 동작 |
+| 5 | 사람이 많이 움직인 연속 촬영 | 위치 매칭 실패 시 빈 CachedFace → validMembers에서 제외 → 일관성 유지 |
+
+### 5.1 addGroupIfValid 내부 안전장치
+
+`SimilarityCache.addGroupIfValid`는 조건 미충족 시 **내부에서 members를 정리**합니다:
+
+```swift
+// SimilarityCache.swift:197-206
+guard members.count >= SimilarityConstants.minGroupSize else {
+    // 조건 미충족 → 멤버들 analyzed(inGroup: false) 설정
+    for assetID in members {
+        setState(.analyzed(inGroup: false, groupID: nil), for: assetID)
+        // ... 얼굴 데이터도 저장
+    }
+    return nil
+}
+```
+
+따라서 **호출자(SimilarityAnalysisQueue)에서 별도 정리가 필요 없습니다.**
+테두리 잔류 위험 없음이 보장됩니다.
 
 ---
 
@@ -271,43 +294,54 @@ for groupAssetIDs in rawGroups {
 ## 7. 영향 범위
 
 ### 7.1 수정 파일
-- `SimilarityAnalysisQueue.swift` (1개 파일, 2곳 수정)
+- `SimilarityAnalysisQueue.swift` (1개 파일, 1곳 수정)
 
 ### 7.2 영향받는 기능
 - 그리드 테두리 표시 (유효 슬롯 얼굴 있는 사진만 표시됨)
 - 뷰어 +버튼 표시 (테두리 있는 사진은 항상 +버튼 표시됨)
-- 연속 촬영 시 위치 변화 대응 (새 슬롯 생성으로 얼굴 데이터 보존)
 
 ### 7.3 기대 효과
 - **일관성 보장**: 테두리 있는 사진 = +버튼 표시되는 사진
 - **사용자 경험 개선**: 테두리 클릭 시 항상 +버튼이 있어 얼굴 비교 가능
-- **연속 촬영 대응**: 사람이 움직여도 얼굴 데이터 유지
 
 ---
 
-## 8. 수정 2만 필요한 이유 (수정 1은 보류)
+## 8. 관련 이슈 현황 (docs/llm/6.md 참조)
 
-### 8.1 현재 상황 재분석
+docs/llm/6.md에서 식별된 4개 이슈 중 현재 문서는 "이슈 3: 뷰어에서 +버튼 미표시"에 집중합니다.
+다른 이슈들의 현재 상태는 아래와 같습니다.
 
-수정 1(위치 매칭 유연화)의 문제점:
-- 새 슬롯을 생성하면 인물 번호가 사진마다 달라질 수 있음
-- 예: A사진의 인물1, B사진의 인물2가 실제로는 같은 사람
-- 이는 얼굴 비교 화면에서 혼란을 야기할 수 있음
+| 이슈 | 설명 | 상태 | 비고 |
+|------|------|------|------|
+| 이슈 1 | iOS 26 그룹핑 실패 (Vision Revision) | ❌ 수정 필요 | `SimilarityAnalyzer.swift:92` revision 미지정 |
+| 이슈 2 | 휴지통 사진 분석 시도 | ✅ 수정 완료 | `viewerMode != .trash` 체크 존재 (385번 줄) |
+| 이슈 3 | 뷰어에서 +버튼 미표시 | ❌ 수정 필요 | **본 문서의 주제** |
+| 이슈 4 | FaceComparison UI 문제 | ✅ 수정 완료 | `safeAreaLayoutGuide` 적용 완료 |
 
-### 8.2 수정 2만으로 충분한 이유
+### 이슈 1 수정 방안 (Vision Revision)
 
-현재 문제의 핵심:
-- 테두리가 있는데 +버튼이 없는 불일치
-- 수정 2로 유효 슬롯 얼굴이 없는 사진을 그룹에서 제외하면 해결됨
+**수정 위치**: `SimilarityAnalyzer.swift` - `generateFeaturePrint` 메서드
 
-위치 매칭 실패한 사진:
-- CachedFace가 비어있음
-- 수정 2에서 validMembers 필터링 시 제외됨
-- 테두리 미표시 → 뷰어에서 +버튼 없어도 일관성 유지
+**현재 코드:**
+```swift
+let request = VNGenerateImageFeaturePrintRequest()
+```
 
-### 8.3 최종 결론
+**수정 코드:**
+```swift
+let request = VNGenerateImageFeaturePrintRequest()
+// iOS 버전별 Revision 명시적 지정 (iOS 26 호환성)
+if #available(iOS 17.0, *) {
+    request.revision = VNGenerateImageFeaturePrintRequestRevision2
+} else {
+    request.revision = VNGenerateImageFeaturePrintRequestRevision1
+}
+```
 
-**수정 2만 적용**하고, 수정 1은 추후 검토 (Phase 7+)
+**이유:**
+- iOS 버전에 따라 기본 revision이 달라짐
+- iOS 26의 기본 revision이 기존 임계값(0.5)과 호환되지 않는 거리 스케일을 가질 수 있음
+- 명시적 지정으로 일관된 동작 보장
 
 ---
 
