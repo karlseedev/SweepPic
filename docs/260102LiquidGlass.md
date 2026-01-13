@@ -21,15 +21,30 @@ iOS 16~25에서 사용하는 커스텀 UI (FloatingTabBar, FloatingTitleBar, Vie
 | 액션 버튼 아이콘 | 22pt | 22pt (유지) |
 | 백 버튼 아이콘 | 20pt | 20pt (유지) |
 | 버튼 배경 | 단색 반투명 (systemRed 90%) | 블러 배경 + tint |
-| 스펙큘러 하이라이트 | 없음 | 상단 10~20% 그라데이션 (alpha 0.08~0.12) |
-| 아이콘 대비 보정 | 없음 | 약한 아이콘 그림자 or vibrancy |
+| 스펙큘러 하이라이트 | 없음 | **버튼만 적용** - 상단 그라데이션 (alpha 0.12) |
+| 아이콘 대비 보정 | 없음 | **버튼만 적용** - 약한 아이콘 그림자 |
 
 ---
 
 ## 디자인 퀄리티 보강 (다크 테마 기준)
 
-- **스펙큘러 하이라이트**: 상단 10~20% 영역에 얇은 화이트 그라데이션을 얹어 유리 광택감 강조
-- **아이콘 대비**: 흰색 아이콘에 약한 그림자(blur 2~4, alpha 0.25~0.35) 추가
+### 적용 범위
+
+| 컴포넌트 | 스펙큘러 하이라이트 | 아이콘 그림자 |
+|---------|-------------------|--------------|
+| FloatingTabBar (바 자체) | ❌ 미적용 | - |
+| FloatingTitleBar (바 자체) | ❌ 미적용 | - |
+| 액션 버튼 (삭제/복구 등) | ✅ 적용 | ✅ 적용 |
+| 백 버튼 | ✅ 적용 | ✅ 적용 |
+| Select 버튼 | ✅ 적용 | ✅ 적용 |
+| Select 모드 Delete 버튼 | ✅ 적용 | ✅ 적용 |
+
+> **이유**: FloatingTabBar/TitleBar는 블러+테두리만으로 유리감이 충분하며, 스펙큘러 하이라이트까지 추가하면 과도해 보임
+
+### 세부 사항
+
+- **스펙큘러 하이라이트**: 버튼 상단 45% 영역에 얇은 화이트 그라데이션 (alpha 0.12→0.0)
+- **아이콘 대비**: 흰색 아이콘에 약한 그림자 (blur 3, alpha 0.35) + shadowPath 설정
 - **핵심 버튼 강조**: 중요 액션만 그림자/하이라이트를 약간 더 강하게 적용
 
 ---
@@ -120,52 +135,113 @@ dimmingAlpha = 0.3
 ```
 
 ### 2.3 Select 버튼 Glass 스타일
+
 ```swift
 // 현재
 config.baseBackgroundColor = UIColor.systemBlue.withAlphaComponent(0.3)
 config.cornerStyle = .capsule
 
-// 변경 → 블러 배경 + 연한 tint (캡슐 형태 유지)
-// UIVisualEffectView 기반 버튼으로 변경
-private func createGlassSelectButton() -> UIButton {
-    let button = UIButton(type: .custom)
+// 변경 → GlassButton 서브클래스 사용 (캡슐 형태 유지)
+```
 
-    // 버튼 높이 기준 캡슐 코너 (높이/2)
-    // layoutSubviews에서 동적으로 계산
-    override func layoutSubviews() {
-        super.layoutSubviews()
-        let capsuleRadius = bounds.height / 2
+#### GlassButton 서브클래스 (신규 파일: `GlassButton.swift`)
 
-        // 블러 배경
-        blurView.layer.cornerRadius = capsuleRadius
-        tintView.layer.cornerRadius = capsuleRadius
-        layer.cornerRadius = capsuleRadius
+```swift
+import UIKit
+
+/// Liquid Glass 스타일 버튼 (iOS 16~25용)
+/// - 블러 배경 + tint 오버레이 + 스펙큘러 하이라이트
+/// - layoutSubviews에서 cornerRadius/frame 자동 갱신
+final class GlassButton: UIButton {
+
+    // MARK: - Properties (레이어 참조 유지)
+    private let blurView: UIVisualEffectView
+    private let tintView: UIView
+    private var highlightLayer: CAGradientLayer?
+
+    private let tintColor: UIColor
+    private let useCapsuleStyle: Bool
+
+    // MARK: - Init
+    init(tintColor: UIColor, useCapsuleStyle: Bool = false) {
+        self.tintColor = tintColor
+        self.useCapsuleStyle = useCapsuleStyle
+
+        // 블러 배경 (cornerRadius는 layoutSubviews에서 설정)
+        let effect = UIBlurEffect(style: LiquidGlassStyle.blurStyle)
+        self.blurView = UIVisualEffectView(effect: effect)
+        blurView.isUserInteractionEnabled = false
+        blurView.clipsToBounds = true
+
+        // tint 오버레이
+        self.tintView = UIView()
+        tintView.backgroundColor = tintColor.withAlphaComponent(LiquidGlassStyle.tintAlpha)
+        tintView.isUserInteractionEnabled = false
+
+        super.init(frame: .zero)
+
+        setupViews()
     }
 
-    // 블러 배경 추가
-    let blurView = LiquidGlassStyle.createBlurView(cornerRadius: 0) // layoutSubviews에서 설정
-    blurView.autoresizingMask = [.flexibleWidth, .flexibleHeight]
-    blurView.frame = button.bounds
-    button.insertSubview(blurView, at: 0)
+    required init?(coder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
 
-    // tint 오버레이
-    let tintView = LiquidGlassStyle.createTintOverlay(color: .systemBlue, cornerRadius: 0)
-    tintView.autoresizingMask = [.flexibleWidth, .flexibleHeight]
-    tintView.frame = blurView.contentView.bounds
-    blurView.contentView.addSubview(tintView)
+    // MARK: - Setup
+    private func setupViews() {
+        // 블러 배경 추가
+        insertSubview(blurView, at: 0)
 
-    // 스펙큘러 하이라이트 (유리 광택감) - layoutSubviews에서 frame 업데이트 필요
-    LiquidGlassStyle.addSpecularHighlight(to: blurView.contentView, cornerRadius: 0)
+        // tint 오버레이 추가
+        blurView.contentView.addSubview(tintView)
 
-    // 테두리 (캡슐 형태)
-    button.layer.borderWidth = LiquidGlassStyle.borderWidth
-    button.layer.borderColor = UIColor.white.withAlphaComponent(LiquidGlassStyle.borderAlpha).cgColor
+        // 스펙큘러 하이라이트 (한 번만 생성, 참조 유지)
+        highlightLayer = LiquidGlassStyle.createSpecularHighlightLayer()
+        blurView.contentView.layer.addSublayer(highlightLayer!)
 
-    return button
+        // 테두리
+        layer.borderWidth = LiquidGlassStyle.borderWidth
+        layer.borderColor = UIColor.white.withAlphaComponent(LiquidGlassStyle.borderAlpha).cgColor
+    }
+
+    // MARK: - Layout (cornerRadius/frame 갱신)
+    override func layoutSubviews() {
+        super.layoutSubviews()
+
+        let cornerRadius = useCapsuleStyle ? bounds.height / 2 : LiquidGlassStyle.defaultCornerRadius
+
+        // 블러 뷰 frame + cornerRadius
+        blurView.frame = bounds
+        blurView.layer.cornerRadius = cornerRadius
+
+        // tint 뷰 frame + cornerRadius
+        tintView.frame = blurView.contentView.bounds
+        tintView.layer.cornerRadius = cornerRadius
+
+        // 하이라이트 레이어 frame + cornerRadius (기존 레이어 재사용)
+        highlightLayer?.frame = blurView.contentView.bounds
+        highlightLayer?.cornerRadius = cornerRadius
+
+        // 버튼 자체 cornerRadius
+        layer.cornerRadius = cornerRadius
+    }
 }
 ```
 
-> **Note**: Select 버튼은 캡슐 형태(`.cornerStyle = .capsule`)를 유지합니다. cornerRadius는 `bounds.height / 2`로 동적 계산됩니다.
+#### 사용 예시
+```swift
+// FloatingTitleBar에서 Select 버튼 생성
+private lazy var selectButton: GlassButton = {
+    let button = GlassButton(tintColor: .systemBlue, useCapsuleStyle: true)
+    button.setTitle("Select", for: .normal)
+    button.setTitleColor(.white, for: .normal)
+    button.titleLabel?.font = .systemFont(ofSize: 15, weight: .medium)
+    button.contentEdgeInsets = UIEdgeInsets(top: 8, left: 16, bottom: 8, right: 16)
+    return button
+}()
+```
+
+> **Note**: Select 버튼은 캡슐 형태(`useCapsuleStyle: true`)를 사용합니다. cornerRadius는 `layoutSubviews`에서 `bounds.height / 2`로 동적 계산됩니다.
 
 ---
 
@@ -305,7 +381,7 @@ config.baseBackgroundColor = UIColor.systemRed.withAlphaComponent(0.3)
 
 ## 스타일 상수 정리 (LiquidGlassStyle.swift 신규 파일)
 
-**경로**: `/Users/karl/Project/Photos/iOS/PickPhoto/PickPhoto/Shared/Styles/LiquidGlassStyle.swift`
+**경로**: `PickPhoto/PickPhoto/Shared/Styles/LiquidGlassStyle.swift`
 
 ```swift
 import UIKit
@@ -315,6 +391,9 @@ enum LiquidGlassStyle {
 
     // MARK: - Blur
     static let blurStyle: UIBlurEffect.Style = .systemUltraThinMaterialDark
+
+    // MARK: - Corner Radius
+    static let defaultCornerRadius: CGFloat = 18
 
     // MARK: - Border (Specular Highlight)
     static let borderWidth: CGFloat = 0.5
@@ -358,12 +437,20 @@ enum LiquidGlassStyle {
         layer.cornerRadius = cornerRadius
     }
 
-    /// Glass 스타일 그림자 적용
-    static func applyShadow(to layer: CALayer) {
+    /// Glass 스타일 그림자 적용 (원형 버튼용 shadowPath 포함)
+    static func applyShadow(to layer: CALayer, cornerRadius: CGFloat? = nil) {
         layer.shadowColor = UIColor.black.cgColor
         layer.shadowOpacity = shadowOpacity
         layer.shadowRadius = shadowRadius
         layer.shadowOffset = shadowOffset
+
+        // shadowPath 설정 (성능 최적화)
+        if let radius = cornerRadius, layer.bounds.width > 0 {
+            layer.shadowPath = UIBezierPath(
+                roundedRect: layer.bounds,
+                cornerRadius: radius
+            ).cgPath
+        }
     }
 
     /// Tint 오버레이 뷰 생성
@@ -382,9 +469,10 @@ enum LiquidGlassStyle {
     static let highlightBottomAlpha: CGFloat = 0.0
     static let highlightEndLocation: CGFloat = 0.45
 
-    /// 상단 스펙큘러 하이라이트 그라데이션 추가 (유리 광택감)
-    @discardableResult
-    static func addSpecularHighlight(to view: UIView, cornerRadius: CGFloat) -> CAGradientLayer {
+    /// 스펙큘러 하이라이트 레이어 생성 (재사용 가능)
+    /// - Note: 반환된 레이어를 프로퍼티에 보관하고 layoutSubviews에서 frame/cornerRadius 업데이트
+    /// - Warning: 이 메서드를 layoutSubviews에서 직접 호출하면 레이어가 누적됨!
+    static func createSpecularHighlightLayer() -> CAGradientLayer {
         let layer = CAGradientLayer()
         layer.colors = [
             UIColor.white.withAlphaComponent(highlightTopAlpha).cgColor,
@@ -393,12 +481,21 @@ enum LiquidGlassStyle {
         layer.locations = [0.0, NSNumber(value: Double(highlightEndLocation))]
         layer.startPoint = CGPoint(x: 0.5, y: 0.0)
         layer.endPoint = CGPoint(x: 0.5, y: 1.0)
-        layer.cornerRadius = cornerRadius
         layer.masksToBounds = true
-        layer.frame = view.bounds
-        // CALayer는 autoresizingMask 대신 layoutSubviews에서 frame 업데이트 필요
-        view.layer.addSublayer(layer)
         return layer
+    }
+
+    /// 스펙큘러 하이라이트 레이어 frame/cornerRadius 업데이트
+    /// - Parameter layer: createSpecularHighlightLayer()로 생성한 레이어
+    /// - Parameter bounds: 부모 뷰의 bounds
+    /// - Parameter cornerRadius: 적용할 cornerRadius
+    static func updateSpecularHighlightLayout(
+        layer: CAGradientLayer,
+        bounds: CGRect,
+        cornerRadius: CGFloat
+    ) {
+        layer.frame = bounds
+        layer.cornerRadius = cornerRadius
     }
 
     // MARK: - Icon Shadow (아이콘 대비 보정)
@@ -409,12 +506,48 @@ enum LiquidGlassStyle {
     static let iconShadowOffset = CGSize(width: 0, height: 1)
 
     /// 아이콘에 약한 그림자 적용 (반투명 배경에서 가독성 확보)
+    /// - Note: shadowPath는 이미지 변경 시마다 업데이트 필요하므로 생략
     static func applyIconShadow(to imageView: UIImageView) {
         imageView.layer.shadowColor = UIColor.black.cgColor
         imageView.layer.shadowOpacity = iconShadowOpacity
         imageView.layer.shadowRadius = iconShadowRadius
         imageView.layer.shadowOffset = iconShadowOffset
     }
+}
+```
+
+### 스펙큘러 하이라이트 사용 패턴 (중요)
+
+```swift
+// ✅ 올바른 사용: 한 번만 생성하고 참조 유지
+class MyGlassView: UIView {
+    private var highlightLayer: CAGradientLayer?
+
+    override init(frame: CGRect) {
+        super.init(frame: frame)
+        // 초기화 시 한 번만 생성
+        highlightLayer = LiquidGlassStyle.createSpecularHighlightLayer()
+        layer.addSublayer(highlightLayer!)
+    }
+
+    override func layoutSubviews() {
+        super.layoutSubviews()
+        // 레이아웃 시 frame/cornerRadius만 업데이트
+        if let highlightLayer = highlightLayer {
+            LiquidGlassStyle.updateSpecularHighlightLayout(
+                layer: highlightLayer,
+                bounds: bounds,
+                cornerRadius: layer.cornerRadius
+            )
+        }
+    }
+}
+
+// ❌ 잘못된 사용: layoutSubviews에서 매번 생성 → 레이어 누적!
+override func layoutSubviews() {
+    super.layoutSubviews()
+    // 이렇게 하면 안 됨!
+    LiquidGlassStyle.createSpecularHighlightLayer() // 매번 새 레이어 추가
 }
 ```
 
