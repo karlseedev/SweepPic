@@ -25,8 +25,6 @@ private enum SimilarPhotoAssociatedKeys {
     static var currentAnalysisRange: UInt8 = 0
     /// 분석 완료 옵저버
     static var analysisObserver: UInt8 = 0
-    /// 그룹 테두리 표시 중인 assetID 집합
-    static var borderedAssetIDs: UInt8 = 0
     /// 테두리 레이어 재사용 풀
     static var borderLayerPool: UInt8 = 0
     /// 삭제 옵저버 (그룹 무효화 처리용)
@@ -65,12 +63,6 @@ extension GridViewController {
         set { objc_setAssociatedObject(self, &SimilarPhotoAssociatedKeys.analysisObserver, newValue, .OBJC_ASSOCIATION_RETAIN_NONATOMIC) }
     }
 
-    /// 테두리 표시 중인 assetID 집합
-    private var borderedAssetIDs: Set<String> {
-        get { (objc_getAssociatedObject(self, &SimilarPhotoAssociatedKeys.borderedAssetIDs) as? Set<String>) ?? [] }
-        set { objc_setAssociatedObject(self, &SimilarPhotoAssociatedKeys.borderedAssetIDs, newValue, .OBJC_ASSOCIATION_RETAIN_NONATOMIC) }
-    }
-
     /// 테두리 레이어 재사용 풀
     private var borderLayerPool: [BorderAnimationLayer] {
         get { (objc_getAssociatedObject(self, &SimilarPhotoAssociatedKeys.borderLayerPool) as? [BorderAnimationLayer]) ?? [] }
@@ -103,15 +95,15 @@ extension GridViewController {
             self?.handleAnalysisComplete(notification)
         }
 
-        // 삭제 이벤트 알림 구독 (그룹 무효화 처리용)
-        // TrashStore의 onStateChange와 별개로, 분석 범위 내 삭제 감지용
+        // 앱 활성화 시 테두리 상태 갱신
+        // SimilarityCache가 Single Source of Truth이므로 UI만 갱신하면 됨
         trashObserver = NotificationCenter.default.addObserver(
             forName: UIApplication.didBecomeActiveNotification,
             object: nil,
             queue: .main
         ) { [weak self] _ in
-            // 앱 활성화 시 테두리 상태 검증
-            self?.validateBorderedCells()
+            // 앱 활성화 시 테두리 상태 갱신
+            self?.updateVisibleCellBorders()
         }
 
         print("[SimilarPhoto] Observer setup complete")
@@ -261,6 +253,7 @@ extension GridViewController {
     // MARK: - Analysis Complete Handler (T019)
 
     /// 분석 완료 알림 처리
+    /// - SimilarityCache가 이미 업데이트된 상태이므로 UI만 갱신
     /// - Parameter notification: 분석 완료 알림
     private func handleAnalysisComplete(_ notification: Notification) {
         guard let userInfo = notification.userInfo,
@@ -271,39 +264,20 @@ extension GridViewController {
 
         print("[SimilarPhoto] Received analysis complete - groups: \(groupIDs.count), assets: \(analyzedAssetIDs.count)")
 
-        // 그룹이 없으면 해당 범위 테두리 모두 제거
-        if groupIDs.isEmpty {
-            // 분석된 assetID들의 테두리 제거
-            for assetID in analyzedAssetIDs {
-                borderedAssetIDs.remove(assetID)
-            }
-            updateVisibleCellBorders()
-            return
-        }
-
-        // 그룹에 속한 assetID들에 테두리 표시
-        Task {
-            var newBorderedIDs = Set<String>()
-
-            for groupID in groupIDs {
-                let members = await SimilarityCache.shared.getGroupMembers(groupID: groupID)
-                newBorderedIDs.formUnion(members)
-            }
-
-            await MainActor.run {
-                // 기존 테두리와 병합 (분석 범위 외 기존 테두리 유지)
-                self.borderedAssetIDs.formUnion(newBorderedIDs)
-                self.updateVisibleCellBorders()
-            }
-        }
+        // SimilarityCache가 Single Source of Truth이므로 UI만 갱신
+        updateVisibleCellBorders()
     }
 
     // MARK: - Border Management (T021)
 
     /// 보이는 셀들의 테두리 상태 업데이트
+    /// - SimilarityCache를 Single Source of Truth로 사용하여 테두리 표시 여부 결정
     private func updateVisibleCellBorders() {
         let visibleIndexPaths = collectionView.indexPathsForVisibleItems
         let padding = paddingCellCount
+
+        // 보이는 셀들의 assetID와 cell 쌍 수집
+        var cellsToUpdate: [(assetID: String, cell: PhotoCell)] = []
 
         for indexPath in visibleIndexPaths {
             // padding 셀 제외
@@ -314,12 +288,22 @@ extension GridViewController {
             guard let assetID = dataSourceDriver.assetID(at: actualIndexPath) else { continue }
             guard let cell = collectionView.cellForItem(at: indexPath) as? PhotoCell else { continue }
 
-            if borderedAssetIDs.contains(assetID) {
-                // 테두리 표시
-                showBorder(on: cell)
-            } else {
-                // 테두리 제거
-                hideBorder(on: cell)
+            cellsToUpdate.append((assetID: assetID, cell: cell))
+        }
+
+        // SimilarityCache에서 각 셀의 그룹 상태 조회 후 테두리 업데이트
+        Task {
+            for (assetID, cell) in cellsToUpdate {
+                let state = await SimilarityCache.shared.getState(for: assetID)
+
+                await MainActor.run {
+                    // 그룹에 속한 경우에만 테두리 표시
+                    if case .analyzed(true, _) = state {
+                        self.showBorder(on: cell)
+                    } else {
+                        self.hideBorder(on: cell)
+                    }
+                }
             }
         }
     }
@@ -375,6 +359,7 @@ extension GridViewController {
     }
 
     /// 셀이 화면에 나타날 때 테두리 레이어 추가/갱신
+    /// - SimilarityCache를 Single Source of Truth로 사용하여 테두리 표시 여부 결정
     /// - Parameters:
     ///   - cell: 표시될 셀
     ///   - indexPath: 셀의 인덱스 경로
@@ -401,10 +386,18 @@ extension GridViewController {
             return
         }
 
-        if borderedAssetIDs.contains(assetID) {
-            showBorder(on: cell)
-        } else {
-            hideBorder(on: cell)
+        // SimilarityCache에서 그룹 상태 조회 후 테두리 업데이트
+        Task {
+            let state = await SimilarityCache.shared.getState(for: assetID)
+
+            await MainActor.run {
+                // 그룹에 속한 경우에만 테두리 표시
+                if case .analyzed(true, _) = state {
+                    self.showBorder(on: cell)
+                } else {
+                    self.hideBorder(on: cell)
+                }
+            }
         }
     }
 
@@ -417,54 +410,22 @@ extension GridViewController {
     // MARK: - Group Invalidation (T022)
 
     /// 삭제로 인한 그룹 무효화 처리
-    /// - 삭제 후 그룹 멤버 3장 미만 시 테두리 즉시 제거
+    /// - SimilarityCache를 Single Source of Truth로 사용
+    /// - 캐시에서 멤버 제거 후 UI 갱신
     /// - 삭제 후 즉시 재분석하지 않고 다음 스크롤 멈춤 시 자동 재분석
     func handleSimilarPhotoAssetDeleted(assetID: String) {
-        // 해당 assetID의 테두리 제거
-        borderedAssetIDs.remove(assetID)
-
         // 해당 assetID가 속한 그룹 확인 및 무효화 처리
         Task {
             let state = await SimilarityCache.shared.getState(for: assetID)
 
             if case .analyzed(true, let groupID?) = state {
-                // 그룹에서 멤버 제거
-                let isGroupStillValid = await SimilarityCache.shared.removeMemberFromGroup(assetID, groupID: groupID)
-
-                if !isGroupStillValid {
-                    // 그룹이 무효화됨 - 해당 그룹의 모든 멤버 테두리 제거
-                    await MainActor.run {
-                        // 그룹 멤버들의 테두리 상태 갱신 (그룹이 무효화되었으므로 제거)
-                        // 실제로는 SimilarityCache.invalidateGroup에서 처리됨
-                        self.updateVisibleCellBorders()
-                    }
-                }
-            }
-        }
-    }
-
-    /// 테두리 표시 중인 셀들의 유효성 검증
-    /// - 그룹이 무효화된 셀의 테두리 제거
-    private func validateBorderedCells() {
-        Task {
-            var invalidAssetIDs = Set<String>()
-
-            for assetID in borderedAssetIDs {
-                let state = await SimilarityCache.shared.getState(for: assetID)
-
-                // 그룹에 속하지 않으면 테두리 제거 대상
-                if case .analyzed(false, _) = state {
-                    invalidAssetIDs.insert(assetID)
-                } else if case .notAnalyzed = state {
-                    invalidAssetIDs.insert(assetID)
-                }
+                // 그룹에서 멤버 제거 (3장 미만 시 자동 무효화됨)
+                await SimilarityCache.shared.removeMemberFromGroup(assetID, groupID: groupID)
             }
 
-            if !invalidAssetIDs.isEmpty {
-                await MainActor.run {
-                    self.borderedAssetIDs.subtract(invalidAssetIDs)
-                    self.updateVisibleCellBorders()
-                }
+            // SimilarityCache가 Single Source of Truth이므로 UI만 갱신
+            await MainActor.run {
+                self.updateVisibleCellBorders()
             }
         }
     }
