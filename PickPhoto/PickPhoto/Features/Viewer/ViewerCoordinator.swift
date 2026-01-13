@@ -233,11 +233,19 @@ final class ViewerCoordinator: ViewerCoordinatorProtocol {
         let trashedIDs = trashStore.trashedAssetIDs
         let totalOriginal = _fetchResult.count
 
+        // [최적화] .normal 모드에서는 휴지통 사진도 표시 (그리드와 일관성)
+        // O(n) 스캔 스킵 - identity 매핑으로 모든 사진 포함
+        if viewerMode == .normal {
+            indexMapping = .identity(totalOriginal: totalOriginal)
+            logRebuildComplete(startTime, totalOriginal, trashedIDs.count)
+            return
+        }
+
+        // 이하 .trash 모드 전용 로직
+
         // 휴지통 비어있으면 빠른 경로
         if trashedIDs.isEmpty {
-            indexMapping = (viewerMode == .trash)
-                ? .trash(originalIndices: [])
-                : .identity(totalOriginal: totalOriginal)
+            indexMapping = .trash(originalIndices: [])
             logRebuildComplete(startTime, totalOriginal, trashedIDs.count)
             return
         }
@@ -252,20 +260,11 @@ final class ViewerCoordinator: ViewerCoordinatorProtocol {
             }
         }
 
-        switch viewerMode {
-        case .normal:
-            // 제외 인덱스 = matchedIndices (휴지통에 있는 사진 제외)
-            indexMapping = matchedIndices.isEmpty
-                ? .identity(totalOriginal: totalOriginal)
-                : .normal(totalOriginal: totalOriginal, excludedOriginalIndices: matchedIndices)
-
-        case .trash:
-            // 전부 휴지통이면 identity, 일부만이면 trash 인덱스
-            if matchedIndices.count == totalOriginal {
-                indexMapping = .identity(totalOriginal: totalOriginal)
-            } else {
-                indexMapping = .trash(originalIndices: matchedIndices)
-            }
+        // 전부 휴지통이면 identity, 일부만이면 trash 인덱스
+        if matchedIndices.count == totalOriginal {
+            indexMapping = .identity(totalOriginal: totalOriginal)
+        } else {
+            indexMapping = .trash(originalIndices: matchedIndices)
         }
 
         logRebuildComplete(startTime, totalOriginal, trashedIDs.count)

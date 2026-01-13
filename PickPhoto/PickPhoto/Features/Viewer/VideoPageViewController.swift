@@ -109,11 +109,29 @@ final class VideoPageViewController: UIViewController {
         return gesture
     }()
 
+    // MARK: - Trashed Border (휴지통 사진 표시)
+
+    /// 휴지통 테두리 표시 여부 (보관함/앨범 뷰어에서만 true)
+    private var showTrashedBorder: Bool = false
+
+    /// 휴지통 테두리 오버레이 (마룬 10pt 테두리)
+    private lazy var trashedBorderOverlay: TrashedBorderOverlay = {
+        let overlay = TrashedBorderOverlay()
+        overlay.translatesAutoresizingMaskIntoConstraints = false
+        return overlay
+    }()
+
     // MARK: - Initialization
 
-    init(asset: PHAsset, index: Int) {
+    /// 초기화
+    /// - Parameters:
+    ///   - asset: 표시할 PHAsset
+    ///   - index: 인덱스
+    ///   - showTrashedBorder: 휴지통 테두리 표시 여부 (기본값 false)
+    init(asset: PHAsset, index: Int, showTrashedBorder: Bool = false) {
         self.asset = asset
         self.index = index
+        self.showTrashedBorder = showTrashedBorder
         super.init(nibName: nil, bundle: nil)
     }
 
@@ -205,6 +223,27 @@ final class VideoPageViewController: UIViewController {
             controlsOverlay.trailingAnchor.constraint(equalTo: view.trailingAnchor),
             controlsOverlay.bottomAnchor.constraint(equalTo: view.bottomAnchor)
         ])
+
+        // 휴지통 테두리 오버레이 (컨트롤 오버레이 위에 배치)
+        view.addSubview(trashedBorderOverlay)
+        NSLayoutConstraint.activate([
+            trashedBorderOverlay.topAnchor.constraint(equalTo: view.topAnchor),
+            trashedBorderOverlay.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+            trashedBorderOverlay.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+            trashedBorderOverlay.bottomAnchor.constraint(equalTo: view.bottomAnchor)
+        ])
+
+        // 초기 테두리 표시 상태 설정
+        trashedBorderOverlay.setVisible(showTrashedBorder, animated: false)
+    }
+
+    // MARK: - Public API (Trashed State)
+
+    /// 휴지통 상태 업데이트 (복구 시 테두리 즉시 제거용)
+    /// - Parameter isTrashed: 휴지통 상태 여부
+    func updateTrashedState(isTrashed: Bool) {
+        showTrashedBorder = isTrashed
+        trashedBorderOverlay.setVisible(isTrashed, animated: true)
     }
 
     /// 제스처 설정

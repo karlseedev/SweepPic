@@ -915,11 +915,9 @@ extension GridViewController: UICollectionViewDelegate {
 
         guard let fetchResult = dataSourceDriver.fetchResult else { return }
 
-        // 휴지통 사진인지 확인
-        let isTrashed = dataSourceDriver.assetID(at: assetIndexPath).flatMap { trashStore.isTrashed($0) } ?? false
-
-        // 뷰어 모드 결정 (휴지통 사진은 trash 모드)
-        let mode: ViewerMode = isTrashed ? .trash : .normal
+        // [수정] 보관함에서는 항상 .normal 모드로 뷰어 열기
+        // 휴지통 사진도 마룬 테두리와 함께 표시되고, 복구 버튼이 표시됨
+        let mode: ViewerMode = .normal
 
         let t1 = CACurrentMediaTime()
 

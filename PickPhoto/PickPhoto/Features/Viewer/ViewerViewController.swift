@@ -285,6 +285,10 @@ final class ViewerViewController: UIViewController {
         if #available(iOS 26.0, *) {
             setupSystemUIIfNeeded()
         }
+
+        // 초기 버튼 상태 설정 (현재 사진의 휴지통 상태에 따라)
+        // iOS 26에서는 setupSystemUIIfNeeded() 이후에 호출해야 함
+        updateToolbarForCurrentPhoto()
     }
 
     override func viewDidAppear(_ animated: Bool) {
@@ -381,7 +385,7 @@ final class ViewerViewController: UIViewController {
     private func setupActionButtons() {
         switch viewerMode {
         case .normal:
-            // 삭제 버튼
+            // 삭제 버튼 (중앙)
             view.addSubview(deleteButton)
             NSLayoutConstraint.activate([
                 deleteButton.centerXAnchor.constraint(equalTo: view.centerXAnchor),
@@ -389,6 +393,18 @@ final class ViewerViewController: UIViewController {
                 deleteButton.widthAnchor.constraint(equalToConstant: Self.deleteButtonSize),
                 deleteButton.heightAnchor.constraint(equalToConstant: Self.deleteButtonSize)
             ])
+
+            // 복구 버튼 (중앙 - 삭제 버튼과 같은 위치, 휴지통 사진일 때 표시)
+            view.addSubview(restoreButton)
+            NSLayoutConstraint.activate([
+                restoreButton.centerXAnchor.constraint(equalTo: view.centerXAnchor),
+                restoreButton.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor, constant: -Self.deleteButtonBottomMargin),
+                restoreButton.widthAnchor.constraint(equalToConstant: Self.deleteButtonSize),
+                restoreButton.heightAnchor.constraint(equalToConstant: Self.deleteButtonSize)
+            ])
+
+            // 초기 상태: 삭제 버튼만 표시, 복구 버튼은 숨김
+            restoreButton.isHidden = true
 
         case .trash:
             // 복구 버튼 (왼쪽)
@@ -468,9 +484,14 @@ final class ViewerViewController: UIViewController {
 
         // 다음 사진으로 이동 (이전 사진 우선 규칙)
         moveToNextAfterDelete()
+
+        // 이동 후 버튼 상태 업데이트 (다음 사진이 휴지통일 수 있음)
+        updateToolbarForCurrentPhoto()
     }
 
-    /// 복구 버튼 탭 (휴지통 모드)
+    /// 복구 버튼 탭
+    /// - .trash 모드: 다음 사진으로 이동 (목록에서 사라짐)
+    /// - .normal 모드: 제자리 유지, 테두리 제거 + 버튼 교체
     @objc private func restoreButtonTapped() {
         guard let assetID = coordinator.assetID(at: currentIndex) else { return }
 
@@ -481,8 +502,14 @@ final class ViewerViewController: UIViewController {
         // 복구 요청
         delegate?.viewerDidRequestRestore(assetID: assetID)
 
-        // 다음 사진으로 이동
-        moveToNextAfterDelete()
+        if viewerMode == .trash {
+            // .trash 모드: 다음 사진으로 이동 (목록에서 사라짐)
+            moveToNextAfterDelete()
+        } else {
+            // .normal 모드: 제자리에서 UI만 업데이트
+            updateCurrentPageTrashedState(isTrashed: false)
+            updateToolbarForCurrentPhoto()
+        }
     }
 
     /// 완전삭제 버튼 탭 (휴지통 모드)
@@ -524,6 +551,9 @@ final class ViewerViewController: UIViewController {
 
         // 다음 사진으로 이동
         moveToNextAfterDelete()
+
+        // 이동 후 버튼 상태 업데이트 (다음 사진이 휴지통일 수 있음)
+        updateToolbarForCurrentPhoto()
     }
 
     /// 삭제 후 다음 사진으로 이동
@@ -748,6 +778,68 @@ final class ViewerViewController: UIViewController {
         toolbarItems = [restoreItem, flexSpace, permanentDeleteItem]
     }
 
+    /// iOS 26+ 툴바 동적 교체 (현재 사진의 휴지통 상태에 따라)
+    @available(iOS 26.0, *)
+    private func updateToolbarItemsForCurrentPhoto() {
+        // .normal 모드에서만 동적 교체 필요
+        guard viewerMode == .normal else { return }
+
+        // nil guard: setupSystemUIIfNeeded() 이전 호출 방지
+        guard toolbarDeleteItem != nil else { return }
+
+        let isTrashed = coordinator.isTrashed(at: currentIndex)
+        let flexSpace = UIBarButtonItem(systemItem: .flexibleSpace)
+
+        if isTrashed {
+            // 휴지통 사진: 복구 버튼만 (중앙 배치)
+            let restoreItem = UIBarButtonItem(
+                title: "복구",
+                primaryAction: UIAction { [weak self] _ in
+                    self?.restoreButtonTapped()
+                }
+            )
+            restoreItem.tintColor = .systemGreen
+            toolbarItems = [flexSpace, restoreItem, flexSpace]
+        } else {
+            // 일반 사진: 삭제 버튼만 (중앙 배치)
+            toolbarItems = [flexSpace, toolbarDeleteItem!, flexSpace]
+        }
+    }
+
+    // MARK: - Toolbar State Management
+
+    /// 현재 사진의 휴지통 상태에 따라 버튼/툴바 업데이트
+    /// - 호출 시점: viewWillAppear, 스와이프 탐색 후, 삭제/복구 후
+    private func updateToolbarForCurrentPhoto() {
+        // .normal 모드에서만 동적 교체 필요
+        guard viewerMode == .normal else { return }
+
+        let isTrashed = coordinator.isTrashed(at: currentIndex)
+
+        // iOS 16~25: 커스텀 버튼 토글
+        if !useSystemUI {
+            deleteButton.isHidden = isTrashed
+            restoreButton.isHidden = !isTrashed
+        }
+
+        // iOS 26+: 시스템 툴바 교체
+        if #available(iOS 26.0, *) {
+            updateToolbarItemsForCurrentPhoto()
+        }
+    }
+
+    /// 현재 페이지의 휴지통 테두리 즉시 업데이트
+    /// - Parameter isTrashed: 휴지통 상태 여부
+    private func updateCurrentPageTrashedState(isTrashed: Bool) {
+        guard let currentVC = pageViewController.viewControllers?.first else { return }
+
+        if let photoVC = currentVC as? PhotoPageViewController {
+            photoVC.updateTrashedState(isTrashed: isTrashed)
+        } else if let videoVC = currentVC as? VideoPageViewController {
+            videoVC.updateTrashedState(isTrashed: isTrashed)
+        }
+    }
+
     /// 뷰어 닫기 (Push → Pop, iOS 버전별 경로 통일)
     private func dismissViewer() {
         if #available(iOS 26.0, *) {
@@ -767,13 +859,16 @@ final class ViewerViewController: UIViewController {
     private func createPageViewController(at index: Int) -> UIViewController? {
         guard let asset = coordinator.asset(at: index) else { return nil }
 
+        // 보관함(.normal)에서만 테두리 표시, 휴지통 탭에서는 표시 안 함
+        let showTrashedBorder = (viewerMode == .normal) && coordinator.isTrashed(at: index)
+
         switch asset.mediaType {
         case .video:
             // 동영상: VideoPageViewController
-            return VideoPageViewController(asset: asset, index: index)
+            return VideoPageViewController(asset: asset, index: index, showTrashedBorder: showTrashedBorder)
         default:
             // 사진/기타: PhotoPageViewController
-            return PhotoPageViewController(asset: asset, index: index)
+            return PhotoPageViewController(asset: asset, index: index, showTrashedBorder: showTrashedBorder)
         }
     }
 
@@ -917,6 +1012,9 @@ extension ViewerViewController: UIPageViewControllerDelegate {
 
         // T026: 유사 사진 오버레이 업데이트 (스와이프로 다른 사진 이동 시)
         updateSimilarPhotoOverlay()
+
+        // 스와이프 탐색 후 버튼 상태 업데이트 (다음 사진이 휴지통일 수 있음)
+        updateToolbarForCurrentPhoto()
     }
 
     /// LOD1 요청 스케줄링 (150ms 디바운스)

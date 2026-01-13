@@ -123,17 +123,35 @@ final class PhotoPageViewController: UIViewController {
     /// 초기 레이아웃 정보 로그 여부 (로그 스팸 방지)
     private var hasLoggedInitialLayoutInfo = false
 
+    // MARK: - Trashed Border (휴지통 사진 표시)
+
+    /// 휴지통 테두리 표시 여부 (보관함/앨범 뷰어에서만 true)
+    private var showTrashedBorder: Bool = false
+
+    /// 휴지통 테두리 오버레이 (마룬 10pt 테두리)
+    private lazy var trashedBorderOverlay: TrashedBorderOverlay = {
+        let overlay = TrashedBorderOverlay()
+        overlay.translatesAutoresizingMaskIntoConstraints = false
+        return overlay
+    }()
+
     // MARK: - Initialization
 
     /// 페이지 생성 시점 (타임라인 비교용)
     private var createdAt: CFTimeInterval = 0
 
-    init(asset: PHAsset, index: Int) {
+    /// 초기화
+    /// - Parameters:
+    ///   - asset: 표시할 PHAsset
+    ///   - index: 인덱스
+    ///   - showTrashedBorder: 휴지통 테두리 표시 여부 (기본값 false)
+    init(asset: PHAsset, index: Int, showTrashedBorder: Bool = false) {
         self.asset = asset
         self.index = index
+        self.showTrashedBorder = showTrashedBorder
         super.init(nibName: nil, bundle: nil)
         createdAt = CACurrentMediaTime()
-        print("[Photo] 🆕 init - index: \(index), t=\(String(format: "%.3f", createdAt))")
+        print("[Photo] 🆕 init - index: \(index), showTrashedBorder: \(showTrashedBorder), t=\(String(format: "%.3f", createdAt))")
     }
 
     required init?(coder: NSCoder) {
@@ -251,6 +269,27 @@ final class PhotoPageViewController: UIViewController {
 
         // 더블탭 제스처
         scrollView.addGestureRecognizer(doubleTapGesture)
+
+        // 휴지통 테두리 오버레이 (스크롤뷰 위에 배치, Auto Layout)
+        view.addSubview(trashedBorderOverlay)
+        NSLayoutConstraint.activate([
+            trashedBorderOverlay.topAnchor.constraint(equalTo: view.topAnchor),
+            trashedBorderOverlay.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+            trashedBorderOverlay.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+            trashedBorderOverlay.bottomAnchor.constraint(equalTo: view.bottomAnchor)
+        ])
+
+        // 초기 테두리 표시 상태 설정
+        trashedBorderOverlay.setVisible(showTrashedBorder, animated: false)
+    }
+
+    // MARK: - Public API (Trashed State)
+
+    /// 휴지통 상태 업데이트 (복구 시 테두리 즉시 제거용)
+    /// - Parameter isTrashed: 휴지통 상태 여부
+    func updateTrashedState(isTrashed: Bool) {
+        showTrashedBorder = isTrashed
+        trashedBorderOverlay.setVisible(isTrashed, animated: true)
     }
 
     // MARK: - Phase 1: Early Layout & LOD0

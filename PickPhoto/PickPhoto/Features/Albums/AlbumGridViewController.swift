@@ -635,11 +635,10 @@ extension AlbumGridViewController: UICollectionViewDelegate {
 
         // 실제 에셋 인덱스 계산
         let assetIndex = indexPath.item - padding
-        let asset = fetchResult.object(at: assetIndex)
-        let isTrashed = trashStore.isTrashed(asset.localIdentifier)
 
-        // 뷰어 모드 결정
-        let mode: ViewerMode = isTrashed ? .trash : .normal
+        // [수정] 앨범에서도 항상 .normal 모드로 뷰어 열기
+        // 보관함과 동일하게 휴지통 사진도 마룬 테두리와 함께 표시되고, 복구 버튼이 표시됨
+        let mode: ViewerMode = .normal
 
         // 뷰어 코디네이터 생성
         let coordinator = ViewerCoordinator(
