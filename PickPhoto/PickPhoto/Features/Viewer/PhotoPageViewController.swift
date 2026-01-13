@@ -132,15 +132,17 @@ final class PhotoPageViewController: UIViewController {
     /// - 휴지통 사진은 좌우 그라데이션 배경으로 표시됨 (블랙 → 마룬 → 블랙)
     private var showTrashedBackground: Bool = false
 
-    /// 휴지통 그라데이션 레이어 (좌우: 블랙 → 마룬 → 블랙)
+    /// 휴지통 그라데이션 레이어 (좌우: 블랙 → 마룬 → 마룬 → 블랙)
+    /// 0%: 블랙, 35%: 마룬, 65%: 마룬, 100%: 블랙
     private lazy var trashedGradientLayer: CAGradientLayer = {
         let layer = CAGradientLayer()
         layer.colors = [
             UIColor.black.cgColor,
             Self.maroonBackgroundColor.cgColor,
+            Self.maroonBackgroundColor.cgColor,
             UIColor.black.cgColor
         ]
-        layer.locations = [0.0, 0.5, 1.0]
+        layer.locations = [0.0, 0.35, 0.65, 1.0]
         layer.startPoint = CGPoint(x: 0, y: 0.5)  // 좌측 중앙
         layer.endPoint = CGPoint(x: 1, y: 0.5)    // 우측 중앙
         return layer
