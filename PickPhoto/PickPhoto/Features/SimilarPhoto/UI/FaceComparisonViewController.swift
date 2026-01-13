@@ -313,7 +313,16 @@ final class FaceComparisonViewController: UIViewController {
         // 타이틀
         updateNavigationTitle()
 
-        // 순환 버튼 (우측)
+        // 디버그 버튼 (순환 버튼 왼쪽)
+        let debugButton = UIBarButtonItem(
+            image: UIImage(systemName: "ladybug"),
+            style: .plain,
+            target: self,
+            action: #selector(debugButtonTapped)
+        )
+        debugButton.tintColor = .systemOrange
+
+        // 순환 버튼 (우측 끝)
         let cycleButton = UIBarButtonItem(
             image: UIImage(systemName: "arrow.trianglehead.2.clockwise.rotate.90"),
             style: .plain,
@@ -321,7 +330,9 @@ final class FaceComparisonViewController: UIViewController {
             action: #selector(cycleButtonTapped)
         )
         cycleButton.tintColor = .white
-        navigationItem.rightBarButtonItem = cycleButton
+
+        // 순서: [디버그, 순환] (우측부터 역순으로 배치됨)
+        navigationItem.rightBarButtonItems = [cycleButton, debugButton]
     }
 
     /// 하단바 설정
@@ -499,6 +510,116 @@ final class FaceComparisonViewController: UIViewController {
         // UI 갱신 (선택 상태 유지)
         updateTitleBar()
         collectionView.reloadData()
+    }
+
+    /// 디버그 버튼 탭
+    /// 현재 그룹의 상세 정보를 JSON으로 콘솔에 출력합니다.
+    @objc private func debugButtonTapped() {
+        print("[FaceComparisonViewController] Debug button tapped")
+
+        Task { @MainActor in
+            let debugInfo = await generateDebugInfo()
+            printDebugInfo(debugInfo)
+        }
+    }
+
+    // MARK: - Debug Info Generation
+
+    /// 디버그 정보를 생성합니다.
+    /// 현재 그룹의 모든 사진과 얼굴 정보, 매칭 거리값을 수집합니다.
+    private func generateDebugInfo() async -> FaceDebugInfo {
+        let groupID = comparisonGroup.sourceGroupID
+        let allAssetIDs = comparisonGroup.selectedAssetIDs
+
+        // 기준 슬롯 정보 수집 (첫 번째 사진의 얼굴 위치)
+        var referenceSlots: [FaceDebugSlot] = []
+        var photoDebugInfos: [PhotoDebugInfo] = []
+
+        // 첫 번째 얼굴이 있는 사진 찾아서 기준 슬롯 설정
+        for assetID in allAssetIDs {
+            let faces = await SimilarityCache.shared.getFaces(for: assetID)
+            if !faces.isEmpty {
+                // 위치 기준 정렬 (X 오름차순, Y 내림차순)
+                let sorted = faces.sorted { f1, f2 in
+                    let xDiff = abs(f1.boundingBox.origin.x - f2.boundingBox.origin.x)
+                    if xDiff > 0.05 {
+                        return f1.boundingBox.origin.x < f2.boundingBox.origin.x
+                    } else {
+                        return f1.boundingBox.origin.y > f2.boundingBox.origin.y
+                    }
+                }
+
+                for (idx, face) in sorted.enumerated() {
+                    referenceSlots.append(FaceDebugSlot(
+                        personIndex: idx + 1,
+                        x: face.boundingBox.midX,
+                        y: face.boundingBox.midY
+                    ))
+                }
+                break
+            }
+        }
+
+        // 각 사진의 얼굴 정보 수집
+        for assetID in allAssetIDs {
+            let faces = await SimilarityCache.shared.getFaces(for: assetID)
+
+            var faceDebugInfos: [FaceDebugEntry] = []
+            for face in faces {
+                // 기준 슬롯과의 거리 계산
+                let faceCenter = CGPoint(x: face.boundingBox.midX, y: face.boundingBox.midY)
+                var matchDistance: CGFloat = -1
+
+                for slot in referenceSlots where slot.personIndex == face.personIndex {
+                    let slotCenter = CGPoint(x: slot.x, y: slot.y)
+                    matchDistance = hypot(faceCenter.x - slotCenter.x, faceCenter.y - slotCenter.y)
+                    break
+                }
+
+                faceDebugInfos.append(FaceDebugEntry(
+                    personIndex: face.personIndex,
+                    isValidSlot: face.isValidSlot,
+                    x: face.boundingBox.origin.x,
+                    y: face.boundingBox.origin.y,
+                    width: face.boundingBox.width,
+                    height: face.boundingBox.height,
+                    matchDistance: matchDistance
+                ))
+            }
+
+            photoDebugInfos.append(PhotoDebugInfo(
+                assetID: assetID,
+                faces: faceDebugInfos
+            ))
+        }
+
+        return FaceDebugInfo(
+            groupID: groupID,
+            currentPersonIndex: currentPersonIndex,
+            validPersonIndices: validPersonIndices,
+            positionThreshold: 0.15,
+            referenceSlots: referenceSlots,
+            photos: photoDebugInfos
+        )
+    }
+
+    /// 디버그 정보를 콘솔에 출력합니다.
+    private func printDebugInfo(_ info: FaceDebugInfo) {
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+
+        do {
+            let jsonData = try encoder.encode(info)
+            if let jsonString = String(data: jsonData, encoding: .utf8) {
+                print("")
+                print("========== FACE DEBUG START ==========")
+                print(jsonString)
+                print("========== FACE DEBUG END ==========")
+                print("")
+            }
+        } catch {
+            print("[FaceComparisonViewController] Failed to encode debug info: \(error)")
+        }
     }
 }
 
@@ -685,6 +806,10 @@ extension FaceComparisonViewController: FaceComparisonTitleBarDelegate {
 
     func faceComparisonTitleBarDidTapClose(_ titleBar: FaceComparisonTitleBar) {
         cancelButtonTapped()
+    }
+
+    func faceComparisonTitleBarDidTapDebug(_ titleBar: FaceComparisonTitleBar) {
+        debugButtonTapped()
     }
 }
 
@@ -878,6 +1003,7 @@ final class FaceComparisonHeaderView: UICollectionReusableView {
 protocol FaceComparisonTitleBarDelegate: AnyObject {
     func faceComparisonTitleBarDidTapCycle(_ titleBar: FaceComparisonTitleBar)
     func faceComparisonTitleBarDidTapClose(_ titleBar: FaceComparisonTitleBar)
+    func faceComparisonTitleBarDidTapDebug(_ titleBar: FaceComparisonTitleBar)
 }
 
 final class FaceComparisonTitleBar: UIView {
@@ -920,6 +1046,17 @@ final class FaceComparisonTitleBar: UIView {
         return label
     }()
 
+    /// 디버그 버튼 (cycleButton 왼쪽)
+    private lazy var debugButton: UIButton = {
+        var config = UIButton.Configuration.plain()
+        config.image = UIImage(systemName: "ladybug")
+        config.baseForegroundColor = .systemOrange
+        let button = UIButton(configuration: config)
+        button.addTarget(self, action: #selector(debugButtonTapped), for: .touchUpInside)
+        button.translatesAutoresizingMaskIntoConstraints = false
+        return button
+    }()
+
     private lazy var cycleButton: UIButton = {
         var config = UIButton.Configuration.plain()
         config.image = UIImage(systemName: "arrow.trianglehead.2.clockwise.rotate.90")
@@ -948,6 +1085,7 @@ final class FaceComparisonTitleBar: UIView {
         addSubview(contentView)
         contentView.addSubview(closeButton)
         contentView.addSubview(titleLabel)
+        contentView.addSubview(debugButton)
         contentView.addSubview(cycleButton)
 
         NSLayoutConstraint.activate([
@@ -967,6 +1105,10 @@ final class FaceComparisonTitleBar: UIView {
             titleLabel.centerXAnchor.constraint(equalTo: contentView.centerXAnchor),
             titleLabel.centerYAnchor.constraint(equalTo: contentView.centerYAnchor),
 
+            // 디버그 버튼: cycleButton 왼쪽에 배치
+            debugButton.trailingAnchor.constraint(equalTo: cycleButton.leadingAnchor, constant: -8),
+            debugButton.centerYAnchor.constraint(equalTo: contentView.centerYAnchor),
+
             cycleButton.trailingAnchor.constraint(equalTo: contentView.trailingAnchor),
             cycleButton.centerYAnchor.constraint(equalTo: contentView.centerYAnchor)
         ])
@@ -984,7 +1126,65 @@ final class FaceComparisonTitleBar: UIView {
         delegate?.faceComparisonTitleBarDidTapClose(self)
     }
 
+    @objc private func debugButtonTapped() {
+        delegate?.faceComparisonTitleBarDidTapDebug(self)
+    }
+
     @objc private func cycleButtonTapped() {
         delegate?.faceComparisonTitleBarDidTapCycle(self)
     }
+}
+
+// MARK: - Debug Info Structures
+
+/// 얼굴 디버그 정보 (전체)
+struct FaceDebugInfo: Codable {
+    /// 그룹 ID
+    let groupID: String
+    /// 현재 표시 중인 인물 번호
+    let currentPersonIndex: Int
+    /// 유효 인물 번호 목록
+    let validPersonIndices: [Int]
+    /// 위치 매칭 임계값 (0.15)
+    let positionThreshold: Double
+    /// 기준 슬롯 정보 (첫 번째 사진의 얼굴 위치)
+    let referenceSlots: [FaceDebugSlot]
+    /// 사진별 얼굴 정보
+    let photos: [PhotoDebugInfo]
+}
+
+/// 기준 슬롯 정보
+struct FaceDebugSlot: Codable {
+    /// 인물 번호
+    let personIndex: Int
+    /// 중심 X 좌표 (정규화)
+    let x: CGFloat
+    /// 중심 Y 좌표 (정규화)
+    let y: CGFloat
+}
+
+/// 사진별 디버그 정보
+struct PhotoDebugInfo: Codable {
+    /// 사진 ID
+    let assetID: String
+    /// 얼굴 목록
+    let faces: [FaceDebugEntry]
+}
+
+/// 얼굴 디버그 정보
+struct FaceDebugEntry: Codable {
+    /// 할당된 인물 번호
+    let personIndex: Int
+    /// 유효 슬롯 여부
+    let isValidSlot: Bool
+    /// bounding box X (정규화)
+    let x: CGFloat
+    /// bounding box Y (정규화)
+    let y: CGFloat
+    /// bounding box 너비 (정규화)
+    let width: CGFloat
+    /// bounding box 높이 (정규화)
+    let height: CGFloat
+    /// 기준 슬롯과의 거리 (-1이면 매칭된 슬롯 없음)
+    let matchDistance: CGFloat
 }
