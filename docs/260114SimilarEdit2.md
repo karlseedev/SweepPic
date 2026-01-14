@@ -1,94 +1,96 @@
-# 얼굴 매칭 로직 심층 분석 및 개선 설계 (Ultimate)
+# 얼굴 매칭 로직 심층 분석 및 개선 설계 (Ultimate v6)
 
-## 1. 현황 및 핵심 문제점 분석 (Why)
+## 1. 개요 및 목적 (Introduction)
 
-기존 `assignPersonIndicesForGroup` 로직을 정밀 분석한 결과, 단순히 임계값을 조정하는 것으로는 해결할 수 없는 **구조적 결함 3가지**가 식별되었습니다.
-
-### 1.1. 위치 기반 선행 필터링 (Fatal Flaw)
-*   **현상**: `위치 거리 < 0.15`를 만족하지 않으면 Feature Print(얼굴 특징) 비교 자체를 수행하지 않음.
-*   **문제**: 같은 사람이 사진 촬영 중 이동하거나, 카메라 구도가 바뀌어 화면 내 위치가 달라지면 **완전히 다른 사람으로 취급**됨.
-
-### 1.2. 정적 기준 슬롯 (Static Reference)
-*   **현상**: **첫 번째 사진**에 등장한 얼굴들만 '기준 슬롯'으로 생성됨.
-*   **문제**: 첫 번째 사진에 없다가 나중에 등장하는 인물('New Person')은 들어갈 슬롯이 없어 엉뚱한 사람과 매칭되거나 누락됨.
-
-### 1.3. 선착순 탐욕 매칭 (Greedy Matching Failure)
-*   **현상**: 얼굴 루프를 돌면서 기준을 통과하는 첫 번째 슬롯을 즉시 점유(Lock).
-*   **문제**: 더 적합한 매칭 대상(진짜 주인)이 뒤에 있어도, 앞선 덜 적합한 대상이 자리를 차지해버림. (Global Optimization 부재)
+본 문서는 `assignPersonIndicesForGroup` 로직의 구조적 결함과 데이터 변별력 문제를 해결하기 위한 최종 기술 명세서입니다. 상위 문서인 `prd9algorithm.md`의 §4 섹션을 대체합니다.
 
 ---
 
-## 2. 심화 개선 알고리즘: 전역 최적화 (Global Optimization)
+## 2. 핵심 문제점 분석 (Why)
 
-위 문제들을 해결하기 위해 **Cost Matrix 기반의 전역 최적 매칭**과 **동적 슬롯 할당** 방식을 도입합니다.
+### 2.1. 구조적 결함
+- **위치 기반 선행 필터링**: 위치가 다르면 특징 비교를 차단하여 매칭 실패 유발.
+- **정적 기준 슬롯**: 첫 사진 이후 등장하는 인물 인식 불가.
+- **선착순 탐욕 매칭**: 최적의 짝이 아닌 순서에 의한 매칭으로 오류 발생.
 
-### 2.1. 동적 인물 풀 (Dynamic Person Pool)
-*   **개념**: 분석이 진행됨에 따라 성장하는 인물 목록(`ActiveSlots`) 운용.
-*   **구조**: `[PersonSlot]`. 각 슬롯은 `id`와 `기준 FeaturePrint`를 가짐.
-*   **동작**: 초기엔 빈 목록. 매칭 실패 시 조건(Quality)을 만족하면 새 슬롯 추가.
+### 2.2. 데이터 변별력 한계
+- 실제 데이터(iOS 17+)에서 동일인($0.56 \sim 0.58$)과 타인($0.59 \sim 0.67$)의 FP 거리 차이가 미세함.
+- 단순 임계값만으로는 변별이 불가능하여 **Grey Zone 전략**이 필수적임.
 
-### 2.2. 성능 최적화: FP 1회 생성 (Optimization)
-*   **개선**: **사진당 각 얼굴의 Feature Print는 최초 1회만 생성**하여 메모리에 캐싱하고, 슬롯 비교 시 재사용함. ($N$개의 얼굴에 대해 $N$번만 생성)
+---
 
-### 2.3. 하이브리드 비용 함수 (Advanced Cost Function)
-단순 거리가 아닌, 위치 정보를 가중치로 활용하는 **비용(Cost)** 개념 도입.
+## 3. 개선 알고리즘: 전역 후보 정렬 기반 그리디 매칭
 
-$$ Cost = Dist_{fp} + (Penalty_{pos} 	imes 0.2) $$
+### 3.1. 동적 인물 풀 (Dynamic Person Pool)
+- **부팅(Bootstrapping)**: `ActiveSlots`가 비어있는 첫 사진 처리 시, **Quality Gate**를 통과한 모든 얼굴을 즉시 신규 슬롯으로 등록.
+- **상한 제한**: `maxPersonSlots` (10개) 초과 시 신규 생성을 중단하여 시스템 부하 방지.
+- **기준 FP 정책**: **최초 등록된 FP 유지 (Keep First)**. 슬롯의 기준값이 변하면(Drift) 일관성이 깨질 위험이 있으므로, 처음 등록된 가장 선명한 모습을 기준으로 삼음.
 
-*   **$Dist_{fp}$**: Feature Print 거리 (0.0 ~ 2.0). 가장 중요한 척도.
-*   **$Penalty_{pos}$**: 위치 거리($Dist_{pos}$). 
-    *   위치가 다르면($Dist_{pos} 
-approx 1.0$) 비용이 0.2 증가 → 유사도 판단 기준이 엄격해짐.
-    *   위치가 같으면($Dist_{pos} 
-approx 0.0$) 비용 증가 없음 → FP 거리 그대로 인정.
+### 3.2. 하이브리드 비용 함수 (Cost Function)
+**Cost = Dist_fp + (Dist_pos * 0.2)**
 
-### 2.4. 전역 최적 매칭 프로세스 (Step-by-Step)
+- **Dist_fp**: Feature Print 거리 (iOS 17+: 0.0 ~ 2.0).
+- **Dist_pos**: 정규화 좌표계(0~1) 내 중심점 간의 유클리드 거리.
+- **Weight(0.2)**: 위치가 멀어질 때 부여하는 페널티.
+
+### 3.3. 매칭 구간 세분화 (Grey Zone 전략)
+1. **확신 구간 (Cost < 0.58)**: 즉시 매칭 확정.
+2. **모호 구간 (0.58 <= Cost < 0.65)**: `Dist_pos < 0.1` (위치 매우 근접)일 때만 매칭 허용.
+3. **거절 구간 (Cost >= 0.65)**: 매칭 실패.
+
+---
+
+## 4. 상세 실행 흐름 (Execution Flow)
+
+다음 5단계를 순차적으로 수행합니다.
 
 1.  **준비 (Preparation)**:
-    *   현재 사진의 모든 얼굴에 대해 Feature Print 생성 (병렬 처리).
-    *   유효한 FP가 생성된 얼굴만 매칭 후보로 등록.
+    - 현재 사진의 모든 얼굴 FP를 병렬로 1회 생성.
+    - FP 생성 실패 시: 매칭 불가(`Unknown`) 처리.
 
 2.  **비용 산출 (Cost Calculation)**:
-    *   `매칭 후보(N)` vs `활성 슬롯(M)`의 모든 조합에 대해 비용 계산.
-    *   `candidates = [(Face, Slot, Cost)]` 리스트 생성.
+    - `(얼굴 N) x (슬롯 M)` 모든 조합의 비용 계산.
+    - `maxPersonSlots=10`이므로 Top-K 최적화 없이 **전수 비교** 수행 (충분히 빠름).
 
 3.  **전역 정렬 (Global Sorting)**:
-    *   `candidates`를 **Cost 오름차순**으로 정렬. (가장 확실한 매칭부터 처리)
+    - 모든 후보를 **Cost 오름차순(낮은 순)**으로 정렬.
 
-4.  **확정 및 점유 (Assignment)**:
-    *   정렬된 리스트를 순회하며:
-        *   Face나 Slot이 이미 사용되었으면 Skip.
-        *   `Cost < 0.7 (Threshold)` 이면 매칭 확정 (`Face -> Slot`).
-        *   사용된 Face와 Slot 마킹.
+4.  **확정 (Assignment)**:
+    - 정렬된 리스트를 순회하며 **3.3항(Grey Zone)** 기준에 따라 매칭 확정.
+    - 이미 매칭된 얼굴이나 슬롯은 건너뜀.
 
-5.  **신규 등록 (New Person Registration)**:
-    *   매칭되지 않은 Face 중:
-        *   **Quality Gate**: 얼굴 크기나 선명도(Confidence)가 기준(0.8) 이상인 경우.
-        *   새로운 `PersonSlot` 생성 및 `ActiveSlots`에 추가.
+5.  **신규/실패 처리**:
+    - **신규 등록**: 미매칭 얼굴 중 **Quality Gate** 통과 시 새 슬롯 생성.
+    - **매칭 실패**: 신규 등록도 못한 얼굴은 `CachedFace`로 저장하되 `personIndex: -1`로 설정하고 UI 렌더링 시 필터링함.
 
 ---
 
-## 3. 예외 상황 처리 (Edge Cases)
+## 5. 예외 상황 처리 및 기준
 
-### 3.1. 얼굴 품질 게이트 (Face Quality Gate)
-*   **목적**: 흐릿하거나 너무 작은 얼굴이 '기준(Reference)'이 되는 것을 방지.
-*   **규칙**: `confidence > 0.8` AND `boundingBox area > minSize` 일 때만 신규 슬롯 생성. 기준 미달 얼굴은 매칭 실패 시 그냥 버림(Unassigned).
+### 5.1. 얼굴 품질 게이트 (Face Quality Gate)
+저품질 얼굴이 슬롯의 기준(Reference)이 되는 것을 방지합니다. (부팅 및 신규 등록 시 공통 적용)
+- **Confidence**: `VNFaceObservation.confidence` > `SimilarityConstants.minFaceQuality` (0.8)
+- **Size**: `boundingBox` 면적 > `SimilarityConstants.minFaceAreaRatio` (0.005)
 
-### 3.2. 중복 매칭 방지 (Ghost Face)
-*   **목적**: 배경 오인 등으로 인한 일회성 슬롯 생성 방지.
-*   **규칙**: 최종 그룹 형성 시 `SimilarityConstants.minPhotosPerSlot` (최소 2장 이상 등장) 조건을 만족하는 슬롯만 유효한 인물로 인정.
+### 5.2. 구현 체크리스트 (Checklist)
+- [ ] **버전별 스케일**: iOS 16/17 분기 처리 확인.
+- [ ] **메인 액터 격리**: `FaceCropper` nonisolated 처리.
+- [ ] **Thread-Safe Resumer**: `SimilarityImageLoader` 중복 resume 방지.
+- [ ] **로그 출력**: Grey Zone 판정 로그 구현.
 
 ---
 
-## 4. 파라미터 튜닝 가이드
+## 6. 파라미터 제안값 (SimilarityConstants)
 
-| 항목 | 제안값 | 설명 |
+| 항목 | 값 (iOS 17+) | 설명 |
 |---|---|---|
-| **Match Threshold** | **0.7** | iOS 17+ 기준. 오탐지를 줄이기 위해 더 엄격하게 설정(0.8 -> 0.7). |
-| **Position Weight** | **0.2** | 위치 차이가 최대일 때 FP 거리 페널티 최대 0.2 부여. |
-| **Min Quality** | **0.8** | 신규 슬롯 생성 시 필요한 최소 Confidence. |
+| **personMatchThreshold** | **0.65** | 최종 상한선 |
+| **greyZoneThreshold** | **0.58** | 위치 조건 필수 시작점 |
+| **positionPenaltyWeight** | **0.2** | 위치 가중치 |
+| **minFaceQuality** | **0.8** | 신규 등록 신뢰도 |
+| **maxPersonSlots** | **10** | 인물 수 상한 |
 
 ---
 
-## 5. 결론
-이 설계는 **전역 최적화 알고리즘**을 통해 매칭 정확도를 극대화하고, **FP 1회 생성**으로 성능 저하를 방지하며, **품질 게이트**로 데이터의 질을 관리하는 완성형 로직입니다.
+## 7. 결론
+이 설계는 **전역 후보 정렬**을 통해 매칭 순서 문제를 해결하고, **Grey Zone 전략**으로 데이터 변별력을 보완하며, **품질 게이트와 안전장치**를 통해 모바일 환경에서의 안정성을 보장합니다.
