@@ -361,7 +361,7 @@ final class PhotoPageViewController: UIViewController {
         hasAppliedInitialLayout = true
 
         if debugPhoto {
-            print("[Photo] 🎯 applyInitialLayout - index: \(index), asset=\(Int(assetWidth))×\(Int(assetHeight)), fit=\(fitSize), vInset=\(vInset), containerSize=\(containerSize)")
+            print("[Photo] 🎯 applyInitialLayout - index: \(index), asset=\(Int(assetWidth))×\(Int(assetHeight)), fit=\(fitSize)")
         }
     }
 

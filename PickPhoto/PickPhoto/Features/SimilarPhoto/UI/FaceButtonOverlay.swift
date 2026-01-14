@@ -193,25 +193,12 @@ final class FaceButtonOverlay: UIView {
                 buttonRadius: Constants.buttonRadius
             )
 
-            let originalPosition = position
-
-            // 겹침 방지 조정
-            position = adjustForCollision(
-                position: position,
-                placedPositions: placedPositions,
-                viewerFrame: viewerFrame
-            )
+            // 겹침 방지 로직 임시 비활성화 (버튼이 얼굴에서 너무 멀리 이동하는 문제)
+            // TODO: 추후 이동 거리를 줄이거나 다른 방식으로 개선 필요
 
             if debugButtonPosition {
                 let bb = face.boundingBox
-                let wasAdjusted = position != originalPosition
-                var logMsg = "[FaceButton] Person(\(face.personIndex)): boundingBox=(x:\(String(format: "%.3f", bb.origin.x)), y:\(String(format: "%.3f", bb.origin.y)), w:\(String(format: "%.3f", bb.width)), h:\(String(format: "%.3f", bb.height)))"
-                logMsg += " -> original=(\(String(format: "%.1f", originalPosition.x)), \(String(format: "%.1f", originalPosition.y)))"
-                if wasAdjusted {
-                    logMsg += " -> ADJUSTED=(\(String(format: "%.1f", position.x)), \(String(format: "%.1f", position.y)))"
-                    logMsg += " [delta: x=\(String(format: "%.1f", position.x - originalPosition.x)), y=\(String(format: "%.1f", position.y - originalPosition.y))]"
-                }
-                print(logMsg)
+                print("[FaceButton] Person(\(face.personIndex)): boundingBox=(x:\(String(format: "%.3f", bb.origin.x)), y:\(String(format: "%.3f", bb.origin.y)), w:\(String(format: "%.3f", bb.width)), h:\(String(format: "%.3f", bb.height))) -> pos=(\(String(format: "%.1f", position.x)), \(String(format: "%.1f", position.y)))")
             }
 
             placedPositions.append(position)
