@@ -25,6 +25,7 @@
 
 import UIKit
 import Photos
+import Vision
 import AppCore
 
 // MARK: - FaceComparisonDelegate
@@ -525,20 +526,39 @@ final class FaceComparisonViewController: UIViewController {
 
     // MARK: - Debug Info Generation
 
+    /// 기준 슬롯 정보 (Feature Print 포함)
+    private struct DebugReferenceSlot {
+        let personIndex: Int
+        let center: CGPoint
+        let boundingBox: CGRect
+        let featurePrint: VNFeaturePrintObservation?
+    }
+
     /// 디버그 정보를 생성합니다.
-    /// 현재 그룹의 모든 사진과 얼굴 정보, 매칭 거리값을 수집합니다.
+    /// 현재 그룹의 모든 사진과 얼굴 정보, Feature Print 거리값을 실시간 계산합니다.
     private func generateDebugInfo() async -> FaceDebugInfo {
         let groupID = comparisonGroup.sourceGroupID
         let allAssetIDs = comparisonGroup.selectedAssetIDs
 
-        // 기준 슬롯 정보 수집 (첫 번째 사진의 얼굴 위치)
+        // 기준 슬롯 정보 수집 (첫 번째 사진의 얼굴 위치 + Feature Print)
         var referenceSlots: [FaceDebugSlot] = []
+        var refSlotsWithFP: [DebugReferenceSlot] = []
         var photoDebugInfos: [PhotoDebugInfo] = []
+        var referenceAssetID: String? = nil
 
-        // 첫 번째 얼굴이 있는 사진 찾아서 기준 슬롯 설정
+        let imageLoader = SimilarityImageLoader.shared
+        let analyzer = SimilarityAnalyzer.shared
+
+        // 첫 번째 얼굴이 있는 사진 찾아서 기준 슬롯 설정 (Feature Print 포함)
         for assetID in allAssetIDs {
             let faces = await SimilarityCache.shared.getFaces(for: assetID)
             if !faces.isEmpty {
+                // PHAsset 가져오기
+                guard let photo = asset(for: assetID) else { continue }
+
+                // 이미지 로드
+                guard let cgImage = try? await imageLoader.loadImage(for: photo) else { continue }
+
                 // 위치 기준 정렬 (X 오름차순, Y 내림차순)
                 let sorted = faces.sorted { f1, f2 in
                     let xDiff = abs(f1.boundingBox.origin.x - f2.boundingBox.origin.x)
@@ -550,29 +570,64 @@ final class FaceComparisonViewController: UIViewController {
                 }
 
                 for (idx, face) in sorted.enumerated() {
+                    let center = CGPoint(x: face.boundingBox.midX, y: face.boundingBox.midY)
+
+                    // 얼굴 크롭 후 Feature Print 생성
+                    var featurePrint: VNFeaturePrintObservation? = nil
+                    if let croppedFace = try? FaceCropper.cropFace(from: cgImage, boundingBox: face.boundingBox) {
+                        featurePrint = try? await analyzer.generateFeaturePrint(for: croppedFace)
+                    }
+
                     referenceSlots.append(FaceDebugSlot(
                         personIndex: idx + 1,
-                        x: face.boundingBox.midX,
-                        y: face.boundingBox.midY
+                        x: center.x,
+                        y: center.y
+                    ))
+
+                    refSlotsWithFP.append(DebugReferenceSlot(
+                        personIndex: idx + 1,
+                        center: center,
+                        boundingBox: face.boundingBox,
+                        featurePrint: featurePrint
                     ))
                 }
+
+                referenceAssetID = assetID
                 break
             }
         }
 
-        // 각 사진의 얼굴 정보 수집
+        // 각 사진의 얼굴 정보 수집 (Feature Print 거리 포함)
         for assetID in allAssetIDs {
             let faces = await SimilarityCache.shared.getFaces(for: assetID)
 
+            // 이미지 로드 (Feature Print 비교용)
+            var cgImage: CGImage? = nil
+            if let photo = asset(for: assetID) {
+                cgImage = try? await imageLoader.loadImage(for: photo)
+            }
+
             var faceDebugInfos: [FaceDebugEntry] = []
             for face in faces {
-                // 기준 슬롯과의 거리 계산
                 let faceCenter = CGPoint(x: face.boundingBox.midX, y: face.boundingBox.midY)
-                var matchDistance: CGFloat = -1
+                var posDistance: CGFloat = -1
+                var fpDistance: Float? = nil
 
-                for slot in referenceSlots where slot.personIndex == face.personIndex {
-                    let slotCenter = CGPoint(x: slot.x, y: slot.y)
-                    matchDistance = hypot(faceCenter.x - slotCenter.x, faceCenter.y - slotCenter.y)
+                // 기준 슬롯 중 같은 personIndex 찾기
+                for refSlot in refSlotsWithFP where refSlot.personIndex == face.personIndex {
+                    // 위치 거리 계산
+                    posDistance = hypot(faceCenter.x - refSlot.center.x, faceCenter.y - refSlot.center.y)
+
+                    // Feature Print 거리 계산 (기준 사진은 자기 자신이므로 0)
+                    if assetID == referenceAssetID {
+                        fpDistance = 0
+                    } else if let refFP = refSlot.featurePrint, let image = cgImage {
+                        // 현재 얼굴 크롭 후 Feature Print 생성
+                        if let croppedFace = try? FaceCropper.cropFace(from: image, boundingBox: face.boundingBox),
+                           let faceFP = try? await analyzer.generateFeaturePrint(for: croppedFace) {
+                            fpDistance = try? analyzer.computeDistance(faceFP, refFP)
+                        }
+                    }
                     break
                 }
 
@@ -583,7 +638,8 @@ final class FaceComparisonViewController: UIViewController {
                     y: face.boundingBox.origin.y,
                     width: face.boundingBox.width,
                     height: face.boundingBox.height,
-                    matchDistance: matchDistance
+                    posDistance: posDistance,
+                    fpDistance: fpDistance
                 ))
             }
 
@@ -598,6 +654,7 @@ final class FaceComparisonViewController: UIViewController {
             currentPersonIndex: currentPersonIndex,
             validPersonIndices: validPersonIndices,
             positionThreshold: 0.15,
+            fpThreshold: SimilarityConstants.personMatchThreshold,
             referenceSlots: referenceSlots,
             photos: photoDebugInfos
         )
@@ -1147,6 +1204,8 @@ struct FaceDebugInfo: Codable {
     let validPersonIndices: [Int]
     /// 위치 매칭 임계값 (0.15)
     let positionThreshold: Double
+    /// Feature Print 매칭 임계값
+    let fpThreshold: Float
     /// 기준 슬롯 정보 (첫 번째 사진의 얼굴 위치)
     let referenceSlots: [FaceDebugSlot]
     /// 사진별 얼굴 정보
@@ -1185,6 +1244,8 @@ struct FaceDebugEntry: Codable {
     let width: CGFloat
     /// bounding box 높이 (정규화)
     let height: CGFloat
-    /// 기준 슬롯과의 거리 (-1이면 매칭된 슬롯 없음)
-    let matchDistance: CGFloat
+    /// 기준 슬롯과의 위치 거리 (-1이면 매칭된 슬롯 없음)
+    let posDistance: CGFloat
+    /// Feature Print 거리 (nil이면 비교 불가)
+    let fpDistance: Float?
 }
