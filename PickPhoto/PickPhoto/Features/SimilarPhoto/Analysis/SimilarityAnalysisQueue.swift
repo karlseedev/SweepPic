@@ -81,6 +81,72 @@ final class SimilarityAnalysisQueue {
     /// 동기화를 위한 직렬 큐
     private let serialQueue = DispatchQueue(label: "com.pickphoto.similarity.queue")
 
+    // MARK: - Performance Statistics
+
+    /// 성능 측정 데이터 (다회 측정용)
+    private struct PerformanceStats {
+        var measurementCount: Int = 0
+        var fpTimes: [Double] = []           // FP 생성 시간 (ms)
+        var faceTimes: [Double] = []         // 얼굴 감지+매칭 시간 (ms)
+        var totalTimes: [Double] = []        // 총 시간 (ms)
+        var memoryDeltas: [Double] = []      // 메모리 변화 (MB)
+        var photoCountSum: Int = 0           // 누적 사진 수
+        var faceCountSum: Int = 0            // 누적 얼굴 수
+
+        /// 통계 계산 헬퍼
+        private func stats(_ values: [Double]) -> (avg: Double, min: Double, max: Double, stdDev: Double) {
+            guard !values.isEmpty else { return (0, 0, 0, 0) }
+            let avg = values.reduce(0, +) / Double(values.count)
+            let minVal = values.min() ?? 0
+            let maxVal = values.max() ?? 0
+            let variance = values.reduce(0) { $0 + pow($1 - avg, 2) } / Double(values.count)
+            let stdDev = sqrt(variance)
+            return (avg, minVal, maxVal, stdDev)
+        }
+
+        /// 통계 리포트 출력
+        func printReport() {
+            guard measurementCount > 0 else { return }
+
+            let fp = stats(fpTimes)
+            let face = stats(faceTimes)
+            let total = stats(totalTimes)
+            let mem = stats(memoryDeltas)
+
+            let avgPhotos = Double(photoCountSum) / Double(measurementCount)
+            let avgFaces = Double(faceCountSum) / Double(measurementCount)
+
+            print("""
+            ╔══════════════════════════════════════════════════════╗
+            ║       PERFORMANCE STATISTICS (Vision) - \(measurementCount) runs       ║
+            ╠══════════════════════════════════════════════════════╣
+            ║  Avg Photos: \(String(format: "%.1f", avgPhotos)), Avg Faces: \(String(format: "%.1f", avgFaces))
+            ╠══════════════════════════════════════════════════════╣
+            ║  FP Generation Time:
+            ║    avg: \(String(format: "%.2f", fp.avg))ms, min: \(String(format: "%.2f", fp.min))ms, max: \(String(format: "%.2f", fp.max))ms
+            ║    stdDev: \(String(format: "%.2f", fp.stdDev))ms
+            ╠══════════════════════════════════════════════════════╣
+            ║  Face Detect+Match Time:
+            ║    avg: \(String(format: "%.2f", face.avg))ms, min: \(String(format: "%.2f", face.min))ms, max: \(String(format: "%.2f", face.max))ms
+            ║    stdDev: \(String(format: "%.2f", face.stdDev))ms
+            ╠══════════════════════════════════════════════════════╣
+            ║  Total Time:
+            ║    avg: \(String(format: "%.2f", total.avg))ms, min: \(String(format: "%.2f", total.min))ms, max: \(String(format: "%.2f", total.max))ms
+            ║    stdDev: \(String(format: "%.2f", total.stdDev))ms
+            ╠══════════════════════════════════════════════════════╣
+            ║  Memory Delta:
+            ║    avg: \(String(format: "%+.1f", mem.avg))MB, min: \(String(format: "%+.1f", mem.min))MB, max: \(String(format: "%+.1f", mem.max))MB
+            ╚══════════════════════════════════════════════════════╝
+            """)
+        }
+    }
+
+    /// 성능 통계 저장소
+    private var performanceStats = PerformanceStats()
+
+    /// 통계 동기화 큐
+    private let statsQueue = DispatchQueue(label: "com.pickphoto.similarity.stats")
+
     // MARK: - Initialization
 
     /// 분석 큐를 초기화합니다.
@@ -278,20 +344,37 @@ final class SimilarityAnalysisQueue {
             await cache.setState(.analyzed(inGroup: false, groupID: nil), for: assetID)
         }
 
-        // 성능 측정 로그 출력
+        // 성능 측정 로그 출력 및 통계 누적
         if performanceLoggingEnabled {
             let totalTime = CFAbsoluteTimeGetCurrent() - totalStartTime
             let endMemory = getMemoryUsageMB()
             let memoryDelta = endMemory - startMemory
             let thermalState = ProcessInfo.processInfo.thermalState
 
+            // ms 단위로 변환
+            let fpTimeMs = fpTime * 1000
+            let faceTimeMs = faceTime * 1000
+            let totalTimeMs = totalTime * 1000
+
+            // 통계 누적 (thread-safe)
+            statsQueue.sync {
+                performanceStats.measurementCount += 1
+                performanceStats.fpTimes.append(fpTimeMs)
+                performanceStats.faceTimes.append(faceTimeMs)
+                performanceStats.totalTimes.append(totalTimeMs)
+                performanceStats.memoryDeltas.append(memoryDelta)
+                performanceStats.photoCountSum += photos.count
+                performanceStats.faceCountSum += totalFaceCount
+            }
+
+            // 개별 측정 결과 출력
             print("""
-            ========== PERFORMANCE METRICS (Vision) ==========
+            ========== PERFORMANCE METRICS (Vision) [#\(performanceStats.measurementCount)] ==========
             Photos: \(photos.count), Faces: \(totalFaceCount), Groups: \(validGroupIDs.count)
             --------------------------------------------------
-            FP Generation Time: \(String(format: "%.2f", fpTime * 1000))ms (\(String(format: "%.1f", fpTime * 1000 / Double(photos.count)))ms/photo)
-            Face Detect+Match Time: \(String(format: "%.2f", faceTime * 1000))ms (\(String(format: "%.1f", faceTime * 1000 / Double(max(1, totalFaceCount))))ms/face)
-            Total Time: \(String(format: "%.2f", totalTime * 1000))ms
+            FP Generation Time: \(String(format: "%.2f", fpTimeMs))ms (\(String(format: "%.1f", fpTimeMs / Double(photos.count)))ms/photo)
+            Face Detect+Match Time: \(String(format: "%.2f", faceTimeMs))ms (\(String(format: "%.1f", faceTimeMs / Double(max(1, totalFaceCount))))ms/face)
+            Total Time: \(String(format: "%.2f", totalTimeMs))ms
             --------------------------------------------------
             Memory Start: \(String(format: "%.1f", startMemory))MB
             Memory End: \(String(format: "%.1f", endMemory))MB
@@ -299,6 +382,13 @@ final class SimilarityAnalysisQueue {
             Thermal State: \(thermalStateString(thermalState))
             ==================================================
             """)
+
+            // 3회 이상 측정되면 통계 리포트 출력
+            if performanceStats.measurementCount >= 3 {
+                statsQueue.sync {
+                    performanceStats.printReport()
+                }
+            }
         }
 
         // T014.8: UI 알림 발송

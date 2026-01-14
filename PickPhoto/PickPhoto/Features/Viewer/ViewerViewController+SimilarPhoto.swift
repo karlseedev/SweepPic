@@ -45,6 +45,69 @@ extension ViewerViewController {
         // Scroll (패닝) 관련
         static var scrollObserver: UInt8 = 0
         static var scrollEndObserver: UInt8 = 0
+        // 성능 측정 관련
+        static var buttonShowStartTime: UInt8 = 0
+        static var viewerPerformanceStats: UInt8 = 0
+    }
+
+    // MARK: - Viewer Performance Statistics
+
+    /// 뷰어 성능 측정 데이터 (다회 측정용)
+    private final class ViewerPerformanceStats {
+        var cacheHitCount: Int = 0
+        var cacheMissCount: Int = 0
+        var buttonShowTimes: [Double] = []      // 캐시 hit → 버튼 표시 시간 (ms)
+        var analysisWaitTimes: [Double] = []    // 캐시 miss → 버튼 표시 시간 (ms)
+        var comparisonGroupTimes: [Double] = [] // +버튼 클릭 → 비교화면 표시 시간 (ms)
+
+        /// 통계 계산 헬퍼
+        private func stats(_ values: [Double]) -> (avg: Double, min: Double, max: Double) {
+            guard !values.isEmpty else { return (0, 0, 0) }
+            let avg = values.reduce(0, +) / Double(values.count)
+            let minVal = values.min() ?? 0
+            let maxVal = values.max() ?? 0
+            return (avg, minVal, maxVal)
+        }
+
+        /// 통계 리포트 출력
+        func printReport() {
+            let totalMeasurements = cacheHitCount + cacheMissCount
+            guard totalMeasurements > 0 else { return }
+
+            let btn = stats(buttonShowTimes)
+            let wait = stats(analysisWaitTimes)
+            let cmp = stats(comparisonGroupTimes)
+
+            print("""
+            ╔══════════════════════════════════════════════════════╗
+            ║     VIEWER PERFORMANCE (Vision) - \(totalMeasurements) views           ║
+            ╠══════════════════════════════════════════════════════╣
+            ║  Cache Hit: \(cacheHitCount), Cache Miss: \(cacheMissCount)
+            ╠══════════════════════════════════════════════════════╣
+            ║  Button Show (Cache Hit):
+            ║    avg: \(String(format: "%.2f", btn.avg))ms, min: \(String(format: "%.2f", btn.min))ms, max: \(String(format: "%.2f", btn.max))ms
+            ╠══════════════════════════════════════════════════════╣
+            ║  Button Show (Cache Miss, incl. analysis):
+            ║    avg: \(String(format: "%.2f", wait.avg))ms, min: \(String(format: "%.2f", wait.min))ms, max: \(String(format: "%.2f", wait.max))ms
+            ╠══════════════════════════════════════════════════════╣
+            ║  +Button → Comparison Screen:
+            ║    avg: \(String(format: "%.2f", cmp.avg))ms, min: \(String(format: "%.2f", cmp.min))ms, max: \(String(format: "%.2f", cmp.max))ms
+            ╚══════════════════════════════════════════════════════╝
+            """)
+        }
+    }
+
+    /// 뷰어 성능 통계 (싱글톤 패턴 - 앱 전체 누적)
+    private static var sharedViewerStats = ViewerPerformanceStats()
+
+    /// 버튼 표시 시작 시간 (캐시 체크 시작 시점)
+    private var buttonShowStartTime: CFAbsoluteTime {
+        get {
+            (objc_getAssociatedObject(self, &AssociatedKeys.buttonShowStartTime) as? CFAbsoluteTime) ?? 0
+        }
+        set {
+            objc_setAssociatedObject(self, &AssociatedKeys.buttonShowStartTime, newValue, .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
+        }
     }
 
     // MARK: - Associated Properties
@@ -399,6 +462,9 @@ extension ViewerViewController {
             return
         }
 
+        // 성능 측정: 시작 시간 기록
+        buttonShowStartTime = CFAbsoluteTimeGetCurrent()
+
         // 캐시 상태 확인 (비동기)
         Task { @MainActor in
             let state = await SimilarityCache.shared.getState(for: assetID)
@@ -406,7 +472,7 @@ extension ViewerViewController {
             switch state {
             case .analyzed(true, _):
                 // 캐시 hit (그룹에 속함) → 즉시 +버튼 표시
-                await showFaceButtons(for: assetID)
+                await showFaceButtons(for: assetID, isCacheHit: true)
 
             case .analyzed(false, _):
                 // 분석 완료되었지만 그룹에 속하지 않음 → 버튼 미표시
@@ -427,7 +493,10 @@ extension ViewerViewController {
     }
 
     /// +버튼 표시
-    private func showFaceButtons(for assetID: String) async {
+    /// - Parameters:
+    ///   - assetID: 사진 ID
+    ///   - isCacheHit: 캐시 hit 여부 (성능 측정용)
+    private func showFaceButtons(for assetID: String, isCacheHit: Bool = false) async {
         // 유효 슬롯 얼굴 가져오기
         let validFaces = await SimilarityCache.shared.getValidSlotFaces(for: assetID)
 
@@ -447,6 +516,20 @@ extension ViewerViewController {
             viewerFrame: view.bounds,
             assetID: assetID
         )
+
+        // 성능 측정: 버튼 표시 완료 시간 기록
+        let elapsedMs = (CFAbsoluteTimeGetCurrent() - buttonShowStartTime) * 1000
+        if isCacheHit {
+            Self.sharedViewerStats.cacheHitCount += 1
+            Self.sharedViewerStats.buttonShowTimes.append(elapsedMs)
+            print("[ViewerPerf] Cache HIT - Button shown in \(String(format: "%.2f", elapsedMs))ms")
+        }
+
+        // 3회 이상 측정되면 통계 출력
+        let total = Self.sharedViewerStats.cacheHitCount + Self.sharedViewerStats.cacheMissCount
+        if total >= 3 && total % 3 == 0 {
+            Self.sharedViewerStats.printReport()
+        }
     }
 
     // MARK: - Private Methods - Analysis
@@ -498,9 +581,21 @@ extension ViewerViewController {
         analysisLoadingIndicator?.hide()
         currentAnalyzingAssetID = nil
 
-        // +버튼 표시 시도
+        // 성능 측정: 캐시 miss (분석 포함) 시간 기록
+        let elapsedMs = (CFAbsoluteTimeGetCurrent() - buttonShowStartTime) * 1000
+        Self.sharedViewerStats.cacheMissCount += 1
+        Self.sharedViewerStats.analysisWaitTimes.append(elapsedMs)
+        print("[ViewerPerf] Cache MISS - Analysis completed in \(String(format: "%.2f", elapsedMs))ms")
+
+        // +버튼 표시 시도 (isCacheHit: false → 성능 통계에 중복 기록 안 함)
         Task { @MainActor in
-            await showFaceButtons(for: currentAssetID)
+            await showFaceButtons(for: currentAssetID, isCacheHit: false)
+
+            // 3회 이상 측정되면 통계 출력
+            let total = Self.sharedViewerStats.cacheHitCount + Self.sharedViewerStats.cacheMissCount
+            if total >= 3 && total % 3 == 0 {
+                Self.sharedViewerStats.printReport()
+            }
         }
     }
 }
@@ -516,6 +611,9 @@ extension ViewerViewController: FaceButtonOverlayDelegate {
         face: CachedFace
     ) {
         // T027 구현: 얼굴 비교 화면으로 이동
+
+        // 성능 측정: +버튼 클릭 시간 기록
+        let tapStartTime = CFAbsoluteTimeGetCurrent()
 
         Task { @MainActor in
             guard let assetID = coordinator.assetID(at: currentIndex) else { return }
@@ -537,6 +635,11 @@ extension ViewerViewController: FaceButtonOverlayDelegate {
 
             // 비교 그룹이 비어있으면 무시
             guard !comparisonGroup.isEmpty else { return }
+
+            // 성능 측정: 비교 그룹 생성 완료 시간 기록
+            let elapsedMs = (CFAbsoluteTimeGetCurrent() - tapStartTime) * 1000
+            Self.sharedViewerStats.comparisonGroupTimes.append(elapsedMs)
+            print("[ViewerPerf] +Button → ComparisonGroup in \(String(format: "%.2f", elapsedMs))ms")
 
             // FaceComparisonViewController 표시 (Phase 5에서 구현)
             showFaceComparisonViewController(with: comparisonGroup)

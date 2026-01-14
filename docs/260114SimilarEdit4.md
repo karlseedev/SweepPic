@@ -94,9 +94,10 @@ YuNet → 얼굴 감지 + 5-point 랜드마크
 ## Phase 0: 기준선 측정 ✅
 
 ### 0.1 성능 측정 코드 추가 (완료)
-`SimilarityAnalysisQueue.swift`에 성능 로그 추가:
+
+**그리드 (SimilarityAnalysisQueue.swift):**
 ```
-========== PERFORMANCE METRICS (Vision) ==========
+========== PERFORMANCE METRICS (Vision) [#N] ==========
 Photos: N, Faces: N, Groups: N
 --------------------------------------------------
 FP Generation Time: XXXms (XXms/photo)
@@ -110,24 +111,68 @@ Thermal State: nominal/fair/serious/critical
 ==================================================
 ```
 
+**다회 측정 통계 (3회 이상 시 자동 출력):**
+```
+╔══════════════════════════════════════════════════════╗
+║       PERFORMANCE STATISTICS (Vision) - N runs       ║
+╠══════════════════════════════════════════════════════╣
+║  Avg Photos: XX, Avg Faces: XX
+║  FP Generation Time: avg/min/max/stdDev
+║  Face Detect+Match Time: avg/min/max/stdDev
+║  Total Time: avg/min/max/stdDev
+║  Memory Delta: avg/min/max
+╚══════════════════════════════════════════════════════╝
+```
+
+**뷰어 (ViewerViewController+SimilarPhoto.swift):**
+```
+[ViewerPerf] Cache HIT - Button shown in XXms
+[ViewerPerf] Cache MISS - Analysis completed in XXms
+[ViewerPerf] +Button → ComparisonGroup in XXms
+```
+
+**뷰어 다회 측정 통계 (3회 이상 시 자동 출력):**
+```
+╔══════════════════════════════════════════════════════╗
+║     VIEWER PERFORMANCE (Vision) - N views            ║
+╠══════════════════════════════════════════════════════╣
+║  Cache Hit: N, Cache Miss: N
+║  Button Show (Cache Hit): avg/min/max
+║  Button Show (Cache Miss, incl. analysis): avg/min/max
+║  +Button → Comparison Screen: avg/min/max
+╚══════════════════════════════════════════════════════╝
+```
+
 ### 0.2 기준선 수집 (완료)
 
-**테스트 조건:** 35장, 25얼굴, 3그룹
+#### 그리드 성능 (5회 측정 평균)
 
-| 지표 | 값 | 단위당 |
-|------|-----|--------|
-| FP 생성 | 150.20ms | **4.3ms/photo** |
-| 얼굴 감지+매칭 | 532.82ms | **21.3ms/face** |
-| 총 시간 | 684.00ms | 19.5ms/photo |
-| 메모리 델타 | -7.1MB | (GC 발생) |
-| Thermal | nominal | - |
+**테스트 조건:** 평균 33장, 21.8얼굴
+
+| 지표 | 평균 | 범위 | 단위당 |
+|------|------|------|--------|
+| FP 생성 | 201.58ms | 167~268ms | **6.1ms/photo** |
+| 얼굴 감지+매칭 | 493.21ms | 168~691ms | **22.6ms/face** |
+| 총 시간 | 696.36ms | 438~864ms | 21.1ms/photo |
+| 메모리 델타 | +6.4MB | -6.9~+50.2MB | - |
+| Thermal | nominal | - | - |
+
+#### 뷰어 성능 (12회 측정 평균)
+
+| 지표 | 평균 | 범위 |
+|------|------|------|
+| 캐시 Hit → 버튼 표시 | **11.27ms** | 4.29~22.17ms |
+| +버튼 → 비교화면 | **2.06ms** | 1.56~2.58ms |
+| 캐시 Hit 비율 | 100% | 12/12 |
 
 ### 0.3 YuNet+SFace 허용 범위 (1.5x 기준)
 
 | 지표 | 기준선 | 허용 상한 |
 |------|--------|----------|
-| photo당 처리 | 4.3ms | **<6.5ms** |
-| face당 처리 | 21.3ms | **<32ms** |
+| photo당 FP 생성 | 6.1ms | **<9.2ms** |
+| face당 감지+매칭 | 22.6ms | **<34ms** |
+| 뷰어 캐시 Hit 버튼 | 11.3ms | **<17ms** |
+| 뷰어 +버튼 클릭 | 2.1ms | **<3.2ms** |
 | 메모리 증가 | - | **+200MB 이내** |
 
 ---
@@ -372,7 +417,9 @@ struct CachedFace {
 ## 작업 체크리스트
 
 ### Phase 0: 기준선
-- [x] 성능 측정 코드 추가
+- [x] 성능 측정 코드 추가 (그리드)
+- [x] 다회 측정 통계 기능 추가 (3회 이상 시 avg/min/max/stdDev 자동 출력)
+- [x] 뷰어 성능 측정 코드 추가 (캐시 hit/miss, +버튼 클릭)
 - [x] 기준선 측정 및 기록 (35장, 25얼굴: 684ms)
 
 ### Phase 1: 모델
