@@ -41,20 +41,45 @@ enum SimilarityConstants: Sendable {
         }
     }
 
-    /// 인물 매칭 임계값 (얼굴 크롭 Feature Print 비교용)
+    /// 인물 매칭 거절 임계값 (Grey Zone 상한)
     ///
-    /// - iOS 16: 임계값 8.0
-    /// - iOS 17+: 임계값 0.8 (정규화 벡터 기준, 범위 0~2)
+    /// - iOS 16: 임계값 8.0 (변경 없음)
+    /// - iOS 17+: 임계값 0.65 (변경: 0.8 → 0.65)
     ///
-    /// 얼굴 크롭 이미지는 조명/각도/표정에 따라 변동이 크므로
-    /// 전체 이미지 유사도 임계값(0.5)보다 높게 설정
+    /// 이 값 이상이면 매칭 거절. Grey Zone(greyZoneThreshold ~ personMatchThreshold)에서는
+    /// 위치 조건을 추가로 확인함.
     nonisolated static var personMatchThreshold: Float {
         if #available(iOS 17.0, *) {
-            return 0.8  // iOS 17+: 정규화 벡터
+            return 0.65  // iOS 17+: 정규화 벡터, Grey Zone 상한
         } else {
-            return 8.0  // iOS 16: 비정규화 벡터
+            return 8.0   // iOS 16: 비정규화 벡터
         }
     }
+
+    /// Grey Zone 시작 임계값 (확신/모호 구간 경계)
+    ///
+    /// - iOS 16: 6.0
+    /// - iOS 17+: 0.50
+    ///
+    /// 이 값 미만이면 즉시 매칭(확신 구간),
+    /// 이 값 이상 ~ personMatchThreshold 미만이면 Grey Zone(위치 조건 필요)
+    nonisolated static var greyZoneThreshold: Float {
+        if #available(iOS 17.0, *) {
+            return 0.50  // iOS 17+: 정규화 벡터
+        } else {
+            return 6.0   // iOS 16: 비정규화 벡터
+        }
+    }
+
+    /// Grey Zone 위치 조건 (정규화된 거리 기준)
+    ///
+    /// Grey Zone에서 매칭을 허용하려면 Dist_pos / √2 < 이 값이어야 함
+    nonisolated static let greyZonePositionLimit: CGFloat = 0.15
+
+    /// 최대 인물 슬롯 수
+    ///
+    /// 동적 슬롯 생성 시 이 값을 초과하면 신규 생성 중단
+    nonisolated static let maxPersonSlots: Int = 10
 
     // MARK: - Group Validation
 

@@ -333,19 +333,31 @@ final class SimilarityAnalysisQueue {
 
     // MARK: - Private Methods - Face Processing
 
-    /// 기준 슬롯 정보 (위치 + Feature Print)
-    private struct ReferenceSlot {
-        let index: Int
-        let center: CGPoint
+    /// 동적 인물 슬롯 (기준 FP + 메타데이터)
+    ///
+    /// Keep First 정책: 슬롯 최초 생성 시의 FP를 유지
+    private struct PersonSlot {
+        let id: Int                                  // 슬롯 ID (1-based)
+        let featurePrint: VNFeaturePrintObservation  // 기준 FP
+        let center: CGPoint                          // 최초 등록 시 위치
+        let boundingBox: CGRect                      // 최초 등록 시 바운딩박스
+    }
+
+    /// 매칭 후보 (전역 정렬용)
+    private struct MatchCandidate {
+        let faceIdx: Int
+        let slotID: Int
+        let cost: Float           // Dist_fp
+        let posDistNorm: CGFloat  // Dist_pos / √2
         let boundingBox: CGRect
-        let featurePrint: VNFeaturePrintObservation?
     }
 
     /// 그룹 단위로 일관된 인물 번호를 부여합니다.
     ///
-    /// 연속 촬영 사진에서 동일 위치 + 동일 얼굴의 사람을 같은 인물로 매칭합니다.
-    /// 첫 번째 사진(얼굴이 있는)의 얼굴 위치와 Feature Print를 기준 슬롯으로 설정하고,
-    /// 다른 사진의 얼굴은 위치 + Feature Print 이중 검증으로 매핑합니다.
+    /// 전역 후보 정렬 기반 근사 매칭 알고리즘을 사용합니다.
+    /// - 동적 인물 풀: 첫 사진에서 부팅, 이후 신규 인물 등록
+    /// - Grey Zone 전략: 확신/모호/거절 구간으로 나누어 위치 조건 적용
+    /// - 캐시 미저장 정책: FP 실패 또는 매칭 실패 얼굴은 CachedFace에 저장하지 않음
     ///
     /// - Parameters:
     ///   - rawFacesMap: 사진별 감지된 얼굴 (assetID → [DetectedFace])
@@ -361,74 +373,81 @@ final class SimilarityAnalysisQueue {
         // assetID → PHAsset 매핑
         let photoMap = Dictionary(uniqueKeysWithValues: photos.map { ($0.localIdentifier, $0) })
 
-        // 기준 슬롯 정의: 첫 번째 얼굴 있는 사진의 얼굴 위치 + Feature Print
-        var referenceSlots: [ReferenceSlot] = []
-        var referenceAssetID: String? = nil
-
-        // 얼굴이 있는 첫 번째 사진 찾기
-        for assetID in assetIDs {
-            guard let faces = rawFacesMap[assetID], !faces.isEmpty else { continue }
-            guard let photo = photoMap[assetID] else { continue }
-
-            // 위치 정렬 (X 오름차순, Y 내림차순)
-            let sorted = sortFacesByPosition(faces)
-
-            // 이미지 로드
-            guard let cgImage = try? await imageLoader.loadImage(for: photo) else { continue }
-
-            // 기준 슬롯 설정 (위치 + Feature Print)
-            for (idx, face) in sorted.enumerated() {
-                let center = CGPoint(
-                    x: face.boundingBox.midX,
-                    y: face.boundingBox.midY
-                )
-
-                // 얼굴 크롭 후 Feature Print 생성
-                var featurePrint: VNFeaturePrintObservation? = nil
-                if let croppedFace = try? FaceCropper.cropFace(from: cgImage, boundingBox: face.boundingBox) {
-                    featurePrint = try? await analyzer.generateFeaturePrint(for: croppedFace)
-                }
-
-                referenceSlots.append(ReferenceSlot(
-                    index: idx + 1,
-                    center: center,
-                    boundingBox: face.boundingBox,
-                    featurePrint: featurePrint
-                ))
-            }
-
-            referenceAssetID = assetID
-            break
-        }
-
-        // 기준 슬롯이 없으면 빈 결과 반환
-        guard !referenceSlots.isEmpty else {
-            var result: [String: [CachedFace]] = [:]
-            for assetID in assetIDs {
-                result[assetID] = []
-            }
-            return result
-        }
-
-        // 각 사진의 얼굴을 기준 슬롯에 매핑
+        // 결과 저장
         var result: [String: [CachedFace]] = [:]
-        let positionThreshold: CGFloat = 0.15  // 위치 허용 오차 (정규화 좌표 기준)
-        let featurePrintThreshold = SimilarityConstants.personMatchThreshold
 
+        // 동적 인물 풀 (사진 처리하며 성장)
+        var activeSlots: [PersonSlot] = []
+        var nextSlotID: Int = 1
+
+        // 상수
+        let greyZoneThreshold = SimilarityConstants.greyZoneThreshold
+        let rejectThreshold = SimilarityConstants.personMatchThreshold
+        let greyZonePosLimit = SimilarityConstants.greyZonePositionLimit
+        let maxSlots = SimilarityConstants.maxPersonSlots
+        let sqrt2: CGFloat = sqrt(2.0)
+
+        // 각 사진 처리
         for assetID in assetIDs {
             guard let faces = rawFacesMap[assetID] else {
                 result[assetID] = []
                 continue
             }
 
-            // 기준 사진은 Feature Print 비교 없이 바로 매칭
-            if assetID == referenceAssetID {
-                let sorted = sortFacesByPosition(faces)
+            // 이미지 로드
+            var cgImage: CGImage? = nil
+            if let photo = photoMap[assetID] {
+                cgImage = try? await imageLoader.loadImage(for: photo)
+            }
+
+            // === Step 1: 모든 얼굴 FP 1회 생성 ===
+            var faceFPs: [Int: VNFeaturePrintObservation] = [:]
+            var faceData: [Int: (center: CGPoint, boundingBox: CGRect)] = [:]
+
+            for (faceIdx, face) in faces.enumerated() {
+                let center = CGPoint(x: face.boundingBox.midX, y: face.boundingBox.midY)
+                faceData[faceIdx] = (center: center, boundingBox: face.boundingBox)
+
+                guard let image = cgImage else { continue }
+                guard let cropped = try? FaceCropper.cropFace(from: image, boundingBox: face.boundingBox) else { continue }
+                guard let fp = try? await analyzer.generateFeaturePrint(for: cropped) else {
+                    print("[FPFail] Face(\(faceIdx)): FP generation failed")
+                    continue
+                }
+                faceFPs[faceIdx] = fp
+            }
+
+            print("[FaceMatching] Photo \(assetID.prefix(8)): \(faces.count) faces, FP: \(faceFPs.count)/\(faces.count), Slots: \(activeSlots.count)")
+
+            // === Step 2: 부팅 (ActiveSlots 비어있을 때) ===
+            if activeSlots.isEmpty {
+                // 위치 정렬된 순서로 슬롯 생성
+                let sortedFaces = sortFacesByPosition(faces)
+                for face in sortedFaces {
+                    guard activeSlots.count < maxSlots else { break }
+
+                    // 해당 얼굴의 인덱스와 FP 찾기
+                    guard let faceIdx = faces.firstIndex(where: { $0.boundingBox == face.boundingBox }) else { continue }
+                    guard let fp = faceFPs[faceIdx] else { continue }
+                    guard let data = faceData[faceIdx] else { continue }
+
+                    let slot = PersonSlot(
+                        id: nextSlotID,
+                        featurePrint: fp,
+                        center: data.center,
+                        boundingBox: data.boundingBox
+                    )
+                    activeSlots.append(slot)
+                    print("[NewSlot] Face(\(faceIdx)) -> Slot(\(nextSlotID)): Bootstrap")
+                    nextSlotID += 1
+                }
+
+                // 부팅 결과 저장
                 var cachedFaces: [CachedFace] = []
-                for (idx, face) in sorted.enumerated() {
+                for slot in activeSlots {
                     cachedFaces.append(CachedFace(
-                        boundingBox: face.boundingBox,
-                        personIndex: idx + 1,
+                        boundingBox: slot.boundingBox,
+                        personIndex: slot.id,
                         isValidSlot: false
                     ))
                 }
@@ -436,113 +455,118 @@ final class SimilarityAnalysisQueue {
                 continue
             }
 
-            // 이미지 로드 (Feature Print 비교용)
-            var cgImage: CGImage? = nil
-            if let photo = photoMap[assetID] {
-                cgImage = try? await imageLoader.loadImage(for: photo)
+            // === Step 3: 비용 산출 ===
+            var allCandidates: [MatchCandidate] = []
+
+            for (faceIdx, faceFP) in faceFPs {
+                guard let data = faceData[faceIdx] else { continue }
+
+                // 모든 슬롯과 비용 계산
+                var slotCosts: [(slot: PersonSlot, cost: Float, posDist: CGFloat)] = []
+
+                for slot in activeSlots {
+                    guard let cost = try? analyzer.computeDistance(faceFP, slot.featurePrint) else { continue }
+                    let posDist = hypot(data.center.x - slot.center.x, data.center.y - slot.center.y)
+                    slotCosts.append((slot: slot, cost: cost, posDist: posDist))
+                }
+
+                // Top-K 필터링: 슬롯 수 > 5개면 상위 3개만 (근사 최적화)
+                let candidates: ArraySlice<(slot: PersonSlot, cost: Float, posDist: CGFloat)>
+                if activeSlots.count > 5 {
+                    candidates = slotCosts.sorted { $0.cost < $1.cost }.prefix(3)
+                } else {
+                    candidates = slotCosts[...]
+                }
+
+                for item in candidates {
+                    let posDistNorm = min(item.posDist / sqrt2, 1.0)
+                    allCandidates.append(MatchCandidate(
+                        faceIdx: faceIdx,
+                        slotID: item.slot.id,
+                        cost: item.cost,
+                        posDistNorm: posDistNorm,
+                        boundingBox: data.boundingBox
+                    ))
+                }
             }
 
+            // === Step 4: 전역 정렬 (Cost 오름차순) ===
+            allCandidates.sort { $0.cost < $1.cost }
+
+            // === Step 5: 매칭 확정 (Grey Zone 적용) ===
+            var usedFaces: Set<Int> = []
+            var usedSlots: Set<Int> = []
             var cachedFaces: [CachedFace] = []
 
-            // 이미 사용된 슬롯 추적 (같은 사진 내에서 하나의 슬롯에 하나의 얼굴만 매칭)
-            var usedSlots: Set<Int> = []
+            for candidate in allCandidates {
+                guard !usedFaces.contains(candidate.faceIdx) else { continue }
+                guard !usedSlots.contains(candidate.slotID) else { continue }
 
-            for face in faces {
-                let faceCenter = CGPoint(
-                    x: face.boundingBox.midX,
-                    y: face.boundingBox.midY
-                )
+                let cost = candidate.cost
+                let posNorm = candidate.posDistNorm
 
-                // 1단계: 위치 기반으로 후보 슬롯 찾기 (이미 사용된 슬롯 제외)
-                var candidateSlots: [(slot: ReferenceSlot, posDistance: CGFloat)] = []
+                // 구간 판정
+                if cost < greyZoneThreshold {
+                    // 확신 구간: 즉시 매칭
+                    usedFaces.insert(candidate.faceIdx)
+                    usedSlots.insert(candidate.slotID)
+                    cachedFaces.append(CachedFace(
+                        boundingBox: candidate.boundingBox,
+                        personIndex: candidate.slotID,
+                        isValidSlot: false
+                    ))
+                    print("[Match] Face(\(candidate.faceIdx)) -> Slot(\(candidate.slotID)): Cost=\(String(format: "%.2f", cost)) (Confident)")
 
-                for slot in referenceSlots {
-                    // 이미 사용된 슬롯은 후보에서 제외
-                    guard !usedSlots.contains(slot.index) else { continue }
-
-                    let posDistance = hypot(faceCenter.x - slot.center.x, faceCenter.y - slot.center.y)
-                    if posDistance < positionThreshold {
-                        candidateSlots.append((slot: slot, posDistance: posDistance))
-                    }
-                }
-
-                // 후보가 없으면 스킵
-                guard !candidateSlots.isEmpty else { continue }
-
-                // 2단계: Feature Print 비교로 최종 매칭
-                var bestSlot: Int? = nil
-                var bestScore: Float = .infinity
-
-                for candidate in candidateSlots {
-                    // Feature Print가 없으면 위치만으로 판단 (fallback)
-                    guard let refFP = candidate.slot.featurePrint else {
-                        print("[FaceMatching] refFP is nil for slot \(candidate.slot.index)")
-                        if Float(candidate.posDistance) < bestScore {
-                            bestScore = Float(candidate.posDistance)
-                            bestSlot = candidate.slot.index
-                        }
-                        continue
-                    }
-
-                    guard let image = cgImage else {
-                        print("[FaceMatching] cgImage is nil for asset \(assetID.prefix(8))")
-                        if Float(candidate.posDistance) < bestScore {
-                            bestScore = Float(candidate.posDistance)
-                            bestSlot = candidate.slot.index
-                        }
-                        continue
-                    }
-
-                    guard let croppedFace = try? FaceCropper.cropFace(from: image, boundingBox: face.boundingBox) else {
-                        print("[FaceMatching] cropFace failed for asset \(assetID.prefix(8))")
-                        if Float(candidate.posDistance) < bestScore {
-                            bestScore = Float(candidate.posDistance)
-                            bestSlot = candidate.slot.index
-                        }
-                        continue
-                    }
-
-                    guard let faceFP = try? await analyzer.generateFeaturePrint(for: croppedFace) else {
-                        print("[FaceMatching] generateFeaturePrint failed for asset \(assetID.prefix(8))")
-                        if Float(candidate.posDistance) < bestScore {
-                            bestScore = Float(candidate.posDistance)
-                            bestSlot = candidate.slot.index
-                        }
-                        continue
-                    }
-
-                    // Feature Print 거리 계산
-                    guard let fpDistance = try? analyzer.computeDistance(faceFP, refFP) else {
-                        print("[FaceMatching] computeDistance failed")
-                        continue
-                    }
-
-                    // Feature Print 임계값 검사
-                    print("[FaceMatching] asset \(assetID.prefix(8)) → slot \(candidate.slot.index): fpDistance=\(fpDistance), threshold=\(featurePrintThreshold)")
-
-                    if fpDistance < featurePrintThreshold {
-                        // Feature Print 거리가 더 좋은 후보 선택
-                        if fpDistance < bestScore {
-                            bestScore = fpDistance
-                            bestSlot = candidate.slot.index
-                        }
+                } else if cost < rejectThreshold {
+                    // 모호 구간: 위치 조건 확인
+                    if posNorm < greyZonePosLimit {
+                        usedFaces.insert(candidate.faceIdx)
+                        usedSlots.insert(candidate.slotID)
+                        cachedFaces.append(CachedFace(
+                            boundingBox: candidate.boundingBox,
+                            personIndex: candidate.slotID,
+                            isValidSlot: false
+                        ))
+                        print("[GreyMatch] Face(\(candidate.faceIdx)) -> Slot(\(candidate.slotID)): Cost=\(String(format: "%.2f", cost)), PosNorm=\(String(format: "%.2f", posNorm))")
                     } else {
-                        print("[FaceMatching] REJECTED: fpDistance \(fpDistance) >= threshold \(featurePrintThreshold)")
+                        print("[GreyReject] Face(\(candidate.faceIdx)) -> Slot(\(candidate.slotID)): Cost=\(String(format: "%.2f", cost)), PosNorm=\(String(format: "%.2f", posNorm))")
                     }
+                } else {
+                    // 거절 구간
+                    print("[Reject] Face(\(candidate.faceIdx)) -> Slot(\(candidate.slotID)): Cost=\(String(format: "%.2f", cost))")
                 }
+            }
 
-                // 매칭되는 슬롯이 없으면 스킵
-                guard let personIndex = bestSlot else { continue }
+            // === Step 6: 신규 슬롯 등록 ===
+            for (faceIdx, fp) in faceFPs {
+                guard !usedFaces.contains(faceIdx) else { continue }
+                guard activeSlots.count < maxSlots else {
+                    print("[Unassigned] Face(\(faceIdx)): Max slots reached")
+                    continue
+                }
+                guard let data = faceData[faceIdx] else { continue }
 
-                // 슬롯 사용 표시 (같은 슬롯에 다른 얼굴이 매칭되지 않도록)
-                usedSlots.insert(personIndex)
+                // 신규 슬롯 생성
+                let slot = PersonSlot(
+                    id: nextSlotID,
+                    featurePrint: fp,
+                    center: data.center,
+                    boundingBox: data.boundingBox
+                )
+                activeSlots.append(slot)
 
+                usedFaces.insert(faceIdx)
                 cachedFaces.append(CachedFace(
-                    boundingBox: face.boundingBox,
-                    personIndex: personIndex,
+                    boundingBox: data.boundingBox,
+                    personIndex: nextSlotID,
                     isValidSlot: false
                 ))
+
+                print("[NewSlot] Face(\(faceIdx)) -> Slot(\(nextSlotID))")
+                nextSlotID += 1
             }
+
+            // FP 없는 얼굴은 CachedFace에 저장하지 않음 (캐시 미저장 정책)
 
             result[assetID] = cachedFaces
         }
