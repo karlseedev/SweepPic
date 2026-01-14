@@ -9,10 +9,11 @@ Vision Framework Feature Print는 범용 이미지 비교용으로 얼굴 인식
 - **겹침 발생** → 위치가 비슷하면 다른 사람도 같은 사람으로 오판
 
 ### PoC 결과
-MobileFaceNet 기반 SFace 모델 테스트:
+MobileFaceNet 기반 SFace 모델 테스트 (4명, 2장):
 - 동일인 유사도: **0.465~0.727**
 - 타인 유사도: **0.138~0.439**
-- **명확한 분리** → 임계값 0.45로 완벽 구분
+- **PoC 범위 내 분리 확인** → 임계값 0.45로 구분 가능
+- ⚠️ 표본이 적어 일반화는 추가 검증 필요
 
 ---
 
@@ -34,9 +35,33 @@ YuNet → 얼굴 감지 + 5-point 랜드마크
 ```
 
 ### 변경 이유
-- YuNet + SFace는 **설계된 조합** (OpenCV 제공, 함께 테스트됨)
+- YuNet + SFace는 **PoC에서 검증된 조합** (OpenCV 제공, 함께 테스트됨)
 - 5-point alignment가 SFace 정확도에 필수
-- Vision + SFace 혼합은 **검증되지 않은 조합**
+- 검증된 조합으로 시작 → 디버깅 용이
+
+---
+
+## 성능 판단 기준
+
+### 지표 (기존 Vision 대비 상대 기준)
+
+| 지표 | 성능 부족 기준 |
+|------|--------------|
+| 처리 시간 (p95) | **1.5x 이상** 느림 |
+| 메모리 피크 | **+200MB 이상** 증가 |
+| Thermal 상태 | serious/critical 진입 |
+
+### 원인 분리 매트릭스
+
+| 조합 | 목적 | 비고 |
+|------|------|------|
+| Vision + VisionFP | 기존 기준선 | 성능/정확도 비교 기준 |
+| **YuNet + SFace** | 목표 품질 | 먼저 구현 |
+| Vision + SFace | 랜드마크 영향 확인 | 나중에 최적화 시도 |
+
+**문제 발생 시 원인 분리:**
+- YuNet+SFace만 잘 나오고 Vision+SFace가 깨지면 → 랜드마크/정렬 문제
+- 둘 다 깨지면 → SFace 전처리/임계값 문제
 
 ---
 
@@ -57,6 +82,41 @@ YuNet → 얼굴 감지 + 5-point 랜드마크
 | 입력 | [1, 3, 112, 112] (N, C, H, W) |
 | 출력 | [1, 128] (128차원 임베딩) |
 | 크기 | 37MB |
+| int8 버전 | face_recognition_sface_2021dec_int8.onnx (용량 감소) |
+
+### 전처리 스펙 (확인 필요)
+- [ ] 입력 색상 형식: BGR vs RGB
+- [ ] 정규화: mean, std 값
+- [ ] 정렬 템플릿: 5-point 기준 좌표
+
+---
+
+## Phase 0: 기준선 측정 ✅
+
+### 0.1 성능 측정 코드 추가 (완료)
+`SimilarityAnalysisQueue.swift`에 성능 로그 추가:
+```
+========== PERFORMANCE METRICS (Vision) ==========
+Photos: N, Faces: N, Groups: N
+--------------------------------------------------
+FP Generation Time: XXXms (XXms/photo)
+Face Detect+Match Time: XXXms (XXms/face)
+Total Time: XXXms
+--------------------------------------------------
+Memory Start: XXX MB
+Memory End: XXX MB
+Memory Delta: +XX MB
+Thermal State: nominal/fair/serious/critical
+==================================================
+```
+
+### 0.2 기준선 수집 (TODO)
+앱 실행 후 아래 값 기록:
+- [ ] FP 생성 시간 (ms/photo)
+- [ ] 얼굴 감지+매칭 시간 (ms/face)
+- [ ] 총 처리 시간 (ms)
+- [ ] 메모리 증가량 (MB)
+- [ ] Thermal 상태
 
 ---
 
@@ -68,18 +128,28 @@ YuNet → 얼굴 감지 + 5-point 랜드마크
 import coremltools as ct
 
 # YuNet 변환
-yunet_mlmodel = ct.converters.onnx.convert(
+yunet_mlmodel = ct.convert(
     "face_detection_yunet_2023mar.onnx",
-    minimum_ios_deployment_target="16.0"
+    convert_to="mlprogram",
+    minimum_deployment_target=ct.target.iOS16
 )
-yunet_mlmodel.save("YuNet.mlmodel")
+yunet_mlmodel.save("YuNet.mlpackage")
 
-# SFace 변환
-sface_mlmodel = ct.converters.onnx.convert(
+# SFace 변환 (float32)
+sface_mlmodel = ct.convert(
     "face_recognition_sface_2021dec.onnx",
-    minimum_ios_deployment_target="16.0"
+    convert_to="mlprogram",
+    minimum_deployment_target=ct.target.iOS16
 )
-sface_mlmodel.save("SFace.mlmodel")
+sface_mlmodel.save("SFace.mlpackage")
+
+# SFace 변환 (int8 - 용량/속도 비교용)
+sface_int8_mlmodel = ct.convert(
+    "face_recognition_sface_2021dec_int8.onnx",
+    convert_to="mlprogram",
+    minimum_deployment_target=ct.target.iOS16
+)
+sface_int8_mlmodel.save("SFace_int8.mlpackage")
 ```
 
 ### 1.2 프로젝트 구조
@@ -88,8 +158,9 @@ sface_mlmodel.save("SFace.mlmodel")
 PickPhoto/
 ├── Resources/
 │   └── MLModels/
-│       ├── YuNet.mlmodel      # 얼굴 감지 (227KB)
-│       └── SFace.mlmodel      # 얼굴 인식 (37MB)
+│       ├── YuNet.mlpackage      # 얼굴 감지 (227KB)
+│       ├── SFace.mlpackage      # 얼굴 인식 (37MB)
+│       └── SFace_int8.mlpackage # 얼굴 인식 int8 (비교용)
 ```
 
 ---
@@ -100,7 +171,7 @@ PickPhoto/
 
 ```
 PickPhoto/Features/SimilarPhoto/Analysis/
-├── FaceDetector.swift           # 기존 (Vision 기반) → 삭제 또는 보관
+├── FaceDetector.swift           # 기존 Vision 기반 (보관, fallback)
 ├── YuNetFaceDetector.swift      # 새로 추가
 ├── SFaceRecognizer.swift        # 새로 추가
 ├── FaceAligner.swift            # 새로 추가 (5-point alignment)
@@ -256,7 +327,7 @@ struct CachedFace {
 
 ---
 
-## Phase 4: 테스트
+## Phase 4: 테스트 및 검증
 
 ### 4.1 단위 테스트
 - [ ] YuNetFaceDetector 얼굴 감지 테스트
@@ -264,37 +335,52 @@ struct CachedFace {
 - [ ] SFaceRecognizer 임베딩 추출 테스트
 - [ ] 코사인 유사도 계산 테스트
 
-### 4.2 통합 테스트
+### 4.2 정확도 테스트
 - [ ] 기존 문제 케이스 (위치 비슷한 다른 사람) 테스트
 - [ ] 다양한 조명/각도 이미지로 테스트
 - [ ] 동일인/타인 분리 확인
+- [ ] 임계값 재튜닝
 
-### 4.3 성능 테스트
-- [ ] 추론 시간 측정 (목표: <100ms/face)
-- [ ] 메모리 사용량 확인
-- [ ] 배터리 소모 확인
+### 4.3 성능 테스트 (기준선 대비)
+- [ ] 처리 시간 비교 (1.5x 이내)
+- [ ] 메모리 사용량 비교 (+200MB 이내)
+- [ ] Thermal 상태 확인
+- [ ] float32 vs int8 모델 비교
 
 ---
 
 ## 롤백 계획
 
 - 기존 Vision 기반 코드는 삭제하지 않고 별도 보관
-- FaceDetector.swift → FaceDetector_Vision.swift 로 이름 변경
-- 문제 발생 시 import 변경으로 즉시 롤백 가능
+- FaceDetector.swift 유지 (fallback용)
+- 문제 발생 시 의존성 전환으로 즉시 롤백 가능
 
 ---
 
 ## 작업 체크리스트
 
-- [ ] Phase 1: 모델 변환 (YuNet, SFace → Core ML)
-- [ ] Phase 1: 모델 프로젝트에 추가
-- [ ] Phase 2: YuNetFaceDetector 구현
-- [ ] Phase 2: FaceAligner 구현
-- [ ] Phase 2: SFaceRecognizer 구현
-- [ ] Phase 3: SimilarityAnalysisQueue 수정
-- [ ] Phase 3: SimilarityConstants 임계값 조정
-- [ ] Phase 4: 단위 테스트
-- [ ] Phase 4: 통합 테스트
+### Phase 0: 기준선
+- [x] 성능 측정 코드 추가
+- [ ] 기준선 측정 및 기록
+
+### Phase 1: 모델
+- [ ] YuNet ONNX → Core ML 변환
+- [ ] SFace ONNX → Core ML 변환 (float32 + int8)
+- [ ] 모델 프로젝트에 추가
+
+### Phase 2: 구현
+- [ ] YuNetFaceDetector 구현
+- [ ] FaceAligner 구현
+- [ ] SFaceRecognizer 구현
+
+### Phase 3: 통합
+- [ ] SimilarityAnalysisQueue 수정
+- [ ] SimilarityConstants 임계값 조정
+
+### Phase 4: 검증
+- [ ] 단위 테스트
+- [ ] 정확도 테스트
+- [ ] 성능 테스트
 - [ ] 커밋 및 PR
 
 ---

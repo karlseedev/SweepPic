@@ -140,11 +140,18 @@ final class SimilarityAnalysisQueue {
     ///   - source: 요청 소스 (.grid 또는 .viewer)
     ///   - fetchResult: 사진 fetch 결과
     /// - Returns: 생성된 유효 그룹 ID 배열
+    /// 성능 측정 활성화 플래그
+    private let performanceLoggingEnabled = true
+
     func formGroupsForRange(
         _ range: ClosedRange<Int>,
         source: AnalysisSource,
         fetchResult: PHFetchResult<PHAsset>
     ) async -> [String] {
+        // 성능 측정 시작
+        let totalStartTime = CFAbsoluteTimeGetCurrent()
+        let startMemory = getMemoryUsageMB()
+
         // T014.1: 분석 준비
         let photos = fetchPhotos(in: range, fetchResult: fetchResult)
 
@@ -159,7 +166,9 @@ final class SimilarityAnalysisQueue {
         await cache.prepareForReanalysis(assetIDs: Set(assetIDs))
 
         // T014.2: Feature Print 병렬 생성
+        let fpStartTime = CFAbsoluteTimeGetCurrent()
         let featurePrints = await generateFeaturePrints(for: photos)
+        let fpTime = CFAbsoluteTimeGetCurrent() - fpStartTime
 
         // T014.3 & T014.4: 인접 거리 계산 및 그룹 분리
         let rawGroups = analyzer.formGroups(
@@ -181,6 +190,10 @@ final class SimilarityAnalysisQueue {
         // T014.5 & T014.6: 얼굴 감지 + 유효 슬롯 계산
         var validGroupIDs: [String] = []
         let viewerSize = getExpectedViewerSize()
+
+        // 성능 측정: 얼굴 감지 + 매칭 시간
+        let faceStartTime = CFAbsoluteTimeGetCurrent()
+        var totalFaceCount = 0
 
         for groupAssetIDs in rawGroups {
             // 그룹 내 사진 가져오기
@@ -248,7 +261,13 @@ final class SimilarityAnalysisQueue {
             ) {
                 validGroupIDs.append(groupID)
             }
+
+            // 성능 측정: 얼굴 수 누적
+            totalFaceCount += photoFacesMap.values.reduce(0) { $0 + $1.count }
         }
+
+        // 성능 측정: 얼굴 감지 + 매칭 시간
+        let faceTime = CFAbsoluteTimeGetCurrent() - faceStartTime
 
         // LRU eviction
         await cache.evictIfNeeded()
@@ -259,10 +278,56 @@ final class SimilarityAnalysisQueue {
             await cache.setState(.analyzed(inGroup: false, groupID: nil), for: assetID)
         }
 
+        // 성능 측정 로그 출력
+        if performanceLoggingEnabled {
+            let totalTime = CFAbsoluteTimeGetCurrent() - totalStartTime
+            let endMemory = getMemoryUsageMB()
+            let memoryDelta = endMemory - startMemory
+            let thermalState = ProcessInfo.processInfo.thermalState
+
+            print("""
+            ========== PERFORMANCE METRICS (Vision) ==========
+            Photos: \(photos.count), Faces: \(totalFaceCount), Groups: \(validGroupIDs.count)
+            --------------------------------------------------
+            FP Generation Time: \(String(format: "%.2f", fpTime * 1000))ms (\(String(format: "%.1f", fpTime * 1000 / Double(photos.count)))ms/photo)
+            Face Detect+Match Time: \(String(format: "%.2f", faceTime * 1000))ms (\(String(format: "%.1f", faceTime * 1000 / Double(max(1, totalFaceCount))))ms/face)
+            Total Time: \(String(format: "%.2f", totalTime * 1000))ms
+            --------------------------------------------------
+            Memory Start: \(String(format: "%.1f", startMemory))MB
+            Memory End: \(String(format: "%.1f", endMemory))MB
+            Memory Delta: \(String(format: "%+.1f", memoryDelta))MB
+            Thermal State: \(thermalStateString(thermalState))
+            ==================================================
+            """)
+        }
+
         // T014.8: UI 알림 발송
         postAnalysisComplete(range: range, groupIDs: validGroupIDs, analyzedAssetIDs: assetIDs)
 
         return validGroupIDs
+    }
+
+    /// 현재 메모리 사용량 (MB)
+    private func getMemoryUsageMB() -> Double {
+        var info = mach_task_basic_info()
+        var count = mach_msg_type_number_t(MemoryLayout<mach_task_basic_info>.size) / 4
+        let result = withUnsafeMutablePointer(to: &info) {
+            $0.withMemoryRebound(to: integer_t.self, capacity: 1) {
+                task_info(mach_task_self_, task_flavor_t(MACH_TASK_BASIC_INFO), $0, &count)
+            }
+        }
+        return result == KERN_SUCCESS ? Double(info.resident_size) / 1024 / 1024 : 0
+    }
+
+    /// Thermal 상태 문자열
+    private func thermalStateString(_ state: ProcessInfo.ThermalState) -> String {
+        switch state {
+        case .nominal: return "nominal"
+        case .fair: return "fair"
+        case .serious: return "serious"
+        case .critical: return "critical"
+        @unknown default: return "unknown"
+        }
     }
 
     // MARK: - Private Methods - Feature Print Generation
