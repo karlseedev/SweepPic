@@ -43,13 +43,16 @@ enum SimilarityConstants: Sendable {
 
     /// 인물 매칭 임계값 (얼굴 크롭 Feature Print 비교용)
     ///
-    /// - iOS 16: 임계값 1.0
-    /// - iOS 17+: 임계값 0.1 (정규화 벡터 기준)
+    /// - iOS 16: 임계값 8.0
+    /// - iOS 17+: 임계값 0.8 (정규화 벡터 기준, 범위 0~2)
+    ///
+    /// 얼굴 크롭 이미지는 조명/각도/표정에 따라 변동이 크므로
+    /// 전체 이미지 유사도 임계값(0.5)보다 높게 설정
     nonisolated static var personMatchThreshold: Float {
         if #available(iOS 17.0, *) {
-            return 0.1  // iOS 17+: 정규화 벡터
+            return 0.8  // iOS 17+: 정규화 벡터
         } else {
-            return 1.0  // iOS 16: 비정규화 벡터
+            return 8.0  // iOS 16: 비정규화 벡터
         }
     }
 

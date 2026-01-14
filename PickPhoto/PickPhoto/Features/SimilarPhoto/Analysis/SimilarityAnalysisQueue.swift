@@ -444,16 +444,22 @@ final class SimilarityAnalysisQueue {
 
             var cachedFaces: [CachedFace] = []
 
+            // 이미 사용된 슬롯 추적 (같은 사진 내에서 하나의 슬롯에 하나의 얼굴만 매칭)
+            var usedSlots: Set<Int> = []
+
             for face in faces {
                 let faceCenter = CGPoint(
                     x: face.boundingBox.midX,
                     y: face.boundingBox.midY
                 )
 
-                // 1단계: 위치 기반으로 후보 슬롯 찾기
+                // 1단계: 위치 기반으로 후보 슬롯 찾기 (이미 사용된 슬롯 제외)
                 var candidateSlots: [(slot: ReferenceSlot, posDistance: CGFloat)] = []
 
                 for slot in referenceSlots {
+                    // 이미 사용된 슬롯은 후보에서 제외
+                    guard !usedSlots.contains(slot.index) else { continue }
+
                     let posDistance = hypot(faceCenter.x - slot.center.x, faceCenter.y - slot.center.y)
                     if posDistance < positionThreshold {
                         candidateSlots.append((slot: slot, posDistance: posDistance))
@@ -469,11 +475,35 @@ final class SimilarityAnalysisQueue {
 
                 for candidate in candidateSlots {
                     // Feature Print가 없으면 위치만으로 판단 (fallback)
-                    guard let refFP = candidate.slot.featurePrint,
-                          let image = cgImage,
-                          let croppedFace = try? FaceCropper.cropFace(from: image, boundingBox: face.boundingBox),
-                          let faceFP = try? await analyzer.generateFeaturePrint(for: croppedFace) else {
-                        // Feature Print 비교 불가 시, 위치 거리가 가장 가까운 것 선택
+                    guard let refFP = candidate.slot.featurePrint else {
+                        print("[FaceMatching] refFP is nil for slot \(candidate.slot.index)")
+                        if Float(candidate.posDistance) < bestScore {
+                            bestScore = Float(candidate.posDistance)
+                            bestSlot = candidate.slot.index
+                        }
+                        continue
+                    }
+
+                    guard let image = cgImage else {
+                        print("[FaceMatching] cgImage is nil for asset \(assetID.prefix(8))")
+                        if Float(candidate.posDistance) < bestScore {
+                            bestScore = Float(candidate.posDistance)
+                            bestSlot = candidate.slot.index
+                        }
+                        continue
+                    }
+
+                    guard let croppedFace = try? FaceCropper.cropFace(from: image, boundingBox: face.boundingBox) else {
+                        print("[FaceMatching] cropFace failed for asset \(assetID.prefix(8))")
+                        if Float(candidate.posDistance) < bestScore {
+                            bestScore = Float(candidate.posDistance)
+                            bestSlot = candidate.slot.index
+                        }
+                        continue
+                    }
+
+                    guard let faceFP = try? await analyzer.generateFeaturePrint(for: croppedFace) else {
+                        print("[FaceMatching] generateFeaturePrint failed for asset \(assetID.prefix(8))")
                         if Float(candidate.posDistance) < bestScore {
                             bestScore = Float(candidate.posDistance)
                             bestSlot = candidate.slot.index
@@ -482,21 +512,30 @@ final class SimilarityAnalysisQueue {
                     }
 
                     // Feature Print 거리 계산
-                    guard let fpDistance = try? analyzer.computeDistance(faceFP, refFP) else { continue }
+                    guard let fpDistance = try? analyzer.computeDistance(faceFP, refFP) else {
+                        print("[FaceMatching] computeDistance failed")
+                        continue
+                    }
 
                     // Feature Print 임계값 검사
+                    print("[FaceMatching] asset \(assetID.prefix(8)) → slot \(candidate.slot.index): fpDistance=\(fpDistance), threshold=\(featurePrintThreshold)")
+
                     if fpDistance < featurePrintThreshold {
                         // Feature Print 거리가 더 좋은 후보 선택
                         if fpDistance < bestScore {
                             bestScore = fpDistance
                             bestSlot = candidate.slot.index
                         }
+                    } else {
+                        print("[FaceMatching] REJECTED: fpDistance \(fpDistance) >= threshold \(featurePrintThreshold)")
                     }
-                    // Feature Print 임계값 초과 시 이 후보는 제외됨
                 }
 
                 // 매칭되는 슬롯이 없으면 스킵
                 guard let personIndex = bestSlot else { continue }
+
+                // 슬롯 사용 표시 (같은 슬롯에 다른 얼굴이 매칭되지 않도록)
+                usedSlots.insert(personIndex)
 
                 cachedFaces.append(CachedFace(
                     boundingBox: face.boundingBox,
