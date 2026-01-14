@@ -58,23 +58,24 @@ enum SimilarityConstants: Sendable {
 
     /// Grey Zone 시작 임계값 (확신/모호 구간 경계)
     ///
-    /// - iOS 16: 6.0
-    /// - iOS 17+: 0.50
+    /// - iOS 16: 5.0
+    /// - iOS 17+: 0.35
     ///
     /// 이 값 미만이면 즉시 매칭(확신 구간),
     /// 이 값 이상 ~ personMatchThreshold 미만이면 Grey Zone(위치 조건 필요)
     nonisolated static var greyZoneThreshold: Float {
         if #available(iOS 17.0, *) {
-            return 0.50  // iOS 17+: 정규화 벡터
+            return 0.35  // iOS 17+: 정규화 벡터 (변경: 0.50 → 0.35)
         } else {
-            return 6.0   // iOS 16: 비정규화 벡터
+            return 5.0   // iOS 16: 비정규화 벡터 (변경: 6.0 → 5.0)
         }
     }
 
     /// Grey Zone 위치 조건 (정규화된 거리 기준)
     ///
     /// Grey Zone에서 매칭을 허용하려면 Dist_pos / √2 < 이 값이어야 함
-    nonisolated static let greyZonePositionLimit: CGFloat = 0.15
+    /// 변경: 0.15 → 0.08 (같은 사람 최대 0.074, 다른 사람 0.081 기준)
+    nonisolated static let greyZonePositionLimit: CGFloat = 0.08
 
     /// 최대 인물 슬롯 수
     ///
@@ -105,7 +106,8 @@ enum SimilarityConstants: Sendable {
     // MARK: - Face Detection
 
     /// 유효 얼굴 최소 비율 (화면 너비 대비)
-    nonisolated static let minFaceWidthRatio: CGFloat = 0.04
+    /// 변경: 0.04 → 0.03 (더 작은 얼굴도 감지)
+    nonisolated static let minFaceWidthRatio: CGFloat = 0.03
 
     /// 사진당 최대 얼굴 수
     nonisolated static let maxFacesPerPhoto: Int = 5

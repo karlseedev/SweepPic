@@ -440,11 +440,17 @@ extension ViewerViewController {
         guard let asset = coordinator.asset(at: currentIndex) else { return }
         let imageSize = CGSize(width: asset.pixelWidth, height: asset.pixelHeight)
 
+        // 디버그: 실제 레이아웃 정보 출력
+        let safeInsets = view.safeAreaInsets
+        let overlayBounds = faceButtonOverlay?.bounds ?? .zero
+        print("[FaceButton] DEBUG - view.bounds=\(view.bounds), safeAreaInsets=\(safeInsets), overlayBounds=\(overlayBounds)")
+
         // 버튼 표시
         faceButtonOverlay?.showButtons(
             for: validFaces,
             imageSize: imageSize,
-            viewerFrame: view.bounds
+            viewerFrame: view.bounds,
+            assetID: assetID
         )
     }
 

@@ -69,11 +69,17 @@ final class FaceButtonOverlay: UIView {
     /// 델리게이트
     weak var delegate: FaceButtonOverlayDelegate?
 
+    /// 디버그 로그 활성화 (+버튼 좌표 계산 정보)
+    private let debugButtonPosition = true
+
     /// 현재 표시 중인 +버튼들
     private var faceButtons: [FaceButton] = []
 
     /// 현재 표시 중인 얼굴 정보
     private var currentFaces: [CachedFace] = []
+
+    /// 현재 사진 assetID (디버그용)
+    private var currentAssetID: String = ""
 
     /// 현재 이미지 크기 (좌표 변환용)
     private var currentImageSize: CGSize = .zero
@@ -147,13 +153,15 @@ final class FaceButtonOverlay: UIView {
     ///   - faces: 표시할 얼굴 정보 (유효 슬롯만 전달해야 함)
     ///   - imageSize: 원본 이미지 크기
     ///   - viewerFrame: 뷰어 프레임 (이미지가 표시되는 영역)
-    func showButtons(for faces: [CachedFace], imageSize: CGSize, viewerFrame: CGRect) {
+    ///   - assetID: 사진 ID (디버그용)
+    func showButtons(for faces: [CachedFace], imageSize: CGSize, viewerFrame: CGRect, assetID: String = "") {
         // 기존 버튼 제거
         removeAllButtons()
 
         // 상태 저장
         currentFaces = faces
         currentImageSize = imageSize
+        currentAssetID = assetID
 
         // 유효 슬롯 얼굴만 필터링 & 크기순 상위 5개
         let validFaces = faces.filter { $0.isValidSlot }.topBySize(Constants.maxButtons)
@@ -172,6 +180,11 @@ final class FaceButtonOverlay: UIView {
         // 버튼 위치 계산 및 생성
         var placedPositions: [CGPoint] = []
 
+        if debugButtonPosition {
+            let assetPrefix = String(assetID.prefix(8))
+            print("[FaceButton] showButtons - assetID=\(assetPrefix), imageSize=\(imageSize), viewerFrame=\(viewerFrame)")
+        }
+
         for face in validFaces {
             // 기본 위치 계산 (얼굴 위 중앙)
             var position = face.buttonPosition(
@@ -180,12 +193,26 @@ final class FaceButtonOverlay: UIView {
                 buttonRadius: Constants.buttonRadius
             )
 
+            let originalPosition = position
+
             // 겹침 방지 조정
             position = adjustForCollision(
                 position: position,
                 placedPositions: placedPositions,
                 viewerFrame: viewerFrame
             )
+
+            if debugButtonPosition {
+                let bb = face.boundingBox
+                let wasAdjusted = position != originalPosition
+                var logMsg = "[FaceButton] Person(\(face.personIndex)): boundingBox=(x:\(String(format: "%.3f", bb.origin.x)), y:\(String(format: "%.3f", bb.origin.y)), w:\(String(format: "%.3f", bb.width)), h:\(String(format: "%.3f", bb.height)))"
+                logMsg += " -> original=(\(String(format: "%.1f", originalPosition.x)), \(String(format: "%.1f", originalPosition.y)))"
+                if wasAdjusted {
+                    logMsg += " -> ADJUSTED=(\(String(format: "%.1f", position.x)), \(String(format: "%.1f", position.y)))"
+                    logMsg += " [delta: x=\(String(format: "%.1f", position.x - originalPosition.x)), y=\(String(format: "%.1f", position.y - originalPosition.y))]"
+                }
+                print(logMsg)
+            }
 
             placedPositions.append(position)
 

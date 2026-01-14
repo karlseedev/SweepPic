@@ -126,6 +126,24 @@ final class PhotoPageViewController: UIViewController {
     /// 초기 레이아웃 정보 로그 여부 (로그 스팸 방지)
     private var hasLoggedInitialLayoutInfo = false
 
+    // MARK: - Debug UI
+
+    /// 디버그 모드 활성화 (assetID 표시)
+    private let debugOverlayEnabled = true
+
+    /// assetID 디버그 라벨 (우측 하단)
+    private lazy var debugAssetLabel: UILabel = {
+        let label = UILabel()
+        label.font = .monospacedSystemFont(ofSize: 11, weight: .medium)
+        label.textColor = .white
+        label.backgroundColor = UIColor.black.withAlphaComponent(0.6)
+        label.textAlignment = .center
+        label.layer.cornerRadius = 4
+        label.clipsToBounds = true
+        label.translatesAutoresizingMaskIntoConstraints = false
+        return label
+    }()
+
     // MARK: - Trashed Background (휴지통 사진 표시)
 
     /// 휴지통 배경 표시 여부 (보관함/앨범 뷰어에서만 true)
@@ -267,6 +285,18 @@ final class PhotoPageViewController: UIViewController {
 
         // 더블탭 제스처
         scrollView.addGestureRecognizer(doubleTapGesture)
+
+        // 디버그 라벨 (우측 하단에 assetID 앞 8자리 표시)
+        if debugOverlayEnabled {
+            view.addSubview(debugAssetLabel)
+            let assetIDPrefix = String(asset.localIdentifier.prefix(8))
+            debugAssetLabel.text = " \(assetIDPrefix) "
+
+            NSLayoutConstraint.activate([
+                debugAssetLabel.trailingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.trailingAnchor, constant: -8),
+                debugAssetLabel.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor, constant: -8)
+            ])
+        }
     }
 
     // MARK: - Public API (Trashed State)
@@ -331,7 +361,7 @@ final class PhotoPageViewController: UIViewController {
         hasAppliedInitialLayout = true
 
         if debugPhoto {
-            print("[Photo] 🎯 applyInitialLayout - index: \(index), asset=\(Int(assetWidth))×\(Int(assetHeight)), fit=\(fitSize)")
+            print("[Photo] 🎯 applyInitialLayout - index: \(index), asset=\(Int(assetWidth))×\(Int(assetHeight)), fit=\(fitSize), vInset=\(vInset), containerSize=\(containerSize)")
         }
     }
 
