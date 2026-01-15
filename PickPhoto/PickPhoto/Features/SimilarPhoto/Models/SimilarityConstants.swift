@@ -68,8 +68,9 @@ enum SimilarityConstants: Sendable {
     /// Grey Zone 위치 조건 (정규화된 거리 기준)
     ///
     /// Grey Zone에서 매칭을 허용하려면 Dist_pos / √2 < 이 값이어야 함
-    /// 변경: 0.15 → 0.08 (같은 사람 최대 0.074, 다른 사람 0.081 기준)
-    nonisolated static let greyZonePositionLimit: CGFloat = 0.08
+    /// 변경: 0.08 → 0.20 (슬롯 위치 갱신 적용 후 완화)
+    /// 이유: 슬롯 위치가 매칭마다 갱신되므로 위치 조건을 덜 엄격하게 적용
+    nonisolated static let greyZonePositionLimit: CGFloat = 0.20
 
     /// 최대 인물 슬롯 수
     ///

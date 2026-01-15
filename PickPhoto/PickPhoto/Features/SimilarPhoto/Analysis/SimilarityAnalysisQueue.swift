@@ -831,7 +831,7 @@ final class SimilarityAnalysisQueue {
                 let posNorm = bestByPos.posDistNorm
 
                 // 교차 검증: 위치가 가깝고(25%) SFace cost가 상한선(0.80) 이하면 매칭
-                if posNorm < lowQualityPosLimit && cost < lowQualityCostLimit {
+                if posNorm <= lowQualityPosLimit && cost < lowQualityCostLimit {
                     usedFaces.insert(faceIdx)
                     usedSlots.insert(bestByPos.slotID)
                     cachedFaces.append(CachedFace(
