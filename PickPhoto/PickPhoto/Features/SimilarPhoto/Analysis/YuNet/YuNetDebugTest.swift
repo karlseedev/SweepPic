@@ -109,7 +109,7 @@ final class YuNetDebugTest {
     private func testCoreMLOutputRange(image: CGImage) async -> TestResult {
         print("\n[Test 1] Core ML Output Range Verification")
 
-        guard let detector = YuNetFaceDetector.shared else {
+        guard YuNetFaceDetector.shared != nil else {
             return TestResult(
                 testName: "Core ML Output Range",
                 passed: false,
@@ -175,6 +175,37 @@ final class YuNetDebugTest {
                 details: "추론 실패: \(error.localizedDescription)"
             )
         }
+    }
+
+    /// CGImage 픽셀 합계 계산 (이미지 동일성 확인용)
+    private func calculatePixelSum(_ image: CGImage) -> Int {
+        let width = image.width
+        let height = image.height
+        let bytesPerPixel = 4
+
+        var pixelData = [UInt8](repeating: 0, count: width * height * bytesPerPixel)
+
+        guard let context = CGContext(
+            data: &pixelData,
+            width: width,
+            height: height,
+            bitsPerComponent: 8,
+            bytesPerRow: width * bytesPerPixel,
+            space: CGColorSpaceCreateDeviceRGB(),
+            bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
+        ) else {
+            return -1
+        }
+
+        context.draw(image, in: CGRect(x: 0, y: 0, width: width, height: height))
+
+        var sum: Int = 0
+        for i in stride(from: 0, to: pixelData.count, by: bytesPerPixel) {
+            sum += Int(pixelData[i])     // R
+            sum += Int(pixelData[i + 1]) // G
+            sum += Int(pixelData[i + 2]) // B
+        }
+        return sum
     }
 
     /// MLMultiArray 통계 계산
@@ -252,7 +283,10 @@ final class YuNetDebugTest {
             do {
                 let aligned = try aligner.align(image: image, landmarks: detection.landmarks)
                 alignedFaces.append(aligned)
-                print("  [\(i)] Aligned: \(aligned.width)×\(aligned.height) ✓")
+
+                // 디버그: 픽셀 합계 출력 (동일 이미지인지 확인)
+                let pixelSum = calculatePixelSum(aligned)
+                print("  [\(i)] Aligned: \(aligned.width)×\(aligned.height), pixelSum=\(pixelSum) ✓")
             } catch {
                 failCount += 1
                 print("  [\(i)] Failed: \(error.localizedDescription) ✗")

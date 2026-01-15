@@ -44,6 +44,11 @@ struct CachedFace: Equatable, Hashable, Sendable {
     /// - 그룹 형성 시 계산되어 설정됨
     var isValidSlot: Bool
 
+    /// SFace 코사인 유사도 기반 거리 (디버그용)
+    /// - 값: 1 - cosineSimilarity (0에 가까울수록 동일인)
+    /// - nil: 기준 사진이거나 계산 실패
+    let sfaceCost: Float?
+
     // MARK: - Initialization
 
     /// CachedFace를 생성합니다.
@@ -52,11 +57,13 @@ struct CachedFace: Equatable, Hashable, Sendable {
     ///   - boundingBox: Vision 정규화 좌표 (0~1)
     ///   - personIndex: 위치 기반 인물 번호 (>= 1)
     ///   - isValidSlot: 유효 슬롯 여부 (기본값: false)
-    init(boundingBox: CGRect, personIndex: Int, isValidSlot: Bool = false) {
+    ///   - sfaceCost: SFace 코사인 유사도 기반 거리 (기본값: nil)
+    init(boundingBox: CGRect, personIndex: Int, isValidSlot: Bool = false, sfaceCost: Float? = nil) {
         precondition(personIndex >= 1, "Person index must be >= 1")
         self.boundingBox = boundingBox
         self.personIndex = personIndex
         self.isValidSlot = isValidSlot
+        self.sfaceCost = sfaceCost
     }
 
     // MARK: - Computed Properties

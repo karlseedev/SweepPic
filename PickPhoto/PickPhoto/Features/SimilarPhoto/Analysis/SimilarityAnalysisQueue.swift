@@ -715,9 +715,10 @@ final class SimilarityAnalysisQueue {
                     cachedFaces.append(CachedFace(
                         boundingBox: candidate.boundingBox,
                         personIndex: candidate.slotID,
-                        isValidSlot: false
+                        isValidSlot: false,
+                        sfaceCost: cost
                     ))
-                    print("[Match] Face(\(candidate.faceIdx)) -> Slot(\(candidate.slotID)): Cost=\(String(format: "%.2f", cost)) (Confident)")
+                    print("[Match] Face(\(candidate.faceIdx)) -> Slot(\(candidate.slotID)): Cost=\(String(format: "%.3f", cost)) (Confident)")
 
                 } else if cost < rejectThreshold {
                     // 모호 구간: 위치 조건 확인
@@ -727,15 +728,16 @@ final class SimilarityAnalysisQueue {
                         cachedFaces.append(CachedFace(
                             boundingBox: candidate.boundingBox,
                             personIndex: candidate.slotID,
-                            isValidSlot: false
+                            isValidSlot: false,
+                            sfaceCost: cost
                         ))
-                        print("[GreyMatch] Face(\(candidate.faceIdx)) -> Slot(\(candidate.slotID)): Cost=\(String(format: "%.2f", cost)), PosNorm=\(String(format: "%.2f", posNorm))")
+                        print("[GreyMatch] Face(\(candidate.faceIdx)) -> Slot(\(candidate.slotID)): Cost=\(String(format: "%.3f", cost)), PosNorm=\(String(format: "%.2f", posNorm))")
                     } else {
-                        print("[GreyReject] Face(\(candidate.faceIdx)) -> Slot(\(candidate.slotID)): Cost=\(String(format: "%.2f", cost)), PosNorm=\(String(format: "%.2f", posNorm))")
+                        print("[GreyReject] Face(\(candidate.faceIdx)) -> Slot(\(candidate.slotID)): Cost=\(String(format: "%.3f", cost)), PosNorm=\(String(format: "%.2f", posNorm))")
                     }
                 } else {
                     // 거절 구간
-                    print("[Reject] Face(\(candidate.faceIdx)) -> Slot(\(candidate.slotID)): Cost=\(String(format: "%.2f", cost))")
+                    print("[Reject] Face(\(candidate.faceIdx)) -> Slot(\(candidate.slotID)): Cost=\(String(format: "%.3f", cost))")
                 }
             }
 

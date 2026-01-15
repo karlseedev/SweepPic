@@ -202,17 +202,22 @@ final class FaceAligner {
             ty: CGFloat(ty)
         )
 
-        // 역변환 반환 (draw 시 사용)
-        return forwardTransform.inverted()
+        // 정변환 반환 (warpAffine은 정변환을 받아서 내부적으로 역변환 사용)
+        return forwardTransform
     }
 
     // MARK: - Private Methods - Image Transform
 
-    /// 변환을 적용하여 정렬된 이미지를 생성합니다.
+    /// warpAffine과 동일하게 변환을 적용하여 정렬된 이미지를 생성합니다.
+    ///
+    /// OpenCV warpAffine 동작:
+    /// - 출력의 각 픽셀 (x', y')에 대해
+    /// - M^(-1) * (x', y') = (x, y)를 계산하여 입력 좌표를 얻음
+    /// - 입력 이미지에서 (x, y) 위치를 bilinear 보간하여 샘플링
     ///
     /// - Parameters:
     ///   - image: 원본 이미지
-    ///   - transform: 적용할 CGAffineTransform (역변환)
+    ///   - transform: 적용할 CGAffineTransform (정변환: src → dst)
     ///   - outputSize: 출력 이미지 크기
     /// - Returns: 변환된 이미지
     /// - Throws: FaceAlignerError.imageCreationFailed
@@ -221,43 +226,96 @@ final class FaceAligner {
         transform: CGAffineTransform,
         outputSize: Int
     ) throws -> CGImage {
-        // Core Graphics 컨텍스트 생성
-        guard let context = CGContext(
-            data: nil,
-            width: outputSize,
-            height: outputSize,
+        let srcWidth = image.width
+        let srcHeight = image.height
+        let bytesPerPixel = 4
+
+        // 1. 입력 이미지 픽셀 데이터 추출
+        var srcPixels = [UInt8](repeating: 0, count: srcWidth * srcHeight * bytesPerPixel)
+        guard let srcContext = CGContext(
+            data: &srcPixels,
+            width: srcWidth,
+            height: srcHeight,
             bitsPerComponent: 8,
-            bytesPerRow: outputSize * 4,
+            bytesPerRow: srcWidth * bytesPerPixel,
             space: CGColorSpaceCreateDeviceRGB(),
             bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
         ) else {
-            throw FaceAlignerError.imageCreationFailed("CGContext 생성 실패")
+            throw FaceAlignerError.imageCreationFailed("입력 CGContext 생성 실패")
+        }
+        srcContext.draw(image, in: CGRect(x: 0, y: 0, width: srcWidth, height: srcHeight))
+
+        // 2. 출력 픽셀 버퍼 생성
+        var dstPixels = [UInt8](repeating: 0, count: outputSize * outputSize * bytesPerPixel)
+
+        // 3. 역변환 계산 (정변환의 역)
+        let inverseTransform = transform.inverted()
+
+        // 4. 출력 각 픽셀에 대해 역변환 적용하여 입력 좌표 계산 후 샘플링
+        for dstY in 0..<outputSize {
+            for dstX in 0..<outputSize {
+                // 출력 좌표 (dstX, dstY)를 역변환하여 입력 좌표 (srcX, srcY) 계산
+                let srcPoint = CGPoint(x: CGFloat(dstX), y: CGFloat(dstY))
+                    .applying(inverseTransform)
+
+                let srcX = Float(srcPoint.x)
+                let srcY = Float(srcPoint.y)
+
+                // 경계 체크
+                if srcX < 0 || srcX >= Float(srcWidth - 1) ||
+                   srcY < 0 || srcY >= Float(srcHeight - 1) {
+                    // 경계 밖은 검정 (0, 0, 0, 255)
+                    let dstIdx = (dstY * outputSize + dstX) * bytesPerPixel
+                    dstPixels[dstIdx + 3] = 255  // Alpha
+                    continue
+                }
+
+                // Bilinear 보간
+                let x0 = Int(srcX)
+                let y0 = Int(srcY)
+                let x1 = min(x0 + 1, srcWidth - 1)
+                let y1 = min(y0 + 1, srcHeight - 1)
+
+                let fx = srcX - Float(x0)
+                let fy = srcY - Float(y0)
+
+                let w00 = (1 - fx) * (1 - fy)
+                let w01 = fx * (1 - fy)
+                let w10 = (1 - fx) * fy
+                let w11 = fx * fy
+
+                let idx00 = (y0 * srcWidth + x0) * bytesPerPixel
+                let idx01 = (y0 * srcWidth + x1) * bytesPerPixel
+                let idx10 = (y1 * srcWidth + x0) * bytesPerPixel
+                let idx11 = (y1 * srcWidth + x1) * bytesPerPixel
+
+                let dstIdx = (dstY * outputSize + dstX) * bytesPerPixel
+
+                // RGBA 채널 보간
+                for c in 0..<4 {
+                    let val = w00 * Float(srcPixels[idx00 + c]) +
+                              w01 * Float(srcPixels[idx01 + c]) +
+                              w10 * Float(srcPixels[idx10 + c]) +
+                              w11 * Float(srcPixels[idx11 + c])
+                    dstPixels[dstIdx + c] = UInt8(min(max(val, 0), 255))
+                }
+            }
         }
 
-        // 배경을 검정으로 채우기 (경계 밖 영역)
-        context.setFillColor(CGColor(red: 0, green: 0, blue: 0, alpha: 1))
-        context.fill(CGRect(x: 0, y: 0, width: outputSize, height: outputSize))
+        // 5. 출력 CGImage 생성
+        guard let dstContext = CGContext(
+            data: &dstPixels,
+            width: outputSize,
+            height: outputSize,
+            bitsPerComponent: 8,
+            bytesPerRow: outputSize * bytesPerPixel,
+            space: CGColorSpaceCreateDeviceRGB(),
+            bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
+        ) else {
+            throw FaceAlignerError.imageCreationFailed("출력 CGContext 생성 실패")
+        }
 
-        // CGContext 좌표계를 이미지 좌표계로 변환 (y축 뒤집기)
-        // CGContext: 왼쪽 아래 원점, y 위로 증가
-        // 이미지/YuNet landmark: 왼쪽 위 원점, y 아래로 증가
-        context.translateBy(x: 0, y: CGFloat(outputSize))
-        context.scaleBy(x: 1, y: -1)
-
-        // 변환 적용 (이제 이미지 좌표계 기준)
-        context.concatenate(transform)
-
-        // 이미지 그리기
-        context.interpolationQuality = .high
-        context.draw(image, in: CGRect(
-            x: 0,
-            y: 0,
-            width: image.width,
-            height: image.height
-        ))
-
-        // 결과 이미지 생성
-        guard let alignedImage = context.makeImage() else {
+        guard let alignedImage = dstContext.makeImage() else {
             throw FaceAlignerError.imageCreationFailed("정렬된 이미지 생성 실패")
         }
 
