@@ -537,7 +537,7 @@ final class FaceComparisonViewController: UIViewController {
             }
 
             // YuNet 테스트 실행
-            let results = await YuNetDebugTest.shared.runAllTests(with: photo)
+            _ = await YuNetDebugTest.shared.runAllTests(with: photo)
 
             // 기존 디버그 정보도 출력
             let debugInfo = await generateDebugInfo()

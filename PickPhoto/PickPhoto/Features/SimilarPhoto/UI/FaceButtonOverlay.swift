@@ -187,7 +187,7 @@ final class FaceButtonOverlay: UIView {
 
         for face in validFaces {
             // 기본 위치 계산 (얼굴 위 중앙)
-            var position = face.buttonPosition(
+            let position = face.buttonPosition(
                 imageSize: imageSize,
                 viewerFrame: viewerFrame,
                 buttonRadius: Constants.buttonRadius

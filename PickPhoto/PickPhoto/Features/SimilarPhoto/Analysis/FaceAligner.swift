@@ -162,8 +162,8 @@ final class FaceAligner {
         // 4. 공분산 행렬 H = src^T * dst
         let h = covarianceMatrix(srcCentered, dstCentered)
 
-        // 5. SVD 분해: H = U * S * V^T
-        let (u, s, vt) = try svdDecompose(h)
+        // 5. SVD 분해: H = U * S * V^T (S는 사용하지 않음)
+        let (u, _, vt) = try svdDecompose(h)
 
         // 6. 회전 행렬 R = V * U^T
         var r = matmul2x2(transpose2x2(vt), transpose2x2(u))
