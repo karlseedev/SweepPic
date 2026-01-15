@@ -490,13 +490,18 @@ final class SimilarityAnalysisQueue {
 
     /// 동적 인물 슬롯 (기준 임베딩 + 메타데이터)
     ///
-    /// Keep First 정책: 슬롯 최초 생성 시의 임베딩을 유지
+    /// Keep Best 정책: 더 높은 norm의 임베딩으로 갱신
     private struct PersonSlot {
         let id: Int                // 슬롯 ID (1-based)
-        let embedding: [Float]     // 128차원 SFace 임베딩
+        var embedding: [Float]     // 128차원 SFace 임베딩
+        var norm: Float            // 임베딩 norm (품질 지표)
         let center: CGPoint        // 최초 등록 시 위치
         let boundingBox: CGRect    // 최초 등록 시 바운딩박스
     }
+
+    /// 임베딩 품질 임계값 (norm 기준)
+    /// norm < 7인 얼굴은 저품질로 판정하여 신규 슬롯 생성 금지
+    private let minEmbeddingNorm: Float = 7.0
 
     /// 매칭 후보 (전역 정렬용)
     private struct MatchCandidate {
@@ -505,6 +510,8 @@ final class SimilarityAnalysisQueue {
         let cost: Float           // Dist_fp
         let posDistNorm: CGFloat  // Dist_pos / √2
         let boundingBox: CGRect
+        let embedding: [Float]    // Keep Best용 임베딩
+        let norm: Float           // 임베딩 품질
     }
 
     /// 그룹 단위로 일관된 인물 번호를 부여합니다.
@@ -615,6 +622,7 @@ final class SimilarityAnalysisQueue {
             print("[FaceMatching] Photo \(assetID.prefix(8)): \(yunetDetections.count) faces (YuNet), Embed: \(faceEmbeddings.count)/\(yunetDetections.count), Slots: \(activeSlots.count)")
 
             // === Step 2: 부팅 (ActiveSlots 비어있을 때) ===
+            // 부팅 시에는 저품질 포함 모든 얼굴로 슬롯 생성 (모든 인물이 슬롯 보유)
             if activeSlots.isEmpty {
                 // 위치 정렬된 순서로 슬롯 생성 (YuNet 결과 기반)
                 let sortedIndices = faceData.keys.sorted { idx1, idx2 in
@@ -632,14 +640,21 @@ final class SimilarityAnalysisQueue {
                     guard let embedding = faceEmbeddings[faceIdx] else { continue }
                     guard let data = faceData[faceIdx] else { continue }
 
+                    // norm 계산
+                    let norm = sqrt(embedding.reduce(0) { $0 + $1 * $1 })
+
+                    // 부팅 시에는 저품질 얼굴도 슬롯 생성 허용 (모든 인물 포함)
+                    let qualityTag = norm < minEmbeddingNorm ? " [LowQ]" : ""
+
                     let slot = PersonSlot(
                         id: nextSlotID,
                         embedding: embedding,
+                        norm: norm,
                         center: data.center,
                         boundingBox: data.boundingBox
                     )
                     activeSlots.append(slot)
-                    print("[NewSlot] Face(\(faceIdx)) -> Slot(\(nextSlotID)): Bootstrap")
+                    print("[NewSlot] Face(\(faceIdx)) -> Slot(\(nextSlotID)): Bootstrap, norm=\(String(format: "%.2f", norm))\(qualityTag)")
                     nextSlotID += 1
                 }
 
@@ -659,8 +674,15 @@ final class SimilarityAnalysisQueue {
             // === Step 3: 비용 산출 (코사인 유사도 → 거리 변환) ===
             var allCandidates: [MatchCandidate] = []
 
+            // 각 얼굴의 norm 미리 계산
+            var faceNorms: [Int: Float] = [:]
+            for (faceIdx, embedding) in faceEmbeddings {
+                faceNorms[faceIdx] = sqrt(embedding.reduce(0) { $0 + $1 * $1 })
+            }
+
             for (faceIdx, faceEmbedding) in faceEmbeddings {
                 guard let data = faceData[faceIdx] else { continue }
+                let faceNorm = faceNorms[faceIdx] ?? 0
 
                 // 모든 슬롯과 비용 계산 (코사인 유사도를 거리로 변환: cost = 1 - similarity)
                 var slotCosts: [(slot: PersonSlot, cost: Float, posDist: CGFloat)] = []
@@ -687,7 +709,9 @@ final class SimilarityAnalysisQueue {
                         slotID: item.slot.id,
                         cost: item.cost,
                         posDistNorm: posDistNorm,
-                        boundingBox: data.boundingBox
+                        boundingBox: data.boundingBox,
+                        embedding: faceEmbedding,
+                        norm: faceNorm
                     ))
                 }
             }
@@ -695,10 +719,22 @@ final class SimilarityAnalysisQueue {
             // === Step 4: 전역 정렬 (Cost 오름차순) ===
             allCandidates.sort { $0.cost < $1.cost }
 
-            // === Step 5: 매칭 확정 (Grey Zone 적용) ===
+            // === Step 5: 매칭 확정 (Grey Zone 적용 + Keep Best) ===
             var usedFaces: Set<Int> = []
             var usedSlots: Set<Int> = []
             var cachedFaces: [CachedFace] = []
+
+            /// Keep Best: 매칭된 얼굴의 norm이 슬롯보다 높으면 슬롯 임베딩 갱신
+            func updateSlotIfBetter(slotID: Int, embedding: [Float], norm: Float) {
+                if let idx = activeSlots.firstIndex(where: { $0.id == slotID }) {
+                    if norm > activeSlots[idx].norm {
+                        let oldNorm = activeSlots[idx].norm
+                        activeSlots[idx].embedding = embedding
+                        activeSlots[idx].norm = norm
+                        print("[KeepBest] Slot(\(slotID)): norm \(String(format: "%.2f", oldNorm)) -> \(String(format: "%.2f", norm))")
+                    }
+                }
+            }
 
             for candidate in allCandidates {
                 guard !usedFaces.contains(candidate.faceIdx) else { continue }
@@ -718,7 +754,10 @@ final class SimilarityAnalysisQueue {
                         isValidSlot: false,
                         sfaceCost: cost
                     ))
-                    print("[Match] Face(\(candidate.faceIdx)) -> Slot(\(candidate.slotID)): Cost=\(String(format: "%.3f", cost)) (Confident)")
+                    print("[Match] Face(\(candidate.faceIdx)) -> Slot(\(candidate.slotID)): Cost=\(String(format: "%.3f", cost)), norm=\(String(format: "%.2f", candidate.norm)) (Confident)")
+
+                    // Keep Best: 슬롯 임베딩 갱신
+                    updateSlotIfBetter(slotID: candidate.slotID, embedding: candidate.embedding, norm: candidate.norm)
 
                 } else if cost < rejectThreshold {
                     // 모호 구간: 위치 조건 확인
@@ -731,7 +770,10 @@ final class SimilarityAnalysisQueue {
                             isValidSlot: false,
                             sfaceCost: cost
                         ))
-                        print("[GreyMatch] Face(\(candidate.faceIdx)) -> Slot(\(candidate.slotID)): Cost=\(String(format: "%.3f", cost)), PosNorm=\(String(format: "%.2f", posNorm))")
+                        print("[GreyMatch] Face(\(candidate.faceIdx)) -> Slot(\(candidate.slotID)): Cost=\(String(format: "%.3f", cost)), PosNorm=\(String(format: "%.2f", posNorm)), norm=\(String(format: "%.2f", candidate.norm))")
+
+                        // Keep Best: 슬롯 임베딩 갱신
+                        updateSlotIfBetter(slotID: candidate.slotID, embedding: candidate.embedding, norm: candidate.norm)
                     } else {
                         print("[GreyReject] Face(\(candidate.faceIdx)) -> Slot(\(candidate.slotID)): Cost=\(String(format: "%.3f", cost)), PosNorm=\(String(format: "%.2f", posNorm))")
                     }
@@ -741,7 +783,7 @@ final class SimilarityAnalysisQueue {
                 }
             }
 
-            // === Step 6: 신규 슬롯 등록 ===
+            // === Step 6: 신규 슬롯 등록 (저품질 필터 적용) ===
             for (faceIdx, embedding) in faceEmbeddings {
                 guard !usedFaces.contains(faceIdx) else { continue }
                 guard activeSlots.count < maxSlots else {
@@ -750,10 +792,32 @@ final class SimilarityAnalysisQueue {
                 }
                 guard let data = faceData[faceIdx] else { continue }
 
+                // norm 계산
+                let norm = faceNorms[faceIdx] ?? sqrt(embedding.reduce(0) { $0 + $1 * $1 })
+
+                // 저품질 얼굴은 신규 슬롯 생성 금지
+                if norm < minEmbeddingNorm {
+                    print("[LowQuality] Face(\(faceIdx)): norm=\(String(format: "%.2f", norm)) < \(minEmbeddingNorm), skip new slot")
+                    continue
+                }
+
+                // 기존 슬롯들과의 최소 cost 계산 (디버그용)
+                var minCost: Float = Float.infinity
+                var minCostSlotID: Int = -1
+                for slot in activeSlots {
+                    let similarity = sface.cosineSimilarity(embedding, slot.embedding)
+                    let cost = 1.0 - similarity
+                    if cost < minCost {
+                        minCost = cost
+                        minCostSlotID = slot.id
+                    }
+                }
+
                 // 신규 슬롯 생성
                 let slot = PersonSlot(
                     id: nextSlotID,
                     embedding: embedding,
+                    norm: norm,
                     center: data.center,
                     boundingBox: data.boundingBox
                 )
@@ -766,7 +830,12 @@ final class SimilarityAnalysisQueue {
                     isValidSlot: false
                 ))
 
-                print("[NewSlot] Face(\(faceIdx)) -> Slot(\(nextSlotID))")
+                // 상세 로그: 왜 기존 슬롯과 매칭되지 않았는지
+                if minCostSlotID > 0 {
+                    print("[NewSlot] Face(\(faceIdx)) -> Slot(\(nextSlotID)): norm=\(String(format: "%.2f", norm)), minCost=\(String(format: "%.3f", minCost)) to Slot(\(minCostSlotID)) (threshold=\(String(format: "%.3f", rejectThreshold)))")
+                } else {
+                    print("[NewSlot] Face(\(faceIdx)) -> Slot(\(nextSlotID)): Bootstrap, norm=\(String(format: "%.2f", norm))")
+                }
                 nextSlotID += 1
             }
 

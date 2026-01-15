@@ -693,15 +693,20 @@ extension FaceComparisonViewController: UICollectionViewDataSource {
         // 선택 상태
         let isSelected = selectedAssetIDs.contains(assetID)
 
+        // 디버그 넘버링 생성 (예: a1, a2, b1, b2)
+        let personAlphabetIndex = validPersonIndices.firstIndex(of: currentPersonIndex) ?? 0
+        let personAlphabet = String(UnicodeScalar("a".unicodeScalars.first!.value + UInt32(personAlphabetIndex))!)
+        let debugText = "\(personAlphabet)\(indexPath.item + 1)"
+
         // 이미지 로드 및 얼굴 크롭
         if let asset = asset(for: assetID), let boundingBox = face?.boundingBox {
             loadCroppedFaceImage(for: asset, boundingBox: boundingBox) { image in
                 DispatchQueue.main.async {
-                    cell.configure(with: image, isSelected: isSelected, assetID: assetID)
+                    cell.configure(with: image, isSelected: isSelected, assetID: assetID, debugText: debugText)
                 }
             }
         } else {
-            cell.configure(with: nil, isSelected: isSelected, assetID: assetID)
+            cell.configure(with: nil, isSelected: isSelected, assetID: assetID, debugText: debugText)
         }
 
         return cell
@@ -900,6 +905,19 @@ final class FaceComparisonCell: UICollectionViewCell {
         return iv
     }()
 
+    /// 디버그 넘버링 라벨 (좌측 상단)
+    private lazy var debugLabel: UILabel = {
+        let label = UILabel()
+        label.font = .systemFont(ofSize: 14, weight: .bold)
+        label.textColor = .white
+        label.backgroundColor = UIColor.black.withAlphaComponent(0.6)
+        label.textAlignment = .center
+        label.layer.cornerRadius = 4
+        label.clipsToBounds = true
+        label.translatesAutoresizingMaskIntoConstraints = false
+        return label
+    }()
+
     // MARK: - Initialization
 
     override init(frame: CGRect) {
@@ -917,6 +935,7 @@ final class FaceComparisonCell: UICollectionViewCell {
         contentView.addSubview(imageView)
         contentView.addSubview(selectionOverlay)
         contentView.addSubview(checkmarkView)
+        contentView.addSubview(debugLabel)
 
         NSLayoutConstraint.activate([
             imageView.topAnchor.constraint(equalTo: contentView.topAnchor),
@@ -932,17 +951,29 @@ final class FaceComparisonCell: UICollectionViewCell {
             checkmarkView.topAnchor.constraint(equalTo: contentView.topAnchor, constant: 8),
             checkmarkView.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -8),
             checkmarkView.widthAnchor.constraint(equalToConstant: 24),
-            checkmarkView.heightAnchor.constraint(equalToConstant: 24)
+            checkmarkView.heightAnchor.constraint(equalToConstant: 24),
+
+            debugLabel.topAnchor.constraint(equalTo: contentView.topAnchor, constant: 8),
+            debugLabel.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 8),
+            debugLabel.widthAnchor.constraint(greaterThanOrEqualToConstant: 28),
+            debugLabel.heightAnchor.constraint(equalToConstant: 22)
         ])
     }
 
     // MARK: - Configuration
 
     /// 셀 구성
-    func configure(with image: UIImage?, isSelected: Bool, assetID: String) {
+    /// - Parameters:
+    ///   - image: 얼굴 이미지
+    ///   - isSelected: 선택 상태
+    ///   - assetID: 사진 ID
+    ///   - debugText: 디버그 넘버링 (예: "a1", "b2")
+    func configure(with image: UIImage?, isSelected: Bool, assetID: String, debugText: String? = nil) {
         self.assetID = assetID
         imageView.image = image
         setSelected(isSelected)
+        debugLabel.text = debugText
+        debugLabel.isHidden = (debugText == nil)
     }
 
     /// 선택 상태 설정
@@ -958,6 +989,8 @@ final class FaceComparisonCell: UICollectionViewCell {
         imageView.image = nil
         assetID = nil
         setSelected(false)
+        debugLabel.text = nil
+        debugLabel.isHidden = true
     }
 }
 

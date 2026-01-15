@@ -14,6 +14,7 @@ import Foundation
 import CoreML
 import CoreGraphics
 import Photos
+import UIKit
 
 /// YuNet + SFace 디버그 테스트
 ///
@@ -81,10 +82,22 @@ final class YuNetDebugTest {
             alignedFaces = aligned
         }
 
+        // 4.5. 정렬 검증 테스트 (정렬된 얼굴이 있는 경우)
+        if !alignedFaces.isEmpty {
+            let validationResult = testAlignmentValidation(alignedFaces: alignedFaces)
+            results.append(validationResult)
+        }
+
         // 5. SFace 임베딩 테스트 (정렬된 얼굴이 있는 경우)
         if !alignedFaces.isEmpty {
             let embeddingResult = await testSFaceEmbedding(alignedFaces: alignedFaces)
             results.append(embeddingResult)
+        }
+
+        // 6. Self-consistency 테스트 (정렬된 얼굴이 있는 경우)
+        if !alignedFaces.isEmpty {
+            let consistencyResult = await testSelfConsistency(alignedFaces: alignedFaces)
+            results.append(consistencyResult)
         }
 
         // 결과 출력
@@ -225,6 +238,208 @@ final class YuNetDebugTest {
         return (minVal, maxVal, sum / Float(count))
     }
 
+    // MARK: - Landmark Visualization Test
+
+    /// YuNet 랜드마크를 원본 이미지 위에 그려서 좌표계 검증
+    ///
+    /// - Parameter photo: 테스트할 PHAsset
+    /// - Returns: 랜드마크가 그려진 이미지 (UIImage)
+    func drawLandmarksOnImage(with photo: PHAsset) async -> UIImage? {
+        print("\n" + String(repeating: "=", count: 60))
+        print("Landmark Visualization Test")
+        print(String(repeating: "=", count: 60))
+
+        // 1. 이미지 로드
+        guard let image = try? await imageLoader.loadImage(for: photo) else {
+            print("[Error] 이미지 로드 실패")
+            return nil
+        }
+
+        print("[Image] Size: \(image.width)×\(image.height)")
+
+        // 2. YuNet 얼굴 감지
+        guard let detector = YuNetFaceDetector.shared else {
+            print("[Error] YuNetFaceDetector 초기화 실패")
+            return nil
+        }
+
+        guard let detections = try? detector.detect(in: image), !detections.isEmpty else {
+            print("[Error] 얼굴 감지 실패")
+            return nil
+        }
+
+        print("[Detection] \(detections.count)개 얼굴 감지")
+
+        // 3. 이미지 위에 랜드마크 그리기
+        let width = image.width
+        let height = image.height
+        let bytesPerPixel = 4
+        let bytesPerRow = width * bytesPerPixel
+
+        // 원본 이미지 픽셀 복사
+        var pixelData = [UInt8](repeating: 0, count: width * height * bytesPerPixel)
+        guard let srcContext = CGContext(
+            data: &pixelData,
+            width: width,
+            height: height,
+            bitsPerComponent: 8,
+            bytesPerRow: bytesPerRow,
+            space: CGColorSpaceCreateDeviceRGB(),
+            bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
+        ) else {
+            print("[Error] CGContext 생성 실패")
+            return nil
+        }
+        srcContext.draw(image, in: CGRect(x: 0, y: 0, width: width, height: height))
+
+        // 각 얼굴의 bbox와 랜드마크 그리기
+        for (faceIdx, detection) in detections.enumerated() {
+            let bbox = detection.boundingBox
+            let landmarks = detection.landmarks
+
+            print("\n[Face \(faceIdx)] score=\(String(format: "%.3f", detection.score))")
+            print("  bbox: (\(Int(bbox.origin.x)), \(Int(bbox.origin.y)), \(Int(bbox.width)), \(Int(bbox.height)))")
+
+            // BBox 그리기 (녹색)
+            drawRect(
+                in: &pixelData,
+                width: width,
+                height: height,
+                rect: bbox,
+                color: (0, 255, 0)  // Green
+            )
+
+            // 랜드마크 그리기 (각각 다른 색)
+            let landmarkColors: [(UInt8, UInt8, UInt8)] = [
+                (255, 0, 0),     // Red - right eye
+                (0, 0, 255),     // Blue - left eye
+                (255, 255, 0),   // Yellow - nose
+                (255, 0, 255),   // Magenta - right mouth
+                (0, 255, 255)    // Cyan - left mouth
+            ]
+            let landmarkNames = ["right_eye", "left_eye", "nose", "right_mouth", "left_mouth"]
+
+            for (i, landmark) in landmarks.enumerated() {
+                let color = landmarkColors[i]
+                drawCircle(
+                    in: &pixelData,
+                    width: width,
+                    height: height,
+                    center: landmark,
+                    radius: max(3, Int(bbox.width / 10)),
+                    color: color
+                )
+                print("  \(landmarkNames[i]): (\(Int(landmark.x)), \(Int(landmark.y))) - \(i == 0 ? "RED" : i == 1 ? "BLUE" : i == 2 ? "YELLOW" : i == 3 ? "MAGENTA" : "CYAN")")
+            }
+        }
+
+        // CGImage 생성
+        guard let outputContext = CGContext(
+            data: &pixelData,
+            width: width,
+            height: height,
+            bitsPerComponent: 8,
+            bytesPerRow: bytesPerRow,
+            space: CGColorSpaceCreateDeviceRGB(),
+            bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
+        ),
+        let outputImage = outputContext.makeImage() else {
+            print("[Error] 출력 이미지 생성 실패")
+            return nil
+        }
+
+        print("\n[Result] 랜드마크 시각화 완료")
+        print("  - 녹색 박스: BBox")
+        print("  - 빨강: right_eye, 파랑: left_eye")
+        print("  - 노랑: nose")
+        print("  - 마젠타: right_mouth, 시안: left_mouth")
+        print(String(repeating: "=", count: 60))
+
+        return UIImage(cgImage: outputImage)
+    }
+
+    /// 사각형 그리기 (픽셀 데이터에 직접)
+    private func drawRect(
+        in pixelData: inout [UInt8],
+        width: Int,
+        height: Int,
+        rect: CGRect,
+        color: (UInt8, UInt8, UInt8)
+    ) {
+        let bytesPerPixel = 4
+        let x1 = max(0, Int(rect.origin.x))
+        let y1 = max(0, Int(rect.origin.y))
+        let x2 = min(width - 1, Int(rect.origin.x + rect.width))
+        let y2 = min(height - 1, Int(rect.origin.y + rect.height))
+
+        // 상단/하단 가로선
+        for x in x1...x2 {
+            for thickness in 0..<2 {
+                // 상단
+                let topY = min(y1 + thickness, height - 1)
+                let topIdx = (topY * width + x) * bytesPerPixel
+                pixelData[topIdx] = color.0
+                pixelData[topIdx + 1] = color.1
+                pixelData[topIdx + 2] = color.2
+
+                // 하단
+                let botY = max(y2 - thickness, 0)
+                let botIdx = (botY * width + x) * bytesPerPixel
+                pixelData[botIdx] = color.0
+                pixelData[botIdx + 1] = color.1
+                pixelData[botIdx + 2] = color.2
+            }
+        }
+
+        // 좌측/우측 세로선
+        for y in y1...y2 {
+            for thickness in 0..<2 {
+                // 좌측
+                let leftX = min(x1 + thickness, width - 1)
+                let leftIdx = (y * width + leftX) * bytesPerPixel
+                pixelData[leftIdx] = color.0
+                pixelData[leftIdx + 1] = color.1
+                pixelData[leftIdx + 2] = color.2
+
+                // 우측
+                let rightX = max(x2 - thickness, 0)
+                let rightIdx = (y * width + rightX) * bytesPerPixel
+                pixelData[rightIdx] = color.0
+                pixelData[rightIdx + 1] = color.1
+                pixelData[rightIdx + 2] = color.2
+            }
+        }
+    }
+
+    /// 원 그리기 (픽셀 데이터에 직접)
+    private func drawCircle(
+        in pixelData: inout [UInt8],
+        width: Int,
+        height: Int,
+        center: CGPoint,
+        radius: Int,
+        color: (UInt8, UInt8, UInt8)
+    ) {
+        let bytesPerPixel = 4
+        let cx = Int(center.x)
+        let cy = Int(center.y)
+
+        for dy in -radius...radius {
+            for dx in -radius...radius {
+                if dx * dx + dy * dy <= radius * radius {
+                    let x = cx + dx
+                    let y = cy + dy
+                    if x >= 0 && x < width && y >= 0 && y < height {
+                        let idx = (y * width + x) * bytesPerPixel
+                        pixelData[idx] = color.0
+                        pixelData[idx + 1] = color.1
+                        pixelData[idx + 2] = color.2
+                    }
+                }
+            }
+        }
+    }
+
     // MARK: - Test 2: YuNet Detection
 
     /// YuNet 얼굴 감지를 테스트합니다.
@@ -301,6 +516,84 @@ final class YuNetDebugTest {
         ), alignedFaces)
     }
 
+    // MARK: - Test 3.5: Alignment Validation
+
+    /// 정렬된 얼굴의 랜드마크가 ArcFace 템플릿과 일치하는지 검증합니다.
+    ///
+    /// 정렬이 제대로 됐다면, 정렬된 이미지에서 다시 얼굴 감지 시
+    /// 랜드마크가 ArcFace 템플릿 좌표 근처에 있어야 합니다.
+    private func testAlignmentValidation(alignedFaces: [CGImage]) -> TestResult {
+        print("\n[Test 3.5] Alignment Validation (Landmark Position Check)")
+
+        guard let detector = YuNetFaceDetector.shared else {
+            return TestResult(
+                testName: "Alignment Validation",
+                passed: false,
+                details: "YuNetFaceDetector 초기화 실패"
+            )
+        }
+
+        // ArcFace 템플릿 좌표 (112×112 기준)
+        let arcFaceTemplate: [CGPoint] = [
+            CGPoint(x: 38.2946, y: 51.6963),   // right eye
+            CGPoint(x: 73.5318, y: 51.5014),   // left eye
+            CGPoint(x: 56.0252, y: 71.7366),   // nose
+            CGPoint(x: 41.5493, y: 92.3655),   // right mouth
+            CGPoint(x: 70.7299, y: 92.2041)    // left mouth
+        ]
+
+        var totalError: Float = 0
+        var validCount = 0
+        var details: [String] = []
+
+        for (i, alignedFace) in alignedFaces.enumerated() {
+            // 정렬된 이미지에서 다시 얼굴 감지
+            guard let detections = try? detector.detect(in: alignedFace),
+                  let detection = detections.first else {
+                details.append("  [\(i)] 얼굴 감지 실패 ✗")
+                continue
+            }
+
+            // 112×112 이미지에서의 랜드마크 좌표 (스케일 조정 불필요)
+            let landmarks = detection.landmarks
+
+            // 각 랜드마크와 템플릿 좌표의 오차 계산
+            var faceError: Float = 0
+            var landmarkErrors: [String] = []
+
+            for (j, (detected, template)) in zip(landmarks, arcFaceTemplate).enumerated() {
+                let dx = Float(detected.x - template.x)
+                let dy = Float(detected.y - template.y)
+                let error = sqrt(dx * dx + dy * dy)
+                faceError += error
+
+                let landmarkNames = ["R_eye", "L_eye", "nose", "R_mouth", "L_mouth"]
+                landmarkErrors.append("\(landmarkNames[j])=\(String(format: "%.1f", error))")
+            }
+
+            let avgError = faceError / 5.0
+            totalError += avgError
+            validCount += 1
+
+            let status = avgError < 10.0 ? "✓" : "✗"
+            details.append("  [\(i)] avgError=\(String(format: "%.2f", avgError))px [\(landmarkErrors.joined(separator: ", "))] \(status)")
+        }
+
+        let overallAvgError = validCount > 0 ? totalError / Float(validCount) : Float.infinity
+        let passed = overallAvgError < 10.0  // 평균 오차 10픽셀 이내면 합격
+
+        print(details.joined(separator: "\n"))
+        print("  Overall Average Error: \(String(format: "%.2f", overallAvgError))px")
+
+        return TestResult(
+            testName: "Alignment Validation",
+            passed: passed,
+            details: passed
+                ? "정렬 정상 (평균 오차 \(String(format: "%.1f", overallAvgError))px)"
+                : "정렬 문제 의심 (평균 오차 \(String(format: "%.1f", overallAvgError))px, 임계값 10px)"
+        )
+    }
+
     // MARK: - Test 4: SFace Embedding
 
     /// SFaceRecognizer를 테스트합니다.
@@ -352,5 +645,213 @@ final class YuNetDebugTest {
             passed: passed,
             details: "\(embeddings.count)/\(alignedFaces.count) 성공 (128-dim), \(failCount) 실패"
         )
+    }
+
+    // MARK: - Test 5: Self-Consistency
+
+    /// SFace 임베딩의 자기 일관성을 테스트합니다.
+    ///
+    /// 모든 정렬된 얼굴에 대해 테스트하여 특정 얼굴만의 문제인지 확인합니다.
+    /// 같은 이미지를 2번 임베딩하면 similarity ≈ 1.0이어야 하고,
+    /// 1~2px shift한 이미지도 similarity가 높아야 합니다.
+    private func testSelfConsistency(alignedFaces: [CGImage]) async -> TestResult {
+        print("\n[Test 5] SFace Self-Consistency Test (All Faces)")
+
+        guard let recognizer = SFaceRecognizer.shared else {
+            return TestResult(
+                testName: "Self-Consistency",
+                passed: false,
+                details: "SFaceRecognizer 초기화 실패"
+            )
+        }
+
+        guard !alignedFaces.isEmpty else {
+            return TestResult(
+                testName: "Self-Consistency",
+                passed: false,
+                details: "테스트할 얼굴 이미지 없음"
+            )
+        }
+
+        var passCount = 0
+        var failCount = 0
+        var failedIndices: [Int] = []
+
+        // 각 얼굴에 대해 테스트
+        for (faceIdx, face) in alignedFaces.enumerated() {
+            print("\n  [Face \(faceIdx)] Self-Consistency Test")
+
+            // 임베딩 추출 및 norm 확인
+            guard let embedding = try? recognizer.extractEmbedding(from: face) else {
+                print("    ❌ 임베딩 추출 실패")
+                failCount += 1
+                failedIndices.append(faceIdx)
+                continue
+            }
+
+            let norm = sqrt(embedding.reduce(0) { $0 + $1 * $1 })
+            print("    norm = \(String(format: "%.3f", norm))")
+
+            var faceAllPassed = true
+
+            // Test: 1px Shift
+            if let shiftedFace = createShiftedImage(face, dx: 1, dy: 0) {
+                if let shiftedEmbedding = try? recognizer.extractEmbedding(from: shiftedFace) {
+                    let sim1px = recognizer.cosineSimilarity(embedding, shiftedEmbedding)
+                    let passed1px = sim1px > 0.95
+                    let status1px = passed1px ? "✓" : "✗"
+                    print("    1px shift: \(String(format: "%.4f", sim1px)) \(status1px)")
+                    if !passed1px { faceAllPassed = false }
+                }
+            }
+
+            // Test: 2px Shift
+            if let shiftedFace = createShiftedImage(face, dx: 2, dy: 2) {
+                if let shiftedEmbedding = try? recognizer.extractEmbedding(from: shiftedFace) {
+                    let sim2px = recognizer.cosineSimilarity(embedding, shiftedEmbedding)
+                    let passed2px = sim2px > 0.90
+                    let status2px = passed2px ? "✓" : "✗"
+                    print("    2px shift: \(String(format: "%.4f", sim2px)) \(status2px)")
+                    if !passed2px { faceAllPassed = false }
+                }
+            }
+
+            if faceAllPassed {
+                passCount += 1
+                print("    → PASS")
+            } else {
+                failCount += 1
+                failedIndices.append(faceIdx)
+                print("    → FAIL")
+            }
+        }
+
+        // 결과 요약
+        print("\n  Summary: \(passCount) passed, \(failCount) failed")
+        if !failedIndices.isEmpty {
+            print("  Failed faces: \(failedIndices)")
+        }
+
+        let allPassed = failCount == 0
+        let details: String
+        if allPassed {
+            details = "모든 얼굴 일관성 정상 (\(passCount)/\(alignedFaces.count))"
+        } else if failCount < alignedFaces.count {
+            details = "일부 얼굴 불안정 (실패: \(failedIndices)) → 저품질 얼굴 필터링 필요"
+        } else {
+            details = "모든 얼굴 불안정 → Core ML 변환 검토 필요"
+        }
+
+        return TestResult(
+            testName: "Self-Consistency",
+            passed: allPassed,
+            details: details
+        )
+    }
+
+    // MARK: - Helper Methods for Self-Consistency Test
+
+    /// 이미지를 dx, dy만큼 이동한 새 이미지 생성
+    private func createShiftedImage(_ image: CGImage, dx: Int, dy: Int) -> CGImage? {
+        let width = image.width
+        let height = image.height
+        let bytesPerPixel = 4
+        let bytesPerRow = width * bytesPerPixel
+
+        // 원본 픽셀 읽기
+        var srcPixels = [UInt8](repeating: 0, count: width * height * bytesPerPixel)
+        guard let srcContext = CGContext(
+            data: &srcPixels,
+            width: width,
+            height: height,
+            bitsPerComponent: 8,
+            bytesPerRow: bytesPerRow,
+            space: CGColorSpaceCreateDeviceRGB(),
+            bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
+        ) else { return nil }
+        srcContext.draw(image, in: CGRect(x: 0, y: 0, width: width, height: height))
+
+        // 이동된 픽셀 생성
+        var dstPixels = [UInt8](repeating: 0, count: width * height * bytesPerPixel)
+
+        for y in 0..<height {
+            for x in 0..<width {
+                let srcX = x - dx
+                let srcY = y - dy
+
+                if srcX >= 0 && srcX < width && srcY >= 0 && srcY < height {
+                    let srcIdx = (srcY * width + srcX) * bytesPerPixel
+                    let dstIdx = (y * width + x) * bytesPerPixel
+
+                    dstPixels[dstIdx] = srcPixels[srcIdx]
+                    dstPixels[dstIdx + 1] = srcPixels[srcIdx + 1]
+                    dstPixels[dstIdx + 2] = srcPixels[srcIdx + 2]
+                    dstPixels[dstIdx + 3] = srcPixels[srcIdx + 3]
+                }
+            }
+        }
+
+        // CGImage 생성
+        guard let dstContext = CGContext(
+            data: &dstPixels,
+            width: width,
+            height: height,
+            bitsPerComponent: 8,
+            bytesPerRow: bytesPerRow,
+            space: CGColorSpaceCreateDeviceRGB(),
+            bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
+        ) else { return nil }
+
+        return dstContext.makeImage()
+    }
+
+    /// 이미지를 수평 반전
+    private func createHorizontallyFlippedImage(_ image: CGImage) -> CGImage? {
+        let width = image.width
+        let height = image.height
+        let bytesPerPixel = 4
+        let bytesPerRow = width * bytesPerPixel
+
+        // 원본 픽셀 읽기
+        var srcPixels = [UInt8](repeating: 0, count: width * height * bytesPerPixel)
+        guard let srcContext = CGContext(
+            data: &srcPixels,
+            width: width,
+            height: height,
+            bitsPerComponent: 8,
+            bytesPerRow: bytesPerRow,
+            space: CGColorSpaceCreateDeviceRGB(),
+            bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
+        ) else { return nil }
+        srcContext.draw(image, in: CGRect(x: 0, y: 0, width: width, height: height))
+
+        // 수평 반전 픽셀 생성
+        var dstPixels = [UInt8](repeating: 0, count: width * height * bytesPerPixel)
+
+        for y in 0..<height {
+            for x in 0..<width {
+                let srcX = width - 1 - x
+                let srcIdx = (y * width + srcX) * bytesPerPixel
+                let dstIdx = (y * width + x) * bytesPerPixel
+
+                dstPixels[dstIdx] = srcPixels[srcIdx]
+                dstPixels[dstIdx + 1] = srcPixels[srcIdx + 1]
+                dstPixels[dstIdx + 2] = srcPixels[srcIdx + 2]
+                dstPixels[dstIdx + 3] = srcPixels[srcIdx + 3]
+            }
+        }
+
+        // CGImage 생성
+        guard let dstContext = CGContext(
+            data: &dstPixels,
+            width: width,
+            height: height,
+            bitsPerComponent: 8,
+            bytesPerRow: bytesPerRow,
+            space: CGColorSpaceCreateDeviceRGB(),
+            bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
+        ) else { return nil }
+
+        return dstContext.makeImage()
     }
 }
