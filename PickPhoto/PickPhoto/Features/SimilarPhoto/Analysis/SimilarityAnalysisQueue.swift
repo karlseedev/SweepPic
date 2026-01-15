@@ -491,12 +491,13 @@ final class SimilarityAnalysisQueue {
     /// 동적 인물 슬롯 (기준 임베딩 + 메타데이터)
     ///
     /// Keep Best 정책: 더 높은 norm의 임베딩으로 갱신
+    /// 위치 갱신 정책: 매칭 시 최근 위치로 갱신 (저품질 경로 정확도 향상)
     private struct PersonSlot {
         let id: Int                // 슬롯 ID (1-based)
         var embedding: [Float]     // 128차원 SFace 임베딩
         var norm: Float            // 임베딩 norm (품질 지표)
-        let center: CGPoint        // 최초 등록 시 위치
-        let boundingBox: CGRect    // 최초 등록 시 바운딩박스
+        var center: CGPoint        // 최근 매칭 위치 (갱신됨)
+        var boundingBox: CGRect    // 최근 매칭 바운딩박스 (갱신됨)
     }
 
     /// 임베딩 품질 임계값 (norm 기준)
@@ -510,6 +511,7 @@ final class SimilarityAnalysisQueue {
         let cost: Float           // Dist_fp
         let posDistNorm: CGFloat  // Dist_pos / √2
         let boundingBox: CGRect
+        let center: CGPoint       // 얼굴 중심 (슬롯 위치 갱신용)
         let embedding: [Float]    // Keep Best용 임베딩
         let norm: Float           // 임베딩 품질
     }
@@ -695,9 +697,18 @@ final class SimilarityAnalysisQueue {
                 }
 
                 // Top-K 필터링: 슬롯 수 > 5개면 상위 3개만 (근사 최적화)
+                // 고품질: cost 기준, 저품질: 위치 기준 (GPT 리뷰 반영)
                 let candidates: ArraySlice<(slot: PersonSlot, cost: Float, posDist: CGFloat)>
+                let isLowQuality = faceNorm < minEmbeddingNorm
+
                 if activeSlots.count > 5 {
-                    candidates = slotCosts.sorted { $0.cost < $1.cost }.prefix(3)
+                    if isLowQuality {
+                        // 저품질: 위치 기준 Top-K (가장 가까운 슬롯이 후보에 포함되도록)
+                        candidates = slotCosts.sorted { $0.posDist < $1.posDist }.prefix(3)
+                    } else {
+                        // 고품질: cost 기준 Top-K
+                        candidates = slotCosts.sorted { $0.cost < $1.cost }.prefix(3)
+                    }
                 } else {
                     candidates = slotCosts[...]
                 }
@@ -710,6 +721,7 @@ final class SimilarityAnalysisQueue {
                         cost: item.cost,
                         posDistNorm: posDistNorm,
                         boundingBox: data.boundingBox,
+                        center: data.center,
                         embedding: faceEmbedding,
                         norm: faceNorm
                     ))
@@ -725,8 +737,14 @@ final class SimilarityAnalysisQueue {
             var cachedFaces: [CachedFace] = []
 
             /// Keep Best: 매칭된 얼굴의 norm이 슬롯보다 높으면 슬롯 임베딩 갱신
-            func updateSlotIfBetter(slotID: Int, embedding: [Float], norm: Float) {
+            /// 위치 갱신: 모든 매칭에서 슬롯 위치를 최근 얼굴 위치로 갱신
+            func updateSlotIfBetter(slotID: Int, embedding: [Float], norm: Float, center: CGPoint, boundingBox: CGRect) {
                 if let idx = activeSlots.firstIndex(where: { $0.id == slotID }) {
+                    // 위치 갱신 (항상 적용 - 저품질 경로 정확도 향상)
+                    activeSlots[idx].center = center
+                    activeSlots[idx].boundingBox = boundingBox
+
+                    // Keep Best: norm이 더 높으면 임베딩도 갱신
                     if norm > activeSlots[idx].norm {
                         let oldNorm = activeSlots[idx].norm
                         activeSlots[idx].embedding = embedding
@@ -738,7 +756,7 @@ final class SimilarityAnalysisQueue {
 
             // 저품질 위치 매칭용 상수
             let lowQualityPosLimit: CGFloat = 0.25  // 저품질은 위치 조건 완화 (25%)
-            let lowQualityCostLimit: Float = rejectThreshold + 0.15  // cost 상한선 완화
+            let lowQualityCostLimit: Float = min(rejectThreshold + 0.15, 1.0)  // cost 상한선 (1.0 초과 방지)
 
             // Step 5A: 고품질 얼굴 매칭 (SFace 우선)
             let highQualityCandidates = allCandidates.filter { $0.norm >= minEmbeddingNorm }
@@ -764,8 +782,8 @@ final class SimilarityAnalysisQueue {
                     ))
                     print("[Match] Face(\(candidate.faceIdx)) -> Slot(\(candidate.slotID)): Cost=\(String(format: "%.3f", cost)), norm=\(String(format: "%.2f", candidate.norm)) (Confident)")
 
-                    // Keep Best: 슬롯 임베딩 갱신
-                    updateSlotIfBetter(slotID: candidate.slotID, embedding: candidate.embedding, norm: candidate.norm)
+                    // Keep Best + 위치 갱신
+                    updateSlotIfBetter(slotID: candidate.slotID, embedding: candidate.embedding, norm: candidate.norm, center: candidate.center, boundingBox: candidate.boundingBox)
 
                 } else if cost < rejectThreshold {
                     // 모호 구간: 위치 조건 확인
@@ -780,8 +798,8 @@ final class SimilarityAnalysisQueue {
                         ))
                         print("[GreyMatch] Face(\(candidate.faceIdx)) -> Slot(\(candidate.slotID)): Cost=\(String(format: "%.3f", cost)), PosNorm=\(String(format: "%.2f", posNorm)), norm=\(String(format: "%.2f", candidate.norm))")
 
-                        // Keep Best: 슬롯 임베딩 갱신
-                        updateSlotIfBetter(slotID: candidate.slotID, embedding: candidate.embedding, norm: candidate.norm)
+                        // Keep Best + 위치 갱신
+                        updateSlotIfBetter(slotID: candidate.slotID, embedding: candidate.embedding, norm: candidate.norm, center: candidate.center, boundingBox: candidate.boundingBox)
                     } else {
                         print("[GreyReject] Face(\(candidate.faceIdx)) -> Slot(\(candidate.slotID)): Cost=\(String(format: "%.3f", cost)), PosNorm=\(String(format: "%.2f", posNorm))")
                     }
@@ -824,7 +842,8 @@ final class SimilarityAnalysisQueue {
                     ))
                     print("[LowQMatch] Face(\(faceIdx)) -> Slot(\(bestByPos.slotID)): Cost=\(String(format: "%.3f", cost)), PosNorm=\(String(format: "%.2f", posNorm)), norm=\(String(format: "%.2f", bestByPos.norm)) (PositionFirst)")
 
-                    // Keep Best는 적용하지 않음 (저품질 임베딩으로 슬롯 갱신 X)
+                    // 위치만 갱신 (저품질 임베딩으로 슬롯 임베딩 갱신 X, norm 0 전달)
+                    updateSlotIfBetter(slotID: bestByPos.slotID, embedding: [], norm: 0, center: bestByPos.center, boundingBox: bestByPos.boundingBox)
                 } else {
                     print("[LowQReject] Face(\(faceIdx)) -> Slot(\(bestByPos.slotID)): Cost=\(String(format: "%.3f", cost)), PosNorm=\(String(format: "%.2f", posNorm)), norm=\(String(format: "%.2f", bestByPos.norm)) (limit: pos<\(String(format: "%.2f", lowQualityPosLimit)), cost<\(String(format: "%.2f", lowQualityCostLimit)))")
                 }
