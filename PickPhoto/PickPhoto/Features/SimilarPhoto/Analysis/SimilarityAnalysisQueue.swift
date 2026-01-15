@@ -580,12 +580,13 @@ final class SimilarityAnalysisQueue {
             }
 
             for (faceIdx, detection) in yunetDetections.enumerated() {
-                // normalized 좌표로 변환 (Vision과 동일한 좌표계)
+                // normalized 좌표로 변환 (Vision 좌표계: 원점이 왼쪽 아래)
+                // YuNet은 일반 이미지 좌표계 (원점이 왼쪽 위)이므로 y좌표 뒤집기 필요
                 let imageWidth = CGFloat(image.width)
                 let imageHeight = CGFloat(image.height)
                 let normalizedBox = CGRect(
                     x: detection.boundingBox.origin.x / imageWidth,
-                    y: detection.boundingBox.origin.y / imageHeight,
+                    y: 1.0 - (detection.boundingBox.origin.y + detection.boundingBox.size.height) / imageHeight,
                     width: detection.boundingBox.size.width / imageWidth,
                     height: detection.boundingBox.size.height / imageHeight
                 )
