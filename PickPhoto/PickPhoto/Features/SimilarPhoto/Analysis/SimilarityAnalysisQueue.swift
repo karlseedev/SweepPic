@@ -488,14 +488,14 @@ final class SimilarityAnalysisQueue {
 
     // MARK: - Private Methods - Face Processing
 
-    /// 동적 인물 슬롯 (기준 FP + 메타데이터)
+    /// 동적 인물 슬롯 (기준 임베딩 + 메타데이터)
     ///
-    /// Keep First 정책: 슬롯 최초 생성 시의 FP를 유지
+    /// Keep First 정책: 슬롯 최초 생성 시의 임베딩을 유지
     private struct PersonSlot {
-        let id: Int                                  // 슬롯 ID (1-based)
-        let featurePrint: VNFeaturePrintObservation  // 기준 FP
-        let center: CGPoint                          // 최초 등록 시 위치
-        let boundingBox: CGRect                      // 최초 등록 시 바운딩박스
+        let id: Int                // 슬롯 ID (1-based)
+        let embedding: [Float]     // 128차원 SFace 임베딩
+        let center: CGPoint        // 최초 등록 시 위치
+        let boundingBox: CGRect    // 최초 등록 시 바운딩박스
     }
 
     /// 매칭 후보 (전역 정렬용)
@@ -555,40 +555,81 @@ final class SimilarityAnalysisQueue {
                 cgImage = try? await imageLoader.loadImage(for: photo)
             }
 
-            // === Step 1: 모든 얼굴 FP 1회 생성 ===
-            var faceFPs: [Int: VNFeaturePrintObservation] = [:]
+            // === Step 1: YuNet으로 얼굴 감지 + SFace 임베딩 생성 ===
+            var faceEmbeddings: [Int: [Float]] = [:]
             var faceData: [Int: (center: CGPoint, boundingBox: CGRect)] = [:]
 
-            for (faceIdx, face) in faces.enumerated() {
-                let center = CGPoint(x: face.boundingBox.midX, y: face.boundingBox.midY)
-                faceData[faceIdx] = (center: center, boundingBox: face.boundingBox)
-
-                guard let image = cgImage else { continue }
-                guard let cropped = try? FaceCropper.cropFace(from: image, boundingBox: face.boundingBox) else { continue }
-                guard let fp = try? await analyzer.generateFeaturePrint(for: cropped) else {
-                    print("[FPFail] Face(\(faceIdx)): FP generation failed")
-                    continue
+            guard let image = cgImage,
+                  let yunet = YuNetFaceDetector.shared,
+                  let sface = SFaceRecognizer.shared else {
+                // 모델 로드 실패 시 기존 rawFacesMap 기반으로 진행 (임베딩 없이)
+                for (faceIdx, face) in faces.enumerated() {
+                    let center = CGPoint(x: face.boundingBox.midX, y: face.boundingBox.midY)
+                    faceData[faceIdx] = (center: center, boundingBox: face.boundingBox)
                 }
-                faceFPs[faceIdx] = fp
+                print("[FaceMatching] Photo \(assetID.prefix(8)): Model not available, skipping embedding")
+                result[assetID] = []
+                continue
             }
 
-            print("[FaceMatching] Photo \(assetID.prefix(8)): \(faces.count) faces, FP: \(faceFPs.count)/\(faces.count), Slots: \(activeSlots.count)")
+            // YuNet으로 얼굴 감지 (landmark 포함)
+            let yunetDetections = yunet.detectFaces(in: image)
+
+            for (faceIdx, detection) in yunetDetections.enumerated() {
+                // normalized 좌표로 변환 (Vision과 동일한 좌표계)
+                let imageWidth = CGFloat(image.width)
+                let imageHeight = CGFloat(image.height)
+                let normalizedBox = CGRect(
+                    x: detection.boundingBox.origin.x / imageWidth,
+                    y: detection.boundingBox.origin.y / imageHeight,
+                    width: detection.boundingBox.size.width / imageWidth,
+                    height: detection.boundingBox.size.height / imageHeight
+                )
+                let center = CGPoint(x: normalizedBox.midX, y: normalizedBox.midY)
+                faceData[faceIdx] = (center: center, boundingBox: normalizedBox)
+
+                // FaceAligner로 정렬 (픽셀 좌표 landmark 사용)
+                guard let alignedFace = FaceAligner.align(
+                    image: image,
+                    landmarks: detection.landmarks
+                ) else {
+                    print("[AlignFail] Face(\(faceIdx)): Alignment failed")
+                    continue
+                }
+
+                // SFace로 임베딩 추출
+                do {
+                    let embedding = try sface.extractEmbedding(from: alignedFace)
+                    faceEmbeddings[faceIdx] = embedding
+                } catch {
+                    print("[EmbedFail] Face(\(faceIdx)): \(error.localizedDescription)")
+                    continue
+                }
+            }
+
+            print("[FaceMatching] Photo \(assetID.prefix(8)): \(yunetDetections.count) faces (YuNet), Embed: \(faceEmbeddings.count)/\(yunetDetections.count), Slots: \(activeSlots.count)")
 
             // === Step 2: 부팅 (ActiveSlots 비어있을 때) ===
             if activeSlots.isEmpty {
-                // 위치 정렬된 순서로 슬롯 생성
-                let sortedFaces = sortFacesByPosition(faces)
-                for face in sortedFaces {
-                    guard activeSlots.count < maxSlots else { break }
+                // 위치 정렬된 순서로 슬롯 생성 (YuNet 결과 기반)
+                let sortedIndices = faceData.keys.sorted { idx1, idx2 in
+                    guard let data1 = faceData[idx1], let data2 = faceData[idx2] else { return false }
+                    let xDiff = abs(data1.boundingBox.origin.x - data2.boundingBox.origin.x)
+                    if xDiff > 0.05 {
+                        return data1.boundingBox.origin.x < data2.boundingBox.origin.x
+                    } else {
+                        return data1.boundingBox.origin.y > data2.boundingBox.origin.y
+                    }
+                }
 
-                    // 해당 얼굴의 인덱스와 FP 찾기
-                    guard let faceIdx = faces.firstIndex(where: { $0.boundingBox == face.boundingBox }) else { continue }
-                    guard let fp = faceFPs[faceIdx] else { continue }
+                for faceIdx in sortedIndices {
+                    guard activeSlots.count < maxSlots else { break }
+                    guard let embedding = faceEmbeddings[faceIdx] else { continue }
                     guard let data = faceData[faceIdx] else { continue }
 
                     let slot = PersonSlot(
                         id: nextSlotID,
-                        featurePrint: fp,
+                        embedding: embedding,
                         center: data.center,
                         boundingBox: data.boundingBox
                     )
@@ -610,17 +651,18 @@ final class SimilarityAnalysisQueue {
                 continue
             }
 
-            // === Step 3: 비용 산출 ===
+            // === Step 3: 비용 산출 (코사인 유사도 → 거리 변환) ===
             var allCandidates: [MatchCandidate] = []
 
-            for (faceIdx, faceFP) in faceFPs {
+            for (faceIdx, faceEmbedding) in faceEmbeddings {
                 guard let data = faceData[faceIdx] else { continue }
 
-                // 모든 슬롯과 비용 계산
+                // 모든 슬롯과 비용 계산 (코사인 유사도를 거리로 변환: cost = 1 - similarity)
                 var slotCosts: [(slot: PersonSlot, cost: Float, posDist: CGFloat)] = []
 
                 for slot in activeSlots {
-                    guard let cost = try? analyzer.computeDistance(faceFP, slot.featurePrint) else { continue }
+                    let similarity = sface.cosineSimilarity(faceEmbedding, slot.embedding)
+                    let cost = 1.0 - similarity  // 유사도를 거리로 변환 (낮을수록 동일인)
                     let posDist = hypot(data.center.x - slot.center.x, data.center.y - slot.center.y)
                     slotCosts.append((slot: slot, cost: cost, posDist: posDist))
                 }
@@ -693,7 +735,7 @@ final class SimilarityAnalysisQueue {
             }
 
             // === Step 6: 신규 슬롯 등록 ===
-            for (faceIdx, fp) in faceFPs {
+            for (faceIdx, embedding) in faceEmbeddings {
                 guard !usedFaces.contains(faceIdx) else { continue }
                 guard activeSlots.count < maxSlots else {
                     print("[Unassigned] Face(\(faceIdx)): Max slots reached")
@@ -704,7 +746,7 @@ final class SimilarityAnalysisQueue {
                 // 신규 슬롯 생성
                 let slot = PersonSlot(
                     id: nextSlotID,
-                    featurePrint: fp,
+                    embedding: embedding,
                     center: data.center,
                     boundingBox: data.boundingBox
                 )
@@ -721,7 +763,7 @@ final class SimilarityAnalysisQueue {
                 nextSlotID += 1
             }
 
-            // FP 없는 얼굴은 CachedFace에 저장하지 않음 (캐시 미저장 정책)
+            // 임베딩 없는 얼굴은 CachedFace에 저장하지 않음 (캐시 미저장 정책)
 
             result[assetID] = cachedFaces
         }

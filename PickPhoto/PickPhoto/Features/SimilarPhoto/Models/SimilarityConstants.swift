@@ -43,32 +43,26 @@ enum SimilarityConstants: Sendable {
 
     /// 인물 매칭 거절 임계값 (Grey Zone 상한)
     ///
-    /// - iOS 16: 임계값 8.0 (변경 없음)
-    /// - iOS 17+: 임계값 0.65 (변경: 0.8 → 0.65)
+    /// SFace 코사인 유사도 기준 (cost = 1 - similarity):
+    /// - 유사도 0.363 이상 = 거리 0.637 이하 → 동일인
+    /// - 거리가 이 값 이상이면 매칭 거절
     ///
-    /// 이 값 이상이면 매칭 거절. Grey Zone(greyZoneThreshold ~ personMatchThreshold)에서는
-    /// 위치 조건을 추가로 확인함.
+    /// 임계값 근거: LFW 벤치마크 0.363 (13,233쌍 테스트, 공식 권장)
+    /// Grey Zone(greyZoneThreshold ~ personMatchThreshold)에서는 위치 조건을 추가로 확인함.
     nonisolated static var personMatchThreshold: Float {
-        if #available(iOS 17.0, *) {
-            return 0.65  // iOS 17+: 정규화 벡터, Grey Zone 상한
-        } else {
-            return 8.0   // iOS 16: 비정규화 벡터
-        }
+        return 0.637  // SFace: 1 - 0.363 (LFW 기준 동일인 임계값)
     }
 
     /// Grey Zone 시작 임계값 (확신/모호 구간 경계)
     ///
-    /// - iOS 16: 5.0
-    /// - iOS 17+: 0.35
+    /// SFace 코사인 유사도 기준 (cost = 1 - similarity):
+    /// - 유사도 0.55 이상 = 거리 0.45 이하 → 확신 구간 (즉시 매칭)
+    /// - 유사도 0.363~0.55 = 거리 0.45~0.637 → Grey Zone (위치 조건 필요)
     ///
     /// 이 값 미만이면 즉시 매칭(확신 구간),
     /// 이 값 이상 ~ personMatchThreshold 미만이면 Grey Zone(위치 조건 필요)
     nonisolated static var greyZoneThreshold: Float {
-        if #available(iOS 17.0, *) {
-            return 0.35  // iOS 17+: 정규화 벡터 (변경: 0.50 → 0.35)
-        } else {
-            return 5.0   // iOS 16: 비정규화 벡터 (변경: 6.0 → 5.0)
-        }
+        return 0.45  // SFace: 1 - 0.55 (확신 구간 경계)
     }
 
     /// Grey Zone 위치 조건 (정규화된 거리 기준)

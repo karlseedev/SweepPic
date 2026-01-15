@@ -472,9 +472,15 @@ struct CachedFace {
   - [x] Swift 구현 (128-dim 임베딩, 코사인 유사도)
 - [x] 파이프라인 테스트 통과 (YuNetDebugTest)
 
-### Phase 3: 통합
-- [ ] SimilarityAnalysisQueue 수정
-- [ ] SimilarityConstants 임계값 조정
+### Phase 3: 통합 ✅
+- [x] SimilarityAnalysisQueue 수정
+  - [x] PersonSlot: featurePrint → embedding
+  - [x] YuNet으로 얼굴 감지 (landmark 포함)
+  - [x] FaceAligner + SFace로 임베딩 생성
+  - [x] 코사인 유사도 → 거리 변환 (cost = 1 - similarity)
+- [x] SimilarityConstants 임계값 조정
+  - [x] personMatchThreshold: 0.637 (유사도 0.363)
+  - [x] greyZoneThreshold: 0.45 (유사도 0.55)
 
 ### Phase 4: 검증
 - [ ] 단위 테스트
