@@ -719,7 +719,7 @@ final class SimilarityAnalysisQueue {
             // === Step 4: 전역 정렬 (Cost 오름차순) ===
             allCandidates.sort { $0.cost < $1.cost }
 
-            // === Step 5: 매칭 확정 (Grey Zone 적용 + Keep Best) ===
+            // === Step 5: 조건부 매칭 (고품질: SFace 우선, 저품질: 위치 우선) ===
             var usedFaces: Set<Int> = []
             var usedSlots: Set<Int> = []
             var cachedFaces: [CachedFace] = []
@@ -736,7 +736,15 @@ final class SimilarityAnalysisQueue {
                 }
             }
 
-            for candidate in allCandidates {
+            // 저품질 위치 매칭용 상수
+            let lowQualityPosLimit: CGFloat = 0.25  // 저품질은 위치 조건 완화 (25%)
+            let lowQualityCostLimit: Float = rejectThreshold + 0.15  // cost 상한선 완화
+
+            // Step 5A: 고품질 얼굴 매칭 (SFace 우선)
+            let highQualityCandidates = allCandidates.filter { $0.norm >= minEmbeddingNorm }
+            let lowQualityCandidates = allCandidates.filter { $0.norm < minEmbeddingNorm }
+
+            for candidate in highQualityCandidates {
                 guard !usedFaces.contains(candidate.faceIdx) else { continue }
                 guard !usedSlots.contains(candidate.slotID) else { continue }
 
@@ -780,6 +788,45 @@ final class SimilarityAnalysisQueue {
                 } else {
                     // 거절 구간
                     print("[Reject] Face(\(candidate.faceIdx)) -> Slot(\(candidate.slotID)): Cost=\(String(format: "%.3f", cost))")
+                }
+            }
+
+            // Step 5B: 저품질 얼굴 매칭 (위치 우선 + SFace 교차검증)
+            // 저품질 얼굴별로 그룹화하여 가장 가까운 슬롯에 매칭 시도
+            var lowQualityByFace: [Int: [MatchCandidate]] = [:]
+            for candidate in lowQualityCandidates {
+                guard !usedFaces.contains(candidate.faceIdx) else { continue }
+                lowQualityByFace[candidate.faceIdx, default: []].append(candidate)
+            }
+
+            for (faceIdx, candidates) in lowQualityByFace {
+                guard !usedFaces.contains(faceIdx) else { continue }
+
+                // 위치 기준으로 정렬 (가장 가까운 슬롯 우선)
+                let sortedByPos = candidates
+                    .filter { !usedSlots.contains($0.slotID) }
+                    .sorted { $0.posDistNorm < $1.posDistNorm }
+
+                guard let bestByPos = sortedByPos.first else { continue }
+
+                let cost = bestByPos.cost
+                let posNorm = bestByPos.posDistNorm
+
+                // 교차 검증: 위치가 가깝고(25%) SFace cost가 상한선(0.80) 이하면 매칭
+                if posNorm < lowQualityPosLimit && cost < lowQualityCostLimit {
+                    usedFaces.insert(faceIdx)
+                    usedSlots.insert(bestByPos.slotID)
+                    cachedFaces.append(CachedFace(
+                        boundingBox: bestByPos.boundingBox,
+                        personIndex: bestByPos.slotID,
+                        isValidSlot: false,
+                        sfaceCost: cost
+                    ))
+                    print("[LowQMatch] Face(\(faceIdx)) -> Slot(\(bestByPos.slotID)): Cost=\(String(format: "%.3f", cost)), PosNorm=\(String(format: "%.2f", posNorm)), norm=\(String(format: "%.2f", bestByPos.norm)) (PositionFirst)")
+
+                    // Keep Best는 적용하지 않음 (저품질 임베딩으로 슬롯 갱신 X)
+                } else {
+                    print("[LowQReject] Face(\(faceIdx)) -> Slot(\(bestByPos.slotID)): Cost=\(String(format: "%.3f", cost)), PosNorm=\(String(format: "%.2f", posNorm)), norm=\(String(format: "%.2f", bestByPos.norm)) (limit: pos<\(String(format: "%.2f", lowQualityPosLimit)), cost<\(String(format: "%.2f", lowQualityCostLimit)))")
                 }
             }
 
