@@ -573,7 +573,11 @@ final class SimilarityAnalysisQueue {
             }
 
             // YuNet으로 얼굴 감지 (landmark 포함)
-            let yunetDetections = yunet.detectFaces(in: image)
+            guard let yunetDetections = try? yunet.detect(in: image) else {
+                print("[FaceMatching] Photo \(assetID.prefix(8)): YuNet detection failed")
+                result[assetID] = []
+                continue
+            }
 
             for (faceIdx, detection) in yunetDetections.enumerated() {
                 // normalized 좌표로 변환 (Vision과 동일한 좌표계)
@@ -589,7 +593,7 @@ final class SimilarityAnalysisQueue {
                 faceData[faceIdx] = (center: center, boundingBox: normalizedBox)
 
                 // FaceAligner로 정렬 (픽셀 좌표 landmark 사용)
-                guard let alignedFace = FaceAligner.align(
+                guard let alignedFace = try? FaceAligner.shared.align(
                     image: image,
                     landmarks: detection.landmarks
                 ) else {
