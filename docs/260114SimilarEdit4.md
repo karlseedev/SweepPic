@@ -456,20 +456,21 @@ struct CachedFace {
 - [x] 모델 프로젝트에 추가 (PickPhoto/MLModels/)
 - [ ] (선택) SFace int8 변환 및 성능 비교
 
-### Phase 2: 구현 (현재 진행 중)
+### Phase 2: 구현 ✅
 > 상세 스펙: [260114SimilarEdit4-1.md](./260114SimilarEdit4-1.md)
 
-- [ ] YuNetFaceDetector 구현
+- [x] YuNetFaceDetector 구현
   - [x] Core ML 출력 매핑 확인 (var_762~var_943)
   - [x] 전처리 스펙 확정 (BGR, 320×320)
   - [x] 디코딩 로직 확정 (stride 곱셈, sigmoid 내장)
-  - [ ] Swift 구현
-- [ ] FaceAligner 구현
+  - [x] Swift 구현 (YuNet/ 디렉토리 4개 파일)
+- [x] FaceAligner 구현
   - [x] ArcFace 5-point 템플릿 확정
-  - [ ] Similarity Transform 구현
-- [ ] SFaceRecognizer 구현
+  - [x] Similarity Transform 구현 (SVD 기반 Procrustes)
+- [x] SFaceRecognizer 구현
   - [x] 전처리 스펙 확정 (RGB, 0-255)
-  - [ ] Swift 구현
+  - [x] Swift 구현 (128-dim 임베딩, 코사인 유사도)
+- [x] 파이프라인 테스트 통과 (YuNetDebugTest)
 
 ### Phase 3: 통합
 - [ ] SimilarityAnalysisQueue 수정
