@@ -514,11 +514,32 @@ final class FaceComparisonViewController: UIViewController {
     }
 
     /// 디버그 버튼 탭
-    /// 현재 그룹의 상세 정보를 JSON으로 콘솔에 출력합니다.
+    /// YuNet + SFace 파이프라인 테스트를 실행합니다.
     @objc private func debugButtonTapped() {
-        print("[FaceComparisonViewController] Debug button tapped")
+        print("[FaceComparisonViewController] Debug button tapped - Running YuNet Test")
 
+        // 현재 표시 중인 사진으로 YuNet 테스트 실행
         Task { @MainActor in
+            // 현재 그룹의 첫 번째 사진으로 테스트
+            guard let firstAssetID = comparisonGroup.selectedAssetIDs.first else {
+                print("[YuNetTest] No photo available")
+                return
+            }
+
+            // PHAsset 가져오기
+            let fetchResult = PHAsset.fetchAssets(
+                withLocalIdentifiers: [firstAssetID],
+                options: nil
+            )
+            guard let photo = fetchResult.firstObject else {
+                print("[YuNetTest] Failed to fetch PHAsset")
+                return
+            }
+
+            // YuNet 테스트 실행
+            let results = await YuNetDebugTest.shared.runAllTests(with: photo)
+
+            // 기존 디버그 정보도 출력
             let debugInfo = await generateDebugInfo()
             printDebugInfo(debugInfo)
         }
