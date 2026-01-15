@@ -238,7 +238,13 @@ final class FaceAligner {
         context.setFillColor(CGColor(red: 0, green: 0, blue: 0, alpha: 1))
         context.fill(CGRect(x: 0, y: 0, width: outputSize, height: outputSize))
 
-        // 변환 적용
+        // CGContext 좌표계를 이미지 좌표계로 변환 (y축 뒤집기)
+        // CGContext: 왼쪽 아래 원점, y 위로 증가
+        // 이미지/YuNet landmark: 왼쪽 위 원점, y 아래로 증가
+        context.translateBy(x: 0, y: CGFloat(outputSize))
+        context.scaleBy(x: 1, y: -1)
+
+        // 변환 적용 (이제 이미지 좌표계 기준)
         context.concatenate(transform)
 
         // 이미지 그리기
