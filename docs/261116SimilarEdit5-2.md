@@ -45,7 +45,7 @@
 | `personMatchThreshold` | 0.637 | 거절 임계값 (LFW 기준) |
 | `greyZonePositionLimit` | 0.20 | Grey Zone 위치 조건 |
 | `lowQualityPosLimit` | 0.25 | 저품질 위치 조건 |
-| `lowQualityCostLimit` | 0.787 | 저품질 cost 상한 *(계산값: rejectThreshold+0.15)* |
+| `lowQualityCostLimit` | 0.787 | 저품질 cost 상한 *(계산값: min(rejectThreshold+0.15, 1.0))* |
 | `scoreThreshold` (YuNet) | 0.6 | 얼굴 감지 신뢰도 |
 | `analysisImageMaxSize` | 480px | 분석 이미지 최대 크기 |
 

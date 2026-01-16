@@ -260,32 +260,6 @@ final class FaceComparisonViewController: UIViewController {
             setupCustomTitleBar()
             setupCollectionViewWithCustomNav()
         }
-
-        // 좌우 스와이프로 인물 전환
-        setupSwipeGestures()
-    }
-
-    /// 좌우 스와이프 제스처 설정
-    private func setupSwipeGestures() {
-        // 왼쪽 스와이프 → 다음 인물
-        let swipeLeft = UISwipeGestureRecognizer(target: self, action: #selector(handleSwipeLeft))
-        swipeLeft.direction = .left
-        collectionView.addGestureRecognizer(swipeLeft)
-
-        // 오른쪽 스와이프 → 이전 인물
-        let swipeRight = UISwipeGestureRecognizer(target: self, action: #selector(handleSwipeRight))
-        swipeRight.direction = .right
-        collectionView.addGestureRecognizer(swipeRight)
-    }
-
-    /// 왼쪽 스와이프 핸들러 (다음 인물)
-    @objc private func handleSwipeLeft() {
-        cycleToNextPerson()
-    }
-
-    /// 오른쪽 스와이프 핸들러 (이전 인물)
-    @objc private func handleSwipeRight() {
-        cycleToPreviousPerson()
     }
 
     /// 커스텀 타이틀바 설정 (iOS 16~25)
@@ -536,31 +510,12 @@ final class FaceComparisonViewController: UIViewController {
 
     /// 순환 버튼 탭
     @objc private func cycleButtonTapped() {
-        cycleToNextPerson()
-    }
-
-    /// 다음 인물로 전환
-    private func cycleToNextPerson() {
         guard validPersonIndices.count > 1 else { return }
 
         // 다음 인물로 이동 (원형 순환)
         currentPersonArrayIndex = (currentPersonArrayIndex + 1) % validPersonIndices.count
 
-        print("[FaceComparisonViewController] Cycled to next person \(currentPersonIndex)")
-
-        // UI 갱신 (선택 상태 유지)
-        updateTitleBar()
-        collectionView.reloadData()
-    }
-
-    /// 이전 인물로 전환
-    private func cycleToPreviousPerson() {
-        guard validPersonIndices.count > 1 else { return }
-
-        // 이전 인물로 이동 (원형 순환)
-        currentPersonArrayIndex = (currentPersonArrayIndex - 1 + validPersonIndices.count) % validPersonIndices.count
-
-        print("[FaceComparisonViewController] Cycled to previous person \(currentPersonIndex)")
+        print("[FaceComparisonViewController] Cycled to person \(currentPersonIndex)")
 
         // UI 갱신 (선택 상태 유지)
         updateTitleBar()
