@@ -695,14 +695,16 @@ final class SimilarityAnalysisQueue {
             // === Step 3: 비용 산출 (코사인 유사도 → 거리 변환) ===
             var allCandidates: [MatchCandidate] = []
 
-            // 각 얼굴의 norm 미리 계산
+            // 각 얼굴의 norm 미리 계산 (결정성 보장: 키 정렬)
             var faceNorms: [Int: Float] = [:]
-            for (faceIdx, embedding) in faceEmbeddings {
+            for faceIdx in faceEmbeddings.keys.sorted() {
+                guard let embedding = faceEmbeddings[faceIdx] else { continue }
                 faceNorms[faceIdx] = sqrt(embedding.reduce(0) { $0 + $1 * $1 })
             }
 
-            for (faceIdx, faceEmbedding) in faceEmbeddings {
-                guard let data = faceData[faceIdx] else { continue }
+            for faceIdx in faceEmbeddings.keys.sorted() {
+                guard let faceEmbedding = faceEmbeddings[faceIdx],
+                      let data = faceData[faceIdx] else { continue }
                 let faceNorm = faceNorms[faceIdx] ?? 0
 
                 // 모든 슬롯과 비용 계산 (코사인 유사도를 거리로 변환: cost = 1 - similarity)
