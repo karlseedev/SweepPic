@@ -116,23 +116,126 @@ for candidate in sortedCandidates {
 
 ---
 
-## 5. 다음 단계
+## 5. Phase 1 세분화 테스트 (2026-01-17)
 
-### 5.1 즉시 실행
+### 5.1 테스트 계획
 
-1. **현재 상태(롤백)에서 녹색 버튼 → 로그 저장**
-2. **결정성 수정 적용**
-3. **결정성 상태에서 녹색 버튼 → 로그 저장**
-4. **두 로그 비교하여 원인 특정**
+결정성 수정을 단계별로 적용하여 S2 발생 시점 특정:
 
-### 5.2 원인 특정 후
+| 단계 | 항목 | 영향 범위 |
+|------|------|----------|
+| 1-1 | faceNorms + faceEmbeddings 순회 | 후보 생성 순서 |
+| 1-2 | 전역 정렬 tie-breaker | 매칭 우선순위 |
+| 1-3 | lowQualityByFace 순회 | 저품질 매칭 순서 |
+| 1-4 | 신규 슬롯 등록 순회 | 슬롯 생성 순서 |
+| 1-5 | Vision fallback 순회 | fallback 매칭 순서 |
 
-- 원인에 따라 해결 방향 결정
-- 슬롯 중심 매칭 또는 다른 방법 적용
+### 5.2 테스트 결과
+
+| 단계 | 적용 코드 | S2 발생 | 로그 파일 |
+|------|----------|---------|-----------|
+| 1-1 | `faceEmbeddings.keys.sorted()` | ❌ 미발생 | 0116logOk3.md |
+| 1-2 | tie-breaker (faceIdx → slotID) | ✅ **발생** | 0116logNo1.md |
+
+### 5.3 적용된 코드
+
+**1-1: faceNorms + faceEmbeddings 순회 (line 700, 705)**
+```swift
+var faceNorms: [Int: Float] = [:]
+for faceIdx in faceEmbeddings.keys.sorted() {
+    guard let embedding = faceEmbeddings[faceIdx] else { continue }
+    faceNorms[faceIdx] = sqrt(embedding.reduce(0) { $0 + $1 * $1 })
+}
+
+for faceIdx in faceEmbeddings.keys.sorted() {
+    // ... 후보 생성 로직
+}
+```
+
+**1-2: 전역 정렬 tie-breaker (line 754-758)**
+```swift
+allCandidates.sort {
+    if $0.cost != $1.cost { return $0.cost < $1.cost }
+    if $0.faceIdx != $1.faceIdx { return $0.faceIdx < $1.faceIdx }
+    return $0.slotID < $1.slotID
+}
+```
 
 ---
 
-## 6. 커밋 히스토리
+## 6. S2 원인 분석 결과
+
+### 6.1 차이 시작점
+
+**Photo 8199D9B4의 LowQ 매칭**:
+
+| 항목 | 1-1 (Ok3) | 1-2 (No1) |
+|------|-----------|-----------|
+| Face(0) | Slot(2) 매칭 (PosNorm=0.08) | **Rejected** (PosNorm=0.26) |
+| Face(2) | Slot(3) 매칭 (PosNorm=0.13) | **Slot(2)** 매칭 (PosNorm=0.09) |
+| 결과 | 2개 얼굴 (c3, b5) | 3개 얼굴 (c3, b5, **a3**) |
+
+### 6.2 연쇄 효과
+
+```
+1-2 tie-breaker 적용
+    ↓
+allCandidates 정렬 순서 변화
+    ↓
+lowQualityByFace 삽입 순서 변화
+    ↓
+8199D9B4에서 Face(2)가 Slot(2) 먼저 선점 (기존: Face(0))
+    ↓
+Slot(2) center가 Face(2) 위치로 갱신
+    ↓
+이후 사진에서 posNorm 계산 달라짐
+    ↓
+A1EF6352: PosNorm 0.16 → 0.01
+A9A61D7E: LowQMatch Slot(1) → Slot(3)
+    ↓
+a3가 추가로 매칭됨 (S2)
+```
+
+### 6.3 핵심 발견
+
+**GPT 분석:**
+> S2의 직접 원인은 "8199D9B4에서 LowQ face 처리 순서가 바뀌어 slot2 선점이 뒤바뀐 것"
+
+**Claude 분석:**
+> 1-2가 직접 LowQ 순서를 바꾸는 게 아니라, allCandidates 정렬 → lowQualityByFace 삽입 순서 → 슬롯 위치 갱신 차이 → posNorm 차이로 이어지는 간접 영향
+
+**합의된 결론:**
+- 결정성이 깨진 게 아니라, **결정된 기준이 바뀌어 결과가 달라진 것**
+- 1-2 tie-breaker가 "랜덤"을 만든 게 아니라, **allCandidates 정렬이 바뀌면서 LowQ 처리 순서가 바뀌고 S2 유발**
+
+### 6.4 추가 로그 필요 (증명용)
+
+| 로그 | 목적 |
+|------|------|
+| lowQualityCandidates 순서 | allCandidates에서 필터링된 순서 |
+| lowQualityByFace key 삽입 순서 | Dictionary 순회 순서 결정 요인 |
+| 8199D9B4 Face(0)/Face(2)의 bestByPos | 왜 Face(2)가 먼저 Slot(2)를 잡는지 |
+
+---
+
+## 7. 다음 단계
+
+### 7.1 옵션 A: 추가 로그로 증명
+
+- S2DebugAnalyzer에 6.4 로그 추가
+- Face(2)가 Slot(2) 먼저 선점하는 이유 명확히 확인
+
+### 7.2 옵션 B: 해결 방향 검토
+
+| 방향 | 설명 | 장점 | 단점 |
+|------|------|------|------|
+| 슬롯 중심 매칭 | 각 슬롯에 대해 최적 후보 선택 | 순서 무관 | 구현 복잡 |
+| Hungarian 알고리즘 | 전역 최적 매칭 | 최적해 보장 | 성능 부담 |
+| LowQ 순서 고정 | lowQualityByFace를 faceIdx 순으로 처리 | 간단 | 부분 해결 |
+
+---
+
+## 8. 커밋 히스토리
 
 | 커밋 | 내용 |
 |------|------|
@@ -142,15 +245,15 @@ for candidate in sortedCandidates {
 
 ---
 
-## 7. 파일 변경 내역
+## 9. 파일 변경 내역
 
-### 7.1 신규 파일
+### 9.1 신규 파일
 
 | 파일 | 역할 |
 |------|------|
 | `S2DebugAnalyzer.swift` | S2 원인 분석용 9개 로그 출력 |
 
-### 7.2 수정 파일
+### 9.2 수정 파일
 
 | 파일 | 변경 내용 |
 |------|----------|
@@ -158,8 +261,11 @@ for candidate in sortedCandidates {
 
 ---
 
-## 8. 변경 이력
+## 10. 변경 이력
 
 | 일시 | 내용 |
 |------|------|
 | 2026-01-16 | 문서 생성, S2 원인 분석 도구 구현 내역 정리 |
+| 2026-01-17 | Phase 1 세분화 테스트 결과 추가 (1-1 OK, 1-2 S2 발생) |
+| 2026-01-17 | S2 원인 분석 결과 추가 (8199D9B4 LowQ 매칭 순서 차이) |
+| 2026-01-17 | GPT/Claude 분석 비교, 합의 결론 정리 |

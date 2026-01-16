@@ -264,15 +264,57 @@ final class S2DebugAnalyzer {
                 }
             }
 
-            // LOG 7: LowQ 매칭
+            // ═══════════════════════════════════════════════════════════════════
+            // LOG 7-PRE: LowQ 시작 전 Slot Snapshot (center 비교용)
+            // ═══════════════════════════════════════════════════════════════════
+            print("")
+            print("  [LOG 7-PRE] Slot Snapshot (before LowQ):")
+            for slot in activeSlots {
+                let isUsed = usedSlots.contains(slot.id)
+                print("    Slot(\(slot.id)): center=(\(String(format: "%.3f", slot.center.x)), \(String(format: "%.3f", slot.center.y))), used=\(isUsed)")
+            }
+
+            // ═══════════════════════════════════════════════════════════════════
+            // LOG 7A: lowQCandidates 필터 전/후
+            // ═══════════════════════════════════════════════════════════════════
+            print("")
+            print("  [LOG 7A] lowQCandidates (from allCandidates):")
+            print("    [Before usedFaces filter] (\(lowQCandidates.count) candidates):")
+            for (idx, c) in lowQCandidates.enumerated() {
+                print("      [\(idx)] Face(\(c.faceIdx)) -> Slot(\(c.slotID)), cost=\(String(format: "%.3f", c.cost)), posNorm=\(String(format: "%.3f", c.posDistNorm))")
+            }
+
+            let filteredLowQ = lowQCandidates.filter { !usedFaces.contains($0.faceIdx) }
+            print("    [After usedFaces filter] (\(filteredLowQ.count) candidates):")
+            for (idx, c) in filteredLowQ.enumerated() {
+                print("      [\(idx)] Face(\(c.faceIdx)) -> Slot(\(c.slotID)), cost=\(String(format: "%.3f", c.cost)), posNorm=\(String(format: "%.3f", c.posDistNorm))")
+            }
+
+            // ═══════════════════════════════════════════════════════════════════
+            // LOG 7B: lowQByFace key 순서 분석
+            // ═══════════════════════════════════════════════════════════════════
             var lowQByFace: [Int: [DebugCandidate]] = [:]
+            var insertionOrder: [Int] = []  // key가 처음 등장한 순서
+
             for c in lowQCandidates {
                 guard !usedFaces.contains(c.faceIdx) else { continue }
+                if lowQByFace[c.faceIdx] == nil {
+                    insertionOrder.append(c.faceIdx)
+                }
                 lowQByFace[c.faceIdx, default: []].append(c)
             }
 
             print("")
-            print("  [LOG 7] LowQ Candidates (sorted by position):")
+            print("  [LOG 7B] lowQByFace key order:")
+            print("    [Insertion Order]: \(insertionOrder)")
+            print("    [Dict Keys (unsorted)]: \(Array(lowQByFace.keys))")
+            print("    [Processing Order (sorted)]: \(lowQByFace.keys.sorted())")
+
+            // ═══════════════════════════════════════════════════════════════════
+            // LOG 7C: LowQ 매칭 상세 (slot selection)
+            // ═══════════════════════════════════════════════════════════════════
+            print("")
+            print("  [LOG 7C] LowQ Matching (sorted by position):")
 
             if lowQByFace.isEmpty {
                 print("    (no lowQ candidates)")
@@ -280,28 +322,39 @@ final class S2DebugAnalyzer {
 
             for faceIdx in lowQByFace.keys.sorted() {
                 guard let candidates = lowQByFace[faceIdx] else { continue }
+                guard let faceInfo = faceData.first(where: { $0.idx == faceIdx }) else { continue }
+
+                print("")
+                print("    Face(\(faceIdx)) - \(faceInfo.uiLabel):")
+                print("      Face center: (\(String(format: "%.3f", faceInfo.center.x)), \(String(format: "%.3f", faceInfo.center.y)))")
+
+                // 각 슬롯별 상세 (rawDist, posNorm, cost, slotUsed)
                 let sortedByPos = candidates
-                    .filter { !usedSlots.contains($0.slotID) }
                     .sorted { $0.posDistNorm < $1.posDistNorm }
 
-                if let data = faceData.first(where: { $0.idx == faceIdx }) {
-                    print("    Face(\(faceIdx)) - \(data.uiLabel):")
-                }
-
-                // 전체 리스트 출력 (GPT 권장)
+                print("      [Candidates by posNorm]:")
                 for (rank, c) in sortedByPos.enumerated() {
-                    print("      [\(rank)] Slot(\(c.slotID)): posNorm=\(String(format: "%.3f", c.posDistNorm)), cost=\(String(format: "%.3f", c.cost))")
+                    let slotUsed = usedSlots.contains(c.slotID)
+                    if let slot = activeSlots.first(where: { $0.id == c.slotID }) {
+                        let rawDist = hypot(faceInfo.center.x - slot.center.x, faceInfo.center.y - slot.center.y)
+                        print("        [\(rank)] Slot(\(c.slotID)): rawDist=\(String(format: "%.3f", rawDist)), posNorm=\(String(format: "%.3f", c.posDistNorm)), cost=\(String(format: "%.3f", c.cost)), slotUsed=\(slotUsed)")
+                    }
                 }
 
-                if let best = sortedByPos.first {
+                // 선택 가능한 슬롯 중 best 선택
+                let availableCandidates = sortedByPos.filter { !usedSlots.contains($0.slotID) }
+                if let best = availableCandidates.first {
+                    print("      [Selection]:")
                     if best.posDistNorm <= config.lowQualityPosLimit && best.cost < config.lowQualityCostLimit {
                         usedFaces.insert(faceIdx)
                         usedSlots.insert(best.slotID)
                         matchResults.append((faceIdx, best.slotID, best.uiLabel))
-                        print("    [LowQMatch] Face(\(faceIdx)) -> Slot(\(best.slotID))")
+                        print("        -> [LowQMatch] Slot(\(best.slotID)): posNorm=\(String(format: "%.3f", best.posDistNorm)) <= \(config.lowQualityPosLimit), cost=\(String(format: "%.3f", best.cost)) < \(String(format: "%.3f", config.lowQualityCostLimit))")
                     } else {
-                        print("    [LowQReject] Face(\(faceIdx)): posNorm=\(String(format: "%.3f", best.posDistNorm)) (limit=\(config.lowQualityPosLimit)) or cost=\(String(format: "%.3f", best.cost)) (limit=\(String(format: "%.3f", config.lowQualityCostLimit)))")
+                        print("        -> [LowQReject] Slot(\(best.slotID)): posNorm=\(String(format: "%.3f", best.posDistNorm)) (limit=\(config.lowQualityPosLimit)) or cost=\(String(format: "%.3f", best.cost)) (limit=\(String(format: "%.3f", config.lowQualityCostLimit)))")
                     }
+                } else {
+                    print("      [Selection]: No available slots")
                 }
             }
 
