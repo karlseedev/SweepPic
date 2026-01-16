@@ -749,8 +749,13 @@ final class SimilarityAnalysisQueue {
                 }
             }
 
-            // === Step 4: 전역 정렬 (Cost 오름차순) ===
-            allCandidates.sort { $0.cost < $1.cost }
+            // === Step 4: 전역 정렬 (Cost 오름차순, tie-breaker: faceIdx, slotID) ===
+            // 결정성 보장: cost 동일 시 faceIdx → slotID 순으로 정렬
+            allCandidates.sort {
+                if $0.cost != $1.cost { return $0.cost < $1.cost }
+                if $0.faceIdx != $1.faceIdx { return $0.faceIdx < $1.faceIdx }
+                return $0.slotID < $1.slotID
+            }
 
             // === Step 5: 조건부 매칭 (고품질: SFace 우선, 저품질: 위치 우선) ===
             var usedFaces: Set<Int> = []
