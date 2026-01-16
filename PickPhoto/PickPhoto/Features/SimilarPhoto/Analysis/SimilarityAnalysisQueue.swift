@@ -582,10 +582,23 @@ final class SimilarityAnalysisQueue {
             }
 
             // YuNet으로 얼굴 감지 (landmark 포함)
-            guard let yunetDetections = try? yunet.detect(in: image) else {
-                print("[FaceMatching] Photo \(assetID.prefix(8)): YuNet detection failed")
+            let yunetDetections: [YuNetDetection]
+            do {
+                yunetDetections = try yunet.detect(in: image)
+            } catch {
+                print("[FaceMatching] Photo \(assetID.prefix(8)): YuNet detection failed - \(error.localizedDescription)")
                 result[assetID] = []
                 continue
+            }
+
+            // Vision fallback: YuNet 결과가 없으면 rawFacesMap 사용 (위치 정보만)
+            if yunetDetections.isEmpty && !faces.isEmpty {
+                print("[VisionFallback] Photo \(assetID.prefix(8)): YuNet=0, Vision=\(faces.count) faces")
+                for (faceIdx, face) in faces.enumerated() {
+                    let center = CGPoint(x: face.boundingBox.midX, y: face.boundingBox.midY)
+                    faceData[faceIdx] = (center: center, boundingBox: face.boundingBox)
+                    // 임베딩 없음 - 저품질 위치 기반 매칭만 가능
+                }
             }
 
             for (faceIdx, detection) in yunetDetections.enumerated() {
@@ -621,7 +634,10 @@ final class SimilarityAnalysisQueue {
                 }
             }
 
-            print("[FaceMatching] Photo \(assetID.prefix(8)): \(yunetDetections.count) faces (YuNet), Embed: \(faceEmbeddings.count)/\(yunetDetections.count), Slots: \(activeSlots.count)")
+            // 감지 소스 표시 (YuNet 또는 Vision fallback)
+            let detectionSource = yunetDetections.isEmpty && !faces.isEmpty ? "Vision" : "YuNet"
+            let totalFaces = yunetDetections.isEmpty ? faces.count : yunetDetections.count
+            print("[FaceMatching] Photo \(assetID.prefix(8)): \(totalFaces) faces (\(detectionSource)), Embed: \(faceEmbeddings.count)/\(totalFaces), Slots: \(activeSlots.count)")
 
             // === Step 2: 부팅 (ActiveSlots 비어있을 때) ===
             // 부팅 시에는 저품질 포함 모든 얼굴로 슬롯 생성 (모든 인물이 슬롯 보유)
