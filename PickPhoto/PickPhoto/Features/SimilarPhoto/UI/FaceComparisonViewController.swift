@@ -260,6 +260,32 @@ final class FaceComparisonViewController: UIViewController {
             setupCustomTitleBar()
             setupCollectionViewWithCustomNav()
         }
+
+        // 좌우 스와이프로 인물 전환
+        setupSwipeGestures()
+    }
+
+    /// 좌우 스와이프 제스처 설정
+    private func setupSwipeGestures() {
+        // 왼쪽 스와이프 → 다음 인물
+        let swipeLeft = UISwipeGestureRecognizer(target: self, action: #selector(handleSwipeLeft))
+        swipeLeft.direction = .left
+        collectionView.addGestureRecognizer(swipeLeft)
+
+        // 오른쪽 스와이프 → 이전 인물
+        let swipeRight = UISwipeGestureRecognizer(target: self, action: #selector(handleSwipeRight))
+        swipeRight.direction = .right
+        collectionView.addGestureRecognizer(swipeRight)
+    }
+
+    /// 왼쪽 스와이프 핸들러 (다음 인물)
+    @objc private func handleSwipeLeft() {
+        cycleToNextPerson()
+    }
+
+    /// 오른쪽 스와이프 핸들러 (이전 인물)
+    @objc private func handleSwipeRight() {
+        cycleToPreviousPerson()
     }
 
     /// 커스텀 타이틀바 설정 (iOS 16~25)
@@ -314,6 +340,15 @@ final class FaceComparisonViewController: UIViewController {
         // 타이틀
         updateNavigationTitle()
 
+        // 감지 비교 버튼 (YuNet vs Vision)
+        let compareButton = UIBarButtonItem(
+            image: UIImage(systemName: "eye.trianglebadge.exclamationmark"),
+            style: .plain,
+            target: self,
+            action: #selector(compareDetectionButtonTapped)
+        )
+        compareButton.tintColor = .systemCyan
+
         // 디버그 버튼 (순환 버튼 왼쪽)
         let debugButton = UIBarButtonItem(
             image: UIImage(systemName: "ladybug"),
@@ -332,8 +367,8 @@ final class FaceComparisonViewController: UIViewController {
         )
         cycleButton.tintColor = .white
 
-        // 순서: [디버그, 순환] (우측부터 역순으로 배치됨)
-        navigationItem.rightBarButtonItems = [cycleButton, debugButton]
+        // 순서: [순환, 디버그, 비교] (우측부터 역순으로 배치됨)
+        navigationItem.rightBarButtonItems = [cycleButton, debugButton, compareButton]
     }
 
     /// 하단바 설정
@@ -501,12 +536,31 @@ final class FaceComparisonViewController: UIViewController {
 
     /// 순환 버튼 탭
     @objc private func cycleButtonTapped() {
+        cycleToNextPerson()
+    }
+
+    /// 다음 인물로 전환
+    private func cycleToNextPerson() {
         guard validPersonIndices.count > 1 else { return }
 
         // 다음 인물로 이동 (원형 순환)
         currentPersonArrayIndex = (currentPersonArrayIndex + 1) % validPersonIndices.count
 
-        print("[FaceComparisonViewController] Cycled to person \(currentPersonIndex)")
+        print("[FaceComparisonViewController] Cycled to next person \(currentPersonIndex)")
+
+        // UI 갱신 (선택 상태 유지)
+        updateTitleBar()
+        collectionView.reloadData()
+    }
+
+    /// 이전 인물로 전환
+    private func cycleToPreviousPerson() {
+        guard validPersonIndices.count > 1 else { return }
+
+        // 이전 인물로 이동 (원형 순환)
+        currentPersonArrayIndex = (currentPersonArrayIndex - 1 + validPersonIndices.count) % validPersonIndices.count
+
+        print("[FaceComparisonViewController] Cycled to previous person \(currentPersonIndex)")
 
         // UI 갱신 (선택 상태 유지)
         updateTitleBar()
@@ -514,35 +568,262 @@ final class FaceComparisonViewController: UIViewController {
     }
 
     /// 디버그 버튼 탭
-    /// YuNet + SFace 파이프라인 테스트를 실행합니다.
+    /// 그룹 매칭 시뮬레이션 + 현재 캐시 상태를 출력합니다.
     @objc private func debugButtonTapped() {
-        print("[FaceComparisonViewController] Debug button tapped - Running YuNet Test")
+        print("[FaceComparisonViewController] Debug button tapped - Running Group Matching Simulation")
 
-        // 현재 표시 중인 사진으로 YuNet 테스트 실행
+        // 현재 그룹의 모든 사진으로 매칭 시뮬레이션 실행
         Task { @MainActor in
-            // 현재 그룹의 첫 번째 사진으로 테스트
-            guard let firstAssetID = comparisonGroup.selectedAssetIDs.first else {
-                print("[YuNetTest] No photo available")
+            let assetIDs = comparisonGroup.selectedAssetIDs
+            guard !assetIDs.isEmpty else {
+                print("[MatchingTest] No photos available")
                 return
             }
 
             // PHAsset 가져오기
             let fetchResult = PHAsset.fetchAssets(
-                withLocalIdentifiers: [firstAssetID],
+                withLocalIdentifiers: assetIDs,
                 options: nil
             )
-            guard let photo = fetchResult.firstObject else {
-                print("[YuNetTest] Failed to fetch PHAsset")
+
+            var photos: [PHAsset] = []
+            fetchResult.enumerateObjects { asset, _, _ in
+                photos.append(asset)
+            }
+
+            guard !photos.isEmpty else {
+                print("[MatchingTest] Failed to fetch PHAssets")
                 return
             }
 
-            // YuNet 테스트 실행
-            _ = await YuNetDebugTest.shared.runAllTests(with: photo)
+            // 그룹 매칭 시뮬레이션 실행
+            await YuNetDebugTest.shared.runGroupMatchingTest(with: photos)
 
-            // 기존 디버그 정보도 출력
+            // 기존 캐시 상태도 출력 (현재 앱에서 실제로 적용된 결과)
             let debugInfo = await generateDebugInfo()
             printDebugInfo(debugInfo)
         }
+    }
+
+    /// 감지 비교 버튼 탭
+    /// YuNet vs Vision 얼굴 감지 결과를 비교합니다.
+    @objc private func compareDetectionButtonTapped() {
+        print("[FaceComparisonViewController] Compare Detection button tapped - YuNet vs Vision")
+
+        Task { @MainActor in
+            let assetIDs = comparisonGroup.selectedAssetIDs
+            guard !assetIDs.isEmpty else {
+                print("[DetectionCompare] No photos available")
+                return
+            }
+
+            // PHAsset 가져오기
+            let fetchResult = PHAsset.fetchAssets(
+                withLocalIdentifiers: assetIDs,
+                options: nil
+            )
+
+            var photos: [PHAsset] = []
+            fetchResult.enumerateObjects { asset, _, _ in
+                photos.append(asset)
+            }
+
+            guard !photos.isEmpty else {
+                print("[DetectionCompare] Failed to fetch PHAssets")
+                return
+            }
+
+            // YuNet vs Vision 비교 실행
+            await runDetectionComparison(with: photos)
+        }
+    }
+
+    /// YuNet vs Vision 얼굴 감지 비교를 실행합니다.
+    /// - Parameter photos: 비교할 사진 배열
+    private func runDetectionComparison(with photos: [PHAsset]) async {
+        print("")
+        print("╔══════════════════════════════════════════════════════════════════╗")
+        print("║         FACE DETECTION COMPARISON: YuNet vs Vision               ║")
+        print("╠══════════════════════════════════════════════════════════════════╣")
+
+        // 통계
+        var totalPhotos = 0
+        var yunetOnlyCount = 0      // YuNet만 감지
+        var visionOnlyCount = 0     // Vision만 감지
+        var bothCount = 0           // 둘 다 감지
+        var neitherCount = 0        // 둘 다 미감지
+
+        let imageLoader = SimilarityImageLoader.shared
+        let visionDetector = FaceDetector.shared
+        guard let yunetDetector = YuNetFaceDetector.shared else {
+            print("║ ✗ YuNet detector not available")
+            print("╚══════════════════════════════════════════════════════════════════╝")
+            return
+        }
+
+        // 임의의 뷰어 크기 (5% 필터용)
+        let viewerSize = CGSize(width: 390, height: 844)
+
+        for photo in photos {
+            totalPhotos += 1
+            let shortID = String(photo.localIdentifier.prefix(8))
+
+            do {
+                // 이미지 로드
+                let cgImage = try await imageLoader.loadImage(for: photo)
+
+                // Vision 감지
+                let visionFaces = try await visionDetector.detectFaces(in: photo, viewerSize: viewerSize)
+
+                // YuNet 감지
+                let yunetFaces = try yunetDetector.detect(in: cgImage)
+
+                // 결과 분석
+                let visionCount = visionFaces.count
+                let yunetCount = yunetFaces.count
+
+                // 이미지 크기 (YuNet 좌표 정규화용)
+                let imageSize = CGSize(width: CGFloat(cgImage.width), height: CGFloat(cgImage.height))
+
+                // 위치 기반 매칭으로 공통/개별 얼굴 판별
+                let matchResult = matchDetectedFaces(
+                    yunetFaces: yunetFaces,
+                    visionFaces: visionFaces,
+                    imageSize: imageSize
+                )
+
+                // 통계 업데이트
+                yunetOnlyCount += matchResult.yunetOnly.count
+                visionOnlyCount += matchResult.visionOnly.count
+                bothCount += matchResult.matched.count
+
+                if visionCount == 0 && yunetCount == 0 {
+                    neitherCount += 1
+                }
+
+                // 로그 출력
+                let statusIcon: String
+                if matchResult.yunetOnly.isEmpty && matchResult.visionOnly.isEmpty {
+                    statusIcon = "✓"  // 완전 일치
+                } else if !matchResult.visionOnly.isEmpty {
+                    statusIcon = "⚠️"  // Vision만 감지한 얼굴 있음 (YuNet 미검출)
+                } else {
+                    statusIcon = "○"  // YuNet만 감지 (오탐 가능성)
+                }
+
+                print("║ \(statusIcon) Photo \(shortID): YuNet=\(yunetCount), Vision=\(visionCount) | " +
+                      "Both=\(matchResult.matched.count), YuNet-only=\(matchResult.yunetOnly.count), " +
+                      "Vision-only=\(matchResult.visionOnly.count)")
+
+                // Vision-only 얼굴 상세 출력 (YuNet 미검출 케이스)
+                for (idx, visionFace) in matchResult.visionOnly.enumerated() {
+                    let bbox = visionFace.boundingBox
+                    print("║   └─ [Vision-only #\(idx+1)] bbox: (\(String(format: "%.2f", bbox.origin.x)), " +
+                          "\(String(format: "%.2f", bbox.origin.y))), size: \(String(format: "%.2f", bbox.width))x" +
+                          "\(String(format: "%.2f", bbox.height))")
+                }
+
+                // YuNet-only 얼굴 상세 출력 (정규화 좌표 포함)
+                for (idx, yunetFace) in matchResult.yunetOnly.enumerated() {
+                    let bbox = yunetFace.boundingBox
+                    // 정규화 좌표 계산 (Y축 반전)
+                    let normX = bbox.midX / imageSize.width
+                    let normY = 1.0 - (bbox.midY / imageSize.height)
+                    print("║   └─ [YuNet-only #\(idx+1)] norm: (\(String(format: "%.2f", normX)), " +
+                          "\(String(format: "%.2f", normY))), px: (\(String(format: "%.0f", bbox.origin.x)), " +
+                          "\(String(format: "%.0f", bbox.origin.y))), score: \(String(format: "%.2f", yunetFace.score))")
+                }
+
+            } catch {
+                print("║ ✗ Photo \(shortID): Error - \(error.localizedDescription)")
+            }
+        }
+
+        // 요약 출력
+        print("╠══════════════════════════════════════════════════════════════════╣")
+        print("║                           SUMMARY                                ║")
+        print("╠══════════════════════════════════════════════════════════════════╣")
+        print("║ Total Photos: \(totalPhotos)")
+        print("║ Faces detected by BOTH: \(bothCount)")
+        print("║ Faces detected by YuNet ONLY: \(yunetOnlyCount) (possible false positives)")
+        print("║ Faces detected by Vision ONLY: \(visionOnlyCount) ← YuNet missed these!")
+        print("║ Photos with NO faces: \(neitherCount)")
+        print("╚══════════════════════════════════════════════════════════════════╝")
+        print("")
+    }
+
+    /// YuNet과 Vision 얼굴 감지 결과를 위치 기반으로 매칭합니다.
+    ///
+    /// 좌표계 차이:
+    /// - Vision: 정규화 좌표 (0~1), 원점 좌하단, Y가 위로 증가
+    /// - YuNet: 픽셀 좌표, 원점 좌상단, Y가 아래로 증가
+    ///
+    /// - Parameters:
+    ///   - yunetFaces: YuNet 감지 결과 (픽셀 좌표)
+    ///   - visionFaces: Vision 감지 결과 (정규화 좌표)
+    ///   - imageSize: 원본 이미지 크기 (좌표 변환용)
+    /// - Returns: 매칭 결과 (공통, YuNet만, Vision만)
+    private func matchDetectedFaces(
+        yunetFaces: [YuNetDetection],
+        visionFaces: [DetectedFace],
+        imageSize: CGSize
+    ) -> DetectionMatchResult {
+        var matched: [(yunet: YuNetDetection, vision: DetectedFace)] = []
+        var yunetOnly: [YuNetDetection] = []
+        var visionOnly: [DetectedFace] = []
+
+        // 매칭 임계값 (정규화 좌표 기준 중심 거리)
+        let matchThreshold: CGFloat = 0.15
+
+        var usedVisionIndices: Set<Int> = []
+
+        // YuNet 얼굴마다 가장 가까운 Vision 얼굴 찾기
+        for yunetFace in yunetFaces {
+            // YuNet 좌표 정규화 + Y축 반전 (좌상단→좌하단 변환)
+            let yunetNormX = yunetFace.boundingBox.midX / imageSize.width
+            let yunetNormY = 1.0 - (yunetFace.boundingBox.midY / imageSize.height)
+            let yunetCenter = CGPoint(x: yunetNormX, y: yunetNormY)
+
+            var bestMatch: (index: Int, distance: CGFloat)? = nil
+
+            for (vIdx, visionFace) in visionFaces.enumerated() {
+                if usedVisionIndices.contains(vIdx) { continue }
+
+                // Vision 좌표는 이미 정규화되어 있음 (좌하단 원점)
+                let visionCenter = CGPoint(
+                    x: visionFace.boundingBox.midX,
+                    y: visionFace.boundingBox.midY
+                )
+
+                let distance = hypot(yunetCenter.x - visionCenter.x, yunetCenter.y - visionCenter.y)
+
+                if distance < matchThreshold {
+                    if bestMatch == nil || distance < bestMatch!.distance {
+                        bestMatch = (vIdx, distance)
+                    }
+                }
+            }
+
+            if let match = bestMatch {
+                matched.append((yunetFace, visionFaces[match.index]))
+                usedVisionIndices.insert(match.index)
+            } else {
+                yunetOnly.append(yunetFace)
+            }
+        }
+
+        // 매칭 안 된 Vision 얼굴
+        for (vIdx, visionFace) in visionFaces.enumerated() {
+            if !usedVisionIndices.contains(vIdx) {
+                visionOnly.append(visionFace)
+            }
+        }
+
+        return DetectionMatchResult(
+            matched: matched,
+            yunetOnly: yunetOnly,
+            visionOnly: visionOnly
+        )
     }
 
     // MARK: - Debug Info Generation
@@ -596,6 +877,10 @@ final class FaceComparisonViewController: UIViewController {
             }
         }
 
+        // UI 라벨 계산을 위한 personIndex별 카운터
+        // UI에서 a1, a2, b1, b2 등의 번호는 해당 personIndex가 나타난 순서대로 부여됨
+        var personPhotoCounter: [Int: Int] = [:]
+
         // 각 사진의 얼굴 정보 수집 (SFace 매칭 cost 포함)
         for assetID in allAssetIDs {
             let faces = await SimilarityCache.shared.getFaces(for: assetID)
@@ -611,8 +896,20 @@ final class FaceComparisonViewController: UIViewController {
                     break
                 }
 
+                // UI 라벨 계산 (예: "a1", "b2")
+                // validPersonIndices에서 personIndex의 인덱스로 알파벳 결정
+                let alphabetIndex = validPersonIndices.firstIndex(of: face.personIndex) ?? 0
+                let alphabet = String(UnicodeScalar("a".unicodeScalars.first!.value + UInt32(alphabetIndex))!)
+
+                // 해당 personIndex의 사진 번호 (1부터 시작)
+                let photoNumber = (personPhotoCounter[face.personIndex] ?? 0) + 1
+                personPhotoCounter[face.personIndex] = photoNumber
+
+                let uiLabel = "\(alphabet)\(photoNumber)"
+
                 // sfaceCost는 CachedFace에 저장된 값 사용 (분석 시점에 계산된 값)
                 faceDebugInfos.append(FaceDebugEntry(
+                    uiLabel: uiLabel,
                     personIndex: face.personIndex,
                     isValidSlot: face.isValidSlot,
                     x: face.boundingBox.origin.x,
@@ -855,6 +1152,10 @@ extension FaceComparisonViewController: FaceComparisonTitleBarDelegate {
     func faceComparisonTitleBarDidTapDebug(_ titleBar: FaceComparisonTitleBar) {
         debugButtonTapped()
     }
+
+    func faceComparisonTitleBarDidTapCompare(_ titleBar: FaceComparisonTitleBar) {
+        compareDetectionButtonTapped()
+    }
 }
 
 // MARK: - FaceComparisonCell
@@ -1076,6 +1377,7 @@ protocol FaceComparisonTitleBarDelegate: AnyObject {
     func faceComparisonTitleBarDidTapCycle(_ titleBar: FaceComparisonTitleBar)
     func faceComparisonTitleBarDidTapClose(_ titleBar: FaceComparisonTitleBar)
     func faceComparisonTitleBarDidTapDebug(_ titleBar: FaceComparisonTitleBar)
+    func faceComparisonTitleBarDidTapCompare(_ titleBar: FaceComparisonTitleBar)
 }
 
 final class FaceComparisonTitleBar: UIView {
@@ -1118,6 +1420,17 @@ final class FaceComparisonTitleBar: UIView {
         return label
     }()
 
+    /// 감지 비교 버튼 (YuNet vs Vision, debugButton 왼쪽)
+    private lazy var compareButton: UIButton = {
+        var config = UIButton.Configuration.plain()
+        config.image = UIImage(systemName: "eye.trianglebadge.exclamationmark")
+        config.baseForegroundColor = .systemCyan
+        let button = UIButton(configuration: config)
+        button.addTarget(self, action: #selector(compareButtonTapped), for: .touchUpInside)
+        button.translatesAutoresizingMaskIntoConstraints = false
+        return button
+    }()
+
     /// 디버그 버튼 (cycleButton 왼쪽)
     private lazy var debugButton: UIButton = {
         var config = UIButton.Configuration.plain()
@@ -1157,6 +1470,7 @@ final class FaceComparisonTitleBar: UIView {
         addSubview(contentView)
         contentView.addSubview(closeButton)
         contentView.addSubview(titleLabel)
+        contentView.addSubview(compareButton)
         contentView.addSubview(debugButton)
         contentView.addSubview(cycleButton)
 
@@ -1176,6 +1490,10 @@ final class FaceComparisonTitleBar: UIView {
 
             titleLabel.centerXAnchor.constraint(equalTo: contentView.centerXAnchor),
             titleLabel.centerYAnchor.constraint(equalTo: contentView.centerYAnchor),
+
+            // 비교 버튼: debugButton 왼쪽에 배치
+            compareButton.trailingAnchor.constraint(equalTo: debugButton.leadingAnchor, constant: -8),
+            compareButton.centerYAnchor.constraint(equalTo: contentView.centerYAnchor),
 
             // 디버그 버튼: cycleButton 왼쪽에 배치
             debugButton.trailingAnchor.constraint(equalTo: cycleButton.leadingAnchor, constant: -8),
@@ -1198,6 +1516,10 @@ final class FaceComparisonTitleBar: UIView {
         delegate?.faceComparisonTitleBarDidTapClose(self)
     }
 
+    @objc private func compareButtonTapped() {
+        delegate?.faceComparisonTitleBarDidTapCompare(self)
+    }
+
     @objc private func debugButtonTapped() {
         delegate?.faceComparisonTitleBarDidTapDebug(self)
     }
@@ -1205,6 +1527,18 @@ final class FaceComparisonTitleBar: UIView {
     @objc private func cycleButtonTapped() {
         delegate?.faceComparisonTitleBarDidTapCycle(self)
     }
+}
+
+// MARK: - Detection Comparison Result
+
+/// YuNet vs Vision 얼굴 감지 비교 결과
+struct DetectionMatchResult {
+    /// 둘 다 감지한 얼굴 (위치 매칭)
+    let matched: [(yunet: YuNetDetection, vision: DetectedFace)]
+    /// YuNet만 감지한 얼굴 (Vision 미검출 또는 오탐)
+    let yunetOnly: [YuNetDetection]
+    /// Vision만 감지한 얼굴 (YuNet 미검출)
+    let visionOnly: [DetectedFace]
 }
 
 // MARK: - Debug Info Structures
@@ -1249,6 +1583,8 @@ struct PhotoDebugInfo: Codable {
 
 /// 얼굴 디버그 정보
 struct FaceDebugEntry: Codable {
+    /// UI에 표시되는 라벨 (예: "a1", "b2")
+    let uiLabel: String
     /// 할당된 인물 번호
     let personIndex: Int
     /// 유효 슬롯 여부

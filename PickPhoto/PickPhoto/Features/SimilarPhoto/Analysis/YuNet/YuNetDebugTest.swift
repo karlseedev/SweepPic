@@ -854,4 +854,270 @@ final class YuNetDebugTest {
 
         return dstContext.makeImage()
     }
+
+    // MARK: - Test 6: Group Matching Simulation
+
+    /// 그룹 매칭 시뮬레이션을 실행합니다.
+    ///
+    /// 여러 사진에 대해 YuNet + SFace 파이프라인을 실행하고
+    /// 슬롯 매칭 로그를 출력합니다.
+    ///
+    /// - Parameter photos: 테스트할 PHAsset 배열
+    func runGroupMatchingTest(with photos: [PHAsset]) async {
+        print("\n" + String(repeating: "=", count: 60))
+        print("Group Matching Simulation Test")
+        print(String(repeating: "=", count: 60))
+        print("[Config] Photos: \(photos.count)")
+        print("[Config] greyZoneThreshold: \(SimilarityConstants.greyZoneThreshold)")
+        print("[Config] rejectThreshold: \(SimilarityConstants.personMatchThreshold)")
+        print("[Config] greyZonePosLimit: \(SimilarityConstants.greyZonePositionLimit)")
+        print("[Config] minEmbeddingNorm: 7.0")
+
+        guard let yunet = YuNetFaceDetector.shared,
+              let sface = SFaceRecognizer.shared else {
+            print("[ERROR] Model not available")
+            return
+        }
+
+        // 상수
+        let greyZoneThreshold = SimilarityConstants.greyZoneThreshold
+        let rejectThreshold = SimilarityConstants.personMatchThreshold
+        let greyZonePosLimit = SimilarityConstants.greyZonePositionLimit
+        let minEmbeddingNorm: Float = 7.0
+        let lowQualityPosLimit: CGFloat = 0.25
+        let lowQualityCostLimit: Float = min(rejectThreshold + 0.15, 1.0)
+        let maxSlots = 10
+        let sqrt2: CGFloat = sqrt(2.0)
+
+        // 동적 슬롯
+        var activeSlots: [SimSlot] = []
+        var nextSlotID: Int = 1
+
+        for photo in photos {
+            let assetID = String(photo.localIdentifier.prefix(8))
+
+            // 이미지 로드
+            guard let image = try? await imageLoader.loadImage(for: photo) else {
+                print("\n[Photo \(assetID)] Image load failed")
+                continue
+            }
+
+            // YuNet 감지
+            guard let detections = try? yunet.detect(in: image) else {
+                print("\n[Photo \(assetID)] Detection failed")
+                continue
+            }
+
+            // 얼굴별 임베딩 추출
+            var faceEmbeddings: [Int: [Float]] = [:]
+            var faceNorms: [Int: Float] = [:]
+            var faceData: [Int: (center: CGPoint, boundingBox: CGRect)] = [:]
+
+            let imageWidth = CGFloat(image.width)
+            let imageHeight = CGFloat(image.height)
+
+            for (faceIdx, det) in detections.enumerated() {
+                // normalized 좌표 (Vision 좌표계)
+                let normalizedBox = CGRect(
+                    x: det.boundingBox.origin.x / imageWidth,
+                    y: 1.0 - (det.boundingBox.origin.y + det.boundingBox.height) / imageHeight,
+                    width: det.boundingBox.width / imageWidth,
+                    height: det.boundingBox.height / imageHeight
+                )
+                let center = CGPoint(x: normalizedBox.midX, y: normalizedBox.midY)
+                faceData[faceIdx] = (center: center, boundingBox: normalizedBox)
+
+                // 정렬 + 임베딩
+                guard let aligned = try? FaceAligner.shared.align(image: image, landmarks: det.landmarks),
+                      let embedding = try? sface.extractEmbedding(from: aligned) else {
+                    continue
+                }
+
+                let norm = sqrt(embedding.reduce(0) { $0 + $1 * $1 })
+                faceEmbeddings[faceIdx] = embedding
+                faceNorms[faceIdx] = norm
+            }
+
+            print("\n[Photo \(assetID)] \(detections.count) faces, Embed: \(faceEmbeddings.count)/\(detections.count), Slots: \(activeSlots.count)")
+
+            // 부팅
+            if activeSlots.isEmpty {
+                let sortedIndices = faceData.keys.sorted { idx1, idx2 in
+                    guard let d1 = faceData[idx1], let d2 = faceData[idx2] else { return false }
+                    let xDiff = abs(d1.boundingBox.origin.x - d2.boundingBox.origin.x)
+                    if xDiff > 0.05 { return d1.boundingBox.origin.x < d2.boundingBox.origin.x }
+                    return d1.boundingBox.origin.y > d2.boundingBox.origin.y
+                }
+
+                for faceIdx in sortedIndices {
+                    guard activeSlots.count < maxSlots else { break }
+                    guard let embedding = faceEmbeddings[faceIdx],
+                          let data = faceData[faceIdx],
+                          let norm = faceNorms[faceIdx] else { continue }
+
+                    let qualityTag = norm < minEmbeddingNorm ? " [LowQ]" : ""
+                    activeSlots.append(SimSlot(
+                        id: nextSlotID,
+                        embedding: embedding,
+                        norm: norm,
+                        center: data.center,
+                        boundingBox: data.boundingBox
+                    ))
+                    print("[NewSlot] Face(\(faceIdx)) -> Slot(\(nextSlotID)): Bootstrap, norm=\(String(format: "%.2f", norm))\(qualityTag)")
+                    nextSlotID += 1
+                }
+                continue
+            }
+
+            // 비용 산출 + 후보 생성
+            var allCandidates: [SimCandidate] = []
+
+            for (faceIdx, embedding) in faceEmbeddings {
+                guard let data = faceData[faceIdx],
+                      let norm = faceNorms[faceIdx] else { continue }
+
+                var slotCosts: [(slot: SimSlot, cost: Float, posDist: CGFloat)] = []
+                for slot in activeSlots {
+                    let similarity = sface.cosineSimilarity(embedding, slot.embedding)
+                    let cost = 1.0 - similarity
+                    let posDist = hypot(data.center.x - slot.center.x, data.center.y - slot.center.y)
+                    slotCosts.append((slot: slot, cost: cost, posDist: posDist))
+                }
+
+                // Top-K (고품질: cost, 저품질: 위치)
+                let isLowQuality = norm < minEmbeddingNorm
+                let candidates: ArraySlice<(slot: SimSlot, cost: Float, posDist: CGFloat)>
+                if activeSlots.count > 5 {
+                    if isLowQuality {
+                        candidates = slotCosts.sorted { $0.posDist < $1.posDist }.prefix(3)
+                    } else {
+                        candidates = slotCosts.sorted { $0.cost < $1.cost }.prefix(3)
+                    }
+                } else {
+                    candidates = slotCosts[...]
+                }
+
+                for item in candidates {
+                    let posDistNorm = min(item.posDist / sqrt2, 1.0)
+                    allCandidates.append(SimCandidate(
+                        faceIdx: faceIdx, slotID: item.slot.id, cost: item.cost,
+                        posDistNorm: posDistNorm, center: data.center,
+                        boundingBox: data.boundingBox, embedding: embedding, norm: norm
+                    ))
+                }
+            }
+
+            // 전역 정렬
+            allCandidates.sort { $0.cost < $1.cost }
+
+            // 매칭
+            var usedFaces: Set<Int> = []
+            var usedSlots: Set<Int> = []
+
+            // 고품질 매칭
+            let highQ = allCandidates.filter { $0.norm >= minEmbeddingNorm }
+            for c in highQ {
+                guard !usedFaces.contains(c.faceIdx), !usedSlots.contains(c.slotID) else { continue }
+
+                if c.cost < greyZoneThreshold {
+                    usedFaces.insert(c.faceIdx)
+                    usedSlots.insert(c.slotID)
+                    print("[Match] Face(\(c.faceIdx)) -> Slot(\(c.slotID)): Cost=\(String(format: "%.3f", c.cost)), norm=\(String(format: "%.2f", c.norm)) (Confident)")
+                    updateSlot(&activeSlots, slotID: c.slotID, embedding: c.embedding, norm: c.norm, center: c.center, boundingBox: c.boundingBox)
+                } else if c.cost < rejectThreshold {
+                    if c.posDistNorm < greyZonePosLimit {
+                        usedFaces.insert(c.faceIdx)
+                        usedSlots.insert(c.slotID)
+                        print("[GreyMatch] Face(\(c.faceIdx)) -> Slot(\(c.slotID)): Cost=\(String(format: "%.3f", c.cost)), PosNorm=\(String(format: "%.2f", c.posDistNorm)), norm=\(String(format: "%.2f", c.norm))")
+                        updateSlot(&activeSlots, slotID: c.slotID, embedding: c.embedding, norm: c.norm, center: c.center, boundingBox: c.boundingBox)
+                    } else {
+                        print("[GreyReject] Face(\(c.faceIdx)) -> Slot(\(c.slotID)): Cost=\(String(format: "%.3f", c.cost)), PosNorm=\(String(format: "%.2f", c.posDistNorm))")
+                    }
+                } else {
+                    print("[Reject] Face(\(c.faceIdx)) -> Slot(\(c.slotID)): Cost=\(String(format: "%.3f", c.cost))")
+                }
+            }
+
+            // 저품질 매칭
+            var lowQByFace: [Int: [SimCandidate]] = [:]
+            for c in allCandidates.filter({ $0.norm < minEmbeddingNorm }) {
+                guard !usedFaces.contains(c.faceIdx) else { continue }
+                lowQByFace[c.faceIdx, default: []].append(c)
+            }
+
+            for (faceIdx, candidates) in lowQByFace {
+                guard !usedFaces.contains(faceIdx) else { continue }
+                let sorted = candidates.filter { !usedSlots.contains($0.slotID) }.sorted { $0.posDistNorm < $1.posDistNorm }
+                guard let best = sorted.first else { continue }
+
+                if best.posDistNorm <= lowQualityPosLimit && best.cost < lowQualityCostLimit {
+                    usedFaces.insert(faceIdx)
+                    usedSlots.insert(best.slotID)
+                    print("[LowQMatch] Face(\(faceIdx)) -> Slot(\(best.slotID)): Cost=\(String(format: "%.3f", best.cost)), PosNorm=\(String(format: "%.2f", best.posDistNorm)), norm=\(String(format: "%.2f", best.norm)) (PositionFirst)")
+                    updateSlot(&activeSlots, slotID: best.slotID, embedding: [], norm: 0, center: best.center, boundingBox: best.boundingBox)
+                } else {
+                    print("[LowQReject] Face(\(faceIdx)) -> Slot(\(best.slotID)): Cost=\(String(format: "%.3f", best.cost)), PosNorm=\(String(format: "%.2f", best.posDistNorm)), norm=\(String(format: "%.2f", best.norm)) (limit: pos<=\(String(format: "%.2f", lowQualityPosLimit)), cost<\(String(format: "%.2f", lowQualityCostLimit)))")
+                }
+            }
+
+            // 신규 슬롯
+            for (faceIdx, embedding) in faceEmbeddings {
+                guard !usedFaces.contains(faceIdx), activeSlots.count < maxSlots else { continue }
+                guard let data = faceData[faceIdx], let norm = faceNorms[faceIdx] else { continue }
+
+                if norm < minEmbeddingNorm {
+                    print("[LowQuality] Face(\(faceIdx)): norm=\(String(format: "%.2f", norm)) < 7.0, skip new slot")
+                    continue
+                }
+
+                var minCost: Float = .infinity
+                var minSlotID: Int = -1
+                for slot in activeSlots {
+                    let cost = 1.0 - sface.cosineSimilarity(embedding, slot.embedding)
+                    if cost < minCost { minCost = cost; minSlotID = slot.id }
+                }
+
+                activeSlots.append(SimSlot(id: nextSlotID, embedding: embedding, norm: norm, center: data.center, boundingBox: data.boundingBox))
+                print("[NewSlot] Face(\(faceIdx)) -> Slot(\(nextSlotID)): norm=\(String(format: "%.2f", norm)), minCost=\(String(format: "%.3f", minCost)) to Slot(\(minSlotID)) (threshold=\(String(format: "%.3f", rejectThreshold)))")
+                nextSlotID += 1
+            }
+        }
+
+        print("\n" + String(repeating: "=", count: 60))
+        print("Simulation Complete - Final Slots: \(activeSlots.count)")
+        print(String(repeating: "=", count: 60) + "\n")
+    }
+
+    // MARK: - Simulation Helper Types
+
+    private struct SimSlot {
+        let id: Int
+        var embedding: [Float]
+        var norm: Float
+        var center: CGPoint
+        var boundingBox: CGRect
+    }
+
+    private struct SimCandidate {
+        let faceIdx: Int
+        let slotID: Int
+        let cost: Float
+        let posDistNorm: CGFloat
+        let center: CGPoint
+        let boundingBox: CGRect
+        let embedding: [Float]
+        let norm: Float
+    }
+
+    private func updateSlot(_ slots: inout [SimSlot], slotID: Int, embedding: [Float], norm: Float, center: CGPoint, boundingBox: CGRect) {
+        guard let idx = slots.firstIndex(where: { $0.id == slotID }) else { return }
+        slots[idx].center = center
+        slots[idx].boundingBox = boundingBox
+        if norm > slots[idx].norm {
+            let oldNorm = slots[idx].norm
+            slots[idx].embedding = embedding
+            slots[idx].norm = norm
+            print("[KeepBest] Slot(\(slotID)): norm \(String(format: "%.2f", oldNorm)) -> \(String(format: "%.2f", norm))")
+        }
+    }
 }
