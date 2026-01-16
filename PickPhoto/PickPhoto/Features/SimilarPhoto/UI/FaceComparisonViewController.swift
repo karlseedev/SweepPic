@@ -561,14 +561,14 @@ final class FaceComparisonViewController: UIViewController {
     }
 
     /// 감지 비교 버튼 탭
-    /// YuNet vs Vision 얼굴 감지 결과를 비교합니다.
+    /// Vision fallback ON/OFF 매칭 결과를 비교합니다.
     @objc private func compareDetectionButtonTapped() {
-        print("[FaceComparisonViewController] Compare Detection button tapped - YuNet vs Vision")
+        print("[FaceComparisonViewController] Compare button tapped - Vision Fallback Test")
 
         Task { @MainActor in
             let assetIDs = comparisonGroup.selectedAssetIDs
             guard !assetIDs.isEmpty else {
-                print("[DetectionCompare] No photos available")
+                print("[FallbackTest] No photos available")
                 return
             }
 
@@ -584,12 +584,12 @@ final class FaceComparisonViewController: UIViewController {
             }
 
             guard !photos.isEmpty else {
-                print("[DetectionCompare] Failed to fetch PHAssets")
+                print("[FallbackTest] Failed to fetch PHAssets")
                 return
             }
 
-            // YuNet vs Vision 비교 실행
-            await runDetectionComparison(with: photos)
+            // Vision fallback 비교 실행
+            await runVisionFallbackComparison(with: photos)
         }
     }
 
@@ -703,6 +703,84 @@ final class FaceComparisonViewController: UIViewController {
         print("║ Faces detected by YuNet ONLY: \(yunetOnlyCount) (possible false positives)")
         print("║ Faces detected by Vision ONLY: \(visionOnlyCount) ← YuNet missed these!")
         print("║ Photos with NO faces: \(neitherCount)")
+        print("╚══════════════════════════════════════════════════════════════════╝")
+        print("")
+    }
+
+    /// Vision fallback ON/OFF 비교 테스트를 실행합니다.
+    /// - Parameter photos: 테스트할 사진 배열
+    private func runVisionFallbackComparison(with photos: [PHAsset]) async {
+        print("")
+        print("╔══════════════════════════════════════════════════════════════════╗")
+        print("║         VISION FALLBACK COMPARISON TEST                          ║")
+        print("╠══════════════════════════════════════════════════════════════════╣")
+
+        let visionDetector = FaceDetector.shared
+        let viewerSize = CGSize(width: 390, height: 844)
+
+        // Step 1: Vision으로 rawFacesMap 생성
+        var rawFacesMap: [String: [DetectedFace]] = [:]
+        for photo in photos {
+            let assetID = photo.localIdentifier
+            let shortID = String(assetID.prefix(8))
+            do {
+                let faces = try await visionDetector.detectFaces(in: photo, viewerSize: viewerSize)
+                rawFacesMap[assetID] = faces
+                print("║ Photo \(shortID): Vision detected \(faces.count) faces")
+            } catch {
+                print("║ Photo \(shortID): Vision detection failed - \(error.localizedDescription)")
+                rawFacesMap[assetID] = []
+            }
+        }
+
+        print("╠══════════════════════════════════════════════════════════════════╣")
+        print("║ Running matching with Vision Fallback OFF...                     ║")
+        print("╠══════════════════════════════════════════════════════════════════╣")
+
+        // Step 2: Vision fallback OFF/ON으로 매칭 실행
+        let (resultOff, resultOn) = await SimilarityAnalysisQueue.shared.testVisionFallback(
+            photos: photos,
+            rawFacesMap: rawFacesMap
+        )
+
+        print("╠══════════════════════════════════════════════════════════════════╣")
+        print("║ Running matching with Vision Fallback ON...                      ║")
+        print("╠══════════════════════════════════════════════════════════════════╣")
+
+        // Step 3: 결과 비교
+        print("╠══════════════════════════════════════════════════════════════════╣")
+        print("║                        COMPARISON RESULT                         ║")
+        print("╠══════════════════════════════════════════════════════════════════╣")
+
+        var totalFacesOff = 0
+        var totalFacesOn = 0
+        var photosWithDiff = 0
+
+        for photo in photos {
+            let assetID = photo.localIdentifier
+            let shortID = String(assetID.prefix(8))
+            let facesOff = resultOff[assetID]?.count ?? 0
+            let facesOn = resultOn[assetID]?.count ?? 0
+            totalFacesOff += facesOff
+            totalFacesOn += facesOn
+
+            let diff = facesOn - facesOff
+            if diff != 0 {
+                photosWithDiff += 1
+                print("║ ⚡ Photo \(shortID): OFF=\(facesOff), ON=\(facesOn) (+\(diff) faces)")
+            } else {
+                print("║   Photo \(shortID): OFF=\(facesOff), ON=\(facesOn)")
+            }
+        }
+
+        print("╠══════════════════════════════════════════════════════════════════╣")
+        print("║                           SUMMARY                                ║")
+        print("╠══════════════════════════════════════════════════════════════════╣")
+        print("║ Total Photos: \(photos.count)")
+        print("║ Fallback OFF: \(totalFacesOff) faces matched")
+        print("║ Fallback ON:  \(totalFacesOn) faces matched")
+        print("║ Difference:   +\(totalFacesOn - totalFacesOff) faces")
+        print("║ Photos with difference: \(photosWithDiff)")
         print("╚══════════════════════════════════════════════════════════════════╝")
         print("")
     }

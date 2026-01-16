@@ -531,7 +531,8 @@ final class SimilarityAnalysisQueue {
     private func assignPersonIndicesForGroup(
         rawFacesMap: [String: [DetectedFace]],
         assetIDs: [String],
-        photos: [PHAsset]
+        photos: [PHAsset],
+        useVisionFallback: Bool = true
     ) async -> [String: [CachedFace]] {
 
         // assetID → PHAsset 매핑
@@ -592,13 +593,15 @@ final class SimilarityAnalysisQueue {
             }
 
             // Vision fallback: YuNet 결과가 없으면 rawFacesMap 사용 (위치 정보만)
-            if yunetDetections.isEmpty && !faces.isEmpty {
+            if useVisionFallback && yunetDetections.isEmpty && !faces.isEmpty {
                 print("[VisionFallback] Photo \(assetID.prefix(8)): YuNet=0, Vision=\(faces.count) faces")
                 for (faceIdx, face) in faces.enumerated() {
                     let center = CGPoint(x: face.boundingBox.midX, y: face.boundingBox.midY)
                     faceData[faceIdx] = (center: center, boundingBox: face.boundingBox)
                     // 임베딩 없음 - 저품질 위치 기반 매칭만 가능
                 }
+            } else if !useVisionFallback && yunetDetections.isEmpty {
+                print("[NoFallback] Photo \(assetID.prefix(8)): YuNet=0, Vision=\(faces.count) (skipped)")
             }
 
             for (faceIdx, detection) in yunetDetections.enumerated() {
@@ -921,7 +924,50 @@ final class SimilarityAnalysisQueue {
                 nextSlotID += 1
             }
 
-            // 임베딩 없는 얼굴은 CachedFace에 저장하지 않음 (캐시 미저장 정책)
+            // === Step 7: Vision Fallback 얼굴 위치 기반 매칭 ===
+            // 임베딩 없는 얼굴 (Vision fallback)은 위치만으로 기존 슬롯과 매칭 시도
+            // 조건: posNorm < 0.10 (매우 엄격), 신규 슬롯 생성 안 함
+            let visionFallbackPosLimit: CGFloat = 0.10
+
+            for (faceIdx, data) in faceData {
+                // 이미 매칭된 얼굴 스킵
+                guard !usedFaces.contains(faceIdx) else { continue }
+                // 임베딩 있는 얼굴 스킵 (이미 위에서 처리됨)
+                guard faceEmbeddings[faceIdx] == nil else { continue }
+
+                // 가장 가까운 슬롯 찾기
+                var bestSlot: (id: Int, posNorm: CGFloat)? = nil
+                for slot in activeSlots {
+                    guard !usedSlots.contains(slot.id) else { continue }
+
+                    let dx = data.center.x - slot.center.x
+                    let dy = data.center.y - slot.center.y
+                    let posNorm = sqrt(dx * dx + dy * dy) / sqrt2
+
+                    if posNorm < visionFallbackPosLimit {
+                        if bestSlot == nil || posNorm < bestSlot!.posNorm {
+                            bestSlot = (id: slot.id, posNorm: posNorm)
+                        }
+                    }
+                }
+
+                // 매칭 성공
+                if let match = bestSlot {
+                    usedFaces.insert(faceIdx)
+                    usedSlots.insert(match.id)
+                    cachedFaces.append(CachedFace(
+                        boundingBox: data.boundingBox,
+                        personIndex: match.id,
+                        isValidSlot: false
+                    ))
+                    print("[VisionFallbackMatch] Face(\(faceIdx)) -> Slot(\(match.id)): PosNorm=\(String(format: "%.2f", match.posNorm)) (position-only)")
+
+                    // 위치만 갱신 (임베딩 없으므로 norm=0)
+                    updateSlotIfBetter(slotID: match.id, embedding: [], norm: 0, center: data.center, boundingBox: data.boundingBox)
+                } else {
+                    print("[VisionFallbackSkip] Face(\(faceIdx)): No slot within posNorm < \(String(format: "%.2f", visionFallbackPosLimit))")
+                }
+            }
 
             result[assetID] = cachedFaces
         }
@@ -1044,6 +1090,41 @@ final class SimilarityAnalysisQueue {
             requestQueue.removeAll()
             activeRequests.removeAll()
         }
+    }
+
+    // MARK: - Debug Test API
+
+    /// Vision fallback 비교 테스트용 API
+    ///
+    /// 동일한 사진에 대해 Vision fallback ON/OFF로 매칭을 실행하고 결과를 비교합니다.
+    ///
+    /// - Parameters:
+    ///   - photos: 테스트할 PHAsset 배열
+    ///   - rawFacesMap: Vision 얼굴 감지 결과 (assetID → [DetectedFace])
+    /// - Returns: (fallbackOff: 결과, fallbackOn: 결과)
+    func testVisionFallback(
+        photos: [PHAsset],
+        rawFacesMap: [String: [DetectedFace]]
+    ) async -> (fallbackOff: [String: [CachedFace]], fallbackOn: [String: [CachedFace]]) {
+        let assetIDs = photos.map { $0.localIdentifier }
+
+        // Vision fallback OFF
+        let resultOff = await assignPersonIndicesForGroup(
+            rawFacesMap: rawFacesMap,
+            assetIDs: assetIDs,
+            photos: photos,
+            useVisionFallback: false
+        )
+
+        // Vision fallback ON
+        let resultOn = await assignPersonIndicesForGroup(
+            rawFacesMap: rawFacesMap,
+            assetIDs: assetIDs,
+            photos: photos,
+            useVisionFallback: true
+        )
+
+        return (fallbackOff: resultOff, fallbackOn: resultOn)
     }
 
     deinit {
