@@ -314,16 +314,16 @@ final class FaceComparisonViewController: UIViewController {
         // 타이틀
         updateNavigationTitle()
 
-        // 감지 비교 버튼 (YuNet vs Vision)
-        let compareButton = UIBarButtonItem(
-            image: UIImage(systemName: "eye.trianglebadge.exclamationmark"),
+        // S2 원인 분석 버튼 (녹색) - 9개 디버그 로그 출력
+        let s2DebugButton = UIBarButtonItem(
+            image: UIImage(systemName: "ant"),
             style: .plain,
             target: self,
-            action: #selector(compareDetectionButtonTapped)
+            action: #selector(s2DebugButtonTapped)
         )
-        compareButton.tintColor = .systemCyan
+        s2DebugButton.tintColor = .systemGreen
 
-        // 디버그 버튼 (순환 버튼 왼쪽)
+        // 디버그 버튼 (주황색) - 기존 그룹 매칭 시뮬레이션
         let debugButton = UIBarButtonItem(
             image: UIImage(systemName: "ladybug"),
             style: .plain,
@@ -341,8 +341,8 @@ final class FaceComparisonViewController: UIViewController {
         )
         cycleButton.tintColor = .white
 
-        // 순서: [순환, 디버그, 비교] (우측부터 역순으로 배치됨)
-        navigationItem.rightBarButtonItems = [cycleButton, debugButton, compareButton]
+        // 순서: [순환, 디버그, S2분석] (우측부터 역순으로 배치됨)
+        navigationItem.rightBarButtonItems = [cycleButton, debugButton, s2DebugButton]
     }
 
     /// 하단바 설정
@@ -557,6 +557,37 @@ final class FaceComparisonViewController: UIViewController {
             // 기존 캐시 상태도 출력 (현재 앱에서 실제로 적용된 결과)
             let debugInfo = await generateDebugInfo()
             printDebugInfo(debugInfo)
+        }
+    }
+
+    /// S2 원인 분석 버튼 탭
+    /// 결정성 수정 후 S2 발생 원인을 파악하기 위한 9개 디버그 로그를 출력합니다.
+    @objc private func s2DebugButtonTapped() {
+        Task { @MainActor in
+            let assetIDs = comparisonGroup.selectedAssetIDs
+            guard !assetIDs.isEmpty else {
+                print("[S2Debug] No photos available")
+                return
+            }
+
+            // PHAsset 가져오기
+            let fetchResult = PHAsset.fetchAssets(
+                withLocalIdentifiers: assetIDs,
+                options: nil
+            )
+
+            var photos: [PHAsset] = []
+            fetchResult.enumerateObjects { asset, _, _ in
+                photos.append(asset)
+            }
+
+            guard !photos.isEmpty else {
+                print("[S2Debug] Failed to fetch PHAssets")
+                return
+            }
+
+            // S2 원인 분석 실행 (별도 파일로 분리됨)
+            await S2DebugAnalyzer.shared.runAnalysis(with: photos)
         }
     }
 
@@ -1186,8 +1217,8 @@ extension FaceComparisonViewController: FaceComparisonTitleBarDelegate {
         debugButtonTapped()
     }
 
-    func faceComparisonTitleBarDidTapCompare(_ titleBar: FaceComparisonTitleBar) {
-        compareDetectionButtonTapped()
+    func faceComparisonTitleBarDidTapS2Debug(_ titleBar: FaceComparisonTitleBar) {
+        s2DebugButtonTapped()
     }
 }
 
@@ -1410,7 +1441,7 @@ protocol FaceComparisonTitleBarDelegate: AnyObject {
     func faceComparisonTitleBarDidTapCycle(_ titleBar: FaceComparisonTitleBar)
     func faceComparisonTitleBarDidTapClose(_ titleBar: FaceComparisonTitleBar)
     func faceComparisonTitleBarDidTapDebug(_ titleBar: FaceComparisonTitleBar)
-    func faceComparisonTitleBarDidTapCompare(_ titleBar: FaceComparisonTitleBar)
+    func faceComparisonTitleBarDidTapS2Debug(_ titleBar: FaceComparisonTitleBar)
 }
 
 final class FaceComparisonTitleBar: UIView {
@@ -1453,13 +1484,13 @@ final class FaceComparisonTitleBar: UIView {
         return label
     }()
 
-    /// 감지 비교 버튼 (YuNet vs Vision, debugButton 왼쪽)
-    private lazy var compareButton: UIButton = {
+    /// S2 원인 분석 버튼 (녹색, debugButton 왼쪽)
+    private lazy var s2DebugButton: UIButton = {
         var config = UIButton.Configuration.plain()
-        config.image = UIImage(systemName: "eye.trianglebadge.exclamationmark")
-        config.baseForegroundColor = .systemCyan
+        config.image = UIImage(systemName: "ant")
+        config.baseForegroundColor = .systemGreen
         let button = UIButton(configuration: config)
-        button.addTarget(self, action: #selector(compareButtonTapped), for: .touchUpInside)
+        button.addTarget(self, action: #selector(s2DebugButtonTapped), for: .touchUpInside)
         button.translatesAutoresizingMaskIntoConstraints = false
         return button
     }()
@@ -1503,7 +1534,7 @@ final class FaceComparisonTitleBar: UIView {
         addSubview(contentView)
         contentView.addSubview(closeButton)
         contentView.addSubview(titleLabel)
-        contentView.addSubview(compareButton)
+        contentView.addSubview(s2DebugButton)
         contentView.addSubview(debugButton)
         contentView.addSubview(cycleButton)
 
@@ -1524,9 +1555,9 @@ final class FaceComparisonTitleBar: UIView {
             titleLabel.centerXAnchor.constraint(equalTo: contentView.centerXAnchor),
             titleLabel.centerYAnchor.constraint(equalTo: contentView.centerYAnchor),
 
-            // 비교 버튼: debugButton 왼쪽에 배치
-            compareButton.trailingAnchor.constraint(equalTo: debugButton.leadingAnchor, constant: -8),
-            compareButton.centerYAnchor.constraint(equalTo: contentView.centerYAnchor),
+            // S2 분석 버튼: debugButton 왼쪽에 배치
+            s2DebugButton.trailingAnchor.constraint(equalTo: debugButton.leadingAnchor, constant: -8),
+            s2DebugButton.centerYAnchor.constraint(equalTo: contentView.centerYAnchor),
 
             // 디버그 버튼: cycleButton 왼쪽에 배치
             debugButton.trailingAnchor.constraint(equalTo: cycleButton.leadingAnchor, constant: -8),
@@ -1549,8 +1580,8 @@ final class FaceComparisonTitleBar: UIView {
         delegate?.faceComparisonTitleBarDidTapClose(self)
     }
 
-    @objc private func compareButtonTapped() {
-        delegate?.faceComparisonTitleBarDidTapCompare(self)
+    @objc private func s2DebugButtonTapped() {
+        delegate?.faceComparisonTitleBarDidTapS2Debug(self)
     }
 
     @objc private func debugButtonTapped() {
