@@ -843,8 +843,9 @@ final class SimilarityAnalysisQueue {
                 lowQualityByFace[candidate.faceIdx, default: []].append(candidate)
             }
 
-            for (faceIdx, candidates) in lowQualityByFace {
-                guard !usedFaces.contains(faceIdx) else { continue }
+            for faceIdx in lowQualityByFace.keys.sorted() {
+                guard let candidates = lowQualityByFace[faceIdx],
+                      !usedFaces.contains(faceIdx) else { continue }
 
                 // 위치 기준으로 정렬 (가장 가까운 슬롯 우선)
                 let sortedByPos = candidates
