@@ -9,12 +9,14 @@
 
 ## 개선 순서
 
-| 순서 | 항목 | 난이도 | 효과 |
-|------|------|--------|------|
-| 1 | 혼합 점수 정렬 (Face 처리 순서) | 쉬움 | 중간 |
-| 2 | 혼합 점수 선택 (슬롯 선택) | 쉬움 | 중간 |
-| 3 | EMA 갱신 (슬롯 center) | 중간 | 높음 |
-| 4 | 2-pass 매칭 | 복잡 | 높음 |
+| 순서 | 항목 | 난이도 | 목적 | 효과 |
+|------|------|--------|------|------|
+| 1 | 혼합 점수 정렬 (Face 처리 순서) | 쉬움 | **성능** | 중간 |
+| 2 | 혼합 점수 선택 (슬롯 선택) | 쉬움 | **성능** | 중간 |
+| 3 | 2-pass 매칭 확장 | 복잡 | **성능** | 높음 |
+| 4 | EMA 갱신 (슬롯 center) | 중간 | **안정성** | 중간 |
+
+> **Note:** 6-3(EMA)는 성능보다 안정성 목적이므로 후순위로 이동
 
 ---
 
@@ -63,9 +65,12 @@ let sortedFaceIds = lowQualityByFace.keys.sorted { faceA, faceB in
 ### 가중치 옵션
 | 케이스 | w1 (cost) | w2 (posNorm) | 특성 |
 |--------|-----------|--------------|------|
-| A | 0.5 | 0.5 | 균형 (기본값) |
-| B | 0.7 | 0.3 | cost 중심 |
+| A | 0.5 | 0.5 | 균형 |
+| **B** | **0.7** | **0.3** | **cost 중심 (권장)** |
 | C | 0.3 | 0.7 | 위치 중심 |
+
+> **권장:** posNorm이 1.0으로 포화되는 경우가 많으므로 **w1=0.7~0.8** 권장.
+> 포화 상황에서 cost만 변별력을 가지므로 cost 가중치를 높여야 효과적.
 
 ---
 
@@ -92,7 +97,10 @@ let sortedByMixed = candidates
 
 ---
 
-## 3. EMA 갱신 (슬롯 center)
+## 4. EMA 갱신 (슬롯 center) - 안정성 목적
+
+> **목적:** 성능(정확도) 개선보다 **안정성** 목적.
+> 연쇄 효과(저품질 매칭 → center 오염 → 다음 사진 영향)를 완화.
 
 ### 현재 (line 767-781)
 ```swift
@@ -179,69 +187,88 @@ updateSlotIfBetter(..., matchQuality: .lowQuality)
 
 ---
 
-## 4. 2-pass 매칭
+## 3. 2-pass 매칭 확장 (기존 구조 기반)
 
-### 현재 구조
+> **중요:** 현재 코드에 이미 2-pass 구조가 존재함 (HighQ → LowQ).
+> 이 개선은 **새 구조가 아닌 기존 구조의 확장**임.
+
+### 현재 구조 (이미 2-pass)
 ```
-Step 5A: 고품질 (Confident + GreyZone) → greedy 순차 처리
-Step 5B: 저품질 (LowQ) → greedy 순차 처리
+Step 5A: HighQ (Confident + GreyZone) → cost 기준 greedy
+Step 5B: LowQ → posNorm 기준 greedy (별도 처리)
 ```
 
 ### 문제
-- greedy는 처리 순서에 민감
-- 먼저 처리된 face가 잘못된 슬롯을 선점할 수 있음
+- GreyZone이 HighQ에 섞여 있어서 Confident와 함께 처리됨
+- LowQ가 별도 경로로 분리되어 글로벌 최적화 불가
 
-### 개선: 2-pass 매칭
+### 개선: 3-tier 확장
 ```
-Pass 1: 확신 매칭만 (Confident only)
-  - cost < greyZoneThreshold인 것만 즉시 매칭
+Pass 1: Confident only (cost < greyZoneThreshold)
+  - 즉시 매칭 (변경 없음)
 
-Pass 2: 애매한 것들 글로벌 재정렬
-  - GreyZone + LowQ를 모아서
-  - mixedScore 기준으로 전역 정렬
-  - 다시 greedy 매칭
+Pass 2: GreyZone + LowQ 글로벌 재정렬
+  - GreyZone을 LowQ와 합쳐서 mixedScore 기준 정렬
+  - 통합된 greedy 매칭
 ```
 
 ### 구현 방향
 ```swift
-// Pass 1: Confident만
-var pendingCandidates: [MatchCandidate] = []
+// Step 5A 수정: Confident만 즉시 매칭
+var greyZoneCandidates: [MatchCandidate] = []
 for candidate in sortedCandidates {
-    if cost < greyZoneThreshold && !usedFaces.contains(...) {
-        // 즉시 매칭
+    let cost = candidate.cost
+    if cost < greyZoneThreshold && !usedFaces.contains(candidate.faceIdx) {
+        // Confident: 즉시 매칭 (기존 로직)
         usedFaces.insert(...)
         usedSlots.insert(...)
-    } else {
-        // 보류
-        pendingCandidates.append(candidate)
+    } else if cost < rejectThreshold {
+        // GreyZone: 보류
+        greyZoneCandidates.append(candidate)
     }
 }
 
-// Pass 2: 보류된 것들 + LowQ 글로벌 재정렬
-let allPending = pendingCandidates + lowQualityCandidates
+// Step 5B 수정: GreyZone + LowQ 통합 처리
+let allPending = greyZoneCandidates + lowQualityCandidates
 let globalSorted = allPending
     .filter { !usedFaces.contains($0.faceIdx) && !usedSlots.contains($0.slotID) }
     .sorted { mixedScore($0) < mixedScore($1) }
 
 for candidate in globalSorted {
-    // greedy 매칭 (조건 확인 후)
+    // 통합 조건 검사 후 매칭
+    let posNorm = candidate.posDistNorm
+    let cost = candidate.cost
+
+    // GreyZone 조건 또는 LowQ 조건 충족 시 매칭
+    if (posNorm < greyZonePosLimit) ||
+       (posNorm <= lowQualityPosLimit && cost < lowQualityCostLimit) {
+        // 매칭
+    }
 }
 ```
 
 ### 복잡도
-- 기존 Step 5A, 5B 구조 변경 필요
+- Step 5A, 5B 경계 수정 필요
+- GreyZone 분리 로직 추가
 - 테스트 충분히 필요
+
+### 리스크
+- 기존 동작과 다른 결과 가능성
+- 충분한 회귀 테스트 필수
 
 ---
 
 ## 적용 계획
 
-| Phase | 내용 | 테스트 |
-|-------|------|--------|
-| 6-1 | 혼합 점수 정렬 | S2 테스트 |
-| 6-2 | 혼합 점수 선택 | S2 테스트 |
-| 6-3 | EMA 갱신 | S2 + 다중 그룹 테스트 |
-| 6-4 | 2-pass 매칭 | 전체 회귀 테스트 |
+| Phase | 내용 | 목적 | 테스트 |
+|-------|------|------|--------|
+| 6-1 | 혼합 점수 정렬 | 성능 | S2 테스트 |
+| 6-2 | 혼합 점수 선택 | 성능 | S2 테스트 |
+| 6-3 | 2-pass 매칭 확장 | 성능 | 전체 회귀 테스트 |
+| 6-4 | EMA 갱신 | 안정성 | S2 + 다중 그룹 테스트 |
+
+> **순서 근거:** 성능 목적 개선(6-1, 6-2, 6-3)을 먼저 진행 후,
+> 안정성 목적(6-4)은 마지막에 적용.
 
 각 Phase마다:
 1. 커밋 (수정 전)
@@ -256,14 +283,17 @@ for candidate in globalSorted {
 
 ### mixedScore 가중치
 ```swift
-// 현재 권장값
-let w1: CGFloat = 0.5  // cost
-let w2: CGFloat = 0.5  // posNorm
+// 권장값 (posNorm 포화 고려)
+let w1: CGFloat = 0.7  // cost (권장)
+let w2: CGFloat = 0.3  // posNorm
 
-// posNorm 포화가 심하면
-let w1: CGFloat = 0.7  // cost 중시
-let w2: CGFloat = 0.3
+// 균형 옵션 (포화가 적은 경우)
+let w1: CGFloat = 0.5
+let w2: CGFloat = 0.5
 ```
+
+> **posNorm 포화 문제:** 로그에서 posNorm=1.0이 빈번하게 관찰됨.
+> 포화 시 cost만 변별력을 가지므로 **w1=0.7~0.8** 권장.
 
 ### EMA alpha 값
 ```swift
