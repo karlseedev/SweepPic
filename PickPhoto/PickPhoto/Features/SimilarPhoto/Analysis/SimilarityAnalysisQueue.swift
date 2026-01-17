@@ -843,8 +843,25 @@ final class SimilarityAnalysisQueue {
                 lowQualityByFace[candidate.faceIdx, default: []].append(candidate)
             }
 
-            for (faceIdx, candidates) in lowQualityByFace {
-                guard !usedFaces.contains(faceIdx) else { continue }
+            // 결정성 보장 + 매칭 품질: best posNorm이 낮은 face부터 처리
+            // (더 확실한 위치 매칭을 가진 face가 먼저 슬롯을 claim)
+            let sortedFaceIds = lowQualityByFace.keys.sorted { faceA, faceB in
+                let bestA = lowQualityByFace[faceA]?
+                    .filter { !usedSlots.contains($0.slotID) }
+                    .min(by: { $0.posDistNorm < $1.posDistNorm })
+                let bestB = lowQualityByFace[faceB]?
+                    .filter { !usedSlots.contains($0.slotID) }
+                    .min(by: { $0.posDistNorm < $1.posDistNorm })
+                // posNorm이 같으면 faceIdx로 tie-break (결정성)
+                let posA = bestA?.posDistNorm ?? 1.0
+                let posB = bestB?.posDistNorm ?? 1.0
+                if posA != posB { return posA < posB }
+                return faceA < faceB
+            }
+
+            for faceIdx in sortedFaceIds {
+                guard let candidates = lowQualityByFace[faceIdx],
+                      !usedFaces.contains(faceIdx) else { continue }
 
                 // 위치 기준으로 정렬 (가장 가까운 슬롯 우선)
                 let sortedByPos = candidates
