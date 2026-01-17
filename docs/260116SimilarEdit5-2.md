@@ -187,3 +187,99 @@
 |------|------|
 | 2026-01-16 | 5-1.md + 5.md 통합, 슬롯 위치 고정 원인 제거 (해결됨), 테스트 결과 추가 |
 | 2026-01-16 | PosCandidate 검증 결과 추가 (효용성 낮음), Extended fallback 구현 완료 표시 |
+| 2026-01-17 | Extended Fallback 복구 (41445d4 → 롤백 → ffcfb1d 재구현) |
+
+---
+
+## 9. Extended Vision Fallback 복구 (2026-01-17)
+
+### 9.1 배경
+
+**롤백 히스토리:**
+```
+202382e  Vision fallback 위치 기반 매칭 구현 (Basic)
+   ↓
+41445d4  Extended fallback IoU 기반 + 작은 얼굴 조건으로 변경
+   ↓
+c87acce  결정성 보장 수정 → S2 발생
+   ↓
+6b594c2  41445d4로 롤백
+   ↓
+202382e  다시 202382e로 롤백 (Extended 코드 손실)
+   ↓
+ffcfb1d  Extended fallback 복구 (별도 파일로 분리)
+```
+
+**문제:** 결정성 수정 작업 중 S2 발생으로 202382e로 롤백하면서 Extended 코드가 손실됨
+
+### 9.2 VisionFallbackMode
+
+```swift
+enum VisionFallbackMode {
+    case off       // Fallback 없음 - YuNet 결과만 사용
+    case basic     // YuNet=0일 때만 Vision 사용
+    case extended  // YuNet이 놓친 작은 얼굴도 Vision으로 보완
+}
+```
+
+| 모드 | 조건 | 동작 |
+|------|------|------|
+| `off` | - | Vision fallback 비활성화 |
+| `basic` | YuNet = 0 | Vision rawFacesMap 위치 정보 사용 |
+| `extended` | YuNet > 0 but Vision > YuNet | IoU 기반으로 누락된 작은 얼굴 추가 |
+
+### 9.3 Extended 조건
+
+```swift
+// 상수
+let iouThreshold: CGFloat = 0.3      // IoU 30% 이상이면 동일 얼굴
+let smallFaceLimit: CGFloat = 0.07   // 작은 얼굴 기준 (7% 이하)
+
+// 조건
+- Vision 얼굴 중 YuNet과 IoU < 0.3 (겹침 없음)
+- 작은 얼굴만 (width < 0.07)
+- FP 방지를 위해 작은 얼굴만 보완
+```
+
+### 9.4 파일 구조
+
+| 파일 | 역할 |
+|------|------|
+| `VisionFallbackMode.swift` | enum 정의 |
+| `SimilarityAnalysisQueue+ExtendedFallback.swift` | IoU 계산, 누락 얼굴 찾기 헬퍼 |
+| `SimilarityAnalysisQueue.swift` | 파라미터 변경, Extended 로직 호출 |
+
+### 9.5 API
+
+```swift
+// Production (기본값 .basic)
+assignPersonIndicesForGroup(
+    rawFacesMap: rawFacesMap,
+    assetIDs: assetIDs,
+    photos: photos
+    // visionFallbackMode: .basic (기본값)
+)
+
+// Basic vs Extended 비교 테스트
+let (basic, extended) = await testVisionFallbackExtended(
+    photos: photos,
+    rawFacesMap: rawFacesMap
+)
+```
+
+### 9.6 로그 출력
+
+```
+[VisionFallback] Photo 07F52250: YuNet=0, Vision=3 faces
+[ExtendedFallback] Photo 07F52250: YuNet=2, Vision=3, SmallMissed=1
+[ExtendedFallback] +Vision[2] size=0.06 at (0.47, 0.57)
+[FaceMatching] Photo 07F52250: 3 faces (YuNet+Vision), Embed: 2/3, Slots: 3
+```
+
+### 9.7 다음 단계
+
+| 항목 | 상태 |
+|------|------|
+| Extended 코드 복구 | ✅ 완료 (ffcfb1d) |
+| 하늘색 테스트 버튼 복원 | 필요 시 |
+| Extended Production 적용 | 테스트 후 결정 |
