@@ -532,7 +532,7 @@ final class SimilarityAnalysisQueue {
         rawFacesMap: [String: [DetectedFace]],
         assetIDs: [String],
         photos: [PHAsset],
-        useVisionFallback: Bool = true
+        visionFallbackMode: VisionFallbackMode = .basic
     ) async -> [String: [CachedFace]] {
 
         // assetID → PHAsset 매핑
@@ -592,16 +592,40 @@ final class SimilarityAnalysisQueue {
                 continue
             }
 
-            // Vision fallback: YuNet 결과가 없으면 rawFacesMap 사용 (위치 정보만)
-            if useVisionFallback && yunetDetections.isEmpty && !faces.isEmpty {
-                print("[VisionFallback] Photo \(assetID.prefix(8)): YuNet=0, Vision=\(faces.count) faces")
-                for (faceIdx, face) in faces.enumerated() {
-                    let center = CGPoint(x: face.boundingBox.midX, y: face.boundingBox.midY)
-                    faceData[faceIdx] = (center: center, boundingBox: face.boundingBox)
-                    // 임베딩 없음 - 저품질 위치 기반 매칭만 가능
+            // Vision fallback 처리
+            // - off: fallback 없음
+            // - basic: YuNet=0일 때만 Vision 사용
+            // - extended: YuNet < Vision일 때 누락된 Vision 얼굴 추가
+            var visionFallbackFaces: [Int] = []  // Vision에서 가져온 얼굴 인덱스
+
+            switch visionFallbackMode {
+            case .off:
+                if yunetDetections.isEmpty && !faces.isEmpty {
+                    print("[NoFallback] Photo \(assetID.prefix(8)): YuNet=0, Vision=\(faces.count) (skipped)")
                 }
-            } else if !useVisionFallback && yunetDetections.isEmpty {
-                print("[NoFallback] Photo \(assetID.prefix(8)): YuNet=0, Vision=\(faces.count) (skipped)")
+
+            case .basic:
+                // YuNet=0일 때만 Vision 사용
+                if yunetDetections.isEmpty && !faces.isEmpty {
+                    print("[VisionFallback] Photo \(assetID.prefix(8)): YuNet=0, Vision=\(faces.count) faces")
+                    for (faceIdx, face) in faces.enumerated() {
+                        let center = CGPoint(x: face.boundingBox.midX, y: face.boundingBox.midY)
+                        faceData[faceIdx] = (center: center, boundingBox: face.boundingBox)
+                        visionFallbackFaces.append(faceIdx)
+                    }
+                }
+
+            case .extended:
+                // YuNet=0일 때 Vision 사용
+                if yunetDetections.isEmpty && !faces.isEmpty {
+                    print("[VisionFallback] Photo \(assetID.prefix(8)): YuNet=0, Vision=\(faces.count) faces")
+                    for (faceIdx, face) in faces.enumerated() {
+                        let center = CGPoint(x: face.boundingBox.midX, y: face.boundingBox.midY)
+                        faceData[faceIdx] = (center: center, boundingBox: face.boundingBox)
+                        visionFallbackFaces.append(faceIdx)
+                    }
+                }
+                // Extended 로직: YuNet > 0이어도 누락된 작은 얼굴 추가 (아래에서 처리)
             }
 
             for (faceIdx, detection) in yunetDetections.enumerated() {
@@ -637,9 +661,42 @@ final class SimilarityAnalysisQueue {
                 }
             }
 
-            // 감지 소스 표시 (YuNet 또는 Vision fallback)
-            let detectionSource = yunetDetections.isEmpty && !faces.isEmpty ? "Vision" : "YuNet"
-            let totalFaces = yunetDetections.isEmpty ? faces.count : yunetDetections.count
+            // === Extended Fallback: IoU 기반 + 작은 얼굴 조건 ===
+            // Vision 얼굴 중 YuNet과 IoU < 0.3이고 작은 얼굴(width < 0.07)만 추가
+            // FP 리스크 최소화를 위해 작은 얼굴만 보완
+            if visionFallbackMode == .extended && !yunetDetections.isEmpty && !faces.isEmpty {
+                // YuNet 얼굴의 boundingBox만 추출
+                let yunetBoxes = faceData.compactMapValues { $0.boundingBox }
+
+                // 누락된 작은 얼굴 찾기
+                let missedFaces = findMissedSmallFaces(
+                    yunetFaceData: yunetBoxes,
+                    visionFaces: faces,
+                    assetID: assetID
+                )
+
+                // 누락된 Vision 얼굴 추가
+                for missed in missedFaces {
+                    let newFaceIdx = yunetDetections.count + visionFallbackFaces.count
+                    let center = CGPoint(x: missed.face.boundingBox.midX, y: missed.face.boundingBox.midY)
+                    faceData[newFaceIdx] = (center: center, boundingBox: missed.face.boundingBox)
+                    visionFallbackFaces.append(newFaceIdx)
+                }
+            }
+
+            // 감지 소스 표시 (YuNet, Vision, 또는 YuNet+Vision)
+            let detectionSource: String
+            let totalFaces: Int
+            if yunetDetections.isEmpty && !faces.isEmpty {
+                detectionSource = "Vision"
+                totalFaces = faces.count
+            } else if !visionFallbackFaces.isEmpty {
+                detectionSource = "YuNet+Vision"
+                totalFaces = yunetDetections.count + visionFallbackFaces.count
+            } else {
+                detectionSource = "YuNet"
+                totalFaces = yunetDetections.count
+            }
             print("[FaceMatching] Photo \(assetID.prefix(8)): \(totalFaces) faces (\(detectionSource)), Embed: \(faceEmbeddings.count)/\(totalFaces), Slots: \(activeSlots.count)")
 
             // === Step 2: 부팅 (ActiveSlots 비어있을 때) ===
@@ -1122,14 +1179,14 @@ final class SimilarityAnalysisQueue {
 
     // MARK: - Debug Test API
 
-    /// Vision fallback 비교 테스트용 API
+    /// Vision fallback 비교 테스트용 API (OFF vs Basic)
     ///
-    /// 동일한 사진에 대해 Vision fallback ON/OFF로 매칭을 실행하고 결과를 비교합니다.
+    /// 동일한 사진에 대해 Vision fallback OFF/Basic으로 매칭을 실행하고 결과를 비교합니다.
     ///
     /// - Parameters:
     ///   - photos: 테스트할 PHAsset 배열
     ///   - rawFacesMap: Vision 얼굴 감지 결과 (assetID → [DetectedFace])
-    /// - Returns: (fallbackOff: 결과, fallbackOn: 결과)
+    /// - Returns: (fallbackOff: 결과, fallbackBasic: 결과)
     func testVisionFallback(
         photos: [PHAsset],
         rawFacesMap: [String: [DetectedFace]]
@@ -1141,18 +1198,52 @@ final class SimilarityAnalysisQueue {
             rawFacesMap: rawFacesMap,
             assetIDs: assetIDs,
             photos: photos,
-            useVisionFallback: false
+            visionFallbackMode: .off
         )
 
-        // Vision fallback ON
+        // Vision fallback Basic
         let resultOn = await assignPersonIndicesForGroup(
             rawFacesMap: rawFacesMap,
             assetIDs: assetIDs,
             photos: photos,
-            useVisionFallback: true
+            visionFallbackMode: .basic
         )
 
         return (fallbackOff: resultOff, fallbackOn: resultOn)
+    }
+
+    /// Vision fallback 확장 비교 테스트용 API (Basic vs Extended)
+    ///
+    /// 동일한 사진에 대해 Vision fallback Basic/Extended로 매칭을 실행하고 결과를 비교합니다.
+    /// Extended는 YuNet이 놓친 작은 얼굴(width < 0.07)을 IoU 기반으로 추가합니다.
+    ///
+    /// - Parameters:
+    ///   - photos: 테스트할 PHAsset 배열
+    ///   - rawFacesMap: Vision 얼굴 감지 결과 (assetID → [DetectedFace])
+    /// - Returns: (basic: 결과, extended: 결과)
+    func testVisionFallbackExtended(
+        photos: [PHAsset],
+        rawFacesMap: [String: [DetectedFace]]
+    ) async -> (basic: [String: [CachedFace]], extended: [String: [CachedFace]]) {
+        let assetIDs = photos.map { $0.localIdentifier }
+
+        // Vision fallback Basic
+        let resultBasic = await assignPersonIndicesForGroup(
+            rawFacesMap: rawFacesMap,
+            assetIDs: assetIDs,
+            photos: photos,
+            visionFallbackMode: .basic
+        )
+
+        // Vision fallback Extended
+        let resultExtended = await assignPersonIndicesForGroup(
+            rawFacesMap: rawFacesMap,
+            assetIDs: assetIDs,
+            photos: photos,
+            visionFallbackMode: .extended
+        )
+
+        return (basic: resultBasic, extended: resultExtended)
     }
 
     deinit {
