@@ -893,8 +893,10 @@ final class SimilarityAnalysisQueue {
             }
 
             // === Step 6: 신규 슬롯 등록 (저품질 필터 적용) ===
-            for (faceIdx, embedding) in faceEmbeddings {
-                guard !usedFaces.contains(faceIdx) else { continue }
+            // 결정성 보장: faceIdx 정렬 순서로 처리
+            for faceIdx in faceEmbeddings.keys.sorted() {
+                guard let embedding = faceEmbeddings[faceIdx],
+                      !usedFaces.contains(faceIdx) else { continue }
                 guard activeSlots.count < maxSlots else {
                     print("[Unassigned] Face(\(faceIdx)): Max slots reached")
                     continue
