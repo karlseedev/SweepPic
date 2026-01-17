@@ -955,7 +955,9 @@ final class SimilarityAnalysisQueue {
             // 조건: posNorm < 0.10 (매우 엄격), 신규 슬롯 생성 안 함
             let visionFallbackPosLimit: CGFloat = 0.10
 
-            for (faceIdx, data) in faceData {
+            // 결정성 보장: faceIdx 정렬 순서로 처리
+            for faceIdx in faceData.keys.sorted() {
+                guard let data = faceData[faceIdx] else { continue }
                 // 이미 매칭된 얼굴 스킵
                 guard !usedFaces.contains(faceIdx) else { continue }
                 // 임베딩 있는 얼굴 스킵 (이미 위에서 처리됨)
