@@ -846,18 +846,23 @@ final class SimilarityAnalysisQueue {
             let lowQualityPosLimit: CGFloat = 0.25  // 저품질은 위치 조건 완화 (25%)
             let lowQualityCostLimit: Float = min(rejectThreshold + 0.15, 1.0)  // cost 상한선 (1.0 초과 방지)
 
-            // Step 5A: 고품질 얼굴 매칭 (SFace 우선)
+            // === 6-3: 2-pass 매칭 구조 ===
+            // Pass 1: Confident만 즉시 매칭
+            // Pass 2: GreyZone + LowQ 통합 처리 (mixedScore 기준)
+
             let highQualityCandidates = allCandidates.filter { $0.norm >= minEmbeddingNorm }
             let lowQualityCandidates = allCandidates.filter { $0.norm < minEmbeddingNorm }
 
+            // GreyZone 후보 수집용
+            var greyZoneCandidates: [MatchCandidate] = []
+
+            // Pass 1: Confident 매칭 (cost < greyZoneThreshold)
             for candidate in highQualityCandidates {
                 guard !usedFaces.contains(candidate.faceIdx) else { continue }
                 guard !usedSlots.contains(candidate.slotID) else { continue }
 
                 let cost = candidate.cost
-                let posNorm = candidate.posDistNorm
 
-                // 구간 판정
                 if cost < greyZoneThreshold {
                     // 확신 구간: 즉시 매칭
                     usedFaces.insert(candidate.faceIdx)
@@ -874,58 +879,49 @@ final class SimilarityAnalysisQueue {
                     updateSlotIfBetter(slotID: candidate.slotID, embedding: candidate.embedding, norm: candidate.norm, center: candidate.center, boundingBox: candidate.boundingBox)
 
                 } else if cost < rejectThreshold {
-                    // 모호 구간: 위치 조건 확인
-                    if posNorm < greyZonePosLimit {
-                        usedFaces.insert(candidate.faceIdx)
-                        usedSlots.insert(candidate.slotID)
-                        cachedFaces.append(CachedFace(
-                            boundingBox: candidate.boundingBox,
-                            personIndex: candidate.slotID,
-                            isValidSlot: false,
-                            sfaceCost: cost
-                        ))
-                        print("[GreyMatch] Face(\(candidate.faceIdx)) -> Slot(\(candidate.slotID)): Cost=\(String(format: "%.3f", cost)), PosNorm=\(String(format: "%.2f", posNorm)), norm=\(String(format: "%.2f", candidate.norm))")
-
-                        // Keep Best + 위치 갱신
-                        updateSlotIfBetter(slotID: candidate.slotID, embedding: candidate.embedding, norm: candidate.norm, center: candidate.center, boundingBox: candidate.boundingBox)
-                    } else {
-                        print("[GreyReject] Face(\(candidate.faceIdx)) -> Slot(\(candidate.slotID)): Cost=\(String(format: "%.3f", cost)), PosNorm=\(String(format: "%.2f", posNorm))")
-                    }
+                    // 모호 구간: Pass 2로 보류
+                    greyZoneCandidates.append(candidate)
+                    print("[GreyDefer] Face(\(candidate.faceIdx)) -> Slot(\(candidate.slotID)): Cost=\(String(format: "%.3f", cost)), PosNorm=\(String(format: "%.2f", candidate.posDistNorm)) (deferred to Pass2)")
                 } else {
                     // 거절 구간
                     print("[Reject] Face(\(candidate.faceIdx)) -> Slot(\(candidate.slotID)): Cost=\(String(format: "%.3f", cost))")
                 }
             }
 
-            // Step 5B: 저품질 얼굴 매칭 (위치 우선 + SFace 교차검증)
-            // 혼합 점수 계산 함수 (6-1: posNorm 포화 대응)
+            // Pass 2: GreyZone + LowQ 통합 처리 (6-3)
+            // 혼합 점수 계산 함수 (posNorm 포화 대응)
             // w1=0.7 (cost 가중치), w2=0.3 (posNorm 가중치)
-            // posNorm이 1.0으로 포화되는 경우가 많으므로 cost 가중치를 높임
             func mixedScore(cost: Float, posNorm: CGFloat) -> CGFloat {
                 let w1: CGFloat = 0.7  // cost 가중치 (권장: 0.7~0.8)
                 let w2: CGFloat = 0.3  // posNorm 가중치
                 return w1 * CGFloat(cost) + w2 * posNorm
             }
 
-            // 저품질 얼굴별로 그룹화하여 가장 가까운 슬롯에 매칭 시도
-            var lowQualityByFace: [Int: [MatchCandidate]] = [:]
-            for candidate in lowQualityCandidates {
+            // GreyZone + LowQ 통합 (얼굴별 그룹화)
+            var pendingByFace: [Int: [MatchCandidate]] = [:]
+
+            // GreyZone 후보 추가
+            for candidate in greyZoneCandidates {
                 guard !usedFaces.contains(candidate.faceIdx) else { continue }
-                lowQualityByFace[candidate.faceIdx, default: []].append(candidate)
+                pendingByFace[candidate.faceIdx, default: []].append(candidate)
             }
 
-            // 결정성 보장 + 매칭 품질: mixedScore가 낮은 face부터 처리 (6-1)
-            // mixedScore = 0.7*cost + 0.3*posNorm (posNorm 포화 시 cost로 변별)
-            let sortedFaceIds = lowQualityByFace.keys.sorted { faceA, faceB in
-                let bestA = lowQualityByFace[faceA]?
+            // LowQ 후보 추가
+            for candidate in lowQualityCandidates {
+                guard !usedFaces.contains(candidate.faceIdx) else { continue }
+                pendingByFace[candidate.faceIdx, default: []].append(candidate)
+            }
+
+            // 결정성 보장 + 매칭 품질: mixedScore가 낮은 face부터 처리
+            let sortedFaceIds = pendingByFace.keys.sorted { faceA, faceB in
+                let bestA = pendingByFace[faceA]?
                     .filter { !usedSlots.contains($0.slotID) }
                     .min(by: { mixedScore(cost: $0.cost, posNorm: $0.posDistNorm)
                              < mixedScore(cost: $1.cost, posNorm: $1.posDistNorm) })
-                let bestB = lowQualityByFace[faceB]?
+                let bestB = pendingByFace[faceB]?
                     .filter { !usedSlots.contains($0.slotID) }
                     .min(by: { mixedScore(cost: $0.cost, posNorm: $0.posDistNorm)
                              < mixedScore(cost: $1.cost, posNorm: $1.posDistNorm) })
-                // mixedScore로 비교, 같으면 faceIdx로 tie-break (결정성)
                 let scoreA = bestA.map { mixedScore(cost: $0.cost, posNorm: $0.posDistNorm) } ?? 1.0
                 let scoreB = bestB.map { mixedScore(cost: $0.cost, posNorm: $0.posDistNorm) } ?? 1.0
                 if scoreA != scoreB { return scoreA < scoreB }
@@ -933,36 +929,53 @@ final class SimilarityAnalysisQueue {
             }
 
             for faceIdx in sortedFaceIds {
-                guard let candidates = lowQualityByFace[faceIdx],
+                guard let candidates = pendingByFace[faceIdx],
                       !usedFaces.contains(faceIdx) else { continue }
 
-                // 혼합 점수 기준으로 정렬 (6-2: posNorm 포화 시 cost로 변별)
+                // 혼합 점수 기준으로 정렬
                 let sortedByMixed = candidates
                     .filter { !usedSlots.contains($0.slotID) }
                     .sorted { mixedScore(cost: $0.cost, posNorm: $0.posDistNorm)
                             < mixedScore(cost: $1.cost, posNorm: $1.posDistNorm) }
 
-                guard let bestByMixed = sortedByMixed.first else { continue }
+                guard let best = sortedByMixed.first else { continue }
 
-                let cost = bestByMixed.cost
-                let posNorm = bestByMixed.posDistNorm
+                let cost = best.cost
+                let posNorm = best.posDistNorm
+                let isHighQuality = best.norm >= minEmbeddingNorm
 
-                // 교차 검증: 위치가 가깝고(25%) SFace cost가 상한선(0.80) 이하면 매칭
-                if posNorm <= lowQualityPosLimit && cost < lowQualityCostLimit {
+                // 조건 검사: GreyZone vs LowQ 조건 분기
+                let shouldMatch: Bool
+                if isHighQuality {
+                    // GreyZone: 위치 조건만 (cost는 이미 greyZone~reject 범위)
+                    shouldMatch = posNorm < greyZonePosLimit
+                } else {
+                    // LowQ: 위치 + cost 조건
+                    shouldMatch = posNorm <= lowQualityPosLimit && cost < lowQualityCostLimit
+                }
+
+                if shouldMatch {
                     usedFaces.insert(faceIdx)
-                    usedSlots.insert(bestByMixed.slotID)
+                    usedSlots.insert(best.slotID)
                     cachedFaces.append(CachedFace(
-                        boundingBox: bestByMixed.boundingBox,
-                        personIndex: bestByMixed.slotID,
+                        boundingBox: best.boundingBox,
+                        personIndex: best.slotID,
                         isValidSlot: false,
                         sfaceCost: cost
                     ))
-                    print("[LowQMatch] Face(\(faceIdx)) -> Slot(\(bestByMixed.slotID)): Cost=\(String(format: "%.3f", cost)), PosNorm=\(String(format: "%.2f", posNorm)), norm=\(String(format: "%.2f", bestByMixed.norm)) (PositionFirst)")
 
-                    // 위치만 갱신 (저품질 임베딩으로 슬롯 임베딩 갱신 X, norm 0 전달)
-                    updateSlotIfBetter(slotID: bestByMixed.slotID, embedding: [], norm: 0, center: bestByMixed.center, boundingBox: bestByMixed.boundingBox)
+                    let matchType = isHighQuality ? "GreyMatch" : "LowQMatch"
+                    print("[\(matchType)] Face(\(faceIdx)) -> Slot(\(best.slotID)): Cost=\(String(format: "%.3f", cost)), PosNorm=\(String(format: "%.2f", posNorm)), norm=\(String(format: "%.2f", best.norm)) (Pass2)")
+
+                    // Keep Best + 위치 갱신 (LowQ는 임베딩 갱신 X)
+                    if isHighQuality {
+                        updateSlotIfBetter(slotID: best.slotID, embedding: best.embedding, norm: best.norm, center: best.center, boundingBox: best.boundingBox)
+                    } else {
+                        updateSlotIfBetter(slotID: best.slotID, embedding: [], norm: 0, center: best.center, boundingBox: best.boundingBox)
+                    }
                 } else {
-                    print("[LowQReject] Face(\(faceIdx)) -> Slot(\(bestByMixed.slotID)): Cost=\(String(format: "%.3f", cost)), PosNorm=\(String(format: "%.2f", posNorm)), norm=\(String(format: "%.2f", bestByMixed.norm)) (limit: pos<\(String(format: "%.2f", lowQualityPosLimit)), cost<\(String(format: "%.2f", lowQualityCostLimit)))")
+                    let rejectType = isHighQuality ? "GreyReject" : "LowQReject"
+                    print("[\(rejectType)] Face(\(faceIdx)) -> Slot(\(best.slotID)): Cost=\(String(format: "%.3f", cost)), PosNorm=\(String(format: "%.2f", posNorm)), norm=\(String(format: "%.2f", best.norm))")
                 }
             }
 
