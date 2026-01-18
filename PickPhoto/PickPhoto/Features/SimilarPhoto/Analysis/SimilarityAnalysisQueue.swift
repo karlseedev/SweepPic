@@ -718,6 +718,11 @@ final class SimilarityAnalysisQueue {
                     guard let embedding = faceEmbeddings[faceIdx] else { continue }
                     guard let data = faceData[faceIdx] else { continue }
 
+                    // Extended fallback 얼굴은 부팅 시에도 슬롯 생성 금지
+                    if visionFallbackFaces.contains(faceIdx) {
+                        continue
+                    }
+
                     // norm 계산
                     let norm = sqrt(embedding.reduce(0) { $0 + $1 * $1 })
 
