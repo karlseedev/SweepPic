@@ -462,6 +462,10 @@ final class ViewerViewController: UIViewController {
         if let videoVC = pageVC as? VideoPageViewController {
             videoVC.requestVideoIfNeeded()
         }
+
+        // Phase 2: LOD1 원본 이미지 요청 스케줄링
+        // (setViewControllers는 delegate를 호출하지 않으므로 수동 호출)
+        scheduleLOD1Request()
     }
 
     // MARK: - Actions
@@ -598,6 +602,9 @@ final class ViewerViewController: UIViewController {
                 // 삭제 후 이동 시에도 유사 사진 오버레이 업데이트
                 // (setViewControllers는 pageViewController delegate를 호출하지 않으므로 수동 호출)
                 self?.updateSimilarPhotoOverlay()
+
+                // Phase 2: LOD1 원본 이미지 요청 스케줄링
+                self?.scheduleLOD1Request()
             }
         )
     }
