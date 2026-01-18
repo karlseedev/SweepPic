@@ -532,7 +532,7 @@ final class SimilarityAnalysisQueue {
         rawFacesMap: [String: [DetectedFace]],
         assetIDs: [String],
         photos: [PHAsset],
-        visionFallbackMode: VisionFallbackMode = .basic
+        visionFallbackMode: VisionFallbackMode = .extended
     ) async -> [String: [CachedFace]] {
 
         // assetID → PHAsset 매핑
