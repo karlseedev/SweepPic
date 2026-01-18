@@ -314,14 +314,14 @@ final class FaceComparisonViewController: UIViewController {
         // 타이틀
         updateNavigationTitle()
 
-        // S2 원인 분석 버튼 (녹색) - 9개 디버그 로그 출력
-        let s2DebugButton = UIBarButtonItem(
-            image: UIImage(systemName: "ant"),
+        // Extended Fallback 테스트 버튼 (하늘색) - Basic vs Extended 비교
+        let extendedTestButton = UIBarButtonItem(
+            image: UIImage(systemName: "sparkle.magnifyingglass"),
             style: .plain,
             target: self,
-            action: #selector(s2DebugButtonTapped)
+            action: #selector(extendedTestButtonTapped)
         )
-        s2DebugButton.tintColor = .systemGreen
+        extendedTestButton.tintColor = .systemCyan
 
         // 디버그 버튼 (주황색) - 기존 그룹 매칭 시뮬레이션
         let debugButton = UIBarButtonItem(
@@ -341,8 +341,8 @@ final class FaceComparisonViewController: UIViewController {
         )
         cycleButton.tintColor = .white
 
-        // 순서: [순환, 디버그, S2분석] (우측부터 역순으로 배치됨)
-        navigationItem.rightBarButtonItems = [cycleButton, debugButton, s2DebugButton]
+        // 순서: [순환, 디버그, Extended테스트] (우측부터 역순으로 배치됨)
+        navigationItem.rightBarButtonItems = [cycleButton, debugButton, extendedTestButton]
     }
 
     /// 하단바 설정
@@ -560,13 +560,13 @@ final class FaceComparisonViewController: UIViewController {
         }
     }
 
-    /// S2 원인 분석 버튼 탭
-    /// 결정성 수정 후 S2 발생 원인을 파악하기 위한 9개 디버그 로그를 출력합니다.
-    @objc private func s2DebugButtonTapped() {
+    /// Extended Fallback 테스트 버튼 탭
+    /// Basic vs Extended 모드 비교 테스트를 실행합니다.
+    @objc private func extendedTestButtonTapped() {
         Task { @MainActor in
             let assetIDs = comparisonGroup.selectedAssetIDs
             guard !assetIDs.isEmpty else {
-                print("[S2Debug] No photos available")
+                print("[ExtendedTest] No photos available")
                 return
             }
 
@@ -582,12 +582,12 @@ final class FaceComparisonViewController: UIViewController {
             }
 
             guard !photos.isEmpty else {
-                print("[S2Debug] Failed to fetch PHAssets")
+                print("[ExtendedTest] Failed to fetch PHAssets")
                 return
             }
 
-            // S2 원인 분석 실행 (별도 파일로 분리됨)
-            await S2DebugAnalyzer.shared.runAnalysis(with: photos)
+            // Extended Fallback 테스트 실행 (별도 파일로 분리됨)
+            await ExtendedFallbackTester.shared.runComparison(with: photos)
         }
     }
 
@@ -1217,8 +1217,8 @@ extension FaceComparisonViewController: FaceComparisonTitleBarDelegate {
         debugButtonTapped()
     }
 
-    func faceComparisonTitleBarDidTapS2Debug(_ titleBar: FaceComparisonTitleBar) {
-        s2DebugButtonTapped()
+    func faceComparisonTitleBarDidTapExtendedTest(_ titleBar: FaceComparisonTitleBar) {
+        extendedTestButtonTapped()
     }
 }
 
@@ -1441,7 +1441,7 @@ protocol FaceComparisonTitleBarDelegate: AnyObject {
     func faceComparisonTitleBarDidTapCycle(_ titleBar: FaceComparisonTitleBar)
     func faceComparisonTitleBarDidTapClose(_ titleBar: FaceComparisonTitleBar)
     func faceComparisonTitleBarDidTapDebug(_ titleBar: FaceComparisonTitleBar)
-    func faceComparisonTitleBarDidTapS2Debug(_ titleBar: FaceComparisonTitleBar)
+    func faceComparisonTitleBarDidTapExtendedTest(_ titleBar: FaceComparisonTitleBar)
 }
 
 final class FaceComparisonTitleBar: UIView {
@@ -1484,13 +1484,13 @@ final class FaceComparisonTitleBar: UIView {
         return label
     }()
 
-    /// S2 원인 분석 버튼 (녹색, debugButton 왼쪽)
-    private lazy var s2DebugButton: UIButton = {
+    /// Extended Fallback 테스트 버튼 (하늘색, debugButton 왼쪽)
+    private lazy var extendedTestButton: UIButton = {
         var config = UIButton.Configuration.plain()
-        config.image = UIImage(systemName: "ant")
-        config.baseForegroundColor = .systemGreen
+        config.image = UIImage(systemName: "sparkle.magnifyingglass")
+        config.baseForegroundColor = .systemCyan
         let button = UIButton(configuration: config)
-        button.addTarget(self, action: #selector(s2DebugButtonTapped), for: .touchUpInside)
+        button.addTarget(self, action: #selector(extendedTestButtonTapped), for: .touchUpInside)
         button.translatesAutoresizingMaskIntoConstraints = false
         return button
     }()
@@ -1534,7 +1534,7 @@ final class FaceComparisonTitleBar: UIView {
         addSubview(contentView)
         contentView.addSubview(closeButton)
         contentView.addSubview(titleLabel)
-        contentView.addSubview(s2DebugButton)
+        contentView.addSubview(extendedTestButton)
         contentView.addSubview(debugButton)
         contentView.addSubview(cycleButton)
 
@@ -1555,9 +1555,9 @@ final class FaceComparisonTitleBar: UIView {
             titleLabel.centerXAnchor.constraint(equalTo: contentView.centerXAnchor),
             titleLabel.centerYAnchor.constraint(equalTo: contentView.centerYAnchor),
 
-            // S2 분석 버튼: debugButton 왼쪽에 배치
-            s2DebugButton.trailingAnchor.constraint(equalTo: debugButton.leadingAnchor, constant: -8),
-            s2DebugButton.centerYAnchor.constraint(equalTo: contentView.centerYAnchor),
+            // Extended 테스트 버튼: debugButton 왼쪽에 배치
+            extendedTestButton.trailingAnchor.constraint(equalTo: debugButton.leadingAnchor, constant: -8),
+            extendedTestButton.centerYAnchor.constraint(equalTo: contentView.centerYAnchor),
 
             // 디버그 버튼: cycleButton 왼쪽에 배치
             debugButton.trailingAnchor.constraint(equalTo: cycleButton.leadingAnchor, constant: -8),
@@ -1580,8 +1580,8 @@ final class FaceComparisonTitleBar: UIView {
         delegate?.faceComparisonTitleBarDidTapClose(self)
     }
 
-    @objc private func s2DebugButtonTapped() {
-        delegate?.faceComparisonTitleBarDidTapS2Debug(self)
+    @objc private func extendedTestButtonTapped() {
+        delegate?.faceComparisonTitleBarDidTapExtendedTest(self)
     }
 
     @objc private func debugButtonTapped() {
