@@ -936,32 +936,33 @@ final class SimilarityAnalysisQueue {
                 guard let candidates = lowQualityByFace[faceIdx],
                       !usedFaces.contains(faceIdx) else { continue }
 
-                // 위치 기준으로 정렬 (가장 가까운 슬롯 우선)
-                let sortedByPos = candidates
+                // 혼합 점수 기준으로 정렬 (6-2: posNorm 포화 시 cost로 변별)
+                let sortedByMixed = candidates
                     .filter { !usedSlots.contains($0.slotID) }
-                    .sorted { $0.posDistNorm < $1.posDistNorm }
+                    .sorted { mixedScore(cost: $0.cost, posNorm: $0.posDistNorm)
+                            < mixedScore(cost: $1.cost, posNorm: $1.posDistNorm) }
 
-                guard let bestByPos = sortedByPos.first else { continue }
+                guard let bestByMixed = sortedByMixed.first else { continue }
 
-                let cost = bestByPos.cost
-                let posNorm = bestByPos.posDistNorm
+                let cost = bestByMixed.cost
+                let posNorm = bestByMixed.posDistNorm
 
                 // 교차 검증: 위치가 가깝고(25%) SFace cost가 상한선(0.80) 이하면 매칭
                 if posNorm <= lowQualityPosLimit && cost < lowQualityCostLimit {
                     usedFaces.insert(faceIdx)
-                    usedSlots.insert(bestByPos.slotID)
+                    usedSlots.insert(bestByMixed.slotID)
                     cachedFaces.append(CachedFace(
-                        boundingBox: bestByPos.boundingBox,
-                        personIndex: bestByPos.slotID,
+                        boundingBox: bestByMixed.boundingBox,
+                        personIndex: bestByMixed.slotID,
                         isValidSlot: false,
                         sfaceCost: cost
                     ))
-                    print("[LowQMatch] Face(\(faceIdx)) -> Slot(\(bestByPos.slotID)): Cost=\(String(format: "%.3f", cost)), PosNorm=\(String(format: "%.2f", posNorm)), norm=\(String(format: "%.2f", bestByPos.norm)) (PositionFirst)")
+                    print("[LowQMatch] Face(\(faceIdx)) -> Slot(\(bestByMixed.slotID)): Cost=\(String(format: "%.3f", cost)), PosNorm=\(String(format: "%.2f", posNorm)), norm=\(String(format: "%.2f", bestByMixed.norm)) (PositionFirst)")
 
                     // 위치만 갱신 (저품질 임베딩으로 슬롯 임베딩 갱신 X, norm 0 전달)
-                    updateSlotIfBetter(slotID: bestByPos.slotID, embedding: [], norm: 0, center: bestByPos.center, boundingBox: bestByPos.boundingBox)
+                    updateSlotIfBetter(slotID: bestByMixed.slotID, embedding: [], norm: 0, center: bestByMixed.center, boundingBox: bestByMixed.boundingBox)
                 } else {
-                    print("[LowQReject] Face(\(faceIdx)) -> Slot(\(bestByPos.slotID)): Cost=\(String(format: "%.3f", cost)), PosNorm=\(String(format: "%.2f", posNorm)), norm=\(String(format: "%.2f", bestByPos.norm)) (limit: pos<\(String(format: "%.2f", lowQualityPosLimit)), cost<\(String(format: "%.2f", lowQualityCostLimit)))")
+                    print("[LowQReject] Face(\(faceIdx)) -> Slot(\(bestByMixed.slotID)): Cost=\(String(format: "%.3f", cost)), PosNorm=\(String(format: "%.2f", posNorm)), norm=\(String(format: "%.2f", bestByMixed.norm)) (limit: pos<\(String(format: "%.2f", lowQualityPosLimit)), cost<\(String(format: "%.2f", lowQualityCostLimit)))")
                 }
             }
 
