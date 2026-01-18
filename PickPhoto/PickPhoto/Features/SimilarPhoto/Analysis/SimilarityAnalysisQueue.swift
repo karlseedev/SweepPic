@@ -898,6 +898,15 @@ final class SimilarityAnalysisQueue {
             }
 
             // Step 5B: 저품질 얼굴 매칭 (위치 우선 + SFace 교차검증)
+            // 혼합 점수 계산 함수 (6-1: posNorm 포화 대응)
+            // w1=0.7 (cost 가중치), w2=0.3 (posNorm 가중치)
+            // posNorm이 1.0으로 포화되는 경우가 많으므로 cost 가중치를 높임
+            func mixedScore(cost: Float, posNorm: CGFloat) -> CGFloat {
+                let w1: CGFloat = 0.7  // cost 가중치 (권장: 0.7~0.8)
+                let w2: CGFloat = 0.3  // posNorm 가중치
+                return w1 * CGFloat(cost) + w2 * posNorm
+            }
+
             // 저품질 얼굴별로 그룹화하여 가장 가까운 슬롯에 매칭 시도
             var lowQualityByFace: [Int: [MatchCandidate]] = [:]
             for candidate in lowQualityCandidates {
@@ -905,19 +914,21 @@ final class SimilarityAnalysisQueue {
                 lowQualityByFace[candidate.faceIdx, default: []].append(candidate)
             }
 
-            // 결정성 보장 + 매칭 품질: best posNorm이 낮은 face부터 처리
-            // (더 확실한 위치 매칭을 가진 face가 먼저 슬롯을 claim)
+            // 결정성 보장 + 매칭 품질: mixedScore가 낮은 face부터 처리 (6-1)
+            // mixedScore = 0.7*cost + 0.3*posNorm (posNorm 포화 시 cost로 변별)
             let sortedFaceIds = lowQualityByFace.keys.sorted { faceA, faceB in
                 let bestA = lowQualityByFace[faceA]?
                     .filter { !usedSlots.contains($0.slotID) }
-                    .min(by: { $0.posDistNorm < $1.posDistNorm })
+                    .min(by: { mixedScore(cost: $0.cost, posNorm: $0.posDistNorm)
+                             < mixedScore(cost: $1.cost, posNorm: $1.posDistNorm) })
                 let bestB = lowQualityByFace[faceB]?
                     .filter { !usedSlots.contains($0.slotID) }
-                    .min(by: { $0.posDistNorm < $1.posDistNorm })
-                // posNorm이 같으면 faceIdx로 tie-break (결정성)
-                let posA = bestA?.posDistNorm ?? 1.0
-                let posB = bestB?.posDistNorm ?? 1.0
-                if posA != posB { return posA < posB }
+                    .min(by: { mixedScore(cost: $0.cost, posNorm: $0.posDistNorm)
+                             < mixedScore(cost: $1.cost, posNorm: $1.posDistNorm) })
+                // mixedScore로 비교, 같으면 faceIdx로 tie-break (결정성)
+                let scoreA = bestA.map { mixedScore(cost: $0.cost, posNorm: $0.posDistNorm) } ?? 1.0
+                let scoreB = bestB.map { mixedScore(cost: $0.cost, posNorm: $0.posDistNorm) } ?? 1.0
+                if scoreA != scoreB { return scoreA < scoreB }
                 return faceA < faceB
             }
 
