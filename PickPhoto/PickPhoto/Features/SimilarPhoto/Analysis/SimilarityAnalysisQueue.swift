@@ -960,6 +960,12 @@ final class SimilarityAnalysisQueue {
                 }
                 guard let data = faceData[faceIdx] else { continue }
 
+                // Extended fallback 얼굴은 신규 슬롯 생성 금지 (기존 슬롯 매칭만 허용)
+                if visionFallbackFaces.contains(faceIdx) {
+                    print("[ExtendedSkip] Face(\(faceIdx)): Extended fallback face, skip new slot (position-only matching in Step 7)")
+                    continue
+                }
+
                 // norm 계산
                 let norm = faceNorms[faceIdx] ?? sqrt(embedding.reduce(0) { $0 + $1 * $1 })
 
