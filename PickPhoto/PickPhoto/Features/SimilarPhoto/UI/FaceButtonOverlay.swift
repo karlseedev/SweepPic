@@ -352,6 +352,13 @@ final class FaceButtonOverlay: UIView {
         toggleButton.isHidden = true
     }
 
+    /// 버튼만 제거하고 줌/토글 상태는 유지 (얼굴 그리드에서 복귀 시)
+    /// resetState()와 달리 isOverlayHidden, lastZoomInfo를 유지합니다.
+    func clearButtonsOnly() {
+        removeAllButtons()
+        // 토글 버튼은 버튼이 다시 표시될 때 함께 표시됨
+    }
+
     // MARK: - Private Methods
 
     /// 모든 버튼 제거

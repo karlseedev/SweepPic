@@ -254,14 +254,29 @@ extension ViewerViewController {
 
     /// 스와이프로 다른 사진 이동 완료 시 호출
     /// pageViewController(_:didFinishAnimating:) 에서 호출
-    func updateSimilarPhotoOverlay() {
+    ///
+    /// - Parameter resetZoom: true면 줌 상태 초기화 (스와이프 시), false면 줌 상태 유지 (얼굴 그리드 복귀 시)
+    func updateSimilarPhotoOverlay(resetZoom: Bool = true) {
         guard shouldEnableSimilarPhoto else { return }
 
-        // 오버레이 상태 리셋
-        faceButtonOverlay?.resetState()
+        if resetZoom {
+            // 스와이프: 오버레이 상태 완전 리셋
+            faceButtonOverlay?.resetState()
+        } else {
+            // 얼굴 그리드 복귀: 버튼만 제거하고 줌/토글 상태 유지
+            faceButtonOverlay?.clearButtonsOnly()
+        }
 
         // 새 사진에 대해 체크
         checkAndShowFaceButtons()
+
+        // 줌 상태 유지 모드이고 VC에 저장된 줌 정보가 있으면 적용
+        if !resetZoom, let zoomInfo = lastZoomInfo,
+           let zoomScale = zoomInfo["zoomScale"] as? CGFloat,
+           zoomScale > 1.0 {
+            // 디바운스 없이 즉시 줌 기반 위치 적용
+            showButtonsAfterZoom()
+        }
     }
 
     /// 유사 사진 기능 정리
@@ -687,8 +702,9 @@ extension ViewerViewController: FaceComparisonDelegate {
     func faceComparisonViewControllerDidClose(_ viewController: FaceComparisonViewController) {
         print("[ViewerViewController+SimilarPhoto] Face comparison closed")
 
-        // +버튼 오버레이 갱신
-        updateSimilarPhotoOverlay()
+        // +버튼 오버레이 갱신 (줌 상태 유지)
+        // resetZoom: false → 확대 상태에서 복귀 시 버튼 위치가 올바르게 표시됨
+        updateSimilarPhotoOverlay(resetZoom: false)
     }
 }
 
