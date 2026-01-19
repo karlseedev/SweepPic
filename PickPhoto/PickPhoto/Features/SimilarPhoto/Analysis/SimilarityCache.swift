@@ -28,7 +28,7 @@ import UIKit
 /// SimilarityCache 의존성 주입을 위한 프로토콜
 ///
 /// FaceComparisonViewController에서 테스트 가능성을 위해 사용됩니다.
-/// Actor 기반이므로 모든 메서드가 async입니다.
+/// Actor 기반이므로 호출 시 await가 필요합니다.
 protocol SimilarityCacheProtocol: Actor {
     /// 특정 사진의 캐시된 얼굴 정보를 조회합니다.
     func getFaces(for assetID: String) -> [CachedFace]
