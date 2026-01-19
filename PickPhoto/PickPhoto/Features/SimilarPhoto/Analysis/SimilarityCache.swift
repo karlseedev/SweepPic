@@ -23,13 +23,33 @@
 import Foundation
 import UIKit
 
+// MARK: - SimilarityCacheProtocol
+
+/// SimilarityCache 의존성 주입을 위한 프로토콜
+///
+/// FaceComparisonViewController에서 테스트 가능성을 위해 사용됩니다.
+/// Actor 기반이므로 모든 메서드가 async입니다.
+protocol SimilarityCacheProtocol: Actor {
+    /// 특정 사진의 캐시된 얼굴 정보를 조회합니다.
+    func getFaces(for assetID: String) -> [CachedFace]
+
+    /// 그룹별 유효 인물 슬롯을 조회합니다.
+    func getGroupValidPersonIndices(for groupID: String) -> Set<Int>
+
+    /// 그룹에서 멤버를 제거합니다.
+    @discardableResult
+    func removeMemberFromGroup(_ assetID: String, groupID: String) -> Bool
+}
+
+// MARK: - SimilarityCache
+
 /// 유사 사진 분석 결과 캐시 (Actor)
 ///
 /// 그리드에서 분석된 결과를 저장하여 뷰어에서 재분석 없이 재사용합니다.
 /// 최대 500장까지 캐시하며, 초과 시 LRU 정책으로 오래된 항목부터 제거합니다.
 ///
 /// - Important: Actor 기반이므로 모든 메서드 호출 시 `await` 키워드가 필요합니다.
-actor SimilarityCache {
+actor SimilarityCache: SimilarityCacheProtocol {
 
     // MARK: - Singleton
 

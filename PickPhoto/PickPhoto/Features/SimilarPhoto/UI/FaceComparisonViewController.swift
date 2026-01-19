@@ -93,6 +93,9 @@ final class FaceComparisonViewController: UIViewController {
     /// 휴지통 스토어
     private let trashStore: TrashStoreProtocol
 
+    /// 유사 사진 캐시
+    private let cache: any SimilarityCacheProtocol
+
     /// 델리게이트
     weak var delegate: FaceComparisonDelegate?
 
@@ -183,11 +186,13 @@ final class FaceComparisonViewController: UIViewController {
     init(
         comparisonGroup: ComparisonGroup,
         fetchResult: PHFetchResult<PHAsset>?,
-        trashStore: TrashStoreProtocol = TrashStore.shared
+        trashStore: TrashStoreProtocol = TrashStore.shared,
+        cache: any SimilarityCacheProtocol = SimilarityCache.shared
     ) {
         self.comparisonGroup = comparisonGroup
         self.fetchResult = fetchResult
         self.trashStore = trashStore
+        self.cache = cache
         super.init(nibName: nil, bundle: nil)
 
         modalPresentationStyle = .fullScreen
@@ -348,7 +353,7 @@ final class FaceComparisonViewController: UIViewController {
     private func loadPhotoFaces() {
         Task { @MainActor in
             for assetID in comparisonGroup.selectedAssetIDs {
-                let faces = await SimilarityCache.shared.getFaces(for: assetID)
+                let faces = await cache.getFaces(for: assetID)
                 photoFaces[assetID] = faces
             }
             isPhotoFacesLoaded = true
@@ -359,7 +364,7 @@ final class FaceComparisonViewController: UIViewController {
     /// 유효 인물 목록 로드
     private func loadValidPersonIndices() {
         Task { @MainActor in
-            let validSlots = await SimilarityCache.shared.getGroupValidPersonIndices(for: comparisonGroup.sourceGroupID)
+            let validSlots = await cache.getGroupValidPersonIndices(for: comparisonGroup.sourceGroupID)
             validPersonIndices = validSlots.sorted()
 
             if let index = validPersonIndices.firstIndex(of: comparisonGroup.personIndex) {
@@ -473,7 +478,7 @@ final class FaceComparisonViewController: UIViewController {
 
         Task { @MainActor in
             for assetID in deletedIDs {
-                _ = await SimilarityCache.shared.removeMemberFromGroup(assetID, groupID: comparisonGroup.sourceGroupID)
+                _ = await cache.removeMemberFromGroup(assetID, groupID: comparisonGroup.sourceGroupID)
             }
 
             selectedAssetIDs.removeAll()
