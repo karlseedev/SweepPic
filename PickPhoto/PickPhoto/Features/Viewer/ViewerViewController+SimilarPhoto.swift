@@ -680,18 +680,30 @@ extension ViewerViewController: FaceButtonOverlayDelegate {
     }
 
     /// 얼굴 비교 화면 표시
+    /// - iOS 26+: UINavigationController로 감싸서 Liquid Glass 네비게이션바 사용
+    /// - iOS 16~25: 커스텀 타이틀바 사용, 직접 present
     private func showFaceComparisonViewController(with comparisonGroup: ComparisonGroup) {
         print("[ViewerViewController+SimilarPhoto] FaceComparisonViewController 표시")
         print("  - sourceGroupID: \(comparisonGroup.sourceGroupID)")
         print("  - personIndex: \(comparisonGroup.personIndex)")
         print("  - selectedAssetIDs: \(comparisonGroup.selectedAssetIDs.count)장")
 
-        // FaceComparisonViewController 생성 및 표시
+        // FaceComparisonViewController 생성
         let faceComparisonVC = FaceComparisonViewController(
             comparisonGroup: comparisonGroup
         )
         faceComparisonVC.delegate = self
-        present(faceComparisonVC, animated: true)
+
+        if #available(iOS 26.0, *) {
+            // iOS 26+: UINavigationController로 감싸서 Liquid Glass 네비게이션바 사용
+            let navController = UINavigationController(rootViewController: faceComparisonVC)
+            navController.modalPresentationStyle = .fullScreen
+            present(navController, animated: true)
+        } else {
+            // iOS 16~25: 커스텀 타이틀바 사용, 직접 present
+            faceComparisonVC.modalPresentationStyle = .fullScreen
+            present(faceComparisonVC, animated: true)
+        }
     }
 }
 

@@ -163,8 +163,6 @@ final class FaceComparisonCell: UICollectionViewCell {
 protocol FaceComparisonTitleBarDelegate: AnyObject {
     func faceComparisonTitleBarDidTapCycle(_ titleBar: FaceComparisonTitleBar)
     func faceComparisonTitleBarDidTapClose(_ titleBar: FaceComparisonTitleBar)
-    func faceComparisonTitleBarDidTapDebug(_ titleBar: FaceComparisonTitleBar)
-    func faceComparisonTitleBarDidTapExtendedTest(_ titleBar: FaceComparisonTitleBar)
 }
 
 // MARK: - FaceComparisonTitleBar
@@ -222,27 +220,6 @@ final class FaceComparisonTitleBar: UIView {
         return button
     }()
 
-    /// Extended Fallback 테스트 버튼 (하늘색, debugButton 왼쪽)
-    private lazy var extendedTestButton: UIButton = {
-        var config = UIButton.Configuration.plain()
-        config.image = UIImage(systemName: "sparkle.magnifyingglass")
-        config.baseForegroundColor = .systemCyan
-        let button = UIButton(configuration: config)
-        button.addTarget(self, action: #selector(extendedTestButtonTapped), for: .touchUpInside)
-        button.translatesAutoresizingMaskIntoConstraints = false
-        return button
-    }()
-
-    /// 디버그 버튼 (cycleButton 왼쪽)
-    private lazy var debugButton: UIButton = {
-        var config = UIButton.Configuration.plain()
-        config.image = UIImage(systemName: "ladybug")
-        config.baseForegroundColor = .systemOrange
-        let button = UIButton(configuration: config)
-        button.addTarget(self, action: #selector(debugButtonTapped), for: .touchUpInside)
-        button.translatesAutoresizingMaskIntoConstraints = false
-        return button
-    }()
 
     // MARK: - Initialization
 
@@ -262,8 +239,6 @@ final class FaceComparisonTitleBar: UIView {
         addSubview(contentView)
         contentView.addSubview(closeButton)
         contentView.addSubview(titleLabel)
-        contentView.addSubview(extendedTestButton)
-        contentView.addSubview(debugButton)
         contentView.addSubview(cycleButton)
 
         NSLayoutConstraint.activate([
@@ -282,14 +257,6 @@ final class FaceComparisonTitleBar: UIView {
 
             titleLabel.centerXAnchor.constraint(equalTo: contentView.centerXAnchor),
             titleLabel.centerYAnchor.constraint(equalTo: contentView.centerYAnchor),
-
-            // Extended 테스트 버튼: debugButton 왼쪽에 배치
-            extendedTestButton.trailingAnchor.constraint(equalTo: debugButton.leadingAnchor, constant: -8),
-            extendedTestButton.centerYAnchor.constraint(equalTo: contentView.centerYAnchor),
-
-            // 디버그 버튼: cycleButton 왼쪽에 배치
-            debugButton.trailingAnchor.constraint(equalTo: cycleButton.leadingAnchor, constant: -8),
-            debugButton.centerYAnchor.constraint(equalTo: contentView.centerYAnchor),
 
             cycleButton.trailingAnchor.constraint(equalTo: contentView.trailingAnchor),
             cycleButton.centerYAnchor.constraint(equalTo: contentView.centerYAnchor)
@@ -310,13 +277,5 @@ final class FaceComparisonTitleBar: UIView {
 
     @objc private func cycleButtonTapped() {
         delegate?.faceComparisonTitleBarDidTapCycle(self)
-    }
-
-    @objc private func extendedTestButtonTapped() {
-        delegate?.faceComparisonTitleBarDidTapExtendedTest(self)
-    }
-
-    @objc private func debugButtonTapped() {
-        delegate?.faceComparisonTitleBarDidTapDebug(self)
     }
 }

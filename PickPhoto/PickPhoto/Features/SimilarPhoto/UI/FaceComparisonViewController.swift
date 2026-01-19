@@ -289,22 +289,17 @@ final class FaceComparisonViewController: UIViewController {
     private func setupSystemNavigationBar() {
         updateNavigationTitle()
 
-        let extendedTestButton = UIBarButtonItem(
-            image: UIImage(systemName: "sparkle.magnifyingglass"),
+        // 왼쪽: 닫기 버튼
+        let closeButton = UIBarButtonItem(
+            image: UIImage(systemName: "xmark"),
             style: .plain,
             target: self,
-            action: #selector(extendedTestButtonTapped)
+            action: #selector(cancelButtonTapped)
         )
-        extendedTestButton.tintColor = .systemCyan
+        closeButton.tintColor = .white
+        navigationItem.leftBarButtonItem = closeButton
 
-        let debugButton = UIBarButtonItem(
-            image: UIImage(systemName: "ladybug"),
-            style: .plain,
-            target: self,
-            action: #selector(debugButtonTapped)
-        )
-        debugButton.tintColor = .systemOrange
-
+        // 오른쪽: 순환 버튼
         let cycleButton = UIBarButtonItem(
             image: UIImage(systemName: "arrow.trianglehead.2.clockwise.rotate.90"),
             style: .plain,
@@ -313,7 +308,7 @@ final class FaceComparisonViewController: UIViewController {
         )
         cycleButton.tintColor = .white
 
-        navigationItem.rightBarButtonItems = [cycleButton, debugButton, extendedTestButton]
+        navigationItem.rightBarButtonItems = [cycleButton]
     }
 
     /// 하단바 설정
@@ -717,13 +712,5 @@ extension FaceComparisonViewController: FaceComparisonTitleBarDelegate {
 
     func faceComparisonTitleBarDidTapClose(_ titleBar: FaceComparisonTitleBar) {
         cancelButtonTapped()
-    }
-
-    func faceComparisonTitleBarDidTapDebug(_ titleBar: FaceComparisonTitleBar) {
-        debugButtonTapped()
-    }
-
-    func faceComparisonTitleBarDidTapExtendedTest(_ titleBar: FaceComparisonTitleBar) {
-        extendedTestButtonTapped()
     }
 }
