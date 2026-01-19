@@ -132,20 +132,35 @@ final class FaceButtonOverlay: UIView {
         isUserInteractionEnabled = true
         backgroundColor = .clear
 
-        // 토글 버튼 추가 (화면 우측 상단, 뒤로가기 버튼과 같은 높이) - T034
-        addSubview(toggleButton)
-        NSLayoutConstraint.activate([
-            toggleButton.topAnchor.constraint(equalTo: safeAreaLayoutGuide.topAnchor, constant: 16),
-            toggleButton.trailingAnchor.constraint(equalTo: safeAreaLayoutGuide.trailingAnchor, constant: -16),
-            toggleButton.widthAnchor.constraint(equalToConstant: 36),
-            toggleButton.heightAnchor.constraint(equalToConstant: 36)
-        ])
+        // iOS 26+: 네비게이션 바에 토글 버튼을 배치하므로 자체 버튼 생성 안 함
+        if #available(iOS 26.0, *) {
+            // 토글 버튼 생성하지 않음
+        } else {
+            // iOS 16~25: 토글 버튼 추가 (화면 우측 상단, 뒤로가기 버튼과 같은 높이)
+            addSubview(toggleButton)
+            NSLayoutConstraint.activate([
+                toggleButton.topAnchor.constraint(equalTo: safeAreaLayoutGuide.topAnchor, constant: 16),
+                toggleButton.trailingAnchor.constraint(equalTo: safeAreaLayoutGuide.trailingAnchor, constant: -16),
+                toggleButton.widthAnchor.constraint(equalToConstant: 36),
+                toggleButton.heightAnchor.constraint(equalToConstant: 36)
+            ])
 
-        // 토글 버튼은 초기에는 숨김 (버튼이 있을 때만 표시)
-        toggleButton.isHidden = true
+            // 토글 버튼은 초기에는 숨김 (버튼이 있을 때만 표시)
+            toggleButton.isHidden = true
+        }
     }
 
     // MARK: - Public Methods
+
+    /// 현재 오버레이 숨김 상태 (iOS 26 네비게이션 바 아이콘 동기화용)
+    var isCurrentlyHidden: Bool {
+        return isOverlayHidden
+    }
+
+    /// 외부에서 토글 기능 호출 (iOS 26 네비게이션 바 버튼용)
+    func toggleOverlay() {
+        toggleButtonTapped()
+    }
 
     /// 얼굴에 +버튼을 표시합니다.
     ///

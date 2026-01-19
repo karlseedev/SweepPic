@@ -237,6 +237,9 @@ final class ViewerViewController: UIViewController {
     /// iOS 26+ 툴바 완전삭제 버튼 참조
     private var toolbarPermanentDeleteItem: UIBarButtonItem?
 
+    /// iOS 26+ 네비게이션 바 눈 아이콘 버튼 참조 (유사 사진 토글)
+    private var navBarEyeItem: UIBarButtonItem?
+
     // MARK: - Initialization
 
     /// 초기화
@@ -724,6 +727,36 @@ final class ViewerViewController: UIViewController {
         // Push 방식이므로 leftBarButtonItem 설정 없이 시스템 백버튼 자동 사용
         // 투명 배경 (사진 위에 Liquid Glass 효과)
         navigationController?.navigationBar.isTranslucent = true
+
+        // 눈 아이콘 버튼 생성 (유사 사진 토글용)
+        let eyeItem = UIBarButtonItem(
+            image: UIImage(systemName: "eye.fill"),
+            primaryAction: UIAction { [weak self] _ in
+                self?.navBarEyeButtonTapped()
+            }
+        )
+        eyeItem.tintColor = .white
+        navBarEyeItem = eyeItem
+        // +버튼 표시 시 rightBarButtonItem으로 설정됨
+    }
+
+    /// iOS 26+ 네비게이션 바 눈 아이콘 탭 핸들러
+    private func navBarEyeButtonTapped() {
+        faceButtonOverlay?.toggleOverlay()
+        updateNavBarEyeIcon()
+    }
+
+    /// iOS 26+ 네비게이션 바 눈 아이콘 업데이트
+    private func updateNavBarEyeIcon() {
+        guard #available(iOS 26.0, *) else { return }
+        let iconName = faceButtonOverlay?.isCurrentlyHidden == true ? "eye.slash.fill" : "eye.fill"
+        navBarEyeItem?.image = UIImage(systemName: iconName)
+    }
+
+    /// iOS 26+ 네비게이션 바 눈 아이콘 표시/숨김
+    func showNavBarEyeButton(_ show: Bool) {
+        guard #available(iOS 26.0, *) else { return }
+        navigationItem.rightBarButtonItem = show ? navBarEyeItem : nil
     }
 
     /// iOS 26+ 시스템 툴바 설정

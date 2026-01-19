@@ -112,8 +112,8 @@ extension ViewerViewController {
 
     // MARK: - Associated Properties
 
-    /// +버튼 오버레이
-    private var faceButtonOverlay: FaceButtonOverlay? {
+    /// +버튼 오버레이 (internal: iOS 26에서 본체의 eye 버튼이 접근 필요)
+    var faceButtonOverlay: FaceButtonOverlay? {
         get {
             objc_getAssociatedObject(self, &AssociatedKeys.faceButtonOverlay) as? FaceButtonOverlay
         }
@@ -484,6 +484,7 @@ extension ViewerViewController {
             case .analyzed(false, _):
                 // 분석 완료되었지만 그룹에 속하지 않음 → 버튼 미표시
                 faceButtonOverlay?.hideButtons()
+                showNavBarEyeButton(false)
 
             case .notAnalyzed:
                 // 캐시 miss → 분석 시작
@@ -509,6 +510,7 @@ extension ViewerViewController {
 
         guard !validFaces.isEmpty else {
             faceButtonOverlay?.hideButtons()
+            showNavBarEyeButton(false)
             return
         }
 
@@ -558,6 +560,9 @@ extension ViewerViewController {
         if total >= 3 && total % 3 == 0 {
             Self.sharedViewerStats.printReport()
         }
+
+        // iOS 26: 네비게이션 바 eye 버튼 표시
+        showNavBarEyeButton(true)
     }
 
     // MARK: - Private Methods - Analysis
