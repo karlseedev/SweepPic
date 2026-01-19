@@ -27,8 +27,11 @@ final class FaceComparisonCell: UICollectionViewCell {
 
     // MARK: - Properties
 
-    /// 현재 셀의 assetID
+    /// 현재 셀의 assetID (configure에서 설정)
     private(set) var assetID: String?
+
+    /// 셀 재사용 안전장치용 assetID (이미지 로드 시작 시 설정)
+    var currentAssetID: String?
 
     // MARK: - UI Components
 
@@ -147,6 +150,7 @@ final class FaceComparisonCell: UICollectionViewCell {
         super.prepareForReuse()
         imageView.image = nil
         assetID = nil
+        currentAssetID = nil
         setSelected(false)
         debugLabel.text = nil
         debugLabel.isHidden = true

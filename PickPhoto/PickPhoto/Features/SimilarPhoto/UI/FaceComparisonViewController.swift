@@ -10,12 +10,12 @@
 //  유사 사진 그룹에서 동일 인물의 얼굴을 2열 그리드로 비교하고 삭제합니다.
 //
 //  주요 기능:
+//  - UIPageViewController로 인물별 페이지 스와이프 전환
 //  - 2열 정사각형 그리드로 크롭된 얼굴 이미지 표시
 //  - 헤더: "인물 N (M장)" 형식
 //  - 순환 버튼으로 다음 인물 전환 (선택 상태 유지)
 //  - 사진 탭으로 선택/해제 토글, 체크마크 표시
 //  - Delete 탭 시 휴지통 이동 + 뷰어 복귀
-//  - 기존 Undo 기능과 통합
 //
 //  UI 구성:
 //  - iOS 16~25: 커스텀 FloatingTitleBar (캡슐 스타일)
@@ -34,16 +34,12 @@ import AppCore
 /// 삭제/닫기 이벤트를 전달합니다.
 protocol FaceComparisonDelegate: AnyObject {
     /// 사진 삭제 완료 시 호출
-    /// - Parameters:
-    ///   - viewController: FaceComparisonViewController
-    ///   - deletedAssetIDs: 삭제된 사진 ID 배열
     func faceComparisonViewController(
         _ viewController: FaceComparisonViewController,
         didDeletePhotos deletedAssetIDs: [String]
     )
 
     /// 화면 닫기 시 호출
-    /// - Parameter viewController: FaceComparisonViewController
     func faceComparisonViewControllerDidClose(_ viewController: FaceComparisonViewController)
 }
 
@@ -52,18 +48,12 @@ protocol FaceComparisonDelegate: AnyObject {
 /// 얼굴 비교 화면
 ///
 /// 유사 사진 뷰어에서 +버튼 탭 시 표시됩니다.
-/// 동일 인물의 얼굴을 2열 그리드로 비교하고, 원하지 않는 사진을 선택하여 삭제할 수 있습니다.
+/// UIPageViewController를 사용하여 인물별 페이지를 스와이프로 전환할 수 있습니다.
 ///
 /// - Note: ComparisonGroup에서 최대 8장까지 표시됩니다.
 final class FaceComparisonViewController: UIViewController {
 
     // MARK: - Constants
-
-    /// 그리드 간격 (상하좌우)
-    private static let gridSpacing: CGFloat = 2
-
-    /// 최소 셀 크기 (화면이 너무 작을 때 보장)
-    private static let minCellSize: CGFloat = 100
 
     /// 하단바 높이
     private static let bottomBarHeight: CGFloat = 56
@@ -75,7 +65,7 @@ final class FaceComparisonViewController: UIViewController {
 
     /// 유효 인물 번호 목록 (순환용)
     /// - 그룹 내에서 2장 이상 감지된 인물만 포함
-    private var validPersonIndices: [Int] = []
+    private(set) var validPersonIndices: [Int] = []
 
     /// 현재 표시 중인 인물 인덱스 (validPersonIndices 배열 내 인덱스)
     private var currentPersonArrayIndex: Int = 0
@@ -106,22 +96,28 @@ final class FaceComparisonViewController: UIViewController {
     /// 델리게이트
     weak var delegate: FaceComparisonDelegate?
 
+    /// 데이터 로딩 완료 여부
+    private var isPhotoFacesLoaded = false
+    private var isValidPersonIndicesLoaded = false
+
+    /// 데이터 준비 완료 여부
+    private var isDataReady: Bool {
+        return isPhotoFacesLoaded && isValidPersonIndicesLoaded
+    }
+
     // MARK: - UI Components
 
-    /// 컬렉션 뷰 (2열 그리드)
-    private lazy var collectionView: UICollectionView = {
-        let layout = UICollectionViewFlowLayout()
-        layout.minimumInteritemSpacing = Self.gridSpacing
-        layout.minimumLineSpacing = Self.gridSpacing
-
-        let cv = UICollectionView(frame: .zero, collectionViewLayout: layout)
-        cv.backgroundColor = .black
-        cv.register(FaceComparisonCell.self, forCellWithReuseIdentifier: FaceComparisonCell.reuseIdentifier)
-        cv.dataSource = self
-        cv.delegate = self
-        cv.contentInsetAdjustmentBehavior = .automatic
-        cv.translatesAutoresizingMaskIntoConstraints = false
-        return cv
+    /// 페이지 뷰 컨트롤러 (인물별 페이지 전환)
+    private lazy var pageViewController: UIPageViewController = {
+        let pvc = UIPageViewController(
+            transitionStyle: .scroll,
+            navigationOrientation: .horizontal,
+            options: nil
+        )
+        pvc.dataSource = self
+        pvc.delegate = self
+        pvc.view.translatesAutoresizingMaskIntoConstraints = false
+        return pvc
     }()
 
     /// 하단바 컨테이너
@@ -184,11 +180,6 @@ final class FaceComparisonViewController: UIViewController {
     // MARK: - Initialization
 
     /// FaceComparisonViewController를 생성합니다.
-    ///
-    /// - Parameters:
-    ///   - comparisonGroup: 비교할 사진 그룹
-    ///   - fetchResult: PHFetchResult (이미지 로딩용)
-    ///   - trashStore: 휴지통 스토어 (기본값: TrashStore.shared)
     init(
         comparisonGroup: ComparisonGroup,
         fetchResult: PHFetchResult<PHAsset>?,
@@ -199,7 +190,6 @@ final class FaceComparisonViewController: UIViewController {
         self.trashStore = trashStore
         super.init(nibName: nil, bundle: nil)
 
-        // 모달 스타일 설정
         modalPresentationStyle = .fullScreen
         modalTransitionStyle = .coverVertical
     }
@@ -225,18 +215,8 @@ final class FaceComparisonViewController: UIViewController {
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
 
-        // iOS 26+: 시스템 네비게이션바 설정
         if #available(iOS 26.0, *) {
             setupSystemNavigationBar()
-        }
-    }
-
-    override func viewWillTransition(to size: CGSize, with coordinator: UIViewControllerTransitionCoordinator) {
-        super.viewWillTransition(to: size, with: coordinator)
-
-        // 화면 회전 시 레이아웃 갱신
-        coordinator.animate { _ in
-            self.collectionView.collectionViewLayout.invalidateLayout()
         }
     }
 
@@ -244,16 +224,13 @@ final class FaceComparisonViewController: UIViewController {
 
     /// UI 구성
     private func setupUI() {
-        // 하단바를 먼저 설정해야 컬렉션 뷰 제약을 걸 수 있음
         setupBottomBar()
 
-        // iOS 16~25: 커스텀 타이틀바
         if #available(iOS 26.0, *) {
-            // iOS 26+는 viewWillAppear에서 시스템 네비게이션바 설정
-            setupCollectionViewWithSystemNav()
+            setupPageViewControllerWithSystemNav()
         } else {
             setupCustomTitleBar()
-            setupCollectionViewWithCustomNav()
+            setupPageViewControllerWithCustomNav()
         }
     }
 
@@ -268,7 +245,6 @@ final class FaceComparisonViewController: UIViewController {
             titleBar.topAnchor.constraint(equalTo: view.topAnchor),
             titleBar.leadingAnchor.constraint(equalTo: view.leadingAnchor),
             titleBar.trailingAnchor.constraint(equalTo: view.trailingAnchor),
-            // SafeArea Top + 44pt 높이 확보 (배경은 topAnchor까지 확장됨)
             titleBar.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 44)
         ])
 
@@ -276,40 +252,39 @@ final class FaceComparisonViewController: UIViewController {
         updateTitleBar()
     }
 
-    /// 컬렉션 뷰 설정 (커스텀 네비게이션)
-    private func setupCollectionViewWithCustomNav() {
-        view.insertSubview(collectionView, belowSubview: bottomBarContainer)
+    /// 페이지 뷰 컨트롤러 설정 (커스텀 네비게이션)
+    private func setupPageViewControllerWithCustomNav() {
+        addChild(pageViewController)
+        view.insertSubview(pageViewController.view, belowSubview: bottomBarContainer)
+        pageViewController.didMove(toParent: self)
 
         NSLayoutConstraint.activate([
-            // 커스텀 타이틀바 바로 아래부터 시작
-            collectionView.topAnchor.constraint(equalTo: customTitleBar!.bottomAnchor),
-            collectionView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
-            collectionView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
-            // 하단바 바로 위까지 (겹침 방지)
-            collectionView.bottomAnchor.constraint(equalTo: bottomBarContainer.topAnchor)
+            pageViewController.view.topAnchor.constraint(equalTo: customTitleBar!.bottomAnchor),
+            pageViewController.view.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+            pageViewController.view.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+            pageViewController.view.bottomAnchor.constraint(equalTo: bottomBarContainer.topAnchor)
         ])
     }
 
-    /// 컬렉션 뷰 설정 (시스템 네비게이션)
-    private func setupCollectionViewWithSystemNav() {
-        view.insertSubview(collectionView, belowSubview: bottomBarContainer)
+    /// 페이지 뷰 컨트롤러 설정 (시스템 네비게이션)
+    private func setupPageViewControllerWithSystemNav() {
+        addChild(pageViewController)
+        view.insertSubview(pageViewController.view, belowSubview: bottomBarContainer)
+        pageViewController.didMove(toParent: self)
 
         NSLayoutConstraint.activate([
-            collectionView.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor),
-            collectionView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
-            collectionView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
-            // 하단바 바로 위까지 (겹침 방지)
-            collectionView.bottomAnchor.constraint(equalTo: bottomBarContainer.topAnchor)
+            pageViewController.view.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor),
+            pageViewController.view.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+            pageViewController.view.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+            pageViewController.view.bottomAnchor.constraint(equalTo: bottomBarContainer.topAnchor)
         ])
     }
 
     /// 시스템 네비게이션바 설정 (iOS 26+)
     @available(iOS 26.0, *)
     private func setupSystemNavigationBar() {
-        // 타이틀
         updateNavigationTitle()
 
-        // Extended Fallback 테스트 버튼 (하늘색) - Basic vs Extended 비교
         let extendedTestButton = UIBarButtonItem(
             image: UIImage(systemName: "sparkle.magnifyingglass"),
             style: .plain,
@@ -318,7 +293,6 @@ final class FaceComparisonViewController: UIViewController {
         )
         extendedTestButton.tintColor = .systemCyan
 
-        // 디버그 버튼 (주황색) - 기존 그룹 매칭 시뮬레이션
         let debugButton = UIBarButtonItem(
             image: UIImage(systemName: "ladybug"),
             style: .plain,
@@ -327,7 +301,6 @@ final class FaceComparisonViewController: UIViewController {
         )
         debugButton.tintColor = .systemOrange
 
-        // 순환 버튼 (우측 끝)
         let cycleButton = UIBarButtonItem(
             image: UIImage(systemName: "arrow.trianglehead.2.clockwise.rotate.90"),
             style: .plain,
@@ -336,7 +309,6 @@ final class FaceComparisonViewController: UIViewController {
         )
         cycleButton.tintColor = .white
 
-        // 순서: [순환, 디버그, Extended테스트] (우측부터 역순으로 배치됨)
         navigationItem.rightBarButtonItems = [cycleButton, debugButton, extendedTestButton]
     }
 
@@ -349,27 +321,22 @@ final class FaceComparisonViewController: UIViewController {
         bottomBarContainer.addSubview(deleteButton)
 
         NSLayoutConstraint.activate([
-            // 하단바 컨테이너: SafeArea Bottom 위로 56pt부터 시작해서 화면 끝까지
             bottomBarContainer.leadingAnchor.constraint(equalTo: view.leadingAnchor),
             bottomBarContainer.trailingAnchor.constraint(equalTo: view.trailingAnchor),
             bottomBarContainer.bottomAnchor.constraint(equalTo: view.bottomAnchor),
             bottomBarContainer.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor, constant: -Self.bottomBarHeight),
 
-            // 블러 효과
             bottomBarBlur.topAnchor.constraint(equalTo: bottomBarContainer.topAnchor),
             bottomBarBlur.leadingAnchor.constraint(equalTo: bottomBarContainer.leadingAnchor),
             bottomBarBlur.trailingAnchor.constraint(equalTo: bottomBarContainer.trailingAnchor),
             bottomBarBlur.bottomAnchor.constraint(equalTo: bottomBarContainer.bottomAnchor),
 
-            // Cancel 버튼 (좌측) - 컨테이너 Top 기준
             cancelButton.leadingAnchor.constraint(equalTo: bottomBarContainer.leadingAnchor, constant: 16),
             cancelButton.topAnchor.constraint(equalTo: bottomBarContainer.topAnchor, constant: 8),
 
-            // 선택 개수 라벨 (중앙) - 컨테이너 Top 기준
             selectionCountLabel.centerXAnchor.constraint(equalTo: bottomBarContainer.centerXAnchor),
             selectionCountLabel.topAnchor.constraint(equalTo: bottomBarContainer.topAnchor, constant: 16),
 
-            // Delete 버튼 (우측) - 컨테이너 Top 기준
             deleteButton.trailingAnchor.constraint(equalTo: bottomBarContainer.trailingAnchor, constant: -16),
             deleteButton.topAnchor.constraint(equalTo: bottomBarContainer.topAnchor, constant: 8)
         ])
@@ -384,7 +351,8 @@ final class FaceComparisonViewController: UIViewController {
                 let faces = await SimilarityCache.shared.getFaces(for: assetID)
                 photoFaces[assetID] = faces
             }
-            collectionView.reloadData()
+            isPhotoFacesLoaded = true
+            setupInitialPageIfReady()
         }
     }
 
@@ -394,13 +362,25 @@ final class FaceComparisonViewController: UIViewController {
             let validSlots = await SimilarityCache.shared.getGroupValidPersonIndices(for: comparisonGroup.sourceGroupID)
             validPersonIndices = validSlots.sorted()
 
-            // 현재 인물의 인덱스 찾기
             if let index = validPersonIndices.firstIndex(of: comparisonGroup.personIndex) {
                 currentPersonArrayIndex = index
             }
 
+            isValidPersonIndicesLoaded = true
             updateTitleBar()
+            setupInitialPageIfReady()
         }
+    }
+
+    /// 데이터 로딩 완료 시 초기 페이지 설정
+    private func setupInitialPageIfReady() {
+        guard isDataReady else { return }
+
+        // 초기 페이지 설정
+        let initialPage = PersonPageViewController(personIndex: currentPersonIndex, dataSource: self)
+        pageViewController.setViewControllers([initialPage], direction: .forward, animated: false)
+
+        print("[FaceComparisonViewController] Initial page set for person \(currentPersonIndex)")
     }
 
     // MARK: - UI Updates
@@ -441,14 +421,6 @@ final class FaceComparisonViewController: UIViewController {
 
     // MARK: - Helpers
 
-    /// 특정 인물의 사진 목록 반환
-    private func photosForPerson(_ personIndex: Int) -> [String] {
-        return comparisonGroup.selectedAssetIDs.filter { assetID in
-            guard let faces = photoFaces[assetID] else { return false }
-            return faces.contains { $0.personIndex == personIndex }
-        }
-    }
-
     /// PHAsset 가져오기
     private func asset(for assetID: String) -> PHAsset? {
         guard let fetchResult = fetchResult else { return nil }
@@ -462,16 +434,27 @@ final class FaceComparisonViewController: UIViewController {
         return nil
     }
 
+    /// 특정 인물로 이동 (UIPageViewController 사용)
+    private func navigateToPerson(at arrayIndex: Int, direction: UIPageViewController.NavigationDirection) {
+        guard arrayIndex >= 0 && arrayIndex < validPersonIndices.count else { return }
+
+        currentPersonArrayIndex = arrayIndex
+        let targetPersonIndex = validPersonIndices[arrayIndex]
+
+        let targetPage = PersonPageViewController(personIndex: targetPersonIndex, dataSource: self)
+        pageViewController.setViewControllers([targetPage], direction: direction, animated: true)
+
+        updateTitleBar()
+    }
+
     // MARK: - Actions
 
     /// Cancel 버튼 탭
     @objc private func cancelButtonTapped() {
         print("[FaceComparisonViewController] Cancel tapped")
 
-        // 선택 해제
         selectedAssetIDs.removeAll()
 
-        // 화면 닫기
         dismiss(animated: true) { [weak self] in
             guard let self = self else { return }
             self.delegate?.faceComparisonViewControllerDidClose(self)
@@ -486,19 +469,15 @@ final class FaceComparisonViewController: UIViewController {
 
         let deletedIDs = Array(selectedAssetIDs)
 
-        // TrashStore에 이동
         trashStore.moveToTrash(assetIDs: deletedIDs)
 
-        // 캐시에서 그룹 업데이트
         Task { @MainActor in
             for assetID in deletedIDs {
                 _ = await SimilarityCache.shared.removeMemberFromGroup(assetID, groupID: comparisonGroup.sourceGroupID)
             }
 
-            // 선택 상태 초기화
             selectedAssetIDs.removeAll()
 
-            // delegate에게 삭제 완료 알림 (delegate가 화면 전환 처리)
             delegate?.faceComparisonViewController(self, didDeletePhotos: deletedIDs)
         }
     }
@@ -507,20 +486,16 @@ final class FaceComparisonViewController: UIViewController {
     @objc private func cycleButtonTapped() {
         guard validPersonIndices.count > 1 else { return }
 
-        // 다음 인물로 이동 (원형 순환)
-        currentPersonArrayIndex = (currentPersonArrayIndex + 1) % validPersonIndices.count
+        let nextIndex = (currentPersonArrayIndex + 1) % validPersonIndices.count
 
-        print("[FaceComparisonViewController] Cycled to person \(currentPersonIndex)")
+        print("[FaceComparisonViewController] Cycled to person \(validPersonIndices[nextIndex])")
 
-        // UI 갱신 (선택 상태 유지)
-        updateTitleBar()
-        collectionView.reloadData()
+        navigateToPerson(at: nextIndex, direction: .forward)
     }
 
     // MARK: - Debug Actions
 
     /// 디버그 버튼 탭
-    /// 그룹 매칭 시뮬레이션 + 현재 캐시 상태를 출력합니다.
     @objc private func debugButtonTapped() {
         print("[FaceComparisonViewController] Debug button tapped - Running Group Matching Simulation")
 
@@ -531,11 +506,7 @@ final class FaceComparisonViewController: UIViewController {
                 return
             }
 
-            // PHAsset 가져오기 (assetIDs 순서 보장)
-            let fetchResult = PHAsset.fetchAssets(
-                withLocalIdentifiers: assetIDs,
-                options: nil
-            )
+            let fetchResult = PHAsset.fetchAssets(withLocalIdentifiers: assetIDs, options: nil)
             var photosDict: [String: PHAsset] = [:]
             fetchResult.enumerateObjects { asset, _, _ in
                 photosDict[asset.localIdentifier] = asset
@@ -547,10 +518,8 @@ final class FaceComparisonViewController: UIViewController {
                 return
             }
 
-            // 그룹 매칭 시뮬레이션 실행
             await YuNetDebugTest.shared.runGroupMatchingTest(with: photos)
 
-            // 기존 캐시 상태도 출력 (현재 앱에서 실제로 적용된 결과)
             let debugInfo = await FaceComparisonDebugHelper.generateDebugInfo(
                 allAssetIDs: assetIDs,
                 groupID: comparisonGroup.sourceGroupID,
@@ -562,7 +531,6 @@ final class FaceComparisonViewController: UIViewController {
     }
 
     /// Extended Fallback 테스트 버튼 탭
-    /// Basic vs Extended 모드 비교 테스트를 실행합니다.
     @objc private func extendedTestButtonTapped() {
         Task { @MainActor in
             let assetIDs = comparisonGroup.selectedAssetIDs
@@ -571,11 +539,7 @@ final class FaceComparisonViewController: UIViewController {
                 return
             }
 
-            // PHAsset 가져오기 (assetIDs 순서 보장)
-            let fetchResult = PHAsset.fetchAssets(
-                withLocalIdentifiers: assetIDs,
-                options: nil
-            )
+            let fetchResult = PHAsset.fetchAssets(withLocalIdentifiers: assetIDs, options: nil)
             var photosDict: [String: PHAsset] = [:]
             fetchResult.enumerateObjects { asset, _, _ in
                 photosDict[asset.localIdentifier] = asset
@@ -587,102 +551,55 @@ final class FaceComparisonViewController: UIViewController {
                 return
             }
 
-            // Extended Fallback 테스트 실행 (별도 파일로 분리됨)
             await ExtendedFallbackTester.shared.runComparison(with: photos)
         }
     }
-
-    /// 감지 비교 버튼 탭
-    /// Vision fallback ON/OFF 매칭 결과를 비교합니다.
-    @objc private func compareDetectionButtonTapped() {
-        print("[FaceComparisonViewController] Compare button tapped - Vision Fallback Test")
-
-        Task { @MainActor in
-            let assetIDs = comparisonGroup.selectedAssetIDs
-            guard !assetIDs.isEmpty else {
-                print("[FallbackTest] No photos available")
-                return
-            }
-
-            // PHAsset 가져오기 (assetIDs 순서 보장)
-            let fetchResult = PHAsset.fetchAssets(
-                withLocalIdentifiers: assetIDs,
-                options: nil
-            )
-            var photosDict: [String: PHAsset] = [:]
-            fetchResult.enumerateObjects { asset, _, _ in
-                photosDict[asset.localIdentifier] = asset
-            }
-            let photos = assetIDs.compactMap { photosDict[$0] }
-
-            guard !photos.isEmpty else {
-                print("[FallbackTest] Failed to fetch PHAssets")
-                return
-            }
-
-            // Vision fallback 비교 실행 (디버그 헬퍼로 위임)
-            await FaceComparisonDebugHelper.runVisionFallbackComparison(with: photos)
-        }
-    }
-
 }
 
-// MARK: - UICollectionViewDataSource
+// MARK: - FaceComparisonDataSource
 
-extension FaceComparisonViewController: UICollectionViewDataSource {
+extension FaceComparisonViewController: FaceComparisonDataSource {
 
-    func numberOfSections(in collectionView: UICollectionView) -> Int {
-        return 1
-    }
-
-    func collectionView(_ collectionView: UICollectionView, numberOfItemsInSection section: Int) -> Int {
-        return photosForPerson(currentPersonIndex).count
-    }
-
-    func collectionView(_ collectionView: UICollectionView, cellForItemAt indexPath: IndexPath) -> UICollectionViewCell {
-        guard let cell = collectionView.dequeueReusableCell(
-            withReuseIdentifier: FaceComparisonCell.reuseIdentifier,
-            for: indexPath
-        ) as? FaceComparisonCell else {
-            return UICollectionViewCell()
+    func photosForPerson(_ personIndex: Int) -> [String] {
+        return comparisonGroup.selectedAssetIDs.filter { assetID in
+            guard let faces = photoFaces[assetID] else { return false }
+            return faces.contains { $0.personIndex == personIndex }
         }
+    }
 
-        let photos = photosForPerson(currentPersonIndex)
-        guard indexPath.item < photos.count else { return cell }
+    func isSelected(_ assetID: String) -> Bool {
+        return selectedAssetIDs.contains(assetID)
+    }
 
-        let assetID = photos[indexPath.item]
-
-        // 얼굴 bounding box 가져오기
-        let face = photoFaces[assetID]?.first { $0.personIndex == currentPersonIndex }
-
-        // 선택 상태
-        let isSelected = selectedAssetIDs.contains(assetID)
-
-        // 디버그 넘버링 생성 (예: a1, a2, b1, b2)
-        let personAlphabetIndex = validPersonIndices.firstIndex(of: currentPersonIndex) ?? 0
-        let personAlphabet = String(UnicodeScalar("a".unicodeScalars.first!.value + UInt32(personAlphabetIndex))!)
-        let debugText = "\(personAlphabet)\(indexPath.item + 1)"
-
-        // 이미지 로드 및 얼굴 크롭
-        if let asset = asset(for: assetID), let boundingBox = face?.boundingBox {
-            loadCroppedFaceImage(for: asset, boundingBox: boundingBox) { image in
-                DispatchQueue.main.async {
-                    cell.configure(with: image, isSelected: isSelected, assetID: assetID, debugText: debugText)
-                }
-            }
+    func toggleSelection(for assetID: String) {
+        if selectedAssetIDs.contains(assetID) {
+            selectedAssetIDs.remove(assetID)
         } else {
-            cell.configure(with: nil, isSelected: isSelected, assetID: assetID, debugText: debugText)
+            selectedAssetIDs.insert(assetID)
         }
 
-        return cell
+        updateSelectionCount()
+
+        print("[FaceComparisonViewController] Toggled selection for \(assetID.prefix(8))..., now \(selectedAssetIDs.count) selected")
     }
 
-    /// 크롭된 얼굴 이미지 로드
-    private func loadCroppedFaceImage(
-        for asset: PHAsset,
-        boundingBox: CGRect,
+    func face(for assetID: String, personIndex: Int) -> CachedFace? {
+        return photoFaces[assetID]?.first { $0.personIndex == personIndex }
+    }
+
+    func loadFaceImage(
+        assetID: String,
+        personIndex: Int,
         completion: @escaping (UIImage?) -> Void
     ) {
+        guard let asset = asset(for: assetID),
+              let face = face(for: assetID, personIndex: personIndex) else {
+            completion(nil)
+            return
+        }
+
+        let boundingBox = face.boundingBox
+
         let options = PHImageRequestOptions()
         options.deliveryMode = .highQualityFormat
         options.resizeMode = .exact
@@ -695,72 +612,92 @@ extension FaceComparisonViewController: UICollectionViewDataSource {
             options: options
         ) { image, _ in
             guard let image = image else {
-                completion(nil)
+                DispatchQueue.main.async { completion(nil) }
                 return
             }
 
-            // 얼굴 크롭
-            do {
-                let croppedImage = try FaceCropper.cropFace(from: image, boundingBox: boundingBox)
-                completion(croppedImage)
-            } catch {
-                print("[FaceComparisonViewController] Failed to crop face: \(error)")
-                completion(nil)
+            // 백그라운드에서 크롭 수행
+            DispatchQueue.global(qos: .userInitiated).async {
+                do {
+                    let croppedImage = try FaceCropper.cropFace(from: image, boundingBox: boundingBox)
+                    DispatchQueue.main.async { completion(croppedImage) }
+                } catch {
+                    print("[FaceComparisonViewController] Failed to crop face: \(error)")
+                    DispatchQueue.main.async { completion(nil) }
+                }
             }
         }
     }
 }
 
-// MARK: - UICollectionViewDelegate
+// MARK: - UIPageViewControllerDataSource
 
-extension FaceComparisonViewController: UICollectionViewDelegate {
+extension FaceComparisonViewController: UIPageViewControllerDataSource {
 
-    func collectionView(_ collectionView: UICollectionView, didSelectItemAt indexPath: IndexPath) {
-        let photos = photosForPerson(currentPersonIndex)
-        guard indexPath.item < photos.count else { return }
+    func pageViewController(
+        _ pageViewController: UIPageViewController,
+        viewControllerBefore viewController: UIViewController
+    ) -> UIViewController? {
+        guard let currentPage = viewController as? PersonPageViewController else { return nil }
 
-        let assetID = photos[indexPath.item]
-
-        // 선택 토글
-        if selectedAssetIDs.contains(assetID) {
-            selectedAssetIDs.remove(assetID)
-        } else {
-            selectedAssetIDs.insert(assetID)
+        let currentIndex = validPersonIndices.firstIndex(of: currentPage.personIndex)
+        guard let idx = currentIndex, idx > 0 else {
+            // 원형 순환: 첫 번째에서 마지막으로
+            guard validPersonIndices.count > 1 else { return nil }
+            let lastPersonIndex = validPersonIndices[validPersonIndices.count - 1]
+            return PersonPageViewController(personIndex: lastPersonIndex, dataSource: self)
         }
 
-        // 셀 UI 업데이트
-        if let cell = collectionView.cellForItem(at: indexPath) as? FaceComparisonCell {
-            cell.setSelected(selectedAssetIDs.contains(assetID))
+        let previousPersonIndex = validPersonIndices[idx - 1]
+        return PersonPageViewController(personIndex: previousPersonIndex, dataSource: self)
+    }
+
+    func pageViewController(
+        _ pageViewController: UIPageViewController,
+        viewControllerAfter viewController: UIViewController
+    ) -> UIViewController? {
+        guard let currentPage = viewController as? PersonPageViewController else { return nil }
+
+        let currentIndex = validPersonIndices.firstIndex(of: currentPage.personIndex)
+        guard let idx = currentIndex, idx < validPersonIndices.count - 1 else {
+            // 원형 순환: 마지막에서 첫 번째로
+            guard validPersonIndices.count > 1 else { return nil }
+            let firstPersonIndex = validPersonIndices[0]
+            return PersonPageViewController(personIndex: firstPersonIndex, dataSource: self)
         }
 
-        // 선택 개수 업데이트
-        updateSelectionCount()
-
-        print("[FaceComparisonViewController] Toggled selection for \(assetID.prefix(8))..., now \(selectedAssetIDs.count) selected")
+        let nextPersonIndex = validPersonIndices[idx + 1]
+        return PersonPageViewController(personIndex: nextPersonIndex, dataSource: self)
     }
 }
 
-// MARK: - UICollectionViewDelegateFlowLayout
+// MARK: - UIPageViewControllerDelegate
 
-extension FaceComparisonViewController: UICollectionViewDelegateFlowLayout {
+extension FaceComparisonViewController: UIPageViewControllerDelegate {
 
-    func collectionView(
-        _ collectionView: UICollectionView,
-        layout collectionViewLayout: UICollectionViewLayout,
-        sizeForItemAt indexPath: IndexPath
-    ) -> CGSize {
-        // 2열 정사각형
-        let width = (collectionView.bounds.width - Self.gridSpacing) / 2
-        let size = max(width, Self.minCellSize)
-        return CGSize(width: size, height: size)
-    }
+    func pageViewController(
+        _ pageViewController: UIPageViewController,
+        didFinishAnimating finished: Bool,
+        previousViewControllers: [UIViewController],
+        transitionCompleted completed: Bool
+    ) {
+        guard completed,
+              let currentPage = pageViewController.viewControllers?.first as? PersonPageViewController else {
+            return
+        }
 
-    func collectionView(
-        _ collectionView: UICollectionView,
-        layout collectionViewLayout: UICollectionViewLayout,
-        insetForSectionAt section: Int
-    ) -> UIEdgeInsets {
-        return UIEdgeInsets(top: Self.gridSpacing, left: 0, bottom: Self.gridSpacing, right: 0)
+        // 현재 인물 인덱스 업데이트
+        if let index = validPersonIndices.firstIndex(of: currentPage.personIndex) {
+            currentPersonArrayIndex = index
+        }
+
+        // 타이틀바 업데이트
+        updateTitleBar()
+
+        // 현재 페이지 리로드 (선택 상태 동기화)
+        currentPage.reloadData()
+
+        print("[FaceComparisonViewController] Page transition completed to person \(currentPage.personIndex)")
     }
 }
 
@@ -784,5 +721,3 @@ extension FaceComparisonViewController: FaceComparisonTitleBarDelegate {
         extendedTestButtonTapped()
     }
 }
-
-
