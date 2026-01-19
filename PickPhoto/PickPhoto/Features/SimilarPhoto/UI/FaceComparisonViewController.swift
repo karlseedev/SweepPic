@@ -694,9 +694,6 @@ extension FaceComparisonViewController: UIPageViewControllerDelegate {
         // 타이틀바 업데이트
         updateTitleBar()
 
-        // 현재 페이지 리로드 (선택 상태 동기화)
-        currentPage.reloadData()
-
         print("[FaceComparisonViewController] Page transition completed to person \(currentPage.personIndex)")
     }
 }
