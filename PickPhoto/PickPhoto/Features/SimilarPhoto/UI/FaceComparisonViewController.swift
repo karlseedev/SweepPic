@@ -84,8 +84,8 @@ final class FaceComparisonViewController: UIViewController {
     /// 선택된 사진 ID 집합
     private var selectedAssetIDs: Set<String> = []
 
-    /// PHFetchResult (이미지 로딩용)
-    private let fetchResult: PHFetchResult<PHAsset>?
+    /// PHAsset 캐시 (assetID → PHAsset, O(1) 조회용)
+    private var assetCache: [String: PHAsset] = [:]
 
     /// 이미지 로더
     private let imageManager = PHCachingImageManager()
@@ -185,12 +185,10 @@ final class FaceComparisonViewController: UIViewController {
     /// FaceComparisonViewController를 생성합니다.
     init(
         comparisonGroup: ComparisonGroup,
-        fetchResult: PHFetchResult<PHAsset>?,
         trashStore: TrashStoreProtocol = TrashStore.shared,
         cache: any SimilarityCacheProtocol = SimilarityCache.shared
     ) {
         self.comparisonGroup = comparisonGroup
-        self.fetchResult = fetchResult
         self.trashStore = trashStore
         self.cache = cache
         super.init(nibName: nil, bundle: nil)
@@ -210,6 +208,7 @@ final class FaceComparisonViewController: UIViewController {
 
         view.backgroundColor = .black
 
+        buildAssetCache()
         setupUI()
         loadPhotoFaces()
         loadValidPersonIndices()
@@ -349,6 +348,19 @@ final class FaceComparisonViewController: UIViewController {
 
     // MARK: - Data Loading
 
+    /// PHAsset 캐시 구축 (O(1) 조회용)
+    /// comparisonGroup에 포함된 assetID들만 캐싱합니다.
+    private func buildAssetCache() {
+        let result = PHAsset.fetchAssets(
+            withLocalIdentifiers: comparisonGroup.selectedAssetIDs,
+            options: nil
+        )
+        result.enumerateObjects { [weak self] asset, _, _ in
+            self?.assetCache[asset.localIdentifier] = asset
+        }
+        print("[FaceComparisonViewController] Asset cache built: \(assetCache.count) assets")
+    }
+
     /// 사진별 얼굴 정보 로드
     private func loadPhotoFaces() {
         Task { @MainActor in
@@ -426,17 +438,9 @@ final class FaceComparisonViewController: UIViewController {
 
     // MARK: - Helpers
 
-    /// PHAsset 가져오기
+    /// PHAsset 가져오기 (O(1) 캐시 조회)
     private func asset(for assetID: String) -> PHAsset? {
-        guard let fetchResult = fetchResult else { return nil }
-
-        for i in 0..<fetchResult.count {
-            let asset = fetchResult.object(at: i)
-            if asset.localIdentifier == assetID {
-                return asset
-            }
-        }
-        return nil
+        return assetCache[assetID]
     }
 
     /// 특정 인물로 이동 (UIPageViewController 사용)

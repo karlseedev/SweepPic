@@ -683,8 +683,7 @@ extension ViewerViewController: FaceButtonOverlayDelegate {
 
         // FaceComparisonViewController 생성 및 표시
         let faceComparisonVC = FaceComparisonViewController(
-            comparisonGroup: comparisonGroup,
-            fetchResult: coordinator.fetchResult
+            comparisonGroup: comparisonGroup
         )
         faceComparisonVC.delegate = self
         present(faceComparisonVC, animated: true)
