@@ -267,16 +267,8 @@ extension ViewerViewController {
             faceButtonOverlay?.clearButtonsOnly()
         }
 
-        // 새 사진에 대해 체크
+        // 새 사진에 대해 체크 (showFaceButtons에서 줌 상태 자동 인식)
         checkAndShowFaceButtons()
-
-        // 줌 상태 유지 모드이고 VC에 저장된 줌 정보가 있으면 적용
-        if !resetZoom, let zoomInfo = lastZoomInfo,
-           let zoomScale = zoomInfo["zoomScale"] as? CGFloat,
-           zoomScale > 1.0 {
-            // 디바운스 없이 즉시 줌 기반 위치 적용
-            showButtonsAfterZoom()
-        }
     }
 
     /// 유사 사진 기능 정리
@@ -524,13 +516,34 @@ extension ViewerViewController {
         guard let asset = coordinator.asset(at: currentIndex) else { return }
         let imageSize = CGSize(width: asset.pixelWidth, height: asset.pixelHeight)
 
-        // 버튼 표시
-        faceButtonOverlay?.showButtons(
-            for: validFaces,
-            imageSize: imageSize,
-            viewerFrame: view.bounds,
-            assetID: assetID
-        )
+        // 버튼 표시 (줌 상태 확인)
+        // VC의 lastZoomInfo에 줌 정보가 있으면 줌 기반 위치로 표시
+        if let zoomInfo = lastZoomInfo,
+           let zoomScale = zoomInfo["zoomScale"] as? CGFloat,
+           let contentOffset = zoomInfo["contentOffset"] as? CGPoint,
+           let imageViewFrame = zoomInfo["imageViewFrame"] as? CGRect,
+           zoomScale > 1.0 {
+            // 줌 상태: 먼저 기본 정보 설정 후 줌 기반 위치로 표시
+            faceButtonOverlay?.showButtons(
+                for: validFaces,
+                imageSize: imageSize,
+                viewerFrame: view.bounds,
+                assetID: assetID
+            )
+            faceButtonOverlay?.showButtonsWithZoom(
+                zoomScale: zoomScale,
+                contentOffset: contentOffset,
+                imageViewFrame: imageViewFrame
+            )
+        } else {
+            // 1x 스케일: 기본 위치로 표시
+            faceButtonOverlay?.showButtons(
+                for: validFaces,
+                imageSize: imageSize,
+                viewerFrame: view.bounds,
+                assetID: assetID
+            )
+        }
 
         // 성능 측정: 버튼 표시 완료 시간 기록
         let elapsedMs = (CFAbsoluteTimeGetCurrent() - buttonShowStartTime) * 1000
