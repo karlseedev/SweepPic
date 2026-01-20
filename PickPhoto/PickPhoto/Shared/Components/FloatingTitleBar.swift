@@ -144,7 +144,7 @@ final class FloatingTitleBar: UIView {
         return label
     }()
 
-    /// Select 버튼 (캡슐 + 틴티드 스타일)
+    /// Select 버튼 (캡슐 + 틴티드 스타일) - 가장 오른쪽
     private lazy var selectButton: UIButton = {
         var config = UIButton.Configuration.filled()
         config.title = "Select"
@@ -158,6 +158,21 @@ final class FloatingTitleBar: UIView {
         let button = UIButton(configuration: config)
         button.addTarget(self, action: #selector(selectButtonTapped), for: .touchUpInside)
         button.translatesAutoresizingMaskIntoConstraints = false
+        return button
+    }()
+
+    /// 두 번째 오른쪽 버튼 (Select 버튼 왼쪽에 배치)
+    /// 휴지통 탭에서 [Select] [비우기] 동시 표시용
+    private lazy var secondRightButton: UIButton = {
+        var config = UIButton.Configuration.filled()
+        config.baseBackgroundColor = UIColor.systemRed.withAlphaComponent(0.3)
+        config.baseForegroundColor = .white
+        config.cornerStyle = .capsule
+        config.contentInsets = NSDirectionalEdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16)
+        let button = UIButton(configuration: config)
+        button.addTarget(self, action: #selector(secondRightButtonTapped), for: .touchUpInside)
+        button.translatesAutoresizingMaskIntoConstraints = false
+        button.isHidden = true // 기본 숨김
         return button
     }()
 
@@ -193,6 +208,7 @@ final class FloatingTitleBar: UIView {
         addSubview(contentContainer)
         contentContainer.addSubview(backButton)
         contentContainer.addSubview(titleLabel)
+        contentContainer.addSubview(secondRightButton)
         contentContainer.addSubview(selectButton)
 
         setupConstraints()
@@ -228,6 +244,10 @@ final class FloatingTitleBar: UIView {
             // Select 버튼: 우측 정렬, 세로 중앙
             selectButton.trailingAnchor.constraint(equalTo: contentContainer.trailingAnchor),
             selectButton.centerYAnchor.constraint(equalTo: contentContainer.centerYAnchor),
+
+            // Second Right 버튼: Select 버튼 왼쪽, 세로 중앙
+            secondRightButton.trailingAnchor.constraint(equalTo: selectButton.leadingAnchor, constant: -8),
+            secondRightButton.centerYAnchor.constraint(equalTo: contentContainer.centerYAnchor),
         ])
 
         // 초기 타이틀 라벨 좌측 제약 활성화
@@ -262,6 +282,12 @@ final class FloatingTitleBar: UIView {
         let backPoint = convert(point, to: backButton)
         if backButton.bounds.contains(backPoint) && !backButton.isHidden {
             return backButton
+        }
+
+        // Second Right 버튼 영역 체크 (Select 버튼 왼쪽)
+        let secondRightPoint = convert(point, to: secondRightButton)
+        if secondRightButton.bounds.contains(secondRightPoint) && !secondRightButton.isHidden {
+            return secondRightButton
         }
 
         // Select 버튼 영역 체크
@@ -384,5 +410,78 @@ final class FloatingTitleBar: UIView {
     @objc private func rightButtonTapped() {
         print("[FloatingTitleBar] Right button tapped")
         rightButtonAction?()
+    }
+
+    // MARK: - Two Right Buttons Support
+
+    /// 두 번째 오른쪽 버튼 액션
+    private var secondRightButtonAction: (() -> Void)?
+
+    @objc private func secondRightButtonTapped() {
+        print("[FloatingTitleBar] Second right button tapped")
+        secondRightButtonAction?()
+    }
+
+    /// 두 개의 오른쪽 버튼 설정 (휴지통 탭: Select + 비우기)
+    /// - Parameters:
+    ///   - firstTitle: 첫 번째 버튼 타이틀 (Select 위치)
+    ///   - firstColor: 첫 번째 버튼 배경색
+    ///   - firstAction: 첫 번째 버튼 탭 액션
+    ///   - secondTitle: 두 번째 버튼 타이틀 (왼쪽에 추가)
+    ///   - secondColor: 두 번째 버튼 배경색
+    ///   - secondAction: 두 번째 버튼 탭 액션
+    func setTwoRightButtons(
+        firstTitle: String,
+        firstColor: UIColor = .systemBlue,
+        firstAction: @escaping () -> Void,
+        secondTitle: String,
+        secondColor: UIColor = .systemRed,
+        secondAction: @escaping () -> Void
+    ) {
+        // 첫 번째 버튼 (Select 위치 - 가장 오른쪽)
+        var firstConfig = UIButton.Configuration.filled()
+        firstConfig.title = firstTitle
+        firstConfig.baseBackgroundColor = firstColor.withAlphaComponent(0.3)
+        firstConfig.baseForegroundColor = .white
+        firstConfig.cornerStyle = .capsule
+        firstConfig.contentInsets = NSDirectionalEdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16)
+        selectButton.configuration = firstConfig
+        selectButton.isHidden = false
+        rightButtonAction = firstAction
+
+        // 액션 연결
+        selectButton.removeTarget(self, action: #selector(selectButtonTapped), for: .touchUpInside)
+        selectButton.removeTarget(self, action: #selector(rightButtonTapped), for: .touchUpInside)
+        selectButton.addTarget(self, action: #selector(rightButtonTapped), for: .touchUpInside)
+
+        // 두 번째 버튼 (왼쪽에 추가)
+        var secondConfig = UIButton.Configuration.filled()
+        secondConfig.title = secondTitle
+        secondConfig.baseBackgroundColor = secondColor.withAlphaComponent(0.3)
+        secondConfig.baseForegroundColor = .white
+        secondConfig.cornerStyle = .capsule
+        secondConfig.contentInsets = NSDirectionalEdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16)
+        secondRightButton.configuration = secondConfig
+        secondRightButton.isHidden = false
+        secondRightButtonAction = secondAction
+
+        print("[FloatingTitleBar] Two right buttons set: [\(firstTitle)] [\(secondTitle)]")
+    }
+
+    /// 두 번째 오른쪽 버튼 숨기기 (일반 모드 복원 시)
+    func hideSecondRightButton() {
+        secondRightButton.isHidden = true
+        secondRightButtonAction = nil
+    }
+
+    /// 모든 오른쪽 버튼을 Select 버튼만 있는 기본 상태로 복원
+    func resetToDefaultRightButtons() {
+        // 두 번째 버튼 숨기기
+        hideSecondRightButton()
+
+        // Select 버튼 복원
+        resetToSelectButton()
+
+        print("[FloatingTitleBar] Reset to default - showing Select button only")
     }
 }

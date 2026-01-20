@@ -165,13 +165,23 @@ extension TrashAlbumViewController {
         overlay.titleBar.setTitle(navigationTitle)
         overlay.titleBar.setShowsBackButton(false, action: nil)
 
-        // "비우기" 버튼 설정 (휴지통이 비어있지 않을 때)
+        // [Select] [비우기] 두 버튼 복원 (휴지통이 비어있지 않을 때)
         if !trashDataSourceAssets.isEmpty {
-            overlay.titleBar.setRightButton(title: "비우기", backgroundColor: .systemRed) { [weak self] in
-                self?.emptyTrashButtonTapped()
-            }
+            overlay.titleBar.setTwoRightButtons(
+                firstTitle: "Select",
+                firstColor: .systemBlue,
+                firstAction: { [weak self] in
+                    self?.enterSelectMode()
+                },
+                secondTitle: "비우기",
+                secondColor: .systemRed,
+                secondAction: { [weak self] in
+                    self?.emptyTrashButtonTapped()
+                }
+            )
         } else {
             overlay.titleBar.isSelectButtonHidden = true
+            overlay.titleBar.hideSecondRightButton()
         }
     }
 

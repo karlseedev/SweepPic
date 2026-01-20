@@ -194,7 +194,7 @@ final class TrashAlbumViewController: BaseGridViewController {
     /// FloatingOverlay 상태를 휴지통 탭용으로 설정
     /// - 타이틀: "PickPhoto 휴지통"
     /// - 뒤로가기 버튼: 숨김 (별도 탭이므로)
-    /// - 오른쪽 버튼: "비우기" (휴지통이 비어있지 않을 때만 표시)
+    /// - 오른쪽 버튼: [Select] [비우기] (휴지통이 비어있지 않을 때만 표시)
     private func configureFloatingOverlayForTrash() {
         guard let tabBarController = tabBarController as? TabBarController,
               let overlay = tabBarController.floatingOverlay else {
@@ -206,13 +206,24 @@ final class TrashAlbumViewController: BaseGridViewController {
         // 뒤로가기 버튼 숨김 (별도 탭이므로)
         overlay.titleBar.setShowsBackButton(false, action: nil)
 
-        // "비우기" 버튼 설정 (휴지통이 비어있지 않을 때)
+        // 휴지통이 비어있지 않을 때: [Select] [비우기] 두 버튼 표시
         if !_trashDataSource.assets.isEmpty {
-            overlay.titleBar.setRightButton(title: "비우기", backgroundColor: .systemRed) { [weak self] in
-                self?.emptyTrashButtonTapped()
-            }
+            overlay.titleBar.setTwoRightButtons(
+                firstTitle: "Select",
+                firstColor: .systemBlue,
+                firstAction: { [weak self] in
+                    self?.enterSelectMode()
+                },
+                secondTitle: "비우기",
+                secondColor: .systemRed,
+                secondAction: { [weak self] in
+                    self?.emptyTrashButtonTapped()
+                }
+            )
         } else {
+            // 휴지통이 비어있으면 버튼 숨김
             overlay.titleBar.isSelectButtonHidden = true
+            overlay.titleBar.hideSecondRightButton()
         }
 
         print("[TrashAlbumViewController] FloatingOverlay configured for trash tab")
