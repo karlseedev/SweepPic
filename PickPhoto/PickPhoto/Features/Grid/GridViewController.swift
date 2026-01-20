@@ -35,15 +35,13 @@ import AppCore
 
 /// 사진 그리드 뷰컨트롤러
 /// All Photos 그리드를 표시하고 핀치 줌, 스크롤 최적화 등을 처리
-final class GridViewController: UIViewController {
+final class GridViewController: BaseGridViewController {
 
     // MARK: - Constants
 
-    /// 셀 간격 (FR-001: 2pt) (extension에서 접근 필요)
-    static let cellSpacing: CGFloat = 2
-
-    // GridColumnCount → GridGridColumnCount.swift로 이동됨
-    // Pinch Zoom 상수 → GridGestures.swift로 이동됨
+    // cellSpacing → BaseGridViewController로 이동됨
+    // GridColumnCount → GridColumnCount.swift로 이동됨
+    // Pinch Zoom 상수 → BaseGridViewController로 이동됨
 
     /// 스크롤 스로틀링 간격 (Step 1: 200ms로 증가) (extension에서 접근 필요)
     static let scrollThrottleInterval: TimeInterval = 0.2
@@ -56,36 +54,7 @@ final class GridViewController: UIViewController {
 
     // MARK: - UI Components
 
-    /// 컬렉션 뷰 (extension에서 접근 필요)
-    lazy var collectionView: UICollectionView = {
-        let cv = UICollectionView(frame: .zero, collectionViewLayout: createLayout(columns: .three))
-        cv.backgroundColor = .black
-        cv.translatesAutoresizingMaskIntoConstraints = false
-        cv.register(PhotoCell.self, forCellWithReuseIdentifier: PhotoCell.reuseIdentifier)
-        cv.delegate = self
-        cv.dataSource = self
-        // [Step 1] prefetchDataSource 복원 (±1 row, 200ms throttle)
-        cv.prefetchDataSource = self
-        cv.alwaysBounceVertical = true
-        // T027-1f: Edge-to-edge 설정
-        // 플로팅 UI 사용 시 수동으로 contentInset 설정
-        cv.contentInsetAdjustmentBehavior = .never
-        return cv
-    }()
-
-    /// 빈 상태 뷰
-    private lazy var emptyStateView: EmptyStateView = {
-        let view = EmptyStateView()
-        view.configure(
-            icon: "photo.on.rectangle",
-            title: "사진이 없습니다",
-            subtitle: "사진을 촬영하거나 가져오세요"
-        )
-        view.useDarkTheme()  // 검정 배경에서 사용
-        view.isHidden = true
-        view.translatesAutoresizingMaskIntoConstraints = false
-        return view
-    }()
+    // collectionView, emptyStateView → BaseGridViewController로 이동됨
 
     // T064: (FR-033 변경) limitedAccessBanner 제거됨
     // Limited도 Denied와 동일하게 PermissionViewController에서 처리
@@ -95,23 +64,9 @@ final class GridViewController: UIViewController {
     /// 데이터소스 드라이버 (extension에서 접근 필요)
     let dataSourceDriver: GridDataSourceDriver
 
-    /// 이미지 파이프라인
-    private let imagePipeline: ImagePipelineProtocol
-
-    /// 휴지통 스토어 (extension에서 접근 필요)
-    let trashStore: TrashStoreProtocol
-
-    /// 현재 열 수 (extension에서 접근 필요)
-    var currentGridColumnCount: GridColumnCount = .three
-
-    /// 현재 셀 크기 (캐시) (extension에서 접근 필요)
-    var currentCellSize: CGSize = .zero
-
-    /// 핀치 줌 마지막 실행 시간 (쿨다운용) (extension에서 접근 필요)
-    var lastPinchZoomTime: Date?
-
-    /// 핀치 줌 앵커 에셋 ID (extension에서 접근 필요)
-    var pinchAnchorAssetID: String?
+    // imagePipeline, trashStore → BaseGridViewController로 이동됨
+    // currentGridColumnCount, currentCellSize → BaseGridViewController로 이동됨
+    // lastPinchZoomTime, pinchAnchorAssetID → BaseGridViewController로 이동됨
 
     /// 스크롤 스로틀링 마지막 시간
     private var lastScrollTime: Date?
@@ -130,8 +85,7 @@ final class GridViewController: UIViewController {
 
     // MARK: - Pending Viewer Return (iOS 18+ Zoom Transition 안정화)
 
-    /// 뷰어 닫힘 후 스크롤할 에셋 ID
-    private var pendingScrollAssetID: String?
+    // pendingScrollAssetID → BaseGridViewController로 이동됨
 
     /// 뷰어 복귀 후 사용자가 스크롤했는지 여부
     /// - true이면 applyPendingViewerReturn()에서 강제 스크롤 skip
@@ -224,17 +178,7 @@ final class GridViewController: UIViewController {
     /// [Phase 2] 감속 중 preheat 플래그 (중복 호출 방지)
     var isDecelerationPreheatScheduled = false
 
-    /// 맨 위 행 빈 셀 개수 (T027-2: 3의 배수가 아닐 시 맨 위 행에 빈 셀)
-    /// 최신 사진(맨 아래) 기준 꽉 차게 정렬
-    /// (extension에서 접근 필요)
-    var paddingCellCount: Int {
-        let totalCount = dataSourceDriver.count
-        guard totalCount > 0 else { return 0 }
-        let columns = currentGridColumnCount.rawValue
-        let remainder = totalCount % columns
-        // 나머지가 0이면 빈 셀 없음, 아니면 (열 수 - 나머지) 만큼 빈 셀
-        return remainder == 0 ? 0 : (columns - remainder)
-    }
+    // paddingCellCount → BaseGridViewController로 이동됨
 
     // MARK: - Timing (초기 로딩 측정용)
 
@@ -289,34 +233,49 @@ final class GridViewController: UIViewController {
         trashStore: TrashStoreProtocol = TrashStore.shared
     ) {
         self.dataSourceDriver = dataSourceDriver
-        self.imagePipeline = imagePipeline
-        self.trashStore = trashStore
-        super.init(nibName: nil, bundle: nil)
+        // GridDataSourceDriverAdapter 생성
+        self._gridDataSourceAdapter = GridDataSourceDriverAdapter(driver: dataSourceDriver)
+        super.init(imagePipeline: imagePipeline, trashStore: trashStore)
     }
 
     required init?(coder: NSCoder) {
-        self.dataSourceDriver = GridDataSourceDriver()
-        self.imagePipeline = ImagePipeline.shared
-        self.trashStore = TrashStore.shared
-        super.init(coder: coder)
+        fatalError("init(coder:) has not been implemented")
+    }
+
+    // MARK: - BaseGridViewController Overrides
+
+    /// GridDataSourceDriverAdapter 저장 (gridDataSource 오버라이드용)
+    private let _gridDataSourceAdapter: GridDataSourceDriverAdapter
+
+    /// 데이터 소스 (GridDataSourceDriver를 GridDataSource로 래핑)
+    override var gridDataSource: GridDataSource {
+        _gridDataSourceAdapter
+    }
+
+    /// 빈 상태 설정
+    override var emptyStateConfig: (icon: String, title: String, subtitle: String?) {
+        ("photo.on.rectangle", "사진이 없습니다", "사진을 촬영하거나 가져오세요")
+    }
+
+    /// 네비게이션 타이틀
+    /// ⚠️ 사진보관함 명칭 변경 시 동시 수정 필요:
+    /// - TabBarController.swift: tabBarItem.title
+    /// - FloatingOverlayContainer.swift: titleBar.title
+    /// - FloatingTitleBar.swift: title 기본값
+    override var navigationTitle: String {
+        "사진보관함"
     }
 
     // MARK: - Lifecycle
 
     override func viewDidLoad() {
-        super.viewDidLoad()
-
-        // [Timing] 로딩 시작 시간 기록
+        // [Timing] 로딩 시작 시간 기록 (super.viewDidLoad 전에)
         loadStartTime = CACurrentMediaTime()
         FileLogger.log("[Timing] === 초기 로딩 시작 ===")
 
-        setupUI()
-        setupGestures()
-        setupObservers()
+        // BaseGridViewController.viewDidLoad()에서 setupUI, setupGestures, additionalSetup 호출
+        super.viewDidLoad()
 
-        if AutoScrollTester.shouldInstallGestureByLaunchArguments {
-            collectionView.setupAutoScrollGesture()
-        }
         // loadData()는 viewDidLayoutSubviews에서 startInitialDisplay()로 호출
         // (레이아웃 확정 후에만 실행해야 size=0 버그 방지)
 
@@ -332,18 +291,44 @@ final class GridViewController: UIViewController {
         }
     }
 
+    /// 추가 설정 (viewDidLoad에서 호출됨)
+    override func additionalSetup() {
+        setupObservers()
+
+        if AutoScrollTester.shouldInstallGestureByLaunchArguments {
+            collectionView.setupAutoScrollGesture()
+        }
+    }
+
+    /// 추가 제스처 설정 (setupGestures에서 호출됨)
+    override func setupAdditionalGestures() {
+        // 드래그 선택 제스처 (T040)
+        // Select 모드에서만 활성화됨
+        let dragGesture = UIPanGestureRecognizer(target: self, action: #selector(handleDragSelectGesture(_:)))
+        dragGesture.minimumNumberOfTouches = 1
+        dragGesture.maximumNumberOfTouches = 1
+        dragGesture.delegate = self
+        dragGesture.isEnabled = false // 기본 비활성화, Select 모드 진입 시 활성화
+        collectionView.addGestureRecognizer(dragGesture)
+        dragSelectGesture = dragGesture
+
+        // PRD7: 스와이프/투핑거탭 제스처 (GridGestures.swift에서 구현)
+        setupSwipeDeleteGestures()
+
+        // 자동 스크롤 테스트 제스처 (3손가락 탭)
+        collectionView.setupAutoScrollGesture()
+    }
+
     /// 초기 표시 트리거 여부 (viewDidLayoutSubviews에서 1회만 실행)
     private var hasTriggeredInitialDisplay: Bool = false
 
     override func viewWillAppear(_ animated: Bool) {
+        // BaseGridViewController.viewWillAppear에서 configureFloatingOverlay() 호출
         super.viewWillAppear(animated)
 
         // [DEBUG] viewWillAppear 호출 시점
         let vwaTime = CACurrentMediaTime()
         let vwaMs = loadStartTime > 0 ? (vwaTime - loadStartTime) * 1000 : -1
-
-        // iOS 16~25: FloatingOverlay 상태 복원 (다른 탭에서 돌아올 때)
-        configureFloatingOverlayForPhotos()
 
         // 초기 진입 시에는 startInitialDisplay()에서 처리하므로 스킵
         if !hasFinishedInitialDisplay {
@@ -365,11 +350,11 @@ final class GridViewController: UIViewController {
         collectionView.reloadData()
     }
 
-    /// FloatingOverlay 상태를 Photos 탭용으로 복원
-    /// - 타이틀: "Photos"
+    /// FloatingOverlay 상태를 Photos 탭용으로 설정
+    /// - 타이틀: "사진보관함"
     /// - 뒤로가기 버튼: 숨김
     /// - 오른쪽 버튼: "Select"으로 복원
-    private func configureFloatingOverlayForPhotos() {
+    override func configureFloatingOverlay() {
         guard let tabBarController = tabBarController as? TabBarController,
               let overlay = tabBarController.floatingOverlay else {
             return
@@ -408,11 +393,8 @@ final class GridViewController: UIViewController {
     }
 
     override func viewDidLayoutSubviews() {
+        // BaseGridViewController.viewDidLayoutSubviews에서 updateCellSize, updateContentInset 호출
         super.viewDidLayoutSubviews()
-        // 셀 크기 업데이트
-        updateCellSize()
-        // T027-1f: contentInset 업데이트 (플로팅 UI 높이 반영)
-        updateContentInset()
 
         // B+A v2: 레이아웃 확정 후 1회만 초기 표시 시작
         // (currentCellSize가 확정된 후에만 프리로드/reloadData 실행)
@@ -430,72 +412,13 @@ final class GridViewController: UIViewController {
         }
     }
 
-    override func viewSafeAreaInsetsDidChange() {
-        super.viewSafeAreaInsetsDidChange()
-        // T027-1f: safe area 변경 시 contentInset 재계산
-        updateContentInset()
-    }
+    // viewSafeAreaInsetsDidChange → BaseGridViewController에서 처리
 
     // MARK: - Setup
 
-    /// UI 설정
-    private func setupUI() {
-        view.backgroundColor = .black
-        // ⚠️ 상단 타이틀 명칭 변경 시 동시 수정 필요:
-        // - GridViewController.swift: navigationItem.title (여기), setTitle()
-        // - FloatingOverlayContainer.swift: titleBar.title
-        // - FloatingTitleBar.swift: title 기본값
-        // 주의: title 대신 navigationItem.title 사용 (tabBarItem.title 덮어쓰기 방지)
-        navigationItem.title = "사진보관함"
-
-        // 컬렉션 뷰
-        view.addSubview(collectionView)
-        NSLayoutConstraint.activate([
-            collectionView.topAnchor.constraint(equalTo: view.topAnchor),
-            collectionView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
-            collectionView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
-            collectionView.bottomAnchor.constraint(equalTo: view.bottomAnchor)
-        ])
-
-        // 빈 상태 뷰
-        view.addSubview(emptyStateView)
-        NSLayoutConstraint.activate([
-            emptyStateView.centerXAnchor.constraint(equalTo: view.centerXAnchor),
-            emptyStateView.centerYAnchor.constraint(equalTo: view.centerYAnchor),
-            emptyStateView.leadingAnchor.constraint(greaterThanOrEqualTo: view.leadingAnchor, constant: 40),
-            emptyStateView.trailingAnchor.constraint(lessThanOrEqualTo: view.trailingAnchor, constant: -40)
-        ])
-
-        // T064: (FR-033 변경) limitedAccessBanner 제거됨
-        // Limited도 Denied와 동일하게 PermissionViewController에서 처리
-    }
-
-    // MARK: - T064: (FR-033 변경) Limited Access Banner 제거됨
+    // setupUI, setupGestures → BaseGridViewController로 이동됨
+    // T064: (FR-033 변경) limitedAccessBanner 제거됨
     // Limited도 Denied와 동일하게 PermissionViewController에서 처리
-    // limitedAccessBannerTapped(), updateLimitedAccessBanner() 함수 제거됨
-
-    /// 제스처 설정 (T023, T040)
-    private func setupGestures() {
-        // 핀치 줌 제스처 (T023)
-        let pinchGesture = UIPinchGestureRecognizer(target: self, action: #selector(handlePinchGesture(_:)))
-        collectionView.addGestureRecognizer(pinchGesture)
-
-        // 드래그 선택 제스처 (T040)
-        // Select 모드에서만 활성화됨
-        let dragGesture = UIPanGestureRecognizer(target: self, action: #selector(handleDragSelectGesture(_:)))
-        dragGesture.minimumNumberOfTouches = 1
-        dragGesture.maximumNumberOfTouches = 1
-        dragGesture.delegate = self
-        dragGesture.isEnabled = false // 기본 비활성화, Select 모드 진입 시 활성화
-        collectionView.addGestureRecognizer(dragGesture)
-        dragSelectGesture = dragGesture
-
-        // PRD7: 스와이프/투핑거탭 제스처 (GridGestures.swift에서 구현)
-        setupSwipeDeleteGestures()
-
-        // 자동 스크롤 테스트 제스처 (3손가락 탭)
-        collectionView.setupAutoScrollGesture()
-    }
 
     /// 옵저버 설정 (T026, T037)
     private func setupObservers() {
@@ -569,63 +492,10 @@ final class GridViewController: UIViewController {
 
     // MARK: - Layout
 
-    /// CompositionalLayout 생성 (extension에서 접근 필요)
-    /// - Parameter columns: 열 수
-    /// - Returns: UICollectionViewLayout
-    func createLayout(columns: GridColumnCount) -> UICollectionViewLayout {
-        let layout = UICollectionViewCompositionalLayout { _, environment in
-            let spacing = Self.cellSpacing
-            let columnCount = CGFloat(columns.rawValue)
+    // createLayout, updateCellSize → BaseGridViewController로 이동됨
 
-            // 셀 크기 계산 (정사각형)
-            let totalSpacing = spacing * (columnCount - 1)
-            let availableWidth = environment.container.effectiveContentSize.width - totalSpacing
-            let cellWidth = floor(availableWidth / columnCount)
-
-            // 아이템 크기
-            let itemSize = NSCollectionLayoutSize(
-                widthDimension: .absolute(cellWidth),
-                heightDimension: .absolute(cellWidth) // 정사각형 비율 (FR-001)
-            )
-            let item = NSCollectionLayoutItem(layoutSize: itemSize)
-
-            // 그룹 (가로)
-            let groupSize = NSCollectionLayoutSize(
-                widthDimension: .fractionalWidth(1.0),
-                heightDimension: .absolute(cellWidth)
-            )
-            let group = NSCollectionLayoutGroup.horizontal(
-                layoutSize: groupSize,
-                repeatingSubitem: item,
-                count: columns.rawValue
-            )
-            group.interItemSpacing = .fixed(spacing)
-
-            // 섹션
-            let section = NSCollectionLayoutSection(group: group)
-            section.interGroupSpacing = spacing
-            // Edge-to-edge: safe area 무시 (iOS 14+)
-            section.contentInsetsReference = .none
-
-            return section
-        }
-
-        return layout
-    }
-
-    /// 셀 크기 업데이트 (extension에서 접근 필요)
-    func updateCellSize() {
-        let spacing = Self.cellSpacing
-        let columnCount = CGFloat(currentGridColumnCount.rawValue)
-        let totalSpacing = spacing * (columnCount - 1)
-        let availableWidth = view.bounds.width - totalSpacing
-        let cellWidth = floor(availableWidth / columnCount)
-
-        currentCellSize = CGSize(width: cellWidth, height: cellWidth)
-    }
-
-    /// T027-1f: contentInset 업데이트 (플로팅 UI 높이 반영)
-    private func updateContentInset() {
+    /// contentInset 업데이트 (플로팅 UI 높이 반영, fallback 처리 포함)
+    override func updateContentInset() {
         // iOS 26+에서는 시스템 자동 조정 사용
         if #available(iOS 26.0, *) {
             return
@@ -634,7 +504,7 @@ final class GridViewController: UIViewController {
         // TabBarController에서 오버레이 높이 가져오기
         guard let tabBarController = tabBarController as? TabBarController,
               let heights = tabBarController.getOverlayHeights() else {
-            // 플로팅 UI가 없으면 safe area만 적용
+            // 플로팅 UI가 없으면 safe area만 적용 (fallback)
             let inset = UIEdgeInsets(
                 top: view.safeAreaInsets.top,
                 left: 0,
@@ -660,8 +530,15 @@ final class GridViewController: UIViewController {
         print("[GridViewController] ContentInset updated - top: \(heights.top), bottom: \(heights.bottom)")
     }
 
+    /// 현재 썸네일 크기 반환 (스크롤 상태에 따라 품질 저하 적용)
+    /// - Parameter forScrolling: 스크롤용 저품질 크기 요청 여부
+    /// - Returns: 썸네일 크기 (픽셀 단위)
+    override func thumbnailSize() -> CGSize {
+        thumbnailSize(forScrolling: false)
+    }
+
     /// 현재 썸네일 크기 반환 (스크롤 상태에 따라 품질 저하 적용) (extension에서 접근 필요)
-    func thumbnailSize(forScrolling: Bool = false) -> CGSize {
+    func thumbnailSize(forScrolling: Bool) -> CGSize {
         let baseSize = currentCellSize
         let scale = UIScreen.main.scale
 
@@ -679,7 +556,7 @@ final class GridViewController: UIViewController {
         }
     }
 
-    // Pinch Zoom 코드 → GridGestures.swift로 이동됨
+    // Pinch Zoom 코드 → BaseGridViewController로 이동됨
 
     // MARK: - Library Change (T026)
 
@@ -736,7 +613,7 @@ final class GridViewController: UIViewController {
     // MARK: - Empty State (T070)
 
     /// 빈 상태 업데이트 (extension에서 접근 필요)
-    func updateEmptyState() {
+    override func updateEmptyState() {
         let isEmpty = dataSourceDriver.count == 0
         emptyStateView.isHidden = !isEmpty
         collectionView.isHidden = isEmpty
@@ -745,11 +622,11 @@ final class GridViewController: UIViewController {
     // Scroll Optimization / Initial Display / Initial Preheat → GridScroll.swift로 이동됨
 }
 
-// MARK: - UICollectionViewDataSource
+// MARK: - UICollectionViewDataSource (Override)
 
-extension GridViewController: UICollectionViewDataSource {
+extension GridViewController {
 
-    func collectionView(_ collectionView: UICollectionView, numberOfItemsInSection section: Int) -> Int {
+    override func collectionView(_ collectionView: UICollectionView, numberOfItemsInSection section: Int) -> Int {
         // B+A v2: 프리로드 완료 전까지 셀 생성 차단
         // shouldShowItems가 false면 0 반환 → UICollectionView 레이아웃 패스에서 셀 미생성
         guard shouldShowItems else { return 0 }
@@ -758,7 +635,7 @@ extension GridViewController: UICollectionViewDataSource {
         return dataSourceDriver.count + paddingCellCount
     }
 
-    func collectionView(_ collectionView: UICollectionView, cellForItemAt indexPath: IndexPath) -> UICollectionViewCell {
+    override func collectionView(_ collectionView: UICollectionView, cellForItemAt indexPath: IndexPath) -> UICollectionViewCell {
         // [DEBUG] cellForItemAt 시간 측정 (초기 3초간)
         let cellStart = CACurrentMediaTime()
         let sinceStart = loadStartTime > 0 ? (cellStart - loadStartTime) * 1000 : -1
@@ -844,9 +721,9 @@ extension GridViewController: UICollectionViewDataSource {
     }
 }
 
-// MARK: - UICollectionViewDelegate
+// MARK: - UICollectionViewDelegate (Override)
 
-extension GridViewController: UICollectionViewDelegate {
+extension GridViewController {
 
     // [Timing] D) 첫 셀 표시 완료
     func collectionView(_ collectionView: UICollectionView, willDisplay cell: UICollectionViewCell, forItemAt indexPath: IndexPath) {
@@ -872,7 +749,7 @@ extension GridViewController: UICollectionViewDelegate {
         removeSimilarPhotoBorder(from: photoCell)
     }
 
-    func collectionView(_ collectionView: UICollectionView, didSelectItemAt indexPath: IndexPath) {
+    override func collectionView(_ collectionView: UICollectionView, didSelectItemAt indexPath: IndexPath) {
         // T027-2: 빈 셀 탭 무시
         let padding = paddingCellCount
         guard indexPath.item >= padding else { return }
@@ -1048,18 +925,18 @@ extension GridViewController: UICollectionViewDelegate {
     }
 }
 
-// MARK: - UICollectionViewDataSourcePrefetching (T024)
+// MARK: - UICollectionViewDataSourcePrefetching (T024, Override)
 
-extension GridViewController: UICollectionViewDataSourcePrefetching {
+extension GridViewController {
 
-    func collectionView(_ collectionView: UICollectionView, prefetchItemsAt indexPaths: [IndexPath]) {
+    override func collectionView(_ collectionView: UICollectionView, prefetchItemsAt indexPaths: [IndexPath]) {
         // [P0] 스크롤 중 preheat 완전 제거
         // - 근거: hitch 63% 개선 (40.7 → 15.0 ms/s), 회색 셀 차이 없음
         // - preheatAfterScrollStop()이 스크롤 정지 후 preheat 담당
         return
     }
 
-    func collectionView(_ collectionView: UICollectionView, cancelPrefetchingForItemsAt indexPaths: [IndexPath]) {
+    override func collectionView(_ collectionView: UICollectionView, cancelPrefetchingForItemsAt indexPaths: [IndexPath]) {
         // [P0] prefetch preheat 제거에 따라 cancel도 불필요
         return
     }
