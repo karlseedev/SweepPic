@@ -111,45 +111,12 @@ final class GridViewController: BaseGridViewController {
     /// (extension에서 접근 필요)
     var shouldShowItems: Bool = false
 
-    /// Select 모드 여부 (extension에서 setter 접근 필요)
-    var isSelectMode: Bool = false
-
-    /// 선택 관리자 (T037) (extension에서 접근 필요)
-    let selectionManager = SelectionManager()
-
-    /// 드래그 선택용 팬 제스처 (T040) (extension에서 접근 필요)
-    var dragSelectGesture: UIPanGestureRecognizer?
+    // Note: Select Mode 프로퍼티는 BaseGridViewController로 이동됨
+    // - isSelectMode, selectionManager, dragSelectGesture, dragSelect* 등
+    // - selectionCountBarItem, autoScrollTimer, autoScrollSpeed, autoScrollEdgeHeight
 
     /// PRD7: 이전 휴지통 상태 (changedIDs 계산용)
     private var lastTrashedIDs: Set<String> = []
-
-    /// 드래그 선택 시작 시점의 인덱스 (T040) (extension에서 접근 필요)
-    var dragSelectStartIndex: Int?
-
-    /// 드래그 선택 중 현재 인덱스 (T040) (extension에서 접근 필요)
-    var dragSelectCurrentIndex: Int?
-
-    /// 드래그 선택 모드: 선택(true) 또는 해제(false) (T040)
-    /// 첫 번째 셀이 이미 선택된 상태면 해제 모드, 아니면 선택 모드
-    /// (extension에서 접근 필요)
-    var dragSelectIsSelecting: Bool = true
-
-    /// 드래그 선택 중 선택/해제된 인덱스 범위 (T040) (extension에서 접근 필요)
-    var dragSelectAffectedIndices: Set<Int> = []
-
-    /// 자동 스크롤 타이머 (화면 가장자리 드래그 시) (extension에서 접근 필요)
-    var autoScrollTimer: Timer?
-
-    // MARK: - iOS 26+ Select Mode UI (시스템 UI 사용)
-
-    /// iOS 26+ 툴바의 선택 개수 라벨 (동적 업데이트용) (extension에서 접근 필요)
-    var selectionCountBarItem: UIBarButtonItem?
-
-    /// 자동 스크롤 영역 높이 (화면 상단/하단) (extension에서 접근 필요)
-    static let autoScrollEdgeHeight: CGFloat = 60
-
-    /// 자동 스크롤 속도 (포인트/초) (extension에서 접근 필요)
-    static let autoScrollSpeed: CGFloat = 400
 
     // MARK: - R2 로그 측정용 (extension에서 접근 필요)
 

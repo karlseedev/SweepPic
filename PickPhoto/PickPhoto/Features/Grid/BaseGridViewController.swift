@@ -131,6 +131,41 @@ class BaseGridViewController: UIViewController {
     /// Grid, Album: true / Trash: false
     var supportsSwipeDelete: Bool { false }
 
+    // MARK: - Select Mode Properties
+
+    /// Select 모드 여부
+    var isSelectMode: Bool = false
+
+    /// 선택 관리자
+    let selectionManager = SelectionManager()
+
+    /// iOS 26+ 툴바의 선택 개수 라벨
+    var selectionCountBarItem: UIBarButtonItem?
+
+    /// 드래그 선택용 팬 제스처
+    var dragSelectGesture: UIPanGestureRecognizer?
+
+    /// 드래그 선택 시작 인덱스
+    var dragSelectStartIndex: Int?
+
+    /// 드래그 선택 현재 인덱스
+    var dragSelectCurrentIndex: Int?
+
+    /// 드래그 선택 영향받은 인덱스들
+    var dragSelectAffectedIndices: Set<Int> = []
+
+    /// 드래그 선택 모드: 선택(true) 또는 해제(false)
+    var dragSelectIsSelecting: Bool = true
+
+    /// 자동 스크롤 타이머
+    var autoScrollTimer: Timer?
+
+    /// 자동 스크롤 속도 (pt/s)
+    static let autoScrollSpeed: CGFloat = 300
+
+    /// 자동 스크롤 영역 높이
+    static let autoScrollEdgeHeight: CGFloat = 60
+
     // MARK: - Abstract Properties (서브클래스 필수 구현)
 
     /// 데이터 소스 (서브클래스에서 반드시 오버라이드)
@@ -184,6 +219,7 @@ class BaseGridViewController: UIViewController {
         setupUI()
         setupGestures()
         setupNavigationUI()
+        setupSelectionManagerDelegate()
         additionalSetup()
     }
 
@@ -232,6 +268,9 @@ class BaseGridViewController: UIViewController {
         if supportsSwipeDelete {
             setupSwipeDeleteGestures()
         }
+
+        // 드래그 선택 제스처 (Select Mode 지원 시)
+        setupDragSelectGesture()
 
         // 서브클래스 추가 제스처
         setupAdditionalGestures()
@@ -503,18 +542,10 @@ class BaseGridViewController: UIViewController {
     /// 삭제 후 추가 처리
     func handleDeleteComplete(assetID: String) {}
 
-    // MARK: - 플로팅 UI 선택 모드 (iOS 18, 서브클래스에서 오버라이드 가능)
-
-    /// 플로팅 UI 선택 모드 진입
-    /// - Grid/Album: selectModeContainer (Delete 버튼)
-    /// - Trash: trashSelectModeContainer (Recover + Delete 버튼)
-    func enterSelectModeFloatingUI() {}
-
-    /// 플로팅 UI 선택 모드 종료
-    func exitSelectModeFloatingUI() {}
-
-    /// 플로팅 UI 선택 개수 업데이트
-    func updateSelectionCountFloatingUI(_ count: Int) {}
+    // Note: 플로팅 UI 선택 모드 메서드는 BaseSelectMode.swift로 이동됨
+    // - enterSelectModeFloatingUI()
+    // - exitSelectModeFloatingUI()
+    // - updateSelectionCountFloatingUI(_:)
 }
 
 // MARK: - UICollectionViewDataSource
@@ -555,6 +586,11 @@ extension BaseGridViewController: UICollectionViewDataSource {
             isTrashed: isTrashed,
             targetSize: thumbnailSize()
         )
+
+        // 선택 모드일 때 선택 상태 복원
+        if isSelectMode {
+            cell.isSelectedForDeletion = selectionManager.isSelected(assetID)
+        }
 
         // 서브클래스 추가 설정 (템플릿 메서드)
         configureCell(cell, at: indexPath, asset: asset)
