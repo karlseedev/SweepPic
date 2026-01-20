@@ -257,22 +257,13 @@ class BaseGridViewController: UIViewController {
         saveScrollAnchorIndexPath()
 
         coordinator.animate(alongsideTransition: { [weak self] _ in
-            // 회전 애니메이션 중에는 아무것도 하지 않음
+            // 레이아웃 무효화 (새 컬럼 수 계산됨)
+            self?.collectionView.collectionViewLayout.invalidateLayout()
         }, completion: { [weak self] _ in
             guard let self = self else { return }
-
-            // 회전 완료 후: 새 레이아웃 적용
-            // CompositionalLayout은 새 크기로 재생성해야 정확함
-            let newLayout = self.createLayout(columns: self.currentGridColumnCount)
-            self.collectionView.setCollectionViewLayout(newLayout, animated: false)
-
-            // 셀 크기 캐시 업데이트
-            self.updateCellSize()
-
-            // contentInset 재계산 (FloatingUI 높이 반영)
+            // ⚠️ 순서 중요: 먼저 inset 확정 → 그 다음 스크롤
+            // (inset 변경 후 스크롤하면 위치가 밀리지 않음)
             self.updateContentInset()
-
-            // 저장된 indexPath로 스크롤 복원
             self.restoreScrollAnchorIndexPath()
         })
     }
