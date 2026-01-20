@@ -186,7 +186,9 @@ extension BaseGridViewController {
     /// iOS 26+ Select 모드 진입 - 시스템 UI 사용
     @available(iOS 26.0, *)
     func enterSelectModeSystemUI() {
-        // 1. Cancel 버튼
+        // 1. 기존 버튼들 제거 후 Cancel 버튼만 표시
+        // Note: rightBarButtonItems (복수)를 사용하는 VC (예: Trash)와 충돌 방지
+        navigationItem.rightBarButtonItems = nil
         navigationItem.rightBarButtonItem = UIBarButtonItem(
             title: "Cancel",
             style: .plain,
