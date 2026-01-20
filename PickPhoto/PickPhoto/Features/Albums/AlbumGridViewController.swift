@@ -86,6 +86,12 @@ final class AlbumGridViewController: BaseGridViewController {
         setupSwipeGestures()
         setupObservers()
 
+        // iOS 26+: 시스템 바 사용, edge-to-edge 투명 효과 활성화
+        if #available(iOS 26.0, *) {
+            setContentScrollView(collectionView, for: .top)
+            setContentScrollView(collectionView, for: .bottom)
+        }
+
         print("[AlbumGridViewController] Initialized with \(fetchResult.count) photos in '\(albumTitle)'")
     }
 
@@ -130,6 +136,19 @@ final class AlbumGridViewController: BaseGridViewController {
         trashStore.onStateChange { [weak self] trashedAssetIDs in
             self?.handleTrashStateChange(trashedAssetIDs)
         }
+
+        // PRD7: VoiceOver 상태 변경 감지
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(voiceOverStatusChanged),
+            name: UIAccessibility.voiceOverStatusDidChangeNotification,
+            object: nil
+        )
+    }
+
+    /// PRD7: VoiceOver 상태 변경 시 스와이프 제스처 활성화/비활성화
+    @objc private func voiceOverStatusChanged() {
+        updateSwipeDeleteGestureEnabled()
     }
 
     /// 휴지통 상태 변경 처리
