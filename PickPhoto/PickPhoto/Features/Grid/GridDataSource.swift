@@ -74,3 +74,47 @@ final class GridDataSourceDriverAdapter: GridDataSource {
         (0..<assetCount).compactMap { assetID(at: $0) }
     }
 }
+
+// MARK: - AlbumDataSource
+
+/// PHFetchResult를 GridDataSource로 래핑
+/// AlbumGridViewController에서 사용
+final class AlbumDataSource: GridDataSource {
+    private let fetchResult: PHFetchResult<PHAsset>
+
+    init(fetchResult: PHFetchResult<PHAsset>) {
+        self.fetchResult = fetchResult
+    }
+
+    var assetCount: Int {
+        fetchResult.count
+    }
+
+    func asset(at index: Int) -> PHAsset? {
+        guard index >= 0, index < fetchResult.count else { return nil }
+        return fetchResult.object(at: index)
+    }
+
+    func assetID(at index: Int) -> String? {
+        guard index >= 0, index < fetchResult.count else { return nil }
+        return fetchResult.object(at: index).localIdentifier
+    }
+
+    func assetIndex(for assetID: String) -> Int? {
+        for i in 0..<fetchResult.count {
+            if fetchResult.object(at: i).localIdentifier == assetID {
+                return i
+            }
+        }
+        return nil
+    }
+
+    var fetchResultForViewer: PHFetchResult<PHAsset>? {
+        fetchResult
+    }
+
+    /// 사용되지 않음 (fetchResultForViewer가 있으므로)
+    var orderedAssetIDs: [String] {
+        (0..<fetchResult.count).map { fetchResult.object(at: $0).localIdentifier }
+    }
+}
