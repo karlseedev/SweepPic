@@ -84,6 +84,11 @@ extension GridViewController {
     func deleteSelectedPhotos() {
         gridDeleteSelectedTapped()
     }
+
+    /// Select 모드 Delete 액션 (iOS 16~25 플로팅 UI)
+    override func handleSelectModeDeleteAction() {
+        gridDeleteSelectedTapped()
+    }
 }
 
 // MARK: - Grid Cell Selection Toggle
@@ -176,5 +181,10 @@ extension AlbumGridViewController {
 
         selectionManager.clearSelection()
         exitSelectMode()
+    }
+
+    /// Select 모드 Delete 액션 (iOS 16~25 플로팅 UI)
+    override func handleSelectModeDeleteAction() {
+        albumDeleteSelectedTapped()
     }
 }

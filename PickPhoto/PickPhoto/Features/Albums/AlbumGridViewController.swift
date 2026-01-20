@@ -214,6 +214,7 @@ final class AlbumGridViewController: BaseGridViewController {
         }
 
         // Select 버튼 표시 (Grid와 동일하게 선택 모드 지원)
+        overlay.titleBar.resetToSelectButton()
         overlay.titleBar.isSelectButtonHidden = false
 
         print("[AlbumGridViewController] FloatingOverlay configured for album: \(albumTitle)")

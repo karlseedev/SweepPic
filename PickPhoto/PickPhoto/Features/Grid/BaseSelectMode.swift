@@ -56,6 +56,17 @@ extension BaseGridViewController {
             )
         }
     }
+
+    /// Select 모드에서 Delete 액션 처리 (서브클래스에서 오버라이드)
+    @objc func handleSelectModeDeleteAction() {
+        // 기본 구현: no-op
+    }
+
+    /// Select 모드에서 선택 가능한 에셋인지 판단
+    /// 기본값: 휴지통 에셋은 선택 불가 (Grid/Album 공통)
+    @objc func canSelectAssetInSelectMode(_ assetID: String) -> Bool {
+        return !trashStore.isTrashed(assetID)
+    }
 }
 
 // MARK: - Select Mode Enter/Exit
@@ -85,8 +96,8 @@ extension BaseGridViewController {
         // 스와이프/투핑거탭 제스처 비활성화
         updateSwipeDeleteGestureEnabled()
 
-        // 컬렉션 뷰 리로드 (선택 UI 표시)
-        collectionView.reloadData()
+        // 선택 UI 갱신 (전체 리로드 대신 visible 셀만 업데이트)
+        updateVisibleSelectionUI()
 
         print("[BaseGridViewController] Entered select mode")
     }
@@ -113,10 +124,58 @@ extension BaseGridViewController {
         // 선택 초기화
         selectionManager.clearSelection()
 
-        // 컬렉션 뷰 리로드
-        collectionView.reloadData()
+        // 선택 UI 갱신 (전체 리로드 대신 visible 셀만 업데이트)
+        updateVisibleSelectionUI()
 
         print("[BaseGridViewController] Exited select mode")
+    }
+}
+
+// MARK: - Select Mode Cell Selection
+
+extension BaseGridViewController {
+
+    /// Select 모드에서 셀 선택 토글
+    /// - Parameter indexPath: 선택할 셀의 indexPath
+    /// - Returns: 토글 후 선택 상태
+    @discardableResult
+    func toggleSelectionForSelectMode(at indexPath: IndexPath) -> Bool {
+        let padding = paddingCellCount
+        guard indexPath.item >= padding else { return false }
+
+        let assetIndex = indexPath.item - padding
+        guard let assetID = gridDataSource.assetID(at: assetIndex) else { return false }
+
+        // Grid/Album은 휴지통 에셋 선택 금지, Trash는 오버라이드로 허용
+        guard canSelectAssetInSelectMode(assetID) else {
+            print("[BaseGridViewController] Cannot select asset in select mode")
+            return false
+        }
+
+        let isSelected = selectionManager.toggle(assetID)
+
+        if let cell = collectionView.cellForItem(at: indexPath) as? PhotoCell {
+            cell.isSelectedForDeletion = isSelected
+        }
+
+        return isSelected
+    }
+
+    /// Select 모드 전환 시 visible 셀의 선택 UI만 갱신
+    private func updateVisibleSelectionUI() {
+        let padding = paddingCellCount
+        let shouldShowSelection = isSelectMode
+
+        for indexPath in collectionView.indexPathsForVisibleItems {
+            guard indexPath.item >= padding else { continue }
+            let assetIndex = indexPath.item - padding
+            guard let assetID = gridDataSource.assetID(at: assetIndex) else { continue }
+
+            if let cell = collectionView.cellForItem(at: indexPath) as? PhotoCell {
+                let isSelected = shouldShowSelection && selectionManager.isSelected(assetID)
+                cell.isSelectedForDeletion = isSelected
+            }
+        }
     }
 }
 
@@ -426,14 +485,12 @@ extension BaseGridViewController: SelectionManagerDelegate {
 
     /// 선택 상태 변경 시 호출
     public func selectionManager(_ manager: SelectionManager, didChangeSelection assetIDs: Set<String>) {
-        // 변경된 셀만 업데이트
-        for indexPath in collectionView.indexPathsForVisibleItems {
-            guard indexPath.item >= paddingCellCount else { continue }
-            let assetIndex = indexPath.item - paddingCellCount
-            guard let asset = gridDataSource.asset(at: assetIndex) else { continue }
-
+        // 변경된 셀만 업데이트 (선택 상태는 manager 기준)
+        for assetID in assetIDs {
+            guard let assetIndex = gridDataSource.assetIndex(for: assetID) else { continue }
+            let indexPath = IndexPath(item: assetIndex + paddingCellCount, section: 0)
             if let cell = collectionView.cellForItem(at: indexPath) as? PhotoCell {
-                cell.isSelectedForDeletion = assetIDs.contains(asset.localIdentifier)
+                cell.isSelectedForDeletion = manager.isSelected(assetID)
             }
         }
     }

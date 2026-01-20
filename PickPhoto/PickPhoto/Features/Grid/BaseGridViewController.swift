@@ -587,10 +587,8 @@ extension BaseGridViewController: UICollectionViewDataSource {
             targetSize: thumbnailSize()
         )
 
-        // 선택 모드일 때 선택 상태 복원
-        if isSelectMode {
-            cell.isSelectedForDeletion = selectionManager.isSelected(assetID)
-        }
+        // Select 모드 여부에 따라 선택 UI 반영
+        cell.isSelectedForDeletion = isSelectMode && selectionManager.isSelected(assetID)
 
         // 서브클래스 추가 설정 (템플릿 메서드)
         configureCell(cell, at: indexPath, asset: asset)
@@ -607,6 +605,12 @@ extension BaseGridViewController: UICollectionViewDelegate {
                         didSelectItemAt indexPath: IndexPath) {
         // 빈 셀 무시
         guard indexPath.item >= paddingCellCount else { return }
+
+        // Select 모드일 때는 선택 토글 처리
+        if isSelectMode {
+            toggleSelectionForSelectMode(at: indexPath)
+            return
+        }
 
         let assetIndex = indexPath.item - paddingCellCount
         guard let asset = gridDataSource.asset(at: assetIndex) else { return }

@@ -260,6 +260,18 @@ extension TabBarController: UITabBarControllerDelegate {
 // MARK: - FloatingOverlayContainerDelegate
 
 extension TabBarController: FloatingOverlayContainerDelegate {
+    /// 현재 탭의 최상위 BaseGridViewController 반환
+    private func currentGridViewController() -> BaseGridViewController? {
+        guard let navController = selectedViewController as? UINavigationController else { return nil }
+        return navController.topViewController as? BaseGridViewController
+    }
+
+    /// Select 모드 지원 VC 반환
+    private func currentSelectModeTarget() -> BaseGridViewController? {
+        guard let target = currentGridViewController(), target.supportsSelectMode else { return nil }
+        return target
+    }
+
     func floatingOverlay(_ container: FloatingOverlayContainer, didSelectTabAt index: Int) {
         // 탭 전환
         selectedIndex = index
@@ -268,26 +280,20 @@ extension TabBarController: FloatingOverlayContainerDelegate {
 
     func floatingOverlayDidTapSelect(_ container: FloatingOverlayContainer) {
         print("[TabBarController] Select tapped via floating UI")
-        // GridViewController에 Select 모드 진입 알림
-        if let photosVC = photosNav?.viewControllers.first as? GridViewController {
-            photosVC.enterSelectMode()
-        }
+        // 현재 탭의 Select 모드 지원 VC에 진입 요청
+        currentSelectModeTarget()?.enterSelectMode()
     }
 
     func floatingOverlayDidTapCancel(_ container: FloatingOverlayContainer) {
         print("[TabBarController] Cancel tapped via floating UI")
-        // GridViewController에 Select 모드 종료 알림
-        if let photosVC = photosNav?.viewControllers.first as? GridViewController {
-            photosVC.exitSelectMode()
-        }
+        // 현재 탭의 Select 모드 지원 VC에 종료 요청
+        currentSelectModeTarget()?.exitSelectMode()
     }
 
     func floatingOverlayDidTapDelete(_ container: FloatingOverlayContainer) {
         print("[TabBarController] Delete tapped via floating UI")
-        // GridViewController에 선택된 사진 삭제 알림
-        if let photosVC = photosNav?.viewControllers.first as? GridViewController {
-            photosVC.deleteSelectedPhotos()
-        }
+        // 현재 탭의 Select 모드 지원 VC에 삭제 액션 전달
+        currentSelectModeTarget()?.handleSelectModeDeleteAction()
     }
 
     func floatingOverlayDidTapEmptyTrash(_ container: FloatingOverlayContainer) {
