@@ -100,6 +100,9 @@ final class AlbumGridViewController: BaseGridViewController {
         if useFloatingUI {
             // FloatingOverlay 상태 세팅 (공유 UI 사용)
             configureFloatingOverlayForAlbum()
+        } else if #available(iOS 26.0, *) {
+            // iOS 26+: 시스템 네비바에 Select 버튼 추가 (Grid와 동일)
+            setupSystemNavigationBarForAlbum()
         }
 
         // iOS 18+ Zoom Transition 안정화: 전환 중이면 completion에서 처리
@@ -210,10 +213,26 @@ final class AlbumGridViewController: BaseGridViewController {
             self?.navigationController?.popViewController(animated: true)
         }
 
-        // Select 버튼 숨김 (앨범에서는 Select 모드 미지원)
-        overlay.titleBar.isSelectButtonHidden = true
+        // Select 버튼 표시 (Grid와 동일하게 선택 모드 지원)
+        overlay.titleBar.isSelectButtonHidden = false
 
         print("[AlbumGridViewController] FloatingOverlay configured for album: \(albumTitle)")
+    }
+
+    /// iOS 26+: 시스템 네비바 설정 (Select 버튼 추가)
+    @available(iOS 26.0, *)
+    private func setupSystemNavigationBarForAlbum() {
+        // 선택 모드가 아닐 때만 Select 버튼 설정
+        guard !isSelectMode else { return }
+
+        navigationItem.rightBarButtonItem = UIBarButtonItem(
+            title: "Select",
+            style: .plain,
+            target: self,
+            action: #selector(selectButtonTapped)
+        )
+
+        print("[AlbumGridViewController] iOS 26+ navigation bar configured with Select button")
     }
 
     // MARK: - Album 고유 기능
