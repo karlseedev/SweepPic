@@ -90,7 +90,7 @@ extension TrashAlbumViewController {
 
     // MARK: - iOS 26+ Navigation Bar Restore
 
-    /// iOS 26+ Select 종료 후 네비바 복원: [Select] [비우기] 동시 표시
+    /// iOS 26+ Select 종료 후 네비바 복원: [비우기] [Select] 동시 표시
     override func restoreNavigationBarAfterSelectMode() {
         if #available(iOS 26.0, *) {
             let selectButton = UIBarButtonItem(
@@ -109,8 +109,11 @@ extension TrashAlbumViewController {
             emptyButton.tintColor = .systemRed
             emptyButton.isEnabled = !trashDataSourceAssets.isEmpty
 
-            // [Select] [비우기] 동시 표시 (우측에서 좌측 순서)
-            navigationItem.rightBarButtonItems = [emptyButton, selectButton]
+            // 프로퍼티에 저장 (데이터 변경 시 상태 업데이트용)
+            emptyTrashBarButtonItem = emptyButton
+
+            // [비우기] [Select] 순서 (배열 첫 요소가 가장 오른쪽)
+            navigationItem.rightBarButtonItems = [selectButton, emptyButton]
         }
     }
 

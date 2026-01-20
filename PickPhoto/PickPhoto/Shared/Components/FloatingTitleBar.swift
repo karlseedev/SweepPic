@@ -354,12 +354,15 @@ final class FloatingTitleBar: UIView {
     /// 커스텀 오른쪽 버튼 액션
     private var rightButtonAction: (() -> Void)?
 
-    /// 커스텀 오른쪽 버튼 설정 (Select 버튼 대체)
+    /// 커스텀 오른쪽 버튼 설정 (Select 버튼 대체, 단일 버튼 모드)
     /// - Parameters:
     ///   - title: 버튼 타이틀
     ///   - backgroundColor: 버튼 배경색 (반투명 적용됨)
     ///   - action: 버튼 탭 시 실행할 클로저
     func setRightButton(title: String, backgroundColor: UIColor = .systemBlue, action: @escaping () -> Void) {
+        // 두 번째 버튼 숨기기 (단일 버튼 모드)
+        hideSecondRightButton()
+
         var config = UIButton.Configuration.filled()
         config.title = title
         // 캡슐 + 틴티드 스타일
@@ -377,8 +380,11 @@ final class FloatingTitleBar: UIView {
         selectButton.addTarget(self, action: #selector(rightButtonTapped), for: .touchUpInside)
     }
 
-    /// 오른쪽 버튼을 Select 버튼으로 복원 (캡슐 + 틴티드 스타일)
+    /// 오른쪽 버튼을 Select 버튼으로 복원 (캡슐 + 틴티드 스타일, 단일 버튼 모드)
     func resetToSelectButton() {
+        // 두 번째 버튼 숨기기 (단일 버튼 모드)
+        hideSecondRightButton()
+
         var config = UIButton.Configuration.filled()
         config.title = "Select"
         // 파란색 반투명 배경 + 흰색 텍스트
@@ -446,7 +452,7 @@ final class FloatingTitleBar: UIView {
         firstConfig.cornerStyle = .capsule
         firstConfig.contentInsets = NSDirectionalEdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16)
         selectButton.configuration = firstConfig
-        selectButton.isHidden = false
+        isSelectButtonHidden = false  // 프로퍼티를 통해 설정 (다른 탭에서 숨겼을 수 있음)
         rightButtonAction = firstAction
 
         // 액션 연결

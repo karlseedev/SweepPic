@@ -178,8 +178,9 @@ final class AlbumsViewController: UIViewController {
         // 뒤로가기 버튼 숨김
         overlay.titleBar.setShowsBackButton(false)
 
-        // Select 버튼 숨김 (Albums 탭에서는 Select 모드 미지원)
+        // 버튼 숨김 (Albums 탭에서는 Select 모드 미지원)
         overlay.titleBar.isSelectButtonHidden = true
+        overlay.titleBar.hideSecondRightButton()
     }
 
     // MARK: - Layout

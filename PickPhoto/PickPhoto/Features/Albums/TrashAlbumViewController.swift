@@ -40,6 +40,10 @@ final class TrashAlbumViewController: BaseGridViewController {
     /// 휴지통 사진 ID Set
     private var trashedAssetIDSet: Set<String> = []
 
+    /// iOS 26+ 비우기 버튼 참조 (데이터 로드 후 상태 업데이트용)
+    /// Note: TrashSelectMode에서 접근해야 하므로 internal
+    var emptyTrashBarButtonItem: UIBarButtonItem?
+
     /// 초기 스크롤 완료 여부 (맨 아래로 스크롤)
     private var didInitialScroll: Bool = false
 
@@ -187,8 +191,11 @@ final class TrashAlbumViewController: BaseGridViewController {
         emptyButton.tintColor = .systemRed
         emptyButton.isEnabled = !_trashDataSource.assets.isEmpty
 
-        // [Select] [비우기] 동시 표시 (우측에서 좌측 순서)
-        navigationItem.rightBarButtonItems = [emptyButton, selectButton]
+        // 프로퍼티에 저장 (데이터 로드 후 상태 업데이트용)
+        emptyTrashBarButtonItem = emptyButton
+
+        // [비우기] [Select] 순서 (배열 첫 요소가 가장 오른쪽)
+        navigationItem.rightBarButtonItems = [selectButton, emptyButton]
     }
 
     /// FloatingOverlay 상태를 휴지통 탭용으로 설정
@@ -297,7 +304,7 @@ final class TrashAlbumViewController: BaseGridViewController {
             updateFloatingEmptyButton()
         } else {
             // iOS 26+: 시스템 네비바 버튼 상태 업데이트
-            navigationItem.rightBarButtonItem?.isEnabled = !_trashDataSource.assets.isEmpty
+            emptyTrashBarButtonItem?.isEnabled = !_trashDataSource.assets.isEmpty
         }
 
         let endTime = CFAbsoluteTimeGetCurrent()
@@ -330,11 +337,22 @@ final class TrashAlbumViewController: BaseGridViewController {
         }
 
         if !_trashDataSource.assets.isEmpty {
-            overlay.titleBar.setRightButton(title: "비우기", backgroundColor: .systemRed) { [weak self] in
-                self?.emptyTrashButtonTapped()
-            }
+            // [Select] [비우기] 두 버튼 표시
+            overlay.titleBar.setTwoRightButtons(
+                firstTitle: "Select",
+                firstColor: .systemBlue,
+                firstAction: { [weak self] in
+                    self?.enterSelectMode()
+                },
+                secondTitle: "비우기",
+                secondColor: .systemRed,
+                secondAction: { [weak self] in
+                    self?.emptyTrashButtonTapped()
+                }
+            )
         } else {
             overlay.titleBar.isSelectButtonHidden = true
+            overlay.titleBar.hideSecondRightButton()
         }
     }
 
