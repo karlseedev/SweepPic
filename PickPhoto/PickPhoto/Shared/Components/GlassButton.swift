@@ -89,6 +89,15 @@ final class GlassButton: UIButton {
 
         // 4. Update Shadow (버튼 레이어에 직접 적용)
         LiquidGlassStyle.applyShadow(to: self.layer, cornerRadius: cornerRadius)
+
+        // 5. Ensure Content is Visible (블러 뷰 위로 올림)
+        // UIButton.Configuration 사용 시 뷰 계층이 변할 수 있으므로 항상 최상단으로 가져옴
+        if let imageView = imageView {
+            bringSubviewToFront(imageView)
+        }
+        if let titleLabel = titleLabel {
+            bringSubviewToFront(titleLabel)
+        }
     }
     
     // MARK: - Interaction Animations

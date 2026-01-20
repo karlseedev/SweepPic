@@ -54,8 +54,8 @@ final class FloatingTabBar: UIView {
     /// 캡슐 코너 반경
     private static let capsuleCornerRadius: CGFloat = capsuleHeight / 2
 
-    /// 최대 딤 알파 (하단은 블러 없이 딤만 적용, 가장 어두운 부분 60%)
-    private static let maxDimAlpha: CGFloat = 0.6
+    /// 최대 딤 알파 (하단은 블러 없이 딤만 적용, 가장 어두운 부분 45%)
+    private static let maxDimAlpha: CGFloat = LiquidGlassStyle.maxDimAlpha
 
     // MARK: - Properties
 
@@ -81,20 +81,20 @@ final class FloatingTabBar: UIView {
         let view = UIView()
         view.layer.cornerRadius = Self.capsuleCornerRadius
         view.layer.shadowColor = UIColor.black.cgColor
-        view.layer.shadowOpacity = 0.25
-        view.layer.shadowRadius = 12
-        view.layer.shadowOffset = CGSize(width: 0, height: 6)
+        view.layer.shadowOpacity = LiquidGlassStyle.shadowOpacity
+        view.layer.shadowRadius = LiquidGlassStyle.shadowRadius
+        view.layer.shadowOffset = LiquidGlassStyle.shadowOffset
         view.translatesAutoresizingMaskIntoConstraints = false
         return view
     }()
 
     /// 캡슐 컨테이너 (블러 배경)
     private lazy var capsuleContainer: UIVisualEffectView = {
-        let effect = UIBlurEffect(style: .systemThinMaterialDark)
+        let effect = UIBlurEffect(style: LiquidGlassStyle.blurStyle)
         let view = UIVisualEffectView(effect: effect)
         view.layer.cornerRadius = Self.capsuleCornerRadius
-        view.layer.borderWidth = 0.5
-        view.layer.borderColor = UIColor.white.withAlphaComponent(0.15).cgColor
+        view.layer.borderWidth = LiquidGlassStyle.borderWidth
+        view.layer.borderColor = UIColor.white.withAlphaComponent(LiquidGlassStyle.borderAlpha).cgColor
         view.clipsToBounds = true
         view.translatesAutoresizingMaskIntoConstraints = false
         return view
@@ -103,7 +103,7 @@ final class FloatingTabBar: UIView {
     /// 캡슐 배경 오버레이 (심플한 톤)
     private lazy var capsuleBackgroundView: UIView = {
         let view = UIView()
-        view.backgroundColor = UIColor(white: 0.12, alpha: 0.5)
+        view.backgroundColor = UIColor(white: 0.1, alpha: LiquidGlassStyle.backgroundAlpha)
         view.isUserInteractionEnabled = false
         view.translatesAutoresizingMaskIntoConstraints = false
         return view
@@ -159,20 +159,20 @@ final class FloatingTabBar: UIView {
         let view = UIView()
         view.layer.cornerRadius = Self.capsuleHeight / 2
         view.layer.shadowColor = UIColor.black.cgColor
-        view.layer.shadowOpacity = 0.25
-        view.layer.shadowRadius = 12
-        view.layer.shadowOffset = CGSize(width: 0, height: 6)
+        view.layer.shadowOpacity = LiquidGlassStyle.shadowOpacity
+        view.layer.shadowRadius = LiquidGlassStyle.shadowRadius
+        view.layer.shadowOffset = LiquidGlassStyle.shadowOffset
         view.translatesAutoresizingMaskIntoConstraints = false
         return view
     }()
 
     /// 삭제하기 버튼 컨테이너 (블러 배경, 원형)
     private lazy var emptyTrashContainer: UIVisualEffectView = {
-        let effect = UIBlurEffect(style: .systemThinMaterialDark)
+        let effect = UIBlurEffect(style: LiquidGlassStyle.blurStyle)
         let view = UIVisualEffectView(effect: effect)
         view.layer.cornerRadius = Self.capsuleHeight / 2
-        view.layer.borderWidth = 0.5
-        view.layer.borderColor = UIColor.white.withAlphaComponent(0.15).cgColor
+        view.layer.borderWidth = LiquidGlassStyle.borderWidth
+        view.layer.borderColor = UIColor.white.withAlphaComponent(LiquidGlassStyle.borderAlpha).cgColor
         view.clipsToBounds = true
         view.translatesAutoresizingMaskIntoConstraints = false
         return view
@@ -181,7 +181,7 @@ final class FloatingTabBar: UIView {
     /// 삭제하기 버튼 배경 오버레이
     private lazy var emptyTrashBackgroundView: UIView = {
         let view = UIView()
-        view.backgroundColor = UIColor(white: 0.12, alpha: 0.5)
+        view.backgroundColor = UIColor(white: 0.1, alpha: LiquidGlassStyle.backgroundAlpha)
         view.isUserInteractionEnabled = false
         view.translatesAutoresizingMaskIntoConstraints = false
         return view
@@ -212,16 +212,21 @@ final class FloatingTabBar: UIView {
         return label
     }()
 
-    /// Delete 버튼 (캡슐 + 틴티드 스타일)
-    private lazy var deleteButton: UIButton = {
-        var config = UIButton.Configuration.filled()
+    /// Delete 버튼 (Liquid Glass 스타일)
+    private lazy var deleteButton: GlassButton = {
+        let button = GlassButton(tintColor: .systemRed, useCapsuleStyle: true)
+        
+        var config = UIButton.Configuration.plain()
         config.title = "Delete"
-        // 빨간색 반투명 배경 + 흰색 텍스트
-        config.baseBackgroundColor = UIColor.systemRed.withAlphaComponent(0.3)
         config.baseForegroundColor = .white
-        config.cornerStyle = .capsule
         config.contentInsets = NSDirectionalEdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16)
-        let button = UIButton(configuration: config)
+        config.titleTextAttributesTransformer = UIConfigurationTextAttributesTransformer { incoming in
+            var outgoing = incoming
+            outgoing.font = .systemFont(ofSize: 15, weight: .medium)
+            return outgoing
+        }
+        
+        button.configuration = config
         button.addTarget(self, action: #selector(deleteButtonTapped), for: .touchUpInside)
         return button
     }()
@@ -246,16 +251,21 @@ final class FloatingTabBar: UIView {
         return view
     }()
 
-    /// Trash Restore 버튼 (캡슐 + 틴티드 스타일)
-    private lazy var trashRestoreButton: UIButton = {
-        var config = UIButton.Configuration.filled()
+    /// Trash Restore 버튼 (Liquid Glass 스타일)
+    private lazy var trashRestoreButton: GlassButton = {
+        let button = GlassButton(tintColor: .systemBlue, useCapsuleStyle: true)
+        
+        var config = UIButton.Configuration.plain()
         config.title = "Restore"
-        // 파란색 반투명 배경 + 흰색 텍스트
-        config.baseBackgroundColor = UIColor.systemBlue.withAlphaComponent(0.3)
         config.baseForegroundColor = .white
-        config.cornerStyle = .capsule
         config.contentInsets = NSDirectionalEdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16)
-        let button = UIButton(configuration: config)
+        config.titleTextAttributesTransformer = UIConfigurationTextAttributesTransformer { incoming in
+            var outgoing = incoming
+            outgoing.font = .systemFont(ofSize: 15, weight: .medium)
+            return outgoing
+        }
+        
+        button.configuration = config
         button.addTarget(self, action: #selector(trashRestoreButtonTapped), for: .touchUpInside)
         return button
     }()
@@ -270,16 +280,21 @@ final class FloatingTabBar: UIView {
         return label
     }()
 
-    /// Trash Delete 버튼 (캡슐 + 틴티드 스타일, 영구 삭제)
-    private lazy var trashDeleteButton: UIButton = {
-        var config = UIButton.Configuration.filled()
+    /// Trash Delete 버튼 (Liquid Glass 스타일, 영구 삭제)
+    private lazy var trashDeleteButton: GlassButton = {
+        let button = GlassButton(tintColor: .systemRed, useCapsuleStyle: true)
+        
+        var config = UIButton.Configuration.plain()
         config.title = "Delete"
-        // 빨간색 반투명 배경 + 흰색 텍스트
-        config.baseBackgroundColor = UIColor.systemRed.withAlphaComponent(0.3)
         config.baseForegroundColor = .white
-        config.cornerStyle = .capsule
         config.contentInsets = NSDirectionalEdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16)
-        let button = UIButton(configuration: config)
+        config.titleTextAttributesTransformer = UIConfigurationTextAttributesTransformer { incoming in
+            var outgoing = incoming
+            outgoing.font = .systemFont(ofSize: 15, weight: .medium)
+            return outgoing
+        }
+        
+        button.configuration = config
         button.addTarget(self, action: #selector(trashDeleteButtonTapped), for: .touchUpInside)
         return button
     }()
@@ -527,7 +542,7 @@ final class FloatingTabBar: UIView {
         config.baseForegroundColor = UIColor(white: 1, alpha: 0.65)
         config.contentInsets = NSDirectionalEdgeInsets(top: 6, leading: 6, bottom: 6, trailing: 6)
         config.titleTextAttributesTransformer = Self.tabTitleTransformer()
-        config.preferredSymbolConfigurationForImage = UIImage.SymbolConfiguration(pointSize: 18, weight: .regular)
+        config.preferredSymbolConfigurationForImage = UIImage.SymbolConfiguration(pointSize: LiquidGlassStyle.tabIconSize, weight: .regular)
 
         button.configuration = config
         button.addTarget(self, action: #selector(tabButtonTapped(_:)), for: .touchUpInside)
@@ -599,7 +614,6 @@ final class FloatingTabBar: UIView {
         isSelectMode = true
         selectionCountLabel.text = "항목 선택"
         deleteButton.isEnabled = false
-        deleteButton.alpha = 0.5
 
         if animated {
             selectModeContainer.isHidden = false
@@ -650,7 +664,6 @@ final class FloatingTabBar: UIView {
         // 0개: "항목 선택", 1개 이상: "N개 항목 선택됨"
         selectionCountLabel.text = count > 0 ? "\(count)개 항목 선택됨" : "항목 선택"
         deleteButton.isEnabled = count > 0
-        deleteButton.alpha = count > 0 ? 1.0 : 0.5
     }
 
     // MARK: - Trash Select Mode Methods
@@ -661,9 +674,7 @@ final class FloatingTabBar: UIView {
         isTrashSelectMode = true
         trashSelectionCountLabel.text = "항목 선택"
         trashRestoreButton.isEnabled = false
-        trashRestoreButton.alpha = 0.5
         trashDeleteButton.isEnabled = false
-        trashDeleteButton.alpha = 0.5
 
         if animated {
             trashSelectModeContainer.isHidden = false
@@ -714,9 +725,7 @@ final class FloatingTabBar: UIView {
         // 0개: "항목 선택", 1개 이상: "N개 항목 선택됨"
         trashSelectionCountLabel.text = count > 0 ? "\(count)개 항목 선택됨" : "항목 선택"
         trashRestoreButton.isEnabled = count > 0
-        trashRestoreButton.alpha = count > 0 ? 1.0 : 0.5
         trashDeleteButton.isEnabled = count > 0
-        trashDeleteButton.alpha = count > 0 ? 1.0 : 0.5
     }
 
     /// 탭바 높이 계산 (safe area 포함)

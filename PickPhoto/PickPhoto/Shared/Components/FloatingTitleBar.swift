@@ -40,8 +40,8 @@ final class FloatingTitleBar: UIView {
     /// 그라데이션 추가 높이 (딤/블러가 더 아래까지 내려오도록)
     private static let gradientExtension: CGFloat = 15
 
-    /// 최대 딤 알파 (가장 어두운 부분 60%)
-    private static let maxDimAlpha: CGFloat = 0.6
+    /// 최대 딤 알파 (가장 어두운 부분 45%)
+    private static let maxDimAlpha: CGFloat = LiquidGlassStyle.maxDimAlpha
 
     // MARK: - Properties
 
@@ -93,11 +93,11 @@ final class FloatingTitleBar: UIView {
         view.translatesAutoresizingMaskIntoConstraints = false
         // 블러 방향: 상단(강함) → 하단(약함)
         view.direction = .down
-        // 블러 강도
-        view.maximumBlurRadius = 2.0
-        // 디밍 색상 (어두운 오버레이) - 가장 어두운 부분 60%
+        // 블러 강도 - 더 투명하게
+        view.maximumBlurRadius = 1.5
+        // 디밍 색상 (어두운 오버레이) - 더 연하게
         view.dimmingTintColor = UIColor.black
-        view.dimmingAlpha = .interfaceStyle(lightModeAlpha: 0.6, darkModeAlpha: 0.5)
+        view.dimmingAlpha = .interfaceStyle(lightModeAlpha: 0.45, darkModeAlpha: 0.3)
         return view
     }()
 
@@ -152,18 +152,21 @@ final class FloatingTitleBar: UIView {
         return label
     }()
 
-    /// Select 버튼 (캡슐 + 틴티드 스타일) - 가장 오른쪽
-    private lazy var selectButton: UIButton = {
-        var config = UIButton.Configuration.filled()
+    /// Select 버튼 (Liquid Glass 스타일) - 가장 오른쪽
+    private lazy var selectButton: GlassButton = {
+        let button = GlassButton(tintColor: .systemBlue, useCapsuleStyle: true)
+        
+        var config = UIButton.Configuration.plain()
         config.title = "Select"
-        // 파란색 반투명 배경 + 흰색 텍스트
-        config.baseBackgroundColor = UIColor.systemBlue.withAlphaComponent(0.3)
         config.baseForegroundColor = .white
-        // 캡슐 형태
-        config.cornerStyle = .capsule
-        // 터치 영역 최소 44pt 보장
         config.contentInsets = NSDirectionalEdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16)
-        let button = UIButton(configuration: config)
+        config.titleTextAttributesTransformer = UIConfigurationTextAttributesTransformer { incoming in
+            var outgoing = incoming
+            outgoing.font = .systemFont(ofSize: 15, weight: .medium)
+            return outgoing
+        }
+        
+        button.configuration = config
         button.addTarget(self, action: #selector(selectButtonTapped), for: .touchUpInside)
         button.translatesAutoresizingMaskIntoConstraints = false
         return button
@@ -171,13 +174,19 @@ final class FloatingTitleBar: UIView {
 
     /// 두 번째 오른쪽 버튼 (Select 버튼 왼쪽에 배치)
     /// 휴지통 탭에서 [Select] [비우기] 동시 표시용
-    private lazy var secondRightButton: UIButton = {
-        var config = UIButton.Configuration.filled()
-        config.baseBackgroundColor = UIColor.systemRed.withAlphaComponent(0.3)
+    private lazy var secondRightButton: GlassButton = {
+        let button = GlassButton(tintColor: .systemRed, useCapsuleStyle: true)
+        
+        var config = UIButton.Configuration.plain()
         config.baseForegroundColor = .white
-        config.cornerStyle = .capsule
         config.contentInsets = NSDirectionalEdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16)
-        let button = UIButton(configuration: config)
+        config.titleTextAttributesTransformer = UIConfigurationTextAttributesTransformer { incoming in
+            var outgoing = incoming
+            outgoing.font = .systemFont(ofSize: 15, weight: .medium)
+            return outgoing
+        }
+        
+        button.configuration = config
         button.addTarget(self, action: #selector(secondRightButtonTapped), for: .touchUpInside)
         button.translatesAutoresizingMaskIntoConstraints = false
         button.isHidden = true // 기본 숨김
@@ -365,20 +374,17 @@ final class FloatingTitleBar: UIView {
     /// 커스텀 오른쪽 버튼 설정 (Select 버튼 대체, 단일 버튼 모드)
     /// - Parameters:
     ///   - title: 버튼 타이틀
-    ///   - backgroundColor: 버튼 배경색 (반투명 적용됨)
+    ///   - backgroundColor: 버튼 배경색 (반투명 적용됨) - GlassButton은 초기화 시 색상 고정 (대부분 Blue)
     ///   - action: 버튼 탭 시 실행할 클로저
     func setRightButton(title: String, backgroundColor: UIColor = .systemBlue, action: @escaping () -> Void) {
         // 두 번째 버튼 숨기기 (단일 버튼 모드)
         hideSecondRightButton()
 
-        var config = UIButton.Configuration.filled()
+        // GlassButton 속성 설정 (Configuration 사용)
+        var config = selectButton.configuration ?? UIButton.Configuration.plain()
         config.title = title
-        // 캡슐 + 틴티드 스타일
-        config.baseBackgroundColor = backgroundColor.withAlphaComponent(0.3)
-        config.baseForegroundColor = .white
-        config.cornerStyle = .capsule
-        config.contentInsets = NSDirectionalEdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16)
         selectButton.configuration = config
+        
         selectButton.isHidden = false
         rightButtonAction = action
 
@@ -393,14 +399,10 @@ final class FloatingTitleBar: UIView {
         // 두 번째 버튼 숨기기 (단일 버튼 모드)
         hideSecondRightButton()
 
-        var config = UIButton.Configuration.filled()
+        var config = selectButton.configuration ?? UIButton.Configuration.plain()
         config.title = "Select"
-        // 파란색 반투명 배경 + 흰색 텍스트
-        config.baseBackgroundColor = UIColor.systemBlue.withAlphaComponent(0.3)
-        config.baseForegroundColor = .white
-        config.cornerStyle = .capsule
-        config.contentInsets = NSDirectionalEdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16)
         selectButton.configuration = config
+        
         rightButtonAction = nil
 
         // 액션 복원
@@ -453,13 +455,10 @@ final class FloatingTitleBar: UIView {
         secondAction: @escaping () -> Void
     ) {
         // 첫 번째 버튼 (Select 위치 - 가장 오른쪽)
-        var firstConfig = UIButton.Configuration.filled()
+        var firstConfig = selectButton.configuration ?? UIButton.Configuration.plain()
         firstConfig.title = firstTitle
-        firstConfig.baseBackgroundColor = firstColor.withAlphaComponent(0.3)
-        firstConfig.baseForegroundColor = .white
-        firstConfig.cornerStyle = .capsule
-        firstConfig.contentInsets = NSDirectionalEdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16)
         selectButton.configuration = firstConfig
+        
         isSelectButtonHidden = false  // 프로퍼티를 통해 설정 (다른 탭에서 숨겼을 수 있음)
         rightButtonAction = firstAction
 
@@ -469,13 +468,10 @@ final class FloatingTitleBar: UIView {
         selectButton.addTarget(self, action: #selector(rightButtonTapped), for: .touchUpInside)
 
         // 두 번째 버튼 (왼쪽에 추가)
-        var secondConfig = UIButton.Configuration.filled()
+        var secondConfig = secondRightButton.configuration ?? UIButton.Configuration.plain()
         secondConfig.title = secondTitle
-        secondConfig.baseBackgroundColor = secondColor.withAlphaComponent(0.3)
-        secondConfig.baseForegroundColor = .white
-        secondConfig.cornerStyle = .capsule
-        secondConfig.contentInsets = NSDirectionalEdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16)
         secondRightButton.configuration = secondConfig
+        
         secondRightButton.isHidden = false
         secondRightButtonAction = secondAction
 

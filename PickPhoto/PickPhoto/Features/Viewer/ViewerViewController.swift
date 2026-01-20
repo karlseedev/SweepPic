@@ -119,66 +119,61 @@ final class ViewerViewController: UIViewController {
         return pvc
     }()
 
-    /// 삭제 버튼 (일반 모드)
-    private lazy var deleteButton: UIButton = {
-        let button = UIButton(type: .system)
+    /// 삭제 버튼 (일반 모드 - Liquid Glass)
+    private lazy var deleteButton: GlassButton = {
+        let button = GlassButton(tintColor: .systemRed, useCapsuleStyle: false)
         button.translatesAutoresizingMaskIntoConstraints = false
 
-        // 원형 버튼 스타일
-        button.backgroundColor = UIColor.systemRed.withAlphaComponent(0.9)
-        button.layer.cornerRadius = Self.deleteButtonSize / 2
-        button.layer.shadowColor = UIColor.black.cgColor
-        button.layer.shadowOffset = CGSize(width: 0, height: 2)
-        button.layer.shadowRadius = 4
-        button.layer.shadowOpacity = 0.3
-
-        // 휴지통 아이콘
-        let config = UIImage.SymbolConfiguration(pointSize: 22, weight: .medium)
+        // 휴지통 아이콘 (22pt)
+        let config = UIImage.SymbolConfiguration(pointSize: LiquidGlassStyle.actionButtonIconSize, weight: .medium)
         let image = UIImage(systemName: "trash.fill", withConfiguration: config)
         button.setImage(image, for: .normal)
         button.tintColor = .white
+
+        // 아이콘 그림자 적용
+        if let imageView = button.imageView {
+            LiquidGlassStyle.applyIconShadow(to: imageView)
+        }
 
         button.addTarget(self, action: #selector(deleteButtonTapped), for: .touchUpInside)
         return button
     }()
 
-    /// 복구 버튼 (휴지통 모드)
-    private lazy var restoreButton: UIButton = {
-        let button = UIButton(type: .system)
+    /// 복구 버튼 (휴지통 모드 - Liquid Glass)
+    private lazy var restoreButton: GlassButton = {
+        let button = GlassButton(tintColor: .systemGreen, useCapsuleStyle: false)
         button.translatesAutoresizingMaskIntoConstraints = false
 
-        button.backgroundColor = UIColor.systemGreen.withAlphaComponent(0.9)
-        button.layer.cornerRadius = Self.deleteButtonSize / 2
-        button.layer.shadowColor = UIColor.black.cgColor
-        button.layer.shadowOffset = CGSize(width: 0, height: 2)
-        button.layer.shadowRadius = 4
-        button.layer.shadowOpacity = 0.3
-
-        let config = UIImage.SymbolConfiguration(pointSize: 22, weight: .medium)
+        // 복구 아이콘 (22pt)
+        let config = UIImage.SymbolConfiguration(pointSize: LiquidGlassStyle.actionButtonIconSize, weight: .medium)
         let image = UIImage(systemName: "arrow.uturn.backward", withConfiguration: config)
         button.setImage(image, for: .normal)
         button.tintColor = .white
+
+        // 아이콘 그림자 적용
+        if let imageView = button.imageView {
+            LiquidGlassStyle.applyIconShadow(to: imageView)
+        }
 
         button.addTarget(self, action: #selector(restoreButtonTapped), for: .touchUpInside)
         return button
     }()
 
-    /// 완전삭제 버튼 (휴지통 모드)
-    private lazy var permanentDeleteButton: UIButton = {
-        let button = UIButton(type: .system)
+    /// 완전삭제 버튼 (휴지통 모드 - Liquid Glass)
+    private lazy var permanentDeleteButton: GlassButton = {
+        let button = GlassButton(tintColor: .systemRed, useCapsuleStyle: false)
         button.translatesAutoresizingMaskIntoConstraints = false
 
-        button.backgroundColor = UIColor.systemRed.withAlphaComponent(0.9)
-        button.layer.cornerRadius = Self.deleteButtonSize / 2
-        button.layer.shadowColor = UIColor.black.cgColor
-        button.layer.shadowOffset = CGSize(width: 0, height: 2)
-        button.layer.shadowRadius = 4
-        button.layer.shadowOpacity = 0.3
-
-        let config = UIImage.SymbolConfiguration(pointSize: 22, weight: .medium)
+        // 휴지통 아이콘 (22pt)
+        let config = UIImage.SymbolConfiguration(pointSize: LiquidGlassStyle.actionButtonIconSize, weight: .medium)
         let image = UIImage(systemName: "trash.fill", withConfiguration: config)
         button.setImage(image, for: .normal)
         button.tintColor = .white
+
+        // 아이콘 그림자 적용
+        if let imageView = button.imageView {
+            LiquidGlassStyle.applyIconShadow(to: imageView)
+        }
 
         button.addTarget(self, action: #selector(permanentDeleteButtonTapped), for: .touchUpInside)
         return button
@@ -366,13 +361,19 @@ final class ViewerViewController: UIViewController {
     /// iOS 16~25 전용 뒤로가기 버튼 설정
     /// Push 전환 방식이지만 네비바는 숨긴 상태로 유지하고 커스텀 버튼 사용
     private func setupBackButton() {
-        let backButton = UIButton(type: .system)
+        let backButton = GlassButton(tintColor: .clear, useCapsuleStyle: false)
         backButton.translatesAutoresizingMaskIntoConstraints = false
-        let config = UIImage.SymbolConfiguration(pointSize: 20, weight: .semibold)
+        
+        // 아이콘 설정 (20pt)
+        let config = UIImage.SymbolConfiguration(pointSize: LiquidGlassStyle.backButtonIconSize, weight: .semibold)
         backButton.setImage(UIImage(systemName: "chevron.backward", withConfiguration: config), for: .normal)
         backButton.tintColor = .white
-        backButton.backgroundColor = UIColor.black.withAlphaComponent(0.5)
-        backButton.layer.cornerRadius = 18
+        
+        // 아이콘 그림자 적용
+        if let imageView = backButton.imageView {
+            LiquidGlassStyle.applyIconShadow(to: imageView)
+        }
+        
         backButton.addTarget(self, action: #selector(backButtonTapped), for: .touchUpInside)
 
         view.addSubview(backButton)
