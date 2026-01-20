@@ -895,8 +895,25 @@ extension BaseGridViewController {
 
 extension BaseGridViewController: UIGestureRecognizerDelegate {
 
-    /// 제스처 시작 조건 (스와이프 삭제 제스처용)
+    /// 제스처 시작 조건 (스와이프 삭제, 드래그 선택 제스처용)
     public func gestureRecognizerShouldBegin(_ gestureRecognizer: UIGestureRecognizer) -> Bool {
+        // 드래그 선택 제스처 체크
+        if gestureRecognizer == dragSelectGesture {
+            guard isSelectMode else { return false }
+
+            guard let panGesture = gestureRecognizer as? UIPanGestureRecognizer else { return false }
+            let velocity = panGesture.velocity(in: collectionView)
+
+            // 수평 이동 속도가 수직 이동 속도보다 커야 드래그 선택 모드
+            let isHorizontalDrag = abs(velocity.x) > abs(velocity.y)
+
+            if isHorizontalDrag {
+                print("[BaseGridViewController] Drag select gesture began (horizontal drag detected)")
+            }
+
+            return isHorizontalDrag
+        }
+
         // 스와이프 삭제 제스처 체크
         if gestureRecognizer == swipeDeleteState.swipeGesture {
             // 스크롤 momentum 중이면 무시
@@ -919,11 +936,15 @@ extension BaseGridViewController: UIGestureRecognizerDelegate {
     }
 
     /// 제스처 동시 인식 허용
-    /// 핀치 줌과 스와이프 삭제가 다른 제스처와 충돌하지 않도록
+    /// 핀치 줌과 드래그 선택이 다른 제스처와 충돌하지 않도록
     public func gestureRecognizer(
         _ gestureRecognizer: UIGestureRecognizer,
         shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer
     ) -> Bool {
+        // 드래그 선택 제스처는 핀치와 동시 인식 허용
+        if gestureRecognizer == dragSelectGesture {
+            return otherGestureRecognizer is UIPinchGestureRecognizer
+        }
         // 핀치 줌은 항상 허용
         if gestureRecognizer is UIPinchGestureRecognizer {
             return true
