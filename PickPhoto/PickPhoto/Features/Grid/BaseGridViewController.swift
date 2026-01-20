@@ -526,9 +526,15 @@ extension BaseGridViewController: UICollectionViewDelegate {
         // 뷰어 열기 (서브클래스에서 구현)
         openViewer(for: asset, at: assetIndex)
     }
+}
+
+// MARK: - Cell Selection (Overridable)
+
+extension BaseGridViewController {
 
     /// 뷰어 열기 (서브클래스에서 반드시 오버라이드 필요)
-    func openViewer(for asset: PHAsset, at assetIndex: Int) {
+    /// extension에서 분리하여 override 가능하게 함
+    @objc func openViewer(for asset: PHAsset, at assetIndex: Int) {
         fatalError("Subclass must override openViewer(for:at:)")
     }
 }

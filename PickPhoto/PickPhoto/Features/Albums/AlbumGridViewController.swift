@@ -2,7 +2,7 @@
 // 앨범 내 사진 그리드 뷰컨트롤러
 //
 // T052: 앨범 탭 → 앨범 그리드 뷰 구현
-// - GridViewController 패턴 재사용
+// - BaseGridViewController 상속 (Phase 4 리팩토링)
 // - 앨범 필터 적용된 PHFetchResult 사용
 // - TabBarController의 FloatingOverlay 공유 (iOS 16~25)
 //
@@ -16,61 +16,9 @@ import AppCore
 /// 앨범 내 사진 그리드 뷰컨트롤러
 /// 특정 앨범의 사진만 표시하는 그리드
 /// TabBarController의 FloatingOverlay를 공유하여 상태만 변경
-final class AlbumGridViewController: UIViewController {
+final class AlbumGridViewController: BaseGridViewController {
 
-    // MARK: - Constants
-
-    /// 셀 간격
-    private static let cellSpacing: CGFloat = 2
-
-    // GridColumnCount → GridGridColumnCount.swift로 이동됨
-
-    /// 핀치 줌 임계값
-    private static let pinchZoomInThreshold: CGFloat = 1.15
-    private static let pinchZoomOutThreshold: CGFloat = 0.85
-
-    /// 핀치 줌 쿨다운
-    private static let pinchCooldown: TimeInterval = 0.2
-
-    // MARK: - UI Components
-
-    /// 컬렉션 뷰
-    private lazy var collectionView: UICollectionView = {
-        let cv = UICollectionView(frame: .zero, collectionViewLayout: createLayout(columns: .three))
-        cv.backgroundColor = .black
-        cv.translatesAutoresizingMaskIntoConstraints = false
-        cv.register(PhotoCell.self, forCellWithReuseIdentifier: PhotoCell.reuseIdentifier)
-        cv.delegate = self
-        cv.dataSource = self
-        cv.prefetchDataSource = self
-        cv.alwaysBounceVertical = true
-        // Edge-to-edge
-        cv.contentInsetAdjustmentBehavior = .never
-        return cv
-    }()
-
-    /// 빈 상태 뷰
-    private lazy var emptyStateView: EmptyStateView = {
-        let view = EmptyStateView()
-        view.configure(
-            icon: "photo.on.rectangle",
-            title: "사진이 없습니다",
-            subtitle: "이 앨범에 사진이 없습니다"
-        )
-        view.isHidden = true
-        view.translatesAutoresizingMaskIntoConstraints = false
-        return view
-    }()
-
-    /// 커스텀 플로팅 UI 사용 여부 (iOS 26+에서는 false)
-    private var useFloatingUI: Bool {
-        if #available(iOS 26.0, *) {
-            return false
-        }
-        return true
-    }
-
-    // MARK: - Properties
+    // MARK: - Properties (Album 고유)
 
     /// 앨범 제목
     /// iOS 18+ zoom transition의 sourceViewProvider에서 외부 접근 필요
@@ -79,23 +27,8 @@ final class AlbumGridViewController: UIViewController {
     /// 앨범 내 사진 fetch result
     private let fetchResult: PHFetchResult<PHAsset>
 
-    /// 이미지 파이프라인
-    private let imagePipeline: ImagePipelineProtocol
-
-    /// 휴지통 스토어
-    private let trashStore: TrashStoreProtocol
-
-    /// 현재 열 수
-    private var currentGridColumnCount: GridColumnCount = .three
-
-    /// 현재 셀 크기
-    private var currentCellSize: CGSize = .zero
-
-    /// 핀치 줌 마지막 실행 시간
-    private var lastPinchZoomTime: Date?
-
-    /// 핀치 줌 앵커 에셋 ID
-    private var pinchAnchorAssetID: String?
+    /// 데이터 소스 어댑터 (GridDataSource 프로토콜 구현)
+    private let _albumDataSource: AlbumDataSource
 
     /// 초기 스크롤 완료 여부 (맨 아래로 스크롤)
     private var didInitialScroll: Bool = false
@@ -110,21 +43,22 @@ final class AlbumGridViewController: UIViewController {
 
     // MARK: - Pending Viewer Return (iOS 18+ Zoom Transition 안정화)
 
-    /// 뷰어 닫힘 후 스크롤할 에셋 ID
-    private var pendingScrollAssetID: String?
-
     /// 뷰어 복귀 후 사용자가 스크롤했는지 여부
     /// - true이면 applyPendingViewerReturn()에서 강제 스크롤 skip
     private var didUserScrollAfterReturn: Bool = false
 
-    /// 맨 위 행 빈 셀 개수 (3의 배수가 아닐 시 맨 위 행에 빈 셀)
-    /// 최신 사진(맨 아래) 기준 꽉 차게 정렬
-    private var paddingCellCount: Int {
-        let totalCount = fetchResult.count
-        guard totalCount > 0 else { return 0 }
-        let columns = currentGridColumnCount.rawValue
-        let remainder = totalCount % columns
-        return remainder == 0 ? 0 : (columns - remainder)
+    // MARK: - BaseGridViewController Overrides
+
+    override var gridDataSource: GridDataSource {
+        _albumDataSource
+    }
+
+    override var emptyStateConfig: (icon: String, title: String, subtitle: String?) {
+        ("photo.on.rectangle", "사진이 없습니다", "이 앨범에 사진이 없습니다")
+    }
+
+    override var navigationTitle: String {
+        albumTitle
     }
 
     // MARK: - Initialization
@@ -137,9 +71,8 @@ final class AlbumGridViewController: UIViewController {
     ) {
         self.albumTitle = albumTitle
         self.fetchResult = fetchResult
-        self.imagePipeline = imagePipeline
-        self.trashStore = trashStore
-        super.init(nibName: nil, bundle: nil)
+        self._albumDataSource = AlbumDataSource(fetchResult: fetchResult)
+        super.init(imagePipeline: imagePipeline, trashStore: trashStore)
     }
 
     required init?(coder: NSCoder) {
@@ -150,18 +83,46 @@ final class AlbumGridViewController: UIViewController {
 
     override func viewDidLoad() {
         super.viewDidLoad()
-        setupUI()
-        setupGestures()
+        setupSwipeGestures()
         setupObservers()
-        updateEmptyState()
 
-        // iOS 26+: 시스템 UI 사용
-        if #available(iOS 26.0, *) {
-            setContentScrollView(collectionView, for: .top)
-            setContentScrollView(collectionView, for: .bottom)
-            collectionView.contentInsetAdjustmentBehavior = .automatic
+        print("[AlbumGridViewController] Initialized with \(fetchResult.count) photos in '\(albumTitle)'")
+    }
+
+    override func viewWillAppear(_ animated: Bool) {
+        super.viewWillAppear(animated)
+
+        if useFloatingUI {
+            // FloatingOverlay 상태 세팅 (공유 UI 사용)
+            configureFloatingOverlayForAlbum()
+        }
+
+        // iOS 18+ Zoom Transition 안정화: 전환 중이면 completion에서 처리
+        if let coordinator = transitionCoordinator {
+            coordinator.animate(alongsideTransition: nil) { [weak self] _ in
+                self?.applyPendingViewerReturn()
+            }
         }
     }
+
+    override func viewDidAppear(_ animated: Bool) {
+        super.viewDidAppear(animated)
+
+        // iOS 18+ Zoom Transition 안정화: fallback (transitionCoordinator 없을 때)
+        applyPendingViewerReturn()
+    }
+
+    override func viewDidLayoutSubviews() {
+        super.viewDidLayoutSubviews()
+
+        // 초기 로드 시 맨 아래로 스크롤 (최신 사진부터 보기)
+        if !didInitialScroll && fetchResult.count > 0 {
+            didInitialScroll = true
+            scrollToBottomIfNeeded()
+        }
+    }
+
+    // MARK: - Setup (Album 고유)
 
     /// PRD7: Observer 설정
     private func setupObservers() {
@@ -207,108 +168,8 @@ final class AlbumGridViewController: UIViewController {
         print("[AlbumGridViewController] Updated \(changedIDs.count) changed cells (no reloadItems)")
     }
 
-    override func viewWillAppear(_ animated: Bool) {
-        super.viewWillAppear(animated)
-
-        if useFloatingUI {
-            // iOS 16~25: 시스템 바 숨김 유지
-            navigationController?.setNavigationBarHidden(true, animated: animated)
-            // tabBar.isHidden은 TabBarController의 BarsVisibilityPolicy에서 관리
-
-            // FloatingOverlay 상태 세팅 (공유 UI 사용)
-            configureFloatingOverlayForAlbum()
-        } else {
-            // iOS 26+: 시스템 바 표시
-            navigationController?.setNavigationBarHidden(false, animated: animated)
-        }
-
-        // iOS 18+ Zoom Transition 안정화: 전환 중이면 completion에서 처리
-        if let coordinator = transitionCoordinator {
-            coordinator.animate(alongsideTransition: nil) { [weak self] _ in
-                self?.applyPendingViewerReturn()
-            }
-        }
-    }
-
-    override func viewDidAppear(_ animated: Bool) {
-        super.viewDidAppear(animated)
-
-        // iOS 18+ Zoom Transition 안정화: fallback (transitionCoordinator 없을 때)
-        applyPendingViewerReturn()
-    }
-
-    override func viewDidLayoutSubviews() {
-        super.viewDidLayoutSubviews()
-        updateCellSize()
-        updateContentInset()
-
-        // 초기 로드 시 맨 아래로 스크롤 (최신 사진부터 보기)
-        if !didInitialScroll && fetchResult.count > 0 {
-            didInitialScroll = true
-            scrollToBottomIfNeeded()
-        }
-    }
-
-    override func viewSafeAreaInsetsDidChange() {
-        super.viewSafeAreaInsetsDidChange()
-        updateContentInset()
-    }
-
-    // MARK: - Setup
-
-    private func setupUI() {
-        view.backgroundColor = .black
-        title = albumTitle
-
-        // 컬렉션 뷰
-        view.addSubview(collectionView)
-        NSLayoutConstraint.activate([
-            collectionView.topAnchor.constraint(equalTo: view.topAnchor),
-            collectionView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
-            collectionView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
-            collectionView.bottomAnchor.constraint(equalTo: view.bottomAnchor)
-        ])
-
-        // 빈 상태 뷰
-        view.addSubview(emptyStateView)
-        NSLayoutConstraint.activate([
-            emptyStateView.centerXAnchor.constraint(equalTo: view.centerXAnchor),
-            emptyStateView.centerYAnchor.constraint(equalTo: view.centerYAnchor),
-            emptyStateView.leadingAnchor.constraint(greaterThanOrEqualTo: view.leadingAnchor, constant: 40),
-            emptyStateView.trailingAnchor.constraint(lessThanOrEqualTo: view.trailingAnchor, constant: -40)
-        ])
-
-        print("[AlbumGridViewController] Initialized with \(fetchResult.count) photos in '\(albumTitle)'")
-    }
-
-    /// FloatingOverlay 상태를 앨범 화면용으로 설정
-    /// - 타이틀: 앨범명
-    /// - 뒤로가기 버튼: 표시 + pop 액션
-    private func configureFloatingOverlayForAlbum() {
-        guard let tabBarController = tabBarController as? TabBarController,
-              let overlay = tabBarController.floatingOverlay else {
-            return
-        }
-
-        // 타이틀 변경
-        overlay.titleBar.setTitle(albumTitle)
-
-        // 뒤로가기 버튼 표시 + pop 액션 설정
-        overlay.titleBar.setShowsBackButton(true) { [weak self] in
-            self?.navigationController?.popViewController(animated: true)
-        }
-
-        // Select 버튼 숨김 (앨범에서는 Select 모드 미지원)
-        overlay.titleBar.isSelectButtonHidden = true
-
-        print("[AlbumGridViewController] FloatingOverlay configured for album: \(albumTitle)")
-    }
-
-    private func setupGestures() {
-        // 핀치 줌 제스처
-        let pinchGesture = UIPinchGestureRecognizer(target: self, action: #selector(handlePinchGesture(_:)))
-        collectionView.addGestureRecognizer(pinchGesture)
-
+    /// PRD7: 스와이프 제스처 설정
+    private func setupSwipeGestures() {
         // PRD7: 스와이프 삭제 제스처
         let swipeGesture = UIPanGestureRecognizer(target: self, action: #selector(handleSwipeDelete(_:)))
         swipeGesture.delegate = self
@@ -332,53 +193,36 @@ final class AlbumGridViewController: UIViewController {
         swipeDeleteState.twoFingerTapGesture?.isEnabled = enabled
     }
 
-    // MARK: - Layout
+    // MARK: - FloatingOverlay Configuration
 
-    private func createLayout(columns: GridColumnCount) -> UICollectionViewLayout {
-        let layout = UICollectionViewCompositionalLayout { _, environment in
-            let spacing = Self.cellSpacing
-            let columnCount = CGFloat(columns.rawValue)
+    /// FloatingOverlay 상태를 앨범 화면용으로 설정
+    /// - 타이틀: 앨범명
+    /// - 뒤로가기 버튼: 표시 + pop 액션
+    override func configureFloatingOverlay() {
+        configureFloatingOverlayForAlbum()
+    }
 
-            let totalSpacing = spacing * (columnCount - 1)
-            let availableWidth = environment.container.effectiveContentSize.width - totalSpacing
-            let cellWidth = floor(availableWidth / columnCount)
-
-            let itemSize = NSCollectionLayoutSize(
-                widthDimension: .absolute(cellWidth),
-                heightDimension: .absolute(cellWidth)
-            )
-            let item = NSCollectionLayoutItem(layoutSize: itemSize)
-
-            let groupSize = NSCollectionLayoutSize(
-                widthDimension: .fractionalWidth(1.0),
-                heightDimension: .absolute(cellWidth)
-            )
-            let group = NSCollectionLayoutGroup.horizontal(
-                layoutSize: groupSize,
-                repeatingSubitem: item,
-                count: columns.rawValue
-            )
-            group.interItemSpacing = .fixed(spacing)
-
-            let section = NSCollectionLayoutSection(group: group)
-            section.interGroupSpacing = spacing
-            section.contentInsetsReference = .none
-
-            return section
+    private func configureFloatingOverlayForAlbum() {
+        guard let tabBarController = tabBarController as? TabBarController,
+              let overlay = tabBarController.floatingOverlay else {
+            return
         }
 
-        return layout
+        // 타이틀 변경
+        overlay.titleBar.setTitle(albumTitle)
+
+        // 뒤로가기 버튼 표시 + pop 액션 설정
+        overlay.titleBar.setShowsBackButton(true) { [weak self] in
+            self?.navigationController?.popViewController(animated: true)
+        }
+
+        // Select 버튼 숨김 (앨범에서는 Select 모드 미지원)
+        overlay.titleBar.isSelectButtonHidden = true
+
+        print("[AlbumGridViewController] FloatingOverlay configured for album: \(albumTitle)")
     }
 
-    private func updateCellSize() {
-        let spacing = Self.cellSpacing
-        let columnCount = CGFloat(currentGridColumnCount.rawValue)
-        let totalSpacing = spacing * (columnCount - 1)
-        let availableWidth = view.bounds.width - totalSpacing
-        let cellWidth = floor(availableWidth / columnCount)
-
-        currentCellSize = CGSize(width: cellWidth, height: cellWidth)
-    }
+    // MARK: - Album 고유 기능
 
     /// 맨 아래로 스크롤 (최신 사진부터 보기)
     private func scrollToBottomIfNeeded() {
@@ -389,137 +233,14 @@ final class AlbumGridViewController: UIViewController {
         collectionView.scrollToItem(at: lastIndexPath, at: .bottom, animated: false)
     }
 
-    /// contentInset 업데이트 (플로팅 UI 높이 반영)
-    private func updateContentInset() {
-        guard useFloatingUI else { return }
+    // MARK: - BaseGridViewController Template Methods
 
-        // TabBarController에서 오버레이 높이 가져오기
-        guard let tabBarController = tabBarController as? TabBarController,
-              let heights = tabBarController.getOverlayHeights() else {
-            return
-        }
-
-        let inset = UIEdgeInsets(
-            top: heights.top,
-            left: 0,
-            bottom: heights.bottom,
-            right: 0
-        )
-
-        collectionView.contentInset = inset
-        collectionView.scrollIndicatorInsets = inset
-    }
-
-    private func thumbnailSize() -> CGSize {
-        let scale = UIScreen.main.scale
-        return CGSize(
-            width: currentCellSize.width * scale,
-            height: currentCellSize.height * scale
-        )
-    }
-
-    private func updateEmptyState() {
-        let isEmpty = fetchResult.count == 0
-        emptyStateView.isHidden = !isEmpty
-        collectionView.isHidden = isEmpty
-    }
-
-    // MARK: - Pinch Zoom
-
-    /// collectionView indexPath → assetID 변환 (padding 보정)
-    private func assetIDForCollectionIndexPath(_ indexPath: IndexPath) -> String? {
-        let assetIndex = indexPath.item - paddingCellCount
-        guard assetIndex >= 0, assetIndex < fetchResult.count else { return nil }
-        return fetchResult.object(at: assetIndex).localIdentifier
-    }
-
-    @objc private func handlePinchGesture(_ gesture: UIPinchGestureRecognizer) {
-        switch gesture.state {
-        case .began:
-            // 앵커 에셋 ID 저장 (padding 보정)
-            let location = gesture.location(in: collectionView)
-            if let indexPath = collectionView.indexPathForItem(at: location) {
-                pinchAnchorAssetID = assetIDForCollectionIndexPath(indexPath)
-            }
-
-        case .changed:
-            if let lastTime = lastPinchZoomTime,
-               Date().timeIntervalSince(lastTime) < Self.pinchCooldown {
-                return
-            }
-
-            let scale = gesture.scale
-            var newGridColumnCount: GridColumnCount?
-
-            if scale > Self.pinchZoomInThreshold {
-                newGridColumnCount = currentGridColumnCount.zoomIn
-            } else if scale < Self.pinchZoomOutThreshold {
-                newGridColumnCount = currentGridColumnCount.zoomOut
-            }
-
-            if let newCount = newGridColumnCount, newCount != currentGridColumnCount {
-                performZoom(to: newCount)
-                gesture.scale = 1.0
-            }
-
-        case .ended, .cancelled:
-            pinchAnchorAssetID = nil
-
-        default:
-            break
-        }
-    }
-
-    private func performZoom(to columns: GridColumnCount) {
-        lastPinchZoomTime = Date()
-
-        // 1. 앵커 assetID 저장 (현재 padding 기준, column 변경 전)
-        let anchorAssetID: String? = {
-            if let id = pinchAnchorAssetID { return id }
-            // 앵커가 없으면 화면 중앙 셀 사용
-            let centerPoint = CGPoint(
-                x: collectionView.bounds.midX,
-                y: collectionView.bounds.midY + collectionView.contentOffset.y
-            )
-            if let centerIndexPath = collectionView.indexPathForItem(at: centerPoint) {
-                return assetIDForCollectionIndexPath(centerIndexPath)
-            }
-            return nil
-        }()
-
-        // 2. 열 수 업데이트 (paddingCellCount도 변경됨)
-        currentGridColumnCount = columns
-        updateCellSize()
-
-        // 3. 새 padding 기준으로 anchorIndexPath 계산
-        let anchorIndexPath = anchorAssetID.flatMap { indexPath(for: $0) }
-
-        UIView.animate(withDuration: 0.25) { [weak self] in
-            guard let self = self else { return }
-
-            self.collectionView.setCollectionViewLayout(
-                self.createLayout(columns: columns),
-                animated: false
-            )
-
-            if let indexPath = anchorIndexPath {
-                self.collectionView.scrollToItem(
-                    at: indexPath,
-                    at: .centeredVertically,
-                    animated: false
-                )
-            }
-        } completion: { [weak self] _ in
-            // 줌 애니메이션 완료 후 visible cells 고해상도 재요청
-            self?.refreshVisibleCellsAfterZoom()
-        }
-
-        print("[AlbumGridViewController] Zoom to \(columns.rawValue) columns")
+    /// 줌 후 visible cells에 고해상도 썸네일 재요청
+    override func didPerformZoom(to columns: GridColumnCount) {
+        refreshVisibleCellsAfterZoom()
     }
 
     /// 줌 후 visible cells에 고해상도 썸네일 재요청
-    /// - 스크롤 중이면 스킵 (스크롤 완료 후 자연스럽게 재로드됨)
-    /// - targetSize가 커질 때만 재요청 (PhotoCell에서 판단)
     private func refreshVisibleCellsAfterZoom() {
         // 안전 가드: 스크롤 중이면 스킵
         if collectionView.isDragging || collectionView.isDecelerating {
@@ -546,75 +267,8 @@ final class AlbumGridViewController: UIViewController {
         }
     }
 
-    // MARK: - Helper Methods
-
-    private func indexPath(for assetID: String) -> IndexPath? {
-        for i in 0..<fetchResult.count {
-            if fetchResult.object(at: i).localIdentifier == assetID {
-                // padding 오프셋 적용
-                return IndexPath(item: i + paddingCellCount, section: 0)
-            }
-        }
-        return nil
-    }
-}
-
-// MARK: - UICollectionViewDataSource
-
-extension AlbumGridViewController: UICollectionViewDataSource {
-
-    func collectionView(_ collectionView: UICollectionView, numberOfItemsInSection section: Int) -> Int {
-        return fetchResult.count + paddingCellCount
-    }
-
-    func collectionView(_ collectionView: UICollectionView, cellForItemAt indexPath: IndexPath) -> UICollectionViewCell {
-        let padding = paddingCellCount
-
-        // 빈 셀 (맨 위 행 패딩)
-        if indexPath.item < padding {
-            let cell = collectionView.dequeueReusableCell(
-                withReuseIdentifier: PhotoCell.reuseIdentifier,
-                for: indexPath
-            ) as? PhotoCell ?? PhotoCell()
-            cell.configureAsEmpty()
-            return cell
-        }
-
-        guard let cell = collectionView.dequeueReusableCell(
-            withReuseIdentifier: PhotoCell.reuseIdentifier,
-            for: indexPath
-        ) as? PhotoCell else {
-            return UICollectionViewCell()
-        }
-
-        // 실제 에셋 인덱스 계산 (padding 오프셋 적용)
-        let assetIndex = indexPath.item - padding
-        let asset = fetchResult.object(at: assetIndex)
-        let isTrashed = trashStore.isTrashed(asset.localIdentifier)
-
-        cell.configure(
-            asset: asset,
-            isTrashed: isTrashed,
-            targetSize: thumbnailSize()
-        )
-
-        return cell
-    }
-}
-
-// MARK: - UICollectionViewDelegate
-
-extension AlbumGridViewController: UICollectionViewDelegate {
-
-    func collectionView(_ collectionView: UICollectionView, didSelectItemAt indexPath: IndexPath) {
-        let padding = paddingCellCount
-
-        // 빈 셀 탭 무시
-        guard indexPath.item >= padding else { return }
-
-        // 실제 에셋 인덱스 계산
-        let assetIndex = indexPath.item - padding
-
+    /// 뷰어 열기 (BaseGridViewController에서 호출)
+    override func openViewer(for asset: PHAsset, at assetIndex: Int) {
         // [수정] 앨범에서도 항상 .normal 모드로 뷰어 열기
         // 보관함과 동일하게 휴지통 사진도 마룬 테두리와 함께 표시되고, 복구 버튼이 표시됨
         let mode: ViewerMode = .normal
@@ -682,41 +336,16 @@ extension AlbumGridViewController: UICollectionViewDelegate {
 
         print("[AlbumGridViewController] Opening viewer at index \(filteredIndex), mode: \(mode)")
     }
+}
 
-    // MARK: - UIScrollViewDelegate (스크롤 롤백 방지)
+// MARK: - UIScrollViewDelegate (스크롤 롤백 방지)
+
+extension AlbumGridViewController {
 
     func scrollViewWillBeginDragging(_ scrollView: UIScrollView) {
         // 사용자가 스크롤 시작하면 pending 스크롤 취소 (롤백 방지)
         pendingScrollAssetID = nil
         didUserScrollAfterReturn = true
-    }
-}
-
-// MARK: - UICollectionViewDataSourcePrefetching
-
-extension AlbumGridViewController: UICollectionViewDataSourcePrefetching {
-
-    func collectionView(_ collectionView: UICollectionView, prefetchItemsAt indexPaths: [IndexPath]) {
-        let padding = paddingCellCount
-        // padding 셀 제외하고 실제 에셋만 prefetch
-        let assetIDs = indexPaths.compactMap { indexPath -> String? in
-            guard indexPath.item >= padding else { return nil }
-            let assetIndex = indexPath.item - padding
-            guard assetIndex < fetchResult.count else { return nil }
-            return fetchResult.object(at: assetIndex).localIdentifier
-        }
-        imagePipeline.preheat(assetIDs: assetIDs, targetSize: thumbnailSize())
-    }
-
-    func collectionView(_ collectionView: UICollectionView, cancelPrefetchingForItemsAt indexPaths: [IndexPath]) {
-        let padding = paddingCellCount
-        let assetIDs = indexPaths.compactMap { indexPath -> String? in
-            guard indexPath.item >= padding else { return nil }
-            let assetIndex = indexPath.item - padding
-            guard assetIndex < fetchResult.count else { return nil }
-            return fetchResult.object(at: assetIndex).localIdentifier
-        }
-        imagePipeline.stopPreheating(assetIDs: assetIDs)
     }
 }
 
@@ -729,7 +358,8 @@ extension AlbumGridViewController: ViewerViewControllerDelegate {
         trashStore.moveToTrash(assetIDs: [assetID])
 
         // 셀 업데이트 (딤드 표시)
-        if let indexPath = indexPath(for: assetID) {
+        // padding 보정 적용 (Base의 collectionIndexPath 사용)
+        if let indexPath = collectionIndexPath(for: assetID) {
             collectionView.reloadItems(at: [indexPath])
         }
 
@@ -739,7 +369,8 @@ extension AlbumGridViewController: ViewerViewControllerDelegate {
     func viewerDidRequestRestore(assetID: String) {
         trashStore.restore(assetIDs: [assetID])
 
-        if let indexPath = indexPath(for: assetID) {
+        // padding 보정 적용 (Base의 collectionIndexPath 사용)
+        if let indexPath = collectionIndexPath(for: assetID) {
             collectionView.reloadItems(at: [indexPath])
         }
 
@@ -784,7 +415,8 @@ extension AlbumGridViewController: ViewerViewControllerDelegate {
             return
         }
 
-        guard let indexPath = indexPath(for: assetID) else { return }
+        // padding 보정 적용 (Base의 collectionIndexPath 사용)
+        guard let indexPath = collectionIndexPath(for: assetID) else { return }
 
         let visibleIndexPaths = collectionView.indexPathsForVisibleItems
         if !visibleIndexPaths.contains(indexPath) {
