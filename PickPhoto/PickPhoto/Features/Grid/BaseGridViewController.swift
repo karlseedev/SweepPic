@@ -398,7 +398,7 @@ class BaseGridViewController: UIViewController {
                 animated: false
             )
 
-            // 앵커 위치로 스크롤
+            // 앵커 위치로 스크롤 (drift 0px 목표)
             if let indexPath = anchorIndexPath {
                 self.collectionView.scrollToItem(
                     at: indexPath,
@@ -406,10 +406,18 @@ class BaseGridViewController: UIViewController {
                     animated: false
                 )
             }
+        } completion: { [weak self] _ in
+            // 줌 애니메이션 완료 후 추가 처리 (서브클래스 확장 지점)
+            self?.didPerformZoom(to: columns)
         }
 
-        // 셀 업데이트 (열 수 변경 후)
-        collectionView.reloadData()
+        print("[BaseGridViewController] Zoom to \(columns.rawValue) columns")
+    }
+
+    /// 줌 완료 후 호출 (서브클래스 확장 지점)
+    /// GridViewController에서 refreshVisibleCellsAfterZoom() 호출에 사용
+    func didPerformZoom(to columns: GridColumnCount) {
+        // 기본 구현 없음 - 서브클래스에서 오버라이드
     }
 
     // MARK: - Empty State

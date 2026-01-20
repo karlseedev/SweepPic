@@ -59,6 +59,8 @@ struct SwipeDeleteState {
 
 extension GridViewController {
 
+    // didPerformZoom 오버라이드 → GridViewController.swift 본체로 이동됨
+
     /// 줌 후 visible cells에 고해상도 썸네일 재요청
     /// - 스크롤 중이면 스킵 (스크롤 완료 후 자연스럽게 재로드됨)
     /// - targetSize가 커질 때만 재요청 (PhotoCell에서 판단)

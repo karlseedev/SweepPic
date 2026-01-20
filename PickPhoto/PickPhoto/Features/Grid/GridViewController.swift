@@ -266,6 +266,11 @@ final class GridViewController: BaseGridViewController {
         "사진보관함"
     }
 
+    /// 줌 완료 후 호출 (고해상도 썸네일 재요청)
+    override func didPerformZoom(to columns: GridColumnCount) {
+        refreshVisibleCellsAfterZoom()
+    }
+
     // MARK: - Lifecycle
 
     override func viewDidLoad() {
