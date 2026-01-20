@@ -321,6 +321,8 @@ final class PhotoCell: UICollectionViewCell {
     override init(frame: CGRect) {
         super.init(frame: frame)
         setupUI()
+        // [DEBUG] 새 셀 생성 추적
+        print("[PhotoCell:init] 새 셀 생성")
     }
 
     required init?(coder: NSCoder) {
@@ -332,6 +334,9 @@ final class PhotoCell: UICollectionViewCell {
 
     override func prepareForReuse() {
         super.prepareForReuse()
+
+        // [DEBUG] prepareForReuse 호출 추적
+        print("[PhotoCell:prepareForReuse] assetID=\(currentAssetID?.prefix(8) ?? "nil"), imageView.image=\(imageView.image == nil ? "nil" : "exists")")
 
         // 이전 요청 취소 (오표시 방지)
         cancelCurrentRequest()
@@ -542,6 +547,9 @@ final class PhotoCell: UICollectionViewCell {
         // B+A v2: 0) 메모리 캐시에서 동기 로드 (즉시 반환)
         // - 프리로드된 이미지가 있으면 셀 생성과 동시에 이미지 할당
         if let memoryImage = MemoryThumbnailCache.shared.get(assetID: assetID, pixelSize: pixelSize) {
+            // [DEBUG] 메모리 캐시 히트
+            print("[PhotoCell:Cache] HIT size=\(Int(pixelSize.width))x\(Int(pixelSize.height)), imageView.image was \(imageView.image == nil ? "nil" : "not nil")")
+
             let wasNil = imageView.image == nil
             imageView.image = memoryImage
             if wasNil { Self.incrementGrayResolved() }  // nil → non-nil 전환 시에만
@@ -560,6 +568,9 @@ final class PhotoCell: UICollectionViewCell {
             #endif
             return // 메모리 캐시 히트 → 완료
         }
+
+        // [DEBUG] 메모리 캐시 미스
+        print("[PhotoCell:Cache] MISS size=\(Int(pixelSize.width))x\(Int(pixelSize.height)), imageView.image was \(imageView.image == nil ? "nil" : "not nil")")
 
         // [설계 정책] 스크롤 중 디스크 캐시 스킵
         // - 디스크 캐시는 "초기 프리로드 전용" (GridViewController.startInitialPreload에서만 사용)
