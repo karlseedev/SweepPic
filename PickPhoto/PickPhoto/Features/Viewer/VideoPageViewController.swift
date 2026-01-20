@@ -152,8 +152,17 @@ final class VideoPageViewController: UIViewController {
         // 줌 중에는 레이아웃 업데이트 보류
         guard !isZoomInteractionActive else { return }
 
+        // ⚠️ 순서 중요: 먼저 oldSize 저장 → 그 다음 frame 업데이트
+        let oldSize = scrollView.frame.size
+        let newSize = view.bounds.size
         scrollView.frame = view.bounds
-        updateVideoLayout()
+
+        // 회전 감지: bounds 크기가 변경되고 비디오 사이즈가 있으면 레이아웃 재계산
+        if oldSize != newSize && oldSize != .zero && videoDisplaySize != .zero {
+            recalculateLayoutForRotation()
+        } else {
+            updateVideoLayout()
+        }
     }
 
     override func viewWillDisappear(_ animated: Bool) {
@@ -571,6 +580,47 @@ final class VideoPageViewController: UIViewController {
             bottom: verticalInset,
             right: horizontalInset
         )
+    }
+
+    /// 회전 후 레이아웃 재계산 (줌 스케일 리셋)
+    private func recalculateLayoutForRotation() {
+        guard videoDisplaySize.width > 0, videoDisplaySize.height > 0 else { return }
+
+        let containerSize = view.bounds.size
+        let videoRatio = videoDisplaySize.width / videoDisplaySize.height
+        let containerRatio = containerSize.width / containerSize.height
+
+        let fitSize: CGSize
+        if videoRatio > containerRatio {
+            // 가로가 더 넓은 비디오 → width에 맞춤
+            fitSize = CGSize(width: containerSize.width,
+                            height: containerSize.width / videoRatio)
+        } else {
+            // 세로가 더 긴 비디오 → height에 맞춤
+            fitSize = CGSize(width: containerSize.height * videoRatio,
+                            height: containerSize.height)
+        }
+
+        // 레이아웃 업데이트
+        playerLayerView.frame = CGRect(origin: .zero, size: fitSize)
+        scrollView.contentSize = fitSize
+
+        // 중앙 정렬
+        let hInset = max(0, (containerSize.width - fitSize.width) / 2)
+        let vInset = max(0, (containerSize.height - fitSize.height) / 2)
+        scrollView.contentInset = UIEdgeInsets(top: vInset, left: hInset,
+                                               bottom: vInset, right: hInset)
+
+        // 회전 시 줌 리셋 (1x로 복귀)
+        scrollView.zoomScale = 1.0
+        scrollView.contentOffset = CGPoint(x: -hInset, y: -vInset)
+
+        // maxZoomScale 재계산
+        scrollView.maximumZoomScale = calculateMaxZoomScale()
+
+        if debugVideo {
+            print("[Video] 🔄 recalculateLayoutForRotation - index: \(index), fit=\(fitSize)")
+        }
     }
 
     // MARK: - Double Tap Zoom

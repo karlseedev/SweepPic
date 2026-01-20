@@ -191,10 +191,14 @@ final class PhotoPageViewController: UIViewController {
 
     override func viewDidLayoutSubviews() {
         super.viewDidLayoutSubviews()
+
+        // ⚠️ 순서 중요: 먼저 oldSize 저장 → 그 다음 frame 업데이트
+        let oldSize = scrollView.frame.size
+        let newSize = view.bounds.size
         scrollView.frame = view.bounds
 
         if debugPhoto {
-            print("[Photo] 📐 viewDidLayoutSubviews - index: \(index), bounds: \(view.bounds.size)")
+            print("[Photo] 📐 viewDidLayoutSubviews - index: \(index), oldSize: \(oldSize), newSize: \(newSize)")
             if !hasLoggedInitialLayoutInfo {
                 hasLoggedInitialLayoutInfo = true
                 print("[Photo] 🎨 backgroundColor - index: \(index), color: \(String(describing: view.backgroundColor))")
@@ -205,6 +209,7 @@ final class PhotoPageViewController: UIViewController {
         if !hasAppliedInitialLayout {
             applyInitialLayout()
             requestLOD0Image()
+            return
         }
 
         // 줌 중에는 레이아웃 변경 보류
@@ -213,8 +218,12 @@ final class PhotoPageViewController: UIViewController {
             return
         }
 
-        // 이미 레이아웃 적용됨 → 레이아웃 변경 없음 (이미지만 교체됨)
-        // requestImageForCurrentBoundsIfNeeded() 제거 - LOD0에서 이미 요청됨
+        // 회전 감지: bounds 크기가 변경되었으면 레이아웃 재계산
+        // (oldSize가 .zero면 초기 상태이므로 무시)
+        // Note: iPad split view 등 "회전 외 크기 변화"에서도 트리거됨 (의도된 동작)
+        if oldSize != newSize && oldSize != .zero {
+            recalculateLayoutForRotation()
+        }
     }
 
     deinit {
@@ -362,6 +371,50 @@ final class PhotoPageViewController: UIViewController {
 
         if debugPhoto {
             print("[Photo] 🎯 applyInitialLayout - index: \(index), asset=\(Int(assetWidth))×\(Int(assetHeight)), fit=\(fitSize)")
+        }
+    }
+
+    /// 회전 후 레이아웃 재계산 (줌 스케일 리셋)
+    /// - Note: applyInitialLayout()과 유사하지만 hasAppliedInitialLayout 체크 없이 실행
+    private func recalculateLayoutForRotation() {
+        let assetWidth = CGFloat(asset.pixelWidth)
+        let assetHeight = CGFloat(asset.pixelHeight)
+        guard assetWidth > 0, assetHeight > 0 else { return }
+
+        // 새 bounds 기준으로 aspect fit 재계산
+        let containerSize = view.bounds.size
+        let assetRatio = assetWidth / assetHeight
+        let containerRatio = containerSize.width / containerSize.height
+
+        let fitSize: CGSize
+        if assetRatio > containerRatio {
+            // 가로가 더 넓은 이미지 → width에 맞춤
+            fitSize = CGSize(width: containerSize.width,
+                            height: containerSize.width / assetRatio)
+        } else {
+            // 세로가 더 긴 이미지 → height에 맞춤
+            fitSize = CGSize(width: containerSize.height * assetRatio,
+                            height: containerSize.height)
+        }
+
+        // 레이아웃 업데이트
+        imageView.frame = CGRect(origin: .zero, size: fitSize)
+        scrollView.contentSize = fitSize
+
+        // 중앙 정렬
+        let hInset = max(0, (containerSize.width - fitSize.width) / 2)
+        let vInset = max(0, (containerSize.height - fitSize.height) / 2)
+        scrollView.contentInset = UIEdgeInsets(top: vInset, left: hInset,
+                                               bottom: vInset, right: hInset)
+
+        // 회전 시 줌 리셋 (1x로 복귀)
+        scrollView.zoomScale = 1.0
+        scrollView.contentOffset = CGPoint(x: -hInset, y: -vInset)
+
+        updateMaxZoomScale()
+
+        if debugPhoto {
+            print("[Photo] 🔄 recalculateLayoutForRotation - index: \(index), fit=\(fitSize)")
         }
     }
 

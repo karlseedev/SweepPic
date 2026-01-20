@@ -166,6 +166,12 @@ class BaseGridViewController: UIViewController {
     /// 자동 스크롤 영역 높이
     static let autoScrollEdgeHeight: CGFloat = 60
 
+    // MARK: - Rotation Support
+
+    /// 회전 시 스크롤 위치 보존용 앵커 indexPath
+    /// - 화면 중앙에 있던 셀의 indexPath를 저장
+    private var scrollAnchorIndexPath: IndexPath?
+
     // MARK: - Abstract Properties (서브클래스 필수 구현)
 
     /// 데이터 소스 (서브클래스에서 반드시 오버라이드)
@@ -237,6 +243,79 @@ class BaseGridViewController: UIViewController {
     override func viewSafeAreaInsetsDidChange() {
         super.viewSafeAreaInsetsDidChange()
         updateContentInset()
+    }
+
+    // MARK: - Rotation
+
+    override func viewWillTransition(
+        to size: CGSize,
+        with coordinator: UIViewControllerTransitionCoordinator
+    ) {
+        super.viewWillTransition(to: size, with: coordinator)
+
+        // 회전 전: 화면 중앙 셀의 indexPath 저장
+        saveScrollAnchorIndexPath()
+
+        coordinator.animate(alongsideTransition: { [weak self] _ in
+            // 레이아웃 무효화 (새 컬럼 수 계산됨)
+            self?.collectionView.collectionViewLayout.invalidateLayout()
+        }, completion: { [weak self] _ in
+            guard let self = self else { return }
+            // ⚠️ 순서 중요: 먼저 inset 확정 → 그 다음 스크롤
+            // (inset 변경 후 스크롤하면 위치가 밀리지 않음)
+            self.updateContentInset()
+            self.restoreScrollAnchorIndexPath()
+        })
+    }
+
+    /// 화면 중앙에 있는 셀의 indexPath 저장
+    /// - Note: 셀 간격(2pt)에 centerPoint가 걸리면 nil 반환 가능 → fallback 처리
+    private func saveScrollAnchorIndexPath() {
+        let visibleRect = CGRect(
+            origin: collectionView.contentOffset,
+            size: collectionView.bounds.size
+        )
+        let centerPoint = CGPoint(
+            x: visibleRect.midX,
+            y: visibleRect.midY
+        )
+
+        // 1차 시도: 정확히 centerPoint에 있는 셀
+        if let indexPath = collectionView.indexPathForItem(at: centerPoint) {
+            scrollAnchorIndexPath = indexPath
+            return
+        }
+
+        // 2차 시도 (fallback): visible cells 중 중앙에 가장 가까운 셀
+        let visibleIndexPaths = collectionView.indexPathsForVisibleItems
+        guard !visibleIndexPaths.isEmpty else { return }
+
+        var closestIndexPath: IndexPath?
+        var closestDistance: CGFloat = .greatestFiniteMagnitude
+
+        for indexPath in visibleIndexPaths {
+            guard let cell = collectionView.cellForItem(at: indexPath) else { continue }
+            let cellCenter = cell.center
+            let distance = hypot(cellCenter.x - centerPoint.x, cellCenter.y - centerPoint.y)
+            if distance < closestDistance {
+                closestDistance = distance
+                closestIndexPath = indexPath
+            }
+        }
+
+        scrollAnchorIndexPath = closestIndexPath
+    }
+
+    /// 저장된 indexPath 기준으로 스크롤 복원
+    private func restoreScrollAnchorIndexPath() {
+        guard let indexPath = scrollAnchorIndexPath else { return }
+        scrollAnchorIndexPath = nil
+
+        // 유효성 검사
+        guard indexPath.item < collectionView.numberOfItems(inSection: 0) else { return }
+
+        // 중앙에 위치하도록 스크롤
+        collectionView.scrollToItem(at: indexPath, at: .centeredVertically, animated: false)
     }
 
     // MARK: - Setup

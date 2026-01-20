@@ -303,6 +303,31 @@ final class ViewerViewController: UIViewController {
         showSimilarPhotoOverlay()
     }
 
+    // MARK: - Rotation
+
+    override func viewWillTransition(
+        to size: CGSize,
+        with coordinator: UIViewControllerTransitionCoordinator
+    ) {
+        super.viewWillTransition(to: size, with: coordinator)
+
+        coordinator.animate(alongsideTransition: { [weak self] _ in
+            // 회전 중: FaceButtonOverlay 즉시 숨김 (위치 오류 방지)
+            self?.faceButtonOverlay?.hideButtonsImmediately()
+        }, completion: { [weak self] _ in
+            // 회전 완료: FaceButtonOverlay 재표시
+            self?.refreshFaceButtonsAfterRotation()
+        })
+    }
+
+    /// 회전 후 +버튼 위치 갱신
+    /// - Note: shouldEnableSimilarPhoto는 Extension의 private 프로퍼티이므로
+    ///         faceButtonOverlay 존재 여부로 기능 활성화 판단
+    private func refreshFaceButtonsAfterRotation() {
+        // faceButtonOverlay가 nil이면 SimilarPhoto 기능 비활성화 상태
+        faceButtonOverlay?.layoutButtons(for: view.bounds)
+    }
+
     override func viewWillDisappear(_ animated: Bool) {
         super.viewWillDisappear(animated)
 
