@@ -157,6 +157,11 @@ final class FaceButtonOverlay: UIView {
         return isOverlayHidden
     }
 
+    /// 버튼이 현재 표시 중인지 여부 (viewDidAppear 중복 호출 방지용)
+    var hasVisibleButtons: Bool {
+        return !faceButtons.isEmpty
+    }
+
     /// 외부에서 토글 기능 호출 (iOS 26 네비게이션 바 버튼용)
     func toggleOverlay() {
         toggleButtonTapped()

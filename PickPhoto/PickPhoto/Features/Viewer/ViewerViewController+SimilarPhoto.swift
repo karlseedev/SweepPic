@@ -249,6 +249,12 @@ extension ViewerViewController {
     /// viewDidAppear에서 호출
     func showSimilarPhotoOverlay() {
         guard shouldEnableSimilarPhoto else { return }
+
+        // 이미 버튼이 표시되어 있으면 건너뜀 (modal dismiss 후 viewDidAppear 재호출 시 깜빡거림 방지)
+        if faceButtonOverlay?.hasVisibleButtons == true {
+            return
+        }
+
         checkAndShowFaceButtons()
     }
 
@@ -731,9 +737,9 @@ extension ViewerViewController: FaceComparisonDelegate {
     func faceComparisonViewControllerDidClose(_ viewController: FaceComparisonViewController) {
         print("[ViewerViewController+SimilarPhoto] Face comparison closed")
 
-        // +버튼 오버레이 갱신 (줌 상태 유지)
-        // resetZoom: false → 확대 상태에서 복귀 시 버튼 위치가 올바르게 표시됨
-        updateSimilarPhotoOverlay(resetZoom: false)
+        // Cancel로 닫을 때는 버튼을 건드리지 않음
+        // - 버튼이 이미 표시되어 있고, modal dismiss 후 그대로 보임
+        // - updateSimilarPhotoOverlay() 호출 시 clearButtonsOnly()로 버튼 제거 → 깜빡거림 발생
     }
 }
 
