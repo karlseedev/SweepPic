@@ -223,7 +223,11 @@ final class AlbumGridViewController: BaseGridViewController {
         overlay.titleBar.resetToSelectButton()
         overlay.titleBar.isSelectButtonHidden = false
 
-        print("[AlbumGridViewController] FloatingOverlay configured for album: \(albumTitle)")
+        // 빈 앨범이면 Select 버튼 비활성화
+        let isEmpty = gridDataSource.assetCount == 0
+        overlay.titleBar.isSelectButtonEnabled = !isEmpty
+
+        print("[AlbumGridViewController] FloatingOverlay configured for album: \(albumTitle), isEmpty: \(isEmpty)")
     }
 
     /// iOS 26+: 시스템 네비바 설정 (Select 버튼 추가)
@@ -232,14 +236,20 @@ final class AlbumGridViewController: BaseGridViewController {
         // 선택 모드가 아닐 때만 Select 버튼 설정
         guard !isSelectMode else { return }
 
-        navigationItem.rightBarButtonItem = UIBarButtonItem(
+        let selectButton = UIBarButtonItem(
             title: "Select",
             style: .plain,
             target: self,
             action: #selector(selectButtonTapped)
         )
 
-        print("[AlbumGridViewController] iOS 26+ navigation bar configured with Select button")
+        // 빈 앨범이면 Select 버튼 비활성화
+        let isEmpty = gridDataSource.assetCount == 0
+        selectButton.isEnabled = !isEmpty
+
+        navigationItem.rightBarButtonItem = selectButton
+
+        print("[AlbumGridViewController] iOS 26+ navigation bar configured with Select button, isEmpty: \(isEmpty)")
     }
 
     // MARK: - Album 고유 기능

@@ -63,6 +63,14 @@ final class FloatingTitleBar: UIView {
         }
     }
 
+    /// Select 버튼 활성화 여부 (빈 앨범/휴지통에서 비활성화)
+    var isSelectButtonEnabled: Bool = true {
+        didSet {
+            selectButton.isEnabled = isSelectButtonEnabled
+            selectButton.alpha = isSelectButtonEnabled ? 1.0 : 0.5
+        }
+    }
+
     /// 뒤로가기 버튼 표시 여부 (push된 화면에서 사용)
     var showsBackButton: Bool = false {
         didSet {

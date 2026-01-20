@@ -327,8 +327,8 @@ extension BaseGridViewController {
 
         let assetID = asset.localIdentifier
 
-        // 딤드 사진(휴지통)은 선택 불가
-        guard !trashStore.isTrashed(assetID) else { return }
+        // 선택 불가 에셋 체크 (Grid/Album: 휴지통 에셋 차단, Trash: 모두 허용)
+        guard canSelectAssetInSelectMode(assetID) else { return }
 
         // 드래그 선택 상태 초기화
         dragSelectStartIndex = indexPath.item
@@ -383,7 +383,7 @@ extension BaseGridViewController {
             guard let asset = gridDataSource.asset(at: assetIndex) else { continue }
 
             let assetID = asset.localIdentifier
-            guard !trashStore.isTrashed(assetID) else { continue }
+            guard canSelectAssetInSelectMode(assetID) else { continue }
 
             if dragSelectIsSelecting {
                 selectionManager.deselect(assetID)
@@ -407,7 +407,7 @@ extension BaseGridViewController {
             guard let asset = gridDataSource.asset(at: assetIndex) else { continue }
 
             let assetID = asset.localIdentifier
-            guard !trashStore.isTrashed(assetID) else { continue }
+            guard canSelectAssetInSelectMode(assetID) else { continue }
 
             if dragSelectIsSelecting {
                 selectionManager.select(assetID)
