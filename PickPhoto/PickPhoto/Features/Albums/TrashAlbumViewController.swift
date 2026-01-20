@@ -126,6 +126,20 @@ final class TrashAlbumViewController: BaseGridViewController {
             // iOS 26+: 시스템 네비바에 "비우기" 버튼 추가
             setupSystemNavigationBar()
         }
+
+        // iOS 18+ Zoom Transition 안정화: 전환 중이면 completion에서 처리
+        if let coordinator = transitionCoordinator {
+            coordinator.animate(alongsideTransition: nil) { [weak self] _ in
+                self?.applyPendingViewerReturn()
+            }
+        }
+    }
+
+    override func viewDidAppear(_ animated: Bool) {
+        super.viewDidAppear(animated)
+
+        // iOS 18+ Zoom Transition 안정화: fallback (transitionCoordinator 없을 때)
+        applyPendingViewerReturn()
     }
 
     // MARK: - Setup
@@ -533,13 +547,11 @@ final class TrashAlbumViewController: BaseGridViewController {
     // MARK: - Cell Configuration (Override)
 
     /// 셀 추가 설정 (휴지통 내에서는 딤드 표시 안 함)
+    /// Base에서 이미 configure() 호출되었으므로, isTrashed 상태만 변경
     override func configureCell(_ cell: PhotoCell, at indexPath: IndexPath, asset: PHAsset) {
-        // 휴지통 내에서는 isTrashed = false (모두 삭제 대상이므로 정상 표시)
-        cell.configure(
-            asset: asset,
-            isTrashed: false,
-            targetSize: thumbnailSize()
-        )
+        // 휴지통 내에서는 모두 삭제 대상이므로 딤드 표시 안 함
+        // Base에서 isTrashed=true로 설정되었을 수 있으므로 false로 덮어씀
+        cell.updateTrashState(false)
     }
 }
 
@@ -593,5 +605,21 @@ extension TrashAlbumViewController: ViewerViewControllerDelegate {
     func viewerWillClose(currentAssetID: String?) {
         // 스크롤 위치만 저장 (전환 완료 후 처리)
         pendingScrollAssetID = currentAssetID
+    }
+
+    /// 뷰어 닫힘 후 대기 중인 작업 처리 (전환 완료 후 호출)
+    /// - scroll만 수행하여 깜빡임 방지
+    private func applyPendingViewerReturn() {
+        guard let assetID = pendingScrollAssetID else { return }
+        pendingScrollAssetID = nil
+
+        // padding 보정 적용하여 indexPath 계산
+        guard let assetIndex = _trashDataSource.assetIndex(for: assetID) else { return }
+        let indexPath = IndexPath(item: assetIndex + paddingCellCount, section: 0)
+
+        let visibleIndexPaths = collectionView.indexPathsForVisibleItems
+        if !visibleIndexPaths.contains(indexPath) {
+            collectionView.scrollToItem(at: indexPath, at: .centeredVertically, animated: false)
+        }
     }
 }
