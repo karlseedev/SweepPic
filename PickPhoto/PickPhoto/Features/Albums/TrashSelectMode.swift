@@ -145,6 +145,9 @@ extension TrashAlbumViewController {
         // Trash 전용: trashSelectModeContainer 종료
         overlay.tabBar.exitTrashSelectMode(animated: true)
 
+        // delegate를 원래대로 복원 (FloatingOverlayContainer)
+        overlay.tabBar.delegate = overlay
+
         // 휴지통 전용 FloatingOverlay 상태로 복원
         configureFloatingOverlayForTrashAfterSelectMode()
 
