@@ -296,6 +296,12 @@ final class GridViewController: BaseGridViewController {
         // BaseGridViewController.viewWillAppear에서 configureFloatingOverlay() 호출
         super.viewWillAppear(animated)
 
+        // 현재 화면이 TrashStore 변경을 받도록 핸들러 재등록
+        trashStore.onStateChange { [weak self] trashedAssetIDs in
+            self?.handleTrashStateChange(trashedAssetIDs)
+        }
+        handleTrashStateChange(trashStore.trashedAssetIDs)
+
         // [DEBUG] viewWillAppear 호출 시점
         let vwaTime = CACurrentMediaTime()
         let vwaMs = loadStartTime > 0 ? (vwaTime - loadStartTime) * 1000 : -1

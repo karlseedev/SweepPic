@@ -97,6 +97,12 @@ final class AlbumGridViewController: BaseGridViewController {
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
 
+        // 현재 화면이 TrashStore 변경을 받도록 핸들러 재등록
+        trashStore.onStateChange { [weak self] trashedAssetIDs in
+            self?.handleTrashStateChange(trashedAssetIDs)
+        }
+        handleTrashStateChange(trashStore.trashedAssetIDs)
+
         if useFloatingUI {
             // FloatingOverlay 상태 세팅 (공유 UI 사용)
             configureFloatingOverlayForAlbum()
