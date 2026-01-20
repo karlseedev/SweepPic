@@ -380,7 +380,20 @@ final class FaceComparisonViewController: UIViewController {
 
             isValidPersonIndicesLoaded = true
             updateTitleBar()
+            updateCycleButtonState()
             setupInitialPageIfReady()
+        }
+    }
+
+    /// 순환 버튼 활성화 상태 업데이트
+    /// 인물이 2명 이상일 때만 활성화
+    private func updateCycleButtonState() {
+        let isEnabled = validPersonIndices.count > 1
+
+        if #available(iOS 26.0, *) {
+            navigationItem.rightBarButtonItems?.first?.isEnabled = isEnabled
+        } else {
+            customTitleBar?.setCycleButtonEnabled(isEnabled)
         }
     }
 

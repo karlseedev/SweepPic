@@ -269,6 +269,12 @@ final class FaceComparisonTitleBar: UIView {
         titleLabel.text = title
     }
 
+    /// 순환 버튼 활성화 상태 설정
+    func setCycleButtonEnabled(_ isEnabled: Bool) {
+        cycleButton.isEnabled = isEnabled
+        cycleButton.alpha = isEnabled ? 1.0 : 0.4
+    }
+
     // MARK: - Actions
 
     @objc private func closeButtonTapped() {
