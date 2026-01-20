@@ -958,7 +958,8 @@ extension GridViewController: ViewerViewControllerDelegate {
         trashStore.moveToTrash(assetIDs: [assetID])
 
         // 그리드 셀 업데이트 (딤드 표시)
-        if let indexPath = dataSourceDriver.indexPath(for: assetID) {
+        // padding 보정 적용 (Base의 collectionIndexPath 사용)
+        if let indexPath = collectionIndexPath(for: assetID) {
             collectionView.reloadItems(at: [indexPath])
         }
 
@@ -978,7 +979,8 @@ extension GridViewController: ViewerViewControllerDelegate {
         let trashStoreTime = CFAbsoluteTimeGetCurrent()
 
         // 그리드 셀 업데이트 (딤드 제거)
-        if let indexPath = dataSourceDriver.indexPath(for: assetID) {
+        // padding 보정 적용 (Base의 collectionIndexPath 사용)
+        if let indexPath = collectionIndexPath(for: assetID) {
             collectionView.reloadItems(at: [indexPath])
         }
 
@@ -1039,7 +1041,8 @@ extension GridViewController: ViewerViewControllerDelegate {
         }
 
         // iOS 사진 앱처럼: 마지막 보던 사진이 화면에 없으면 해당 위치로 스크롤
-        guard let indexPath = dataSourceDriver.indexPath(for: assetID) else { return }
+        // padding 보정 적용 (Base의 collectionIndexPath 사용)
+        guard let indexPath = collectionIndexPath(for: assetID) else { return }
 
         // 현재 보이는 셀인지 확인
         let visibleIndexPaths = collectionView.indexPathsForVisibleItems

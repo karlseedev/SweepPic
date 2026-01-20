@@ -527,9 +527,9 @@ extension BaseGridViewController: UICollectionViewDelegate {
         openViewer(for: asset, at: assetIndex)
     }
 
-    /// 뷰어 열기 (서브클래스에서 오버라이드 가능)
+    /// 뷰어 열기 (서브클래스에서 반드시 오버라이드 필요)
     func openViewer(for asset: PHAsset, at assetIndex: Int) {
-        // 기본 구현 - 서브클래스에서 오버라이드
+        fatalError("Subclass must override openViewer(for:at:)")
     }
 }
 
