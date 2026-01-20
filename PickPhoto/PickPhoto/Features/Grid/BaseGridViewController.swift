@@ -253,6 +253,9 @@ class BaseGridViewController: UIViewController {
     ) {
         super.viewWillTransition(to: size, with: coordinator)
 
+        // [DEBUG] 회전 시작 시점 로그
+        print("[Rotation:Start] visibleCells=\(collectionView.visibleCells.count), numberOfItems=\(collectionView.numberOfItems(inSection: 0))")
+
         // 회전 전: 화면 중앙 셀의 indexPath 저장
         saveScrollAnchorIndexPath()
 
