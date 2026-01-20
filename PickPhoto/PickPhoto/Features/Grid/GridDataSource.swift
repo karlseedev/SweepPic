@@ -126,7 +126,23 @@ final class AlbumDataSource: GridDataSource {
 /// 휴지통 에셋은 동적으로 변경되므로 assets가 var
 final class TrashDataSource: GridDataSource {
     /// 휴지통 에셋 배열 (외부에서 갱신 가능)
-    var assets: [PHAsset] = []
+    /// didSet에서 인덱스 캐시 자동 갱신
+    var assets: [PHAsset] = [] {
+        didSet {
+            rebuildIndexCache()
+        }
+    }
+
+    /// 에셋 ID → 인덱스 캐시 (O(1) 조회용)
+    private var indexCache: [String: Int] = [:]
+
+    /// 인덱스 캐시 재구축
+    private func rebuildIndexCache() {
+        indexCache.removeAll(keepingCapacity: true)
+        for (index, asset) in assets.enumerated() {
+            indexCache[asset.localIdentifier] = index
+        }
+    }
 
     var assetCount: Int {
         assets.count
@@ -142,8 +158,9 @@ final class TrashDataSource: GridDataSource {
         return assets[index].localIdentifier
     }
 
+    /// O(1) 인덱스 조회 (캐시 사용)
     func assetIndex(for assetID: String) -> Int? {
-        assets.firstIndex { $0.localIdentifier == assetID }
+        indexCache[assetID]
     }
 
     /// 휴지통은 fetchResult를 사용하지 않음 (동적 배열 기반)

@@ -120,9 +120,6 @@ final class GridViewController: BaseGridViewController {
     /// 드래그 선택용 팬 제스처 (T040) (extension에서 접근 필요)
     var dragSelectGesture: UIPanGestureRecognizer?
 
-    /// PRD7: 스와이프 삭제 상태 (extension에서 stored property 불가 → 구조체)
-    var swipeDeleteState = SwipeDeleteState()
-
     /// PRD7: 이전 휴지통 상태 (changedIDs 계산용)
     private var lastTrashedIDs: Set<String> = []
 
@@ -252,6 +249,9 @@ final class GridViewController: BaseGridViewController {
         _gridDataSourceAdapter
     }
 
+    /// 스와이프 삭제 지원 (PRD7)
+    override var supportsSwipeDelete: Bool { true }
+
     /// 빈 상태 설정
     override var emptyStateConfig: (icon: String, title: String, subtitle: String?) {
         ("photo.on.rectangle", "사진이 없습니다", "사진을 촬영하거나 가져오세요")
@@ -306,6 +306,7 @@ final class GridViewController: BaseGridViewController {
     }
 
     /// 추가 제스처 설정 (setupGestures에서 호출됨)
+    /// Note: 스와이프 삭제 제스처는 Base.setupGestures에서 supportsSwipeDelete 체크 후 자동 설정됨
     override func setupAdditionalGestures() {
         // 드래그 선택 제스처 (T040)
         // Select 모드에서만 활성화됨
@@ -316,9 +317,6 @@ final class GridViewController: BaseGridViewController {
         dragGesture.isEnabled = false // 기본 비활성화, Select 모드 진입 시 활성화
         collectionView.addGestureRecognizer(dragGesture)
         dragSelectGesture = dragGesture
-
-        // PRD7: 스와이프/투핑거탭 제스처 (GridGestures.swift에서 구현)
-        setupSwipeDeleteGestures()
 
         // 자동 스크롤 테스트 제스처 (3손가락 탭)
         collectionView.setupAutoScrollGesture()

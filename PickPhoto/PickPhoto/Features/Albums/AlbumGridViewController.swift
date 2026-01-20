@@ -33,12 +33,8 @@ final class AlbumGridViewController: BaseGridViewController {
     /// 초기 스크롤 완료 여부 (맨 아래로 스크롤)
     private var didInitialScroll: Bool = false
 
-    // MARK: - PRD7: Swipe Delete State
-
-    /// 스와이프 삭제 상태 (GridViewController와 동일한 구조체 사용)
-    private var swipeDeleteState = SwipeDeleteState()
-
     /// PRD7: 이전 휴지통 상태 (changedIDs 계산용)
+    /// Note: swipeDeleteState는 BaseGridViewController에서 상속
     private var lastTrashedIDs: Set<String> = []
 
     // MARK: - Pending Viewer Return (iOS 18+ Zoom Transition 안정화)
@@ -52,6 +48,9 @@ final class AlbumGridViewController: BaseGridViewController {
     override var gridDataSource: GridDataSource {
         _albumDataSource
     }
+
+    /// 스와이프 삭제 지원 (PRD7)
+    override var supportsSwipeDelete: Bool { true }
 
     override var emptyStateConfig: (icon: String, title: String, subtitle: String?) {
         ("photo.on.rectangle", "사진이 없습니다", "이 앨범에 사진이 없습니다")
@@ -83,7 +82,7 @@ final class AlbumGridViewController: BaseGridViewController {
 
     override func viewDidLoad() {
         super.viewDidLoad()
-        setupSwipeGestures()
+        // Note: 스와이프 제스처는 Base.setupGestures에서 supportsSwipeDelete 체크 후 자동 설정
         setupObservers()
 
         // iOS 26+: 시스템 바 사용, edge-to-edge 투명 효과 활성화
@@ -187,32 +186,8 @@ final class AlbumGridViewController: BaseGridViewController {
         print("[AlbumGridViewController] Updated \(changedIDs.count) changed cells (no reloadItems)")
     }
 
-    /// PRD7: 스와이프 제스처 설정
-    private func setupSwipeGestures() {
-        // PRD7: 스와이프 삭제 제스처
-        let swipeGesture = UIPanGestureRecognizer(target: self, action: #selector(handleSwipeDelete(_:)))
-        swipeGesture.delegate = self
-        collectionView.addGestureRecognizer(swipeGesture)
-        swipeDeleteState.swipeGesture = swipeGesture
-
-        // PRD7: 투 핑거 탭 제스처
-        let twoFingerTap = UITapGestureRecognizer(target: self, action: #selector(handleTwoFingerTap(_:)))
-        twoFingerTap.numberOfTouchesRequired = 2
-        twoFingerTap.delegate = self
-        collectionView.addGestureRecognizer(twoFingerTap)
-        swipeDeleteState.twoFingerTapGesture = twoFingerTap
-
-        updateSwipeDeleteGestureEnabled()
-    }
-
-    /// PRD7: 스와이프 제스처 활성화 상태 업데이트
-    private func updateSwipeDeleteGestureEnabled() {
-        let enabled = !UIAccessibility.isVoiceOverRunning
-        swipeDeleteState.swipeGesture?.isEnabled = enabled
-        swipeDeleteState.twoFingerTapGesture?.isEnabled = enabled
-    }
-
     // MARK: - FloatingOverlay Configuration
+    // Note: 스와이프 제스처 설정은 BaseGridViewController에서 supportsSwipeDelete로 처리됨
 
     /// FloatingOverlay 상태를 앨범 화면용으로 설정
     /// - 타이틀: 앨범명
@@ -444,244 +419,5 @@ extension AlbumGridViewController: ViewerViewControllerDelegate {
     }
 }
 
-// MARK: - PRD7: Swipe Delete/Restore (FR-101, FR-102)
-
-extension AlbumGridViewController: UIGestureRecognizerDelegate {
-
-    // MARK: - UIGestureRecognizerDelegate
-
-    public func gestureRecognizerShouldBegin(_ gestureRecognizer: UIGestureRecognizer) -> Bool {
-        if gestureRecognizer == swipeDeleteState.swipeGesture {
-            // 스크롤 momentum 중이면 무시
-            if collectionView.isDecelerating { return false }
-
-            // 터치 위치에 셀이 없으면 무시
-            guard let pan = gestureRecognizer as? UIPanGestureRecognizer else { return false }
-            let location = pan.location(in: collectionView)
-            guard let indexPath = collectionView.indexPathForItem(at: location) else { return false }
-
-            // 패딩 셀이면 무시
-            guard indexPath.item >= paddingCellCount else { return false }
-
-            // velocity 기반 힌트 (30° 이내)
-            let velocity = pan.velocity(in: collectionView)
-            let angle = atan2(abs(velocity.y), abs(velocity.x))
-            return angle < (30.0 * .pi / 180.0)
-        }
-        return true
-    }
-
-    // MARK: - Swipe Delete Handler
-
-    @objc private func handleSwipeDelete(_ gesture: UIPanGestureRecognizer) {
-        switch gesture.state {
-        case .began:
-            handleSwipeDeleteBegan(gesture)
-        case .changed:
-            handleSwipeDeleteChanged(gesture)
-        case .ended:
-            handleSwipeDeleteEnded(gesture)
-        case .cancelled, .failed:
-            handleSwipeDeleteCancelled()
-        default:
-            break
-        }
-    }
-
-    private func handleSwipeDeleteBegan(_ gesture: UIPanGestureRecognizer) {
-        let location = gesture.location(in: collectionView)
-        guard let indexPath = collectionView.indexPathForItem(at: location),
-              indexPath.item >= paddingCellCount,
-              let cell = collectionView.cellForItem(at: indexPath) as? PhotoCell,
-              !cell.isAnimating else {
-            gesture.state = .cancelled
-            return
-        }
-
-        swipeDeleteState.targetCell = cell
-        swipeDeleteState.targetIndexPath = indexPath
-        swipeDeleteState.targetIsTrashed = cell.isTrashed
-        swipeDeleteState.angleCheckPassed = false
-        cell.isAnimating = true
-        HapticFeedback.prepare()
-    }
-
-    private func handleSwipeDeleteChanged(_ gesture: UIPanGestureRecognizer) {
-        guard let cell = swipeDeleteState.targetCell else { return }
-
-        let translation = gesture.translation(in: collectionView)
-        let absX = abs(translation.x)
-
-        if absX < SwipeDeleteState.minimumTranslation && !swipeDeleteState.angleCheckPassed {
-            return
-        }
-
-        if !swipeDeleteState.angleCheckPassed {
-            let angle = atan2(abs(translation.y), abs(translation.x))
-            if angle > SwipeDeleteState.angleThreshold {
-                handleSwipeDeleteCancelled()
-                gesture.state = .cancelled
-                return
-            }
-            swipeDeleteState.angleCheckPassed = true
-        }
-
-        let progress = min(1.0, absX / currentCellSize.width)
-        let direction: PhotoCell.SwipeDirection = translation.x > 0 ? .right : .left
-        cell.setDimmedProgress(progress, direction: direction, isTrashed: swipeDeleteState.targetIsTrashed)
-    }
-
-    private func handleSwipeDeleteEnded(_ gesture: UIPanGestureRecognizer) {
-        guard let cell = swipeDeleteState.targetCell,
-              let indexPath = swipeDeleteState.targetIndexPath else {
-            swipeDeleteState.reset()
-            return
-        }
-
-        let translation = gesture.translation(in: collectionView)
-        let velocity = gesture.velocity(in: collectionView)
-
-        let isDistanceConfirmed = abs(translation.x) >= currentCellSize.width * SwipeDeleteState.confirmRatio
-        let isVelocityConfirmed = abs(velocity.x) >= SwipeDeleteState.confirmVelocity
-
-        if (isDistanceConfirmed || isVelocityConfirmed) && swipeDeleteState.angleCheckPassed {
-            confirmSwipeDelete(cell: cell, indexPath: indexPath)
-        } else {
-            cancelSwipeDelete(cell: cell)
-        }
-    }
-
-    private func handleSwipeDeleteCancelled() {
-        guard let cell = swipeDeleteState.targetCell else {
-            swipeDeleteState.reset()
-            return
-        }
-        cancelSwipeDelete(cell: cell)
-    }
-
-    private func confirmSwipeDelete(cell: PhotoCell, indexPath: IndexPath) {
-        let isTrashed = swipeDeleteState.targetIsTrashed
-        let toTrashed = !isTrashed
-
-        let actualIndex = indexPath.item - paddingCellCount
-        guard actualIndex < fetchResult.count else {
-            cancelSwipeDelete(cell: cell)
-            return
-        }
-        let assetID = fetchResult.object(at: actualIndex).localIdentifier
-
-        cell.confirmDimmedAnimation(toTrashed: toTrashed) { [weak self] in
-            guard let self = self else { return }
-
-            if toTrashed {
-                self.trashStore.moveToTrash(assetID) { [weak self] result in
-                    self?.handleSwipeResult(result, cell: cell)
-                }
-            } else {
-                self.trashStore.restore(assetID) { [weak self] result in
-                    self?.handleSwipeResult(result, cell: cell)
-                }
-            }
-        }
-
-        swipeDeleteState.reset()
-    }
-
-    private func cancelSwipeDelete(cell: PhotoCell) {
-        cell.cancelDimmedAnimation { [weak self] in
-            cell.isAnimating = false
-            self?.swipeDeleteState.reset()
-        }
-    }
-
-    private func handleSwipeResult(_ result: Result<Void, TrashStoreError>, cell: PhotoCell) {
-        switch result {
-        case .success:
-            HapticFeedback.light()
-            cell.isAnimating = false
-        case .failure:
-            rollbackSwipeCell(cell: cell)
-        }
-    }
-
-    private func rollbackSwipeCell(cell: PhotoCell) {
-        let originalTrashed = swipeDeleteState.targetIsTrashed
-
-        if originalTrashed {
-            cell.fadeDimmed(toTrashed: true) {
-                cell.isAnimating = false
-            }
-        } else {
-            cell.cancelDimmedAnimation {
-                cell.isAnimating = false
-            }
-        }
-
-        HapticFeedback.error()
-        ToastView.show("저장 실패. 다시 시도해주세요", in: view.window)
-    }
-
-    // MARK: - Two Finger Tap Handler
-
-    @objc private func handleTwoFingerTap(_ gesture: UITapGestureRecognizer) {
-        guard gesture.state == .ended else { return }
-
-        let touch0 = gesture.location(ofTouch: 0, in: collectionView)
-        let touch1 = gesture.location(ofTouch: 1, in: collectionView)
-
-        guard let ip0 = collectionView.indexPathForItem(at: touch0),
-              let ip1 = collectionView.indexPathForItem(at: touch1),
-              ip0 == ip1,
-              ip0.item >= paddingCellCount else {
-            return
-        }
-
-        let actualIndex = ip0.item - paddingCellCount
-        guard actualIndex < fetchResult.count else { return }
-        let assetID = fetchResult.object(at: actualIndex).localIdentifier
-
-        guard let cell = collectionView.cellForItem(at: ip0) as? PhotoCell,
-              !cell.isAnimating else {
-            return
-        }
-
-        cell.isAnimating = true
-        let isTrashed = cell.isTrashed
-        let toTrashed = !isTrashed
-
-        cell.fadeDimmed(toTrashed: toTrashed) { [weak self] in
-            guard let self = self else {
-                cell.isAnimating = false
-                return
-            }
-
-            if toTrashed {
-                self.trashStore.moveToTrash(assetID) { [weak self] result in
-                    self?.handleTwoFingerTapResult(result, cell: cell, originalTrashed: isTrashed)
-                }
-            } else {
-                self.trashStore.restore(assetID) { [weak self] result in
-                    self?.handleTwoFingerTapResult(result, cell: cell, originalTrashed: isTrashed)
-                }
-            }
-        }
-    }
-
-    private func handleTwoFingerTapResult(
-        _ result: Result<Void, TrashStoreError>,
-        cell: PhotoCell,
-        originalTrashed: Bool
-    ) {
-        switch result {
-        case .success:
-            HapticFeedback.light()
-            cell.isAnimating = false
-        case .failure:
-            cell.fadeDimmed(toTrashed: originalTrashed) {
-                cell.isAnimating = false
-            }
-            HapticFeedback.error()
-            ToastView.show("저장 실패. 다시 시도해주세요", in: view.window)
-        }
-    }
-}
+// Note: 스와이프 삭제/복구 코드는 BaseGridViewController로 공통화됨
+// supportsSwipeDelete = true로 자동 활성화
