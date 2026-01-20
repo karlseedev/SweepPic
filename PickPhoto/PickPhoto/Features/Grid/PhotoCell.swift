@@ -546,10 +546,9 @@ final class PhotoCell: UICollectionViewCell {
 
         // B+A v2: 0) 메모리 캐시에서 동기 로드 (즉시 반환)
         // - 프리로드된 이미지가 있으면 셀 생성과 동시에 이미지 할당
-        // - 캐시 키는 assetID만 사용 (크기 무관 - 회전 시 캐시 히트 보장)
-        if let memoryImage = MemoryThumbnailCache.shared.get(assetID: assetID) {
+        if let memoryImage = MemoryThumbnailCache.shared.get(assetID: assetID, pixelSize: pixelSize) {
             // [DEBUG] 메모리 캐시 히트
-            print("[PhotoCell:Cache] HIT assetID=\(assetID.prefix(8)), imageView.image was \(imageView.image == nil ? "nil" : "not nil")")
+            print("[PhotoCell:Cache] HIT size=\(Int(pixelSize.width))x\(Int(pixelSize.height)), imageView.image was \(imageView.image == nil ? "nil" : "not nil")")
 
             let wasNil = imageView.image == nil
             imageView.image = memoryImage
@@ -571,7 +570,7 @@ final class PhotoCell: UICollectionViewCell {
         }
 
         // [DEBUG] 메모리 캐시 미스
-        print("[PhotoCell:Cache] MISS assetID=\(assetID.prefix(8)), imageView.image was \(imageView.image == nil ? "nil" : "not nil")")
+        print("[PhotoCell:Cache] MISS size=\(Int(pixelSize.width))x\(Int(pixelSize.height)), imageView.image was \(imageView.image == nil ? "nil" : "not nil")")
 
         // [설계 정책] 스크롤 중 디스크 캐시 스킵
         // - 디스크 캐시는 "초기 프리로드 전용" (GridViewController.startInitialPreload에서만 사용)

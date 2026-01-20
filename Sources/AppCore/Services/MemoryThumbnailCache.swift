@@ -4,7 +4,7 @@
 // B+A 조합 v2:
 // - 첫 화면 프리로드 결과를 메모리에 저장
 // - cellForItemAt에서 동기 조회로 즉시 이미지 할당
-// - 키는 assetID만 사용 (크기 무관 - 회전 시 캐시 히트 보장)
+// - 모든 키는 픽셀(px) 단위로 통일
 
 #if canImport(UIKit)
 import UIKit
@@ -15,7 +15,7 @@ import UIKit
 /// 메모리 기반 썸네일 캐시
 /// - NSCache 사용으로 메모리 압박 시 자동 해제
 /// - 동기 접근으로 cellForItemAt에서 즉시 반환
-/// - 키는 assetID만 사용 (크기 무관)
+/// - 키는 픽셀 단위 (pt × scale 변환된 값)
 public final class MemoryThumbnailCache {
 
     // MARK: - Singleton
@@ -81,10 +81,12 @@ public final class MemoryThumbnailCache {
     // MARK: - Public API
 
     /// 동기 조회 (cellForItemAt용)
-    /// - Parameter assetID: 에셋 ID (localIdentifier)
+    /// - Parameters:
+    ///   - assetID: 에셋 ID (localIdentifier)
+    ///   - pixelSize: 픽셀 단위 크기 (pt × scale 변환된 값)
     /// - Returns: 캐시된 이미지 또는 nil
-    public func get(assetID: String) -> UIImage? {
-        let key = cacheKey(assetID: assetID)
+    public func get(assetID: String, pixelSize: CGSize) -> UIImage? {
+        let key = cacheKey(assetID: assetID, pixelSize: pixelSize)
         let image = cache.object(forKey: key)
 
         // 통계 업데이트
@@ -100,19 +102,12 @@ public final class MemoryThumbnailCache {
     }
 
     /// 저장 (프리로드 완료 시)
-    /// - 기존 이미지보다 큰 경우에만 저장 (품질 유지)
     /// - Parameters:
     ///   - image: 저장할 이미지
     ///   - assetID: 에셋 ID
-    public func set(image: UIImage, assetID: String) {
-        let key = cacheKey(assetID: assetID)
-
-        // 기존 이미지보다 큰 경우에만 저장 (품질 유지)
-        if let existing = cache.object(forKey: key) {
-            let existingPixels = existing.size.width * existing.size.height * existing.scale * existing.scale
-            let newPixels = image.size.width * image.size.height * image.scale * image.scale
-            guard newPixels >= existingPixels else { return }
-        }
+    ///   - pixelSize: 픽셀 단위 크기
+    public func set(image: UIImage, assetID: String, pixelSize: CGSize) {
+        let key = cacheKey(assetID: assetID, pixelSize: pixelSize)
 
         // cost = 이미지 메모리 크기 추정 (width × height × 4 bytes)
         let cost = Int(image.size.width * image.size.height * image.scale * image.scale * 4)
@@ -121,8 +116,9 @@ public final class MemoryThumbnailCache {
 
     /// 특정 에셋 삭제
     /// - Parameter assetID: 에셋 ID
-    public func remove(assetID: String) {
-        let key = cacheKey(assetID: assetID)
+    /// - Parameter pixelSize: 픽셀 단위 크기
+    public func remove(assetID: String, pixelSize: CGSize) {
+        let key = cacheKey(assetID: assetID, pixelSize: pixelSize)
         cache.removeObject(forKey: key)
     }
 
@@ -137,9 +133,11 @@ public final class MemoryThumbnailCache {
 
     // MARK: - Private Methods
 
-    /// 캐시 키 생성 (assetID만 사용)
-    /// - 크기 무관으로 회전 시에도 캐시 히트 보장
-    private func cacheKey(assetID: String) -> NSString {
-        assetID as NSString
+    /// 캐시 키 생성 (px 단위 강제)
+    /// - 형식: "{assetID}_{width}x{height}"
+    /// - pixelSize는 이미 pt × scale 변환된 값이어야 함
+    private func cacheKey(assetID: String, pixelSize: CGSize) -> NSString {
+        // px 단위임을 명시 (scale 미포함 - 이미 곱해진 값)
+        "\(assetID)_\(Int(pixelSize.width))x\(Int(pixelSize.height))" as NSString
     }
 }

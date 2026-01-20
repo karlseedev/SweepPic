@@ -400,7 +400,7 @@ final class TrashAlbumViewController: BaseGridViewController {
             let assetID = asset.localIdentifier
 
             // 메모리 캐시 히트 시 스킵
-            if MemoryThumbnailCache.shared.get(assetID: assetID) != nil {
+            if MemoryThumbnailCache.shared.get(assetID: assetID, pixelSize: pixelSize) != nil {
                 incrementPreloadCount()
                 continue
             }
@@ -412,7 +412,11 @@ final class TrashAlbumViewController: BaseGridViewController {
                 size: pixelSize
             ) { [weak self] image in
                 if let image = image {
-                    MemoryThumbnailCache.shared.set(image: image, assetID: assetID)
+                    MemoryThumbnailCache.shared.set(
+                        image: image,
+                        assetID: assetID,
+                        pixelSize: pixelSize
+                    )
                 }
                 self?.incrementPreloadCount()
             }
