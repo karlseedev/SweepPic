@@ -128,9 +128,9 @@ extension TrashAlbumViewController {
             self?.exitSelectMode()
         }
 
-        // TODO: Phase 4에서 trashSelectModeContainer 구현 후 연결
-        // 현재는 기본 selectModeContainer 사용
-        overlay.tabBar.enterSelectMode(animated: true)
+        // Trash 전용: trashSelectModeContainer 사용 (Restore + 선택개수 + Delete)
+        overlay.tabBar.delegate = self
+        overlay.tabBar.enterTrashSelectMode(animated: true)
 
         print("[TrashAlbumViewController] Floating UI select mode entered")
     }
@@ -142,8 +142,8 @@ extension TrashAlbumViewController {
 
         overlay.titleBar.exitSelectMode()
 
-        // TODO: Phase 4에서 trashSelectModeContainer 구현 후 연결
-        overlay.tabBar.exitSelectMode(animated: true)
+        // Trash 전용: trashSelectModeContainer 종료
+        overlay.tabBar.exitTrashSelectMode(animated: true)
 
         // 휴지통 전용 FloatingOverlay 상태로 복원
         configureFloatingOverlayForTrashAfterSelectMode()
@@ -156,8 +156,8 @@ extension TrashAlbumViewController {
         guard let tabBarController = tabBarController as? TabBarController,
               let overlay = tabBarController.floatingOverlay else { return }
 
-        // TODO: Phase 4에서 trashSelectModeContainer 구현 후 연결
-        overlay.tabBar.updateSelectionCount(count)
+        // Trash 전용: trashSelectModeContainer의 선택 개수 업데이트
+        overlay.tabBar.updateTrashSelectionCount(count)
     }
 
     /// Select 모드 종료 후 FloatingOverlay를 휴지통 상태로 복원
@@ -240,5 +240,35 @@ extension TrashAlbumViewController {
     /// TrashDataSource assets 접근 헬퍼
     fileprivate var trashDataSourceAssets: [PHAsset] {
         (gridDataSource as? TrashDataSource)?.assets ?? []
+    }
+}
+
+// MARK: - FloatingTabBarDelegate (Trash Select Mode)
+
+extension TrashAlbumViewController: FloatingTabBarDelegate {
+
+    /// 탭 선택 (Trash Select 모드에서는 무시)
+    func floatingTabBar(_ tabBar: FloatingTabBar, didSelectTabAt index: Int) {
+        // Select 모드에서는 탭 전환 무시
+    }
+
+    /// Grid/Album Delete 버튼 (Trash에서는 사용 안 함)
+    func floatingTabBarDidTapDelete(_ tabBar: FloatingTabBar) {
+        // Trash에서는 trashDeleteSelectedTapped 사용
+    }
+
+    /// 휴지통 비우기 버튼 (Select 모드 아닐 때)
+    func floatingTabBarDidTapEmptyTrash(_ tabBar: FloatingTabBar) {
+        emptyTrashButtonTapped()
+    }
+
+    /// Trash Select 모드: Restore 버튼
+    func floatingTabBarDidTapRestore(_ tabBar: FloatingTabBar) {
+        trashRestoreSelectedTapped()
+    }
+
+    /// Trash Select 모드: Delete 버튼 (영구 삭제)
+    func floatingTabBarDidTapTrashDelete(_ tabBar: FloatingTabBar) {
+        trashDeleteSelectedTapped()
     }
 }

@@ -21,6 +21,19 @@ protocol FloatingTabBarDelegate: AnyObject {
 
     /// 휴지통 비우기(삭제하기) 버튼 탭
     func floatingTabBarDidTapEmptyTrash(_ tabBar: FloatingTabBar)
+
+    /// 휴지통 Select 모드에서 Restore 버튼 탭
+    func floatingTabBarDidTapRestore(_ tabBar: FloatingTabBar)
+
+    /// 휴지통 Select 모드에서 Delete 버튼 탭 (영구 삭제)
+    func floatingTabBarDidTapTrashDelete(_ tabBar: FloatingTabBar)
+}
+
+// MARK: - Default Implementation
+
+extension FloatingTabBarDelegate {
+    func floatingTabBarDidTapRestore(_ tabBar: FloatingTabBar) {}
+    func floatingTabBarDidTapTrashDelete(_ tabBar: FloatingTabBar) {}
 }
 
 /// 하단 플로팅 캡슐 탭바
@@ -55,8 +68,11 @@ final class FloatingTabBar: UIView {
         }
     }
 
-    /// 현재 Select 모드 여부
+    /// 현재 Select 모드 여부 (Grid/Album용)
     private(set) var isSelectMode: Bool = false
+
+    /// 현재 Trash Select 모드 여부 (Trash 전용)
+    private(set) var isTrashSelectMode: Bool = false
 
     // MARK: - UI Components (Normal Mode)
 
@@ -210,13 +226,62 @@ final class FloatingTabBar: UIView {
         return button
     }()
 
-    /// Select 모드 컨테이너 (선택개수 + Delete)
+    /// Select 모드 컨테이너 (선택개수 + Delete) - Grid/Album용
     private lazy var selectModeContainer: UIView = {
         let view = UIView()
         view.backgroundColor = .clear
         view.isHidden = true
         view.translatesAutoresizingMaskIntoConstraints = false
         return view
+    }()
+
+    // MARK: - UI Components (Trash Select Mode)
+
+    /// Trash Select 모드 컨테이너 (Restore + 선택개수 + Delete) - Trash 전용
+    private lazy var trashSelectModeContainer: UIView = {
+        let view = UIView()
+        view.backgroundColor = .clear
+        view.isHidden = true
+        view.translatesAutoresizingMaskIntoConstraints = false
+        return view
+    }()
+
+    /// Trash Restore 버튼 (캡슐 + 틴티드 스타일)
+    private lazy var trashRestoreButton: UIButton = {
+        var config = UIButton.Configuration.filled()
+        config.title = "Restore"
+        // 파란색 반투명 배경 + 흰색 텍스트
+        config.baseBackgroundColor = UIColor.systemBlue.withAlphaComponent(0.3)
+        config.baseForegroundColor = .white
+        config.cornerStyle = .capsule
+        config.contentInsets = NSDirectionalEdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16)
+        let button = UIButton(configuration: config)
+        button.addTarget(self, action: #selector(trashRestoreButtonTapped), for: .touchUpInside)
+        return button
+    }()
+
+    /// Trash 선택 개수 라벨
+    private lazy var trashSelectionCountLabel: UILabel = {
+        let label = UILabel()
+        label.text = "항목 선택"
+        label.textColor = .white
+        label.font = .systemFont(ofSize: 17, weight: .regular)
+        label.textAlignment = .center
+        return label
+    }()
+
+    /// Trash Delete 버튼 (캡슐 + 틴티드 스타일, 영구 삭제)
+    private lazy var trashDeleteButton: UIButton = {
+        var config = UIButton.Configuration.filled()
+        config.title = "Delete"
+        // 빨간색 반투명 배경 + 흰색 텍스트
+        config.baseBackgroundColor = UIColor.systemRed.withAlphaComponent(0.3)
+        config.baseForegroundColor = .white
+        config.cornerStyle = .capsule
+        config.contentInsets = NSDirectionalEdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16)
+        let button = UIButton(configuration: config)
+        button.addTarget(self, action: #selector(trashDeleteButtonTapped), for: .touchUpInside)
+        return button
     }()
 
     /// 그라데이션 딤 레이어 (하단에서 상단으로 자연스럽게 페이드, 블러 없음)
@@ -273,12 +338,21 @@ final class FloatingTabBar: UIView {
         emptyTrashContainer.contentView.addSubview(emptyTrashButton)
         emptyTrashShadowView.isHidden = true  // 비활성화
 
-        // Select 모드 컨테이너 추가 (선택개수 + Delete)
+        // Select 모드 컨테이너 추가 (선택개수 + Delete) - Grid/Album용
         addSubview(selectModeContainer)
         selectModeContainer.addSubview(selectionCountLabel)
         selectModeContainer.addSubview(deleteButton)
         selectionCountLabel.translatesAutoresizingMaskIntoConstraints = false
         deleteButton.translatesAutoresizingMaskIntoConstraints = false
+
+        // Trash Select 모드 컨테이너 추가 (Restore + 선택개수 + Delete) - Trash 전용
+        addSubview(trashSelectModeContainer)
+        trashSelectModeContainer.addSubview(trashRestoreButton)
+        trashSelectModeContainer.addSubview(trashSelectionCountLabel)
+        trashSelectModeContainer.addSubview(trashDeleteButton)
+        trashRestoreButton.translatesAutoresizingMaskIntoConstraints = false
+        trashSelectionCountLabel.translatesAutoresizingMaskIntoConstraints = false
+        trashDeleteButton.translatesAutoresizingMaskIntoConstraints = false
 
         setupConstraints()
         updateTabSelection()
@@ -331,7 +405,7 @@ final class FloatingTabBar: UIView {
             emptyTrashButton.trailingAnchor.constraint(equalTo: emptyTrashContainer.contentView.trailingAnchor),
             emptyTrashButton.bottomAnchor.constraint(equalTo: emptyTrashContainer.contentView.bottomAnchor),
 
-            // Select 모드 컨테이너: 전체 너비
+            // Select 모드 컨테이너: 전체 너비 (Grid/Album용)
             selectModeContainer.topAnchor.constraint(equalTo: topAnchor),
             selectModeContainer.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 16),
             selectModeContainer.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -16),
@@ -344,6 +418,24 @@ final class FloatingTabBar: UIView {
             // Delete 버튼: 우측
             deleteButton.trailingAnchor.constraint(equalTo: selectModeContainer.trailingAnchor),
             deleteButton.centerYAnchor.constraint(equalTo: selectModeContainer.centerYAnchor),
+
+            // Trash Select 모드 컨테이너: 전체 너비 (Trash 전용)
+            trashSelectModeContainer.topAnchor.constraint(equalTo: topAnchor),
+            trashSelectModeContainer.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 16),
+            trashSelectModeContainer.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -16),
+            trashSelectModeContainer.heightAnchor.constraint(equalToConstant: Self.capsuleHeight),
+
+            // Trash Restore 버튼: 좌측
+            trashRestoreButton.leadingAnchor.constraint(equalTo: trashSelectModeContainer.leadingAnchor),
+            trashRestoreButton.centerYAnchor.constraint(equalTo: trashSelectModeContainer.centerYAnchor),
+
+            // Trash 선택개수 라벨: 중앙
+            trashSelectionCountLabel.centerXAnchor.constraint(equalTo: trashSelectModeContainer.centerXAnchor),
+            trashSelectionCountLabel.centerYAnchor.constraint(equalTo: trashSelectModeContainer.centerYAnchor),
+
+            // Trash Delete 버튼: 우측
+            trashDeleteButton.trailingAnchor.constraint(equalTo: trashSelectModeContainer.trailingAnchor),
+            trashDeleteButton.centerYAnchor.constraint(equalTo: trashSelectModeContainer.centerYAnchor),
         ])
     }
 
@@ -367,7 +459,23 @@ final class FloatingTabBar: UIView {
     /// 버튼만 터치 반응, 나머지 딤드 영역은 터치 차단
     /// 기본 사진 앱과 동일하게 딤드 영역에서는 스크롤 불가
     override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
-        // Select 모드일 때
+        // Trash Select 모드일 때 (Trash 전용: Restore + Delete)
+        if isTrashSelectMode {
+            // Restore 버튼 체크
+            let restorePoint = convert(point, to: trashRestoreButton)
+            if trashRestoreButton.bounds.contains(restorePoint) {
+                return trashRestoreButton
+            }
+            // Delete 버튼 체크
+            let deletePoint = convert(point, to: trashDeleteButton)
+            if trashDeleteButton.bounds.contains(deletePoint) {
+                return trashDeleteButton
+            }
+            // 나머지 딤드 영역은 터치 차단
+            return self
+        }
+
+        // Select 모드일 때 (Grid/Album용)
         if isSelectMode {
             // Delete 버튼 체크
             let deletePoint = convert(point, to: deleteButton)
@@ -473,6 +581,16 @@ final class FloatingTabBar: UIView {
         delegate?.floatingTabBarDidTapEmptyTrash(self)
     }
 
+    @objc private func trashRestoreButtonTapped() {
+        print("[FloatingTabBar] Trash Restore tapped")
+        delegate?.floatingTabBarDidTapRestore(self)
+    }
+
+    @objc private func trashDeleteButtonTapped() {
+        print("[FloatingTabBar] Trash Delete tapped")
+        delegate?.floatingTabBarDidTapTrashDelete(self)
+    }
+
     // MARK: - Public Methods
 
     /// Select 모드 진입
@@ -526,13 +644,79 @@ final class FloatingTabBar: UIView {
         print("[FloatingTabBar] Exited select mode")
     }
 
-    /// 선택 개수 업데이트 (Select 모드에서)
+    /// 선택 개수 업데이트 (Select 모드에서) - Grid/Album용
     /// - Parameter count: 선택된 사진 개수
     func updateSelectionCount(_ count: Int) {
         // 0개: "항목 선택", 1개 이상: "N개 항목 선택됨"
         selectionCountLabel.text = count > 0 ? "\(count)개 항목 선택됨" : "항목 선택"
         deleteButton.isEnabled = count > 0
         deleteButton.alpha = count > 0 ? 1.0 : 0.5
+    }
+
+    // MARK: - Trash Select Mode Methods
+
+    /// Trash Select 모드 진입 (Trash 전용: Restore + 선택개수 + Delete)
+    /// - Parameter animated: 애니메이션 여부
+    func enterTrashSelectMode(animated: Bool = true) {
+        isTrashSelectMode = true
+        trashSelectionCountLabel.text = "항목 선택"
+        trashRestoreButton.isEnabled = false
+        trashRestoreButton.alpha = 0.5
+        trashDeleteButton.isEnabled = false
+        trashDeleteButton.alpha = 0.5
+
+        if animated {
+            trashSelectModeContainer.isHidden = false
+            trashSelectModeContainer.alpha = 0
+            UIView.animate(withDuration: 0.25) {
+                self.capsuleShadowView.alpha = 0
+                self.trashSelectModeContainer.alpha = 1
+            } completion: { _ in
+                self.capsuleShadowView.isHidden = true
+            }
+        } else {
+            capsuleShadowView.isHidden = true
+            capsuleShadowView.alpha = 0
+            trashSelectModeContainer.isHidden = false
+            trashSelectModeContainer.alpha = 1
+        }
+
+        print("[FloatingTabBar] Entered trash select mode")
+    }
+
+    /// Trash Select 모드 종료 (Trash 전용)
+    /// - Parameter animated: 애니메이션 여부
+    func exitTrashSelectMode(animated: Bool = true) {
+        isTrashSelectMode = false
+
+        if animated {
+            capsuleShadowView.isHidden = false
+            capsuleShadowView.alpha = 0
+            UIView.animate(withDuration: 0.25) {
+                self.capsuleShadowView.alpha = 1
+                self.trashSelectModeContainer.alpha = 0
+            } completion: { _ in
+                self.trashSelectModeContainer.isHidden = true
+            }
+        } else {
+            capsuleShadowView.isHidden = false
+            capsuleShadowView.alpha = 1
+            trashSelectModeContainer.isHidden = true
+            trashSelectModeContainer.alpha = 0
+        }
+
+        print("[FloatingTabBar] Exited trash select mode")
+    }
+
+    /// Trash 선택 개수 업데이트 (Trash Select 모드에서)
+    /// - Parameter count: 선택된 사진 개수
+    func updateTrashSelectionCount(_ count: Int) {
+        // 0개: "항목 선택", 1개 이상: "N개 항목 선택됨"
+        trashSelectionCountLabel.text = count > 0 ? "\(count)개 항목 선택됨" : "항목 선택"
+        trashRestoreButton.isEnabled = count > 0
+        trashRestoreButton.alpha = count > 0 ? 1.0 : 0.5
+        trashDeleteButton.isEnabled = count > 0
+        trashDeleteButton.alpha = count > 0 ? 1.0 : 0.5
     }
 
     /// 탭바 높이 계산 (safe area 포함)

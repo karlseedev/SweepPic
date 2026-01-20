@@ -1,4 +1,4 @@
-# 자동 정리 기능: 저품질 사진 판별 기획서 (v7)
+# 자동 정리 기능: 저품질 사진 판별 기획서 (v8)
 
 **작성일**: 2026-01-19
 **목적**: '정리' 버튼 클릭 시 저품질 사진 50장을 찾아 휴지통으로 이동하는 기능의 판별 로직 기획
@@ -14,6 +14,7 @@
 | v5 | 260120 | 이어서 정리 기능, 취소 시 처리, 백그라운드/동기화 정책, 1,000장 규칙 목적 명확화 |
 | v6 | 260120 | 사용자 스토리 기반 로직/문구 구체화, 종료 조건 우선순위 명확화, 진행률 팝업 즉시 시작 방식 |
 | v7 | 260120 | 숨김 사진/공유 앨범 사진 조기 필터 제외 추가 |
+| v8 | 260120 | Weak 신호 가중치 차등 적용 (blur=2점), iOS 18 AestheticsScore 모드별 임계값 추가, Stage별 Weak 계산 위치 명시 |
 
 ---
 
@@ -94,6 +95,18 @@
 | | 낮은 색상 다양성 | RGB Std < 15 | 단조로운 이미지 |
 | | 저해상도 | < 1MP (1,000,000 픽셀) | VGA 이하 |
 
+**Weak 신호 가중치 및 계산 Stage (iOS 16-17 Fallback 전용):**
+
+| Weak 신호 | 가중치 | 계산 Stage | 근거 |
+|----------|:------:|:----------:|------|
+| **일반 블러** | **2점** | Stage 3 | PMC 연구: blur가 타 요소 대비 ~2배 영향력 |
+| 일반 노출 (평균) | 1점 | Stage 2 | 기본값 |
+| 일반 노출 (분포) | 1점 | Stage 2 | 기본값 |
+| 낮은 색상 다양성 | 1점 | Stage 2 | 기본값 |
+| 저해상도 | 1점 | Stage 1 | PHAsset 메타데이터에서 판정 |
+
+> **참고**: iOS 18+에서는 AestheticsScore가 이 로직을 대체합니다. (Section 6.2 참조)
+
 ### C. 안전장치 (Safe Guard)
 
 저품질 판정 시에도 아래 조건 충족 시 **정상 사진으로 복구**.
@@ -146,22 +159,33 @@
 | **목적** | 커버리지 최대화 (더 많은 저품질 탐지) |
 | **판정** | Strong + Conditional + Weak 조합 사용 |
 | **Conditional** | 단일 항목으로 저품질 확정 |
-| **Weak 조합** | 2개 이상 충족 시 저품질 |
+| **Weak 조합** | 가중치 합산 >= 3점 시 저품질 (iOS 16-17) |
 | **임계값** | 완화 (휘도<0.15, Lap<100) |
 
-**Weak 조합 규칙 상세**:
-- 모든 Weak 항목은 동등한 가중치 (1점)
-- 2점 이상 → LOW_QUALITY 판정
-- 특정 조합 제외 없음 (예: 블러+저해상도, 노출+단색 등 모두 유효)
-- 예시: 일반 블러(1점) + 일반 노출(1점) = 2점 → LOW_QUALITY
+**Weak 조합 규칙 상세 (iOS 16-17 Fallback 전용)**:
+- 블러는 2점, 나머지 Weak 신호는 1점 (Section 1.B 가중치 표 참조)
+- **Recall 모드**: 합산 >= 3점 → LOW_QUALITY
+- 예시: 일반 블러(2점) + 일반 노출(1점) = 3점 → LOW_QUALITY
+- 예시: 일반 노출(1점) + 색상 다양성(1점) + 저해상도(1점) = 3점 → LOW_QUALITY
+
+> **iOS 18+**: AestheticsScore `overallScore < 0` 으로 대체 (Section 6.2 참조)
 
 ### 모드별 신호 활성화 요약
+
+**iOS 16-17 (Stage 2~4 파이프라인):**
 
 | 구분 | 항목 | Precision | Recall |
 |:---:|------|:---------:|:------:|
 | Strong | 극단 노출, 심각 블러 | O | O |
 | Conditional | 렌즈 가림, 주머니 샷, 극단 단색 | X | O |
-| Weak | 일반 블러, 일반 노출, 저해상도 등 | X | 2+조합 |
+| Weak | 일반 블러, 일반 노출, 저해상도 등 | X | 가중치 합 >= 3 |
+
+**iOS 18+ (AestheticsScore):**
+
+| 모드 | 임계값 | 설명 |
+|:---:|:------:|------|
+| Precision | overallScore < **-0.3** | 확실한 저품질만 (엄격) |
+| Recall | overallScore < **0** | Apple 기본 기준 |
 
 ---
 
@@ -216,11 +240,15 @@
 ┌─────────────────────────────────────────────────────────────┐
 │  Stage 4: CompositeJudge + SafeGuard    [복합 판정 + 예외]  │
 │  ─────────────────────────────────────────────────────────  │
-│  입력: Stage 2~3 분석 결과 + 판정 사유                       │
+│  입력: Stage 1~3 분석 결과 + Weak 플래그                     │
+│  Weak 신호 집계 (iOS 16-17, Recall 모드만):                  │
+│    • Stage 1: 저해상도 (1점)                                │
+│    • Stage 2: 노출 평균 (1점), 노출 분포 (1점), 색상 (1점)  │
+│    • Stage 3: 일반 블러 (2점)                               │
+│    • 가중치 합산 >= 3 → LOW_QUALITY                         │
 │  복합 판정 (Recall 모드만):                                  │
 │    • 주머니 샷: 휘도<0.10 AND RGB Std<15 AND Lap<50         │
 │                 AND 비네팅<0.05 → LOW_QUALITY               │
-│    • Weak 2개 이상 조합 → LOW_QUALITY                       │
 │  Safe Guard 후처리:                                         │
 │    • 블러 판정인 경우:                                       │
 │      - depthEffect 확인 → SKIP                              │
@@ -235,10 +263,10 @@
 
 | Stage | 이름 | 입력 | 비용 | 판정 항목 |
 |:-----:|------|------|:----:|----------|
-| 1 | MetadataFilter | PHAsset | 최저 | 즐겨찾기, 편집됨, 숨김, 공유앨범, 스크린샷 (Safe Guard 조기) |
-| 2 | ExposureAnalyzer | 64×64 이미지 | 중간 | 노출(Strong), 단색/렌즈가림(Conditional) |
-| 3 | BlurAnalyzer | 256×256 이미지 | 최고 | 블러(Strong/Weak) |
-| 4 | CompositeJudge + SafeGuard | 분석 결과 | 조건부 | 주머니 샷, Weak 조합, 심도 효과, 얼굴 품질 |
+| 1 | MetadataFilter | PHAsset | 최저 | 즐겨찾기, 편집됨, 숨김, 공유앨범, 스크린샷 (Safe Guard), **저해상도 (Weak)** |
+| 2 | ExposureAnalyzer | 64×64 이미지 | 중간 | 노출(Strong), 단색/렌즈가림(Conditional), **노출/색상 다양성 (Weak)** |
+| 3 | BlurAnalyzer | 256×256 이미지 | 최고 | 블러(Strong), **일반 블러 (Weak, 가중치 2)** |
+| 4 | CompositeJudge + SafeGuard | 분석 결과 | 조건부 | 주머니 샷, **Weak 가중치 집계 (합>=3)**, 심도 효과, 얼굴 품질 |
 
 > **Note**: iOS 18+ AestheticsScore 사용 시에도 Stage 1(MetadataFilter)은 반드시 선행 적용됩니다.
 
@@ -642,7 +670,8 @@
 
 1. AestheticsScore 분석 시도
 2. 성공 시:
-   - overallScore < 0 → LOW_QUALITY (Stage 2~3 대체)
+   - Precision 모드: overallScore < -0.3 → LOW_QUALITY
+   - Recall 모드: overallScore < 0 → LOW_QUALITY
    - isUtility == true → UTILITY 카테고리 (스크린샷과 동일 취급)
 3. 실패 시 (시뮬레이터 등):
    - 기존 Stage 2~4 파이프라인으로 Fallback
@@ -652,17 +681,28 @@
 
 ### 6.2 iOS 18 AestheticsScore API
 
+**모드별 임계값:**
+
+| 모드 | 임계값 | 근거 |
+|:---:|:------:|------|
+| **Precision** | overallScore < **-0.3** | 확실한 저품질만 선별 (오탐 최소화) |
+| **Recall** | overallScore < **0** | Apple 기본 기준 (커버리지 최대화) |
+
+> **임계값 선정 근거**: Apple 문서에 따르면 overallScore는 -1 ~ 1 범위이며, 0 미만은 낮은 품질을 의미합니다. Precision 모드의 -0.3은 검증 테스트(Section 8)에서 미세 조정될 수 있습니다.
+
 ```swift
 import Vision
 
-func analyzeWithAesthetics(image: UIImage) async throws -> Bool {
+func analyzeWithAesthetics(image: UIImage, mode: JudgmentMode) async throws -> Bool {
     guard let ciimage = CIImage(image: image) else { return false }
     let request = CalculateImageAestheticsScoresRequest()
     let observation = try await request.perform(on: ciimage)
 
-    // overallScore < 0 → 저품질
+    // 모드별 임계값 적용
+    let threshold: Float = (mode == .precision) ? -0.3 : 0.0
+
     // isUtility == true → 스크린샷/문서 (별도 처리)
-    return observation.overallScore < 0
+    return observation.overallScore < threshold
 }
 ```
 
