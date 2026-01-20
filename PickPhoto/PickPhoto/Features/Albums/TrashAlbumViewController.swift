@@ -11,6 +11,10 @@
 //
 // T059: 빈 상태 표시
 // - "휴지통이 비어 있습니다"
+//
+// Phase 5: BaseGridViewController 상속으로 리팩토링
+// - 공통 코드 제거: 상수, 레이아웃, 핀치 줌, 프리패치
+// - 고유 기능 유지: 초기표시 최적화, 백그라운드 로딩, 비우기 버튼
 
 import UIKit
 import Photos
@@ -19,86 +23,22 @@ import AppCore
 /// 휴지통 앨범 뷰컨트롤러
 /// TrashStore의 삭제 예정 사진을 그리드로 표시
 /// TabBarController의 FloatingOverlay를 공유하여 상태만 변경
-final class TrashAlbumViewController: UIViewController {
+final class TrashAlbumViewController: BaseGridViewController {
 
-    // MARK: - Constants
+    // MARK: - Data Source
 
-    /// 셀 간격
-    private static let cellSpacing: CGFloat = 2
+    /// 휴지통 데이터 소스
+    private let _trashDataSource = TrashDataSource()
 
-    // GridColumnCount → GridGridColumnCount.swift로 이동됨
-
-    /// 핀치 줌 임계값
-    private static let pinchZoomInThreshold: CGFloat = 1.15
-    private static let pinchZoomOutThreshold: CGFloat = 0.85
-
-    /// 핀치 줌 쿨다운
-    private static let pinchCooldown: TimeInterval = 0.2
-
-    // MARK: - UI Components
-
-    /// 컬렉션 뷰
-    private lazy var collectionView: UICollectionView = {
-        let cv = UICollectionView(frame: .zero, collectionViewLayout: createLayout(columns: .three))
-        cv.backgroundColor = .black
-        cv.translatesAutoresizingMaskIntoConstraints = false
-        cv.register(PhotoCell.self, forCellWithReuseIdentifier: PhotoCell.reuseIdentifier)
-        cv.delegate = self
-        cv.dataSource = self
-        cv.prefetchDataSource = self
-        cv.alwaysBounceVertical = true
-        // Edge-to-edge
-        cv.contentInsetAdjustmentBehavior = .never
-        return cv
-    }()
-
-    /// 빈 상태 뷰 (T059)
-    private lazy var emptyStateView: EmptyStateView = {
-        let view = EmptyStateView()
-        view.configure(
-            icon: "trash",
-            title: "휴지통이 비어 있습니다",
-            subtitle: nil
-        )
-        view.useDarkTheme()  // 검정 배경에서 사용
-        view.isHidden = true
-        view.translatesAutoresizingMaskIntoConstraints = false
-        return view
-    }()
-
-    /// 커스텀 플로팅 UI 사용 여부 (iOS 26+에서는 false)
-    private var useFloatingUI: Bool {
-        if #available(iOS 26.0, *) {
-            return false
-        }
-        return true
+    /// GridDataSource 프로토콜 구현
+    override var gridDataSource: GridDataSource {
+        _trashDataSource
     }
 
     // MARK: - Properties
 
-    /// 이미지 파이프라인
-    private let imagePipeline: ImagePipelineProtocol
-
-    /// 휴지통 스토어
-    private let trashStore: TrashStoreProtocol
-
     /// 휴지통 사진 ID Set
     private var trashedAssetIDSet: Set<String> = []
-
-    /// 휴지통 사진 PHAsset 배열
-    private var trashedAssets: [PHAsset] = []
-
-    /// 현재 열 수
-    private var currentGridColumnCount: GridColumnCount = .three
-
-    /// 현재 셀 크기
-    private var currentCellSize: CGSize = .zero
-
-    /// 핀치 줌 마지막 실행 시간
-    private var lastPinchZoomTime: Date?
-
-    /// 핀치 줌 앵커 에셋 ID
-    private var pinchAnchorAssetID: String?
 
     /// 초기 스크롤 완료 여부 (맨 아래로 스크롤)
     private var didInitialScroll: Bool = false
@@ -120,30 +60,28 @@ final class TrashAlbumViewController: UIViewController {
     /// 타임아웃 플래그
     private var preloadTimedOut: Bool = false
 
-    // MARK: - Pending Viewer Return (iOS 18+ Zoom Transition 안정화)
+    // MARK: - BaseGridViewController Overrides
 
-    /// 뷰어 닫힘 후 스크롤할 에셋 ID
-    private var pendingScrollAssetID: String?
+    /// 빈 상태 설정
+    override var emptyStateConfig: (icon: String, title: String, subtitle: String?) {
+        ("trash", "휴지통이 비어 있습니다", nil)
+    }
 
-    /// 맨 위 행 빈 셀 개수 (3의 배수가 아닐 시 맨 위 행에 빈 셀)
-    /// 최신 사진(맨 아래) 기준 꽉 차게 정렬
-    private var paddingCellCount: Int {
-        let totalCount = trashedAssets.count
-        guard totalCount > 0 else { return 0 }
-        let columns = currentGridColumnCount.rawValue
-        let remainder = totalCount % columns
-        return remainder == 0 ? 0 : (columns - remainder)
+    /// 네비게이션 타이틀
+    /// ⚠️ 휴지통 명칭 변경 시 동시 수정 필요:
+    /// - TabBarController.swift: tabBarItem.title
+    /// - configureFloatingOverlayForTrash의 setTitle()
+    override var navigationTitle: String {
+        "PickPhoto 휴지통"
     }
 
     // MARK: - Initialization
 
-    init(
+    override init(
         imagePipeline: ImagePipelineProtocol = ImagePipeline.shared,
         trashStore: TrashStoreProtocol = TrashStore.shared
     ) {
-        self.imagePipeline = imagePipeline
-        self.trashStore = trashStore
-        super.init(nibName: nil, bundle: nil)
+        super.init(imagePipeline: imagePipeline, trashStore: trashStore)
     }
 
     required init?(coder: NSCoder) {
@@ -154,8 +92,6 @@ final class TrashAlbumViewController: UIViewController {
 
     override func viewDidLoad() {
         super.viewDidLoad()
-        setupUI()
-        setupGestures()
         setupObservers()
 
         // 노출 게이팅: 프리로드 완료까지 숨김
@@ -176,83 +112,38 @@ final class TrashAlbumViewController: UIViewController {
             setContentScrollView(collectionView, for: .bottom)
             collectionView.contentInsetAdjustmentBehavior = .automatic
         }
+
+        print("[TrashAlbumViewController] Initialized")
     }
 
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
 
         if useFloatingUI {
-            // iOS 16~25: 시스템 바 숨김 유지
-            navigationController?.setNavigationBarHidden(true, animated: animated)
-            // tabBar.isHidden은 TabBarController의 BarsVisibilityPolicy에서 관리
-
             // FloatingOverlay 상태 세팅 (공유 UI 사용)
             configureFloatingOverlayForTrash()
-        } else {
-            // iOS 26+: 시스템 바 표시
-            navigationController?.setNavigationBarHidden(false, animated: animated)
-            // 시스템 네비바에 "비우기" 버튼 추가
+        } else if #available(iOS 26.0, *) {
+            // iOS 26+: 시스템 네비바에 "비우기" 버튼 추가
             setupSystemNavigationBar()
         }
-
-        // iOS 18+ Zoom Transition 안정화: 전환 중이면 completion에서 처리
-        if let coordinator = transitionCoordinator {
-            coordinator.animate(alongsideTransition: nil) { [weak self] _ in
-                self?.applyPendingViewerReturn()
-            }
-        }
-    }
-
-    override func viewDidAppear(_ animated: Bool) {
-        super.viewDidAppear(animated)
-
-        // iOS 18+ Zoom Transition 안정화: fallback (transitionCoordinator 없을 때)
-        applyPendingViewerReturn()
-    }
-
-    override func viewDidLayoutSubviews() {
-        super.viewDidLayoutSubviews()
-        updateCellSize()
-        updateContentInset()
-    }
-
-    override func viewSafeAreaInsetsDidChange() {
-        super.viewSafeAreaInsetsDidChange()
-        updateContentInset()
     }
 
     // MARK: - Setup
 
-    private func setupUI() {
-        view.backgroundColor = .black
-        // ⚠️ 상단 타이틀 명칭 변경 시 동시 수정 필요:
-        // - TrashAlbumViewController.swift: navigationItem.title (여기), setTitle()
-        // 주의: title 대신 navigationItem.title 사용 (tabBarItem.title 덮어쓰기 방지)
-        navigationItem.title = "PickPhoto 휴지통"
-
-        // 컬렉션 뷰
-        view.addSubview(collectionView)
-        NSLayoutConstraint.activate([
-            collectionView.topAnchor.constraint(equalTo: view.topAnchor),
-            collectionView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
-            collectionView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
-            collectionView.bottomAnchor.constraint(equalTo: view.bottomAnchor)
-        ])
-
-        // 빈 상태 뷰
-        view.addSubview(emptyStateView)
-        NSLayoutConstraint.activate([
-            emptyStateView.centerXAnchor.constraint(equalTo: view.centerXAnchor),
-            emptyStateView.centerYAnchor.constraint(equalTo: view.centerYAnchor),
-            emptyStateView.leadingAnchor.constraint(greaterThanOrEqualTo: view.leadingAnchor, constant: 40),
-            emptyStateView.trailingAnchor.constraint(lessThanOrEqualTo: view.trailingAnchor, constant: -40)
-        ])
-
-        print("[TrashAlbumViewController] Initialized")
+    /// TrashStore 상태 변경 구독
+    private func setupObservers() {
+        trashStore.onStateChange { [weak self] _ in
+            DispatchQueue.main.async {
+                self?.loadTrashedAssets()
+            }
+        }
     }
 
     /// 시스템 네비바 설정 (iOS 26+)
-    private func setupSystemNavigationBar() {
+    @available(iOS 26.0, *)
+    override func setupSystemNavigationBar() {
+        super.setupSystemNavigationBar()
+
         // "비우기" 버튼 추가
         let emptyButton = UIBarButtonItem(
             title: "비우기",
@@ -264,7 +155,7 @@ final class TrashAlbumViewController: UIViewController {
         navigationItem.rightBarButtonItem = emptyButton
 
         // 빈 휴지통이면 버튼 비활성화
-        emptyButton.isEnabled = !trashedAssets.isEmpty
+        emptyButton.isEnabled = !_trashDataSource.assets.isEmpty
     }
 
     /// FloatingOverlay 상태를 휴지통 탭용으로 설정
@@ -277,16 +168,13 @@ final class TrashAlbumViewController: UIViewController {
             return
         }
 
-        // ⚠️ 휴지통 명칭 변경 시 동시 수정 필요:
-        // - TabBarController.swift: tabBarItem.title
-        // - TrashAlbumViewController.swift: title, setTitle() (여기)
-        overlay.titleBar.setTitle("PickPhoto 휴지통")
+        overlay.titleBar.setTitle(navigationTitle)
 
         // 뒤로가기 버튼 숨김 (별도 탭이므로)
         overlay.titleBar.setShowsBackButton(false, action: nil)
 
         // "비우기" 버튼 설정 (휴지통이 비어있지 않을 때)
-        if !trashedAssets.isEmpty {
+        if !_trashDataSource.assets.isEmpty {
             overlay.titleBar.setRightButton(title: "비우기", backgroundColor: .systemRed) { [weak self] in
                 self?.emptyTrashButtonTapped()
             }
@@ -295,21 +183,6 @@ final class TrashAlbumViewController: UIViewController {
         }
 
         print("[TrashAlbumViewController] FloatingOverlay configured for trash tab")
-    }
-
-    private func setupGestures() {
-        // 핀치 줌 제스처
-        let pinchGesture = UIPinchGestureRecognizer(target: self, action: #selector(handlePinchGesture(_:)))
-        collectionView.addGestureRecognizer(pinchGesture)
-    }
-
-    /// TrashStore 상태 변경 구독
-    private func setupObservers() {
-        trashStore.onStateChange { [weak self] _ in
-            DispatchQueue.main.async {
-                self?.loadTrashedAssets()
-            }
-        }
     }
 
     // MARK: - Data Loading
@@ -322,7 +195,7 @@ final class TrashAlbumViewController: UIViewController {
         trashedAssetIDSet = trashStore.trashedAssetIDs
 
         if trashedAssetIDSet.isEmpty {
-            trashedAssets = []
+            _trashDataSource.assets = []
             DispatchQueue.main.async { [weak self] in
                 self?.onDataLoaded(startTime: startTime)
             }
@@ -358,7 +231,7 @@ final class TrashAlbumViewController: UIViewController {
 
             // 메인 스레드에서 UI 업데이트
             DispatchQueue.main.async {
-                self.trashedAssets = assets
+                self._trashDataSource.assets = assets
                 self.onDataLoaded(startTime: startTime)
             }
         }
@@ -380,12 +253,12 @@ final class TrashAlbumViewController: UIViewController {
             updateFloatingEmptyButton()
         } else {
             // iOS 26+: 시스템 네비바 버튼 상태 업데이트
-            navigationItem.rightBarButtonItem?.isEnabled = !trashedAssets.isEmpty
+            navigationItem.rightBarButtonItem?.isEnabled = !_trashDataSource.assets.isEmpty
         }
 
         let endTime = CFAbsoluteTimeGetCurrent()
 
-        print("[TrashAlbumViewController] Loaded \(trashedAssets.count) trashed assets")
+        print("[TrashAlbumViewController] Loaded \(_trashDataSource.assetCount) trashed assets")
         print("[TrashAlbumViewController.Timing] reloadData: \(String(format: "%.1f", (reloadTime - reloadStartTime) * 1000))ms, total: \(String(format: "%.1f", (endTime - startTime) * 1000))ms")
 
         // 프리로드 시작 (초기 로드 시에만)
@@ -396,18 +269,36 @@ final class TrashAlbumViewController: UIViewController {
 
     /// 맨 아래로 스크롤 (최신 사진부터 보기)
     private func scrollToBottomIfNeeded() {
-        guard !trashedAssets.isEmpty else { return }
+        guard !_trashDataSource.assets.isEmpty else { return }
         // padding 적용된 마지막 인덱스
-        let lastIndex = trashedAssets.count - 1 + paddingCellCount
+        let lastIndex = _trashDataSource.assetCount - 1 + paddingCellCount
         let lastIndexPath = IndexPath(item: lastIndex, section: 0)
         collectionView.scrollToItem(at: lastIndexPath, at: .bottom, animated: false)
+    }
+
+    /// FloatingUI 비우기 버튼 상태 업데이트
+    /// 주의: 현재 탭이 휴지통 탭일 때만 버튼 변경 (공유 UI이므로 다른 탭일 때 변경하면 안 됨)
+    private func updateFloatingEmptyButton() {
+        guard let tabBarController = tabBarController as? TabBarController,
+              tabBarController.selectedIndex == 2,  // 휴지통 탭 인덱스일 때만 변경
+              let overlay = tabBarController.floatingOverlay else {
+            return
+        }
+
+        if !_trashDataSource.assets.isEmpty {
+            overlay.titleBar.setRightButton(title: "비우기", backgroundColor: .systemRed) { [weak self] in
+                self?.emptyTrashButtonTapped()
+            }
+        } else {
+            overlay.titleBar.isSelectButtonHidden = true
+        }
     }
 
     // MARK: - Initial Display
 
     /// 첫 화면 프리로드 범위 계산 (맨 아래 12개)
     private func calculatePreloadRange() -> (startIndex: Int, count: Int) {
-        let totalCount = trashedAssets.count
+        let totalCount = _trashDataSource.assetCount
         guard totalCount > 0 else { return (0, 0) }
 
         let targetCount = min(12, totalCount)  // 3열 × 4행
@@ -442,8 +333,8 @@ final class TrashAlbumViewController: UIViewController {
         var preloadAssets: [PHAsset] = []
         for i in 0..<count {
             let assetIndex = startIndex + i
-            guard assetIndex < trashedAssets.count else { continue }
-            preloadAssets.append(trashedAssets[assetIndex])
+            guard let asset = _trashDataSource.asset(at: assetIndex) else { continue }
+            preloadAssets.append(asset)
         }
 
         // PHCachingImageManager preheat (디스크 캐시 미스 대비)
@@ -524,121 +415,19 @@ final class TrashAlbumViewController: UIViewController {
         print("[TrashAlbumViewController] Initial display: \(reason), preloaded: \(completed)/\(target)")
     }
 
-    // MARK: - Layout
-
-    private func createLayout(columns: GridColumnCount) -> UICollectionViewLayout {
-        let layout = UICollectionViewCompositionalLayout { _, environment in
-            let spacing = Self.cellSpacing
-            let columnCount = CGFloat(columns.rawValue)
-
-            let totalSpacing = spacing * (columnCount - 1)
-            let availableWidth = environment.container.effectiveContentSize.width - totalSpacing
-            let cellWidth = floor(availableWidth / columnCount)
-
-            let itemSize = NSCollectionLayoutSize(
-                widthDimension: .absolute(cellWidth),
-                heightDimension: .absolute(cellWidth)
-            )
-            let item = NSCollectionLayoutItem(layoutSize: itemSize)
-
-            let groupSize = NSCollectionLayoutSize(
-                widthDimension: .fractionalWidth(1.0),
-                heightDimension: .absolute(cellWidth)
-            )
-            let group = NSCollectionLayoutGroup.horizontal(
-                layoutSize: groupSize,
-                repeatingSubitem: item,
-                count: columns.rawValue
-            )
-            group.interItemSpacing = .fixed(spacing)
-
-            let section = NSCollectionLayoutSection(group: group)
-            section.interGroupSpacing = spacing
-            section.contentInsetsReference = .none
-
-            return section
-        }
-
-        return layout
-    }
-
-    private func updateCellSize() {
-        let spacing = Self.cellSpacing
-        let columnCount = CGFloat(currentGridColumnCount.rawValue)
-        let totalSpacing = spacing * (columnCount - 1)
-        let availableWidth = view.bounds.width - totalSpacing
-        let cellWidth = floor(availableWidth / columnCount)
-
-        currentCellSize = CGSize(width: cellWidth, height: cellWidth)
-    }
-
-    /// contentInset 업데이트 (플로팅 UI 높이 반영)
-    private func updateContentInset() {
-        guard useFloatingUI else { return }
-
-        // TabBarController에서 오버레이 높이 가져오기
-        guard let tabBarController = tabBarController as? TabBarController,
-              let heights = tabBarController.getOverlayHeights() else {
-            return
-        }
-
-        let inset = UIEdgeInsets(
-            top: heights.top,
-            left: 0,
-            bottom: heights.bottom,
-            right: 0
-        )
-
-        collectionView.contentInset = inset
-        collectionView.scrollIndicatorInsets = inset
-    }
-
-    private func thumbnailSize() -> CGSize {
-        let scale = UIScreen.main.scale
-        return CGSize(
-            width: currentCellSize.width * scale,
-            height: currentCellSize.height * scale
-        )
-    }
-
-    /// 빈 상태 업데이트 (T059)
-    private func updateEmptyState() {
-        let isEmpty = trashedAssets.isEmpty
-        emptyStateView.isHidden = !isEmpty
-        collectionView.isHidden = isEmpty
-    }
-
-    /// FloatingUI 비우기 버튼 상태 업데이트
-    /// 주의: 현재 탭이 휴지통 탭일 때만 버튼 변경 (공유 UI이므로 다른 탭일 때 변경하면 안 됨)
-    private func updateFloatingEmptyButton() {
-        guard let tabBarController = tabBarController as? TabBarController,
-              tabBarController.selectedIndex == 2,  // 휴지통 탭 인덱스일 때만 변경
-              let overlay = tabBarController.floatingOverlay else {
-            return
-        }
-
-        if !trashedAssets.isEmpty {
-            overlay.titleBar.setRightButton(title: "비우기", backgroundColor: .systemRed) { [weak self] in
-                self?.emptyTrashButtonTapped()
-            }
-        } else {
-            overlay.titleBar.isSelectButtonHidden = true
-        }
-    }
-
     // MARK: - Actions
 
     /// "비우기" 버튼 탭 (T058)
     /// 바로 iOS 시스템 팝업으로 일괄 삭제 (확인 얼럿 생략 - iOS 팝업이 확인 역할)
     @objc private func emptyTrashButtonTapped() {
-        guard !trashedAssets.isEmpty else { return }
+        guard !_trashDataSource.assets.isEmpty else { return }
         performEmptyTrash()
     }
 
     /// 휴지통 비우기 (외부에서 호출 가능)
     /// FloatingTabBar의 삭제하기 버튼에서 호출
     func emptyTrash() {
-        guard !trashedAssets.isEmpty else { return }
+        guard !_trashDataSource.assets.isEmpty else { return }
         performEmptyTrash()
     }
 
@@ -656,171 +445,24 @@ final class TrashAlbumViewController: UIViewController {
         }
     }
 
-    // MARK: - Pinch Zoom
+    // MARK: - Cell Selection (Override)
 
-    @objc private func handlePinchGesture(_ gesture: UIPinchGestureRecognizer) {
-        switch gesture.state {
-        case .began:
-            let location = gesture.location(in: collectionView)
-            if let indexPath = collectionView.indexPathForItem(at: location),
-               indexPath.item < trashedAssets.count {
-                pinchAnchorAssetID = trashedAssets[indexPath.item].localIdentifier
-            }
-
-        case .changed:
-            if let lastTime = lastPinchZoomTime,
-               Date().timeIntervalSince(lastTime) < Self.pinchCooldown {
-                return
-            }
-
-            let scale = gesture.scale
-            var newGridColumnCount: GridColumnCount?
-
-            if scale > Self.pinchZoomInThreshold {
-                newGridColumnCount = currentGridColumnCount.zoomIn
-            } else if scale < Self.pinchZoomOutThreshold {
-                newGridColumnCount = currentGridColumnCount.zoomOut
-            }
-
-            if let newCount = newGridColumnCount, newCount != currentGridColumnCount {
-                performZoom(to: newCount)
-                gesture.scale = 1.0
-            }
-
-        case .ended, .cancelled:
-            pinchAnchorAssetID = nil
-
-        default:
-            break
-        }
-    }
-
-    private func performZoom(to columns: GridColumnCount) {
-        lastPinchZoomTime = Date()
-
-        let anchorIndexPath: IndexPath?
-        if let anchorID = pinchAnchorAssetID {
-            anchorIndexPath = indexPath(for: anchorID)
-        } else {
-            let centerPoint = CGPoint(
-                x: collectionView.bounds.midX,
-                y: collectionView.bounds.midY + collectionView.contentOffset.y
-            )
-            anchorIndexPath = collectionView.indexPathForItem(at: centerPoint)
-        }
-
-        currentGridColumnCount = columns
-        updateCellSize()
-
-        UIView.animate(withDuration: 0.25) { [weak self] in
-            guard let self = self else { return }
-
-            self.collectionView.setCollectionViewLayout(
-                self.createLayout(columns: columns),
-                animated: false
-            )
-
-            if let indexPath = anchorIndexPath {
-                self.collectionView.scrollToItem(
-                    at: indexPath,
-                    at: .centeredVertically,
-                    animated: false
-                )
-            }
-        }
-
-        print("[TrashAlbumViewController] Zoom to \(columns.rawValue) columns")
-    }
-
-    // MARK: - Helper Methods
-
-    private func indexPath(for assetID: String) -> IndexPath? {
-        for i in 0..<trashedAssets.count {
-            if trashedAssets[i].localIdentifier == assetID {
-                return IndexPath(item: i, section: 0)
-            }
-        }
-        return nil
-    }
-}
-
-// MARK: - UICollectionViewDataSource
-
-extension TrashAlbumViewController: UICollectionViewDataSource {
-
-    func collectionView(_ collectionView: UICollectionView, numberOfItemsInSection section: Int) -> Int {
-        return trashedAssets.count + paddingCellCount
-    }
-
-    func collectionView(_ collectionView: UICollectionView, cellForItemAt indexPath: IndexPath) -> UICollectionViewCell {
-        let padding = paddingCellCount
-
-        // 빈 셀 (맨 위 행 패딩)
-        if indexPath.item < padding {
-            let cell = collectionView.dequeueReusableCell(
-                withReuseIdentifier: PhotoCell.reuseIdentifier,
-                for: indexPath
-            ) as? PhotoCell ?? PhotoCell()
-            cell.configureAsEmpty()
-            return cell
-        }
-
-        guard let cell = collectionView.dequeueReusableCell(
-            withReuseIdentifier: PhotoCell.reuseIdentifier,
-            for: indexPath
-        ) as? PhotoCell else {
-            return UICollectionViewCell()
-        }
-
-        // 실제 에셋 인덱스 계산 (padding 오프셋 적용)
-        let assetIndex = indexPath.item - padding
-        guard assetIndex < trashedAssets.count else {
-            return cell
-        }
-
-        let asset = trashedAssets[assetIndex]
-
-        // 휴지통 내에서는 딤드 표시 안 함 (모두 삭제 대상이므로 정상 표시)
-        cell.configure(
-            asset: asset,
-            isTrashed: false,  // 휴지통 내에서는 딤드 없이 표시
-            targetSize: thumbnailSize()
-        )
-
-        return cell
-    }
-}
-
-// MARK: - UICollectionViewDelegate
-
-extension TrashAlbumViewController: UICollectionViewDelegate {
-
-    func collectionView(_ collectionView: UICollectionView, didSelectItemAt indexPath: IndexPath) {
-        let padding = paddingCellCount
-
-        // 빈 셀 탭 무시
-        guard indexPath.item >= padding else { return }
-
-        // 실제 에셋 인덱스 계산
-        let assetIndex = indexPath.item - padding
-        guard assetIndex < trashedAssets.count else { return }
-
-        // 클릭한 에셋
-        let selectedAsset = trashedAssets[assetIndex]
-        let selectedAssetID = selectedAsset.localIdentifier
+    /// 뷰어 열기 (휴지통 모드)
+    override func openViewer(for asset: PHAsset, at assetIndex: Int) {
+        let selectedAssetID = asset.localIdentifier
 
         // 뷰어 코디네이터 생성 (휴지통 전용)
         // trashedAssets 배열을 기반으로 PHFetchResult 생성
         // 정렬 옵션 추가: 최신 사진이 아래 (아이폰 기본 사진앱과 동일)
-        let assetIDs = trashedAssets.map { $0.localIdentifier }
+        let assetIDs = _trashDataSource.orderedAssetIDs
         let fetchOptions = PHFetchOptions()
         fetchOptions.sortDescriptors = [NSSortDescriptor(key: "creationDate", ascending: true)]
         let fetchResult = PHAsset.fetchAssets(withLocalIdentifiers: assetIDs, options: fetchOptions)
 
         // PHFetchResult에서 선택한 에셋의 실제 인덱스 찾기
         var actualIndex = 0
-        fetchResult.enumerateObjects { asset, index, stop in
-            if asset.localIdentifier == selectedAssetID {
+        fetchResult.enumerateObjects { fetchedAsset, index, stop in
+            if fetchedAsset.localIdentifier == selectedAssetID {
                 actualIndex = index
                 stop.pointee = true
             }
@@ -861,12 +503,12 @@ extension TrashAlbumViewController: UICollectionViewDelegate {
                 }
 
                 // trashedAssets에서 해당 에셋의 인덱스 찾기
-                guard let assetIndex = self.trashedAssets.firstIndex(where: { $0.localIdentifier == assetID }) else {
+                guard let trashIndex = self._trashDataSource.assetIndex(for: assetID) else {
                     return nil
                 }
 
                 // padding 셀 적용하여 실제 collectionView indexPath 계산
-                let cellIndexPath = IndexPath(item: assetIndex + self.paddingCellCount, section: 0)
+                let cellIndexPath = IndexPath(item: trashIndex + self.paddingCellCount, section: 0)
 
                 // 셀이 화면에 없으면 nil 반환 (중앙에서 줌 fallback)
                 guard let cell = self.collectionView.cellForItem(at: cellIndexPath) as? PhotoCell else {
@@ -885,35 +527,19 @@ extension TrashAlbumViewController: UICollectionViewDelegate {
         // Push 방식으로 뷰어 표시 (모든 iOS 버전 공통)
         navigationController?.pushViewController(viewerVC, animated: true)
 
-        print("[TrashAlbumViewController] Opening viewer - tapped: \(indexPath.item), actualIndex: \(actualIndex), assetID: \(selectedAssetID.prefix(8))...")
-    }
-}
-
-// MARK: - UICollectionViewDataSourcePrefetching
-
-extension TrashAlbumViewController: UICollectionViewDataSourcePrefetching {
-
-    func collectionView(_ collectionView: UICollectionView, prefetchItemsAt indexPaths: [IndexPath]) {
-        let padding = paddingCellCount
-        // padding 셀 제외하고 실제 에셋만 prefetch
-        let assetIDs = indexPaths.compactMap { indexPath -> String? in
-            guard indexPath.item >= padding else { return nil }
-            let assetIndex = indexPath.item - padding
-            guard assetIndex < trashedAssets.count else { return nil }
-            return trashedAssets[assetIndex].localIdentifier
-        }
-        imagePipeline.preheat(assetIDs: assetIDs, targetSize: thumbnailSize())
+        print("[TrashAlbumViewController] Opening viewer - assetIndex: \(assetIndex), actualIndex: \(actualIndex), assetID: \(selectedAssetID.prefix(8))...")
     }
 
-    func collectionView(_ collectionView: UICollectionView, cancelPrefetchingForItemsAt indexPaths: [IndexPath]) {
-        let padding = paddingCellCount
-        let assetIDs = indexPaths.compactMap { indexPath -> String? in
-            guard indexPath.item >= padding else { return nil }
-            let assetIndex = indexPath.item - padding
-            guard assetIndex < trashedAssets.count else { return nil }
-            return trashedAssets[assetIndex].localIdentifier
-        }
-        imagePipeline.stopPreheating(assetIDs: assetIDs)
+    // MARK: - Cell Configuration (Override)
+
+    /// 셀 추가 설정 (휴지통 내에서는 딤드 표시 안 함)
+    override func configureCell(_ cell: PhotoCell, at indexPath: IndexPath, asset: PHAsset) {
+        // 휴지통 내에서는 isTrashed = false (모두 삭제 대상이므로 정상 표시)
+        cell.configure(
+            asset: asset,
+            isTrashed: false,
+            targetSize: thumbnailSize()
+        )
     }
 }
 
@@ -967,19 +593,5 @@ extension TrashAlbumViewController: ViewerViewControllerDelegate {
     func viewerWillClose(currentAssetID: String?) {
         // 스크롤 위치만 저장 (전환 완료 후 처리)
         pendingScrollAssetID = currentAssetID
-    }
-
-    /// 뷰어 닫힘 후 대기 중인 작업 처리 (전환 완료 후 호출)
-    /// - scroll만 수행하여 깜빡임 방지
-    private func applyPendingViewerReturn() {
-        guard let assetID = pendingScrollAssetID else { return }
-        pendingScrollAssetID = nil
-
-        guard let indexPath = indexPath(for: assetID) else { return }
-
-        let visibleIndexPaths = collectionView.indexPathsForVisibleItems
-        if !visibleIndexPaths.contains(indexPath) {
-            collectionView.scrollToItem(at: indexPath, at: .centeredVertically, animated: false)
-        }
     }
 }

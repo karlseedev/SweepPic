@@ -118,3 +118,41 @@ final class AlbumDataSource: GridDataSource {
         (0..<fetchResult.count).map { fetchResult.object(at: $0).localIdentifier }
     }
 }
+
+// MARK: - TrashDataSource
+
+/// [PHAsset] 배열을 GridDataSource로 래핑
+/// TrashAlbumViewController에서 사용
+/// 휴지통 에셋은 동적으로 변경되므로 assets가 var
+final class TrashDataSource: GridDataSource {
+    /// 휴지통 에셋 배열 (외부에서 갱신 가능)
+    var assets: [PHAsset] = []
+
+    var assetCount: Int {
+        assets.count
+    }
+
+    func asset(at index: Int) -> PHAsset? {
+        guard index >= 0, index < assets.count else { return nil }
+        return assets[index]
+    }
+
+    func assetID(at index: Int) -> String? {
+        guard index >= 0, index < assets.count else { return nil }
+        return assets[index].localIdentifier
+    }
+
+    func assetIndex(for assetID: String) -> Int? {
+        assets.firstIndex { $0.localIdentifier == assetID }
+    }
+
+    /// 휴지통은 fetchResult를 사용하지 않음 (동적 배열 기반)
+    var fetchResultForViewer: PHFetchResult<PHAsset>? {
+        nil
+    }
+
+    /// 뷰어에서 사용할 에셋 ID 배열
+    var orderedAssetIDs: [String] {
+        assets.map { $0.localIdentifier }
+    }
+}
