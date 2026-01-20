@@ -256,14 +256,24 @@ class BaseGridViewController: UIViewController {
         // 회전 전: 화면 중앙 셀의 indexPath 저장
         saveScrollAnchorIndexPath()
 
-        coordinator.animate(alongsideTransition: { [weak self] _ in
-            // 레이아웃 무효화 (새 컬럼 수 계산됨)
-            self?.collectionView.collectionViewLayout.invalidateLayout()
+        coordinator.animate(alongsideTransition: { _ in
+            // 회전 애니메이션 중에는 아무것도 하지 않음
         }, completion: { [weak self] _ in
             guard let self = self else { return }
-            // ⚠️ 순서 중요: 먼저 inset 확정 → 그 다음 스크롤
-            // (inset 변경 후 스크롤하면 위치가 밀리지 않음)
+
+            // 회전 완료 후: view.bounds.width를 명시적으로 전달하여 새 레이아웃 생성
+            // (environment.container.effectiveContentSize가 부정확할 수 있음)
+            let newWidth = self.view.bounds.width
+            let newLayout = self.createLayout(columns: self.currentGridColumnCount, explicitWidth: newWidth)
+            self.collectionView.setCollectionViewLayout(newLayout, animated: false)
+
+            // 셀 크기 캐시 업데이트
+            self.updateCellSize()
+
+            // contentInset 재계산 (FloatingUI 높이 반영)
             self.updateContentInset()
+
+            // 저장된 indexPath로 스크롤 복원
             self.restoreScrollAnchorIndexPath()
         })
     }
@@ -382,16 +392,20 @@ class BaseGridViewController: UIViewController {
     // MARK: - Layout
 
     /// CompositionalLayout 생성
-    /// - Parameter columns: 열 수
+    /// - Parameters:
+    ///   - columns: 열 수
+    ///   - explicitWidth: 명시적 너비 (회전 후 강제 지정 시 사용, nil이면 environment에서 자동 계산)
     /// - Returns: UICollectionViewLayout
-    func createLayout(columns: GridColumnCount) -> UICollectionViewLayout {
+    func createLayout(columns: GridColumnCount, explicitWidth: CGFloat? = nil) -> UICollectionViewLayout {
         let layout = UICollectionViewCompositionalLayout { _, environment in
             let spacing = Self.cellSpacing
             let columnCount = CGFloat(columns.rawValue)
+            let totalSpacing = spacing * (columnCount - 1)
 
             // 셀 크기 계산 (정사각형)
-            let totalSpacing = spacing * (columnCount - 1)
-            let availableWidth = environment.container.effectiveContentSize.width - totalSpacing
+            // 회전 후에는 explicitWidth 사용 (environment 값이 부정확할 수 있음)
+            let containerWidth = explicitWidth ?? environment.container.effectiveContentSize.width
+            let availableWidth = containerWidth - totalSpacing
             let cellWidth = floor(availableWidth / columnCount)
 
             // 아이템 크기
