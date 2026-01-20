@@ -256,15 +256,13 @@ class BaseGridViewController: UIViewController {
         // 회전 전: 화면 중앙 셀의 indexPath 저장
         saveScrollAnchorIndexPath()
 
-        coordinator.animate(alongsideTransition: { _ in
-            // 회전 애니메이션 중에는 아무것도 하지 않음
-        }, completion: { [weak self] _ in
+        // 회전 후 크기로 새 레이아웃 미리 생성 (size 파라미터가 회전 후 크기)
+        let newLayout = createLayout(columns: currentGridColumnCount, explicitWidth: size.width)
+
+        coordinator.animate(alongsideTransition: { [weak self] _ in
             guard let self = self else { return }
 
-            // 회전 완료 후: view.bounds.width를 명시적으로 전달하여 새 레이아웃 생성
-            // (environment.container.effectiveContentSize가 부정확할 수 있음)
-            let newWidth = self.view.bounds.width
-            let newLayout = self.createLayout(columns: self.currentGridColumnCount, explicitWidth: newWidth)
+            // 회전 애니메이션과 동기화하여 레이아웃 변경
             self.collectionView.setCollectionViewLayout(newLayout, animated: false)
 
             // 셀 크기 캐시 업데이트
@@ -275,7 +273,7 @@ class BaseGridViewController: UIViewController {
 
             // 저장된 indexPath로 스크롤 복원
             self.restoreScrollAnchorIndexPath()
-        })
+        }, completion: nil)
     }
 
     /// 화면 중앙에 있는 셀의 indexPath 저장
