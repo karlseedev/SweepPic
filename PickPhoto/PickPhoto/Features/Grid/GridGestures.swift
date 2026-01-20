@@ -4,7 +4,8 @@
 //
 //  Created by Claude on 2025-12-31.
 //  Description: GridViewController의 제스처 관련 기능 분리
-//               - Pinch Zoom (T023)
+//               - Pinch Zoom 후처리 (refreshVisibleCellsAfterZoom)
+//                 * 핸들러/상수는 BaseGridViewController로 이동됨
 //               - UIGestureRecognizerDelegate (T040)
 //               - PRD7: Swipe Delete/Restore (FR-101)
 //               - PRD7: Two Finger Tap Delete/Restore (FR-102)
