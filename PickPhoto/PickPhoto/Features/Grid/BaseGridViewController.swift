@@ -442,6 +442,19 @@ class BaseGridViewController: UIViewController {
 
     /// 삭제 후 추가 처리
     func handleDeleteComplete(assetID: String) {}
+
+    // MARK: - 플로팅 UI 선택 모드 (iOS 18, 서브클래스에서 오버라이드 가능)
+
+    /// 플로팅 UI 선택 모드 진입
+    /// - Grid/Album: selectModeContainer (Delete 버튼)
+    /// - Trash: trashSelectModeContainer (Recover + Delete 버튼)
+    func enterSelectModeFloatingUI() {}
+
+    /// 플로팅 UI 선택 모드 종료
+    func exitSelectModeFloatingUI() {}
+
+    /// 플로팅 UI 선택 개수 업데이트
+    func updateSelectionCountFloatingUI(_ count: Int) {}
 }
 
 // MARK: - UICollectionViewDataSource
