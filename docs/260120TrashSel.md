@@ -679,35 +679,36 @@ protocol FloatingTabBarDelegate: AnyObject {
 ## 검증 체크리스트
 
 ### Phase 0 완료 후
-- [ ] 빌드 성공
-- [ ] 기존 Grid 선택 모드 동작 유지
+- [x] 빌드 성공
+- [x] 기존 Grid 선택 모드 동작 유지
 
 ### Phase 1 완료 후
-- [ ] Grid 선택 모드 정상 동작
+- [x] Grid 선택 모드 정상 동작
 - [ ] Album iOS 26+: Select 버튼 표시
 - [ ] Album iOS 16~25: Select 버튼 표시 (FloatingTitleBar)
 - [ ] Album 선택 → Delete → 휴지통 이동
 - [ ] Album 드래그 선택
 
 ### Phase 2 완료 후
-- [ ] Trash iOS 26+: [Select] [비우기] 두 버튼 표시
-- [ ] Trash iOS 26+ 선택 모드: [Restore] [선택개수] [Delete] 툴바
-- [ ] Trash iOS 26+: Select 종료 후 [Select] [비우기] 복원
-- [ ] Trash 드래그 선택
-- [ ] Restore 버튼 → 복원
-- [ ] Delete 버튼 → 영구 삭제 (iOS 팝업)
+- [x] Trash iOS 26+: [Select] [비우기] 두 버튼 표시
+- [x] Trash iOS 26+ 선택 모드: [Restore] [선택개수] [Delete] 툴바
+- [x] Trash iOS 26+: Select 종료 후 [Select] [비우기] 복원
+- [x] Trash 드래그 선택
+- [x] Restore 버튼 → 복원
+- [x] Delete 버튼 → 영구 삭제 (iOS 팝업)
 
 ### Phase 3 완료 후
-- [ ] FloatingTitleBar 두 버튼 동시 표시
-- [ ] Trash iOS 16~25: [Select] [비우기] 표시
+- [x] FloatingTitleBar 두 버튼 동시 표시
+- [x] Trash iOS 16~25: [Select] [비우기] 표시
 
 ### Phase 4 완료 후
-- [ ] trashSelectModeContainer: [Restore] [선택개수] [Delete]
-- [ ] Restore 버튼 → delegate → 복원
-- [ ] Delete 버튼 → delegate → 영구 삭제
-- [ ] 버튼 비활성화 (선택 0개일 때)
+- [x] trashSelectModeContainer: [Restore] [선택개수] [Delete]
+- [x] Restore 버튼 → delegate → 복원
+- [x] Delete 버튼 → delegate → 영구 삭제
+- [x] 버튼 비활성화 (선택 0개일 때)
+- [x] Select 모드 종료 후 탭 전환 정상 동작 (delegate 복원)
 
 ### 회귀 테스트
-- [ ] 스크롤 후 선택 상태 유지
+- [x] 스크롤 후 선택 상태 유지
 - [ ] 빈 앨범/휴지통일 때 Select 버튼 처리
-- [ ] 선택 모드에서 스와이프 삭제 비활성화
+- [x] 선택 모드에서 스와이프 삭제 비활성화
