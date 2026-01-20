@@ -164,11 +164,20 @@ final class TrashAlbumViewController: BaseGridViewController {
     }
 
     /// 시스템 네비바 설정 (iOS 26+)
+    /// [Select] [비우기] 두 버튼 동시 표시
     @available(iOS 26.0, *)
     override func setupSystemNavigationBar() {
         super.setupSystemNavigationBar()
 
-        // "비우기" 버튼 추가
+        // Select 버튼
+        let selectButton = UIBarButtonItem(
+            title: "Select",
+            style: .plain,
+            target: self,
+            action: #selector(selectButtonTapped)
+        )
+
+        // "비우기" 버튼
         let emptyButton = UIBarButtonItem(
             title: "비우기",
             style: .plain,
@@ -176,10 +185,10 @@ final class TrashAlbumViewController: BaseGridViewController {
             action: #selector(emptyTrashButtonTapped)
         )
         emptyButton.tintColor = .systemRed
-        navigationItem.rightBarButtonItem = emptyButton
-
-        // 빈 휴지통이면 버튼 비활성화
         emptyButton.isEnabled = !_trashDataSource.assets.isEmpty
+
+        // [Select] [비우기] 동시 표시 (우측에서 좌측 순서)
+        navigationItem.rightBarButtonItems = [emptyButton, selectButton]
     }
 
     /// FloatingOverlay 상태를 휴지통 탭용으로 설정
@@ -443,7 +452,8 @@ final class TrashAlbumViewController: BaseGridViewController {
 
     /// "비우기" 버튼 탭 (T058)
     /// 바로 iOS 시스템 팝업으로 일괄 삭제 (확인 얼럿 생략 - iOS 팝업이 확인 역할)
-    @objc private func emptyTrashButtonTapped() {
+    /// Note: TrashSelectMode.swift에서 selector로 접근하므로 internal
+    @objc func emptyTrashButtonTapped() {
         guard !_trashDataSource.assets.isEmpty else { return }
         performEmptyTrash()
     }

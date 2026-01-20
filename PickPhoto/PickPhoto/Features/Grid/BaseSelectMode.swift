@@ -242,7 +242,7 @@ extension BaseGridViewController {
 
     /// 플로팅 UI 선택 모드 진입 (Trash에서 오버라이드)
     /// 기본 구현: Grid/Album용 selectModeContainer 사용
-    func enterSelectModeFloatingUI() {
+    @objc func enterSelectModeFloatingUI() {
         guard let tabBarController = tabBarController as? TabBarController,
               let overlay = tabBarController.floatingOverlay else { return }
 
@@ -255,7 +255,7 @@ extension BaseGridViewController {
     }
 
     /// 플로팅 UI 선택 모드 종료 (Trash에서 오버라이드)
-    func exitSelectModeFloatingUI() {
+    @objc func exitSelectModeFloatingUI() {
         guard let tabBarController = tabBarController as? TabBarController,
               let overlay = tabBarController.floatingOverlay else { return }
 
@@ -266,7 +266,7 @@ extension BaseGridViewController {
     }
 
     /// 플로팅 UI 선택 개수 업데이트 (Trash에서 오버라이드)
-    func updateSelectionCountFloatingUI(_ count: Int) {
+    @objc func updateSelectionCountFloatingUI(_ count: Int) {
         guard let tabBarController = tabBarController as? TabBarController,
               let overlay = tabBarController.floatingOverlay else { return }
         overlay.tabBar.updateSelectionCount(count)
