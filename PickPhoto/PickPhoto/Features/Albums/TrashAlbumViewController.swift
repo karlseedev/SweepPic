@@ -43,6 +43,10 @@ final class TrashAlbumViewController: BaseGridViewController {
     /// 초기 스크롤 완료 여부 (맨 아래로 스크롤)
     private var didInitialScroll: Bool = false
 
+    /// 뷰어 복귀 후 사용자가 스크롤했는지 여부
+    /// - true이면 applyPendingViewerReturn()에서 강제 스크롤 skip
+    private var didUserScrollAfterReturn: Bool = false
+
     // MARK: - Initial Display Properties
 
     /// 초기 표시 완료 여부
@@ -553,6 +557,14 @@ final class TrashAlbumViewController: BaseGridViewController {
         // Base에서 isTrashed=true로 설정되었을 수 있으므로 false로 덮어씀
         cell.updateTrashState(false)
     }
+
+    // MARK: - UIScrollViewDelegate
+
+    /// 사용자가 스크롤 시작 시 pending 스크롤 취소 (롤백 방지)
+    func scrollViewWillBeginDragging(_ scrollView: UIScrollView) {
+        pendingScrollAssetID = nil
+        didUserScrollAfterReturn = true
+    }
 }
 
 // MARK: - ViewerViewControllerDelegate (T056, T057)
@@ -605,13 +617,26 @@ extension TrashAlbumViewController: ViewerViewControllerDelegate {
     func viewerWillClose(currentAssetID: String?) {
         // 스크롤 위치만 저장 (전환 완료 후 처리)
         pendingScrollAssetID = currentAssetID
+        // 사용자 스크롤 플래그 초기화
+        didUserScrollAfterReturn = false
     }
 
     /// 뷰어 닫힘 후 대기 중인 작업 처리 (전환 완료 후 호출)
     /// - scroll만 수행하여 깜빡임 방지
+    /// - 사용자가 이미 스크롤 중이면 강제 스크롤 skip (롤백 방지)
     private func applyPendingViewerReturn() {
         guard let assetID = pendingScrollAssetID else { return }
         pendingScrollAssetID = nil
+
+        // 안전 가드 1: 사용자가 복귀 후 스크롤했으면 skip
+        if didUserScrollAfterReturn {
+            return
+        }
+
+        // 안전 가드 2: 현재 스크롤 중이면 skip
+        if collectionView.isDragging || collectionView.isDecelerating {
+            return
+        }
 
         // padding 보정 적용하여 indexPath 계산
         guard let assetIndex = _trashDataSource.assetIndex(for: assetID) else { return }
