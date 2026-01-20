@@ -30,6 +30,14 @@ def main():
         if re.search(r"git\s+checkout\s+-b\s+", command):
             sys.exit(0)
 
+        # git reset HEAD (스테이징 취소)는 허용 - 코드 변경 없이 스테이징만 해제
+        # 허용 패턴: git reset HEAD, git reset HEAD -- <file>
+        # 차단 패턴: git reset --hard, git reset HEAD~1, git reset <commit-hash>
+        if re.search(r"git\s+reset\s+HEAD(\s|$)", command):
+            # --hard 옵션이 있으면 차단
+            if "--hard" not in command:
+                sys.exit(0)
+
         output = {
             "hookSpecificOutput": {
                 "hookEventName": "PreToolUse",

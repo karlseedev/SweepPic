@@ -44,6 +44,9 @@ final class TrashAlbumViewController: BaseGridViewController {
     /// Note: TrashSelectMode에서 접근해야 하므로 internal
     var emptyTrashBarButtonItem: UIBarButtonItem?
 
+    /// iOS 26+ Select 버튼 참조 (빈 휴지통일 때 비활성화용)
+    private var selectBarButtonItem: UIBarButtonItem?
+
     /// 초기 스크롤 완료 여부 (맨 아래로 스크롤)
     private var didInitialScroll: Bool = false
 
@@ -173,6 +176,8 @@ final class TrashAlbumViewController: BaseGridViewController {
     override func setupSystemNavigationBar() {
         super.setupSystemNavigationBar()
 
+        let isEmpty = _trashDataSource.assets.isEmpty
+
         // Select 버튼
         let selectButton = UIBarButtonItem(
             title: "Select",
@@ -180,6 +185,7 @@ final class TrashAlbumViewController: BaseGridViewController {
             target: self,
             action: #selector(selectButtonTapped)
         )
+        selectButton.isEnabled = !isEmpty
 
         // "비우기" 버튼
         let emptyButton = UIBarButtonItem(
@@ -189,9 +195,10 @@ final class TrashAlbumViewController: BaseGridViewController {
             action: #selector(emptyTrashButtonTapped)
         )
         emptyButton.tintColor = .systemRed
-        emptyButton.isEnabled = !_trashDataSource.assets.isEmpty
+        emptyButton.isEnabled = !isEmpty
 
         // 프로퍼티에 저장 (데이터 로드 후 상태 업데이트용)
+        selectBarButtonItem = selectButton
         emptyTrashBarButtonItem = emptyButton
 
         // [비우기] [Select] 순서 (배열 첫 요소가 가장 오른쪽)
@@ -213,25 +220,22 @@ final class TrashAlbumViewController: BaseGridViewController {
         // 뒤로가기 버튼 숨김 (별도 탭이므로)
         overlay.titleBar.setShowsBackButton(false, action: nil)
 
-        // 휴지통이 비어있지 않을 때: [Select] [비우기] 두 버튼 표시
-        if !_trashDataSource.assets.isEmpty {
-            overlay.titleBar.setTwoRightButtons(
-                firstTitle: "Select",
-                firstColor: .systemBlue,
-                firstAction: { [weak self] in
-                    self?.enterSelectMode()
-                },
-                secondTitle: "비우기",
-                secondColor: .systemRed,
-                secondAction: { [weak self] in
-                    self?.emptyTrashButtonTapped()
-                }
-            )
-        } else {
-            // 휴지통이 비어있으면 버튼 숨김
-            overlay.titleBar.isSelectButtonHidden = true
-            overlay.titleBar.hideSecondRightButton()
-        }
+        // [Select] [비우기] 두 버튼 표시
+        let isEmpty = _trashDataSource.assets.isEmpty
+        overlay.titleBar.setTwoRightButtons(
+            firstTitle: "Select",
+            firstColor: .systemBlue,
+            firstAction: { [weak self] in
+                self?.enterSelectMode()
+            },
+            secondTitle: "비우기",
+            secondColor: .systemRed,
+            secondAction: { [weak self] in
+                self?.emptyTrashButtonTapped()
+            }
+        )
+        // 빈 휴지통: 버튼 비활성화 (숨김 X)
+        overlay.titleBar.setTwoRightButtonsEnabled(firstEnabled: !isEmpty, secondEnabled: !isEmpty)
 
         print("[TrashAlbumViewController] FloatingOverlay configured for trash tab")
     }
@@ -299,12 +303,14 @@ final class TrashAlbumViewController: BaseGridViewController {
         updateEmptyState()
 
         // 버튼 상태 업데이트 (iOS 버전별 분기 유지)
+        let isEmpty = _trashDataSource.assets.isEmpty
         if useFloatingUI {
-            // iOS 16~25: FloatingUI 비우기 버튼 상태 갱신
-            updateFloatingEmptyButton()
+            // iOS 16~25: FloatingUI 버튼 상태 갱신
+            updateFloatingButtonsState()
         } else {
             // iOS 26+: 시스템 네비바 버튼 상태 업데이트
-            emptyTrashBarButtonItem?.isEnabled = !_trashDataSource.assets.isEmpty
+            selectBarButtonItem?.isEnabled = !isEmpty
+            emptyTrashBarButtonItem?.isEnabled = !isEmpty
         }
 
         let endTime = CFAbsoluteTimeGetCurrent()
@@ -327,33 +333,18 @@ final class TrashAlbumViewController: BaseGridViewController {
         collectionView.scrollToItem(at: lastIndexPath, at: .bottom, animated: false)
     }
 
-    /// FloatingUI 비우기 버튼 상태 업데이트
+    /// FloatingUI 버튼 상태 업데이트 (Select/비우기 활성화/비활성화)
     /// 주의: 현재 탭이 휴지통 탭일 때만 버튼 변경 (공유 UI이므로 다른 탭일 때 변경하면 안 됨)
-    private func updateFloatingEmptyButton() {
+    private func updateFloatingButtonsState() {
         guard let tabBarController = tabBarController as? TabBarController,
               tabBarController.selectedIndex == 2,  // 휴지통 탭 인덱스일 때만 변경
               let overlay = tabBarController.floatingOverlay else {
             return
         }
 
-        if !_trashDataSource.assets.isEmpty {
-            // [Select] [비우기] 두 버튼 표시
-            overlay.titleBar.setTwoRightButtons(
-                firstTitle: "Select",
-                firstColor: .systemBlue,
-                firstAction: { [weak self] in
-                    self?.enterSelectMode()
-                },
-                secondTitle: "비우기",
-                secondColor: .systemRed,
-                secondAction: { [weak self] in
-                    self?.emptyTrashButtonTapped()
-                }
-            )
-        } else {
-            overlay.titleBar.isSelectButtonHidden = true
-            overlay.titleBar.hideSecondRightButton()
-        }
+        let isEmpty = _trashDataSource.assets.isEmpty
+        // 빈 휴지통: 버튼 비활성화 (숨김 X)
+        overlay.titleBar.setTwoRightButtonsEnabled(firstEnabled: !isEmpty, secondEnabled: !isEmpty)
     }
 
     // MARK: - Initial Display

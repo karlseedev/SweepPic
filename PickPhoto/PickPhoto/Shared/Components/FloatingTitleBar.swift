@@ -480,6 +480,17 @@ final class FloatingTitleBar: UIView {
         secondRightButtonAction = nil
     }
 
+    /// 두 버튼 활성화/비활성화 설정 (휴지통 빈 상태 등)
+    /// - Parameters:
+    ///   - firstEnabled: 첫 번째 버튼 (Select) 활성화 여부
+    ///   - secondEnabled: 두 번째 버튼 (비우기) 활성화 여부
+    func setTwoRightButtonsEnabled(firstEnabled: Bool, secondEnabled: Bool) {
+        selectButton.isEnabled = firstEnabled
+        selectButton.alpha = firstEnabled ? 1.0 : 0.5
+        secondRightButton.isEnabled = secondEnabled
+        secondRightButton.alpha = secondEnabled ? 1.0 : 0.5
+    }
+
     /// 모든 오른쪽 버튼을 Select 버튼만 있는 기본 상태로 복원
     func resetToDefaultRightButtons() {
         // 두 번째 버튼 숨기기
