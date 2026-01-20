@@ -31,4 +31,30 @@ enum GridColumnCount: Int, CaseIterable {
         case .five: return .five
         }
     }
+
+    // MARK: - Rotation Column Mapping
+
+    /// 세로 → 가로 회전 시 열 수
+    /// - 1열 → 3열
+    /// - 3열 → 5열
+    /// - 5열 → 5열
+    var landscapeColumnCount: GridColumnCount {
+        switch self {
+        case .one: return .three
+        case .three: return .five
+        case .five: return .five
+        }
+    }
+
+    /// 가로 → 세로 회전 시 열 수
+    /// - 1열 → 1열
+    /// - 3열 → 3열
+    /// - 5열 → 3열
+    var portraitColumnCount: GridColumnCount {
+        switch self {
+        case .one: return .one
+        case .three: return .three
+        case .five: return .three
+        }
+    }
 }

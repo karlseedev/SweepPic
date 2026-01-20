@@ -256,11 +256,22 @@ class BaseGridViewController: UIViewController {
         // 회전 전: 화면 중앙 셀의 indexPath 저장
         saveScrollAnchorIndexPath()
 
+        // 회전 후 방향에 따라 열 수 결정 (기본 사진앱 방식)
+        // - 세로→가로: 1→3, 3→5, 5→5
+        // - 가로→세로: 1→1, 3→3, 5→3
+        let isLandscape = size.width > size.height
+        let newColumnCount = isLandscape
+            ? currentGridColumnCount.landscapeColumnCount
+            : currentGridColumnCount.portraitColumnCount
+
         // 회전 후 크기로 새 레이아웃 미리 생성 (size 파라미터가 회전 후 크기)
-        let newLayout = createLayout(columns: currentGridColumnCount, explicitWidth: size.width)
+        let newLayout = createLayout(columns: newColumnCount, explicitWidth: size.width)
 
         coordinator.animate(alongsideTransition: { [weak self] _ in
             guard let self = self else { return }
+
+            // 열 수 업데이트
+            self.currentGridColumnCount = newColumnCount
 
             // 회전 애니메이션과 동기화하여 레이아웃 변경
             self.collectionView.setCollectionViewLayout(newLayout, animated: false)
