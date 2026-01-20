@@ -1,4 +1,4 @@
-# 자동 정리 기능: 저품질 사진 판별 기획서 (v6)
+# 자동 정리 기능: 저품질 사진 판별 기획서 (v7)
 
 **작성일**: 2026-01-19
 **목적**: '정리' 버튼 클릭 시 저품질 사진 50장을 찾아 휴지통으로 이동하는 기능의 판별 로직 기획
@@ -13,6 +13,7 @@
 | v4 | 260119 | UX 흐름 전면 개편: 검토 화면 제거, 연도 단위 탐색, 휴지통 전제조건 추가, 안내 팝업 방식 변경 |
 | v5 | 260120 | 이어서 정리 기능, 취소 시 처리, 백그라운드/동기화 정책, 1,000장 규칙 목적 명확화 |
 | v6 | 260120 | 사용자 스토리 기반 로직/문구 구체화, 종료 조건 우선순위 명확화, 진행률 팝업 즉시 시작 방식 |
+| v7 | 260120 | 숨김 사진/공유 앨범 사진 조기 필터 제외 추가 |
 
 ---
 
@@ -101,6 +102,8 @@
 |----------|------|-------------|:-----:|------|
 | **조기 필터** | 즐겨찾기 | `isFavorite == true` | 1 | 전체 분석 건너뜀 |
 | | 편집됨 | `hasAdjustments == true` | 1 | 전체 분석 건너뜀 |
+| | 숨김 사진 | `isHidden == true` | 1 | 전체 분석 건너뜀 |
+| | 공유 앨범 | `sourceType == .typeCloudShared` | 1 | 전체 분석 건너뜀 |
 | **후처리 필터** | 심도 효과 | `mediaSubtypes.contains(.photoDepthEffect)` | 4 | 블러 판정만 무효화 |
 | | 선명한 얼굴 | `VNFaceCaptureQuality >= 0.4` | 4 | 블러 판정만 무효화 |
 
@@ -174,6 +177,8 @@
 │  처리:                                                      │
 │    • isFavorite → SKIP (정상) [Safe Guard 조기 필터]        │
 │    • hasAdjustments → SKIP (정상) [Safe Guard 조기 필터]    │
+│    • isHidden → SKIP (정상) [Safe Guard 조기 필터]          │
+│    • sourceType == .typeCloudShared → SKIP [조기 필터]      │
 │    • isScreenshot → SEPARATE (별도 카테고리)                 │
 │  출력: Stage 2로 전달 또는 SKIP                              │
 │  ※ iOS 18 AestheticsScore 사용 시에도 반드시 선행 적용      │
@@ -230,7 +235,7 @@
 
 | Stage | 이름 | 입력 | 비용 | 판정 항목 |
 |:-----:|------|------|:----:|----------|
-| 1 | MetadataFilter | PHAsset | 최저 | 즐겨찾기, 편집됨, 스크린샷 (Safe Guard 조기) |
+| 1 | MetadataFilter | PHAsset | 최저 | 즐겨찾기, 편집됨, 숨김, 공유앨범, 스크린샷 (Safe Guard 조기) |
 | 2 | ExposureAnalyzer | 64×64 이미지 | 중간 | 노출(Strong), 단색/렌즈가림(Conditional) |
 | 3 | BlurAnalyzer | 256×256 이미지 | 최고 | 블러(Strong/Weak) |
 | 4 | CompositeJudge + SafeGuard | 분석 결과 | 조건부 | 주머니 샷, Weak 조합, 심도 효과, 얼굴 품질 |
@@ -632,7 +637,7 @@
 **iOS 18+ 상세 전략**:
 ```
 0. Stage 1 (MetadataFilter) 선행 적용 ← 필수!
-   - isFavorite, hasAdjustments → SKIP
+   - isFavorite, hasAdjustments, isHidden, 공유앨범 → SKIP
    - isScreenshot → SEPARATE
 
 1. AestheticsScore 분석 시도

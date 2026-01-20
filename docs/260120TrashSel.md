@@ -6,449 +6,647 @@
 
 ## 개요
 
-BaseGridViewController 리팩토링 완료 후, 앨범(AlbumGridViewController)과 휴지통(TrashAlbumViewController)에 선택 모드를 활성화합니다.
+선택 모드를 Base로 공통화한 후, 앨범(AlbumGridViewController)과 휴지통(TrashAlbumViewController)에 선택 모드를 활성화합니다.
 
-리팩토링으로 선택 모드 기본 구조가 BaseGridViewController에 포함되므로, 각 VC에서는 템플릿 메서드만 오버라이드하면 됩니다.
+## 설계 결정
 
-## 선행 조건
+1. **"비우기"와 "Select" 버튼**: 두 버튼 동시 표시
+   - iOS 26+: `rightBarButtonItems = [selectButton, emptyButton]`
+   - iOS 16~25: FloatingTitleBar 수정하여 Right 버튼 2개 지원
 
-리팩토링 완료 후 Base에서 제공되는 선택 모드 기능:
-- `isSelectMode`, `selectionManager` 프로퍼티
-- `enterSelectMode()`, `exitSelectMode()` 메서드
-- 드래그 선택, 자동 스크롤
-- iOS 버전별 UI 분기 (iOS 26+ 시스템 UI / iOS 16~25 플로팅 UI)
-- `SelectionManagerDelegate` 구현
+2. **드래그 선택**: 모든 화면에서 제공 (Grid/Album/Trash 동일)
 
-Base에서 제공되는 템플릿 메서드 (서브클래스 오버라이드):
-- `supportsSelectMode: Bool` - 선택 모드 지원 여부
-- `setupSelectionToolbar() -> [UIBarButtonItem]` - iOS 26+ 툴바 버튼 구성
-- `updateSelectionToolbar(count: Int)` - 선택 개수 변경 시 툴바 업데이트
-- `enterSelectModeFloatingUI()` - 플로팅 UI 선택 모드 진입 (오버라이드 가능)
-- `exitSelectModeFloatingUI()` - 플로팅 UI 선택 모드 종료 (오버라이드 가능)
+3. **선택 모드 파일 구조**: 기능별 분리 (방식 C)
+   - Grid/Album 공용: GridSelectMode.swift
+   - Trash 전용: TrashSelectMode.swift
+
+## 파일 구조
+
+```
+Features/Grid/
+├── BaseGridViewController.swift    (프로퍼티 추가)
+├── BaseSelectMode.swift            (신규 - 공통 선택 모드 로직)
+├── GridSelectMode.swift            (수정 - Grid/Album 공용)
+├── TrashSelectMode.swift           (신규 - Trash 전용)
+└── ...
+
+Features/Albums/
+├── AlbumGridViewController.swift   (선택 모드 코드 없음 - GridSelectMode 사용)
+├── TrashAlbumViewController.swift  (선택 모드 코드 없음 - TrashSelectMode 사용)
+└── ...
+
+Shared/Components/
+├── FloatingTitleBar.swift          (수정 - Right 버튼 2개 지원)
+├── FloatingTabBar.swift            (수정 - 휴지통 선택 모드 UI)
+└── ...
+```
 
 ## 각 VC별 선택 모드 차이점
 
 | 항목 | 사진보관함 (Grid) | 앨범 (Album) | 휴지통 (Trash) |
 |------|-----------------|--------------|---------------|
-| supportsSelectMode | true (기존) | true (신규) | true (신규) |
-| iOS 26+ 툴바 | [선택개수] [Delete] | [선택개수] [Delete] | [Restore] [선택개수] [Delete] |
-| 플로팅 TabBar UI | selectModeContainer | selectModeContainer (재사용) | **trashSelectModeContainer** (신규) |
-| Delete 동작 | 휴지통 이동 | 휴지통 이동 | **완전 삭제** (iOS 팝업) |
-| Restore 동작 | 없음 | 없음 | **휴지통에서 복구** |
+| 선택 모드 파일 | GridSelectMode | GridSelectMode | **TrashSelectMode** |
+| iOS 26+ 툴바 | [선택개수] [Delete] | [선택개수] [Delete] | **[Restore] [선택개수] [Delete]** |
+| iOS 26+ 네비바 | [Select] | [Select] | [Select] [비우기] |
+| 플로팅 TabBar | selectModeContainer | selectModeContainer | **trashSelectModeContainer** |
+| 플로팅 TitleBar | [Select] | [Select] | [Select] [비우기] |
+| Delete 동작 | 휴지통 이동 | 휴지통 이동 | **영구 삭제** |
+| Restore 동작 | 없음 | 없음 | **복원** |
+| 드래그 선택 | ✅ | ✅ | ✅ |
 
 ---
 
-## Phase 1: 앨범 선택 모드 활성화 (~60줄)
+## Phase 0: Base 선택 모드 공통화
 
-### 1.1 AlbumGridViewController 수정 - 기본 설정
+### 0.1 BaseGridViewController.swift에 프로퍼티 추가
 
 ```swift
-// MARK: - Select Mode Support
+// MARK: - Select Mode Properties
 
-override var supportsSelectMode: Bool { true }
+var isSelectMode: Bool = false
+let selectionManager = SelectionManager()
+var selectionCountBarItem: UIBarButtonItem?
 
-override func setupSelectionToolbar() -> [UIBarButtonItem] {
-    // iOS 26+ 툴바: [flex] [선택개수] [flex] [Delete]
-    let countLabel = UILabel()
-    countLabel.text = "항목 선택"
-    countLabel.font = .systemFont(ofSize: 17)
-    let countItem = UIBarButtonItem(customView: countLabel)
-    selectionCountBarItem = countItem
+// 드래그 선택 관련
+var dragSelectGesture: UIPanGestureRecognizer?
+var dragSelectStartIndex: Int?
+var dragSelectCurrentIndex: Int?
+var dragSelectAffectedIndices: Set<Int> = []
+var dragSelectIsSelecting: Bool = true
+```
 
-    let deleteItem = UIBarButtonItem(
-        title: "Delete",
-        style: .plain,
-        target: self,
-        action: #selector(deleteSelectedPhotosTapped)
-    )
-    deleteItem.tintColor = .systemRed
+### 0.2 BaseSelectMode.swift 생성 (~300줄)
 
-    return [
-        UIBarButtonItem(barButtonSystemItem: .flexibleSpace, target: nil, action: nil),
-        countItem,
-        UIBarButtonItem(barButtonSystemItem: .flexibleSpace, target: nil, action: nil),
-        deleteItem
-    ]
-}
+공통 선택 모드 로직:
 
-override func updateSelectionToolbar(count: Int) {
-    if let countItem = selectionCountBarItem,
-       let label = countItem.customView as? UILabel {
-        label.text = count > 0 ? "\(count)개 항목 선택됨" : "항목 선택"
-        label.sizeToFit()
+```swift
+// BaseSelectMode.swift
+// BaseGridViewController의 Select Mode 공통 기능
+
+import UIKit
+import Photos
+import AppCore
+
+// MARK: - Select Mode Template Methods
+
+extension BaseGridViewController {
+
+    /// 선택 모드 지원 여부 (서브클래스에서 오버라이드)
+    @objc var supportsSelectMode: Bool { false }
+
+    /// iOS 26+ 툴바 버튼 구성 (서브클래스에서 오버라이드)
+    @objc func setupSelectionToolbar() -> [UIBarButtonItem] { [] }
+
+    /// 툴바 선택 개수 업데이트 (서브클래스에서 오버라이드)
+    @objc func updateSelectionToolbar(count: Int) {}
+
+    /// iOS 26+ Select 종료 후 네비바 복원 (서브클래스에서 오버라이드)
+    @objc func restoreNavigationBarAfterSelectMode() {
+        if #available(iOS 26.0, *) {
+            navigationItem.rightBarButtonItem = UIBarButtonItem(
+                title: "Select",
+                style: .plain,
+                target: self,
+                action: #selector(selectButtonTapped)
+            )
+        }
     }
-    toolbarItems?.last?.isEnabled = count > 0
 }
 
-@objc private func deleteSelectedPhotosTapped() {
-    let selectedAssetIDs = selectionManager.selectedAssetIDs
-    guard !selectedAssetIDs.isEmpty else { return }
+// MARK: - Select Mode Enter/Exit
 
-    trashStore.moveToTrash(assetIDs: Array(selectedAssetIDs))
-    selectionManager.clearSelection()
-    exitSelectMode()
+extension BaseGridViewController {
+
+    func enterSelectMode() {
+        guard supportsSelectMode else { return }
+        guard !isSelectMode else { return }
+        isSelectMode = true
+
+        if #available(iOS 26.0, *) {
+            enterSelectModeSystemUI()
+        } else {
+            enterSelectModeFloatingUI()
+        }
+
+        dragSelectGesture?.isEnabled = true
+        updateSwipeDeleteGestureEnabled()
+        collectionView.reloadData()
+    }
+
+    func exitSelectMode() {
+        guard isSelectMode else { return }
+        isSelectMode = false
+
+        if #available(iOS 26.0, *) {
+            exitSelectModeSystemUI()
+        } else {
+            exitSelectModeFloatingUI()
+        }
+
+        dragSelectGesture?.isEnabled = false
+        updateSwipeDeleteGestureEnabled()
+        selectionManager.clearSelection()
+        collectionView.reloadData()
+    }
+}
+
+// MARK: - iOS 26+ System UI
+
+extension BaseGridViewController {
+
+    @available(iOS 26.0, *)
+    func enterSelectModeSystemUI() {
+        navigationItem.rightBarButtonItem = UIBarButtonItem(
+            title: "Cancel",
+            style: .plain,
+            target: self,
+            action: #selector(cancelSelectModeTapped)
+        )
+        tabBarController?.tabBar.isHidden = true
+        toolbarItems = setupSelectionToolbar()
+        navigationController?.setToolbarHidden(false, animated: true)
+    }
+
+    @available(iOS 26.0, *)
+    func exitSelectModeSystemUI() {
+        navigationController?.setToolbarHidden(true, animated: true)
+        tabBarController?.tabBar.isHidden = false
+        restoreNavigationBarAfterSelectMode()
+    }
+
+    @objc func cancelSelectModeTapped() {
+        exitSelectMode()
+    }
+
+    @objc func selectButtonTapped() {
+        enterSelectMode()
+    }
+}
+
+// MARK: - iOS 16~25 Floating UI (기본 구현 - Grid/Album용)
+
+extension BaseGridViewController {
+
+    /// 플로팅 UI 선택 모드 진입 (Trash에서 오버라이드)
+    func enterSelectModeFloatingUI() {
+        guard let tabBarController = tabBarController as? TabBarController,
+              let overlay = tabBarController.floatingOverlay else { return }
+
+        overlay.titleBar.enterSelectMode { [weak self] in
+            self?.exitSelectMode()
+        }
+        overlay.tabBar.enterSelectMode(animated: true)
+    }
+
+    /// 플로팅 UI 선택 모드 종료 (Trash에서 오버라이드)
+    func exitSelectModeFloatingUI() {
+        guard let tabBarController = tabBarController as? TabBarController,
+              let overlay = tabBarController.floatingOverlay else { return }
+
+        overlay.titleBar.exitSelectMode()
+        overlay.tabBar.exitSelectMode(animated: true)
+    }
+
+    /// 플로팅 UI 선택 개수 업데이트 (Trash에서 오버라이드)
+    func updateSelectionCountFloatingUI(_ count: Int) {
+        guard let tabBarController = tabBarController as? TabBarController,
+              let overlay = tabBarController.floatingOverlay else { return }
+        overlay.tabBar.updateSelectionCount(count)
+    }
+}
+
+// MARK: - Drag Selection
+
+extension BaseGridViewController {
+
+    func setupDragSelectGesture() {
+        guard supportsSelectMode else { return }
+
+        let dragGesture = UIPanGestureRecognizer(target: self, action: #selector(handleDragSelect(_:)))
+        dragGesture.delegate = self
+        dragGesture.isEnabled = false
+        collectionView.addGestureRecognizer(dragGesture)
+        dragSelectGesture = dragGesture
+    }
+
+    @objc func handleDragSelect(_ gesture: UIPanGestureRecognizer) {
+        // 드래그 선택 로직 (기존 GridSelectMode.swift에서 이동)
+    }
+}
+
+// MARK: - SelectionManagerDelegate
+
+extension BaseGridViewController: SelectionManagerDelegate {
+
+    public func selectionManager(_ manager: SelectionManager, didChangeSelection assetIDs: Set<String>) {
+        for indexPath in collectionView.indexPathsForVisibleItems {
+            guard indexPath.item >= paddingCellCount else { continue }
+            let assetIndex = indexPath.item - paddingCellCount
+            guard let asset = gridDataSource.asset(at: assetIndex) else { continue }
+
+            if let cell = collectionView.cellForItem(at: indexPath) as? PhotoCell {
+                cell.isSelectedForDeletion = assetIDs.contains(asset.localIdentifier)
+            }
+        }
+    }
+
+    public func selectionManager(_ manager: SelectionManager, selectionCountDidChange count: Int) {
+        if #available(iOS 26.0, *) {
+            updateSelectionToolbar(count: count)
+        } else {
+            updateSelectionCountFloatingUI(count)
+        }
+    }
+}
+
+// MARK: - Setup
+
+extension BaseGridViewController {
+
+    func setupSelectionManagerDelegate() {
+        selectionManager.delegate = self
+    }
 }
 ```
 
-### 1.2 iOS 26+ 시스템 UI - Select 버튼 추가
+### 0.3 cellForItemAt에서 선택 상태 복원
 
 ```swift
-// setupSystemNavigationBar() 또는 viewDidLoad에서
+// BaseGridViewController.swift - cellForItemAt 수정
+
+if isSelectMode {
+    cell.isSelectedForDeletion = selectionManager.isSelected(asset.localIdentifier)
+}
+```
+
+---
+
+## Phase 1: GridSelectMode.swift 수정 (Grid/Album 공용)
+
+### 1.1 Grid/Album 공용으로 확장 (~100줄)
+
+```swift
+// GridSelectMode.swift
+// Grid/Album 공용 선택 모드
+
+import UIKit
+import Photos
+import AppCore
+
+// MARK: - Grid/Album Select Mode Support
+
+extension GridViewController {
+    override var supportsSelectMode: Bool { true }
+}
+
+extension AlbumGridViewController {
+    override var supportsSelectMode: Bool { true }
+}
+
+// MARK: - Grid/Album 공용 툴바 (BaseGridViewController extension)
+
+extension BaseGridViewController {
+
+    /// Grid/Album 공용 툴바: [flex] [선택개수] [flex] [Delete]
+    /// GridViewController, AlbumGridViewController에서 사용
+    func setupGridAlbumSelectionToolbar() -> [UIBarButtonItem] {
+        let countLabel = UILabel()
+        countLabel.text = "항목 선택"
+        countLabel.font = .systemFont(ofSize: 17)
+        let countItem = UIBarButtonItem(customView: countLabel)
+        selectionCountBarItem = countItem
+
+        let deleteItem = UIBarButtonItem(
+            title: "Delete",
+            style: .plain,
+            target: self,
+            action: #selector(gridAlbumDeleteSelectedTapped)
+        )
+        deleteItem.tintColor = .systemRed
+
+        return [
+            UIBarButtonItem(barButtonSystemItem: .flexibleSpace, target: nil, action: nil),
+            countItem,
+            UIBarButtonItem(barButtonSystemItem: .flexibleSpace, target: nil, action: nil),
+            deleteItem
+        ]
+    }
+
+    func updateGridAlbumSelectionToolbar(count: Int) {
+        if let countItem = selectionCountBarItem,
+           let label = countItem.customView as? UILabel {
+            label.text = count > 0 ? "\(count)개 항목 선택됨" : "항목 선택"
+            label.sizeToFit()
+        }
+        toolbarItems?.last?.isEnabled = count > 0
+    }
+
+    /// Grid/Album 공용 삭제 (휴지통으로 이동)
+    @objc func gridAlbumDeleteSelectedTapped() {
+        let selectedAssetIDs = selectionManager.selectedAssetIDs
+        guard !selectedAssetIDs.isEmpty else { return }
+
+        trashStore.moveToTrash(assetIDs: Array(selectedAssetIDs))
+        selectionManager.clearSelection()
+        exitSelectMode()
+    }
+}
+
+// MARK: - GridViewController Overrides
+
+extension GridViewController {
+
+    override func setupSelectionToolbar() -> [UIBarButtonItem] {
+        setupGridAlbumSelectionToolbar()
+    }
+
+    override func updateSelectionToolbar(count: Int) {
+        updateGridAlbumSelectionToolbar(count: count)
+    }
+}
+
+// MARK: - AlbumGridViewController Overrides
+
+extension AlbumGridViewController {
+
+    override func setupSelectionToolbar() -> [UIBarButtonItem] {
+        setupGridAlbumSelectionToolbar()
+    }
+
+    override func updateSelectionToolbar(count: Int) {
+        updateGridAlbumSelectionToolbar(count: count)
+    }
+}
+```
+
+### 1.2 iOS 26+ Select 버튼 설정
+
+Grid는 TabBarController에서 설정, Album은 viewWillAppear에서 설정:
+
+```swift
+// AlbumGridViewController.swift - viewWillAppear에 추가
+if #available(iOS 26.0, *) {
+    navigationItem.rightBarButtonItem = UIBarButtonItem(
+        title: "Select",
+        style: .plain,
+        target: self,
+        action: #selector(selectButtonTapped)
+    )
+}
+```
+
+### 1.3 iOS 16~25 플로팅 UI Select 버튼
+
+```swift
+// AlbumGridViewController - configureFloatingOverlayForAlbum() 수정
+// 기존: overlay.titleBar.isSelectButtonHidden = true
+// 변경:
+overlay.titleBar.setRightButton(title: "Select", backgroundColor: .systemBlue) { [weak self] in
+    self?.enterSelectMode()
+}
+```
+
+---
+
+## Phase 2: TrashSelectMode.swift 생성 (Trash 전용)
+
+### 2.1 Trash 전용 선택 모드 (~200줄)
+
+```swift
+// TrashSelectMode.swift
+// Trash 전용 선택 모드 (Restore + 영구 Delete)
+
+import UIKit
+import Photos
+import AppCore
+
+// MARK: - Trash Select Mode Support
+
+extension TrashAlbumViewController {
+
+    override var supportsSelectMode: Bool { true }
+
+    // MARK: - iOS 26+ 툴바: [Restore] [flex] [선택개수] [flex] [Delete]
+
+    override func setupSelectionToolbar() -> [UIBarButtonItem] {
+        let restoreItem = UIBarButtonItem(
+            title: "Restore",
+            style: .plain,
+            target: self,
+            action: #selector(trashRestoreSelectedTapped)
+        )
+
+        let countLabel = UILabel()
+        countLabel.text = "항목 선택"
+        countLabel.font = .systemFont(ofSize: 17)
+        let countItem = UIBarButtonItem(customView: countLabel)
+        selectionCountBarItem = countItem
+
+        let deleteItem = UIBarButtonItem(
+            title: "Delete",
+            style: .plain,
+            target: self,
+            action: #selector(trashDeleteSelectedTapped)
+        )
+        deleteItem.tintColor = .systemRed
+
+        return [
+            restoreItem,
+            UIBarButtonItem(barButtonSystemItem: .flexibleSpace, target: nil, action: nil),
+            countItem,
+            UIBarButtonItem(barButtonSystemItem: .flexibleSpace, target: nil, action: nil),
+            deleteItem
+        ]
+    }
+
+    override func updateSelectionToolbar(count: Int) {
+        if let countItem = selectionCountBarItem,
+           let label = countItem.customView as? UILabel {
+            label.text = count > 0 ? "\(count)개 항목 선택됨" : "항목 선택"
+            label.sizeToFit()
+        }
+        if let items = toolbarItems {
+            items.first?.isEnabled = count > 0  // Restore
+            items.last?.isEnabled = count > 0   // Delete
+        }
+    }
+
+    // MARK: - iOS 26+ 네비바 복원 (Select + 비우기)
+
+    override func restoreNavigationBarAfterSelectMode() {
+        if #available(iOS 26.0, *) {
+            let selectButton = UIBarButtonItem(
+                title: "Select",
+                style: .plain,
+                target: self,
+                action: #selector(selectButtonTapped)
+            )
+
+            let emptyButton = UIBarButtonItem(
+                title: "비우기",
+                style: .plain,
+                target: self,
+                action: #selector(emptyTrashTapped)
+            )
+            emptyButton.tintColor = .systemRed
+            emptyButton.isEnabled = !_trashDataSource.assets.isEmpty
+
+            navigationItem.rightBarButtonItems = [emptyButton, selectButton]
+        }
+    }
+
+    // MARK: - iOS 16~25 플로팅 UI (Trash 전용 오버라이드)
+
+    override func enterSelectModeFloatingUI() {
+        guard let tabBarController = tabBarController as? TabBarController,
+              let overlay = tabBarController.floatingOverlay else { return }
+
+        overlay.titleBar.enterSelectMode { [weak self] in
+            self?.exitSelectMode()
+        }
+        // Trash 전용: trashSelectModeContainer 사용
+        overlay.tabBar.enterTrashSelectMode(animated: true)
+    }
+
+    override func exitSelectModeFloatingUI() {
+        guard let tabBarController = tabBarController as? TabBarController,
+              let overlay = tabBarController.floatingOverlay else { return }
+
+        overlay.titleBar.exitSelectMode()
+        overlay.tabBar.exitTrashSelectMode(animated: true)
+        configureFloatingOverlayForTrash()
+    }
+
+    override func updateSelectionCountFloatingUI(_ count: Int) {
+        guard let tabBarController = tabBarController as? TabBarController,
+              let overlay = tabBarController.floatingOverlay else { return }
+        overlay.tabBar.updateTrashSelectionCount(count)
+    }
+
+    // MARK: - Actions
+
+    /// 복원 (Trash 전용)
+    @objc func trashRestoreSelectedTapped() {
+        let selectedAssetIDs = selectionManager.selectedAssetIDs
+        guard !selectedAssetIDs.isEmpty else { return }
+
+        trashStore.restore(assetIDs: Array(selectedAssetIDs))
+        selectionManager.clearSelection()
+        exitSelectMode()
+    }
+
+    /// 영구 삭제 (Trash 전용)
+    @objc func trashDeleteSelectedTapped() {
+        let selectedAssetIDs = selectionManager.selectedAssetIDs
+        guard !selectedAssetIDs.isEmpty else { return }
+
+        Task {
+            do {
+                try await trashStore.permanentlyDelete(assetIDs: Array(selectedAssetIDs))
+                await MainActor.run {
+                    selectionManager.clearSelection()
+                    exitSelectMode()
+                }
+            } catch {
+                print("[TrashSelectMode] Failed to delete: \(error)")
+            }
+        }
+    }
+}
+
+// MARK: - FloatingTabBarDelegate (Trash 전용)
+
+extension TrashAlbumViewController: FloatingTabBarDelegate {
+
+    func floatingTabBarDidTapRestore(_ tabBar: FloatingTabBar) {
+        trashRestoreSelectedTapped()
+    }
+
+    func floatingTabBarDidTapTrashDelete(_ tabBar: FloatingTabBar) {
+        trashDeleteSelectedTapped()
+    }
+}
+```
+
+### 2.2 iOS 26+ 초기 네비바 설정
+
+```swift
+// TrashAlbumViewController.swift - setupSystemNavigationBar() 수정
 @available(iOS 26.0, *)
-private func setupSelectButton() {
+private func setupSystemNavigationBar() {
     let selectButton = UIBarButtonItem(
         title: "Select",
         style: .plain,
         target: self,
         action: #selector(selectButtonTapped)
     )
-    // 기존 rightBarButtonItem이 있다면 배열로, 없다면 단독 설정
-    navigationItem.rightBarButtonItem = selectButton
-}
 
-@objc private func selectButtonTapped() {
-    enterSelectMode()
-}
-```
-
-### 1.3 iOS 16~25 플로팅 UI - Select 버튼 추가
-
-```swift
-// configureFloatingOverlayForAlbum() 수정
-overlay.titleBar.setRightButton(title: "Select", backgroundColor: .systemBlue) { [weak self] in
-    self?.enterSelectMode()
-}
-```
-
-> **참고**: 앨범은 기존 Grid와 동일한 `selectModeContainer` (Delete 버튼만)를 사용하므로, Base의 `enterSelectModeFloatingUI()`를 그대로 사용.
-
----
-
-## Phase 2: 휴지통 선택 모드 활성화 (~120줄)
-
-### 2.1 TrashAlbumViewController 수정 - 기본 설정
-
-```swift
-// MARK: - Select Mode Support
-
-override var supportsSelectMode: Bool { true }
-
-override func setupSelectionToolbar() -> [UIBarButtonItem] {
-    // iOS 26+ 툴바: [Restore] [flex] [선택개수] [flex] [Delete]
-    let restoreItem = UIBarButtonItem(
-        title: "Restore",
+    let emptyButton = UIBarButtonItem(
+        title: "비우기",
         style: .plain,
         target: self,
-        action: #selector(restoreSelectedPhotosTapped)
+        action: #selector(emptyTrashTapped)
     )
+    emptyButton.tintColor = .systemRed
+    emptyButton.isEnabled = !_trashDataSource.assets.isEmpty
 
-    let countLabel = UILabel()
-    countLabel.text = "항목 선택"
-    countLabel.font = .systemFont(ofSize: 17)
-    let countItem = UIBarButtonItem(customView: countLabel)
-    selectionCountBarItem = countItem
-
-    let deleteItem = UIBarButtonItem(
-        title: "Delete",
-        style: .plain,
-        target: self,
-        action: #selector(deleteSelectedPhotosTapped)
-    )
-    deleteItem.tintColor = .systemRed
-
-    return [
-        restoreItem,
-        UIBarButtonItem(barButtonSystemItem: .flexibleSpace, target: nil, action: nil),
-        countItem,
-        UIBarButtonItem(barButtonSystemItem: .flexibleSpace, target: nil, action: nil),
-        deleteItem
-    ]
-}
-
-override func updateSelectionToolbar(count: Int) {
-    if let countItem = selectionCountBarItem,
-       let label = countItem.customView as? UILabel {
-        label.text = count > 0 ? "\(count)개 항목 선택됨" : "항목 선택"
-        label.sizeToFit()
-    }
-
-    // Restore/Delete 버튼 활성화
-    if let items = toolbarItems {
-        items.first?.isEnabled = count > 0  // Restore
-        items.last?.isEnabled = count > 0   // Delete
-    }
-}
-
-@objc private func restoreSelectedPhotosTapped() {
-    let selectedAssetIDs = selectionManager.selectedAssetIDs
-    guard !selectedAssetIDs.isEmpty else { return }
-
-    trashStore.restore(assetIDs: Array(selectedAssetIDs))
-    selectionManager.clearSelection()
-    exitSelectMode()
-}
-
-@objc private func deleteSelectedPhotosTapped() {
-    let selectedAssetIDs = selectionManager.selectedAssetIDs
-    guard !selectedAssetIDs.isEmpty else { return }
-
-    Task {
-        do {
-            try await trashStore.permanentlyDelete(assetIDs: Array(selectedAssetIDs))
-            await MainActor.run {
-                selectionManager.clearSelection()
-                exitSelectMode()
-            }
-        } catch {
-            print("[TrashAlbumViewController] Failed to delete: \(error)")
-        }
-    }
-}
-```
-
-### 2.2 iOS 26+ 시스템 UI - Select 버튼 추가
-
-```swift
-// setupSystemNavigationBar() 수정
-let selectButton = UIBarButtonItem(
-    title: "Select",
-    style: .plain,
-    target: self,
-    action: #selector(selectButtonTapped)
-)
-
-// 기존 emptyButton과 함께 배열로 설정
-navigationItem.rightBarButtonItems = [emptyButton, selectButton]
-
-@objc private func selectButtonTapped() {
-    enterSelectMode()
-}
-```
-
-### 2.3 iOS 16~25 플로팅 UI - 휴지통 전용 처리
-
-휴지통은 Restore 버튼이 추가로 필요하므로 **Base의 플로팅 UI 메서드를 오버라이드**:
-
-```swift
-// MARK: - Floating UI Override (휴지통 전용)
-
-override func enterSelectModeFloatingUI() {
-    guard let tabBarController = tabBarController as? TabBarController,
-          let overlay = tabBarController.floatingOverlay else { return }
-
-    overlay.titleBar.enterSelectMode { [weak self] in
-        self?.exitSelectMode()
-    }
-    // 휴지통 전용 UI 사용
-    overlay.tabBar.enterTrashSelectMode(animated: true)
-}
-
-override func exitSelectModeFloatingUI() {
-    guard let tabBarController = tabBarController as? TabBarController,
-          let overlay = tabBarController.floatingOverlay else { return }
-
-    overlay.titleBar.exitSelectMode()
-    overlay.tabBar.exitTrashSelectMode(animated: true)
-    configureFloatingOverlayForTrash()  // 원래 상태로 복원
-}
-
-// SelectionManagerDelegate에서 호출
-override func updateSelectionCountFloatingUI(_ count: Int) {
-    guard let tabBarController = tabBarController as? TabBarController,
-          let overlay = tabBarController.floatingOverlay else { return }
-    overlay.tabBar.updateTrashSelectionCount(count)
-}
-```
-
-### 2.4 configureFloatingOverlayForTrash() 수정
-
-```swift
-// Select 버튼 추가 (사진이 있을 때만)
-if !trashedAssets.isEmpty {
-    overlay.titleBar.setRightButton(title: "Select", backgroundColor: .systemBlue) { [weak self] in
-        self?.enterSelectMode()
-    }
-} else {
-    overlay.titleBar.hideRightButton()
-}
-```
-
-### 2.5 FloatingTabBarDelegate 구현
-
-```swift
-// MARK: - FloatingTabBarDelegate
-
-extension TrashAlbumViewController: FloatingTabBarDelegate {
-    // 기존 델리게이트 메서드들...
-
-    func floatingTabBarDidTapRestore(_ tabBar: FloatingTabBar) {
-        restoreSelectedPhotosTapped()
-    }
-
-    func floatingTabBarDidTapTrashDelete(_ tabBar: FloatingTabBar) {
-        deleteSelectedPhotosTapped()
-    }
+    // [Select] [비우기] 동시 표시
+    navigationItem.rightBarButtonItems = [emptyButton, selectButton]
 }
 ```
 
 ---
 
-## Phase 3: FloatingTabBar 휴지통 선택 모드 UI (~100줄)
+## Phase 3: FloatingTitleBar 두 버튼 지원 (~50줄)
 
-### 3.1 추가할 UI 컴포넌트
-
-```swift
-// MARK: - Trash Select Mode UI
-
-/// 휴지통 선택 모드 컨테이너 (Restore + 선택개수 + Delete)
-private lazy var trashSelectModeContainer: UIView = {
-    let view = UIView()
-    view.backgroundColor = .clear
-    view.isHidden = true
-    return view
-}()
-
-/// Restore 버튼
-private lazy var restoreButton: UIButton = {
-    let button = UIButton(type: .system)
-    button.setTitle("Restore", for: .normal)
-    button.titleLabel?.font = .systemFont(ofSize: 17, weight: .medium)
-    button.addTarget(self, action: #selector(restoreButtonTapped), for: .touchUpInside)
-    return button
-}()
-
-/// 휴지통 선택개수 라벨
-private lazy var trashSelectionCountLabel: UILabel = {
-    let label = UILabel()
-    label.text = "항목 선택"
-    label.font = .systemFont(ofSize: 15)
-    label.textColor = .secondaryLabel
-    label.textAlignment = .center
-    return label
-}()
-
-/// 휴지통 Delete 버튼 (완전 삭제)
-private lazy var trashDeleteButton: UIButton = {
-    let button = UIButton(type: .system)
-    button.setTitle("Delete", for: .normal)
-    button.titleLabel?.font = .systemFont(ofSize: 17, weight: .medium)
-    button.tintColor = .systemRed
-    button.addTarget(self, action: #selector(trashDeleteButtonTapped), for: .touchUpInside)
-    return button
-}()
-```
-
-### 3.2 setupUI()에 레이아웃 추가
+### 3.1 휴지통용 두 버튼 설정
 
 ```swift
-// trashSelectModeContainer 추가
-addSubview(trashSelectModeContainer)
-trashSelectModeContainer.addSubview(restoreButton)
-trashSelectModeContainer.addSubview(trashSelectionCountLabel)
-trashSelectModeContainer.addSubview(trashDeleteButton)
+// FloatingTitleBar.swift
 
-// Auto Layout 설정
-trashSelectModeContainer.translatesAutoresizingMaskIntoConstraints = false
-NSLayoutConstraint.activate([
-    trashSelectModeContainer.leadingAnchor.constraint(equalTo: leadingAnchor),
-    trashSelectModeContainer.trailingAnchor.constraint(equalTo: trailingAnchor),
-    trashSelectModeContainer.topAnchor.constraint(equalTo: topAnchor),
-    trashSelectModeContainer.bottomAnchor.constraint(equalTo: bottomAnchor)
-])
+private lazy var secondaryRightButton: UIButton = { ... }()
+private var secondaryRightButtonAction: (() -> Void)?
 
-// 버튼/라벨 레이아웃 (수평 배치)
-// [Restore] --- [선택개수] --- [Delete]
+/// 두 버튼 동시 설정 (휴지통용: Select + 비우기)
+func setRightButtons(
+    primary: (title: String, color: UIColor, action: () -> Void),
+    secondary: (title: String, color: UIColor, action: () -> Void)
+) { ... }
+
+func hideSecondaryRightButton() { ... }
 ```
 
-### 3.3 추가할 메서드
+---
+
+## Phase 4: FloatingTabBar 휴지통 선택 모드 UI (~100줄)
+
+### 4.1 trashSelectModeContainer
 
 ```swift
-// MARK: - Trash Select Mode Methods
+// FloatingTabBar.swift
 
-func enterTrashSelectMode(animated: Bool = true) {
-    capsuleContainer.isHidden = true
-    selectModeContainer.isHidden = true
-    trashSelectModeContainer.isHidden = false
-    updateTrashSelectionCount(0)
-}
+// [Restore]  [선택개수]  [Delete]
+//    좌측       중앙       우측
 
-func exitTrashSelectMode(animated: Bool = true) {
-    trashSelectModeContainer.isHidden = true
-    capsuleContainer.isHidden = false
-}
+private lazy var trashSelectModeContainer: UIView = { ... }()
+private lazy var restoreButton: UIButton = { ... }()        // 좌측
+private lazy var trashSelectionCountLabel: UILabel = { ... }()  // 중앙
+private lazy var trashDeleteButton: UIButton = { ... }()    // 우측
 
-func updateTrashSelectionCount(_ count: Int) {
-    trashSelectionCountLabel.text = count > 0 ? "\(count)개 선택됨" : "항목 선택"
-    restoreButton.isEnabled = count > 0
-    trashDeleteButton.isEnabled = count > 0
-}
-
-@objc private func restoreButtonTapped() {
-    delegate?.floatingTabBarDidTapRestore(self)
-}
-
-@objc private func trashDeleteButtonTapped() {
-    delegate?.floatingTabBarDidTapTrashDelete(self)
-}
+func enterTrashSelectMode(animated: Bool = true)
+func exitTrashSelectMode(animated: Bool = true)
+func updateTrashSelectionCount(_ count: Int)
 ```
 
-### 3.4 델리게이트 프로토콜 추가
+### 4.2 델리게이트 프로토콜 추가
 
 ```swift
 protocol FloatingTabBarDelegate: AnyObject {
-    // 기존 메서드들...
-    func floatingTabBarDidTapDelete(_ tabBar: FloatingTabBar)
-
-    // 휴지통 전용 (신규)
+    // 기존...
     func floatingTabBarDidTapRestore(_ tabBar: FloatingTabBar)
     func floatingTabBarDidTapTrashDelete(_ tabBar: FloatingTabBar)
 }
-
-// 기본 구현 (옵셔널 처리)
-extension FloatingTabBarDelegate {
-    func floatingTabBarDidTapRestore(_ tabBar: FloatingTabBar) {}
-    func floatingTabBarDidTapTrashDelete(_ tabBar: FloatingTabBar) {}
-}
 ```
-
----
-
-## Phase 4: Base 수정 사항 확인
-
-리팩토링 문서(260120refac.md)에서 Base에 정의된 플로팅 UI 메서드가 오버라이드 가능해야 함:
-
-```swift
-// BaseGridViewController.swift
-
-/// 플로팅 UI 선택 모드 진입 (서브클래스에서 오버라이드 가능)
-func enterSelectModeFloatingUI() {
-    guard let tabBarController = tabBarController as? TabBarController,
-          let overlay = tabBarController.floatingOverlay else { return }
-
-    overlay.titleBar.enterSelectMode { [weak self] in
-        self?.exitSelectMode()
-    }
-    overlay.tabBar.enterSelectMode(animated: true)
-}
-
-/// 플로팅 UI 선택 모드 종료 (서브클래스에서 오버라이드 가능)
-func exitSelectModeFloatingUI() {
-    guard let tabBarController = tabBarController as? TabBarController,
-          let overlay = tabBarController.floatingOverlay else { return }
-
-    overlay.titleBar.exitSelectMode()
-    overlay.tabBar.exitSelectMode(animated: true)
-}
-
-/// 플로팅 UI 선택 개수 업데이트 (서브클래스에서 오버라이드 가능)
-func updateSelectionCountFloatingUI(_ count: Int) {
-    guard let tabBarController = tabBarController as? TabBarController,
-          let overlay = tabBarController.floatingOverlay else { return }
-    overlay.tabBar.updateSelectionCount(count)
-}
-```
-
-> **중요**: 리팩토링 문서(260120refac.md)에 위 메서드들이 오버라이드 가능하도록 명시되어 있는지 확인 필요. 없다면 리팩토링 문서도 업데이트 필요.
 
 ---
 
@@ -456,72 +654,60 @@ func updateSelectionCountFloatingUI(_ count: Int) {
 
 | 파일 | 작업 내용 | 예상 줄 수 |
 |------|----------|-----------|
-| AlbumGridViewController.swift | supportsSelectMode, 툴바, Select 버튼 (iOS 26+/플로팅) | ~60줄 추가 |
-| TrashAlbumViewController.swift | supportsSelectMode, 툴바, Select 버튼, 플로팅 UI 오버라이드, 델리게이트 | ~120줄 추가 |
-| FloatingTabBar.swift | trashSelectModeContainer UI, 메서드, 델리게이트 | ~100줄 추가 |
-| BaseGridViewController.swift | 플로팅 UI 메서드 오버라이드 가능 확인 | (리팩토링에서 처리) |
-| **합계** | | **~280줄** |
-
----
-
-## 검증 계획
-
-### 빌드 테스트
-```bash
-xcodebuild -project PickPhoto/PickPhoto.xcodeproj -scheme PickPhoto -configuration Debug -destination 'platform=iOS Simulator,name=iPhone 16' build
-```
-
-### 기능 테스트 체크리스트
-
-**앨범 선택 모드 (iOS 26+):**
-- [ ] Select 버튼 표시 (네비게이션 바)
-- [ ] Select 버튼으로 선택 모드 진입
-- [ ] 시스템 툴바에 [선택개수] [Delete] 표시
-- [ ] 셀 탭으로 선택/해제
-- [ ] 드래그로 연속 선택
-- [ ] Delete 버튼으로 휴지통 이동
-- [ ] Cancel 버튼으로 선택 모드 종료
-
-**앨범 선택 모드 (iOS 16~25 플로팅 UI):**
-- [ ] Select 버튼 표시 (FloatingTitleBar)
-- [ ] selectModeContainer 표시 (기존 Grid와 동일)
-- [ ] Delete 버튼 동작
-
-**휴지통 선택 모드 (iOS 26+):**
-- [ ] Select 버튼 표시 (비우기 버튼 옆)
-- [ ] 시스템 툴바에 [Restore] [선택개수] [Delete] 표시
-- [ ] Restore 버튼으로 복구
-- [ ] Delete 버튼으로 완전 삭제 (iOS 시스템 팝업)
-
-**휴지통 선택 모드 (iOS 16~25 플로팅 UI):**
-- [ ] Select 버튼 표시 (FloatingTitleBar)
-- [ ] trashSelectModeContainer 표시 ([Restore] [선택개수] [Delete])
-- [ ] Restore 버튼 → 델리게이트 → 복구 동작
-- [ ] Delete 버튼 → 델리게이트 → 완전 삭제 동작
-
-**공통:**
-- [ ] 빈 앨범/휴지통일 때 Select 버튼 숨김/비활성화
-- [ ] 선택 개수 0일 때 Restore/Delete 버튼 비활성화
+| **BaseSelectMode.swift** (신규) | 공통 선택 모드 로직 | ~300줄 |
+| BaseGridViewController.swift | 프로퍼티 추가, cellForItemAt 수정 | ~30줄 추가 |
+| **GridSelectMode.swift** (수정) | Grid/Album 공용으로 확장 | ~100줄 (기존 480줄 → 100줄) |
+| **TrashSelectMode.swift** (신규) | Trash 전용 선택 모드 | ~200줄 |
+| GridViewController.swift | 프로퍼티 제거 (Base로 이동) | ~10줄 감소 |
+| AlbumGridViewController.swift | Select 버튼 설정만 | ~10줄 추가 |
+| TrashAlbumViewController.swift | 네비바 설정만, delegate 연결 | ~20줄 추가 |
+| FloatingTitleBar.swift | 두 버튼 지원 | ~50줄 추가 |
+| FloatingTabBar.swift | trashSelectModeContainer | ~100줄 추가 |
 
 ---
 
 ## Git 커밋 계획
 
-1. Phase 1 완료: `feat(album): 앨범 선택 모드 활성화`
-2. Phase 2 완료: `feat(trash): 휴지통 선택 모드 활성화`
-3. Phase 3 완료: `feat(floating-ui): 휴지통 선택 모드 플로팅 UI 추가`
+1. Phase 0: `refactor(select-mode): Base 선택 모드 공통화`
+2. Phase 1: `feat(select-mode): Grid/Album 선택 모드 통합`
+3. Phase 2: `feat(trash): Trash 전용 선택 모드 구현`
+4. Phase 3: `feat(floating-ui): FloatingTitleBar 두 버튼 지원`
+5. Phase 4: `feat(floating-ui): 휴지통 선택 모드 플로팅 UI`
 
 ---
 
-## 참고: 리팩토링 문서 업데이트 필요 사항
+## 검증 체크리스트
 
-260120refac.md에 다음 내용 추가 필요:
+### Phase 0 완료 후
+- [ ] 빌드 성공
+- [ ] 기존 Grid 선택 모드 동작 유지
 
-1. **Base 플로팅 UI 메서드 오버라이드 가능 명시**:
-   - `enterSelectModeFloatingUI()`
-   - `exitSelectModeFloatingUI()`
-   - `updateSelectionCountFloatingUI(_ count: Int)`
+### Phase 1 완료 후
+- [ ] Grid 선택 모드 정상 동작
+- [ ] Album iOS 26+: Select 버튼 표시
+- [ ] Album iOS 16~25: Select 버튼 표시 (FloatingTitleBar)
+- [ ] Album 선택 → Delete → 휴지통 이동
+- [ ] Album 드래그 선택
 
-2. **GridSelectMode.swift 변경 시 위 메서드들 분리**:
-   - 현재 GridSelectMode.swift에 있는 플로팅 UI 로직을 Base 메서드로 분리
-   - 서브클래스에서 오버라이드 가능하도록 구조화
+### Phase 2 완료 후
+- [ ] Trash iOS 26+: [Select] [비우기] 두 버튼 표시
+- [ ] Trash iOS 26+ 선택 모드: [Restore] [선택개수] [Delete] 툴바
+- [ ] Trash iOS 26+: Select 종료 후 [Select] [비우기] 복원
+- [ ] Trash 드래그 선택
+- [ ] Restore 버튼 → 복원
+- [ ] Delete 버튼 → 영구 삭제 (iOS 팝업)
+
+### Phase 3 완료 후
+- [ ] FloatingTitleBar 두 버튼 동시 표시
+- [ ] Trash iOS 16~25: [Select] [비우기] 표시
+
+### Phase 4 완료 후
+- [ ] trashSelectModeContainer: [Restore] [선택개수] [Delete]
+- [ ] Restore 버튼 → delegate → 복원
+- [ ] Delete 버튼 → delegate → 영구 삭제
+- [ ] 버튼 비활성화 (선택 0개일 때)
+
+### 회귀 테스트
+- [ ] 스크롤 후 선택 상태 유지
+- [ ] 빈 앨범/휴지통일 때 Select 버튼 처리
+- [ ] 선택 모드에서 스와이프 삭제 비활성화
