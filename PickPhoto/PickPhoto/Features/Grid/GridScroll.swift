@@ -492,7 +492,7 @@ extension GridViewController {
             let assetID = asset.localIdentifier
 
             // 이미 메모리에 있으면 스킵
-            if MemoryThumbnailCache.shared.get(assetID: assetID, pixelSize: pixelSize) != nil {
+            if MemoryThumbnailCache.shared.get(assetID: assetID) != nil {
                 onPreloadCompleted()
                 continue
             }
@@ -506,7 +506,7 @@ extension GridViewController {
                 // 메모리 캐시에 저장
                 if let image = image {
                     FileLogger.log("[Preload] DISK HIT: \(assetID.prefix(8))...")
-                    MemoryThumbnailCache.shared.set(image: image, assetID: assetID, pixelSize: pixelSize)
+                    MemoryThumbnailCache.shared.set(image: image, assetID: assetID)
                 } else {
                     FileLogger.log("[Preload] DISK MISS: \(assetID.prefix(8))...")
                 }
