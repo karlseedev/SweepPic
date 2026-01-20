@@ -42,31 +42,7 @@ final class GridViewController: UIViewController {
     /// 셀 간격 (FR-001: 2pt) (extension에서 접근 필요)
     static let cellSpacing: CGFloat = 2
 
-    /// 열 구성 (1/3/5)
-    enum ColumnCount: Int, CaseIterable {
-        case one = 1
-        case three = 3
-        case five = 5
-
-        /// 다음 확대 열 수 (1 → 1, 3 → 1, 5 → 3)
-        var zoomIn: ColumnCount {
-            switch self {
-            case .one: return .one
-            case .three: return .one
-            case .five: return .three
-            }
-        }
-
-        /// 다음 축소 열 수 (1 → 3, 3 → 5, 5 → 5)
-        var zoomOut: ColumnCount {
-            switch self {
-            case .one: return .three
-            case .three: return .five
-            case .five: return .five
-            }
-        }
-    }
-
+    // GridColumnCount → GridGridColumnCount.swift로 이동됨
     // Pinch Zoom 상수 → GridGestures.swift로 이동됨
 
     /// 스크롤 스로틀링 간격 (Step 1: 200ms로 증가) (extension에서 접근 필요)
@@ -126,7 +102,7 @@ final class GridViewController: UIViewController {
     let trashStore: TrashStoreProtocol
 
     /// 현재 열 수 (extension에서 접근 필요)
-    var currentColumnCount: ColumnCount = .three
+    var currentGridColumnCount: GridColumnCount = .three
 
     /// 현재 셀 크기 (캐시) (extension에서 접근 필요)
     var currentCellSize: CGSize = .zero
@@ -254,7 +230,7 @@ final class GridViewController: UIViewController {
     var paddingCellCount: Int {
         let totalCount = dataSourceDriver.count
         guard totalCount > 0 else { return 0 }
-        let columns = currentColumnCount.rawValue
+        let columns = currentGridColumnCount.rawValue
         let remainder = totalCount % columns
         // 나머지가 0이면 빈 셀 없음, 아니면 (열 수 - 나머지) 만큼 빈 셀
         return remainder == 0 ? 0 : (columns - remainder)
@@ -596,7 +572,7 @@ final class GridViewController: UIViewController {
     /// CompositionalLayout 생성 (extension에서 접근 필요)
     /// - Parameter columns: 열 수
     /// - Returns: UICollectionViewLayout
-    func createLayout(columns: ColumnCount) -> UICollectionViewLayout {
+    func createLayout(columns: GridColumnCount) -> UICollectionViewLayout {
         let layout = UICollectionViewCompositionalLayout { _, environment in
             let spacing = Self.cellSpacing
             let columnCount = CGFloat(columns.rawValue)
@@ -640,7 +616,7 @@ final class GridViewController: UIViewController {
     /// 셀 크기 업데이트 (extension에서 접근 필요)
     func updateCellSize() {
         let spacing = Self.cellSpacing
-        let columnCount = CGFloat(currentColumnCount.rawValue)
+        let columnCount = CGFloat(currentGridColumnCount.rawValue)
         let totalSpacing = spacing * (columnCount - 1)
         let availableWidth = view.bounds.width - totalSpacing
         let cellWidth = floor(availableWidth / columnCount)
@@ -713,7 +689,7 @@ final class GridViewController: UIViewController {
             change,
             to: collectionView,
             anchorAssetID: nil,
-            columns: currentColumnCount.rawValue
+            columns: currentGridColumnCount.rawValue
         ) { [weak self] _ in
             self?.updateEmptyState()
         }

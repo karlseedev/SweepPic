@@ -101,18 +101,18 @@ extension GridViewController {
             // 임계값 체크
             let scale = gesture.scale
 
-            var newColumnCount: ColumnCount?
+            var newGridColumnCount: GridColumnCount?
 
             if scale > Self.pinchZoomInThreshold {
                 // 확대 (열 수 감소)
-                newColumnCount = currentColumnCount.zoomIn
+                newGridColumnCount = currentGridColumnCount.zoomIn
             } else if scale < Self.pinchZoomOutThreshold {
                 // 축소 (열 수 증가)
-                newColumnCount = currentColumnCount.zoomOut
+                newGridColumnCount = currentGridColumnCount.zoomOut
             }
 
             // 열 수가 변경되면 레이아웃 업데이트
-            if let newCount = newColumnCount, newCount != currentColumnCount {
+            if let newCount = newGridColumnCount, newCount != currentGridColumnCount {
                 performZoom(to: newCount)
                 gesture.scale = 1.0 // 스케일 리셋
             }
@@ -127,7 +127,7 @@ extension GridViewController {
 
     /// 줌 수행
     /// - Parameter columns: 새 열 수
-    func performZoom(to columns: ColumnCount) {
+    func performZoom(to columns: GridColumnCount) {
         // 쿨다운 시간 기록
         lastPinchZoomTime = Date()
 
@@ -146,7 +146,7 @@ extension GridViewController {
         }()
 
         // 2. 열 수 업데이트 (paddingCellCount도 변경됨)
-        currentColumnCount = columns
+        currentGridColumnCount = columns
         updateCellSize()
 
         // 3. 새 padding 기준으로 anchorIndexPath 계산

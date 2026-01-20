@@ -26,28 +26,7 @@ final class TrashAlbumViewController: UIViewController {
     /// 셀 간격
     private static let cellSpacing: CGFloat = 2
 
-    /// 열 구성
-    enum ColumnCount: Int, CaseIterable {
-        case one = 1
-        case three = 3
-        case five = 5
-
-        var zoomIn: ColumnCount {
-            switch self {
-            case .one: return .one
-            case .three: return .one
-            case .five: return .three
-            }
-        }
-
-        var zoomOut: ColumnCount {
-            switch self {
-            case .one: return .three
-            case .three: return .five
-            case .five: return .five
-            }
-        }
-    }
+    // GridColumnCount → GridGridColumnCount.swift로 이동됨
 
     /// 핀치 줌 임계값
     private static let pinchZoomInThreshold: CGFloat = 1.15
@@ -110,7 +89,7 @@ final class TrashAlbumViewController: UIViewController {
     private var trashedAssets: [PHAsset] = []
 
     /// 현재 열 수
-    private var currentColumnCount: ColumnCount = .three
+    private var currentGridColumnCount: GridColumnCount = .three
 
     /// 현재 셀 크기
     private var currentCellSize: CGSize = .zero
@@ -151,7 +130,7 @@ final class TrashAlbumViewController: UIViewController {
     private var paddingCellCount: Int {
         let totalCount = trashedAssets.count
         guard totalCount > 0 else { return 0 }
-        let columns = currentColumnCount.rawValue
+        let columns = currentGridColumnCount.rawValue
         let remainder = totalCount % columns
         return remainder == 0 ? 0 : (columns - remainder)
     }
@@ -547,7 +526,7 @@ final class TrashAlbumViewController: UIViewController {
 
     // MARK: - Layout
 
-    private func createLayout(columns: ColumnCount) -> UICollectionViewLayout {
+    private func createLayout(columns: GridColumnCount) -> UICollectionViewLayout {
         let layout = UICollectionViewCompositionalLayout { _, environment in
             let spacing = Self.cellSpacing
             let columnCount = CGFloat(columns.rawValue)
@@ -585,7 +564,7 @@ final class TrashAlbumViewController: UIViewController {
 
     private func updateCellSize() {
         let spacing = Self.cellSpacing
-        let columnCount = CGFloat(currentColumnCount.rawValue)
+        let columnCount = CGFloat(currentGridColumnCount.rawValue)
         let totalSpacing = spacing * (columnCount - 1)
         let availableWidth = view.bounds.width - totalSpacing
         let cellWidth = floor(availableWidth / columnCount)
@@ -695,15 +674,15 @@ final class TrashAlbumViewController: UIViewController {
             }
 
             let scale = gesture.scale
-            var newColumnCount: ColumnCount?
+            var newGridColumnCount: GridColumnCount?
 
             if scale > Self.pinchZoomInThreshold {
-                newColumnCount = currentColumnCount.zoomIn
+                newGridColumnCount = currentGridColumnCount.zoomIn
             } else if scale < Self.pinchZoomOutThreshold {
-                newColumnCount = currentColumnCount.zoomOut
+                newGridColumnCount = currentGridColumnCount.zoomOut
             }
 
-            if let newCount = newColumnCount, newCount != currentColumnCount {
+            if let newCount = newGridColumnCount, newCount != currentGridColumnCount {
                 performZoom(to: newCount)
                 gesture.scale = 1.0
             }
@@ -716,7 +695,7 @@ final class TrashAlbumViewController: UIViewController {
         }
     }
 
-    private func performZoom(to columns: ColumnCount) {
+    private func performZoom(to columns: GridColumnCount) {
         lastPinchZoomTime = Date()
 
         let anchorIndexPath: IndexPath?
@@ -730,7 +709,7 @@ final class TrashAlbumViewController: UIViewController {
             anchorIndexPath = collectionView.indexPathForItem(at: centerPoint)
         }
 
-        currentColumnCount = columns
+        currentGridColumnCount = columns
         updateCellSize()
 
         UIView.animate(withDuration: 0.25) { [weak self] in
