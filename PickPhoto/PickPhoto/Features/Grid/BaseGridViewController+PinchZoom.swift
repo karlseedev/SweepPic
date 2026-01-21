@@ -136,19 +136,27 @@ extension BaseGridViewController {
         state.stageBase = layout.virtualColumns
 
         // 앵커 결정 (핀치 중심점)
-        let location = gesture.location(in: collectionView)
-        state.anchorPointInView = location
-        state.anchorAssetID = resolveAnchorAssetID(at: location)
+        // gesture.location(in: collectionView)는 content 좌표 반환
+        let locationInContent = gesture.location(in: collectionView)
+        // bounds 좌표로 변환 (updateContentOffsetForAnchor에서 필요)
+        let locationInBounds = CGPoint(
+            x: locationInContent.x - collectionView.contentOffset.x,
+            y: locationInContent.y - collectionView.contentOffset.y
+        )
+        state.anchorPointInView = locationInBounds  // bounds 좌표 저장
+        state.anchorAssetID = resolveAnchorAssetID(at: locationInContent)  // content 좌표로 검색
 
         // 앵커를 못 찾으면 화면 중앙으로 fallback
         if state.anchorAssetID == nil {
-            let centerPoint = CGPoint(
-                x: collectionView.bounds.midX,
+            let centerInContent = CGPoint(
+                x: collectionView.bounds.midX + collectionView.contentOffset.x,
                 y: collectionView.bounds.midY + collectionView.contentOffset.y
             )
-            state.anchorAssetID = resolveAnchorAssetID(at: centerPoint)
+            state.anchorAssetID = resolveAnchorAssetID(at: centerInContent)
             state.anchorPointInView = CGPoint(x: collectionView.bounds.midX, y: collectionView.bounds.midY)
         }
+
+        print("[PinchZoom] Anchor: content=\(locationInContent), bounds=\(locationInBounds)")
 
         pinchZoomState = state
 
