@@ -136,23 +136,16 @@ extension BaseGridViewController {
         state.stageBase = layout.virtualColumns
 
         // 앵커 결정 (핀치 중심점)
-        // bounds 좌표 → content 좌표 변환 필요 (indexPathForItem은 content 좌표 기대)
+        // visible 셀 기반으로 찾으므로 bounds 좌표 그대로 사용
         let locationInBounds = gesture.location(in: collectionView)
-        let locationInContent = CGPoint(
-            x: locationInBounds.x + collectionView.contentOffset.x,
-            y: locationInBounds.y + collectionView.contentOffset.y
-        )
-        state.anchorPointInView = locationInBounds  // 화면상 위치 (bounds)
-        state.anchorAssetID = resolveAnchorAssetID(at: locationInContent)  // content 좌표로 검색
+        state.anchorPointInView = locationInBounds
+        state.anchorAssetID = resolveAnchorAssetID(at: locationInBounds)
 
         // 앵커를 못 찾으면 화면 중앙으로 fallback
         if state.anchorAssetID == nil {
-            let centerInContent = CGPoint(
-                x: collectionView.bounds.midX + collectionView.contentOffset.x,
-                y: collectionView.bounds.midY + collectionView.contentOffset.y
-            )
-            state.anchorAssetID = resolveAnchorAssetID(at: centerInContent)
-            state.anchorPointInView = CGPoint(x: collectionView.bounds.midX, y: collectionView.bounds.midY)
+            let centerInBounds = CGPoint(x: collectionView.bounds.midX, y: collectionView.bounds.midY)
+            state.anchorAssetID = resolveAnchorAssetID(at: centerInBounds)
+            state.anchorPointInView = centerInBounds
         }
 
         pinchZoomState = state
@@ -260,38 +253,30 @@ extension BaseGridViewController {
 
     // MARK: - Anchor Resolution
 
-    /// 앵커 에셋 ID 찾기 (fallback 포함)
-    /// - Parameter locationInContent: content 좌표계 기준 위치 (이미 contentOffset 반영된 좌표)
-    func resolveAnchorAssetID(at locationInContent: CGPoint) -> String? {
-        // 1) 터치 위치에서 직접 찾기 (content 좌표 그대로 사용)
-        if let indexPath = collectionView.indexPathForItem(at: locationInContent) {
-            if let assetID = assetIDForCollectionIndexPath(indexPath) {
-                return assetID
-            }
+    /// 앵커 에셋 ID 찾기 (visible 셀 기반)
+    /// - Parameter locationInBounds: bounds 좌표계 기준 위치 (화면상 터치 위치)
+    /// - Note: indexPathForItem(at:) 대신 visible 셀에서 직접 찾아 좌표 변환 문제 회피
+    func resolveAnchorAssetID(at locationInBounds: CGPoint) -> String? {
+        // visible 셀 중 터치 위치에 가장 가까운 셀 찾기
+        // cell.center는 collectionView의 bounds 좌표이므로 locationInBounds와 직접 비교 가능
+        let visibleCells = collectionView.visibleCells.compactMap { $0 as? PhotoCell }
+        guard !visibleCells.isEmpty else {
+            print("[PinchZoom] resolveAnchor: No visible cells")
+            return nil
         }
 
-        // 2) 화면 중앙 셀로 fallback (이미 content 좌표이므로 그대로 사용)
-        let centerInContent = CGPoint(
-            x: collectionView.bounds.midX + collectionView.contentOffset.x,
-            y: collectionView.bounds.midY + collectionView.contentOffset.y
-        )
-        if let centerIndexPath = collectionView.indexPathForItem(at: centerInContent) {
-            if let assetID = assetIDForCollectionIndexPath(centerIndexPath) {
-                return assetID
-            }
-        }
-
-        // 3) visible 셀 중 가장 가까운 셀로 fallback
-        let visible = collectionView.indexPathsForVisibleItems
-        guard let nearest = visible.min(by: { a, b in
-            guard let attrA = collectionView.layoutAttributesForItem(at: a),
-                  let attrB = collectionView.layoutAttributesForItem(at: b) else { return false }
-            let distA = hypot(attrA.center.x - centerInContent.x, attrA.center.y - centerInContent.y)
-            let distB = hypot(attrB.center.x - centerInContent.x, attrB.center.y - centerInContent.y)
+        let nearest = visibleCells.min { cellA, cellB in
+            // convert to collectionView coordinate
+            let centerA = cellA.center
+            let centerB = cellB.center
+            let distA = hypot(centerA.x - locationInBounds.x, centerA.y - locationInBounds.y)
+            let distB = hypot(centerB.x - locationInBounds.x, centerB.y - locationInBounds.y)
             return distA < distB
-        }) else { return nil }
+        }
 
-        return assetIDForCollectionIndexPath(nearest)
+        let assetID = nearest?.currentAssetID
+        print("[PinchZoom] resolveAnchor: found \(assetID?.prefix(8) ?? "nil") at \(locationInBounds)")
+        return assetID
     }
 
     // MARK: - Content Offset Correction
