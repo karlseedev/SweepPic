@@ -176,21 +176,18 @@ extension BaseGridViewController {
                                   ContinuousGridLayout.maxVirtualColumns)
 
         // 레이아웃 업데이트
+        // 핀치 중에는 paddingCellCount 고정 (indexPath 불일치 방지)
+        // → 스냅 완료 시에만 업데이트
         let prevEffective = layout.effectiveColumns
-        let prevPadding = layout.paddingCellCount
 
         layout.virtualColumns = virtualColumns
-        let newPadding = calculatePaddingCount(for: layout.effectiveColumns)
-        layout.paddingCellCount = newPadding
+        // layout.paddingCellCount = 변경하지 않음!
         layout.invalidateLayout()
         collectionView.layoutIfNeeded()
 
-        // [DEBUG] effectiveColumns/padding 변경 감지
+        // [DEBUG] effectiveColumns 변경 감지
         if layout.effectiveColumns != prevEffective {
-            print("[PinchZoom:Layout] effectiveColumns 변경: \(prevEffective) → \(layout.effectiveColumns)")
-        }
-        if newPadding != prevPadding {
-            print("[PinchZoom:Layout] paddingCellCount 변경: \(prevPadding) → \(newPadding)")
+            print("[PinchZoom:Layout] effectiveColumns 변경: \(prevEffective) → \(layout.effectiveColumns) (padding 고정: \(layout.paddingCellCount))")
         }
 
         // 앵커 고정 (contentOffset 보정)
@@ -530,9 +527,10 @@ extension BaseGridViewController {
         let easedProgress = 1 - pow(1 - progress, 3)
 
         // virtualColumns 보간
+        // 애니메이션 중에도 paddingCellCount 고정 (스냅 완료 시에만 업데이트)
         let newValue = animState.startValue + (animState.targetValue - animState.startValue) * CGFloat(easedProgress)
         layout.virtualColumns = newValue
-        layout.paddingCellCount = calculatePaddingCount(for: layout.effectiveColumns)
+        // layout.paddingCellCount = 변경하지 않음!
         layout.invalidateLayout()
         collectionView.layoutIfNeeded()
 
@@ -547,6 +545,15 @@ extension BaseGridViewController {
         if progress >= 1.0 {
             let targetColumns = GridColumnCount(rawValue: Int(animState.targetValue.rounded())) ?? .three
             layout.snapToColumns(targetColumns)
+
+            // 스냅 완료 시에만 paddingCellCount 업데이트 + 컬렉션뷰 동기화
+            let newPadding = calculatePaddingCount(for: targetColumns.rawValue)
+            if layout.paddingCellCount != newPadding {
+                print("[PinchZoom:Snap] paddingCellCount 업데이트: \(layout.paddingCellCount) → \(newPadding)")
+                layout.paddingCellCount = newPadding
+                collectionView.reloadData()  // numberOfItems 동기화
+            }
+
             let completion = animState.completion
             cancelSnapAnimation()
             completion?()
