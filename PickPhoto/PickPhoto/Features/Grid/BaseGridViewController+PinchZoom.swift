@@ -73,10 +73,10 @@ extension BaseGridViewController {
     /// 핀치줌 상태
     var pinchZoomState: PinchZoomState {
         get {
-            objc_getAssociatedObject(self, &Self.pinchStateKey) as? PinchZoomState ?? PinchZoomState()
+            (objc_getAssociatedObject(self, &Self.pinchStateKey) as? PinchZoomStateBox)?.state ?? PinchZoomState()
         }
         set {
-            objc_setAssociatedObject(self, &Self.pinchStateKey, newValue, .OBJC_ASSOCIATION_COPY_NONATOMIC)
+            objc_setAssociatedObject(self, &Self.pinchStateKey, PinchZoomStateBox(newValue), .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
         }
     }
 
@@ -521,30 +521,9 @@ extension BaseGridViewController {
     }
 }
 
-// MARK: - PinchZoomState Copying
+// MARK: - PinchZoomStateBox
 
-extension PinchZoomState: _ObjectiveCBridgeable {
-    typealias _ObjectiveCType = NSObject
-
-    func _bridgeToObjectiveC() -> NSObject {
-        return PinchZoomStateBox(self)
-    }
-
-    static func _forceBridgeFromObjectiveC(_ source: NSObject, result: inout PinchZoomState?) {
-        result = (source as? PinchZoomStateBox)?.state
-    }
-
-    static func _conditionallyBridgeFromObjectiveC(_ source: NSObject, result: inout PinchZoomState?) -> Bool {
-        result = (source as? PinchZoomStateBox)?.state
-        return result != nil
-    }
-
-    static func _unconditionallyBridgeFromObjectiveC(_ source: NSObject?) -> PinchZoomState {
-        return (source as? PinchZoomStateBox)?.state ?? PinchZoomState()
-    }
-}
-
-/// PinchZoomState를 NSObject로 래핑
+/// PinchZoomState를 NSObject로 래핑 (associated object 저장용)
 private class PinchZoomStateBox: NSObject {
     let state: PinchZoomState
     init(_ state: PinchZoomState) { self.state = state }
