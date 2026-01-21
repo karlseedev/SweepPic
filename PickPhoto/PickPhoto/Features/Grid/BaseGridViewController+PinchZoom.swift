@@ -136,31 +136,23 @@ extension BaseGridViewController {
         state.stageBase = layout.virtualColumns
 
         // 앵커 결정 (핀치 중심점)
-        // gesture.location(in: collectionView)는 bounds 좌표 (화면상 위치)
-        let locationInBounds = gesture.location(in: collectionView)
-        // content 좌표로 변환 (indexPathForItem용)
-        let locationInContent = CGPoint(
-            x: locationInBounds.x + collectionView.contentOffset.x,
-            y: locationInBounds.y + collectionView.contentOffset.y
-        )
-
-        // anchorPointInView는 화면상 위치 (bounds 좌표)로 저장
-        state.anchorPointInView = locationInBounds
-        state.anchorAssetID = resolveAnchorAssetID(at: locationInContent)
+        let location = gesture.location(in: collectionView)
+        state.anchorPointInView = location
+        state.anchorAssetID = resolveAnchorAssetID(at: location)
 
         // 앵커를 못 찾으면 화면 중앙으로 fallback
         if state.anchorAssetID == nil {
-            let centerInContent = CGPoint(
-                x: collectionView.bounds.midX + collectionView.contentOffset.x,
+            let centerPoint = CGPoint(
+                x: collectionView.bounds.midX,
                 y: collectionView.bounds.midY + collectionView.contentOffset.y
             )
-            state.anchorAssetID = resolveAnchorAssetID(at: centerInContent)
+            state.anchorAssetID = resolveAnchorAssetID(at: centerPoint)
             state.anchorPointInView = CGPoint(x: collectionView.bounds.midX, y: collectionView.bounds.midY)
         }
 
         pinchZoomState = state
 
-        print("[PinchZoom] Began: baseColumns=\(state.baseColumns), anchor=\(state.anchorAssetID?.prefix(8) ?? "nil"), pointInView=\(state.anchorPointInView)")
+        print("[PinchZoom] Began: baseColumns=\(state.baseColumns), anchor=\(state.anchorAssetID?.prefix(8) ?? "nil")")
     }
 
     /// 핀치 진행 중
@@ -263,22 +255,32 @@ extension BaseGridViewController {
     // MARK: - Anchor Resolution
 
     /// 앵커 에셋 ID 찾기 (fallback 포함)
-    /// - Parameter locationInContent: content 좌표계 기준 위치
-    func resolveAnchorAssetID(at locationInContent: CGPoint) -> String? {
+    func resolveAnchorAssetID(at location: CGPoint) -> String? {
         // 1) 터치 위치에서 직접 찾기
-        if let indexPath = collectionView.indexPathForItem(at: locationInContent) {
+        if let indexPath = collectionView.indexPathForItem(at: location) {
             if let assetID = assetIDForCollectionIndexPath(indexPath) {
                 return assetID
             }
         }
 
-        // 2) visible 셀 중 가장 가까운 셀로 fallback
+        // 2) 화면 중앙 셀로 fallback
+        let centerPoint = CGPoint(
+            x: collectionView.bounds.midX,
+            y: collectionView.bounds.midY + collectionView.contentOffset.y
+        )
+        if let centerIndexPath = collectionView.indexPathForItem(at: centerPoint) {
+            if let assetID = assetIDForCollectionIndexPath(centerIndexPath) {
+                return assetID
+            }
+        }
+
+        // 3) visible 셀 중 가장 가까운 셀로 fallback
         let visible = collectionView.indexPathsForVisibleItems
         guard let nearest = visible.min(by: { a, b in
             guard let attrA = collectionView.layoutAttributesForItem(at: a),
                   let attrB = collectionView.layoutAttributesForItem(at: b) else { return false }
-            let distA = hypot(attrA.center.x - locationInContent.x, attrA.center.y - locationInContent.y)
-            let distB = hypot(attrB.center.x - locationInContent.x, attrB.center.y - locationInContent.y)
+            let distA = hypot(attrA.center.x - centerPoint.x, attrA.center.y - centerPoint.y)
+            let distB = hypot(attrB.center.x - centerPoint.x, attrB.center.y - centerPoint.y)
             return distA < distB
         }) else { return nil }
 
