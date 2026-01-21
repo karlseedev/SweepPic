@@ -23,13 +23,6 @@ PickPhoto는 iOS 사진 갤러리 앱입니다. 네이티브 iOS 사진 앱과 �
 - 네이티브 사진 앱과 유사한 그리드 기반 사진 브라우징
 - 사진 정리 특화 기능 보유(추후 상세 기능 명확화 예정)
 
-## 언어 & 문서화
-
-- **모든 대화와 설명은 한글로 작성**
-- PRD 및 품질 문서는 한글로 작성됨
-- 코드 식별자와 주석은 영어 사용
-- 문서는 한글 권장
-
 ## 코딩 스타일
 
 - **모든 코드에는 상세한 주석을 달아서 작성한다**
@@ -50,175 +43,26 @@ PickPhoto는 iOS 사진 갤러리 앱입니다. 네이티브 iOS 사진 앱과 �
 - **롤백 작업 요청 시 수동으로 코드를 수정하는 것을 기본으로 한다. 깃으로 롤백이 필요할 경우에는 사용자에게 확인을 받고 깃으로 롤백한다**
 - **git checkout, git reset 등 git 명령어로 코드를 원복할 때는 반드시 본인(Claude)이 해당 대화에서 커밋한 경우에만 가능하다. 사용자가 커밋한 내용은 그 사이에 어떤 수정이 있었는지 알 수 없으므로 git으로 원복하지 않는다**
 
-## 프로젝트 파일 구조
+## 기술 스택
+- iOS 16+, Swift 5.9+, UIKit
+- PhotoKit, Vision Framework
 
-> **주의:** 신규 파일 생성 또는 기존 파일 수정으로 구조가 변경되면 이 섹션도 함께 업데이트한다.
+## 폴더 구조
 
-```
-iOS/
-├── Package.swift                    # Swift Package: AppCore 라이브러리
-├── CLAUDE.md                        # Claude Code 가이드
-│
-├── Sources/AppCore/                 # 공유 비즈니스 로직 및 유틸리티
-│   ├── AppCore.swift
-│   ├── Models/
-│   │   ├── AlbumModels.swift
-│   │   ├── PermissionState.swift
-│   │   ├── PhotoModels.swift
-│   │   └── TrashState.swift
-│   ├── Services/
-│   │   ├── AlbumService.swift
-│   │   ├── FileLogger.swift
-│   │   ├── HitchMonitor.swift
-│   │   ├── ImagePipeline.swift
-│   │   ├── MemoryThumbnailCache.swift
-│   │   ├── PhotoLibraryService.swift
-│   │   ├── ThumbnailCache.swift
-│   │   └── VideoPipeline.swift
-│   └── Stores/
-│       ├── AppStateStore.swift
-│       ├── PermissionStore.swift
-│       └── TrashStore.swift
-│
-├── Tests/AppCoreTests/              # AppCore 패키지 테스트
-│   └── AppCoreTests.swift
-│
-├── PickPhoto/                       # 메인 iOS 애플리케이션
-│   └── PickPhoto/
-│       ├── App/
-│       │   ├── AppDelegate.swift
-│       │   └── SceneDelegate.swift
-│       │
-│       ├── Debug/
-│       │   └── AutoScrollTester.swift
-│       │
-│       ├── Features/
-│       │   ├── Albums/              # 앨범 관련 기능
-│       │   │   ├── AlbumCell.swift
-│       │   │   ├── AlbumGridViewController.swift
-│       │   │   ├── AlbumsViewController.swift
-│       │   │   └── TrashAlbumViewController.swift
-│       │   │
-│       │   ├── Grid/                # 그리드 뷰 기능
-│       │   │   ├── BaseGridViewController.swift
-│       │   │   ├── GridColumnCount.swift
-│       │   │   ├── GridDataSource.swift
-│       │   │   ├── GridDataSourceDriver.swift
-│       │   │   ├── GridGestures.swift
-│       │   │   ├── GridScroll.swift
-│       │   │   ├── GridSelectMode.swift
-│       │   │   ├── GridViewController.swift
-│       │   │   ├── GridViewController+SimilarPhoto.swift
-│       │   │   ├── PhotoCell.swift
-│       │   │   └── SelectionManager.swift
-│       │   │
-│       │   ├── Permissions/         # 권한 요청
-│       │   │   └── PermissionViewController.swift
-│       │   │
-│       │   ├── SimilarPhoto/        # 유사 사진 분석 기능
-│       │   │   ├── Analysis/
-│       │   │   │   ├── ExtendedFallbackTester.swift
-│       │   │   │   ├── FaceAligner.swift
-│       │   │   │   ├── FaceCropper.swift
-│       │   │   │   ├── FaceDetector.swift
-│       │   │   │   ├── S2DebugAnalyzer.swift
-│       │   │   │   ├── SFaceRecognizer.swift
-│       │   │   │   ├── SimilarityAnalysisQueue.swift
-│       │   │   │   ├── SimilarityAnalysisQueue+ExtendedFallback.swift
-│       │   │   │   ├── SimilarityAnalyzer.swift
-│       │   │   │   ├── SimilarityCache.swift
-│       │   │   │   ├── SimilarityImageLoader.swift
-│       │   │   │   ├── VisionFallbackMode.swift
-│       │   │   │   └── YuNet/       # YuNet 얼굴 감지
-│       │   │   │       ├── YuNetDebugTest.swift
-│       │   │   │       ├── YuNetDecoder.swift
-│       │   │   │       ├── YuNetFaceDetector.swift
-│       │   │   │       ├── YuNetPreprocessor.swift
-│       │   │   │       └── YuNetTypes.swift
-│       │   │   ├── Debug/
-│       │   │   │   └── FaceComparisonDebug.swift
-│       │   │   ├── Models/
-│       │   │   │   ├── AnalysisRequest.swift
-│       │   │   │   ├── CachedFace.swift
-│       │   │   │   ├── FaceMatch.swift
-│       │   │   │   ├── SimilarPhotoGroup.swift
-│       │   │   │   ├── SimilarityAnalysisState.swift
-│       │   │   │   └── SimilarityConstants.swift
-│       │   │   ├── UI/
-│       │   │   │   ├── AnalysisLoadingIndicator.swift
-│       │   │   │   ├── BorderAnimationLayer.swift
-│       │   │   │   ├── FaceButtonOverlay.swift
-│       │   │   │   ├── FaceComparisonViewController.swift
-│       │   │   │   ├── FaceComparisonViews.swift
-│       │   │   │   └── PersonPageViewController.swift
-│       │   │   └── Utils/
-│       │   │       └── AsyncSemaphore.swift
-│       │   │
-│       │   └── Viewer/              # 사진 뷰어 기능
-│       │       ├── PhotoPageViewController.swift
-│       │       ├── PlayerLayerView.swift
-│       │       ├── SwipeDeleteHandler.swift
-│       │       ├── VideoControlsOverlay.swift
-│       │       ├── VideoPageViewController.swift
-│       │       ├── ViewerCoordinator.swift
-│       │       ├── ViewerViewController.swift
-│       │       └── ViewerViewController+SimilarPhoto.swift
-│       │
-│       └── Shared/                  # 공유 컴포넌트
-│           ├── Components/
-│           │   ├── EmptyStateView.swift
-│           │   ├── FloatingOverlayContainer.swift
-│           │   ├── FloatingTabBar.swift
-│           │   ├── FloatingTitleBar.swift
-│           │   └── ToastView.swift
-│           ├── FeatureFlags.swift
-│           ├── Navigation/
-│           │   └── TabBarController.swift
-│           ├── Protocols/
-│           │   └── BarsVisibilityControlling.swift
-│           └── Utils/
-│               └── HapticFeedback.swift
-│
-├── docs/                            # 문서
-│   ├── prd*.md                      # 제품 요구사항 문서
-│   ├── 26MMDD*.md                   # 작업 로그
-│   ├── log/                         # 상세 로그
-│   ├── complete/                    # 완료된 작업 문서
-│   └── bak/                         # 백업 문서
-│
-├── specs/                           # 기능 명세
-│   ├── 001-auto-cleanup/
-│   ├── 001-pickphoto-mvp/
-│   └── 002-similar-photo/
-│
-└── test/                            # 테스트 및 스파이크
-    └── Spike1/                      # 성능 테스트 프로젝트
-```
-
-## Active Technologies (001-pickphoto-mvp)
-- Swift 5.9+, iOS 16+
-- UIKit 기반 (UICollectionView + performBatchUpdates)
-- PhotoKit (PHAsset, PHFetchResult, PHCachingImageManager, PHPhotoLibraryChangeObserver)
-- 파일 기반 저장 (앱 내 휴지통 상태)
-
-## Recent Changes
-- 002-similar-photo: Added Swift 5.9+ + UIKit, Vision Framework (VNGenerateImageFeaturePrintRequest, VNDetectFaceRectanglesRequest), PhotoKit (PHAsset, PHCachingImageManager)
-- 001-similar-photo: Added Swift 5.9+ + UIKit, PhotoKit, Vision Framework
-- 001-pickphoto-mvp: UIKit 기반 + performBatchUpdates + PHCachingImageManager 확정
-
-## 빌드 & 테스트 명령어
-
-```bash
-# AppCore Swift 패키지 빌드/테스트
-swift build
-swift test
-
-# iOS 앱 빌드 (시뮬레이터)
-xcodebuild -project PickPhoto/PickPhoto.xcodeproj -scheme PickPhoto -destination 'platform=iOS Simulator,name=iPhone 16'
-
-# Xcode에서 열기
-open PickPhoto/PickPhoto.xcodeproj
-```
+| 폴더 | 역할 |
+|-----|------|
+| `Sources/AppCore/Models/` | 데이터 모델 (Album, Photo, Trash 등) |
+| `Sources/AppCore/Services/` | 서비스 레이어 (ImagePipeline, PhotoLibraryService 등) |
+| `Sources/AppCore/Stores/` | 상태 관리 (AppState, Permission, Trash) |
+| `PickPhoto/PickPhoto/App/` | 앱 진입점 (AppDelegate, SceneDelegate) |
+| `PickPhoto/PickPhoto/Features/Albums/` | 앨범 목록 및 상세, 휴지통 |
+| `PickPhoto/PickPhoto/Features/Grid/` | 메인 사진 그리드, 셀, 선택 모드 |
+| `PickPhoto/PickPhoto/Features/Permissions/` | 사진 라이브러리 권한 요청 |
+| `PickPhoto/PickPhoto/Features/SimilarPhoto/` | 유사 사진 분석 (얼굴 인식, Vision) |
+| `PickPhoto/PickPhoto/Features/Viewer/` | 전체화면 사진/비디오 뷰어 |
+| `PickPhoto/PickPhoto/Shared/Components/` | 공용 UI (FloatingTabBar, Toast 등) |
+| `specs/` | 기능별 명세 문서 |
+| `docs/` | 작업 로그, PRD 문서 |
 
 ## 주요 클래스 역할
 
@@ -266,3 +110,17 @@ if #available(iOS 26.0, *) {
 **`useFloatingUI` 정의 위치:**
 - `BaseGridViewController.swift:152` - 그리드 계열 VC용
 - `TabBarController.swift:31` - 탭바 컨트롤러용
+
+## 빌드 & 테스트 명령어
+
+```bash
+# AppCore Swift 패키지 빌드/테스트
+swift build
+swift test
+
+# iOS 앱 빌드 (시뮬레이터)
+xcodebuild -project PickPhoto/PickPhoto.xcodeproj -scheme PickPhoto -destination 'platform=iOS Simulator,name=iPhone 17'
+
+# Xcode에서 열기
+open PickPhoto/PickPhoto.xcodeproj
+```
