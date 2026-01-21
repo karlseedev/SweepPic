@@ -176,8 +176,8 @@ extension BaseGridViewController {
                                   ContinuousGridLayout.maxVirtualColumns)
 
         // 레이아웃 업데이트
-        // paddingCellCount는 핀치 중 고정 (스냅 완료 시에만 업데이트)
         layout.virtualColumns = virtualColumns
+        layout.paddingCellCount = calculatePaddingCount(for: layout.effectiveColumns)
         layout.invalidateLayout()
         collectionView.layoutIfNeeded()
 
@@ -298,29 +298,16 @@ extension BaseGridViewController {
     // MARK: - Content Offset Correction
 
     /// 앵커 셀 고정을 위한 contentOffset 보정
-    /// layoutAttributesForItem 대신 직접 계산 (effectiveColumns 변화에 영향받지 않도록)
     func updateContentOffsetForAnchor(
         anchorAssetID: String?,
         anchorPointInView: CGPoint,
         layout: ContinuousGridLayout
     ) {
         guard let assetID = anchorAssetID,
-              let assetIndex = gridDataSource.assetIndex(for: assetID) else { return }
+              let indexPath = collectionIndexPathForContinuousLayout(for: assetID, layout: layout),
+              let attributes = layout.layoutAttributesForItem(at: indexPath) else { return }
 
-        // prepare()와 동일한 계산 로직 사용
-        let columns = layout.effectiveColumns
-        let itemIndex = assetIndex + layout.paddingCellCount
-        let row = itemIndex / columns
-        let col = itemIndex % columns
-
-        let itemSize = layout.itemSize
-        let spacing = ContinuousGridLayout.cellSpacing
-
-        // 셀 중심 좌표 계산
-        let centerX = CGFloat(col) * (itemSize.width + spacing) + itemSize.width / 2
-        let centerY = CGFloat(row) * (itemSize.height + spacing) + itemSize.height / 2
-
-        let anchorCenterInContent = CGPoint(x: centerX, y: centerY)
+        let anchorCenterInContent = attributes.center
         let newOffset = CGPoint(
             x: anchorCenterInContent.x - anchorPointInView.x,
             y: anchorCenterInContent.y - anchorPointInView.y
@@ -514,7 +501,7 @@ extension BaseGridViewController {
         // virtualColumns 보간
         let newValue = animState.startValue + (animState.targetValue - animState.startValue) * CGFloat(easedProgress)
         layout.virtualColumns = newValue
-        // paddingCellCount는 핀치/스냅 중 고정 (완료 시에만 업데이트)
+        layout.paddingCellCount = calculatePaddingCount(for: layout.effectiveColumns)
         layout.invalidateLayout()
         collectionView.layoutIfNeeded()
 
@@ -529,14 +516,6 @@ extension BaseGridViewController {
         if progress >= 1.0 {
             let targetColumns = GridColumnCount(rawValue: Int(animState.targetValue.rounded())) ?? .three
             layout.snapToColumns(targetColumns)
-
-            // 스냅 완료 후 paddingCellCount 동기화 및 reloadData
-            let newPadding = calculatePaddingCount(for: targetColumns.rawValue)
-            if layout.paddingCellCount != newPadding {
-                layout.paddingCellCount = newPadding
-                collectionView.reloadData()
-            }
-
             let completion = animState.completion
             cancelSnapAnimation()
             completion?()
