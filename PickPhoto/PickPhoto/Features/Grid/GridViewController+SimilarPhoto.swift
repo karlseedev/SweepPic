@@ -146,7 +146,7 @@ extension GridViewController {
     /// 스크롤 시작 시 호출
     /// - 진행 중인 분석 취소
     /// - 테두리 애니메이션 숨김
-    override func handleSimilarPhotoScrollStart() {
+    func handleSimilarPhotoScrollStart() {
         // Feature Flag 및 비활성화 조건 체크
         guard shouldEnableSimilarPhoto() else { return }
 
@@ -166,7 +166,7 @@ extension GridViewController {
 
     /// 스크롤 종료 시 호출
     /// - 0.3초 디바운싱 후 분석 시작
-    override func handleSimilarPhotoScrollEnd() {
+    func handleSimilarPhotoScrollEnd() {
         // Feature Flag 및 비활성화 조건 체크
         guard shouldEnableSimilarPhoto() else { return }
 

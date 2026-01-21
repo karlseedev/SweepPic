@@ -73,7 +73,7 @@
 | **Strong** | 극단 노출 (어두움) | 휘도 < 0.10 | 설계값 (Gist 0.133 기준 엄격) |
 | | 극단 노출 (밝음) | 휘도 > 0.90 | GitHub Gist |
 | | 심각 블러 | Laplacian < 50 | 설계값 (PyImageSearch 100의 50%) |
-| **Conditional** | 주머니 샷 | 휘도<0.15 AND RGB Std<15 AND Lap<50 AND 비네팅<0.05 | 복합 조건 |
+| **Conditional** | 주머니 샷 | 휘도<0.10 AND RGB Std<15 AND Lap<50 AND 비네팅<0.05 | 복합 조건 |
 | | 극단 단색 | RGB Std<10 AND (휘도<0.15 OR >0.85) | 복합 조건 |
 | | 렌즈 가림 | 모서리 휘도 < 중앙 × 0.4 | 3×3 그리드 |
 | **Weak** | 일반 블러 | Laplacian < 100 | PyImageSearch |
@@ -147,7 +147,7 @@ Stage 4: CompositeJudge + SafeGuard
 > **조기 종료**: 노출/단색/렌즈 판정은 Safe Guard 대상 아님 → 즉시 LOW_QUALITY 확정
 > **블러 판정**: Safe Guard 적용 가능 → Stage 4까지 진행 후 최종 판정
 
-> **iOS 18+**: Stage 1 → AestheticsScore → Safe Guard 체크 → 최종 판정. AestheticsScore 실패 시 Stage 2-4 Fallback
+> **iOS 18+**: Stage 1 후 AestheticsScore 우선 적용, 실패 시 Stage 2-4 Fallback
 
 ---
 

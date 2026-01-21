@@ -71,7 +71,7 @@ class BaseGridViewController: UIViewController {
 
     /// 컬렉션 뷰
     lazy var collectionView: UICollectionView = {
-        let cv = UICollectionView(frame: .zero, collectionViewLayout: createLayout())
+        let cv = UICollectionView(frame: .zero, collectionViewLayout: createLayout(columns: .three))
         cv.backgroundColor = .black
         cv.translatesAutoresizingMaskIntoConstraints = false
         cv.register(PhotoCell.self, forCellWithReuseIdentifier: PhotoCell.reuseIdentifier)
@@ -116,11 +116,8 @@ class BaseGridViewController: UIViewController {
     /// 핀치 줌 마지막 실행 시간 (쿨다운용)
     var lastPinchZoomTime: Date?
 
-    /// 핀치 줌 앵커 에셋 ID (레거시 - pinchState로 대체)
+    /// 핀치 줌 앵커 에셋 ID
     var pinchAnchorAssetID: String?
-
-    /// 핀치줌 상태 (transform 기반 스케일링)
-    var pinchState = PinchZoomState()
 
     /// 뷰어 복귀 후 스크롤할 에셋 ID
     var pendingScrollAssetID: String?
@@ -171,12 +168,9 @@ class BaseGridViewController: UIViewController {
 
     // MARK: - Rotation Support
 
-    /// 회전 시 스크롤 위치 보존용 앵커 indexPath (레거시)
+    /// 회전 시 스크롤 위치 보존용 앵커 indexPath
     /// - 화면 중앙에 있던 셀의 indexPath를 저장
     private var scrollAnchorIndexPath: IndexPath?
-
-    /// 회전 시 스크롤 위치 보존용 앵커 assetID (paddingCellCount 변경에 안전)
-    private var scrollAnchorAssetID: String?
 
     // MARK: - Abstract Properties (서브클래스 필수 구현)
 
@@ -259,11 +253,10 @@ class BaseGridViewController: UIViewController {
     ) {
         super.viewWillTransition(to: size, with: coordinator)
 
-        // 1. 앵커 저장 (화면 중앙 셀의 assetID)
-        saveScrollAnchorAssetID()
-        let anchorAssetID = scrollAnchorAssetID
+        // 회전 전: 화면 중앙 셀의 indexPath 저장
+        saveScrollAnchorIndexPath()
 
-        // 2. 새 열 수 결정
+        // 회전 후 방향에 따라 열 수 결정 (기본 사진앱 방식)
         // - 세로→가로: 1→3, 3→5, 5→5
         // - 가로→세로: 1→1, 3→3, 5→3
         let isLandscape = size.width > size.height
@@ -271,11 +264,8 @@ class BaseGridViewController: UIViewController {
             ? currentGridColumnCount.landscapeColumnCount
             : currentGridColumnCount.portraitColumnCount
 
-        // 3. 유사 사진 테두리 숨김
-        handleSimilarPhotoScrollStart()
-
-        // 4. 회전과 동시에 fade in 시작
-        fadeInVisibleCells(targetColumns: newColumnCount, anchorAssetID: anchorAssetID)
+        // 회전 후 크기로 새 레이아웃 미리 생성 (size 파라미터가 회전 후 크기)
+        let newLayout = createLayout(columns: newColumnCount, explicitWidth: size.width)
 
         coordinator.animate(alongsideTransition: { [weak self] _ in
             guard let self = self else { return }
@@ -283,74 +273,21 @@ class BaseGridViewController: UIViewController {
             // 열 수 업데이트
             self.currentGridColumnCount = newColumnCount
 
-            // 레이아웃 즉시 변경 (셀 이동 애니메이션 없음)
-            self.collectionView.collectionViewLayout.invalidateLayout()
+            // 회전 애니메이션과 동기화하여 레이아웃 변경
+            self.collectionView.setCollectionViewLayout(newLayout, animated: false)
+
+            // 셀 크기 캐시 업데이트
             self.updateCellSize()
+
+            // contentInset 재계산 (FloatingUI 높이 반영)
             self.updateContentInset()
 
-        }, completion: { [weak self] _ in
-            guard let self = self else { return }
-
-            // 앵커 위치로 스크롤
-            self.restoreScrollAnchorAssetID()
-
-            // 고해상도 썸네일 재요청
-            self.didPerformZoom(to: newColumnCount)
-
-            // 유사 사진 테두리 재표시
-            self.handleSimilarPhotoScrollEnd()
-        })
+            // 저장된 indexPath로 스크롤 복원
+            self.restoreScrollAnchorIndexPath()
+        }, completion: nil)
     }
 
-    /// 화면 중앙 셀의 assetID 저장 (paddingCellCount 변경에 안전)
-    private func saveScrollAnchorAssetID() {
-        let visibleRect = CGRect(
-            origin: collectionView.contentOffset,
-            size: collectionView.bounds.size
-        )
-        let centerPoint = CGPoint(
-            x: visibleRect.midX,
-            y: visibleRect.midY
-        )
-
-        // 1차: 정확히 centerPoint에 있는 셀
-        if let indexPath = collectionView.indexPathForItem(at: centerPoint) {
-            scrollAnchorAssetID = assetIDForCollectionIndexPath(indexPath)
-            return
-        }
-
-        // 2차: visible cells 중 중앙에 가장 가까운 셀
-        let visibleIndexPaths = collectionView.indexPathsForVisibleItems
-        var closestIndexPath: IndexPath?
-        var closestDistance: CGFloat = .greatestFiniteMagnitude
-
-        for indexPath in visibleIndexPaths {
-            guard let cell = collectionView.cellForItem(at: indexPath) else { continue }
-            let distance = hypot(cell.center.x - centerPoint.x, cell.center.y - centerPoint.y)
-            if distance < closestDistance {
-                closestDistance = distance
-                closestIndexPath = indexPath
-            }
-        }
-
-        scrollAnchorAssetID = closestIndexPath.flatMap { assetIDForCollectionIndexPath($0) }
-    }
-
-    /// assetID 기준으로 스크롤 복원
-    private func restoreScrollAnchorAssetID() {
-        guard let assetID = scrollAnchorAssetID else { return }
-        scrollAnchorAssetID = nil
-
-        // 새 padding 기준으로 indexPath 계산
-        guard let indexPath = collectionIndexPath(for: assetID) else { return }
-        guard indexPath.item < collectionView.numberOfItems(inSection: 0) else { return }
-
-        collectionView.scrollToItem(at: indexPath, at: .centeredVertically, animated: false)
-    }
-
-    // MARK: - Legacy Rotation Support (하위 호환)
-
-    /// 화면 중앙에 있는 셀의 indexPath 저장 (레거시)
+    /// 화면 중앙에 있는 셀의 indexPath 저장
     /// - Note: 셀 간격(2pt)에 centerPoint가 걸리면 nil 반환 가능 → fallback 처리
     private func saveScrollAnchorIndexPath() {
         let visibleRect = CGRect(
@@ -388,7 +325,7 @@ class BaseGridViewController: UIViewController {
         scrollAnchorIndexPath = closestIndexPath
     }
 
-    /// 저장된 indexPath 기준으로 스크롤 복원 (레거시)
+    /// 저장된 indexPath 기준으로 스크롤 복원
     private func restoreScrollAnchorIndexPath() {
         guard let indexPath = scrollAnchorIndexPath else { return }
         scrollAnchorIndexPath = nil
@@ -463,51 +400,7 @@ class BaseGridViewController: UIViewController {
 
     // MARK: - Layout
 
-    /// CompositionalLayout 생성 (동적 열 수 참조)
-    /// - currentGridColumnCount를 section provider에서 동적으로 참조
-    /// - invalidateLayout() 호출 시 새 열 수로 레이아웃 재계산
-    /// - Returns: UICollectionViewLayout
-    func createLayout() -> UICollectionViewLayout {
-        let layout = UICollectionViewCompositionalLayout { [weak self] _, environment in
-            // self가 nil이면 기본 3열 사용
-            let columns = self?.currentGridColumnCount.rawValue ?? 3
-            let columnCount = CGFloat(columns)
-            let spacing: CGFloat = 2  // Self.cellSpacing 대신 상수 사용 (클로저 내)
-            let totalSpacing = spacing * (columnCount - 1)
-            let containerWidth = environment.container.effectiveContentSize.width
-            let availableWidth = containerWidth - totalSpacing
-            let cellWidth = floor(availableWidth / columnCount)
-
-            // 아이템 크기
-            let itemSize = NSCollectionLayoutSize(
-                widthDimension: .absolute(cellWidth),
-                heightDimension: .absolute(cellWidth)
-            )
-            let item = NSCollectionLayoutItem(layoutSize: itemSize)
-
-            // 그룹
-            let groupSize = NSCollectionLayoutSize(
-                widthDimension: .fractionalWidth(1.0),
-                heightDimension: .absolute(cellWidth)
-            )
-            let group = NSCollectionLayoutGroup.horizontal(
-                layoutSize: groupSize,
-                repeatingSubitem: item,
-                count: columns
-            )
-            group.interItemSpacing = .fixed(spacing)
-
-            // 섹션
-            let section = NSCollectionLayoutSection(group: group)
-            section.interGroupSpacing = spacing
-            section.contentInsetsReference = .none
-
-            return section
-        }
-        return layout
-    }
-
-    /// CompositionalLayout 생성 (고정 열 수 - 레거시 호환)
+    /// CompositionalLayout 생성
     /// - Parameters:
     ///   - columns: 열 수
     ///   - explicitWidth: 명시적 너비 (회전 후 강제 지정 시 사용, nil이면 environment에서 자동 계산)
@@ -618,168 +511,46 @@ class BaseGridViewController: UIViewController {
         return IndexPath(item: assetIndex + paddingCellCount, section: 0)
     }
 
-    /// 핀치 줌 제스처 처리 (transform 기반 스케일링)
-    /// - 전체 화면이 transform으로 확대/축소 (스크린샷처럼)
-    /// - 기준점(1/3/5열) 통과 시 → 해당 열 기준 이미지로 fade in
+    /// 핀치 줌 제스처 처리
     @objc func handlePinchGesture(_ gesture: UIPinchGestureRecognizer) {
         switch gesture.state {
         case .began:
-            handlePinchBegan(gesture)
+            // 앵커 에셋 ID 저장 (padding 보정)
+            let location = gesture.location(in: collectionView)
+            if let indexPath = collectionView.indexPathForItem(at: location) {
+                pinchAnchorAssetID = assetIDForCollectionIndexPath(indexPath)
+            }
 
         case .changed:
-            handlePinchChanged(gesture)
+            // 쿨다운 체크
+            if let lastTime = lastPinchZoomTime,
+               Date().timeIntervalSince(lastTime) < Self.pinchCooldown {
+                return
+            }
+
+            // 임계값 체크
+            let scale = gesture.scale
+            var newColumnCount: GridColumnCount?
+
+            if scale > Self.pinchZoomInThreshold {
+                // 확대 (열 수 감소)
+                newColumnCount = currentGridColumnCount.zoomIn
+            } else if scale < Self.pinchZoomOutThreshold {
+                // 축소 (열 수 증가)
+                newColumnCount = currentGridColumnCount.zoomOut
+            }
+
+            // 열 수가 변경되면 레이아웃 업데이트
+            if let newCount = newColumnCount, newCount != currentGridColumnCount {
+                performZoom(to: newCount)
+                gesture.scale = 1.0  // 스케일 리셋
+            }
 
         case .ended, .cancelled:
-            handlePinchEnded(gesture)
+            pinchAnchorAssetID = nil
 
         default:
             break
-        }
-    }
-
-    /// 핀치 시작 처리
-    private func handlePinchBegan(_ gesture: UIPinchGestureRecognizer) {
-        // 1. 상태 초기화
-        pinchState = PinchZoomState()
-        pinchState.isActive = true
-        pinchState.initialScale = gesture.scale  // 보통 1.0
-        pinchState.baseColumnCount = currentGridColumnCount
-        pinchState.previousVirtualColumns = CGFloat(currentGridColumnCount.rawValue)
-
-        // 2. 원본 layer 상태 저장 (복원용)
-        pinchState.originalLayerAnchorPoint = collectionView.layer.anchorPoint
-        pinchState.originalLayerPosition = collectionView.layer.position
-
-        // 3. 앵커 결정 (핀치 중심점의 셀)
-        let location = gesture.location(in: collectionView)
-        pinchState.anchorPoint = CGPoint(
-            x: location.x - collectionView.contentOffset.x,
-            y: location.y - collectionView.contentOffset.y
-        )
-
-        if let indexPath = collectionView.indexPathForItem(at: location),
-           indexPath.item >= paddingCellCount {
-            pinchState.anchorAssetID = assetIDForCollectionIndexPath(indexPath)
-        } else {
-            // 빈 공간 → 화면 중앙 셀을 앵커로
-            let centerPoint = CGPoint(
-                x: collectionView.contentOffset.x + collectionView.bounds.width / 2,
-                y: collectionView.contentOffset.y + collectionView.bounds.height / 2
-            )
-            if let centerIndexPath = collectionView.indexPathForItem(at: centerPoint) {
-                pinchState.anchorAssetID = assetIDForCollectionIndexPath(centerIndexPath)
-            }
-            pinchState.anchorPoint = CGPoint(
-                x: collectionView.bounds.width / 2,
-                y: collectionView.bounds.height / 2
-            )
-        }
-
-        // 4. anchorPoint 설정 (position 보정 포함)
-        let newAnchor = CGPoint(
-            x: pinchState.anchorPoint.x / collectionView.bounds.width,
-            y: pinchState.anchorPoint.y / collectionView.bounds.height
-        )
-        let oldAnchor = collectionView.layer.anchorPoint
-        collectionView.layer.anchorPoint = newAnchor
-        // position 보정: anchorPoint 변경으로 인한 이동 상쇄
-        collectionView.layer.position.x += (newAnchor.x - oldAnchor.x) * collectionView.bounds.width
-        collectionView.layer.position.y += (newAnchor.y - oldAnchor.y) * collectionView.bounds.height
-
-        // 5. 스크롤/제스처 비활성화
-        collectionView.isScrollEnabled = false
-
-        // 6. 유사 사진 테두리 숨김 (스크롤과 동일한 처리)
-        handleSimilarPhotoScrollStart()
-
-        print("[BaseGridViewController] Pinch began at \(pinchState.anchorPoint), anchor=\(pinchState.anchorAssetID?.prefix(8) ?? "nil")")
-    }
-
-    /// 핀치 진행 중 처리
-    private func handlePinchChanged(_ gesture: UIPinchGestureRecognizer) {
-        guard pinchState.isActive else { return }
-
-        let scale = gesture.scale
-
-        // 1. transform 적용 (전체 화면 스케일링)
-        // anchorPoint는 .began에서 이미 설정됨 (변경하지 않음)
-        collectionView.transform = CGAffineTransform(scaleX: scale, y: scale)
-
-        // 2. 가상 열 수 계산
-        let baseColumns = CGFloat(pinchState.baseColumnCount.rawValue)
-        let currentVirtualColumns = baseColumns / scale
-
-        // 3. 기준점 통과 감지 → fade in 트리거 (다중 기준점 지원)
-        let crossedThresholds = detectThresholdCrossings(
-            previousColumns: pinchState.previousVirtualColumns,
-            currentColumns: currentVirtualColumns
-        )
-
-        // 통과한 모든 기준점에 대해 순차적으로 fade in
-        // (빠른 핀치로 5→1 한번에 넘으면 5→3→1 순서로 fade in)
-        for crossedThreshold in crossedThresholds {
-            pinchState.currentTargetColumns = crossedThreshold
-            fadeInVisibleCells(
-                targetColumns: crossedThreshold,
-                anchorAssetID: pinchState.anchorAssetID
-            )
-            print("[BaseGridViewController] Threshold crossed: \(crossedThreshold.rawValue) columns")
-        }
-
-        // 4. 이전 열 수 업데이트
-        pinchState.previousVirtualColumns = currentVirtualColumns
-    }
-
-    /// 핀치 종료 처리
-    private func handlePinchEnded(_ gesture: UIPinchGestureRecognizer) {
-        guard pinchState.isActive else { return }
-
-        // 1. 최종 열 수 결정
-        let scale = gesture.scale
-        let baseColumns = CGFloat(pinchState.baseColumnCount.rawValue)
-        let finalVirtualColumns = baseColumns / scale
-
-        // 가장 가까운 기준점으로 스냅
-        let finalColumns = snapToNearestColumnCount(finalVirtualColumns)
-
-        // 2. 복원할 값 캡처 (completion에서 사용)
-        let originalAnchorPoint = pinchState.originalLayerAnchorPoint
-        let originalPosition = pinchState.originalLayerPosition
-        let anchorAssetID = pinchState.anchorAssetID
-
-        print("[BaseGridViewController] Pinch ended: \(pinchState.baseColumnCount.rawValue) → \(finalColumns.rawValue) columns")
-
-        // 3. transform 제거 + 레이아웃 적용
-        UIView.animate(withDuration: 0.2) { [weak self] in
-            self?.collectionView.transform = .identity
-        } completion: { [weak self] _ in
-            guard let self = self else { return }
-
-            // anchorPoint/position 복원 (점프 방지)
-            self.collectionView.layer.anchorPoint = originalAnchorPoint
-            self.collectionView.layer.position = originalPosition
-
-            // 레이아웃 변경
-            self.currentGridColumnCount = finalColumns
-            self.collectionView.collectionViewLayout.invalidateLayout()
-            self.updateCellSize()
-
-            // 앵커 위치로 스크롤
-            if let anchorID = anchorAssetID,
-               let indexPath = self.collectionIndexPath(for: anchorID) {
-                self.collectionView.scrollToItem(at: indexPath, at: .centeredVertically, animated: false)
-            }
-
-            // 고해상도 썸네일 재요청
-            self.didPerformZoom(to: finalColumns)
-
-            // 상태 초기화 (completion 안에서!)
-            self.pinchState = PinchZoomState()
-            self.collectionView.isScrollEnabled = true
-            self.updateSwipeDeleteGestureEnabled()
-
-            // 유사 사진 테두리 재표시
-            self.handleSimilarPhotoScrollEnd()
         }
     }
 
@@ -872,14 +643,6 @@ class BaseGridViewController: UIViewController {
 
     /// 삭제 후 추가 처리
     func handleDeleteComplete(assetID: String) {}
-
-    /// 유사 사진 스크롤/핀치 시작 시 호출 (서브클래스에서 오버라이드)
-    /// 테두리 숨김 + 분석 취소
-    @objc dynamic func handleSimilarPhotoScrollStart() {}
-
-    /// 유사 사진 스크롤/핀치 종료 시 호출 (서브클래스에서 오버라이드)
-    /// 분석 재시작 → 테두리 재생성
-    @objc dynamic func handleSimilarPhotoScrollEnd() {}
 
     // Note: 플로팅 UI 선택 모드 메서드는 BaseSelectMode.swift로 이동됨
     // - enterSelectModeFloatingUI()
