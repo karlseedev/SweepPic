@@ -316,15 +316,6 @@ final class PhotoCell: UICollectionViewCell {
     /// 현재 스와이프 방향
     private var currentSwipeDirection: SwipeDirection = .right
 
-    // MARK: - Pinch Zoom FadeIn Properties
-
-    /// fadeIn 요청 토큰 (핀치줌 중 이미지 교체 검증용)
-    /// - 새 fadeIn 요청 시 토큰이 변경되면 이전 요청 결과 무시
-    var fadeToken: String?
-
-    /// fadeIn용 오버레이 이미지 뷰 (CrossFade 효과용)
-    private var fadeOverlayImageView: UIImageView?
-
     // MARK: - Initialization
 
     override init(frame: CGRect) {
@@ -367,9 +358,6 @@ final class PhotoCell: UICollectionViewCell {
         videoIconView.isHidden = true
         videoGradientView.isHidden = true
         iCloudIconView.isHidden = true
-
-        // 핀치줌 fadeIn 오버레이 정리
-        cleanupFadeOverlay()
     }
 
     override func layoutSubviews() {
@@ -1104,60 +1092,5 @@ extension PhotoCell {
             // degraded 무시, 실패 시 기존 이미지 유지
         }
         return true  // 업그레이드 요청함
-    }
-}
-
-// MARK: - Pinch Zoom FadeIn Support
-
-extension PhotoCell {
-
-    /// fadeIn 이미지 적용 (핀치줌 중 고해상도 이미지 전환)
-    /// - 오버레이 방식으로 기존 이미지 위에 새 이미지를 fadeIn
-    /// - 핀치줌 도중 부드러운 전환 제공
-    /// - Parameter image: fadeIn할 이미지
-    func fadeInImage(_ image: UIImage) {
-        // 오버레이 이미지 뷰 생성/재사용
-        if fadeOverlayImageView == nil {
-            let overlay = UIImageView()
-            overlay.contentMode = .scaleAspectFill
-            overlay.clipsToBounds = true
-            overlay.translatesAutoresizingMaskIntoConstraints = false
-            overlay.alpha = 0
-
-            contentView.insertSubview(overlay, aboveSubview: imageView)
-            NSLayoutConstraint.activate([
-                overlay.topAnchor.constraint(equalTo: imageView.topAnchor),
-                overlay.leadingAnchor.constraint(equalTo: imageView.leadingAnchor),
-                overlay.trailingAnchor.constraint(equalTo: imageView.trailingAnchor),
-                overlay.bottomAnchor.constraint(equalTo: imageView.bottomAnchor)
-            ])
-
-            fadeOverlayImageView = overlay
-        }
-
-        guard let overlay = fadeOverlayImageView else { return }
-
-        // 새 이미지 설정
-        overlay.image = image
-        overlay.alpha = 0
-
-        // fadeIn 애니메이션
-        UIView.animate(withDuration: 0.15, delay: 0, options: .curveEaseOut) {
-            overlay.alpha = 1
-        } completion: { [weak self] _ in
-            guard let self = self else { return }
-
-            // 애니메이션 완료 후 기본 이미지 교체 및 오버레이 정리
-            self.imageView.image = image
-            overlay.alpha = 0
-            overlay.image = nil
-        }
-    }
-
-    /// fadeIn 오버레이 정리 (prepareForReuse에서 호출)
-    func cleanupFadeOverlay() {
-        fadeToken = nil
-        fadeOverlayImageView?.removeFromSuperview()
-        fadeOverlayImageView = nil
     }
 }

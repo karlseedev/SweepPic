@@ -71,7 +71,7 @@ class BaseGridViewController: UIViewController {
 
     /// 컬렉션 뷰
     lazy var collectionView: UICollectionView = {
-        let cv = UICollectionView(frame: .zero, collectionViewLayout: createContinuousLayout(columns: .three))
+        let cv = UICollectionView(frame: .zero, collectionViewLayout: createLayout(columns: .three))
         cv.backgroundColor = .black
         cv.translatesAutoresizingMaskIntoConstraints = false
         cv.register(PhotoCell.self, forCellWithReuseIdentifier: PhotoCell.reuseIdentifier)
@@ -264,15 +264,17 @@ class BaseGridViewController: UIViewController {
             ? currentGridColumnCount.landscapeColumnCount
             : currentGridColumnCount.portraitColumnCount
 
+        // 회전 후 크기로 새 레이아웃 미리 생성 (size 파라미터가 회전 후 크기)
+        let newLayout = createLayout(columns: newColumnCount, explicitWidth: size.width)
+
         coordinator.animate(alongsideTransition: { [weak self] _ in
             guard let self = self else { return }
-            guard let layout = self.continuousLayout else { return }
 
-            // virtualColumns 업데이트 (ContinuousGridLayout)
-            layout.virtualColumns = CGFloat(newColumnCount.rawValue)
-            // paddingCellCount는 회전 중 변경 금지! (completion에서 업데이트)
-            layout.invalidateLayout()
-            self.collectionView.layoutIfNeeded()
+            // 열 수 업데이트
+            self.currentGridColumnCount = newColumnCount
+
+            // 회전 애니메이션과 동기화하여 레이아웃 변경
+            self.collectionView.setCollectionViewLayout(newLayout, animated: false)
 
             // 셀 크기 캐시 업데이트
             self.updateCellSize()
@@ -282,23 +284,7 @@ class BaseGridViewController: UIViewController {
 
             // 저장된 indexPath로 스크롤 복원
             self.restoreScrollAnchorIndexPath()
-
-        }, completion: { [weak self] _ in
-            guard let self = self else { return }
-            guard let layout = self.continuousLayout else { return }
-
-            // 회전 완료 후에만 paddingCellCount 업데이트
-            let newPadding = self.calculatePaddingCellCount(for: newColumnCount.rawValue)
-            if layout.paddingCellCount != newPadding {
-                layout.paddingCellCount = newPadding
-            }
-
-            // 열 수 업데이트
-            self.currentGridColumnCount = newColumnCount
-
-            self.collectionView.reloadData()
-            self.didPerformZoom(to: newColumnCount)
-        })
+        }, completion: nil)
     }
 
     /// 화면 중앙에 있는 셀의 indexPath 저장
@@ -462,17 +448,6 @@ class BaseGridViewController: UIViewController {
         return layout
     }
 
-    /// ContinuousGridLayout 생성 (핀치줌용)
-    /// - Parameter columns: 초기 열 수
-    /// - Returns: ContinuousGridLayout
-    /// - Note: calculatePaddingCellCount는 BaseGridViewController+PinchZoom.swift에 정의됨
-    func createContinuousLayout(columns: GridColumnCount) -> ContinuousGridLayout {
-        let layout = ContinuousGridLayout()
-        layout.virtualColumns = CGFloat(columns.rawValue)
-        layout.paddingCellCount = calculatePaddingCellCount(for: columns.rawValue)
-        return layout
-    }
-
     /// 셀 크기 업데이트
     func updateCellSize() {
         let spacing = Self.cellSpacing
@@ -536,24 +511,100 @@ class BaseGridViewController: UIViewController {
         return IndexPath(item: assetIndex + paddingCellCount, section: 0)
     }
 
-    /// 핀치 줌 제스처 처리 (ContinuousGridLayout 기반 연속 줌)
-    /// - 부드러운 연속 줌 지원 (virtualColumns 1.0 ~ 5.0)
-    /// - 앵커 기반 스크롤 위치 고정
-    /// - 10%/50% 스냅 규칙 적용
+    /// 핀치 줌 제스처 처리
     @objc func handlePinchGesture(_ gesture: UIPinchGestureRecognizer) {
         switch gesture.state {
         case .began:
-            handleContinuousPinchBegan(gesture)
+            // 앵커 에셋 ID 저장 (padding 보정)
+            let location = gesture.location(in: collectionView)
+            if let indexPath = collectionView.indexPathForItem(at: location) {
+                pinchAnchorAssetID = assetIDForCollectionIndexPath(indexPath)
+            }
 
         case .changed:
-            handleContinuousPinchChanged(gesture)
+            // 쿨다운 체크
+            if let lastTime = lastPinchZoomTime,
+               Date().timeIntervalSince(lastTime) < Self.pinchCooldown {
+                return
+            }
+
+            // 임계값 체크
+            let scale = gesture.scale
+            var newColumnCount: GridColumnCount?
+
+            if scale > Self.pinchZoomInThreshold {
+                // 확대 (열 수 감소)
+                newColumnCount = currentGridColumnCount.zoomIn
+            } else if scale < Self.pinchZoomOutThreshold {
+                // 축소 (열 수 증가)
+                newColumnCount = currentGridColumnCount.zoomOut
+            }
+
+            // 열 수가 변경되면 레이아웃 업데이트
+            if let newCount = newColumnCount, newCount != currentGridColumnCount {
+                performZoom(to: newCount)
+                gesture.scale = 1.0  // 스케일 리셋
+            }
 
         case .ended, .cancelled:
-            handleContinuousPinchEnded(gesture)
+            pinchAnchorAssetID = nil
 
         default:
             break
         }
+    }
+
+    /// 줌 수행
+    /// - Parameter columns: 새 열 수
+    func performZoom(to columns: GridColumnCount) {
+        // 쿨다운 시간 기록
+        lastPinchZoomTime = Date()
+
+        // 1. 앵커 assetID 저장 (현재 padding 기준, column 변경 전)
+        let anchorAssetID: String? = {
+            if let id = pinchAnchorAssetID { return id }
+            // 앵커가 없으면 화면 중앙 셀 사용
+            let centerPoint = CGPoint(
+                x: collectionView.bounds.midX,
+                y: collectionView.bounds.midY + collectionView.contentOffset.y
+            )
+            if let centerIndexPath = collectionView.indexPathForItem(at: centerPoint) {
+                return assetIDForCollectionIndexPath(centerIndexPath)
+            }
+            return nil
+        }()
+
+        // 2. 열 수 업데이트 (paddingCellCount도 변경됨)
+        currentGridColumnCount = columns
+        updateCellSize()
+
+        // 3. 새 padding 기준으로 anchorIndexPath 계산
+        let anchorIndexPath = anchorAssetID.flatMap { collectionIndexPath(for: $0) }
+
+        // 레이아웃 애니메이션
+        UIView.animate(withDuration: 0.25) { [weak self] in
+            guard let self = self else { return }
+
+            // 새 레이아웃 적용
+            self.collectionView.setCollectionViewLayout(
+                self.createLayout(columns: columns),
+                animated: false
+            )
+
+            // 앵커 위치로 스크롤 (drift 0px 목표)
+            if let indexPath = anchorIndexPath {
+                self.collectionView.scrollToItem(
+                    at: indexPath,
+                    at: .centeredVertically,
+                    animated: false
+                )
+            }
+        } completion: { [weak self] _ in
+            // 줌 애니메이션 완료 후 추가 처리 (서브클래스 확장 지점)
+            self?.didPerformZoom(to: columns)
+        }
+
+        print("[BaseGridViewController] Zoom to \(columns.rawValue) columns")
     }
 
     /// 줌 완료 후 호출 (서브클래스 확장 지점)
