@@ -86,6 +86,7 @@
 - 합산 >= 3점 → LOW_QUALITY
 
 > **iOS 18+**: AestheticsScore로 대체 (Precision: <-0.3, Recall: <0)
+> **isUtility**: AestheticsScore의 `isUtility == true`인 경우 스크린샷과 동일 취급 (별도 카테고리)
 
 ### C. 안전장치 (Safe Guard)
 
@@ -169,6 +170,8 @@ Stage 4: CompositeJudge + SafeGuard
 | 이어서 정리 | 마지막 탐색 위치 | 종료 조건까지 |
 | 연도별 | 선택 연도 12월 | 해당 연도만 |
 
+> **연도 기준**: PHAsset의 `creationDate`를 기기 현지 타임존으로 변환하여 판단
+
 ### C. 성능 제약
 
 | 항목 | 값 |
@@ -179,11 +182,14 @@ Stage 4: CompositeJudge + SafeGuard
 | 다운샘플 (블러) | 256×256 |
 | iCloud | 로컬 캐시 썸네일 사용 (`networkAccessAllowed=false`) |
 
-### D. 비디오 처리
+### D. 특수 미디어 처리
 
-- 대표 프레임 3개 (시작/중간/끝) 추출
-- 중앙값 품질 기준 판정
-- 10분 초과 → SKIP
+| 유형 | 처리 방식 | 근거 |
+|-----|----------|------|
+| **비디오** | 로컬: 프레임 3개 추출, 중앙값 판정. iCloud-only: SKIP. 10분 초과: SKIP | 프레임 추출은 로컬 파일 필요 |
+| **Live Photo** | 정지 이미지만 분석 | 사용자는 "사진"으로 인식, 삭제 시 함께 삭제됨 |
+| **Burst** | 대표 사진만 분석 | PHFetchResult 기본 동작, 그룹 관리 복잡도 회피 |
+| **RAW+JPEG** | JPEG로 분석, 삭제 시 함께 삭제 | PHAsset 구조상 분리 불가 |
 
 ### E. 에러 및 예외 처리
 
