@@ -136,17 +136,22 @@ extension BaseGridViewController {
         state.stageBase = layout.virtualColumns
 
         // 앵커 결정 (핀치 중심점)
-        let location = gesture.location(in: collectionView)
-        state.anchorPointInView = location
-        state.anchorAssetID = resolveAnchorAssetID(at: location)
+        // bounds 좌표 → content 좌표 변환 필요 (indexPathForItem은 content 좌표 기대)
+        let locationInBounds = gesture.location(in: collectionView)
+        let locationInContent = CGPoint(
+            x: locationInBounds.x + collectionView.contentOffset.x,
+            y: locationInBounds.y + collectionView.contentOffset.y
+        )
+        state.anchorPointInView = locationInBounds  // 화면상 위치 (bounds)
+        state.anchorAssetID = resolveAnchorAssetID(at: locationInContent)  // content 좌표로 검색
 
         // 앵커를 못 찾으면 화면 중앙으로 fallback
         if state.anchorAssetID == nil {
-            let centerPoint = CGPoint(
-                x: collectionView.bounds.midX,
+            let centerInContent = CGPoint(
+                x: collectionView.bounds.midX + collectionView.contentOffset.x,
                 y: collectionView.bounds.midY + collectionView.contentOffset.y
             )
-            state.anchorAssetID = resolveAnchorAssetID(at: centerPoint)
+            state.anchorAssetID = resolveAnchorAssetID(at: centerInContent)
             state.anchorPointInView = CGPoint(x: collectionView.bounds.midX, y: collectionView.bounds.midY)
         }
 
@@ -168,8 +173,9 @@ extension BaseGridViewController {
                                   ContinuousGridLayout.maxVirtualColumns)
 
         // 레이아웃 업데이트
+        // 핀치 중에는 paddingCellCount 고정 (스냅 완료 시에만 업데이트)
+        // 이유: paddingCellCount 변경 시 numberOfItems와 불일치 발생 → indexPath 매핑 오류
         layout.virtualColumns = virtualColumns
-        layout.paddingCellCount = calculatePaddingCount(for: layout.effectiveColumns)
         layout.invalidateLayout()
         collectionView.layoutIfNeeded()
 
@@ -255,20 +261,21 @@ extension BaseGridViewController {
     // MARK: - Anchor Resolution
 
     /// 앵커 에셋 ID 찾기 (fallback 포함)
-    func resolveAnchorAssetID(at location: CGPoint) -> String? {
-        // 1) 터치 위치에서 직접 찾기
-        if let indexPath = collectionView.indexPathForItem(at: location) {
+    /// - Parameter locationInContent: content 좌표계 기준 위치 (이미 contentOffset 반영된 좌표)
+    func resolveAnchorAssetID(at locationInContent: CGPoint) -> String? {
+        // 1) 터치 위치에서 직접 찾기 (content 좌표 그대로 사용)
+        if let indexPath = collectionView.indexPathForItem(at: locationInContent) {
             if let assetID = assetIDForCollectionIndexPath(indexPath) {
                 return assetID
             }
         }
 
-        // 2) 화면 중앙 셀로 fallback
-        let centerPoint = CGPoint(
-            x: collectionView.bounds.midX,
+        // 2) 화면 중앙 셀로 fallback (이미 content 좌표이므로 그대로 사용)
+        let centerInContent = CGPoint(
+            x: collectionView.bounds.midX + collectionView.contentOffset.x,
             y: collectionView.bounds.midY + collectionView.contentOffset.y
         )
-        if let centerIndexPath = collectionView.indexPathForItem(at: centerPoint) {
+        if let centerIndexPath = collectionView.indexPathForItem(at: centerInContent) {
             if let assetID = assetIDForCollectionIndexPath(centerIndexPath) {
                 return assetID
             }
@@ -279,8 +286,8 @@ extension BaseGridViewController {
         guard let nearest = visible.min(by: { a, b in
             guard let attrA = collectionView.layoutAttributesForItem(at: a),
                   let attrB = collectionView.layoutAttributesForItem(at: b) else { return false }
-            let distA = hypot(attrA.center.x - centerPoint.x, attrA.center.y - centerPoint.y)
-            let distB = hypot(attrB.center.x - centerPoint.x, attrB.center.y - centerPoint.y)
+            let distA = hypot(attrA.center.x - centerInContent.x, attrA.center.y - centerInContent.y)
+            let distB = hypot(attrB.center.x - centerInContent.x, attrB.center.y - centerInContent.y)
             return distA < distB
         }) else { return nil }
 
@@ -491,9 +498,9 @@ extension BaseGridViewController {
         let easedProgress = 1 - pow(1 - progress, 3)
 
         // virtualColumns 보간
+        // 애니메이션 중에도 paddingCellCount 고정 (스냅 완료 시에만 업데이트)
         let newValue = animState.startValue + (animState.targetValue - animState.startValue) * CGFloat(easedProgress)
         layout.virtualColumns = newValue
-        layout.paddingCellCount = calculatePaddingCount(for: layout.effectiveColumns)
         layout.invalidateLayout()
         collectionView.layoutIfNeeded()
 
@@ -508,6 +515,14 @@ extension BaseGridViewController {
         if progress >= 1.0 {
             let targetColumns = GridColumnCount(rawValue: Int(animState.targetValue.rounded())) ?? .three
             layout.snapToColumns(targetColumns)
+
+            // 스냅 완료 시에만 paddingCellCount 업데이트 + 컬렉션뷰 동기화
+            let newPadding = calculatePaddingCount(for: targetColumns.rawValue)
+            if layout.paddingCellCount != newPadding {
+                layout.paddingCellCount = newPadding
+                collectionView.reloadData()  // numberOfItems 동기화
+            }
+
             let completion = animState.completion
             cancelSnapAnimation()
             completion?()
