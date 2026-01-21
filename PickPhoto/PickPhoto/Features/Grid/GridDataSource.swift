@@ -28,6 +28,9 @@ protocol GridDataSource: AnyObject {
     /// 에셋 ID로 인덱스 검색
     func assetIndex(for assetID: String) -> Int?
 
+    /// 에셋 ID로 PHAsset 반환
+    func assetForID(_ assetID: String) -> PHAsset?
+
     /// 뷰어용 PHFetchResult (옵셔널)
     /// - Grid/Album: fetchResult 반환
     /// - Trash: nil (assetIDs 사용)
@@ -63,6 +66,11 @@ final class GridDataSourceDriverAdapter: GridDataSource {
 
     func assetIndex(for assetID: String) -> Int? {
         driver.indexPath(for: assetID)?.item
+    }
+
+    func assetForID(_ assetID: String) -> PHAsset? {
+        guard let index = assetIndex(for: assetID) else { return nil }
+        return asset(at: index)
     }
 
     var fetchResultForViewer: PHFetchResult<PHAsset>? {
@@ -107,6 +115,11 @@ final class AlbumDataSource: GridDataSource {
             }
         }
         return nil
+    }
+
+    func assetForID(_ assetID: String) -> PHAsset? {
+        guard let index = assetIndex(for: assetID) else { return nil }
+        return asset(at: index)
     }
 
     var fetchResultForViewer: PHFetchResult<PHAsset>? {
@@ -161,6 +174,11 @@ final class TrashDataSource: GridDataSource {
     /// O(1) 인덱스 조회 (캐시 사용)
     func assetIndex(for assetID: String) -> Int? {
         indexCache[assetID]
+    }
+
+    func assetForID(_ assetID: String) -> PHAsset? {
+        guard let index = assetIndex(for: assetID) else { return nil }
+        return asset(at: index)
     }
 
     /// 휴지통은 fetchResult를 사용하지 않음 (동적 배열 기반)
