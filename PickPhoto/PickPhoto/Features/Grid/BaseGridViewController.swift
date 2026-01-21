@@ -334,11 +334,12 @@ class BaseGridViewController: UIViewController {
 
     /// 화면 중앙 셀의 assetID 저장
     func saveScrollAnchorAssetID() {
-        let centerPoint = CGPoint(
-            x: collectionView.bounds.midX,
+        // content 좌표계 기준 화면 중앙
+        let centerInContent = CGPoint(
+            x: collectionView.bounds.midX + collectionView.contentOffset.x,
             y: collectionView.bounds.midY + collectionView.contentOffset.y
         )
-        scrollAnchorAssetID = resolveAnchorAssetID(at: centerPoint)
+        scrollAnchorAssetID = resolveAnchorAssetID(at: centerInContent)
     }
 
     /// 저장된 assetID 기준으로 스크롤 복원

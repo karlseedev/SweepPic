@@ -52,6 +52,10 @@
 2. **판별 로직 및 기능** - 고성능, 사용자 친화적
 3. **간소화된 UX** - 검토 화면 제거, 휴지통에서 확인/복구
 
+### 정리 버튼 위치
+
+- **그리드 화면 상단, 셀렉트 버튼 왼쪽**에 배치
+
 ---
 
 ## 1. 저품질 사진의 정량적 정의
@@ -73,7 +77,7 @@
 | **Strong** | 극단 노출 (어두움) | 휘도 < 0.10 | 설계값 (Gist 0.133 기준 엄격) |
 | | 극단 노출 (밝음) | 휘도 > 0.90 | GitHub Gist |
 | | 심각 블러 | Laplacian < 50 | 설계값 (PyImageSearch 100의 50%) |
-| **Conditional** | 주머니 샷 | 휘도<0.10 AND RGB Std<15 AND Lap<50 AND 비네팅<0.05 | 복합 조건 |
+| **Conditional** | 주머니 샷 | 휘도<0.15 AND RGB Std<15 AND Lap<50 AND 비네팅<0.05 | 복합 조건 |
 | | 극단 단색 | RGB Std<10 AND (휘도<0.15 OR >0.85) | 복합 조건 |
 | | 렌즈 가림 | 모서리 휘도 < 중앙 × 0.4 | 3×3 그리드 |
 | **Weak** | 일반 블러 | Laplacian < 100 | PyImageSearch |
@@ -100,21 +104,22 @@
 ### D. 스크린샷 처리
 
 - 판별: `mediaSubtypes.contains(.photoScreenshot)`
-- 처리: 저품질 로직에서 **제외**, 별도 카테고리 예정
+- 처리: 저품질 로직에서 **제외** (1차 범위 외, 별도 기능으로 추후 개발)
 
 ---
 
 ## 2. 판별 모드
 
-### Precision 모드 (기본값)
+### Precision 모드 (1차 출시)
 - **목적**: 오탐지 최소화
 - **사용**: Strong 신호만
 - **임계값**: 엄격 (휘도<0.10, Lap<50)
 
-### Recall 모드 (공격적)
+### Recall 모드 (추후 추가 예정)
 - **목적**: 커버리지 최대화
 - **사용**: Strong + Conditional + Weak 조합
 - **임계값**: 완화 (휘도<0.15, Lap<100)
+- **상태**: 1차 범위 외, 추후 업데이트에서 추가
 
 ---
 
@@ -147,7 +152,7 @@ Stage 4: CompositeJudge + SafeGuard
 > **조기 종료**: 노출/단색/렌즈 판정은 Safe Guard 대상 아님 → 즉시 LOW_QUALITY 확정
 > **블러 판정**: Safe Guard 적용 가능 → Stage 4까지 진행 후 최종 판정
 
-> **iOS 18+**: Stage 1 후 AestheticsScore 우선 적용, 실패 시 Stage 2-4 Fallback
+> **iOS 18+**: Stage 1 → AestheticsScore → Safe Guard 체크 → 최종 판정. AestheticsScore 실패 시 Stage 2-4 Fallback
 
 ---
 
@@ -253,7 +258,10 @@ Stage 4: CompositeJudge + SafeGuard
 - 보관 기간: 30일
 - 복구: 휴지통에서 직접
 
-### 5.6 판별 모드 전환 UI
+### 5.6 판별 모드 전환 UI (추후 추가 예정)
+
+> **1차 출시**: Precision 모드만 사용, 모드 전환 UI 없음
+> **추후 업데이트**: Recall 모드 추가 시 아래 UI 구현
 
 - 신중한 정리 (기본) → Precision
 - 적극적 정리 → Recall
