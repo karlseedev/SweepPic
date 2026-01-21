@@ -176,10 +176,22 @@ extension BaseGridViewController {
                                   ContinuousGridLayout.maxVirtualColumns)
 
         // 레이아웃 업데이트
+        let prevEffective = layout.effectiveColumns
+        let prevPadding = layout.paddingCellCount
+
         layout.virtualColumns = virtualColumns
-        layout.paddingCellCount = calculatePaddingCount(for: layout.effectiveColumns)
+        let newPadding = calculatePaddingCount(for: layout.effectiveColumns)
+        layout.paddingCellCount = newPadding
         layout.invalidateLayout()
         collectionView.layoutIfNeeded()
+
+        // [DEBUG] effectiveColumns/padding 변경 감지
+        if layout.effectiveColumns != prevEffective {
+            print("[PinchZoom:Layout] effectiveColumns 변경: \(prevEffective) → \(layout.effectiveColumns)")
+        }
+        if newPadding != prevPadding {
+            print("[PinchZoom:Layout] paddingCellCount 변경: \(prevPadding) → \(newPadding)")
+        }
 
         // 앵커 고정 (contentOffset 보정)
         updateContentOffsetForAnchor(
@@ -297,6 +309,9 @@ extension BaseGridViewController {
 
     // MARK: - Content Offset Correction
 
+    /// 디버그용 프레임 카운터
+    private static var debugFrameCounter: Int = 0
+
     /// 앵커 셀 고정을 위한 contentOffset 보정
     func updateContentOffsetForAnchor(
         anchorAssetID: String?,
@@ -305,14 +320,26 @@ extension BaseGridViewController {
     ) {
         guard let assetID = anchorAssetID,
               let indexPath = collectionIndexPathForContinuousLayout(for: assetID, layout: layout),
-              let attributes = layout.layoutAttributesForItem(at: indexPath) else { return }
+              let attributes = layout.layoutAttributesForItem(at: indexPath) else {
+            print("[PinchZoom:Anchor] ⚠️ attributes 없음! assetID=\(anchorAssetID?.prefix(8) ?? "nil")")
+            return
+        }
 
         let anchorCenterInContent = attributes.center
         let newOffset = CGPoint(
             x: anchorCenterInContent.x - anchorPointInView.x,
             y: anchorCenterInContent.y - anchorPointInView.y
         )
-        collectionView.contentOffset = clampOffset(newOffset)
+        let clampedOffset = clampOffset(newOffset)
+        let prevOffset = collectionView.contentOffset
+        collectionView.contentOffset = clampedOffset
+
+        // [DEBUG] 10프레임마다 앵커 상태 출력
+        Self.debugFrameCounter += 1
+        if Self.debugFrameCounter % 10 == 0 {
+            let offsetDiff = hypot(clampedOffset.x - prevOffset.x, clampedOffset.y - prevOffset.y)
+            print("[PinchZoom:Anchor] frame=\(Self.debugFrameCounter), indexPath=\(indexPath.item), center=\(Int(anchorCenterInContent.y)), offset=\(Int(clampedOffset.y)), diff=\(Int(offsetDiff))")
+        }
     }
 
     /// contentOffset 범위 제한
@@ -406,6 +433,7 @@ extension BaseGridViewController {
     /// 앵커 셀 제외, 기존 visible 셀만 대상
     func triggerFadeIn(target: GridColumnCount, anchorAssetID: String?) {
         let targetSize = thumbnailSizeForColumns(target)
+        var refreshedCount = 0
 
         for cell in collectionView.visibleCells.compactMap({ $0 as? PhotoCell }) {
             guard let assetID = cell.currentAssetID,
@@ -414,8 +442,11 @@ extension BaseGridViewController {
             // 고해상도 이미지 요청 (기존 refreshImageIfNeeded 활용)
             if let asset = gridDataSource.assetForID(assetID) {
                 cell.refreshImageIfNeeded(asset: asset, targetSize: targetSize)
+                refreshedCount += 1
             }
         }
+
+        print("[PinchZoom:FadeIn] target=\(target.rawValue)열, cells=\(refreshedCount)개, size=\(Int(targetSize.width))px")
     }
 
     /// 특정 열 수에 맞는 썸네일 크기 계산
