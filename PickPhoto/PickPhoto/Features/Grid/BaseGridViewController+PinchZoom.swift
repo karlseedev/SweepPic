@@ -176,19 +176,10 @@ extension BaseGridViewController {
                                   ContinuousGridLayout.maxVirtualColumns)
 
         // 레이아웃 업데이트
-        // 핀치 중에는 paddingCellCount 고정 (indexPath 불일치 방지)
-        // → 스냅 완료 시에만 업데이트
-        let prevEffective = layout.effectiveColumns
-
         layout.virtualColumns = virtualColumns
-        // layout.paddingCellCount = 변경하지 않음!
+        layout.paddingCellCount = calculatePaddingCount(for: layout.effectiveColumns)
         layout.invalidateLayout()
         collectionView.layoutIfNeeded()
-
-        // [DEBUG] effectiveColumns 변경 감지
-        if layout.effectiveColumns != prevEffective {
-            print("[PinchZoom:Layout] effectiveColumns 변경: \(prevEffective) → \(layout.effectiveColumns) (padding 고정: \(layout.paddingCellCount))")
-        }
 
         // 앵커 고정 (contentOffset 보정)
         updateContentOffsetForAnchor(
@@ -306,9 +297,6 @@ extension BaseGridViewController {
 
     // MARK: - Content Offset Correction
 
-    /// 디버그용 프레임 카운터
-    private static var debugFrameCounter: Int = 0
-
     /// 앵커 셀 고정을 위한 contentOffset 보정
     func updateContentOffsetForAnchor(
         anchorAssetID: String?,
@@ -317,26 +305,14 @@ extension BaseGridViewController {
     ) {
         guard let assetID = anchorAssetID,
               let indexPath = collectionIndexPathForContinuousLayout(for: assetID, layout: layout),
-              let attributes = layout.layoutAttributesForItem(at: indexPath) else {
-            print("[PinchZoom:Anchor] ⚠️ attributes 없음! assetID=\(anchorAssetID?.prefix(8) ?? "nil")")
-            return
-        }
+              let attributes = layout.layoutAttributesForItem(at: indexPath) else { return }
 
         let anchorCenterInContent = attributes.center
         let newOffset = CGPoint(
             x: anchorCenterInContent.x - anchorPointInView.x,
             y: anchorCenterInContent.y - anchorPointInView.y
         )
-        let clampedOffset = clampOffset(newOffset)
-        let prevOffset = collectionView.contentOffset
-        collectionView.contentOffset = clampedOffset
-
-        // [DEBUG] 10프레임마다 앵커 상태 출력
-        Self.debugFrameCounter += 1
-        if Self.debugFrameCounter % 10 == 0 {
-            let offsetDiff = hypot(clampedOffset.x - prevOffset.x, clampedOffset.y - prevOffset.y)
-            print("[PinchZoom:Anchor] frame=\(Self.debugFrameCounter), indexPath=\(indexPath.item), center=\(Int(anchorCenterInContent.y)), offset=\(Int(clampedOffset.y)), diff=\(Int(offsetDiff))")
-        }
+        collectionView.contentOffset = clampOffset(newOffset)
     }
 
     /// contentOffset 범위 제한
@@ -430,7 +406,6 @@ extension BaseGridViewController {
     /// 앵커 셀 제외, 기존 visible 셀만 대상
     func triggerFadeIn(target: GridColumnCount, anchorAssetID: String?) {
         let targetSize = thumbnailSizeForColumns(target)
-        var refreshedCount = 0
 
         for cell in collectionView.visibleCells.compactMap({ $0 as? PhotoCell }) {
             guard let assetID = cell.currentAssetID,
@@ -439,11 +414,8 @@ extension BaseGridViewController {
             // 고해상도 이미지 요청 (기존 refreshImageIfNeeded 활용)
             if let asset = gridDataSource.assetForID(assetID) {
                 cell.refreshImageIfNeeded(asset: asset, targetSize: targetSize)
-                refreshedCount += 1
             }
         }
-
-        print("[PinchZoom:FadeIn] target=\(target.rawValue)열, cells=\(refreshedCount)개, size=\(Int(targetSize.width))px")
     }
 
     /// 특정 열 수에 맞는 썸네일 크기 계산
@@ -527,10 +499,9 @@ extension BaseGridViewController {
         let easedProgress = 1 - pow(1 - progress, 3)
 
         // virtualColumns 보간
-        // 애니메이션 중에도 paddingCellCount 고정 (스냅 완료 시에만 업데이트)
         let newValue = animState.startValue + (animState.targetValue - animState.startValue) * CGFloat(easedProgress)
         layout.virtualColumns = newValue
-        // layout.paddingCellCount = 변경하지 않음!
+        layout.paddingCellCount = calculatePaddingCount(for: layout.effectiveColumns)
         layout.invalidateLayout()
         collectionView.layoutIfNeeded()
 
@@ -545,15 +516,6 @@ extension BaseGridViewController {
         if progress >= 1.0 {
             let targetColumns = GridColumnCount(rawValue: Int(animState.targetValue.rounded())) ?? .three
             layout.snapToColumns(targetColumns)
-
-            // 스냅 완료 시에만 paddingCellCount 업데이트 + 컬렉션뷰 동기화
-            let newPadding = calculatePaddingCount(for: targetColumns.rawValue)
-            if layout.paddingCellCount != newPadding {
-                print("[PinchZoom:Snap] paddingCellCount 업데이트: \(layout.paddingCellCount) → \(newPadding)")
-                layout.paddingCellCount = newPadding
-                collectionView.reloadData()  // numberOfItems 동기화
-            }
-
             let completion = animState.completion
             cancelSnapAnimation()
             completion?()
