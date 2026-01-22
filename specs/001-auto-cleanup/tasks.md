@@ -26,9 +26,9 @@
 
 **Purpose**: AutoCleanup 기능 디렉토리 구조 생성
 
-- [ ] T001 `PickPhoto/PickPhoto/Features/AutoCleanup/` 폴더 구조 생성 (Models/, Analysis/, Services/, UI/, Debug/)
-- [ ] T002 [P] `PickPhoto/PickPhotoTests/AutoCleanup/` 테스트 폴더 구조 생성
-- [ ] T003 [P] CleanupConstants.swift 상수 정의 파일 생성 (`PickPhoto/PickPhoto/Features/AutoCleanup/CleanupConstants.swift`)
+- [x] T001 `PickPhoto/PickPhoto/Features/AutoCleanup/` 폴더 구조 생성 (Models/, Analysis/, Services/, UI/, Debug/)
+- [x] T002 [P] `PickPhoto/PickPhotoTests/AutoCleanup/` 테스트 폴더 구조 생성
+- [x] T003 [P] CleanupConstants.swift 상수 정의 파일 생성 (`PickPhoto/PickPhoto/Features/AutoCleanup/CleanupConstants.swift`)
 
 **Checkpoint**: 폴더 구조 준비 완료
 
@@ -42,31 +42,31 @@
 
 ### Models
 
-- [ ] T004 [P] CleanupMethod enum 정의 (fromLatest, continueFromLast, byYear) in `Models/CleanupMethod.swift`
-- [ ] T005 [P] JudgmentMode enum 정의 (precision, recall) in `Models/JudgmentMode.swift`
-- [ ] T006 [P] SessionStatus enum 정의 (idle, scanning, paused, completed, cancelled) in `Models/SessionStatus.swift`
-- [ ] T007 [P] QualitySignal 모델 정의 (SignalType, SignalKind, QualitySignal struct) in `Models/QualitySignal.swift`
-- [ ] T008 CleanupSession 모델 정의 (Codable, 세션 상태 관리) in `Models/CleanupSession.swift` (depends on T004, T005, T006)
-- [ ] T009 [P] QualityResult 모델 정의 (QualityVerdict, SkipReason, SafeGuardReason, AnalysisMethod) in `Models/QualityResult.swift`
-- [ ] T010 [P] CleanupResult 모델 정의 (CleanupResultType, EndReason) in `Models/CleanupResult.swift`
-- [ ] T011 [P] CleanupProgress 모델 정의 (진행 상황 콜백용) in `Models/CleanupProgress.swift`
-- [ ] T012 [P] CleanupError enum 정의 in `Models/CleanupError.swift`
-- [ ] T013 [P] AnalysisError enum 정의 in `Models/AnalysisError.swift`
+- [x] T004 [P] CleanupMethod enum 정의 (fromLatest, continueFromLast, byYear) in `Models/CleanupMethod.swift`
+- [x] T005 [P] JudgmentMode enum 정의 (precision, recall) in `Models/JudgmentMode.swift`
+- [x] T006 [P] SessionStatus enum 정의 (idle, scanning, paused, completed, cancelled) in `Models/SessionStatus.swift`
+- [x] T007 [P] QualitySignal 모델 정의 (SignalType, SignalKind, QualitySignal struct) in `Models/QualitySignal.swift`
+- [x] T008 CleanupSession 모델 정의 (Codable, 세션 상태 관리) in `Models/CleanupSession.swift` (depends on T004, T005, T006)
+- [x] T009 [P] QualityResult 모델 정의 (QualityVerdict, SkipReason, SafeGuardReason, AnalysisMethod) in `Models/QualityResult.swift`
+- [x] T010 [P] CleanupResult 모델 정의 (CleanupResultType, EndReason) in `Models/CleanupResult.swift`
+- [x] T011 [P] CleanupProgress 모델 정의 (진행 상황 콜백용) in `Models/CleanupProgress.swift`
+- [x] T012 [P] CleanupError enum 정의 in `Models/CleanupError.swift`
+- [x] T013 [P] AnalysisError enum 정의 in `Models/AnalysisError.swift`
 
 ### Session Store
 
-- [ ] T014 CleanupSessionStoreProtocol 프로토콜 정의 in `Services/CleanupSessionStoreProtocol.swift` (depends on T008)
-- [ ] T015 CleanupSessionStore 구현 (파일 기반 JSON 저장/로드) in `Services/CleanupSessionStore.swift` (depends on T014)
+- [x] T014 CleanupSessionStoreProtocol 프로토콜 정의 in `Services/CleanupSessionStoreProtocol.swift` (depends on T008)
+- [x] T015 CleanupSessionStore 구현 (파일 기반 JSON 저장/로드) in `Services/CleanupSessionStore.swift` (depends on T014)
 
 ### Unit Tests - Models
 
-- [ ] T016 [P] CleanupSession 모델 테스트 (Codable 인코딩/디코딩, 상태 전이) in `PickPhoto/PickPhotoTests/AutoCleanup/Models/CleanupSessionTests.swift`
-- [ ] T017 [P] QualitySignal 모델 테스트 in `PickPhoto/PickPhotoTests/AutoCleanup/Models/QualitySignalTests.swift`
-- [ ] T018 [P] CleanupSessionStore 테스트 (저장/로드/삭제) in `PickPhoto/PickPhotoTests/AutoCleanup/Services/CleanupSessionStoreTests.swift`
+- [x] T016 [P] CleanupSession 모델 테스트 (Codable 인코딩/디코딩, 상태 전이) in `PickPhoto/PickPhotoTests/AutoCleanup/Models/CleanupSessionTests.swift`
+- [x] T017 [P] QualitySignal 모델 테스트 in `PickPhoto/PickPhotoTests/AutoCleanup/Models/QualitySignalTests.swift`
+- [x] T018 [P] CleanupSessionStore 테스트 (저장/로드/삭제) in `PickPhoto/PickPhotoTests/AutoCleanup/Services/CleanupSessionStoreTests.swift`
 
 ### PHAsset Extension
 
-- [ ] T019 PHAsset+Cleanup extension 구현 (shouldSkipForCleanup, isLowResolution, isLongVideo) in `Models/PHAsset+Cleanup.swift`
+- [x] T019 PHAsset+Cleanup extension 구현 (shouldSkipForCleanup, isLowResolution, isLongVideo) in `Models/PHAsset+Cleanup.swift`
 
 **Checkpoint**: 기반 모델 준비 완료 - User Story 구현 가능
 

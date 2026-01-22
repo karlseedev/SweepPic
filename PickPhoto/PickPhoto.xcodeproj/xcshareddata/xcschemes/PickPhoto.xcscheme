@@ -27,8 +27,13 @@
       buildConfiguration = "Debug"
       selectedDebuggerIdentifier = "Xcode.DebuggerFoundation.Debugger.LLDB"
       selectedLauncherIdentifier = "Xcode.DebuggerFoundation.Launcher.LLDB"
-      shouldUseLaunchSchemeArgsEnv = "YES"
-      shouldAutocreateTestPlan = "YES">
+      shouldUseLaunchSchemeArgsEnv = "YES">
+      <TestPlans>
+         <TestPlanReference
+            reference = "container:PickPhotoTests/PickPhoto.xctestplan"
+            default = "YES">
+         </TestPlanReference>
+      </TestPlans>
       <Testables>
          <TestableReference
             skipped = "NO"
@@ -38,6 +43,17 @@
                BlueprintIdentifier = "CBAB3B192EFAE2CB00548282"
                BuildableName = "PickPhotoUITests.xctest"
                BlueprintName = "PickPhotoUITests"
+               ReferencedContainer = "container:PickPhoto.xcodeproj">
+            </BuildableReference>
+         </TestableReference>
+         <TestableReference
+            skipped = "NO"
+            parallelizable = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "CBE1F9652F21E18200984B63"
+               BuildableName = "PickPhotoTests.xctest"
+               BlueprintName = "PickPhotoTests"
                ReferencedContainer = "container:PickPhoto.xcodeproj">
             </BuildableReference>
          </TestableReference>

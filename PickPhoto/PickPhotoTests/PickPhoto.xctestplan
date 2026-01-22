@@ -12,7 +12,13 @@
 
   },
   "testTargets" : [
-
+    {
+      "target" : {
+        "containerPath" : "container:PickPhoto.xcodeproj",
+        "identifier" : "CBE1F9652F21E18200984B63",
+        "name" : "PickPhotoTests"
+      }
+    }
   ],
   "version" : 1
 }

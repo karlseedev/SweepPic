@@ -112,17 +112,21 @@ final class SimilarityImageLoader {
             // 타겟 크기 계산 (긴 변 기준)
             let targetSize = calculateTargetSize(for: asset)
 
-            // 타임아웃 작업 아이템
+            // 요청 ID 저장용
+            var requestID: PHImageRequestID?
+
+            // 타임아웃 작업 - resume하지 않고 요청 취소만 함
+            // 취소 후 콜백에서 cancelled 상태로 처리됨
             let timeoutItem = DispatchWorkItem { [weak self] in
-                guard self != nil else { return }
-                continuation.resume(throwing: SimilarityImageLoadError.timeout)
+                guard let self = self, let id = requestID else { return }
+                self.imageManager.cancelImageRequest(id)
             }
 
             // 타임아웃 스케줄
             DispatchQueue.global().asyncAfter(deadline: .now() + timeout, execute: timeoutItem)
 
-            // 이미지 요청
-            imageManager.requestImage(
+            // 이미지 요청 및 ID 저장
+            requestID = imageManager.requestImage(
                 for: asset,
                 targetSize: targetSize,
                 contentMode: .aspectFit,  // 패딩/크롭 금지, 원본 비율 유지
@@ -131,15 +135,20 @@ final class SimilarityImageLoader {
                 // 타임아웃 취소
                 timeoutItem.cancel()
 
-                // 에러 처리
-                if let error = info?[PHImageErrorKey] as? Error {
-                    continuation.resume(throwing: SimilarityImageLoadError.loadFailed(error.localizedDescription))
+                // degraded (저품질) 이미지는 무시 - 고품질 이미지가 뒤따라옴
+                if let isDegraded = info?[PHImageResultIsDegradedKey] as? Bool, isDegraded {
                     return
                 }
 
-                // 취소 확인
+                // 취소됨 (타임아웃으로 인한 취소 포함)
                 if let cancelled = info?[PHImageCancelledKey] as? Bool, cancelled {
-                    continuation.resume(throwing: SimilarityImageLoadError.loadFailed("요청이 취소됨"))
+                    continuation.resume(throwing: SimilarityImageLoadError.timeout)
+                    return
+                }
+
+                // 에러 처리
+                if let error = info?[PHImageErrorKey] as? Error {
+                    continuation.resume(throwing: SimilarityImageLoadError.loadFailed(error.localizedDescription))
                     return
                 }
 

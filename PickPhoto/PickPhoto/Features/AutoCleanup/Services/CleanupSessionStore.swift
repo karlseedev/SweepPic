@@ -44,10 +44,25 @@ final class CleanupSessionStore: CleanupSessionStoreProtocol {
     /// 동시성 제어를 위한 큐
     private let queue = DispatchQueue(label: "com.pickphoto.cleanupsessionstore", qos: .utility)
 
+    /// 테스트용 인스턴스 여부 (동기 모드)
+    private let isTestInstance: Bool
+
+    // MARK: - Deinitialization
+
+    deinit {
+        // 비동기 작업 완료 대기 (테스트 인스턴스가 아닐 때만)
+        // 테스트 인스턴스는 동기 모드이므로 대기 불필요
+        if !isTestInstance {
+            queue.sync { }  // 모든 대기 중인 작업 완료
+        }
+    }
+
     // MARK: - Initialization
 
     /// 기본 초기화 (Documents 디렉토리 사용)
     private init() {
+        self.isTestInstance = false
+
         // Documents 디렉토리에 세션 파일 저장
         let documentsPath = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
         self.sessionFilePath = documentsPath.appendingPathComponent(CleanupConstants.sessionFileName)
@@ -65,7 +80,9 @@ final class CleanupSessionStore: CleanupSessionStoreProtocol {
     }
 
     /// 테스트용 초기화 (커스텀 경로)
+    /// - 테스트에서는 동기 모드를 사용하여 메모리 안정성 보장
     init(filePath: URL) {
+        self.isTestInstance = true
         self.sessionFilePath = filePath
 
         self.encoder = JSONEncoder()
@@ -75,7 +92,34 @@ final class CleanupSessionStore: CleanupSessionStoreProtocol {
         self.decoder = JSONDecoder()
         self.decoder.dateDecodingStrategy = .iso8601
 
-        loadFromFile()
+        // 테스트용: 동기적으로 로드 (비동기 해제 충돌 방지)
+        loadFromFileSync()
+    }
+
+    /// 동기적 파일 로드 (테스트용)
+    private func loadFromFileSync() {
+        guard !isCacheLoaded else { return }
+
+        do {
+            guard FileManager.default.fileExists(atPath: sessionFilePath.path) else {
+                isCacheLoaded = true
+                return
+            }
+
+            let data = try Data(contentsOf: sessionFilePath)
+            let session = try decoder.decode(CleanupSession.self, from: data)
+            cachedSession = session
+            isCacheLoaded = true
+
+            #if DEBUG
+            print("[CleanupSessionStore] Loaded session (sync): \(session.id.uuidString.prefix(8))")
+            #endif
+        } catch {
+            #if DEBUG
+            print("[CleanupSessionStore] Failed to load session: \(error.localizedDescription)")
+            #endif
+            isCacheLoaded = true
+        }
     }
 
     // MARK: - CleanupSessionStoreProtocol
@@ -97,9 +141,15 @@ final class CleanupSessionStore: CleanupSessionStoreProtocol {
     /// 세션 저장
     /// - Parameter session: 저장할 세션
     func save(_ session: CleanupSession) {
-        queue.async { [weak self] in
-            self?.cachedSession = session
-            self?.saveToFile(session)
+        if isTestInstance {
+            // 테스트용: 동기 저장
+            cachedSession = session
+            saveToFile(session)
+        } else {
+            queue.async { [weak self] in
+                self?.cachedSession = session
+                self?.saveToFile(session)
+            }
         }
     }
 
@@ -111,9 +161,15 @@ final class CleanupSessionStore: CleanupSessionStoreProtocol {
 
     /// 세션 삭제
     func clear() {
-        queue.async { [weak self] in
-            self?.cachedSession = nil
-            self?.deleteFile()
+        if isTestInstance {
+            // 테스트용: 동기 삭제
+            cachedSession = nil
+            deleteFile()
+        } else {
+            queue.async { [weak self] in
+                self?.cachedSession = nil
+                self?.deleteFile()
+            }
         }
     }
 
@@ -124,7 +180,7 @@ final class CleanupSessionStore: CleanupSessionStoreProtocol {
         scannedCount: Int,
         foundCount: Int
     ) {
-        queue.async { [weak self] in
+        let updateBlock = { [weak self] in
             guard var session = self?.cachedSession else { return }
 
             session.updateProgress(
@@ -137,6 +193,13 @@ final class CleanupSessionStore: CleanupSessionStoreProtocol {
             self?.cachedSession = session
             // 부분 업데이트는 파일에 저장하지 않음 (메모리만)
             // 정상 종료 시에만 파일 저장
+        }
+
+        if isTestInstance {
+            // 테스트용: 동기 업데이트
+            updateBlock()
+        } else {
+            queue.async(execute: updateBlock)
         }
     }
 
