@@ -467,6 +467,7 @@ final class FloatingTabBar: UIView {
         emptyTrashShadowView.layer.shadowPath = UIBezierPath(
             ovalIn: emptyTrashShadowView.bounds
         ).cgPath
+
     }
 
     // MARK: - Hit Testing (터치 차단)

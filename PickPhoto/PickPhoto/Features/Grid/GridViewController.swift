@@ -357,6 +357,10 @@ final class GridViewController: BaseGridViewController {
         // iOS 18+ Zoom Transition 안정화: fallback (transitionCoordinator 없을 때)
         applyPendingViewerReturn()
 
+        // [DEBUG] 시스템 UI 인스펙션용 플로팅 버튼 표시
+        // 각 화면에서 버튼을 탭하면 해당 화면의 UI 정보가 파일로 저장됨
+        SystemUIInspector.shared.showDebugButton()
+
         // 런치 아규먼트 로깅 (디버깅용)
         let args = ProcessInfo.processInfo.arguments
         FileLogger.log("[LaunchArgs] count=\(args.count), contains --auto-scroll: \(args.contains("--auto-scroll"))")

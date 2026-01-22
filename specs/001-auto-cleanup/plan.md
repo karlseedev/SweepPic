@@ -91,7 +91,7 @@ PickPhoto/PickPhoto/Features/AutoCleanup/
     └── CleanupDebug.swift         # 디버그 유틸리티
 
 # 기존 파일 수정
-Sources/AppCore/Stores/TrashStore.swift        # 배치 이동 API 추가 (선택적)
+Sources/AppCore/Stores/TrashStore.swift        # 기존 moveToTrash(assetIDs:) API 활용 (수정 불필요)
 PickPhoto/PickPhoto/Features/Grid/GridViewController.swift  # 정리 버튼 추가
 PickPhoto/PickPhoto/Features/Grid/BaseGridViewController.swift  # 버튼 영역 확보
 ```

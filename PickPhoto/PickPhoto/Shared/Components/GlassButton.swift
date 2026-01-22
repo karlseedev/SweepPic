@@ -75,11 +75,11 @@ final class GlassButton: UIButton {
         // 1. Update Frames
         blurView.frame = bounds
         tintView.frame = blurView.contentView.bounds
-        
+
         // 2. Update Corner Radius
         blurView.layer.cornerRadius = cornerRadius
         blurView.layer.cornerCurve = .continuous
-        
+
         // 3. Update Highlight
         if let highlightLayer = highlightLayer {
             highlightLayer.frame = blurView.contentView.bounds
@@ -98,8 +98,9 @@ final class GlassButton: UIButton {
         if let titleLabel = titleLabel {
             bringSubviewToFront(titleLabel)
         }
+
     }
-    
+
     // MARK: - Interaction Animations
     private func animateInteraction(isPressed: Bool) {
         let scale: CGFloat = isPressed ? 0.96 : 1.0

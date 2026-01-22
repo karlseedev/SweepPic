@@ -288,6 +288,7 @@ final class FloatingTitleBar: UIView {
         super.layoutSubviews()
         // 그라데이션 딤 레이어 프레임 업데이트
         gradientLayer.frame = bounds
+
     }
 
     // MARK: - Hit Testing (터치 차단)
