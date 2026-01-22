@@ -10,6 +10,30 @@
 
 ---
 
+## 실측 데이터 재수집 방법
+
+시스템 UI 정보를 다시 수집하려면 `SystemUIInspector` 디버그 도구를 사용합니다.
+
+### 활성화 방법
+`GridViewController.swift`의 `viewDidAppear`에 아래 코드 추가:
+```swift
+SystemUIInspector.shared.showDebugButton()
+```
+
+### 사용 방법
+1. 앱 실행 후 우측 하단에 플로팅 디버그 버튼 표시됨
+2. 원하는 화면(Photos 앱 등)으로 이동
+3. 디버그 버튼 탭 → 현재 화면의 UI 정보가 파일로 저장됨
+
+### 결과 파일 위치
+- 시뮬레이터: `Documents/system_ui_inspection_N.txt`
+- 경로 확인: Xcode 콘솔에 저장 경로 출력됨
+
+### 관련 파일
+- `PickPhoto/PickPhoto/Debug/SystemUIInspector.swift`
+
+---
+
 ## Private API 대안 전략
 
 iOS 26의 실제 Liquid Glass는 Private API를 사용합니다. App Store 앱에서는 사용할 수 없으므로 Public API로 유사한 효과를 구현합니다.
