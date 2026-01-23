@@ -36,10 +36,10 @@ struct MetadataFilter {
             return .favorite
         }
 
-        // 2. 편집됨 (hasAdjustments 체크)
-        if asset.hasAdjustments {
-            return .edited
-        }
+        // 2. 편집됨 체크 - 제거됨
+        // PHAssetResource.assetResources() 호출이 메인 스레드에서 메타데이터를 동기 로딩하여
+        // "Missing prefetched properties" 경고 발생 및 성능 저하
+        // 실제 테스트 결과 SKIP되는 사진이 거의 없어 제거
 
         // 3. 숨김
         if asset.isHidden {
@@ -114,22 +114,12 @@ struct MetadataFilter {
     }
 }
 
-// MARK: - PHAsset Extension
+// MARK: - PHAsset Extension (제거됨)
 
-extension PHAsset {
-
-    /// 수정된 사진인지 확인
-    ///
-    /// PHAsset.hasAdjustments는 비동기 메서드가 따로 있지만,
-    /// 간단한 체크를 위해 adjustmentFormatIdentifier 존재 여부로 판단.
-    ///
-    /// - Note: iOS 8+에서 편집된 사진은 adjustmentData가 존재함
-    var hasAdjustments: Bool {
-        // PHAssetResource에서 adjustmentData 존재 여부 확인
-        let resources = PHAssetResource.assetResources(for: self)
-        return resources.contains { $0.type == .adjustmentData }
-    }
-}
+// hasAdjustments 프로퍼티 제거됨
+// PHAssetResource.assetResources() 호출이 메인 스레드에서 메타데이터를 동기 로딩하여
+// "Missing prefetched properties" 경고 발생 및 성능 저하
+// 필요 시 비동기 방식으로 재구현 필요
 
 // MARK: - Debug Support
 
