@@ -78,43 +78,43 @@
 
 ### Analysis Protocols
 
-- [ ] T020 [P] ExposureAnalyzerProtocol 정의 in `Analysis/Protocols/ExposureAnalyzerProtocol.swift`
-- [ ] T021 [P] BlurAnalyzerProtocol 정의 in `Analysis/Protocols/BlurAnalyzerProtocol.swift`
-- [ ] T022 [P] SafeGuardProtocol 정의 in `Analysis/Protocols/SafeGuardProtocol.swift`
-- [ ] T023 [P] AestheticsAnalyzerProtocol 정의 (iOS 18+) in `Analysis/Protocols/AestheticsAnalyzerProtocol.swift`
-- [ ] T024 QualityAnalyzerProtocol 정의 in `Analysis/Protocols/QualityAnalyzerProtocol.swift` (depends on T020-T023)
+- [x] T020 [P] ExposureAnalyzerProtocol 정의 in `Analysis/Protocols/ExposureAnalyzerProtocol.swift`
+- [x] T021 [P] BlurAnalyzerProtocol 정의 in `Analysis/Protocols/BlurAnalyzerProtocol.swift`
+- [x] T022 [P] SafeGuardProtocol 정의 in `Analysis/Protocols/SafeGuardProtocol.swift`
+- [x] T023 [P] AestheticsAnalyzerProtocol 정의 (iOS 18+) in `Analysis/Protocols/AestheticsAnalyzerProtocol.swift`
+- [x] T024 QualityAnalyzerProtocol 정의 in `Analysis/Protocols/QualityAnalyzerProtocol.swift` (depends on T020-T023)
 
 ### Exposure Analyzer (Stage 2)
 
-- [ ] T025 ExposureAnalyzer 구현 - 휘도 계산 (ITU-R BT.601) in `Analysis/ExposureAnalyzer.swift` (depends on T020)
-- [ ] T026 ExposureAnalyzer - RGB 표준편차 계산 추가 in `Analysis/ExposureAnalyzer.swift` (depends on T025)
-- [ ] T027 ExposureAnalyzer - 비네팅 계산 추가 (3x3 그리드) in `Analysis/ExposureAnalyzer.swift` (depends on T026)
-- [ ] T028 [P] ExposureAnalyzer 테스트 (극단 어두움/밝음, 단색 감지) in `PickPhoto/PickPhotoTests/AutoCleanup/Analysis/ExposureAnalyzerTests.swift`
+- [x] T025 ExposureAnalyzer 구현 - 휘도 계산 (ITU-R BT.601) in `Analysis/ExposureAnalyzer.swift` (depends on T020)
+- [x] T026 ExposureAnalyzer - RGB 표준편차 계산 추가 in `Analysis/ExposureAnalyzer.swift` (depends on T025)
+- [x] T027 ExposureAnalyzer - 비네팅 계산 추가 (3x3 그리드) in `Analysis/ExposureAnalyzer.swift` (depends on T026)
+- [x] T028 [P] ExposureAnalyzer 테스트 (극단 어두움/밝음, 단색 감지) in `PickPhoto/PickPhotoTests/AutoCleanup/Analysis/ExposureAnalyzerTests.swift`
 
 ### Blur Analyzer (Stage 3)
 
-- [ ] T029 BlurAnalyzer 구현 - Metal 초기화 (MTLDevice, MPSImageLaplacian) in `Analysis/BlurAnalyzer.swift` (depends on T021)
-- [ ] T030 BlurAnalyzer - Laplacian Variance 계산 구현 in `Analysis/BlurAnalyzer.swift` (depends on T029)
-- [ ] T031 BlurAnalyzer - 256x256 다운샘플링 및 결과 반환 in `Analysis/BlurAnalyzer.swift` (depends on T030)
-- [ ] T032 [P] BlurAnalyzer 테스트 (심각 블러/일반 블러 감지) in `PickPhoto/PickPhotoTests/AutoCleanup/Analysis/BlurAnalyzerTests.swift`
+- [x] T029 BlurAnalyzer 구현 - Metal 초기화 (MTLDevice, MPSImageLaplacian) in `Analysis/BlurAnalyzer.swift` (depends on T021)
+- [x] T030 BlurAnalyzer - Laplacian Variance 계산 구현 in `Analysis/BlurAnalyzer.swift` (depends on T029)
+- [x] T031 BlurAnalyzer - 256x256 다운샘플링 및 결과 반환 in `Analysis/BlurAnalyzer.swift` (depends on T030)
+- [x] T032 [P] BlurAnalyzer 테스트 (심각 블러/일반 블러 감지) in `PickPhoto/PickPhotoTests/AutoCleanup/Analysis/BlurAnalyzerTests.swift`
 
 ### Safe Guard (Stage 4)
 
-- [ ] T033 SafeGuard 구현 - 심도 효과 감지 (PHAsset depthData 확인) in `Analysis/SafeGuard.swift` (depends on T022)
-- [ ] T034 SafeGuard - 얼굴 품질 감지 (VNDetectFaceCaptureQualityRequest) in `Analysis/SafeGuard.swift` (depends on T033)
-- [ ] T035 [P] SafeGuard 테스트 (블러 판정 무효화 케이스) in `PickPhoto/PickPhotoTests/AutoCleanup/Analysis/SafeGuardTests.swift`
+- [x] T033 SafeGuard 구현 - 심도 효과 감지 (PHAsset depthData 확인) in `Analysis/SafeGuard.swift` (depends on T022)
+- [x] T034 SafeGuard - 얼굴 품질 감지 (VNDetectFaceCaptureQualityRequest) in `Analysis/SafeGuard.swift` (depends on T033)
+- [x] T035 [P] SafeGuard 테스트 (블러 판정 무효화 케이스) in `PickPhoto/PickPhotoTests/AutoCleanup/Analysis/SafeGuardTests.swift`
 
 ### Aesthetics Analyzer (iOS 18+)
 
-- [ ] T036 AestheticsAnalyzer 구현 (CalculateImageAestheticsScoresRequest) in `Analysis/AestheticsAnalyzer.swift` (depends on T023)
-- [ ] T037 AestheticsAnalyzer - 실패 시 fallback 반환 처리 in `Analysis/AestheticsAnalyzer.swift` (depends on T036)
+- [x] T036 AestheticsAnalyzer 구현 (CalculateImageAestheticsScoresRequest) in `Analysis/AestheticsAnalyzer.swift` (depends on T023)
+- [x] T037 AestheticsAnalyzer - 실패 시 fallback 반환 처리 in `Analysis/AestheticsAnalyzer.swift` (depends on T036)
 
 ### Quality Analyzer (코디네이터)
 
-- [ ] T038 QualityAnalyzer 구현 - iOS 버전별 분기 로직 in `Analysis/QualityAnalyzer.swift` (depends on T024, T025, T029, T033, T036)
-- [ ] T039 QualityAnalyzer - Precision 모드 Strong 신호 판정 in `Analysis/QualityAnalyzer.swift` (depends on T038)
-- [ ] T040 QualityAnalyzer - 배치 분석 (analyzeBatch) 구현 in `Analysis/QualityAnalyzer.swift` (depends on T039)
-- [ ] T041 QualityAnalyzer Integration 테스트 (전체 파이프라인 통합) in `PickPhoto/PickPhotoTests/AutoCleanup/Analysis/QualityAnalyzerIntegrationTests.swift` (depends on T040)
+- [x] T038 QualityAnalyzer 구현 - iOS 버전별 분기 로직 in `Analysis/QualityAnalyzer.swift` (depends on T024, T025, T029, T033, T036)
+- [x] T039 QualityAnalyzer - Precision 모드 Strong 신호 판정 in `Analysis/QualityAnalyzer.swift` (depends on T038)
+- [x] T040 QualityAnalyzer - 배치 분석 (analyzeBatch) 구현 in `Analysis/QualityAnalyzer.swift` (depends on T039)
+- [x] T041 QualityAnalyzer Integration 테스트 (전체 파이프라인 통합) in `PickPhoto/PickPhotoTests/AutoCleanup/Analysis/QualityAnalyzerIntegrationTests.swift` (depends on T040)
 
 **Checkpoint**: 분석 파이프라인 완료 - 서비스 레이어 구현 가능
 
