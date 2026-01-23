@@ -218,7 +218,11 @@ final class CleanupSessionStore: CleanupSessionStoreProtocol {
                 }
 
                 let data = try Data(contentsOf: self.sessionFilePath)
-                let session = try self.decoder.decode(CleanupSession.self, from: data)
+                // 로컬 디코더 생성 - Swift 6 concurrency 격리 경고 회피
+                // (self.decoder는 MainActor 격리 컨텍스트에서 캡처됨)
+                let localDecoder = JSONDecoder()
+                localDecoder.dateDecodingStrategy = .iso8601
+                let session = try localDecoder.decode(CleanupSession.self, from: data)
                 self.cachedSession = session
                 self.isCacheLoaded = true
 

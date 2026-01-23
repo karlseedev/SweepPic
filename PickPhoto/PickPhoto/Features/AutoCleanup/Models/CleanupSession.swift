@@ -21,7 +21,8 @@ import Foundation
 ///
 /// 정리 작업의 전체 상태를 관리하는 모델.
 /// Codable을 준수하여 JSON으로 파일 저장/로드 가능.
-struct CleanupSession: Codable, Equatable {
+/// Sendable을 준수하여 Swift 6 concurrency에서 안전하게 사용 가능.
+struct CleanupSession: Equatable, Sendable {
 
     // MARK: - 식별자
 
@@ -323,5 +324,50 @@ extension CleanupSession: CustomStringConvertible {
         - Start: \(dateFormatter.string(from: startDate))
         - Last: \(lastAssetDate.map { dateFormatter.string(from: $0) } ?? "N/A")
         """
+    }
+}
+
+// MARK: - Codable (Swift 6 호환)
+
+/// Swift 6 concurrency 격리 문제 해결을 위해 명시적 nonisolated Codable 구현
+/// DispatchQueue.async 등 nonisolated context에서 안전하게 decode/encode 가능
+extension CleanupSession: Codable {
+
+    private enum CodingKeys: String, CodingKey {
+        case id, createdAt, startDate, lastAssetDate, lastAssetID
+        case method, mode, scannedCount, foundCount, trashedAssetIDs
+        case status, updatedAt
+    }
+
+    nonisolated init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decode(UUID.self, forKey: .id)
+        createdAt = try container.decode(Date.self, forKey: .createdAt)
+        startDate = try container.decode(Date.self, forKey: .startDate)
+        lastAssetDate = try container.decodeIfPresent(Date.self, forKey: .lastAssetDate)
+        lastAssetID = try container.decodeIfPresent(String.self, forKey: .lastAssetID)
+        method = try container.decode(CleanupMethod.self, forKey: .method)
+        mode = try container.decode(JudgmentMode.self, forKey: .mode)
+        scannedCount = try container.decode(Int.self, forKey: .scannedCount)
+        foundCount = try container.decode(Int.self, forKey: .foundCount)
+        trashedAssetIDs = try container.decode([String].self, forKey: .trashedAssetIDs)
+        status = try container.decode(SessionStatus.self, forKey: .status)
+        updatedAt = try container.decode(Date.self, forKey: .updatedAt)
+    }
+
+    nonisolated func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(id, forKey: .id)
+        try container.encode(createdAt, forKey: .createdAt)
+        try container.encode(startDate, forKey: .startDate)
+        try container.encodeIfPresent(lastAssetDate, forKey: .lastAssetDate)
+        try container.encodeIfPresent(lastAssetID, forKey: .lastAssetID)
+        try container.encode(method, forKey: .method)
+        try container.encode(mode, forKey: .mode)
+        try container.encode(scannedCount, forKey: .scannedCount)
+        try container.encode(foundCount, forKey: .foundCount)
+        try container.encode(trashedAssetIDs, forKey: .trashedAssetIDs)
+        try container.encode(status, forKey: .status)
+        try container.encode(updatedAt, forKey: .updatedAt)
     }
 }

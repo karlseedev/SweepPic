@@ -117,10 +117,7 @@ extension GridViewController {
     /// 정리 버튼 탭 핸들러
     @objc func cleanupButtonTapped() {
         // 1. 휴지통 비어있는지 확인
-        let cleanupService = CleanupService.shared
-
-        if !cleanupService.isTrashEmpty() {
-            // 휴지통이 비어있지 않음 - 알림 표시
+        if !CleanupService.shared.isTrashEmpty() {
             showTrashNotEmptyAlert()
             return
         }
@@ -129,12 +126,26 @@ extension GridViewController {
         showCleanupMethodSheet()
     }
 
+    // MARK: - Alerts (직접 UIAlertController 사용)
+
     /// 휴지통 비어있지 않음 알림 표시
     private func showTrashNotEmptyAlert() {
         let trashCount = trashStore.trashedCount
-        let alert = TrashNotEmptyAlert()
-        alert.delegate = self
-        alert.show(trashCount: trashCount, from: self)
+        let message = "휴지통에 \(trashCount)장의 사진이 있습니다.\n정리를 시작하려면 휴지통을 먼저 비워주세요."
+
+        let alert = UIAlertController(
+            title: "휴지통을 비워주세요",
+            message: message,
+            preferredStyle: .alert
+        )
+
+        alert.addAction(UIAlertAction(title: "휴지통 보기", style: .default) { [weak self] _ in
+            self?.navigateToTrash()
+        })
+
+        alert.addAction(UIAlertAction(title: "취소", style: .cancel))
+
+        present(alert, animated: true)
     }
 
     /// 정리 방식 선택 시트 표시
@@ -188,33 +199,56 @@ extension GridViewController {
 
     /// 정리 결과 표시
     private func showCleanupResult(_ result: CleanupResult) {
-        let alert = CleanupResultAlert()
-        alert.delegate = self
-        alert.show(result: result, from: self)
+        // 취소된 경우 알림 없음
+        if case .cancelled = result.resultType {
+            return
+        }
+
+        let title = "정리 완료"
+        let message: String
+        let showTrashButton: Bool
+
+        if result.trashedAssetIDs.count > 0 {
+            message = CleanupConstants.resultMessage(count: result.trashedAssetIDs.count)
+            showTrashButton = true
+        } else {
+            message = CleanupConstants.noneFoundMessage
+            showTrashButton = false
+        }
+
+        let alert = UIAlertController(title: title, message: message, preferredStyle: .alert)
+
+        alert.addAction(UIAlertAction(title: "확인", style: .default))
+
+        if showTrashButton {
+            alert.addAction(UIAlertAction(title: "휴지통 보기", style: .default) { [weak self] _ in
+                self?.navigateToTrash()
+            })
+        }
+
+        present(alert, animated: true)
     }
 
     /// 정리 에러 표시
     private func showCleanupError(_ error: CleanupError) {
-        let alert = CleanupResultAlert()
-        alert.delegate = self
-        alert.showError(error, from: self)
+        let alert = UIAlertController(
+            title: "정리 실패",
+            message: error.localizedDescription,
+            preferredStyle: .alert
+        )
+
+        alert.addAction(UIAlertAction(title: "확인", style: .default))
+
+        present(alert, animated: true)
     }
 
     /// 휴지통 화면으로 이동
-    func navigateToTrash() {
+    private func navigateToTrash() {
         guard let tabBarController = tabBarController as? TabBarController else {
             return
         }
-
-        // Albums 탭으로 전환 후 휴지통 push
-        tabBarController.selectedIndex = 1  // Albums 탭
-
-        // Albums 탭의 네비게이션 컨트롤러 찾기
-        if let albumsNav = tabBarController.viewControllers?[1] as? UINavigationController {
-            // 휴지통 VC push
-            let trashVC = TrashAlbumViewController()
-            albumsNav.pushViewController(trashVC, animated: true)
-        }
+        tabBarController.selectedIndex = 2
+        tabBarController.floatingOverlay?.selectedTabIndex = 2
     }
 }
 
@@ -236,41 +270,7 @@ extension GridViewController: CleanupMethodSheetDelegate {
 extension GridViewController: CleanupProgressViewDelegate {
 
     func cleanupProgressViewDidTapCancel(_ view: CleanupProgressView) {
-        // 정리 취소
         CleanupService.shared.cancelCleanup()
-
-        // 진행 뷰 숨김
         view.hide()
-    }
-}
-
-// MARK: - CleanupResultAlertDelegate
-
-extension GridViewController: CleanupResultAlertDelegate {
-
-    func cleanupResultAlertDidTapConfirm() {
-        // 아무 동작 없음
-    }
-
-    func cleanupResultAlertDidTapViewTrash() {
-        navigateToTrash()
-    }
-}
-
-// MARK: - TrashNotEmptyAlertDelegate
-
-extension GridViewController: TrashNotEmptyAlertDelegate {
-
-    func trashNotEmptyAlertDidTapEmptyTrash() {
-        // 휴지통 비우기 - 휴지통 화면에서 처리하도록 이동
-        navigateToTrash()
-    }
-
-    func trashNotEmptyAlertDidTapCancel() {
-        // 아무 동작 없음
-    }
-
-    func trashNotEmptyAlertDidTapViewTrash() {
-        navigateToTrash()
     }
 }

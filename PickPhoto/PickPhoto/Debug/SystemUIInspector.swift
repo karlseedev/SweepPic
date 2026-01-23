@@ -579,7 +579,8 @@ final class SystemUIInspector {
             return "unknown"
         }
 
-        let colorSpace = cgColor.colorSpace?.name as String? ?? "unknown"
+        // colorSpace는 현재 사용하지 않음 (필요시 활성화)
+        _ = cgColor.colorSpace?.name as String? ?? "unknown"
 
         if components.count == 2 {
             // Grayscale + Alpha
@@ -1068,7 +1069,7 @@ extension SystemUIInspector {
             "zoom", "zoomLevel"
         ]
 
-        guard let nsLayer = layer as? NSObject else { return results }
+        let nsLayer = layer as NSObject
 
         for key in backdropKeys {
             if let value = ObjCExceptionCatcher.safeValue(forKey: key, on: nsLayer) {
@@ -1085,7 +1086,7 @@ extension SystemUIInspector {
     func dumpInnerShadowView(from view: UIView, indent: String) -> [String] {
         var results: [String] = []
 
-        guard let nsView = view as? NSObject else { return results }
+        let nsView = view as NSObject
 
         // innerShadowView 접근 시도
         if let innerShadow = ObjCExceptionCatcher.safeValue(forKey: "innerShadowView", on: nsView) as? UIView {
