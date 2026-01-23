@@ -270,6 +270,9 @@ final class GridViewController: BaseGridViewController {
         if AutoScrollTester.shouldInstallGestureByLaunchArguments {
             collectionView.setupAutoScrollGesture()
         }
+
+        // 정리 버튼 설정 (auto-cleanup)
+        setupCleanupButton()
     }
 
     /// 추가 제스처 설정 (setupGestures에서 호출됨)
@@ -346,9 +349,8 @@ final class GridViewController: BaseGridViewController {
         // 뒤로가기 버튼 숨김
         overlay.titleBar.setShowsBackButton(false)
 
-        // Select 버튼으로 복원 (휴지통의 "비우기" 버튼에서 복원)
-        overlay.titleBar.resetToSelectButton()
-        overlay.titleBar.isSelectButtonHidden = false
+        // [Select] [정리] 두 개 버튼으로 설정 (auto-cleanup)
+        setupFloatingCleanupButton()
     }
 
     override func viewDidAppear(_ animated: Bool) {

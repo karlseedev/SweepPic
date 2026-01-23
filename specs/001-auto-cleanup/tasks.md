@@ -128,28 +128,28 @@
 
 ### Service Layer
 
-- [ ] T042 [US1] CleanupServiceProtocol 정의 in `Services/CleanupServiceProtocol.swift`
-- [ ] T043 [US1] CleanupService 구현 - 휴지통 비어있는지 확인 in `Services/CleanupService.swift` (depends on T042)
-- [ ] T044 [US1] CleanupService - fromLatest 방식 탐색 로직 (최신→오래된 순) in `Services/CleanupService.swift` (depends on T043)
-- [ ] T045 [US1] CleanupService - 종료 조건 구현 (50장 찾음, 1000장 검색, 범위 끝) in `Services/CleanupService.swift` (depends on T044)
-- [ ] T046 [US1] CleanupService - 배치 처리 (100장 단위) 및 동시성 제어 (4개) in `Services/CleanupService.swift` (depends on T045)
-- [ ] T047 [US1] CleanupService - TrashStore 연동 (휴지통 이동) in `Services/CleanupService.swift` (depends on T046)
-- [ ] T048 [US1] CleanupService - 진행 상황 콜백 (progressHandler) in `Services/CleanupService.swift` (depends on T047)
-- [ ] T049 [US1] CleanupService - 취소 처리 (아무것도 이동하지 않음) in `Services/CleanupService.swift` (depends on T048)
+- [x] T042 [US1] CleanupServiceProtocol 정의 in `Services/CleanupServiceProtocol.swift`
+- [x] T043 [US1] CleanupService 구현 - 휴지통 비어있는지 확인 in `Services/CleanupService.swift` (depends on T042)
+- [x] T044 [US1] CleanupService - fromLatest 방식 탐색 로직 (최신→오래된 순) in `Services/CleanupService.swift` (depends on T043)
+- [x] T045 [US1] CleanupService - 종료 조건 구현 (50장 찾음, 1000장 검색, 범위 끝) in `Services/CleanupService.swift` (depends on T044)
+- [x] T046 [US1] CleanupService - 배치 처리 (100장 단위) 및 동시성 제어 (4개) in `Services/CleanupService.swift` (depends on T045)
+- [x] T047 [US1] CleanupService - TrashStore 연동 (휴지통 이동) in `Services/CleanupService.swift` (depends on T046)
+- [x] T048 [US1] CleanupService - 진행 상황 콜백 (progressHandler) in `Services/CleanupService.swift` (depends on T047)
+- [x] T049 [US1] CleanupService - 취소 처리 (아무것도 이동하지 않음) in `Services/CleanupService.swift` (depends on T048)
 
 ### UI Components
 
-- [ ] T050 [P] [US1] CleanupButton 컴포넌트 구현 in `UI/CleanupButton.swift`
-- [ ] T051 [P] [US1] CleanupMethodSheet - 정리 방식 선택 시트 (최신사진부터/이어서/연도별) in `UI/CleanupMethodSheet.swift`
-- [ ] T052 [P] [US1] CleanupProgressView - 탐색 진행 UI (진행바, 찾은 수, 취소 버튼) in `UI/CleanupProgressView.swift`
-- [ ] T053 [P] [US1] CleanupResultAlert - 결과 알림 (N장 이동/0장 발견/취소) in `UI/CleanupResultAlert.swift`
-- [ ] T054 [P] [US1] TrashNotEmptyAlert - 휴지통 비어있지 않음 알림 in `UI/TrashNotEmptyAlert.swift`
+- [x] T050 [P] [US1] CleanupButton 컴포넌트 구현 in `UI/CleanupButton.swift` (GridViewController+Cleanup.swift에 통합)
+- [x] T051 [P] [US1] CleanupMethodSheet - 정리 방식 선택 시트 (최신사진부터/이어서/연도별) in `UI/CleanupMethodSheet.swift`
+- [x] T052 [P] [US1] CleanupProgressView - 탐색 진행 UI (진행바, 찾은 수, 취소 버튼) in `UI/CleanupProgressView.swift`
+- [x] T053 [P] [US1] CleanupResultAlert - 결과 알림 (N장 이동/0장 발견/취소) in `UI/CleanupResultAlert.swift`
+- [x] T054 [P] [US1] TrashNotEmptyAlert - 휴지통 비어있지 않음 알림 in `UI/TrashNotEmptyAlert.swift`
 
 ### GridViewController 통합
 
-- [ ] T055 [US1] GridViewController에 CleanupButton 추가 (셀렉트 버튼 왼쪽) in `Features/Grid/GridViewController+Cleanup.swift` (depends on T050)
-- [ ] T056 [US1] GridViewController - 정리 버튼 탭 핸들러 구현 in `Features/Grid/GridViewController+Cleanup.swift` (depends on T055, T051)
-- [ ] T057 [US1] GridViewController - 정리 진행/결과 UI 연동 in `Features/Grid/GridViewController+Cleanup.swift` (depends on T056, T052, T053, T054)
+- [x] T055 [US1] GridViewController에 CleanupButton 추가 (셀렉트 버튼 왼쪽) in `Features/Grid/GridViewController+Cleanup.swift` (depends on T050)
+- [x] T056 [US1] GridViewController - 정리 버튼 탭 핸들러 구현 in `Features/Grid/GridViewController+Cleanup.swift` (depends on T055, T051)
+- [x] T057 [US1] GridViewController - 정리 진행/결과 UI 연동 in `Features/Grid/GridViewController+Cleanup.swift` (depends on T056, T052, T053, T054)
 
 ### Tests for US1
 
