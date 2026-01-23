@@ -293,12 +293,22 @@ final class CleanupService: CleanupServiceProtocol {
                 maxConcurrent: CleanupConstants.concurrentAnalysis
             )
 
-            // 저품질 사진 수집
+            // 저품질 사진 수집 및 SKIP 통계
             var batchFoundCount = 0
+            var skipStats: [String: Int] = [:]  // SKIP 이유별 카운트
+            var analyzedCount = 0
+
             for result in results {
                 if result.verdict.isLowQuality {
                     foundAssetIDs.append(result.assetID)
                     batchFoundCount += 1
+                }
+
+                // SKIP 통계 수집
+                if case .skipped(let reason) = result.verdict {
+                    skipStats[reason.rawValue, default: 0] += 1
+                } else {
+                    analyzedCount += 1
                 }
             }
 
@@ -313,7 +323,11 @@ final class CleanupService: CleanupServiceProtocol {
             let dateFormatter = DateFormatter()
             dateFormatter.dateFormat = "yyyy-MM-dd HH:mm"
             let dateStr = dateFormatter.string(from: currentDate)
-            print("[CleanupService] 배치 완료: 스캔=\(scannedCount)/\(totalCount), 발견=\(foundAssetIDs.count) (이번 배치 +\(batchFoundCount)), 탐색 시점=\(dateStr)")
+
+            // SKIP 통계 문자열 생성
+            let skipStr = skipStats.isEmpty ? "없음" : skipStats.map { "\($0.key):\($0.value)" }.joined(separator: ", ")
+
+            print("[CleanupService] 배치 완료: 스캔=\(scannedCount)/\(totalCount), 분석=\(analyzedCount), 발견=\(batchFoundCount), SKIP=[\(skipStr)], 시점=\(dateStr)")
             #endif
 
             // 진행 상황 콜백 (메인 스레드)
