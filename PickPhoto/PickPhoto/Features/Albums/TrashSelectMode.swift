@@ -90,30 +90,10 @@ extension TrashAlbumViewController {
 
     // MARK: - iOS 26+ Navigation Bar Restore
 
-    /// iOS 26+ Select 종료 후 네비바 복원: [비우기] [Select] 동시 표시
+    /// iOS 26+ Select 종료 후 네비바 복원: 초기 설정 함수 재사용
     override func restoreNavigationBarAfterSelectMode() {
         if #available(iOS 26.0, *) {
-            let selectButton = UIBarButtonItem(
-                title: "Select",
-                style: .plain,
-                target: self,
-                action: #selector(selectButtonTapped)
-            )
-
-            let emptyButton = UIBarButtonItem(
-                title: "비우기",
-                style: .plain,
-                target: self,
-                action: #selector(emptyTrashButtonTapped)
-            )
-            emptyButton.tintColor = .systemRed
-            emptyButton.isEnabled = !trashDataSourceAssets.isEmpty
-
-            // 프로퍼티에 저장 (데이터 변경 시 상태 업데이트용)
-            emptyTrashBarButtonItem = emptyButton
-
-            // [비우기] [Select] 순서 (배열 첫 요소가 가장 오른쪽)
-            navigationItem.rightBarButtonItems = [selectButton, emptyButton]
+            setupSystemNavigationBar()  // TrashAlbumViewController.swift
         }
     }
 
@@ -135,7 +115,7 @@ extension TrashAlbumViewController {
         print("[TrashAlbumViewController] Floating UI select mode entered")
     }
 
-    /// 플로팅 UI 선택 모드 종료 (Trash 전용)
+    /// 플로팅 UI 선택 모드 종료 (Trash 전용): 초기 설정 함수 재사용
     override func exitSelectModeFloatingUI() {
         guard let tabBarController = tabBarController as? TabBarController,
               let overlay = tabBarController.floatingOverlay else { return }
@@ -145,13 +125,11 @@ extension TrashAlbumViewController {
         // Trash 전용: trashSelectModeContainer 종료
         overlay.tabBar.exitTrashSelectMode(animated: true)
 
-        // delegate를 원래대로 복원 (FloatingOverlayContainer)
+        // delegate를 원래대로 복원 (FloatingOverlayContainer) - 필수
         overlay.tabBar.delegate = overlay
 
-        // 휴지통 전용 FloatingOverlay 상태로 복원
-        configureFloatingOverlayForTrashAfterSelectMode()
-
-        print("[TrashAlbumViewController] Floating UI select mode exited")
+        // 초기 설정 함수 재사용
+        configureFloatingOverlayForTrash()
     }
 
     /// 플로팅 UI 선택 개수 업데이트 (Trash 전용)
@@ -161,32 +139,6 @@ extension TrashAlbumViewController {
 
         // Trash 전용: trashSelectModeContainer의 선택 개수 업데이트
         overlay.tabBar.updateTrashSelectionCount(count)
-    }
-
-    /// Select 모드 종료 후 FloatingOverlay를 휴지통 상태로 복원
-    private func configureFloatingOverlayForTrashAfterSelectMode() {
-        guard let tabBarController = tabBarController as? TabBarController,
-              let overlay = tabBarController.floatingOverlay else { return }
-
-        overlay.titleBar.setTitle(navigationTitle)
-        overlay.titleBar.setShowsBackButton(false, action: nil)
-
-        // [Select] [비우기] 두 버튼 복원
-        let isEmpty = trashDataSourceAssets.isEmpty
-        overlay.titleBar.setTwoRightButtons(
-            firstTitle: "Select",
-            firstColor: .systemBlue,
-            firstAction: { [weak self] in
-                self?.enterSelectMode()
-            },
-            secondTitle: "비우기",
-            secondColor: .systemRed,
-            secondAction: { [weak self] in
-                self?.emptyTrashButtonTapped()
-            }
-        )
-        // 빈 휴지통: 버튼 비활성화 (숨김 X)
-        overlay.titleBar.setTwoRightButtonsEnabled(firstEnabled: !isEmpty, secondEnabled: !isEmpty)
     }
 
     // MARK: - Actions

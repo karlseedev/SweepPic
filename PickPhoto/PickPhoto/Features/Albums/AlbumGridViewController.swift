@@ -205,7 +205,8 @@ final class AlbumGridViewController: BaseGridViewController {
         configureFloatingOverlayForAlbum()
     }
 
-    private func configureFloatingOverlayForAlbum() {
+    /// Note: GridSelectMode.swift의 exitSelectModeFloatingUI()에서 호출하므로 internal
+    func configureFloatingOverlayForAlbum() {
         guard let tabBarController = tabBarController as? TabBarController,
               let overlay = tabBarController.floatingOverlay else {
             return
@@ -231,8 +232,9 @@ final class AlbumGridViewController: BaseGridViewController {
     }
 
     /// iOS 26+: 시스템 네비바 설정 (Select 버튼 추가)
+    /// Note: GridSelectMode.swift의 restoreNavigationBarAfterSelectMode()에서 호출하므로 internal
     @available(iOS 26.0, *)
-    private func setupSystemNavigationBarForAlbum() {
+    func setupSystemNavigationBarForAlbum() {
         // 선택 모드가 아닐 때만 Select 버튼 설정
         guard !isSelectMode else { return }
 

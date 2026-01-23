@@ -209,7 +209,8 @@ final class TrashAlbumViewController: BaseGridViewController {
     /// - 타이틀: "PickPhoto 휴지통"
     /// - 뒤로가기 버튼: 숨김 (별도 탭이므로)
     /// - 오른쪽 버튼: [Select] [비우기] (휴지통이 비어있지 않을 때만 표시)
-    private func configureFloatingOverlayForTrash() {
+    /// Note: TrashSelectMode.swift의 exitSelectModeFloatingUI()에서 호출하므로 internal
+    func configureFloatingOverlayForTrash() {
         guard let tabBarController = tabBarController as? TabBarController,
               let overlay = tabBarController.floatingOverlay else {
             return

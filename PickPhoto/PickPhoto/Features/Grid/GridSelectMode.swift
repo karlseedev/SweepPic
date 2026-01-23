@@ -89,6 +89,29 @@ extension GridViewController {
     override func handleSelectModeDeleteAction() {
         gridDeleteSelectedTapped()
     }
+
+    // MARK: - iOS 26+ Navigation Bar Restore
+
+    /// iOS 26+ Select 종료 후 네비바 복원: 초기 설정 함수 재사용
+    override func restoreNavigationBarAfterSelectMode() {
+        if #available(iOS 26.0, *) {
+            setupCleanupButton()  // GridViewController+Cleanup.swift
+        }
+    }
+
+    // MARK: - iOS 16~25 Floating UI
+
+    /// 플로팅 UI 선택 모드 종료: 초기 설정 함수 재사용
+    override func exitSelectModeFloatingUI() {
+        guard let tabBarController = tabBarController as? TabBarController,
+              let overlay = tabBarController.floatingOverlay else { return }
+
+        overlay.titleBar.exitSelectMode()
+        overlay.tabBar.exitSelectMode(animated: true)
+
+        // 초기 설정 함수 재사용
+        configureFloatingOverlay()
+    }
 }
 
 // MARK: - Grid Cell Selection Toggle
@@ -190,27 +213,16 @@ extension AlbumGridViewController {
 
     // MARK: - iOS 26+ Navigation Bar Restore
 
-    /// iOS 26+ Select 종료 후 네비바 복원: 빈 앨범이면 Select 버튼 비활성화
+    /// iOS 26+ Select 종료 후 네비바 복원: 초기 설정 함수 재사용
     override func restoreNavigationBarAfterSelectMode() {
         if #available(iOS 26.0, *) {
-            let selectButton = UIBarButtonItem(
-                title: "Select",
-                style: .plain,
-                target: self,
-                action: #selector(selectButtonTapped)
-            )
-
-            // 빈 앨범이면 Select 버튼 비활성화
-            let isEmpty = gridDataSource.assetCount == 0
-            selectButton.isEnabled = !isEmpty
-
-            navigationItem.rightBarButtonItem = selectButton
+            setupSystemNavigationBarForAlbum()  // AlbumGridViewController.swift
         }
     }
 
     // MARK: - iOS 16~25 Floating UI
 
-    /// 플로팅 UI 선택 모드 종료: 빈 앨범이면 Select 버튼 비활성화
+    /// 플로팅 UI 선택 모드 종료: 초기 설정 함수 재사용
     override func exitSelectModeFloatingUI() {
         guard let tabBarController = tabBarController as? TabBarController,
               let overlay = tabBarController.floatingOverlay else { return }
@@ -218,10 +230,7 @@ extension AlbumGridViewController {
         overlay.titleBar.exitSelectMode()
         overlay.tabBar.exitSelectMode(animated: true)
 
-        // 빈 앨범이면 Select 버튼 비활성화
-        let isEmpty = gridDataSource.assetCount == 0
-        overlay.titleBar.isSelectButtonEnabled = !isEmpty
-
-        print("[AlbumGridViewController] Floating UI select mode exited, isEmpty: \(isEmpty)")
+        // 초기 설정 함수 재사용
+        configureFloatingOverlayForAlbum()
     }
 }
