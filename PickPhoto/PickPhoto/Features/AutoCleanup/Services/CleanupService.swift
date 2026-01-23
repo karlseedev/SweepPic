@@ -234,6 +234,10 @@ final class CleanupService: CleanupServiceProtocol {
         let fetchResult = createFetchResult(for: method)
         let totalCount = fetchResult.count
 
+        #if DEBUG
+        print("[CleanupService] 스캔 시작: method=\(method), 대상 사진 수=\(totalCount)")
+        #endif
+
         guard totalCount > 0 else {
             // 사진이 없는 경우
             let result = CleanupResult.noneFound(
@@ -290,9 +294,11 @@ final class CleanupService: CleanupServiceProtocol {
             )
 
             // 저품질 사진 수집
+            var batchFoundCount = 0
             for result in results {
                 if result.verdict.isLowQuality {
                     foundAssetIDs.append(result.assetID)
+                    batchFoundCount += 1
                 }
             }
 
@@ -302,6 +308,13 @@ final class CleanupService: CleanupServiceProtocol {
             if let lastAsset = batchAssets.last, let creationDate = lastAsset.creationDate {
                 currentDate = creationDate
             }
+
+            #if DEBUG
+            let dateFormatter = DateFormatter()
+            dateFormatter.dateFormat = "yyyy-MM-dd HH:mm"
+            let dateStr = dateFormatter.string(from: currentDate)
+            print("[CleanupService] 배치 완료: 스캔=\(scannedCount)/\(totalCount), 발견=\(foundAssetIDs.count) (이번 배치 +\(batchFoundCount)), 탐색 시점=\(dateStr)")
+            #endif
 
             // 진행 상황 콜백 (메인 스레드)
             let progress = CleanupProgress(

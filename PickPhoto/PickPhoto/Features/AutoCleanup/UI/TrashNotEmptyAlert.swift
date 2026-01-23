@@ -56,19 +56,20 @@ final class TrashNotEmptyAlert {
         )
 
         // 휴지통 보기 버튼
+        // Note: [self] 강참조 - Alert이 닫힐 때까지 인스턴스 유지 필요
         alert.addAction(UIAlertAction(
             title: "휴지통 보기",
             style: .default
-        ) { [weak self] _ in
-            self?.delegate?.trashNotEmptyAlertDidTapViewTrash()
+        ) { [self] _ in
+            self.delegate?.trashNotEmptyAlertDidTapViewTrash()
         })
 
         // 취소 버튼
         alert.addAction(UIAlertAction(
             title: "취소",
             style: .cancel
-        ) { [weak self] _ in
-            self?.delegate?.trashNotEmptyAlertDidTapCancel()
+        ) { [self] _ in
+            self.delegate?.trashNotEmptyAlertDidTapCancel()
         })
 
         viewController.present(alert, animated: true)

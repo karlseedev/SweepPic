@@ -74,8 +74,8 @@ final class CleanupResultAlert {
         alert.addAction(UIAlertAction(
             title: "확인",
             style: .default
-        ) { [weak self] _ in
-            self?.delegate?.cleanupResultAlertDidTapConfirm()
+        ) { [self] _ in
+            self.delegate?.cleanupResultAlertDidTapConfirm()
         })
 
         viewController.present(alert, animated: true)
@@ -94,19 +94,20 @@ final class CleanupResultAlert {
         )
 
         // 확인 버튼
+        // Note: [self] 강참조 - Alert이 닫힐 때까지 인스턴스 유지 필요
         alert.addAction(UIAlertAction(
             title: "확인",
             style: .default
-        ) { [weak self] _ in
-            self?.delegate?.cleanupResultAlertDidTapConfirm()
+        ) { [self] _ in
+            self.delegate?.cleanupResultAlertDidTapConfirm()
         })
 
         // 휴지통 보기 버튼
         alert.addAction(UIAlertAction(
             title: "휴지통 보기",
             style: .default
-        ) { [weak self] _ in
-            self?.delegate?.cleanupResultAlertDidTapViewTrash()
+        ) { [self] _ in
+            self.delegate?.cleanupResultAlertDidTapViewTrash()
         })
 
         return alert
@@ -123,8 +124,8 @@ final class CleanupResultAlert {
         alert.addAction(UIAlertAction(
             title: "확인",
             style: .default
-        ) { [weak self] _ in
-            self?.delegate?.cleanupResultAlertDidTapConfirm()
+        ) { [self] _ in
+            self.delegate?.cleanupResultAlertDidTapConfirm()
         })
 
         return alert
