@@ -153,8 +153,8 @@
 
 ### Tests for US1
 
-- [ ] T058 [P] [US1] CleanupService Unit 테스트 (fromLatest 탐색, 종료 조건) in `PickPhoto/PickPhotoTests/AutoCleanup/Services/CleanupServiceTests.swift`
-- [ ] T059 [US1] CleanupService Integration 테스트 (전체 정리 플로우) in `PickPhoto/PickPhotoTests/AutoCleanup/Services/CleanupServiceIntegrationTests.swift` (depends on T049)
+- [x] T058 [P] [US1] CleanupService Unit 테스트 (fromLatest 탐색, 종료 조건) in `PickPhoto/PickPhotoTests/AutoCleanup/Services/CleanupServiceTests.swift`
+- [x] T059 [US1] CleanupService Integration 테스트 (전체 정리 플로우) in `PickPhoto/PickPhotoTests/AutoCleanup/Services/CleanupServiceIntegrationTests.swift` (depends on T049)
 
 **Checkpoint**: User Story 1 완료 - 최신 사진부터 정리 기능 독립 테스트 가능
 
