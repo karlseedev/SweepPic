@@ -58,12 +58,16 @@ final class CleanupMethodSheet {
     /// 시트 표시
     /// - Parameter viewController: 표시할 ViewController
     func present(from viewController: UIViewController) {
+        // self를 강참조하여 Task 완료까지 유지
+        // (로컬 변수로 생성된 sheet가 Task 완료 전에 해제되는 것을 방지)
+        let strongSelf = self
+
         // 연도 목록 가져오기 (백그라운드에서)
         Task {
-            availableYears = await fetchAvailableYears()
+            strongSelf.availableYears = await strongSelf.fetchAvailableYears()
 
             await MainActor.run {
-                showMainActionSheet(from: viewController)
+                strongSelf.showMainActionSheet(from: viewController)
             }
         }
     }
@@ -79,11 +83,11 @@ final class CleanupMethodSheet {
         )
 
         // 최신사진부터 정리
+        // Note: [self] 강참조 - ActionSheet가 닫힐 때까지 sheet 인스턴스 유지 필요
         alert.addAction(UIAlertAction(
             title: "최신사진부터 정리",
             style: .default
-        ) { [weak self] _ in
-            guard let self = self else { return }
+        ) { [self] _ in
             self.delegate?.cleanupMethodSheet(self, didSelect: .fromLatest)
         })
 
@@ -95,8 +99,7 @@ final class CleanupMethodSheet {
             alert.addAction(UIAlertAction(
                 title: title,
                 style: .default
-            ) { [weak self] _ in
-                guard let self = self else { return }
+            ) { [self] _ in
                 self.delegate?.cleanupMethodSheet(self, didSelect: .continueFromLast)
             })
         }
@@ -106,8 +109,7 @@ final class CleanupMethodSheet {
             alert.addAction(UIAlertAction(
                 title: "연도별 정리",
                 style: .default
-            ) { [weak self] _ in
-                guard let self = self else { return }
+            ) { [self] _ in
                 self.showYearSelectionSheet(from: viewController)
             })
         }
@@ -116,8 +118,7 @@ final class CleanupMethodSheet {
         alert.addAction(UIAlertAction(
             title: "취소",
             style: .cancel
-        ) { [weak self] _ in
-            guard let self = self else { return }
+        ) { [self] _ in
             self.delegate?.cleanupMethodSheetDidCancel(self)
         })
 
@@ -149,8 +150,7 @@ final class CleanupMethodSheet {
             alert.addAction(UIAlertAction(
                 title: "\(year)년",
                 style: .default
-            ) { [weak self] _ in
-                guard let self = self else { return }
+            ) { [self] _ in
                 self.delegate?.cleanupMethodSheet(self, didSelect: .byYear(year: year))
             })
         }
@@ -159,8 +159,7 @@ final class CleanupMethodSheet {
         alert.addAction(UIAlertAction(
             title: "뒤로",
             style: .cancel
-        ) { [weak self] _ in
-            guard let self = self else { return }
+        ) { [self] _ in
             self.showMainActionSheet(from: viewController)
         })
 

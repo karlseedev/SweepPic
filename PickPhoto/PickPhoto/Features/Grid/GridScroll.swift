@@ -407,6 +407,9 @@ extension GridViewController {
         MemoryThumbnailCache.shared.resetStats()
         PhotoCell.resetGrayCellStats()
         PhotoCell.resetMismatchStats()
+
+        // 정리 버튼 활성화 상태 업데이트 (초기 로딩 완료 후)
+        updateCleanupButtonState()
     }
 
     /// 맨 아래로 스크롤 (FR-003)
