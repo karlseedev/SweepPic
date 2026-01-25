@@ -91,18 +91,25 @@ final class CleanupMethodSheet {
             self.delegate?.cleanupMethodSheet(self, didSelect: .fromLatest)
         })
 
-        // 이어서 정리 (이전 이력이 있을 때만)
+        // 이어서 정리 (항상 표시, 이력 없으면 비활성화)
+        let continueAction: UIAlertAction
         if let session = lastSession {
             let dateString = formatDate(session.lastAssetDate)
-            let title = "이어서 정리 (\(dateString)부터)"
-
-            alert.addAction(UIAlertAction(
-                title: title,
+            continueAction = UIAlertAction(
+                title: "이어서 정리 (\(dateString)부터)",
                 style: .default
             ) { [self] _ in
                 self.delegate?.cleanupMethodSheet(self, didSelect: .continueFromLast)
-            })
+            }
+        } else {
+            continueAction = UIAlertAction(
+                title: "이어서 정리",
+                style: .default,
+                handler: nil
+            )
+            continueAction.isEnabled = false
         }
+        alert.addAction(continueAction)
 
         // 연도별 정리
         if !availableYears.isEmpty {
@@ -122,16 +129,19 @@ final class CleanupMethodSheet {
             self.delegate?.cleanupMethodSheetDidCancel(self)
         })
 
-        // iPad 지원
-        if let popover = alert.popoverPresentationController {
-            popover.sourceView = viewController.view
-            popover.sourceRect = CGRect(
-                x: viewController.view.bounds.midX,
-                y: viewController.view.bounds.midY,
-                width: 0,
-                height: 0
-            )
-            popover.permittedArrowDirections = []
+        // iPad 지원 (iOS 26 미만에서만)
+        // iOS 26에서는 기본 동작 사용 (중앙 표시, 취소 버튼 표시)
+        if #unavailable(iOS 26.0) {
+            if let popover = alert.popoverPresentationController {
+                popover.sourceView = viewController.view
+                popover.sourceRect = CGRect(
+                    x: viewController.view.bounds.midX,
+                    y: viewController.view.bounds.midY,
+                    width: 0,
+                    height: 0
+                )
+                popover.permittedArrowDirections = []
+            }
         }
 
         viewController.present(alert, animated: true)
@@ -163,16 +173,19 @@ final class CleanupMethodSheet {
             self.showMainActionSheet(from: viewController)
         })
 
-        // iPad 지원
-        if let popover = alert.popoverPresentationController {
-            popover.sourceView = viewController.view
-            popover.sourceRect = CGRect(
-                x: viewController.view.bounds.midX,
-                y: viewController.view.bounds.midY,
-                width: 0,
-                height: 0
-            )
-            popover.permittedArrowDirections = []
+        // iPad 지원 (iOS 26 미만에서만)
+        // iOS 26에서는 기본 동작 사용 (중앙 표시, 취소 버튼 표시)
+        if #unavailable(iOS 26.0) {
+            if let popover = alert.popoverPresentationController {
+                popover.sourceView = viewController.view
+                popover.sourceRect = CGRect(
+                    x: viewController.view.bounds.midX,
+                    y: viewController.view.bounds.midY,
+                    width: 0,
+                    height: 0
+                )
+                popover.permittedArrowDirections = []
+            }
         }
 
         viewController.present(alert, animated: true)
