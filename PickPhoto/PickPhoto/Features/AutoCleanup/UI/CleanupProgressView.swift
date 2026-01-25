@@ -181,16 +181,9 @@ final class CleanupProgressView: UIView {
         // 찾은 수
         foundCountLabel.text = "\(progress.foundCount)장 발견"
 
-        // 탐색 시점
+        // 탐색 시점 (모든 모드에서 동일한 형식)
         let dateString = formatDate(progress.currentDate)
-        switch method {
-        case .byYear:
-            // 연도별: 월만 표시
-            dateLabel.text = dateString.isEmpty ? "" : "\(dateString)부터 탐색 중..."
-        default:
-            // 최신/이어서: 연월 표시
-            dateLabel.text = dateString.isEmpty ? "" : "\(dateString)부터 탐색 중..."
-        }
+        dateLabel.text = dateString.isEmpty ? "" : "\(dateString) 사진 확인 중..."
     }
 
     /// 뷰 표시 (애니메이션)
@@ -224,17 +217,10 @@ final class CleanupProgressView: UIView {
 
     // MARK: - Private Methods
 
-    /// 날짜 포맷팅
+    /// 날짜 포맷팅 (모든 모드에서 "yyyy년 M월" 형식 통일)
     private func formatDate(_ date: Date) -> String {
         let formatter = DateFormatter()
-
-        switch method {
-        case .byYear:
-            formatter.dateFormat = "M월"
-        default:
-            formatter.dateFormat = "yyyy년 M월"
-        }
-
+        formatter.dateFormat = "yyyy년 M월"
         return formatter.string(from: date)
     }
 
