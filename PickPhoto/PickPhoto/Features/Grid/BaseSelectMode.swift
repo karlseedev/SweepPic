@@ -435,38 +435,92 @@ extension BaseGridViewController {
         print("[BaseGridViewController] Drag select ended")
     }
 
-    /// 자동 스크롤 처리
+    /// 자동 스크롤 처리 - 가장자리 거리에 따라 속도 가변
     private func handleAutoScroll(at locationInView: CGPoint) {
-        let topEdge = view.safeAreaInsets.top + Self.autoScrollEdgeHeight
-        let bottomEdge = view.bounds.height - view.safeAreaInsets.bottom - Self.autoScrollEdgeHeight
+        let safeTop = view.safeAreaInsets.top
+        let safeBottom = view.bounds.height - view.safeAreaInsets.bottom
 
-        if locationInView.y < topEdge {
-            startAutoScroll(direction: -1)
-        } else if locationInView.y > bottomEdge {
-            startAutoScroll(direction: 1)
+        // 핫스팟 경계선 (이 선을 넘으면 스크롤 시작)
+        let topEdgeStart = safeTop + Self.autoScrollEdgeHeight
+        let bottomEdgeStart = safeBottom - Self.autoScrollEdgeHeight
+
+        if locationInView.y < topEdgeStart {
+            // 상단 핫스팟 또는 그 위: 위로 스크롤
+            let distanceIntoEdge: CGFloat
+            if locationInView.y >= safeTop {
+                // 핫스팟 영역 내: 거리 기반 속도
+                distanceIntoEdge = topEdgeStart - locationInView.y
+            } else {
+                // safeArea 밖 (화면 맨 위): 최대 속도
+                distanceIntoEdge = Self.autoScrollEdgeHeight
+            }
+            let speed = calculateScrollSpeed(distance: distanceIntoEdge)
+            updateAutoScroll(speed: -speed)
+
+        } else if locationInView.y > bottomEdgeStart {
+            // 하단 핫스팟 또는 그 아래: 아래로 스크롤
+            let distanceIntoEdge: CGFloat
+            if locationInView.y <= safeBottom {
+                // 핫스팟 영역 내: 거리 기반 속도
+                distanceIntoEdge = locationInView.y - bottomEdgeStart
+            } else {
+                // safeArea 밖 (화면 맨 아래): 최대 속도
+                distanceIntoEdge = Self.autoScrollEdgeHeight
+            }
+            let speed = calculateScrollSpeed(distance: distanceIntoEdge)
+            updateAutoScroll(speed: speed)
+
         } else {
+            // 중앙 영역: 스크롤 중지
             stopAutoScroll()
         }
     }
 
-    /// 자동 스크롤 시작
-    private func startAutoScroll(direction: CGFloat) {
+    /// 거리 기반 스크롤 속도 계산 (제곱 함수 easing)
+    /// - Parameter distance: 핫스팟 경계선으로부터의 거리 (0 ~ edgeHeight)
+    /// - Returns: 계산된 스크롤 속도 (pt/s)
+    private func calculateScrollSpeed(distance: CGFloat) -> CGFloat {
+        // 0.0 ~ 1.0 비율 계산 (가장자리에 가까울수록 1.0)
+        let fraction = min(distance / Self.autoScrollEdgeHeight, 1.0)
+
+        // 제곱 함수로 가속 (가장자리에 가까울수록 급격히 빨라짐)
+        let easedFraction = pow(fraction, 2.0)
+
+        // 최소~최대 범위 내에서 속도 계산
+        return Self.autoScrollMinSpeed +
+               (Self.autoScrollMaxSpeed - Self.autoScrollMinSpeed) * easedFraction
+    }
+
+    /// 자동 스크롤 업데이트 (타이머 재시작 없이 속도만 갱신)
+    private func updateAutoScroll(speed: CGFloat) {
+        currentAutoScrollSpeed = speed
+
+        // 타이머가 없으면 시작
+        if autoScrollTimer == nil {
+            startAutoScrollTimer()
+        }
+    }
+
+    /// 자동 스크롤 타이머 시작
+    private func startAutoScrollTimer() {
         guard autoScrollTimer == nil else { return }
 
         autoScrollTimer = Timer.scheduledTimer(withTimeInterval: 1.0 / 60.0, repeats: true) { [weak self] _ in
             guard let self = self else { return }
 
-            let scrollAmount = Self.autoScrollSpeed / 60.0 * direction
+            // 현재 속도로 스크롤량 계산 (음수=위로, 양수=아래로)
+            let scrollAmount = self.currentAutoScrollSpeed / 60.0
             var newOffset = self.collectionView.contentOffset
             newOffset.y += scrollAmount
 
+            // 스크롤 범위 제한
             let minY = -self.collectionView.contentInset.top
             let maxY = self.collectionView.contentSize.height - self.collectionView.bounds.height + self.collectionView.contentInset.bottom
-
             newOffset.y = max(minY, min(maxY, newOffset.y))
 
             self.collectionView.setContentOffset(newOffset, animated: false)
 
+            // 드래그 선택 범위도 동시에 업데이트
             if let gesture = self.dragSelectGesture {
                 let location = gesture.location(in: self.collectionView)
                 self.handleDragSelectChanged(at: location)

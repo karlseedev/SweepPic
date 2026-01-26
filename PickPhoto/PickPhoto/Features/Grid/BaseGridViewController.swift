@@ -157,11 +157,17 @@ class BaseGridViewController: UIViewController {
     /// 자동 스크롤 타이머
     var autoScrollTimer: Timer?
 
-    /// 자동 스크롤 속도 (pt/s)
-    static let autoScrollSpeed: CGFloat = 300
+    /// 자동 스크롤 최소 속도 (pt/s) - 핫스팟 진입 시
+    static let autoScrollMinSpeed: CGFloat = 200
 
-    /// 자동 스크롤 영역 높이
-    static let autoScrollEdgeHeight: CGFloat = 60
+    /// 자동 스크롤 최대 속도 (pt/s) - 가장자리 끝에서
+    static let autoScrollMaxSpeed: CGFloat = 1500
+
+    /// 자동 스크롤 영역 높이 (핫스팟)
+    static let autoScrollEdgeHeight: CGFloat = 100
+
+    /// 현재 자동 스크롤 속도 (가변, 음수=위로, 양수=아래로)
+    var currentAutoScrollSpeed: CGFloat = 0
 
     // MARK: - Rotation Support
 
