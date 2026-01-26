@@ -1,17 +1,139 @@
 # iOS UI 속성 완전 조사 방법
 
 **작성일**: 2026-01-25
+**최종 수정**: 2026-01-26
 **목표**: iOS 시스템 UI의 **모든 속성을 빠짐없이** 추출하는 핵심 방법
 
 ---
 
-## 1. 핵심 결론
+## 0. 핵심 결론 (2026-01-26 업데이트)
 
-**LLDB `_ivarDescription` 하나로 모든 속성 조사 가능**
+### ❌ `_ivarDescription`만으로는 불충분
+
+| 방법 | 수집 가능 | 수집 불가 |
+|------|----------|----------|
+| `_ivarDescription` | ivar (인스턴스 변수) | **CALayer 속성** (cornerRadius, filters 등) |
+
+**테스트 결과**: 기존 iOS26-TabBar.md 문서의 약 10%만 수집됨
+
+### ✅ 올바른 방법: 속성별 개별 조회
+
+| 속성 카테고리 | 접근 방법 | 테스트 결과 |
+|--------------|----------|------------|
+| CALayer 기본 | `layer.cornerRadius`, `layer.cornerCurve` | ✅ 가능 |
+| layer.filters | `layer.filters` (Private) | ✅ 가능 |
+| layer.compositingFilter | `layer.compositingFilter` (Private) | ✅ 가능 |
+| UIColor 분해 | `getWhite(&w, alpha:&a)` | ✅ 가능 |
+| _UILiquidLensView | KVC `value(forKey:)` | ✅ 가능 |
+| CABackdropLayer | KVC `value(forKey:)` | ✅ 가능 |
+| CAFilter 이름/타입 | KVC `value(forKey: "name")` | ✅ 가능 |
+| CAAnimation 파라미터 | `layer.animation(forKey:)` | ✅ 가능 |
+
+### 테스트 결과 상세 (2026-01-26)
+
+#### 1. CALayer 기본 속성 (Public API)
+```
+cornerRadius: 0.0 ✅
+cornerCurve: continuous ✅
+masksToBounds: false ✅
+borderWidth: 0.0 ✅
+shadowOpacity: 0.0 ✅
+shadowRadius: 3.0 ✅
+```
+
+#### 2. layer.filters 테스트
+```
+[PocketBlur] layer.filters: [variableBlur]
+[_UIPortalView] layer.filters: [colorMatrix]
+[HostedViewWrapper] layer.filters: [gaussianBlur]
+[SubviewContainerView] layer.filters: [gaussianBlur]
+✅ layer.filters 접근 가능
+```
+
+#### 3. layer.compositingFilter 테스트
+```
+[_UIPortalView] layer.compositingFilter: destIn
+[DestOutView] layer.compositingFilter: destOut
+✅ layer.compositingFilter 접근 가능
+```
+
+#### 4. UIColor 분해 테스트
+```
+[systemBackground]
+  getWhite: white=0.000, alpha=1.000 ✅
+  getRed: r=0.000, g=0.000, b=0.000, a=1.000 ✅
+[gray 0.5 alpha 0.8]
+  getWhite: white=0.500, alpha=0.800 ✅
+  getRed: r=0.500, g=0.500, b=0.500, a=0.800 ✅
+```
+
+#### 5. Private 클래스 KVC 접근 테스트
+```
+[_UILiquidLensView]
+  warpsContentBelow: 1 ✅
+  liftedContentMode: 1 ✅
+  hasCustomRestingBackground: 1 ✅
+```
+
+#### 6. CABackdropLayer 속성 테스트
+```
+[CABackdropLayer]
+  scale: 0.5 ✅
+  groupName: backgroundGroup-0x... ✅
+  captureOnly: 0 ✅
+  usesGlobalGroupNamespace: 0 ✅
+```
+
+#### 7. CAFilter 파라미터 테스트
+```
+필터 타입: CAFilter (CIFilter 아님)
+[CABackdropLayer] Filter: variableBlur
+  name: variableBlur ✅
+  type: variableBlur ✅
+[CAPortalLayer] Filter: colorMatrix
+  name: colorMatrix ✅
+  type: colorMatrix ✅
+[CALayer] Filter: gaussianBlur
+  name: gaussianBlur ✅
+  type: gaussianBlur ✅
+[_UIMultiLayer] Filter: vibrantColorMatrix
+  name: vibrantColorMatrix ✅
+  type: vibrantColorMatrix ✅
+```
+**참고**: CAFilter의 세부 파라미터(inputRadius 등)는 추가 조사 필요
+
+#### 8. CAAnimation 파라미터 테스트
+```
+iOS 26 신규 애니메이션 타입 발견:
+- CAMatchPropertyAnimation (duration: inf, fillMode: both)
+- CAMatchMoveAnimation (duration: inf, fillMode: both)
+
+animationKeys 예시:
+- match-bounds
+- match-position
+- match-corner-radius
+- match-corner-radii
+- match-corner-curve
+- match-hidden
+- _UILiquidLensView.punchout.matchPosition
+
+기본 속성 접근 ✅:
+- duration, timingFunction, isRemovedOnCompletion, fillMode
+- CABasicAnimation: keyPath, fromValue, toValue
+- CAKeyframeAnimation: values, keyTimes, calculationMode
+- CASpringAnimation: mass, stiffness, damping, initialVelocity
+- CAMediaTimingFunction.getControlPoint() - bezier 제어점
+```
+
+---
+
+## 1. 이전 결론 (수정됨)
+
+~~**LLDB `_ivarDescription` 하나로 모든 속성 조사 가능**~~
 
 | 명령 | 용도 | 완전성 |
 |------|------|--------|
-| `po [view _ivarDescription]` | 모든 ivar 덤프 (상속 포함) | ★★★★★ |
+| `po [view _ivarDescription]` | ivar만 덤프 | ~~★★★★★~~ → **★★☆☆☆** |
 | `po [view _shortMethodDescription]` | computed property 확인 | 보조 |
 | `class-dump` | 클래스 구조 미리 파악 | 보조 |
 
@@ -139,20 +261,58 @@ let desc = view.perform(selector)?.takeUnretainedValue() as? String
 
 ### 4.3. 구현 파일
 
-#### 신규 생성 파일 (권장)
+#### 디버그 파일 목록 (2026-01-26 기준)
 
-| 파일 | 용도 |
-|------|------|
-| `PickPhoto/PickPhoto/Debug/SystemUIInspector2.swift` | `_ivarDescription` 기반 완전 덤프 |
-
-#### 기존 파일 (참고용, 불완전)
-
-| 파일 | 용도 | 비고 |
+| 파일 | 용도 | 상태 |
 |------|------|------|
-| `PickPhoto/PickPhoto/Debug/SystemUIInspector.swift` | CALayer 속성 수동 덤프 | `_ivarDescription` 미사용, 속성 누락 가능 |
+| `Debug/SystemUIInspector.swift` | class_copyIvarList 방식 | ❌ 불완전, 참고용 |
+| `Debug/SystemUIInspector2.swift` | `_ivarDescription` 방식 | ❌ CALayer 속성 누락 |
+| `Debug/SystemUIInspector3.swift` | **JSON 완전 덤프 (계획)** | 🔜 구현 예정 |
 
-> **주의**: 기존 `SystemUIInspector.swift`는 `class_copyIvarList` + 수동 필터링 방식이라 속성 누락 발생.
-> 새로 만든 `SystemUIInspector2.swift`는 `_ivarDescription`으로 상속 포함 모든 ivar 자동 덤프.
+> `LayerPropertyTest.swift`는 테스트 완료 후 삭제됨 (결과는 위 섹션에 기록)
+
+#### SystemUIInspector3 구현 계획
+
+**출력 형식**: JSON
+
+**수집할 속성 목록**:
+
+```
+A. UIView 속성 (Public)
+   - frame, bounds, alpha, isHidden, clipsToBounds
+   - backgroundColor (UIColor 분해 포함)
+
+B. CALayer 속성 (Public + Private)
+   - cornerRadius, cornerCurve, masksToBounds
+   - borderWidth, borderColor
+   - shadowColor, shadowOpacity, shadowRadius, shadowOffset
+   - filters (배열, 필터 이름 + 파라미터)
+   - compositingFilter
+   - backgroundColor
+
+C. UIColor 분해
+   - getWhite(&w, alpha:&a) - Gray 색상
+   - getRed(&r, &g, &b, alpha:&a) - RGB 색상
+
+D. UIFont 속성 (UILabel, UIButton)
+   - pointSize, fontName
+
+E. Private 클래스 속성 (KVC)
+   - _UILiquidLensView: warpsContentBelow, liftedContentMode, hasCustomRestingBackground
+   - CABackdropLayer: scale, groupName, captureOnly, usesGlobalGroupNamespace
+
+F. CAFilter 속성 (KVC)
+   - name, type (접근 확인됨)
+   - 세부 파라미터 (inputRadius 등) - 추가 조사 필요
+
+G. CAAnimation 파라미터
+   - 기본: duration, timingFunction, fillMode, isRemovedOnCompletion
+   - CABasicAnimation: keyPath, fromValue, toValue
+   - CASpringAnimation: mass, stiffness, damping, initialVelocity
+   - CAMediaTimingFunction: getControlPoint() (bezier 제어점)
+```
+
+> **참고**: 기존 `SystemUIInspector.swift`, `SystemUIInspector2.swift`는 삭제하지 않고 참고용으로 유지.
 
 ### 4.4. 활성화 방법
 

@@ -115,11 +115,6 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         permissionViewController = nil
 
         print("[SceneDelegate] Showing main interface (TabBarController)")
-
-        // CALayer Private 속성 접근 테스트 버튼
-        #if DEBUG
-        showTestButton()
-        #endif
     }
 
     /// 권한 요청 화면 표시 (PermissionViewController)
@@ -250,42 +245,6 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         AppStateStore.shared.handleBackgroundTransition()
         print("[SceneDelegate] Scene did enter background")
     }
-
-    // MARK: - Debug Test Button
-
-    #if DEBUG
-    private var testButton: UIButton?
-
-    /// CALayer 속성 테스트 버튼 표시
-    private func showTestButton() {
-        guard testButton == nil, let window = window else { return }
-
-        let button = UIButton(type: .system)
-        button.setTitle("🧪 Layer Test", for: .normal)
-        button.titleLabel?.font = .boldSystemFont(ofSize: 14)
-        button.backgroundColor = .systemOrange
-        button.setTitleColor(.white, for: .normal)
-        button.layer.cornerRadius = 20
-
-        button.translatesAutoresizingMaskIntoConstraints = false
-        button.addTarget(self, action: #selector(testButtonTapped), for: .touchUpInside)
-
-        window.addSubview(button)
-
-        NSLayoutConstraint.activate([
-            button.centerXAnchor.constraint(equalTo: window.centerXAnchor),
-            button.centerYAnchor.constraint(equalTo: window.centerYAnchor),
-            button.widthAnchor.constraint(equalToConstant: 120),
-            button.heightAnchor.constraint(equalToConstant: 40)
-        ])
-
-        testButton = button
-    }
-
-    @objc private func testButtonTapped() {
-        LayerPropertyTest.shared.runTest()
-    }
-    #endif
 }
 
 // MARK: - PermissionViewControllerDelegate

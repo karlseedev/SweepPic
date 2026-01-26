@@ -207,9 +207,9 @@ final class CleanupMethodSheet {
            session.canContinueByYear,
            let targetYear = session.targetYear,
            let continueFrom = session.lastAssetDate {
-            let dateString = formatDate(session.lastAssetDate)
+            let monthString = formatMonth(session.lastAssetDate)
             alert.addAction(UIAlertAction(
-                title: "\(targetYear)년 이어서 (\(dateString)부터)",
+                title: "\(targetYear)년 이어서 (\(monthString) 이전)",
                 style: .default
             ) { [self] _ in
                 // 해당 연도에서 이어서 정리 (continueFrom으로 시작점 전달)
@@ -278,12 +278,21 @@ final class CleanupMethodSheet {
         }
     }
 
-    /// 날짜 포맷팅
+    /// 날짜 포맷팅 (연도 포함)
     private func formatDate(_ date: Date?) -> String {
         guard let date = date else { return "" }
 
         let formatter = DateFormatter()
         formatter.dateFormat = "yyyy년 M월"
+        return formatter.string(from: date)
+    }
+
+    /// 월만 포맷팅 (연도별 이어서용)
+    private func formatMonth(_ date: Date?) -> String {
+        guard let date = date else { return "" }
+
+        let formatter = DateFormatter()
+        formatter.dateFormat = "M월"
         return formatter.string(from: date)
     }
 }
