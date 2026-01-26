@@ -88,10 +88,11 @@ final class QualityAnalyzer {
     func analyze(_ asset: PHAsset) async -> QualityResult {
         let startTime = CFAbsoluteTimeGetCurrent()
         let assetID = asset.localIdentifier
+        let creationDate = asset.creationDate
 
         // Stage 1: 메타데이터 필터링
         if let skipReason = metadataFilter.shouldAnalyze(asset) {
-            return QualityResult.skipped(assetID: assetID, reason: skipReason)
+            return QualityResult.skipped(assetID: assetID, creationDate: creationDate, reason: skipReason)
         }
 
         // 해상도 체크 (Recall 모드)
@@ -114,12 +115,12 @@ final class QualityAnalyzer {
             if let loadError = error as? SimilarityImageLoadError {
                 switch loadError {
                 case .timeout:
-                    return QualityResult.skipped(assetID: assetID, reason: .analysisError)
+                    return QualityResult.skipped(assetID: assetID, creationDate: creationDate, reason: .analysisError)
                 default:
-                    return QualityResult.skipped(assetID: assetID, reason: .analysisError)
+                    return QualityResult.skipped(assetID: assetID, creationDate: creationDate, reason: .analysisError)
                 }
             }
-            return QualityResult.skipped(assetID: assetID, reason: .analysisError)
+            return QualityResult.skipped(assetID: assetID, creationDate: creationDate, reason: .analysisError)
         }
 
         // Stage 2: 노출 분석
@@ -127,7 +128,7 @@ final class QualityAnalyzer {
         do {
             exposureMetrics = try exposureAnalyzer.analyze(image)
         } catch {
-            return QualityResult.skipped(assetID: assetID, reason: .analysisError)
+            return QualityResult.skipped(assetID: assetID, creationDate: creationDate, reason: .analysisError)
         }
 
         var signals = exposureAnalyzer.detectSignals(from: exposureMetrics, mode: mode)
@@ -141,7 +142,7 @@ final class QualityAnalyzer {
                 blurMetrics = try blurAnalyzer.analyzeCPU(image)
             }
         } catch {
-            return QualityResult.skipped(assetID: assetID, reason: .analysisError)
+            return QualityResult.skipped(assetID: assetID, creationDate: creationDate, reason: .analysisError)
         }
 
         let blurSignals = blurAnalyzer.detectSignals(from: blurMetrics, mode: mode)
@@ -178,6 +179,7 @@ final class QualityAnalyzer {
 
         return makeVerdict(
             assetID: assetID,
+            creationDate: creationDate,
             signals: signals,
             safeGuardResult: safeGuardResult,
             analysisTimeMs: analysisTimeMs,
@@ -191,7 +193,10 @@ final class QualityAnalyzer {
     ///   - assets: 분석할 PHAsset 배열
     ///   - maxConcurrent: 최대 동시 분석 수 (기본값: 4)
     ///   - onProgress: 진행 콜백 (분석 완료된 결과)
-    /// - Returns: 모든 분석 결과 배열
+    /// - Returns: 모든 분석 결과 배열 (원본 순서 보장)
+    ///
+    /// - Important: 결과는 입력 assets 배열과 동일한 순서로 반환됩니다.
+    ///   이는 50장 제한 로직과 이어서 정리 기능의 정확성을 위해 필수입니다.
     func analyzeBatch(
         _ assets: [PHAsset],
         maxConcurrent: Int = 4,  // CleanupConstants.concurrentAnalysis
@@ -200,9 +205,9 @@ final class QualityAnalyzer {
         // 빈 배열 처리
         guard !assets.isEmpty else { return [] }
 
-        // TaskGroup으로 병렬 분석
-        return await withTaskGroup(of: QualityResult.self) { group in
-            var results: [QualityResult] = []
+        // TaskGroup으로 병렬 분석 (인덱스와 함께 결과 수집)
+        let indexedResults = await withTaskGroup(of: (index: Int, result: QualityResult).self) { group in
+            var results: [(index: Int, result: QualityResult)] = []
             results.reserveCapacity(assets.count)
 
             // 동시성 제한을 위한 세마포어 역할
@@ -212,23 +217,27 @@ final class QualityAnalyzer {
             // 초기 태스크 추가
             while activeCount < maxConcurrent && assetIndex < assets.count {
                 let asset = assets[assetIndex]
+                let capturedIndex = assetIndex  // 클로저에서 캡처할 인덱스
                 group.addTask {
-                    await self.analyze(asset)
+                    let result = await self.analyze(asset)
+                    return (index: capturedIndex, result: result)
                 }
                 activeCount += 1
                 assetIndex += 1
             }
 
             // 결과 수집 및 추가 태스크 시작
-            for await result in group {
-                results.append(result)
-                onProgress?(result)
+            for await indexedResult in group {
+                results.append(indexedResult)
+                onProgress?(indexedResult.result)
 
                 // 다음 태스크 추가
                 if assetIndex < assets.count {
                     let asset = assets[assetIndex]
+                    let capturedIndex = assetIndex
                     group.addTask {
-                        await self.analyze(asset)
+                        let result = await self.analyze(asset)
+                        return (index: capturedIndex, result: result)
                     }
                     assetIndex += 1
                 }
@@ -236,6 +245,11 @@ final class QualityAnalyzer {
 
             return results
         }
+
+        // 원본 순서대로 정렬하여 반환
+        return indexedResults
+            .sorted { $0.index < $1.index }
+            .map { $0.result }
     }
 
     // MARK: - Private Methods
@@ -243,6 +257,7 @@ final class QualityAnalyzer {
     /// 최종 판정 생성
     private func makeVerdict(
         assetID: String,
+        creationDate: Date?,
         signals: [QualitySignal],
         safeGuardResult: SafeGuardResult,
         analysisTimeMs: Double,
@@ -276,6 +291,7 @@ final class QualityAnalyzer {
         if isLowQuality {
             return QualityResult.lowQuality(
                 assetID: assetID,
+                creationDate: creationDate,
                 signals: effectiveSignals,
                 analysisTimeMs: analysisTimeMs,
                 method: method
@@ -285,6 +301,7 @@ final class QualityAnalyzer {
         if safeGuardResult.isApplied, let reason = safeGuardResult.reason {
             return QualityResult.safeGuarded(
                 assetID: assetID,
+                creationDate: creationDate,
                 signals: signals,  // 원본 신호 유지 (디버깅용)
                 reason: reason,
                 analysisTimeMs: analysisTimeMs,
@@ -294,6 +311,7 @@ final class QualityAnalyzer {
 
         return QualityResult.acceptable(
             assetID: assetID,
+            creationDate: creationDate,
             signals: effectiveSignals,
             analysisTimeMs: analysisTimeMs,
             method: method

@@ -82,6 +82,7 @@ struct MetadataFilter {
                 // SKIP 처리
                 skipped.append(QualityResult.skipped(
                     assetID: asset.localIdentifier,
+                    creationDate: asset.creationDate,
                     reason: skipReason
                 ))
             } else {
@@ -106,6 +107,7 @@ struct MetadataFilter {
         if let skipReason = shouldAnalyze(asset) {
             onSkip(QualityResult.skipped(
                 assetID: asset.localIdentifier,
+                creationDate: asset.creationDate,
                 reason: skipReason
             ))
             return false

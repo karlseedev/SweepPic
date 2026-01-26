@@ -149,7 +149,7 @@ final class MetadataFilterTests: XCTestCase {
         let reason = SkipReason.favorite
 
         // When
-        let result = QualityResult.skipped(assetID: assetID, reason: reason)
+        let result = QualityResult.skipped(assetID: assetID, creationDate: nil, reason: reason)
 
         // Then
         XCTAssertEqual(result.assetID, assetID)

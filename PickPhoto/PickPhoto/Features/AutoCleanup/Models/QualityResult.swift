@@ -152,6 +152,10 @@ struct QualityResult: Equatable {
     /// 사진 ID (PHAsset.localIdentifier)
     let assetID: String
 
+    /// 사진 생성일 (이어서 정리용)
+    /// - 50장 제한 도달 시 마지막 사진의 날짜를 저장하기 위해 필요
+    let creationDate: Date?
+
     /// 최종 판정
     let verdict: QualityVerdict
 
@@ -178,12 +182,14 @@ struct QualityResult: Equatable {
     /// 저품질 결과 생성
     static func lowQuality(
         assetID: String,
+        creationDate: Date?,
         signals: [QualitySignal],
         analysisTimeMs: Double,
         method: AnalysisMethod
     ) -> QualityResult {
         return QualityResult(
             assetID: assetID,
+            creationDate: creationDate,
             verdict: .lowQuality,
             signals: signals,
             safeGuardApplied: false,
@@ -196,12 +202,14 @@ struct QualityResult: Equatable {
     /// 정상 결과 생성
     static func acceptable(
         assetID: String,
+        creationDate: Date?,
         signals: [QualitySignal] = [],
         analysisTimeMs: Double,
         method: AnalysisMethod
     ) -> QualityResult {
         return QualityResult(
             assetID: assetID,
+            creationDate: creationDate,
             verdict: .acceptable,
             signals: signals,
             safeGuardApplied: false,
@@ -214,6 +222,7 @@ struct QualityResult: Equatable {
     /// Safe Guard 적용 결과 생성
     static func safeGuarded(
         assetID: String,
+        creationDate: Date?,
         signals: [QualitySignal],
         reason: SafeGuardReason,
         analysisTimeMs: Double,
@@ -221,6 +230,7 @@ struct QualityResult: Equatable {
     ) -> QualityResult {
         return QualityResult(
             assetID: assetID,
+            creationDate: creationDate,
             verdict: .acceptable,
             signals: signals,
             safeGuardApplied: true,
@@ -233,10 +243,12 @@ struct QualityResult: Equatable {
     /// 건너뜀 결과 생성
     static func skipped(
         assetID: String,
+        creationDate: Date?,
         reason: SkipReason
     ) -> QualityResult {
         return QualityResult(
             assetID: assetID,
+            creationDate: creationDate,
             verdict: .skipped(reason: reason),
             signals: [],
             safeGuardApplied: false,

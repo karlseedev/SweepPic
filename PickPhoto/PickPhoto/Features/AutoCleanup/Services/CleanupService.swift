@@ -253,11 +253,21 @@ final class CleanupService: CleanupServiceProtocol {
         var scannedCount = 0
         var currentDate = Date()
 
+        // 50장 제한 도달 시 마지막 저품질 사진의 날짜 (이어서 정리용)
+        // nil이면 배치 마지막 asset의 날짜 사용
+        var lastLowQualityDate: Date?
+
         // 배치 단위로 처리
         let batchSize = CleanupConstants.batchSize
         var batchStartIndex = 0
+        let maxFoundCount = CleanupConstants.maxFoundCount
 
         while batchStartIndex < totalCount {
+            // 이미 50장을 찾았으면 더 이상 배치 분석하지 않음
+            if foundAssetIDs.count >= maxFoundCount {
+                break
+            }
+
             // 취소 체크
             if shouldCancel() {
                 let result = CleanupResult.cancelled(
@@ -294,14 +304,34 @@ final class CleanupService: CleanupServiceProtocol {
             )
 
             // 저품질 사진 수집 및 SKIP 통계
+            // - 결과는 원본 순서 보장됨 (analyzeBatch에서 정렬)
+            // - 50장 제한 체크하여 초과분은 추가하지 않음
             var batchFoundCount = 0
             var skipStats: [String: Int] = [:]  // SKIP 이유별 카운트
             var analyzedCount = 0
 
             for result in results {
                 if result.verdict.isLowQuality {
-                    foundAssetIDs.append(result.assetID)
-                    batchFoundCount += 1
+                    // 50장 제한 체크
+                    if foundAssetIDs.count < maxFoundCount {
+                        foundAssetIDs.append(result.assetID)
+                        batchFoundCount += 1
+
+                        // 50번째 도달 시 해당 사진의 날짜 기록 (이어서 정리용)
+                        // 이 날짜 이전부터 다음 정리가 시작되어야 버려진 사진도 다시 탐색됨
+                        if foundAssetIDs.count == maxFoundCount {
+                            lastLowQualityDate = result.creationDate
+
+                            #if DEBUG
+                            if let date = lastLowQualityDate {
+                                let df = DateFormatter()
+                                df.dateFormat = "yyyy-MM-dd HH:mm"
+                                print("[CleanupService] 50장 도달! 마지막 저품질 사진 날짜: \(df.string(from: date))")
+                            }
+                            #endif
+                        }
+                    }
+                    // 50장 이후는 추가하지 않음 (다음 이어서 정리에서 다시 탐색)
                 }
 
                 // SKIP 통계 수집
@@ -315,8 +345,15 @@ final class CleanupService: CleanupServiceProtocol {
             scannedCount += batchAssets.count
 
             // 현재 탐색 시점 업데이트
-            if let lastAsset = batchAssets.last, let creationDate = lastAsset.creationDate {
-                currentDate = creationDate
+            // - 50장 도달 전: 배치 마지막 asset의 날짜
+            // - 50장 도달 후: lastLowQualityDate 사용 (이어서 정리 시 버려진 사진도 다시 탐색)
+            if lastLowQualityDate == nil {
+                if let lastAsset = batchAssets.last, let creationDate = lastAsset.creationDate {
+                    currentDate = creationDate
+                }
+            } else {
+                // 50장 도달 시 마지막 저품질 사진의 날짜 사용
+                currentDate = lastLowQualityDate ?? currentDate
             }
 
             #if DEBUG

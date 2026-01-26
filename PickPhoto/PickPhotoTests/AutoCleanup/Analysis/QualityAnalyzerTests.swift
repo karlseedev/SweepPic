@@ -69,6 +69,7 @@ final class QualityAnalyzerTests: XCTestCase {
             // 저품질
             QualityResult.lowQuality(
                 assetID: "1",
+                creationDate: nil,
                 signals: [QualitySignal(kind: .extremeDark, measuredValue: 0.05, threshold: 0.10)],
                 analysisTimeMs: 10.0,
                 method: .metalPipeline
@@ -76,13 +77,14 @@ final class QualityAnalyzerTests: XCTestCase {
             // 정상
             QualityResult.acceptable(
                 assetID: "2",
+                creationDate: nil,
                 signals: [],
                 analysisTimeMs: 15.0,
                 method: .metalPipeline
             ),
             // SKIP
-            QualityResult.skipped(assetID: "3", reason: .favorite),
-            QualityResult.skipped(assetID: "4", reason: .screenshot)
+            QualityResult.skipped(assetID: "3", creationDate: nil, reason: .favorite),
+            QualityResult.skipped(assetID: "4", creationDate: nil, reason: .screenshot)
         ]
 
         // When
@@ -103,23 +105,26 @@ final class QualityAnalyzerTests: XCTestCase {
         let results: [QualityResult] = [
             QualityResult.lowQuality(
                 assetID: "1",
+                creationDate: nil,
                 signals: [QualitySignal(kind: .extremeDark, measuredValue: 0.05, threshold: 0.10)],
                 analysisTimeMs: 10.0,
                 method: .metalPipeline
             ),
             QualityResult.acceptable(
                 assetID: "2",
+                creationDate: nil,
                 signals: [],
                 analysisTimeMs: 15.0,
                 method: .metalPipeline
             ),
             QualityResult.lowQuality(
                 assetID: "3",
+                creationDate: nil,
                 signals: [QualitySignal(kind: .severeBlur, measuredValue: 30.0, threshold: 50.0)],
                 analysisTimeMs: 20.0,
                 method: .metalPipeline
             ),
-            QualityResult.skipped(assetID: "4", reason: .favorite)
+            QualityResult.skipped(assetID: "4", creationDate: nil, reason: .favorite)
         ]
 
         // When
@@ -165,6 +170,7 @@ final class QualityAnalyzerTests: XCTestCase {
         // Given
         let result = QualityResult.safeGuarded(
             assetID: "test",
+            creationDate: nil,
             signals: [QualitySignal(kind: .severeBlur, measuredValue: 30.0, threshold: 50.0)],
             reason: .clearFace,
             analysisTimeMs: 25.0,
