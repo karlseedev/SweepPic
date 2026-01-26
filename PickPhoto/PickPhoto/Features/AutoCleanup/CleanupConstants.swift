@@ -107,9 +107,11 @@ enum CleanupConstants {
     /// - < 1,000,000 픽셀 (1MP) → Weak 신호
     static let lowResolutionPixelCount = 1_000_000
 
-    /// 긴 비디오 기준 (초)
-    /// - > 600초 (10분) → 분석 제외 (SKIP)
-    static let longVideoDuration: Double = 600
+    /// 분석 대상 비디오 최대 길이 (초)
+    /// - 5초 이하: 프레임 3개 추출하여 분석
+    /// - 5초 초과: SKIP (의도적 촬영으로 간주)
+    /// - 근거: 주머니샷 등 실수 촬영은 짧은 영상에서만 발생
+    static let maxAnalyzableVideoDuration: Double = 5.0
 
     // MARK: - iOS 18+ AestheticsScore
 

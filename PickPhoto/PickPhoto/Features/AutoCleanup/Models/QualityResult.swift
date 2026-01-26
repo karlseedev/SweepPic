@@ -90,9 +90,9 @@ enum SkipReason: String, Codable, CaseIterable {
     /// - 원칙: 판단 불가 시 삭제 금지 (SKIP)
     case analysisError
 
-    /// 10분 초과 비디오
-    /// - 긴 비디오는 분석 제외
-    /// - duration > 600초
+    /// 5초 초과 비디오
+    /// - 5초 초과 비디오는 의도적 촬영으로 간주하여 분석 제외
+    /// - duration > 5초
     case longVideo
 
     /// isUtility (iOS 18+)

@@ -81,20 +81,20 @@ extension PHAsset {
         return pixelWidth * pixelHeight < CleanupConstants.lowResolutionPixelCount
     }
 
-    /// 긴 비디오 여부 확인
+    /// 분석 제외 대상 비디오 여부 확인
     ///
-    /// 10분(600초) 초과 비디오는 분석에서 제외.
+    /// 5초 초과 비디오는 의도적 촬영으로 간주하여 분석에서 제외.
     ///
-    /// - Returns: 10분 초과 비디오면 true
+    /// - Returns: 5초 초과 비디오면 true
     var isLongVideo: Bool {
         guard mediaType == .video else { return false }
-        return duration > CleanupConstants.longVideoDuration
+        return duration > CleanupConstants.maxAnalyzableVideoDuration
     }
 
     /// 분석 가능한 비디오인지 확인
     ///
     /// - 비디오 타입이어야 함
-    /// - 10분 이하여야 함
+    /// - 5초 이하여야 함 (주머니샷 등 실수 촬영 대상)
     ///
     /// - Returns: 분석 가능한 비디오면 true
     var isAnalyzableVideo: Bool {

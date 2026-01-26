@@ -58,8 +58,8 @@ struct MetadataFilter {
             return .screenshot
         }
 
-        // 6. 10분 초과 비디오
-        if asset.mediaType == .video && asset.duration > CleanupConstants.longVideoDuration {
+        // 6. 5초 초과 비디오 (의도적 촬영으로 간주)
+        if asset.mediaType == .video && asset.duration > CleanupConstants.maxAnalyzableVideoDuration {
             return .longVideo
         }
 

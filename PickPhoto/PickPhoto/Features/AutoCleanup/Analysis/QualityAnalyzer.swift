@@ -11,6 +11,10 @@
 //  - Stage 4: Safe Guard 체크 (SafeGuardChecker)
 //  - 최종 판정 및 결과 생성
 //
+//  동영상 처리:
+//  - 5초 이하: 프레임 3개 추출 (10%/50%/90%), 중앙값 판정
+//  - 5초 초과: SKIP (MetadataFilter에서 처리)
+//
 
 import Foundation
 import Photos
@@ -19,6 +23,7 @@ import Photos
 ///
 /// 개별 사진의 품질을 분석하여 저품질 여부를 판정합니다.
 /// 4단계 파이프라인을 통해 분석을 수행합니다.
+/// 동영상의 경우 프레임 3개 추출 후 중앙값 판정.
 final class QualityAnalyzer {
 
     // MARK: - Singleton
@@ -43,6 +48,9 @@ final class QualityAnalyzer {
     /// 이미지 로더 (기존 SimilarityImageLoader 재사용)
     private let imageLoader: SimilarityImageLoader
 
+    /// 동영상 프레임 추출기
+    private let videoFrameExtractor: VideoFrameExtractor
+
     /// 판정 모드
     private(set) var mode: JudgmentMode = .precision
 
@@ -55,18 +63,21 @@ final class QualityAnalyzer {
     ///   - blurAnalyzer: 블러 분석기
     ///   - safeGuardChecker: Safe Guard 체커
     ///   - imageLoader: 이미지 로더
+    ///   - videoFrameExtractor: 동영상 프레임 추출기
     init(
         metadataFilter: MetadataFilter = MetadataFilter(),
         exposureAnalyzer: ExposureAnalyzer = .shared,
         blurAnalyzer: BlurAnalyzer = .shared,
         safeGuardChecker: SafeGuardChecker = .shared,
-        imageLoader: SimilarityImageLoader = .shared
+        imageLoader: SimilarityImageLoader = .shared,
+        videoFrameExtractor: VideoFrameExtractor = .shared
     ) {
         self.metadataFilter = metadataFilter
         self.exposureAnalyzer = exposureAnalyzer
         self.blurAnalyzer = blurAnalyzer
         self.safeGuardChecker = safeGuardChecker
         self.imageLoader = imageLoader
+        self.videoFrameExtractor = videoFrameExtractor
     }
 
     // MARK: - Configuration
@@ -79,12 +90,13 @@ final class QualityAnalyzer {
 
     // MARK: - Public Methods
 
-    /// 단일 사진 분석
+    /// 단일 사진/동영상 분석
     ///
     /// - Parameter asset: 분석할 PHAsset
     /// - Returns: 품질 분석 결과
     ///
     /// - Note: Stage 1~4 순차 수행, 에러 발생 시 SKIP 처리
+    /// - Note: 동영상은 프레임 3개 추출 후 중앙값 판정
     func analyze(_ asset: PHAsset) async -> QualityResult {
         let startTime = CFAbsoluteTimeGetCurrent()
         let assetID = asset.localIdentifier
@@ -93,6 +105,11 @@ final class QualityAnalyzer {
         // Stage 1: 메타데이터 필터링
         if let skipReason = metadataFilter.shouldAnalyze(asset) {
             return QualityResult.skipped(assetID: assetID, creationDate: creationDate, reason: skipReason)
+        }
+
+        // 동영상 분기 처리 (5초 이하만 여기까지 도달)
+        if asset.mediaType == .video {
+            return await analyzeVideo(asset, startTime: startTime)
         }
 
         // 해상도 체크 (Recall 모드)
@@ -253,6 +270,129 @@ final class QualityAnalyzer {
     }
 
     // MARK: - Private Methods
+
+    /// 동영상 분석 (프레임 3개 추출, 중앙값 판정)
+    ///
+    /// - Parameters:
+    ///   - asset: 분석할 동영상 PHAsset
+    ///   - startTime: 분석 시작 시간 (성능 측정용)
+    /// - Returns: 품질 분석 결과
+    ///
+    /// - Note: 2개 이상 저품질 프레임 → LOW_QUALITY
+    private func analyzeVideo(_ asset: PHAsset, startTime: CFAbsoluteTime) async -> QualityResult {
+        let assetID = asset.localIdentifier
+        let creationDate = asset.creationDate
+
+        // 프레임 추출
+        let frames: [CGImage]
+        do {
+            frames = try await videoFrameExtractor.extractFrames(from: asset)
+        } catch {
+            // 프레임 추출 실패 → SKIP
+            #if DEBUG
+            print("[QualityAnalyzer] 동영상 프레임 추출 실패: \(error.localizedDescription)")
+            #endif
+
+            if let extractError = error as? VideoFrameExtractError {
+                switch extractError {
+                case .iCloudOnly:
+                    return QualityResult.skipped(assetID: assetID, creationDate: creationDate, reason: .iCloudOnly)
+                default:
+                    return QualityResult.skipped(assetID: assetID, creationDate: creationDate, reason: .analysisError)
+                }
+            }
+            return QualityResult.skipped(assetID: assetID, creationDate: creationDate, reason: .analysisError)
+        }
+
+        // 각 프레임 분석
+        var lowQualityCount = 0
+        var allSignals: [QualitySignal] = []
+
+        for frame in frames {
+            let frameResult = analyzeFrame(frame)
+            allSignals.append(contentsOf: frameResult.signals)
+
+            if frameResult.isLowQuality {
+                lowQualityCount += 1
+            }
+        }
+
+        let analysisTimeMs = (CFAbsoluteTimeGetCurrent() - startTime) * 1000
+        let analysisMethod: AnalysisMethod = blurAnalyzer.isAvailable ? .metalPipeline : .fallback
+
+        // 중앙값 판정: 2개 이상 저품질 → LOW_QUALITY
+        let isLowQuality = lowQualityCount >= 2
+
+        #if DEBUG
+        print("[QualityAnalyzer] 동영상 분석: \(frames.count)프레임, 저품질=\(lowQualityCount), 판정=\(isLowQuality ? "LOW" : "OK")")
+        #endif
+
+        if isLowQuality {
+            return QualityResult.lowQuality(
+                assetID: assetID,
+                creationDate: creationDate,
+                signals: allSignals,
+                analysisTimeMs: analysisTimeMs,
+                method: analysisMethod
+            )
+        }
+
+        return QualityResult.acceptable(
+            assetID: assetID,
+            creationDate: creationDate,
+            signals: allSignals,
+            analysisTimeMs: analysisTimeMs,
+            method: analysisMethod
+        )
+    }
+
+    /// 단일 프레임 분석 (노출 + 블러)
+    ///
+    /// - Parameter frame: 분석할 CGImage
+    /// - Returns: (저품질 여부, 신호 배열)
+    private func analyzeFrame(_ frame: CGImage) -> (isLowQuality: Bool, signals: [QualitySignal]) {
+        var signals: [QualitySignal] = []
+
+        // 노출 분석
+        do {
+            let exposureMetrics = try exposureAnalyzer.analyze(frame)
+            let exposureSignals = exposureAnalyzer.detectSignals(from: exposureMetrics, mode: mode)
+            signals.append(contentsOf: exposureSignals)
+        } catch {
+            #if DEBUG
+            print("[QualityAnalyzer] 프레임 노출 분석 실패: \(error.localizedDescription)")
+            #endif
+        }
+
+        // 블러 분석
+        do {
+            let blurMetrics: BlurMetrics
+            if blurAnalyzer.isAvailable {
+                blurMetrics = try blurAnalyzer.analyze(frame)
+            } else {
+                blurMetrics = try blurAnalyzer.analyzeCPU(frame)
+            }
+            let blurSignals = blurAnalyzer.detectSignals(from: blurMetrics, mode: mode)
+            signals.append(contentsOf: blurSignals)
+        } catch {
+            #if DEBUG
+            print("[QualityAnalyzer] 프레임 블러 분석 실패: \(error.localizedDescription)")
+            #endif
+        }
+
+        // 판정 (동영상에서는 Safe Guard 적용 안 함)
+        let isLowQuality: Bool
+        switch mode {
+        case .precision:
+            isLowQuality = signals.hasStrongSignal
+        case .recall:
+            isLowQuality = signals.hasStrongSignal ||
+                           signals.hasConditionalSignal ||
+                           signals.hasEnoughWeakSignals
+        }
+
+        return (isLowQuality, signals)
+    }
 
     /// 최종 판정 생성
     private func makeVerdict(
