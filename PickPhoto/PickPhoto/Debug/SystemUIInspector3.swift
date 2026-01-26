@@ -167,7 +167,15 @@ final class LayerInfo: Codable {
 
     // Private
     let backdrop: BackdropInfo?
+    let portal: PortalInfo?      // CAPortalLayer 전용
+    let sdf: SDFInfo?            // CASDFLayer 전용
     let pvt: [String: String]?
+
+    // 추가 속성 (기본값 아닌 것만)
+    let masksToBounds: Bool?     // false면 생략
+    let hasContents: Bool?       // nil이면 생략, 있으면 true
+    let contentsGravity: String? // resize면 생략
+    let contentsScale: CGFloat?  // 화면 스케일이면 생략
 
     init(cls: String, name: String?, frame: FrameInfo, zPos: CGFloat?, anchor: PointInfo?,
          anchorZ: CGFloat?, scale: CGFloat?, transform: [CGFloat]?, subTransform: [CGFloat]?,
@@ -176,7 +184,8 @@ final class LayerInfo: Codable {
          bgColor: ColorInfo?, shadowColor: ColorInfo?, shadowOpacity: Float?, shadowRadius: CGFloat?,
          shadowOffset: SizeInfo?, filters: [FilterInfo]?, bgFilters: [FilterInfo]?, compFilter: String?,
          mask: LayerInfo?, sublayers: [LayerInfo]?, anims: [AnimInfo]?, backdrop: BackdropInfo?,
-         pvt: [String: String]?) {
+         portal: PortalInfo?, sdf: SDFInfo?, pvt: [String: String]?,
+         masksToBounds: Bool?, hasContents: Bool?, contentsGravity: String?, contentsScale: CGFloat?) {
         self.cls = cls; self.name = name; self.frame = frame; self.zPos = zPos
         self.anchor = anchor; self.anchorZ = anchorZ; self.scale = scale
         self.transform = transform; self.subTransform = subTransform
@@ -187,7 +196,9 @@ final class LayerInfo: Codable {
         self.shadowRadius = shadowRadius; self.shadowOffset = shadowOffset
         self.filters = filters; self.bgFilters = bgFilters; self.compFilter = compFilter
         self.mask = mask; self.sublayers = sublayers; self.anims = anims
-        self.backdrop = backdrop; self.pvt = pvt
+        self.backdrop = backdrop; self.portal = portal; self.sdf = sdf; self.pvt = pvt
+        self.masksToBounds = masksToBounds; self.hasContents = hasContents
+        self.contentsGravity = contentsGravity; self.contentsScale = contentsScale
     }
 }
 
@@ -211,6 +222,27 @@ struct BackdropInfo: Codable {
     let scale: CGFloat?
     let groupName: String?
     let captureOnly: Bool?
+    // 추가 속성
+    let blurRadius: CGFloat?
+    let saturation: CGFloat?
+    let zoom: CGFloat?
+}
+
+/// CAPortalLayer 정보
+struct PortalInfo: Codable {
+    let sourceLayerClass: String?
+    let hidesSourceLayer: Bool?
+    let matchesOpacity: Bool?
+    let matchesPosition: Bool?
+    let matchesTransform: Bool?
+}
+
+/// CASDFLayer 정보
+struct SDFInfo: Codable {
+    let shape: String?
+    let fillColor: ColorInfo?
+    let strokeColor: ColorInfo?
+    let strokeWidth: CGFloat?
 }
 
 /// 메타데이터
@@ -241,9 +273,15 @@ final class SystemUIInspector3 {
     private var inspectionCount = 0
 
     private let filterParamKeys = [
+        // 기본 파라미터
         "inputRadius", "inputAmount", "inputScale", "inputAngle",
         "inputNormalizeEdges", "inputHardEdges", "inputQuality",
-        "inputThreshold", "inputReversed", "inputColorMatrix"
+        "inputThreshold", "inputReversed", "inputColorMatrix",
+        // 추가 파라미터 (displacementMap, opacityPair 등)
+        "inputImage", "inputScaleX", "inputScaleY", "inputCenter",
+        "inputOpacity", "inputOpacity0", "inputOpacity1",
+        "inputSaturation", "inputBrightness", "inputContrast",
+        "inputMaskImage", "inputDisplacementImage"
     ]
 
     private let maxLinesPerFile = 2000
@@ -695,6 +733,25 @@ final class SystemUIInspector3 {
             shadowOffset = SizeInfo(width: sanitize(layer.shadowOffset.width), height: sanitize(layer.shadowOffset.height))
         }
 
+        // Portal info (CAPortalLayer 전용)
+        var portalInfo: PortalInfo? = nil
+        if typeName.contains("Portal") {
+            let ns = layer as NSObject
+            portalInfo = extractPortalInfo(ns)
+        }
+
+        // SDF info (CASDFLayer 전용)
+        var sdfInfo: SDFInfo? = nil
+        if typeName.contains("SDF") {
+            let ns = layer as NSObject
+            sdfInfo = extractSDFInfo(ns)
+        }
+
+        // 추가 속성
+        let hasCont = layer.contents != nil
+        let gravity = layer.contentsGravity.rawValue
+        let screenScale = UIScreen.main.scale
+
         return LayerInfo(
             cls: typeName,
             name: layer.name,
@@ -725,7 +782,13 @@ final class SystemUIInspector3 {
             sublayers: sublayersInfo,
             anims: anims,
             backdrop: backdrop,
-            pvt: pvt
+            portal: portalInfo,
+            sdf: sdfInfo,
+            pvt: pvt,
+            masksToBounds: layer.masksToBounds ? true : nil,
+            hasContents: hasCont ? true : nil,
+            contentsGravity: gravity != "resize" ? gravity : nil,
+            contentsScale: abs(layer.contentsScale - screenScale) > 0.01 ? sanitize(layer.contentsScale) : nil
         )
     }
 
@@ -812,20 +875,31 @@ final class SystemUIInspector3 {
 
     private func extractPrivateViewProperties(_ view: UIView) -> [String: String]? {
         var props: [String: String] = [:]
-        let keys = ["warpsContentBelow", "liftedContentMode", "hasCustomRestingBackground"]
-        for key in keys {
-            if let value = view.value(forKey: key) {
-                props[key] = String(describing: value)
+        let className = NSStringFromClass(type(of: view))
+
+        // _UILiquidLensView 전용 키들 - 해당 클래스에서만 접근
+        if className.contains("LiquidLens") {
+            let liquidLensKeys = ["warpsContentBelow", "liftedContentMode", "hasCustomRestingBackground"]
+            for key in liquidLensKeys {
+                let selector = NSSelectorFromString(key)
+                if (view as NSObject).responds(to: selector),
+                   let value = view.value(forKey: key) {
+                    props[key] = String(describing: value)
+                }
             }
         }
+
         return props.isEmpty ? nil : props
     }
 
     private func extractPrivateLayerProperties(_ layer: CALayer) -> [String: String] {
         var props: [String: String] = [:]
         let keys = ["allowsGroupBlending", "continuousCorners"]
+        let ns = layer as NSObject
         for key in keys {
-            if let value = (layer as NSObject).value(forKey: key) {
+            let selector = NSSelectorFromString(key)
+            if ns.responds(to: selector),
+               let value = ns.value(forKey: key) {
                 props[key] = String(describing: value)
             }
         }
@@ -834,11 +908,78 @@ final class SystemUIInspector3 {
 
     private func extractBackdropProperties(_ layer: CALayer) -> BackdropInfo {
         let ns = layer as NSObject
-        return BackdropInfo(
-            scale: ns.value(forKey: "scale") as? CGFloat,
-            groupName: ns.value(forKey: "groupName") as? String,
-            captureOnly: ns.value(forKey: "captureOnly") as? Bool
-        )
+
+        // responds(to:) 체크 후 안전하게 접근
+        let scale: CGFloat? = ns.responds(to: NSSelectorFromString("scale"))
+            ? ns.value(forKey: "scale") as? CGFloat : nil
+        let groupName: String? = ns.responds(to: NSSelectorFromString("groupName"))
+            ? ns.value(forKey: "groupName") as? String : nil
+        let captureOnly: Bool? = ns.responds(to: NSSelectorFromString("captureOnly"))
+            ? ns.value(forKey: "captureOnly") as? Bool : nil
+
+        // 추가 속성
+        let blurRadius: CGFloat? = ns.responds(to: NSSelectorFromString("blurRadius"))
+            ? ns.value(forKey: "blurRadius") as? CGFloat : nil
+        let saturation: CGFloat? = ns.responds(to: NSSelectorFromString("saturationAmount"))
+            ? ns.value(forKey: "saturationAmount") as? CGFloat : nil
+        let zoom: CGFloat? = ns.responds(to: NSSelectorFromString("zoom"))
+            ? ns.value(forKey: "zoom") as? CGFloat : nil
+
+        return BackdropInfo(scale: scale, groupName: groupName, captureOnly: captureOnly,
+                           blurRadius: blurRadius, saturation: saturation, zoom: zoom)
+    }
+
+    private func extractPortalInfo(_ ns: NSObject) -> PortalInfo? {
+        // sourceLayer의 클래스 이름
+        var sourceClass: String? = nil
+        if ns.responds(to: NSSelectorFromString("sourceLayer")),
+           let source = ns.value(forKey: "sourceLayer") {
+            sourceClass = String(describing: type(of: source))
+        }
+
+        let hides = ns.responds(to: NSSelectorFromString("hidesSourceLayer"))
+            ? ns.value(forKey: "hidesSourceLayer") as? Bool : nil
+        let matchOp = ns.responds(to: NSSelectorFromString("matchesOpacity"))
+            ? ns.value(forKey: "matchesOpacity") as? Bool : nil
+        let matchPos = ns.responds(to: NSSelectorFromString("matchesPosition"))
+            ? ns.value(forKey: "matchesPosition") as? Bool : nil
+        let matchTr = ns.responds(to: NSSelectorFromString("matchesTransform"))
+            ? ns.value(forKey: "matchesTransform") as? Bool : nil
+
+        // 아무 것도 없으면 nil
+        if sourceClass == nil && hides == nil && matchOp == nil && matchPos == nil && matchTr == nil {
+            return nil
+        }
+
+        return PortalInfo(sourceLayerClass: sourceClass, hidesSourceLayer: hides,
+                         matchesOpacity: matchOp, matchesPosition: matchPos, matchesTransform: matchTr)
+    }
+
+    private func extractSDFInfo(_ ns: NSObject) -> SDFInfo? {
+        let shape = ns.responds(to: NSSelectorFromString("shape"))
+            ? ns.value(forKey: "shape") as? String : nil
+
+        var fillColor: ColorInfo? = nil
+        if ns.responds(to: NSSelectorFromString("fillColor")),
+           let cgColor = ns.value(forKey: "fillColor") as? CGColor {
+            fillColor = extractCGColor(cgColor)
+        }
+
+        var strokeColor: ColorInfo? = nil
+        if ns.responds(to: NSSelectorFromString("strokeColor")),
+           let cgColor = ns.value(forKey: "strokeColor") as? CGColor {
+            strokeColor = extractCGColor(cgColor)
+        }
+
+        let strokeWidth = ns.responds(to: NSSelectorFromString("strokeWidth"))
+            ? ns.value(forKey: "strokeWidth") as? CGFloat : nil
+
+        // 아무 것도 없으면 nil
+        if shape == nil && fillColor == nil && strokeColor == nil && strokeWidth == nil {
+            return nil
+        }
+
+        return SDFInfo(shape: shape, fillColor: fillColor, strokeColor: strokeColor, strokeWidth: strokeWidth)
     }
 
     private func getKeyWindow() -> UIWindow? {
@@ -873,10 +1014,16 @@ final class SystemUIInspector3 {
         var topVC = rootVC
         while let presented = topVC.presentedViewController { topVC = presented }
 
-        let message = files.prefix(5).joined(separator: "\n") + (files.count > 5 ? "\n..." : "")
+        let docsPath = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first?.path ?? ""
+        let fileList = files.prefix(5).joined(separator: "\n") + (files.count > 5 ? "\n..." : "")
+        let message = "경로: \(docsPath)\n\n\(fileList)"
+
         let alert = UIAlertController(title: "덤프 완료 (\(files.count)개)", message: message, preferredStyle: .alert)
         alert.addAction(UIAlertAction(title: "확인", style: .default))
         topVC.present(alert, animated: true)
+
+        // 콘솔에도 경로 출력
+        print("Documents 경로: \(docsPath)")
     }
 }
 
