@@ -112,9 +112,111 @@ po [(UIView *)0x주소 layer].shadowOpacity
 
 ---
 
-## 4. LLDB 명령어 정리
+## 4. 앱 내 디버그 버튼 방식 (권장)
 
-### 4.1. 전체 덤프 (핵심)
+LLDB 직접 사용 없이, 앱 내에서 버튼으로 속성 덤프를 수행하는 방법.
+
+### 4.1. 장점
+
+| 항목 | LLDB 직접 | 앱 내 버튼 |
+|------|----------|-----------|
+| SIP 비활성화 | 시스템 앱 시 필요 | **불필요** |
+| LLDB 숙련도 | 필요 | **불필요** |
+| 여러 화면 조사 | 매번 주소 찾기 | **버튼만 누르면 됨** |
+| 결과 저장 | 수동 복사 | **자동 파일 저장** |
+
+### 4.2. 원리
+
+`_ivarDescription`은 Objective-C 런타임 메서드라서 앱 코드에서도 호출 가능:
+
+```swift
+// perform(Selector)로 private 메서드 호출 - LLDB와 100% 동일
+let selector = Selector(("_ivarDescription"))
+let desc = view.perform(selector)?.takeUnretainedValue() as? String
+```
+
+> **주의**: `value(forKey:)`는 KVC 규칙을 따르므로 동작이 다를 수 있음. `perform(Selector)` 사용 권장.
+
+### 4.3. 구현 파일
+
+#### 신규 생성 파일 (권장)
+
+| 파일 | 용도 |
+|------|------|
+| `PickPhoto/PickPhoto/Debug/SystemUIInspector2.swift` | `_ivarDescription` 기반 완전 덤프 |
+
+#### 기존 파일 (참고용, 불완전)
+
+| 파일 | 용도 | 비고 |
+|------|------|------|
+| `PickPhoto/PickPhoto/Debug/SystemUIInspector.swift` | CALayer 속성 수동 덤프 | `_ivarDescription` 미사용, 속성 누락 가능 |
+
+> **주의**: 기존 `SystemUIInspector.swift`는 `class_copyIvarList` + 수동 필터링 방식이라 속성 누락 발생.
+> 새로 만든 `SystemUIInspector2.swift`는 `_ivarDescription`으로 상속 포함 모든 ivar 자동 덤프.
+
+### 4.4. 활성화 방법
+
+**SceneDelegate.swift**의 `showMainInterface()` 함수 끝에 추가:
+
+```swift
+// PickPhoto/PickPhoto/App/SceneDelegate.swift - showMainInterface() 함수 내
+
+// UI 속성 조사용 디버그 버튼 (260125inspect.md 참고)
+#if DEBUG
+SystemUIInspector2.shared.showDebugButton()
+#endif
+```
+
+### 4.5. 사용 방법
+
+1. **디버그 빌드**로 앱 실행 (iOS 26 시뮬레이터)
+2. 조사할 화면으로 이동 (그리드, 뷰어, 유사사진 등)
+3. 화면 가운데 **🔬 Full Dump 버튼** 탭
+4. 덤프 완료 알림 확인
+5. 저장된 파일 확인
+
+### 4.6. 저장 파일 위치
+
+```bash
+# 시뮬레이터 Documents 폴더
+open $(xcrun simctl get_app_container booted com.pickphoto.app data)/Documents/
+
+# 또는 앱 내 Files 앱에서 확인 가능
+```
+
+저장 파일 (2개):
+- `ui_dump_[타임스탬프]_[번호]_filtered.txt` - UI 관련 속성만 (주로 볼 파일)
+- `ui_dump_[타임스탬프]_[번호]_full.txt` - 전체 ivar (누락 대비)
+
+### 4.7. 조사 대상 뷰
+
+자동으로 다음 클래스명 패턴을 포함하는 뷰를 찾아 덤프:
+
+| 패턴 | 매칭 예시 |
+|------|----------|
+| `UITabBar` | UITabBar |
+| `UINavigationBar` | UINavigationBar |
+| `UIToolbar` | UIToolbar |
+| `_UITabBarPlatterView` | _UITabBarPlatterView |
+| `_UITabBarItemView` | _UITabBarItemView |
+| `_UINavigationBarBackground` | _UINavigationBarBackground |
+| `_UIBarBackground` | _UIBarBackground |
+| `PlatterView` | _UITabBarPlatterView 등 |
+| `GlassView` | _UIClearGlassView 등 |
+| `LiquidGlass` | _UILiquidGlassView 등 |
+| `UICollectionView` | UICollectionView |
+
+### 4.8. 주의사항
+
+- **#if DEBUG** 전용 - 릴리스 빌드에서 자동 제외
+- Private API 사용 - App Store 제출 시 문제 없음 (디버그 전용이므로)
+- 기존 `SystemUIInspector.swift`는 삭제하지 않음 (이전 조사 결과 참고용)
+
+---
+
+## 5. LLDB 명령어 정리
+
+### 5.1. 전체 덤프 (핵심)
 
 ```lldb
 # 모든 ivar (상속 포함)
@@ -127,7 +229,7 @@ po [[view class] _propertyDescription]
 po [view _shortMethodDescription]
 ```
 
-### 4.2. Swift 컨텍스트에서 사용
+### 5.2. Swift 컨텍스트에서 사용
 
 ```lldb
 # Objective-C 언어 지정
@@ -137,7 +239,7 @@ expression -l objc -O -- [view _ivarDescription]
 po view.value(forKey: "_ivarDescription")
 ```
 
-### 4.3. ~/.lldbinit 설정
+### 5.3. ~/.lldbinit 설정
 
 ```lldb
 # 전체 ivar 덤프 단축
@@ -149,14 +251,14 @@ command alias methods expression -l objc -O -- [%1 _shortMethodDescription]
 
 ---
 
-## 5. class-dump (클래스 구조 파악)
+## 6. class-dump (클래스 구조 파악)
 
-### 5.1. 용도
+### 6.1. 용도
 
 - **조사 전**: Private 클래스에 어떤 속성이 있는지 **목록** 파악
 - **조사 후**: `_ivarDescription` 결과와 비교하여 누락 확인
 
-### 5.2. 사용법
+### 6.2. 사용법
 
 ```bash
 # 설치
@@ -169,7 +271,7 @@ class-dump /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platfor
 class-dump -C "_UITabBar.*" /path/to/UIKitCore -H -o ~/Desktop/tabbar-headers
 ```
 
-### 5.3. 출력 예시 (`_UITabBarPlatterView.h`)
+### 6.3. 출력 예시 (`_UITabBarPlatterView.h`)
 
 ```objc
 @interface _UITabBarPlatterView : UIView {
@@ -192,7 +294,7 @@ class-dump -C "_UITabBar.*" /path/to/UIKitCore -H -o ~/Desktop/tabbar-headers
 
 ---
 
-## 6. 다른 도구들의 역할
+## 7. 다른 도구들의 역할
 
 | 도구 | 역할 | LLDB 대비 |
 |------|------|----------|
@@ -205,7 +307,7 @@ class-dump -C "_UITabBar.*" /path/to/UIKitCore -H -o ~/Desktop/tabbar-headers
 
 ---
 
-## 7. 참고 문서
+## 8. 참고 문서
 
 ### Private 디버깅 메서드
 - [Apple Forums - Debugging all properties](https://developer.apple.com/forums/thread/121628)

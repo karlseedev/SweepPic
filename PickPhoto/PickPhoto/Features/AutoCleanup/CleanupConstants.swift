@@ -146,13 +146,57 @@ enum CleanupConstants {
     /// 휴지통 비어있지 않음 메시지
     static let trashNotEmptyMessage = "휴지통을 먼저 비워주세요"
 
-    /// 결과 메시지 - N장 이동
-    static func resultMessage(count: Int) -> String {
-        return "\(count)장의 정리할 사진을 휴지통으로 이동했습니다"
-    }
+    /// 결과 메시지 생성
+    ///
+    /// EndReason과 발견 수, 정리 방식에 따라 적절한 메시지 반환
+    ///
+    /// - Parameters:
+    ///   - endReason: 종료 사유
+    ///   - foundCount: 발견된 저품질 사진 수
+    ///   - method: 정리 방식 (연도별인 경우 연도 표시용)
+    /// - Returns: 사용자에게 표시할 결과 메시지
+    static func resultMessage(
+        endReason: EndReason,
+        foundCount: Int,
+        method: CleanupMethod
+    ) -> String {
+        switch (endReason, foundCount) {
+        // 1. 50장 발견
+        case (.maxFound, _):
+            return "50장의 정리할 사진을 찾았습니다.\n더 찾으려면 '이어서 정리'를 사용하세요."
 
-    /// 결과 메시지 - 0장 발견
-    static let noneFoundMessage = "정리할 사진을 찾지 못했습니다"
+        // 2. 1,000장 검색 + N장 발견
+        case (.maxScanned, let n) where n > 0:
+            return "1,000장을 검색하여 \(n)장을 찾았습니다.\n더 찾으려면 '이어서 정리'를 사용하세요."
+
+        // 3. 1,000장 검색 + 0장 발견
+        case (.maxScanned, 0):
+            return "1,000장을 검색했지만 정리할 사진이 없습니다.\n더 검색하려면 '이어서 정리'를 사용하세요."
+
+        // 4, 5. 범위 끝 + N장 발견
+        case (.endOfRange, let n) where n > 0:
+            if case .byYear(let year) = method {
+                return "\(year)년의 마지막 사진까지 검색하여 \(n)장을 찾았습니다."
+            } else {
+                return "마지막 사진까지 검색하여 \(n)장을 찾았습니다."
+            }
+
+        // 6, 7. 범위 끝 + 0장 발견
+        case (.endOfRange, 0):
+            if case .byYear(let year) = method {
+                return "\(year)년의 마지막 사진까지 검색했지만 정리할 사진이 없습니다."
+            } else {
+                return "보관함의 마지막 사진까지 검색했지만 정리할 사진이 없습니다."
+            }
+
+        // 취소 (메시지 없음)
+        case (.userCancelled, _):
+            return ""
+
+        default:
+            return ""
+        }
+    }
 }
 
 // MARK: - Debug 확장

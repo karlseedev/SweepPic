@@ -170,18 +170,6 @@ struct CleanupResult: Equatable {
 
 extension CleanupResult {
 
-    /// UI에 표시할 결과 메시지
-    var displayMessage: String {
-        switch resultType {
-        case .completed(let count):
-            return CleanupConstants.resultMessage(count: count)
-        case .noneFound:
-            return CleanupConstants.noneFoundMessage
-        case .cancelled:
-            return ""  // 취소 시 메시지 없음 (즉시 종료)
-        }
-    }
-
     /// 휴지통 보기 버튼 표시 여부
     /// - 1장 이상 이동했을 때만 표시
     var shouldShowTrashButton: Bool {

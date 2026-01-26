@@ -58,18 +58,8 @@ final class CleanupMethodSheet {
     /// 시트 표시
     /// - Parameter viewController: 표시할 ViewController
     func present(from viewController: UIViewController) {
-        // self를 강참조하여 Task 완료까지 유지
-        // (로컬 변수로 생성된 sheet가 Task 완료 전에 해제되는 것을 방지)
-        let strongSelf = self
-
-        // 연도 목록 가져오기 (백그라운드에서)
-        Task {
-            strongSelf.availableYears = await strongSelf.fetchAvailableYears()
-
-            await MainActor.run {
-                strongSelf.showMainActionSheet(from: viewController)
-            }
-        }
+        // 메인 ActionSheet 바로 표시 (연도 목록은 "연도별 정리" 선택 시 로드)
+        showMainActionSheet(from: viewController)
     }
 
     // MARK: - Private Methods
@@ -113,15 +103,13 @@ final class CleanupMethodSheet {
         }
         alert.addAction(continueAction)
 
-        // 연도별 정리
-        if !availableYears.isEmpty {
-            alert.addAction(UIAlertAction(
-                title: "연도별 정리",
-                style: .default
-            ) { [self] _ in
-                self.showYearSelectionSheet(from: viewController)
-            })
-        }
+        // 연도별 정리 (선택 시 연도 목록 로드)
+        alert.addAction(UIAlertAction(
+            title: "연도별 정리",
+            style: .default
+        ) { [self] _ in
+            self.loadYearsAndShowSelection(from: viewController)
+        })
 
         // 취소
         alert.addAction(UIAlertAction(
@@ -147,6 +135,48 @@ final class CleanupMethodSheet {
         }
 
         viewController.present(alert, animated: true)
+    }
+
+    /// 연도 목록 로드 후 연도 선택 시트 표시
+    /// - 로딩 Alert 표시하며 전체 사진에서 연도 목록 추출
+    private func loadYearsAndShowSelection(from viewController: UIViewController) {
+        // 로딩 Alert 생성
+        let loadingAlert = UIAlertController(
+            title: nil,
+            message: "사진별 연도 목록 확인 중",
+            preferredStyle: .alert
+        )
+
+        // ActivityIndicator 추가
+        let indicator = UIActivityIndicatorView(style: .medium)
+        indicator.translatesAutoresizingMaskIntoConstraints = false
+        indicator.startAnimating()
+
+        loadingAlert.view.addSubview(indicator)
+
+        NSLayoutConstraint.activate([
+            indicator.centerYAnchor.constraint(equalTo: loadingAlert.view.centerYAnchor),
+            indicator.leadingAnchor.constraint(equalTo: loadingAlert.view.leadingAnchor, constant: 20),
+            loadingAlert.view.heightAnchor.constraint(greaterThanOrEqualToConstant: 80)
+        ])
+
+        // 로딩 Alert 표시
+        viewController.present(loadingAlert, animated: true)
+
+        // self 강참조로 Task 완료까지 유지
+        let strongSelf = self
+
+        // 백그라운드에서 연도 목록 로드
+        Task {
+            strongSelf.availableYears = await strongSelf.fetchAvailableYears()
+
+            await MainActor.run {
+                // 로딩 Alert 닫고 연도 선택 시트 표시
+                loadingAlert.dismiss(animated: true) {
+                    strongSelf.showYearSelectionSheet(from: viewController)
+                }
+            }
+        }
     }
 
     /// 연도 선택 ActionSheet 표시
@@ -211,6 +241,7 @@ final class CleanupMethodSheet {
     }
 
     /// 사진이 있는 연도 목록 가져오기
+    /// - 전체 사진에서 연도 추출 (로딩 Alert과 함께 사용)
     private func fetchAvailableYears() async -> [Int] {
         return await withCheckedContinuation { continuation in
             var years = Set<Int>()
@@ -218,14 +249,10 @@ final class CleanupMethodSheet {
             let options = PHFetchOptions()
             options.sortDescriptors = [NSSortDescriptor(key: "creationDate", ascending: false)]
 
-            // 최근 사진 1000장에서 연도 추출 (성능 고려)
+            // 전체 사진에서 연도 추출
             let fetchResult = PHAsset.fetchAssets(with: options)
-            let count = min(fetchResult.count, 1000)
 
-            fetchResult.enumerateObjects(
-                at: IndexSet(integersIn: 0..<count),
-                options: []
-            ) { asset, _, _ in
+            fetchResult.enumerateObjects { asset, _, _ in
                 if let date = asset.creationDate {
                     let year = Calendar.current.component(.year, from: date)
                     years.insert(year)

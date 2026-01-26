@@ -178,7 +178,7 @@ extension GridViewController {
 
                 await MainActor.run {
                     progressView.hide { [weak self] in
-                        self?.showCleanupResult(result)
+                        self?.showCleanupResult(result, method: method)
                     }
                 }
             } catch let error as CleanupError {
@@ -198,23 +198,24 @@ extension GridViewController {
     }
 
     /// 정리 결과 표시
-    private func showCleanupResult(_ result: CleanupResult) {
+    ///
+    /// EndReason과 발견 수에 따라 적절한 메시지 표시
+    /// - Parameters:
+    ///   - result: 정리 결과
+    ///   - method: 정리 방식 (연도별인 경우 연도 표시용)
+    private func showCleanupResult(_ result: CleanupResult, method: CleanupMethod) {
         // 취소된 경우 알림 없음
         if case .cancelled = result.resultType {
             return
         }
 
         let title = "정리 완료"
-        let message: String
-        let showTrashButton: Bool
-
-        if result.trashedAssetIDs.count > 0 {
-            message = CleanupConstants.resultMessage(count: result.trashedAssetIDs.count)
-            showTrashButton = true
-        } else {
-            message = CleanupConstants.noneFoundMessage
-            showTrashButton = false
-        }
+        let message = CleanupConstants.resultMessage(
+            endReason: result.endReason,
+            foundCount: result.foundCount,
+            method: method
+        )
+        let showTrashButton = result.trashedAssetIDs.count > 0
 
         let alert = UIAlertController(title: title, message: message, preferredStyle: .alert)
 
