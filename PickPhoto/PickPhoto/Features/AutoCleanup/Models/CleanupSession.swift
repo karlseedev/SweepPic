@@ -83,6 +83,14 @@ struct CleanupSession: Equatable, Sendable {
     /// 세션 상태
     var status: SessionStatus
 
+    /// 종료 사유
+    /// - nil: 아직 종료되지 않음
+    /// - maxFound: 50장 도달 (이어서 정리 가능)
+    /// - maxScanned: 1000장 검색 (이어서 정리 가능)
+    /// - endOfRange: 범위 끝 도달 (이어서 정리 불가)
+    /// - userCancelled: 사용자 취소
+    var endReason: EndReason?
+
     /// 마지막 업데이트 시간
     var updatedAt: Date
 
@@ -109,6 +117,7 @@ struct CleanupSession: Equatable, Sendable {
         self.foundCount = 0
         self.trashedAssetIDs = []
         self.status = .idle
+        self.endReason = nil
         self.updatedAt = Date()
     }
 
@@ -129,6 +138,7 @@ struct CleanupSession: Equatable, Sendable {
         self.foundCount = 0
         self.trashedAssetIDs = []
         self.status = .idle
+        self.endReason = nil
         self.updatedAt = Date()
     }
 
@@ -149,6 +159,7 @@ struct CleanupSession: Equatable, Sendable {
         self.foundCount = 0
         self.trashedAssetIDs = []
         self.status = .idle
+        self.endReason = nil
         self.updatedAt = Date()
     }
 }
@@ -257,6 +268,32 @@ extension CleanupSession {
         return nil
     }
 
+    /// 이어서 정리 가능 여부
+    /// - 50장 도달 또는 1000장 검색 도달 시에만 이어서 정리 가능
+    /// - 범위 끝 도달 또는 사용자 취소 시에는 이어서 정리 불가
+    var canContinue: Bool {
+        guard let reason = endReason else { return false }
+        return reason == .maxFound || reason == .maxScanned
+    }
+
+    /// fromLatest 방식의 이어서 정리 가능 여부
+    /// - method가 fromLatest 또는 continueFromLast이고 이어서 정리 가능한 경우
+    var canContinueFromLatest: Bool {
+        switch method {
+        case .fromLatest, .continueFromLast:
+            return canContinue
+        case .byYear:
+            return false
+        }
+    }
+
+    /// 연도별 이어서 정리 가능 여부
+    /// - method가 byYear이고 이어서 정리 가능한 경우
+    var canContinueByYear: Bool {
+        guard case .byYear = method else { return false }
+        return canContinue
+    }
+
     /// 유효한 세션인지 확인
     var isValid: Bool {
         // 기본 제약 조건 확인
@@ -336,7 +373,7 @@ extension CleanupSession: Codable {
     private enum CodingKeys: String, CodingKey {
         case id, createdAt, startDate, lastAssetDate, lastAssetID
         case method, mode, scannedCount, foundCount, trashedAssetIDs
-        case status, updatedAt
+        case status, endReason, updatedAt
     }
 
     nonisolated init(from decoder: Decoder) throws {
@@ -352,6 +389,7 @@ extension CleanupSession: Codable {
         foundCount = try container.decode(Int.self, forKey: .foundCount)
         trashedAssetIDs = try container.decode([String].self, forKey: .trashedAssetIDs)
         status = try container.decode(SessionStatus.self, forKey: .status)
+        endReason = try container.decodeIfPresent(EndReason.self, forKey: .endReason)
         updatedAt = try container.decode(Date.self, forKey: .updatedAt)
     }
 
@@ -368,6 +406,7 @@ extension CleanupSession: Codable {
         try container.encode(foundCount, forKey: .foundCount)
         try container.encode(trashedAssetIDs, forKey: .trashedAssetIDs)
         try container.encode(status, forKey: .status)
+        try container.encodeIfPresent(endReason, forKey: .endReason)
         try container.encode(updatedAt, forKey: .updatedAt)
     }
 }

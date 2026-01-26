@@ -527,15 +527,23 @@ final class CleanupService: CleanupServiceProtocol {
 
     /// 세션 정리
     private func cleanupSession(result: CleanupResult, lastScannedDate: Date? = nil) async {
-        // 정상 완료된 경우 세션 저장 (이어서 정리용)
-        if result.resultType.isSuccess && result.foundCount > 0,
+        // 취소가 아닌 경우에만 세션 저장 (이어서 정리용)
+        // - maxFound, maxScanned: 이어서 정리 가능
+        // - endOfRange: 이어서 정리 불가 (범위 끝 도달)
+        // - userCancelled: 저장하지 않음
+        if result.endReason != .userCancelled,
            let lastDate = lastScannedDate {
             var session = currentSession ?? CleanupSession(method: .fromLatest, mode: .precision)
             session.status = .completed
             session.lastAssetDate = lastDate
             session.scannedCount = result.scannedCount
             session.foundCount = result.foundCount
+            session.endReason = result.endReason  // 종료 사유 저장
             sessionStore.save(session)
+
+            #if DEBUG
+            print("[CleanupService] Session saved - endReason: \(result.endReason), canContinue: \(session.canContinue)")
+            #endif
         }
 
         // 현재 세션 정리

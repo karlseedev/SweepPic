@@ -6,8 +6,8 @@
 //
 //  정리 방식 선택 시트 (Alert 형태)
 //  - 최신사진부터 정리
-//  - 이어서 정리 (이전 이력 있을 때만 활성화)
-//  - 연도별 정리
+//  - 이어서 정리 (최신사진부터 정리 후 50장/1000장 제한 도달 시에만 활성화)
+//  - 연도별 정리 (해당 연도 이어서 정리 버튼은 연도 선택 화면에서 표시)
 //
 
 import UIKit
@@ -91,9 +91,11 @@ final class CleanupMethodSheet {
             self.delegate?.cleanupMethodSheet(self, didSelect: .fromLatest)
         })
 
-        // 이어서 정리 (항상 표시, 이력 없으면 비활성화)
+        // 이어서 정리 (최신사진부터 정리의 연장선, canContinueFromLatest일 때만 활성화)
+        // - fromLatest 또는 continueFromLast 세션이고
+        // - 50장 도달 또는 1000장 검색 도달인 경우에만 활성화
         let continueAction: UIAlertAction
-        if let session = lastSession {
+        if let session = lastSession, session.canContinueFromLatest {
             let dateString = formatDate(session.lastAssetDate)
             continueAction = UIAlertAction(
                 title: "이어서 정리 (\(dateString)부터)",
@@ -154,6 +156,22 @@ final class CleanupMethodSheet {
             message: "정리할 연도를 선택하세요",
             preferredStyle: .actionSheet
         )
+
+        // 연도별 이어서 정리 버튼 (조건 충족 시 최상단에 표시)
+        // - 이전 세션이 byYear이고
+        // - 50장 도달 또는 1000장 검색 도달인 경우
+        if let session = lastSession,
+           session.canContinueByYear,
+           let targetYear = session.targetYear {
+            let dateString = formatDate(session.lastAssetDate)
+            alert.addAction(UIAlertAction(
+                title: "\(targetYear)년 이어서 (\(dateString)부터)",
+                style: .default
+            ) { [self] _ in
+                // 해당 연도에서 이어서 정리
+                self.delegate?.cleanupMethodSheet(self, didSelect: .byYear(year: targetYear))
+            })
+        }
 
         // 최신 연도부터 표시
         for year in availableYears {
