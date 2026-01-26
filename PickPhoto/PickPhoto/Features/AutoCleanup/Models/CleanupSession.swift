@@ -262,7 +262,7 @@ extension CleanupSession {
 
     /// 연도별 정리인 경우 해당 연도
     var targetYear: Int? {
-        if case .byYear(let year) = method {
+        if case .byYear(let year, _) = method {
             return year
         }
         return nil

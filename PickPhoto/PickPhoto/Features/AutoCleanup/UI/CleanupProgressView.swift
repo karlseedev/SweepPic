@@ -167,7 +167,7 @@ final class CleanupProgressView: UIView {
             titleLabel.text = "최신 사진부터 정리 중"
         case .continueFromLast:
             titleLabel.text = "이어서 정리 중"
-        case .byYear(let year):
+        case .byYear(let year, _):
             titleLabel.text = "\(year)년 사진 정리 중"
         }
     }

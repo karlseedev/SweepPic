@@ -30,10 +30,12 @@ enum CleanupMethod: Codable, Equatable {
     case continueFromLast
 
     /// 연도별 정리
-    /// - 시작점: 해당 연도 12월 31일
+    /// - 시작점: 해당 연도 12월 31일 (또는 continueFrom 날짜)
     /// - 범위: 해당 연도만 (다른 연도로 확장 없음)
-    /// - associated value: 선택한 연도 (예: 2024)
-    case byYear(year: Int)
+    /// - associated value:
+    ///   - year: 선택한 연도 (예: 2024)
+    ///   - continueFrom: 이어서 정리 시 시작점 (nil이면 연도 전체)
+    case byYear(year: Int, continueFrom: Date? = nil)
 
     // MARK: - Codable
 
@@ -41,6 +43,7 @@ enum CleanupMethod: Codable, Equatable {
     private enum CodingKeys: String, CodingKey {
         case method
         case year
+        case continueFrom
     }
 
     /// JSON 인코딩 시 method 값
@@ -63,7 +66,8 @@ enum CleanupMethod: Codable, Equatable {
             self = .continueFromLast
         case .byYear:
             let year = try container.decode(Int.self, forKey: .year)
-            self = .byYear(year: year)
+            let continueFrom = try container.decodeIfPresent(Date.self, forKey: .continueFrom)
+            self = .byYear(year: year, continueFrom: continueFrom)
         }
     }
 
@@ -77,9 +81,10 @@ enum CleanupMethod: Codable, Equatable {
             try container.encode(MethodValue.fromLatest, forKey: .method)
         case .continueFromLast:
             try container.encode(MethodValue.continueFromLast, forKey: .method)
-        case .byYear(let year):
+        case .byYear(let year, let continueFrom):
             try container.encode(MethodValue.byYear, forKey: .method)
             try container.encode(year, forKey: .year)
+            try container.encodeIfPresent(continueFrom, forKey: .continueFrom)
         }
     }
 }
@@ -95,7 +100,7 @@ extension CleanupMethod: CustomStringConvertible {
             return "최신사진부터 정리"
         case .continueFromLast:
             return "이어서 정리"
-        case .byYear(let year):
+        case .byYear(let year, _):
             return "\(year)년 사진 정리"
         }
     }
@@ -112,14 +117,14 @@ extension CleanupMethod {
             return "최신사진부터 정리"
         case .continueFromLast:
             return "이어서 정리"
-        case .byYear(let year):
+        case .byYear(let year, _):
             return "\(year)년 사진 정리"
         }
     }
 
     /// 연도별 정리인 경우 연도 반환, 아니면 nil
     var year: Int? {
-        if case .byYear(let year) = self {
+        if case .byYear(let year, _) = self {
             return year
         }
         return nil

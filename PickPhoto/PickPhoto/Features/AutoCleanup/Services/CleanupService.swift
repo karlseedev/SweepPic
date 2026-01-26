@@ -472,18 +472,31 @@ final class CleanupService: CleanupServiceProtocol {
             }
             return PHAsset.fetchAssets(with: options)
 
-        case .byYear(let year):
+        case .byYear(let year, let continueFrom):
             // 특정 연도만
             let startOfYear = Calendar.current.date(from: DateComponents(year: year))!
             let endOfYear = Calendar.current.date(from: DateComponents(year: year + 1))!
 
-            options.predicate = NSPredicate(
-                format: "(mediaType == %d OR mediaType == %d) AND creationDate >= %@ AND creationDate < %@",
-                PHAssetMediaType.image.rawValue,
-                PHAssetMediaType.video.rawValue,
-                startOfYear as NSDate,
-                endOfYear as NSDate
-            )
+            if let fromDate = continueFrom {
+                // 이어서: 해당 연도 + fromDate 이전
+                options.predicate = NSPredicate(
+                    format: "(mediaType == %d OR mediaType == %d) AND creationDate >= %@ AND creationDate < %@ AND creationDate < %@",
+                    PHAssetMediaType.image.rawValue,
+                    PHAssetMediaType.video.rawValue,
+                    startOfYear as NSDate,
+                    endOfYear as NSDate,
+                    fromDate as NSDate
+                )
+            } else {
+                // 새로 시작: 해당 연도 전체
+                options.predicate = NSPredicate(
+                    format: "(mediaType == %d OR mediaType == %d) AND creationDate >= %@ AND creationDate < %@",
+                    PHAssetMediaType.image.rawValue,
+                    PHAssetMediaType.video.rawValue,
+                    startOfYear as NSDate,
+                    endOfYear as NSDate
+                )
+            }
             return PHAsset.fetchAssets(with: options)
         }
     }

@@ -67,7 +67,7 @@ extension CleanupProgress {
         let year = calendar.component(.year, from: currentDate)
 
         switch method {
-        case .byYear:
+        case .byYear(_, _):
             // 연도별 정리: 월 생략
             return "\(year)년 사진 탐색 중..."
         case .fromLatest, .continueFromLast:

@@ -162,14 +162,15 @@ final class CleanupMethodSheet {
         // - 50장 도달 또는 1000장 검색 도달인 경우
         if let session = lastSession,
            session.canContinueByYear,
-           let targetYear = session.targetYear {
+           let targetYear = session.targetYear,
+           let continueFrom = session.lastAssetDate {
             let dateString = formatDate(session.lastAssetDate)
             alert.addAction(UIAlertAction(
                 title: "\(targetYear)년 이어서 (\(dateString)부터)",
                 style: .default
             ) { [self] _ in
-                // 해당 연도에서 이어서 정리
-                self.delegate?.cleanupMethodSheet(self, didSelect: .byYear(year: targetYear))
+                // 해당 연도에서 이어서 정리 (continueFrom으로 시작점 전달)
+                self.delegate?.cleanupMethodSheet(self, didSelect: .byYear(year: targetYear, continueFrom: continueFrom))
             })
         }
 
