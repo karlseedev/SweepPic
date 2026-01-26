@@ -6,7 +6,7 @@
 //
 //  정리 세션 저장소 구현
 //  - 파일 기반 JSON 저장/로드
-//  - Documents/CleanupSession.json에 저장
+//  - fromLatest/continueFromLast 세션과 byYear 세션 분리 저장
 //  - "이어서 정리" 기능 지원
 //
 
@@ -16,6 +16,7 @@ import Foundation
 ///
 /// 정리 세션을 파일로 저장하고 로드하는 구현체.
 /// 싱글톤 패턴으로 앱 전체에서 하나의 인스턴스 공유.
+/// fromLatest/continueFromLast 세션과 byYear 세션을 분리 저장.
 final class CleanupSessionStore: CleanupSessionStoreProtocol {
 
     // MARK: - Singleton
@@ -25,15 +26,20 @@ final class CleanupSessionStore: CleanupSessionStoreProtocol {
 
     // MARK: - Properties
 
-    /// 메모리 캐시된 세션
-    /// - 파일 I/O 최소화를 위해 메모리에 캐시
-    private var cachedSession: CleanupSession?
+    /// 메모리 캐시된 최신사진부터 세션
+    private var cachedLatestSession: CleanupSession?
+
+    /// 메모리 캐시된 연도별 세션
+    private var cachedByYearSession: CleanupSession?
 
     /// 캐시 로드 여부
     private var isCacheLoaded = false
 
-    /// 세션 파일 경로
-    private let sessionFilePath: URL
+    /// 최신사진부터 세션 파일 경로
+    private let latestSessionFilePath: URL
+
+    /// 연도별 세션 파일 경로
+    private let byYearSessionFilePath: URL
 
     /// JSON 인코더
     private let encoder: JSONEncoder
@@ -65,7 +71,8 @@ final class CleanupSessionStore: CleanupSessionStoreProtocol {
 
         // Documents 디렉토리에 세션 파일 저장
         let documentsPath = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
-        self.sessionFilePath = documentsPath.appendingPathComponent(CleanupConstants.sessionFileName)
+        self.latestSessionFilePath = documentsPath.appendingPathComponent("CleanupSessionLatest.json")
+        self.byYearSessionFilePath = documentsPath.appendingPathComponent("CleanupSessionByYear.json")
 
         // JSON 인코더/디코더 설정
         self.encoder = JSONEncoder()
@@ -76,14 +83,17 @@ final class CleanupSessionStore: CleanupSessionStoreProtocol {
         self.decoder.dateDecodingStrategy = .iso8601
 
         // 초기 로드
-        loadFromFile()
+        loadFromFiles()
     }
 
     /// 테스트용 초기화 (커스텀 경로)
     /// - 테스트에서는 동기 모드를 사용하여 메모리 안정성 보장
     init(filePath: URL) {
         self.isTestInstance = true
-        self.sessionFilePath = filePath
+        // 테스트용: 단일 파일 경로를 latest로 사용
+        self.latestSessionFilePath = filePath
+        self.byYearSessionFilePath = filePath.deletingLastPathComponent()
+            .appendingPathComponent("TestCleanupSessionByYear.json")
 
         self.encoder = JSONEncoder()
         self.encoder.dateEncodingStrategy = .iso8601
@@ -93,40 +103,61 @@ final class CleanupSessionStore: CleanupSessionStoreProtocol {
         self.decoder.dateDecodingStrategy = .iso8601
 
         // 테스트용: 동기적으로 로드 (비동기 해제 충돌 방지)
-        loadFromFileSync()
+        loadFromFilesSync()
     }
 
     /// 동기적 파일 로드 (테스트용)
-    private func loadFromFileSync() {
+    private func loadFromFilesSync() {
         guard !isCacheLoaded else { return }
 
-        do {
-            guard FileManager.default.fileExists(atPath: sessionFilePath.path) else {
-                isCacheLoaded = true
-                return
+        // Latest 세션 로드
+        if FileManager.default.fileExists(atPath: latestSessionFilePath.path) {
+            do {
+                let data = try Data(contentsOf: latestSessionFilePath)
+                cachedLatestSession = try decoder.decode(CleanupSession.self, from: data)
+                #if DEBUG
+                print("[CleanupSessionStore] Loaded latest session (sync)")
+                #endif
+            } catch {
+                #if DEBUG
+                print("[CleanupSessionStore] Failed to load latest session: \(error.localizedDescription)")
+                #endif
             }
-
-            let data = try Data(contentsOf: sessionFilePath)
-            let session = try decoder.decode(CleanupSession.self, from: data)
-            cachedSession = session
-            isCacheLoaded = true
-
-            #if DEBUG
-            print("[CleanupSessionStore] Loaded session (sync): \(session.id.uuidString.prefix(8))")
-            #endif
-        } catch {
-            #if DEBUG
-            print("[CleanupSessionStore] Failed to load session: \(error.localizedDescription)")
-            #endif
-            isCacheLoaded = true
         }
+
+        // ByYear 세션 로드
+        if FileManager.default.fileExists(atPath: byYearSessionFilePath.path) {
+            do {
+                let data = try Data(contentsOf: byYearSessionFilePath)
+                cachedByYearSession = try decoder.decode(CleanupSession.self, from: data)
+                #if DEBUG
+                print("[CleanupSessionStore] Loaded byYear session (sync)")
+                #endif
+            } catch {
+                #if DEBUG
+                print("[CleanupSessionStore] Failed to load byYear session: \(error.localizedDescription)")
+                #endif
+            }
+        }
+
+        isCacheLoaded = true
     }
 
     // MARK: - CleanupSessionStoreProtocol
 
-    /// 현재 저장된 세션
+    /// 현재 저장된 세션 (하위 호환용, latestSession 우선 반환)
     var currentSession: CleanupSession? {
-        return queue.sync { cachedSession }
+        return queue.sync { cachedLatestSession ?? cachedByYearSession }
+    }
+
+    /// 최신사진부터/이어서 정리 세션
+    var latestSession: CleanupSession? {
+        return queue.sync { cachedLatestSession }
+    }
+
+    /// 연도별 정리 세션
+    var byYearSession: CleanupSession? {
+        return queue.sync { cachedByYearSession }
     }
 
     /// 이어서 정리 가능 여부
@@ -140,16 +171,34 @@ final class CleanupSessionStore: CleanupSessionStoreProtocol {
 
     /// 세션 저장
     /// - Parameter session: 저장할 세션
+    /// - method에 따라 자동으로 분리 저장
     func save(_ session: CleanupSession) {
         if isTestInstance {
             // 테스트용: 동기 저장
-            cachedSession = session
-            saveToFile(session)
+            saveSessionByMethod(session)
         } else {
             queue.async { [weak self] in
-                self?.cachedSession = session
-                self?.saveToFile(session)
+                self?.saveSessionByMethod(session)
             }
+        }
+    }
+
+    /// method에 따라 세션 분리 저장
+    private func saveSessionByMethod(_ session: CleanupSession) {
+        switch session.method {
+        case .fromLatest, .continueFromLast:
+            cachedLatestSession = session
+            saveToFile(session, path: latestSessionFilePath)
+            #if DEBUG
+            print("[CleanupSessionStore] Saved latest session: \(session.id.uuidString.prefix(8))")
+            #endif
+
+        case .byYear:
+            cachedByYearSession = session
+            saveToFile(session, path: byYearSessionFilePath)
+            #if DEBUG
+            print("[CleanupSessionStore] Saved byYear session: \(session.id.uuidString.prefix(8))")
+            #endif
         }
     }
 
@@ -159,21 +208,26 @@ final class CleanupSessionStore: CleanupSessionStoreProtocol {
         return currentSession
     }
 
-    /// 세션 삭제
+    /// 세션 삭제 (모든 세션)
     func clear() {
         if isTestInstance {
             // 테스트용: 동기 삭제
-            cachedSession = nil
-            deleteFile()
+            cachedLatestSession = nil
+            cachedByYearSession = nil
+            deleteFile(path: latestSessionFilePath)
+            deleteFile(path: byYearSessionFilePath)
         } else {
             queue.async { [weak self] in
-                self?.cachedSession = nil
-                self?.deleteFile()
+                self?.cachedLatestSession = nil
+                self?.cachedByYearSession = nil
+                self?.deleteFile(path: self?.latestSessionFilePath)
+                self?.deleteFile(path: self?.byYearSessionFilePath)
             }
         }
     }
 
-    /// 세션 부분 업데이트
+    /// 세션 부분 업데이트 (현재 진행 중인 세션)
+    /// - 테스트 호환성을 위해 latestSession 업데이트
     func update(
         lastAssetDate: Date?,
         lastAssetID: String?,
@@ -181,7 +235,8 @@ final class CleanupSessionStore: CleanupSessionStoreProtocol {
         foundCount: Int
     ) {
         let updateBlock = { [weak self] in
-            guard var session = self?.cachedSession else { return }
+            // latestSession 업데이트 (기존 동작 호환)
+            guard var session = self?.cachedLatestSession else { return }
 
             session.updateProgress(
                 scannedCount: scannedCount,
@@ -190,13 +245,11 @@ final class CleanupSessionStore: CleanupSessionStoreProtocol {
                 lastAssetID: lastAssetID
             )
 
-            self?.cachedSession = session
+            self?.cachedLatestSession = session
             // 부분 업데이트는 파일에 저장하지 않음 (메모리만)
-            // 정상 종료 시에만 파일 저장
         }
 
         if isTestInstance {
-            // 테스트용: 동기 업데이트
             updateBlock()
         } else {
             queue.async(execute: updateBlock)
@@ -206,47 +259,53 @@ final class CleanupSessionStore: CleanupSessionStoreProtocol {
     // MARK: - Private Methods
 
     /// 파일에서 세션 로드
-    private func loadFromFile() {
+    private func loadFromFiles() {
         queue.async { [weak self] in
             guard let self = self else { return }
             guard !self.isCacheLoaded else { return }
 
-            do {
-                guard FileManager.default.fileExists(atPath: self.sessionFilePath.path) else {
-                    self.isCacheLoaded = true
-                    return
+            let localDecoder = JSONDecoder()
+            localDecoder.dateDecodingStrategy = .iso8601
+
+            // Latest 세션 로드
+            if FileManager.default.fileExists(atPath: self.latestSessionFilePath.path) {
+                do {
+                    let data = try Data(contentsOf: self.latestSessionFilePath)
+                    self.cachedLatestSession = try localDecoder.decode(CleanupSession.self, from: data)
+                    #if DEBUG
+                    print("[CleanupSessionStore] Loaded latest session")
+                    #endif
+                } catch {
+                    #if DEBUG
+                    print("[CleanupSessionStore] Failed to load latest session: \(error.localizedDescription)")
+                    #endif
                 }
-
-                let data = try Data(contentsOf: self.sessionFilePath)
-                // 로컬 디코더 생성 - Swift 6 concurrency 격리 경고 회피
-                // (self.decoder는 MainActor 격리 컨텍스트에서 캡처됨)
-                let localDecoder = JSONDecoder()
-                localDecoder.dateDecodingStrategy = .iso8601
-                let session = try localDecoder.decode(CleanupSession.self, from: data)
-                self.cachedSession = session
-                self.isCacheLoaded = true
-
-                #if DEBUG
-                print("[CleanupSessionStore] Loaded session: \(session.id.uuidString.prefix(8))")
-                #endif
-            } catch {
-                #if DEBUG
-                print("[CleanupSessionStore] Failed to load session: \(error.localizedDescription)")
-                #endif
-                self.isCacheLoaded = true
             }
+
+            // ByYear 세션 로드
+            if FileManager.default.fileExists(atPath: self.byYearSessionFilePath.path) {
+                do {
+                    let data = try Data(contentsOf: self.byYearSessionFilePath)
+                    self.cachedByYearSession = try localDecoder.decode(CleanupSession.self, from: data)
+                    #if DEBUG
+                    print("[CleanupSessionStore] Loaded byYear session")
+                    #endif
+                } catch {
+                    #if DEBUG
+                    print("[CleanupSessionStore] Failed to load byYear session: \(error.localizedDescription)")
+                    #endif
+                }
+            }
+
+            self.isCacheLoaded = true
         }
     }
 
     /// 파일에 세션 저장
-    private func saveToFile(_ session: CleanupSession) {
+    private func saveToFile(_ session: CleanupSession, path: URL) {
         do {
             let data = try encoder.encode(session)
-            try data.write(to: sessionFilePath, options: .atomic)
-
-            #if DEBUG
-            print("[CleanupSessionStore] Saved session: \(session.id.uuidString.prefix(8))")
-            #endif
+            try data.write(to: path, options: .atomic)
         } catch {
             #if DEBUG
             print("[CleanupSessionStore] Failed to save session: \(error.localizedDescription)")
@@ -255,13 +314,13 @@ final class CleanupSessionStore: CleanupSessionStoreProtocol {
     }
 
     /// 세션 파일 삭제
-    private func deleteFile() {
+    private func deleteFile(path: URL?) {
+        guard let path = path else { return }
         do {
-            if FileManager.default.fileExists(atPath: sessionFilePath.path) {
-                try FileManager.default.removeItem(at: sessionFilePath)
-
+            if FileManager.default.fileExists(atPath: path.path) {
+                try FileManager.default.removeItem(at: path)
                 #if DEBUG
-                print("[CleanupSessionStore] Deleted session file")
+                print("[CleanupSessionStore] Deleted session file: \(path.lastPathComponent)")
                 #endif
             }
         } catch {
@@ -279,7 +338,7 @@ extension CleanupSessionStore {
     /// 이전 세션 정보 요약 (UI 표시용)
     /// - Returns: "2024년 5월부터 계속" 형식의 문자열
     func previousSessionDescription() -> String? {
-        guard let session = currentSession,
+        guard let session = latestSession,
               let lastDate = session.lastAssetDate else {
             return nil
         }
@@ -293,17 +352,17 @@ extension CleanupSessionStore {
 
     /// 이전 세션의 마지막 탐색 날짜
     var lastSessionDate: Date? {
-        return currentSession?.lastAssetDate
+        return latestSession?.lastAssetDate
     }
 
     /// 이전 세션의 찾은 사진 수
     var lastFoundCount: Int {
-        return currentSession?.foundCount ?? 0
+        return latestSession?.foundCount ?? 0
     }
 
     /// 이전 세션의 검색한 사진 수
     var lastScannedCount: Int {
-        return currentSession?.scannedCount ?? 0
+        return latestSession?.scannedCount ?? 0
     }
 }
 
@@ -314,10 +373,16 @@ extension CleanupSessionStore {
 
     /// 디버그용: 현재 세션 출력
     func debugPrintSession() {
-        if let session = currentSession {
-            print(session.description)
+        print("[CleanupSessionStore] --- Sessions ---")
+        if let latest = latestSession {
+            print("Latest: \(latest.description)")
         } else {
-            print("[CleanupSessionStore] No session stored")
+            print("Latest: nil")
+        }
+        if let byYear = byYearSession {
+            print("ByYear: \(byYear.description)")
+        } else {
+            print("ByYear: nil")
         }
     }
 

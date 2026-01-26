@@ -15,11 +15,18 @@ import Foundation
 ///
 /// 정리 세션을 파일로 저장하고 로드하는 인터페이스.
 /// "이어서 정리" 기능을 위해 마지막 세션 정보를 유지.
+/// fromLatest/continueFromLast 세션과 byYear 세션을 분리 저장.
 protocol CleanupSessionStoreProtocol {
 
-    /// 현재 저장된 세션
+    /// 현재 저장된 세션 (하위 호환용, latestSession 우선 반환)
     /// - 저장된 세션이 없으면 nil
     var currentSession: CleanupSession? { get }
+
+    /// 최신사진부터/이어서 정리 세션
+    var latestSession: CleanupSession? { get }
+
+    /// 연도별 정리 세션
+    var byYearSession: CleanupSession? { get }
 
     /// 이어서 정리 가능 여부
     /// - 이전 세션이 존재하고 완료 상태일 때 true

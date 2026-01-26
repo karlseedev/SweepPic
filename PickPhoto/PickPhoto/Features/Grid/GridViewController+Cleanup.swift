@@ -150,8 +150,11 @@ extension GridViewController {
 
     /// 정리 방식 선택 시트 표시
     private func showCleanupMethodSheet() {
-        let lastSession = CleanupService.shared.lastSession
-        let sheet = CleanupMethodSheet(lastSession: lastSession)
+        let sessionStore = CleanupSessionStore.shared
+        let sheet = CleanupMethodSheet(
+            latestSession: sessionStore.latestSession,
+            byYearSession: sessionStore.byYearSession
+        )
         sheet.delegate = self
         sheet.present(from: self)
     }

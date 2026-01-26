@@ -20,6 +20,7 @@ final class CleanupSessionStoreTests: XCTestCase {
 
     var store: CleanupSessionStore!
     var testFilePath: URL!
+    var testByYearFilePath: URL!
 
     // MARK: - Setup
 
@@ -28,7 +29,12 @@ final class CleanupSessionStoreTests: XCTestCase {
 
         // 테스트용 임시 파일 경로
         let tempDir = FileManager.default.temporaryDirectory
-        testFilePath = tempDir.appendingPathComponent("TestCleanupSession_\(UUID().uuidString).json")
+        let uuid = UUID().uuidString
+        testFilePath = tempDir.appendingPathComponent("TestCleanupSession_\(uuid).json")
+        testByYearFilePath = tempDir.appendingPathComponent("TestCleanupSessionByYear.json")
+
+        // 기존 파일 삭제 (이전 테스트에서 남은 파일)
+        try? FileManager.default.removeItem(at: testByYearFilePath)
 
         // 테스트용 스토어 생성 (동기 모드)
         store = CleanupSessionStore(filePath: testFilePath)
@@ -42,7 +48,12 @@ final class CleanupSessionStoreTests: XCTestCase {
         if let path = testFilePath {
             try? FileManager.default.removeItem(at: path)
         }
+        // byYear 파일도 정리
+        if let path = testByYearFilePath {
+            try? FileManager.default.removeItem(at: path)
+        }
         testFilePath = nil
+        testByYearFilePath = nil
 
         super.tearDown()
     }
