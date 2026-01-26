@@ -77,6 +77,11 @@ enum CleanupConstants {
     /// - RGB Std < 10 → Conditional 신호 (Recall 모드, 휘도 조건 충족 시)
     static let extremeMonochromeRgbStd: Double = 10
 
+    /// 유틸리티 이미지 RGB 표준편차 임계값
+    /// - 휘도 극단 + RGB Std < 20 → 유틸리티 이미지 (메모, 문서 등) → SKIP
+    /// - 실제 과노출/과어두움 사진은 RGB Std가 이보다 높음
+    static let utilityImageRgbStd: Double = 20
+
     /// 낮은 색상 다양성 RGB 표준편차 임계값
     /// - RGB Std < 15 → Weak 신호 (Recall 모드)
     static let lowColorVarietyRgbStd: Double = 15

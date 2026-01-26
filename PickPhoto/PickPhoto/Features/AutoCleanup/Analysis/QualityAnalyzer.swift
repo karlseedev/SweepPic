@@ -148,6 +148,12 @@ final class QualityAnalyzer {
             return QualityResult.skipped(assetID: assetID, creationDate: creationDate, reason: .analysisError)
         }
 
+        // 유틸리티 이미지 체크 (메모, 문서 스크린샷 등)
+        // 휘도 극단 + RGB 표준편차 낮음 → 단색 배경 이미지 → SKIP
+        if isUtilityImage(exposureMetrics) {
+            return QualityResult.skipped(assetID: assetID, creationDate: creationDate, reason: .utilityImage)
+        }
+
         var signals = exposureAnalyzer.detectSignals(from: exposureMetrics, mode: mode)
 
         // Stage 3: 블러 분석
@@ -270,6 +276,22 @@ final class QualityAnalyzer {
     }
 
     // MARK: - Private Methods
+
+    /// 유틸리티 이미지 여부 판정
+    ///
+    /// 메모, 문서, 단색 배경 스크린샷 등 유틸리티 이미지를 감지합니다.
+    /// - 휘도가 극단적 (매우 밝거나 매우 어두움)
+    /// - RGB 표준편차가 낮음 (색상 다양성 부족)
+    ///
+    /// - Parameter metrics: 노출 분석 결과
+    /// - Returns: 유틸리티 이미지이면 true
+    private func isUtilityImage(_ metrics: ExposureMetrics) -> Bool {
+        let isExtremeLuminance = metrics.luminance < CleanupConstants.extremeDarkLuminance ||
+                                  metrics.luminance > CleanupConstants.extremeBrightLuminance
+        let isLowColorVariety = metrics.rgbStd < CleanupConstants.utilityImageRgbStd
+
+        return isExtremeLuminance && isLowColorVariety
+    }
 
     /// 동영상 분석 (프레임 3개 추출, 중앙값 판정)
     ///
