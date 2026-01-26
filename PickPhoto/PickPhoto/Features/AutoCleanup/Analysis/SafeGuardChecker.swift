@@ -66,16 +66,12 @@ final class SafeGuardChecker {
     /// - Note: 심도 효과 여부만 확인 (빠른 체크)
     func checkMetadata(_ asset: PHAsset) -> SafeGuardResult {
         // 심도 효과 체크 (Portrait 모드)
-        // PHAsset에 depthData가 있으면 의도적 배경 흐림
-        let resources = PHAssetResource.assetResources(for: asset)
-        let hasDepthData = resources.contains { resource in
-            // iOS 11+: auxiliaryDepthData, iOS 12+: adjustmentData에 depth 포함 가능
-            resource.type == .adjustmentData ||
-            resource.uniformTypeIdentifier.contains("depth")
-        }
-
-        // Portrait 모드 확인
-        if asset.mediaSubtypes.contains(.photoDepthEffect) || hasDepthData {
+        // mediaSubtypes로 포트레이트 모드 판별 (Apple 공식 API)
+        //
+        // Note: PHAssetResource.assetResources() 호출 제거됨
+        // - 메인 스레드에서 메타데이터를 동기 로딩하여 "Missing prefetched properties" 경고 발생
+        // - mediaSubtypes.contains(.photoDepthEffect)로 포트레이트 모드 판별에 충분
+        if asset.mediaSubtypes.contains(.photoDepthEffect) {
             return .applied(.depthEffect)
         }
 
