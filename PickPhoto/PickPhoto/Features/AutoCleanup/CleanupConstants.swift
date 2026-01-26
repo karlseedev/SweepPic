@@ -178,7 +178,7 @@ enum CleanupConstants {
             if case .byYear(let year, _) = method {
                 return "\(year)년의 마지막 사진까지 검색하여 \(n)장을 찾았습니다."
             } else {
-                return "마지막 사진까지 검색하여 \(n)장을 찾았습니다."
+                return "보관함의 마지막 사진까지 검색하여 \(n)장을 찾았습니다."
             }
 
         // 6, 7. 범위 끝 + 0장 발견
