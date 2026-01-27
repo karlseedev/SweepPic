@@ -83,7 +83,7 @@ public final class VideoPipeline {
         }
 
         #if DEBUG
-        print("[VideoPipeline] Requesting playerItem for asset: \(asset.localIdentifier.prefix(8))...")
+        Log.print("[VideoPipeline] Requesting playerItem for asset: \(asset.localIdentifier.prefix(8))...")
         #endif
 
         // PHImageManager.requestPlayerItem 호출
@@ -96,7 +96,7 @@ public final class VideoPipeline {
             // 취소된 경우 무시
             guard !cancellable.isCancelled else {
                 #if DEBUG
-                print("[VideoPipeline] Request cancelled")
+                Log.print("[VideoPipeline] Request cancelled")
                 #endif
                 return
             }
@@ -104,13 +104,13 @@ public final class VideoPipeline {
             // info 딕셔너리에서 상태 확인
             #if DEBUG
             if let error = info?[PHImageErrorKey] as? Error {
-                print("[VideoPipeline] Error: \(error.localizedDescription)")
+                Log.print("[VideoPipeline] Error: \(error.localizedDescription)")
             }
             if let isInCloud = info?[PHImageResultIsInCloudKey] as? Bool, isInCloud {
-                print("[VideoPipeline] Asset is in iCloud, downloading...")
+                Log.print("[VideoPipeline] Asset is in iCloud, downloading...")
             }
             if let isCancelled = info?[PHImageCancelledKey] as? Bool, isCancelled {
-                print("[VideoPipeline] Request was cancelled by system")
+                Log.print("[VideoPipeline] Request was cancelled by system")
             }
             #endif
 
@@ -126,7 +126,7 @@ public final class VideoPipeline {
             self?.imageManager.cancelImageRequest(requestID)
 
             #if DEBUG
-            print("[VideoPipeline] Cancelled request: \(requestID)")
+            Log.print("[VideoPipeline] Cancelled request: \(requestID)")
             #endif
         }
 

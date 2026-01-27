@@ -47,7 +47,7 @@ Plan 문서의 모든 🔍 항목이 다음 중 하나로 전환될 때:
 └─────────────────────────────────────────────────────────┘
 ```
 
-**현재 사이클**: 1회차 (초기 수집 완료, 미해결 항목 추가 조사 중)
+**현재 사이클**: 2회차 (260127_123512 덤프 분석 완료, 다음 조사 계획 수립)
 
 ---
 
@@ -75,12 +75,25 @@ Plan 문서의 모든 🔍 항목이 다음 중 하나로 전환될 때:
 
 ### 2.3. 미해결 (🔍)
 
-| 항목 | 문제 | 필요한 조사 |
-|------|------|-------------|
-| opacityPair 필터 | 역할 불명, 파라미터 없음 | 추가 파라미터 키 탐색 |
-| displacementMap 필터 | inputAmount=0 외 파라미터 불명 | 렌즈 왜곡 구현 방법 |
-| CASDFLayer | SDF 데이터 정의 방법 불명 | shape, sdfData 등 탐색 |
-| innerShadowView | 그림자 설정 방법 불명 | shadow 속성 덤프 |
+| 항목 | 문제 | 필요한 조사 | 상태 |
+|------|------|-------------|------|
+| opacityPair 필터 | 역할 불명 | ~~추가 파라미터 키 탐색~~ → 역할 파악 | ⚠️ 파라미터 없음 확인 |
+| displacementMap 필터 | 역할 불명 | ~~렌즈 왜곡 파라미터~~ → 역할 파악 | ⚠️ inputAmount=0만 확인 |
+| CASDFLayer | SDF 데이터 정의 방법 불명 | shape, sdfData 등 탐색 | 🔍 미착수 |
+| innerShadowView | 그림자 설정 방법 불명 | shadow 속성 덤프 | 🔍 미착수 |
+
+#### 2.3.1. 260127_123512 덤프 분석 결과
+
+`respondingKeys` 검증으로 필터 파라미터 존재 여부 확인 완료:
+
+| 필터 | respondingKeys | 결론 |
+|------|----------------|------|
+| opacityPair | `["enabled", "cachesInputImage"]` | 추가 파라미터 없음 |
+| displacementMap | `["enabled", "cachesInputImage"]` | inputAmount 외 없음 |
+
+**다음 단계**: 파라미터 탐색 → **역할 파악**으로 전환
+- opacityPair: 필터 제거 시 동작 변화 테스트
+- displacementMap: inputAmount=0이 비활성 상태인지, 기본값인지 확인
 
 ---
 
@@ -352,7 +365,9 @@ matchesTransform: true
 ### 5.4. 수집 자료
 
 - [260126Liquid-tabbar.md](./260126Liquid-tabbar.md) - 상세 속성 자료
-- 원본 JSON: `260127_100514_tabbar_*.json`
+- 원본 JSON:
+  - `260127_100514_tabbar_*.json` - 파라미터 값 포함
+  - `260127_123512_tabbar_*.json` - respondingKeys 포함
 
 ---
 
@@ -370,21 +385,39 @@ matchesTransform: true
 
 ---
 
-## 7. 다음 조사 계획
+## 7. 다음 조사 계획 (3회차)
 
-### 7.1. Inspector 보강 항목
+### 7.0. 조사 우선순위
+
+| 순위 | 항목 | 방법 | 예상 결과 |
+|------|------|------|-----------|
+| 1 | opacityPair 역할 파악 | 필터 제거 테스트 | 시각적 차이 확인 → 생략 가능 여부 |
+| 2 | displacementMap 역할 파악 | inputAmount 변경 테스트 | 렌즈 왜곡 효과 확인 → 생략 가능 여부 |
+| 3 | CASDFLayer 속성 | Inspector 보강 | SDF 데이터 정의 방법 |
+| 4 | innerShadowView 속성 | Inspector 보강 | 그림자 설정 값 |
+
+### 7.1. 필터 역할 파악 테스트 (신규)
+
+**목표**: opacityPair, displacementMap의 시각적 역할 확인
+
+**방법 A: 시스템 UI 관찰**
+- iOS 26 시뮬레이터에서 TabBar 동작 관찰
+- 탭 전환 시 렌즈 왜곡 효과가 있는지 육안 확인
+- 스크린샷 비교 (고해상도)
+
+**방법 B: 커스텀 테스트 (선택)**
+- 테스트용 뷰에 displacementMap 필터 적용
+- inputAmount 값 변경하며 효과 확인
+
+### 7.2. Inspector 보강 항목 (CASDFLayer, innerShadowView)
 
 ```swift
-// CALayer 추가 속성
-layer.masksToBounds
-layer.contents != nil  // 이미지 유무
-layer.contentsGravity
-layer.contentsScale
-
-// CASDFLayer 전용
+// CASDFLayer 전용 (우선)
 (layer as? NSObject)?.value(forKey: "sdfData")
 (layer as? NSObject)?.value(forKey: "shape")
 (layer as? NSObject)?.value(forKey: "path")
+(layer as? NSObject)?.value(forKey: "cornerRadius")
+(layer as? NSObject)?.value(forKey: "fillRule")
 
 // innerShadowView 전용
 layer.shadowColor
@@ -392,33 +425,22 @@ layer.shadowRadius
 layer.shadowOpacity
 layer.shadowOffset
 layer.shadowPath
-
-// 추가 필터 파라미터
-let additionalFilterKeys = [
-    "inputImage",
-    "inputScaleX", "inputScaleY",
-    "inputCenter",
-    "inputOpacity0", "inputOpacity1",
-    "inputMaskImage",
-    "inputDisplacementImage",
-]
 ```
 
-### 7.2. 동적 테스트
+### 7.3. ~~필터 파라미터 탐색~~ (완료)
 
-- 탭 전환하면서 여러 번 덤프
-- 선택 탭 변경 시 값 변화 비교
-- displacementMap의 inputAmount가 애니메이션 중 변하는지 확인
+~~추가 필터 파라미터 키 시도~~ → respondingKeys 검증으로 완료됨
 
-### 7.3. 우회 구현 검증
+### 7.4. 우회 구현 검증 (구현 단계에서)
 
-| Private API | 대안 | 검증 방법 |
-|-------------|------|-----------|
-| vibrantColorMatrix | UIVibrancyEffect | 실제 적용 후 스크린샷 비교 |
-| destOut | CALayer.mask | 마스킹 동작 확인 |
-| CABackdropLayer | UIVisualEffectView | 블러 품질 비교 |
-| CASDFLayer | UIBezierPath + CAShapeLayer | 형태 동일성 확인 |
-| displacementMap | Metal Shader 또는 생략 | 시각적 영향도 평가 |
+| Private API | 대안 | 검증 방법 | 우선순위 |
+|-------------|------|-----------|----------|
+| vibrantColorMatrix | UIVibrancyEffect | 실제 적용 후 스크린샷 비교 | 구현 시 |
+| destOut | CALayer.mask | 마스킹 동작 확인 | 구현 시 |
+| CABackdropLayer | UIVisualEffectView | 블러 품질 비교 | 구현 시 |
+| opacityPair | 생략? | 역할 파악 후 결정 | **3회차** |
+| displacementMap | 생략? | 역할 파악 후 결정 | **3회차** |
+| CASDFLayer | UIBezierPath + CAShapeLayer | 형태 동일성 확인 | 구현 시 |
 
 ---
 
@@ -472,3 +494,4 @@ zoom: 0 ✅
 | 날짜 | 버전 | 변경 내용 |
 |------|------|-----------|
 | 2026-01-27 | v1 | 문서 생성 (기존 SearchPlan + gaps 통합, Plan 연계 구조) |
+| 2026-01-27 | v1.1 | 260127_123512 덤프 분석 결과 반영, respondingKeys 발견, 3회차 조사 계획 수립 |

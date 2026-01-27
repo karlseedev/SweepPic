@@ -492,7 +492,7 @@ public final class ImagePipeline: ImagePipelineProtocol {
         // [가드레일] 메인 스레드에서 호출 시 경고
         #if DEBUG
         if Thread.isMainThread {
-            print("[ImagePipeline] Warning: preheatAssets called on main thread")
+            Log.print("[ImagePipeline] Warning: preheatAssets called on main thread")
         }
         #endif
 
@@ -530,7 +530,7 @@ public final class ImagePipeline: ImagePipelineProtocol {
         }
 
         #if DEBUG
-        print("[ImagePipeline] Cache cleared")
+        Log.print("[ImagePipeline] Cache cleared")
         #endif
     }
 
@@ -546,7 +546,7 @@ public final class ImagePipeline: ImagePipelineProtocol {
     ) -> RequestToken? {
         guard let asset = fetchAsset(for: assetID) else {
             #if DEBUG
-            print("[ImagePipeline] Asset not found: \(assetID.prefix(8))...")
+            Log.print("[ImagePipeline] Asset not found: \(assetID.prefix(8))...")
             #endif
             return nil
         }

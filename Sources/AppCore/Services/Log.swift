@@ -100,16 +100,43 @@ public enum Log {
         "VideoFrameExtractor": false,
 
         // =============================================
-        // Debug / 기타
+        // ImagePipeline / 썸네일
         // =============================================
         "ImagePipeline": false,
+        "Pipeline": false,
         "ThumbnailCache": false,
+        "MemoryCache": false,
+        "DiskSave": false,
+        "Thumb:Req": false,
+        "Thumb:Res": false,
+        "Preload": false,
+
+        // =============================================
+        // 앱 상태 / 초기화
+        // =============================================
+        "LaunchArgs": false,
+        "Env": false,
+        "Config": false,
+        "TrashStore": false,
+        "AppStateStore": false,
+        "Timing": false,
+        "InitialDisplay": false,
+        "Initial Load": false,
+
+        // =============================================
+        // 서비스
+        // =============================================
         "PhotoLibraryService": false,
+        "VideoPipeline": false,
+        "AlbumService": false,
+
+        // =============================================
+        // Debug / 기타
+        // =============================================
         "Permission": false,
         "Trash": false,
         "Album": false,
         "Error": false,
-        "Config": false,
         "SystemUIInspector": false,
         "SystemUIInspector2": false,
         "SystemUIInspector3": false,

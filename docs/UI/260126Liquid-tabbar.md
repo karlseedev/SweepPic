@@ -1,8 +1,8 @@
 # iOS 26 Liquid Glass TabBar 구현 자료
 
-**작성일**: 2026-01-27 (v2)
+**작성일**: 2026-01-27 (v3)
 **데이터 소스**: SystemUIInspector3 (iOS 26.0.1 시뮬레이터)
-**최신 덤프**: `260127_100514_tabbar_*.json`
+**최신 덤프**: `260127_123512_tabbar_*.json` (파라미터 확인), `260127_100514_tabbar_*.json` (값 참조)
 
 ---
 
@@ -156,8 +156,21 @@ layer.contentsScale = 1         // ✅ 확인됨
 | vibrantColorMatrix | 아이콘/라벨 레이어 | inputColorMatrix | ✅ 완전 파악 |
 | gaussianBlur | UICABackdropLayer | inputRadius=2, inputNormalizeEdges=1, inputQuality="default" | ✅ 완전 파악 |
 | colorMatrix | UICABackdropLayer | inputColorMatrix | ✅ 완전 파악 |
-| opacityPair | _UILiquidLensView.layer | 🔍 파라미터 없음 - 역할 불명 | 🔍 조사 중 |
-| displacementMap | ClearGlassView 내부 | inputAmount=0 🔍 다른 파라미터? | 🔍 조사 중 |
+| opacityPair | _UILiquidLensView.layer | ⚠️ 파라미터 없음 확인 (respondingKeys 검증) | 🔍 역할 불명 |
+| displacementMap | ClearGlassView 내부 | ⚠️ inputAmount=0만 존재 (respondingKeys 검증) | 🔍 역할 불명 |
+
+#### 4.1.1. respondingKeys 검증 결과 (260127_123512 덤프)
+
+Inspector에서 필터가 응답하는 키를 확인한 결과:
+
+| 필터 | respondingKeys | 의미 |
+|------|----------------|------|
+| opacityPair | `["enabled", "cachesInputImage"]` | 추가 파라미터 없음 확인됨 |
+| displacementMap | `["enabled", "cachesInputImage"]` | inputAmount 외 파라미터 없음 확인됨 |
+
+**결론**:
+- `opacityPair`: 파라미터가 없는 필터. 역할은 아직 불명 (선택/비선택 전환 관련 추측)
+- `displacementMap`: `inputAmount=0`만 존재. 현재 비활성 상태이거나 다른 방식으로 동작
 
 ### 4.2. CAFilter 생성 코드
 
@@ -185,10 +198,12 @@ let confirmedKeys = [
     "inputNormalizeEdges",   // gaussianBlur ✅
     "inputQuality",          // gaussianBlur ✅
     "inputColorMatrix",      // colorMatrix, vibrantColorMatrix ✅
-    "enabled"                // 모든 필터 ✅
+    "enabled",               // 모든 필터 ✅
+    "cachesInputImage"       // 모든 필터 ✅ (260127_123512에서 발견)
 ]
 
 // 시도했지만 응답 없음 (opacityPair, displacementMap용)
+// ⚠️ respondingKeys 검증으로 추가 파라미터 없음 확인됨
 let triedKeys = [
     "inputOpacity", "inputOpacity0", "inputOpacity1",
     "inputImage", "inputScaleX", "inputScaleY", "inputCenter",
@@ -368,15 +383,20 @@ func animateTabSelection(to index: Int) {
 
 ## 10. 미해결 항목 🔍
 
-**상세 내용은 [260126Liquid-tabbar-gaps.md](./260126Liquid-tabbar-gaps.md) 참조**
+**상세 조사 계획은 [260127Liquid-Research.md](./260127Liquid-Research.md) 참조**
 
-| 항목 | 상태 | 요약 |
-|------|------|------|
-| opacityPair 필터 | 🔍 | 파라미터 없음, 역할 불명 |
-| displacementMap 필터 | 🔍 | inputAmount=0 외 파라미터 불명 |
-| CASDFLayer | 🔍 | SDF 데이터 정의 방법 불명 |
-| CAPortalLayer.sourceLayer | 🔍 | 참조 대상 레이어 미확인 |
-| innerShadowView | 🔍 | 그림자 설정 방법 불명 |
+| 항목 | 상태 | 요약 | 업데이트 |
+|------|------|------|----------|
+| opacityPair 필터 | 🔍 역할 불명 | 파라미터 없음 확인됨 | ✅ 파라미터 탐색 완료 (260127) |
+| displacementMap 필터 | 🔍 역할 불명 | inputAmount=0만 존재 확인됨 | ✅ 파라미터 탐색 완료 (260127) |
+| CASDFLayer | 🔍 | SDF 데이터 정의 방법 불명 | - |
+| CAPortalLayer.sourceLayer | 🔍 | 참조 대상 레이어 미확인 | - |
+| innerShadowView | 🔍 | 그림자 설정 방법 불명 | - |
+
+### 10.1. 파라미터 탐색 완료 항목
+
+**opacityPair, displacementMap**: respondingKeys 검증으로 추가 파라미터가 없음 확인됨.
+- 역할 파악이 남은 과제 (필터 제거 테스트, 동적 값 변화 관찰 등)
 
 ---
 
@@ -411,7 +431,8 @@ func animateTabSelection(to index: Int) {
 ## 부록: 원본 데이터
 
 ### A. 필터 파일
-`260127_100514_tabbar_filters.json` (27KB)
+- `260127_100514_tabbar_filters.json` (27KB) - 파라미터 값 포함
+- `260127_123512_tabbar_filters.json` (21KB) - respondingKeys 포함
 
 ### B. 구조 파일
 `260127_100514_tabbar_structure.json` (5KB)

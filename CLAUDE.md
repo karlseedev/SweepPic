@@ -111,6 +111,19 @@ if #available(iOS 26.0, *) {
 - `BaseGridViewController.swift:152` - 그리드 계열 VC용
 - `TabBarController.swift:31` - 탭바 컨트롤러용
 
+## 로그 관리 시스템
+
+앱 전체 로그는 `Sources/AppCore/Services/Log.swift`에서 중앙 관리됩니다.
+
+```swift
+// 카테고리별 ON/OFF (Log.swift의 categories 딕셔너리 수정)
+Log.categories["Video"] = true      // 특정 카테고리만 켜기
+Log.categories["GridViewController"] = false
+```
+
+- `Log.print("[Category] 메시지")` - 카테고리 자동 추출하여 필터링
+- `Log.debug("Category", "메시지")` - 카테고리 직접 지정
+
 ## 빌드 & 테스트 명령어
 
 ```bash

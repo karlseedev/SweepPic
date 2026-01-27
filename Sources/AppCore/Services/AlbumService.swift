@@ -86,7 +86,7 @@ public final class AlbumService: AlbumServiceProtocol {
             albums.append(album)
         }
 
-        print("[AlbumService] Fetched \(albums.count) user albums")
+        Log.print("[AlbumService] Fetched \(albums.count) user albums")
         return albums
     }
 
@@ -118,7 +118,7 @@ public final class AlbumService: AlbumServiceProtocol {
             }
         }
 
-        print("[AlbumService] Fetched \(smartAlbums.count) smart albums")
+        Log.print("[AlbumService] Fetched \(smartAlbums.count) smart albums")
         return smartAlbums
     }
 
@@ -133,7 +133,7 @@ public final class AlbumService: AlbumServiceProtocol {
         )
 
         guard let collection = collections.firstObject else {
-            print("[AlbumService] Album not found: \(albumID)")
+            Log.print("[AlbumService] Album not found: \(albumID)")
             return nil
         }
 
@@ -144,7 +144,7 @@ public final class AlbumService: AlbumServiceProtocol {
 
         let assets = PHAsset.fetchAssets(in: collection, options: options)
 
-        print("[AlbumService] Fetched \(assets.count) photos in album: \(collection.localizedTitle ?? "Unknown")")
+        Log.print("[AlbumService] Fetched \(assets.count) photos in album: \(collection.localizedTitle ?? "Unknown")")
         return assets
     }
 
@@ -153,7 +153,7 @@ public final class AlbumService: AlbumServiceProtocol {
     /// - Returns: PHFetchResult (nil이면 앨범을 찾지 못함)
     public func fetchPhotosInSmartAlbum(type: SmartAlbumType) -> PHFetchResult<PHAsset>? {
         guard let subtype = phAssetCollectionSubtype(for: type) else {
-            print("[AlbumService] Unsupported smart album type: \(type)")
+            Log.print("[AlbumService] Unsupported smart album type: \(type)")
             return nil
         }
 
@@ -165,7 +165,7 @@ public final class AlbumService: AlbumServiceProtocol {
         )
 
         guard let collection = collections.firstObject else {
-            print("[AlbumService] Smart album not found: \(type)")
+            Log.print("[AlbumService] Smart album not found: \(type)")
             return nil
         }
 
@@ -180,7 +180,7 @@ public final class AlbumService: AlbumServiceProtocol {
 
         let assets = PHAsset.fetchAssets(in: collection, options: options)
 
-        print("[AlbumService] Fetched \(assets.count) photos in smart album: \(type.displayTitle)")
+        Log.print("[AlbumService] Fetched \(assets.count) photos in smart album: \(type.displayTitle)")
         return assets
     }
 
