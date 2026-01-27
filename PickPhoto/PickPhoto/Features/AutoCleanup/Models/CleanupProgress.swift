@@ -59,24 +59,6 @@ struct CleanupProgress: Equatable {
 
 extension CleanupProgress {
 
-    /// 현재 탐색 시점을 문자열로 표현
-    /// - 연도별 정리: "2024년 사진 탐색 중..."
-    /// - 일반 정리: "2024년 5월부터 탐색 중..."
-    func currentDateDescription(for method: CleanupMethod) -> String {
-        let calendar = Calendar.current
-        let year = calendar.component(.year, from: currentDate)
-
-        switch method {
-        case .byYear(_, _):
-            // 연도별 정리: 월 생략
-            return "\(year)년 사진 탐색 중..."
-        case .fromLatest, .continueFromLast:
-            // 일반 정리: 월 포함
-            let month = calendar.component(.month, from: currentDate)
-            return "\(year)년 \(month)월부터 탐색 중..."
-        }
-    }
-
     /// 찾은 사진 수 표시 문자열
     /// - "23장 발견" 형식
     var foundCountDescription: String {

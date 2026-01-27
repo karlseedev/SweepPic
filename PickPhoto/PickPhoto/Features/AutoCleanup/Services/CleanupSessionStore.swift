@@ -336,21 +336,6 @@ final class CleanupSessionStore: CleanupSessionStoreProtocol {
 
 extension CleanupSessionStore {
 
-    /// 이전 세션 정보 요약 (UI 표시용)
-    /// - Returns: "2024년 5월부터 계속" 형식의 문자열
-    func previousSessionDescription() -> String? {
-        guard let session = latestSession,
-              let lastDate = session.lastAssetDate else {
-            return nil
-        }
-
-        let calendar = Calendar.current
-        let year = calendar.component(.year, from: lastDate)
-        let month = calendar.component(.month, from: lastDate)
-
-        return "\(year)년 \(month)월부터 계속"
-    }
-
     /// 이전 세션의 마지막 탐색 날짜
     var lastSessionDate: Date? {
         return latestSession?.lastAssetDate

@@ -156,9 +156,10 @@ enum CleanupConstants {
     // MARK: - 흰 배경 이미지 감지
 
     /// 흰 배경 모서리 휘도 임계값
-    /// - 모서리휘도 > 0.99 → 거의 순백색
+    /// - 모서리휘도 > 0.95 → 매우 밝은 배경
     /// - 조건: 극단 밝음 + 모서리 > 중앙일 때 흰 배경 이미지로 판정
-    static let whiteBackgroundCornerLuminance: Double = 0.99
+    /// - 일반 사진에서 4개 모서리가 모두 0.95 이상일 가능성 낮음
+    static let whiteBackgroundCornerLuminance: Double = 0.95
 
     // MARK: - Weak 가중치 (Recall 모드)
 

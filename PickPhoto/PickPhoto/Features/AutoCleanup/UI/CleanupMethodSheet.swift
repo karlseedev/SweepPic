@@ -101,7 +101,7 @@ final class CleanupMethodSheet {
         if let session = latestSession, session.canContinueFromLatest {
             let dateString = formatDate(session.lastAssetDate)
             continueAction = UIAlertAction(
-                title: "이어서 정리 (\(dateString)부터)",
+                title: "이어서 정리 (\(dateString) 이전)",
                 style: .default
             ) { [self] _ in
                 self.delegate?.cleanupMethodSheet(self, didSelect: .continueFromLast)
