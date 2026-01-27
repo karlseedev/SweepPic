@@ -59,6 +59,7 @@ struct FilterEntry: Codable {
     let filterType: String
     let enabled: Bool
     let parameters: [String: String]
+    let respondingKeys: [String]?  // 응답하는 키 목록 (디버그용)
 }
 
 /// 애니메이션 엔트리 (경로 포함)
@@ -207,6 +208,7 @@ struct FilterInfo: Codable {
     let name: String
     let type: String
     let params: [String: String]?  // parameters 축약
+    let respondingKeys: [String]?  // 응답하는 키 목록 (디버그용)
 }
 
 /// 애니메이션 정보
@@ -231,6 +233,8 @@ struct BackdropInfo: Codable {
 /// CAPortalLayer 정보
 struct PortalInfo: Codable {
     let sourceLayerClass: String?
+    let sourceLayerName: String?      // sourceLayer.name
+    let sourceLayerFrame: FrameInfo?  // sourceLayer.frame
     let hidesSourceLayer: Bool?
     let matchesOpacity: Bool?
     let matchesPosition: Bool?
@@ -243,6 +247,11 @@ struct SDFInfo: Codable {
     let fillColor: ColorInfo?
     let strokeColor: ColorInfo?
     let strokeWidth: CGFloat?
+    // 추가 속성
+    let sdfPath: String?       // path 데이터
+    let cornerRadius: CGFloat?
+    let fillRule: String?
+    let allKeys: [String]?     // 발견된 모든 키
 }
 
 /// 메타데이터
@@ -281,7 +290,17 @@ final class SystemUIInspector3 {
         "inputImage", "inputScaleX", "inputScaleY", "inputCenter",
         "inputOpacity", "inputOpacity0", "inputOpacity1",
         "inputSaturation", "inputBrightness", "inputContrast",
-        "inputMaskImage", "inputDisplacementImage"
+        "inputMaskImage", "inputDisplacementImage",
+        // opacityPair 추정 키
+        "opacity", "opacity0", "opacity1", "inputOpacityPair",
+        "firstOpacity", "secondOpacity", "fromOpacity", "toOpacity",
+        // displacementMap 추정 키
+        "displacementScale", "inputDisplacementScale", "mapScale",
+        "inputXScale", "inputYScale", "inputOffset", "inputWarp",
+        // variableBlur 추정 키
+        "inputMask", "inputGradientImage", "inputMaskImage",
+        // 일반적인 키
+        "enabled", "cachesInputImage", "value", "values"
     ]
 
     private let maxLinesPerFile = 2000
@@ -510,7 +529,8 @@ final class SystemUIInspector3 {
                 filterName: String(describing: compFilter),
                 filterType: "compositingFilter",
                 enabled: true,
-                parameters: [:]
+                parameters: [:],
+                respondingKeys: nil
             )
             filters.append(entry)
         }
@@ -535,17 +555,28 @@ final class SystemUIInspector3 {
         let enabled = (nsFilter.value(forKey: "enabled") as? Bool) ?? true
 
         var params: [String: String] = [:]
+        var responding: [String] = []
+
         for key in filterParamKeys {
-            if let value = nsFilter.value(forKey: key) {
-                if key == "inputColorMatrix", let nsValue = value as? NSValue {
-                    params[key] = parseColorMatrix(nsValue)
-                } else {
-                    params[key] = String(describing: value)
+            let selector = NSSelectorFromString(key)
+            if nsFilter.responds(to: selector) {
+                responding.append(key)
+                if let value = nsFilter.value(forKey: key) {
+                    if key == "inputColorMatrix", let nsValue = value as? NSValue {
+                        params[key] = parseColorMatrix(nsValue)
+                    } else {
+                        params[key] = String(describing: value)
+                    }
                 }
             }
         }
 
-        return FilterEntry(path: path, filterName: name, filterType: type, enabled: enabled, parameters: params)
+        // 파라미터 없는 필터는 응답 키 기록
+        let respKeys: [String]? = (name == "opacityPair" || name == "displacementMap" || params.isEmpty)
+            ? (responding.isEmpty ? nil : responding) : nil
+
+        return FilterEntry(path: path, filterName: name, filterType: type,
+                          enabled: enabled, parameters: params, respondingKeys: respKeys)
     }
 
     // MARK: - Animations 추출
@@ -839,18 +870,29 @@ final class SystemUIInspector3 {
 
         var params: [String: String]? = nil
         var p: [String: String] = [:]
+        var responding: [String] = []
+
         for key in filterParamKeys {
-            if let value = nsFilter.value(forKey: key) {
-                if key == "inputColorMatrix", let nsValue = value as? NSValue {
-                    p[key] = parseColorMatrix(nsValue)
-                } else {
-                    p[key] = String(describing: value)
+            // responds(to:) 체크 - KVC 가능 키 확인
+            let selector = NSSelectorFromString(key)
+            if nsFilter.responds(to: selector) {
+                responding.append(key)
+                if let value = nsFilter.value(forKey: key) {
+                    if key == "inputColorMatrix", let nsValue = value as? NSValue {
+                        p[key] = parseColorMatrix(nsValue)
+                    } else {
+                        p[key] = String(describing: value)
+                    }
                 }
             }
         }
         if !p.isEmpty { params = p }
 
-        return FilterInfo(name: name, type: type, params: params)
+        // opacityPair, displacementMap 등 파라미터 없는 필터는 응답 키 기록
+        let respKeys: [String]? = (name == "opacityPair" || name == "displacementMap" || params == nil)
+            ? (responding.isEmpty ? nil : responding) : nil
+
+        return FilterInfo(name: name, type: type, params: params, respondingKeys: respKeys)
     }
 
     private func parseColorMatrix(_ nsValue: NSValue) -> String {
@@ -930,11 +972,20 @@ final class SystemUIInspector3 {
     }
 
     private func extractPortalInfo(_ ns: NSObject) -> PortalInfo? {
-        // sourceLayer의 클래스 이름
+        // sourceLayer 정보
         var sourceClass: String? = nil
+        var sourceName: String? = nil
+        var sourceFrame: FrameInfo? = nil
+
         if ns.responds(to: NSSelectorFromString("sourceLayer")),
            let source = ns.value(forKey: "sourceLayer") {
             sourceClass = String(describing: type(of: source))
+
+            // sourceLayer가 CALayer이면 name과 frame도 수집
+            if let sourceLayer = source as? CALayer {
+                sourceName = sourceLayer.name
+                sourceFrame = sanitizeFrame(sourceLayer.frame)
+            }
         }
 
         let hides = ns.responds(to: NSSelectorFromString("hidesSourceLayer"))
@@ -951,13 +1002,32 @@ final class SystemUIInspector3 {
             return nil
         }
 
-        return PortalInfo(sourceLayerClass: sourceClass, hidesSourceLayer: hides,
+        return PortalInfo(sourceLayerClass: sourceClass, sourceLayerName: sourceName,
+                         sourceLayerFrame: sourceFrame, hidesSourceLayer: hides,
                          matchesOpacity: matchOp, matchesPosition: matchPos, matchesTransform: matchTr)
     }
 
     private func extractSDFInfo(_ ns: NSObject) -> SDFInfo? {
+        // 시도할 키 목록 (CASDFLayer, CASDFElementLayer)
+        let sdfKeys = [
+            "shape", "path", "sdfPath", "fillColor", "strokeColor", "strokeWidth",
+            "cornerRadius", "fillRule", "strokeStart", "strokeEnd", "lineCap",
+            "lineJoin", "miterLimit", "lineDashPhase", "lineDashPattern",
+            "sdfData", "distanceField", "resolution", "spread", "padding",
+            "contour", "outline", "geometry", "shapeType", "elementType"
+        ]
+
+        var foundKeys: [String] = []
+        for key in sdfKeys {
+            if ns.responds(to: NSSelectorFromString(key)) {
+                foundKeys.append(key)
+            }
+        }
+
         let shape = ns.responds(to: NSSelectorFromString("shape"))
             ? ns.value(forKey: "shape") as? String : nil
+        let sdfPath = ns.responds(to: NSSelectorFromString("path"))
+            ? String(describing: ns.value(forKey: "path") ?? "nil") : nil
 
         var fillColor: ColorInfo? = nil
         if ns.responds(to: NSSelectorFromString("fillColor")),
@@ -973,13 +1043,19 @@ final class SystemUIInspector3 {
 
         let strokeWidth = ns.responds(to: NSSelectorFromString("strokeWidth"))
             ? ns.value(forKey: "strokeWidth") as? CGFloat : nil
+        let cornerRadius = ns.responds(to: NSSelectorFromString("cornerRadius"))
+            ? ns.value(forKey: "cornerRadius") as? CGFloat : nil
+        let fillRule = ns.responds(to: NSSelectorFromString("fillRule"))
+            ? ns.value(forKey: "fillRule") as? String : nil
 
-        // 아무 것도 없으면 nil
-        if shape == nil && fillColor == nil && strokeColor == nil && strokeWidth == nil {
+        // 발견된 키가 있으면 반환
+        if foundKeys.isEmpty && shape == nil && fillColor == nil {
             return nil
         }
 
-        return SDFInfo(shape: shape, fillColor: fillColor, strokeColor: strokeColor, strokeWidth: strokeWidth)
+        return SDFInfo(shape: shape, fillColor: fillColor, strokeColor: strokeColor,
+                      strokeWidth: strokeWidth, sdfPath: sdfPath, cornerRadius: cornerRadius,
+                      fillRule: fillRule, allKeys: foundKeys.isEmpty ? nil : foundKeys)
     }
 
     private func getKeyWindow() -> UIWindow? {
