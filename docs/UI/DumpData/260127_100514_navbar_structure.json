@@ -1,0 +1,119 @@
+{
+  "meta" : {
+    "date" : "2026-01-27T01:05:14Z",
+    "iOS" : "26.0.1",
+    "screen" : "UINavigationController"
+  },
+  "views" : [
+    {
+      "childCount" : 3,
+      "children" : [
+        {
+          "childCount" : 0,
+          "className" : "_UIBarBackground",
+          "frame" : {
+            "height" : 116,
+            "width" : 402,
+            "x" : 0,
+            "y" : -62
+          },
+          "hasAnimations" : false,
+          "hasFilters" : false,
+          "layerClass" : "CALayer"
+        },
+        {
+          "childCount" : 1,
+          "children" : [
+            {
+              "childCount" : 3,
+              "children" : [
+                {
+                  "childCount" : 1,
+                  "className" : "HostedViewContainer",
+                  "frame" : {
+                    "height" : 54,
+                    "width" : 402,
+                    "x" : 0,
+                    "y" : 0
+                  },
+                  "hasAnimations" : false,
+                  "hasFilters" : false,
+                  "layerClass" : "CALayer"
+                },
+                {
+                  "childCount" : 0,
+                  "className" : "UIView",
+                  "frame" : {
+                    "height" : 54,
+                    "width" : 402,
+                    "x" : 0,
+                    "y" : 0
+                  },
+                  "hasAnimations" : false,
+                  "hasFilters" : false,
+                  "layerClass" : "CALayer"
+                },
+                {
+                  "childCount" : 2,
+                  "className" : "NavigationBarPlatterContainer",
+                  "frame" : {
+                    "height" : 54,
+                    "width" : 402,
+                    "x" : 0,
+                    "y" : 0
+                  },
+                  "hasAnimations" : false,
+                  "hasFilters" : false,
+                  "layerClass" : "CALayer"
+                }
+              ],
+              "className" : "NavigationBarTransitionContainer",
+              "frame" : {
+                "height" : 54,
+                "width" : 402,
+                "x" : 0,
+                "y" : 0
+              },
+              "hasAnimations" : false,
+              "hasFilters" : false,
+              "layerClass" : "CALayer"
+            }
+          ],
+          "className" : "NavigationBarContentView",
+          "frame" : {
+            "height" : 54,
+            "width" : 402,
+            "x" : 0,
+            "y" : 0
+          },
+          "hasAnimations" : false,
+          "hasFilters" : false,
+          "layerClass" : "CALayer"
+        },
+        {
+          "childCount" : 0,
+          "className" : "_UIPointerInteractionAssistantEffectContainerView",
+          "frame" : {
+            "height" : 0,
+            "width" : 0,
+            "x" : 0,
+            "y" : 0
+          },
+          "hasAnimations" : false,
+          "hasFilters" : false,
+          "layerClass" : "CALayer"
+        }
+      ],
+      "className" : "UINavigationBar",
+      "frame" : {
+        "height" : 54,
+        "width" : 402,
+        "x" : 0,
+        "y" : 62
+      },
+      "hasAnimations" : false,
+      "hasFilters" : false,
+      "layerClass" : "CALayer"
+    }
+  ]
+}

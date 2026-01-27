@@ -1,0 +1,188 @@
+{
+  "meta" : {
+    "date" : "2026-01-27T03:49:14Z",
+    "iOS" : "26.0.1",
+    "screen" : "UINavigationController"
+  },
+  "views" : [
+    {
+      "childCount" : 1,
+      "children" : [
+        {
+          "childCount" : 4,
+          "children" : [
+            {
+              "childCount" : 3,
+              "children" : [
+                {
+                  "childCount" : 2,
+                  "className" : "_UITabButton",
+                  "frame" : {
+                    "height" : 54,
+                    "width" : 94,
+                    "x" : 4,
+                    "y" : 4
+                  },
+                  "hasAnimations" : false,
+                  "hasFilters" : false,
+                  "layerClass" : "CALayer"
+                },
+                {
+                  "childCount" : 2,
+                  "className" : "_UITabButton",
+                  "frame" : {
+                    "height" : 54,
+                    "width" : 94,
+                    "x" : 90,
+                    "y" : 4
+                  },
+                  "hasAnimations" : false,
+                  "hasFilters" : false,
+                  "layerClass" : "CALayer"
+                },
+                {
+                  "childCount" : 2,
+                  "className" : "_UITabButton",
+                  "frame" : {
+                    "height" : 54,
+                    "width" : 94,
+                    "x" : 176,
+                    "y" : 4
+                  },
+                  "hasAnimations" : false,
+                  "hasFilters" : false,
+                  "layerClass" : "CALayer"
+                }
+              ],
+              "className" : "SelectedContentView",
+              "frame" : {
+                "height" : 62,
+                "width" : 274,
+                "x" : 0,
+                "y" : 0
+              },
+              "hasAnimations" : false,
+              "hasFilters" : false,
+              "layerClass" : "CALayer"
+            },
+            {
+              "childCount" : 1,
+              "children" : [
+                {
+                  "childCount" : 2,
+                  "className" : "UIView",
+                  "frame" : {
+                    "height" : 54,
+                    "width" : 94,
+                    "x" : 0,
+                    "y" : 0
+                  },
+                  "hasAnimations" : false,
+                  "hasFilters" : false,
+                  "layerClass" : "CALayer"
+                }
+              ],
+              "className" : "_UILiquidLensView",
+              "frame" : {
+                "height" : 54,
+                "width" : 94,
+                "x" : 4,
+                "y" : 4
+              },
+              "hasAnimations" : false,
+              "hasFilters" : true,
+              "layerClass" : "CALayer"
+            },
+            {
+              "childCount" : 3,
+              "children" : [
+                {
+                  "childCount" : 2,
+                  "className" : "_UITabButton",
+                  "frame" : {
+                    "height" : 54,
+                    "width" : 94,
+                    "x" : 4,
+                    "y" : 4
+                  },
+                  "hasAnimations" : false,
+                  "hasFilters" : false,
+                  "layerClass" : "CALayer"
+                },
+                {
+                  "childCount" : 2,
+                  "className" : "_UITabButton",
+                  "frame" : {
+                    "height" : 54,
+                    "width" : 94,
+                    "x" : 90,
+                    "y" : 4
+                  },
+                  "hasAnimations" : false,
+                  "hasFilters" : false,
+                  "layerClass" : "CALayer"
+                },
+                {
+                  "childCount" : 2,
+                  "className" : "_UITabButton",
+                  "frame" : {
+                    "height" : 54,
+                    "width" : 94,
+                    "x" : 176,
+                    "y" : 4
+                  },
+                  "hasAnimations" : false,
+                  "hasFilters" : false,
+                  "layerClass" : "CALayer"
+                }
+              ],
+              "className" : "ContentView",
+              "frame" : {
+                "height" : 62,
+                "width" : 274,
+                "x" : 0,
+                "y" : 0
+              },
+              "hasAnimations" : false,
+              "hasFilters" : false,
+              "layerClass" : "CALayer"
+            },
+            {
+              "childCount" : 0,
+              "className" : "DestOutView",
+              "frame" : {
+                "height" : 54,
+                "width" : 94,
+                "x" : 0,
+                "y" : 0
+              },
+              "hasAnimations" : true,
+              "hasFilters" : true,
+              "layerClass" : "CALayer"
+            }
+          ],
+          "className" : "_UITabBarPlatterView",
+          "frame" : {
+            "height" : 62,
+            "width" : 274,
+            "x" : 64,
+            "y" : 0
+          },
+          "hasAnimations" : false,
+          "hasFilters" : false,
+          "layerClass" : "CALayer"
+        }
+      ],
+      "className" : "UITabBar",
+      "frame" : {
+        "height" : 83,
+        "width" : 402,
+        "x" : 0,
+        "y" : 791
+      },
+      "hasAnimations" : false,
+      "hasFilters" : false,
+      "layerClass" : "CALayer"
+    }
+  ]
+}

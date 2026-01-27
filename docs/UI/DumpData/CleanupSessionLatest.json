@@ -1,0 +1,18 @@
+{
+  "createdAt" : "2026-01-26T09:47:10Z",
+  "endReason" : "maxScanned",
+  "foundCount" : 4,
+  "id" : "58C416F8-A8DA-4F6A-9063-FDAF845700C9",
+  "lastAssetDate" : "2024-08-07T06:11:47Z",
+  "method" : {
+    "method" : "fromLatest"
+  },
+  "mode" : "precision",
+  "scannedCount" : 1000,
+  "startDate" : "2026-01-26T09:47:10Z",
+  "status" : "completed",
+  "trashedAssetIDs" : [
+
+  ],
+  "updatedAt" : "2026-01-26T09:47:10Z"
+}

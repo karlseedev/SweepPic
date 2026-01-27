@@ -112,7 +112,7 @@ final class PhotoCell: UICollectionViewCell {
         let pipelineMismatch = pipelineMismatchCount
         mismatchLock.unlock()
 
-        FileLogger.log("[\(label)] diskCacheMismatch: \(diskMismatch), pipelineMismatch: \(pipelineMismatch)")
+        Log.print("[\(label)] diskCacheMismatch: \(diskMismatch), pipelineMismatch: \(pipelineMismatch)")
     }
 
     // MARK: - Gray Cell Statistics (회색 셀 측정)
@@ -180,7 +180,7 @@ final class PhotoCell: UICollectionViewCell {
     static func logGrayCellStats(label: String = "PhotoCell") {
         let stats = getGrayCellStats()
         let pending = stats.shown - stats.resolved
-        FileLogger.log("[\(label)] grayShown: \(stats.shown), grayResolved: \(stats.resolved), pending: \(pending)")
+        Log.print("[\(label)] grayShown: \(stats.shown), grayResolved: \(stats.resolved), pending: \(pending)")
     }
 
     // MARK: - UI Components
@@ -526,7 +526,7 @@ final class PhotoCell: UICollectionViewCell {
         if FileLogger.logThumbEnabled {
             Self.configureCallCount += 1
             if Self.configureCallCount <= 5 || Self.configureCallCount % 10 == 0 {
-                FileLogger.log("[Thumb:Req] #\(Self.configureCallCount) target=\(Int(pixelSize.width))x\(Int(pixelSize.height))px, fullSize=\(isFullSizeRequest)")
+                Log.print("[Thumb:Req] #\(Self.configureCallCount) target=\(Int(pixelSize.width))x\(Int(pixelSize.height))px, fullSize=\(isFullSizeRequest)")
             }
         }
 
@@ -535,7 +535,7 @@ final class PhotoCell: UICollectionViewCell {
         #if false  // DEBUG 로그 임시 비활성화
         // 검증 로그: PhotoCell에서 조회하는 pixelSize (1회만)
         if Self.imageApplyCounter == 0 {
-            FileLogger.log("[PhotoCell] 메모리 캐시 조회 pixelSize: \(Int(pixelSize.width))x\(Int(pixelSize.height))px")
+            Log.print("[PhotoCell] 메모리 캐시 조회 pixelSize: \(Int(pixelSize.width))x\(Int(pixelSize.height))px")
         }
         #endif
 
@@ -554,7 +554,7 @@ final class PhotoCell: UICollectionViewCell {
                 // 첫 번째 이미지 할당 시 T_firstThumbnailVisible 로그
                 if !Self.hasLoggedFirstThumbnail {
                     Self.hasLoggedFirstThumbnail = true
-                    FileLogger.log("[PhotoCell] T_firstThumbnailVisible: 첫 이미지 할당 (메모리 캐시 히트)")
+                    Log.print("[PhotoCell] T_firstThumbnailVisible: 첫 이미지 할당 (메모리 캐시 히트)")
                 }
             }
             #endif
@@ -637,7 +637,7 @@ final class PhotoCell: UICollectionViewCell {
                     if Self.pipelineResponseCount <= 5 || Self.pipelineResponseCount % 10 == 0 {
                         let imgPx = Int(image.size.width * image.scale)
                         let imgPy = Int(image.size.height * image.scale)
-                        FileLogger.log("[Thumb:Res] #\(Self.pipelineResponseCount) img=\(imgPx)x\(imgPy)px, target=\(Int(pixelSize.width))x\(Int(pixelSize.height))px, degraded=\(isDegraded)")
+                        Log.print("[Thumb:Res] #\(Self.pipelineResponseCount) img=\(imgPx)x\(imgPy)px, target=\(Int(pixelSize.width))x\(Int(pixelSize.height))px, degraded=\(isDegraded)")
                     }
                 }
 
@@ -650,13 +650,13 @@ final class PhotoCell: UICollectionViewCell {
                     // 첫 번째 이미지 할당 시 T_firstThumbnailVisible 로그
                     if !Self.hasLoggedFirstThumbnail {
                         Self.hasLoggedFirstThumbnail = true
-                        FileLogger.log("[PhotoCell] T_firstThumbnailVisible: 첫 이미지 할당 (Pipeline, isDegraded=\(isDegraded))")
+                        Log.print("[PhotoCell] T_firstThumbnailVisible: 첫 이미지 할당 (Pipeline, isDegraded=\(isDegraded))")
                     }
 
                     // 20개마다 visible/hit 비율 로그
                     if count == 20 || count == 50 {
                         let hitRate = Double(Self.cacheHitApplyCounter) / Double(count) * 100
-                        FileLogger.log("[PhotoCell] 이미지 할당 #\(count): 캐시 히트율 \(String(format: "%.1f", hitRate))% (\(Self.cacheHitApplyCounter)/\(count))")
+                        Log.print("[PhotoCell] 이미지 할당 #\(count): 캐시 히트율 \(String(format: "%.1f", hitRate))% (\(Self.cacheHitApplyCounter)/\(count))")
                     }
                 }
                 #endif
@@ -678,9 +678,9 @@ final class PhotoCell: UICollectionViewCell {
                     Self.savedCacheKeysLock.unlock()
 
                     if !alreadySaved {
-                        #if DEBUG
-                        FileLogger.log("[DiskSave] \(assetID.prefix(8))... final saved")
-                        #endif
+                        // #if DEBUG
+                        // Log.print("[DiskSave] \(assetID.prefix(8))... final saved")
+                        // #endif
                         ThumbnailCache.shared.save(
                             image: image,
                             assetID: assetID,

@@ -243,7 +243,7 @@ final class GridViewController: BaseGridViewController {
     override func viewDidLoad() {
         // [Timing] 로딩 시작 시간 기록 (super.viewDidLoad 전에)
         loadStartTime = CACurrentMediaTime()
-        FileLogger.log("[Timing] === 초기 로딩 시작 ===")
+        Log.print("[Timing] === 초기 로딩 시작 ===")
 
         // BaseGridViewController.viewDidLoad()에서 setupUI, setupGestures, additionalSetup 호출
         super.viewDidLoad()
@@ -311,7 +311,7 @@ final class GridViewController: BaseGridViewController {
 
         // 초기 진입 시에는 startInitialDisplay()에서 처리하므로 스킵
         if !hasFinishedInitialDisplay {
-            FileLogger.log("[Timing] viewWillAppear: +\(String(format: "%.1f", vwaMs))ms (초기 진입 - reloadData 스킵)")
+            Log.print("[Timing] viewWillAppear: +\(String(format: "%.1f", vwaMs))ms (초기 진입 - reloadData 스킵)")
             return
         }
 
@@ -320,11 +320,11 @@ final class GridViewController: BaseGridViewController {
             coordinator.animate(alongsideTransition: nil) { [weak self] _ in
                 self?.applyPendingViewerReturn()
             }
-            FileLogger.log("[Timing] viewWillAppear: +\(String(format: "%.1f", vwaMs))ms (전환 중 - completion 예약)")
+            Log.print("[Timing] viewWillAppear: +\(String(format: "%.1f", vwaMs))ms (전환 중 - completion 예약)")
             return
         }
 
-        FileLogger.log("[Timing] viewWillAppear.reloadData: +\(String(format: "%.1f", vwaMs))ms")
+        Log.print("[Timing] viewWillAppear.reloadData: +\(String(format: "%.1f", vwaMs))ms")
         // 화면 표시 시 변경사항 반영 (탭 전환 등)
         collectionView.reloadData()
     }
@@ -361,7 +361,7 @@ final class GridViewController: BaseGridViewController {
 
         // 런치 아규먼트 로깅 (디버깅용)
         let args = ProcessInfo.processInfo.arguments
-        FileLogger.log("[LaunchArgs] count=\(args.count), contains --auto-scroll: \(args.contains("--auto-scroll"))")
+        Log.print("[LaunchArgs] count=\(args.count), contains --auto-scroll: \(args.contains("--auto-scroll"))")
 
         AutoScrollTester.shared.startIfRequestedByLaunchArguments(scrollView: collectionView)
 
@@ -386,7 +386,7 @@ final class GridViewController: BaseGridViewController {
             hasLoggedFirstLayout = true
             let layoutTime = CACurrentMediaTime()
             let sinceStart = (layoutTime - loadStartTime) * 1000
-            FileLogger.log("[Timing] C) 첫 레이아웃 완료: +\(String(format: "%.1f", sinceStart))ms")
+            Log.print("[Timing] C) 첫 레이아웃 완료: +\(String(format: "%.1f", sinceStart))ms")
         }
     }
 
@@ -680,7 +680,7 @@ extension GridViewController {
             // 원복: git checkout a5414d4 -- PickPhoto/PickPhoto/Features/Grid/GridViewController.swift
             // 매 10번째에 구간별 로그 출력 (임시 비활성화)
             // if cellForItemAtCount % 10 == 0 {
-            //     FileLogger.log("[Timing] cellForItemAt #\(cellForItemAtCount): ...")
+            //     Log.print("[Timing] cellForItemAt #\(cellForItemAtCount): ...")
             // }
         }
 
@@ -709,7 +709,7 @@ extension GridViewController {
             hasLoggedFirstCellDisplay = true
             let displayTime = CACurrentMediaTime()
             let sinceStart = (displayTime - loadStartTime) * 1000
-            FileLogger.log("[Timing] D) 첫 셀 표시: +\(String(format: "%.1f", sinceStart))ms (indexPath: \(indexPath))")
+            Log.print("[Timing] D) 첫 셀 표시: +\(String(format: "%.1f", sinceStart))ms (indexPath: \(indexPath))")
         }
 
         // 회색 셀 측정: 화면에 표시되는 순간 이미지가 nil이면 카운트

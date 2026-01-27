@@ -1,0 +1,225 @@
+{
+  "animations" : [
+    {
+      "className" : "CAMatchPropertyAnimation",
+      "duration" : 0,
+      "key" : "match-bounds",
+      "path" : "navbar > UINavigationBar.layer.sub[1].sub[0].sub[2].sub[1].sub[0].sub[0].sub[0].sub[0].sub[0].sub[0]"
+    },
+    {
+      "className" : "CAMatchMoveAnimation",
+      "duration" : 0,
+      "key" : "match-position",
+      "path" : "navbar > UINavigationBar.layer.sub[1].sub[0].sub[2].sub[1].sub[0].sub[0].sub[0].sub[0].sub[0].sub[0]"
+    },
+    {
+      "className" : "CAMatchPropertyAnimation",
+      "duration" : 0,
+      "key" : "match-corner-radius",
+      "path" : "navbar > UINavigationBar.layer.sub[1].sub[0].sub[2].sub[1].sub[0].sub[0].sub[0].sub[0].sub[0].sub[0]"
+    },
+    {
+      "className" : "CAMatchPropertyAnimation",
+      "duration" : 0,
+      "key" : "match-corner-radii",
+      "path" : "navbar > UINavigationBar.layer.sub[1].sub[0].sub[2].sub[1].sub[0].sub[0].sub[0].sub[0].sub[0].sub[0]"
+    },
+    {
+      "className" : "CAMatchPropertyAnimation",
+      "duration" : 0,
+      "key" : "match-corner-curve",
+      "path" : "navbar > UINavigationBar.layer.sub[1].sub[0].sub[2].sub[1].sub[0].sub[0].sub[0].sub[0].sub[0].sub[0]"
+    },
+    {
+      "className" : "CAMatchPropertyAnimation",
+      "duration" : 0,
+      "key" : "match-hidden",
+      "path" : "navbar > UINavigationBar.layer.sub[1].sub[0].sub[2].sub[1].sub[0].sub[0].sub[0].sub[0].sub[0].sub[0]"
+    },
+    {
+      "className" : "CAMatchPropertyAnimation",
+      "duration" : 0,
+      "key" : "match-bounds",
+      "path" : "navbar > UINavigationBar.layer.sub[1].sub[0].sub[2].sub[1].sub[0].sub[0].sub[0].sub[0].sub[0].sub[1]"
+    },
+    {
+      "className" : "CAMatchMoveAnimation",
+      "duration" : 0,
+      "key" : "match-position",
+      "path" : "navbar > UINavigationBar.layer.sub[1].sub[0].sub[2].sub[1].sub[0].sub[0].sub[0].sub[0].sub[0].sub[1]"
+    },
+    {
+      "className" : "CAMatchPropertyAnimation",
+      "duration" : 0,
+      "key" : "match-corner-radius",
+      "path" : "navbar > UINavigationBar.layer.sub[1].sub[0].sub[2].sub[1].sub[0].sub[0].sub[0].sub[0].sub[0].sub[1]"
+    },
+    {
+      "className" : "CAMatchPropertyAnimation",
+      "duration" : 0,
+      "key" : "match-corner-radii",
+      "path" : "navbar > UINavigationBar.layer.sub[1].sub[0].sub[2].sub[1].sub[0].sub[0].sub[0].sub[0].sub[0].sub[1]"
+    },
+    {
+      "className" : "CAMatchPropertyAnimation",
+      "duration" : 0,
+      "key" : "match-corner-curve",
+      "path" : "navbar > UINavigationBar.layer.sub[1].sub[0].sub[2].sub[1].sub[0].sub[0].sub[0].sub[0].sub[0].sub[1]"
+    },
+    {
+      "className" : "CAMatchPropertyAnimation",
+      "duration" : 0,
+      "key" : "match-hidden",
+      "path" : "navbar > UINavigationBar.layer.sub[1].sub[0].sub[2].sub[1].sub[0].sub[0].sub[0].sub[0].sub[0].sub[1]"
+    },
+    {
+      "className" : "CAMatchPropertyAnimation",
+      "duration" : 0,
+      "key" : "match-bounds",
+      "path" : "navbar > UINavigationBar[1] > NavigationBarContentView.layer.sub[0].sub[2].sub[1].sub[0].sub[0].sub[0].sub[0].sub[0].sub[0]"
+    },
+    {
+      "className" : "CAMatchMoveAnimation",
+      "duration" : 0,
+      "key" : "match-position",
+      "path" : "navbar > UINavigationBar[1] > NavigationBarContentView.layer.sub[0].sub[2].sub[1].sub[0].sub[0].sub[0].sub[0].sub[0].sub[0]"
+    },
+    {
+      "className" : "CAMatchPropertyAnimation",
+      "duration" : 0,
+      "key" : "match-corner-radius",
+      "path" : "navbar > UINavigationBar[1] > NavigationBarContentView.layer.sub[0].sub[2].sub[1].sub[0].sub[0].sub[0].sub[0].sub[0].sub[0]"
+    },
+    {
+      "className" : "CAMatchPropertyAnimation",
+      "duration" : 0,
+      "key" : "match-corner-radii",
+      "path" : "navbar > UINavigationBar[1] > NavigationBarContentView.layer.sub[0].sub[2].sub[1].sub[0].sub[0].sub[0].sub[0].sub[0].sub[0]"
+    },
+    {
+      "className" : "CAMatchPropertyAnimation",
+      "duration" : 0,
+      "key" : "match-corner-curve",
+      "path" : "navbar > UINavigationBar[1] > NavigationBarContentView.layer.sub[0].sub[2].sub[1].sub[0].sub[0].sub[0].sub[0].sub[0].sub[0]"
+    },
+    {
+      "className" : "CAMatchPropertyAnimation",
+      "duration" : 0,
+      "key" : "match-hidden",
+      "path" : "navbar > UINavigationBar[1] > NavigationBarContentView.layer.sub[0].sub[2].sub[1].sub[0].sub[0].sub[0].sub[0].sub[0].sub[0]"
+    },
+    {
+      "className" : "CAMatchPropertyAnimation",
+      "duration" : 0,
+      "key" : "match-bounds",
+      "path" : "navbar > UINavigationBar[1] > NavigationBarContentView.layer.sub[0].sub[2].sub[1].sub[0].sub[0].sub[0].sub[0].sub[0].sub[1]"
+    },
+    {
+      "className" : "CAMatchMoveAnimation",
+      "duration" : 0,
+      "key" : "match-position",
+      "path" : "navbar > UINavigationBar[1] > NavigationBarContentView.layer.sub[0].sub[2].sub[1].sub[0].sub[0].sub[0].sub[0].sub[0].sub[1]"
+    },
+    {
+      "className" : "CAMatchPropertyAnimation",
+      "duration" : 0,
+      "key" : "match-corner-radius",
+      "path" : "navbar > UINavigationBar[1] > NavigationBarContentView.layer.sub[0].sub[2].sub[1].sub[0].sub[0].sub[0].sub[0].sub[0].sub[1]"
+    },
+    {
+      "className" : "CAMatchPropertyAnimation",
+      "duration" : 0,
+      "key" : "match-corner-radii",
+      "path" : "navbar > UINavigationBar[1] > NavigationBarContentView.layer.sub[0].sub[2].sub[1].sub[0].sub[0].sub[0].sub[0].sub[0].sub[1]"
+    },
+    {
+      "className" : "CAMatchPropertyAnimation",
+      "duration" : 0,
+      "key" : "match-corner-curve",
+      "path" : "navbar > UINavigationBar[1] > NavigationBarContentView.layer.sub[0].sub[2].sub[1].sub[0].sub[0].sub[0].sub[0].sub[0].sub[1]"
+    },
+    {
+      "className" : "CAMatchPropertyAnimation",
+      "duration" : 0,
+      "key" : "match-hidden",
+      "path" : "navbar > UINavigationBar[1] > NavigationBarContentView.layer.sub[0].sub[2].sub[1].sub[0].sub[0].sub[0].sub[0].sub[0].sub[1]"
+    },
+    {
+      "className" : "CAMatchPropertyAnimation",
+      "duration" : 0,
+      "key" : "match-bounds",
+      "path" : "navbar > UINavigationBar[1] > NavigationBarContentView[0] > NavigationBarTransitionContainer.layer.sub[2].sub[1].sub[0].sub[0].sub[0].sub[0].sub[0].sub[0]"
+    },
+    {
+      "className" : "CAMatchMoveAnimation",
+      "duration" : 0,
+      "key" : "match-position",
+      "path" : "navbar > UINavigationBar[1] > NavigationBarContentView[0] > NavigationBarTransitionContainer.layer.sub[2].sub[1].sub[0].sub[0].sub[0].sub[0].sub[0].sub[0]"
+    },
+    {
+      "className" : "CAMatchPropertyAnimation",
+      "duration" : 0,
+      "key" : "match-corner-radius",
+      "path" : "navbar > UINavigationBar[1] > NavigationBarContentView[0] > NavigationBarTransitionContainer.layer.sub[2].sub[1].sub[0].sub[0].sub[0].sub[0].sub[0].sub[0]"
+    },
+    {
+      "className" : "CAMatchPropertyAnimation",
+      "duration" : 0,
+      "key" : "match-corner-radii",
+      "path" : "navbar > UINavigationBar[1] > NavigationBarContentView[0] > NavigationBarTransitionContainer.layer.sub[2].sub[1].sub[0].sub[0].sub[0].sub[0].sub[0].sub[0]"
+    },
+    {
+      "className" : "CAMatchPropertyAnimation",
+      "duration" : 0,
+      "key" : "match-corner-curve",
+      "path" : "navbar > UINavigationBar[1] > NavigationBarContentView[0] > NavigationBarTransitionContainer.layer.sub[2].sub[1].sub[0].sub[0].sub[0].sub[0].sub[0].sub[0]"
+    },
+    {
+      "className" : "CAMatchPropertyAnimation",
+      "duration" : 0,
+      "key" : "match-hidden",
+      "path" : "navbar > UINavigationBar[1] > NavigationBarContentView[0] > NavigationBarTransitionContainer.layer.sub[2].sub[1].sub[0].sub[0].sub[0].sub[0].sub[0].sub[0]"
+    },
+    {
+      "className" : "CAMatchPropertyAnimation",
+      "duration" : 0,
+      "key" : "match-bounds",
+      "path" : "navbar > UINavigationBar[1] > NavigationBarContentView[0] > NavigationBarTransitionContainer.layer.sub[2].sub[1].sub[0].sub[0].sub[0].sub[0].sub[0].sub[1]"
+    },
+    {
+      "className" : "CAMatchMoveAnimation",
+      "duration" : 0,
+      "key" : "match-position",
+      "path" : "navbar > UINavigationBar[1] > NavigationBarContentView[0] > NavigationBarTransitionContainer.layer.sub[2].sub[1].sub[0].sub[0].sub[0].sub[0].sub[0].sub[1]"
+    },
+    {
+      "className" : "CAMatchPropertyAnimation",
+      "duration" : 0,
+      "key" : "match-corner-radius",
+      "path" : "navbar > UINavigationBar[1] > NavigationBarContentView[0] > NavigationBarTransitionContainer.layer.sub[2].sub[1].sub[0].sub[0].sub[0].sub[0].sub[0].sub[1]"
+    },
+    {
+      "className" : "CAMatchPropertyAnimation",
+      "duration" : 0,
+      "key" : "match-corner-radii",
+      "path" : "navbar > UINavigationBar[1] > NavigationBarContentView[0] > NavigationBarTransitionContainer.layer.sub[2].sub[1].sub[0].sub[0].sub[0].sub[0].sub[0].sub[1]"
+    },
+    {
+      "className" : "CAMatchPropertyAnimation",
+      "duration" : 0,
+      "key" : "match-corner-curve",
+      "path" : "navbar > UINavigationBar[1] > NavigationBarContentView[0] > NavigationBarTransitionContainer.layer.sub[2].sub[1].sub[0].sub[0].sub[0].sub[0].sub[0].sub[1]"
+    },
+    {
+      "className" : "CAMatchPropertyAnimation",
+      "duration" : 0,
+      "key" : "match-hidden",
+      "path" : "navbar > UINavigationBar[1] > NavigationBarContentView[0] > NavigationBarTransitionContainer.layer.sub[2].sub[1].sub[0].sub[0].sub[0].sub[0].sub[0].sub[1]"
+    }
+  ],
+  "meta" : {
+    "date" : "2026-01-27T03:35:12Z",
+    "iOS" : "26.0.1",
+    "screen" : "UINavigationController"
+  }
+}

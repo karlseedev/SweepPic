@@ -1,0 +1,1017 @@
+{
+  "filters" : [
+    {
+      "enabled" : true,
+      "filterName" : "gaussianBlur",
+      "filterType" : "gaussianBlur",
+      "parameters" : {
+        "inputRadius" : "0"
+      },
+      "path" : "navbar > UINavigationBar.layer.sub[1].sub[0].sub[0].sub[0]"
+    },
+    {
+      "enabled" : true,
+      "filterName" : "vibrantColorMatrix",
+      "filterType" : "vibrantColorMatrix",
+      "parameters" : {
+        "inputColorMatrix" : "{\"R\":[0.000,0.000,0.000,0.000,1.000],\"G\":[0.000,0.000,0.000,0.000,1.000],\"B\":[0.000,0.000,0.000,0.000,1.000],\"A\":[0.000,0.000,0.000,0.000,1.000]}"
+      },
+      "path" : "navbar > UINavigationBar.layer.sub[1].sub[0].sub[0].sub[0].sub[0].sub[0].sub[0]"
+    },
+    {
+      "enabled" : true,
+      "filterName" : "gaussianBlur",
+      "filterType" : "gaussianBlur",
+      "parameters" : {
+
+      },
+      "path" : "navbar > UINavigationBar.layer.sub[1].sub[0].sub[2].sub[0].sub[0].sub[0].sub[0].sub[0].sub[0].sub[0].sub[0].sub[0]"
+    },
+    {
+      "enabled" : true,
+      "filterName" : "gaussianBlur",
+      "filterType" : "gaussianBlur",
+      "parameters" : {
+
+      },
+      "path" : "navbar > UINavigationBar.layer.sub[1].sub[0].sub[2].sub[0].sub[0].sub[0].sub[0].sub[0].sub[0].sub[0].sub[0].sub[0].sub[0]"
+    },
+    {
+      "enabled" : true,
+      "filterName" : "vibrantColorMatrix",
+      "filterType" : "vibrantColorMatrix",
+      "parameters" : {
+        "inputColorMatrix" : "{\"R\":[0.500,0.000,0.000,0.000,0.000],\"G\":[0.000,0.500,0.000,0.000,0.569],\"B\":[0.000,0.000,0.500,0.000,1.000],\"A\":[0.000,0.000,0.000,1.000,0.000]}"
+      },
+      "path" : "navbar > UINavigationBar.layer.sub[1].sub[0].sub[2].sub[0].sub[0].sub[0].sub[0].sub[0].sub[0].sub[0].sub[0].sub[0].sub[0].sub[0].sub[0].sub[0].sub[0]"
+    },
+    {
+      "enabled" : true,
+      "filterName" : "gaussianBlur",
+      "filterType" : "gaussianBlur",
+      "parameters" : {
+        "inputRadius" : "0"
+      },
+      "path" : "navbar > UINavigationBar.layer.sub[1].sub[0].sub[2].sub[0].sub[1].sub[0].sub[0].sub[0].sub[0].sub[0].sub[0].sub[0]"
+    },
+    {
+      "enabled" : true,
+      "filterName" : "gaussianBlur",
+      "filterType" : "gaussianBlur",
+      "parameters" : {
+
+      },
+      "path" : "navbar > UINavigationBar.layer.sub[1].sub[0].sub[2].sub[0].sub[1].sub[0].sub[0].sub[0].sub[0].sub[0].sub[0].sub[0].sub[0]"
+    },
+    {
+      "enabled" : true,
+      "filterName" : "vibrantColorMatrix",
+      "filterType" : "vibrantColorMatrix",
+      "parameters" : {
+        "inputColorMatrix" : "{\"R\":[0.500,0.000,0.000,0.000,0.000],\"G\":[0.000,0.500,0.000,0.000,0.569],\"B\":[0.000,0.000,0.500,0.000,1.000],\"A\":[0.000,0.000,0.000,1.000,0.000]}"
+      },
+      "path" : "navbar > UINavigationBar.layer.sub[1].sub[0].sub[2].sub[0].sub[1].sub[0].sub[0].sub[0].sub[0].sub[0].sub[0].sub[0].sub[0].sub[0].sub[0].sub[0].sub[0]"
+    },
+    {
+      "enabled" : true,
+      "filterName" : "normalBlendMode",
+      "filterType" : "compositingFilter",
+      "parameters" : {
+
+      },
+      "path" : "navbar > UINavigationBar.layer.sub[1].sub[0].sub[2].sub[1].sub[0].sub[0]"
+    },
+    {
+      "enabled" : true,
+      "filterName" : "glassBackground",
+      "filterType" : "glassBackground",
+      "parameters" : {
+
+      },
+      "path" : "navbar > UINavigationBar.layer.sub[1].sub[0].sub[2].sub[1].sub[0].sub[0].sub[0]"
+    },
+    {
+      "enabled" : true,
+      "filterName" : "normalBlendMode",
+      "filterType" : "compositingFilter",
+      "parameters" : {
+
+      },
+      "path" : "navbar > UINavigationBar.layer.sub[1].sub[0].sub[2].sub[1].sub[0].sub[0].sub[0]"
+    },
+    {
+      "enabled" : true,
+      "filterName" : "normalBlendMode",
+      "filterType" : "compositingFilter",
+      "parameters" : {
+
+      },
+      "path" : "navbar > UINavigationBar.layer.sub[1].sub[0].sub[2].sub[1].sub[0].sub[0].sub[0].sub[0]"
+    },
+    {
+      "enabled" : true,
+      "filterName" : "vibrantColorMatrix",
+      "filterType" : "vibrantColorMatrix",
+      "parameters" : {
+        "inputColorMatrix" : "{\"R\":[2.649,-1.180,-0.119,0.000,0.150],\"G\":[-0.351,1.820,-0.119,0.000,0.150],\"B\":[-0.351,-1.180,2.881,0.000,0.150],\"A\":[0.000,0.000,0.000,1.000,0.000]}"
+      },
+      "path" : "navbar > UINavigationBar.layer.sub[1].sub[0].sub[2].sub[1].sub[0].sub[0].sub[1]"
+    },
+    {
+      "enabled" : true,
+      "filterName" : "normalBlendMode",
+      "filterType" : "compositingFilter",
+      "parameters" : {
+
+      },
+      "path" : "navbar > UINavigationBar.layer.sub[1].sub[0].sub[2].sub[1].sub[0].sub[0].sub[1]"
+    },
+    {
+      "enabled" : true,
+      "filterName" : "gaussianBlur",
+      "filterType" : "gaussianBlur",
+      "parameters" : {
+        "inputRadius" : "0"
+      },
+      "path" : "navbar > UINavigationBar[1] > NavigationBarContentView.layer.sub[0].sub[0].sub[0]"
+    },
+    {
+      "enabled" : true,
+      "filterName" : "vibrantColorMatrix",
+      "filterType" : "vibrantColorMatrix",
+      "parameters" : {
+        "inputColorMatrix" : "{\"R\":[0.000,0.000,0.000,0.000,1.000],\"G\":[0.000,0.000,0.000,0.000,1.000],\"B\":[0.000,0.000,0.000,0.000,1.000],\"A\":[0.000,0.000,0.000,0.000,1.000]}"
+      },
+      "path" : "navbar > UINavigationBar[1] > NavigationBarContentView.layer.sub[0].sub[0].sub[0].sub[0].sub[0].sub[0]"
+    },
+    {
+      "enabled" : true,
+      "filterName" : "gaussianBlur",
+      "filterType" : "gaussianBlur",
+      "parameters" : {
+
+      },
+      "path" : "navbar > UINavigationBar[1] > NavigationBarContentView.layer.sub[0].sub[2].sub[0].sub[0].sub[0].sub[0].sub[0].sub[0].sub[0].sub[0].sub[0]"
+    },
+    {
+      "enabled" : true,
+      "filterName" : "gaussianBlur",
+      "filterType" : "gaussianBlur",
+      "parameters" : {
+
+      },
+      "path" : "navbar > UINavigationBar[1] > NavigationBarContentView.layer.sub[0].sub[2].sub[0].sub[0].sub[0].sub[0].sub[0].sub[0].sub[0].sub[0].sub[0].sub[0]"
+    },
+    {
+      "enabled" : true,
+      "filterName" : "vibrantColorMatrix",
+      "filterType" : "vibrantColorMatrix",
+      "parameters" : {
+        "inputColorMatrix" : "{\"R\":[0.500,0.000,0.000,0.000,0.000],\"G\":[0.000,0.500,0.000,0.000,0.569],\"B\":[0.000,0.000,0.500,0.000,1.000],\"A\":[0.000,0.000,0.000,1.000,0.000]}"
+      },
+      "path" : "navbar > UINavigationBar[1] > NavigationBarContentView.layer.sub[0].sub[2].sub[0].sub[0].sub[0].sub[0].sub[0].sub[0].sub[0].sub[0].sub[0].sub[0].sub[0].sub[0].sub[0].sub[0]"
+    },
+    {
+      "enabled" : true,
+      "filterName" : "gaussianBlur",
+      "filterType" : "gaussianBlur",
+      "parameters" : {
+        "inputRadius" : "0"
+      },
+      "path" : "navbar > UINavigationBar[1] > NavigationBarContentView.layer.sub[0].sub[2].sub[0].sub[1].sub[0].sub[0].sub[0].sub[0].sub[0].sub[0].sub[0]"
+    },
+    {
+      "enabled" : true,
+      "filterName" : "gaussianBlur",
+      "filterType" : "gaussianBlur",
+      "parameters" : {
+
+      },
+      "path" : "navbar > UINavigationBar[1] > NavigationBarContentView.layer.sub[0].sub[2].sub[0].sub[1].sub[0].sub[0].sub[0].sub[0].sub[0].sub[0].sub[0].sub[0]"
+    },
+    {
+      "enabled" : true,
+      "filterName" : "vibrantColorMatrix",
+      "filterType" : "vibrantColorMatrix",
+      "parameters" : {
+        "inputColorMatrix" : "{\"R\":[0.500,0.000,0.000,0.000,0.000],\"G\":[0.000,0.500,0.000,0.000,0.569],\"B\":[0.000,0.000,0.500,0.000,1.000],\"A\":[0.000,0.000,0.000,1.000,0.000]}"
+      },
+      "path" : "navbar > UINavigationBar[1] > NavigationBarContentView.layer.sub[0].sub[2].sub[0].sub[1].sub[0].sub[0].sub[0].sub[0].sub[0].sub[0].sub[0].sub[0].sub[0].sub[0].sub[0].sub[0]"
+    },
+    {
+      "enabled" : true,
+      "filterName" : "normalBlendMode",
+      "filterType" : "compositingFilter",
+      "parameters" : {
+
+      },
+      "path" : "navbar > UINavigationBar[1] > NavigationBarContentView.layer.sub[0].sub[2].sub[1].sub[0].sub[0]"
+    },
+    {
+      "enabled" : true,
+      "filterName" : "glassBackground",
+      "filterType" : "glassBackground",
+      "parameters" : {
+
+      },
+      "path" : "navbar > UINavigationBar[1] > NavigationBarContentView.layer.sub[0].sub[2].sub[1].sub[0].sub[0].sub[0]"
+    },
+    {
+      "enabled" : true,
+      "filterName" : "normalBlendMode",
+      "filterType" : "compositingFilter",
+      "parameters" : {
+
+      },
+      "path" : "navbar > UINavigationBar[1] > NavigationBarContentView.layer.sub[0].sub[2].sub[1].sub[0].sub[0].sub[0]"
+    },
+    {
+      "enabled" : true,
+      "filterName" : "normalBlendMode",
+      "filterType" : "compositingFilter",
+      "parameters" : {
+
+      },
+      "path" : "navbar > UINavigationBar[1] > NavigationBarContentView.layer.sub[0].sub[2].sub[1].sub[0].sub[0].sub[0].sub[0]"
+    },
+    {
+      "enabled" : true,
+      "filterName" : "vibrantColorMatrix",
+      "filterType" : "vibrantColorMatrix",
+      "parameters" : {
+        "inputColorMatrix" : "{\"R\":[2.649,-1.180,-0.119,0.000,0.150],\"G\":[-0.351,1.820,-0.119,0.000,0.150],\"B\":[-0.351,-1.180,2.881,0.000,0.150],\"A\":[0.000,0.000,0.000,1.000,0.000]}"
+      },
+      "path" : "navbar > UINavigationBar[1] > NavigationBarContentView.layer.sub[0].sub[2].sub[1].sub[0].sub[0].sub[1]"
+    },
+    {
+      "enabled" : true,
+      "filterName" : "normalBlendMode",
+      "filterType" : "compositingFilter",
+      "parameters" : {
+
+      },
+      "path" : "navbar > UINavigationBar[1] > NavigationBarContentView.layer.sub[0].sub[2].sub[1].sub[0].sub[0].sub[1]"
+    },
+    {
+      "enabled" : true,
+      "filterName" : "gaussianBlur",
+      "filterType" : "gaussianBlur",
+      "parameters" : {
+        "inputRadius" : "0"
+      },
+      "path" : "navbar > UINavigationBar[1] > NavigationBarContentView[0] > NavigationBarTransitionContainer.layer.sub[0].sub[0]"
+    },
+    {
+      "enabled" : true,
+      "filterName" : "vibrantColorMatrix",
+      "filterType" : "vibrantColorMatrix",
+      "parameters" : {
+        "inputColorMatrix" : "{\"R\":[0.000,0.000,0.000,0.000,1.000],\"G\":[0.000,0.000,0.000,0.000,1.000],\"B\":[0.000,0.000,0.000,0.000,1.000],\"A\":[0.000,0.000,0.000,0.000,1.000]}"
+      },
+      "path" : "navbar > UINavigationBar[1] > NavigationBarContentView[0] > NavigationBarTransitionContainer.layer.sub[0].sub[0].sub[0].sub[0].sub[0]"
+    },
+    {
+      "enabled" : true,
+      "filterName" : "gaussianBlur",
+      "filterType" : "gaussianBlur",
+      "parameters" : {
+
+      },
+      "path" : "navbar > UINavigationBar[1] > NavigationBarContentView[0] > NavigationBarTransitionContainer.layer.sub[2].sub[0].sub[0].sub[0].sub[0].sub[0].sub[0].sub[0].sub[0].sub[0]"
+    },
+    {
+      "enabled" : true,
+      "filterName" : "gaussianBlur",
+      "filterType" : "gaussianBlur",
+      "parameters" : {
+
+      },
+      "path" : "navbar > UINavigationBar[1] > NavigationBarContentView[0] > NavigationBarTransitionContainer.layer.sub[2].sub[0].sub[0].sub[0].sub[0].sub[0].sub[0].sub[0].sub[0].sub[0].sub[0]"
+    },
+    {
+      "enabled" : true,
+      "filterName" : "vibrantColorMatrix",
+      "filterType" : "vibrantColorMatrix",
+      "parameters" : {
+        "inputColorMatrix" : "{\"R\":[0.500,0.000,0.000,0.000,0.000],\"G\":[0.000,0.500,0.000,0.000,0.569],\"B\":[0.000,0.000,0.500,0.000,1.000],\"A\":[0.000,0.000,0.000,1.000,0.000]}"
+      },
+      "path" : "navbar > UINavigationBar[1] > NavigationBarContentView[0] > NavigationBarTransitionContainer.layer.sub[2].sub[0].sub[0].sub[0].sub[0].sub[0].sub[0].sub[0].sub[0].sub[0].sub[0].sub[0].sub[0].sub[0].sub[0]"
+    },
+    {
+      "enabled" : true,
+      "filterName" : "gaussianBlur",
+      "filterType" : "gaussianBlur",
+      "parameters" : {
+        "inputRadius" : "0"
+      },
+      "path" : "navbar > UINavigationBar[1] > NavigationBarContentView[0] > NavigationBarTransitionContainer.layer.sub[2].sub[0].sub[1].sub[0].sub[0].sub[0].sub[0].sub[0].sub[0].sub[0]"
+    },
+    {
+      "enabled" : true,
+      "filterName" : "gaussianBlur",
+      "filterType" : "gaussianBlur",
+      "parameters" : {
+
+      },
+      "path" : "navbar > UINavigationBar[1] > NavigationBarContentView[0] > NavigationBarTransitionContainer.layer.sub[2].sub[0].sub[1].sub[0].sub[0].sub[0].sub[0].sub[0].sub[0].sub[0].sub[0]"
+    },
+    {
+      "enabled" : true,
+      "filterName" : "vibrantColorMatrix",
+      "filterType" : "vibrantColorMatrix",
+      "parameters" : {
+        "inputColorMatrix" : "{\"R\":[0.500,0.000,0.000,0.000,0.000],\"G\":[0.000,0.500,0.000,0.000,0.569],\"B\":[0.000,0.000,0.500,0.000,1.000],\"A\":[0.000,0.000,0.000,1.000,0.000]}"
+      },
+      "path" : "navbar > UINavigationBar[1] > NavigationBarContentView[0] > NavigationBarTransitionContainer.layer.sub[2].sub[0].sub[1].sub[0].sub[0].sub[0].sub[0].sub[0].sub[0].sub[0].sub[0].sub[0].sub[0].sub[0].sub[0]"
+    },
+    {
+      "enabled" : true,
+      "filterName" : "normalBlendMode",
+      "filterType" : "compositingFilter",
+      "parameters" : {
+
+      },
+      "path" : "navbar > UINavigationBar[1] > NavigationBarContentView[0] > NavigationBarTransitionContainer.layer.sub[2].sub[1].sub[0].sub[0]"
+    },
+    {
+      "enabled" : true,
+      "filterName" : "glassBackground",
+      "filterType" : "glassBackground",
+      "parameters" : {
+
+      },
+      "path" : "navbar > UINavigationBar[1] > NavigationBarContentView[0] > NavigationBarTransitionContainer.layer.sub[2].sub[1].sub[0].sub[0].sub[0]"
+    },
+    {
+      "enabled" : true,
+      "filterName" : "normalBlendMode",
+      "filterType" : "compositingFilter",
+      "parameters" : {
+
+      },
+      "path" : "navbar > UINavigationBar[1] > NavigationBarContentView[0] > NavigationBarTransitionContainer.layer.sub[2].sub[1].sub[0].sub[0].sub[0]"
+    },
+    {
+      "enabled" : true,
+      "filterName" : "normalBlendMode",
+      "filterType" : "compositingFilter",
+      "parameters" : {
+
+      },
+      "path" : "navbar > UINavigationBar[1] > NavigationBarContentView[0] > NavigationBarTransitionContainer.layer.sub[2].sub[1].sub[0].sub[0].sub[0].sub[0]"
+    },
+    {
+      "enabled" : true,
+      "filterName" : "vibrantColorMatrix",
+      "filterType" : "vibrantColorMatrix",
+      "parameters" : {
+        "inputColorMatrix" : "{\"R\":[2.649,-1.180,-0.119,0.000,0.150],\"G\":[-0.351,1.820,-0.119,0.000,0.150],\"B\":[-0.351,-1.180,2.881,0.000,0.150],\"A\":[0.000,0.000,0.000,1.000,0.000]}"
+      },
+      "path" : "navbar > UINavigationBar[1] > NavigationBarContentView[0] > NavigationBarTransitionContainer.layer.sub[2].sub[1].sub[0].sub[0].sub[1]"
+    },
+    {
+      "enabled" : true,
+      "filterName" : "normalBlendMode",
+      "filterType" : "compositingFilter",
+      "parameters" : {
+
+      },
+      "path" : "navbar > UINavigationBar[1] > NavigationBarContentView[0] > NavigationBarTransitionContainer.layer.sub[2].sub[1].sub[0].sub[0].sub[1]"
+    },
+    {
+      "enabled" : true,
+      "filterName" : "gaussianBlur",
+      "filterType" : "gaussianBlur",
+      "parameters" : {
+        "inputRadius" : "0"
+      },
+      "path" : "navbar > UINavigationBar[1] > NavigationBarContentView[0] > NavigationBarTransitionContainer[0] > HostedViewContainer.layer.sub[0]"
+    },
+    {
+      "enabled" : true,
+      "filterName" : "vibrantColorMatrix",
+      "filterType" : "vibrantColorMatrix",
+      "parameters" : {
+        "inputColorMatrix" : "{\"R\":[0.000,0.000,0.000,0.000,1.000],\"G\":[0.000,0.000,0.000,0.000,1.000],\"B\":[0.000,0.000,0.000,0.000,1.000],\"A\":[0.000,0.000,0.000,0.000,1.000]}"
+      },
+      "path" : "navbar > UINavigationBar[1] > NavigationBarContentView[0] > NavigationBarTransitionContainer[0] > HostedViewContainer.layer.sub[0].sub[0].sub[0].sub[0]"
+    },
+    {
+      "enabled" : true,
+      "filterName" : "gaussianBlur",
+      "filterType" : "gaussianBlur",
+      "parameters" : {
+        "inputRadius" : "0"
+      },
+      "path" : "navbar > UINavigationBar[1] > NavigationBarContentView[0] > NavigationBarTransitionContainer[0] > HostedViewContainer[0] > HostedViewWrapper.layer"
+    },
+    {
+      "enabled" : true,
+      "filterName" : "vibrantColorMatrix",
+      "filterType" : "vibrantColorMatrix",
+      "parameters" : {
+        "inputColorMatrix" : "{\"R\":[0.000,0.000,0.000,0.000,1.000],\"G\":[0.000,0.000,0.000,0.000,1.000],\"B\":[0.000,0.000,0.000,0.000,1.000],\"A\":[0.000,0.000,0.000,0.000,1.000]}"
+      },
+      "path" : "navbar > UINavigationBar[1] > NavigationBarContentView[0] > NavigationBarTransitionContainer[0] > HostedViewContainer[0] > HostedViewWrapper.layer.sub[0].sub[0].sub[0]"
+    },
+    {
+      "enabled" : true,
+      "filterName" : "vibrantColorMatrix",
+      "filterType" : "vibrantColorMatrix",
+      "parameters" : {
+        "inputColorMatrix" : "{\"R\":[0.000,0.000,0.000,0.000,1.000],\"G\":[0.000,0.000,0.000,0.000,1.000],\"B\":[0.000,0.000,0.000,0.000,1.000],\"A\":[0.000,0.000,0.000,0.000,1.000]}"
+      },
+      "path" : "navbar > UINavigationBar[1] > NavigationBarContentView[0] > NavigationBarTransitionContainer[0] > HostedViewContainer[0] > HostedViewWrapper[0] > _UINavigationBarTitleControl.layer.sub[0].sub[0]"
+    },
+    {
+      "enabled" : true,
+      "filterName" : "vibrantColorMatrix",
+      "filterType" : "vibrantColorMatrix",
+      "parameters" : {
+        "inputColorMatrix" : "{\"R\":[0.000,0.000,0.000,0.000,1.000],\"G\":[0.000,0.000,0.000,0.000,1.000],\"B\":[0.000,0.000,0.000,0.000,1.000],\"A\":[0.000,0.000,0.000,0.000,1.000]}"
+      },
+      "path" : "navbar > UINavigationBar[1] > NavigationBarContentView[0] > NavigationBarTransitionContainer[0] > HostedViewContainer[0] > HostedViewWrapper[0] > _UINavigationBarTitleControl[0] > _UIIntrinsicContentSizeInvalidationForwardingWrapperView.layer.sub[0]"
+    },
+    {
+      "enabled" : true,
+      "filterName" : "gaussianBlur",
+      "filterType" : "gaussianBlur",
+      "parameters" : {
+
+      },
+      "path" : "navbar > UINavigationBar[1] > NavigationBarContentView[0] > NavigationBarTransitionContainer[2] > NavigationBarPlatterContainer.layer.sub[0].sub[0].sub[0].sub[0].sub[0].sub[0].sub[0].sub[0]"
+    },
+    {
+      "enabled" : true,
+      "filterName" : "gaussianBlur",
+      "filterType" : "gaussianBlur",
+      "parameters" : {
+
+      },
+      "path" : "navbar > UINavigationBar[1] > NavigationBarContentView[0] > NavigationBarTransitionContainer[2] > NavigationBarPlatterContainer.layer.sub[0].sub[0].sub[0].sub[0].sub[0].sub[0].sub[0].sub[0].sub[0]"
+    },
+    {
+      "enabled" : true,
+      "filterName" : "vibrantColorMatrix",
+      "filterType" : "vibrantColorMatrix",
+      "parameters" : {
+        "inputColorMatrix" : "{\"R\":[0.500,0.000,0.000,0.000,0.000],\"G\":[0.000,0.500,0.000,0.000,0.569],\"B\":[0.000,0.000,0.500,0.000,1.000],\"A\":[0.000,0.000,0.000,1.000,0.000]}"
+      },
+      "path" : "navbar > UINavigationBar[1] > NavigationBarContentView[0] > NavigationBarTransitionContainer[2] > NavigationBarPlatterContainer.layer.sub[0].sub[0].sub[0].sub[0].sub[0].sub[0].sub[0].sub[0].sub[0].sub[0].sub[0].sub[0].sub[0]"
+    },
+    {
+      "enabled" : true,
+      "filterName" : "gaussianBlur",
+      "filterType" : "gaussianBlur",
+      "parameters" : {
+        "inputRadius" : "0"
+      },
+      "path" : "navbar > UINavigationBar[1] > NavigationBarContentView[0] > NavigationBarTransitionContainer[2] > NavigationBarPlatterContainer.layer.sub[1].sub[0].sub[0].sub[0].sub[0].sub[0].sub[0].sub[0]"
+    },
+    {
+      "enabled" : true,
+      "filterName" : "gaussianBlur",
+      "filterType" : "gaussianBlur",
+      "parameters" : {
+
+      },
+      "path" : "navbar > UINavigationBar[1] > NavigationBarContentView[0] > NavigationBarTransitionContainer[2] > NavigationBarPlatterContainer.layer.sub[1].sub[0].sub[0].sub[0].sub[0].sub[0].sub[0].sub[0].sub[0]"
+    },
+    {
+      "enabled" : true,
+      "filterName" : "vibrantColorMatrix",
+      "filterType" : "vibrantColorMatrix",
+      "parameters" : {
+        "inputColorMatrix" : "{\"R\":[0.500,0.000,0.000,0.000,0.000],\"G\":[0.000,0.500,0.000,0.000,0.569],\"B\":[0.000,0.000,0.500,0.000,1.000],\"A\":[0.000,0.000,0.000,1.000,0.000]}"
+      },
+      "path" : "navbar > UINavigationBar[1] > NavigationBarContentView[0] > NavigationBarTransitionContainer[2] > NavigationBarPlatterContainer.layer.sub[1].sub[0].sub[0].sub[0].sub[0].sub[0].sub[0].sub[0].sub[0].sub[0].sub[0].sub[0].sub[0]"
+    },
+    {
+      "enabled" : true,
+      "filterName" : "gaussianBlur",
+      "filterType" : "gaussianBlur",
+      "parameters" : {
+
+      },
+      "path" : "navbar > UINavigationBar[1] > NavigationBarContentView[0] > NavigationBarTransitionContainer[2] > NavigationBarPlatterContainer[0] > PlatterView.layer.sub[0].sub[0].sub[0].sub[0].sub[0].sub[0].sub[0]"
+    },
+    {
+      "enabled" : true,
+      "filterName" : "gaussianBlur",
+      "filterType" : "gaussianBlur",
+      "parameters" : {
+
+      },
+      "path" : "navbar > UINavigationBar[1] > NavigationBarContentView[0] > NavigationBarTransitionContainer[2] > NavigationBarPlatterContainer[0] > PlatterView.layer.sub[0].sub[0].sub[0].sub[0].sub[0].sub[0].sub[0].sub[0]"
+    },
+    {
+      "enabled" : true,
+      "filterName" : "vibrantColorMatrix",
+      "filterType" : "vibrantColorMatrix",
+      "parameters" : {
+        "inputColorMatrix" : "{\"R\":[0.500,0.000,0.000,0.000,0.000],\"G\":[0.000,0.500,0.000,0.000,0.569],\"B\":[0.000,0.000,0.500,0.000,1.000],\"A\":[0.000,0.000,0.000,1.000,0.000]}"
+      },
+      "path" : "navbar > UINavigationBar[1] > NavigationBarContentView[0] > NavigationBarTransitionContainer[2] > NavigationBarPlatterContainer[0] > PlatterView.layer.sub[0].sub[0].sub[0].sub[0].sub[0].sub[0].sub[0].sub[0].sub[0].sub[0].sub[0].sub[0]"
+    },
+    {
+      "enabled" : true,
+      "filterName" : "gaussianBlur",
+      "filterType" : "gaussianBlur",
+      "parameters" : {
+
+      },
+      "path" : "navbar > UINavigationBar[1] > NavigationBarContentView[0] > NavigationBarTransitionContainer[2] > NavigationBarPlatterContainer[0] > PlatterView[0] > AnimationView.layer.sub[0].sub[0].sub[0].sub[0].sub[0].sub[0]"
+    },
+    {
+      "enabled" : true,
+      "filterName" : "gaussianBlur",
+      "filterType" : "gaussianBlur",
+      "parameters" : {
+
+      },
+      "path" : "navbar > UINavigationBar[1] > NavigationBarContentView[0] > NavigationBarTransitionContainer[2] > NavigationBarPlatterContainer[0] > PlatterView[0] > AnimationView.layer.sub[0].sub[0].sub[0].sub[0].sub[0].sub[0].sub[0]"
+    },
+    {
+      "enabled" : true,
+      "filterName" : "vibrantColorMatrix",
+      "filterType" : "vibrantColorMatrix",
+      "parameters" : {
+        "inputColorMatrix" : "{\"R\":[0.500,0.000,0.000,0.000,0.000],\"G\":[0.000,0.500,0.000,0.000,0.569],\"B\":[0.000,0.000,0.500,0.000,1.000],\"A\":[0.000,0.000,0.000,1.000,0.000]}"
+      },
+      "path" : "navbar > UINavigationBar[1] > NavigationBarContentView[0] > NavigationBarTransitionContainer[2] > NavigationBarPlatterContainer[0] > PlatterView[0] > AnimationView.layer.sub[0].sub[0].sub[0].sub[0].sub[0].sub[0].sub[0].sub[0].sub[0].sub[0].sub[0]"
+    },
+    {
+      "enabled" : true,
+      "filterName" : "gaussianBlur",
+      "filterType" : "gaussianBlur",
+      "parameters" : {
+
+      },
+      "path" : "navbar > UINavigationBar[1] > NavigationBarContentView[0] > NavigationBarTransitionContainer[2] > NavigationBarPlatterContainer[0] > PlatterView[0] > AnimationView[0] > AnimationView.layer.sub[0].sub[0].sub[0].sub[0].sub[0]"
+    },
+    {
+      "enabled" : true,
+      "filterName" : "gaussianBlur",
+      "filterType" : "gaussianBlur",
+      "parameters" : {
+
+      },
+      "path" : "navbar > UINavigationBar[1] > NavigationBarContentView[0] > NavigationBarTransitionContainer[2] > NavigationBarPlatterContainer[0] > PlatterView[0] > AnimationView[0] > AnimationView.layer.sub[0].sub[0].sub[0].sub[0].sub[0].sub[0]"
+    },
+    {
+      "enabled" : true,
+      "filterName" : "vibrantColorMatrix",
+      "filterType" : "vibrantColorMatrix",
+      "parameters" : {
+        "inputColorMatrix" : "{\"R\":[0.500,0.000,0.000,0.000,0.000],\"G\":[0.000,0.500,0.000,0.000,0.569],\"B\":[0.000,0.000,0.500,0.000,1.000],\"A\":[0.000,0.000,0.000,1.000,0.000]}"
+      },
+      "path" : "navbar > UINavigationBar[1] > NavigationBarContentView[0] > NavigationBarTransitionContainer[2] > NavigationBarPlatterContainer[0] > PlatterView[0] > AnimationView[0] > AnimationView.layer.sub[0].sub[0].sub[0].sub[0].sub[0].sub[0].sub[0].sub[0].sub[0].sub[0]"
+    },
+    {
+      "enabled" : true,
+      "filterName" : "gaussianBlur",
+      "filterType" : "gaussianBlur",
+      "parameters" : {
+
+      },
+      "path" : "navbar > UINavigationBar[1] > NavigationBarContentView[0] > NavigationBarTransitionContainer[2] > NavigationBarPlatterContainer[0] > PlatterView[0] > AnimationView[0] > AnimationView[0] > AnimationView.layer.sub[0].sub[0].sub[0].sub[0]"
+    },
+    {
+      "enabled" : true,
+      "filterName" : "gaussianBlur",
+      "filterType" : "gaussianBlur",
+      "parameters" : {
+
+      },
+      "path" : "navbar > UINavigationBar[1] > NavigationBarContentView[0] > NavigationBarTransitionContainer[2] > NavigationBarPlatterContainer[0] > PlatterView[0] > AnimationView[0] > AnimationView[0] > AnimationView.layer.sub[0].sub[0].sub[0].sub[0].sub[0]"
+    },
+    {
+      "enabled" : true,
+      "filterName" : "vibrantColorMatrix",
+      "filterType" : "vibrantColorMatrix",
+      "parameters" : {
+        "inputColorMatrix" : "{\"R\":[0.500,0.000,0.000,0.000,0.000],\"G\":[0.000,0.500,0.000,0.000,0.569],\"B\":[0.000,0.000,0.500,0.000,1.000],\"A\":[0.000,0.000,0.000,1.000,0.000]}"
+      },
+      "path" : "navbar > UINavigationBar[1] > NavigationBarContentView[0] > NavigationBarTransitionContainer[2] > NavigationBarPlatterContainer[0] > PlatterView[0] > AnimationView[0] > AnimationView[0] > AnimationView.layer.sub[0].sub[0].sub[0].sub[0].sub[0].sub[0].sub[0].sub[0].sub[0]"
+    },
+    {
+      "enabled" : true,
+      "filterName" : "gaussianBlur",
+      "filterType" : "gaussianBlur",
+      "parameters" : {
+
+      },
+      "path" : "navbar > UINavigationBar[1] > NavigationBarContentView[0] > NavigationBarTransitionContainer[2] > NavigationBarPlatterContainer[0] > PlatterView[0] > AnimationView[0] > AnimationView[0] > AnimationView[0] > AnimationView.layer.sub[0].sub[0].sub[0]"
+    },
+    {
+      "enabled" : true,
+      "filterName" : "gaussianBlur",
+      "filterType" : "gaussianBlur",
+      "parameters" : {
+
+      },
+      "path" : "navbar > UINavigationBar[1] > NavigationBarContentView[0] > NavigationBarTransitionContainer[2] > NavigationBarPlatterContainer[0] > PlatterView[0] > AnimationView[0] > AnimationView[0] > AnimationView[0] > AnimationView.layer.sub[0].sub[0].sub[0].sub[0]"
+    },
+    {
+      "enabled" : true,
+      "filterName" : "vibrantColorMatrix",
+      "filterType" : "vibrantColorMatrix",
+      "parameters" : {
+        "inputColorMatrix" : "{\"R\":[0.500,0.000,0.000,0.000,0.000],\"G\":[0.000,0.500,0.000,0.000,0.569],\"B\":[0.000,0.000,0.500,0.000,1.000],\"A\":[0.000,0.000,0.000,1.000,0.000]}"
+      },
+      "path" : "navbar > UINavigationBar[1] > NavigationBarContentView[0] > NavigationBarTransitionContainer[2] > NavigationBarPlatterContainer[0] > PlatterView[0] > AnimationView[0] > AnimationView[0] > AnimationView[0] > AnimationView.layer.sub[0].sub[0].sub[0].sub[0].sub[0].sub[0].sub[0].sub[0]"
+    },
+    {
+      "enabled" : true,
+      "filterName" : "gaussianBlur",
+      "filterType" : "gaussianBlur",
+      "parameters" : {
+
+      },
+      "path" : "navbar > UINavigationBar[1] > NavigationBarContentView[0] > NavigationBarTransitionContainer[2] > NavigationBarPlatterContainer[0] > PlatterView[0] > AnimationView[0] > AnimationView[0] > AnimationView[0] > AnimationView[0] > PlatterContentView.layer.sub[0].sub[0]"
+    },
+    {
+      "enabled" : true,
+      "filterName" : "gaussianBlur",
+      "filterType" : "gaussianBlur",
+      "parameters" : {
+
+      },
+      "path" : "navbar > UINavigationBar[1] > NavigationBarContentView[0] > NavigationBarTransitionContainer[2] > NavigationBarPlatterContainer[0] > PlatterView[0] > AnimationView[0] > AnimationView[0] > AnimationView[0] > AnimationView[0] > PlatterContentView.layer.sub[0].sub[0].sub[0]"
+    },
+    {
+      "enabled" : true,
+      "filterName" : "vibrantColorMatrix",
+      "filterType" : "vibrantColorMatrix",
+      "parameters" : {
+        "inputColorMatrix" : "{\"R\":[0.500,0.000,0.000,0.000,0.000],\"G\":[0.000,0.500,0.000,0.000,0.569],\"B\":[0.000,0.000,0.500,0.000,1.000],\"A\":[0.000,0.000,0.000,1.000,0.000]}"
+      },
+      "path" : "navbar > UINavigationBar[1] > NavigationBarContentView[0] > NavigationBarTransitionContainer[2] > NavigationBarPlatterContainer[0] > PlatterView[0] > AnimationView[0] > AnimationView[0] > AnimationView[0] > AnimationView[0] > PlatterContentView.layer.sub[0].sub[0].sub[0].sub[0].sub[0].sub[0].sub[0]"
+    },
+    {
+      "enabled" : true,
+      "filterName" : "gaussianBlur",
+      "filterType" : "gaussianBlur",
+      "parameters" : {
+
+      },
+      "path" : "navbar > UINavigationBar[1] > NavigationBarContentView[0] > NavigationBarTransitionContainer[2] > NavigationBarPlatterContainer[0] > PlatterView[0] > AnimationView[0] > AnimationView[0] > AnimationView[0] > AnimationView[0] > PlatterContentView[0] > PlatterGlassView.layer.sub[0]"
+    },
+    {
+      "enabled" : true,
+      "filterName" : "gaussianBlur",
+      "filterType" : "gaussianBlur",
+      "parameters" : {
+
+      },
+      "path" : "navbar > UINavigationBar[1] > NavigationBarContentView[0] > NavigationBarTransitionContainer[2] > NavigationBarPlatterContainer[0] > PlatterView[0] > AnimationView[0] > AnimationView[0] > AnimationView[0] > AnimationView[0] > PlatterContentView[0] > PlatterGlassView.layer.sub[0].sub[0]"
+    },
+    {
+      "enabled" : true,
+      "filterName" : "vibrantColorMatrix",
+      "filterType" : "vibrantColorMatrix",
+      "parameters" : {
+        "inputColorMatrix" : "{\"R\":[0.500,0.000,0.000,0.000,0.000],\"G\":[0.000,0.500,0.000,0.000,0.569],\"B\":[0.000,0.000,0.500,0.000,1.000],\"A\":[0.000,0.000,0.000,1.000,0.000]}"
+      },
+      "path" : "navbar > UINavigationBar[1] > NavigationBarContentView[0] > NavigationBarTransitionContainer[2] > NavigationBarPlatterContainer[0] > PlatterView[0] > AnimationView[0] > AnimationView[0] > AnimationView[0] > AnimationView[0] > PlatterContentView[0] > PlatterGlassView.layer.sub[0].sub[0].sub[0].sub[0].sub[0].sub[0]"
+    },
+    {
+      "enabled" : true,
+      "filterName" : "gaussianBlur",
+      "filterType" : "gaussianBlur",
+      "parameters" : {
+
+      },
+      "path" : "navbar > UINavigationBar[1] > NavigationBarContentView[0] > NavigationBarTransitionContainer[2] > NavigationBarPlatterContainer[0] > PlatterView[0] > AnimationView[0] > AnimationView[0] > AnimationView[0] > AnimationView[0] > PlatterContentView[0] > PlatterGlassView[0] > SubviewContainerView.layer"
+    },
+    {
+      "enabled" : true,
+      "filterName" : "gaussianBlur",
+      "filterType" : "gaussianBlur",
+      "parameters" : {
+
+      },
+      "path" : "navbar > UINavigationBar[1] > NavigationBarContentView[0] > NavigationBarTransitionContainer[2] > NavigationBarPlatterContainer[0] > PlatterView[0] > AnimationView[0] > AnimationView[0] > AnimationView[0] > AnimationView[0] > PlatterContentView[0] > PlatterGlassView[0] > SubviewContainerView.layer.sub[0]"
+    },
+    {
+      "enabled" : true,
+      "filterName" : "vibrantColorMatrix",
+      "filterType" : "vibrantColorMatrix",
+      "parameters" : {
+        "inputColorMatrix" : "{\"R\":[0.500,0.000,0.000,0.000,0.000],\"G\":[0.000,0.500,0.000,0.000,0.569],\"B\":[0.000,0.000,0.500,0.000,1.000],\"A\":[0.000,0.000,0.000,1.000,0.000]}"
+      },
+      "path" : "navbar > UINavigationBar[1] > NavigationBarContentView[0] > NavigationBarTransitionContainer[2] > NavigationBarPlatterContainer[0] > PlatterView[0] > AnimationView[0] > AnimationView[0] > AnimationView[0] > AnimationView[0] > PlatterContentView[0] > PlatterGlassView[0] > SubviewContainerView.layer.sub[0].sub[0].sub[0].sub[0].sub[0]"
+    },
+    {
+      "enabled" : true,
+      "filterName" : "gaussianBlur",
+      "filterType" : "gaussianBlur",
+      "parameters" : {
+
+      },
+      "path" : "navbar > UINavigationBar[1] > NavigationBarContentView[0] > NavigationBarTransitionContainer[2] > NavigationBarPlatterContainer[0] > PlatterView[0] > AnimationView[0] > AnimationView[0] > AnimationView[0] > AnimationView[0] > PlatterContentView[0] > PlatterGlassView[0] > SubviewContainerView[0] > PlatterItemView.layer"
+    },
+    {
+      "enabled" : true,
+      "filterName" : "vibrantColorMatrix",
+      "filterType" : "vibrantColorMatrix",
+      "parameters" : {
+        "inputColorMatrix" : "{\"R\":[0.500,0.000,0.000,0.000,0.000],\"G\":[0.000,0.500,0.000,0.000,0.569],\"B\":[0.000,0.000,0.500,0.000,1.000],\"A\":[0.000,0.000,0.000,1.000,0.000]}"
+      },
+      "path" : "navbar > UINavigationBar[1] > NavigationBarContentView[0] > NavigationBarTransitionContainer[2] > NavigationBarPlatterContainer[0] > PlatterView[0] > AnimationView[0] > AnimationView[0] > AnimationView[0] > AnimationView[0] > PlatterContentView[0] > PlatterGlassView[0] > SubviewContainerView[0] > PlatterItemView.layer.sub[0].sub[0].sub[0].sub[0]"
+    },
+    {
+      "enabled" : true,
+      "filterName" : "vibrantColorMatrix",
+      "filterType" : "vibrantColorMatrix",
+      "parameters" : {
+        "inputColorMatrix" : "{\"R\":[0.500,0.000,0.000,0.000,0.000],\"G\":[0.000,0.500,0.000,0.000,0.569],\"B\":[0.000,0.000,0.500,0.000,1.000],\"A\":[0.000,0.000,0.000,1.000,0.000]}"
+      },
+      "path" : "navbar > UINavigationBar[1] > NavigationBarContentView[0] > NavigationBarTransitionContainer[2] > NavigationBarPlatterContainer[0] > PlatterView[0] > AnimationView[0] > AnimationView[0] > AnimationView[0] > AnimationView[0] > PlatterContentView[0] > PlatterGlassView[0] > SubviewContainerView[0] > PlatterItemView[0] > ItemWrapperView.layer.sub[0].sub[0].sub[0]"
+    },
+    {
+      "enabled" : true,
+      "filterName" : "vibrantColorMatrix",
+      "filterType" : "vibrantColorMatrix",
+      "parameters" : {
+        "inputColorMatrix" : "{\"R\":[0.500,0.000,0.000,0.000,0.000],\"G\":[0.000,0.500,0.000,0.000,0.569],\"B\":[0.000,0.000,0.500,0.000,1.000],\"A\":[0.000,0.000,0.000,1.000,0.000]}"
+      },
+      "path" : "navbar > UINavigationBar[1] > NavigationBarContentView[0] > NavigationBarTransitionContainer[2] > NavigationBarPlatterContainer[0] > PlatterView[0] > AnimationView[0] > AnimationView[0] > AnimationView[0] > AnimationView[0] > PlatterContentView[0] > PlatterGlassView[0] > SubviewContainerView[0] > PlatterItemView[0] > ItemWrapperView[0] > _UIButtonBarButton.layer.sub[0].sub[0]"
+    },
+    {
+      "enabled" : true,
+      "filterName" : "vibrantColorMatrix",
+      "filterType" : "vibrantColorMatrix",
+      "parameters" : {
+        "inputColorMatrix" : "{\"R\":[0.500,0.000,0.000,0.000,0.000],\"G\":[0.000,0.500,0.000,0.000,0.569],\"B\":[0.000,0.000,0.500,0.000,1.000],\"A\":[0.000,0.000,0.000,1.000,0.000]}"
+      },
+      "path" : "navbar > UINavigationBar[1] > NavigationBarContentView[0] > NavigationBarTransitionContainer[2] > NavigationBarPlatterContainer[0] > PlatterView[0] > AnimationView[0] > AnimationView[0] > AnimationView[0] > AnimationView[0] > PlatterContentView[0] > PlatterGlassView[0] > SubviewContainerView[0] > PlatterItemView[0] > ItemWrapperView[0] > _UIButtonBarButton[0] > _UIModernBarButton.layer.sub[0]"
+    },
+    {
+      "enabled" : true,
+      "filterName" : "gaussianBlur",
+      "filterType" : "gaussianBlur",
+      "parameters" : {
+        "inputRadius" : "0"
+      },
+      "path" : "navbar > UINavigationBar[1] > NavigationBarContentView[0] > NavigationBarTransitionContainer[2] > NavigationBarPlatterContainer[1] > PlatterView.layer.sub[0].sub[0].sub[0].sub[0].sub[0].sub[0].sub[0]"
+    },
+    {
+      "enabled" : true,
+      "filterName" : "gaussianBlur",
+      "filterType" : "gaussianBlur",
+      "parameters" : {
+
+      },
+      "path" : "navbar > UINavigationBar[1] > NavigationBarContentView[0] > NavigationBarTransitionContainer[2] > NavigationBarPlatterContainer[1] > PlatterView.layer.sub[0].sub[0].sub[0].sub[0].sub[0].sub[0].sub[0].sub[0]"
+    },
+    {
+      "enabled" : true,
+      "filterName" : "vibrantColorMatrix",
+      "filterType" : "vibrantColorMatrix",
+      "parameters" : {
+        "inputColorMatrix" : "{\"R\":[0.500,0.000,0.000,0.000,0.000],\"G\":[0.000,0.500,0.000,0.000,0.569],\"B\":[0.000,0.000,0.500,0.000,1.000],\"A\":[0.000,0.000,0.000,1.000,0.000]}"
+      },
+      "path" : "navbar > UINavigationBar[1] > NavigationBarContentView[0] > NavigationBarTransitionContainer[2] > NavigationBarPlatterContainer[1] > PlatterView.layer.sub[0].sub[0].sub[0].sub[0].sub[0].sub[0].sub[0].sub[0].sub[0].sub[0].sub[0].sub[0]"
+    },
+    {
+      "enabled" : true,
+      "filterName" : "gaussianBlur",
+      "filterType" : "gaussianBlur",
+      "parameters" : {
+        "inputRadius" : "0"
+      },
+      "path" : "navbar > UINavigationBar[1] > NavigationBarContentView[0] > NavigationBarTransitionContainer[2] > NavigationBarPlatterContainer[1] > PlatterView[0] > AnimationView.layer.sub[0].sub[0].sub[0].sub[0].sub[0].sub[0]"
+    },
+    {
+      "enabled" : true,
+      "filterName" : "gaussianBlur",
+      "filterType" : "gaussianBlur",
+      "parameters" : {
+
+      },
+      "path" : "navbar > UINavigationBar[1] > NavigationBarContentView[0] > NavigationBarTransitionContainer[2] > NavigationBarPlatterContainer[1] > PlatterView[0] > AnimationView.layer.sub[0].sub[0].sub[0].sub[0].sub[0].sub[0].sub[0]"
+    },
+    {
+      "enabled" : true,
+      "filterName" : "vibrantColorMatrix",
+      "filterType" : "vibrantColorMatrix",
+      "parameters" : {
+        "inputColorMatrix" : "{\"R\":[0.500,0.000,0.000,0.000,0.000],\"G\":[0.000,0.500,0.000,0.000,0.569],\"B\":[0.000,0.000,0.500,0.000,1.000],\"A\":[0.000,0.000,0.000,1.000,0.000]}"
+      },
+      "path" : "navbar > UINavigationBar[1] > NavigationBarContentView[0] > NavigationBarTransitionContainer[2] > NavigationBarPlatterContainer[1] > PlatterView[0] > AnimationView.layer.sub[0].sub[0].sub[0].sub[0].sub[0].sub[0].sub[0].sub[0].sub[0].sub[0].sub[0]"
+    },
+    {
+      "enabled" : true,
+      "filterName" : "gaussianBlur",
+      "filterType" : "gaussianBlur",
+      "parameters" : {
+        "inputRadius" : "0"
+      },
+      "path" : "navbar > UINavigationBar[1] > NavigationBarContentView[0] > NavigationBarTransitionContainer[2] > NavigationBarPlatterContainer[1] > PlatterView[0] > AnimationView[0] > AnimationView.layer.sub[0].sub[0].sub[0].sub[0].sub[0]"
+    },
+    {
+      "enabled" : true,
+      "filterName" : "gaussianBlur",
+      "filterType" : "gaussianBlur",
+      "parameters" : {
+
+      },
+      "path" : "navbar > UINavigationBar[1] > NavigationBarContentView[0] > NavigationBarTransitionContainer[2] > NavigationBarPlatterContainer[1] > PlatterView[0] > AnimationView[0] > AnimationView.layer.sub[0].sub[0].sub[0].sub[0].sub[0].sub[0]"
+    },
+    {
+      "enabled" : true,
+      "filterName" : "vibrantColorMatrix",
+      "filterType" : "vibrantColorMatrix",
+      "parameters" : {
+        "inputColorMatrix" : "{\"R\":[0.500,0.000,0.000,0.000,0.000],\"G\":[0.000,0.500,0.000,0.000,0.569],\"B\":[0.000,0.000,0.500,0.000,1.000],\"A\":[0.000,0.000,0.000,1.000,0.000]}"
+      },
+      "path" : "navbar > UINavigationBar[1] > NavigationBarContentView[0] > NavigationBarTransitionContainer[2] > NavigationBarPlatterContainer[1] > PlatterView[0] > AnimationView[0] > AnimationView.layer.sub[0].sub[0].sub[0].sub[0].sub[0].sub[0].sub[0].sub[0].sub[0].sub[0]"
+    },
+    {
+      "enabled" : true,
+      "filterName" : "gaussianBlur",
+      "filterType" : "gaussianBlur",
+      "parameters" : {
+        "inputRadius" : "0"
+      },
+      "path" : "navbar > UINavigationBar[1] > NavigationBarContentView[0] > NavigationBarTransitionContainer[2] > NavigationBarPlatterContainer[1] > PlatterView[0] > AnimationView[0] > AnimationView[0] > AnimationView.layer.sub[0].sub[0].sub[0].sub[0]"
+    },
+    {
+      "enabled" : true,
+      "filterName" : "gaussianBlur",
+      "filterType" : "gaussianBlur",
+      "parameters" : {
+
+      },
+      "path" : "navbar > UINavigationBar[1] > NavigationBarContentView[0] > NavigationBarTransitionContainer[2] > NavigationBarPlatterContainer[1] > PlatterView[0] > AnimationView[0] > AnimationView[0] > AnimationView.layer.sub[0].sub[0].sub[0].sub[0].sub[0]"
+    },
+    {
+      "enabled" : true,
+      "filterName" : "vibrantColorMatrix",
+      "filterType" : "vibrantColorMatrix",
+      "parameters" : {
+        "inputColorMatrix" : "{\"R\":[0.500,0.000,0.000,0.000,0.000],\"G\":[0.000,0.500,0.000,0.000,0.569],\"B\":[0.000,0.000,0.500,0.000,1.000],\"A\":[0.000,0.000,0.000,1.000,0.000]}"
+      },
+      "path" : "navbar > UINavigationBar[1] > NavigationBarContentView[0] > NavigationBarTransitionContainer[2] > NavigationBarPlatterContainer[1] > PlatterView[0] > AnimationView[0] > AnimationView[0] > AnimationView.layer.sub[0].sub[0].sub[0].sub[0].sub[0].sub[0].sub[0].sub[0].sub[0]"
+    },
+    {
+      "enabled" : true,
+      "filterName" : "gaussianBlur",
+      "filterType" : "gaussianBlur",
+      "parameters" : {
+        "inputRadius" : "0"
+      },
+      "path" : "navbar > UINavigationBar[1] > NavigationBarContentView[0] > NavigationBarTransitionContainer[2] > NavigationBarPlatterContainer[1] > PlatterView[0] > AnimationView[0] > AnimationView[0] > AnimationView[0] > AnimationView.layer.sub[0].sub[0].sub[0]"
+    },
+    {
+      "enabled" : true,
+      "filterName" : "gaussianBlur",
+      "filterType" : "gaussianBlur",
+      "parameters" : {
+
+      },
+      "path" : "navbar > UINavigationBar[1] > NavigationBarContentView[0] > NavigationBarTransitionContainer[2] > NavigationBarPlatterContainer[1] > PlatterView[0] > AnimationView[0] > AnimationView[0] > AnimationView[0] > AnimationView.layer.sub[0].sub[0].sub[0].sub[0]"
+    },
+    {
+      "enabled" : true,
+      "filterName" : "vibrantColorMatrix",
+      "filterType" : "vibrantColorMatrix",
+      "parameters" : {
+        "inputColorMatrix" : "{\"R\":[0.500,0.000,0.000,0.000,0.000],\"G\":[0.000,0.500,0.000,0.000,0.569],\"B\":[0.000,0.000,0.500,0.000,1.000],\"A\":[0.000,0.000,0.000,1.000,0.000]}"
+      },
+      "path" : "navbar > UINavigationBar[1] > NavigationBarContentView[0] > NavigationBarTransitionContainer[2] > NavigationBarPlatterContainer[1] > PlatterView[0] > AnimationView[0] > AnimationView[0] > AnimationView[0] > AnimationView.layer.sub[0].sub[0].sub[0].sub[0].sub[0].sub[0].sub[0].sub[0]"
+    },
+    {
+      "enabled" : true,
+      "filterName" : "gaussianBlur",
+      "filterType" : "gaussianBlur",
+      "parameters" : {
+        "inputRadius" : "0"
+      },
+      "path" : "navbar > UINavigationBar[1] > NavigationBarContentView[0] > NavigationBarTransitionContainer[2] > NavigationBarPlatterContainer[1] > PlatterView[0] > AnimationView[0] > AnimationView[0] > AnimationView[0] > AnimationView[0] > PlatterContentView.layer.sub[0].sub[0]"
+    },
+    {
+      "enabled" : true,
+      "filterName" : "gaussianBlur",
+      "filterType" : "gaussianBlur",
+      "parameters" : {
+
+      },
+      "path" : "navbar > UINavigationBar[1] > NavigationBarContentView[0] > NavigationBarTransitionContainer[2] > NavigationBarPlatterContainer[1] > PlatterView[0] > AnimationView[0] > AnimationView[0] > AnimationView[0] > AnimationView[0] > PlatterContentView.layer.sub[0].sub[0].sub[0]"
+    },
+    {
+      "enabled" : true,
+      "filterName" : "vibrantColorMatrix",
+      "filterType" : "vibrantColorMatrix",
+      "parameters" : {
+        "inputColorMatrix" : "{\"R\":[0.500,0.000,0.000,0.000,0.000],\"G\":[0.000,0.500,0.000,0.000,0.569],\"B\":[0.000,0.000,0.500,0.000,1.000],\"A\":[0.000,0.000,0.000,1.000,0.000]}"
+      },
+      "path" : "navbar > UINavigationBar[1] > NavigationBarContentView[0] > NavigationBarTransitionContainer[2] > NavigationBarPlatterContainer[1] > PlatterView[0] > AnimationView[0] > AnimationView[0] > AnimationView[0] > AnimationView[0] > PlatterContentView.layer.sub[0].sub[0].sub[0].sub[0].sub[0].sub[0].sub[0]"
+    },
+    {
+      "enabled" : true,
+      "filterName" : "gaussianBlur",
+      "filterType" : "gaussianBlur",
+      "parameters" : {
+        "inputRadius" : "0"
+      },
+      "path" : "navbar > UINavigationBar[1] > NavigationBarContentView[0] > NavigationBarTransitionContainer[2] > NavigationBarPlatterContainer[1] > PlatterView[0] > AnimationView[0] > AnimationView[0] > AnimationView[0] > AnimationView[0] > PlatterContentView[0] > PlatterGlassView.layer.sub[0]"
+    },
+    {
+      "enabled" : true,
+      "filterName" : "gaussianBlur",
+      "filterType" : "gaussianBlur",
+      "parameters" : {
+
+      },
+      "path" : "navbar > UINavigationBar[1] > NavigationBarContentView[0] > NavigationBarTransitionContainer[2] > NavigationBarPlatterContainer[1] > PlatterView[0] > AnimationView[0] > AnimationView[0] > AnimationView[0] > AnimationView[0] > PlatterContentView[0] > PlatterGlassView.layer.sub[0].sub[0]"
+    },
+    {
+      "enabled" : true,
+      "filterName" : "vibrantColorMatrix",
+      "filterType" : "vibrantColorMatrix",
+      "parameters" : {
+        "inputColorMatrix" : "{\"R\":[0.500,0.000,0.000,0.000,0.000],\"G\":[0.000,0.500,0.000,0.000,0.569],\"B\":[0.000,0.000,0.500,0.000,1.000],\"A\":[0.000,0.000,0.000,1.000,0.000]}"
+      },
+      "path" : "navbar > UINavigationBar[1] > NavigationBarContentView[0] > NavigationBarTransitionContainer[2] > NavigationBarPlatterContainer[1] > PlatterView[0] > AnimationView[0] > AnimationView[0] > AnimationView[0] > AnimationView[0] > PlatterContentView[0] > PlatterGlassView.layer.sub[0].sub[0].sub[0].sub[0].sub[0].sub[0]"
+    },
+    {
+      "enabled" : true,
+      "filterName" : "gaussianBlur",
+      "filterType" : "gaussianBlur",
+      "parameters" : {
+        "inputRadius" : "0"
+      },
+      "path" : "navbar > UINavigationBar[1] > NavigationBarContentView[0] > NavigationBarTransitionContainer[2] > NavigationBarPlatterContainer[1] > PlatterView[0] > AnimationView[0] > AnimationView[0] > AnimationView[0] > AnimationView[0] > PlatterContentView[0] > PlatterGlassView[0] > SubviewContainerView.layer"
+    },
+    {
+      "enabled" : true,
+      "filterName" : "gaussianBlur",
+      "filterType" : "gaussianBlur",
+      "parameters" : {
+
+      },
+      "path" : "navbar > UINavigationBar[1] > NavigationBarContentView[0] > NavigationBarTransitionContainer[2] > NavigationBarPlatterContainer[1] > PlatterView[0] > AnimationView[0] > AnimationView[0] > AnimationView[0] > AnimationView[0] > PlatterContentView[0] > PlatterGlassView[0] > SubviewContainerView.layer.sub[0]"
+    },
+    {
+      "enabled" : true,
+      "filterName" : "vibrantColorMatrix",
+      "filterType" : "vibrantColorMatrix",
+      "parameters" : {
+        "inputColorMatrix" : "{\"R\":[0.500,0.000,0.000,0.000,0.000],\"G\":[0.000,0.500,0.000,0.000,0.569],\"B\":[0.000,0.000,0.500,0.000,1.000],\"A\":[0.000,0.000,0.000,1.000,0.000]}"
+      },
+      "path" : "navbar > UINavigationBar[1] > NavigationBarContentView[0] > NavigationBarTransitionContainer[2] > NavigationBarPlatterContainer[1] > PlatterView[0] > AnimationView[0] > AnimationView[0] > AnimationView[0] > AnimationView[0] > PlatterContentView[0] > PlatterGlassView[0] > SubviewContainerView.layer.sub[0].sub[0].sub[0].sub[0].sub[0]"
+    },
+    {
+      "enabled" : true,
+      "filterName" : "gaussianBlur",
+      "filterType" : "gaussianBlur",
+      "parameters" : {
+
+      },
+      "path" : "navbar > UINavigationBar[1] > NavigationBarContentView[0] > NavigationBarTransitionContainer[2] > NavigationBarPlatterContainer[1] > PlatterView[0] > AnimationView[0] > AnimationView[0] > AnimationView[0] > AnimationView[0] > PlatterContentView[0] > PlatterGlassView[0] > SubviewContainerView[0] > PlatterItemView.layer"
+    },
+    {
+      "enabled" : true,
+      "filterName" : "vibrantColorMatrix",
+      "filterType" : "vibrantColorMatrix",
+      "parameters" : {
+        "inputColorMatrix" : "{\"R\":[0.500,0.000,0.000,0.000,0.000],\"G\":[0.000,0.500,0.000,0.000,0.569],\"B\":[0.000,0.000,0.500,0.000,1.000],\"A\":[0.000,0.000,0.000,1.000,0.000]}"
+      },
+      "path" : "navbar > UINavigationBar[1] > NavigationBarContentView[0] > NavigationBarTransitionContainer[2] > NavigationBarPlatterContainer[1] > PlatterView[0] > AnimationView[0] > AnimationView[0] > AnimationView[0] > AnimationView[0] > PlatterContentView[0] > PlatterGlassView[0] > SubviewContainerView[0] > PlatterItemView.layer.sub[0].sub[0].sub[0].sub[0]"
+    },
+    {
+      "enabled" : true,
+      "filterName" : "vibrantColorMatrix",
+      "filterType" : "vibrantColorMatrix",
+      "parameters" : {
+        "inputColorMatrix" : "{\"R\":[0.500,0.000,0.000,0.000,0.000],\"G\":[0.000,0.500,0.000,0.000,0.569],\"B\":[0.000,0.000,0.500,0.000,1.000],\"A\":[0.000,0.000,0.000,1.000,0.000]}"
+      },
+      "path" : "navbar > UINavigationBar[1] > NavigationBarContentView[0] > NavigationBarTransitionContainer[2] > NavigationBarPlatterContainer[1] > PlatterView[0] > AnimationView[0] > AnimationView[0] > AnimationView[0] > AnimationView[0] > PlatterContentView[0] > PlatterGlassView[0] > SubviewContainerView[0] > PlatterItemView[0] > ItemWrapperView.layer.sub[0].sub[0].sub[0]"
+    },
+    {
+      "enabled" : true,
+      "filterName" : "vibrantColorMatrix",
+      "filterType" : "vibrantColorMatrix",
+      "parameters" : {
+        "inputColorMatrix" : "{\"R\":[0.500,0.000,0.000,0.000,0.000],\"G\":[0.000,0.500,0.000,0.000,0.569],\"B\":[0.000,0.000,0.500,0.000,1.000],\"A\":[0.000,0.000,0.000,1.000,0.000]}"
+      },
+      "path" : "navbar > UINavigationBar[1] > NavigationBarContentView[0] > NavigationBarTransitionContainer[2] > NavigationBarPlatterContainer[1] > PlatterView[0] > AnimationView[0] > AnimationView[0] > AnimationView[0] > AnimationView[0] > PlatterContentView[0] > PlatterGlassView[0] > SubviewContainerView[0] > PlatterItemView[0] > ItemWrapperView[0] > _UIButtonBarButton.layer.sub[0].sub[0]"
+    },
+    {
+      "enabled" : true,
+      "filterName" : "vibrantColorMatrix",
+      "filterType" : "vibrantColorMatrix",
+      "parameters" : {
+        "inputColorMatrix" : "{\"R\":[0.500,0.000,0.000,0.000,0.000],\"G\":[0.000,0.500,0.000,0.000,0.569],\"B\":[0.000,0.000,0.500,0.000,1.000],\"A\":[0.000,0.000,0.000,1.000,0.000]}"
+      },
+      "path" : "navbar > UINavigationBar[1] > NavigationBarContentView[0] > NavigationBarTransitionContainer[2] > NavigationBarPlatterContainer[1] > PlatterView[0] > AnimationView[0] > AnimationView[0] > AnimationView[0] > AnimationView[0] > PlatterContentView[0] > PlatterGlassView[0] > SubviewContainerView[0] > PlatterItemView[0] > ItemWrapperView[0] > _UIButtonBarButton[0] > _UIModernBarButton.layer.sub[0]"
+    }
+  ],
+  "meta" : {
+    "date" : "2026-01-26T14:23:48Z",
+    "iOS" : "26.0.1",
+    "screen" : "UINavigationController"
+  }
+}

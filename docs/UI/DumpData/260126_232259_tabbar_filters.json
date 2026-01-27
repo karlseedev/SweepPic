@@ -1,0 +1,629 @@
+{
+  "filters" : [
+    {
+      "enabled" : true,
+      "filterName" : "vibrantColorMatrix",
+      "filterType" : "vibrantColorMatrix",
+      "parameters" : {
+        "inputColorMatrix" : "{\"R\":[0.500,0.000,0.000,0.000,0.000],\"G\":[0.000,0.500,0.000,0.000,0.569],\"B\":[0.000,0.000,0.500,0.000,1.000],\"A\":[0.000,0.000,0.000,1.000,0.000]}"
+      },
+      "path" : "tabbar > UITabBar.layer.sub[0].sub[0].sub[0].sub[0]"
+    },
+    {
+      "enabled" : true,
+      "filterName" : "vibrantColorMatrix",
+      "filterType" : "vibrantColorMatrix",
+      "parameters" : {
+        "inputColorMatrix" : "{\"R\":[0.500,0.000,0.000,0.000,0.000],\"G\":[0.000,0.500,0.000,0.000,0.569],\"B\":[0.000,0.000,0.500,0.000,1.000],\"A\":[0.000,0.000,0.000,1.000,0.000]}"
+      },
+      "path" : "tabbar > UITabBar.layer.sub[0].sub[0].sub[0].sub[1]"
+    },
+    {
+      "enabled" : true,
+      "filterName" : "vibrantColorMatrix",
+      "filterType" : "vibrantColorMatrix",
+      "parameters" : {
+        "inputColorMatrix" : "{\"R\":[0.500,0.000,0.000,0.000,0.000],\"G\":[0.000,0.500,0.000,0.000,0.569],\"B\":[0.000,0.000,0.500,0.000,1.000],\"A\":[0.000,0.000,0.000,1.000,0.000]}"
+      },
+      "path" : "tabbar > UITabBar.layer.sub[0].sub[0].sub[1].sub[0]"
+    },
+    {
+      "enabled" : true,
+      "filterName" : "vibrantColorMatrix",
+      "filterType" : "vibrantColorMatrix",
+      "parameters" : {
+        "inputColorMatrix" : "{\"R\":[0.500,0.000,0.000,0.000,0.000],\"G\":[0.000,0.500,0.000,0.000,0.569],\"B\":[0.000,0.000,0.500,0.000,1.000],\"A\":[0.000,0.000,0.000,1.000,0.000]}"
+      },
+      "path" : "tabbar > UITabBar.layer.sub[0].sub[0].sub[1].sub[1]"
+    },
+    {
+      "enabled" : true,
+      "filterName" : "vibrantColorMatrix",
+      "filterType" : "vibrantColorMatrix",
+      "parameters" : {
+        "inputColorMatrix" : "{\"R\":[0.500,0.000,0.000,0.000,0.000],\"G\":[0.000,0.500,0.000,0.000,0.569],\"B\":[0.000,0.000,0.500,0.000,1.000],\"A\":[0.000,0.000,0.000,1.000,0.000]}"
+      },
+      "path" : "tabbar > UITabBar.layer.sub[0].sub[0].sub[2].sub[0]"
+    },
+    {
+      "enabled" : true,
+      "filterName" : "vibrantColorMatrix",
+      "filterType" : "vibrantColorMatrix",
+      "parameters" : {
+        "inputColorMatrix" : "{\"R\":[0.500,0.000,0.000,0.000,0.000],\"G\":[0.000,0.500,0.000,0.000,0.569],\"B\":[0.000,0.000,0.500,0.000,1.000],\"A\":[0.000,0.000,0.000,1.000,0.000]}"
+      },
+      "path" : "tabbar > UITabBar.layer.sub[0].sub[0].sub[2].sub[1]"
+    },
+    {
+      "enabled" : true,
+      "filterName" : "opacityPair",
+      "filterType" : "opacityPair",
+      "parameters" : {
+
+      },
+      "path" : "tabbar > UITabBar.layer.sub[0].sub[1]"
+    },
+    {
+      "enabled" : true,
+      "filterName" : "gaussianBlur",
+      "filterType" : "gaussianBlur",
+      "parameters" : {
+        "inputNormalizeEdges" : "1",
+        "inputQuality" : "default",
+        "inputRadius" : "2"
+      },
+      "path" : "tabbar > UITabBar.layer.sub[0].sub[1].sub[0].sub[0].sub[0]"
+    },
+    {
+      "enabled" : true,
+      "filterName" : "colorMatrix",
+      "filterType" : "colorMatrix",
+      "parameters" : {
+        "inputColorMatrix" : "{\"R\":[1.082,-0.113,-0.011,0.000,0.135],\"G\":[-0.034,1.003,-0.011,0.000,0.135],\"B\":[-0.034,-0.113,1.105,0.000,0.135],\"A\":[0.000,0.000,0.000,1.000,0.000]}"
+      },
+      "path" : "tabbar > UITabBar.layer.sub[0].sub[1].sub[0].sub[0].sub[0]"
+    },
+    {
+      "enabled" : true,
+      "filterName" : "displacementMap",
+      "filterType" : "displacementMap",
+      "parameters" : {
+        "inputAmount" : "0"
+      },
+      "path" : "tabbar > UITabBar.layer.sub[0].sub[1].sub[0].sub[1].sub[0]"
+    },
+    {
+      "enabled" : true,
+      "filterName" : "vibrantColorMatrix",
+      "filterType" : "vibrantColorMatrix",
+      "parameters" : {
+        "inputColorMatrix" : "{\"R\":[0.798,-0.680,-0.069,0.000,0.950],\"G\":[-0.202,0.321,-0.069,0.000,0.950],\"B\":[-0.202,-0.679,0.931,0.000,0.950],\"A\":[0.000,0.000,0.000,1.000,0.000]}"
+      },
+      "path" : "tabbar > UITabBar.layer.sub[0].sub[2].sub[0].sub[0]"
+    },
+    {
+      "enabled" : true,
+      "filterName" : "vibrantColorMatrix",
+      "filterType" : "vibrantColorMatrix",
+      "parameters" : {
+        "inputColorMatrix" : "{\"R\":[0.798,-0.680,-0.069,0.000,0.950],\"G\":[-0.202,0.321,-0.069,0.000,0.950],\"B\":[-0.202,-0.679,0.931,0.000,0.950],\"A\":[0.000,0.000,0.000,1.000,0.000]}"
+      },
+      "path" : "tabbar > UITabBar.layer.sub[0].sub[2].sub[0].sub[1]"
+    },
+    {
+      "enabled" : true,
+      "filterName" : "vibrantColorMatrix",
+      "filterType" : "vibrantColorMatrix",
+      "parameters" : {
+        "inputColorMatrix" : "{\"R\":[0.798,-0.680,-0.069,0.000,0.950],\"G\":[-0.202,0.321,-0.069,0.000,0.950],\"B\":[-0.202,-0.679,0.931,0.000,0.950],\"A\":[0.000,0.000,0.000,1.000,0.000]}"
+      },
+      "path" : "tabbar > UITabBar.layer.sub[0].sub[2].sub[1].sub[0]"
+    },
+    {
+      "enabled" : true,
+      "filterName" : "vibrantColorMatrix",
+      "filterType" : "vibrantColorMatrix",
+      "parameters" : {
+        "inputColorMatrix" : "{\"R\":[0.798,-0.680,-0.069,0.000,0.950],\"G\":[-0.202,0.321,-0.069,0.000,0.950],\"B\":[-0.202,-0.679,0.931,0.000,0.950],\"A\":[0.000,0.000,0.000,1.000,0.000]}"
+      },
+      "path" : "tabbar > UITabBar.layer.sub[0].sub[2].sub[1].sub[1]"
+    },
+    {
+      "enabled" : true,
+      "filterName" : "vibrantColorMatrix",
+      "filterType" : "vibrantColorMatrix",
+      "parameters" : {
+        "inputColorMatrix" : "{\"R\":[0.798,-0.680,-0.069,0.000,0.950],\"G\":[-0.202,0.321,-0.069,0.000,0.950],\"B\":[-0.202,-0.679,0.931,0.000,0.950],\"A\":[0.000,0.000,0.000,1.000,0.000]}"
+      },
+      "path" : "tabbar > UITabBar.layer.sub[0].sub[2].sub[2].sub[0]"
+    },
+    {
+      "enabled" : true,
+      "filterName" : "vibrantColorMatrix",
+      "filterType" : "vibrantColorMatrix",
+      "parameters" : {
+        "inputColorMatrix" : "{\"R\":[0.798,-0.680,-0.069,0.000,0.950],\"G\":[-0.202,0.321,-0.069,0.000,0.950],\"B\":[-0.202,-0.679,0.931,0.000,0.950],\"A\":[0.000,0.000,0.000,1.000,0.000]}"
+      },
+      "path" : "tabbar > UITabBar.layer.sub[0].sub[2].sub[2].sub[1]"
+    },
+    {
+      "enabled" : true,
+      "filterName" : "destOut",
+      "filterType" : "compositingFilter",
+      "parameters" : {
+
+      },
+      "path" : "tabbar > UITabBar.layer.sub[0].sub[3]"
+    },
+    {
+      "enabled" : true,
+      "filterName" : "vibrantColorMatrix",
+      "filterType" : "vibrantColorMatrix",
+      "parameters" : {
+        "inputColorMatrix" : "{\"R\":[0.500,0.000,0.000,0.000,0.000],\"G\":[0.000,0.500,0.000,0.000,0.569],\"B\":[0.000,0.000,0.500,0.000,1.000],\"A\":[0.000,0.000,0.000,1.000,0.000]}"
+      },
+      "path" : "tabbar > UITabBar[0] > _UITabBarPlatterView.layer.sub[0].sub[0].sub[0]"
+    },
+    {
+      "enabled" : true,
+      "filterName" : "vibrantColorMatrix",
+      "filterType" : "vibrantColorMatrix",
+      "parameters" : {
+        "inputColorMatrix" : "{\"R\":[0.500,0.000,0.000,0.000,0.000],\"G\":[0.000,0.500,0.000,0.000,0.569],\"B\":[0.000,0.000,0.500,0.000,1.000],\"A\":[0.000,0.000,0.000,1.000,0.000]}"
+      },
+      "path" : "tabbar > UITabBar[0] > _UITabBarPlatterView.layer.sub[0].sub[0].sub[1]"
+    },
+    {
+      "enabled" : true,
+      "filterName" : "vibrantColorMatrix",
+      "filterType" : "vibrantColorMatrix",
+      "parameters" : {
+        "inputColorMatrix" : "{\"R\":[0.500,0.000,0.000,0.000,0.000],\"G\":[0.000,0.500,0.000,0.000,0.569],\"B\":[0.000,0.000,0.500,0.000,1.000],\"A\":[0.000,0.000,0.000,1.000,0.000]}"
+      },
+      "path" : "tabbar > UITabBar[0] > _UITabBarPlatterView.layer.sub[0].sub[1].sub[0]"
+    },
+    {
+      "enabled" : true,
+      "filterName" : "vibrantColorMatrix",
+      "filterType" : "vibrantColorMatrix",
+      "parameters" : {
+        "inputColorMatrix" : "{\"R\":[0.500,0.000,0.000,0.000,0.000],\"G\":[0.000,0.500,0.000,0.000,0.569],\"B\":[0.000,0.000,0.500,0.000,1.000],\"A\":[0.000,0.000,0.000,1.000,0.000]}"
+      },
+      "path" : "tabbar > UITabBar[0] > _UITabBarPlatterView.layer.sub[0].sub[1].sub[1]"
+    },
+    {
+      "enabled" : true,
+      "filterName" : "vibrantColorMatrix",
+      "filterType" : "vibrantColorMatrix",
+      "parameters" : {
+        "inputColorMatrix" : "{\"R\":[0.500,0.000,0.000,0.000,0.000],\"G\":[0.000,0.500,0.000,0.000,0.569],\"B\":[0.000,0.000,0.500,0.000,1.000],\"A\":[0.000,0.000,0.000,1.000,0.000]}"
+      },
+      "path" : "tabbar > UITabBar[0] > _UITabBarPlatterView.layer.sub[0].sub[2].sub[0]"
+    },
+    {
+      "enabled" : true,
+      "filterName" : "vibrantColorMatrix",
+      "filterType" : "vibrantColorMatrix",
+      "parameters" : {
+        "inputColorMatrix" : "{\"R\":[0.500,0.000,0.000,0.000,0.000],\"G\":[0.000,0.500,0.000,0.000,0.569],\"B\":[0.000,0.000,0.500,0.000,1.000],\"A\":[0.000,0.000,0.000,1.000,0.000]}"
+      },
+      "path" : "tabbar > UITabBar[0] > _UITabBarPlatterView.layer.sub[0].sub[2].sub[1]"
+    },
+    {
+      "enabled" : true,
+      "filterName" : "opacityPair",
+      "filterType" : "opacityPair",
+      "parameters" : {
+
+      },
+      "path" : "tabbar > UITabBar[0] > _UITabBarPlatterView.layer.sub[1]"
+    },
+    {
+      "enabled" : true,
+      "filterName" : "gaussianBlur",
+      "filterType" : "gaussianBlur",
+      "parameters" : {
+        "inputNormalizeEdges" : "1",
+        "inputQuality" : "default",
+        "inputRadius" : "2"
+      },
+      "path" : "tabbar > UITabBar[0] > _UITabBarPlatterView.layer.sub[1].sub[0].sub[0].sub[0]"
+    },
+    {
+      "enabled" : true,
+      "filterName" : "colorMatrix",
+      "filterType" : "colorMatrix",
+      "parameters" : {
+        "inputColorMatrix" : "{\"R\":[1.082,-0.113,-0.011,0.000,0.135],\"G\":[-0.034,1.003,-0.011,0.000,0.135],\"B\":[-0.034,-0.113,1.105,0.000,0.135],\"A\":[0.000,0.000,0.000,1.000,0.000]}"
+      },
+      "path" : "tabbar > UITabBar[0] > _UITabBarPlatterView.layer.sub[1].sub[0].sub[0].sub[0]"
+    },
+    {
+      "enabled" : true,
+      "filterName" : "displacementMap",
+      "filterType" : "displacementMap",
+      "parameters" : {
+        "inputAmount" : "0"
+      },
+      "path" : "tabbar > UITabBar[0] > _UITabBarPlatterView.layer.sub[1].sub[0].sub[1].sub[0]"
+    },
+    {
+      "enabled" : true,
+      "filterName" : "vibrantColorMatrix",
+      "filterType" : "vibrantColorMatrix",
+      "parameters" : {
+        "inputColorMatrix" : "{\"R\":[0.798,-0.680,-0.069,0.000,0.950],\"G\":[-0.202,0.321,-0.069,0.000,0.950],\"B\":[-0.202,-0.679,0.931,0.000,0.950],\"A\":[0.000,0.000,0.000,1.000,0.000]}"
+      },
+      "path" : "tabbar > UITabBar[0] > _UITabBarPlatterView.layer.sub[2].sub[0].sub[0]"
+    },
+    {
+      "enabled" : true,
+      "filterName" : "vibrantColorMatrix",
+      "filterType" : "vibrantColorMatrix",
+      "parameters" : {
+        "inputColorMatrix" : "{\"R\":[0.798,-0.680,-0.069,0.000,0.950],\"G\":[-0.202,0.321,-0.069,0.000,0.950],\"B\":[-0.202,-0.679,0.931,0.000,0.950],\"A\":[0.000,0.000,0.000,1.000,0.000]}"
+      },
+      "path" : "tabbar > UITabBar[0] > _UITabBarPlatterView.layer.sub[2].sub[0].sub[1]"
+    },
+    {
+      "enabled" : true,
+      "filterName" : "vibrantColorMatrix",
+      "filterType" : "vibrantColorMatrix",
+      "parameters" : {
+        "inputColorMatrix" : "{\"R\":[0.798,-0.680,-0.069,0.000,0.950],\"G\":[-0.202,0.321,-0.069,0.000,0.950],\"B\":[-0.202,-0.679,0.931,0.000,0.950],\"A\":[0.000,0.000,0.000,1.000,0.000]}"
+      },
+      "path" : "tabbar > UITabBar[0] > _UITabBarPlatterView.layer.sub[2].sub[1].sub[0]"
+    },
+    {
+      "enabled" : true,
+      "filterName" : "vibrantColorMatrix",
+      "filterType" : "vibrantColorMatrix",
+      "parameters" : {
+        "inputColorMatrix" : "{\"R\":[0.798,-0.680,-0.069,0.000,0.950],\"G\":[-0.202,0.321,-0.069,0.000,0.950],\"B\":[-0.202,-0.679,0.931,0.000,0.950],\"A\":[0.000,0.000,0.000,1.000,0.000]}"
+      },
+      "path" : "tabbar > UITabBar[0] > _UITabBarPlatterView.layer.sub[2].sub[1].sub[1]"
+    },
+    {
+      "enabled" : true,
+      "filterName" : "vibrantColorMatrix",
+      "filterType" : "vibrantColorMatrix",
+      "parameters" : {
+        "inputColorMatrix" : "{\"R\":[0.798,-0.680,-0.069,0.000,0.950],\"G\":[-0.202,0.321,-0.069,0.000,0.950],\"B\":[-0.202,-0.679,0.931,0.000,0.950],\"A\":[0.000,0.000,0.000,1.000,0.000]}"
+      },
+      "path" : "tabbar > UITabBar[0] > _UITabBarPlatterView.layer.sub[2].sub[2].sub[0]"
+    },
+    {
+      "enabled" : true,
+      "filterName" : "vibrantColorMatrix",
+      "filterType" : "vibrantColorMatrix",
+      "parameters" : {
+        "inputColorMatrix" : "{\"R\":[0.798,-0.680,-0.069,0.000,0.950],\"G\":[-0.202,0.321,-0.069,0.000,0.950],\"B\":[-0.202,-0.679,0.931,0.000,0.950],\"A\":[0.000,0.000,0.000,1.000,0.000]}"
+      },
+      "path" : "tabbar > UITabBar[0] > _UITabBarPlatterView.layer.sub[2].sub[2].sub[1]"
+    },
+    {
+      "enabled" : true,
+      "filterName" : "destOut",
+      "filterType" : "compositingFilter",
+      "parameters" : {
+
+      },
+      "path" : "tabbar > UITabBar[0] > _UITabBarPlatterView.layer.sub[3]"
+    },
+    {
+      "enabled" : true,
+      "filterName" : "vibrantColorMatrix",
+      "filterType" : "vibrantColorMatrix",
+      "parameters" : {
+        "inputColorMatrix" : "{\"R\":[0.500,0.000,0.000,0.000,0.000],\"G\":[0.000,0.500,0.000,0.000,0.569],\"B\":[0.000,0.000,0.500,0.000,1.000],\"A\":[0.000,0.000,0.000,1.000,0.000]}"
+      },
+      "path" : "tabbar > UITabBar[0] > _UITabBarPlatterView[0] > SelectedContentView.layer.sub[0].sub[0]"
+    },
+    {
+      "enabled" : true,
+      "filterName" : "vibrantColorMatrix",
+      "filterType" : "vibrantColorMatrix",
+      "parameters" : {
+        "inputColorMatrix" : "{\"R\":[0.500,0.000,0.000,0.000,0.000],\"G\":[0.000,0.500,0.000,0.000,0.569],\"B\":[0.000,0.000,0.500,0.000,1.000],\"A\":[0.000,0.000,0.000,1.000,0.000]}"
+      },
+      "path" : "tabbar > UITabBar[0] > _UITabBarPlatterView[0] > SelectedContentView.layer.sub[0].sub[1]"
+    },
+    {
+      "enabled" : true,
+      "filterName" : "vibrantColorMatrix",
+      "filterType" : "vibrantColorMatrix",
+      "parameters" : {
+        "inputColorMatrix" : "{\"R\":[0.500,0.000,0.000,0.000,0.000],\"G\":[0.000,0.500,0.000,0.000,0.569],\"B\":[0.000,0.000,0.500,0.000,1.000],\"A\":[0.000,0.000,0.000,1.000,0.000]}"
+      },
+      "path" : "tabbar > UITabBar[0] > _UITabBarPlatterView[0] > SelectedContentView.layer.sub[1].sub[0]"
+    },
+    {
+      "enabled" : true,
+      "filterName" : "vibrantColorMatrix",
+      "filterType" : "vibrantColorMatrix",
+      "parameters" : {
+        "inputColorMatrix" : "{\"R\":[0.500,0.000,0.000,0.000,0.000],\"G\":[0.000,0.500,0.000,0.000,0.569],\"B\":[0.000,0.000,0.500,0.000,1.000],\"A\":[0.000,0.000,0.000,1.000,0.000]}"
+      },
+      "path" : "tabbar > UITabBar[0] > _UITabBarPlatterView[0] > SelectedContentView.layer.sub[1].sub[1]"
+    },
+    {
+      "enabled" : true,
+      "filterName" : "vibrantColorMatrix",
+      "filterType" : "vibrantColorMatrix",
+      "parameters" : {
+        "inputColorMatrix" : "{\"R\":[0.500,0.000,0.000,0.000,0.000],\"G\":[0.000,0.500,0.000,0.000,0.569],\"B\":[0.000,0.000,0.500,0.000,1.000],\"A\":[0.000,0.000,0.000,1.000,0.000]}"
+      },
+      "path" : "tabbar > UITabBar[0] > _UITabBarPlatterView[0] > SelectedContentView.layer.sub[2].sub[0]"
+    },
+    {
+      "enabled" : true,
+      "filterName" : "vibrantColorMatrix",
+      "filterType" : "vibrantColorMatrix",
+      "parameters" : {
+        "inputColorMatrix" : "{\"R\":[0.500,0.000,0.000,0.000,0.000],\"G\":[0.000,0.500,0.000,0.000,0.569],\"B\":[0.000,0.000,0.500,0.000,1.000],\"A\":[0.000,0.000,0.000,1.000,0.000]}"
+      },
+      "path" : "tabbar > UITabBar[0] > _UITabBarPlatterView[0] > SelectedContentView.layer.sub[2].sub[1]"
+    },
+    {
+      "enabled" : true,
+      "filterName" : "vibrantColorMatrix",
+      "filterType" : "vibrantColorMatrix",
+      "parameters" : {
+        "inputColorMatrix" : "{\"R\":[0.500,0.000,0.000,0.000,0.000],\"G\":[0.000,0.500,0.000,0.000,0.569],\"B\":[0.000,0.000,0.500,0.000,1.000],\"A\":[0.000,0.000,0.000,1.000,0.000]}"
+      },
+      "path" : "tabbar > UITabBar[0] > _UITabBarPlatterView[0] > SelectedContentView[0] > _UITabButton.layer.sub[0]"
+    },
+    {
+      "enabled" : true,
+      "filterName" : "vibrantColorMatrix",
+      "filterType" : "vibrantColorMatrix",
+      "parameters" : {
+        "inputColorMatrix" : "{\"R\":[0.500,0.000,0.000,0.000,0.000],\"G\":[0.000,0.500,0.000,0.000,0.569],\"B\":[0.000,0.000,0.500,0.000,1.000],\"A\":[0.000,0.000,0.000,1.000,0.000]}"
+      },
+      "path" : "tabbar > UITabBar[0] > _UITabBarPlatterView[0] > SelectedContentView[0] > _UITabButton.layer.sub[1]"
+    },
+    {
+      "enabled" : true,
+      "filterName" : "vibrantColorMatrix",
+      "filterType" : "vibrantColorMatrix",
+      "parameters" : {
+        "inputColorMatrix" : "{\"R\":[0.500,0.000,0.000,0.000,0.000],\"G\":[0.000,0.500,0.000,0.000,0.569],\"B\":[0.000,0.000,0.500,0.000,1.000],\"A\":[0.000,0.000,0.000,1.000,0.000]}"
+      },
+      "path" : "tabbar > UITabBar[0] > _UITabBarPlatterView[0] > SelectedContentView[1] > _UITabButton.layer.sub[0]"
+    },
+    {
+      "enabled" : true,
+      "filterName" : "vibrantColorMatrix",
+      "filterType" : "vibrantColorMatrix",
+      "parameters" : {
+        "inputColorMatrix" : "{\"R\":[0.500,0.000,0.000,0.000,0.000],\"G\":[0.000,0.500,0.000,0.000,0.569],\"B\":[0.000,0.000,0.500,0.000,1.000],\"A\":[0.000,0.000,0.000,1.000,0.000]}"
+      },
+      "path" : "tabbar > UITabBar[0] > _UITabBarPlatterView[0] > SelectedContentView[1] > _UITabButton.layer.sub[1]"
+    },
+    {
+      "enabled" : true,
+      "filterName" : "vibrantColorMatrix",
+      "filterType" : "vibrantColorMatrix",
+      "parameters" : {
+        "inputColorMatrix" : "{\"R\":[0.500,0.000,0.000,0.000,0.000],\"G\":[0.000,0.500,0.000,0.000,0.569],\"B\":[0.000,0.000,0.500,0.000,1.000],\"A\":[0.000,0.000,0.000,1.000,0.000]}"
+      },
+      "path" : "tabbar > UITabBar[0] > _UITabBarPlatterView[0] > SelectedContentView[2] > _UITabButton.layer.sub[0]"
+    },
+    {
+      "enabled" : true,
+      "filterName" : "vibrantColorMatrix",
+      "filterType" : "vibrantColorMatrix",
+      "parameters" : {
+        "inputColorMatrix" : "{\"R\":[0.500,0.000,0.000,0.000,0.000],\"G\":[0.000,0.500,0.000,0.000,0.569],\"B\":[0.000,0.000,0.500,0.000,1.000],\"A\":[0.000,0.000,0.000,1.000,0.000]}"
+      },
+      "path" : "tabbar > UITabBar[0] > _UITabBarPlatterView[0] > SelectedContentView[2] > _UITabButton.layer.sub[1]"
+    },
+    {
+      "enabled" : true,
+      "filterName" : "opacityPair",
+      "filterType" : "opacityPair",
+      "parameters" : {
+
+      },
+      "path" : "tabbar > UITabBar[0] > _UITabBarPlatterView[1] > _UILiquidLensView.layer"
+    },
+    {
+      "enabled" : true,
+      "filterName" : "gaussianBlur",
+      "filterType" : "gaussianBlur",
+      "parameters" : {
+        "inputNormalizeEdges" : "1",
+        "inputQuality" : "default",
+        "inputRadius" : "2"
+      },
+      "path" : "tabbar > UITabBar[0] > _UITabBarPlatterView[1] > _UILiquidLensView.layer.sub[0].sub[0].sub[0]"
+    },
+    {
+      "enabled" : true,
+      "filterName" : "colorMatrix",
+      "filterType" : "colorMatrix",
+      "parameters" : {
+        "inputColorMatrix" : "{\"R\":[1.082,-0.113,-0.011,0.000,0.135],\"G\":[-0.034,1.003,-0.011,0.000,0.135],\"B\":[-0.034,-0.113,1.105,0.000,0.135],\"A\":[0.000,0.000,0.000,1.000,0.000]}"
+      },
+      "path" : "tabbar > UITabBar[0] > _UITabBarPlatterView[1] > _UILiquidLensView.layer.sub[0].sub[0].sub[0]"
+    },
+    {
+      "enabled" : true,
+      "filterName" : "displacementMap",
+      "filterType" : "displacementMap",
+      "parameters" : {
+        "inputAmount" : "0"
+      },
+      "path" : "tabbar > UITabBar[0] > _UITabBarPlatterView[1] > _UILiquidLensView.layer.sub[0].sub[1].sub[0]"
+    },
+    {
+      "enabled" : true,
+      "filterName" : "gaussianBlur",
+      "filterType" : "gaussianBlur",
+      "parameters" : {
+        "inputNormalizeEdges" : "1",
+        "inputQuality" : "default",
+        "inputRadius" : "2"
+      },
+      "path" : "tabbar > UITabBar[0] > _UITabBarPlatterView[1] > _UILiquidLensView[0] > UIView.layer.sub[0].sub[0]"
+    },
+    {
+      "enabled" : true,
+      "filterName" : "colorMatrix",
+      "filterType" : "colorMatrix",
+      "parameters" : {
+        "inputColorMatrix" : "{\"R\":[1.082,-0.113,-0.011,0.000,0.135],\"G\":[-0.034,1.003,-0.011,0.000,0.135],\"B\":[-0.034,-0.113,1.105,0.000,0.135],\"A\":[0.000,0.000,0.000,1.000,0.000]}"
+      },
+      "path" : "tabbar > UITabBar[0] > _UITabBarPlatterView[1] > _UILiquidLensView[0] > UIView.layer.sub[0].sub[0]"
+    },
+    {
+      "enabled" : true,
+      "filterName" : "displacementMap",
+      "filterType" : "displacementMap",
+      "parameters" : {
+        "inputAmount" : "0"
+      },
+      "path" : "tabbar > UITabBar[0] > _UITabBarPlatterView[1] > _UILiquidLensView[0] > UIView.layer.sub[1].sub[0]"
+    },
+    {
+      "enabled" : true,
+      "filterName" : "displacementMap",
+      "filterType" : "displacementMap",
+      "parameters" : {
+        "inputAmount" : "0"
+      },
+      "path" : "tabbar > UITabBar[0] > _UITabBarPlatterView[1] > _UILiquidLensView[0] > UIView[1] > ClearGlassView.layer.sub[0]"
+    },
+    {
+      "enabled" : true,
+      "filterName" : "displacementMap",
+      "filterType" : "displacementMap",
+      "parameters" : {
+        "inputAmount" : "0"
+      },
+      "path" : "tabbar > UITabBar[0] > _UITabBarPlatterView[1] > _UILiquidLensView[0] > UIView[1] > ClearGlassView[0] > UIView.layer"
+    },
+    {
+      "enabled" : true,
+      "filterName" : "vibrantColorMatrix",
+      "filterType" : "vibrantColorMatrix",
+      "parameters" : {
+        "inputColorMatrix" : "{\"R\":[0.798,-0.680,-0.069,0.000,0.950],\"G\":[-0.202,0.321,-0.069,0.000,0.950],\"B\":[-0.202,-0.679,0.931,0.000,0.950],\"A\":[0.000,0.000,0.000,1.000,0.000]}"
+      },
+      "path" : "tabbar > UITabBar[0] > _UITabBarPlatterView[2] > ContentView.layer.sub[0].sub[0]"
+    },
+    {
+      "enabled" : true,
+      "filterName" : "vibrantColorMatrix",
+      "filterType" : "vibrantColorMatrix",
+      "parameters" : {
+        "inputColorMatrix" : "{\"R\":[0.798,-0.680,-0.069,0.000,0.950],\"G\":[-0.202,0.321,-0.069,0.000,0.950],\"B\":[-0.202,-0.679,0.931,0.000,0.950],\"A\":[0.000,0.000,0.000,1.000,0.000]}"
+      },
+      "path" : "tabbar > UITabBar[0] > _UITabBarPlatterView[2] > ContentView.layer.sub[0].sub[1]"
+    },
+    {
+      "enabled" : true,
+      "filterName" : "vibrantColorMatrix",
+      "filterType" : "vibrantColorMatrix",
+      "parameters" : {
+        "inputColorMatrix" : "{\"R\":[0.798,-0.680,-0.069,0.000,0.950],\"G\":[-0.202,0.321,-0.069,0.000,0.950],\"B\":[-0.202,-0.679,0.931,0.000,0.950],\"A\":[0.000,0.000,0.000,1.000,0.000]}"
+      },
+      "path" : "tabbar > UITabBar[0] > _UITabBarPlatterView[2] > ContentView.layer.sub[1].sub[0]"
+    },
+    {
+      "enabled" : true,
+      "filterName" : "vibrantColorMatrix",
+      "filterType" : "vibrantColorMatrix",
+      "parameters" : {
+        "inputColorMatrix" : "{\"R\":[0.798,-0.680,-0.069,0.000,0.950],\"G\":[-0.202,0.321,-0.069,0.000,0.950],\"B\":[-0.202,-0.679,0.931,0.000,0.950],\"A\":[0.000,0.000,0.000,1.000,0.000]}"
+      },
+      "path" : "tabbar > UITabBar[0] > _UITabBarPlatterView[2] > ContentView.layer.sub[1].sub[1]"
+    },
+    {
+      "enabled" : true,
+      "filterName" : "vibrantColorMatrix",
+      "filterType" : "vibrantColorMatrix",
+      "parameters" : {
+        "inputColorMatrix" : "{\"R\":[0.798,-0.680,-0.069,0.000,0.950],\"G\":[-0.202,0.321,-0.069,0.000,0.950],\"B\":[-0.202,-0.679,0.931,0.000,0.950],\"A\":[0.000,0.000,0.000,1.000,0.000]}"
+      },
+      "path" : "tabbar > UITabBar[0] > _UITabBarPlatterView[2] > ContentView.layer.sub[2].sub[0]"
+    },
+    {
+      "enabled" : true,
+      "filterName" : "vibrantColorMatrix",
+      "filterType" : "vibrantColorMatrix",
+      "parameters" : {
+        "inputColorMatrix" : "{\"R\":[0.798,-0.680,-0.069,0.000,0.950],\"G\":[-0.202,0.321,-0.069,0.000,0.950],\"B\":[-0.202,-0.679,0.931,0.000,0.950],\"A\":[0.000,0.000,0.000,1.000,0.000]}"
+      },
+      "path" : "tabbar > UITabBar[0] > _UITabBarPlatterView[2] > ContentView.layer.sub[2].sub[1]"
+    },
+    {
+      "enabled" : true,
+      "filterName" : "vibrantColorMatrix",
+      "filterType" : "vibrantColorMatrix",
+      "parameters" : {
+        "inputColorMatrix" : "{\"R\":[0.798,-0.680,-0.069,0.000,0.950],\"G\":[-0.202,0.321,-0.069,0.000,0.950],\"B\":[-0.202,-0.679,0.931,0.000,0.950],\"A\":[0.000,0.000,0.000,1.000,0.000]}"
+      },
+      "path" : "tabbar > UITabBar[0] > _UITabBarPlatterView[2] > ContentView[0] > _UITabButton.layer.sub[0]"
+    },
+    {
+      "enabled" : true,
+      "filterName" : "vibrantColorMatrix",
+      "filterType" : "vibrantColorMatrix",
+      "parameters" : {
+        "inputColorMatrix" : "{\"R\":[0.798,-0.680,-0.069,0.000,0.950],\"G\":[-0.202,0.321,-0.069,0.000,0.950],\"B\":[-0.202,-0.679,0.931,0.000,0.950],\"A\":[0.000,0.000,0.000,1.000,0.000]}"
+      },
+      "path" : "tabbar > UITabBar[0] > _UITabBarPlatterView[2] > ContentView[0] > _UITabButton.layer.sub[1]"
+    },
+    {
+      "enabled" : true,
+      "filterName" : "vibrantColorMatrix",
+      "filterType" : "vibrantColorMatrix",
+      "parameters" : {
+        "inputColorMatrix" : "{\"R\":[0.798,-0.680,-0.069,0.000,0.950],\"G\":[-0.202,0.321,-0.069,0.000,0.950],\"B\":[-0.202,-0.679,0.931,0.000,0.950],\"A\":[0.000,0.000,0.000,1.000,0.000]}"
+      },
+      "path" : "tabbar > UITabBar[0] > _UITabBarPlatterView[2] > ContentView[1] > _UITabButton.layer.sub[0]"
+    },
+    {
+      "enabled" : true,
+      "filterName" : "vibrantColorMatrix",
+      "filterType" : "vibrantColorMatrix",
+      "parameters" : {
+        "inputColorMatrix" : "{\"R\":[0.798,-0.680,-0.069,0.000,0.950],\"G\":[-0.202,0.321,-0.069,0.000,0.950],\"B\":[-0.202,-0.679,0.931,0.000,0.950],\"A\":[0.000,0.000,0.000,1.000,0.000]}"
+      },
+      "path" : "tabbar > UITabBar[0] > _UITabBarPlatterView[2] > ContentView[1] > _UITabButton.layer.sub[1]"
+    },
+    {
+      "enabled" : true,
+      "filterName" : "vibrantColorMatrix",
+      "filterType" : "vibrantColorMatrix",
+      "parameters" : {
+        "inputColorMatrix" : "{\"R\":[0.798,-0.680,-0.069,0.000,0.950],\"G\":[-0.202,0.321,-0.069,0.000,0.950],\"B\":[-0.202,-0.679,0.931,0.000,0.950],\"A\":[0.000,0.000,0.000,1.000,0.000]}"
+      },
+      "path" : "tabbar > UITabBar[0] > _UITabBarPlatterView[2] > ContentView[2] > _UITabButton.layer.sub[0]"
+    },
+    {
+      "enabled" : true,
+      "filterName" : "vibrantColorMatrix",
+      "filterType" : "vibrantColorMatrix",
+      "parameters" : {
+        "inputColorMatrix" : "{\"R\":[0.798,-0.680,-0.069,0.000,0.950],\"G\":[-0.202,0.321,-0.069,0.000,0.950],\"B\":[-0.202,-0.679,0.931,0.000,0.950],\"A\":[0.000,0.000,0.000,1.000,0.000]}"
+      },
+      "path" : "tabbar > UITabBar[0] > _UITabBarPlatterView[2] > ContentView[2] > _UITabButton.layer.sub[1]"
+    },
+    {
+      "enabled" : true,
+      "filterName" : "destOut",
+      "filterType" : "compositingFilter",
+      "parameters" : {
+
+      },
+      "path" : "tabbar > UITabBar[0] > _UITabBarPlatterView[3] > DestOutView.layer"
+    }
+  ],
+  "meta" : {
+    "date" : "2026-01-26T14:22:59Z",
+    "iOS" : "26.0.1",
+    "screen" : "UINavigationController"
+  }
+}

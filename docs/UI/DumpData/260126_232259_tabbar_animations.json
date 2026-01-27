@@ -1,0 +1,27 @@
+{
+  "animations" : [
+    {
+      "className" : "CAMatchMoveAnimation",
+      "duration" : 0,
+      "key" : "_UILiquidLensView.punchout.matchPosition",
+      "path" : "tabbar > UITabBar.layer.sub[0].sub[3]"
+    },
+    {
+      "className" : "CAMatchMoveAnimation",
+      "duration" : 0,
+      "key" : "_UILiquidLensView.punchout.matchPosition",
+      "path" : "tabbar > UITabBar[0] > _UITabBarPlatterView.layer.sub[3]"
+    },
+    {
+      "className" : "CAMatchMoveAnimation",
+      "duration" : 0,
+      "key" : "_UILiquidLensView.punchout.matchPosition",
+      "path" : "tabbar > UITabBar[0] > _UITabBarPlatterView[3] > DestOutView.layer"
+    }
+  ],
+  "meta" : {
+    "date" : "2026-01-26T14:22:59Z",
+    "iOS" : "26.0.1",
+    "screen" : "UINavigationController"
+  }
+}

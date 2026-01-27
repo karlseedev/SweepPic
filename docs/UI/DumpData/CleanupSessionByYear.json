@@ -1,0 +1,19 @@
+{
+  "createdAt" : "2026-01-26T09:05:35Z",
+  "endReason" : "endOfRange",
+  "foundCount" : 0,
+  "id" : "5CCD0B5A-9E3C-486B-98EA-B6E768D16098",
+  "lastAssetDate" : "2009-10-09T21:09:20Z",
+  "method" : {
+    "method" : "byYear",
+    "year" : 2009
+  },
+  "mode" : "precision",
+  "scannedCount" : 1,
+  "startDate" : "2026-01-26T09:05:35Z",
+  "status" : "completed",
+  "trashedAssetIDs" : [
+
+  ],
+  "updatedAt" : "2026-01-26T09:05:35Z"
+}

@@ -31,10 +31,10 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
 
         // [DEBUG] Launch arguments 로깅 (AutoScrollTester 디버깅용)
         let args = ProcessInfo.processInfo.arguments
-        FileLogger.log("[LaunchArgs] didFinishLaunching: count=\(args.count)")
-        FileLogger.log("[LaunchArgs] --auto-scroll: \(args.contains("--auto-scroll"))")
+        Log.print("[LaunchArgs] didFinishLaunching: count=\(args.count)")
+        Log.print("[LaunchArgs] --auto-scroll: \(args.contains("--auto-scroll"))")
         if args.contains("--auto-scroll") {
-            FileLogger.log("[LaunchArgs] ALL: \(args)")
+            Log.print("[LaunchArgs] ALL: \(args)")
         }
 
         // [E) 환경 정보 로그] 전/후 비교용 메타 데이터
@@ -84,9 +84,9 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
             photoAuthStatus = "unknown"
         }
 
-        FileLogger.log("[Env] Build: \(buildConfig)")
-        FileLogger.log("[Env] LowPowerMode: \(isLowPowerMode ? "ON" : "OFF")")
-        FileLogger.log("[Env] PhotosAuth: \(photoAuthStatus)")
+        Log.print("[Env] Build: \(buildConfig)")
+        Log.print("[Env] LowPowerMode: \(isLowPowerMode ? "ON" : "OFF")")
+        Log.print("[Env] PhotosAuth: \(photoAuthStatus)")
     }
 
     // MARK: - UISceneSession Lifecycle

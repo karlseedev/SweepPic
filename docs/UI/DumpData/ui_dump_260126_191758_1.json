@@ -1,0 +1,2977 @@
+{
+  "captureDate" : "2026-01-26T10:17:58Z",
+  "floatingButtons" : [
+
+  ],
+  "iOSVersion" : "26.0.1",
+  "navigationBars" : [
+    {
+      "address" : "0xe397b874ec060530",
+      "alpha" : 1,
+      "bounds" : {
+        "height" : 54,
+        "width" : 402,
+        "x" : 0,
+        "y" : 0
+      },
+      "children" : [
+        {
+          "address" : "0xd195787b8e1abeb3",
+          "alpha" : 1,
+          "bounds" : {
+            "height" : 116,
+            "width" : 402,
+            "x" : 0,
+            "y" : 0
+          },
+          "children" : [
+
+          ],
+          "className" : "_UIBarBackground",
+          "clipsToBounds" : false,
+          "frame" : {
+            "height" : 116,
+            "width" : 402,
+            "x" : 0,
+            "y" : -62
+          },
+          "isHidden" : false,
+          "layer" : {
+            "borderColor" : {
+              "alpha" : 1,
+              "blue" : 0,
+              "description" : "rgba",
+              "green" : 0,
+              "red" : 0
+            },
+            "borderWidth" : 0,
+            "className" : "CALayer",
+            "cornerCurve" : "continuous",
+            "cornerRadius" : 0,
+            "masksToBounds" : false,
+            "opacity" : 1,
+            "shadowColor" : {
+              "alpha" : 1,
+              "blue" : 0,
+              "description" : "rgba",
+              "green" : 0,
+              "red" : 0
+            },
+            "shadowOffsetHeight" : -3,
+            "shadowOffsetWidth" : 0,
+            "shadowOpacity" : 0,
+            "shadowRadius" : 3,
+            "sublayersCount" : 0
+          },
+          "privateProperties" : {
+
+          }
+        },
+        {
+          "address" : "0x296cee32bc07d221",
+          "alpha" : 1,
+          "bounds" : {
+            "height" : 54,
+            "width" : 402,
+            "x" : 0,
+            "y" : 0
+          },
+          "children" : [
+            {
+              "address" : "0x22d8b8664bf2c56f",
+              "alpha" : 1,
+              "bounds" : {
+                "height" : 54,
+                "width" : 402,
+                "x" : 0,
+                "y" : 0
+              },
+              "children" : [
+                {
+                  "address" : "0x8202bcf7f7bf986f",
+                  "alpha" : 1,
+                  "bounds" : {
+                    "height" : 54,
+                    "width" : 402,
+                    "x" : 0,
+                    "y" : 0
+                  },
+                  "children" : [
+                    {
+                      "address" : "0x262853989031b774",
+                      "alpha" : 1,
+                      "bounds" : {
+                        "height" : 20.333333333333332,
+                        "width" : 73.66666666666667,
+                        "x" : 0,
+                        "y" : 0
+                      },
+                      "children" : [
+                        {
+                          "address" : "0x4303943471be2109",
+                          "alpha" : 1,
+                          "bounds" : {
+                            "height" : 20.333333333333332,
+                            "width" : 73.66666666666667,
+                            "x" : 0,
+                            "y" : 0
+                          },
+                          "children" : [
+                            {
+                              "address" : "0x136860bce8f29f21",
+                              "alpha" : 1,
+                              "bounds" : {
+                                "height" : 20.333333333333332,
+                                "width" : 73.66666666666667,
+                                "x" : 0,
+                                "y" : 0
+                              },
+                              "children" : [
+                                {
+                                  "address" : "0xc19713c83480e6a7",
+                                  "alpha" : 1,
+                                  "backgroundColor" : {
+                                    "alpha" : 0,
+                                    "blue" : 0,
+                                    "description" : "UIExtendedGrayColorSpace 0 0",
+                                    "green" : 0,
+                                    "red" : 0
+                                  },
+                                  "bounds" : {
+                                    "height" : 20.333333333333332,
+                                    "width" : 73.66666666666667,
+                                    "x" : 0,
+                                    "y" : 0
+                                  },
+                                  "children" : [
+
+                                  ],
+                                  "className" : "UILabel",
+                                  "clipsToBounds" : false,
+                                  "frame" : {
+                                    "height" : 20.333333333333332,
+                                    "width" : 73.66666666666667,
+                                    "x" : 0,
+                                    "y" : 0
+                                  },
+                                  "isHidden" : false,
+                                  "layer" : {
+                                    "borderColor" : {
+                                      "alpha" : 1,
+                                      "blue" : 0,
+                                      "description" : "rgba",
+                                      "green" : 0,
+                                      "red" : 0
+                                    },
+                                    "borderWidth" : 0,
+                                    "className" : "_UILabelLayer",
+                                    "cornerCurve" : "continuous",
+                                    "cornerRadius" : 0,
+                                    "masksToBounds" : false,
+                                    "opacity" : 1,
+                                    "shadowColor" : {
+                                      "alpha" : 1,
+                                      "blue" : 0,
+                                      "description" : "rgba",
+                                      "green" : 0,
+                                      "red" : 0
+                                    },
+                                    "shadowOffsetHeight" : -3,
+                                    "shadowOffsetWidth" : 0,
+                                    "shadowOpacity" : 0,
+                                    "shadowRadius" : 3,
+                                    "sublayersCount" : 0
+                                  }
+                                }
+                              ],
+                              "className" : "_UIIntrinsicContentSizeInvalidationForwardingWrapperView",
+                              "clipsToBounds" : false,
+                              "frame" : {
+                                "height" : 20.333333333333332,
+                                "width" : 73.66666666666667,
+                                "x" : 0,
+                                "y" : 0
+                              },
+                              "isHidden" : false,
+                              "layer" : {
+                                "borderColor" : {
+                                  "alpha" : 1,
+                                  "blue" : 0,
+                                  "description" : "rgba",
+                                  "green" : 0,
+                                  "red" : 0
+                                },
+                                "borderWidth" : 0,
+                                "className" : "CALayer",
+                                "cornerCurve" : "continuous",
+                                "cornerRadius" : 0,
+                                "masksToBounds" : false,
+                                "opacity" : 1,
+                                "shadowColor" : {
+                                  "alpha" : 1,
+                                  "blue" : 0,
+                                  "description" : "rgba",
+                                  "green" : 0,
+                                  "red" : 0
+                                },
+                                "shadowOffsetHeight" : -3,
+                                "shadowOffsetWidth" : 0,
+                                "shadowOpacity" : 0,
+                                "shadowRadius" : 3,
+                                "sublayersCount" : 1
+                              },
+                              "privateProperties" : {
+
+                              }
+                            }
+                          ],
+                          "className" : "_UINavigationBarTitleControl",
+                          "clipsToBounds" : false,
+                          "frame" : {
+                            "height" : 20.333333333333332,
+                            "width" : 73.66666666666667,
+                            "x" : 0,
+                            "y" : 0
+                          },
+                          "isHidden" : false,
+                          "layer" : {
+                            "borderColor" : {
+                              "alpha" : 1,
+                              "blue" : 0,
+                              "description" : "rgba",
+                              "green" : 0,
+                              "red" : 0
+                            },
+                            "borderWidth" : 0,
+                            "className" : "CALayer",
+                            "cornerCurve" : "continuous",
+                            "cornerRadius" : 0,
+                            "masksToBounds" : false,
+                            "opacity" : 1,
+                            "shadowColor" : {
+                              "alpha" : 1,
+                              "blue" : 0,
+                              "description" : "rgba",
+                              "green" : 0,
+                              "red" : 0
+                            },
+                            "shadowOffsetHeight" : -3,
+                            "shadowOffsetWidth" : 0,
+                            "shadowOpacity" : 0,
+                            "shadowRadius" : 3,
+                            "sublayersCount" : 1
+                          },
+                          "privateProperties" : {
+
+                          }
+                        }
+                      ],
+                      "className" : "HostedViewWrapper",
+                      "clipsToBounds" : false,
+                      "frame" : {
+                        "height" : 20.333333333333332,
+                        "width" : 73.66666666666667,
+                        "x" : 16,
+                        "y" : 11.833333333333334
+                      },
+                      "isHidden" : false,
+                      "layer" : {
+                        "borderColor" : {
+                          "alpha" : 1,
+                          "blue" : 0,
+                          "description" : "rgba",
+                          "green" : 0,
+                          "red" : 0
+                        },
+                        "borderWidth" : 0,
+                        "className" : "CALayer",
+                        "cornerCurve" : "continuous",
+                        "cornerRadius" : 0,
+                        "filters" : [
+                          {
+                            "enabled" : true,
+                            "name" : "gaussianBlur",
+                            "parameters" : {
+                              "inputRadius" : "0"
+                            },
+                            "type" : "gaussianBlur"
+                          }
+                        ],
+                        "masksToBounds" : false,
+                        "opacity" : 1,
+                        "shadowColor" : {
+                          "alpha" : 1,
+                          "blue" : 0,
+                          "description" : "rgba",
+                          "green" : 0,
+                          "red" : 0
+                        },
+                        "shadowOffsetHeight" : -3,
+                        "shadowOffsetWidth" : 0,
+                        "shadowOpacity" : 0,
+                        "shadowRadius" : 3,
+                        "sublayersCount" : 1
+                      }
+                    }
+                  ],
+                  "className" : "HostedViewContainer",
+                  "clipsToBounds" : false,
+                  "frame" : {
+                    "height" : 54,
+                    "width" : 402,
+                    "x" : 0,
+                    "y" : 0
+                  },
+                  "isHidden" : false,
+                  "layer" : {
+                    "borderColor" : {
+                      "alpha" : 1,
+                      "blue" : 0,
+                      "description" : "rgba",
+                      "green" : 0,
+                      "red" : 0
+                    },
+                    "borderWidth" : 0,
+                    "className" : "CALayer",
+                    "cornerCurve" : "continuous",
+                    "cornerRadius" : 0,
+                    "masksToBounds" : false,
+                    "opacity" : 1,
+                    "shadowColor" : {
+                      "alpha" : 1,
+                      "blue" : 0,
+                      "description" : "rgba",
+                      "green" : 0,
+                      "red" : 0
+                    },
+                    "shadowOffsetHeight" : -3,
+                    "shadowOffsetWidth" : 0,
+                    "shadowOpacity" : 0,
+                    "shadowRadius" : 3,
+                    "sublayersCount" : 1
+                  }
+                },
+                {
+                  "address" : "0x64efd3e88d4a718",
+                  "alpha" : 1,
+                  "bounds" : {
+                    "height" : 54,
+                    "width" : 402,
+                    "x" : 0,
+                    "y" : 0
+                  },
+                  "children" : [
+
+                  ],
+                  "className" : "UIView",
+                  "clipsToBounds" : false,
+                  "frame" : {
+                    "height" : 54,
+                    "width" : 402,
+                    "x" : 0,
+                    "y" : 0
+                  },
+                  "isHidden" : false,
+                  "layer" : {
+                    "borderColor" : {
+                      "alpha" : 1,
+                      "blue" : 0,
+                      "description" : "rgba",
+                      "green" : 0,
+                      "red" : 0
+                    },
+                    "borderWidth" : 0,
+                    "className" : "CALayer",
+                    "cornerCurve" : "continuous",
+                    "cornerRadius" : 0,
+                    "masksToBounds" : false,
+                    "opacity" : 1,
+                    "shadowColor" : {
+                      "alpha" : 1,
+                      "blue" : 0,
+                      "description" : "rgba",
+                      "green" : 0,
+                      "red" : 0
+                    },
+                    "shadowOffsetHeight" : -3,
+                    "shadowOffsetWidth" : 0,
+                    "shadowOpacity" : 0,
+                    "shadowRadius" : 3,
+                    "sublayersCount" : 0
+                  }
+                },
+                {
+                  "address" : "0x7b4de8afde3ae88",
+                  "alpha" : 1,
+                  "bounds" : {
+                    "height" : 54,
+                    "width" : 402,
+                    "x" : 0,
+                    "y" : 0
+                  },
+                  "children" : [
+                    {
+                      "address" : "0xec4434747d62c66a",
+                      "alpha" : 1,
+                      "bounds" : {
+                        "height" : 44,
+                        "width" : 54,
+                        "x" : 0,
+                        "y" : 0
+                      },
+                      "children" : [
+                        {
+                          "address" : "0x6979dbc88b3652fc",
+                          "alpha" : 1,
+                          "bounds" : {
+                            "height" : 44,
+                            "width" : 54,
+                            "x" : 0,
+                            "y" : 0
+                          },
+                          "children" : [
+                            {
+                              "address" : "0x6a0127dcf9a71f62",
+                              "alpha" : 1,
+                              "bounds" : {
+                                "height" : 44,
+                                "width" : 54,
+                                "x" : 0,
+                                "y" : 0
+                              },
+                              "children" : [
+                                {
+                                  "address" : "0x7b083dbe8e1929ed",
+                                  "alpha" : 1,
+                                  "bounds" : {
+                                    "height" : 44,
+                                    "width" : 54,
+                                    "x" : 0,
+                                    "y" : 0
+                                  },
+                                  "children" : [
+                                    {
+                                      "address" : "0x91a51377e1df7190",
+                                      "alpha" : 1,
+                                      "bounds" : {
+                                        "height" : 44,
+                                        "width" : 54,
+                                        "x" : 0,
+                                        "y" : 0
+                                      },
+                                      "children" : [
+                                        {
+                                          "address" : "0x2a22177e427501f",
+                                          "alpha" : 1,
+                                          "bounds" : {
+                                            "height" : 44,
+                                            "width" : 54,
+                                            "x" : 0,
+                                            "y" : 0
+                                          },
+                                          "children" : [
+                                            {
+                                              "address" : "0xff3a19acbeae0845",
+                                              "alpha" : 1,
+                                              "bounds" : {
+                                                "height" : 44,
+                                                "width" : 54,
+                                                "x" : 0,
+                                                "y" : 0
+                                              },
+                                              "children" : [
+
+                                              ],
+                                              "className" : "PlatterGlassView",
+                                              "clipsToBounds" : true,
+                                              "frame" : {
+                                                "height" : 44,
+                                                "width" : 54,
+                                                "x" : 0,
+                                                "y" : 0
+                                              },
+                                              "isHidden" : false,
+                                              "layer" : {
+                                                "borderColor" : {
+                                                  "alpha" : 1,
+                                                  "blue" : 0,
+                                                  "description" : "rgba",
+                                                  "green" : 0,
+                                                  "red" : 0
+                                                },
+                                                "borderWidth" : 0,
+                                                "className" : "CALayer",
+                                                "cornerCurve" : "continuous",
+                                                "cornerRadius" : 22,
+                                                "masksToBounds" : true,
+                                                "opacity" : 1,
+                                                "shadowColor" : {
+                                                  "alpha" : 1,
+                                                  "blue" : 0,
+                                                  "description" : "rgba",
+                                                  "green" : 0,
+                                                  "red" : 0
+                                                },
+                                                "shadowOffsetHeight" : -3,
+                                                "shadowOffsetWidth" : 0,
+                                                "shadowOpacity" : 0,
+                                                "shadowRadius" : 3,
+                                                "sublayersCount" : 1
+                                              },
+                                              "privateProperties" : {
+
+                                              }
+                                            }
+                                          ],
+                                          "className" : "PlatterContentView",
+                                          "clipsToBounds" : false,
+                                          "frame" : {
+                                            "height" : 44,
+                                            "width" : 54,
+                                            "x" : 0,
+                                            "y" : 0
+                                          },
+                                          "isHidden" : false,
+                                          "layer" : {
+                                            "borderColor" : {
+                                              "alpha" : 1,
+                                              "blue" : 0,
+                                              "description" : "rgba",
+                                              "green" : 0,
+                                              "red" : 0
+                                            },
+                                            "borderWidth" : 0,
+                                            "className" : "CALayer",
+                                            "cornerCurve" : "continuous",
+                                            "cornerRadius" : 0,
+                                            "masksToBounds" : false,
+                                            "opacity" : 1,
+                                            "shadowColor" : {
+                                              "alpha" : 1,
+                                              "blue" : 0,
+                                              "description" : "rgba",
+                                              "green" : 0,
+                                              "red" : 0
+                                            },
+                                            "shadowOffsetHeight" : -3,
+                                            "shadowOffsetWidth" : 0,
+                                            "shadowOpacity" : 0,
+                                            "shadowRadius" : 3,
+                                            "sublayersCount" : 1
+                                          },
+                                          "privateProperties" : {
+
+                                          }
+                                        }
+                                      ],
+                                      "className" : "AnimationView",
+                                      "clipsToBounds" : false,
+                                      "frame" : {
+                                        "height" : 40.16632088371219,
+                                        "width" : 49.29503017546496,
+                                        "x" : 2.352484912267524,
+                                        "y" : 1.9168395581439093
+                                      },
+                                      "isHidden" : false,
+                                      "layer" : {
+                                        "borderColor" : {
+                                          "alpha" : 1,
+                                          "blue" : 0,
+                                          "description" : "rgba",
+                                          "green" : 0,
+                                          "red" : 0
+                                        },
+                                        "borderWidth" : 0,
+                                        "className" : "CALayer",
+                                        "cornerCurve" : "continuous",
+                                        "cornerRadius" : 0,
+                                        "masksToBounds" : false,
+                                        "opacity" : 1,
+                                        "shadowColor" : {
+                                          "alpha" : 1,
+                                          "blue" : 0,
+                                          "description" : "rgba",
+                                          "green" : 0,
+                                          "red" : 0
+                                        },
+                                        "shadowOffsetHeight" : -3,
+                                        "shadowOffsetWidth" : 0,
+                                        "shadowOpacity" : 0,
+                                        "shadowRadius" : 3,
+                                        "sublayersCount" : 1
+                                      }
+                                    }
+                                  ],
+                                  "className" : "AnimationView",
+                                  "clipsToBounds" : false,
+                                  "frame" : {
+                                    "height" : 48.19958506045461,
+                                    "width" : 59.15403621055793,
+                                    "x" : -2.5770181052789667,
+                                    "y" : -2.099792530227308
+                                  },
+                                  "isHidden" : false,
+                                  "layer" : {
+                                    "borderColor" : {
+                                      "alpha" : 1,
+                                      "blue" : 0,
+                                      "description" : "rgba",
+                                      "green" : 0,
+                                      "red" : 0
+                                    },
+                                    "borderWidth" : 0,
+                                    "className" : "CALayer",
+                                    "cornerCurve" : "continuous",
+                                    "cornerRadius" : 0,
+                                    "masksToBounds" : false,
+                                    "opacity" : 1,
+                                    "shadowColor" : {
+                                      "alpha" : 1,
+                                      "blue" : 0,
+                                      "description" : "rgba",
+                                      "green" : 0,
+                                      "red" : 0
+                                    },
+                                    "shadowOffsetHeight" : -3,
+                                    "shadowOffsetWidth" : 0,
+                                    "shadowOpacity" : 0,
+                                    "shadowRadius" : 3,
+                                    "sublayersCount" : 1
+                                  }
+                                }
+                              ],
+                              "className" : "AnimationView",
+                              "clipsToBounds" : false,
+                              "frame" : {
+                                "height" : 44,
+                                "width" : 54,
+                                "x" : 0,
+                                "y" : 0
+                              },
+                              "isHidden" : false,
+                              "layer" : {
+                                "borderColor" : {
+                                  "alpha" : 1,
+                                  "blue" : 0,
+                                  "description" : "rgba",
+                                  "green" : 0,
+                                  "red" : 0
+                                },
+                                "borderWidth" : 0,
+                                "className" : "CALayer",
+                                "cornerCurve" : "continuous",
+                                "cornerRadius" : 0,
+                                "masksToBounds" : false,
+                                "opacity" : 1,
+                                "shadowColor" : {
+                                  "alpha" : 1,
+                                  "blue" : 0,
+                                  "description" : "rgba",
+                                  "green" : 0,
+                                  "red" : 0
+                                },
+                                "shadowOffsetHeight" : -3,
+                                "shadowOffsetWidth" : 0,
+                                "shadowOpacity" : 0,
+                                "shadowRadius" : 3,
+                                "sublayersCount" : 1
+                              }
+                            }
+                          ],
+                          "className" : "AnimationView",
+                          "clipsToBounds" : false,
+                          "frame" : {
+                            "height" : 44,
+                            "width" : 54,
+                            "x" : 0,
+                            "y" : 0
+                          },
+                          "isHidden" : false,
+                          "layer" : {
+                            "borderColor" : {
+                              "alpha" : 1,
+                              "blue" : 0,
+                              "description" : "rgba",
+                              "green" : 0,
+                              "red" : 0
+                            },
+                            "borderWidth" : 0,
+                            "className" : "CALayer",
+                            "cornerCurve" : "continuous",
+                            "cornerRadius" : 0,
+                            "masksToBounds" : false,
+                            "opacity" : 1,
+                            "shadowColor" : {
+                              "alpha" : 1,
+                              "blue" : 0,
+                              "description" : "rgba",
+                              "green" : 0,
+                              "red" : 0
+                            },
+                            "shadowOffsetHeight" : -3,
+                            "shadowOffsetWidth" : 0,
+                            "shadowOpacity" : 0,
+                            "shadowRadius" : 3,
+                            "sublayersCount" : 1
+                          }
+                        }
+                      ],
+                      "className" : "PlatterView",
+                      "clipsToBounds" : false,
+                      "frame" : {
+                        "height" : 44,
+                        "width" : 54,
+                        "x" : 246.66666666666669,
+                        "y" : 0
+                      },
+                      "isHidden" : false,
+                      "layer" : {
+                        "borderColor" : {
+                          "alpha" : 1,
+                          "blue" : 0,
+                          "description" : "rgba",
+                          "green" : 0,
+                          "red" : 0
+                        },
+                        "borderWidth" : 0,
+                        "className" : "CALayer",
+                        "cornerCurve" : "continuous",
+                        "cornerRadius" : 0,
+                        "masksToBounds" : false,
+                        "opacity" : 1,
+                        "shadowColor" : {
+                          "alpha" : 1,
+                          "blue" : 0,
+                          "description" : "rgba",
+                          "green" : 0,
+                          "red" : 0
+                        },
+                        "shadowOffsetHeight" : -3,
+                        "shadowOffsetWidth" : 0,
+                        "shadowOpacity" : 0,
+                        "shadowRadius" : 3,
+                        "sublayersCount" : 1
+                      },
+                      "privateProperties" : {
+
+                      }
+                    },
+                    {
+                      "address" : "0xbd4047b93bd94f04",
+                      "alpha" : 1,
+                      "bounds" : {
+                        "height" : 44,
+                        "width" : 73.33333333333331,
+                        "x" : 0,
+                        "y" : 0
+                      },
+                      "children" : [
+                        {
+                          "address" : "0xe7787d40eea90015",
+                          "alpha" : 1,
+                          "bounds" : {
+                            "height" : 44,
+                            "width" : 73.33333333333331,
+                            "x" : 0,
+                            "y" : 0
+                          },
+                          "children" : [
+                            {
+                              "address" : "0xa480151c6d044334",
+                              "alpha" : 1,
+                              "bounds" : {
+                                "height" : 44,
+                                "width" : 73.33333333333331,
+                                "x" : 0,
+                                "y" : 0
+                              },
+                              "children" : [
+                                {
+                                  "address" : "0xe6e41f46632ce279",
+                                  "alpha" : 1,
+                                  "bounds" : {
+                                    "height" : 44,
+                                    "width" : 73.33333333333331,
+                                    "x" : 0,
+                                    "y" : 0
+                                  },
+                                  "children" : [
+                                    {
+                                      "address" : "0xfe3ec35d1a17e788",
+                                      "alpha" : 1,
+                                      "bounds" : {
+                                        "height" : 44,
+                                        "width" : 73.33333333333331,
+                                        "x" : 0,
+                                        "y" : 0
+                                      },
+                                      "children" : [
+                                        {
+                                          "address" : "0x907d3778ec13dd01",
+                                          "alpha" : 1,
+                                          "bounds" : {
+                                            "height" : 44,
+                                            "width" : 73.33333333333331,
+                                            "x" : 0,
+                                            "y" : 0
+                                          },
+                                          "children" : [
+                                            {
+                                              "address" : "0x6f2994c5175cf9e",
+                                              "alpha" : 1,
+                                              "bounds" : {
+                                                "height" : 44,
+                                                "width" : 73.33333333333333,
+                                                "x" : 0,
+                                                "y" : 0
+                                              },
+                                              "children" : [
+
+                                              ],
+                                              "className" : "PlatterGlassView",
+                                              "clipsToBounds" : true,
+                                              "frame" : {
+                                                "height" : 44,
+                                                "width" : 73.33333333333333,
+                                                "x" : 0,
+                                                "y" : 0
+                                              },
+                                              "isHidden" : false,
+                                              "layer" : {
+                                                "borderColor" : {
+                                                  "alpha" : 1,
+                                                  "blue" : 0,
+                                                  "description" : "rgba",
+                                                  "green" : 0,
+                                                  "red" : 0
+                                                },
+                                                "borderWidth" : 0,
+                                                "className" : "CALayer",
+                                                "cornerCurve" : "continuous",
+                                                "cornerRadius" : 22,
+                                                "masksToBounds" : true,
+                                                "opacity" : 1,
+                                                "shadowColor" : {
+                                                  "alpha" : 1,
+                                                  "blue" : 0,
+                                                  "description" : "rgba",
+                                                  "green" : 0,
+                                                  "red" : 0
+                                                },
+                                                "shadowOffsetHeight" : -3,
+                                                "shadowOffsetWidth" : 0,
+                                                "shadowOpacity" : 0,
+                                                "shadowRadius" : 3,
+                                                "sublayersCount" : 1
+                                              },
+                                              "privateProperties" : {
+
+                                              }
+                                            }
+                                          ],
+                                          "className" : "PlatterContentView",
+                                          "clipsToBounds" : false,
+                                          "frame" : {
+                                            "height" : 44,
+                                            "width" : 73.33333333333331,
+                                            "x" : 0,
+                                            "y" : 0
+                                          },
+                                          "isHidden" : false,
+                                          "layer" : {
+                                            "borderColor" : {
+                                              "alpha" : 1,
+                                              "blue" : 0,
+                                              "description" : "rgba",
+                                              "green" : 0,
+                                              "red" : 0
+                                            },
+                                            "borderWidth" : 0,
+                                            "className" : "CALayer",
+                                            "cornerCurve" : "continuous",
+                                            "cornerRadius" : 0,
+                                            "masksToBounds" : false,
+                                            "opacity" : 1,
+                                            "shadowColor" : {
+                                              "alpha" : 1,
+                                              "blue" : 0,
+                                              "description" : "rgba",
+                                              "green" : 0,
+                                              "red" : 0
+                                            },
+                                            "shadowOffsetHeight" : -3,
+                                            "shadowOffsetWidth" : 0,
+                                            "shadowOpacity" : 0,
+                                            "shadowRadius" : 3,
+                                            "sublayersCount" : 1
+                                          },
+                                          "privateProperties" : {
+
+                                          }
+                                        }
+                                      ],
+                                      "className" : "AnimationView",
+                                      "clipsToBounds" : false,
+                                      "frame" : {
+                                        "height" : 40.16632088371219,
+                                        "width" : 66.94386813952028,
+                                        "x" : 3.194732596906512,
+                                        "y" : 1.9168395581439093
+                                      },
+                                      "isHidden" : false,
+                                      "layer" : {
+                                        "borderColor" : {
+                                          "alpha" : 1,
+                                          "blue" : 0,
+                                          "description" : "rgba",
+                                          "green" : 0,
+                                          "red" : 0
+                                        },
+                                        "borderWidth" : 0,
+                                        "className" : "CALayer",
+                                        "cornerCurve" : "continuous",
+                                        "cornerRadius" : 0,
+                                        "masksToBounds" : false,
+                                        "opacity" : 1,
+                                        "shadowColor" : {
+                                          "alpha" : 1,
+                                          "blue" : 0,
+                                          "description" : "rgba",
+                                          "green" : 0,
+                                          "red" : 0
+                                        },
+                                        "shadowOffsetHeight" : -3,
+                                        "shadowOffsetWidth" : 0,
+                                        "shadowOpacity" : 0,
+                                        "shadowRadius" : 3,
+                                        "sublayersCount" : 1
+                                      }
+                                    }
+                                  ],
+                                  "className" : "AnimationView",
+                                  "clipsToBounds" : false,
+                                  "frame" : {
+                                    "height" : 48.19958506045461,
+                                    "width" : 80.33264176742435,
+                                    "x" : -3.49965421704551,
+                                    "y" : -2.099792530227308
+                                  },
+                                  "isHidden" : false,
+                                  "layer" : {
+                                    "borderColor" : {
+                                      "alpha" : 1,
+                                      "blue" : 0,
+                                      "description" : "rgba",
+                                      "green" : 0,
+                                      "red" : 0
+                                    },
+                                    "borderWidth" : 0,
+                                    "className" : "CALayer",
+                                    "cornerCurve" : "continuous",
+                                    "cornerRadius" : 0,
+                                    "masksToBounds" : false,
+                                    "opacity" : 1,
+                                    "shadowColor" : {
+                                      "alpha" : 1,
+                                      "blue" : 0,
+                                      "description" : "rgba",
+                                      "green" : 0,
+                                      "red" : 0
+                                    },
+                                    "shadowOffsetHeight" : -3,
+                                    "shadowOffsetWidth" : 0,
+                                    "shadowOpacity" : 0,
+                                    "shadowRadius" : 3,
+                                    "sublayersCount" : 1
+                                  }
+                                }
+                              ],
+                              "className" : "AnimationView",
+                              "clipsToBounds" : false,
+                              "frame" : {
+                                "height" : 44,
+                                "width" : 73.33333333333331,
+                                "x" : 0,
+                                "y" : 0
+                              },
+                              "isHidden" : false,
+                              "layer" : {
+                                "borderColor" : {
+                                  "alpha" : 1,
+                                  "blue" : 0,
+                                  "description" : "rgba",
+                                  "green" : 0,
+                                  "red" : 0
+                                },
+                                "borderWidth" : 0,
+                                "className" : "CALayer",
+                                "cornerCurve" : "continuous",
+                                "cornerRadius" : 0,
+                                "masksToBounds" : false,
+                                "opacity" : 1,
+                                "shadowColor" : {
+                                  "alpha" : 1,
+                                  "blue" : 0,
+                                  "description" : "rgba",
+                                  "green" : 0,
+                                  "red" : 0
+                                },
+                                "shadowOffsetHeight" : -3,
+                                "shadowOffsetWidth" : 0,
+                                "shadowOpacity" : 0,
+                                "shadowRadius" : 3,
+                                "sublayersCount" : 1
+                              }
+                            }
+                          ],
+                          "className" : "AnimationView",
+                          "clipsToBounds" : false,
+                          "frame" : {
+                            "height" : 44,
+                            "width" : 73.33333333333331,
+                            "x" : 0,
+                            "y" : 0
+                          },
+                          "isHidden" : false,
+                          "layer" : {
+                            "borderColor" : {
+                              "alpha" : 1,
+                              "blue" : 0,
+                              "description" : "rgba",
+                              "green" : 0,
+                              "red" : 0
+                            },
+                            "borderWidth" : 0,
+                            "className" : "CALayer",
+                            "cornerCurve" : "continuous",
+                            "cornerRadius" : 0,
+                            "masksToBounds" : false,
+                            "opacity" : 1,
+                            "shadowColor" : {
+                              "alpha" : 1,
+                              "blue" : 0,
+                              "description" : "rgba",
+                              "green" : 0,
+                              "red" : 0
+                            },
+                            "shadowOffsetHeight" : -3,
+                            "shadowOffsetWidth" : 0,
+                            "shadowOpacity" : 0,
+                            "shadowRadius" : 3,
+                            "sublayersCount" : 1
+                          }
+                        }
+                      ],
+                      "className" : "PlatterView",
+                      "clipsToBounds" : false,
+                      "frame" : {
+                        "height" : 44,
+                        "width" : 73.33333333333331,
+                        "x" : 312.66666666666674,
+                        "y" : 0
+                      },
+                      "isHidden" : false,
+                      "layer" : {
+                        "borderColor" : {
+                          "alpha" : 1,
+                          "blue" : 0,
+                          "description" : "rgba",
+                          "green" : 0,
+                          "red" : 0
+                        },
+                        "borderWidth" : 0,
+                        "className" : "CALayer",
+                        "cornerCurve" : "continuous",
+                        "cornerRadius" : 0,
+                        "masksToBounds" : false,
+                        "opacity" : 1,
+                        "shadowColor" : {
+                          "alpha" : 1,
+                          "blue" : 0,
+                          "description" : "rgba",
+                          "green" : 0,
+                          "red" : 0
+                        },
+                        "shadowOffsetHeight" : -3,
+                        "shadowOffsetWidth" : 0,
+                        "shadowOpacity" : 0,
+                        "shadowRadius" : 3,
+                        "sublayersCount" : 1
+                      },
+                      "privateProperties" : {
+
+                      }
+                    }
+                  ],
+                  "className" : "NavigationBarPlatterContainer",
+                  "clipsToBounds" : false,
+                  "frame" : {
+                    "height" : 54,
+                    "width" : 402,
+                    "x" : 0,
+                    "y" : 0
+                  },
+                  "isHidden" : false,
+                  "layer" : {
+                    "borderColor" : {
+                      "alpha" : 1,
+                      "blue" : 0,
+                      "description" : "rgba",
+                      "green" : 0,
+                      "red" : 0
+                    },
+                    "borderWidth" : 0,
+                    "className" : "CALayer",
+                    "cornerCurve" : "continuous",
+                    "cornerRadius" : 0,
+                    "masksToBounds" : false,
+                    "opacity" : 1,
+                    "shadowColor" : {
+                      "alpha" : 1,
+                      "blue" : 0,
+                      "description" : "rgba",
+                      "green" : 0,
+                      "red" : 0
+                    },
+                    "shadowOffsetHeight" : -3,
+                    "shadowOffsetWidth" : 0,
+                    "shadowOpacity" : 0,
+                    "shadowRadius" : 3,
+                    "sublayersCount" : 2
+                  },
+                  "privateProperties" : {
+
+                  }
+                }
+              ],
+              "className" : "NavigationBarTransitionContainer",
+              "clipsToBounds" : false,
+              "frame" : {
+                "height" : 54,
+                "width" : 402,
+                "x" : 0,
+                "y" : 0
+              },
+              "isHidden" : false,
+              "layer" : {
+                "borderColor" : {
+                  "alpha" : 1,
+                  "blue" : 0,
+                  "description" : "rgba",
+                  "green" : 0,
+                  "red" : 0
+                },
+                "borderWidth" : 0,
+                "className" : "CALayer",
+                "cornerCurve" : "continuous",
+                "cornerRadius" : 0,
+                "masksToBounds" : false,
+                "opacity" : 1,
+                "shadowColor" : {
+                  "alpha" : 1,
+                  "blue" : 0,
+                  "description" : "rgba",
+                  "green" : 0,
+                  "red" : 0
+                },
+                "shadowOffsetHeight" : -3,
+                "shadowOffsetWidth" : 0,
+                "shadowOpacity" : 0,
+                "shadowRadius" : 3,
+                "sublayersCount" : 3
+              }
+            }
+          ],
+          "className" : "NavigationBarContentView",
+          "clipsToBounds" : false,
+          "frame" : {
+            "height" : 54,
+            "width" : 402,
+            "x" : 0,
+            "y" : 0
+          },
+          "isHidden" : false,
+          "layer" : {
+            "borderColor" : {
+              "alpha" : 1,
+              "blue" : 0,
+              "description" : "rgba",
+              "green" : 0,
+              "red" : 0
+            },
+            "borderWidth" : 0,
+            "className" : "CALayer",
+            "cornerCurve" : "continuous",
+            "cornerRadius" : 0,
+            "masksToBounds" : false,
+            "opacity" : 1,
+            "shadowColor" : {
+              "alpha" : 1,
+              "blue" : 0,
+              "description" : "rgba",
+              "green" : 0,
+              "red" : 0
+            },
+            "shadowOffsetHeight" : -3,
+            "shadowOffsetWidth" : 0,
+            "shadowOpacity" : 0,
+            "shadowRadius" : 3,
+            "sublayersCount" : 1
+          }
+        },
+        {
+          "address" : "0x57639dc527988217",
+          "alpha" : 1,
+          "bounds" : {
+            "height" : 0,
+            "width" : 0,
+            "x" : 0,
+            "y" : 0
+          },
+          "children" : [
+
+          ],
+          "className" : "_UIPointerInteractionAssistantEffectContainerView",
+          "clipsToBounds" : false,
+          "frame" : {
+            "height" : 0,
+            "width" : 0,
+            "x" : 0,
+            "y" : 0
+          },
+          "isHidden" : false,
+          "layer" : {
+            "borderColor" : {
+              "alpha" : 1,
+              "blue" : 0,
+              "description" : "rgba",
+              "green" : 0,
+              "red" : 0
+            },
+            "borderWidth" : 0,
+            "className" : "CALayer",
+            "cornerCurve" : "continuous",
+            "cornerRadius" : 0,
+            "masksToBounds" : false,
+            "opacity" : 1,
+            "shadowColor" : {
+              "alpha" : 1,
+              "blue" : 0,
+              "description" : "rgba",
+              "green" : 0,
+              "red" : 0
+            },
+            "shadowOffsetHeight" : -3,
+            "shadowOffsetWidth" : 0,
+            "shadowOpacity" : 0,
+            "shadowRadius" : 3,
+            "sublayersCount" : 0
+          },
+          "privateProperties" : {
+
+          }
+        }
+      ],
+      "className" : "UINavigationBar",
+      "clipsToBounds" : false,
+      "frame" : {
+        "height" : 54,
+        "width" : 402,
+        "x" : 0,
+        "y" : 62
+      },
+      "isHidden" : false,
+      "layer" : {
+        "borderColor" : {
+          "alpha" : 1,
+          "blue" : 0,
+          "description" : "rgba",
+          "green" : 0,
+          "red" : 0
+        },
+        "borderWidth" : 0,
+        "className" : "CALayer",
+        "cornerCurve" : "continuous",
+        "cornerRadius" : 0,
+        "masksToBounds" : false,
+        "opacity" : 1,
+        "shadowColor" : {
+          "alpha" : 1,
+          "blue" : 0,
+          "description" : "rgba",
+          "green" : 0,
+          "red" : 0
+        },
+        "shadowOffsetHeight" : -3,
+        "shadowOffsetWidth" : 0,
+        "shadowOpacity" : 0,
+        "shadowRadius" : 3,
+        "sublayersCount" : 3
+      }
+    }
+  ],
+  "screenName" : "UINavigationController",
+  "tabBars" : [
+    {
+      "address" : "0xc78bc9924e21ae33",
+      "alpha" : 1,
+      "bounds" : {
+        "height" : 83,
+        "width" : 402,
+        "x" : 0,
+        "y" : 0
+      },
+      "children" : [
+        {
+          "address" : "0x16cf9f76bc5ad951",
+          "alpha" : 1,
+          "bounds" : {
+            "height" : 62,
+            "width" : 274,
+            "x" : 0,
+            "y" : 0
+          },
+          "children" : [
+            {
+              "address" : "0xad315174f95c2020",
+              "alpha" : 1,
+              "bounds" : {
+                "height" : 62,
+                "width" : 274,
+                "x" : 0,
+                "y" : 0
+              },
+              "children" : [
+                {
+                  "address" : "0xcb5dcb645f240a98",
+                  "alpha" : 1,
+                  "bounds" : {
+                    "height" : 54,
+                    "width" : 94,
+                    "x" : 0,
+                    "y" : 0
+                  },
+                  "children" : [
+                    {
+                      "address" : "0x288845271fc47db1",
+                      "alpha" : 1,
+                      "bounds" : {
+                        "height" : 28.666666666666668,
+                        "width" : 34.333333333333336,
+                        "x" : 0,
+                        "y" : 0
+                      },
+                      "children" : [
+
+                      ],
+                      "className" : "UIImageView",
+                      "clipsToBounds" : false,
+                      "frame" : {
+                        "height" : 28.666666666666668,
+                        "width" : 34.333333333333336,
+                        "x" : 30.000000000000004,
+                        "y" : 6.333333333333334
+                      },
+                      "isHidden" : false,
+                      "layer" : {
+                        "borderColor" : {
+                          "alpha" : 1,
+                          "blue" : 0,
+                          "description" : "rgba",
+                          "green" : 0,
+                          "red" : 0
+                        },
+                        "borderWidth" : 0,
+                        "className" : "CALayer",
+                        "cornerCurve" : "continuous",
+                        "cornerRadius" : 0,
+                        "masksToBounds" : false,
+                        "opacity" : 1,
+                        "shadowColor" : {
+                          "alpha" : 1,
+                          "blue" : 0,
+                          "description" : "rgba",
+                          "green" : 0,
+                          "red" : 0
+                        },
+                        "shadowOffsetHeight" : -3,
+                        "shadowOffsetWidth" : 0,
+                        "shadowOpacity" : 0,
+                        "shadowRadius" : 3,
+                        "sublayersCount" : 0
+                      }
+                    },
+                    {
+                      "address" : "0x4a7897ff9c46a30e",
+                      "alpha" : 1,
+                      "backgroundColor" : {
+                        "alpha" : 0,
+                        "blue" : 0,
+                        "description" : "UIExtendedGrayColorSpace 0 0",
+                        "green" : 0,
+                        "red" : 0
+                      },
+                      "bounds" : {
+                        "height" : 12,
+                        "width" : 26,
+                        "x" : 0,
+                        "y" : 0
+                      },
+                      "children" : [
+
+                      ],
+                      "className" : "Label",
+                      "clipsToBounds" : false,
+                      "frame" : {
+                        "height" : 12,
+                        "width" : 26,
+                        "x" : 34,
+                        "y" : 35
+                      },
+                      "isHidden" : false,
+                      "layer" : {
+                        "borderColor" : {
+                          "alpha" : 1,
+                          "blue" : 0,
+                          "description" : "rgba",
+                          "green" : 0,
+                          "red" : 0
+                        },
+                        "borderWidth" : 0,
+                        "className" : "_UILabelLayer",
+                        "cornerCurve" : "continuous",
+                        "cornerRadius" : 0,
+                        "masksToBounds" : false,
+                        "opacity" : 1,
+                        "shadowColor" : {
+                          "alpha" : 1,
+                          "blue" : 0,
+                          "description" : "rgba",
+                          "green" : 0,
+                          "red" : 0
+                        },
+                        "shadowOffsetHeight" : -3,
+                        "shadowOffsetWidth" : 0,
+                        "shadowOpacity" : 0,
+                        "shadowRadius" : 3,
+                        "sublayersCount" : 0
+                      }
+                    }
+                  ],
+                  "className" : "_UITabButton",
+                  "clipsToBounds" : false,
+                  "frame" : {
+                    "height" : 54,
+                    "width" : 94,
+                    "x" : 4,
+                    "y" : 4
+                  },
+                  "isHidden" : false,
+                  "layer" : {
+                    "borderColor" : {
+                      "alpha" : 1,
+                      "blue" : 0,
+                      "description" : "rgba",
+                      "green" : 0,
+                      "red" : 0
+                    },
+                    "borderWidth" : 0,
+                    "className" : "CALayer",
+                    "cornerCurve" : "continuous",
+                    "cornerRadius" : 0,
+                    "masksToBounds" : false,
+                    "opacity" : 1,
+                    "shadowColor" : {
+                      "alpha" : 1,
+                      "blue" : 0,
+                      "description" : "rgba",
+                      "green" : 0,
+                      "red" : 0
+                    },
+                    "shadowOffsetHeight" : -3,
+                    "shadowOffsetWidth" : 0,
+                    "shadowOpacity" : 0,
+                    "shadowRadius" : 3,
+                    "sublayersCount" : 2
+                  },
+                  "privateProperties" : {
+
+                  }
+                },
+                {
+                  "address" : "0xf149d90a28b29468",
+                  "alpha" : 1,
+                  "bounds" : {
+                    "height" : 54,
+                    "width" : 94,
+                    "x" : 0,
+                    "y" : 0
+                  },
+                  "children" : [
+                    {
+                      "address" : "0x78ceae3d5e90aa4e",
+                      "alpha" : 1,
+                      "bounds" : {
+                        "height" : 31.333333333333332,
+                        "width" : 30,
+                        "x" : 0,
+                        "y" : 0
+                      },
+                      "children" : [
+
+                      ],
+                      "className" : "UIImageView",
+                      "clipsToBounds" : false,
+                      "frame" : {
+                        "height" : 31.333333333333332,
+                        "width" : 30,
+                        "x" : 32,
+                        "y" : 4.999999999999998
+                      },
+                      "isHidden" : false,
+                      "layer" : {
+                        "borderColor" : {
+                          "alpha" : 1,
+                          "blue" : 0,
+                          "description" : "rgba",
+                          "green" : 0,
+                          "red" : 0
+                        },
+                        "borderWidth" : 0,
+                        "className" : "CALayer",
+                        "cornerCurve" : "continuous",
+                        "cornerRadius" : 0,
+                        "masksToBounds" : false,
+                        "opacity" : 1,
+                        "shadowColor" : {
+                          "alpha" : 1,
+                          "blue" : 0,
+                          "description" : "rgba",
+                          "green" : 0,
+                          "red" : 0
+                        },
+                        "shadowOffsetHeight" : -3,
+                        "shadowOffsetWidth" : 0,
+                        "shadowOpacity" : 0,
+                        "shadowRadius" : 3,
+                        "sublayersCount" : 0
+                      }
+                    },
+                    {
+                      "address" : "0x4b74bf5bb4aa5546",
+                      "alpha" : 1,
+                      "backgroundColor" : {
+                        "alpha" : 0,
+                        "blue" : 0,
+                        "description" : "UIExtendedGrayColorSpace 0 0",
+                        "green" : 0,
+                        "red" : 0
+                      },
+                      "bounds" : {
+                        "height" : 12,
+                        "width" : 17.333333333333332,
+                        "x" : 0,
+                        "y" : 0
+                      },
+                      "children" : [
+
+                      ],
+                      "className" : "Label",
+                      "clipsToBounds" : false,
+                      "frame" : {
+                        "height" : 12,
+                        "width" : 17.333333333333332,
+                        "x" : 38,
+                        "y" : 35
+                      },
+                      "isHidden" : false,
+                      "layer" : {
+                        "borderColor" : {
+                          "alpha" : 1,
+                          "blue" : 0,
+                          "description" : "rgba",
+                          "green" : 0,
+                          "red" : 0
+                        },
+                        "borderWidth" : 0,
+                        "className" : "_UILabelLayer",
+                        "cornerCurve" : "continuous",
+                        "cornerRadius" : 0,
+                        "masksToBounds" : false,
+                        "opacity" : 1,
+                        "shadowColor" : {
+                          "alpha" : 1,
+                          "blue" : 0,
+                          "description" : "rgba",
+                          "green" : 0,
+                          "red" : 0
+                        },
+                        "shadowOffsetHeight" : -3,
+                        "shadowOffsetWidth" : 0,
+                        "shadowOpacity" : 0,
+                        "shadowRadius" : 3,
+                        "sublayersCount" : 0
+                      }
+                    }
+                  ],
+                  "className" : "_UITabButton",
+                  "clipsToBounds" : false,
+                  "frame" : {
+                    "height" : 54,
+                    "width" : 94,
+                    "x" : 90,
+                    "y" : 4
+                  },
+                  "isHidden" : false,
+                  "layer" : {
+                    "borderColor" : {
+                      "alpha" : 1,
+                      "blue" : 0,
+                      "description" : "rgba",
+                      "green" : 0,
+                      "red" : 0
+                    },
+                    "borderWidth" : 0,
+                    "className" : "CALayer",
+                    "cornerCurve" : "continuous",
+                    "cornerRadius" : 0,
+                    "masksToBounds" : false,
+                    "opacity" : 1,
+                    "shadowColor" : {
+                      "alpha" : 1,
+                      "blue" : 0,
+                      "description" : "rgba",
+                      "green" : 0,
+                      "red" : 0
+                    },
+                    "shadowOffsetHeight" : -3,
+                    "shadowOffsetWidth" : 0,
+                    "shadowOpacity" : 0,
+                    "shadowRadius" : 3,
+                    "sublayersCount" : 2
+                  },
+                  "privateProperties" : {
+
+                  }
+                },
+                {
+                  "address" : "0x28b4c38bbd6c073f",
+                  "alpha" : 1,
+                  "bounds" : {
+                    "height" : 54,
+                    "width" : 94,
+                    "x" : 0,
+                    "y" : 0
+                  },
+                  "children" : [
+                    {
+                      "address" : "0xd5359e8a0f79cf90",
+                      "alpha" : 1,
+                      "bounds" : {
+                        "height" : 29.666666666666668,
+                        "width" : 25.666666666666668,
+                        "x" : 0,
+                        "y" : 0
+                      },
+                      "children" : [
+
+                      ],
+                      "className" : "UIImageView",
+                      "clipsToBounds" : false,
+                      "frame" : {
+                        "height" : 29.666666666666668,
+                        "width" : 25.666666666666668,
+                        "x" : 34,
+                        "y" : 4.000000000000002
+                      },
+                      "isHidden" : false,
+                      "layer" : {
+                        "borderColor" : {
+                          "alpha" : 1,
+                          "blue" : 0,
+                          "description" : "rgba",
+                          "green" : 0,
+                          "red" : 0
+                        },
+                        "borderWidth" : 0,
+                        "className" : "CALayer",
+                        "cornerCurve" : "continuous",
+                        "cornerRadius" : 0,
+                        "masksToBounds" : false,
+                        "opacity" : 1,
+                        "shadowColor" : {
+                          "alpha" : 1,
+                          "blue" : 0,
+                          "description" : "rgba",
+                          "green" : 0,
+                          "red" : 0
+                        },
+                        "shadowOffsetHeight" : -3,
+                        "shadowOffsetWidth" : 0,
+                        "shadowOpacity" : 0,
+                        "shadowRadius" : 3,
+                        "sublayersCount" : 0
+                      }
+                    },
+                    {
+                      "address" : "0x1f8c892ca8798685",
+                      "alpha" : 1,
+                      "backgroundColor" : {
+                        "alpha" : 0,
+                        "blue" : 0,
+                        "description" : "UIExtendedGrayColorSpace 0 0",
+                        "green" : 0,
+                        "red" : 0
+                      },
+                      "bounds" : {
+                        "height" : 12,
+                        "width" : 26,
+                        "x" : 0,
+                        "y" : 0
+                      },
+                      "children" : [
+
+                      ],
+                      "className" : "Label",
+                      "clipsToBounds" : false,
+                      "frame" : {
+                        "height" : 12,
+                        "width" : 26,
+                        "x" : 34,
+                        "y" : 35
+                      },
+                      "isHidden" : false,
+                      "layer" : {
+                        "borderColor" : {
+                          "alpha" : 1,
+                          "blue" : 0,
+                          "description" : "rgba",
+                          "green" : 0,
+                          "red" : 0
+                        },
+                        "borderWidth" : 0,
+                        "className" : "_UILabelLayer",
+                        "cornerCurve" : "continuous",
+                        "cornerRadius" : 0,
+                        "masksToBounds" : false,
+                        "opacity" : 1,
+                        "shadowColor" : {
+                          "alpha" : 1,
+                          "blue" : 0,
+                          "description" : "rgba",
+                          "green" : 0,
+                          "red" : 0
+                        },
+                        "shadowOffsetHeight" : -3,
+                        "shadowOffsetWidth" : 0,
+                        "shadowOpacity" : 0,
+                        "shadowRadius" : 3,
+                        "sublayersCount" : 0
+                      }
+                    }
+                  ],
+                  "className" : "_UITabButton",
+                  "clipsToBounds" : false,
+                  "frame" : {
+                    "height" : 54,
+                    "width" : 94,
+                    "x" : 176,
+                    "y" : 4
+                  },
+                  "isHidden" : false,
+                  "layer" : {
+                    "borderColor" : {
+                      "alpha" : 1,
+                      "blue" : 0,
+                      "description" : "rgba",
+                      "green" : 0,
+                      "red" : 0
+                    },
+                    "borderWidth" : 0,
+                    "className" : "CALayer",
+                    "cornerCurve" : "continuous",
+                    "cornerRadius" : 0,
+                    "masksToBounds" : false,
+                    "opacity" : 1,
+                    "shadowColor" : {
+                      "alpha" : 1,
+                      "blue" : 0,
+                      "description" : "rgba",
+                      "green" : 0,
+                      "red" : 0
+                    },
+                    "shadowOffsetHeight" : -3,
+                    "shadowOffsetWidth" : 0,
+                    "shadowOpacity" : 0,
+                    "shadowRadius" : 3,
+                    "sublayersCount" : 2
+                  },
+                  "privateProperties" : {
+
+                  }
+                }
+              ],
+              "className" : "SelectedContentView",
+              "clipsToBounds" : false,
+              "frame" : {
+                "height" : 62,
+                "width" : 274,
+                "x" : 0,
+                "y" : 0
+              },
+              "isHidden" : false,
+              "layer" : {
+                "borderColor" : {
+                  "alpha" : 1,
+                  "blue" : 0,
+                  "description" : "rgba",
+                  "green" : 0,
+                  "red" : 0
+                },
+                "borderWidth" : 0,
+                "className" : "CALayer",
+                "cornerCurve" : "continuous",
+                "cornerRadius" : 0,
+                "masksToBounds" : false,
+                "opacity" : 1,
+                "shadowColor" : {
+                  "alpha" : 1,
+                  "blue" : 0,
+                  "description" : "rgba",
+                  "green" : 0,
+                  "red" : 0
+                },
+                "shadowOffsetHeight" : -3,
+                "shadowOffsetWidth" : 0,
+                "shadowOpacity" : 0,
+                "shadowRadius" : 3,
+                "sublayersCount" : 3
+              }
+            },
+            {
+              "address" : "0xa20e39d91d5298a8",
+              "alpha" : 1,
+              "bounds" : {
+                "height" : 54,
+                "width" : 94,
+                "x" : 0,
+                "y" : 0
+              },
+              "children" : [
+                {
+                  "address" : "0x6d15a693a266afcf",
+                  "alpha" : 1,
+                  "bounds" : {
+                    "height" : 54,
+                    "width" : 94,
+                    "x" : 0,
+                    "y" : 0
+                  },
+                  "children" : [
+                    {
+                      "address" : "0x3b7a079f7921e270",
+                      "alpha" : 1,
+                      "bounds" : {
+                        "height" : 54,
+                        "width" : 94,
+                        "x" : 0,
+                        "y" : 0
+                      },
+                      "children" : [
+
+                      ],
+                      "className" : "_UITabSelectionView",
+                      "clipsToBounds" : false,
+                      "frame" : {
+                        "height" : 54,
+                        "width" : 94,
+                        "x" : 0,
+                        "y" : 0
+                      },
+                      "isHidden" : false,
+                      "layer" : {
+                        "borderColor" : {
+                          "alpha" : 1,
+                          "blue" : 0,
+                          "description" : "rgba",
+                          "green" : 0,
+                          "red" : 0
+                        },
+                        "borderWidth" : 0,
+                        "className" : "CALayer",
+                        "cornerCurve" : "continuous",
+                        "cornerRadius" : 27,
+                        "masksToBounds" : false,
+                        "opacity" : 1,
+                        "shadowColor" : {
+                          "alpha" : 1,
+                          "blue" : 0,
+                          "description" : "gray",
+                          "green" : 0,
+                          "red" : 0
+                        },
+                        "shadowOffsetHeight" : 0,
+                        "shadowOffsetWidth" : 0,
+                        "shadowOpacity" : 0,
+                        "shadowRadius" : 0,
+                        "sublayersCount" : 0
+                      },
+                      "privateProperties" : {
+
+                      }
+                    },
+                    {
+                      "address" : "0xc3970940a90de1e3",
+                      "alpha" : 1,
+                      "bounds" : {
+                        "height" : 54,
+                        "width" : 94,
+                        "x" : 0,
+                        "y" : 0
+                      },
+                      "children" : [
+                        {
+                          "address" : "0x1228dd14b9d8ed98",
+                          "alpha" : 1,
+                          "bounds" : {
+                            "height" : 54,
+                            "width" : 94,
+                            "x" : 0,
+                            "y" : 0
+                          },
+                          "children" : [
+                            {
+                              "address" : "0x6bf268ebf1fe5124",
+                              "alpha" : 1,
+                              "bounds" : {
+                                "height" : 54,
+                                "width" : 94,
+                                "x" : 0,
+                                "y" : 0
+                              },
+                              "children" : [
+                                {
+                                  "address" : "0x60e936a7dd48002e",
+                                  "alpha" : 1,
+                                  "bounds" : {
+                                    "height" : 54,
+                                    "width" : 94,
+                                    "x" : 0,
+                                    "y" : 0
+                                  },
+                                  "children" : [
+
+                                  ],
+                                  "className" : "SDFElementView",
+                                  "clipsToBounds" : false,
+                                  "frame" : {
+                                    "height" : 54,
+                                    "width" : 94,
+                                    "x" : 0,
+                                    "y" : 0
+                                  },
+                                  "isHidden" : false,
+                                  "layer" : {
+                                    "borderColor" : {
+                                      "alpha" : 1,
+                                      "blue" : 0,
+                                      "description" : "rgba",
+                                      "green" : 0,
+                                      "red" : 0
+                                    },
+                                    "borderWidth" : 0,
+                                    "className" : "CASDFElementLayer",
+                                    "cornerCurve" : "continuous",
+                                    "cornerRadius" : 0,
+                                    "masksToBounds" : false,
+                                    "opacity" : 1,
+                                    "shadowColor" : {
+                                      "alpha" : 1,
+                                      "blue" : 0,
+                                      "description" : "rgba",
+                                      "green" : 0,
+                                      "red" : 0
+                                    },
+                                    "shadowOffsetHeight" : -3,
+                                    "shadowOffsetWidth" : 0,
+                                    "shadowOpacity" : 0,
+                                    "shadowRadius" : 3,
+                                    "sublayersCount" : 0
+                                  }
+                                }
+                              ],
+                              "className" : "SDFView",
+                              "clipsToBounds" : false,
+                              "frame" : {
+                                "height" : 54,
+                                "width" : 94,
+                                "x" : 0,
+                                "y" : 0
+                              },
+                              "isHidden" : false,
+                              "layer" : {
+                                "borderColor" : {
+                                  "alpha" : 1,
+                                  "blue" : 0,
+                                  "description" : "rgba",
+                                  "green" : 0,
+                                  "red" : 0
+                                },
+                                "borderWidth" : 0,
+                                "className" : "CASDFLayer",
+                                "cornerCurve" : "continuous",
+                                "cornerRadius" : 0,
+                                "masksToBounds" : false,
+                                "opacity" : 1,
+                                "shadowColor" : {
+                                  "alpha" : 1,
+                                  "blue" : 0,
+                                  "description" : "rgba",
+                                  "green" : 0,
+                                  "red" : 0
+                                },
+                                "shadowOffsetHeight" : -3,
+                                "shadowOffsetWidth" : 0,
+                                "shadowOpacity" : 0,
+                                "shadowRadius" : 3,
+                                "sublayersCount" : 1
+                              }
+                            },
+                            {
+                              "address" : "0x7eabb9941a8fb64b",
+                              "alpha" : 1,
+                              "bounds" : {
+                                "height" : 54,
+                                "width" : 94,
+                                "x" : 0,
+                                "y" : 0
+                              },
+                              "children" : [
+
+                              ],
+                              "className" : "_UIPortalView",
+                              "clipsToBounds" : true,
+                              "frame" : {
+                                "height" : 54,
+                                "width" : 94,
+                                "x" : 0,
+                                "y" : 0
+                              },
+                              "isHidden" : false,
+                              "layer" : {
+                                "borderColor" : {
+                                  "alpha" : 1,
+                                  "blue" : 0,
+                                  "description" : "rgba",
+                                  "green" : 0,
+                                  "red" : 0
+                                },
+                                "borderWidth" : 0,
+                                "className" : "CAPortalLayer",
+                                "cornerCurve" : "continuous",
+                                "cornerRadius" : 0,
+                                "masksToBounds" : true,
+                                "opacity" : 1,
+                                "shadowColor" : {
+                                  "alpha" : 1,
+                                  "blue" : 0,
+                                  "description" : "rgba",
+                                  "green" : 0,
+                                  "red" : 0
+                                },
+                                "shadowOffsetHeight" : -3,
+                                "shadowOffsetWidth" : 0,
+                                "shadowOpacity" : 0,
+                                "shadowRadius" : 3,
+                                "sublayersCount" : 0
+                              },
+                              "privateProperties" : {
+
+                              }
+                            }
+                          ],
+                          "className" : "UIView",
+                          "clipsToBounds" : false,
+                          "frame" : {
+                            "height" : 54,
+                            "width" : 94,
+                            "x" : 0,
+                            "y" : 0
+                          },
+                          "isHidden" : false,
+                          "layer" : {
+                            "borderColor" : {
+                              "alpha" : 1,
+                              "blue" : 0,
+                              "description" : "rgba",
+                              "green" : 0,
+                              "red" : 0
+                            },
+                            "borderWidth" : 0,
+                            "className" : "CALayer",
+                            "cornerCurve" : "continuous",
+                            "cornerRadius" : 0,
+                            "filters" : [
+                              {
+                                "enabled" : true,
+                                "name" : "displacementMap",
+                                "parameters" : {
+                                  "inputAmount" : "0"
+                                },
+                                "type" : "displacementMap"
+                              }
+                            ],
+                            "masksToBounds" : false,
+                            "opacity" : 1,
+                            "shadowColor" : {
+                              "alpha" : 1,
+                              "blue" : 0,
+                              "description" : "rgba",
+                              "green" : 0,
+                              "red" : 0
+                            },
+                            "shadowOffsetHeight" : -3,
+                            "shadowOffsetWidth" : 0,
+                            "shadowOpacity" : 0,
+                            "shadowRadius" : 3,
+                            "sublayersCount" : 2
+                          }
+                        },
+                        {
+                          "address" : "0x2f608a9fd4c66b25",
+                          "alpha" : 1,
+                          "bounds" : {
+                            "height" : 54,
+                            "width" : 94,
+                            "x" : 0,
+                            "y" : 0
+                          },
+                          "children" : [
+
+                          ],
+                          "className" : "UIView",
+                          "clipsToBounds" : true,
+                          "frame" : {
+                            "height" : 54,
+                            "width" : 94,
+                            "x" : 0,
+                            "y" : 0
+                          },
+                          "isHidden" : false,
+                          "layer" : {
+                            "borderColor" : {
+                              "alpha" : 1,
+                              "blue" : 0,
+                              "description" : "rgba",
+                              "green" : 0,
+                              "red" : 0
+                            },
+                            "borderWidth" : 0,
+                            "className" : "CALayer",
+                            "cornerCurve" : "continuous",
+                            "cornerRadius" : 0,
+                            "masksToBounds" : true,
+                            "opacity" : 1,
+                            "shadowColor" : {
+                              "alpha" : 1,
+                              "blue" : 0,
+                              "description" : "rgba",
+                              "green" : 0,
+                              "red" : 0
+                            },
+                            "shadowOffsetHeight" : 0,
+                            "shadowOffsetWidth" : 0,
+                            "shadowOpacity" : 0,
+                            "shadowRadius" : 0,
+                            "sublayersCount" : 0
+                          }
+                        }
+                      ],
+                      "className" : "ClearGlassView",
+                      "clipsToBounds" : false,
+                      "frame" : {
+                        "height" : 54,
+                        "width" : 94,
+                        "x" : 0,
+                        "y" : 0
+                      },
+                      "isHidden" : false,
+                      "layer" : {
+                        "borderColor" : {
+                          "alpha" : 1,
+                          "blue" : 0,
+                          "description" : "rgba",
+                          "green" : 0,
+                          "red" : 0
+                        },
+                        "borderWidth" : 0,
+                        "className" : "CALayer",
+                        "cornerCurve" : "continuous",
+                        "cornerRadius" : 0,
+                        "masksToBounds" : false,
+                        "opacity" : 1,
+                        "shadowColor" : {
+                          "alpha" : 1,
+                          "blue" : 0,
+                          "description" : "rgba",
+                          "green" : 0,
+                          "red" : 0
+                        },
+                        "shadowOffsetHeight" : -3,
+                        "shadowOffsetWidth" : 0,
+                        "shadowOpacity" : 0,
+                        "shadowRadius" : 3,
+                        "sublayersCount" : 2
+                      },
+                      "privateProperties" : {
+
+                      }
+                    }
+                  ],
+                  "className" : "UIView",
+                  "clipsToBounds" : false,
+                  "frame" : {
+                    "height" : 54,
+                    "width" : 94,
+                    "x" : 0,
+                    "y" : 0
+                  },
+                  "isHidden" : false,
+                  "layer" : {
+                    "borderColor" : {
+                      "alpha" : 1,
+                      "blue" : 0,
+                      "description" : "rgba",
+                      "green" : 0,
+                      "red" : 0
+                    },
+                    "borderWidth" : 0,
+                    "className" : "CALayer",
+                    "cornerCurve" : "continuous",
+                    "cornerRadius" : 0,
+                    "masksToBounds" : false,
+                    "opacity" : 1,
+                    "shadowColor" : {
+                      "alpha" : 1,
+                      "blue" : 0,
+                      "description" : "rgba",
+                      "green" : 0,
+                      "red" : 0
+                    },
+                    "shadowOffsetHeight" : -3,
+                    "shadowOffsetWidth" : 0,
+                    "shadowOpacity" : 0,
+                    "shadowRadius" : 3,
+                    "sublayersCount" : 2
+                  }
+                }
+              ],
+              "className" : "_UILiquidLensView",
+              "clipsToBounds" : false,
+              "frame" : {
+                "height" : 54,
+                "width" : 94,
+                "x" : 4,
+                "y" : 4
+              },
+              "isHidden" : false,
+              "layer" : {
+                "borderColor" : {
+                  "alpha" : 1,
+                  "blue" : 0,
+                  "description" : "rgba",
+                  "green" : 0,
+                  "red" : 0
+                },
+                "borderWidth" : 0,
+                "className" : "CALayer",
+                "cornerCurve" : "continuous",
+                "cornerRadius" : 0,
+                "filters" : [
+                  {
+                    "enabled" : true,
+                    "name" : "opacityPair",
+                    "parameters" : {
+
+                    },
+                    "type" : "opacityPair"
+                  }
+                ],
+                "masksToBounds" : false,
+                "opacity" : 1,
+                "shadowColor" : {
+                  "alpha" : 1,
+                  "blue" : 0,
+                  "description" : "rgba",
+                  "green" : 0,
+                  "red" : 0
+                },
+                "shadowOffsetHeight" : -3,
+                "shadowOffsetWidth" : 0,
+                "shadowOpacity" : 0,
+                "shadowRadius" : 3,
+                "sublayersCount" : 1
+              },
+              "privateProperties" : {
+                "hasCustomRestingBackground" : "1",
+                "liftedContentMode" : "1",
+                "warpsContentBelow" : "1"
+              }
+            },
+            {
+              "address" : "0x98c355b4345ebd80",
+              "alpha" : 1,
+              "bounds" : {
+                "height" : 62,
+                "width" : 274,
+                "x" : 0,
+                "y" : 0
+              },
+              "children" : [
+                {
+                  "address" : "0xcb4e3d88237e554b",
+                  "alpha" : 1,
+                  "bounds" : {
+                    "height" : 54,
+                    "width" : 94,
+                    "x" : 0,
+                    "y" : 0
+                  },
+                  "children" : [
+                    {
+                      "address" : "0xb213e3b980bf3b84",
+                      "alpha" : 1,
+                      "bounds" : {
+                        "height" : 27.333333333333332,
+                        "width" : 34.666666666666664,
+                        "x" : 0,
+                        "y" : 0
+                      },
+                      "children" : [
+
+                      ],
+                      "className" : "UIImageView",
+                      "clipsToBounds" : false,
+                      "frame" : {
+                        "height" : 27.333333333333332,
+                        "width" : 34.666666666666664,
+                        "x" : 29.999999999999996,
+                        "y" : 6.333333333333334
+                      },
+                      "isHidden" : false,
+                      "layer" : {
+                        "borderColor" : {
+                          "alpha" : 1,
+                          "blue" : 0,
+                          "description" : "rgba",
+                          "green" : 0,
+                          "red" : 0
+                        },
+                        "borderWidth" : 0,
+                        "className" : "CALayer",
+                        "cornerCurve" : "continuous",
+                        "cornerRadius" : 0,
+                        "masksToBounds" : false,
+                        "opacity" : 1,
+                        "shadowColor" : {
+                          "alpha" : 1,
+                          "blue" : 0,
+                          "description" : "rgba",
+                          "green" : 0,
+                          "red" : 0
+                        },
+                        "shadowOffsetHeight" : -3,
+                        "shadowOffsetWidth" : 0,
+                        "shadowOpacity" : 0,
+                        "shadowRadius" : 3,
+                        "sublayersCount" : 0
+                      }
+                    },
+                    {
+                      "address" : "0xfae5a341f76ca06e",
+                      "alpha" : 1,
+                      "backgroundColor" : {
+                        "alpha" : 0,
+                        "blue" : 0,
+                        "description" : "UIExtendedGrayColorSpace 0 0",
+                        "green" : 0,
+                        "red" : 0
+                      },
+                      "bounds" : {
+                        "height" : 12,
+                        "width" : 26,
+                        "x" : 0,
+                        "y" : 0
+                      },
+                      "children" : [
+
+                      ],
+                      "className" : "Label",
+                      "clipsToBounds" : false,
+                      "frame" : {
+                        "height" : 12,
+                        "width" : 26,
+                        "x" : 34,
+                        "y" : 35
+                      },
+                      "isHidden" : false,
+                      "layer" : {
+                        "borderColor" : {
+                          "alpha" : 1,
+                          "blue" : 0,
+                          "description" : "rgba",
+                          "green" : 0,
+                          "red" : 0
+                        },
+                        "borderWidth" : 0,
+                        "className" : "_UILabelLayer",
+                        "cornerCurve" : "continuous",
+                        "cornerRadius" : 0,
+                        "masksToBounds" : false,
+                        "opacity" : 1,
+                        "shadowColor" : {
+                          "alpha" : 1,
+                          "blue" : 0,
+                          "description" : "rgba",
+                          "green" : 0,
+                          "red" : 0
+                        },
+                        "shadowOffsetHeight" : -3,
+                        "shadowOffsetWidth" : 0,
+                        "shadowOpacity" : 0,
+                        "shadowRadius" : 3,
+                        "sublayersCount" : 0
+                      }
+                    }
+                  ],
+                  "className" : "_UITabButton",
+                  "clipsToBounds" : false,
+                  "frame" : {
+                    "height" : 54,
+                    "width" : 94,
+                    "x" : 4,
+                    "y" : 4
+                  },
+                  "isHidden" : false,
+                  "layer" : {
+                    "borderColor" : {
+                      "alpha" : 1,
+                      "blue" : 0,
+                      "description" : "rgba",
+                      "green" : 0,
+                      "red" : 0
+                    },
+                    "borderWidth" : 0,
+                    "className" : "CALayer",
+                    "cornerCurve" : "continuous",
+                    "cornerRadius" : 0,
+                    "masksToBounds" : false,
+                    "opacity" : 1,
+                    "shadowColor" : {
+                      "alpha" : 1,
+                      "blue" : 0,
+                      "description" : "rgba",
+                      "green" : 0,
+                      "red" : 0
+                    },
+                    "shadowOffsetHeight" : -3,
+                    "shadowOffsetWidth" : 0,
+                    "shadowOpacity" : 0,
+                    "shadowRadius" : 3,
+                    "sublayersCount" : 2
+                  },
+                  "privateProperties" : {
+
+                  }
+                },
+                {
+                  "address" : "0xe227bb9e304c2ac",
+                  "alpha" : 1,
+                  "bounds" : {
+                    "height" : 54,
+                    "width" : 94,
+                    "x" : 0,
+                    "y" : 0
+                  },
+                  "children" : [
+                    {
+                      "address" : "0xe4fb98dda25472dd",
+                      "alpha" : 1,
+                      "bounds" : {
+                        "height" : 31.333333333333332,
+                        "width" : 30,
+                        "x" : 0,
+                        "y" : 0
+                      },
+                      "children" : [
+
+                      ],
+                      "className" : "UIImageView",
+                      "clipsToBounds" : false,
+                      "frame" : {
+                        "height" : 31.333333333333332,
+                        "width" : 30,
+                        "x" : 32,
+                        "y" : 4.999999999999998
+                      },
+                      "isHidden" : false,
+                      "layer" : {
+                        "borderColor" : {
+                          "alpha" : 1,
+                          "blue" : 0,
+                          "description" : "rgba",
+                          "green" : 0,
+                          "red" : 0
+                        },
+                        "borderWidth" : 0,
+                        "className" : "CALayer",
+                        "cornerCurve" : "continuous",
+                        "cornerRadius" : 0,
+                        "masksToBounds" : false,
+                        "opacity" : 1,
+                        "shadowColor" : {
+                          "alpha" : 1,
+                          "blue" : 0,
+                          "description" : "rgba",
+                          "green" : 0,
+                          "red" : 0
+                        },
+                        "shadowOffsetHeight" : -3,
+                        "shadowOffsetWidth" : 0,
+                        "shadowOpacity" : 0,
+                        "shadowRadius" : 3,
+                        "sublayersCount" : 0
+                      }
+                    },
+                    {
+                      "address" : "0xc8f375003f5a4aa1",
+                      "alpha" : 1,
+                      "backgroundColor" : {
+                        "alpha" : 0,
+                        "blue" : 0,
+                        "description" : "UIExtendedGrayColorSpace 0 0",
+                        "green" : 0,
+                        "red" : 0
+                      },
+                      "bounds" : {
+                        "height" : 12,
+                        "width" : 17.333333333333332,
+                        "x" : 0,
+                        "y" : 0
+                      },
+                      "children" : [
+
+                      ],
+                      "className" : "Label",
+                      "clipsToBounds" : false,
+                      "frame" : {
+                        "height" : 12,
+                        "width" : 17.333333333333332,
+                        "x" : 38,
+                        "y" : 35
+                      },
+                      "isHidden" : false,
+                      "layer" : {
+                        "borderColor" : {
+                          "alpha" : 1,
+                          "blue" : 0,
+                          "description" : "rgba",
+                          "green" : 0,
+                          "red" : 0
+                        },
+                        "borderWidth" : 0,
+                        "className" : "_UILabelLayer",
+                        "cornerCurve" : "continuous",
+                        "cornerRadius" : 0,
+                        "masksToBounds" : false,
+                        "opacity" : 1,
+                        "shadowColor" : {
+                          "alpha" : 1,
+                          "blue" : 0,
+                          "description" : "rgba",
+                          "green" : 0,
+                          "red" : 0
+                        },
+                        "shadowOffsetHeight" : -3,
+                        "shadowOffsetWidth" : 0,
+                        "shadowOpacity" : 0,
+                        "shadowRadius" : 3,
+                        "sublayersCount" : 0
+                      }
+                    }
+                  ],
+                  "className" : "_UITabButton",
+                  "clipsToBounds" : false,
+                  "frame" : {
+                    "height" : 54,
+                    "width" : 94,
+                    "x" : 90,
+                    "y" : 4
+                  },
+                  "isHidden" : false,
+                  "layer" : {
+                    "borderColor" : {
+                      "alpha" : 1,
+                      "blue" : 0,
+                      "description" : "rgba",
+                      "green" : 0,
+                      "red" : 0
+                    },
+                    "borderWidth" : 0,
+                    "className" : "CALayer",
+                    "cornerCurve" : "continuous",
+                    "cornerRadius" : 0,
+                    "masksToBounds" : false,
+                    "opacity" : 1,
+                    "shadowColor" : {
+                      "alpha" : 1,
+                      "blue" : 0,
+                      "description" : "rgba",
+                      "green" : 0,
+                      "red" : 0
+                    },
+                    "shadowOffsetHeight" : -3,
+                    "shadowOffsetWidth" : 0,
+                    "shadowOpacity" : 0,
+                    "shadowRadius" : 3,
+                    "sublayersCount" : 2
+                  },
+                  "privateProperties" : {
+
+                  }
+                },
+                {
+                  "address" : "0xc9e0e379b042d4aa",
+                  "alpha" : 1,
+                  "bounds" : {
+                    "height" : 54,
+                    "width" : 94,
+                    "x" : 0,
+                    "y" : 0
+                  },
+                  "children" : [
+                    {
+                      "address" : "0xa527f5778d0a60c3",
+                      "alpha" : 1,
+                      "bounds" : {
+                        "height" : 29.666666666666668,
+                        "width" : 25.666666666666668,
+                        "x" : 0,
+                        "y" : 0
+                      },
+                      "children" : [
+
+                      ],
+                      "className" : "UIImageView",
+                      "clipsToBounds" : false,
+                      "frame" : {
+                        "height" : 29.666666666666668,
+                        "width" : 25.666666666666668,
+                        "x" : 34,
+                        "y" : 4.000000000000002
+                      },
+                      "isHidden" : false,
+                      "layer" : {
+                        "borderColor" : {
+                          "alpha" : 1,
+                          "blue" : 0,
+                          "description" : "rgba",
+                          "green" : 0,
+                          "red" : 0
+                        },
+                        "borderWidth" : 0,
+                        "className" : "CALayer",
+                        "cornerCurve" : "continuous",
+                        "cornerRadius" : 0,
+                        "masksToBounds" : false,
+                        "opacity" : 1,
+                        "shadowColor" : {
+                          "alpha" : 1,
+                          "blue" : 0,
+                          "description" : "rgba",
+                          "green" : 0,
+                          "red" : 0
+                        },
+                        "shadowOffsetHeight" : -3,
+                        "shadowOffsetWidth" : 0,
+                        "shadowOpacity" : 0,
+                        "shadowRadius" : 3,
+                        "sublayersCount" : 0
+                      }
+                    },
+                    {
+                      "address" : "0xda4166e69a21f9ef",
+                      "alpha" : 1,
+                      "backgroundColor" : {
+                        "alpha" : 0,
+                        "blue" : 0,
+                        "description" : "UIExtendedGrayColorSpace 0 0",
+                        "green" : 0,
+                        "red" : 0
+                      },
+                      "bounds" : {
+                        "height" : 12,
+                        "width" : 26,
+                        "x" : 0,
+                        "y" : 0
+                      },
+                      "children" : [
+
+                      ],
+                      "className" : "Label",
+                      "clipsToBounds" : false,
+                      "frame" : {
+                        "height" : 12,
+                        "width" : 26,
+                        "x" : 34,
+                        "y" : 35
+                      },
+                      "isHidden" : false,
+                      "layer" : {
+                        "borderColor" : {
+                          "alpha" : 1,
+                          "blue" : 0,
+                          "description" : "rgba",
+                          "green" : 0,
+                          "red" : 0
+                        },
+                        "borderWidth" : 0,
+                        "className" : "_UILabelLayer",
+                        "cornerCurve" : "continuous",
+                        "cornerRadius" : 0,
+                        "masksToBounds" : false,
+                        "opacity" : 1,
+                        "shadowColor" : {
+                          "alpha" : 1,
+                          "blue" : 0,
+                          "description" : "rgba",
+                          "green" : 0,
+                          "red" : 0
+                        },
+                        "shadowOffsetHeight" : -3,
+                        "shadowOffsetWidth" : 0,
+                        "shadowOpacity" : 0,
+                        "shadowRadius" : 3,
+                        "sublayersCount" : 0
+                      }
+                    }
+                  ],
+                  "className" : "_UITabButton",
+                  "clipsToBounds" : false,
+                  "frame" : {
+                    "height" : 54,
+                    "width" : 94,
+                    "x" : 176,
+                    "y" : 4
+                  },
+                  "isHidden" : false,
+                  "layer" : {
+                    "borderColor" : {
+                      "alpha" : 1,
+                      "blue" : 0,
+                      "description" : "rgba",
+                      "green" : 0,
+                      "red" : 0
+                    },
+                    "borderWidth" : 0,
+                    "className" : "CALayer",
+                    "cornerCurve" : "continuous",
+                    "cornerRadius" : 0,
+                    "masksToBounds" : false,
+                    "opacity" : 1,
+                    "shadowColor" : {
+                      "alpha" : 1,
+                      "blue" : 0,
+                      "description" : "rgba",
+                      "green" : 0,
+                      "red" : 0
+                    },
+                    "shadowOffsetHeight" : -3,
+                    "shadowOffsetWidth" : 0,
+                    "shadowOpacity" : 0,
+                    "shadowRadius" : 3,
+                    "sublayersCount" : 2
+                  },
+                  "privateProperties" : {
+
+                  }
+                }
+              ],
+              "className" : "ContentView",
+              "clipsToBounds" : false,
+              "frame" : {
+                "height" : 62,
+                "width" : 274,
+                "x" : 0,
+                "y" : 0
+              },
+              "isHidden" : false,
+              "layer" : {
+                "borderColor" : {
+                  "alpha" : 1,
+                  "blue" : 0,
+                  "description" : "rgba",
+                  "green" : 0,
+                  "red" : 0
+                },
+                "borderWidth" : 0,
+                "className" : "CALayer",
+                "cornerCurve" : "continuous",
+                "cornerRadius" : 0,
+                "masksToBounds" : false,
+                "opacity" : 1,
+                "shadowColor" : {
+                  "alpha" : 1,
+                  "blue" : 0,
+                  "description" : "rgba",
+                  "green" : 0,
+                  "red" : 0
+                },
+                "shadowOffsetHeight" : -3,
+                "shadowOffsetWidth" : 0,
+                "shadowOpacity" : 0,
+                "shadowRadius" : 3,
+                "sublayersCount" : 3
+              }
+            },
+            {
+              "address" : "0x4db9158eef9b9701",
+              "alpha" : 1,
+              "backgroundColor" : {
+                "alpha" : 1,
+                "blue" : 0,
+                "description" : "UIExtendedGrayColorSpace 0 1",
+                "green" : 0,
+                "red" : 0
+              },
+              "bounds" : {
+                "height" : 54,
+                "width" : 94,
+                "x" : 0,
+                "y" : 0
+              },
+              "children" : [
+
+              ],
+              "className" : "DestOutView",
+              "clipsToBounds" : false,
+              "frame" : {
+                "height" : 54,
+                "width" : 94,
+                "x" : 0,
+                "y" : 0
+              },
+              "isHidden" : false,
+              "layer" : {
+                "borderColor" : {
+                  "alpha" : 1,
+                  "blue" : 0,
+                  "description" : "rgba",
+                  "green" : 0,
+                  "red" : 0
+                },
+                "borderWidth" : 0,
+                "className" : "CALayer",
+                "compositingFilter" : "destOut",
+                "cornerCurve" : "continuous",
+                "cornerRadius" : 0,
+                "masksToBounds" : false,
+                "opacity" : 1,
+                "shadowColor" : {
+                  "alpha" : 1,
+                  "blue" : 0,
+                  "description" : "rgba",
+                  "green" : 0,
+                  "red" : 0
+                },
+                "shadowOffsetHeight" : -3,
+                "shadowOffsetWidth" : 0,
+                "shadowOpacity" : 0,
+                "shadowRadius" : 3,
+                "sublayersCount" : 0
+              }
+            }
+          ],
+          "className" : "_UITabBarPlatterView",
+          "clipsToBounds" : true,
+          "frame" : {
+            "height" : 62,
+            "width" : 274,
+            "x" : 64,
+            "y" : 0
+          },
+          "isHidden" : false,
+          "layer" : {
+            "borderColor" : {
+              "alpha" : 1,
+              "blue" : 0,
+              "description" : "rgba",
+              "green" : 0,
+              "red" : 0
+            },
+            "borderWidth" : 0,
+            "className" : "CALayer",
+            "cornerCurve" : "continuous",
+            "cornerRadius" : 0,
+            "masksToBounds" : true,
+            "opacity" : 1,
+            "shadowColor" : {
+              "alpha" : 1,
+              "blue" : 0,
+              "description" : "rgba",
+              "green" : 0,
+              "red" : 0
+            },
+            "shadowOffsetHeight" : -3,
+            "shadowOffsetWidth" : 0,
+            "shadowOpacity" : 0,
+            "shadowRadius" : 3,
+            "sublayersCount" : 4
+          },
+          "privateProperties" : {
+
+          }
+        }
+      ],
+      "className" : "UITabBar",
+      "clipsToBounds" : false,
+      "frame" : {
+        "height" : 83,
+        "width" : 402,
+        "x" : 0,
+        "y" : 791
+      },
+      "isHidden" : false,
+      "layer" : {
+        "borderColor" : {
+          "alpha" : 1,
+          "blue" : 0,
+          "description" : "rgba",
+          "green" : 0,
+          "red" : 0
+        },
+        "borderWidth" : 0,
+        "className" : "CALayer",
+        "cornerCurve" : "continuous",
+        "cornerRadius" : 0,
+        "masksToBounds" : false,
+        "opacity" : 1,
+        "shadowColor" : {
+          "alpha" : 1,
+          "blue" : 0,
+          "description" : "rgba",
+          "green" : 0,
+          "red" : 0
+        },
+        "shadowOffsetHeight" : -3,
+        "shadowOffsetWidth" : 0,
+        "shadowOpacity" : 0,
+        "shadowRadius" : 3,
+        "sublayersCount" : 1
+      }
+    }
+  ],
+  "toolbars" : [
+
+  ]
+}

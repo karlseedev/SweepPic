@@ -21,7 +21,7 @@ extension GridViewController {
     func startInitialDisplay() {
         #if DEBUG
         let startMs = (CACurrentMediaTime() - loadStartTime) * 1000
-        FileLogger.log("[InitialDisplay] 시작: +\(String(format: "%.1f", startMs))ms, cellSize=\(Int(currentCellSize.width))x\(Int(currentCellSize.height))pt")
+        Log.print("[InitialDisplay] 시작: +\(String(format: "%.1f", startMs))ms, cellSize=\(Int(currentCellSize.width))x\(Int(currentCellSize.height))pt")
         #endif
 
         // 1) 노출 게이트 - collectionView 숨김
@@ -43,7 +43,7 @@ extension GridViewController {
 
             #if DEBUG
             let dataMs = (CACurrentMediaTime() - self.loadStartTime) * 1000
-            FileLogger.log("[InitialDisplay] 데이터 로드 완료: +\(String(format: "%.1f", dataMs))ms, \(count)장")
+            Log.print("[InitialDisplay] 데이터 로드 완료: +\(String(format: "%.1f", dataMs))ms, \(count)장")
             #endif
 
             // 3) 타임아웃 설정 (100ms)
@@ -77,7 +77,7 @@ extension GridViewController {
         // 첫 스크롤 시작 시간 기록
         if !hasCompletedFirstScroll && firstScrollStartTime == 0 {
             firstScrollStartTime = currentScrollStartTime
-            FileLogger.log("[Scroll] First scroll 시작: +\(String(format: "%.1f", (currentScrollStartTime - loadStartTime) * 1000))ms")
+            Log.print("[Scroll] First scroll 시작: +\(String(format: "%.1f", (currentScrollStartTime - loadStartTime) * 1000))ms")
         }
 
         // [SimilarPhoto] 스크롤 시작 시 분석 취소 및 테두리 숨김
@@ -103,7 +103,7 @@ extension GridViewController {
             if !self.hasCompletedFirstScroll {
                 self.hasCompletedFirstScroll = true
                 let scrollDuration = (CACurrentMediaTime() - self.firstScrollStartTime) * 1000
-                FileLogger.log("[Scroll] First scroll 완료: \(String(format: "%.1f", scrollDuration))ms 동안 스크롤")
+                Log.print("[Scroll] First scroll 완료: \(String(format: "%.1f", scrollDuration))ms 동안 스크롤")
             }
 
             // [preheat 최적화] 스크롤 정지 후 1회 preheat
@@ -119,7 +119,7 @@ extension GridViewController {
 
             // [R2:Timing] 로그
             if FileLogger.logThumbEnabled {
-                FileLogger.log("[R2:Timing] seq=\(currentSeq), velocity=\(velocity)pt/s, 디바운스=50ms")
+                Log.print("[R2:Timing] seq=\(currentSeq), velocity=\(velocity)pt/s, 디바운스=50ms")
             }
 
             // [R2] 스크롤 정지 후 visible 셀 고해상도 업그레이드
@@ -181,7 +181,7 @@ extension GridViewController {
         }
 
         if FileLogger.logThumbEnabled {
-            FileLogger.log("[R2] seq=\(scrollSeq), visible=\(visibleCount), upgraded=\(upgradedCount)")
+            Log.print("[R2] seq=\(scrollSeq), visible=\(visibleCount), upgraded=\(upgradedCount)")
         }
     }
 
@@ -216,7 +216,7 @@ extension GridViewController {
         }
 
         // 로그 형식: [Thumb:Check] seq=5, t=0.2s, velocity=3200, underSized=10/24
-        FileLogger.log("[Thumb:Check] seq=\(seq), t=\(timing), velocity=\(velocity), underSized=\(underSizedCount)/\(totalCount)")
+        Log.print("[Thumb:Check] seq=\(seq), t=\(timing), velocity=\(velocity), underSized=\(underSizedCount)/\(totalCount)")
     }
 
     // MARK: - Phase 2: 감속 중 preheat
@@ -267,7 +267,7 @@ extension GridViewController {
 
         // [Phase 2 로그]
         if FileLogger.logThumbEnabled {
-            FileLogger.log("[Preheat:Decel] seq=\(scrollSeq), \(assets.count)개 에셋, targetSize=\(Int(fullSize.width))px")
+            Log.print("[Preheat:Decel] seq=\(scrollSeq), \(assets.count)개 에셋, targetSize=\(Int(fullSize.width))px")
         }
 
         // 백그라운드에서 preheat
@@ -325,7 +325,7 @@ extension GridViewController {
         // - 완료되었으면 "L2 Steady"
         let scrollType = hasCompletedFirstScroll ? "L2 Steady" : "L1 First"
 
-        FileLogger.log("[Hitch] \(scrollType): \(result.formatted())")
+        Log.print("[Hitch] \(scrollType): \(result.formatted())")
 
         // [Cache Stats] 구간별 캐시 통계 출력
         MemoryThumbnailCache.shared.logStats(label: scrollType)
@@ -358,7 +358,7 @@ extension GridViewController {
         // [Timing] E0: finishInitialDisplay 시작
         let e0Time = CACurrentMediaTime()
         let e0Ms = (e0Time - loadStartTime) * 1000
-        FileLogger.log("[Timing] E0) finishInitialDisplay 시작: +\(String(format: "%.1f", e0Ms))ms (reason: \(reason), preloaded: \(preloadCompletedCount)/\(preloadTargetCount))")
+        Log.print("[Timing] E0) finishInitialDisplay 시작: +\(String(format: "%.1f", e0Ms))ms (reason: \(reason), preloaded: \(preloadCompletedCount)/\(preloadTargetCount))")
 
         // 1) 셀 표시 허용 → reloadData에서 실제 count 반환
         shouldShowItems = true
@@ -370,7 +370,7 @@ extension GridViewController {
         // [Timing] E1: reloadData + layoutIfNeeded 완료
         let e1Time = CACurrentMediaTime()
         let e0ToE1Ms = (e1Time - e0Time) * 1000
-        FileLogger.log("[Timing] E1) reloadData+layout 완료: +\(String(format: "%.1f", (e1Time - loadStartTime) * 1000))ms (E0→E1: \(String(format: "%.1f", e0ToE1Ms))ms)")
+        Log.print("[Timing] E1) reloadData+layout 완료: +\(String(format: "%.1f", (e1Time - loadStartTime) * 1000))ms (E0→E1: \(String(format: "%.1f", e0ToE1Ms))ms)")
 
         // 3) 맨 아래로 스크롤 (FR-003: 최신 사진)
         scrollToBottomIfNeeded()
@@ -381,7 +381,7 @@ extension GridViewController {
         // [Timing] E2: scrollToItem + layoutIfNeeded 완료
         let e2Time = CACurrentMediaTime()
         let e1ToE2Ms = (e2Time - e1Time) * 1000
-        FileLogger.log("[Timing] E2) scrollToItem+layout 완료: +\(String(format: "%.1f", (e2Time - loadStartTime) * 1000))ms (E1→E2: \(String(format: "%.1f", e1ToE2Ms))ms)")
+        Log.print("[Timing] E2) scrollToItem+layout 완료: +\(String(format: "%.1f", (e2Time - loadStartTime) * 1000))ms (E1→E2: \(String(format: "%.1f", e1ToE2Ms))ms)")
 
         // 5) reveal (fade-in)
         UIView.animate(withDuration: 0.15) {
@@ -390,10 +390,10 @@ extension GridViewController {
 
         // [Timing] 완료 시점 요약
         let totalMs = (e2Time - loadStartTime) * 1000
-        FileLogger.log("[Timing] === 초기 로딩 완료: +\(String(format: "%.1f", totalMs))ms (E0→E1: \(String(format: "%.1f", e0ToE1Ms))ms, E1→E2: \(String(format: "%.1f", e1ToE2Ms))ms) ===")
+        Log.print("[Timing] === 초기 로딩 완료: +\(String(format: "%.1f", totalMs))ms (E0→E1: \(String(format: "%.1f", e0ToE1Ms))ms, E1→E2: \(String(format: "%.1f", e1ToE2Ms))ms) ===")
 
         // [DEBUG] 최종 통계 출력
-        FileLogger.log("[Timing] 최종 통계: cellForItemAt \(cellForItemAtCount)회, 총 \(String(format: "%.1f", cellForItemAtTotalTime))ms, 평균 \(String(format: "%.2f", cellForItemAtCount > 0 ? cellForItemAtTotalTime / Double(cellForItemAtCount) : 0))ms")
+        Log.print("[Timing] 최종 통계: cellForItemAt \(cellForItemAtCount)회, 총 \(String(format: "%.1f", cellForItemAtTotalTime))ms, 평균 \(String(format: "%.2f", cellForItemAtCount > 0 ? cellForItemAtTotalTime / Double(cellForItemAtCount) : 0))ms")
 
         // [Pipeline] 파이프라인 통계 출력
         ImagePipeline.shared.logStats(label: "Initial Load")
@@ -458,7 +458,7 @@ extension GridViewController {
         // 방어: currentCellSize가 0이면 다음 런루프에서 재시도
         guard currentCellSize != .zero else {
             #if DEBUG
-            FileLogger.log("[Preload] currentCellSize==0, 다음 런루프에서 재시도")
+            Log.print("[Preload] currentCellSize==0, 다음 런루프에서 재시도")
             #endif
             DispatchQueue.main.async { [weak self] in
                 self?.startInitialPreload()
@@ -481,7 +481,7 @@ extension GridViewController {
 
         #if DEBUG
         // 검증 로그: 프리로드에서 사용하는 pixelSize
-        FileLogger.log("[Preload] 시작: index \(startIndex)~\(startIndex + count - 1) (\(count)개), pixelSize=\(Int(pixelSize.width))x\(Int(pixelSize.height))px")
+        Log.print("[Preload] 시작: index \(startIndex)~\(startIndex + count - 1) (\(count)개), pixelSize=\(Int(pixelSize.width))x\(Int(pixelSize.height))px")
         #endif
 
         // 각 에셋에 대해 디스크 캐시 → 메모리 캐시 로드
@@ -508,10 +508,10 @@ extension GridViewController {
             ) { [weak self] image in
                 // 메모리 캐시에 저장
                 if let image = image {
-                    FileLogger.log("[Preload] DISK HIT: \(assetID.prefix(8))...")
+                    Log.print("[Preload] DISK HIT: \(assetID.prefix(8))...")
                     MemoryThumbnailCache.shared.set(image: image, assetID: assetID, pixelSize: pixelSize)
                 } else {
-                    FileLogger.log("[Preload] DISK MISS: \(assetID.prefix(8))...")
+                    Log.print("[Preload] DISK MISS: \(assetID.prefix(8))...")
                 }
                 self?.onPreloadCompleted()
             }

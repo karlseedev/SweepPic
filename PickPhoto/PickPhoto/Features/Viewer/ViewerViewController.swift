@@ -19,6 +19,7 @@
 import UIKit
 import Photos
 import AppCore
+import Vision
 
 /// 뷰어 모드
 /// 일반 모드 vs 휴지통 모드에 따라 버튼이 다르게 표시됨
@@ -233,6 +234,21 @@ final class ViewerViewController: UIViewController {
     /// iOS 26+ 네비게이션 바 눈 아이콘 버튼 참조 (유사 사진 토글)
     private var navBarEyeItem: UIBarButtonItem?
 
+    #if DEBUG
+    /// 디버그 분석 버튼 (휴지통 모드에서만 표시)
+    private lazy var debugAnalyzeButton: UIButton = {
+        let button = UIButton(type: .system)
+        button.translatesAutoresizingMaskIntoConstraints = false
+        button.setTitle("분석", for: .normal)
+        button.setTitleColor(.white, for: .normal)
+        button.titleLabel?.font = .systemFont(ofSize: 14, weight: .medium)
+        button.backgroundColor = UIColor.systemBlue.withAlphaComponent(0.7)
+        button.layer.cornerRadius = 8
+        button.addTarget(self, action: #selector(debugAnalyzeButtonTapped), for: .touchUpInside)
+        return button
+    }()
+    #endif
+
     // MARK: - Initialization
 
     /// 초기화
@@ -379,7 +395,145 @@ final class ViewerViewController: UIViewController {
             setupActionButtons()
             setupBackButton()
         }
+
+        #if DEBUG
+        // 휴지통 모드에서 디버그 분석 버튼 추가
+        if viewerMode == .trash {
+            setupDebugAnalyzeButton()
+        }
+        #endif
     }
+
+    #if DEBUG
+    /// 디버그 분석 버튼 설정 (상단 오른쪽)
+    private func setupDebugAnalyzeButton() {
+        view.addSubview(debugAnalyzeButton)
+        NSLayoutConstraint.activate([
+            debugAnalyzeButton.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 16),
+            debugAnalyzeButton.trailingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.trailingAnchor, constant: -16),
+            debugAnalyzeButton.widthAnchor.constraint(equalToConstant: 60),
+            debugAnalyzeButton.heightAnchor.constraint(equalToConstant: 32)
+        ])
+    }
+
+    /// 디버그 분석 버튼 탭 - 현재 이미지 재분석
+    @objc private func debugAnalyzeButtonTapped() {
+        guard let asset = coordinator.asset(at: currentIndex) else {
+            Log.print("[Debug] asset을 찾을 수 없음")
+            return
+        }
+
+        Log.print("[Debug] ========== 재분석 시작 ==========")
+        Log.print("[Debug] assetID: \(asset.localIdentifier)")
+        Log.print("[Debug] mediaType: \(asset.mediaType == .image ? "image" : "video")")
+        Log.print("[Debug] pixelSize: \(asset.pixelWidth) x \(asset.pixelHeight)")
+
+        Task {
+            let analyzer = QualityAnalyzer.shared
+            let result = await analyzer.analyze(asset)
+
+            await MainActor.run {
+                Log.print("[Debug] ========== 분석 결과 ==========")
+                Log.print("[Debug] verdict: \(result.verdict)")
+                Log.print("[Debug] signals: \(result.signals.map { $0.kind.rawValue })")
+                Log.print("[Debug] analysisTime: \(String(format: "%.1f", result.analysisTimeMs))ms")
+                Log.print("[Debug] method: \(result.analysisMethod.rawValue)")
+
+                if result.safeGuardApplied, let reason = result.safeGuardReason {
+                    Log.print("[Debug] safeGuard: \(reason.rawValue)")
+                }
+
+                // 추가 상세 정보 (노출 분석 결과)
+                self.debugPrintExposureMetrics(for: asset)
+
+                Log.print("[Debug] ====================================")
+            }
+        }
+    }
+
+    /// 디버그: 노출 분석 상세 정보 출력
+    private func debugPrintExposureMetrics(for asset: PHAsset) {
+        Task {
+            do {
+                let imageLoader = SimilarityImageLoader.shared
+                let image = try await imageLoader.loadImage(for: asset)
+
+                let exposureAnalyzer = ExposureAnalyzer.shared
+                let metrics = try exposureAnalyzer.analyze(image)
+
+                let hasExtremeExposure = metrics.luminance < CleanupConstants.extremeDarkLuminance ||
+                                          metrics.luminance > CleanupConstants.extremeBrightLuminance
+
+                await MainActor.run {
+                    Log.print("[Debug] -- 노출 분석 상세 --")
+                    Log.print("[Debug] 휘도: \(String(format: "%.3f", metrics.luminance))")
+                    Log.print("[Debug] RGB Std: \(String(format: "%.2f", metrics.rgbStd))")
+                    Log.print("[Debug] hasExtremeExposure: \(hasExtremeExposure)")
+                    Log.print("[Debug] 중앙휘도: \(String(format: "%.3f", metrics.centerLuminance))")
+                    Log.print("[Debug] 모서리휘도: \(String(format: "%.3f", metrics.cornerLuminance))")
+                }
+
+                // 텍스트 감지 테스트 (hasExtremeExposure 여부와 관계없이 실행)
+                await debugPrintTextDetection(image: image)
+
+            } catch {
+                await MainActor.run {
+                    Log.print("[Debug] 노출 분석 실패: \(error.localizedDescription)")
+                }
+            }
+        }
+    }
+
+    /// 디버그: Vision 텍스트 감지 테스트
+    private func debugPrintTextDetection(image: CGImage) async {
+        await withCheckedContinuation { (continuation: CheckedContinuation<Void, Never>) in
+            let request = VNRecognizeTextRequest { request, error in
+                if let error = error {
+                    Log.print("[Debug] -- 텍스트 감지 실패: \(error.localizedDescription)")
+                    continuation.resume()
+                    return
+                }
+
+                guard let observations = request.results as? [VNRecognizedTextObservation] else {
+                    Log.print("[Debug] -- 텍스트 감지: 결과 없음")
+                    continuation.resume()
+                    return
+                }
+
+                let textBlockCount = observations.count
+                let isTextScreenshot = textBlockCount >= CleanupConstants.textBlockCountThreshold
+
+                Log.print("[Debug] -- 텍스트 감지 --")
+                Log.print("[Debug] 텍스트 블록 수: \(textBlockCount)")
+                Log.print("[Debug] 임계값: \(CleanupConstants.textBlockCountThreshold)")
+                Log.print("[Debug] isTextScreenshot: \(isTextScreenshot)")
+
+                // 감지된 텍스트 샘플 출력 (최대 5개)
+                if textBlockCount > 0 {
+                    Log.print("[Debug] 텍스트 샘플:")
+                    for (index, observation) in observations.prefix(5).enumerated() {
+                        if let candidate = observation.topCandidates(1).first {
+                            Log.print("[Debug]   \(index + 1). \"\(candidate.string.prefix(30))...\"")
+                        }
+                    }
+                }
+
+                continuation.resume()
+            }
+
+            request.recognitionLevel = CleanupConstants.textRecognitionUseFastMode ? .fast : .accurate
+            request.recognitionLanguages = ["ko-KR", "en-US"]
+
+            let handler = VNImageRequestHandler(cgImage: image, options: [:])
+            do {
+                try handler.perform([request])
+            } catch {
+                Log.print("[Debug] -- Vision 요청 실패: \(error.localizedDescription)")
+                continuation.resume()
+            }
+        }
+    }
+    #endif
 
     /// iOS 16~25 전용 뒤로가기 버튼 설정
     /// Push 전환 방식이지만 네비바는 숨긴 상태로 유지하고 커스텀 버튼 사용
