@@ -94,8 +94,6 @@ final class VideoPageViewController: UIViewController {
         return label
     }()
 
-    /// 디버그 로그 활성화
-    private let debugVideo = true
 
     /// 비디오 컨트롤 오버레이
     private lazy var controlsOverlay: VideoControlsOverlay = {
@@ -176,9 +174,7 @@ final class VideoPageViewController: UIViewController {
         thumbnailRequestCancellable?.cancel()
         videoRequestCancellable?.cancel()
 
-        if debugVideo {
-            print("[Video] deinit - index: \(index)")
-        }
+        Log.debug("Video", "deinit - index: \(index)")
     }
 
     // MARK: - Audio Session
@@ -190,13 +186,9 @@ final class VideoPageViewController: UIViewController {
             try audioSession.setCategory(.playback, mode: .moviePlayback)
             try audioSession.setActive(true)
 
-            if debugVideo {
-                print("[Video] Audio session configured for playback")
-            }
+            Log.debug("Video", "Audio session configured for playback")
         } catch {
-            if debugVideo {
-                print("[Video] Failed to configure audio session: \(error)")
-            }
+            Log.debug("Video", "Failed to configure audio session: \(error)")
         }
     }
 
@@ -269,9 +261,7 @@ final class VideoPageViewController: UIViewController {
 
     /// 포스터 이미지 로드
     private func loadPoster() {
-        if debugVideo {
-            print("[Video] 🖼️ loadPoster() called - index: \(index)")
-        }
+        Log.debug("Video", "🖼️ loadPoster() called - index: \(index)")
 
         // bounds가 아직 설정되지 않은 경우 기본 크기 사용
         let screenSize = UIScreen.main.bounds.size
@@ -292,9 +282,7 @@ final class VideoPageViewController: UIViewController {
 
             self.playerLayerView.setPoster(image)
 
-            if self.debugVideo {
-                print("[Video] 🖼️ Poster loaded - index: \(self.index), degraded: \(isDegraded), size: \(image.size)")
-            }
+            Log.debug("Video", "🖼️ Poster loaded - index: \(self.index), degraded: \(isDegraded), size: \(image.size)")
         }
     }
 
@@ -305,9 +293,7 @@ final class VideoPageViewController: UIViewController {
     func requestVideoIfNeeded() {
         // 이미 첫 프레임이 표시됐으면 재요청 불필요 (취소 후 재진입 시)
         guard !hasShownFirstFrame else {
-            if debugVideo {
-                print("[Video] ⏭️ Skip request (already shown) - index: \(index)")
-            }
+            Log.debug("Video", "⏭️ Skip request (already shown) - index: \(index)")
             // 플레이어가 있으면 재생 재개
             if player != nil {
                 player?.play()
@@ -321,19 +307,17 @@ final class VideoPageViewController: UIViewController {
         playerLayerView.loadingIndicator.startAnimating()
         errorLabel.isHidden = true
 
-        if debugVideo {
+        if Log.categories["Video"] == true {
             // 호출 스택 추적 (디버그용)
             let callStack = Thread.callStackSymbols.prefix(6).joined(separator: "\n")
-            print("[Video] Requesting video - index: \(index), asset: \(asset.localIdentifier.prefix(8))...")
-            print("[Video] Call stack:\n\(callStack)")
+            Log.debug("Video", "Requesting video - index: \(index), asset: \(asset.localIdentifier.prefix(8))...")
+            Log.debug("Video", "Call stack:\n\(callStack)")
         }
 
         videoRequestCancellable = VideoPipeline.shared.requestPlayerItem(
             for: asset,
-            progressHandler: { [weak self] progress in
-                if self?.debugVideo == true {
-                    print("[Video] Download progress: \(Int(progress * 100))%")
-                }
+            progressHandler: { progress in
+                Log.debug("Video", "Download progress: \(Int(progress * 100))%")
             },
             completion: { [weak self] playerItem, info in
                 guard let self = self else { return }
@@ -341,9 +325,7 @@ final class VideoPageViewController: UIViewController {
                 // 취소된 경우
                 if VideoPipeline.isCancelled(from: info) {
                     self.hasRequestedVideo = false
-                    if self.debugVideo {
-                        print("[Video] Request cancelled - index: \(self.index)")
-                    }
+                    Log.debug("Video", "Request cancelled - index: \(self.index)")
                     return
                 }
 
@@ -375,8 +357,8 @@ final class VideoPageViewController: UIViewController {
         // 로딩 인디케이터 중지 (이전에 누락됨!)
         playerLayerView.loadingIndicator.stopAnimating()
 
-        if debugVideo && hadRequest {
-            print("[Video] ⏹️ Request cancelled & indicator stopped - index: \(index)")
+        if hadRequest {
+            Log.debug("Video", "⏹️ Request cancelled & indicator stopped - index: \(index)")
         }
     }
 
@@ -403,18 +385,14 @@ final class VideoPageViewController: UIViewController {
         controlsOverlay.configure(with: player)
         controlsOverlay.updateMuteState(isMuted: true)
 
-        if debugVideo {
-            print("[Video] Player setup complete - index: \(index)")
-        }
+        Log.debug("Video", "Player setup complete - index: \(index)")
     }
 
     // MARK: - KVO
 
     /// KVO 설정
     private func setupKVO() {
-        if debugVideo {
-            print("[Video] 🔍 KVO setup started - index: \(index)")
-        }
+        Log.debug("Video", "🔍 KVO setup started - index: \(index)")
 
         // AVPlayerLayer.isReadyForDisplay 관찰
         readyForDisplayObserver = playerLayerView.playerLayer.observe(
@@ -423,9 +401,7 @@ final class VideoPageViewController: UIViewController {
         ) { [weak self] layer, _ in
             guard let self = self else { return }
 
-            if self.debugVideo {
-                print("[Video] 🔍 KVO isReadyForDisplay: \(layer.isReadyForDisplay) - index: \(self.index)")
-            }
+            Log.debug("Video", "🔍 KVO isReadyForDisplay: \(layer.isReadyForDisplay) - index: \(self.index)")
 
             guard layer.isReadyForDisplay else { return }
 
@@ -441,9 +417,7 @@ final class VideoPageViewController: UIViewController {
         ) { [weak self] item, _ in
             guard let self = self else { return }
 
-            if self.debugVideo {
-                print("[Video] 🔍 KVO playerItem.status: \(item.status.rawValue) - index: \(self.index)")
-            }
+            Log.debug("Video", "🔍 KVO playerItem.status: \(item.status.rawValue) - index: \(self.index)")
 
             if item.status == .failed {
                 DispatchQueue.main.async {
@@ -457,9 +431,7 @@ final class VideoPageViewController: UIViewController {
     private func onReadyForDisplay() {
         // 중복 호출 방지
         guard !hasShownFirstFrame else {
-            if debugVideo {
-                print("[Video] ⚠️ onReadyForDisplay skipped (already shown) - index: \(index)")
-            }
+            Log.debug("Video", "⚠️ onReadyForDisplay skipped (already shown) - index: \(index)")
             return
         }
         hasShownFirstFrame = true
@@ -474,9 +446,7 @@ final class VideoPageViewController: UIViewController {
             controlsOverlay.updatePlayPauseState(isPlaying: true)
         }
 
-        if debugVideo {
-            print("[Video] ✅ Ready for display, indicator stopped - index: \(index)")
-        }
+        Log.debug("Video", "✅ Ready for display, indicator stopped - index: \(index)")
     }
 
     /// KVO 해제
@@ -515,9 +485,7 @@ final class VideoPageViewController: UIViewController {
                 self.scrollView.maximumZoomScale = self.calculateMaxZoomScale()
                 self.updateVideoLayout()
 
-                if self.debugVideo {
-                    print("[Video] Display size: \(self.videoDisplaySize) - index: \(self.index)")
-                }
+                Log.debug("Video", "Display size: \(self.videoDisplaySize) - index: \(self.index)")
             }
         }
     }
@@ -618,9 +586,7 @@ final class VideoPageViewController: UIViewController {
         // maxZoomScale 재계산
         scrollView.maximumZoomScale = calculateMaxZoomScale()
 
-        if debugVideo {
-            print("[Video] 🔄 recalculateLayoutForRotation - index: \(index), fit=\(fitSize)")
-        }
+        Log.debug("Video", "🔄 recalculateLayoutForRotation - index: \(index), fit=\(fitSize)")
     }
 
     // MARK: - Double Tap Zoom
@@ -649,9 +615,7 @@ final class VideoPageViewController: UIViewController {
         errorLabel.text = message
         errorLabel.isHidden = false
 
-        if debugVideo {
-            print("[Video] Error: \(message) - index: \(index)")
-        }
+        Log.debug("Video", "Error: \(message) - index: \(index)")
     }
 
     // MARK: - Cleanup
@@ -683,9 +647,7 @@ final class VideoPageViewController: UIViewController {
         controlsOverlay.updatePlayPauseState(isPlaying: true)
         controlsOverlay.updateMuteState(isMuted: muted)
 
-        if debugVideo {
-            print("[Video] Play - muted: \(muted), index: \(index)")
-        }
+        Log.debug("Video", "Play - muted: \(muted), index: \(index)")
     }
 
     /// 재생 일시정지
@@ -693,9 +655,7 @@ final class VideoPageViewController: UIViewController {
         player?.pause()
         controlsOverlay.updatePlayPauseState(isPlaying: false)
 
-        if debugVideo {
-            print("[Video] Pause - index: \(index)")
-        }
+        Log.debug("Video", "Pause - index: \(index)")
     }
 
     /// 재생 정지 및 처음으로 이동
@@ -704,9 +664,7 @@ final class VideoPageViewController: UIViewController {
         player?.seek(to: .zero)
         controlsOverlay.updatePlayPauseState(isPlaying: false)
 
-        if debugVideo {
-            print("[Video] Stop - index: \(index)")
-        }
+        Log.debug("Video", "Stop - index: \(index)")
     }
 
     /// 자동 재생 비활성화
@@ -758,9 +716,7 @@ extension VideoPageViewController: VideoControlsOverlayDelegate {
         player.play()
         controlsOverlay.updatePlayPauseState(isPlaying: true)
 
-        if debugVideo {
-            print("[Video] Controls requested play - index: \(index)")
-        }
+        Log.debug("Video", "Controls requested play - index: \(index)")
     }
 
     /// 일시정지 요청
@@ -770,9 +726,7 @@ extension VideoPageViewController: VideoControlsOverlayDelegate {
         player.pause()
         controlsOverlay.updatePlayPauseState(isPlaying: false)
 
-        if debugVideo {
-            print("[Video] Controls requested pause - index: \(index)")
-        }
+        Log.debug("Video", "Controls requested pause - index: \(index)")
     }
 
     /// 시킹 요청
@@ -781,10 +735,8 @@ extension VideoPageViewController: VideoControlsOverlayDelegate {
 
         player.seek(to: time, toleranceBefore: .zero, toleranceAfter: .zero)
 
-        if debugVideo {
-            let seconds = CMTimeGetSeconds(time)
-            print("[Video] Controls requested seek to \(String(format: "%.1f", seconds))s - index: \(index)")
-        }
+        let seconds = CMTimeGetSeconds(time)
+        Log.debug("Video", "Controls requested seek to \(String(format: "%.1f", seconds))s - index: \(index)")
     }
 
     /// 음소거 토글 요청
@@ -794,8 +746,6 @@ extension VideoPageViewController: VideoControlsOverlayDelegate {
         player.isMuted = muted
         controlsOverlay.updateMuteState(isMuted: muted)
 
-        if debugVideo {
-            print("[Video] Controls requested mute: \(muted) - index: \(index)")
-        }
+        Log.debug("Video", "Controls requested mute: \(muted) - index: \(index)")
     }
 }

@@ -203,8 +203,6 @@ final class ViewerViewController: UIViewController {
     /// 최초 표시 페이드 인 적용 여부 (시스템 전환 대신 사용)
     private var didPerformInitialFadeIn: Bool = false
 
-    /// 디버그 로그 활성화
-    private let debugViewer = true
 
     /// iOS 18+ zoom transition 사용 시 커스텀 페이드 애니메이션 비활성화 플래그
     /// preferredTransition = .zoom 설정 시 true로 설정해야 이중 애니메이션 방지
@@ -978,15 +976,13 @@ extension ViewerViewController {
         if let sv = pageViewController.view.subviews.first(where: { $0 is UIScrollView }) as? UIScrollView {
             pageScrollView = sv
             sv.panGestureRecognizer.addTarget(self, action: #selector(handlePageScrollPan(_:)))
-            if debugViewer {
-                print("[PageScroll] attach - frame=\(sv.frame), contentSize=\(sv.contentSize)")
-            }
+            Log.debug("Viewer", "[PageScroll] attach - frame=\(sv.frame), contentSize=\(sv.contentSize)")
         }
     }
 
     /// 페이지 스크롤 진행률 로깅
     @objc private func handlePageScrollPan(_ gesture: UIPanGestureRecognizer) {
-        guard debugViewer, let sv = pageScrollView else { return }
+        guard Log.categories["Viewer"] == true, let sv = pageScrollView else { return }
         guard isTransitioning else { return }
 
         let now = CACurrentMediaTime()
@@ -996,7 +992,7 @@ extension ViewerViewController {
         let w = sv.bounds.width
         let offsetX = sv.contentOffset.x
         let progress = w > 0 ? (offsetX - w) / w : 0
-        print("[PageScroll] tid=\(transitionId) state=\(gesture.state.rawValue) offsetX=\(String(format: "%.1f", offsetX)) progress=\(String(format: "%.2f", progress))")
+        Log.debug("Viewer", "[PageScroll] tid=\(transitionId) state=\(gesture.state.rawValue) offsetX=\(String(format: "%.1f", offsetX)) progress=\(String(format: "%.2f", progress))")
     }
 }
 
@@ -1014,10 +1010,10 @@ extension ViewerViewController: UIPageViewControllerDelegate {
         lod1DebounceTimer?.invalidate()
         lod1DebounceTimer = nil
 
-        guard debugViewer else { return }
+        guard Log.categories["Viewer"] == true else { return }
         let now = CACurrentMediaTime()
         let pendingIndex = pendingViewControllers.first.flatMap { index(from: $0) }
-        print("[Viewer] ➡️ willTransition - tid=\(transitionId), from: \(currentIndex), to: \(pendingIndex.map(String.init) ?? "nil"), t=\(String(format: "%.3f", now))")
+        Log.debug("Viewer", "➡️ willTransition - tid=\(transitionId), from: \(currentIndex), to: \(pendingIndex.map(String.init) ?? "nil"), t=\(String(format: "%.3f", now))")
 
         // 현재/다음 페이지 스냅샷
         if let current = pageViewController.viewControllers?.first as? PhotoPageViewController {
@@ -1036,11 +1032,11 @@ extension ViewerViewController: UIPageViewControllerDelegate {
         isTransitioning = false
 
         // 전환 완료 시에만 처리
-        if debugViewer {
+        if Log.categories["Viewer"] == true {
             let now = CACurrentMediaTime()
             let prevIndex = previousViewControllers.first.flatMap { index(from: $0) }
             let nextIndex = pageViewController.viewControllers?.first.flatMap { index(from: $0) }
-            print("[Viewer] ✅ didFinishAnimating - tid=\(transitionId), completed=\(completed), prev=\(prevIndex.map(String.init) ?? "nil"), next=\(nextIndex.map(String.init) ?? "nil"), t=\(String(format: "%.3f", now))")
+            Log.debug("Viewer", "✅ didFinishAnimating - tid=\(transitionId), completed=\(completed), prev=\(prevIndex.map(String.init) ?? "nil"), next=\(nextIndex.map(String.init) ?? "nil"), t=\(String(format: "%.3f", now))")
 
             // 현재 페이지 스냅샷
             if let current = pageViewController.viewControllers?.first as? PhotoPageViewController {
@@ -1093,9 +1089,7 @@ extension ViewerViewController: UIPageViewControllerDelegate {
 
             // 현재 페이지가 PhotoPageViewController면 LOD1 요청
             if let photoVC = self.pageViewController.viewControllers?.first as? PhotoPageViewController {
-                if self.debugViewer {
-                    print("[Viewer] 🔍 LOD1 디바운스 완료 - index: \(photoVC.index)")
-                }
+                Log.debug("Viewer", "🔍 LOD1 디바운스 완료 - index: \(photoVC.index)")
                 photoVC.requestHighQualityImage()
             }
         }

@@ -91,8 +91,6 @@ final class VideoControlsOverlay: UIView {
     /// 음소거 여부 (UI 업데이트용)
     private var isMuted: Bool = true
 
-    /// 디버그 로그 활성화
-    private let debugControls = false
 
     // MARK: - UI Components
 
@@ -257,9 +255,7 @@ final class VideoControlsOverlay: UIView {
         // 총 시간 설정
         updateDuration()
 
-        if debugControls {
-            print("[Controls] configured with player")
-        }
+        Log.debug("VideoControls", "configured with player")
     }
 
     /// 재생 상태 업데이트
@@ -289,9 +285,7 @@ final class VideoControlsOverlay: UIView {
         guard !isVisible else { return }
         isVisible = true
 
-        if debugControls {
-            print("[Controls] show")
-        }
+        Log.debug("VideoControls", "show")
 
         let duration = animated ? Self.fadeAnimationDuration : 0
         UIView.animate(withDuration: duration) {
@@ -310,9 +304,7 @@ final class VideoControlsOverlay: UIView {
         guard isVisible else { return }
         isVisible = false
 
-        if debugControls {
-            print("[Controls] hide")
-        }
+        Log.debug("VideoControls", "hide")
 
         cancelAutoHideTimer()
 
@@ -337,9 +329,7 @@ final class VideoControlsOverlay: UIView {
         removeTimeObserver()
         player = nil
 
-        if debugControls {
-            print("[Controls] cleanup")
-        }
+        Log.debug("VideoControls", "cleanup")
     }
 
     // MARK: - Time Observer
@@ -364,9 +354,7 @@ final class VideoControlsOverlay: UIView {
             self.timelineSlider.value = Float(seconds)
         }
 
-        if debugControls {
-            print("[Controls] timeObserver setup")
-        }
+        Log.debug("VideoControls", "timeObserver setup")
     }
 
     /// 타임 옵저버 제거
@@ -375,9 +363,7 @@ final class VideoControlsOverlay: UIView {
             player.removeTimeObserver(observer)
             timeObserver = nil
 
-            if debugControls {
-                print("[Controls] timeObserver removed")
-            }
+            Log.debug("VideoControls", "timeObserver removed")
         }
     }
 
@@ -395,9 +381,7 @@ final class VideoControlsOverlay: UIView {
         timelineSlider.minimumValue = 0
         timelineSlider.maximumValue = Float(durationSeconds)
 
-        if debugControls {
-            print("[Controls] duration set: \(durationSeconds)s")
-        }
+        Log.debug("VideoControls", "duration set: \(durationSeconds)s")
     }
 
     /// Duration 로드 완료 옵저버 설정
@@ -431,9 +415,7 @@ final class VideoControlsOverlay: UIView {
             self.hide(animated: true)
         }
 
-        if debugControls {
-            print("[Controls] autoHideTimer started")
-        }
+        Log.debug("VideoControls", "autoHideTimer started")
     }
 
     /// 자동 숨김 타이머 취소
@@ -503,9 +485,7 @@ final class VideoControlsOverlay: UIView {
             delegate?.controlsDidRequestPause()
         }
 
-        if debugControls {
-            print("[Controls] slider drag started, wasPlaying: \(wasPlayingBeforeScrubbing)")
-        }
+        Log.debug("VideoControls", "slider drag started, wasPlaying: \(wasPlayingBeforeScrubbing)")
     }
 
     /// 슬라이더 터치 종료
@@ -523,9 +503,7 @@ final class VideoControlsOverlay: UIView {
             startAutoHideTimer()
         }
 
-        if debugControls {
-            print("[Controls] slider drag ended, seek to: \(seconds)s, resumePlay: \(wasPlayingBeforeScrubbing)")
-        }
+        Log.debug("VideoControls", "slider drag ended, seek to: \(seconds)s, resumePlay: \(wasPlayingBeforeScrubbing)")
     }
 
     // MARK: - Hit Test

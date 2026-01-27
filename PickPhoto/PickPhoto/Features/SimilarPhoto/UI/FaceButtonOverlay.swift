@@ -69,8 +69,6 @@ final class FaceButtonOverlay: UIView {
     /// 델리게이트
     weak var delegate: FaceButtonOverlayDelegate?
 
-    /// 디버그 로그 활성화 (+버튼 좌표 계산 정보)
-    private let debugButtonPosition = true
 
     /// 현재 표시 중인 +버튼들
     private var faceButtons: [FaceButton] = []
@@ -200,10 +198,8 @@ final class FaceButtonOverlay: UIView {
         // 버튼 위치 계산 및 생성
         var placedPositions: [CGPoint] = []
 
-        if debugButtonPosition {
-            let assetPrefix = String(assetID.prefix(8))
-            print("[FaceButton] showButtons - assetID=\(assetPrefix), imageSize=\(imageSize), viewerFrame=\(viewerFrame)")
-        }
+        let assetPrefix = String(assetID.prefix(8))
+        Log.debug("FaceButton", "showButtons - assetID=\(assetPrefix), imageSize=\(imageSize), viewerFrame=\(viewerFrame)")
 
         for face in validFaces {
             // 기본 위치 계산 (얼굴 위 중앙)
@@ -216,10 +212,8 @@ final class FaceButtonOverlay: UIView {
             // 겹침 방지 로직 임시 비활성화 (버튼이 얼굴에서 너무 멀리 이동하는 문제)
             // TODO: 추후 이동 거리를 줄이거나 다른 방식으로 개선 필요
 
-            if debugButtonPosition {
-                let bb = face.boundingBox
-                print("[FaceButton] Person(\(face.personIndex)): boundingBox=(x:\(String(format: "%.3f", bb.origin.x)), y:\(String(format: "%.3f", bb.origin.y)), w:\(String(format: "%.3f", bb.width)), h:\(String(format: "%.3f", bb.height))) -> pos=(\(String(format: "%.1f", position.x)), \(String(format: "%.1f", position.y)))")
-            }
+            let bb = face.boundingBox
+            Log.debug("FaceButton", "Person(\(face.personIndex)): boundingBox=(x:\(String(format: "%.3f", bb.origin.x)), y:\(String(format: "%.3f", bb.origin.y)), w:\(String(format: "%.3f", bb.width)), h:\(String(format: "%.3f", bb.height))) -> pos=(\(String(format: "%.1f", position.x)), \(String(format: "%.1f", position.y)))")
 
             placedPositions.append(position)
 
