@@ -9,6 +9,7 @@
 /* Begin PBXBuildFile section */
 		CB97217B2EF2D37900F85BF4 /* AppCore in Frameworks */ = {isa = PBXBuildFile; productRef = CB97217A2EF2D37900F85BF4 /* AppCore */; };
 		CB9721BB2EF3D12300F85BF4 /* BlurUIKit in Frameworks */ = {isa = PBXBuildFile; productRef = CB9721BA2EF3D12300F85BF4 /* BlurUIKit */; };
+		CB9721C22EF4000000F85BF4 /* LiquidGlassKit in Frameworks */ = {isa = PBXBuildFile; productRef = CB9721C12EF4000000F85BF4 /* LiquidGlassKit */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -72,6 +73,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				CB9721BB2EF3D12300F85BF4 /* BlurUIKit in Frameworks */,
+				CB9721C22EF4000000F85BF4 /* LiquidGlassKit in Frameworks */,
 				CB97217B2EF2D37900F85BF4 /* AppCore in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -136,6 +138,7 @@
 			packageProductDependencies = (
 				CB97217A2EF2D37900F85BF4 /* AppCore */,
 				CB9721BA2EF3D12300F85BF4 /* BlurUIKit */,
+				CB9721C12EF4000000F85BF4 /* LiquidGlassKit */,
 			);
 			productName = PickPhoto;
 			productReference = CB9721512EF2D2AB00F85BF4 /* PickPhoto.app */;
@@ -222,6 +225,7 @@
 			packageReferences = (
 				CB9721792EF2D37900F85BF4 /* XCLocalSwiftPackageReference "../../iOS" */,
 				CB9721B92EF3D12300F85BF4 /* XCRemoteSwiftPackageReference "BlurUIKit" */,
+				CB9721C02EF4000000F85BF4 /* XCRemoteSwiftPackageReference "LiquidGlassKit" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = CB9721522EF2D2AB00F85BF4 /* Products */;
@@ -629,6 +633,14 @@
 				minimumVersion = 1.2.2;
 			};
 		};
+		CB9721C02EF4000000F85BF4 /* XCRemoteSwiftPackageReference "LiquidGlassKit" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/DnV1eX/LiquidGlassKit.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 1.0.0;
+			};
+		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
@@ -640,6 +652,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = CB9721B92EF3D12300F85BF4 /* XCRemoteSwiftPackageReference "BlurUIKit" */;
 			productName = BlurUIKit;
+		};
+		CB9721C12EF4000000F85BF4 /* LiquidGlassKit */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = CB9721C02EF4000000F85BF4 /* XCRemoteSwiftPackageReference "LiquidGlassKit" */;
+			productName = LiquidGlassKit;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};
