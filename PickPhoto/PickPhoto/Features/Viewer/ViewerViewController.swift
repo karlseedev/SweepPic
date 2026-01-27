@@ -455,7 +455,7 @@ final class ViewerViewController: UIViewController {
     private func debugPrintExposureMetrics(for asset: PHAsset) {
         Task {
             do {
-                let imageLoader = SimilarityImageLoader.shared
+                let imageLoader = CleanupImageLoader.shared
                 let image = try await imageLoader.loadImage(for: asset)
 
                 let exposureAnalyzer = ExposureAnalyzer.shared
