@@ -513,9 +513,9 @@ extension BaseGridViewController {
             var newOffset = self.collectionView.contentOffset
             newOffset.y += scrollAmount
 
-            // 스크롤 범위 제한
-            let minY = -self.collectionView.contentInset.top
-            let maxY = self.collectionView.contentSize.height - self.collectionView.bounds.height + self.collectionView.contentInset.bottom
+            // 스크롤 범위 제한 (adjustedContentInset 사용하여 safe area 포함)
+            let minY = -self.collectionView.adjustedContentInset.top
+            let maxY = self.collectionView.contentSize.height - self.collectionView.bounds.height + self.collectionView.adjustedContentInset.bottom
             newOffset.y = max(minY, min(maxY, newOffset.y))
 
             self.collectionView.setContentOffset(newOffset, animated: false)
