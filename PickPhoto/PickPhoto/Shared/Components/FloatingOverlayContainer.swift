@@ -27,6 +27,19 @@ protocol FloatingOverlayContainerDelegate: AnyObject {
 
     /// 휴지통 비우기(삭제하기) 버튼 탭
     func floatingOverlayDidTapEmptyTrash(_ container: FloatingOverlayContainer)
+
+    /// 휴지통 Select 모드에서 Restore 버튼 탭
+    func floatingOverlayDidTapRestore(_ container: FloatingOverlayContainer)
+
+    /// 휴지통 Select 모드에서 Delete 버튼 탭 (영구 삭제)
+    func floatingOverlayDidTapTrashDelete(_ container: FloatingOverlayContainer)
+}
+
+// MARK: - Default Implementation
+
+extension FloatingOverlayContainerDelegate {
+    func floatingOverlayDidTapRestore(_ container: FloatingOverlayContainer) {}
+    func floatingOverlayDidTapTrashDelete(_ container: FloatingOverlayContainer) {}
 }
 
 /// 플로팅 오버레이 컨테이너
@@ -66,9 +79,9 @@ final class FloatingOverlayContainer: UIView {
         return bar
     }()
 
-    /// 하단 플로팅 탭바
-    private(set) lazy var tabBar: FloatingTabBar = {
-        let bar = FloatingTabBar()
+    /// 하단 플로팅 탭바 (Liquid Glass 스타일)
+    private(set) lazy var tabBar: LiquidGlassTabBar = {
+        let bar = LiquidGlassTabBar()
         bar.delegate = self
         bar.translatesAutoresizingMaskIntoConstraints = false
         return bar
@@ -114,7 +127,7 @@ final class FloatingOverlayContainer: UIView {
     private func setupConstraints() {
         // 초기 높이 (safe area 적용 전)
         let initialTitleBarHeight = FloatingTitleBar.totalHeight(safeAreaTop: 47) // 대략적인 노치 높이
-        let initialTabBarHeight = FloatingTabBar.totalHeight(safeAreaBottom: 34) // 대략적인 홈 인디케이터 높이
+        let initialTabBarHeight = LiquidGlassTabBar.totalHeight(safeAreaBottom: 34) // 대략적인 홈 인디케이터 높이
 
         titleBarHeightConstraint = titleBar.heightAnchor.constraint(equalToConstant: initialTitleBarHeight)
         tabBarHeightConstraint = tabBar.heightAnchor.constraint(equalToConstant: initialTabBarHeight)
@@ -144,7 +157,7 @@ final class FloatingOverlayContainer: UIView {
 
         // 높이 제약조건 업데이트
         let newTitleBarHeight = FloatingTitleBar.totalHeight(safeAreaTop: safeAreaTop)
-        let newTabBarHeight = FloatingTabBar.totalHeight(safeAreaBottom: safeAreaBottom)
+        let newTabBarHeight = LiquidGlassTabBar.totalHeight(safeAreaBottom: safeAreaBottom)
 
         titleBarHeightConstraint?.constant = newTitleBarHeight
         tabBarHeightConstraint?.constant = newTabBarHeight
@@ -247,7 +260,7 @@ final class FloatingOverlayContainer: UIView {
     func getOverlayHeights() -> (top: CGFloat, bottom: CGFloat) {
         return (
             top: FloatingTitleBar.totalHeight(safeAreaTop: safeAreaTop),
-            bottom: FloatingTabBar.totalHeight(safeAreaBottom: safeAreaBottom)
+            bottom: LiquidGlassTabBar.totalHeight(safeAreaBottom: safeAreaBottom)
         )
     }
 
@@ -260,7 +273,7 @@ final class FloatingOverlayContainer: UIView {
         self.safeAreaBottom = bottom
 
         let newTitleBarHeight = FloatingTitleBar.totalHeight(safeAreaTop: top)
-        let newTabBarHeight = FloatingTabBar.totalHeight(safeAreaBottom: bottom)
+        let newTabBarHeight = LiquidGlassTabBar.totalHeight(safeAreaBottom: bottom)
 
         titleBarHeightConstraint?.constant = newTitleBarHeight
         tabBarHeightConstraint?.constant = newTabBarHeight
@@ -308,20 +321,28 @@ extension FloatingOverlayContainer: FloatingTitleBarDelegate {
     }
 }
 
-// MARK: - FloatingTabBarDelegate
+// MARK: - LiquidGlassTabBarDelegate
 
-extension FloatingOverlayContainer: FloatingTabBarDelegate {
-    func floatingTabBar(_ tabBar: FloatingTabBar, didSelectTabAt index: Int) {
+extension FloatingOverlayContainer: LiquidGlassTabBarDelegate {
+    func liquidGlassTabBar(_ tabBar: LiquidGlassTabBar, didSelectTabAt index: Int) {
         // 타이틀 갱신은 탭 전환 완료 후 TabBarController가 처리
         // (selectedTabIndex를 여기서 바꾸면 타이틀이 먼저 바뀌고 화면이 나중에 바뀌는 문제 발생)
         delegate?.floatingOverlay(self, didSelectTabAt: index)
     }
 
-    func floatingTabBarDidTapDelete(_ tabBar: FloatingTabBar) {
+    func liquidGlassTabBarDidTapDelete(_ tabBar: LiquidGlassTabBar) {
         delegate?.floatingOverlayDidTapDelete(self)
     }
 
-    func floatingTabBarDidTapEmptyTrash(_ tabBar: FloatingTabBar) {
+    func liquidGlassTabBarDidTapEmptyTrash(_ tabBar: LiquidGlassTabBar) {
         delegate?.floatingOverlayDidTapEmptyTrash(self)
+    }
+
+    func liquidGlassTabBarDidTapRestore(_ tabBar: LiquidGlassTabBar) {
+        delegate?.floatingOverlayDidTapRestore(self)
+    }
+
+    func liquidGlassTabBarDidTapTrashDelete(_ tabBar: LiquidGlassTabBar) {
+        delegate?.floatingOverlayDidTapTrashDelete(self)
     }
 }

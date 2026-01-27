@@ -196,32 +196,32 @@ extension TrashAlbumViewController {
     }
 }
 
-// MARK: - FloatingTabBarDelegate (Trash Select Mode)
+// MARK: - LiquidGlassTabBarDelegate (Trash Select Mode)
 
-extension TrashAlbumViewController: FloatingTabBarDelegate {
+extension TrashAlbumViewController: LiquidGlassTabBarDelegate {
 
     /// 탭 선택 (Trash Select 모드에서는 무시)
-    func floatingTabBar(_ tabBar: FloatingTabBar, didSelectTabAt index: Int) {
+    func liquidGlassTabBar(_ tabBar: LiquidGlassTabBar, didSelectTabAt index: Int) {
         // Select 모드에서는 탭 전환 무시
     }
 
     /// Grid/Album Delete 버튼 (Trash에서는 사용 안 함)
-    func floatingTabBarDidTapDelete(_ tabBar: FloatingTabBar) {
+    func liquidGlassTabBarDidTapDelete(_ tabBar: LiquidGlassTabBar) {
         // Trash에서는 trashDeleteSelectedTapped 사용
     }
 
     /// 휴지통 비우기 버튼 (Select 모드 아닐 때)
-    func floatingTabBarDidTapEmptyTrash(_ tabBar: FloatingTabBar) {
+    func liquidGlassTabBarDidTapEmptyTrash(_ tabBar: LiquidGlassTabBar) {
         emptyTrashButtonTapped()
     }
 
     /// Trash Select 모드: Restore 버튼
-    func floatingTabBarDidTapRestore(_ tabBar: FloatingTabBar) {
+    func liquidGlassTabBarDidTapRestore(_ tabBar: LiquidGlassTabBar) {
         trashRestoreSelectedTapped()
     }
 
     /// Trash Select 모드: Delete 버튼 (영구 삭제)
-    func floatingTabBarDidTapTrashDelete(_ tabBar: FloatingTabBar) {
+    func liquidGlassTabBarDidTapTrashDelete(_ tabBar: LiquidGlassTabBar) {
         trashDeleteSelectedTapped()
     }
 }
