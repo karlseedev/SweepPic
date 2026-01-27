@@ -47,6 +47,12 @@ enum CleanupConstants {
     /// - 256×256 픽셀로 다운샘플하여 Laplacian Variance 분석
     static let blurAnalysisSize = CGSize(width: 256, height: 256)
 
+    /// 분석용 이미지 최소 크기 (짧은 변 기준, 픽셀)
+    /// - 짧은 변 360px로 다운샘플
+    /// - 세로로 긴 이미지(블로그 캡쳐 등)에서도 텍스트 감지 가능하도록 설계
+    /// - 일반 사진은 기존과 유사한 크기 유지
+    static let analysisImageMinSize: CGFloat = 360
+
     /// 분석 타임아웃 (초)
     /// - 개별 사진 분석이 이 시간을 초과하면 SKIP 처리
     static let analysisTimeout: TimeInterval = 5.0
@@ -141,6 +147,13 @@ enum CleanupConstants {
     /// - .accurate: 느리지만 정확도 높음 (200~500ms)
     /// - 스크린샷 여부만 판단하므로 fast로 충분
     static let textRecognitionUseFastMode = true
+
+    // MARK: - 흰 배경 이미지 감지
+
+    /// 흰 배경 모서리 휘도 임계값
+    /// - 모서리휘도 > 0.99 → 거의 순백색
+    /// - 조건: 극단 밝음 + 모서리 > 중앙일 때 흰 배경 이미지로 판정
+    static let whiteBackgroundCornerLuminance: Double = 0.99
 
     // MARK: - Weak 가중치 (Recall 모드)
 

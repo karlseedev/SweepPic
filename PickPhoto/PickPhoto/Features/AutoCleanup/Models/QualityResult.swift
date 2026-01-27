@@ -104,6 +104,11 @@ enum SkipReason: String, Codable, CaseIterable {
     /// - Vision 텍스트 감지로 텍스트가 많이 검출된 이미지
     /// - 블로그 캡쳐, 문서 스크린샷 등
     case textScreenshot
+
+    /// 흰 배경 이미지
+    /// - 모서리가 순백색(>0.99)이고 중앙보다 밝은 패턴
+    /// - 일러스트, 문서, 상품 사진 등
+    case whiteBackground
 }
 
 // MARK: - SafeGuardReason

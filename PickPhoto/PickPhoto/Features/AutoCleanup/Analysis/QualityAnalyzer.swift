@@ -47,8 +47,8 @@ final class QualityAnalyzer {
     /// Safe Guard 체커
     private let safeGuardChecker: SafeGuardChecker
 
-    /// 이미지 로더 (기존 SimilarityImageLoader 재사용)
-    private let imageLoader: SimilarityImageLoader
+    /// 이미지 로더 (AutoCleanup 전용)
+    private let imageLoader: CleanupImageLoader
 
     /// 동영상 프레임 추출기
     private let videoFrameExtractor: VideoFrameExtractor
@@ -71,7 +71,7 @@ final class QualityAnalyzer {
         exposureAnalyzer: ExposureAnalyzer = .shared,
         blurAnalyzer: BlurAnalyzer = .shared,
         safeGuardChecker: SafeGuardChecker = .shared,
-        imageLoader: SimilarityImageLoader = .shared,
+        imageLoader: CleanupImageLoader = .shared,
         videoFrameExtractor: VideoFrameExtractor = .shared
     ) {
         self.metadataFilter = metadataFilter
@@ -131,7 +131,7 @@ final class QualityAnalyzer {
             image = try await imageLoader.loadImage(for: asset)
         } catch {
             // 이미지 로딩 실패 → SKIP
-            if let loadError = error as? SimilarityImageLoadError {
+            if let loadError = error as? CleanupImageLoadError {
                 switch loadError {
                 case .timeout:
                     return QualityResult.skipped(assetID: assetID, creationDate: creationDate, reason: .analysisError)
@@ -163,6 +163,12 @@ final class QualityAnalyzer {
             if isTextScreenshot {
                 return QualityResult.skipped(assetID: assetID, creationDate: creationDate, reason: .textScreenshot)
             }
+        }
+
+        // 흰 배경 이미지 체크 (일러스트, 문서, 상품 사진 등)
+        // 극단 밝음 + 모서리가 순백색 + 모서리 > 중앙 → 흰 배경 이미지 → SKIP
+        if isWhiteBackgroundImage(exposureMetrics) {
+            return QualityResult.skipped(assetID: assetID, creationDate: creationDate, reason: .whiteBackground)
         }
 
         var signals = exposureAnalyzer.detectSignals(from: exposureMetrics, mode: mode)
@@ -314,6 +320,23 @@ final class QualityAnalyzer {
     private func hasExtremeExposure(_ metrics: ExposureMetrics) -> Bool {
         return metrics.luminance < CleanupConstants.extremeDarkLuminance ||
                metrics.luminance > CleanupConstants.extremeBrightLuminance
+    }
+
+    /// 흰 배경 이미지 여부 판정
+    ///
+    /// 일러스트, 문서, 상품 사진 등 흰 배경 이미지를 감지합니다.
+    /// - 휘도가 극단적으로 밝음 (> 0.90)
+    /// - 모서리가 거의 순백색 (> 0.99)
+    /// - 모서리가 중앙보다 밝음 (흰 테두리/배경 패턴)
+    ///
+    /// - Parameter metrics: 노출 분석 결과
+    /// - Returns: 흰 배경 이미지이면 true
+    private func isWhiteBackgroundImage(_ metrics: ExposureMetrics) -> Bool {
+        let isExtremeBright = metrics.luminance > CleanupConstants.extremeBrightLuminance
+        let isCornerNearWhite = metrics.cornerLuminance > CleanupConstants.whiteBackgroundCornerLuminance
+        let isCornerBrighterThanCenter = metrics.cornerLuminance > metrics.centerLuminance
+
+        return isExtremeBright && isCornerNearWhite && isCornerBrighterThanCenter
     }
 
     /// 텍스트 스크린샷 감지 (Vision 프레임워크)
