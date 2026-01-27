@@ -67,11 +67,11 @@ enum LiquidGlassConstants {
         /// 버튼 간 겹침 (음수 = 겹침)
         static let spacing: CGFloat = -8
 
-        /// 아이콘 SF Symbol point size
-        static let iconPointSize: CGFloat = 28
+        /// 아이콘 SF Symbol point size (28 → 22로 축소)
+        static let iconPointSize: CGFloat = 22
 
         /// 아이콘 상단 오프셋 (버튼 상단 기준)
-        static let iconTopOffset: CGFloat = 9
+        static let iconTopOffset: CGFloat = 8
 
         /// 레이블 상단 오프셋 (버튼 상단 기준)
         static let labelTopOffset: CGFloat = 35
@@ -83,28 +83,18 @@ enum LiquidGlassConstants {
         static let labelFontSize: CGFloat = 10
     }
 
-    // MARK: - Background (배경 색상)
-
-    enum Background {
-        /// Platter 배경 gray 값 (iOS 26 실측)
-        static let gray: CGFloat = 0.11
-
-        /// Platter 배경 alpha 값 (iOS 26 실측: 0.73)
-        /// LiquidGlassStyle.backgroundAlpha(0.12)와 별도 관리
-        static let alpha: CGFloat = 0.73
-    }
-
     // MARK: - Blur (블러 설정)
+    // iOS 26 실측: gaussianBlur radius=2 (매우 약한 블러) + colorMatrix (약간 밝게)
+    // Public API로는 UIVisualEffectView 기본 블러 사용 (Material 계열은 너무 불투명)
 
     enum Blur {
-        /// Platter 블러 스타일 (투명한 블러 + overlay 조합)
-        static let platterStyle: UIBlurEffect.Style = .systemUltraThinMaterialDark
+        /// Platter 블러 스타일 (약한 투명 블러)
+        /// 실측: gaussianBlur radius=2 (매우 약함)
+        static let platterStyle: UIBlurEffect.Style = .systemUltraThinMaterial
 
-        /// Platter overlay alpha (iOS 26 실측: gray 0.11 위에 0.73)
-        static let platterOverlayAlpha: CGFloat = 0.73
-
-        /// Selection Pill 블러 스타일 (더 선명한 블러)
-        static let pillStyle: UIBlurEffect.Style = .systemThinMaterialDark
+        /// Selection Pill 블러 스타일 (배경을 밝게 만드는 블러)
+        /// 실측: gaussianBlur radius=2 + colorMatrix bias=0.135 (밝게 보정)
+        static let pillStyle: UIBlurEffect.Style = .light
     }
 
     // MARK: - Animation (애니메이션)
@@ -126,13 +116,14 @@ enum LiquidGlassConstants {
         /// Platter 배경 (최하단)
         static let platterBackground: CGFloat = -2
 
-        /// 일반 컨텐츠
-        static let content: CGFloat = 0
+        /// Selection Pill (버튼 뒤, 배경 역할)
+        /// 참고: iOS 26 실측값은 zPos=10이나, 뷰 계층 구조가 다르므로 버튼(1)보다 낮게 설정
+        static let selectionPill: CGFloat = 0
 
-        /// 탭 버튼
+        /// 탭 버튼 (Selection Pill 위)
         static let tabButton: CGFloat = 1
 
-        /// Selection Pill (최상단)
-        static let selectionPill: CGFloat = 10
+        /// 일반 컨텐츠
+        static let content: CGFloat = 2
     }
 }

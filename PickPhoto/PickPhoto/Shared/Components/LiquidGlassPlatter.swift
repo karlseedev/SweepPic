@@ -2,11 +2,11 @@
 // Liquid Glass 스타일 배경 Platter 컴포넌트
 //
 // iOS 26 TabBar 배경과 동일한 시각 효과 구현
-// - 블러 배경 (systemUltraThinMaterialDark)
-// - 오버레이 (gray 0.11, alpha 0.73)
+// - 블러 배경 (실측: gaussianBlur radius=2, 매우 약한 블러)
 // - 테두리 (0.5pt, white 30%)
 // - 그림자 (ambient shadow)
 // - 스펙큘러 하이라이트
+// - 오버레이 없음 (실측 데이터에 없음)
 
 import UIKit
 import AppCore
@@ -21,18 +21,6 @@ final class LiquidGlassPlatter: UIView {
     private lazy var backgroundBlur: UIVisualEffectView = {
         let effect = UIBlurEffect(style: LiquidGlassConstants.Blur.platterStyle)
         let view = UIVisualEffectView(effect: effect)
-        view.translatesAutoresizingMaskIntoConstraints = false
-        return view
-    }()
-
-    /// 배경 오버레이 (색상 보정)
-    private lazy var backgroundOverlay: UIView = {
-        let view = UIView()
-        view.backgroundColor = UIColor(
-            white: LiquidGlassConstants.Background.gray,
-            alpha: LiquidGlassConstants.Background.alpha
-        )
-        view.isUserInteractionEnabled = false
         view.translatesAutoresizingMaskIntoConstraints = false
         return view
     }()
@@ -66,12 +54,9 @@ final class LiquidGlassPlatter: UIView {
         layer.cornerCurve = .continuous
         clipsToBounds = true
 
-        // 블러 배경 추가
+        // 블러 배경 추가 (오버레이 없음 - 실측 데이터 기반)
         addSubview(backgroundBlur)
         backgroundBlur.layer.zPosition = LiquidGlassConstants.ZPosition.platterBackground
-
-        // 오버레이 추가
-        addSubview(backgroundOverlay)
 
         // 하이라이트 레이어 추가
         layer.addSublayer(highlightLayer)
@@ -89,12 +74,6 @@ final class LiquidGlassPlatter: UIView {
             backgroundBlur.leadingAnchor.constraint(equalTo: leadingAnchor),
             backgroundBlur.trailingAnchor.constraint(equalTo: trailingAnchor),
             backgroundBlur.bottomAnchor.constraint(equalTo: bottomAnchor),
-
-            // backgroundOverlay: 전체 영역
-            backgroundOverlay.topAnchor.constraint(equalTo: topAnchor),
-            backgroundOverlay.leadingAnchor.constraint(equalTo: leadingAnchor),
-            backgroundOverlay.trailingAnchor.constraint(equalTo: trailingAnchor),
-            backgroundOverlay.bottomAnchor.constraint(equalTo: bottomAnchor),
         ])
     }
 
