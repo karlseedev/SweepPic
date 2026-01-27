@@ -257,9 +257,9 @@ public final class ImagePipeline: ImagePipelineProtocol {
         let cancelPolicy = "prepareForReuse"  // TODO: Gate2 적용 시 didEndDisplaying 추가
         let r2Recovery = "disabled"           // TODO: Gate2 적용 시 enabled로 변경
 
-        FileLogger.log("[Config] deliveryMode: \(deliveryModeStr)")
-        FileLogger.log("[Config] cancelPolicy: \(cancelPolicy)")
-        FileLogger.log("[Config] R2Recovery: \(r2Recovery)")
+        Log.print("[Config] deliveryMode: \(deliveryModeStr)")
+        Log.print("[Config] cancelPolicy: \(cancelPolicy)")
+        Log.print("[Config] R2Recovery: \(r2Recovery)")
     }
 
     /// 통계 로그 출력
@@ -288,10 +288,10 @@ public final class ImagePipeline: ImagePipelineProtocol {
         let canPerSec = elapsed > 0 ? Double(canCount) / elapsed : 0
         let compPerSec = elapsed > 0 ? Double(compCount) / elapsed : 0
 
-        FileLogger.log("[\(label)] req: \(reqCount) (\(String(format: "%.1f", reqPerSec))/s), cancel: \(canCount) (\(String(format: "%.1f", canPerSec))/s), complete: \(compCount) (\(String(format: "%.1f", compPerSec))/s)")
-        FileLogger.log("[\(label)] degraded: \(degCount), maxInFlight: \(maxInFlight)")
-        FileLogger.log("[\(label)] latency avg: \(String(format: "%.1f", avgLatency))ms, p95: \(String(format: "%.1f", p95Latency))ms, max: \(String(format: "%.1f", maxLatency))ms")
-        FileLogger.log("[\(label)] preheat: \(phCount)회, 총 \(phAssetCount)개 에셋")
+        Log.print("[\(label)] req: \(reqCount) (\(String(format: "%.1f", reqPerSec))/s), cancel: \(canCount) (\(String(format: "%.1f", canPerSec))/s), complete: \(compCount) (\(String(format: "%.1f", compPerSec))/s)")
+        Log.print("[\(label)] degraded: \(degCount), maxInFlight: \(maxInFlight)")
+        Log.print("[\(label)] latency avg: \(String(format: "%.1f", avgLatency))ms, p95: \(String(format: "%.1f", p95Latency))ms, max: \(String(format: "%.1f", maxLatency))ms")
+        Log.print("[\(label)] preheat: \(phCount)회, 총 \(phAssetCount)개 에셋")
     }
 
     // MARK: - Private Properties
@@ -377,7 +377,7 @@ public final class ImagePipeline: ImagePipelineProtocol {
         // [Stats] 10/20/30회마다 로그
         if currentReqCount == 10 || currentReqCount == 20 || currentReqCount == 30 {
             let elapsed = (CACurrentMediaTime() - statsStartTime) * 1000
-            FileLogger.log("[Pipeline] requestImage #\(currentReqCount): +\(String(format: "%.1f", elapsed))ms")
+            Log.print("[Pipeline] requestImage #\(currentReqCount): +\(String(format: "%.1f", elapsed))ms")
         }
 
         // 백그라운드 OperationQueue에서 PhotoKit 호출
@@ -437,7 +437,7 @@ public final class ImagePipeline: ImagePipelineProtocol {
                 // [Stats] 50회 도달 시점 로그
                 if currentCompleteCount == 50 {
                     let elapsed = (CACurrentMediaTime() - self.statsStartTime) * 1000
-                    FileLogger.log("[Pipeline] completion #50 도달: +\(String(format: "%.1f", elapsed))ms")
+                    Log.print("[Pipeline] completion #50 도달: +\(String(format: "%.1f", elapsed))ms")
                 }
 
                 // [--log-thumb] 파이프라인 응답 상세 로그 (샘플링: 20개마다)
@@ -446,7 +446,7 @@ public final class ImagePipeline: ImagePipelineProtocol {
                         let imgPx = Int(img.size.width * img.scale)
                         let imgPy = Int(img.size.height * img.scale)
                         let ratio = targetSize.width > 0 ? Double(imgPx) / Double(targetSize.width) * 100 : 0
-                        FileLogger.log("[Pipeline] #\(currentCompleteCount) target=\(Int(targetSize.width))x\(Int(targetSize.height))px → img=\(imgPx)x\(imgPy)px (\(String(format: "%.0f", ratio))%), degraded=\(isDegraded)")
+                        Log.print("[Pipeline] #\(currentCompleteCount) target=\(Int(targetSize.width))x\(Int(targetSize.height))px → img=\(imgPx)x\(imgPy)px (\(String(format: "%.0f", ratio))%), degraded=\(isDegraded)")
                     }
                 }
 

@@ -56,7 +56,7 @@ public final class MemoryThumbnailCache {
         let total = hit + miss
         let hitRate = total > 0 ? Double(hit) / Double(total) * 100 : 0
 
-        FileLogger.log("[\(label)] memHit: \(hit), memMiss: \(miss), hitRate: \(String(format: "%.1f", hitRate))%")
+        Log.print("[\(label)] memHit: \(hit), memMiss: \(miss), hitRate: \(String(format: "%.1f", hitRate))%")
     }
 
     // MARK: - Private Properties
@@ -74,7 +74,7 @@ public final class MemoryThumbnailCache {
         cache.totalCostLimit = 50 * 1024 * 1024
 
         #if DEBUG
-        FileLogger.log("[MemoryCache] 초기화: countLimit=100, costLimit=50MB")
+        Log.print("[MemoryCache] 초기화: countLimit=100, costLimit=50MB")
         #endif
     }
 
@@ -127,7 +127,7 @@ public final class MemoryThumbnailCache {
         cache.removeAllObjects()
 
         #if DEBUG
-        FileLogger.log("[MemoryCache] 전체 삭제")
+        Log.print("[MemoryCache] 전체 삭제")
         #endif
     }
 

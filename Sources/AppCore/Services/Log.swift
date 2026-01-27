@@ -141,6 +141,7 @@ public enum Log {
         "SystemUIInspector2": false,
         "SystemUIInspector3": false,
         "LayerPropertyTest": false,
+        "Debug": true,               // 휴지통 뷰어 재분석 디버그
     ]
 
     // ========================================

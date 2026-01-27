@@ -86,7 +86,7 @@ public final class ThumbnailCache {
         try? FileManager.default.createDirectory(at: cacheDirectory, withIntermediateDirectories: true)
 
         #if DEBUG
-        FileLogger.log("[ThumbnailCache] Cache directory: \(cacheDirectory.path)")
+        Log.print("[ThumbnailCache] Cache directory: \(cacheDirectory.path)")
         #endif
     }
 
@@ -120,10 +120,10 @@ public final class ThumbnailCache {
                 Self.counterLock.withLock { Self.missCount += 1 }
                 let total = Self.hitCount + Self.missCount
                 if total <= 50 {
-                    FileLogger.log("[ThumbnailCache] MISS #\(total): \(assetID.prefix(8))...")
+                    Log.print("[ThumbnailCache] MISS #\(total): \(assetID.prefix(8))...")
                 }
                 if total == 50 {
-                    FileLogger.log("[ThumbnailCache] === 첫 50셀 히트율: \(String(format: "%.1f", Self.hitRate * 100))% (hit=\(Self.hitCount), miss=\(Self.missCount)) ===")
+                    Log.print("[ThumbnailCache] === 첫 50셀 히트율: \(String(format: "%.1f", Self.hitRate * 100))% (hit=\(Self.hitCount), miss=\(Self.missCount)) ===")
                 }
                 #endif
                 DispatchQueue.main.async { completion(nil) }
@@ -136,10 +136,10 @@ public final class ThumbnailCache {
             Self.counterLock.withLock { Self.hitCount += 1 }
             let total = Self.hitCount + Self.missCount
             if total <= 50 {
-                FileLogger.log("[ThumbnailCache] HIT #\(total): \(assetID.prefix(8))...")
+                Log.print("[ThumbnailCache] HIT #\(total): \(assetID.prefix(8))...")
             }
             if total == 50 {
-                FileLogger.log("[ThumbnailCache] === 첫 50셀 히트율: \(String(format: "%.1f", Self.hitRate * 100))% (hit=\(Self.hitCount), miss=\(Self.missCount)) ===")
+                Log.print("[ThumbnailCache] === 첫 50셀 히트율: \(String(format: "%.1f", Self.hitRate * 100))% (hit=\(Self.hitCount), miss=\(Self.missCount)) ===")
             }
             #endif
 
@@ -193,12 +193,12 @@ public final class ThumbnailCache {
                     #if DEBUG
                     let sizeKB = data.count / 1024
                     if sizeKB > 100 {
-                        FileLogger.log("[ThumbnailCache] Saved large file: \(sizeKB)KB")
+                        Log.print("[ThumbnailCache] Saved large file: \(sizeKB)KB")
                     }
                     #endif
                 } catch {
                     #if DEBUG
-                    FileLogger.log("[ThumbnailCache] Save failed: \(error.localizedDescription)")
+                    Log.print("[ThumbnailCache] Save failed: \(error.localizedDescription)")
                     #endif
                 }
             }
@@ -251,11 +251,11 @@ public final class ThumbnailCache {
                 }
 
                 #if DEBUG
-                FileLogger.log("[ThumbnailCache] Cleared all cache: \(files.count) files")
+                Log.print("[ThumbnailCache] Cleared all cache: \(files.count) files")
                 #endif
             } catch {
                 #if DEBUG
-                FileLogger.log("[ThumbnailCache] Clear failed: \(error.localizedDescription)")
+                Log.print("[ThumbnailCache] Clear failed: \(error.localizedDescription)")
                 #endif
             }
         }
@@ -315,7 +315,7 @@ public final class ThumbnailCache {
             #if DEBUG
             let usedMB = totalSize / (1024 * 1024)
             let maxMB = maxCacheSize / (1024 * 1024)
-            FileLogger.log("[ThumbnailCache] Cache size OK: \(usedMB)MB / \(maxMB)MB (\(files.count) files)")
+            Log.print("[ThumbnailCache] Cache size OK: \(usedMB)MB / \(maxMB)MB (\(files.count) files)")
             #endif
             return
         }
@@ -343,7 +343,7 @@ public final class ThumbnailCache {
 
         #if DEBUG
         let afterMB = totalSize / (1024 * 1024)
-        FileLogger.log("[ThumbnailCache] Trimmed: \(beforeMB)MB → \(afterMB)MB, deleted \(deletedCount) files")
+        Log.print("[ThumbnailCache] Trimmed: \(beforeMB)MB → \(afterMB)MB, deleted \(deletedCount) files")
         #endif
     }
 }

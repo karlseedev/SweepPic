@@ -1,7 +1,7 @@
 # Liquid Glass 구현 계획
 
 **작성일**: 2026-01-27
-**버전**: v1 (데이터 수집 완료 후 v2로 업데이트 예정)
+**버전**: v2 (데이터 수집 완료, 구현 준비 완료)
 
 ---
 
@@ -44,18 +44,19 @@
 
 ### 2.2. 품질 기준
 
-| 기준 | 목표 |
-|------|------|
-| 시각적 유사도 | 99% (일반 사용자가 구분 불가 수준) |
-| 크기/레이아웃 | iOS 26 실측값과 동일 |
-| 애니메이션 | iOS 26과 동일한 Spring 애니메이션 |
-| 색상/투명도 | iOS 26 실측값 적용 |
+| 기준 | 목표 | 비고 |
+|------|------|------|
+| 시각적 유사도 | **90-95%** | Private API 한계로 99%는 현실적으로 어려움 |
+| 크기/레이아웃 | iOS 26 실측값과 동일 | ✅ 데이터 확보 완료 |
+| 애니메이션 | iOS 26과 동일한 Spring 애니메이션 | ✅ 구현 가능 |
+| 색상/투명도 | iOS 26 실측값 적용 | ✅ 데이터 확보 완료 |
+| 렌즈 왜곡 효과 | 생략 | Private API (displacementMap) |
 
 ### 2.3. 대상 컴포넌트 (우선순위)
 
 | 순위 | 컴포넌트 | 상태 |
 |------|----------|------|
-| 1 | TabBar | 🔄 진행 중 |
+| 1 | TabBar | ✅ 데이터 수집 완료, 구현 대기 |
 | 2 | NavBar | ⏸️ 대기 |
 | 3 | 플로팅 버튼 | ⏸️ 대기 |
 
@@ -69,28 +70,28 @@
 - iOS 26 Liquid Glass는 Private API 기반
 - Public API로 동등한 효과 구현 필요
 
-### 3.2. Private API → Public API 대안
+### 3.2. Private API → Public API 대안 (확정)
 
-| Private API | 역할 | Public API 대안 | 유사도 |
-|-------------|------|----------------|--------|
-| `_UILiquidLensView` | Liquid Glass 루트 | `UIView` + `UIVisualEffectView` | 95% |
-| `vibrantColorMatrix` | 아이콘/레이블 색상 | `UIVibrancyEffect` 또는 고정 tintColor | 🔍 검증 필요 |
-| `gaussianBlur` + `colorMatrix` | 배경 블러/색보정 | `UIVisualEffectView(.systemMaterial)` | 95% |
-| `destOut` compositingFilter | Selection Pill 마스킹 | `CALayer.mask` 또는 별도 뷰 구조 | 🔍 검증 필요 |
-| `CASDFLayer` | SDF 형태/Rim Light | `CAGradientLayer` + `cornerCurve: .continuous` | 🔍 검증 필요 |
-| `UICABackdropLayer` | 배경 캡처 (scale 0.25) | `UIVisualEffectView` 기본 동작 | 90% |
+| Private API | 역할 | Public API 대안 | 유사도 | 상태 |
+|-------------|------|----------------|--------|------|
+| `_UILiquidLensView` | Liquid Glass 루트 | `UIView` + `UIVisualEffectView` | 95% | ✅ |
+| `vibrantColorMatrix` | 아이콘/레이블 색상 | `tintColor` 직접 지정 | 95% | ✅ |
+| `gaussianBlur` + `colorMatrix` | 배경 블러/색보정 | `UIVisualEffectView(.systemMaterial)` | 95% | ✅ |
+| `destOut` compositingFilter | Selection Pill 마스킹 | `CALayer.mask` | 99% | ✅ |
+| `CASDFLayer` | SDF 형태 | `CAShapeLayer` + `cornerCurve: .continuous` | 99% | ✅ |
+| `UICABackdropLayer` | 배경 캡처 | `UIVisualEffectView` 기본 동작 | 90% | ✅ |
 
-### 3.3. 미해결 항목 (데이터 수집 후 대안 결정)
+### 3.3. 미해결 항목 → 해결 완료
 
-| Private API | 역할 | 현재 상태 | 대안 후보 |
+| Private API | 역할 | 조사 결과 | 최종 결정 |
 |-------------|------|----------|-----------|
-| `opacityPair` 필터 | 🔍 역할 불명 | 파라미터 없음 | 🔍 조사 후 결정 |
-| `displacementMap` 필터 | 렌즈 왜곡 효과 | inputAmount=0 외 불명 | Metal Shader 또는 생략 |
-| `CASDFLayer` | SDF 데이터 정의 | 정의 방법 불명 | UIBezierPath + CAShapeLayer |
-| `CAPortalLayer` | 레이어 미러링 | sourceLayer 불명 | 스냅샷 또는 직접 렌더링 |
-| `innerShadowView` | 내부 그림자 | 설정 방법 불명 | CALayer.shadow + mask |
+| `opacityPair` 필터 | 불명 (파라미터 없음) | 웹 문서 없음 | ⛔ **생략** (시각적 영향 미미) |
+| `displacementMap` 필터 | 렌즈 왜곡 효과 | inputAmount=0 (비활성) | ⛔ **생략** (효과 없음) |
+| `CASDFLayer` | SDF 형태 정의 | 핵심 속성 미지원 | ✅ `CAShapeLayer` + `cornerCurve` |
+| `CAPortalLayer` | 레이어 미러링 | 구조 파악됨 | ✅ 뷰 계층 직접 구성 |
+| `innerShadowView` | 내부 그림자 | 모든 속성 기본값 | ✅ `CALayer.shadow` (필요시) |
 
-### 3.4. 예상 시각적 차이
+### 3.4. 예상 시각적 차이 (확정)
 
 | 효과 | iOS 26 | 대안 구현 | 예상 유사도 |
 |------|--------|----------|------------|
@@ -98,9 +99,12 @@
 | 배경 색상/투명도 | ✅ | ✅ 실측값 적용 | 99% |
 | Selection Pill 형태 | ✅ | ✅ cornerCurve: continuous | 99% |
 | Selection Pill 이동 | ✅ | ✅ Spring 애니메이션 | 100% |
-| 아이콘 색상 (선택/비선택) | ✅ | 🔍 UIVibrancyEffect | 95% |
-| 렌즈 왜곡 (굴절) | ✅ | 🔍 미해결 | 80~95% |
-| Rim Light | ✅ | 🔍 CAGradientLayer | 90% |
+| 아이콘 색상 (선택/비선택) | ✅ | ✅ tintColor 직접 지정 | 95% |
+| 렌즈 왜곡 (굴절) | ✅ | ⛔ **생략** | 90% |
+| Rim Light | ✅ | ⚠️ CAGradientLayer (선택) | 90% |
+| 내부 그림자 | ✅ | ⚠️ CALayer.shadow (선택) | 95% |
+
+**종합 예상 유사도**: **90-95%** (일반 사용자가 미세한 차이만 인식)
 
 ---
 
@@ -145,7 +149,7 @@ Shared/Components/
 #### Phase 2: Selection Pill 구현
 - [ ] `SelectionPillView.swift` 생성
 - [ ] cornerRadius=27, cornerCurve=continuous
-- [ ] 배경 블러 효과 (UIVisualEffectView 또는 🔍 대안)
+- [ ] 배경 블러 효과 (`UIVisualEffectView(.systemThinMaterial)`)
 - [ ] `FloatingTabBar+SelectionPill.swift` 생성
 - [ ] 선택 탭 위치 계산 로직
 - [ ] Spring 애니메이션 (0.35s, damping 0.8)
@@ -157,8 +161,8 @@ Shared/Components/
 - [ ] Selection Pill 통합
 
 #### Phase 4: 아이콘/레이블 스타일
-- [ ] 선택 탭 색상 (파란 틴트) - 🔍 UIVibrancyEffect 또는 tintColor
-- [ ] 비선택 탭 색상 (회색) - 🔍 UIVibrancyEffect 또는 고정 색상
+- [ ] 선택 탭 색상: `tintColor = .systemBlue` (또는 실측 파란색)
+- [ ] 비선택 탭 색상: `tintColor = .secondaryLabel` (회색)
 - [ ] 아이콘 크기 조정 (28pt pointSize)
 - [ ] 레이블 위치/크기 (y=35pt, 높이 12pt)
 
@@ -222,4 +226,39 @@ Shared/Components/
 | 날짜 | 버전 | 변경 내용 |
 |------|------|-----------|
 | 2026-01-27 | v1 | 문서 생성 (데이터 수집 80% 기준) |
-| - | v2 | 🔜 데이터 수집 완료 후 상세 대안 확정 |
+| 2026-01-27 | v2 | 데이터 수집 완료, 모든 대안 확정, 구현 준비 완료 |
+
+---
+
+## 8. 참조 자료
+
+### 8.1. 데이터 수집 문서
+- [260127Liquid-Research.md](./260127Liquid-Research.md) - 수집 계획 및 결과
+- [260126Liquid-tabbar.md](./260126Liquid-tabbar.md) - TabBar 상세 속성
+
+### 8.2. 덤프 데이터
+- [docs/UI/DumpData/](./DumpData/) - JSON 덤프 파일 48개
+  - `260127_*_tabbar_*.json` - TabBar 덤프
+  - `260127_*_navbar_*.json` - NavBar 덤프
+
+### 8.3. 주요 실측값 요약
+
+**Platter (전체 컨테이너)**:
+- 크기: 274×62pt (화면 너비의 68.2%)
+- cornerRadius: 31pt, cornerCurve: continuous
+- 배경: gray 0.11, alpha 0.73
+
+**Selection Pill**:
+- 크기: 94×54pt
+- cornerRadius: 27pt, cornerCurve: continuous
+- 위치: y=4pt (Platter 내부 상단 패딩)
+
+**Tab Button**:
+- 크기: 94×54pt
+- 간격: -8pt (오버랩)
+- 아이콘: 28pt pointSize, y=9pt
+- 레이블: y=35pt, 높이 12pt
+
+**색상**:
+- 선택 탭: 파란 틴트 (vibrantColorMatrix 기반)
+- 비선택 탭: 회색 (secondaryLabel 수준)

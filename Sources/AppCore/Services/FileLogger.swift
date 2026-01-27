@@ -2,7 +2,7 @@
 // 디버그 로그를 파일에 저장하는 유틸리티
 //
 // 사용법:
-// - FileLogger.log("메시지")
+// - Log.print("메시지")
 // - 로그는 Documents/launch_log.txt에 저장됨
 // - Xcode → Devices and Simulators → Download Container로 확인
 

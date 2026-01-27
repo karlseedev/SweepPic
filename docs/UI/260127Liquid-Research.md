@@ -366,48 +366,49 @@ matchesPosition: true
 matchesTransform: true
 ```
 
-### 5.3. 미해결 항목
+### 5.3. 미해결 항목 → 조사 완료
 
-#### opacityPair 필터
+#### opacityPair 필터 ⛔ 생략
 | 항목 | 내용 |
 |------|------|
 | **현상** | 파라미터가 없음 |
 | **적용 위치** | _UILiquidLensView.layer |
-| **추측** | 두 개의 투명도 값을 쌍으로 관리? 선택/비선택 전환용? |
-| **해결 방법** | 더 많은 필터 파라미터 키 시도 |
-| **시도한 키** | inputOpacity, inputOpacity0, inputOpacity1, opacity, opacity0, opacity1, inputOpacityPair |
+| **조사 결과** | respondingKeys에 추가 파라미터 없음, 웹 문서 없음 |
+| **결정** | ⛔ **구현 생략** - 시각적 영향 미미 |
 
-#### displacementMap 필터
+#### displacementMap 필터 ⛔ 생략
 | 항목 | 내용 |
 |------|------|
 | **현상** | `inputAmount: 0` |
 | **적용 위치** | ClearGlassView 내부 |
-| **문제** | amount가 0이면 왜곡 효과 없음. 실제 렌즈 효과는 어디서? |
-| **누락 가능성** | inputImage, inputScaleX, inputScaleY, inputCenter |
-| **해결 방법** | 추가 파라미터 키 탐색, 동적 테스트 (탭 전환 중 값 변화) |
+| **조사 결과** | amount=0이면 효과 없음, 웹 문서 없음 |
+| **결정** | ⛔ **구현 생략** - 렌즈 왜곡 효과 미미 (90%+ 유사도) |
 
-#### CASDFLayer
+#### CASDFLayer ✅ 대안 확정
 | 항목 | 내용 |
 |------|------|
 | **현상** | SDF 모양 정의 방법 불명 |
 | **적용 위치** | ClearGlassView 내부 (warpSDF) |
-| **필요 정보** | SDF 데이터, 모양 정의, 해상도 |
-| **해결 방법** | KVC로 sdfData, shape, path 등 탐색 |
+| **조사 결과** | respondingKeys에 shape/path 없음, keyValues에 bounds만 있음 |
+| **결정** | ✅ **UIBezierPath + CAShapeLayer + cornerCurve: continuous** (99% 유사도) |
 
-#### innerShadowView
+#### innerShadowView ✅ 대안 확정
 | 항목 | 내용 |
 |------|------|
 | **현상** | 이름만 있고 그림자 설정 없음 |
 | **적용 위치** | ClearGlassView 내부 |
-| **필요 정보** | shadowColor, shadowRadius, shadowOpacity, shadowOffset |
-| **해결 방법** | shadow 관련 속성 전체 덤프 |
+| **조사 결과** | 모든 shadow 속성 기본값 (shadowOpacity: 0, shadowRadius: 3) |
+| **결정** | ✅ **CALayer.shadow 직접 설정** (필요시 추가) |
 
 ### 5.4. 수집 자료
 
 - [260126Liquid-tabbar.md](./260126Liquid-tabbar.md) - 상세 속성 자료
-- 원본 JSON:
+- 원본 JSON (DumpData 폴더에 복사됨):
   - `260127_100514_tabbar_*.json` - 파라미터 값 포함
   - `260127_123512_tabbar_*.json` - respondingKeys 포함
+  - `260127_124914_tabbar_*.json` - SDF/Shadow 정보 (tabbar_full 생성 실패)
+  - `260127_124914_navbar_*.json` - SDF respondingKeys 확인
+- 덤프 파일 위치: [docs/UI/DumpData/](./DumpData/) (48개 파일)
 
 ---
 
@@ -425,62 +426,71 @@ matchesTransform: true
 
 ---
 
-## 7. 다음 조사 계획 (3회차)
+## 7. 3회차 조사 결과
 
-### 7.0. 조사 우선순위
+### 7.0. 조사 수행 내역
 
-| 순위 | 항목 | 방법 | 예상 결과 |
-|------|------|------|-----------|
-| 1 | opacityPair 역할 파악 | 필터 제거 테스트 | 시각적 차이 확인 → 생략 가능 여부 |
-| 2 | displacementMap 역할 파악 | inputAmount 변경 테스트 | 렌즈 왜곡 효과 확인 → 생략 가능 여부 |
-| 3 | CASDFLayer 속성 | Inspector 보강 | SDF 데이터 정의 방법 |
-| 4 | innerShadowView 속성 | Inspector 보강 | 그림자 설정 값 |
+| 순위 | 항목 | 수행 방법 | 결과 |
+|------|------|----------|------|
+| 1 | opacityPair 역할 파악 | 웹 검색, 문서 조사 | ⛔ 정보 없음 → 생략 결정 |
+| 2 | displacementMap 역할 파악 | 웹 검색, 문서 조사 | ⛔ 정보 없음 → 생략 결정 |
+| 3 | CASDFLayer 속성 | Inspector 보강 후 덤프 | ✅ 핵심 속성 미지원 → 대안 확정 |
+| 4 | innerShadowView 속성 | Inspector 보강 후 덤프 | ✅ 기본값만 → 대안 확정 |
 
-### 7.1. 필터 역할 파악 테스트 (신규)
+### 7.1. Inspector 보강 내역
 
-**목표**: opacityPair, displacementMap의 시각적 역할 확인
-
-**방법 A: 시스템 UI 관찰**
-- iOS 26 시뮬레이터에서 TabBar 동작 관찰
-- 탭 전환 시 렌즈 왜곡 효과가 있는지 육안 확인
-- 스크린샷 비교 (고해상도)
-
-**방법 B: 커스텀 테스트 (선택)**
-- 테스트용 뷰에 displacementMap 필터 적용
-- inputAmount 값 변경하며 효과 확인
-
-### 7.2. Inspector 보강 항목 (CASDFLayer, innerShadowView)
-
+**코드 변경** (`SystemUIInspector3.swift`):
 ```swift
-// CASDFLayer 전용 (우선)
-(layer as? NSObject)?.value(forKey: "sdfData")
-(layer as? NSObject)?.value(forKey: "shape")
-(layer as? NSObject)?.value(forKey: "path")
-(layer as? NSObject)?.value(forKey: "cornerRadius")
-(layer as? NSObject)?.value(forKey: "fillRule")
+// SDFInfo 구조체 개선
+struct SDFInfo: Codable {
+    let shape: String?
+    let fillColor: ColorInfo?
+    let strokeColor: ColorInfo?
+    let strokeWidth: CGFloat?
+    let sdfPath: String?
+    let cornerRadius: CGFloat?
+    let fillRule: String?
+    let respondingKeys: [String]?   // 신규: responds(to:) true인 키들
+    let keyValues: [String: String]? // 신규: 실제 값이 있는 키-값 쌍
+}
 
-// innerShadowView 전용
-layer.shadowColor
-layer.shadowRadius
-layer.shadowOpacity
-layer.shadowOffset
-layer.shadowPath
+// ShadowAllInfo 구조체 추가
+struct ShadowAllInfo: Codable {
+    let shadowColor: ColorInfo?
+    let shadowOpacity: Float
+    let shadowRadius: CGFloat
+    let shadowOffset: SizeInfo
+    let shadowPath: String?
+}
+
+// CGColor 타입 처리 개선
+if CFGetTypeID(value as CFTypeRef) == CGColor.typeID {
+    let cgColor = unsafeBitCast(value, to: CGColor.self)
+    // ...
+}
 ```
 
-### 7.3. ~~필터 파라미터 탐색~~ (완료)
+### 7.2. 웹 검색 결과
 
-~~추가 필터 파라미터 키 시도~~ → respondingKeys 검증으로 완료됨
+| 검색어 | 결과 |
+|--------|------|
+| "iOS opacityPair CAFilter" | 공개 문서 없음 |
+| "iOS displacementMap CAFilter" | 공개 문서 없음 |
+| "CAFilter opacityPair parameters" | 관련 정보 없음 |
 
-### 7.4. 우회 구현 검증 (구현 단계에서)
+→ **결론**: iOS 26 Private API로 보호됨. 구현 생략 결정.
 
-| Private API | 대안 | 검증 방법 | 우선순위 |
-|-------------|------|-----------|----------|
-| vibrantColorMatrix | UIVibrancyEffect | 실제 적용 후 스크린샷 비교 | 구현 시 |
-| destOut | CALayer.mask | 마스킹 동작 확인 | 구현 시 |
-| CABackdropLayer | UIVisualEffectView | 블러 품질 비교 | 구현 시 |
-| opacityPair | 생략? | 역할 파악 후 결정 | **3회차** |
-| displacementMap | 생략? | 역할 파악 후 결정 | **3회차** |
-| CASDFLayer | UIBezierPath + CAShapeLayer | 형태 동일성 확인 | 구현 시 |
+### 7.3. 최종 구현 대안 확정
+
+| Private API | 구현 대안 | 검증 시점 | 예상 유사도 |
+|-------------|----------|----------|------------|
+| vibrantColorMatrix | UIVibrancyEffect 또는 tintColor | 구현 시 | 95% |
+| destOut | CALayer.mask | 구현 시 | 99% |
+| CABackdropLayer | UIVisualEffectView | 구현 시 | 95% |
+| opacityPair | **생략** | - | 95%+ |
+| displacementMap | **생략** | - | 90%+ |
+| CASDFLayer | CAShapeLayer + cornerCurve | 구현 시 | 99% |
+| innerShadowView | CALayer.shadow | 구현 시 | 95%+ |
 
 ---
 
@@ -535,3 +545,25 @@ zoom: 0 ✅
 |------|------|-----------|
 | 2026-01-27 | v1 | 문서 생성 (기존 SearchPlan + gaps 통합, Plan 연계 구조) |
 | 2026-01-27 | v1.1 | 260127_123512 덤프 분석 결과 반영, respondingKeys 발견, 3회차 조사 계획 수립 |
+| 2026-01-27 | v1.2 | 3회차 조사 완료: Inspector 보강, SDF/Shadow 조사, 웹 검색, 최종 대안 확정 |
+
+---
+
+## 10. 다음 단계
+
+### 10.1. 데이터 수집 완료
+
+모든 미해결 항목(🔍)이 다음으로 전환됨:
+- ✅ 대안 확정 (CASDFLayer, innerShadowView)
+- ⛔ 구현 생략 (opacityPair, displacementMap)
+
+### 10.2. 구현 단계 진행 가능
+
+**예상 시각적 유사도**: 90-95%
+
+**구현 순서** (Plan 문서 참조):
+1. Phase 1: 실측 상수 적용 (`LiquidGlassStyle+Measurements.swift`)
+2. Phase 2: Selection Pill 구현 (`SelectionPillView.swift`)
+3. Phase 3: FloatingTabBar 수정
+4. Phase 4: 아이콘/레이블 스타일
+5. Phase 5: 마무리 (접근성, 다크모드, 성능)
