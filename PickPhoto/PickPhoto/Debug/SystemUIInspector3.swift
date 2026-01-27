@@ -1069,9 +1069,11 @@ final class SystemUIInspector3 {
                 if let value = ns.value(forKey: key) {
                     if key == "fillColor" || key == "strokeColor" || key == "_fillColor" || key == "_strokeColor" {
                         // CGColor 타입 체크 (CFTypeID 비교)
-                        if CFGetTypeID(value as CFTypeRef) == CGColor.typeID,
-                           let colorInfo = extractCGColor(value as! CGColor) {
-                            keyValues[key] = "rgba(\(colorInfo.r), \(colorInfo.g), \(colorInfo.b), \(colorInfo.a))"
+                        if CFGetTypeID(value as CFTypeRef) == CGColor.typeID {
+                            let cgColor = unsafeBitCast(value, to: CGColor.self)
+                            if let colorInfo = extractCGColor(cgColor) {
+                                keyValues[key] = "rgba(\(colorInfo.r), \(colorInfo.g), \(colorInfo.b), \(colorInfo.a))"
+                            }
                         }
                     } else if key == "path" || key == "_path" || key == "shapePath" || key == "bezierPath" {
                         // CGPath는 description이 길 수 있으므로 타입만 기록
@@ -1093,7 +1095,7 @@ final class SystemUIInspector3 {
         if ns.responds(to: NSSelectorFromString("fillColor")),
            let value = ns.value(forKey: "fillColor") {
             if CFGetTypeID(value as CFTypeRef) == CGColor.typeID {
-                fillColor = extractCGColor(value as! CGColor)
+                fillColor = extractCGColor(unsafeBitCast(value, to: CGColor.self))
             }
         }
 
@@ -1101,7 +1103,7 @@ final class SystemUIInspector3 {
         if ns.responds(to: NSSelectorFromString("strokeColor")),
            let value = ns.value(forKey: "strokeColor") {
             if CFGetTypeID(value as CFTypeRef) == CGColor.typeID {
-                strokeColor = extractCGColor(value as! CGColor)
+                strokeColor = extractCGColor(unsafeBitCast(value, to: CGColor.self))
             }
         }
 
