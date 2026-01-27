@@ -43,13 +43,13 @@ public enum Log {
         // =============================================
         // Grid 관련
         // =============================================
-        "GridViewController": true,
-        "GridVC.sourceViewProvider": true,
+        "GridViewController": false,
+        "GridVC.sourceViewProvider": false,
         "BaseGridViewController": false,
         "AlbumGridViewController": false,
-        "TrashAlbumViewController": true,
+        "TrashAlbumViewController": false,
         "TrashAlbumViewController.Timing": false,
-        "TrashAlbumVC.sourceViewProvider": true,
+        "TrashAlbumVC.sourceViewProvider": false,
         "GridDataSource": false,
         "GridDataSourceDriver": false,
         "GridSelectMode": false,
@@ -143,7 +143,7 @@ public enum Log {
         "SystemUIInspector2": false,
         "SystemUIInspector3": false,
         "LayerPropertyTest": false,
-        "Debug": true,               // 휴지통 뷰어 재분석 디버그
+        "Debug": false,
     ]
 
     // ========================================

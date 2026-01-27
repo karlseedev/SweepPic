@@ -802,32 +802,15 @@ extension GridViewController {
                 // padding 셀 적용하여 실제 collectionView indexPath 계산
                 let cellIndexPath = IndexPath(item: originalIndex + self.paddingCellCount, section: 0)
 
-                // 🔍 디버그: 인덱스 값 확인 (비교용)
-                let assetID = coordinator.assetID(at: currentFilteredIndex) ?? "nil"
-                let gridAssetID = self.gridDataSource.assetID(at: originalIndex) ?? "nil"
-                Log.print("[GridVC.sourceViewProvider] currentIndex=\(currentFilteredIndex), originalIndex=\(originalIndex), paddingCellCount=\(self.paddingCellCount), cellIndexPath=\(cellIndexPath.item)")
-                Log.print("[GridVC.sourceViewProvider] coordinator.assetID=\(assetID.prefix(8)), gridDataSource.assetID=\(gridAssetID.prefix(8))")
-
                 // 셀이 화면에 없으면 nil 반환 (중앙에서 줌 fallback)
                 guard let cell = self.collectionView.cellForItem(at: cellIndexPath) as? PhotoCell else {
-                    Log.print("[GridVC.sourceViewProvider] ❌ cell nil at indexPath \(cellIndexPath.item)")
                     return nil
                 }
 
                 // placeholder가 아닌 실제 이미지가 로드된 경우에만 줌 전환
                 guard cell.hasLoadedImage else {
-                    Log.print("[GridVC.sourceViewProvider] ❌ cell.hasLoadedImage=false")
                     return nil  // 이미지 미로드 시 중앙에서 줌 (fallback)
                 }
-
-                // 🔍 Step 1: 반환하는 셀의 실제 상태 확인 (비교용)
-                let cellAssetID = cell.currentAssetID ?? "nil"
-                let cellFrame = cell.frame
-                let imageViewGlobalFrame = cell.thumbnailImageView.superview?.convert(cell.thumbnailImageView.frame, to: nil) ?? .zero
-                Log.print("[GridVC.sourceViewProvider] ✅ cell at \(cellIndexPath.item)")
-                Log.print("[GridVC.sourceViewProvider] 📍 cell.currentAssetID=\(cellAssetID.prefix(8)), expected=\(assetID.prefix(8)), match=\(cellAssetID == assetID)")
-                Log.print("[GridVC.sourceViewProvider] 📍 cell.frame=\(cellFrame)")
-                Log.print("[GridVC.sourceViewProvider] 📍 imageView.globalFrame=\(imageViewGlobalFrame)")
 
                 return cell.thumbnailImageView
             })

@@ -549,7 +549,6 @@ final class TrashAlbumViewController: BaseGridViewController {
                 guard let self = self,
                       let coordinator = coordinator,
                       let viewer = context.zoomedViewController as? ViewerViewController else {
-                    Log.print("[TrashAlbumVC.sourceViewProvider] ❌ guard failed")
                     return nil
                 }
 
@@ -559,41 +558,21 @@ final class TrashAlbumViewController: BaseGridViewController {
                 // 다른 VC들과 동일한 패턴: originalIndex 직접 사용
                 // (trash 모드는 identity 매핑이므로 currentIndex == originalIndex)
                 guard let originalIndex = coordinator.originalIndex(from: currentIndex) else {
-                    Log.print("[TrashAlbumVC.sourceViewProvider] ❌ originalIndex nil, currentIndex=\(currentIndex)")
                     return nil
                 }
 
                 // padding 셀 적용하여 실제 collectionView indexPath 계산
                 let cellIndexPath = IndexPath(item: originalIndex + self.paddingCellCount, section: 0)
 
-                // 🔍 디버그: 인덱스 값 확인
-                let assetID = coordinator.assetID(at: currentIndex) ?? "nil"
-                let gridAssetID = self._trashDataSource.assetID(at: originalIndex) ?? "nil"
-                Log.print("[TrashAlbumVC.sourceViewProvider] currentIndex=\(currentIndex), originalIndex=\(originalIndex), paddingCellCount=\(self.paddingCellCount), cellIndexPath=\(cellIndexPath.item)")
-                Log.print("[TrashAlbumVC.sourceViewProvider] coordinator.assetID=\(assetID.prefix(8)), gridDataSource.assetID=\(gridAssetID.prefix(8))")
-
                 // 셀이 화면에 없으면 nil 반환 (중앙에서 줌 fallback)
                 guard let cell = self.collectionView.cellForItem(at: cellIndexPath) as? PhotoCell else {
-                    Log.print("[TrashAlbumVC.sourceViewProvider] ❌ cell nil at indexPath \(cellIndexPath.item)")
-                    Log.print("[TrashAlbumVC.sourceViewProvider] visibleCells count: \(self.collectionView.visibleCells.count), visibleIndexPaths: \(self.collectionView.indexPathsForVisibleItems.map { $0.item })")
                     return nil
                 }
 
                 // placeholder가 아닌 실제 이미지가 로드된 경우에만 줌 전환
                 guard cell.hasLoadedImage else {
-                    Log.print("[TrashAlbumVC.sourceViewProvider] ❌ cell.hasLoadedImage=false at indexPath \(cellIndexPath.item)")
                     return nil  // 이미지 미로드 시 중앙에서 줌 (fallback)
                 }
-
-                // 🔍 Step 1: 반환하는 셀의 실제 상태 확인
-                let cellAssetID = cell.currentAssetID ?? "nil"
-                let cellFrame = cell.frame
-                let imageViewFrame = cell.thumbnailImageView.frame
-                let imageViewGlobalFrame = cell.thumbnailImageView.superview?.convert(cell.thumbnailImageView.frame, to: nil) ?? .zero
-                Log.print("[TrashAlbumVC.sourceViewProvider] ✅ cell at \(cellIndexPath.item)")
-                Log.print("[TrashAlbumVC.sourceViewProvider] 📍 cell.currentAssetID=\(cellAssetID.prefix(8)), expected=\(assetID.prefix(8)), match=\(cellAssetID == assetID)")
-                Log.print("[TrashAlbumVC.sourceViewProvider] 📍 cell.frame=\(cellFrame), imageView.frame=\(imageViewFrame)")
-                Log.print("[TrashAlbumVC.sourceViewProvider] 📍 imageView.globalFrame=\(imageViewGlobalFrame)")
 
                 return cell.thumbnailImageView
             })
@@ -601,10 +580,6 @@ final class TrashAlbumViewController: BaseGridViewController {
 
         // Push 방식으로 뷰어 표시 (모든 iOS 버전 공통)
         navigationController?.pushViewController(viewerVC, animated: true)
-
-        // 🔍 디버그: 열 때 인덱스 확인
-        Log.print("[TrashAlbumViewController] Opening viewer - assetIndex: \(assetIndex), paddingCellCount: \(paddingCellCount), fetchResult.count: \(fetchResult.count)")
-        Log.print("[TrashAlbumViewController] assetID: \(selectedAssetID.prefix(8)), gridDataSource.assetID(at:\(assetIndex)): \((_trashDataSource.assetID(at: assetIndex) ?? "nil").prefix(8))")
     }
 
     // MARK: - Cell Configuration (Override)
@@ -673,28 +648,40 @@ extension TrashAlbumViewController: ViewerViewControllerDelegate {
 
     /// 뷰어 닫기 시
     /// iOS 18+ Zoom Transition 안정화: 전환 중 scrollToItem 금지
+    /// ⚠️ 중요: 여기서 loadTrashedAssets() 호출하면 안 됨!
+    ///    sourceViewProvider가 이 함수 이후에 호출되므로, reloadData()가 먼저 실행되면
+    ///    셀 내용이 바뀌어 잘못된 사진으로 축소됨
     func viewerWillClose(currentAssetID: String?) {
-        // 뷰어 닫힘 상태로 변경
-        isViewerOpen = false
-
         // 스크롤 위치만 저장 (전환 완료 후 처리)
         pendingScrollAssetID = currentAssetID
         // 사용자 스크롤 플래그 초기화
         didUserScrollAfterReturn = false
 
-        // 지연된 데이터 갱신 처리
-        if pendingDataRefresh {
-            pendingDataRefresh = false
-            Log.print("[TrashAlbumViewController] Processing deferred data refresh")
-            loadTrashedAssets()
-        }
+        // ⚠️ isViewerOpen = false와 loadTrashedAssets()는
+        //    applyPendingViewerReturn()에서 처리 (dismiss 애니메이션 완료 후)
+        Log.print("[TrashAlbumViewController] viewerWillClose - pendingDataRefresh=\(pendingDataRefresh), keeping isViewerOpen=true until animation completes")
     }
 
     /// 뷰어 닫힘 후 대기 중인 작업 처리 (전환 완료 후 호출)
+    /// - 뷰어 상태 해제 및 지연된 데이터 갱신 처리
     /// - scroll만 수행하여 깜빡임 방지
     /// - 사용자가 이미 스크롤 중이면 강제 스크롤 skip (롤백 방지)
     private func applyPendingViewerReturn() {
-        guard let assetID = pendingScrollAssetID else { return }
+        // ⚠️ dismiss 애니메이션 완료 후에야 뷰어 상태 해제
+        let wasViewerOpen = isViewerOpen
+        isViewerOpen = false
+
+        // 지연된 데이터 갱신 처리 (dismiss 애니메이션 완료 후)
+        if pendingDataRefresh {
+            pendingDataRefresh = false
+            Log.print("[TrashAlbumViewController] Processing deferred data refresh (after animation)")
+            loadTrashedAssets()
+        }
+
+        guard let assetID = pendingScrollAssetID else {
+            Log.print("[TrashAlbumViewController] applyPendingViewerReturn - wasViewerOpen=\(wasViewerOpen), no pendingScrollAssetID")
+            return
+        }
         pendingScrollAssetID = nil
 
         // 안전 가드 1: 사용자가 복귀 후 스크롤했으면 skip
