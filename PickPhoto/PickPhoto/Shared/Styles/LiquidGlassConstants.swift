@@ -83,32 +83,10 @@ enum LiquidGlassConstants {
         static let labelFontSize: CGFloat = 10
     }
 
-    // MARK: - Blur (블러 설정)
-    // iOS 26 실측: gaussianBlur radius=2 (매우 약한 블러) + colorMatrix (약간 밝게)
-    // Public API로는 UIVisualEffectView 기본 블러 사용 (Material 계열은 너무 불투명)
-
-    enum Blur {
-        /// Platter 블러 스타일 (약한 투명 블러)
-        /// 실측: gaussianBlur radius=2 (매우 약함)
-        static let platterStyle: UIBlurEffect.Style = .systemUltraThinMaterial
-
-        /// Selection Pill 블러 스타일 (배경을 밝게 만드는 블러)
-        /// 실측: gaussianBlur radius=2 + colorMatrix bias=0.135 (밝게 보정)
-        static let pillStyle: UIBlurEffect.Style = .light
-    }
-
-    // MARK: - Animation (애니메이션)
-
-    enum Animation {
-        /// 애니메이션 지속 시간
-        static let duration: TimeInterval = 0.35
-
-        /// Spring 애니메이션 damping ratio
-        static let dampingRatio: CGFloat = 0.8
-
-        /// Spring 애니메이션 초기 속도
-        static let initialVelocity: CGFloat = 0
-    }
+    // MARK: - Blur / Animation
+    // ⚠️ LiquidGlassKit 적용으로 삭제됨
+    // - Blur: LiquidGlassEffectView가 내부적으로 처리
+    // - Animation: LiquidLensView.setLifted()가 Spring 애니메이션 자동 적용
 
     // MARK: - zPosition (레이어 순서)
 
