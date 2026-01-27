@@ -171,6 +171,7 @@ final class LayerInfo: Codable {
     let backdrop: BackdropInfo?
     let portal: PortalInfo?      // CAPortalLayer 전용
     let sdf: SDFInfo?            // CASDFLayer 전용
+    let shadowAll: ShadowAllInfo?  // innerShadowView용 전체 shadow 정보
     let pvt: [String: String]?
 
     // 추가 속성 (기본값 아닌 것만)
@@ -186,7 +187,7 @@ final class LayerInfo: Codable {
          bgColor: ColorInfo?, shadowColor: ColorInfo?, shadowOpacity: Float?, shadowRadius: CGFloat?,
          shadowOffset: SizeInfo?, filters: [FilterInfo]?, bgFilters: [FilterInfo]?, compFilter: String?,
          mask: LayerInfo?, sublayers: [LayerInfo]?, anims: [AnimInfo]?, backdrop: BackdropInfo?,
-         portal: PortalInfo?, sdf: SDFInfo?, pvt: [String: String]?,
+         portal: PortalInfo?, sdf: SDFInfo?, shadowAll: ShadowAllInfo?, pvt: [String: String]?,
          masksToBounds: Bool?, hasContents: Bool?, contentsGravity: String?, contentsScale: CGFloat?) {
         self.cls = cls; self.name = name; self.frame = frame; self.zPos = zPos
         self.anchor = anchor; self.anchorZ = anchorZ; self.scale = scale
@@ -198,7 +199,7 @@ final class LayerInfo: Codable {
         self.shadowRadius = shadowRadius; self.shadowOffset = shadowOffset
         self.filters = filters; self.bgFilters = bgFilters; self.compFilter = compFilter
         self.mask = mask; self.sublayers = sublayers; self.anims = anims
-        self.backdrop = backdrop; self.portal = portal; self.sdf = sdf; self.pvt = pvt
+        self.backdrop = backdrop; self.portal = portal; self.sdf = sdf; self.shadowAll = shadowAll; self.pvt = pvt
         self.masksToBounds = masksToBounds; self.hasContents = hasContents
         self.contentsGravity = contentsGravity; self.contentsScale = contentsScale
     }
@@ -242,6 +243,15 @@ struct PortalInfo: Codable {
     let matchesTransform: Bool?
 }
 
+/// innerShadowView용 전체 shadow 정보 (기본값 포함)
+struct ShadowAllInfo: Codable {
+    let shadowColor: ColorInfo?
+    let shadowOpacity: Float
+    let shadowRadius: CGFloat
+    let shadowOffset: SizeInfo
+    let shadowPath: String?  // 타입만 기록
+}
+
 /// CASDFLayer 정보
 struct SDFInfo: Codable {
     let shape: String?
@@ -252,7 +262,8 @@ struct SDFInfo: Codable {
     let sdfPath: String?       // path 데이터
     let cornerRadius: CGFloat?
     let fillRule: String?
-    let allKeys: [String]?     // 발견된 모든 키
+    let respondingKeys: [String]?  // responds(to:)가 true인 키들
+    let keyValues: [String: String]?  // 실제 값이 있는 키-값 쌍
 }
 
 /// 메타데이터
@@ -779,6 +790,23 @@ final class SystemUIInspector3 {
             sdfInfo = extractSDFInfo(ns)
         }
 
+        // innerShadowView 전용 - 모든 shadow 속성 강제 수집 (기본값 포함)
+        var shadowAllInfo: ShadowAllInfo? = nil
+        if let name = layer.name, name.contains("innerShadow") {
+            var shadowColorInfo: ColorInfo? = nil
+            if let sc = layer.shadowColor {
+                shadowColorInfo = extractCGColor(sc)
+            }
+            shadowAllInfo = ShadowAllInfo(
+                shadowColor: shadowColorInfo,
+                shadowOpacity: layer.shadowOpacity,
+                shadowRadius: layer.shadowRadius,
+                shadowOffset: SizeInfo(width: sanitize(layer.shadowOffset.width),
+                                       height: sanitize(layer.shadowOffset.height)),
+                shadowPath: layer.shadowPath != nil ? "[\(type(of: layer.shadowPath!))]" : nil
+            )
+        }
+
         // 추가 속성
         let hasCont = layer.contents != nil
         let gravity = layer.contentsGravity.rawValue
@@ -816,6 +844,7 @@ final class SystemUIInspector3 {
             backdrop: backdrop,
             portal: portalInfo,
             sdf: sdfInfo,
+            shadowAll: shadowAllInfo,
             pvt: pvt,
             masksToBounds: layer.masksToBounds ? true : nil,
             hasContents: hasCont ? true : nil,
@@ -1010,36 +1039,70 @@ final class SystemUIInspector3 {
 
     private func extractSDFInfo(_ ns: NSObject) -> SDFInfo? {
         // 시도할 키 목록 (CASDFLayer, CASDFElementLayer)
+        // CAShapeLayer 계열 키 + SDF 추정 키 + Private 추정 키
         let sdfKeys = [
-            "shape", "path", "sdfPath", "fillColor", "strokeColor", "strokeWidth",
-            "cornerRadius", "fillRule", "strokeStart", "strokeEnd", "lineCap",
-            "lineJoin", "miterLimit", "lineDashPhase", "lineDashPattern",
-            "sdfData", "distanceField", "resolution", "spread", "padding",
-            "contour", "outline", "geometry", "shapeType", "elementType"
+            // CAShapeLayer 표준 키
+            "path", "fillColor", "strokeColor", "strokeWidth", "fillRule",
+            "strokeStart", "strokeEnd", "lineCap", "lineJoin", "miterLimit",
+            "lineDashPhase", "lineDashPattern",
+            // SDF 추정 키
+            "sdfData", "distanceField", "signedDistanceField", "sdf",
+            "resolution", "spread", "padding", "smoothing",
+            // 형태 관련 추정 키
+            "shape", "shapeType", "elementType", "contour", "outline",
+            "geometry", "sdfPath", "shapePath", "bezierPath",
+            // Private 추정 키
+            "_path", "_fillColor", "_strokeColor", "_shape",
+            "cornerContents", "corners", "elements", "elementLayers",
+            // 추가 시도 키
+            "bounds", "contents", "contentsRect", "contentsCenter"
         ]
 
-        var foundKeys: [String] = []
+        var respondingKeys: [String] = []
+        var keyValues: [String: String] = [:]
+
         for key in sdfKeys {
-            if ns.responds(to: NSSelectorFromString(key)) {
-                foundKeys.append(key)
+            let selector = NSSelectorFromString(key)
+            if ns.responds(to: selector) {
+                respondingKeys.append(key)
+                // 값도 수집 시도
+                if let value = ns.value(forKey: key) {
+                    if key == "fillColor" || key == "strokeColor" || key == "_fillColor" || key == "_strokeColor" {
+                        // CGColor 타입 체크 (CFTypeID 비교)
+                        if CFGetTypeID(value as CFTypeRef) == CGColor.typeID,
+                           let colorInfo = extractCGColor(value as! CGColor) {
+                            keyValues[key] = "rgba(\(colorInfo.r), \(colorInfo.g), \(colorInfo.b), \(colorInfo.a))"
+                        }
+                    } else if key == "path" || key == "_path" || key == "shapePath" || key == "bezierPath" {
+                        // CGPath는 description이 길 수 있으므로 타입만 기록
+                        keyValues[key] = "[\(type(of: value))]"
+                    } else {
+                        keyValues[key] = String(describing: value)
+                    }
+                }
             }
         }
 
+        // 기본 속성 추출
         let shape = ns.responds(to: NSSelectorFromString("shape"))
             ? ns.value(forKey: "shape") as? String : nil
         let sdfPath = ns.responds(to: NSSelectorFromString("path"))
-            ? String(describing: ns.value(forKey: "path") ?? "nil") : nil
+            ? "[\(type(of: ns.value(forKey: "path") ?? "nil"))]" : nil
 
         var fillColor: ColorInfo? = nil
         if ns.responds(to: NSSelectorFromString("fillColor")),
            let value = ns.value(forKey: "fillColor") {
-            fillColor = extractCGColor(value as! CGColor)
+            if CFGetTypeID(value as CFTypeRef) == CGColor.typeID {
+                fillColor = extractCGColor(value as! CGColor)
+            }
         }
 
         var strokeColor: ColorInfo? = nil
         if ns.responds(to: NSSelectorFromString("strokeColor")),
            let value = ns.value(forKey: "strokeColor") {
-            strokeColor = extractCGColor(value as! CGColor)
+            if CFGetTypeID(value as CFTypeRef) == CGColor.typeID {
+                strokeColor = extractCGColor(value as! CGColor)
+            }
         }
 
         let strokeWidth = ns.responds(to: NSSelectorFromString("strokeWidth"))
@@ -1049,14 +1112,12 @@ final class SystemUIInspector3 {
         let fillRule = ns.responds(to: NSSelectorFromString("fillRule"))
             ? ns.value(forKey: "fillRule") as? String : nil
 
-        // 발견된 키가 있으면 반환
-        if foundKeys.isEmpty && shape == nil && fillColor == nil {
-            return nil
-        }
-
+        // SDF 레이어이면 항상 반환 (정보가 없어도 키 목록 포함)
         return SDFInfo(shape: shape, fillColor: fillColor, strokeColor: strokeColor,
                       strokeWidth: strokeWidth, sdfPath: sdfPath, cornerRadius: cornerRadius,
-                      fillRule: fillRule, allKeys: foundKeys.isEmpty ? nil : foundKeys)
+                      fillRule: fillRule,
+                      respondingKeys: respondingKeys.isEmpty ? nil : respondingKeys,
+                      keyValues: keyValues.isEmpty ? nil : keyValues)
     }
 
     private func getKeyWindow() -> UIWindow? {
