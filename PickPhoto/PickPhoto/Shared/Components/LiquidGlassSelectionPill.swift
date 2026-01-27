@@ -29,6 +29,8 @@ final class LiquidGlassSelectionPill: UIView {
     private lazy var lensView: LiquidLensView = {
         let view = LiquidLensView()
         view.translatesAutoresizingMaskIntoConstraints = false
+        // 기본 배경보다 50% 더 투명하게 설정
+        view.restingBackgroundColor = UIColor.white.withAlphaComponent(0.15)
         return view
     }()
 

@@ -585,7 +585,16 @@ final class TrashAlbumViewController: BaseGridViewController {
                     return nil  // 이미지 미로드 시 중앙에서 줌 (fallback)
                 }
 
-                Log.print("[TrashAlbumVC.sourceViewProvider] ✅ returning thumbnailImageView for cell at \(cellIndexPath.item)")
+                // 🔍 Step 1: 반환하는 셀의 실제 상태 확인
+                let cellAssetID = cell.currentAssetID ?? "nil"
+                let cellFrame = cell.frame
+                let imageViewFrame = cell.thumbnailImageView.frame
+                let imageViewGlobalFrame = cell.thumbnailImageView.superview?.convert(cell.thumbnailImageView.frame, to: nil) ?? .zero
+                Log.print("[TrashAlbumVC.sourceViewProvider] ✅ cell at \(cellIndexPath.item)")
+                Log.print("[TrashAlbumVC.sourceViewProvider] 📍 cell.currentAssetID=\(cellAssetID.prefix(8)), expected=\(assetID.prefix(8)), match=\(cellAssetID == assetID)")
+                Log.print("[TrashAlbumVC.sourceViewProvider] 📍 cell.frame=\(cellFrame), imageView.frame=\(imageViewFrame)")
+                Log.print("[TrashAlbumVC.sourceViewProvider] 📍 imageView.globalFrame=\(imageViewGlobalFrame)")
+
                 return cell.thumbnailImageView
             })
         }

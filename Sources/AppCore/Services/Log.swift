@@ -43,7 +43,8 @@ public enum Log {
         // =============================================
         // Grid 관련
         // =============================================
-        "GridViewController": false,
+        "GridViewController": true,
+        "GridVC.sourceViewProvider": true,
         "BaseGridViewController": false,
         "AlbumGridViewController": false,
         "TrashAlbumViewController": true,
