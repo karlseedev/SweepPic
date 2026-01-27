@@ -124,6 +124,11 @@ enum CleanupConstants {
     /// - 근거: 주머니샷 등 실수 촬영은 짧은 영상에서만 발생
     static let maxAnalyzableVideoDuration: Double = 5.0
 
+    /// 너무 짧은 비디오 길이 (초)
+    /// - 1초 미만: 저품질 확정 (분석 없이)
+    /// - 근거: 1초 미만 영상은 거의 확실히 실수 촬영
+    static let tooShortVideoDuration: Double = 1.0
+
     // MARK: - iOS 18+ AestheticsScore
 
     /// AestheticsScore Precision 모드 임계값

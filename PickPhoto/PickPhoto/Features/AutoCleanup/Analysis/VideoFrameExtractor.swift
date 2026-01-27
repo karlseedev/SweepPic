@@ -5,7 +5,8 @@
 //  Created by Claude on 2026-01-26.
 //
 //  동영상 프레임 추출기
-//  - 5초 이하 동영상에서 3개 프레임 추출 (10%, 50%, 90% 시점)
+//  - 1초 이상 5초 이하 동영상에서 3개 프레임 추출 (10%, 50%, 90% 시점)
+//  - 1초 미만은 QualityAnalyzer에서 저품질 확정 처리
 //  - AVAssetImageGenerator 사용
 //  - iCloud-only 동영상은 SKIP
 //
@@ -45,7 +46,7 @@ enum VideoFrameExtractError: Error, LocalizedError {
 
 /// 동영상 프레임 추출기
 ///
-/// 5초 이하 동영상에서 분석용 프레임 3개를 추출합니다.
+/// 1초 이상 5초 이하 동영상에서 분석용 프레임 3개를 추출합니다.
 /// - 추출 시점: 10%, 50%, 90%
 /// - iCloud-only 동영상은 SKIP
 final class VideoFrameExtractor {
@@ -80,16 +81,11 @@ final class VideoFrameExtractor {
     /// - Returns: CGImage 배열 (10%, 50%, 90% 시점)
     /// - Throws: VideoFrameExtractError
     ///
-    /// - Important: 5초 이하 동영상만 대상, iCloud-only는 SKIP
+    /// - Important: 1초 이상 5초 이하 동영상만 대상 (1초 미만은 QualityAnalyzer에서 저품질 확정)
     func extractFrames(from asset: PHAsset) async throws -> [CGImage] {
         // 동영상 타입 확인
         guard asset.mediaType == .video else {
             throw VideoFrameExtractError.extractionFailed("동영상이 아닙니다")
-        }
-
-        // 최소 길이 확인 (0.5초 이상)
-        guard asset.duration >= 0.5 else {
-            throw VideoFrameExtractError.tooShort
         }
 
         // AVAsset 획득

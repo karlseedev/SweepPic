@@ -12,7 +12,8 @@
 //  - 최종 판정 및 결과 생성
 //
 //  동영상 처리:
-//  - 5초 이하: 프레임 3개 추출 (10%/50%/90%), 중앙값 판정
+//  - 1초 미만: 저품질 확정 (실수 촬영)
+//  - 1초~5초: 프레임 3개 추출 (10%/50%/90%), 중앙값 판정
 //  - 5초 초과: SKIP (MetadataFilter에서 처리)
 //
 
@@ -111,6 +112,29 @@ final class QualityAnalyzer {
 
         // 동영상 분기 처리 (5초 이하만 여기까지 도달)
         if asset.mediaType == .video {
+            // 1초 미만: 저품질 확정 (실수 촬영)
+            if asset.duration < CleanupConstants.tooShortVideoDuration {
+                let analysisTimeMs = (CFAbsoluteTimeGetCurrent() - startTime) * 1000
+                let signal = QualitySignal(
+                    kind: .tooShortVideo,
+                    measuredValue: asset.duration,
+                    threshold: CleanupConstants.tooShortVideoDuration
+                )
+
+                #if DEBUG
+                Log.print("[QualityAnalyzer] 동영상 1초 미만: \(String(format: "%.2f", asset.duration))초 → 저품질 확정")
+                #endif
+
+                return QualityResult.lowQuality(
+                    assetID: assetID,
+                    creationDate: creationDate,
+                    signals: [signal],
+                    analysisTimeMs: analysisTimeMs,
+                    method: .metalPipeline
+                )
+            }
+
+            // 1초 이상 5초 이하: 3프레임 분석
             return await analyzeVideo(asset, startTime: startTime)
         }
 

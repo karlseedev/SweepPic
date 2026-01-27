@@ -74,6 +74,12 @@ enum SignalKind: String, Codable, CaseIterable {
     /// - 타입: Strong (Safe Guard 체크 필요)
     case severeBlur
 
+    /// 너무 짧은 동영상
+    /// - 조건: duration < 1초
+    /// - 타입: Strong (분석 없이 저품질 확정)
+    /// - 근거: 1초 미만 동영상은 거의 확실히 실수 촬영
+    case tooShortVideo
+
     // MARK: Conditional 신호 (Recall only)
 
     /// 주머니 샷
@@ -126,7 +132,7 @@ enum SignalKind: String, Codable, CaseIterable {
     var signalType: SignalType {
         switch self {
         // Strong
-        case .extremeDark, .extremeBright, .severeBlur, .lowAesthetics:
+        case .extremeDark, .extremeBright, .severeBlur, .tooShortVideo, .lowAesthetics:
             return .strong
         // Conditional
         case .pocketShot, .extremeMonochrome, .lensBlocked:
@@ -142,7 +148,7 @@ enum SignalKind: String, Codable, CaseIterable {
     /// Precision 모드에서 사용 가능한 신호인지
     var isUsedInPrecision: Bool {
         switch self {
-        case .extremeDark, .extremeBright, .severeBlur, .lowAesthetics:
+        case .extremeDark, .extremeBright, .severeBlur, .tooShortVideo, .lowAesthetics:
             return true
         default:
             return false
