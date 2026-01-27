@@ -549,6 +549,7 @@ final class TrashAlbumViewController: BaseGridViewController {
                 guard let self = self,
                       let coordinator = coordinator,
                       let viewer = context.zoomedViewController as? ViewerViewController else {
+                    Log.print("[TrashAlbumVC.sourceViewProvider] ❌ guard failed")
                     return nil
                 }
 
@@ -558,22 +559,33 @@ final class TrashAlbumViewController: BaseGridViewController {
                 // 다른 VC들과 동일한 패턴: originalIndex 직접 사용
                 // (trash 모드는 identity 매핑이므로 currentIndex == originalIndex)
                 guard let originalIndex = coordinator.originalIndex(from: currentIndex) else {
+                    Log.print("[TrashAlbumVC.sourceViewProvider] ❌ originalIndex nil, currentIndex=\(currentIndex)")
                     return nil
                 }
 
                 // padding 셀 적용하여 실제 collectionView indexPath 계산
                 let cellIndexPath = IndexPath(item: originalIndex + self.paddingCellCount, section: 0)
 
+                // 🔍 디버그: 인덱스 값 확인
+                let assetID = coordinator.assetID(at: currentIndex) ?? "nil"
+                let gridAssetID = self._trashDataSource.assetID(at: originalIndex) ?? "nil"
+                Log.print("[TrashAlbumVC.sourceViewProvider] currentIndex=\(currentIndex), originalIndex=\(originalIndex), paddingCellCount=\(self.paddingCellCount), cellIndexPath=\(cellIndexPath.item)")
+                Log.print("[TrashAlbumVC.sourceViewProvider] coordinator.assetID=\(assetID.prefix(8)), gridDataSource.assetID=\(gridAssetID.prefix(8))")
+
                 // 셀이 화면에 없으면 nil 반환 (중앙에서 줌 fallback)
                 guard let cell = self.collectionView.cellForItem(at: cellIndexPath) as? PhotoCell else {
+                    Log.print("[TrashAlbumVC.sourceViewProvider] ❌ cell nil at indexPath \(cellIndexPath.item)")
+                    Log.print("[TrashAlbumVC.sourceViewProvider] visibleCells count: \(self.collectionView.visibleCells.count), visibleIndexPaths: \(self.collectionView.indexPathsForVisibleItems.map { $0.item })")
                     return nil
                 }
 
                 // placeholder가 아닌 실제 이미지가 로드된 경우에만 줌 전환
                 guard cell.hasLoadedImage else {
+                    Log.print("[TrashAlbumVC.sourceViewProvider] ❌ cell.hasLoadedImage=false at indexPath \(cellIndexPath.item)")
                     return nil  // 이미지 미로드 시 중앙에서 줌 (fallback)
                 }
 
+                Log.print("[TrashAlbumVC.sourceViewProvider] ✅ returning thumbnailImageView for cell at \(cellIndexPath.item)")
                 return cell.thumbnailImageView
             })
         }
@@ -581,7 +593,9 @@ final class TrashAlbumViewController: BaseGridViewController {
         // Push 방식으로 뷰어 표시 (모든 iOS 버전 공통)
         navigationController?.pushViewController(viewerVC, animated: true)
 
-        Log.print("[TrashAlbumViewController] Opening viewer - assetIndex: \(assetIndex), assetID: \(selectedAssetID.prefix(8))...")
+        // 🔍 디버그: 열 때 인덱스 확인
+        Log.print("[TrashAlbumViewController] Opening viewer - assetIndex: \(assetIndex), paddingCellCount: \(paddingCellCount), fetchResult.count: \(fetchResult.count)")
+        Log.print("[TrashAlbumViewController] assetID: \(selectedAssetID.prefix(8)), gridDataSource.assetID(at:\(assetIndex)): \((_trashDataSource.assetID(at: assetIndex) ?? "nil").prefix(8))")
     }
 
     // MARK: - Cell Configuration (Override)
