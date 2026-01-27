@@ -961,14 +961,14 @@ final class SystemUIInspector3 {
 
         var fillColor: ColorInfo? = nil
         if ns.responds(to: NSSelectorFromString("fillColor")),
-           let cgColor = ns.value(forKey: "fillColor") as? CGColor {
-            fillColor = extractCGColor(cgColor)
+           let value = ns.value(forKey: "fillColor") {
+            fillColor = extractCGColor(value as! CGColor)
         }
 
         var strokeColor: ColorInfo? = nil
         if ns.responds(to: NSSelectorFromString("strokeColor")),
-           let cgColor = ns.value(forKey: "strokeColor") as? CGColor {
-            strokeColor = extractCGColor(cgColor)
+           let value = ns.value(forKey: "strokeColor") {
+            strokeColor = extractCGColor(value as! CGColor)
         }
 
         let strokeWidth = ns.responds(to: NSSelectorFromString("strokeWidth"))
