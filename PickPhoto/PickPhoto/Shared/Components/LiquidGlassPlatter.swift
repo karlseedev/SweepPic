@@ -25,6 +25,8 @@ final class LiquidGlassPlatter: UIView {
         // LiquidGlassEffect with .regular style
         // isNative: true -> iOS 26+에서 자동으로 네이티브 API 사용
         let effect = LiquidGlassEffect(style: .regular, isNative: true)
+        // 블루톤 제거, 어둡고 투명하게 (블랙, alpha 0.2)
+        effect.tintColor = UIColor(white: 0, alpha: 0.2)
         let view = VisualEffectView(effect: effect)
         view.translatesAutoresizingMaskIntoConstraints = false
         return view

@@ -635,10 +635,10 @@
 		};
 		CB9721C02EF4000000F85BF4 /* XCRemoteSwiftPackageReference "LiquidGlassKit" */ = {
 			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/DnV1eX/LiquidGlassKit.git";
+			repositoryURL = "https://github.com/karlseedev/LiquidGlassKit.git";
 			requirement = {
-				kind = upToNextMajorVersion;
-				minimumVersion = 1.0.0;
+				branch = master;
+				kind = branch;
 			};
 		};
 /* End XCRemoteSwiftPackageReference section */

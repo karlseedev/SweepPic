@@ -1,5 +1,5 @@
 {
-  "originHash" : "2ec834b33c667ac393ba0441c3989373b729ac3548acebcfac7b78707ae378bf",
+  "originHash" : "9120030bbb74a3a0423fc0d40d7ee3ec5d2c656aabf4285f280fab1f915f4e71",
   "pins" : [
     {
       "identity" : "bluruikit",
@@ -13,10 +13,10 @@
     {
       "identity" : "liquidglasskit",
       "kind" : "remoteSourceControl",
-      "location" : "https://github.com/DnV1eX/LiquidGlassKit.git",
+      "location" : "https://github.com/karlseedev/LiquidGlassKit.git",
       "state" : {
-        "revision" : "2eb41c5d0115d23179d7a3eb133cb07bac7bb7d8",
-        "version" : "1.0.1"
+        "branch" : "master",
+        "revision" : "8f72323d27999a1f86fdd884707c838cfed8498f"
       }
     }
   ],

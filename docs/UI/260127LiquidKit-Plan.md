@@ -1,8 +1,67 @@
 # LiquidGlassKit 적용 계획
 
 **작성일**: 2026-01-27
-**버전**: v1
+**버전**: v2
 **관련 문서**: [260127LiquidKit-Research.md](./260127LiquidKit-Research.md)
+
+---
+
+## ⚠️ Fork 사용 중
+
+### 현재 상태
+
+| 항목 | 값 |
+|------|-----|
+| **원본** | `https://github.com/DnV1eX/LiquidGlassKit.git` |
+| **Fork** | `https://github.com/karlseedev/LiquidGlassKit.git` |
+| **브랜치** | `master` |
+| **Fork 날짜** | 2026-01-28 |
+
+### Fork 이유
+
+원본 LiquidGlassKit에서 `LiquidGlassEffect.tintColor`가 iOS 16-25에서 무시됨.
+- iOS 26+: `UIGlassEffect`에 tintColor 전달 ✅
+- iOS 16-25: `LiquidGlassEffectView`에 tintColor 전달 안함 ❌
+
+### 수정 내용
+
+**파일**: `Sources/LiquidGlassKit/LiquidGlassEffectView.swift`
+
+```swift
+// 변경 전
+let liquidGlassView = LiquidGlassView(effect.style.liquidGlass)
+
+// 변경 후
+var liquidGlass = effect.style.liquidGlass
+if let tintColor = effect.tintColor {
+    liquidGlass.tintColor = tintColor
+}
+let liquidGlassView = LiquidGlassView(liquidGlass)
+```
+
+### 색상 설정 현황
+
+| 컴포넌트 | 설정 |
+|---------|------|
+| **LiquidGlassPlatter** | `UIColor(white: 0, alpha: 0.2)` - 블랙, 20% 불투명 |
+| **LiquidGlassSelectionPill** | `restingBackgroundColor = UIColor.white.withAlphaComponent(0.15)` |
+
+### 원본 업데이트 반영 방법
+
+원본에 중요한 업데이트가 있을 경우:
+
+```bash
+cd /tmp
+git clone https://github.com/karlseedev/LiquidGlassKit.git
+cd LiquidGlassKit
+git remote add upstream https://github.com/DnV1eX/LiquidGlassKit.git
+git fetch upstream
+git merge upstream/master
+# 충돌 해결 후
+git push origin master
+```
+
+Xcode에서 `File > Packages > Update to Latest Package Versions` 실행.
 
 ---
 
