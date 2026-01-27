@@ -186,16 +186,6 @@ extension TrashAlbumViewController {
     }
 }
 
-// MARK: - Helper Properties
-
-extension TrashAlbumViewController {
-
-    /// TrashDataSource assets 접근 헬퍼
-    fileprivate var trashDataSourceAssets: [PHAsset] {
-        (gridDataSource as? TrashDataSource)?.assets ?? []
-    }
-}
-
 // MARK: - LiquidGlassTabBarDelegate (Trash Select Mode)
 
 extension TrashAlbumViewController: LiquidGlassTabBarDelegate {

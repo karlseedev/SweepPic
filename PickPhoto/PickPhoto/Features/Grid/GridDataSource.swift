@@ -134,41 +134,53 @@ final class AlbumDataSource: GridDataSource {
 
 // MARK: - TrashDataSource
 
-/// [PHAsset] 배열을 GridDataSource로 래핑
+/// PHFetchResult 기반 휴지통 데이터 소스
 /// TrashAlbumViewController에서 사용
-/// 휴지통 에셋은 동적으로 변경되므로 assets가 var
+/// 그리드와 뷰어가 동일한 fetchResult를 공유하여 인덱스 일관성 보장
 final class TrashDataSource: GridDataSource {
-    /// 휴지통 에셋 배열 (외부에서 갱신 가능)
-    /// didSet에서 인덱스 캐시 자동 갱신
-    var assets: [PHAsset] = [] {
-        didSet {
-            rebuildIndexCache()
-        }
-    }
+    /// 휴지통 fetchResult (그리드와 뷰어 공유)
+    /// setFetchResult()를 통해 외부에서 갱신
+    private(set) var fetchResult: PHFetchResult<PHAsset>?
 
     /// 에셋 ID → 인덱스 캐시 (O(1) 조회용)
     private var indexCache: [String: Int] = [:]
 
-    /// 인덱스 캐시 재구축
+    /// fetchResult 설정 (외부에서 갱신)
+    /// 인덱스 캐시 자동 재구축
+    func setFetchResult(_ fetchResult: PHFetchResult<PHAsset>?) {
+        self.fetchResult = fetchResult
+        rebuildIndexCache()
+    }
+
+    /// 인덱스 캐시 재구축 (fetchResult 기반)
     private func rebuildIndexCache() {
         indexCache.removeAll(keepingCapacity: true)
-        for (index, asset) in assets.enumerated() {
-            indexCache[asset.localIdentifier] = index
+        guard let fetchResult = fetchResult else { return }
+        for i in 0..<fetchResult.count {
+            let asset = fetchResult.object(at: i)
+            indexCache[asset.localIdentifier] = i
         }
     }
 
+    /// 빈 상태 확인용 (기존 assets.isEmpty 대체)
+    var isEmpty: Bool {
+        fetchResult == nil || fetchResult!.count == 0
+    }
+
     var assetCount: Int {
-        assets.count
+        fetchResult?.count ?? 0
     }
 
     func asset(at index: Int) -> PHAsset? {
-        guard index >= 0, index < assets.count else { return nil }
-        return assets[index]
+        guard let fetchResult = fetchResult,
+              index >= 0, index < fetchResult.count else { return nil }
+        return fetchResult.object(at: index)
     }
 
     func assetID(at index: Int) -> String? {
-        guard index >= 0, index < assets.count else { return nil }
-        return assets[index].localIdentifier
+        guard let fetchResult = fetchResult,
+              index >= 0, index < fetchResult.count else { return nil }
+        return fetchResult.object(at: index).localIdentifier
     }
 
     /// O(1) 인덱스 조회 (캐시 사용)
@@ -181,13 +193,14 @@ final class TrashDataSource: GridDataSource {
         return asset(at: index)
     }
 
-    /// 휴지통은 fetchResult를 사용하지 않음 (동적 배열 기반)
+    /// 뷰어용 fetchResult (그리드와 동일한 인스턴스 공유)
     var fetchResultForViewer: PHFetchResult<PHAsset>? {
-        nil
+        fetchResult
     }
 
-    /// 뷰어에서 사용할 에셋 ID 배열
+    /// 프로토콜 요구사항 (fetchResultForViewer가 있으므로 사용되지 않음)
     var orderedAssetIDs: [String] {
-        assets.map { $0.localIdentifier }
+        guard let fetchResult = fetchResult else { return [] }
+        return (0..<fetchResult.count).map { fetchResult.object(at: $0).localIdentifier }
     }
 }

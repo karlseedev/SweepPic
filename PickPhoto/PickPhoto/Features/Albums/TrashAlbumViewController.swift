@@ -54,6 +54,14 @@ final class TrashAlbumViewController: BaseGridViewController {
     /// - true이면 applyPendingViewerReturn()에서 강제 스크롤 skip
     private var didUserScrollAfterReturn: Bool = false
 
+    /// 뷰어 열림 상태 (데이터 갱신 지연용)
+    /// 뷰어가 열려있는 동안 loadTrashedAssets() 호출 시 갱신을 지연
+    private var isViewerOpen: Bool = false
+
+    /// 지연된 데이터 갱신 플래그
+    /// 뷰어 닫힐 때 true면 loadTrashedAssets() 재호출
+    private var pendingDataRefresh: Bool = false
+
     // MARK: - Initial Display Properties
 
     /// 초기 표시 완료 여부
@@ -176,7 +184,7 @@ final class TrashAlbumViewController: BaseGridViewController {
     override func setupSystemNavigationBar() {
         super.setupSystemNavigationBar()
 
-        let isEmpty = _trashDataSource.assets.isEmpty
+        let isEmpty = _trashDataSource.isEmpty
 
         // Select 버튼
         let selectButton = UIBarButtonItem(
@@ -222,7 +230,7 @@ final class TrashAlbumViewController: BaseGridViewController {
         overlay.titleBar.setShowsBackButton(false, action: nil)
 
         // [Select] [비우기] 두 버튼 표시
-        let isEmpty = _trashDataSource.assets.isEmpty
+        let isEmpty = _trashDataSource.isEmpty
         overlay.titleBar.setTwoRightButtons(
             firstTitle: "Select",
             firstColor: .systemBlue,
@@ -245,24 +253,32 @@ final class TrashAlbumViewController: BaseGridViewController {
 
     /// 휴지통 사진 로드 (백그라운드에서 fetch/정렬)
     /// TrashStore.trashedAssetIDs 기반으로 PHAsset 조회
+    /// 뷰어 열린 상태면 갱신 지연 (dismiss 애니메이션 인덱스 일관성 보장)
     private func loadTrashedAssets() {
+        // 뷰어 열린 상태면 갱신 지연 (인덱스 불일치 방지)
+        if isViewerOpen {
+            pendingDataRefresh = true
+            Log.print("[TrashAlbumViewController] Data refresh deferred (viewer open)")
+            return
+        }
+
         let startTime = CFAbsoluteTimeGetCurrent()
 
         trashedAssetIDSet = trashStore.trashedAssetIDs
 
         if trashedAssetIDSet.isEmpty {
-            _trashDataSource.assets = []
+            _trashDataSource.setFetchResult(nil)
             DispatchQueue.main.async { [weak self] in
                 self?.onDataLoaded(startTime: startTime)
             }
             return
         }
 
-        // 백그라운드에서 fetch/정렬 수행 (메인 스레드 블로킹 방지)
+        // 백그라운드에서 fetch 수행 (메인 스레드 블로킹 방지)
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
             guard let self = self else { return }
 
-            // PhotoKit 정렬 옵션 사용 (sorted 제거)
+            // PhotoKit 정렬 옵션 사용
             let options = PHFetchOptions()
             options.includeHiddenAssets = false
             options.includeAllBurstAssets = false
@@ -275,19 +291,12 @@ final class TrashAlbumViewController: BaseGridViewController {
 
             let fetchTime = CFAbsoluteTimeGetCurrent()
 
-            // 배열로 변환 (백그라운드)
-            var assets: [PHAsset] = []
-            fetchResult.enumerateObjects { asset, _, _ in
-                assets.append(asset)
-            }
-
-            let enumerateTime = CFAbsoluteTimeGetCurrent()
-
-            Log.print("[TrashAlbumViewController.Timing] fetch: \(String(format: "%.1f", (fetchTime - startTime) * 1000))ms, enumerate: \(String(format: "%.1f", (enumerateTime - fetchTime) * 1000))ms (background)")
+            Log.print("[TrashAlbumViewController.Timing] fetch: \(String(format: "%.1f", (fetchTime - startTime) * 1000))ms (background)")
 
             // 메인 스레드에서 UI 업데이트
+            // fetchResult를 직접 저장 (배열 변환 제거 - 인덱스 일관성 보장)
             DispatchQueue.main.async {
-                self._trashDataSource.assets = assets
+                self._trashDataSource.setFetchResult(fetchResult)
                 self.onDataLoaded(startTime: startTime)
             }
         }
@@ -304,7 +313,7 @@ final class TrashAlbumViewController: BaseGridViewController {
         updateEmptyState()
 
         // 버튼 상태 업데이트 (iOS 버전별 분기 유지)
-        let isEmpty = _trashDataSource.assets.isEmpty
+        let isEmpty = _trashDataSource.isEmpty
         if useFloatingUI {
             // iOS 16~25: FloatingUI 버튼 상태 갱신
             updateFloatingButtonsState()
@@ -327,7 +336,7 @@ final class TrashAlbumViewController: BaseGridViewController {
 
     /// 맨 아래로 스크롤 (최신 사진부터 보기)
     private func scrollToBottomIfNeeded() {
-        guard !_trashDataSource.assets.isEmpty else { return }
+        guard !_trashDataSource.isEmpty else { return }
         // padding 적용된 마지막 인덱스
         let lastIndex = _trashDataSource.assetCount - 1 + paddingCellCount
         let lastIndexPath = IndexPath(item: lastIndex, section: 0)
@@ -343,7 +352,7 @@ final class TrashAlbumViewController: BaseGridViewController {
             return
         }
 
-        let isEmpty = _trashDataSource.assets.isEmpty
+        let isEmpty = _trashDataSource.isEmpty
         // 빈 휴지통: 버튼 비활성화 (숨김 X)
         overlay.titleBar.setTwoRightButtonsEnabled(firstEnabled: !isEmpty, secondEnabled: !isEmpty)
     }
@@ -475,14 +484,14 @@ final class TrashAlbumViewController: BaseGridViewController {
     /// 바로 iOS 시스템 팝업으로 일괄 삭제 (확인 얼럿 생략 - iOS 팝업이 확인 역할)
     /// Note: TrashSelectMode.swift에서 selector로 접근하므로 internal
     @objc func emptyTrashButtonTapped() {
-        guard !_trashDataSource.assets.isEmpty else { return }
+        guard !_trashDataSource.isEmpty else { return }
         performEmptyTrash()
     }
 
     /// 휴지통 비우기 (외부에서 호출 가능)
     /// FloatingTabBar의 삭제하기 버튼에서 호출
     func emptyTrash() {
-        guard !_trashDataSource.assets.isEmpty else { return }
+        guard !_trashDataSource.isEmpty else { return }
         performEmptyTrash()
     }
 
@@ -503,25 +512,18 @@ final class TrashAlbumViewController: BaseGridViewController {
     // MARK: - Cell Selection (Override)
 
     /// 뷰어 열기 (휴지통 모드)
+    /// 그리드와 동일한 fetchResult를 공유하여 인덱스 일관성 보장
     override func openViewer(for asset: PHAsset, at assetIndex: Int) {
-        let selectedAssetID = asset.localIdentifier
-
-        // 뷰어 코디네이터 생성 (휴지통 전용)
-        // trashedAssets 배열을 기반으로 PHFetchResult 생성
-        // 정렬 옵션 추가: 최신 사진이 아래 (아이폰 기본 사진앱과 동일)
-        let assetIDs = _trashDataSource.orderedAssetIDs
-        let fetchOptions = PHFetchOptions()
-        fetchOptions.sortDescriptors = [NSSortDescriptor(key: "creationDate", ascending: true)]
-        let fetchResult = PHAsset.fetchAssets(withLocalIdentifiers: assetIDs, options: fetchOptions)
-
-        // PHFetchResult에서 선택한 에셋의 실제 인덱스 찾기
-        var actualIndex = 0
-        fetchResult.enumerateObjects { fetchedAsset, index, stop in
-            if fetchedAsset.localIdentifier == selectedAssetID {
-                actualIndex = index
-                stop.pointee = true
-            }
+        // 기존 fetchResult 사용 (새로 생성하지 않음 - 인덱스 일관성 보장)
+        guard let fetchResult = _trashDataSource.fetchResult else {
+            Log.print("[TrashAlbumViewController] Cannot open viewer: fetchResult is nil")
+            return
         }
+
+        // 뷰어 열림 상태 설정 (데이터 갱신 지연용)
+        isViewerOpen = true
+
+        let selectedAssetID = asset.localIdentifier
 
         let coordinator = ViewerCoordinator(
             fetchResult: fetchResult,
@@ -530,9 +532,10 @@ final class TrashAlbumViewController: BaseGridViewController {
         )
 
         // 뷰어 뷰컨트롤러 생성 (휴지통 모드)
+        // assetIndex는 이미 fetchResult 기준이므로 그대로 사용
         let viewerVC = ViewerViewController(
             coordinator: coordinator,
-            startIndex: actualIndex,
+            startIndex: assetIndex,
             mode: .trash
         )
         viewerVC.delegate = self
@@ -552,18 +555,14 @@ final class TrashAlbumViewController: BaseGridViewController {
                 // 뷰어의 현재 인덱스 (fetchResult 기준)
                 let currentIndex = viewer.currentIndex
 
-                // fetchResult에서 현재 에셋 ID 가져오기
-                guard let assetID = coordinator.assetID(at: currentIndex) else {
-                    return nil
-                }
-
-                // trashedAssets에서 해당 에셋의 인덱스 찾기
-                guard let trashIndex = self._trashDataSource.assetIndex(for: assetID) else {
+                // 다른 VC들과 동일한 패턴: originalIndex 직접 사용
+                // (trash 모드는 identity 매핑이므로 currentIndex == originalIndex)
+                guard let originalIndex = coordinator.originalIndex(from: currentIndex) else {
                     return nil
                 }
 
                 // padding 셀 적용하여 실제 collectionView indexPath 계산
-                let cellIndexPath = IndexPath(item: trashIndex + self.paddingCellCount, section: 0)
+                let cellIndexPath = IndexPath(item: originalIndex + self.paddingCellCount, section: 0)
 
                 // 셀이 화면에 없으면 nil 반환 (중앙에서 줌 fallback)
                 guard let cell = self.collectionView.cellForItem(at: cellIndexPath) as? PhotoCell else {
@@ -582,7 +581,7 @@ final class TrashAlbumViewController: BaseGridViewController {
         // Push 방식으로 뷰어 표시 (모든 iOS 버전 공통)
         navigationController?.pushViewController(viewerVC, animated: true)
 
-        Log.print("[TrashAlbumViewController] Opening viewer - assetIndex: \(assetIndex), actualIndex: \(actualIndex), assetID: \(selectedAssetID.prefix(8))...")
+        Log.print("[TrashAlbumViewController] Opening viewer - assetIndex: \(assetIndex), assetID: \(selectedAssetID.prefix(8))...")
     }
 
     // MARK: - Cell Configuration (Override)
@@ -652,10 +651,20 @@ extension TrashAlbumViewController: ViewerViewControllerDelegate {
     /// 뷰어 닫기 시
     /// iOS 18+ Zoom Transition 안정화: 전환 중 scrollToItem 금지
     func viewerWillClose(currentAssetID: String?) {
+        // 뷰어 닫힘 상태로 변경
+        isViewerOpen = false
+
         // 스크롤 위치만 저장 (전환 완료 후 처리)
         pendingScrollAssetID = currentAssetID
         // 사용자 스크롤 플래그 초기화
         didUserScrollAfterReturn = false
+
+        // 지연된 데이터 갱신 처리
+        if pendingDataRefresh {
+            pendingDataRefresh = false
+            Log.print("[TrashAlbumViewController] Processing deferred data refresh")
+            loadTrashedAssets()
+        }
     }
 
     /// 뷰어 닫힘 후 대기 중인 작업 처리 (전환 완료 후 호출)
