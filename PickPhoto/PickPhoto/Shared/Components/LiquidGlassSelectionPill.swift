@@ -2,15 +2,18 @@
 // Liquid Glass 스타일 Selection Pill 컴포넌트
 //
 // iOS 26 TabBar 선택 표시와 동일한 시각 효과 구현
-// - 블러 배경 (systemThinMaterialDark)
-// - Spring 애니메이션으로 이동
+// - LiquidGlassKit의 LiquidLensView 사용
+// - setLifted() 메소드로 resting/lifted 상태 전환
+// - 탭 전환 시 squash/stretch 효과 자동 적용
 // - 94×54pt, cornerRadius 27pt
 
 import UIKit
 import AppCore
+import LiquidGlassKit
 
 /// Liquid Glass 스타일 Selection Pill
 /// 현재 선택된 탭을 표시하는 배경 Pill
+/// LiquidGlassKit의 LiquidLensView를 사용하여 iOS 26 스타일 squash/stretch 효과 구현
 final class LiquidGlassSelectionPill: UIView {
 
     // MARK: - Properties
@@ -20,10 +23,11 @@ final class LiquidGlassSelectionPill: UIView {
 
     // MARK: - UI Components
 
-    /// 블러 배경
-    private lazy var pillBlur: UIVisualEffectView = {
-        let effect = UIBlurEffect(style: LiquidGlassConstants.Blur.pillStyle)
-        let view = UIVisualEffectView(effect: effect)
+    /// LiquidGlassKit 기반 Lens 뷰
+    /// - resting 상태: 일반 배경
+    /// - lifted 상태: 굴절 효과 + squash/stretch 활성화
+    private lazy var lensView: LiquidLensView = {
+        let view = LiquidLensView()
         view.translatesAutoresizingMaskIntoConstraints = false
         return view
     }()
@@ -50,31 +54,30 @@ final class LiquidGlassSelectionPill: UIView {
         layer.cornerCurve = .continuous
         clipsToBounds = true
 
-        // zPosition 설정 (최상단)
+        // zPosition 설정 (탭 버튼 뒤)
         layer.zPosition = LiquidGlassConstants.ZPosition.selectionPill
 
-        // 블러 배경 추가
-        addSubview(pillBlur)
+        // LiquidLensView 추가
+        // LiquidGlassKit이 블러, 굴절, 테두리를 처리
+        addSubview(lensView)
 
-        // 테두리 적용
-        LiquidGlassStyle.applyBorder(to: layer, cornerRadius: LiquidGlassConstants.SelectionPill.cornerRadius)
-
-        Log.print("[LiquidGlassSelectionPill] Initialized")
+        Log.print("[LiquidGlassSelectionPill] Initialized with LiquidGlassKit")
     }
 
     private func setupConstraints() {
         NSLayoutConstraint.activate([
-            // pillBlur: 전체 영역
-            pillBlur.topAnchor.constraint(equalTo: topAnchor),
-            pillBlur.leadingAnchor.constraint(equalTo: leadingAnchor),
-            pillBlur.trailingAnchor.constraint(equalTo: trailingAnchor),
-            pillBlur.bottomAnchor.constraint(equalTo: bottomAnchor),
+            // lensView: 전체 영역
+            lensView.topAnchor.constraint(equalTo: topAnchor),
+            lensView.leadingAnchor.constraint(equalTo: leadingAnchor),
+            lensView.trailingAnchor.constraint(equalTo: trailingAnchor),
+            lensView.bottomAnchor.constraint(equalTo: bottomAnchor),
         ])
     }
 
     // MARK: - Public Methods
 
     /// 특정 버튼 위치로 이동
+    /// LiquidLensView의 setLifted()를 사용하여 squash/stretch 효과 적용
     /// - Parameters:
     ///   - button: 이동할 대상 버튼
     ///   - animated: 애니메이션 여부
@@ -85,16 +88,17 @@ final class LiquidGlassSelectionPill: UIView {
         let newLeading = button.frame.origin.x
 
         if animated {
-            UIView.animate(
-                withDuration: LiquidGlassConstants.Animation.duration,
-                delay: 0,
-                usingSpringWithDamping: LiquidGlassConstants.Animation.dampingRatio,
-                initialSpringVelocity: LiquidGlassConstants.Animation.initialVelocity,
-                options: .curveEaseInOut
-            ) {
+            // lifted 상태로 전환 → 이동 → resting 상태로 복귀
+            // setLifted(true) 시 굴절 효과 활성화 + squash/stretch 애니메이션
+            lensView.setLifted(true, animated: true, alongsideAnimations: {
                 self.leadingConstraint?.constant = newLeading
                 self.superview?.layoutIfNeeded()
-            }
+            }, completion: { _ in
+                // 이동 완료 후 resting 상태로 복귀
+                self.lensView.setLifted(false, animated: true,
+                                        alongsideAnimations: nil,
+                                        completion: nil)
+            })
         } else {
             leadingConstraint?.constant = newLeading
             superview?.layoutIfNeeded()
