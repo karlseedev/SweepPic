@@ -2,34 +2,32 @@
 // Liquid Glass 스타일 배경 Platter 컴포넌트
 //
 // iOS 26 TabBar 배경과 동일한 시각 효과 구현
-// - 블러 배경 (실측: gaussianBlur radius=2, 매우 약한 블러)
-// - 테두리 (0.5pt, white 30%)
-// - 그림자 (ambient shadow)
-// - 스펙큘러 하이라이트
-// - 오버레이 없음 (실측 데이터에 없음)
+// - LiquidGlassKit을 사용하여 굴절 효과 + 그림자 + 테두리 통합 제공
+// - iOS 26+: 네이티브 UIGlassEffect 자동 사용
+// - iOS 16-25: LiquidGlassKit의 Metal 기반 커스텀 구현 사용
 
 import UIKit
 import AppCore
+import LiquidGlassKit
 
 /// Liquid Glass 스타일 배경 Platter
 /// TabBar, NavBar 등의 배경으로 재사용 가능
+/// LiquidGlassKit의 VisualEffectView를 사용하여 iOS 26 스타일 굴절 효과 구현
 final class LiquidGlassPlatter: UIView {
 
     // MARK: - UI Components
 
-    /// 블러 배경
-    private lazy var backgroundBlur: UIVisualEffectView = {
-        let effect = UIBlurEffect(style: LiquidGlassConstants.Blur.platterStyle)
-        let view = UIVisualEffectView(effect: effect)
+    /// LiquidGlassKit 기반 굴절 효과 뷰
+    /// - VisualEffectView() 팩토리 함수 사용
+    /// - iOS 26+: 네이티브 UIGlassEffect 자동 선택
+    /// - iOS 16-25: LiquidGlassEffectView (Metal 기반) 사용
+    private lazy var liquidGlassEffectView: AnyVisualEffectView = {
+        // LiquidGlassEffect with .regular style
+        // isNative: true -> iOS 26+에서 자동으로 네이티브 API 사용
+        let effect = LiquidGlassEffect(style: .regular, isNative: true)
+        let view = VisualEffectView(effect: effect)
         view.translatesAutoresizingMaskIntoConstraints = false
         return view
-    }()
-
-    /// 스펙큘러 하이라이트 레이어
-    private lazy var highlightLayer: CAGradientLayer = {
-        let layer = LiquidGlassStyle.createSpecularHighlightLayer()
-        layer.cornerRadius = LiquidGlassConstants.Platter.cornerRadius
-        return layer
     }()
 
     // MARK: - Initialization
@@ -49,47 +47,34 @@ final class LiquidGlassPlatter: UIView {
     // MARK: - Setup
 
     private func setupUI() {
-        // 코너 설정
+        // 코너 설정 (LiquidGlassView에도 적용됨)
         layer.cornerRadius = LiquidGlassConstants.Platter.cornerRadius
         layer.cornerCurve = .continuous
         clipsToBounds = true
 
-        // 블러 배경 추가 (오버레이 없음 - 실측 데이터 기반)
-        addSubview(backgroundBlur)
-        backgroundBlur.layer.zPosition = LiquidGlassConstants.ZPosition.platterBackground
+        // LiquidGlass EffectView 추가
+        // LiquidGlassKit이 블러, 굴절, 테두리, 하이라이트를 모두 처리
+        addSubview(liquidGlassEffectView)
+        liquidGlassEffectView.layer.zPosition = LiquidGlassConstants.ZPosition.platterBackground
 
-        // 하이라이트 레이어 추가
-        layer.addSublayer(highlightLayer)
-
-        // 테두리 적용
-        LiquidGlassStyle.applyBorder(to: layer, cornerRadius: LiquidGlassConstants.Platter.cornerRadius)
-
-        Log.print("[LiquidGlassPlatter] Initialized")
+        Log.print("[LiquidGlassPlatter] Initialized with LiquidGlassKit (isNative: true)")
     }
 
     private func setupConstraints() {
         NSLayoutConstraint.activate([
-            // backgroundBlur: 전체 영역
-            backgroundBlur.topAnchor.constraint(equalTo: topAnchor),
-            backgroundBlur.leadingAnchor.constraint(equalTo: leadingAnchor),
-            backgroundBlur.trailingAnchor.constraint(equalTo: trailingAnchor),
-            backgroundBlur.bottomAnchor.constraint(equalTo: bottomAnchor),
+            // liquidGlassEffectView: 전체 영역
+            liquidGlassEffectView.topAnchor.constraint(equalTo: topAnchor),
+            liquidGlassEffectView.leadingAnchor.constraint(equalTo: leadingAnchor),
+            liquidGlassEffectView.trailingAnchor.constraint(equalTo: trailingAnchor),
+            liquidGlassEffectView.bottomAnchor.constraint(equalTo: bottomAnchor),
         ])
-    }
-
-    // MARK: - Layout
-
-    override func layoutSubviews() {
-        super.layoutSubviews()
-
-        // 하이라이트 레이어 프레임 업데이트
-        highlightLayer.frame = bounds
     }
 }
 
 // MARK: - Shadow Container
 
 /// LiquidGlassPlatter의 그림자를 위한 컨테이너
+/// LiquidGlassKit 사용 시에도 추가 그림자가 필요한 경우를 위해 유지
 /// clipsToBounds가 true인 Platter 바깥에 그림자를 그리기 위해 사용
 final class LiquidGlassShadowContainer: UIView {
 
@@ -121,7 +106,8 @@ final class LiquidGlassShadowContainer: UIView {
     private func setupUI() {
         backgroundColor = .clear
 
-        // 그림자 설정
+        // 그림자 설정 (LiquidGlassView의 그림자와 중첩될 수 있음)
+        // LiquidGlassKit이 자체 그림자를 제공하지만, 더 강한 그림자가 필요한 경우 유지
         LiquidGlassStyle.applyShadow(to: layer, cornerRadius: LiquidGlassConstants.Platter.cornerRadius)
 
         // Platter 추가
