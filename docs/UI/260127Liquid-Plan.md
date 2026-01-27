@@ -124,75 +124,116 @@
 | 배경 gray | - | **0.11** | ✅ |
 | 배경 alpha | 0.12 | **0.73** | ✅ |
 
-### 4.2. 파일 구조 (예정)
+### 4.2. 파일 구조
 
 ```
 Shared/Styles/
-├── LiquidGlassStyle.swift              (기존, 유지)
-└── LiquidGlassStyle+Measurements.swift (신규, 실측 상수)
+├── LiquidGlassStyle.swift           (기존, 유지)
+└── LiquidGlassConstants.swift       (신규: 모든 실측 상수)
 
 Shared/Components/
-├── FloatingTabBar.swift                (기존, 수정)
-├── FloatingTabBar+SelectionPill.swift  (신규)
-└── SelectionPillView.swift             (신규)
+├── FloatingTabBar.swift             (기존, 유지 또는 deprecated)
+├── LiquidGlassTabBar.swift          (신규: 메인 컨테이너)
+├── LiquidGlassPlatter.swift         (신규: 배경 Platter)
+├── LiquidGlassSelectionPill.swift   (신규: Selection Pill)
+└── LiquidGlassTabButton.swift       (신규: 개별 탭 버튼)
 ```
+
+**파일별 역할**:
+
+| 파일 | 역할 | 예상 라인 |
+|------|------|----------|
+| `LiquidGlassConstants.swift` | 실측 상수 (크기, 색상, 애니메이션) | ~100 |
+| `LiquidGlassTabBar.swift` | TabBar 메인 컨테이너, 탭 전환 로직 | ~200 |
+| `LiquidGlassPlatter.swift` | 배경 블러 + 둥근 모서리 컨테이너 | ~100 |
+| `LiquidGlassSelectionPill.swift` | 선택 표시 Pill, Spring 애니메이션 | ~150 |
+| `LiquidGlassTabButton.swift` | 아이콘 + 레이블, 선택/비선택 스타일 | ~150 |
+
+**확장성**:
+- `LiquidGlassPlatter`는 NavBar에서도 재사용
+- `LiquidGlassConstants`에 NavBar/Button 상수 추가 예정
 
 ### 4.3. Phase 체크리스트
 
-#### Phase 1: 실측 상수 적용
-- [ ] `LiquidGlassStyle+Measurements.swift` 생성
-- [ ] Platter 크기 상수 (274×62, 68.2%)
-- [ ] Tab Button 크기 상수 (94×54, 패딩 4pt)
-- [ ] Selection Pill 상수 (cornerRadius 27pt)
-- [ ] 배경 색상 상수 (gray 0.11, alpha 0.73)
+#### Phase 1: 상수 파일 생성
+- [ ] `LiquidGlassConstants.swift` 생성 (Shared/Styles/)
+  - [ ] Platter 크기 상수 (274×62, 68.2%)
+  - [ ] Tab Button 크기 상수 (94×54, 패딩 4pt)
+  - [ ] Selection Pill 상수 (cornerRadius 27pt)
+  - [ ] 배경 색상 상수 (gray 0.11, alpha 0.73)
+  - [ ] 애니메이션 상수 (duration 0.35s, damping 0.8)
 
-#### Phase 2: Selection Pill 구현
-- [ ] `SelectionPillView.swift` 생성
-- [ ] cornerRadius=27, cornerCurve=continuous
-- [ ] 배경 블러 효과 (`UIVisualEffectView(.systemThinMaterial)`)
-- [ ] `FloatingTabBar+SelectionPill.swift` 생성
-- [ ] 선택 탭 위치 계산 로직
-- [ ] Spring 애니메이션 (0.35s, damping 0.8)
+#### Phase 2: Platter 구현
+- [ ] `LiquidGlassPlatter.swift` 생성
+  - [ ] UIVisualEffectView 배경 블러
+  - [ ] cornerRadius=31, cornerCurve=continuous
+  - [ ] 배경 색상 오버레이 (gray 0.11, alpha 0.73)
 
-#### Phase 3: FloatingTabBar 수정
-- [ ] Platter 크기 실측값 적용
-- [ ] cornerCurve: continuous 적용
-- [ ] Tab Button 레이아웃 수정
-- [ ] Selection Pill 통합
+#### Phase 3: Selection Pill 구현
+- [ ] `LiquidGlassSelectionPill.swift` 생성
+  - [ ] cornerRadius=27, cornerCurve=continuous
+  - [ ] UIVisualEffectView(.systemThinMaterial)
+  - [ ] 위치 업데이트 메서드
+  - [ ] Spring 애니메이션 (0.35s, damping 0.8)
 
-#### Phase 4: 아이콘/레이블 스타일
-- [ ] 선택 탭 색상: `tintColor = .systemBlue` (또는 실측 파란색)
-- [ ] 비선택 탭 색상: `tintColor = .secondaryLabel` (회색)
-- [ ] 아이콘 크기 조정 (28pt pointSize)
-- [ ] 레이블 위치/크기 (y=35pt, 높이 12pt)
+#### Phase 4: Tab Button 구현
+- [ ] `LiquidGlassTabButton.swift` 생성
+  - [ ] 아이콘 (28pt pointSize, y=9pt)
+  - [ ] 레이블 (y=35pt, 높이 12pt)
+  - [ ] 선택 상태: tintColor = .systemBlue
+  - [ ] 비선택 상태: tintColor = .secondaryLabel
 
-#### Phase 5: 마무리
+#### Phase 5: TabBar 통합
+- [ ] `LiquidGlassTabBar.swift` 생성
+  - [ ] Platter, SelectionPill, TabButton 조합
+  - [ ] 탭 전환 로직
+  - [ ] 델리게이트 패턴 (탭 선택 콜백)
+- [ ] 기존 `FloatingTabBar.swift`에서 마이그레이션
+  - [ ] iOS 16~25: LiquidGlassTabBar 사용
+  - [ ] 기존 코드 정리
+
+#### Phase 6: 마무리
 - [ ] 접근성 대응 (투명도 감소, 모션 감소)
 - [ ] 다크/라이트 모드 대응
 - [ ] 성능 최적화
+- [ ] 기존 FloatingTabBar 제거 또는 deprecated 처리
 
 ### 4.4. 검증 체크리스트
 
-#### 크기/레이아웃
-- [ ] Platter 너비 68.2%
-- [ ] Platter 높이 62pt
-- [ ] Tab Button 94×54pt
-- [ ] Selection Pill cornerRadius 27pt
-- [ ] cornerCurve: continuous
+#### 파일별 검증
 
-#### 색상/효과
+**LiquidGlassConstants.swift**:
+- [ ] 모든 상수가 실측값과 일치
+
+**LiquidGlassPlatter.swift**:
+- [ ] 너비 68.2% (화면 기준)
+- [ ] 높이 62pt
+- [ ] cornerRadius 31pt, cornerCurve continuous
 - [ ] 배경 gray 0.11, alpha 0.73
-- [ ] 선택 탭 파란 틴트
-- [ ] 비선택 탭 회색
 
-#### 애니메이션
-- [ ] Selection Pill Spring 애니메이션
-- [ ] 전환 시간 0.35s
-- [ ] damping 0.8
+**LiquidGlassSelectionPill.swift**:
+- [ ] 크기 94×54pt
+- [ ] cornerRadius 27pt, cornerCurve continuous
+- [ ] Spring 애니메이션 (0.35s, damping 0.8)
+- [ ] 탭 전환 시 부드러운 이동
 
-#### 접근성
-- [ ] 투명도 감소 설정 대응
-- [ ] 모션 감소 설정 대응
+**LiquidGlassTabButton.swift**:
+- [ ] 크기 94×54pt
+- [ ] 아이콘 28pt, y=9pt
+- [ ] 레이블 y=35pt, 높이 12pt
+- [ ] 선택 시 파란 틴트, 비선택 시 회색
+
+**LiquidGlassTabBar.swift**:
+- [ ] 3개 탭 정상 표시
+- [ ] 탭 전환 동작
+- [ ] 델리게이트 콜백 정상
+
+#### 통합 검증
+- [ ] iOS 16~25에서 정상 동작
+- [ ] iOS 26에서 시스템 TabBar 사용 (분기 확인)
+- [ ] 접근성: 투명도 감소 설정 대응
+- [ ] 접근성: 모션 감소 설정 대응
+- [ ] 다크/라이트 모드 전환
 
 ---
 
@@ -227,6 +268,8 @@ Shared/Components/
 |------|------|-----------|
 | 2026-01-27 | v1 | 문서 생성 (데이터 수집 80% 기준) |
 | 2026-01-27 | v2 | 데이터 수집 완료, 모든 대안 확정, 구현 준비 완료 |
+| 2026-01-27 | v2.1 | 파일 구조 개선 (요소별 분리), Phase 5→6개로 세분화 |
+| 2026-01-27 | v2.2 | 파일 구조 단순화 (하위 폴더 제거, 플랫 구조) |
 
 ---
 
