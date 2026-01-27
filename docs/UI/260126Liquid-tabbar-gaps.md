@@ -35,19 +35,21 @@
 
 ## 2. Private 레이어 클래스 정보 부족
 
-### 2.1. CAPortalLayer ⚠️ 높음
-**문제**: 어떤 레이어를 참조하는지 알 수 없음
+### 2.1. CAPortalLayer ✅ 해결됨
+**상태**: Inspector 보강으로 속성 수집 완료
 
-```swift
-// 필요한 정보
-layer.setValue(sourceLayer, forKey: "sourceLayer")  // 참조 대상
-layer.setValue(true, forKey: "hidesSourceLayer")    // 원본 숨김 여부
-layer.setValue(true, forKey: "matchesOpacity")      // 투명도 동기화
-layer.setValue(true, forKey: "matchesPosition")     // 위치 동기화
-layer.setValue(true, forKey: "matchesTransform")    // 변환 동기화
+```json
+// 수집된 데이터
+"portal" : {
+  "hidesSourceLayer" : true,
+  "matchesOpacity" : true,
+  "matchesPosition" : true,
+  "matchesTransform" : true
+}
+"masksToBounds" : true
 ```
 
-**해결 방법**: Inspector에 CAPortalLayer 전용 속성 추출 추가
+**남은 문제**: `sourceLayer`가 어떤 레이어를 참조하는지 (클래스명만 수집, 실제 참조 대상 불명)
 
 ### 2.2. CASDFLayer / CASDFElementLayer ⚠️ 높음
 **문제**: SDF 모양 정의 방법 불명
@@ -61,17 +63,24 @@ layer.setValue(true, forKey: "matchesTransform")    // 변환 동기화
 
 **해결 방법**: KVC로 SDF 관련 속성 탐색 필요
 
-### 2.3. UICABackdropLayer 추가 속성
-**현재 수집**: scale, groupName, captureOnly
+### 2.3. UICABackdropLayer 추가 속성 ✅ 부분 해결
+**현재 수집**: scale, groupName, captureOnly, zoom, blurRadius, saturation
 
-**누락 가능성**:
+**수집된 데이터**:
+```json
+"backdrop" : {
+  "captureOnly" : false,
+  "groupName" : "<UITabSelectionView: 0x...>",
+  "scale" : 0.25,
+  "zoom" : 0
+}
+```
+
+**여전히 누락 가능**:
 ```swift
 allowsInPlaceFiltering
 disablesOccludedBackdropBlur
 bleedAmount
-saturationAmount
-blurRadius  // gaussianBlur와 별개?
-zoom
 statisticsType
 ```
 

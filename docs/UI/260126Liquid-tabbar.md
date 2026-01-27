@@ -1,6 +1,6 @@
 # iOS 26 Liquid Glass TabBar 구현 자료
 
-**작성일**: 2026-01-26
+**작성일**: 2026-01-27 (업데이트)
 **데이터 소스**: SystemUIInspector3 (iOS 26.0.1 시뮬레이터)
 
 ---
@@ -94,6 +94,7 @@ let platterX = (tabBarWidth - platterWidth) / 2  // = 64
 ```swift
 layer.setValue(true, forKey: "continuousCorners")
 layer.cornerCurve = .continuous
+layer.contentsScale = 1.0  // 주의: 화면 스케일(3)이 아님!
 ```
 
 아이콘/라벨 레이어 (`_UIMultiLayer`):
@@ -104,6 +105,26 @@ layer.setValue(false, forKey: "allowsGroupBlending")  // 0
 기타 레이어:
 ```swift
 layer.setValue(true, forKey: "allowsGroupBlending")   // 1
+```
+
+### 3.3. CAPortalLayer 속성 (신규 발견)
+
+```swift
+// CAPortalLayer - 다른 레이어를 미러링
+layer.masksToBounds = true
+layer.setValue(true, forKey: "hidesSourceLayer")    // 원본 숨김
+layer.setValue(true, forKey: "matchesOpacity")      // 투명도 동기화
+layer.setValue(true, forKey: "matchesPosition")     // 위치 동기화
+layer.setValue(true, forKey: "matchesTransform")    // 변환 동기화
+```
+
+### 3.4. UICABackdropLayer 추가 속성 (신규 발견)
+
+```swift
+backdrop.scale = 0.25       // 1/4 해상도로 캡처
+backdrop.zoom = 0           // 줌 없음
+backdrop.captureOnly = false
+backdrop.groupName = "<UITabSelectionView: 0x...>"
 ```
 
 ---
