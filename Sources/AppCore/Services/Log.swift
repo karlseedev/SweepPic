@@ -1,0 +1,186 @@
+// Log.swift
+// 중앙 집중 로그 관리 시스템
+//
+// 사용법:
+//   - 카테고리별 로그 ON/OFF: Log.categories["Video"] = true
+//   - 전체 로그 ON/OFF: Log.isEnabled = false
+//   - 기존 print 대체: Log.print("[Video] 재생 시작")
+//   - 카테고리 직접 지정: Log.debug("Zoom", "scale: \(scale)")
+
+import Foundation
+
+/// 중앙 집중 로그 관리 시스템
+/// - Log.swift 한 파일에서 모든 로그 ON/OFF 관리
+/// - 기존 print()는 Log.print()로 치환하여 출력 필터링
+public enum Log {
+
+    // ========================================
+    // MARK: - 카테고리별 ON/OFF (여기서 한눈에 관리)
+    // ========================================
+
+    /// 카테고리별 로그 활성화 상태
+    /// - 키: 카테고리 이름 (예: "Video", "Photo")
+    /// - 값: true면 출력, false면 무시
+    public static var categories: [String: Bool] = [
+        // ----- Viewer 관련 -----
+        "Video": false,              // 비디오 재생 로그 (VideoPageViewController 등)
+        "Photo": false,              // 사진 표시 로그 (PhotoPageViewController 등)
+        "Zoom": false,               // 줌 동작 (기존 debugZoom)
+        "Overlay": false,            // 오버레이 (기존 debugOverlayEnabled)
+        "Viewer": false,             // 뷰어 일반 (기존 debugViewer)
+        "VideoControls": false,      // 비디오 컨트롤 (기존 debugControls)
+        "FaceButton": false,         // 얼굴 버튼 위치 (기존 debugButtonPosition)
+
+        // ----- Grid 관련 -----
+        "GridViewController": false,
+        "BaseGridViewController": false,
+        "AlbumGridViewController": false,
+        "TrashAlbumViewController": false,
+        "GridDataSource": false,
+
+        // ----- Navigation -----
+        "TabBarController": false,
+        "FloatingTabBar": false,
+        "FloatingTitleBar": false,
+
+        // ----- 분석 기능 -----
+        "SimilarityAnalysisQueue": false,
+        "SimilarityAnalyzer": false,
+        "YuNetDebugTest": false,
+
+        // ----- AutoCleanup 기능 -----
+        "QualityAnalyzer": true,     // 현재 작업 중 (ON)
+        "CleanupService": true,      // 현재 작업 중 (ON)
+        "CleanupSessionStore": true, // 현재 작업 중 (ON)
+        "AutoCleanup": false,
+
+        // ----- 기타 -----
+        "ImagePipeline": false,
+        "ThumbnailCache": false,
+        "PhotoLibraryService": false,
+        "Permission": false,
+        "Trash": false,
+        "Album": false,
+    ]
+
+    // ========================================
+    // MARK: - 전역 설정
+    // ========================================
+
+    /// 전체 로그 ON/OFF (false면 모든 로그 비활성화)
+    public static var isEnabled = true
+
+    /// 카테고리 없는 로그 출력 여부
+    /// - true: [Category] 형식이 아닌 로그도 출력
+    /// - false: 카테고리가 없는 로그는 무시
+    public static var showUncategorized = false
+
+    // ========================================
+    // MARK: - 로그 출력 함수
+    // ========================================
+
+    /// 메시지에서 카테고리를 추출하여 필터링 후 출력
+    /// - Parameter message: "[Category] 메시지" 형식의 로그 메시지
+    ///
+    /// 사용 예:
+    /// ```swift
+    /// Log.print("[Video] 재생 시작")
+    /// Log.print("[Zoom] scale: \(scale)")
+    /// ```
+    public static func print(_ message: String) {
+        guard isEnabled else { return }
+
+        // [Category] 형식에서 카테고리 추출
+        if let category = extractCategory(from: message) {
+            // 카테고리가 등록되어 있고 true인 경우에만 출력
+            guard categories[category] == true else { return }
+        } else if !showUncategorized {
+            // 카테고리가 없는 로그는 showUncategorized가 true일 때만 출력
+            return
+        }
+
+        Swift.print(message)
+    }
+
+    /// 카테고리를 직접 지정하여 출력 (debugXXX 플래그 대체용)
+    /// - Parameters:
+    ///   - category: 로그 카테고리 (예: "Zoom", "Video")
+    ///   - message: 출력할 메시지
+    ///
+    /// 사용 예:
+    /// ```swift
+    /// // 기존 코드:
+    /// // if debugZoom { print("[Zoom] scale: \(scale)") }
+    ///
+    /// // 변경 후:
+    /// Log.debug("Zoom", "scale: \(scale)")
+    /// ```
+    public static func debug(_ category: String, _ message: String) {
+        guard isEnabled else { return }
+        guard categories[category] == true else { return }
+        Swift.print("[\(category)] \(message)")
+    }
+
+    /// 조건부 로그 출력 (복잡한 로그 메시지 생성 비용 절감)
+    /// - Parameters:
+    ///   - category: 로그 카테고리
+    ///   - message: 메시지를 생성하는 클로저 (lazy evaluation)
+    ///
+    /// 사용 예:
+    /// ```swift
+    /// Log.debug("Video") { "재생 상태: \(expensiveDebugInfo())" }
+    /// ```
+    public static func debug(_ category: String, _ message: @autoclosure () -> String) {
+        guard isEnabled else { return }
+        guard categories[category] == true else { return }
+        Swift.print("[\(category)] \(message())")
+    }
+
+    // ========================================
+    // MARK: - 유틸리티 함수
+    // ========================================
+
+    /// 특정 카테고리 활성화
+    /// - Parameter category: 활성화할 카테고리
+    public static func enable(_ category: String) {
+        categories[category] = true
+    }
+
+    /// 특정 카테고리 비활성화
+    /// - Parameter category: 비활성화할 카테고리
+    public static func disable(_ category: String) {
+        categories[category] = false
+    }
+
+    /// 모든 카테고리 비활성화
+    public static func disableAll() {
+        for key in categories.keys {
+            categories[key] = false
+        }
+    }
+
+    /// 모든 카테고리 활성화
+    public static func enableAll() {
+        for key in categories.keys {
+            categories[key] = true
+        }
+    }
+
+    // ========================================
+    // MARK: - Private
+    // ========================================
+
+    /// 메시지에서 "[Category]" 형식의 카테고리 추출
+    /// - Parameter message: 로그 메시지
+    /// - Returns: 카테고리 문자열 (없으면 nil)
+    private static func extractCategory(from message: String) -> String? {
+        // "[Category] ..." 형식에서 Category 추출
+        guard message.hasPrefix("["),
+              let endIndex = message.firstIndex(of: "]") else {
+            return nil
+        }
+
+        let start = message.index(after: message.startIndex)
+        return String(message[start..<endIndex])
+    }
+}
