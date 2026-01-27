@@ -6,7 +6,7 @@
 //
 //  정리 방식 선택 시트 (Alert 형태)
 //  - 최신사진부터 정리
-//  - 이어서 정리 (최신사진부터 정리 후 50장/1000장 제한 도달 시에만 활성화)
+//  - 이어서 정리 (최신사진부터 정리 후 50장/2000장 제한 도달 시에만 활성화)
 //  - 연도별 정리 (해당 연도 이어서 정리 버튼은 연도 선택 화면에서 표시)
 //
 
@@ -96,7 +96,7 @@ final class CleanupMethodSheet {
 
         // 이어서 정리 (최신사진부터 정리의 연장선, canContinueFromLatest일 때만 활성화)
         // - fromLatest 또는 continueFromLast 세션이고
-        // - 50장 도달 또는 1000장 검색 도달인 경우에만 활성화
+        // - 50장 도달 또는 2000장 검색 도달인 경우에만 활성화
         let continueAction: UIAlertAction
         if let session = latestSession, session.canContinueFromLatest {
             let dateString = formatDate(session.lastAssetDate)
@@ -202,7 +202,7 @@ final class CleanupMethodSheet {
 
         // 연도별 이어서 정리 버튼 (조건 충족 시 최상단에 표시)
         // - byYearSession이 존재하고 canContinueByYear일 때
-        // - 50장 도달 또는 1000장 검색 도달인 경우
+        // - 50장 도달 또는 2000장 검색 도달인 경우
         if let session = byYearSession,
            session.canContinueByYear,
            let targetYear = session.targetYear,

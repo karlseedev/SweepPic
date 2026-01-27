@@ -66,7 +66,7 @@ enum EndReason: String, Codable, CaseIterable {
     case maxFound
 
     /// 최대 검색 수 도달
-    /// - 1,000장을 검색함
+    /// - 2,000장을 검색함
     case maxScanned
 
     /// 범위 끝 도달

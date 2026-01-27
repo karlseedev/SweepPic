@@ -5,7 +5,7 @@
 //  Created by Claude on 2026-01-22.
 //
 //  저품질 사진 자동 정리 기능에서 사용하는 상수 정의
-//  - 종료 조건: 최대 찾기 수 50장, 최대 검색 수 1,000장
+//  - 종료 조건: 최대 찾기 수 50장, 최대 검색 수 2,000장
 //  - 성능: 배치 크기 100장, 동시 분석 4개
 //  - 임계값: 휘도, Laplacian, RGB Std, 얼굴 품질 등
 //  - iOS 버전별 분기: AestheticsScore vs Metal 파이프라인
@@ -26,8 +26,8 @@ enum CleanupConstants {
     static let maxFoundCount = 50
 
     /// 최대 검색 수
-    /// - 1,000장을 검색하면 탐색 종료
-    static let maxScanCount = 1000
+    /// - 2,000장을 검색하면 탐색 종료
+    static let maxScanCount = 2000
 
     // MARK: - 성능
 
@@ -203,13 +203,13 @@ enum CleanupConstants {
         case (.maxFound, _):
             return "50장의 정리할 사진을 찾았습니다.\n더 찾으려면 '이어서 정리'를 사용하세요."
 
-        // 2. 1,000장 검색 + N장 발견
+        // 2. 2,000장 검색 + N장 발견
         case (.maxScanned, let n) where n > 0:
-            return "1,000장을 검색하여 \(n)장을 찾았습니다.\n더 찾으려면 '이어서 정리'를 사용하세요."
+            return "2,000장을 검색하여 \(n)장을 찾았습니다.\n더 찾으려면 '이어서 정리'를 사용하세요."
 
-        // 3. 1,000장 검색 + 0장 발견
+        // 3. 2,000장 검색 + 0장 발견
         case (.maxScanned, 0):
-            return "1,000장을 검색했지만 정리할 사진이 없습니다.\n더 검색하려면 '이어서 정리'를 사용하세요."
+            return "2,000장을 검색했지만 정리할 사진이 없습니다.\n더 검색하려면 '이어서 정리'를 사용하세요."
 
         // 4, 5. 범위 끝 + N장 발견
         case (.endOfRange, let n) where n > 0:

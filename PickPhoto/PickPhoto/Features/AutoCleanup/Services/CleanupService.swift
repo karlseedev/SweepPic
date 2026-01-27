@@ -514,7 +514,7 @@ final class CleanupService: CleanupServiceProtocol {
             return .maxFound
         }
 
-        // 1000장 검색
+        // 2000장 검색
         if scannedCount >= CleanupConstants.maxScanCount {
             return .maxScanned
         }

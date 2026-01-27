@@ -67,7 +67,7 @@ struct CleanupSession: Equatable, Sendable {
     // MARK: - 진행 상황
 
     /// 검색한 사진 수
-    /// - 최대 1,000장
+    /// - 최대 2,000장
     var scannedCount: Int
 
     /// 찾은 저품질 사진 수
@@ -86,7 +86,7 @@ struct CleanupSession: Equatable, Sendable {
     /// 종료 사유
     /// - nil: 아직 종료되지 않음
     /// - maxFound: 50장 도달 (이어서 정리 가능)
-    /// - maxScanned: 1000장 검색 (이어서 정리 가능)
+    /// - maxScanned: 2000장 검색 (이어서 정리 가능)
     /// - endOfRange: 범위 끝 도달 (이어서 정리 불가)
     /// - userCancelled: 사용자 취소
     var endReason: EndReason?
@@ -269,7 +269,7 @@ extension CleanupSession {
     }
 
     /// 이어서 정리 가능 여부
-    /// - 50장 도달 또는 1000장 검색 도달 시에만 이어서 정리 가능
+    /// - 50장 도달 또는 2000장 검색 도달 시에만 이어서 정리 가능
     /// - 범위 끝 도달 또는 사용자 취소 시에는 이어서 정리 불가
     var canContinue: Bool {
         guard let reason = endReason else { return false }

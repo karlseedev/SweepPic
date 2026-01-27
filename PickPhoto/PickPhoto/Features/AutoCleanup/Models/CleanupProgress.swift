@@ -30,7 +30,7 @@ struct CleanupProgress: Equatable {
     let currentDate: Date
 
     /// 진행률 (0.0 ~ 1.0)
-    /// - 최대 검색 수(1,000장) 기준 진행률
+    /// - 최대 검색 수(2,000장) 기준 진행률
     /// - foundCount가 50에 가까워지면 빠르게 완료될 수 있음
     let progress: Float
 
@@ -41,14 +41,14 @@ struct CleanupProgress: Equatable {
         return Float(foundCount) / Float(CleanupConstants.maxFoundCount)
     }
 
-    /// 최대 검색 수(1000)까지의 진행률
+    /// 최대 검색 수(2000)까지의 진행률
     var scanProgress: Float {
         return Float(scannedCount) / Float(CleanupConstants.maxScanCount)
     }
 
     /// 탐색 완료 예상 여부
     /// - 50장 찾을 때까지 계속 탐색
-    /// - 1,000장 검색 시 종료
+    /// - 2,000장 검색 시 종료
     var isNearCompletion: Bool {
         return foundCount >= CleanupConstants.maxFoundCount - 5 ||
                scannedCount >= CleanupConstants.maxScanCount - 100
@@ -110,7 +110,7 @@ extension CleanupProgress {
         foundCount: Int,
         currentDate: Date
     ) -> CleanupProgress {
-        // 진행률 계산: 검색 수 기준 (최대 1,000장)
+        // 진행률 계산: 검색 수 기준 (최대 2,000장)
         let progress = Float(scannedCount) / Float(CleanupConstants.maxScanCount)
         return CleanupProgress(
             scannedCount: scannedCount,

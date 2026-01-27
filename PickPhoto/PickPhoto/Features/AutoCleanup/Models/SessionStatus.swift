@@ -46,7 +46,7 @@ enum SessionStatus: String, Codable, CaseIterable {
     /// 완료
     /// - 종료 조건 충족:
     ///   1. 50장 찾음
-    ///   2. 1,000장 검색
+    ///   2. 2,000장 검색
     ///   3. 범위 끝 (연도별/가장 오래된 사진)
     case completed
 
