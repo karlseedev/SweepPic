@@ -27,7 +27,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?
     ) -> Bool {
         // AppCore 초기화 로그
-        print("[AppDelegate] PickPhoto started with AppCore \(AppCore.version)")
+        Log.print("[AppDelegate] PickPhoto started with AppCore \(AppCore.version)")
 
         // [DEBUG] Launch arguments 로깅 (AutoScrollTester 디버깅용)
         let args = ProcessInfo.processInfo.arguments
@@ -125,7 +125,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     /// 메모리 경고 시 호출
     /// - Parameter application: UIApplication 인스턴스
     func applicationDidReceiveMemoryWarning(_ application: UIApplication) {
-        print("[AppDelegate] Memory warning received")
+        Log.print("[AppDelegate] Memory warning received")
         // T072: AppStateStore를 통한 메모리 경고 처리
         AppStateStore.shared.handleMemoryWarning()
     }

@@ -577,7 +577,7 @@ final class SimilarityAnalysisQueue {
                     let center = CGPoint(x: face.boundingBox.midX, y: face.boundingBox.midY)
                     faceData[faceIdx] = (center: center, boundingBox: face.boundingBox)
                 }
-                print("[FaceMatching] Photo \(assetID.prefix(8)): Model not available, skipping embedding")
+                Log.print("[FaceMatching] Photo \(assetID.prefix(8)): Model not available, skipping embedding")
                 result[assetID] = []
                 continue
             }
@@ -587,7 +587,7 @@ final class SimilarityAnalysisQueue {
             do {
                 yunetDetections = try yunet.detect(in: image)
             } catch {
-                print("[FaceMatching] Photo \(assetID.prefix(8)): YuNet detection failed - \(error.localizedDescription)")
+                Log.print("[FaceMatching] Photo \(assetID.prefix(8)): YuNet detection failed - \(error.localizedDescription)")
                 result[assetID] = []
                 continue
             }
@@ -601,13 +601,13 @@ final class SimilarityAnalysisQueue {
             switch visionFallbackMode {
             case .off:
                 if yunetDetections.isEmpty && !faces.isEmpty {
-                    print("[NoFallback] Photo \(assetID.prefix(8)): YuNet=0, Vision=\(faces.count) (skipped)")
+                    Log.print("[NoFallback] Photo \(assetID.prefix(8)): YuNet=0, Vision=\(faces.count) (skipped)")
                 }
 
             case .basic:
                 // YuNet=0일 때만 Vision 사용
                 if yunetDetections.isEmpty && !faces.isEmpty {
-                    print("[VisionFallback] Photo \(assetID.prefix(8)): YuNet=0, Vision=\(faces.count) faces")
+                    Log.print("[VisionFallback] Photo \(assetID.prefix(8)): YuNet=0, Vision=\(faces.count) faces")
                     for (faceIdx, face) in faces.enumerated() {
                         let center = CGPoint(x: face.boundingBox.midX, y: face.boundingBox.midY)
                         faceData[faceIdx] = (center: center, boundingBox: face.boundingBox)
@@ -618,7 +618,7 @@ final class SimilarityAnalysisQueue {
             case .extended:
                 // YuNet=0일 때 Vision 사용
                 if yunetDetections.isEmpty && !faces.isEmpty {
-                    print("[VisionFallback] Photo \(assetID.prefix(8)): YuNet=0, Vision=\(faces.count) faces")
+                    Log.print("[VisionFallback] Photo \(assetID.prefix(8)): YuNet=0, Vision=\(faces.count) faces")
                     for (faceIdx, face) in faces.enumerated() {
                         let center = CGPoint(x: face.boundingBox.midX, y: face.boundingBox.midY)
                         faceData[faceIdx] = (center: center, boundingBox: face.boundingBox)
@@ -647,7 +647,7 @@ final class SimilarityAnalysisQueue {
                     image: image,
                     landmarks: detection.landmarks
                 ) else {
-                    print("[AlignFail] Face(\(faceIdx)): Alignment failed")
+                    Log.print("[AlignFail] Face(\(faceIdx)): Alignment failed")
                     continue
                 }
 
@@ -656,7 +656,7 @@ final class SimilarityAnalysisQueue {
                     let embedding = try sface.extractEmbedding(from: alignedFace)
                     faceEmbeddings[faceIdx] = embedding
                 } catch {
-                    print("[EmbedFail] Face(\(faceIdx)): \(error.localizedDescription)")
+                    Log.print("[EmbedFail] Face(\(faceIdx)): \(error.localizedDescription)")
                     continue
                 }
             }
@@ -697,7 +697,7 @@ final class SimilarityAnalysisQueue {
                 detectionSource = "YuNet"
                 totalFaces = yunetDetections.count
             }
-            print("[FaceMatching] Photo \(assetID.prefix(8)): \(totalFaces) faces (\(detectionSource)), Embed: \(faceEmbeddings.count)/\(totalFaces), Slots: \(activeSlots.count)")
+            Log.print("[FaceMatching] Photo \(assetID.prefix(8)): \(totalFaces) faces (\(detectionSource)), Embed: \(faceEmbeddings.count)/\(totalFaces), Slots: \(activeSlots.count)")
 
             // === Step 2: 부팅 (ActiveSlots 비어있을 때) ===
             // 부팅 시에는 저품질 포함 모든 얼굴로 슬롯 생성 (모든 인물이 슬롯 보유)
@@ -737,7 +737,7 @@ final class SimilarityAnalysisQueue {
                         boundingBox: data.boundingBox
                     )
                     activeSlots.append(slot)
-                    print("[NewSlot] Face(\(faceIdx)) -> Slot(\(nextSlotID)): Bootstrap, norm=\(String(format: "%.2f", norm))\(qualityTag)")
+                    Log.print("[NewSlot] Face(\(faceIdx)) -> Slot(\(nextSlotID)): Bootstrap, norm=\(String(format: "%.2f", norm))\(qualityTag)")
                     nextSlotID += 1
                 }
 
@@ -837,7 +837,7 @@ final class SimilarityAnalysisQueue {
                         let oldNorm = activeSlots[idx].norm
                         activeSlots[idx].embedding = embedding
                         activeSlots[idx].norm = norm
-                        print("[KeepBest] Slot(\(slotID)): norm \(String(format: "%.2f", oldNorm)) -> \(String(format: "%.2f", norm))")
+                        Log.print("[KeepBest] Slot(\(slotID)): norm \(String(format: "%.2f", oldNorm)) -> \(String(format: "%.2f", norm))")
                     }
                 }
             }
@@ -868,7 +868,7 @@ final class SimilarityAnalysisQueue {
                         isValidSlot: false,
                         sfaceCost: cost
                     ))
-                    print("[Match] Face(\(candidate.faceIdx)) -> Slot(\(candidate.slotID)): Cost=\(String(format: "%.3f", cost)), norm=\(String(format: "%.2f", candidate.norm)) (Confident)")
+                    Log.print("[Match] Face(\(candidate.faceIdx)) -> Slot(\(candidate.slotID)): Cost=\(String(format: "%.3f", cost)), norm=\(String(format: "%.2f", candidate.norm)) (Confident)")
 
                     // Keep Best + 위치 갱신
                     updateSlotIfBetter(slotID: candidate.slotID, embedding: candidate.embedding, norm: candidate.norm, center: candidate.center, boundingBox: candidate.boundingBox)
@@ -884,16 +884,16 @@ final class SimilarityAnalysisQueue {
                             isValidSlot: false,
                             sfaceCost: cost
                         ))
-                        print("[GreyMatch] Face(\(candidate.faceIdx)) -> Slot(\(candidate.slotID)): Cost=\(String(format: "%.3f", cost)), PosNorm=\(String(format: "%.2f", posNorm)), norm=\(String(format: "%.2f", candidate.norm))")
+                        Log.print("[GreyMatch] Face(\(candidate.faceIdx)) -> Slot(\(candidate.slotID)): Cost=\(String(format: "%.3f", cost)), PosNorm=\(String(format: "%.2f", posNorm)), norm=\(String(format: "%.2f", candidate.norm))")
 
                         // Keep Best + 위치 갱신
                         updateSlotIfBetter(slotID: candidate.slotID, embedding: candidate.embedding, norm: candidate.norm, center: candidate.center, boundingBox: candidate.boundingBox)
                     } else {
-                        print("[GreyReject] Face(\(candidate.faceIdx)) -> Slot(\(candidate.slotID)): Cost=\(String(format: "%.3f", cost)), PosNorm=\(String(format: "%.2f", posNorm))")
+                        Log.print("[GreyReject] Face(\(candidate.faceIdx)) -> Slot(\(candidate.slotID)): Cost=\(String(format: "%.3f", cost)), PosNorm=\(String(format: "%.2f", posNorm))")
                     }
                 } else {
                     // 거절 구간
-                    print("[Reject] Face(\(candidate.faceIdx)) -> Slot(\(candidate.slotID)): Cost=\(String(format: "%.3f", cost))")
+                    Log.print("[Reject] Face(\(candidate.faceIdx)) -> Slot(\(candidate.slotID)): Cost=\(String(format: "%.3f", cost))")
                 }
             }
 
@@ -956,12 +956,12 @@ final class SimilarityAnalysisQueue {
                         isValidSlot: false,
                         sfaceCost: cost
                     ))
-                    print("[LowQMatch] Face(\(faceIdx)) -> Slot(\(bestByPos.slotID)): Cost=\(String(format: "%.3f", cost)), PosNorm=\(String(format: "%.2f", posNorm)), norm=\(String(format: "%.2f", bestByPos.norm)) (PositionFirst)")
+                    Log.print("[LowQMatch] Face(\(faceIdx)) -> Slot(\(bestByPos.slotID)): Cost=\(String(format: "%.3f", cost)), PosNorm=\(String(format: "%.2f", posNorm)), norm=\(String(format: "%.2f", bestByPos.norm)) (PositionFirst)")
 
                     // 위치만 갱신 (저품질 임베딩으로 슬롯 임베딩 갱신 X, norm 0 전달)
                     updateSlotIfBetter(slotID: bestByPos.slotID, embedding: [], norm: 0, center: bestByPos.center, boundingBox: bestByPos.boundingBox)
                 } else {
-                    print("[LowQReject] Face(\(faceIdx)) -> Slot(\(bestByPos.slotID)): Cost=\(String(format: "%.3f", cost)), PosNorm=\(String(format: "%.2f", posNorm)), norm=\(String(format: "%.2f", bestByPos.norm)) (limit: pos<\(String(format: "%.2f", lowQualityPosLimit)), cost<\(String(format: "%.2f", lowQualityCostLimit)))")
+                    Log.print("[LowQReject] Face(\(faceIdx)) -> Slot(\(bestByPos.slotID)): Cost=\(String(format: "%.3f", cost)), PosNorm=\(String(format: "%.2f", posNorm)), norm=\(String(format: "%.2f", bestByPos.norm)) (limit: pos<\(String(format: "%.2f", lowQualityPosLimit)), cost<\(String(format: "%.2f", lowQualityCostLimit)))")
                 }
             }
 
@@ -971,14 +971,14 @@ final class SimilarityAnalysisQueue {
                 guard let embedding = faceEmbeddings[faceIdx],
                       !usedFaces.contains(faceIdx) else { continue }
                 guard activeSlots.count < maxSlots else {
-                    print("[Unassigned] Face(\(faceIdx)): Max slots reached")
+                    Log.print("[Unassigned] Face(\(faceIdx)): Max slots reached")
                     continue
                 }
                 guard let data = faceData[faceIdx] else { continue }
 
                 // Extended fallback 얼굴은 신규 슬롯 생성 금지 (기존 슬롯 매칭만 허용)
                 if visionFallbackFaces.contains(faceIdx) {
-                    print("[ExtendedSkip] Face(\(faceIdx)): Extended fallback face, skip new slot (position-only matching in Step 7)")
+                    Log.print("[ExtendedSkip] Face(\(faceIdx)): Extended fallback face, skip new slot (position-only matching in Step 7)")
                     continue
                 }
 
@@ -987,7 +987,7 @@ final class SimilarityAnalysisQueue {
 
                 // 저품질 얼굴은 신규 슬롯 생성 금지
                 if norm < minEmbeddingNorm {
-                    print("[LowQuality] Face(\(faceIdx)): norm=\(String(format: "%.2f", norm)) < \(minEmbeddingNorm), skip new slot")
+                    Log.print("[LowQuality] Face(\(faceIdx)): norm=\(String(format: "%.2f", norm)) < \(minEmbeddingNorm), skip new slot")
                     continue
                 }
 
@@ -1022,9 +1022,9 @@ final class SimilarityAnalysisQueue {
 
                 // 상세 로그: 왜 기존 슬롯과 매칭되지 않았는지
                 if minCostSlotID > 0 {
-                    print("[NewSlot] Face(\(faceIdx)) -> Slot(\(nextSlotID)): norm=\(String(format: "%.2f", norm)), minCost=\(String(format: "%.3f", minCost)) to Slot(\(minCostSlotID)) (threshold=\(String(format: "%.3f", rejectThreshold)))")
+                    Log.print("[NewSlot] Face(\(faceIdx)) -> Slot(\(nextSlotID)): norm=\(String(format: "%.2f", norm)), minCost=\(String(format: "%.3f", minCost)) to Slot(\(minCostSlotID)) (threshold=\(String(format: "%.3f", rejectThreshold)))")
                 } else {
-                    print("[NewSlot] Face(\(faceIdx)) -> Slot(\(nextSlotID)): Bootstrap, norm=\(String(format: "%.2f", norm))")
+                    Log.print("[NewSlot] Face(\(faceIdx)) -> Slot(\(nextSlotID)): Bootstrap, norm=\(String(format: "%.2f", norm))")
                 }
                 nextSlotID += 1
             }
@@ -1067,12 +1067,12 @@ final class SimilarityAnalysisQueue {
                         personIndex: match.id,
                         isValidSlot: false
                     ))
-                    print("[VisionFallbackMatch] Face(\(faceIdx)) -> Slot(\(match.id)): PosNorm=\(String(format: "%.2f", match.posNorm)) (position-only)")
+                    Log.print("[VisionFallbackMatch] Face(\(faceIdx)) -> Slot(\(match.id)): PosNorm=\(String(format: "%.2f", match.posNorm)) (position-only)")
 
                     // 위치만 갱신 (임베딩 없으므로 norm=0)
                     updateSlotIfBetter(slotID: match.id, embedding: [], norm: 0, center: data.center, boundingBox: data.boundingBox)
                 } else {
-                    print("[VisionFallbackSkip] Face(\(faceIdx)): No slot within posNorm < \(String(format: "%.2f", visionFallbackPosLimit))")
+                    Log.print("[VisionFallbackSkip] Face(\(faceIdx)): No slot within posNorm < \(String(format: "%.2f", visionFallbackPosLimit))")
                 }
             }
 

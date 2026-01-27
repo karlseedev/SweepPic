@@ -124,7 +124,7 @@ final class TrashAlbumViewController: BaseGridViewController {
             collectionView.contentInsetAdjustmentBehavior = .automatic
         }
 
-        print("[TrashAlbumViewController] Initialized")
+        Log.print("[TrashAlbumViewController] Initialized")
     }
 
     override func viewWillAppear(_ animated: Bool) {
@@ -238,7 +238,7 @@ final class TrashAlbumViewController: BaseGridViewController {
         // 빈 휴지통: 버튼 비활성화 (숨김 X)
         overlay.titleBar.setTwoRightButtonsEnabled(firstEnabled: !isEmpty, secondEnabled: !isEmpty)
 
-        print("[TrashAlbumViewController] FloatingOverlay configured for trash tab")
+        Log.print("[TrashAlbumViewController] FloatingOverlay configured for trash tab")
     }
 
     // MARK: - Data Loading
@@ -283,7 +283,7 @@ final class TrashAlbumViewController: BaseGridViewController {
 
             let enumerateTime = CFAbsoluteTimeGetCurrent()
 
-            print("[TrashAlbumViewController.Timing] fetch: \(String(format: "%.1f", (fetchTime - startTime) * 1000))ms, enumerate: \(String(format: "%.1f", (enumerateTime - fetchTime) * 1000))ms (background)")
+            Log.print("[TrashAlbumViewController.Timing] fetch: \(String(format: "%.1f", (fetchTime - startTime) * 1000))ms, enumerate: \(String(format: "%.1f", (enumerateTime - fetchTime) * 1000))ms (background)")
 
             // 메인 스레드에서 UI 업데이트
             DispatchQueue.main.async {
@@ -316,8 +316,8 @@ final class TrashAlbumViewController: BaseGridViewController {
 
         let endTime = CFAbsoluteTimeGetCurrent()
 
-        print("[TrashAlbumViewController] Loaded \(_trashDataSource.assetCount) trashed assets")
-        print("[TrashAlbumViewController.Timing] reloadData: \(String(format: "%.1f", (reloadTime - reloadStartTime) * 1000))ms, total: \(String(format: "%.1f", (endTime - startTime) * 1000))ms")
+        Log.print("[TrashAlbumViewController] Loaded \(_trashDataSource.assetCount) trashed assets")
+        Log.print("[TrashAlbumViewController.Timing] reloadData: \(String(format: "%.1f", (reloadTime - reloadStartTime) * 1000))ms, total: \(String(format: "%.1f", (endTime - startTime) * 1000))ms")
 
         // 프리로드 시작 (초기 로드 시에만)
         if !hasFinishedInitialDisplay {
@@ -423,7 +423,7 @@ final class TrashAlbumViewController: BaseGridViewController {
             }
         }
 
-        print("[TrashAlbumViewController] Preload started: \(count) assets")
+        Log.print("[TrashAlbumViewController] Preload started: \(count) assets")
     }
 
     /// 프리로드 카운터 증가 (스레드 안전)
@@ -466,7 +466,7 @@ final class TrashAlbumViewController: BaseGridViewController {
             self.collectionView.alpha = 1
         }
 
-        print("[TrashAlbumViewController] Initial display: \(reason), preloaded: \(completed)/\(target)")
+        Log.print("[TrashAlbumViewController] Initial display: \(reason), preloaded: \(completed)/\(target)")
     }
 
     // MARK: - Actions
@@ -491,10 +491,10 @@ final class TrashAlbumViewController: BaseGridViewController {
         Task {
             do {
                 try await trashStore.emptyTrash()
-                print("[TrashAlbumViewController] Trash emptied successfully")
+                Log.print("[TrashAlbumViewController] Trash emptied successfully")
             } catch {
                 // 취소 또는 오류 시 조용히 무시 (사진이 그대로 남아있음)
-                print("[TrashAlbumViewController] Empty trash cancelled or failed: \(error)")
+                Log.print("[TrashAlbumViewController] Empty trash cancelled or failed: \(error)")
             }
             // 성공/실패 무관하게 UI 갱신 (onStateChange 콜백으로 처리됨)
         }
@@ -582,7 +582,7 @@ final class TrashAlbumViewController: BaseGridViewController {
         // Push 방식으로 뷰어 표시 (모든 iOS 버전 공통)
         navigationController?.pushViewController(viewerVC, animated: true)
 
-        print("[TrashAlbumViewController] Opening viewer - assetIndex: \(assetIndex), actualIndex: \(actualIndex), assetID: \(selectedAssetID.prefix(8))...")
+        Log.print("[TrashAlbumViewController] Opening viewer - assetIndex: \(assetIndex), actualIndex: \(actualIndex), assetID: \(selectedAssetID.prefix(8))...")
     }
 
     // MARK: - Cell Configuration (Override)
@@ -623,8 +623,8 @@ extension TrashAlbumViewController: ViewerViewControllerDelegate {
 
         let trashStoreTime = CFAbsoluteTimeGetCurrent()
 
-        print("[TrashAlbumViewController] Restored: \(assetID.prefix(8))...")
-        print("[TrashAlbumViewController.Timing] trashStore: \(String(format: "%.1f", (trashStoreTime - startTime) * 1000))ms")
+        Log.print("[TrashAlbumViewController] Restored: \(assetID.prefix(8))...")
+        Log.print("[TrashAlbumViewController.Timing] trashStore: \(String(format: "%.1f", (trashStoreTime - startTime) * 1000))ms")
     }
 
     /// 완전 삭제 요청 (T057)
@@ -634,7 +634,7 @@ extension TrashAlbumViewController: ViewerViewControllerDelegate {
             do {
                 try await trashStore.permanentlyDelete(assetIDs: [assetID])
                 // loadTrashedAssets()는 onStateChange 콜백으로 자동 호출됨
-                print("[TrashAlbumViewController] Permanently deleted: \(assetID.prefix(8))...")
+                Log.print("[TrashAlbumViewController] Permanently deleted: \(assetID.prefix(8))...")
 
                 // 삭제 완료 후 뷰어에 알림 (메인 스레드에서)
                 // Push 방식이므로 navigationController에서 확인
@@ -644,7 +644,7 @@ extension TrashAlbumViewController: ViewerViewControllerDelegate {
                     }
                 }
             } catch {
-                print("[TrashAlbumViewController] Failed to permanently delete: \(error)")
+                Log.print("[TrashAlbumViewController] Failed to permanently delete: \(error)")
             }
         }
     }

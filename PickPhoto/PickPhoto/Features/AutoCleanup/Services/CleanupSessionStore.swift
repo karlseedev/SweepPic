@@ -11,6 +11,7 @@
 //
 
 import Foundation
+import AppCore
 
 /// 정리 세션 저장소
 ///
@@ -116,11 +117,11 @@ final class CleanupSessionStore: CleanupSessionStoreProtocol {
                 let data = try Data(contentsOf: latestSessionFilePath)
                 cachedLatestSession = try decoder.decode(CleanupSession.self, from: data)
                 #if DEBUG
-                print("[CleanupSessionStore] Loaded latest session (sync)")
+                Log.print("[CleanupSessionStore] Loaded latest session (sync)")
                 #endif
             } catch {
                 #if DEBUG
-                print("[CleanupSessionStore] Failed to load latest session: \(error.localizedDescription)")
+                Log.print("[CleanupSessionStore] Failed to load latest session: \(error.localizedDescription)")
                 #endif
             }
         }
@@ -131,11 +132,11 @@ final class CleanupSessionStore: CleanupSessionStoreProtocol {
                 let data = try Data(contentsOf: byYearSessionFilePath)
                 cachedByYearSession = try decoder.decode(CleanupSession.self, from: data)
                 #if DEBUG
-                print("[CleanupSessionStore] Loaded byYear session (sync)")
+                Log.print("[CleanupSessionStore] Loaded byYear session (sync)")
                 #endif
             } catch {
                 #if DEBUG
-                print("[CleanupSessionStore] Failed to load byYear session: \(error.localizedDescription)")
+                Log.print("[CleanupSessionStore] Failed to load byYear session: \(error.localizedDescription)")
                 #endif
             }
         }
@@ -190,14 +191,14 @@ final class CleanupSessionStore: CleanupSessionStoreProtocol {
             cachedLatestSession = session
             saveToFile(session, path: latestSessionFilePath)
             #if DEBUG
-            print("[CleanupSessionStore] Saved latest session: \(session.id.uuidString.prefix(8))")
+            Log.print("[CleanupSessionStore] Saved latest session: \(session.id.uuidString.prefix(8))")
             #endif
 
         case .byYear:
             cachedByYearSession = session
             saveToFile(session, path: byYearSessionFilePath)
             #if DEBUG
-            print("[CleanupSessionStore] Saved byYear session: \(session.id.uuidString.prefix(8))")
+            Log.print("[CleanupSessionStore] Saved byYear session: \(session.id.uuidString.prefix(8))")
             #endif
         }
     }
@@ -273,11 +274,11 @@ final class CleanupSessionStore: CleanupSessionStoreProtocol {
                     let data = try Data(contentsOf: self.latestSessionFilePath)
                     self.cachedLatestSession = try localDecoder.decode(CleanupSession.self, from: data)
                     #if DEBUG
-                    print("[CleanupSessionStore] Loaded latest session")
+                    Log.print("[CleanupSessionStore] Loaded latest session")
                     #endif
                 } catch {
                     #if DEBUG
-                    print("[CleanupSessionStore] Failed to load latest session: \(error.localizedDescription)")
+                    Log.print("[CleanupSessionStore] Failed to load latest session: \(error.localizedDescription)")
                     #endif
                 }
             }
@@ -288,11 +289,11 @@ final class CleanupSessionStore: CleanupSessionStoreProtocol {
                     let data = try Data(contentsOf: self.byYearSessionFilePath)
                     self.cachedByYearSession = try localDecoder.decode(CleanupSession.self, from: data)
                     #if DEBUG
-                    print("[CleanupSessionStore] Loaded byYear session")
+                    Log.print("[CleanupSessionStore] Loaded byYear session")
                     #endif
                 } catch {
                     #if DEBUG
-                    print("[CleanupSessionStore] Failed to load byYear session: \(error.localizedDescription)")
+                    Log.print("[CleanupSessionStore] Failed to load byYear session: \(error.localizedDescription)")
                     #endif
                 }
             }
@@ -308,7 +309,7 @@ final class CleanupSessionStore: CleanupSessionStoreProtocol {
             try data.write(to: path, options: .atomic)
         } catch {
             #if DEBUG
-            print("[CleanupSessionStore] Failed to save session: \(error.localizedDescription)")
+            Log.print("[CleanupSessionStore] Failed to save session: \(error.localizedDescription)")
             #endif
         }
     }
@@ -320,12 +321,12 @@ final class CleanupSessionStore: CleanupSessionStoreProtocol {
             if FileManager.default.fileExists(atPath: path.path) {
                 try FileManager.default.removeItem(at: path)
                 #if DEBUG
-                print("[CleanupSessionStore] Deleted session file: \(path.lastPathComponent)")
+                Log.print("[CleanupSessionStore] Deleted session file: \(path.lastPathComponent)")
                 #endif
             }
         } catch {
             #if DEBUG
-            print("[CleanupSessionStore] Failed to delete session file: \(error.localizedDescription)")
+            Log.print("[CleanupSessionStore] Failed to delete session file: \(error.localizedDescription)")
             #endif
         }
     }
@@ -373,7 +374,7 @@ extension CleanupSessionStore {
 
     /// 디버그용: 현재 세션 출력
     func debugPrintSession() {
-        print("[CleanupSessionStore] --- Sessions ---")
+        Log.print("[CleanupSessionStore] --- Sessions ---")
         if let latest = latestSession {
             print("Latest: \(latest.description)")
         } else {

@@ -9,6 +9,7 @@
 // - 탭으로 컨트롤 표시/숨김 토글
 
 import UIKit
+import AppCore
 import AVFoundation
 
 // MARK: - VideoControlsOverlayDelegate

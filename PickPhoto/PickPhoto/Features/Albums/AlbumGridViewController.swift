@@ -91,7 +91,7 @@ final class AlbumGridViewController: BaseGridViewController {
             setContentScrollView(collectionView, for: .bottom)
         }
 
-        print("[AlbumGridViewController] Initialized with \(fetchResult.count) photos in '\(albumTitle)'")
+        Log.print("[AlbumGridViewController] Initialized with \(fetchResult.count) photos in '\(albumTitle)'")
     }
 
     override func viewWillAppear(_ animated: Bool) {
@@ -192,7 +192,7 @@ final class AlbumGridViewController: BaseGridViewController {
             cell.updateTrashState(trashedAssetIDs.contains(assetID))
         }
 
-        print("[AlbumGridViewController] Updated \(changedIDs.count) changed cells (no reloadItems)")
+        Log.print("[AlbumGridViewController] Updated \(changedIDs.count) changed cells (no reloadItems)")
     }
 
     // MARK: - FloatingOverlay Configuration
@@ -228,7 +228,7 @@ final class AlbumGridViewController: BaseGridViewController {
         let isEmpty = gridDataSource.assetCount == 0
         overlay.titleBar.isSelectButtonEnabled = !isEmpty
 
-        print("[AlbumGridViewController] FloatingOverlay configured for album: \(albumTitle), isEmpty: \(isEmpty)")
+        Log.print("[AlbumGridViewController] FloatingOverlay configured for album: \(albumTitle), isEmpty: \(isEmpty)")
     }
 
     /// iOS 26+: 시스템 네비바 설정 (Select 버튼 추가)
@@ -251,7 +251,7 @@ final class AlbumGridViewController: BaseGridViewController {
 
         navigationItem.rightBarButtonItem = selectButton
 
-        print("[AlbumGridViewController] iOS 26+ navigation bar configured with Select button, isEmpty: \(isEmpty)")
+        Log.print("[AlbumGridViewController] iOS 26+ navigation bar configured with Select button, isEmpty: \(isEmpty)")
     }
 
     // MARK: - Album 고유 기능
@@ -314,7 +314,7 @@ final class AlbumGridViewController: BaseGridViewController {
 
         // 필터링된 인덱스 계산
         guard let filteredIndex = coordinator.filteredIndex(from: assetIndex) else {
-            print("[AlbumGridViewController] Failed to find filtered index for \(assetIndex)")
+            Log.print("[AlbumGridViewController] Failed to find filtered index for \(assetIndex)")
             return
         }
 
@@ -366,7 +366,7 @@ final class AlbumGridViewController: BaseGridViewController {
         // Push 방식으로 뷰어 표시 (모든 iOS 버전 공통)
         navigationController?.pushViewController(viewerVC, animated: true)
 
-        print("[AlbumGridViewController] Opening viewer at index \(filteredIndex), mode: \(mode)")
+        Log.print("[AlbumGridViewController] Opening viewer at index \(filteredIndex), mode: \(mode)")
     }
 }
 
@@ -395,7 +395,7 @@ extension AlbumGridViewController: ViewerViewControllerDelegate {
             collectionView.reloadItems(at: [indexPath])
         }
 
-        print("[AlbumGridViewController] Moved to trash: \(assetID.prefix(8))...")
+        Log.print("[AlbumGridViewController] Moved to trash: \(assetID.prefix(8))...")
     }
 
     func viewerDidRequestRestore(assetID: String) {
@@ -406,16 +406,16 @@ extension AlbumGridViewController: ViewerViewControllerDelegate {
             collectionView.reloadItems(at: [indexPath])
         }
 
-        print("[AlbumGridViewController] Restored: \(assetID.prefix(8))...")
+        Log.print("[AlbumGridViewController] Restored: \(assetID.prefix(8))...")
     }
 
     func viewerDidRequestPermanentDelete(assetID: String) {
         Task {
             do {
                 try await trashStore.permanentlyDelete(assetIDs: [assetID])
-                print("[AlbumGridViewController] Permanently deleted: \(assetID.prefix(8))...")
+                Log.print("[AlbumGridViewController] Permanently deleted: \(assetID.prefix(8))...")
             } catch {
-                print("[AlbumGridViewController] Failed to permanently delete: \(error)")
+                Log.print("[AlbumGridViewController] Failed to permanently delete: \(error)")
             }
         }
     }

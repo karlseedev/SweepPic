@@ -11,6 +11,7 @@
 //
 
 import Foundation
+import AppCore
 import Photos
 import AVFoundation
 
@@ -153,7 +154,7 @@ final class VideoFrameExtractor {
             } catch {
                 // 개별 프레임 실패는 계속 진행
                 #if DEBUG
-                print("[VideoFrameExtractor] 프레임 추출 실패 (position: \(position)): \(error.localizedDescription)")
+                Log.print("[VideoFrameExtractor] 프레임 추출 실패 (position: \(position)): \(error.localizedDescription)")
                 #endif
             }
         }

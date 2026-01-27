@@ -505,7 +505,7 @@ final class GridViewController: BaseGridViewController {
         collectionView.contentInset = inset
         collectionView.scrollIndicatorInsets = inset
 
-        print("[GridViewController] ContentInset updated - top: \(heights.top), bottom: \(heights.bottom)")
+        Log.print("[GridViewController] ContentInset updated - top: \(heights.top), bottom: \(heights.bottom)")
     }
 
     /// 현재 썸네일 크기 반환 (스크롤 상태에 따라 품질 저하 적용)
@@ -585,7 +585,7 @@ final class GridViewController: BaseGridViewController {
             cell.updateTrashState(trashedAssetIDs.contains(assetID))
         }
 
-        print("[GridViewController] Updated \(changedIDs.count) changed cells (no reloadItems)")
+        Log.print("[GridViewController] Updated \(changedIDs.count) changed cells (no reloadItems)")
     }
 
     // MARK: - Empty State (T070)
@@ -763,7 +763,7 @@ extension GridViewController {
 
         // 원본 인덱스를 필터링된 인덱스로 변환 (padding 제외한 실제 인덱스 사용)
         guard let filteredIndex = coordinator.filteredIndex(from: assetIndexPath.item) else {
-            print("[GridViewController] Failed to find filtered index for \(assetIndexPath.item)")
+            Log.print("[GridViewController] Failed to find filtered index for \(assetIndexPath.item)")
             return
         }
 
@@ -819,7 +819,7 @@ extension GridViewController {
                     width: self.view.bounds.width * screenScale,
                     height: self.view.bounds.height * screenScale
                 )
-                print("[ZoomTransition] imageSize: \(Int(imageSize.width))x\(Int(imageSize.height))px, screenPixelSize: \(Int(screenPixelSize.width))x\(Int(screenPixelSize.height))px, scale: \(screenScale)x")
+                Log.print("[ZoomTransition] imageSize: \(Int(imageSize.width))x\(Int(imageSize.height))px, screenPixelSize: \(Int(screenPixelSize.width))x\(Int(screenPixelSize.height))px, scale: \(screenScale)x")
 
                 return cell.thumbnailImageView
             })
@@ -833,8 +833,8 @@ extension GridViewController {
         let t6 = CACurrentMediaTime()
 
         // [Timing] 각 단계별 소요 시간 출력
-        print("[Zoom Timing] 준비: \(String(format: "%.1f", (t1-t0)*1000))ms, Coordinator: \(String(format: "%.1f", (t2-t1)*1000))ms, filteredIndex: \(String(format: "%.1f", (t3-t2)*1000))ms, ViewerVC: \(String(format: "%.1f", (t4-t3)*1000))ms, transition설정: \(String(format: "%.1f", (t5-t4)*1000))ms, push: \(String(format: "%.1f", (t6-t5)*1000))ms, 총: \(String(format: "%.1f", (t6-t0)*1000))ms")
-        print("[GridViewController] Opening viewer at filtered index \(filteredIndex) (original: \(indexPath.item)), mode: \(mode)")
+        Log.print("[Zoom Timing] 준비: \(String(format: "%.1f", (t1-t0)*1000))ms, Coordinator: \(String(format: "%.1f", (t2-t1)*1000))ms, filteredIndex: \(String(format: "%.1f", (t3-t2)*1000))ms, ViewerVC: \(String(format: "%.1f", (t4-t3)*1000))ms, transition설정: \(String(format: "%.1f", (t5-t4)*1000))ms, push: \(String(format: "%.1f", (t6-t5)*1000))ms, 총: \(String(format: "%.1f", (t6-t0)*1000))ms")
+        Log.print("[GridViewController] Opening viewer at filtered index \(filteredIndex) (original: \(indexPath.item)), mode: \(mode)")
     }
 
     func scrollViewWillBeginDragging(_ scrollView: UIScrollView) {
@@ -939,7 +939,7 @@ extension GridViewController: ViewerViewControllerDelegate {
         // [SimilarPhoto] 그룹 무효화 처리 (T022)
         handleSimilarPhotoAssetDeleted(assetID: assetID)
 
-        print("[GridViewController] Moved to trash: \(assetID.prefix(8))...")
+        Log.print("[GridViewController] Moved to trash: \(assetID.prefix(8))...")
     }
 
     /// 사진 복구 요청 (휴지통에서 복원)
@@ -959,8 +959,8 @@ extension GridViewController: ViewerViewControllerDelegate {
 
         let uiUpdateTime = CFAbsoluteTimeGetCurrent()
 
-        print("[GridViewController] Restored: \(assetID.prefix(8))...")
-        print("[GridViewController.Timing] trashStore: \(String(format: "%.1f", (trashStoreTime - startTime) * 1000))ms, uiUpdate: \(String(format: "%.1f", (uiUpdateTime - trashStoreTime) * 1000))ms, total: \(String(format: "%.1f", (uiUpdateTime - startTime) * 1000))ms")
+        Log.print("[GridViewController] Restored: \(assetID.prefix(8))...")
+        Log.print("[GridViewController.Timing] trashStore: \(String(format: "%.1f", (trashStoreTime - startTime) * 1000))ms, uiUpdate: \(String(format: "%.1f", (uiUpdateTime - trashStoreTime) * 1000))ms, total: \(String(format: "%.1f", (uiUpdateTime - startTime) * 1000))ms")
     }
 
     /// 사진 완전삭제 요청 (iOS 휴지통으로 이동)
@@ -970,7 +970,7 @@ extension GridViewController: ViewerViewControllerDelegate {
         Task {
             do {
                 try await trashStore.permanentlyDelete(assetIDs: [assetID])
-                print("[GridViewController] Permanently deleted: \(assetID.prefix(8))...")
+                Log.print("[GridViewController] Permanently deleted: \(assetID.prefix(8))...")
 
                 // 삭제 완료 후 뷰어에 알림 (메인 스레드에서)
                 // Push 방식이므로 navigationController에서 확인
@@ -980,7 +980,7 @@ extension GridViewController: ViewerViewControllerDelegate {
                     }
                 }
             } catch {
-                print("[GridViewController] Failed to permanently delete: \(error)")
+                Log.print("[GridViewController] Failed to permanently delete: \(error)")
             }
         }
     }

@@ -3,6 +3,7 @@
 // 사용 후 삭제 예정
 
 import UIKit
+import AppCore
 import ObjectiveC
 
 /// 시스템 UI 레이어 속성 인스펙터
@@ -56,7 +57,7 @@ final class SystemUIInspector {
         ])
 
         self.debugButton = button
-        print("[SystemUIInspector] 디버그 버튼 표시됨 - 각 화면에서 탭하여 인스펙션")
+        Log.print("[SystemUIInspector] 디버그 버튼 표시됨 - 각 화면에서 탭하여 인스펙션")
     }
 
     /// 디버그 버튼 숨기기

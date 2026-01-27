@@ -159,7 +159,7 @@ final class CleanupService: CleanupServiceProtocol {
         }
 
         #if DEBUG
-        print("[CleanupService] Cleanup cancelled - no photos moved to trash")
+        Log.print("[CleanupService] Cleanup cancelled - no photos moved to trash")
         #endif
     }
 
@@ -175,7 +175,7 @@ final class CleanupService: CleanupServiceProtocol {
         }
 
         #if DEBUG
-        print("[CleanupService] Cleanup paused")
+        Log.print("[CleanupService] Cleanup paused")
         #endif
     }
 
@@ -191,7 +191,7 @@ final class CleanupService: CleanupServiceProtocol {
         }
 
         #if DEBUG
-        print("[CleanupService] Cleanup resumed")
+        Log.print("[CleanupService] Cleanup resumed")
         #endif
     }
 
@@ -235,7 +235,7 @@ final class CleanupService: CleanupServiceProtocol {
         let totalCount = fetchResult.count
 
         #if DEBUG
-        print("[CleanupService] 스캔 시작: method=\(method), 대상 사진 수=\(totalCount)")
+        Log.print("[CleanupService] 스캔 시작: method=\(method), 대상 사진 수=\(totalCount)")
         #endif
 
         guard totalCount > 0 else {
@@ -326,7 +326,7 @@ final class CleanupService: CleanupServiceProtocol {
                             if let date = lastLowQualityDate {
                                 let df = DateFormatter()
                                 df.dateFormat = "yyyy-MM-dd HH:mm"
-                                print("[CleanupService] 50장 도달! 마지막 저품질 사진 날짜: \(df.string(from: date))")
+                                Log.print("[CleanupService] 50장 도달! 마지막 저품질 사진 날짜: \(df.string(from: date))")
                             }
                             #endif
                         }
@@ -364,7 +364,7 @@ final class CleanupService: CleanupServiceProtocol {
             // SKIP 통계 문자열 생성
             let skipStr = skipStats.isEmpty ? "없음" : skipStats.map { "\($0.key):\($0.value)" }.joined(separator: ", ")
 
-            print("[CleanupService] 배치 완료: 스캔=\(scannedCount)/\(totalCount), 분석=\(analyzedCount), 발견=\(batchFoundCount), SKIP=[\(skipStr)], 시점=\(dateStr)")
+            Log.print("[CleanupService] 배치 완료: 스캔=\(scannedCount)/\(totalCount), 분석=\(analyzedCount), 발견=\(batchFoundCount), SKIP=[\(skipStr)], 시점=\(dateStr)")
             #endif
 
             // 진행 상황 콜백 (메인 스레드)
@@ -534,7 +534,7 @@ final class CleanupService: CleanupServiceProtocol {
         trashStore.moveToTrash(assetIDs: assetIDs)
 
         #if DEBUG
-        print("[CleanupService] Moved \(assetIDs.count) photos to trash")
+        Log.print("[CleanupService] Moved \(assetIDs.count) photos to trash")
         #endif
     }
 
@@ -555,7 +555,7 @@ final class CleanupService: CleanupServiceProtocol {
             sessionStore.save(session)
 
             #if DEBUG
-            print("[CleanupService] Session saved - endReason: \(result.endReason), canContinue: \(session.canContinue)")
+            Log.print("[CleanupService] Session saved - endReason: \(result.endReason), canContinue: \(session.canContinue)")
             #endif
         }
 

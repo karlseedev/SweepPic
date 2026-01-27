@@ -129,6 +129,19 @@ enum CleanupConstants {
     /// - overallScore < 0 → 저품질
     static let aestheticsRecallThreshold: Float = 0.0
 
+    // MARK: - 텍스트 스크린샷 감지 (조건부 Vision)
+
+    /// 텍스트 블록 개수 임계값
+    /// - 감지된 텍스트 블록 >= 5개 → 스크린샷으로 판정
+    /// - 조건: 과노출/과어두움으로 판정되려는 이미지에만 적용
+    static let textBlockCountThreshold = 5
+
+    /// Vision 텍스트 감지 인식 레벨
+    /// - .fast: 빠르지만 정확도 낮음 (50~150ms)
+    /// - .accurate: 느리지만 정확도 높음 (200~500ms)
+    /// - 스크린샷 여부만 판단하므로 fast로 충분
+    static let textRecognitionUseFastMode = true
+
     // MARK: - Weak 가중치 (Recall 모드)
 
     /// 일반 블러 가중치

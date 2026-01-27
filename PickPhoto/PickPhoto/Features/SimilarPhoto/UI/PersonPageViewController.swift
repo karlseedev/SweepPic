@@ -16,6 +16,7 @@
 //
 
 import UIKit
+import AppCore
 import Photos
 
 // MARK: - FaceComparisonDataSource Protocol
@@ -231,7 +232,7 @@ extension PersonPageViewController: UICollectionViewDelegate {
             cell.setSelected(dataSource.isSelected(assetID))
         }
 
-        print("[PersonPageViewController] Toggled selection for \(assetID.prefix(8))...")
+        Log.print("[PersonPageViewController] Toggled selection for \(assetID.prefix(8))...")
     }
 }
 

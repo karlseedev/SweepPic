@@ -13,6 +13,7 @@
 //
 
 import UIKit
+import AppCore
 import Photos
 
 // MARK: - Similar Photo Properties
@@ -82,7 +83,7 @@ extension GridViewController {
     func setupSimilarPhotoObserver() {
         // Feature Flag 체크
         guard FeatureFlags.isSimilarPhotoEnabled else {
-            print("[SimilarPhoto] Feature disabled")
+            Log.print("[SimilarPhoto] Feature disabled")
             return
         }
 
@@ -106,7 +107,7 @@ extension GridViewController {
             self?.updateVisibleCellBorders()
         }
 
-        print("[SimilarPhoto] Observer setup complete")
+        Log.print("[SimilarPhoto] Observer setup complete")
 
         // 첫 화면 로드 시 분석 시작 (데이터 로드 완료 대기)
         triggerInitialAnalysis()
@@ -123,7 +124,7 @@ extension GridViewController {
             guard self.shouldEnableSimilarPhoto() else { return }
             guard !self.isScrolling else { return }
 
-            print("[SimilarPhoto] Triggering initial analysis")
+            Log.print("[SimilarPhoto] Triggering initial analysis")
             self.startAnalysis()
         }
     }
@@ -192,21 +193,21 @@ extension GridViewController {
     /// - 화면에 보이는 셀 범위 + 앞뒤 7장 확장
     private func startAnalysis() {
         guard let fetchResult = dataSourceDriver.fetchResult else {
-            print("[SimilarPhoto] No fetch result available")
+            Log.print("[SimilarPhoto] No fetch result available")
             return
         }
 
         // 분석 범위 계산
         let range = calculateAnalysisRange()
         guard let analysisRange = range else {
-            print("[SimilarPhoto] Invalid analysis range")
+            Log.print("[SimilarPhoto] Invalid analysis range")
             return
         }
 
         // 현재 분석 범위 저장
         currentAnalysisRange = analysisRange
 
-        print("[SimilarPhoto] Starting analysis for range: \(analysisRange)")
+        Log.print("[SimilarPhoto] Starting analysis for range: \(analysisRange)")
 
         // 분석 요청 (비동기)
         Task {
@@ -215,7 +216,7 @@ extension GridViewController {
                 source: .grid,
                 fetchResult: fetchResult
             )
-            print("[SimilarPhoto] Analysis complete, found \(groupIDs.count) groups")
+            Log.print("[SimilarPhoto] Analysis complete, found \(groupIDs.count) groups")
         }
     }
 
@@ -262,7 +263,7 @@ extension GridViewController {
             return
         }
 
-        print("[SimilarPhoto] Received analysis complete - groups: \(groupIDs.count), assets: \(analyzedAssetIDs.count)")
+        Log.print("[SimilarPhoto] Received analysis complete - groups: \(groupIDs.count), assets: \(analyzedAssetIDs.count)")
 
         // SimilarityCache가 Single Source of Truth이므로 UI만 갱신
         updateVisibleCellBorders()

@@ -23,6 +23,7 @@
 //
 
 import Foundation
+import AppCore
 import CoreML
 import CoreGraphics
 import Accelerate
@@ -82,7 +83,7 @@ final class SFaceRecognizer {
         do {
             return try SFaceRecognizer()
         } catch {
-            print("[SFaceRecognizer] 초기화 실패: \(error)")
+            Log.print("[SFaceRecognizer] 초기화 실패: \(error)")
             return nil
         }
     }()
@@ -363,7 +364,7 @@ extension SFaceRecognizer {
         vDSP_measqv(embedding, 1, &variance, vDSP_Length(embedding.count))
         let std = sqrt(variance - mean * mean)
 
-        print("[SFace] Embedding Stats:")
+        Log.print("[SFace] Embedding Stats:")
         print("  - Dim: \(embedding.count)")
         print("  - Range: [\(String(format: "%.4f", min)), \(String(format: "%.4f", max))]")
         print("  - Mean: \(String(format: "%.4f", mean))")

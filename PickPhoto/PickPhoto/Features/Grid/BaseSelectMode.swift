@@ -76,7 +76,7 @@ extension BaseGridViewController {
     /// Select 모드 진입
     func enterSelectMode() {
         guard supportsSelectMode else {
-            print("[BaseGridViewController] Select mode not supported")
+            Log.print("[BaseGridViewController] Select mode not supported")
             return
         }
         guard !isSelectMode else { return }
@@ -99,7 +99,7 @@ extension BaseGridViewController {
         // 선택 UI 갱신 (전체 리로드 대신 visible 셀만 업데이트)
         updateVisibleSelectionUI()
 
-        print("[BaseGridViewController] Entered select mode")
+        Log.print("[BaseGridViewController] Entered select mode")
     }
 
     /// Select 모드 종료
@@ -127,7 +127,7 @@ extension BaseGridViewController {
         // 선택 UI 갱신 (전체 리로드 대신 visible 셀만 업데이트)
         updateVisibleSelectionUI()
 
-        print("[BaseGridViewController] Exited select mode")
+        Log.print("[BaseGridViewController] Exited select mode")
     }
 }
 
@@ -148,7 +148,7 @@ extension BaseGridViewController {
 
         // Grid/Album은 휴지통 에셋 선택 금지, Trash는 오버라이드로 허용
         guard canSelectAssetInSelectMode(assetID) else {
-            print("[BaseGridViewController] Cannot select asset in select mode")
+            Log.print("[BaseGridViewController] Cannot select asset in select mode")
             return false
         }
 
@@ -205,7 +205,7 @@ extension BaseGridViewController {
         // 4. 툴바 표시
         navigationController?.setToolbarHidden(false, animated: true)
 
-        print("[BaseGridViewController] iOS 26+ system UI select mode entered")
+        Log.print("[BaseGridViewController] iOS 26+ system UI select mode entered")
     }
 
     /// iOS 26+ Select 모드 종료 - 시스템 UI 복원
@@ -224,7 +224,7 @@ extension BaseGridViewController {
         selectionCountBarItem = nil
         toolbarItems = nil
 
-        print("[BaseGridViewController] iOS 26+ system UI select mode exited")
+        Log.print("[BaseGridViewController] iOS 26+ system UI select mode exited")
     }
 
     /// iOS 26+ Cancel 버튼 탭 핸들러
@@ -253,7 +253,7 @@ extension BaseGridViewController {
         }
         overlay.tabBar.enterSelectMode(animated: true)
 
-        print("[BaseGridViewController] Floating UI select mode entered")
+        Log.print("[BaseGridViewController] Floating UI select mode entered")
     }
 
     /// 플로팅 UI 선택 모드 종료 (Trash에서 오버라이드)
@@ -264,7 +264,7 @@ extension BaseGridViewController {
         overlay.titleBar.exitSelectMode()
         overlay.tabBar.exitSelectMode(animated: true)
 
-        print("[BaseGridViewController] Floating UI select mode exited")
+        Log.print("[BaseGridViewController] Floating UI select mode exited")
     }
 
     /// 플로팅 UI 선택 개수 업데이트 (Trash에서 오버라이드)
@@ -289,7 +289,7 @@ extension BaseGridViewController {
         collectionView.addGestureRecognizer(dragGesture)
         dragSelectGesture = dragGesture
 
-        print("[BaseGridViewController] Drag select gesture configured")
+        Log.print("[BaseGridViewController] Drag select gesture configured")
     }
 
     /// 드래그 선택 제스처 핸들러
@@ -350,7 +350,7 @@ extension BaseGridViewController {
             cell.isSelectedForDeletion = dragSelectIsSelecting
         }
 
-        print("[BaseGridViewController] Drag select began at index \(indexPath.item)")
+        Log.print("[BaseGridViewController] Drag select began at index \(indexPath.item)")
     }
 
     /// 드래그 선택 변경 처리
@@ -432,7 +432,7 @@ extension BaseGridViewController {
         dragSelectCurrentIndex = nil
         dragSelectAffectedIndices = []
 
-        print("[BaseGridViewController] Drag select ended")
+        Log.print("[BaseGridViewController] Drag select ended")
     }
 
     /// 자동 스크롤 처리 - 가장자리 거리에 따라 속도 가변
@@ -561,7 +561,7 @@ extension BaseGridViewController: SelectionManagerDelegate {
             updateSelectionCountFloatingUI(count)
         }
 
-        print("[BaseGridViewController] Selection count: \(count)")
+        Log.print("[BaseGridViewController] Selection count: \(count)")
     }
 }
 

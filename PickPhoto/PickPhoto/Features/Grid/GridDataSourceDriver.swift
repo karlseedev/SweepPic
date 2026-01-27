@@ -164,7 +164,7 @@ final class GridDataSourceDriver: NSObject, GridDataSourceDriverProtocol {
         // [Timing] A) fetch 완료
         let fetchEnd = CACurrentMediaTime()
         let fetchMs = (fetchEnd - fetchStart) * 1000
-        print("[Timing] A) Fetch: \(String(format: "%.1f", fetchMs))ms (\(count) items)")
+        Log.print("[Timing] A) Fetch: \(String(format: "%.1f", fetchMs))ms (\(count) items)")
 
         invalidateCache()
         completion?()
@@ -210,7 +210,7 @@ final class GridDataSourceDriver: NSObject, GridDataSourceDriverProtocol {
 
             let newAnchorIndexPath = anchorAssetID.flatMap { indexPath(for: $0) }
             completion?(newAnchorIndexPath)
-            print("[GridDataSourceDriver] Used reloadData for deletion (count: \(removed.count))")
+            Log.print("[GridDataSourceDriver] Used reloadData for deletion (count: \(removed.count))")
             return
         }
 
@@ -230,7 +230,7 @@ final class GridDataSourceDriver: NSObject, GridDataSourceDriverProtocol {
 
             let newAnchorIndexPath = anchorAssetID.flatMap { indexPath(for: $0) }
             completion?(newAnchorIndexPath)
-            print("[GridDataSourceDriver] Used reloadData due to count mismatch (expected: \(expectedAfterCount), actual: \(afterCount))")
+            Log.print("[GridDataSourceDriver] Used reloadData due to count mismatch (expected: \(expectedAfterCount), actual: \(afterCount))")
             return
         }
 
@@ -248,7 +248,7 @@ final class GridDataSourceDriver: NSObject, GridDataSourceDriverProtocol {
 
             let newAnchorIndexPath = anchorAssetID.flatMap { indexPath(for: $0) }
             completion?(newAnchorIndexPath)
-            print("[GridDataSourceDriver] Used reloadData due to padding change (before: \(beforePadding), after: \(afterPadding))")
+            Log.print("[GridDataSourceDriver] Used reloadData due to padding change (before: \(beforePadding), after: \(afterPadding))")
             return
         }
 
@@ -290,7 +290,7 @@ final class GridDataSourceDriver: NSObject, GridDataSourceDriverProtocol {
             completion?(newAnchorIndexPath)
         })
 
-        print("[GridDataSourceDriver] Applied change - Removed: \(changes.removedIndexes?.count ?? 0), Inserted: \(changes.insertedIndexes?.count ?? 0)")
+        Log.print("[GridDataSourceDriver] Applied change - Removed: \(changes.removedIndexes?.count ?? 0), Inserted: \(changes.insertedIndexes?.count ?? 0)")
     }
 
     /// 휴지통 상태 변경 적용
@@ -314,7 +314,7 @@ final class GridDataSourceDriver: NSObject, GridDataSourceDriverProtocol {
 
         if !indexPathsToReload.isEmpty {
             collectionView.reloadItems(at: indexPathsToReload)
-            print("[GridDataSourceDriver] Reloaded \(indexPathsToReload.count) cells for trash state change")
+            Log.print("[GridDataSourceDriver] Reloaded \(indexPathsToReload.count) cells for trash state change")
         }
     }
 
@@ -336,7 +336,7 @@ final class GridDataSourceDriver: NSObject, GridDataSourceDriverProtocol {
     private func buildCache() {
         // [Timing] 시작
         let startTime = CACurrentMediaTime()
-        print("[GridDataSourceDriver] buildCache() 시작")
+        Log.print("[GridDataSourceDriver] buildCache() 시작")
 
         guard let fetchResult = fetchResult else { return }
 
@@ -353,7 +353,7 @@ final class GridDataSourceDriver: NSObject, GridDataSourceDriverProtocol {
 
         // [Timing] 완료
         let elapsed = (CACurrentMediaTime() - startTime) * 1000
-        print("[GridDataSourceDriver] buildCache() 완료: \(String(format: "%.1f", elapsed))ms, Count: \(assetIDToIndexCache.count)")
+        Log.print("[GridDataSourceDriver] buildCache() 완료: \(String(format: "%.1f", elapsed))ms, Count: \(assetIDToIndexCache.count)")
     }
 
     /// 캐시 무효화

@@ -22,6 +22,7 @@
 //
 
 import UIKit
+import AppCore
 import Photos
 
 // MARK: - ViewerViewController+SimilarPhoto
@@ -558,7 +559,7 @@ extension ViewerViewController {
         if isCacheHit {
             Self.sharedViewerStats.cacheHitCount += 1
             Self.sharedViewerStats.buttonShowTimes.append(elapsedMs)
-            print("[ViewerPerf] Cache HIT - Button shown in \(String(format: "%.2f", elapsedMs))ms")
+            Log.print("[ViewerPerf] Cache HIT - Button shown in \(String(format: "%.2f", elapsedMs))ms")
         }
 
         // 3회 이상 측정되면 통계 출력
@@ -624,7 +625,7 @@ extension ViewerViewController {
         let elapsedMs = (CFAbsoluteTimeGetCurrent() - buttonShowStartTime) * 1000
         Self.sharedViewerStats.cacheMissCount += 1
         Self.sharedViewerStats.analysisWaitTimes.append(elapsedMs)
-        print("[ViewerPerf] Cache MISS - Analysis completed in \(String(format: "%.2f", elapsedMs))ms")
+        Log.print("[ViewerPerf] Cache MISS - Analysis completed in \(String(format: "%.2f", elapsedMs))ms")
 
         // +버튼 표시 시도 (isCacheHit: false → 성능 통계에 중복 기록 안 함)
         Task { @MainActor in
@@ -678,7 +679,7 @@ extension ViewerViewController: FaceButtonOverlayDelegate {
             // 성능 측정: 비교 그룹 생성 완료 시간 기록
             let elapsedMs = (CFAbsoluteTimeGetCurrent() - tapStartTime) * 1000
             Self.sharedViewerStats.comparisonGroupTimes.append(elapsedMs)
-            print("[ViewerPerf] +Button → ComparisonGroup in \(String(format: "%.2f", elapsedMs))ms")
+            Log.print("[ViewerPerf] +Button → ComparisonGroup in \(String(format: "%.2f", elapsedMs))ms")
 
             // FaceComparisonViewController 표시 (Phase 5에서 구현)
             showFaceComparisonViewController(with: comparisonGroup)
@@ -689,7 +690,7 @@ extension ViewerViewController: FaceButtonOverlayDelegate {
     /// - iOS 26+: UINavigationController로 감싸서 Liquid Glass 네비게이션바 사용
     /// - iOS 16~25: 커스텀 타이틀바 사용, 직접 present
     private func showFaceComparisonViewController(with comparisonGroup: ComparisonGroup) {
-        print("[ViewerViewController+SimilarPhoto] FaceComparisonViewController 표시")
+        Log.print("[ViewerViewController+SimilarPhoto] FaceComparisonViewController 표시")
         print("  - sourceGroupID: \(comparisonGroup.sourceGroupID)")
         print("  - personIndex: \(comparisonGroup.personIndex)")
         print("  - selectedAssetIDs: \(comparisonGroup.selectedAssetIDs.count)장")
@@ -723,8 +724,8 @@ extension ViewerViewController: FaceComparisonDelegate {
         _ viewController: FaceComparisonViewController,
         didDeletePhotos deletedAssetIDs: [String]
     ) {
-        print("[ViewerViewController+SimilarPhoto] Deleted \(deletedAssetIDs.count) photos from face comparison")
-        print("[ViewerViewController+SimilarPhoto] Dismissing FaceComparison and popping to grid")
+        Log.print("[ViewerViewController+SimilarPhoto] Deleted \(deletedAssetIDs.count) photos from face comparison")
+        Log.print("[ViewerViewController+SimilarPhoto] Dismissing FaceComparison and popping to grid")
 
         // FaceComparisonViewController 닫기 (modal)
         viewController.dismiss(animated: false) { [weak self] in
@@ -735,7 +736,7 @@ extension ViewerViewController: FaceComparisonDelegate {
 
     /// 화면 닫기 시 호출 (Cancel 버튼)
     func faceComparisonViewControllerDidClose(_ viewController: FaceComparisonViewController) {
-        print("[ViewerViewController+SimilarPhoto] Face comparison closed")
+        Log.print("[ViewerViewController+SimilarPhoto] Face comparison closed")
 
         // Cancel로 닫을 때는 버튼을 건드리지 않음
         // - 버튼이 이미 표시되어 있고, modal dismiss 후 그대로 보임

@@ -17,7 +17,9 @@
 //
 
 import Foundation
+import AppCore
 import Photos
+import Vision
 
 /// 품질 분석기
 ///
@@ -154,6 +156,15 @@ final class QualityAnalyzer {
             return QualityResult.skipped(assetID: assetID, creationDate: creationDate, reason: .utilityImage)
         }
 
+        // 조건부 텍스트 스크린샷 체크
+        // 극단 노출(과노출/과어두움)로 판정될 가능성이 있는 경우에만 Vision 텍스트 감지 실행
+        if hasExtremeExposure(exposureMetrics) {
+            let isTextScreenshot = await detectTextScreenshot(image)
+            if isTextScreenshot {
+                return QualityResult.skipped(assetID: assetID, creationDate: creationDate, reason: .textScreenshot)
+            }
+        }
+
         var signals = exposureAnalyzer.detectSignals(from: exposureMetrics, mode: mode)
 
         // Stage 3: 블러 분석
@@ -190,7 +201,7 @@ final class QualityAnalyzer {
                 } catch {
                     // Vision 에러는 무시하고 계속 진행
                     #if DEBUG
-                    print("[QualityAnalyzer] SafeGuard face check failed: \(error.localizedDescription)")
+                    Log.print("[QualityAnalyzer] SafeGuard face check failed: \(error.localizedDescription)")
                     #endif
                 }
             }
@@ -293,6 +304,74 @@ final class QualityAnalyzer {
         return isExtremeLuminance && isLowColorVariety
     }
 
+    /// 극단 노출 여부 판정
+    ///
+    /// 과노출 또는 과어두움으로 저품질 판정될 가능성이 있는지 확인합니다.
+    /// 조건부 텍스트 감지의 트리거로 사용됩니다.
+    ///
+    /// - Parameter metrics: 노출 분석 결과
+    /// - Returns: 극단 노출이면 true
+    private func hasExtremeExposure(_ metrics: ExposureMetrics) -> Bool {
+        return metrics.luminance < CleanupConstants.extremeDarkLuminance ||
+               metrics.luminance > CleanupConstants.extremeBrightLuminance
+    }
+
+    /// 텍스트 스크린샷 감지 (Vision 프레임워크)
+    ///
+    /// VNRecognizeTextRequest를 사용하여 이미지에 텍스트가 많은지 감지합니다.
+    /// 블로그 캡쳐, 문서 스크린샷 등 텍스트가 포함된 스크린샷을 필터링합니다.
+    ///
+    /// - Parameter image: 분석할 이미지
+    /// - Returns: 텍스트 스크린샷이면 true
+    private func detectTextScreenshot(_ image: CGImage) async -> Bool {
+        return await withCheckedContinuation { continuation in
+            let request = VNRecognizeTextRequest { request, error in
+                // 에러 발생 시 스크린샷 아님으로 처리 (안전한 방향)
+                guard error == nil,
+                      let observations = request.results as? [VNRecognizedTextObservation] else {
+                    continuation.resume(returning: false)
+                    return
+                }
+
+                // 텍스트 블록 개수로 판정
+                let textBlockCount = observations.count
+                let isTextScreenshot = textBlockCount >= CleanupConstants.textBlockCountThreshold
+
+                #if DEBUG
+                if textBlockCount > 0 {
+                    Log.print("[QualityAnalyzer] 텍스트 감지: \(textBlockCount)개 블록, 스크린샷=\(isTextScreenshot)")
+                }
+                #endif
+
+                continuation.resume(returning: isTextScreenshot)
+            }
+
+            // Fast 모드 설정 (50~150ms)
+            if CleanupConstants.textRecognitionUseFastMode {
+                request.recognitionLevel = .fast
+            } else {
+                request.recognitionLevel = .accurate
+            }
+
+            // 언어 힌트 (한국어, 영어)
+            request.recognitionLanguages = ["ko-KR", "en-US"]
+
+            // 최소 텍스트 높이 제거 (세로로 긴 이미지에서도 감지되도록)
+            // 기본값 사용 (Vision이 자동 판단)
+
+            // Vision 요청 실행
+            let handler = VNImageRequestHandler(cgImage: image, options: [:])
+            do {
+                try handler.perform([request])
+            } catch {
+                #if DEBUG
+                Log.print("[QualityAnalyzer] Vision 텍스트 감지 실패: \(error.localizedDescription)")
+                #endif
+                continuation.resume(returning: false)
+            }
+        }
+    }
+
     /// 동영상 분석 (프레임 3개 추출, 중앙값 판정)
     ///
     /// - Parameters:
@@ -312,7 +391,7 @@ final class QualityAnalyzer {
         } catch {
             // 프레임 추출 실패 → SKIP
             #if DEBUG
-            print("[QualityAnalyzer] 동영상 프레임 추출 실패: \(error.localizedDescription)")
+            Log.print("[QualityAnalyzer] 동영상 프레임 추출 실패: \(error.localizedDescription)")
             #endif
 
             if let extractError = error as? VideoFrameExtractError {
@@ -346,7 +425,7 @@ final class QualityAnalyzer {
         let isLowQuality = lowQualityCount >= 2
 
         #if DEBUG
-        print("[QualityAnalyzer] 동영상 분석: \(frames.count)프레임, 저품질=\(lowQualityCount), 판정=\(isLowQuality ? "LOW" : "OK")")
+        Log.print("[QualityAnalyzer] 동영상 분석: \(frames.count)프레임, 저품질=\(lowQualityCount), 판정=\(isLowQuality ? "LOW" : "OK")")
         #endif
 
         if isLowQuality {
@@ -382,7 +461,7 @@ final class QualityAnalyzer {
             signals.append(contentsOf: exposureSignals)
         } catch {
             #if DEBUG
-            print("[QualityAnalyzer] 프레임 노출 분석 실패: \(error.localizedDescription)")
+            Log.print("[QualityAnalyzer] 프레임 노출 분석 실패: \(error.localizedDescription)")
             #endif
         }
 
@@ -398,7 +477,7 @@ final class QualityAnalyzer {
             signals.append(contentsOf: blurSignals)
         } catch {
             #if DEBUG
-            print("[QualityAnalyzer] 프레임 블러 분석 실패: \(error.localizedDescription)")
+            Log.print("[QualityAnalyzer] 프레임 블러 분석 실패: \(error.localizedDescription)")
             #endif
         }
 

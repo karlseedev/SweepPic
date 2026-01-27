@@ -61,7 +61,7 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         // T066: 권한 상태 변경 콜백 등록
         setupPermissionObserver()
 
-        print("[SceneDelegate] Scene connected, window configured")
+        Log.print("[SceneDelegate] Scene connected, window configured")
     }
 
     // MARK: - T065: Permission Check
@@ -86,7 +86,7 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
             showPermissionViewController()
         }
 
-        print("[SceneDelegate] configureRootViewController: \(permissionState)")
+        Log.print("[SceneDelegate] configureRootViewController: \(permissionState)")
     }
 
     /// 메인 인터페이스 표시 (TabBarController)
@@ -114,7 +114,12 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         // 권한 뷰컨트롤러 해제
         permissionViewController = nil
 
-        print("[SceneDelegate] Showing main interface (TabBarController)")
+        Log.print("[SceneDelegate] Showing main interface (TabBarController)")
+
+        // iOS 26 시스템 UI JSON 덤프 버튼
+        #if DEBUG
+        SystemUIInspector3.shared.showDebugButton()
+        #endif
     }
 
     /// 권한 요청 화면 표시 (PermissionViewController)
@@ -143,7 +148,7 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         // 탭바 컨트롤러 해제
         tabBarController = nil
 
-        print("[SceneDelegate] Showing permission view controller")
+        Log.print("[SceneDelegate] Showing permission view controller")
     }
 
     // MARK: - T066: Permission Change Observer
@@ -151,7 +156,7 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
     /// 권한 상태 변경 옵저버 설정
     private func setupPermissionObserver() {
         PermissionStore.shared.onStatusChange { [weak self] newStatus in
-            print("[SceneDelegate] Permission status changed: \(newStatus)")
+            Log.print("[SceneDelegate] Permission status changed: \(newStatus)")
 
             // 메인 스레드에서 UI 업데이트
             DispatchQueue.main.async {
@@ -184,14 +189,14 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
     /// - Parameter scene: 연결 해제된 Scene
     func sceneDidDisconnect(_ scene: UIScene) {
         // Scene 연결 해제 시 정리 작업
-        print("[SceneDelegate] Scene disconnected")
+        Log.print("[SceneDelegate] Scene disconnected")
     }
 
     /// Scene이 활성화될 때 호출
     /// - Parameter scene: 활성화된 Scene
     func sceneDidBecomeActive(_ scene: UIScene) {
         // 앱이 활성 상태가 될 때 처리
-        print("[SceneDelegate] Scene became active")
+        Log.print("[SceneDelegate] Scene became active")
 
         // v6: 백그라운드에서 캐시 트림 (용량 관리)
         DispatchQueue.global(qos: .utility).async {
@@ -203,7 +208,7 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
     /// - Parameter scene: 비활성화된 Scene
     func sceneWillResignActive(_ scene: UIScene) {
         // 앱이 비활성 상태가 될 때 처리
-        print("[SceneDelegate] Scene will resign active")
+        Log.print("[SceneDelegate] Scene will resign active")
     }
 
     /// Scene이 포그라운드로 진입할 때 호출
@@ -218,7 +223,7 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         // T060: 외부 삭제 처리 - PhotoKit에서 삭제된 사진을 TrashState에서 제거
         cleanupInvalidTrashedAssets()
 
-        print("[SceneDelegate] Scene will enter foreground")
+        Log.print("[SceneDelegate] Scene will enter foreground")
     }
 
     /// T060: 휴지통에서 외부 삭제된 사진 정리
@@ -243,8 +248,9 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
     func sceneDidEnterBackground(_ scene: UIScene) {
         // T015: 백그라운드 진입 시 AppStateStore 처리
         AppStateStore.shared.handleBackgroundTransition()
-        print("[SceneDelegate] Scene did enter background")
+        Log.print("[SceneDelegate] Scene did enter background")
     }
+
 }
 
 // MARK: - PermissionViewControllerDelegate
@@ -253,7 +259,7 @@ extension SceneDelegate: PermissionViewControllerDelegate {
 
     /// 권한이 승인되어 사진 접근이 가능해졌을 때 호출
     func permissionViewControllerDidGrantAccess(_ controller: PermissionViewController) {
-        print("[SceneDelegate] Permission granted, showing main interface")
+        Log.print("[SceneDelegate] Permission granted, showing main interface")
         showMainInterface()
     }
 }

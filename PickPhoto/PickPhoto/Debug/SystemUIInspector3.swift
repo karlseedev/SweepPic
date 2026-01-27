@@ -12,6 +12,7 @@
 #if DEBUG
 
 import UIKit
+import AppCore
 
 // MARK: - 기본 구조체
 
@@ -335,7 +336,7 @@ final class SystemUIInspector3 {
         ])
 
         self.debugButton = button
-        print("[SystemUIInspector3] 디버그 버튼 표시됨")
+        Log.print("[SystemUIInspector3] 디버그 버튼 표시됨")
     }
 
     func hideDebugButton() {
@@ -361,7 +362,7 @@ final class SystemUIInspector3 {
 
     private func performJSONDump() {
         guard let window = getKeyWindow() else {
-            print("[SystemUIInspector3] Key Window를 찾을 수 없습니다.")
+            Log.print("[SystemUIInspector3] Key Window를 찾을 수 없습니다.")
             return
         }
 

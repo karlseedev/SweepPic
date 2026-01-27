@@ -6,6 +6,7 @@
 // T027-1e: 네비바 숨김 처리 (iOS 16~25만 숨김)
 
 import UIKit
+import AppCore
 
 /// PickPhoto 앱의 메인 TabBarController
 /// Photos 탭과 Albums 탭을 관리
@@ -46,7 +47,7 @@ class TabBarController: UITabBarController {
         // 탭 변경 감지
         delegate = self
 
-        print("[TabBarController] Initialized - useFloatingUI: \(useFloatingUI)")
+        Log.print("[TabBarController] Initialized - useFloatingUI: \(useFloatingUI)")
     }
 
     override func viewDidLayoutSubviews() {
@@ -111,13 +112,13 @@ class TabBarController: UITabBarController {
         // 탭 뷰컨트롤러 설정
         viewControllers = [photosNavController, albumsNavController, trashNavController]
 
-        print("[TabBarController] Tabs configured: Photos, Albums, Trash")
+        Log.print("[TabBarController] Tabs configured: Photos, Albums, Trash")
     }
 
     /// 플로팅 UI 설정 (iOS 16~25)
     private func setupFloatingUIIfNeeded() {
         guard useFloatingUI else {
-            print("[TabBarController] iOS 26+: Using system default UI")
+            Log.print("[TabBarController] iOS 26+: Using system default UI")
             return
         }
 
@@ -138,7 +139,7 @@ class TabBarController: UITabBarController {
 
         self.floatingOverlay = overlay
 
-        print("[TabBarController] FloatingOverlayContainer added")
+        Log.print("[TabBarController] FloatingOverlayContainer added")
     }
 
     /// 시스템 바 가시성 설정
@@ -152,7 +153,7 @@ class TabBarController: UITabBarController {
             albumsNav?.setNavigationBarHidden(true, animated: false)
             trashNav?.setNavigationBarHidden(true, animated: false)
 
-            print("[TabBarController] System bars hidden (using floating UI)")
+            Log.print("[TabBarController] System bars hidden (using floating UI)")
         } else {
             // iOS 26+: 시스템 바 표시
             tabBar.isHidden = false
@@ -161,7 +162,7 @@ class TabBarController: UITabBarController {
             // 네비바 표시 + Select 버튼 추가
             setupNavigationBarForSystemMode()
 
-            print("[TabBarController] System bars visible (iOS 26+)")
+            Log.print("[TabBarController] System bars visible (iOS 26+)")
         }
     }
 
@@ -202,7 +203,7 @@ class TabBarController: UITabBarController {
 
     /// 시스템 네비바의 Select 버튼 탭 (iOS 26+)
     @objc private func systemSelectButtonTapped() {
-        print("[TabBarController] System Select button tapped")
+        Log.print("[TabBarController] System Select button tapped")
         // GridViewController에 Select 모드 진입 알림
         if let photosVC = photosNav?.viewControllers.first as? GridViewController {
             photosVC.enterSelectMode()
@@ -252,7 +253,7 @@ extension TabBarController: UITabBarControllerDelegate {
         // 플로팅 오버레이 탭 동기화
         if let index = viewControllers?.firstIndex(of: viewController) {
             floatingOverlay?.selectedTabIndex = index
-            print("[TabBarController] Tab selected via system: \(index)")
+            Log.print("[TabBarController] Tab selected via system: \(index)")
         }
     }
 }
@@ -275,29 +276,29 @@ extension TabBarController: FloatingOverlayContainerDelegate {
     func floatingOverlay(_ container: FloatingOverlayContainer, didSelectTabAt index: Int) {
         // 탭 전환
         selectedIndex = index
-        print("[TabBarController] Tab selected via floating UI: \(index)")
+        Log.print("[TabBarController] Tab selected via floating UI: \(index)")
     }
 
     func floatingOverlayDidTapSelect(_ container: FloatingOverlayContainer) {
-        print("[TabBarController] Select tapped via floating UI")
+        Log.print("[TabBarController] Select tapped via floating UI")
         // 현재 탭의 Select 모드 지원 VC에 진입 요청
         currentSelectModeTarget()?.enterSelectMode()
     }
 
     func floatingOverlayDidTapCancel(_ container: FloatingOverlayContainer) {
-        print("[TabBarController] Cancel tapped via floating UI")
+        Log.print("[TabBarController] Cancel tapped via floating UI")
         // 현재 탭의 Select 모드 지원 VC에 종료 요청
         currentSelectModeTarget()?.exitSelectMode()
     }
 
     func floatingOverlayDidTapDelete(_ container: FloatingOverlayContainer) {
-        print("[TabBarController] Delete tapped via floating UI")
+        Log.print("[TabBarController] Delete tapped via floating UI")
         // 현재 탭의 Select 모드 지원 VC에 삭제 액션 전달
         currentSelectModeTarget()?.handleSelectModeDeleteAction()
     }
 
     func floatingOverlayDidTapEmptyTrash(_ container: FloatingOverlayContainer) {
-        print("[TabBarController] Empty Trash tapped via floating UI")
+        Log.print("[TabBarController] Empty Trash tapped via floating UI")
         // TrashAlbumViewController에 휴지통 비우기 알림
         if let trashVC = trashNav?.viewControllers.first as? TrashAlbumViewController {
             trashVC.emptyTrash()
@@ -352,6 +353,6 @@ extension TabBarController: UINavigationControllerDelegate {
         // 디버그 로그
         let vcName = String(describing: type(of: viewController))
         let hasPolicy = policy != nil
-        print("[TabBarController] BarsVisibilityPolicy applied for \(vcName) (hasPolicy: \(hasPolicy))")
+        Log.print("[TabBarController] BarsVisibilityPolicy applied for \(vcName) (hasPolicy: \(hasPolicy))")
     }
 }

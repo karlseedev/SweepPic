@@ -132,7 +132,7 @@ final class PermissionViewController: UIViewController {
         setupUI()
         updateUI(for: permissionStore.currentStatus)
 
-        print("[PermissionVC] View loaded, current status: \(permissionStore.currentStatus)")
+        Log.print("[PermissionVC] View loaded, current status: \(permissionStore.currentStatus)")
     }
 
     override func viewWillAppear(_ animated: Bool) {
@@ -210,7 +210,7 @@ final class PermissionViewController: UIViewController {
         case .authorized:
             // 전체 접근 권한 있음 - 이 화면이 표시되면 안 됨
             // 델리게이트가 화면 전환 처리
-            print("[PermissionVC] Already authorized, should transition to main")
+            Log.print("[PermissionVC] Already authorized, should transition to main")
             delegate?.permissionViewControllerDidGrantAccess(self)
         }
     }
@@ -228,7 +228,7 @@ final class PermissionViewController: UIViewController {
         actionButton.backgroundColor = .systemBlue
         secondaryLabel.isHidden = true
 
-        print("[PermissionVC] Showing request UI")
+        Log.print("[PermissionVC] Showing request UI")
     }
 
     /// T063: 거부/제한 상태 UI 표시
@@ -259,7 +259,7 @@ final class PermissionViewController: UIViewController {
             secondaryLabel.isHidden = true
         }
 
-        print("[PermissionVC] Showing denied UI (isRestricted: \(isRestricted), isLimited: \(isLimited))")
+        Log.print("[PermissionVC] Showing denied UI (isRestricted: \(isRestricted), isLimited: \(isLimited))")
     }
 
     // MARK: - Actions
@@ -283,7 +283,7 @@ final class PermissionViewController: UIViewController {
 
     /// T062: 사진 접근 권한 요청
     private func requestPhotoAccess() {
-        print("[PermissionVC] Requesting photo access...")
+        Log.print("[PermissionVC] Requesting photo access...")
 
         // 버튼 비활성화 (중복 요청 방지)
         actionButton.isEnabled = false
@@ -296,7 +296,7 @@ final class PermissionViewController: UIViewController {
                 actionButton.isEnabled = true
                 updateUI(for: status)
 
-                print("[PermissionVC] Request completed, status: \(status)")
+                Log.print("[PermissionVC] Request completed, status: \(status)")
 
                 // 권한 승인 시 델리게이트에 알림
                 if status.canAccessPhotos {
@@ -309,14 +309,14 @@ final class PermissionViewController: UIViewController {
     /// T063: 설정 앱 열기
     private func openSettings() {
         guard let settingsURL = URL(string: UIApplication.openSettingsURLString) else {
-            print("[PermissionVC] Failed to create settings URL")
+            Log.print("[PermissionVC] Failed to create settings URL")
             return
         }
 
-        print("[PermissionVC] Opening settings...")
+        Log.print("[PermissionVC] Opening settings...")
 
         UIApplication.shared.open(settingsURL) { success in
-            print("[PermissionVC] Settings opened: \(success)")
+            Log.print("[PermissionVC] Settings opened: \(success)")
         }
     }
 

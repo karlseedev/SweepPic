@@ -21,6 +21,7 @@
 //
 
 import UIKit
+import AppCore
 
 /// +버튼 탭 이벤트 델리게이트
 protocol FaceButtonOverlayDelegate: AnyObject {

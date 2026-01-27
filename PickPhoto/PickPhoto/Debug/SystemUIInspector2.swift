@@ -5,6 +5,7 @@
 #if DEBUG
 
 import UIKit
+import AppCore
 
 /// 시스템 UI 완전 덤프 인스펙터
 /// - _ivarDescription을 사용하여 상속 포함 모든 ivar 덤프
@@ -126,7 +127,7 @@ final class SystemUIInspector2 {
         ])
 
         self.debugButton = button
-        print("[SystemUIInspector2] 디버그 버튼 표시됨 - _ivarDescription 완전 덤프")
+        Log.print("[SystemUIInspector2] 디버그 버튼 표시됨 - _ivarDescription 완전 덤프")
     }
 
     /// 디버그 버튼 숨기기
@@ -160,7 +161,7 @@ final class SystemUIInspector2 {
     /// 전체 덤프 실행 (파일 2개 저장)
     private func performFullDump() {
         guard let window = getKeyWindow() else {
-            print("[SystemUIInspector2] Key Window를 찾을 수 없습니다.")
+            Log.print("[SystemUIInspector2] Key Window를 찾을 수 없습니다.")
             return
         }
 
@@ -407,7 +408,7 @@ final class SystemUIInspector2 {
         let fileName = "ui_dump_\(timestamp)_\(inspectionCount)_\(suffix).txt"
 
         guard let documentsPath = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first else {
-            print("[SystemUIInspector2] Documents 폴더를 찾을 수 없습니다.")
+            Log.print("[SystemUIInspector2] Documents 폴더를 찾을 수 없습니다.")
             return fileName
         }
 
@@ -415,9 +416,9 @@ final class SystemUIInspector2 {
 
         do {
             try content.write(to: filePath, atomically: true, encoding: .utf8)
-            print("[SystemUIInspector2] 저장 완료: \(filePath.path)")
+            Log.print("[SystemUIInspector2] 저장 완료: \(filePath.path)")
         } catch {
-            print("[SystemUIInspector2] 저장 실패: \(error)")
+            Log.print("[SystemUIInspector2] 저장 실패: \(error)")
         }
 
         return fileName

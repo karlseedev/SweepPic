@@ -8,6 +8,7 @@
 // - 이벤트 흐름: GridVC가 Select 진입/종료 이벤트 발생 → FloatingOverlayContainer가 UI 전환
 
 import UIKit
+import AppCore
 
 /// 플로팅 탭바 델리게이트
 /// 탭 선택 및 Select 모드 이벤트 전달
@@ -372,7 +373,7 @@ final class FloatingTabBar: UIView {
         setupConstraints()
         updateTabSelection()
 
-        print("[FloatingTabBar] Initialized")
+        Log.print("[FloatingTabBar] Initialized")
     }
 
     private func setupConstraints() {
@@ -582,28 +583,28 @@ final class FloatingTabBar: UIView {
 
     @objc private func tabButtonTapped(_ sender: UIButton) {
         let index = sender.tag
-        print("[FloatingTabBar] Tab \(index) tapped")
+        Log.print("[FloatingTabBar] Tab \(index) tapped")
         selectedIndex = index
         delegate?.floatingTabBar(self, didSelectTabAt: index)
     }
 
     @objc private func deleteButtonTapped() {
-        print("[FloatingTabBar] Delete tapped")
+        Log.print("[FloatingTabBar] Delete tapped")
         delegate?.floatingTabBarDidTapDelete(self)
     }
 
     @objc private func emptyTrashButtonTapped() {
-        print("[FloatingTabBar] Empty Trash tapped")
+        Log.print("[FloatingTabBar] Empty Trash tapped")
         delegate?.floatingTabBarDidTapEmptyTrash(self)
     }
 
     @objc private func trashRestoreButtonTapped() {
-        print("[FloatingTabBar] Trash Restore tapped")
+        Log.print("[FloatingTabBar] Trash Restore tapped")
         delegate?.floatingTabBarDidTapRestore(self)
     }
 
     @objc private func trashDeleteButtonTapped() {
-        print("[FloatingTabBar] Trash Delete tapped")
+        Log.print("[FloatingTabBar] Trash Delete tapped")
         delegate?.floatingTabBarDidTapTrashDelete(self)
     }
 
@@ -632,7 +633,7 @@ final class FloatingTabBar: UIView {
             selectModeContainer.alpha = 1
         }
 
-        print("[FloatingTabBar] Entered select mode")
+        Log.print("[FloatingTabBar] Entered select mode")
     }
 
     /// Select 모드 종료
@@ -656,7 +657,7 @@ final class FloatingTabBar: UIView {
             selectModeContainer.alpha = 0
         }
 
-        print("[FloatingTabBar] Exited select mode")
+        Log.print("[FloatingTabBar] Exited select mode")
     }
 
     /// 선택 개수 업데이트 (Select 모드에서) - Grid/Album용
@@ -693,7 +694,7 @@ final class FloatingTabBar: UIView {
             trashSelectModeContainer.alpha = 1
         }
 
-        print("[FloatingTabBar] Entered trash select mode")
+        Log.print("[FloatingTabBar] Entered trash select mode")
     }
 
     /// Trash Select 모드 종료 (Trash 전용)
@@ -717,7 +718,7 @@ final class FloatingTabBar: UIView {
             trashSelectModeContainer.alpha = 0
         }
 
-        print("[FloatingTabBar] Exited trash select mode")
+        Log.print("[FloatingTabBar] Exited trash select mode")
     }
 
     /// Trash 선택 개수 업데이트 (Trash Select 모드에서)

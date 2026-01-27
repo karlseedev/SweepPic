@@ -310,7 +310,7 @@ final class AlbumsViewController: UIViewController {
         // 컬렉션 뷰 리로드
         collectionView.reloadData()
 
-        print("[AlbumsViewController] Loaded \(smartAlbums.count) smart albums, \(userAlbums.count) user albums")
+        Log.print("[AlbumsViewController] Loaded \(smartAlbums.count) smart albums, \(userAlbums.count) user albums")
     }
 
     /// 빈 상태 업데이트
@@ -423,7 +423,7 @@ extension AlbumsViewController: UICollectionViewDelegate {
     /// 스마트 앨범 그리드 열기 (T052)
     private func openAlbumGrid(smartAlbum: SmartAlbum) {
         guard let fetchResult = albumService.fetchPhotosInSmartAlbum(type: smartAlbum.type) else {
-            print("[AlbumsViewController] Failed to fetch photos for smart album: \(smartAlbum.type)")
+            Log.print("[AlbumsViewController] Failed to fetch photos for smart album: \(smartAlbum.type)")
             return
         }
 
@@ -460,13 +460,13 @@ extension AlbumsViewController: UICollectionViewDelegate {
 
         navigationController?.pushViewController(albumGridVC, animated: true)
 
-        print("[AlbumsViewController] Opened smart album: \(smartAlbum.title)")
+        Log.print("[AlbumsViewController] Opened smart album: \(smartAlbum.title)")
     }
 
     /// 사용자 앨범 그리드 열기 (T052)
     private func openAlbumGrid(album: Album) {
         guard let fetchResult = albumService.fetchPhotosInAlbum(albumID: album.id) else {
-            print("[AlbumsViewController] Failed to fetch photos for album: \(album.title)")
+            Log.print("[AlbumsViewController] Failed to fetch photos for album: \(album.title)")
             return
         }
 
@@ -503,7 +503,7 @@ extension AlbumsViewController: UICollectionViewDelegate {
 
         navigationController?.pushViewController(albumGridVC, animated: true)
 
-        print("[AlbumsViewController] Opened album: \(album.title)")
+        Log.print("[AlbumsViewController] Opened album: \(album.title)")
     }
 
     // MARK: - iOS 18+ Zoom Transition Helper
@@ -572,7 +572,7 @@ extension AlbumsViewController: PHPhotoLibraryChangeObserver {
         // 메인 스레드에서 UI 업데이트
         DispatchQueue.main.async { [weak self] in
             self?.loadData()
-            print("[AlbumsViewController] PhotoLibrary changed, reloading data")
+            Log.print("[AlbumsViewController] PhotoLibrary changed, reloading data")
         }
     }
 }

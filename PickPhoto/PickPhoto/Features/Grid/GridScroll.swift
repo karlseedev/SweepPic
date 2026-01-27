@@ -552,7 +552,7 @@ extension GridViewController {
         guard !visibleIndexPaths.isEmpty else {
             // 만약을 위한 fallback
             hasPreheatedInitialScreen = false
-            print("[GridViewController] preheatInitialScreen: visible empty, will retry")
+            Log.print("[GridViewController] preheatInitialScreen: visible empty, will retry")
             return
         }
 
@@ -569,7 +569,7 @@ extension GridViewController {
         // PHAsset 배열 가져오기
         let assets = extendedIndexPaths.compactMap { dataSourceDriver.asset(at: $0) }
         guard !assets.isEmpty else {
-            print("[GridViewController] preheatInitialScreen: no assets to preheat")
+            Log.print("[GridViewController] preheatInitialScreen: no assets to preheat")
             return
         }
 
@@ -578,7 +578,7 @@ extension GridViewController {
             ImagePipeline.shared.preheatAssets(assets, targetSize: targetSize)
         }
 
-        print("[GridViewController] preheatInitialScreen: \(assets.count) assets")
+        Log.print("[GridViewController] preheatInitialScreen: \(assets.count) assets")
     }
 
     /// IndexPath 배열을 확장 (앞뒤로 지정 개수만큼)

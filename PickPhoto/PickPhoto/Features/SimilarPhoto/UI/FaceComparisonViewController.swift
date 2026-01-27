@@ -213,7 +213,7 @@ final class FaceComparisonViewController: UIViewController {
         loadPhotoFaces()
         loadValidPersonIndices()
 
-        print("[FaceComparisonViewController] Loaded with \(comparisonGroup.count) photos, person \(comparisonGroup.personIndex)")
+        Log.print("[FaceComparisonViewController] Loaded with \(comparisonGroup.count) photos, person \(comparisonGroup.personIndex)")
     }
 
     override func viewWillAppear(_ animated: Bool) {
@@ -353,7 +353,7 @@ final class FaceComparisonViewController: UIViewController {
         result.enumerateObjects { [weak self] asset, _, _ in
             self?.assetCache[asset.localIdentifier] = asset
         }
-        print("[FaceComparisonViewController] Asset cache built: \(assetCache.count) assets")
+        Log.print("[FaceComparisonViewController] Asset cache built: \(assetCache.count) assets")
     }
 
     /// 사진별 얼굴 정보 로드
@@ -405,7 +405,7 @@ final class FaceComparisonViewController: UIViewController {
         let initialPage = PersonPageViewController(personIndex: currentPersonIndex, dataSource: self)
         pageViewController.setViewControllers([initialPage], direction: .forward, animated: false)
 
-        print("[FaceComparisonViewController] Initial page set for person \(currentPersonIndex)")
+        Log.print("[FaceComparisonViewController] Initial page set for person \(currentPersonIndex)")
     }
 
     // MARK: - UI Updates
@@ -468,7 +468,7 @@ final class FaceComparisonViewController: UIViewController {
 
     /// Cancel 버튼 탭
     @objc private func cancelButtonTapped() {
-        print("[FaceComparisonViewController] Cancel tapped")
+        Log.print("[FaceComparisonViewController] Cancel tapped")
 
         selectedAssetIDs.removeAll()
 
@@ -482,7 +482,7 @@ final class FaceComparisonViewController: UIViewController {
     @objc private func deleteButtonTapped() {
         guard !selectedAssetIDs.isEmpty else { return }
 
-        print("[FaceComparisonViewController] Delete tapped: \(selectedAssetIDs.count) photos")
+        Log.print("[FaceComparisonViewController] Delete tapped: \(selectedAssetIDs.count) photos")
 
         let deletedIDs = Array(selectedAssetIDs)
 
@@ -505,7 +505,7 @@ final class FaceComparisonViewController: UIViewController {
 
         let nextIndex = (currentPersonArrayIndex + 1) % validPersonIndices.count
 
-        print("[FaceComparisonViewController] Cycled to person \(validPersonIndices[nextIndex])")
+        Log.print("[FaceComparisonViewController] Cycled to person \(validPersonIndices[nextIndex])")
 
         navigateToPerson(at: nextIndex, direction: .forward)
     }
@@ -514,12 +514,12 @@ final class FaceComparisonViewController: UIViewController {
 
     /// 디버그 버튼 탭
     @objc private func debugButtonTapped() {
-        print("[FaceComparisonViewController] Debug button tapped - Running Group Matching Simulation")
+        Log.print("[FaceComparisonViewController] Debug button tapped - Running Group Matching Simulation")
 
         Task { @MainActor in
             let assetIDs = comparisonGroup.selectedAssetIDs
             guard !assetIDs.isEmpty else {
-                print("[MatchingTest] No photos available")
+                Log.print("[MatchingTest] No photos available")
                 return
             }
 
@@ -531,7 +531,7 @@ final class FaceComparisonViewController: UIViewController {
             let photos = assetIDs.compactMap { photosDict[$0] }
 
             guard !photos.isEmpty else {
-                print("[MatchingTest] Failed to fetch PHAssets")
+                Log.print("[MatchingTest] Failed to fetch PHAssets")
                 return
             }
 
@@ -552,7 +552,7 @@ final class FaceComparisonViewController: UIViewController {
         Task { @MainActor in
             let assetIDs = comparisonGroup.selectedAssetIDs
             guard !assetIDs.isEmpty else {
-                print("[ExtendedTest] No photos available")
+                Log.print("[ExtendedTest] No photos available")
                 return
             }
 
@@ -564,7 +564,7 @@ final class FaceComparisonViewController: UIViewController {
             let photos = assetIDs.compactMap { photosDict[$0] }
 
             guard !photos.isEmpty else {
-                print("[ExtendedTest] Failed to fetch PHAssets")
+                Log.print("[ExtendedTest] Failed to fetch PHAssets")
                 return
             }
 
@@ -597,7 +597,7 @@ extension FaceComparisonViewController: FaceComparisonDataSource {
 
         updateSelectionCount()
 
-        print("[FaceComparisonViewController] Toggled selection for \(assetID.prefix(8))..., now \(selectedAssetIDs.count) selected")
+        Log.print("[FaceComparisonViewController] Toggled selection for \(assetID.prefix(8))..., now \(selectedAssetIDs.count) selected")
     }
 
     func face(for assetID: String, personIndex: Int) -> CachedFace? {
@@ -639,7 +639,7 @@ extension FaceComparisonViewController: FaceComparisonDataSource {
                     let croppedImage = try FaceCropper.cropFace(from: image, boundingBox: boundingBox)
                     DispatchQueue.main.async { completion(croppedImage) }
                 } catch {
-                    print("[FaceComparisonViewController] Failed to crop face: \(error)")
+                    Log.print("[FaceComparisonViewController] Failed to crop face: \(error)")
                     DispatchQueue.main.async { completion(nil) }
                 }
             }
@@ -711,7 +711,7 @@ extension FaceComparisonViewController: UIPageViewControllerDelegate {
         // 타이틀바 업데이트
         updateTitleBar()
 
-        print("[FaceComparisonViewController] Page transition completed to person \(currentPage.personIndex)")
+        Log.print("[FaceComparisonViewController] Page transition completed to person \(currentPage.personIndex)")
     }
 }
 

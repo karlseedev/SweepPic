@@ -99,6 +99,11 @@ enum SkipReason: String, Codable, CaseIterable {
     /// - AestheticsScore의 isUtility == true
     /// - 스크린샷과 동일 취급
     case utilityImage
+
+    /// 텍스트 스크린샷
+    /// - Vision 텍스트 감지로 텍스트가 많이 검출된 이미지
+    /// - 블로그 캡쳐, 문서 스크린샷 등
+    case textScreenshot
 }
 
 // MARK: - SafeGuardReason

@@ -8,6 +8,7 @@
 // - 고정 레이어로 성능 유지 (스크롤과 무관)
 
 import UIKit
+import AppCore
 
 /// 플로팅 오버레이 컨테이너 델리게이트
 /// 탭 선택 및 Select 모드 이벤트 전달
@@ -107,7 +108,7 @@ final class FloatingOverlayContainer: UIView {
         setupConstraints()
         updateForCurrentTab()
 
-        print("[FloatingOverlayContainer] Initialized")
+        Log.print("[FloatingOverlayContainer] Initialized")
     }
 
     private func setupConstraints() {
@@ -148,7 +149,7 @@ final class FloatingOverlayContainer: UIView {
         titleBarHeightConstraint?.constant = newTitleBarHeight
         tabBarHeightConstraint?.constant = newTabBarHeight
 
-        print("[FloatingOverlayContainer] Safe area updated - top: \(safeAreaTop), bottom: \(safeAreaBottom)")
+        Log.print("[FloatingOverlayContainer] Safe area updated - top: \(safeAreaTop), bottom: \(safeAreaBottom)")
     }
 
     // MARK: - Hit Testing (터치 통과)
@@ -220,7 +221,7 @@ final class FloatingOverlayContainer: UIView {
         }
         // 탭바: Select 모드 UI로 전환
         tabBar.enterSelectMode(animated: true)
-        print("[FloatingOverlayContainer] Entered select mode")
+        Log.print("[FloatingOverlayContainer] Entered select mode")
     }
 
     /// Select 모드 종료 (원상복귀)
@@ -231,7 +232,7 @@ final class FloatingOverlayContainer: UIView {
         titleBar.exitSelectMode()
         // 탭바: 일반 모드로 복원
         tabBar.exitSelectMode(animated: true)
-        print("[FloatingOverlayContainer] Exited select mode")
+        Log.print("[FloatingOverlayContainer] Exited select mode")
     }
 
     /// 선택 개수 업데이트
@@ -287,7 +288,7 @@ final class FloatingOverlayContainer: UIView {
     func hideTitleBar() {
         titleBar.isHidden = true
         titleBarHeightConstraint?.constant = 0
-        print("[FloatingOverlayContainer] TitleBar hidden (using system navigation bar)")
+        Log.print("[FloatingOverlayContainer] TitleBar hidden (using system navigation bar)")
     }
 
     /// 타이틀바 표시
@@ -295,7 +296,7 @@ final class FloatingOverlayContainer: UIView {
         titleBar.isHidden = false
         let height = FloatingTitleBar.totalHeight(safeAreaTop: safeAreaTop)
         titleBarHeightConstraint?.constant = height
-        print("[FloatingOverlayContainer] TitleBar shown")
+        Log.print("[FloatingOverlayContainer] TitleBar shown")
     }
 }
 

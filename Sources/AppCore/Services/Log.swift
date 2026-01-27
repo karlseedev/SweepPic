@@ -22,45 +22,98 @@ public enum Log {
     /// - 키: 카테고리 이름 (예: "Video", "Photo")
     /// - 값: true면 출력, false면 무시
     public static var categories: [String: Bool] = [
-        // ----- Viewer 관련 -----
-        "Video": false,              // 비디오 재생 로그 (VideoPageViewController 등)
-        "Photo": false,              // 사진 표시 로그 (PhotoPageViewController 등)
+        // =============================================
+        // App 라이프사이클
+        // =============================================
+        "AppDelegate": false,
+        "SceneDelegate": false,
+
+        // =============================================
+        // Viewer 관련
+        // =============================================
+        "Video": false,              // 비디오 재생 로그 (VideoPageViewController)
+        "Photo": false,              // 사진 표시 로그 (PhotoPageViewController)
         "Zoom": false,               // 줌 동작 (기존 debugZoom)
         "Overlay": false,            // 오버레이 (기존 debugOverlayEnabled)
         "Viewer": false,             // 뷰어 일반 (기존 debugViewer)
         "VideoControls": false,      // 비디오 컨트롤 (기존 debugControls)
         "FaceButton": false,         // 얼굴 버튼 위치 (기존 debugButtonPosition)
+        "ViewerPerf": false,         // 뷰어 성능 측정
 
-        // ----- Grid 관련 -----
+        // =============================================
+        // Grid 관련
+        // =============================================
         "GridViewController": false,
         "BaseGridViewController": false,
         "AlbumGridViewController": false,
         "TrashAlbumViewController": false,
+        "TrashAlbumViewController.Timing": false,
         "GridDataSource": false,
+        "GridDataSourceDriver": false,
+        "GridSelectMode": false,
+        "BaseSelectMode": false,
+        "TrashSelectMode": false,
+        "SelectionManager": false,
+        "GridGestures": false,
+        "GridScroll": false,
+        "PinchZoom": false,
 
-        // ----- Navigation -----
+        // =============================================
+        // Navigation / UI
+        // =============================================
         "TabBarController": false,
         "FloatingTabBar": false,
         "FloatingTitleBar": false,
+        "FloatingOverlayContainer": false,
+        "PermissionVC": false,
+        "AlbumsViewController": false,
 
-        // ----- 분석 기능 -----
+        // =============================================
+        // SimilarPhoto 분석
+        // =============================================
+        "SimilarPhoto": false,
         "SimilarityAnalysisQueue": false,
         "SimilarityAnalyzer": false,
-        "YuNetDebugTest": false,
+        "FaceComparisonViewController": false,
+        "PersonPageViewController": false,
+        "ViewerViewController+SimilarPhoto": false,
+        "GridViewController+SimilarPhoto": false,
 
-        // ----- AutoCleanup 기능 -----
+        // =============================================
+        // 얼굴 인식 (YuNet / Vision)
+        // =============================================
+        "YuNet": false,
+        "YuNetDebugTest": false,
+        "YuNetFaceDetector": false,
+        "SFace": false,
+        "FaceMatching": false,
+        "VisionFallback": false,
+        "NewSlot": false,
+
+        // =============================================
+        // AutoCleanup 기능
+        // =============================================
         "QualityAnalyzer": true,     // 현재 작업 중 (ON)
         "CleanupService": true,      // 현재 작업 중 (ON)
         "CleanupSessionStore": true, // 현재 작업 중 (ON)
         "AutoCleanup": false,
+        "VideoFrameExtractor": false,
 
-        // ----- 기타 -----
+        // =============================================
+        // Debug / 기타
+        // =============================================
         "ImagePipeline": false,
         "ThumbnailCache": false,
         "PhotoLibraryService": false,
         "Permission": false,
         "Trash": false,
         "Album": false,
+        "Error": false,
+        "Config": false,
+        "SystemUIInspector": false,
+        "SystemUIInspector2": false,
+        "SystemUIInspector3": false,
+        "LayerPropertyTest": false,
     ]
 
     // ========================================
@@ -121,20 +174,6 @@ public enum Log {
         Swift.print("[\(category)] \(message)")
     }
 
-    /// 조건부 로그 출력 (복잡한 로그 메시지 생성 비용 절감)
-    /// - Parameters:
-    ///   - category: 로그 카테고리
-    ///   - message: 메시지를 생성하는 클로저 (lazy evaluation)
-    ///
-    /// 사용 예:
-    /// ```swift
-    /// Log.debug("Video") { "재생 상태: \(expensiveDebugInfo())" }
-    /// ```
-    public static func debug(_ category: String, _ message: @autoclosure () -> String) {
-        guard isEnabled else { return }
-        guard categories[category] == true else { return }
-        Swift.print("[\(category)] \(message())")
-    }
 
     // ========================================
     // MARK: - 유틸리티 함수

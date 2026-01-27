@@ -17,6 +17,7 @@
 //
 
 import Foundation
+import AppCore
 import Vision
 import CoreGraphics
 
@@ -213,14 +214,14 @@ final class SimilarityAnalyzer {
 
         // [DEBUG] Feature Print nil 개수 확인
         let nilCount = featurePrints.filter { $0 == nil }.count
-        print("[SimilarityAnalyzer] Feature Prints: \(featurePrints.count)개, nil: \(nilCount)개")
+        Log.print("[SimilarityAnalyzer] Feature Prints: \(featurePrints.count)개, nil: \(nilCount)개")
 
         for i in 0..<(featurePrints.count - 1) {
             guard let fp1 = featurePrints[i],
                   let fp2 = featurePrints[i + 1] else {
                 // Feature Print가 nil이면 거리도 nil
                 distances.append(nil)
-                print("[SimilarityAnalyzer] Distance[\(i)]: nil (Feature Print 없음)")
+                Log.print("[SimilarityAnalyzer] Distance[\(i)]: nil (Feature Print 없음)")
                 continue
             }
 
@@ -228,11 +229,11 @@ final class SimilarityAnalyzer {
                 let distance = try computeDistance(fp1, fp2)
                 distances.append(distance)
                 // [DEBUG] 거리 값 로그
-                print("[SimilarityAnalyzer] Distance[\(i)]: \(distance)")
+                Log.print("[SimilarityAnalyzer] Distance[\(i)]: \(distance)")
             } catch {
                 // 계산 실패 시 nil
                 distances.append(nil)
-                print("[SimilarityAnalyzer] Distance[\(i)]: nil (계산 실패: \(error))")
+                Log.print("[SimilarityAnalyzer] Distance[\(i)]: nil (계산 실패: \(error))")
             }
         }
 
@@ -263,7 +264,7 @@ final class SimilarityAnalyzer {
         let distances = calculateAdjacentDistances(featurePrints)
 
         // [DEBUG] Threshold 로그
-        print("[SimilarityAnalyzer] formGroups - threshold: \(threshold), iOS version: \(ProcessInfo.processInfo.operatingSystemVersion.majorVersion)")
+        Log.print("[SimilarityAnalyzer] formGroups - threshold: \(threshold), iOS version: \(ProcessInfo.processInfo.operatingSystemVersion.majorVersion)")
 
         var groups: [[String]] = []
         var currentGroup: [String] = [photoIDs[0]]
@@ -275,7 +276,7 @@ final class SimilarityAnalyzer {
             if distance == nil || distance! > threshold {
                 // [DEBUG] 그룹 분리 로그
                 if let d = distance {
-                    print("[SimilarityAnalyzer] 그룹 분리: distance \(d) > threshold \(threshold)")
+                    Log.print("[SimilarityAnalyzer] 그룹 분리: distance \(d) > threshold \(threshold)")
                 }
                 // 현재 그룹이 최소 크기 이상이면 저장
                 if currentGroup.count >= SimilarityConstants.minGroupSize {
@@ -295,9 +296,9 @@ final class SimilarityAnalyzer {
         }
 
         // [DEBUG] 최종 그룹 결과 로그
-        print("[SimilarityAnalyzer] formGroups 결과: \(groups.count)개 그룹")
+        Log.print("[SimilarityAnalyzer] formGroups 결과: \(groups.count)개 그룹")
         for (idx, group) in groups.enumerated() {
-            print("[SimilarityAnalyzer]   그룹[\(idx)]: \(group.count)장")
+            Log.print("[SimilarityAnalyzer]   그룹[\(idx)]: \(group.count)장")
         }
 
         return groups

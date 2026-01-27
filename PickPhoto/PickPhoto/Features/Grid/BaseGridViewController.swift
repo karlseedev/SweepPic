@@ -918,7 +918,7 @@ extension BaseGridViewController: UIGestureRecognizerDelegate {
             let isHorizontalDrag = abs(velocity.x) > abs(velocity.y)
 
             if isHorizontalDrag {
-                print("[BaseGridViewController] Drag select gesture began (horizontal drag detected)")
+                Log.print("[BaseGridViewController] Drag select gesture began (horizontal drag detected)")
             }
 
             return isHorizontalDrag

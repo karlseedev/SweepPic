@@ -112,7 +112,7 @@ extension TrashAlbumViewController {
         overlay.tabBar.delegate = self
         overlay.tabBar.enterTrashSelectMode(animated: true)
 
-        print("[TrashAlbumViewController] Floating UI select mode entered")
+        Log.print("[TrashAlbumViewController] Floating UI select mode entered")
     }
 
     /// 플로팅 UI 선택 모드 종료 (Trash 전용): 초기 설정 함수 재사용
@@ -147,12 +147,12 @@ extension TrashAlbumViewController {
     @objc func trashRestoreSelectedTapped() {
         let selectedAssetIDs = selectionManager.selectedAssetIDs
         guard !selectedAssetIDs.isEmpty else {
-            print("[TrashAlbumViewController] No photos selected for restore")
+            Log.print("[TrashAlbumViewController] No photos selected for restore")
             return
         }
 
         trashStore.restore(assetIDs: Array(selectedAssetIDs))
-        print("[TrashAlbumViewController] Restored \(selectedAssetIDs.count) photos from trash")
+        Log.print("[TrashAlbumViewController] Restored \(selectedAssetIDs.count) photos from trash")
 
         selectionManager.clearSelection()
         exitSelectMode()
@@ -162,7 +162,7 @@ extension TrashAlbumViewController {
     @objc func trashDeleteSelectedTapped() {
         let selectedAssetIDs = selectionManager.selectedAssetIDs
         guard !selectedAssetIDs.isEmpty else {
-            print("[TrashAlbumViewController] No photos selected for deletion")
+            Log.print("[TrashAlbumViewController] No photos selected for deletion")
             return
         }
 
@@ -170,12 +170,12 @@ extension TrashAlbumViewController {
             do {
                 try await trashStore.permanentlyDelete(assetIDs: Array(selectedAssetIDs))
                 await MainActor.run {
-                    print("[TrashAlbumViewController] Permanently deleted \(selectedAssetIDs.count) photos")
+                    Log.print("[TrashAlbumViewController] Permanently deleted \(selectedAssetIDs.count) photos")
                     selectionManager.clearSelection()
                     exitSelectMode()
                 }
             } catch {
-                print("[TrashAlbumViewController] Failed to delete: \(error)")
+                Log.print("[TrashAlbumViewController] Failed to delete: \(error)")
             }
         }
     }

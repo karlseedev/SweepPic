@@ -7,6 +7,7 @@
 // - 선택 변경 알림 (delegate/closure)
 
 import Foundation
+import AppCore
 
 /// 선택 매니저 델리게이트
 /// 선택 상태 변경 알림 전달
@@ -134,6 +135,6 @@ final class SelectionManager {
         delegate?.selectionManager(self, didChangeSelection: assetIDs)
         delegate?.selectionManager(self, selectionCountDidChange: selectedCount)
 
-        print("[SelectionManager] Selection changed: \(selectedCount) items selected")
+        Log.print("[SelectionManager] Selection changed: \(selectedCount) items selected")
     }
 }

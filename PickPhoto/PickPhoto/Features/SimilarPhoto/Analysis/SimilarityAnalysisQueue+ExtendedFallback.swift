@@ -9,6 +9,7 @@
 //
 
 import Foundation
+import AppCore
 import CoreGraphics
 
 // MARK: - Extended Fallback Helper
@@ -67,11 +68,11 @@ extension SimilarityAnalysisQueue {
         // 로그 출력
         if !missedFaces.isEmpty {
             let shortID = String(assetID.prefix(8))
-            print("[ExtendedFallback] Photo \(shortID): YuNet=\(yunetFaceData.count), Vision=\(visionFaces.count), SmallMissed=\(missedFaces.count)")
+            Log.print("[ExtendedFallback] Photo \(shortID): YuNet=\(yunetFaceData.count), Vision=\(visionFaces.count), SmallMissed=\(missedFaces.count)")
             for missed in missedFaces {
                 let size = missed.face.boundingBox.width
                 let center = CGPoint(x: missed.face.boundingBox.midX, y: missed.face.boundingBox.midY)
-                print("[ExtendedFallback] +Vision[\(missed.visionIdx)] size=\(String(format: "%.2f", size)) at (\(String(format: "%.2f", center.x)), \(String(format: "%.2f", center.y)))")
+                Log.print("[ExtendedFallback] +Vision[\(missed.visionIdx)] size=\(String(format: "%.2f", size)) at (\(String(format: "%.2f", center.x)), \(String(format: "%.2f", center.y)))")
             }
         }
 

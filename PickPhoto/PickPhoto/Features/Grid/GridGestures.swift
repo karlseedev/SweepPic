@@ -87,7 +87,7 @@ extension GridViewController {
             let isHorizontalDrag = abs(velocity.x) > abs(velocity.y)
 
             if isHorizontalDrag {
-                print("[GridViewController] Drag select gesture began (horizontal drag detected)")
+                Log.print("[GridViewController] Drag select gesture began (horizontal drag detected)")
             }
 
             return isHorizontalDrag
