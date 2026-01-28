@@ -115,11 +115,6 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         permissionViewController = nil
 
         Log.print("[SceneDelegate] Showing main interface (TabBarController)")
-
-        // iOS 26 시스템 UI JSON 덤프 버튼
-        #if DEBUG
-        SystemUIInspector3.shared.showDebugButton()
-        #endif
     }
 
     /// 권한 요청 화면 표시 (PermissionViewController)
