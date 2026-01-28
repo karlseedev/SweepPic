@@ -277,6 +277,13 @@ extension GridViewController: CleanupMethodSheetDelegate {
     func cleanupMethodSheet(_ sheet: CleanupMethodSheet, didSelectAestheticsOnlyMode method: CleanupMethod) {
         startAestheticsOnlyTest(with: method)
     }
+
+    /// 비교 분석 테스트 선택됨 (DEBUG 전용)
+    /// 기존 로직 vs AestheticsScore 동시 실행, 결과 비교
+    @available(iOS 18.0, *)
+    func cleanupMethodSheetDidSelectCompareAnalysis(_ sheet: CleanupMethodSheet) {
+        startCompareAnalysisTest()
+    }
     #endif
 }
 
@@ -365,6 +372,81 @@ extension GridViewController {
 
         // 저품질 사진이 있으면 휴지통 보기 버튼 추가
         if result.lowQualityCount > 0 {
+            alert.addAction(UIAlertAction(title: "휴지통 보기", style: .default) { [weak self] _ in
+                self?.navigateToTrash()
+            })
+        }
+
+        present(alert, animated: true)
+    }
+
+    // MARK: - 비교 분석 테스트
+
+    /// 비교 분석 테스트 시작 (DEBUG 전용)
+    ///
+    /// 기존 로직 vs AestheticsScore 동시 실행
+    /// 결과를 카테고리별로 분류하여 휴지통에 저장
+    /// - 🟣 둘 다: 기존 + AestheticsScore 둘 다 저품질
+    /// - 🔵 기존만: 기존 로직만 저품질
+    /// - 🟡 신규만: AestheticsScore만 저품질 (핵심 - 기존이 놓친 것)
+    @available(iOS 18.0, *)
+    func startCompareAnalysisTest() {
+        let tester = CompareAnalysisTester.shared
+
+        // 진행 Alert 생성
+        let progressAlert = UIAlertController(
+            title: "비교 분석 테스트",
+            message: "검색: 0장\n🟣 둘다: 0  🔵 기존: 0  🟡 신규: 0",
+            preferredStyle: .alert
+        )
+
+        present(progressAlert, animated: true)
+
+        // 테스트 실행
+        Task {
+            let result = await tester.runTest { scanned, both, onlyOld, onlyNew in
+                // 진행 상황 업데이트 (메인 스레드)
+                Task { @MainActor in
+                    progressAlert.message = """
+                    검색: \(scanned)장
+                    🟣 둘다: \(both)  🔵 기존: \(onlyOld)  🟡 신규: \(onlyNew)
+                    """
+                }
+            }
+
+            // 결과 표시 (메인 스레드)
+            await MainActor.run {
+                progressAlert.dismiss(animated: true) { [weak self] in
+                    self?.showCompareAnalysisResult(result)
+                }
+            }
+        }
+    }
+
+    /// 비교 분석 테스트 결과 표시
+    @available(iOS 18.0, *)
+    private func showCompareAnalysisResult(_ result: CompareAnalysisResult) {
+        let message = """
+        검색: \(result.totalScanned)장
+
+        🟣 둘 다 저품질: \(result.bothCount)장
+        🔵 기존만 저품질: \(result.onlyOldCount)장
+        🟡 신규만 저품질: \(result.onlyNewCount)장
+
+        총 휴지통: \(result.totalTrashed)장
+
+        (휴지통에서 배지로 구분 가능)
+        """
+
+        let alert = UIAlertController(
+            title: "비교 분석 완료",
+            message: message,
+            preferredStyle: .alert
+        )
+
+        alert.addAction(UIAlertAction(title: "확인", style: .default))
+
+        if result.totalTrashed > 0 {
             alert.addAction(UIAlertAction(title: "휴지통 보기", style: .default) { [weak self] _ in
                 self?.navigateToTrash()
             })

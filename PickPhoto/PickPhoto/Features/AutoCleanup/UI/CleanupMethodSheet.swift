@@ -33,6 +33,11 @@ protocol CleanupMethodSheetDelegate: AnyObject {
     ///   - method: 정리 방식 (.fromLatest 또는 .continueFromLast)
     @available(iOS 18.0, *)
     func cleanupMethodSheet(_ sheet: CleanupMethodSheet, didSelectAestheticsOnlyMode method: CleanupMethod)
+
+    /// 비교 분석 테스트 선택됨 (DEBUG 전용)
+    /// 기존 로직 vs AestheticsScore 비교
+    @available(iOS 18.0, *)
+    func cleanupMethodSheetDidSelectCompareAnalysis(_ sheet: CleanupMethodSheet)
     #endif
 }
 
@@ -143,6 +148,15 @@ final class CleanupMethodSheet {
                 style: .default
             ) { [self] _ in
                 self.delegate?.cleanupMethodSheet(self, didSelectAestheticsOnlyMode: .fromLatest)
+            })
+
+            // 비교 분석 테스트 버튼
+            // 기존 로직 vs AestheticsScore 동시 실행, 결과 비교
+            alert.addAction(UIAlertAction(
+                title: "[DEBUG] 비교 분석",
+                style: .default
+            ) { [self] _ in
+                self.delegate?.cleanupMethodSheetDidSelectCompareAnalysis(self)
             })
         }
         #endif
