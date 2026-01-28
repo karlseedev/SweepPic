@@ -83,28 +83,29 @@ iOS 26 Liquid Glass 효과를 iOS 16-25에서도 동일하게 구현하여 **시
 
 ---
 
-## 2. 현재 상태
+## 2. 현재 상태 (2026-01-28 업데이트)
 
-### 2.1. 기존 구현 파일
+### 2.1. 구현 완료 현황
 
 | 파일 | 역할 | 상태 |
 |------|------|------|
-| `LiquidGlassPlatter.swift` | 탭바 배경 블러 | UIVisualEffectView 기반 |
-| `LiquidGlassShadowContainer` | 그림자 컨테이너 | Platter 내부 |
-| `LiquidGlassSelectionPill.swift` | 선택 표시 pill | UIVisualEffectView 기반 |
-| `LiquidGlassTabButton.swift` | 탭 버튼 | 아이콘 + 라벨 |
-| `LiquidGlassTabBar.swift` | 탭바 전체 | 비즈니스 로직 |
-| `LiquidGlassStyle.swift` | 스타일 헬퍼 | 테두리, 그림자 등 |
-| `LiquidGlassConstants.swift` | 상수 정의 | 크기, 애니메이션 |
-| `GlassButton.swift` | 일반 버튼 | 블러 + 틴트 |
+| `LiquidGlassPlatter.swift` | 탭바 배경 | ✅ LiquidGlassEffectView 적용 |
+| `LiquidGlassShadowContainer` | 그림자 컨테이너 | ✅ 유지 (추가 그림자용) |
+| `LiquidGlassSelectionPill.swift` | 선택 표시 pill | ✅ LiquidLensView 적용 |
+| `LiquidGlassTabButton.swift` | 탭 버튼 | 변경 없음 |
+| `LiquidGlassTabBar.swift` | 탭바 전체 | 변경 없음 |
+| `LiquidGlassStyle.swift` | 스타일 헬퍼 | 유지 (GlassButton용) |
+| `LiquidGlassConstants.swift` | 상수 정의 | ✅ Blur/Animation 삭제 |
+| `GlassButton.swift` | 일반 버튼 | ✅ Dual state + 햅틱 |
 
-### 2.2. 문제점
+### 2.2. 목표 달성 현황
 
-- ❌ 굴절 효과 없음 (단순 블러)
-- ❌ 색수차 없음
-- ❌ squash/stretch 애니메이션 없음
-- ❌ 버튼 누르면 작아짐 (iOS 26은 커짐)
-- ❌ 햅틱 피드백 없음
+- ✅ 굴절 효과 (LiquidGlassEffectView, Metal 렌더링)
+- ✅ 색수차 (dispersionStrength 파라미터)
+- ✅ squash/stretch 애니메이션 (LiquidLensView.setLifted)
+- ✅ 버튼 누르면 커짐 (Dual state: contracted ↔ expanded)
+- ✅ 햅틱 피드백 (UIImpactFeedbackGenerator)
+- ✅ 색상 커스터마이징 (Fork를 통한 tintColor 지원)
 
 ---
 
@@ -429,16 +430,16 @@ enum LiquidGlassConstants {
 
 ---
 
-## 7. 일정 (예상)
+## 7. 구현 완료 현황
 
-| Phase | 작업 | 예상 |
-|-------|------|------|
-| 1 | LiquidGlassKit 설치 | - |
-| 2 | Platter 교체 | - |
-| 3 | SelectionPill 교체 | - |
-| 4 | GlassButton 개선 | - |
-| 5 | 정리 및 최적화 | - |
-| - | 테스트 및 버그 수정 | - |
+| Phase | 작업 | 상태 | 완료일 |
+|-------|------|------|--------|
+| 1 | LiquidGlassKit 설치 | ✅ 완료 | 2026-01-27 |
+| 2 | Platter 교체 | ✅ 완료 | 2026-01-27 |
+| 3 | SelectionPill 교체 | ✅ 완료 | 2026-01-27 |
+| 4 | GlassButton 개선 | ✅ 완료 | 2026-01-27 |
+| 5 | 정리 및 최적화 | ✅ 완료 | 2026-01-27 |
+| 6 | Fork 및 색상 커스터마이징 | ✅ 완료 | 2026-01-28 |
 
 ---
 
@@ -461,3 +462,7 @@ git revert HEAD
 | 날짜 | 변경 내용 |
 |------|-----------|
 | 2026-01-27 | 초안 작성 |
+| 2026-01-27 | Phase 1-5 구현 완료 |
+| 2026-01-28 | Fork 생성 및 tintColor 지원 추가 |
+| 2026-01-28 | 색상 커스터마이징 완료 (Platter: 블랙 20%, SelectionPill: 흰색 15%) |
+| 2026-01-28 | 문서 v2 업데이트 (구현 완료 상태 반영) |
