@@ -116,11 +116,13 @@ extension GridViewController {
 
     /// 정리 버튼 탭 핸들러
     @objc func cleanupButtonTapped() {
-        // 1. 휴지통 비어있는지 확인
+        // 1. 휴지통 비어있는지 확인 (DEBUG에서는 스킵)
+        #if !DEBUG
         if !CleanupService.shared.isTrashEmpty() {
             showTrashNotEmptyAlert()
             return
         }
+        #endif
 
         // 2. 정리 방식 선택 시트 표시
         showCleanupMethodSheet()
