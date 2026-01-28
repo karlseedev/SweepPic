@@ -83,13 +83,10 @@ final class CleanupProgressView: UIView {
         return label
     }()
 
-    /// 취소 버튼
-    private lazy var cancelButton: UIButton = {
-        let button = UIButton(type: .system)
+    /// 취소 버튼 - GlassTextButton (Liquid Glass 스타일)
+    private lazy var cancelButton: GlassTextButton = {
+        let button = GlassTextButton(title: "취소", style: .plain, tintColor: .systemRed)
         button.translatesAutoresizingMaskIntoConstraints = false
-        button.setTitle("취소", for: .normal)
-        button.setTitleColor(.systemRed, for: .normal)
-        button.titleLabel?.font = .systemFont(ofSize: 17, weight: .medium)
         button.addTarget(self, action: #selector(cancelButtonTapped), for: .touchUpInside)
         return button
     }()

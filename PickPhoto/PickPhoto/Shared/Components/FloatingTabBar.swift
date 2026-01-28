@@ -214,20 +214,9 @@ final class FloatingTabBar: UIView {
     }()
 
     /// Delete 버튼 (Liquid Glass 스타일)
-    private lazy var deleteButton: GlassButton = {
-        let button = GlassButton(tintColor: .systemRed, useCapsuleStyle: true)
-        
-        var config = UIButton.Configuration.plain()
-        config.title = "Delete"
-        config.baseForegroundColor = .white
-        config.contentInsets = NSDirectionalEdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16)
-        config.titleTextAttributesTransformer = UIConfigurationTextAttributesTransformer { incoming in
-            var outgoing = incoming
-            outgoing.font = .systemFont(ofSize: 15, weight: .medium)
-            return outgoing
-        }
-        
-        button.configuration = config
+    /// iOS 26 스펙: 높이 44pt, fontSize 17pt
+    private lazy var deleteButton: GlassTextButton = {
+        let button = GlassTextButton(title: "삭제", style: .plain, tintColor: .systemRed)
         button.addTarget(self, action: #selector(deleteButtonTapped), for: .touchUpInside)
         return button
     }()
@@ -253,20 +242,9 @@ final class FloatingTabBar: UIView {
     }()
 
     /// Trash Restore 버튼 (Liquid Glass 스타일)
-    private lazy var trashRestoreButton: GlassButton = {
-        let button = GlassButton(tintColor: .systemBlue, useCapsuleStyle: true)
-        
-        var config = UIButton.Configuration.plain()
-        config.title = "Restore"
-        config.baseForegroundColor = .white
-        config.contentInsets = NSDirectionalEdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16)
-        config.titleTextAttributesTransformer = UIConfigurationTextAttributesTransformer { incoming in
-            var outgoing = incoming
-            outgoing.font = .systemFont(ofSize: 15, weight: .medium)
-            return outgoing
-        }
-        
-        button.configuration = config
+    /// iOS 26 스펙: 높이 44pt, fontSize 17pt
+    private lazy var trashRestoreButton: GlassTextButton = {
+        let button = GlassTextButton(title: "복구", style: .plain, tintColor: .systemBlue)
         button.addTarget(self, action: #selector(trashRestoreButtonTapped), for: .touchUpInside)
         return button
     }()
@@ -282,20 +260,9 @@ final class FloatingTabBar: UIView {
     }()
 
     /// Trash Delete 버튼 (Liquid Glass 스타일, 영구 삭제)
-    private lazy var trashDeleteButton: GlassButton = {
-        let button = GlassButton(tintColor: .systemRed, useCapsuleStyle: true)
-        
-        var config = UIButton.Configuration.plain()
-        config.title = "Delete"
-        config.baseForegroundColor = .white
-        config.contentInsets = NSDirectionalEdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16)
-        config.titleTextAttributesTransformer = UIConfigurationTextAttributesTransformer { incoming in
-            var outgoing = incoming
-            outgoing.font = .systemFont(ofSize: 15, weight: .medium)
-            return outgoing
-        }
-        
-        button.configuration = config
+    /// iOS 26 스펙: 높이 44pt, fontSize 17pt
+    private lazy var trashDeleteButton: GlassTextButton = {
+        let button = GlassTextButton(title: "삭제", style: .plain, tintColor: .systemRed)
         button.addTarget(self, action: #selector(trashDeleteButtonTapped), for: .touchUpInside)
         return button
     }()
@@ -574,7 +541,9 @@ final class FloatingTabBar: UIView {
 
     private func updateButtonConfiguration(_ button: UIButton, isSelected: Bool) {
         guard var config = button.configuration else { return }
-        config.baseForegroundColor = isSelected ? .systemBlue : UIColor(white: 1, alpha: 0.65)
+        // 활성: #29BCFF, 비활성: 흰색 100%
+        let activeColor = UIColor(red: 41/255, green: 188/255, blue: 255/255, alpha: 1.0)
+        config.baseForegroundColor = isSelected ? activeColor : .white
         config.image = isSelected ? button.image(for: .selected) : button.image(for: .normal)
         button.configuration = config
     }

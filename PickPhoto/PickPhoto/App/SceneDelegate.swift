@@ -115,6 +115,12 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         permissionViewController = nil
 
         Log.print("[SceneDelegate] Showing main interface (TabBarController)")
+
+        // 실측용 Inspector 활성화 (iOS 26 버튼 크기/모양 수집)
+        #if DEBUG
+        // SystemUIInspector3.shared.showDebugButton()  // JSON Dump - 현재 미사용
+        // ButtonInspector.shared.showDebugButton()     // Button Dump - 현재 미사용
+        #endif
     }
 
     /// 권한 요청 화면 표시 (PermissionViewController)

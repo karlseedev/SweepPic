@@ -171,6 +171,10 @@ final class TrashAlbumViewController: BaseGridViewController {
 
         // iOS 18+ Zoom Transition 안정화: fallback (transitionCoordinator 없을 때)
         applyPendingViewerReturn()
+
+        // 레이아웃 디버깅 로그
+        let firstCellY = collectionView.cellForItem(at: IndexPath(item: 0, section: 0))?.frame.origin.y ?? -1
+        Log.print("[GridLayout] TrashGrid - contentInset: \(collectionView.contentInset), contentOffset.y: \(collectionView.contentOffset.y), safeArea: \(view.safeAreaInsets), firstCellY: \(firstCellY)")
     }
 
     // MARK: - Setup
@@ -194,7 +198,7 @@ final class TrashAlbumViewController: BaseGridViewController {
 
         // Select 버튼
         let selectButton = UIBarButtonItem(
-            title: "Select",
+            title: "선택",
             style: .plain,
             target: self,
             action: #selector(selectButtonTapped)
@@ -238,7 +242,7 @@ final class TrashAlbumViewController: BaseGridViewController {
         // [Select] [비우기] 두 버튼 표시
         let isEmpty = _trashDataSource.isEmpty
         overlay.titleBar.setTwoRightButtons(
-            firstTitle: "Select",
+            firstTitle: "선택",
             firstColor: .systemBlue,
             firstAction: { [weak self] in
                 self?.enterSelectMode()

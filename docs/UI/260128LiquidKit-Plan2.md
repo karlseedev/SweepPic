@@ -18,6 +18,197 @@
 
 ---
 
+## iOS 26 버튼 실측 스펙
+
+> **측정일**: 2026-01-28
+> **측정 도구**: ButtonInspector (Debug/ButtonInspector.swift)
+> **iOS 버전**: 26.0.1
+
+### NavBar 아이콘 버튼 (뒤로가기)
+
+| 항목 | 값 |
+|------|-----|
+| **Glass 컨테이너** | PlatterGlassView |
+| **크기** | 44×44 |
+| **cornerRadius** | 22 (완전한 원형) |
+| **cornerCurve** | continuous |
+| **iconSize** | 28 |
+| **tintColor** | #0091FF (파란색) |
+
+### 하단 아이콘 버튼 (휴지통 - Grid)
+
+| 항목 | 값 |
+|------|-----|
+| **터치 영역** | 48×48 |
+| **버튼 크기** | 38×38 |
+| **iconSize** | 28 |
+| **tintColor** | #FF4245 (빨간색) |
+| **cornerRadius** | 0 |
+
+### 하단 텍스트 버튼 (Viewer: 복구/삭제)
+
+| 항목 | 복구 | 삭제 |
+|------|------|------|
+| **텍스트** | "복구" | "삭제" |
+| **터치 영역** | 48×54 | 48×54 |
+| **버튼 크기** | 38×44 | 38×44 |
+| **fontSize** | 17 | 17 |
+| **tintColor** | #30D158 (녹색) | #FF4245 (빨간색) |
+| **cornerRadius** | 0 | 0 |
+
+### 하단 텍스트 버튼 (Grid: Restore All / Delete All)
+
+| 항목 | Restore All | Delete All |
+|------|-------------|------------|
+| **터치 영역** | 48×84.33 | 48×74.67 |
+| **버튼 크기** | 38×(동적) | 38×(동적) |
+| **라벨 크기** | 20.33×60.33 | 20.33×50.67 |
+| **fontSize** | 17 | 17 |
+| **tintColor** | #0091FF (파란색) | #FF4245 (빨간색) |
+| **높이** | 38 (고정) | 38 (고정) |
+
+> **Note**: 텍스트 버튼의 너비는 텍스트 길이에 따라 동적으로 결정됨
+
+### 상단 눈모양 버튼 (NavBar - 얼굴 토글)
+
+> **측정 기기**: iPhone 13 mini (iOS 26.2)
+
+| 항목 | 값 |
+|------|-----|
+| **Glass 컨테이너** | PlatterGlassView |
+| **크기** | 44×45.67 |
+| **cornerRadius** | 22 |
+| **iconSize** | 29.67 |
+| **tintColor** | #FFFFFF (흰색) |
+
+### FaceButton (얼굴 위 버튼)
+
+| 항목 | 값 |
+|------|-----|
+| **크기** | 44×44 |
+| **cornerRadius** | 22 (원형) |
+| **backgroundColor** | #000000 (50%) - 반투명 검정 |
+| **tintColor** | #FFFFFF (흰색) |
+| **iconSize** | 26.33 |
+| **shadowRadius** | 4 |
+| **shadowOpacity** | 0.3 |
+| **shadowOffset** | (0, 2) |
+
+### 얼굴 비교 타이틀바 버튼 (닫기/다음 인물)
+
+> **참조**: 기존 NavBar 아이콘 버튼과 동일 스펙, 아이콘만 다름
+
+| 항목 | 닫기 버튼 | 다음 인물 버튼 |
+|------|----------|----------------|
+| **참조 스펙** | NavBar 아이콘 버튼 (뒤로가기) | 상단 눈모양 버튼 |
+| **크기** | 44×44 | 44×45.67 |
+| **cornerRadius** | 22 | 22 |
+| **아이콘** | xmark | arrow.trianglehead.2.clockwise.rotate.90 |
+| **tintColor** | #FFFFFF (흰색) | #FFFFFF (흰색) |
+
+### 얼굴 비교 화면 하단 버튼 (취소/삭제)
+
+> **참조**: 휴지통 그리드 선택 모드의 Restore All / Delete All 버튼과 동일 스펙 적용
+
+| 항목 | 취소 | 삭제 |
+|------|------|------|
+| **터치 영역** | 48×(동적) | 48×(동적) |
+| **버튼 크기** | 38×(동적) | 38×(동적) |
+| **fontSize** | 17 | 17 |
+| **tintColor** | #0091FF (파란색) | #FF4245 (빨간색) |
+| **높이** | 38 (고정) | 38 (고정) |
+| **cornerRadius** | 19 (pill shape) | 19 (pill shape) |
+
+### 자동 정리 취소 버튼
+
+> **참조**: 얼굴 비교 화면 취소 버튼과 동일 스펙 적용
+
+| 항목 | 값 |
+|------|-----|
+| **버튼 크기** | 38×(동적) |
+| **fontSize** | 17 |
+| **tintColor** | #0091FF (파란색) |
+| **높이** | 38 (고정) |
+| **cornerRadius** | 19 (pill shape) |
+
+### 색상 정리
+
+| 용도 | 색상 | Hex |
+|------|------|-----|
+| 기본 (파란색) | systemBlue | #0091FF |
+| 복구/긍정 (녹색) | systemGreen | #30D158 |
+| 삭제/위험 (빨간색) | systemRed | #FF4245 |
+
+### 구현 스펙 (iOS 16-25용) - ✅ 구현 완료
+
+#### GlassIconButton (아이콘 버튼)
+
+> **파일**: `Shared/Components/GlassIconButton.swift`
+> **적용**: backButton, closeButton, cycleButton
+
+| 항목 | 값 | 비고 |
+|------|-----|------|
+| **크기** | 44×44 | Size.medium |
+| **cornerRadius** | 22 | height / 2, 원형 |
+| **배경** | `LiquidGlassEffect` | LiquidGlassPlatter와 동일 |
+| **배경 tintColor** | `UIColor(white: 0, alpha: 0.2)` | 어둡고 투명 |
+| **iconSize** | 22pt | |
+| **iconWeight** | `.light` | |
+| **iconColor** | `.white` | 기본값 |
+| **아이콘 그림자** | 없음 | |
+| **Specular Highlight** | 없음 | |
+| **Dual State** | contracted ↔ expanded | 터치 시 확장 애니메이션 |
+| **햅틱** | `.light` | |
+
+#### GlassCircleButton (원형 버튼) - Phase 3 예정
+
+> **파일**: `Shared/Components/GlassCircleButton.swift`
+> **적용**: toggleButton, faceButtons[]
+
+| 항목 | 값 | 비고 |
+|------|-----|------|
+| **크기** | 44×44 | Size.medium |
+| **cornerRadius** | 22 | height / 2, 원형 |
+| **배경** | `LiquidGlassEffect` | GlassIconButton과 동일 |
+| **배경 tintColor** | `UIColor(white: 0, alpha: 0.2)` | 어둡고 투명 |
+| **iconSize** | 22pt | |
+| **iconWeight** | `.light` | |
+| **iconColor** | `.white` | 기본값 |
+| **아이콘 그림자** | 없음 | |
+| **Specular Highlight** | 없음 | |
+| **Dual State** | contracted ↔ expanded | |
+| **햅틱** | `.light` | |
+
+#### GlassTextButton (텍스트 버튼) - Phase 5 예정
+
+> **파일**: `Shared/Components/GlassTextButton.swift`
+> **적용**: cancelButton, deleteButton
+
+| 항목 | 값 | 비고 |
+|------|-----|------|
+| **높이** | 38 (고정) | |
+| **cornerRadius** | 19 | height / 2, pill shape |
+| **배경** | `LiquidGlassEffect` | GlassIconButton과 동일 |
+| **배경 tintColor** | `UIColor(white: 0, alpha: 0.2)` | 어둡고 투명 |
+| **fontSize** | 17pt | |
+| **fontWeight** | `.regular` | |
+| **textColor** | 용도별 | 파란/빨간/흰색 |
+| **텍스트 그림자** | 없음 | |
+| **Specular Highlight** | 없음 | |
+| **Dual State** | contracted ↔ expanded | |
+| **햅틱** | `.light` | |
+| **좌우 패딩** | 7pt | |
+| **너비** | 텍스트 너비 + 14 | 패딩×2 |
+
+#### 텍스트별 버튼 너비 (참고용)
+| 텍스트 | 버튼 너비 |
+|--------|----------|
+| 복구 / 삭제 | 44pt |
+| Restore All | 74pt |
+| Delete All | 65pt |
+
+---
+
 ## 1. 전체 버튼 목록 및 Liquid Glass 적용 판단
 
 ### 1.1. FloatingTabBar (하단 탭바) - iOS 16~25
@@ -28,10 +219,10 @@
 | `photosButton` | UIButton | 아이콘+텍스트 수직 | 보관함 탭 | ❌ | 탭바 구현 완료 (Plan1) |
 | `albumsButton` | UIButton | 아이콘+텍스트 수직 | 앨범 탭 | ❌ | 탭바 구현 완료 (Plan1) |
 | `trashButton` | UIButton | 아이콘+텍스트 수직 | 휴지통 탭 | ❌ | 탭바 구현 완료 (Plan1) |
-| `emptyTrashButton` | UIButton | 원형 아이콘 | 휴지통 비우기 | ✅ | 원형 Glass 버튼으로 변경 |
-| `deleteButton` | GlassButton | Capsule+텍스트 | Select 삭제 | ✅ 완료 | 이미 적용됨 |
-| `trashRestoreButton` | GlassButton | Capsule+텍스트 | Trash 복구 | ✅ 완료 | 이미 적용됨 |
-| `trashDeleteButton` | GlassButton | Capsule+텍스트 | Trash 영구삭제 | ✅ 완료 | 이미 적용됨 |
+| `emptyTrashButton` | UIButton | 원형 아이콘 | 휴지통 비우기 | ❌ | **미사용** (isHidden=true, 비활성화됨) |
+| `deleteButton` | GlassButton | Capsule+텍스트 | Select 삭제 | ✅ | Phase 7 (GlassButton 수정) |
+| `trashRestoreButton` | GlassButton | Capsule+텍스트 | Trash 복구 | ✅ | Phase 7 (GlassButton 수정) |
+| `trashDeleteButton` | GlassButton | Capsule+텍스트 | Trash 영구삭제 | ✅ | Phase 7 (GlassButton 수정) |
 
 ---
 
@@ -40,9 +231,9 @@
 
 | 버튼명 | 현재 타입 | 스타일 | 용도 | LG 적용 | 비고 |
 |--------|----------|--------|------|---------|------|
-| `backButton` | UIButton | 아이콘만 (chevron.left) | 뒤로가기 | ✅ | 아이콘 Glass 버튼으로 변경 |
-| `selectButton` | GlassButton | Capsule+텍스트 | Select 모드 | ✅ 완료 | 이미 적용됨 |
-| `secondRightButton` | GlassButton | Capsule+텍스트 | 비우기/커스텀 | ✅ 완료 | 이미 적용됨 |
+| `backButton` | GlassIconButton | 아이콘만 (chevron.left) | 뒤로가기 | ✅ 완료 | Phase 2a |
+| `selectButton` | GlassButton | Capsule+텍스트 | Select 모드 | ✅ | Phase 7 (GlassButton 수정) |
+| `secondRightButton` | GlassButton | Capsule+텍스트 | 비우기/커스텀 | ✅ | Phase 7 (GlassButton 수정) |
 
 ---
 
@@ -51,10 +242,10 @@
 
 | 버튼명 | 현재 타입 | 스타일 | 용도 | LG 적용 | 비고 |
 |--------|----------|--------|------|---------|------|
-| `tabButtons[0~2]` | LiquidGlassTabButton | 아이콘+레이블 수직 | 탭 선택 | ✅ 완료 | 이미 적용됨 |
-| `deleteButton` | GlassButton | Capsule+텍스트 | Select 삭제 | ✅ 완료 | 이미 적용됨 |
-| `trashRestoreButton` | GlassButton | Capsule+텍스트 | Trash 복구 | ✅ 완료 | 이미 적용됨 |
-| `trashDeleteButton` | GlassButton | Capsule+텍스트 | Trash 영구삭제 | ✅ 완료 | 이미 적용됨 |
+| `tabButtons[0~2]` | LiquidGlassTabButton | 아이콘+레이블 수직 | 탭 선택 | ❌ | iOS 26 네이티브 (수정 불필요) |
+| `deleteButton` | GlassButton | Capsule+텍스트 | Select 삭제 | ✅ | Phase 7 (GlassButton 수정) |
+| `trashRestoreButton` | GlassButton | Capsule+텍스트 | Trash 복구 | ✅ | Phase 7 (GlassButton 수정) |
+| `trashDeleteButton` | GlassButton | Capsule+텍스트 | Trash 영구삭제 | ✅ | Phase 7 (GlassButton 수정) |
 
 ---
 
@@ -63,9 +254,10 @@
 
 | 버튼명 | 현재 타입 | 스타일 | 용도 | LG 적용 | 비고 |
 |--------|----------|--------|------|---------|------|
-| `deleteButton` | GlassButton | 아이콘 56×56 | 사진 삭제 | ✅ 완료 | 이미 적용됨 |
-| `restoreButton` | GlassButton | 아이콘 56×56 | 복구 | ✅ 완료 | 이미 적용됨 |
-| `permanentDeleteButton` | GlassButton | 아이콘 56×56 | 영구삭제 | ✅ 완료 | 이미 적용됨 |
+| `deleteButton` | GlassButton | 아이콘 56×56 | 사진 삭제 | ✅ | Phase 7 (GlassButton 수정) + 아이콘 그림자 제거 |
+| `restoreButton` | GlassButton | 아이콘 56×56 | 복구 | ✅ | Phase 7 (GlassButton 수정) + 아이콘 그림자 제거 |
+| `permanentDeleteButton` | GlassButton | 아이콘 56×56 | 영구삭제 | ✅ | Phase 7 (GlassButton 수정) + 아이콘 그림자 제거 |
+| `backButton` (iOS 26) | GlassButton | 아이콘 | 뒤로가기 | ✅ | Phase 7 (GlassButton 수정) |
 | `debugAnalyzeButton` | UIButton | 텍스트만 | 디버그용 | ❌ | DEBUG 전용, 변경 불필요 |
 
 ---
@@ -85,8 +277,8 @@
 
 | 버튼명 | 현재 타입 | 스타일 | 용도 | LG 적용 | 비고 |
 |--------|----------|--------|------|---------|------|
-| `toggleButton` | UIButton | 36×36 아이콘 | 표시/숨김 토글 | ✅ | iOS 16-25 전용 (iOS 26은 NavBar) |
-| `faceButtons[]` | FaceButton | 44pt 원형 | 얼굴 비교 진입 | ✅ | **모든 iOS 버전** 동일 적용 |
+| `toggleButton` | GlassCircleButton | 36×36 아이콘 | 표시/숨김 토글 | ✅ 완료 | Phase 4 |
+| `faceButtons[]` | FaceButton (GlassCircleButton 상속) | 44pt 원형 | 얼굴 비교 진입 | ✅ 완료 | Phase 4 |
 
 ---
 
@@ -95,8 +287,8 @@
 
 | 버튼명 | 현재 타입 | 스타일 | 용도 | LG 적용 | 비고 |
 |--------|----------|--------|------|---------|------|
-| `closeButton` | UIButton | 아이콘만 (xmark) | 닫기 | ✅ | 아이콘 Glass 버튼으로 변경 |
-| `cycleButton` | UIButton | 아이콘만 | 다음 인물 | ✅ | 아이콘 Glass 버튼으로 변경 |
+| `closeButton` | GlassIconButton | 아이콘만 (xmark) | 닫기 | ✅ 완료 | Phase 2c |
+| `cycleButton` | GlassIconButton | 아이콘만 | 다음 인물 | ✅ 완료 | Phase 2c |
 
 ---
 
@@ -105,8 +297,8 @@
 
 | 버튼명 | 현재 타입 | 스타일 | 용도 | LG 적용 | 비고 |
 |--------|----------|--------|------|---------|------|
-| `cancelButton` | UIButton | 텍스트만 | 취소 | ✅ | **모든 iOS 버전** 동일 적용 |
-| `deleteButton` | UIButton | 텍스트+배경색 | 삭제 | ✅ | **모든 iOS 버전** 동일 적용 |
+| `cancelButton` | GlassTextButton | 텍스트 (.plain) | 취소 | ✅ 완료 | Phase 6 |
+| `deleteButton` | GlassTextButton | 텍스트 (.filled) | 삭제 | ✅ 완료 | Phase 6 |
 
 ---
 
@@ -124,7 +316,7 @@
 
 | 버튼명 | 현재 타입 | 스타일 | 용도 | LG 적용 | 비고 |
 |--------|----------|--------|------|---------|------|
-| `cancelButton` | UIButton | 텍스트만 | 정리 취소 | ✅ | GlassButton (selectButton과 동일) |
+| `cancelButton` | GlassTextButton | 텍스트 (.plain) | 정리 취소 | ✅ 완료 | Phase 6 |
 
 ---
 
@@ -134,31 +326,48 @@
 
 | 상태 | 버튼 수 | 설명 |
 |------|--------|------|
-| ✅ 완료 | 12개 | GlassButton, LiquidGlassTabButton 이미 적용 |
-| ✅ 적용 예정 | 9개 | 새로 Liquid Glass 적용 필요 |
-| ❌ 적용 안함 | 7개 | iOS 26 전용, 디버그용, 시스템 스타일 등 |
+| ✅ Phase 1-6 완료 | 8개 | GlassIconButton, GlassCircleButton, GlassTextButton |
+| ✅ Phase 7 예정 | 12개 | GlassButton 수정 (LiquidGlassEffect 적용) |
+| ❌ 적용 안함 | 8개 | iOS 26 전용, 디버그용, 시스템 스타일, 미사용 등 |
 
-### 2.2. 적용 예정 버튼 목록
+### 2.2. Phase 1-6 완료 버튼 목록
 
-| 버튼명 | 파일 | 변경할 타입 | iOS 버전 |
-|--------|------|------------|----------|
-| `emptyTrashButton` | FloatingTabBar | 원형 Glass | 16-25 |
-| `backButton` | FloatingTitleBar | 아이콘 Glass | 16-25 |
-| `toggleButton` | FaceButtonOverlay | 원형 Glass | 16-25 |
-| `faceButtons[]` | FaceButtonOverlay | 원형 Glass | **전체** |
-| `closeButton` | FaceComparisonViews | 아이콘 Glass | 16-25 |
-| `cycleButton` | FaceComparisonViews | 아이콘 Glass | 16-25 |
-| `cancelButton` | FaceComparisonViewController | 텍스트 Glass | **전체** |
-| `deleteButton` | FaceComparisonViewController | 텍스트 Glass | **전체** |
-| `cancelButton` | CleanupProgressView | GlassButton (selectButton과 동일) | 16-25 |
+| 버튼명 | 파일 | 변경된 타입 | Phase |
+|--------|------|------------|-------|
+| `backButton` | FloatingTitleBar | GlassIconButton | 2a ✅ |
+| `closeButton` | FaceComparisonViews | GlassIconButton | 2c ✅ |
+| `cycleButton` | FaceComparisonViews | GlassIconButton | 2c ✅ |
+| `toggleButton` | FaceButtonOverlay | GlassCircleButton | 4 ✅ |
+| `faceButtons[]` | FaceButtonOverlay | GlassCircleButton (상속) | 4 ✅ |
+| `cancelButton` | FaceComparisonViewController | GlassTextButton | 6 ✅ |
+| `deleteButton` | FaceComparisonViewController | GlassTextButton | 6 ✅ |
+| `cancelButton` | CleanupProgressView | GlassTextButton | 6 ✅ |
 
-### 2.3. 적용 안함 버튼 목록
+### 2.3. Phase 7 예정 버튼 목록 (GlassButton 수정)
+
+| 버튼명 | 파일 | tintColor | useCapsuleStyle |
+|--------|------|-----------|-----------------|
+| `deleteButton` | FloatingTabBar | .systemRed | true |
+| `trashRestoreButton` | FloatingTabBar | .systemBlue | true |
+| `trashDeleteButton` | FloatingTabBar | .systemRed | true |
+| `selectButton` | FloatingTitleBar | .systemBlue | true |
+| `secondRightButton` | FloatingTitleBar | .systemRed | true |
+| `deleteButton` | LiquidGlassTabBar | .systemRed | true |
+| `trashRestoreButton` | LiquidGlassTabBar | .systemBlue | true |
+| `trashDeleteButton` | LiquidGlassTabBar | .systemRed | true |
+| `deleteButton` | ViewerViewController | .systemRed | false (아이콘) |
+| `restoreButton` | ViewerViewController | .systemGreen | false (아이콘) |
+| `permanentDeleteButton` | ViewerViewController | .systemRed | false (아이콘) |
+| `backButton` (iOS 26) | ViewerViewController | .clear | false (아이콘) |
+
+### 2.4. 적용 안함 버튼 목록
 
 | 버튼명 | 파일 | 이유 |
 |--------|------|------|
 | `photosButton` | FloatingTabBar | 탭바 구현 완료 (Plan1) |
 | `albumsButton` | FloatingTabBar | 탭바 구현 완료 (Plan1) |
 | `trashButton` | FloatingTabBar | 탭바 구현 완료 (Plan1) |
+| `emptyTrashButton` | FloatingTabBar | **미사용** (isHidden=true, 비활성화됨) |
 | `playPauseButton` | VideoControlsOverlay | iOS 26에서도 Glass 배경 없음 |
 | `muteButton` | VideoControlsOverlay | iOS 26에서도 Glass 배경 없음 |
 | `debugAnalyzeButton` | ViewerViewController | DEBUG 전용 |
@@ -192,27 +401,27 @@ Shared/Components/
 | 파일 | 적용 버튼 | 개수 |
 |------|----------|------|
 | `GlassIconButton.swift` | backButton, closeButton, cycleButton | 3개 |
-| `GlassCircleButton.swift` | emptyTrashButton, toggleButton, faceButtons[] | 3개 |
+| `GlassCircleButton.swift` | toggleButton, faceButtons[] | 2개 |
 | `GlassTextButton.swift` | cancelButton(2), deleteButton | 3개 |
 
 ---
 
 ## 4. 구현 계획
 
-### Phase 1: GlassIconButton 구현
+### Phase 1: ✅ GlassIconButton 구현 완료
 
 **목표:** 아이콘 전용 Liquid Glass 버튼 클래스 생성
 
 **생성 파일:** `Shared/Components/GlassIconButton.swift`
 
-**클래스 설계:**
+**최종 구현:**
 ```swift
 final class GlassIconButton: UIButton {
 
     enum Size {
-        case small   // 36×36, 아이콘 18pt
+        case small   // 36×36, 아이콘 14pt
         case medium  // 44×44, 아이콘 22pt
-        case large   // 56×56, 아이콘 28pt
+        case large   // 56×56, 아이콘 22pt
     }
 
     init(icon: String, size: Size = .medium, tintColor: UIColor = .white)
@@ -221,27 +430,31 @@ final class GlassIconButton: UIButton {
 }
 ```
 
-**포함 기능:**
-- Dual state (contracted ↔ expanded)
-- LiquidGlassEffect 적용
-- 햅틱 피드백 (.light)
-- 아이콘 변경 메서드 (토글용)
+**구현된 기능:**
+- ✅ Dual state (contracted ↔ expanded)
+- ✅ LiquidGlassEffect 적용 (LiquidGlassPlatter와 동일)
+- ✅ 배경 tintColor: `UIColor(white: 0, alpha: 0.2)`
+- ✅ 아이콘 weight: `.light`
+- ✅ 햅틱 피드백 (.light)
+- ✅ 아이콘 변경 메서드 (토글용)
+- ✅ 아이콘 그림자 없음
+- ✅ Specular Highlight 없음
 
 ---
 
-### Phase 2a: GlassIconButton 첫 적용 (backButton)
+### Phase 2a: ✅ GlassIconButton 첫 적용 완료 (backButton)
 
 **목표:** backButton 하나만 먼저 적용하여 기본 동작 검증
 
 **변경 파일 및 버튼:**
 
-| 파일 | 버튼 | 크기 | 아이콘 |
-|------|------|------|--------|
-| `FloatingTitleBar.swift` | `backButton` | .medium | chevron.left |
+| 파일 | 버튼 | 크기 | 아이콘 | tintColor |
+|------|------|------|--------|-----------|
+| `FloatingTitleBar.swift` | `backButton` | .medium | chevron.left | .white |
 
 ---
 
-### Phase 2b: ✅ 검증
+### Phase 2b: ✅ 검증 완료
 
 **목표:** GlassIconButton 기본 동작 확인
 
@@ -250,32 +463,36 @@ final class GlassIconButton: UIButton {
 2. 좌상단 **뒤로가기 버튼** 확인
 
 **검증 항목:**
-- [ ] Liquid Glass 배경 효과 표시
-- [ ] 버튼 터치 시 햅틱 피드백
-- [ ] 버튼 동작 (뒤로가기) 정상
-- [ ] 다양한 배경(사진)에서 굴절 효과 확인
+- [x] Liquid Glass 배경 효과 표시
+- [x] 버튼 터치 시 햅틱 피드백
+- [x] 버튼 동작 (뒤로가기) 정상
+- [x] 다양한 배경(사진)에서 굴절 효과 확인
 
-**통과 시:** Phase 2c 진행
-**실패 시:** Phase 1 수정 후 재검증
+**결과:** Phase 2c 진행 가능
 
 ---
 
-### Phase 2c: GlassIconButton 나머지 적용
+### Phase 2c: ✅ GlassIconButton 나머지 적용 완료
 
 **목표:** 검증된 GlassIconButton을 나머지 버튼에 적용
 
 **변경 파일 및 버튼:**
 
-| 파일 | 버튼 | 크기 | 아이콘 |
-|------|------|------|--------|
-| `FaceComparisonViews.swift` | `closeButton` | .medium | xmark |
-| `FaceComparisonViews.swift` | `cycleButton` | .medium | arrow.trianglehead.2.clockwise.rotate.90 |
+| 파일 | 버튼 | 크기 | 아이콘 | tintColor |
+|------|------|------|--------|-----------|
+| `FaceComparisonViews.swift` | `closeButton` | .medium | xmark | .white |
+| `FaceComparisonViews.swift` | `cycleButton` | .medium | arrow.trianglehead.2.clockwise.rotate.90 | .white |
+
+**구현 완료 내용:**
+- FaceComparisonTitleBar에서 UIButton.Configuration → GlassIconButton 교체
+- blurView 배경 제거 (버튼 자체가 glass 효과 가짐)
+- setCycleButtonEnabled() 간소화 (GlassIconButton이 isEnabled 변경 시 자동 alpha 조정)
 
 ---
 
-### Phase 3: GlassCircleButton 구현
+### Phase 3: ✅ GlassCircleButton 구현 완료
 
-**목표:** 원형 Liquid Glass 버튼 클래스 생성
+**목표:** 원형 Liquid Glass 버튼 클래스 생성 (GlassIconButton과 동일 스타일)
 
 **생성 파일:** `Shared/Components/GlassCircleButton.swift`
 
@@ -284,9 +501,9 @@ final class GlassIconButton: UIButton {
 final class GlassCircleButton: UIButton {
 
     enum Size {
-        case small   // 36pt 지름
-        case medium  // 44pt 지름
-        case large   // 56pt 지름
+        case small   // 36×36, 아이콘 14pt
+        case medium  // 44×44, 아이콘 22pt
+        case large   // 56×56, 아이콘 22pt
     }
 
     init(icon: String, size: Size = .medium, tintColor: UIColor = .white)
@@ -295,33 +512,47 @@ final class GlassCircleButton: UIButton {
 }
 ```
 
-**포함 기능:**
-- 원형 레이아웃 (cornerRadius = height/2)
-- Dual state (contracted ↔ expanded)
-- LiquidGlassEffect 적용
-- 햅틱 피드백 (.light)
+**구현 스펙 (GlassIconButton과 동일):**
+
+| 항목 | 값 | 비고 |
+|------|-----|------|
+| **배경** | `LiquidGlassEffect` | LiquidGlassPlatter와 동일 |
+| **배경 tintColor** | `UIColor(white: 0, alpha: 0.2)` | 어둡고 투명 |
+| **cornerRadius** | dimension / 2 | 완전한 원형 |
+| **iconSize** | 22pt (medium) | |
+| **iconWeight** | `.light` | |
+| **iconColor** | `.white` | 기본값 |
+| **아이콘 그림자** | 없음 | |
+| **Specular Highlight** | 없음 | |
+| **Dual State** | contracted ↔ expanded | |
+| **햅틱** | `.light` | |
+
+> **Note:** GlassIconButton과 구조 동일. 용도 구분을 위해 별도 클래스로 분리.
 
 ---
 
-### Phase 4: GlassCircleButton 적용
+### Phase 4: ✅ GlassCircleButton 적용 완료
 
 **목표:** 기존 버튼을 GlassCircleButton으로 교체
 
 **변경 파일 및 버튼:**
 
-| 파일 | 버튼 | 크기 | 아이콘 | iOS 버전 |
-|------|------|------|--------|----------|
-| `FloatingTabBar.swift` | `emptyTrashButton` | .medium | trash | 16-25 |
-| `FaceButtonOverlay.swift` | `toggleButton` | .small | eye.fill / eye.slash.fill | 16-25 |
-| `FaceButtonOverlay.swift` | `faceButtons[]` | .medium | plus.circle.fill | **전체** |
+| 파일 | 버튼 | 크기 | 아이콘 | tintColor | iOS 버전 |
+|------|------|------|--------|-----------|----------|
+| `FaceButtonOverlay.swift` | `toggleButton` | .small | eye.fill / eye.slash.fill | .white | 16-25 |
+| `FaceButtonOverlay.swift` | `faceButtons[]` | .medium | plus.circle.fill | .white | **전체** |
 
-**추가 작업:**
-- `FaceButton` 클래스를 `GlassCircleButton`으로 교체
-- faceButtons[]는 iOS 분기 없이 모든 버전에서 동일하게 Liquid Glass 적용
+**구현 완료 내용:**
+- `toggleButton`: UIButton → GlassCircleButton (.small)
+- `FaceButton`: GlassCircleButton 상속으로 변경
+  - face 프로퍼티 유지
+  - 접근성 설정 유지
+  - Dual state, 햅틱은 GlassCircleButton 기본 동작 사용
+- `updateToggleIcon()`: setIcon 메서드 사용으로 변경
 
 ---
 
-### Phase 5: GlassTextButton 구현
+### Phase 5: ✅ GlassTextButton 구현 완료
 
 **목표:** 텍스트 전용 Liquid Glass 버튼 클래스 생성
 
@@ -329,56 +560,150 @@ final class GlassCircleButton: UIButton {
 
 **클래스 설계:**
 ```swift
-final class GlassTextButton: UIButton {
+class GlassTextButton: UIButton {
 
     enum Style {
-        case plain      // 텍스트만 (취소)
-        case filled     // 배경색 있음 (삭제)
+        case plain      // Glass 배경 + 텍스트
+        case filled     // Glass 배경 + 색상 오버레이 + 텍스트
     }
 
     init(title: String, style: Style = .plain, tintColor: UIColor = .white)
 
-    func setTitle(_ title: String, animated: Bool = false)
+    func setButtonTitle(_ title: String, animated: Bool = false)
 }
 ```
 
-**포함 기능:**
-- plain: 텍스트만, 투명 배경
-- filled: 텍스트 + 배경색 (systemRed, systemBlue 등)
-- Dual state (contracted ↔ expanded)
-- LiquidGlassEffect 적용
-- 햅틱 피드백 (plain: 없음, filled: .medium)
+**구현 스펙:**
+
+| 항목 | 값 | 비고 |
+|------|-----|------|
+| **배경** | `LiquidGlassEffect` | LiquidGlassPlatter와 동일 |
+| **배경 tintColor** | `UIColor(white: 0, alpha: 0.2)` | 어둡고 투명 |
+| **높이** | 38pt (고정) | |
+| **cornerRadius** | 19 (pill shape) | height / 2 |
+| **fontSize** | 17pt | |
+| **fontWeight** | `.regular` | |
+| **textColor** | 용도별 (파란/빨간/흰색) | |
+| **텍스트 그림자** | 없음 | |
+| **Specular Highlight** | 없음 | |
+| **Dual State** | contracted ↔ expanded | |
+| **햅틱** | `.light` | |
+
+**Style별 차이:**
+
+| Style | 배경 | 용도 |
+|-------|------|------|
+| `.plain` | Glass만 | 취소 버튼 |
+| `.filled` | Glass + 색상 오버레이 (alpha 0.3) | 삭제/확인 버튼 |
 
 ---
 
-### Phase 6: GlassTextButton 적용 및 CleanupProgressView 수정
+### Phase 6: ✅ GlassTextButton 적용 완료
 
-**목표:** 기존 UIButton을 GlassTextButton 또는 GlassButton으로 교체
+**목표:** 기존 UIButton을 GlassTextButton으로 교체
 
 **변경 파일 및 버튼:**
 
-| 파일 | 버튼 | 변경 타입 | iOS 버전 |
-|------|------|----------|----------|
-| `FaceComparisonViewController.swift` | `cancelButton` | GlassTextButton(.plain) | **전체** |
-| `FaceComparisonViewController.swift` | `deleteButton` | GlassTextButton(.filled) | **전체** |
-| `CleanupProgressView.swift` | `cancelButton` | GlassButton | 16-25 |
+| 파일 | 버튼 | Style | textColor | iOS 버전 |
+|------|------|-------|-----------|----------|
+| `FaceComparisonViewController.swift` | `cancelButton` | .plain | .systemBlue | **전체** |
+| `FaceComparisonViewController.swift` | `deleteButton` | .filled (.systemRed) | .white | **전체** |
+| `CleanupProgressView.swift` | `cancelButton` | .plain | .systemRed | 16-25 |
+
+**구현 완료 내용:**
+- FaceComparisonViewController: cancelButton, deleteButton → GlassTextButton
+- CleanupProgressView: cancelButton → GlassTextButton
+- GlassTextButton은 intrinsicContentSize 사용하여 텍스트에 맞게 자동 크기 조정
+
+---
+
+### Phase 7: GlassButton 수정 (LiquidGlassEffect 적용)
+
+**목표:** 기존 GlassButton의 contractedView를 UIBlurEffect → LiquidGlassEffect로 변경
+
+**수정 파일:** `Shared/Components/GlassButton.swift`
+
+**현재 문제점:**
+- contractedView가 `UIBlurEffect`를 사용 (탭바와 다른 느낌)
+- tintView, highlightLayer 등 불필요한 레이어 존재
+- GlassIconButton과 스타일 불일치
+
+**수정 내용:**
+```swift
+// 기존 (UIBlurEffect)
+private lazy var blurView: UIVisualEffectView = {
+    let effect = UIBlurEffect(style: LiquidGlassStyle.blurStyle)
+    ...
+}()
+
+// 변경 (LiquidGlassEffect)
+private lazy var contractedView: AnyVisualEffectView = {
+    let effect = LiquidGlassEffect(style: .regular, isNative: true)
+    effect.tintColor = UIColor(white: 0, alpha: 0.2)
+    let view = VisualEffectView(effect: effect)
+    ...
+}()
+```
+
+**삭제할 컴포넌트:**
+- `blurView` (UIVisualEffectView + UIBlurEffect)
+- `tintView` (UIView)
+- `highlightLayer` (CAGradientLayer - Specular Highlight)
+
+**최종 구현 스펙 (GlassIconButton과 동일):**
+
+| 항목 | 값 | 비고 |
+|------|-----|------|
+| **배경** | `LiquidGlassEffect` | LiquidGlassPlatter와 동일 |
+| **배경 tintColor** | `UIColor(white: 0, alpha: 0.2)` | 어둡고 투명 |
+| **cornerRadius** | capsule: height/2, 기본: defaultCornerRadius | |
+| **Specular Highlight** | 없음 | 제거 |
+| **Dual State** | contracted ↔ expanded | 유지 |
+| **햅틱** | `.light` | 유지 |
+
+**영향받는 버튼 (자동 적용):**
+
+| 파일 | 버튼 | tintColor | useCapsuleStyle |
+|------|------|-----------|-----------------|
+| `FloatingTabBar.swift` | `deleteButton` | .systemRed | true |
+| `FloatingTabBar.swift` | `trashRestoreButton` | .systemBlue | true |
+| `FloatingTabBar.swift` | `trashDeleteButton` | .systemRed | true |
+| `FloatingTitleBar.swift` | `selectButton` | .systemBlue | true |
+| `FloatingTitleBar.swift` | `secondRightButton` | .systemRed | true |
+| `LiquidGlassTabBar.swift` | `deleteButton` | .systemRed | true |
+| `LiquidGlassTabBar.swift` | `trashRestoreButton` | .systemBlue | true |
+| `LiquidGlassTabBar.swift` | `trashDeleteButton` | .systemRed | true |
+| `ViewerViewController.swift` | `deleteButton` | .systemRed | false (아이콘) |
+| `ViewerViewController.swift` | `restoreButton` | .systemGreen | false (아이콘) |
+| `ViewerViewController.swift` | `permanentDeleteButton` | .systemRed | false (아이콘) |
+| `ViewerViewController.swift` | `backButton` (iOS 26) | .clear | false (아이콘) |
+
+**Phase 7 실제 변경 내용:**
+- GlassButton.swift: UIBlurEffect → LiquidGlassEffect 교체
+- ViewerViewController: 아이콘 버튼 → GlassTextButton 텍스트 버튼으로 변경 (iOS 26 스펙)
+- ViewerViewController backButton: GlassButton → GlassIconButton (44×44)
+- FloatingTabBar/FloatingTitleBar/LiquidGlassTabBar: GlassButton → GlassTextButton
 
 ---
 
 ## 5. 파일별 변경 요약
 
-| 파일 | 작업 | Phase |
-|------|------|-------|
-| `GlassIconButton.swift` | 생성 | 1 |
-| `FloatingTitleBar.swift` | 수정 (backButton) | 2a |
-| - | ✅ 검증 | 2b |
-| `FaceComparisonViews.swift` | 수정 (close, cycle) | 2c |
-| `GlassCircleButton.swift` | 생성 | 3 |
-| `FloatingTabBar.swift` | 수정 (emptyTrash) | 4 |
-| `FaceButtonOverlay.swift` | 수정 (toggle, faceButtons) | 4 |
-| `GlassTextButton.swift` | 생성 | 5 |
-| `FaceComparisonViewController.swift` | 수정 (cancel, delete) | 6 |
-| `CleanupProgressView.swift` | 수정 (cancel) | 6 |
+| 파일 | 작업 | Phase | 상태 |
+|------|------|-------|------|
+| `GlassIconButton.swift` | 생성 | 1 | ✅ 완료 |
+| `FloatingTitleBar.swift` | 수정 (backButton) | 2a | ✅ 완료 |
+| - | 검증 | 2b | ✅ 완료 |
+| `FaceComparisonViews.swift` | 수정 (close, cycle) | 2c | ✅ 완료 |
+| `GlassCircleButton.swift` | 생성 | 3 | ✅ 완료 |
+| `FaceButtonOverlay.swift` | 수정 (toggle, faceButtons) | 4 | ✅ 완료 |
+| `GlassTextButton.swift` | 생성 | 5 | ✅ 완료 |
+| `FaceComparisonViewController.swift` | 수정 (cancel, delete) | 6 | ✅ 완료 |
+| `CleanupProgressView.swift` | 수정 (cancel) | 6 | ✅ 완료 |
+| `GlassButton.swift` | 수정 (LiquidGlassEffect 적용) | 7 | ✅ 완료 |
+| `ViewerViewController.swift` | 수정 (텍스트 버튼으로 변경, backButton → GlassIconButton) | 7 | ✅ 완료 |
+| `FloatingTabBar.swift` | 수정 (GlassTextButton으로 변경) | 7 | ✅ 완료 |
+| `FloatingTitleBar.swift` | 수정 (GlassTextButton으로 변경) | 7 | ✅ 완료 |
+| `LiquidGlassTabBar.swift` | 수정 (GlassTextButton으로 변경) | 7 | ✅ 완료 |
 
 ---
 
@@ -426,3 +751,12 @@ git revert HEAD
 | 2026-01-28 | faceButtons[] 모든 iOS 버전 동일 적용으로 명시 |
 | 2026-01-28 | FaceComparison cancel/deleteButton 모든 iOS 버전 동일 적용 |
 | 2026-01-28 | Phase 2 분리 (2a→2b검증→2c) - 조기 검증 포인트 추가 |
+| 2026-01-28 | **iOS 26 버튼 실측 스펙 추가** (ButtonInspector로 측정) |
+| 2026-01-28 | 얼굴 비교 화면 취소/삭제 버튼 스펙 추가 (Grid 텍스트 버튼과 동일) |
+| 2026-01-28 | `emptyTrashButton` 미사용으로 확인, 적용 목록에서 제외 |
+| 2026-01-28 | 얼굴 비교 타이틀바 버튼 스펙 추가 (닫기=뒤로가기, 다음인물=눈모양과 동일) |
+| 2026-01-28 | 자동 정리 취소 버튼 스펙 추가 (텍스트 버튼 동일 스펙) |
+| 2026-01-28 | **Phase 1~2b 완료**: GlassIconButton 구현 및 backButton 적용 |
+| 2026-01-28 | GlassIconButton 최종 스펙: LiquidGlassEffect, iconSize 22pt, weight .light, tintColor .white |
+| 2026-01-28 | Phase 2c~6 구현 계획을 GlassIconButton 스펙 기준으로 통일 |
+| 2026-01-28 | GlassCircleButton, GlassTextButton 구현 스펙 상세화 |

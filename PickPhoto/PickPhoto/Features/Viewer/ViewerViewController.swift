@@ -57,11 +57,9 @@ final class ViewerViewController: UIViewController {
 
     // MARK: - Constants
 
-    /// 삭제 버튼 크기
-    private static let deleteButtonSize: CGFloat = 56
-
-    /// 삭제 버튼 하단 여백
-    private static let deleteButtonBottomMargin: CGFloat = 40
+    /// 버튼 center에서 safeArea bottom까지의 거리
+    /// FloatingTabBar의 capsuleHeight/2와 동일 (56/2 = 28)
+    private static let buttonCenterFromBottom: CGFloat = 28
 
     /// 아래 스와이프 닫기 임계값 (화면 높이의 %)
     private static let dismissThreshold: CGFloat = 0.15
@@ -120,62 +118,30 @@ final class ViewerViewController: UIViewController {
         return pvc
     }()
 
-    /// 삭제 버튼 (일반 모드 - Liquid Glass)
-    private lazy var deleteButton: GlassButton = {
-        let button = GlassButton(tintColor: .systemRed, useCapsuleStyle: false)
+    /// 삭제 버튼 (일반 모드 - Liquid Glass 아이콘 버튼)
+    /// iOS 26 스펙: 38×38, iconSize 28 (medium 44×44 사용)
+    private lazy var deleteButton: GlassIconButton = {
+        // iOS 26 스펙: tintColor #FF4245 (빨간색)
+        let button = GlassIconButton(icon: "trash.fill", size: .medium, tintColor: .systemRed)
         button.translatesAutoresizingMaskIntoConstraints = false
-
-        // 휴지통 아이콘 (22pt)
-        let config = UIImage.SymbolConfiguration(pointSize: LiquidGlassStyle.actionButtonIconSize, weight: .medium)
-        let image = UIImage(systemName: "trash.fill", withConfiguration: config)
-        button.setImage(image, for: .normal)
-        button.tintColor = .white
-
-        // 아이콘 그림자 적용
-        if let imageView = button.imageView {
-            LiquidGlassStyle.applyIconShadow(to: imageView)
-        }
-
         button.addTarget(self, action: #selector(deleteButtonTapped), for: .touchUpInside)
         return button
     }()
 
-    /// 복구 버튼 (휴지통 모드 - Liquid Glass)
-    private lazy var restoreButton: GlassButton = {
-        let button = GlassButton(tintColor: .systemGreen, useCapsuleStyle: false)
+    /// 복구 버튼 (휴지통 모드 - Liquid Glass 텍스트 버튼)
+    /// iOS 26 스펙: 텍스트 "복구", tintColor #30D158 (녹색)
+    private lazy var restoreButton: GlassTextButton = {
+        let button = GlassTextButton(title: "복구", style: .plain, tintColor: .systemGreen)
         button.translatesAutoresizingMaskIntoConstraints = false
-
-        // 복구 아이콘 (22pt)
-        let config = UIImage.SymbolConfiguration(pointSize: LiquidGlassStyle.actionButtonIconSize, weight: .medium)
-        let image = UIImage(systemName: "arrow.uturn.backward", withConfiguration: config)
-        button.setImage(image, for: .normal)
-        button.tintColor = .white
-
-        // 아이콘 그림자 적용
-        if let imageView = button.imageView {
-            LiquidGlassStyle.applyIconShadow(to: imageView)
-        }
-
         button.addTarget(self, action: #selector(restoreButtonTapped), for: .touchUpInside)
         return button
     }()
 
-    /// 완전삭제 버튼 (휴지통 모드 - Liquid Glass)
-    private lazy var permanentDeleteButton: GlassButton = {
-        let button = GlassButton(tintColor: .systemRed, useCapsuleStyle: false)
+    /// 완전삭제 버튼 (휴지통 모드 - Liquid Glass 텍스트 버튼)
+    /// iOS 26 스펙: 텍스트 "삭제", tintColor #FF4245 (빨간색)
+    private lazy var permanentDeleteButton: GlassTextButton = {
+        let button = GlassTextButton(title: "삭제", style: .plain, tintColor: .systemRed)
         button.translatesAutoresizingMaskIntoConstraints = false
-
-        // 휴지통 아이콘 (22pt)
-        let config = UIImage.SymbolConfiguration(pointSize: LiquidGlassStyle.actionButtonIconSize, weight: .medium)
-        let image = UIImage(systemName: "trash.fill", withConfiguration: config)
-        button.setImage(image, for: .normal)
-        button.tintColor = .white
-
-        // 아이콘 그림자 적용
-        if let imageView = button.imageView {
-            LiquidGlassStyle.applyIconShadow(to: imageView)
-        }
-
         button.addTarget(self, action: #selector(permanentDeleteButtonTapped), for: .touchUpInside)
         return button
     }()
@@ -537,32 +503,22 @@ final class ViewerViewController: UIViewController {
 
     /// iOS 16~25 전용 뒤로가기 버튼 설정
     /// Push 전환 방식이지만 네비바는 숨긴 상태로 유지하고 커스텀 버튼 사용
+    /// iOS 26 스펙: 44×44, iconSize 22pt (GlassIconButton과 동일)
     private func setupBackButton() {
-        let backButton = GlassButton(tintColor: .clear, useCapsuleStyle: false)
+        // GlassIconButton 사용 (iOS 26 NavBar 아이콘 버튼과 동일 스펙)
+        let backButton = GlassIconButton(icon: "chevron.backward", size: .medium, tintColor: .white)
         backButton.translatesAutoresizingMaskIntoConstraints = false
-        
-        // 아이콘 설정 (20pt)
-        let config = UIImage.SymbolConfiguration(pointSize: LiquidGlassStyle.backButtonIconSize, weight: .semibold)
-        backButton.setImage(UIImage(systemName: "chevron.backward", withConfiguration: config), for: .normal)
-        backButton.tintColor = .white
-        
-        // 아이콘 그림자 적용
-        if let imageView = backButton.imageView {
-            LiquidGlassStyle.applyIconShadow(to: imageView)
-        }
-        
         backButton.addTarget(self, action: #selector(backButtonTapped), for: .touchUpInside)
 
         view.addSubview(backButton)
         NSLayoutConstraint.activate([
             backButton.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 16),
-            backButton.leadingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.leadingAnchor, constant: 16),
-            backButton.widthAnchor.constraint(equalToConstant: 36),
-            backButton.heightAnchor.constraint(equalToConstant: 36)
+            backButton.leadingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.leadingAnchor, constant: 16)
         ])
     }
 
     /// 액션 버튼 설정 (모드에 따라 다름)
+    /// 버튼 위치: FloatingTabBar의 Delete 버튼과 동일 (safeArea bottom에서 28pt 위에 center)
     private func setupActionButtons() {
         switch viewerMode {
         case .normal:
@@ -570,40 +526,32 @@ final class ViewerViewController: UIViewController {
             view.addSubview(deleteButton)
             NSLayoutConstraint.activate([
                 deleteButton.centerXAnchor.constraint(equalTo: view.centerXAnchor),
-                deleteButton.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor, constant: -Self.deleteButtonBottomMargin),
-                deleteButton.widthAnchor.constraint(equalToConstant: Self.deleteButtonSize),
-                deleteButton.heightAnchor.constraint(equalToConstant: Self.deleteButtonSize)
+                deleteButton.centerYAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor, constant: -Self.buttonCenterFromBottom)
             ])
 
             // 복구 버튼 (중앙 - 삭제 버튼과 같은 위치, 휴지통 사진일 때 표시)
             view.addSubview(restoreButton)
             NSLayoutConstraint.activate([
                 restoreButton.centerXAnchor.constraint(equalTo: view.centerXAnchor),
-                restoreButton.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor, constant: -Self.deleteButtonBottomMargin),
-                restoreButton.widthAnchor.constraint(equalToConstant: Self.deleteButtonSize),
-                restoreButton.heightAnchor.constraint(equalToConstant: Self.deleteButtonSize)
+                restoreButton.centerYAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor, constant: -Self.buttonCenterFromBottom)
             ])
 
             // 초기 상태: 삭제 버튼만 표시, 복구 버튼은 숨김
             restoreButton.isHidden = true
 
         case .trash:
-            // 복구 버튼 (왼쪽)
+            // 복구 버튼 (왼쪽 끝) - iOS 26 스펙: 양쪽 끝 배치
             view.addSubview(restoreButton)
             NSLayoutConstraint.activate([
-                restoreButton.centerXAnchor.constraint(equalTo: view.centerXAnchor, constant: -50),
-                restoreButton.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor, constant: -Self.deleteButtonBottomMargin),
-                restoreButton.widthAnchor.constraint(equalToConstant: Self.deleteButtonSize),
-                restoreButton.heightAnchor.constraint(equalToConstant: Self.deleteButtonSize)
+                restoreButton.leadingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.leadingAnchor, constant: 24),
+                restoreButton.centerYAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor, constant: -Self.buttonCenterFromBottom)
             ])
 
-            // 완전삭제 버튼 (오른쪽)
+            // 완전삭제 버튼 (오른쪽 끝) - iOS 26 스펙: 양쪽 끝 배치
             view.addSubview(permanentDeleteButton)
             NSLayoutConstraint.activate([
-                permanentDeleteButton.centerXAnchor.constraint(equalTo: view.centerXAnchor, constant: 50),
-                permanentDeleteButton.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor, constant: -Self.deleteButtonBottomMargin),
-                permanentDeleteButton.widthAnchor.constraint(equalToConstant: Self.deleteButtonSize),
-                permanentDeleteButton.heightAnchor.constraint(equalToConstant: Self.deleteButtonSize)
+                permanentDeleteButton.trailingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.trailingAnchor, constant: -24),
+                permanentDeleteButton.centerYAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor, constant: -Self.buttonCenterFromBottom)
             ])
         }
     }

@@ -59,6 +59,7 @@ public enum Log {
         "GridGestures": false,
         "GridScroll": false,
         "PinchZoom": false,
+        "GridLayout": true,          // 그리드 레이아웃 디버깅 (contentInset, contentOffset)
 
         // =============================================
         // Navigation / UI
@@ -142,8 +143,12 @@ public enum Log {
         "SystemUIInspector": false,
         "SystemUIInspector2": false,
         "SystemUIInspector3": false,
+        "ButtonInspector": true,
         "LayerPropertyTest": false,
-        "Debug": false,
+        "Debug": true,                   // 분석 버튼 로그
+        "CompareAnalysis": true,         // 비교 분석 테스터 로그
+        "CompareCategoryStore": true,    // 비교 카테고리 저장소 로그
+        "AestheticsOnly": true,          // AestheticsScore 단독 테스터 로그
     ]
 
     // ========================================

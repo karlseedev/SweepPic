@@ -48,7 +48,7 @@ extension GridViewController {
         cleanupItem.tintColor = .systemBlue
 
         let selectItem = UIBarButtonItem(
-            title: "Select",
+            title: "선택",
             style: .plain,
             target: self,
             action: #selector(selectButtonTapped)
@@ -71,7 +71,7 @@ extension GridViewController {
 
         // 기존 Select 버튼 대신 [Select] [정리] 두 개 버튼으로 변경
         overlay.titleBar.setTwoRightButtons(
-            firstTitle: "Select",
+            firstTitle: "선택",
             firstColor: .systemBlue,
             firstAction: { [weak self] in
                 self?.selectButtonTapped()
@@ -271,18 +271,11 @@ extension GridViewController: CleanupMethodSheetDelegate {
     }
 
     #if DEBUG
-    /// AestheticsScore 단독 테스트 선택됨 (DEBUG 전용)
-    /// 기존 로직(Laplacian, 노출 등)을 무시하고 AestheticsScore만으로 저품질 판정
+    /// 통합 로직 테스트 선택됨 (DEBUG 전용)
+    /// 경로1 (기존 로직 기반) + 경로2 (AestheticsScore 기반) 테스트
     @available(iOS 18.0, *)
-    func cleanupMethodSheet(_ sheet: CleanupMethodSheet, didSelectAestheticsOnlyMode method: CleanupMethod) {
-        startAestheticsOnlyTest(with: method)
-    }
-
-    /// 비교 분석 테스트 선택됨 (DEBUG 전용)
-    /// 기존 로직 vs AestheticsScore 동시 실행, 결과 비교
-    @available(iOS 18.0, *)
-    func cleanupMethodSheetDidSelectCompareAnalysis(_ sheet: CleanupMethodSheet) {
-        startCompareAnalysisTest()
+    func cleanupMethodSheetDidSelectIntegratedTest(_ sheet: CleanupMethodSheet) {
+        startIntegratedLogicTest()
     }
     #endif
 }
@@ -297,106 +290,26 @@ extension GridViewController: CleanupProgressViewDelegate {
     }
 }
 
-// MARK: - DEBUG: AestheticsScore 단독 테스트
+// MARK: - DEBUG: 통합 로직 테스트
 
 #if DEBUG
 extension GridViewController {
 
-    /// AestheticsScore 단독 테스트 시작 (DEBUG 전용)
+    /// 통합 로직 테스트 시작 (DEBUG 전용)
     ///
-    /// 기존 로직(Laplacian, 노출 등)을 무시하고
-    /// AestheticsScore < 0.2 만으로 저품질 판정
-    ///
-    /// - Parameter method: 정리 방식 (.fromLatest 또는 .continueFromLast)
-    @available(iOS 18.0, *)
-    func startAestheticsOnlyTest(with method: CleanupMethod) {
-        let tester = AestheticsOnlyTester.shared
-
-        // 이어서 테스트할 날짜 결정
-        let continueFrom: Date?
-        switch method {
-        case .continueFromLast:
-            continueFrom = tester.lastAssetDate
-        case .fromLatest:
-            tester.clearSession()
-            continueFrom = nil
-        default:
-            continueFrom = nil
-        }
-
-        // 진행 Alert 생성
-        let progressAlert = UIAlertController(
-            title: "AestheticsScore 단독 테스트",
-            message: "검색: 0장\n저품질: 0장",
-            preferredStyle: .alert
-        )
-
-        // 취소 버튼 없음 (일단 완료까지 대기)
-        present(progressAlert, animated: true)
-
-        // 테스트 실행
-        Task {
-            let result = await tester.runTest(continueFrom: continueFrom) { scanned, lowQuality in
-                // 진행 상황 업데이트 (메인 스레드)
-                Task { @MainActor in
-                    progressAlert.message = "검색: \(scanned)장\n저품질: \(lowQuality)장"
-                }
-            }
-
-            // 결과 표시 (메인 스레드)
-            await MainActor.run {
-                progressAlert.dismiss(animated: true) { [weak self] in
-                    self?.showAestheticsOnlyResult(result)
-                }
-            }
-        }
-    }
-
-    /// AestheticsScore 단독 테스트 결과 표시
-    @available(iOS 18.0, *)
-    private func showAestheticsOnlyResult(_ result: AestheticsOnlyResult) {
-        let message = """
-        검색: \(result.totalScanned)장
-        저품질: \(result.lowQualityCount)장
-
-        (임계값: AestheticsScore < 0.2)
-        """
-
-        let alert = UIAlertController(
-            title: "테스트 완료",
-            message: message,
-            preferredStyle: .alert
-        )
-
-        alert.addAction(UIAlertAction(title: "확인", style: .default))
-
-        // 저품질 사진이 있으면 휴지통 보기 버튼 추가
-        if result.lowQualityCount > 0 {
-            alert.addAction(UIAlertAction(title: "휴지통 보기", style: .default) { [weak self] _ in
-                self?.navigateToTrash()
-            })
-        }
-
-        present(alert, animated: true)
-    }
-
-    // MARK: - 비교 분석 테스트
-
-    /// 비교 분석 테스트 시작 (DEBUG 전용)
-    ///
-    /// 기존 로직 vs AestheticsScore 동시 실행
+    /// 경로1 (기존 로직 기반) + 경로2 (AestheticsScore 기반) 테스트
     /// 결과를 카테고리별로 분류하여 휴지통에 저장
-    /// - 🟣 둘 다: 기존 + AestheticsScore 둘 다 저품질
-    /// - 🔵 기존만: 기존 로직만 저품질
-    /// - 🟡 신규만: AestheticsScore만 저품질 (핵심 - 기존이 놓친 것)
+    /// - ⚪ 회색: 경로1 + 경로2 둘 다 해당
+    /// - 🔵 파랑: 경로1만 해당 (기존 로직 기반)
+    /// - 🟡 노랑: 경로2만 해당 (AestheticsScore 기반)
     @available(iOS 18.0, *)
-    func startCompareAnalysisTest() {
+    func startIntegratedLogicTest() {
         let tester = CompareAnalysisTester.shared
 
         // 진행 Alert 생성
         let progressAlert = UIAlertController(
-            title: "비교 분석 테스트",
-            message: "검색: 0장\n🟣 둘다: 0  🔵 기존: 0  🟡 신규: 0",
+            title: "통합 로직 테스트",
+            message: "검색: 0장\n⚪ 둘다: 0  🔵 경로1: 0  🟡 경로2: 0",
             preferredStyle: .alert
         )
 
@@ -404,12 +317,12 @@ extension GridViewController {
 
         // 테스트 실행
         Task {
-            let result = await tester.runTest { scanned, both, onlyOld, onlyNew in
+            let result = await tester.runTest { scanned, both, path1Only, path2Only in
                 // 진행 상황 업데이트 (메인 스레드)
                 Task { @MainActor in
                     progressAlert.message = """
                     검색: \(scanned)장
-                    🟣 둘다: \(both)  🔵 기존: \(onlyOld)  🟡 신규: \(onlyNew)
+                    ⚪ 둘다: \(both)  🔵 경로1: \(path1Only)  🟡 경로2: \(path2Only)
                     """
                 }
             }
@@ -417,21 +330,21 @@ extension GridViewController {
             // 결과 표시 (메인 스레드)
             await MainActor.run {
                 progressAlert.dismiss(animated: true) { [weak self] in
-                    self?.showCompareAnalysisResult(result)
+                    self?.showIntegratedLogicResult(result)
                 }
             }
         }
     }
 
-    /// 비교 분석 테스트 결과 표시
+    /// 통합 로직 테스트 결과 표시
     @available(iOS 18.0, *)
-    private func showCompareAnalysisResult(_ result: CompareAnalysisResult) {
+    private func showIntegratedLogicResult(_ result: CompareAnalysisResult) {
         let message = """
         검색: \(result.totalScanned)장
 
-        🟣 둘 다 저품질: \(result.bothCount)장
-        🔵 기존만 저품질: \(result.onlyOldCount)장
-        🟡 신규만 저품질: \(result.onlyNewCount)장
+        ⚪ 둘 다 해당: \(result.bothCount)장
+        🔵 경로1만 (기존 로직): \(result.path1OnlyCount)장
+        🟡 경로2만 (AestheticsScore): \(result.path2OnlyCount)장
 
         총 휴지통: \(result.totalTrashed)장
 
@@ -439,7 +352,7 @@ extension GridViewController {
         """
 
         let alert = UIAlertController(
-            title: "비교 분석 완료",
+            title: "통합 로직 테스트 완료",
             message: message,
             preferredStyle: .alert
         )

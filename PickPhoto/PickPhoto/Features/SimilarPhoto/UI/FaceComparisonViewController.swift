@@ -139,12 +139,9 @@ final class FaceComparisonViewController: UIViewController {
         return view
     }()
 
-    /// Cancel 버튼
-    private lazy var cancelButton: UIButton = {
-        var config = UIButton.Configuration.plain()
-        config.title = "Cancel"
-        config.baseForegroundColor = .white
-        let button = UIButton(configuration: config)
+    /// Cancel 버튼 - GlassTextButton (Liquid Glass 스타일)
+    private lazy var cancelButton: GlassTextButton = {
+        let button = GlassTextButton(title: "취소", style: .plain, tintColor: .systemBlue)
         button.addTarget(self, action: #selector(cancelButtonTapped), for: .touchUpInside)
         button.translatesAutoresizingMaskIntoConstraints = false
         return button
@@ -161,18 +158,11 @@ final class FaceComparisonViewController: UIViewController {
         return label
     }()
 
-    /// Delete 버튼
-    private lazy var deleteButton: UIButton = {
-        var config = UIButton.Configuration.filled()
-        config.title = "Delete"
-        config.baseBackgroundColor = UIColor.systemRed.withAlphaComponent(0.3)
-        config.baseForegroundColor = .white
-        config.cornerStyle = .capsule
-        config.contentInsets = NSDirectionalEdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16)
-        let button = UIButton(configuration: config)
+    /// Delete 버튼 - GlassTextButton (Liquid Glass 스타일, filled)
+    private lazy var deleteButton: GlassTextButton = {
+        let button = GlassTextButton(title: "삭제", style: .filled, tintColor: .systemRed)
         button.addTarget(self, action: #selector(deleteButtonTapped), for: .touchUpInside)
         button.isEnabled = false
-        button.alpha = 0.5
         button.translatesAutoresizingMaskIntoConstraints = false
         return button
     }()

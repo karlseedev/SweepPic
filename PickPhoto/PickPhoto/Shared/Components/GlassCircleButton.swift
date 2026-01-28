@@ -1,26 +1,29 @@
-// GlassIconButton.swift
-// 아이콘 전용 Liquid Glass 버튼 컴포넌트
+// GlassCircleButton.swift
+// 원형 Liquid Glass 버튼 컴포넌트
 //
 // - 특징: Dual state (contracted ↔ expanded), 굴절 효과, 햅틱 피드백
 // - Contracted (resting): LiquidGlassEffect 적용 (LiquidGlassPlatter와 동일)
 // - Expanded (pressed): 확장 + 굴절 효과 (LiquidGlassEffect)
 // - Size: small(36pt), medium(44pt), large(56pt)
+// - 용도: toggleButton, faceButtons[] 등 원형 버튼에 사용
 
 import UIKit
 import LiquidGlassKit
 
-/// 아이콘 전용 Liquid Glass 버튼
-/// - backButton, closeButton, cycleButton 등 아이콘만 있는 버튼에 사용
+/// 원형 Liquid Glass 버튼
+/// - toggleButton, faceButtons[] 등 원형 버튼에 사용
+/// - GlassIconButton과 동일한 구현, 용도 구분을 위해 별도 클래스
 /// - Dual state: contracted(resting) ↔ expanded(pressed)
-final class GlassIconButton: UIButton {
+/// - 상속 허용 (FaceButton 등)
+class GlassCircleButton: UIButton {
 
     // MARK: - Types
 
     /// 버튼 크기 사전 정의
     enum Size {
-        case small   // 36×36, 아이콘 18pt
+        case small   // 36×36, 아이콘 14pt
         case medium  // 44×44, 아이콘 22pt
-        case large   // 56×56, 아이콘 28pt
+        case large   // 56×56, 아이콘 22pt
 
         /// 버튼 전체 크기 (정사각형)
         var dimension: CGFloat {
@@ -41,11 +44,10 @@ final class GlassIconButton: UIButton {
         }
 
         /// 코너 반경 (완전한 원형: dimension / 2)
-        /// iOS 26 실측 기준: 44×44 버튼에 cornerRadius 22
         var cornerRadius: CGFloat {
             switch self {
             case .small: return 18   // 36 / 2
-            case .medium: return 22  // 44 / 2, iOS 26 실측값
+            case .medium: return 22  // 44 / 2
             case .large: return 28   // 56 / 2
             }
         }
@@ -116,11 +118,11 @@ final class GlassIconButton: UIButton {
 
     // MARK: - Init
 
-    /// 아이콘 버튼 생성
+    /// 원형 버튼 생성
     /// - Parameters:
     ///   - icon: SF Symbol 이름
     ///   - size: 버튼 크기 (기본: .medium)
-    ///   - tintColor: 아이콘/배경 틴트 색상 (기본: .white)
+    ///   - tintColor: 아이콘 틴트 색상 (기본: .white)
     init(icon: String, size: Size = .medium, tintColor: UIColor = .white) {
         self.buttonSize = size
         self.iconTintColor = tintColor
@@ -142,15 +144,14 @@ final class GlassIconButton: UIButton {
     // MARK: - Setup
 
     /// 아이콘 설정
-    /// iOS 26 실측: 그림자 없음, weight light (regular보다 가늘게)
+    /// weight: .light (GlassIconButton과 동일)
     private func setupIcon(_ icon: String) {
         let config = UIImage.SymbolConfiguration(
             pointSize: buttonSize.iconPointSize,
-            weight: .light  // regular보다 한 단계 가늘게
+            weight: .light
         )
         iconImageView.image = UIImage(systemName: icon, withConfiguration: config)
         iconImageView.tintColor = iconTintColor
-        // iOS 26 실측: 아이콘 그림자 없음
     }
 
     private func setupLayers() {
@@ -209,7 +210,7 @@ final class GlassIconButton: UIButton {
 
         let config = UIImage.SymbolConfiguration(
             pointSize: buttonSize.iconPointSize,
-            weight: .light  // setupIcon과 동일하게 light
+            weight: .light
         )
         let newImage = UIImage(systemName: icon, withConfiguration: config)
 
@@ -248,7 +249,6 @@ final class GlassIconButton: UIButton {
     // MARK: - Dual State Animations
 
     /// 버튼 확장 (pressed → expanded)
-    /// LiquidGlassSwitch 패턴 참고: 커지면서 굴절 효과 활성화
     private func expandButton(animated: Bool) {
         guard !isExpanded else { return }
         isExpanded = true

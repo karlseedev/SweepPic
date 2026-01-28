@@ -3,39 +3,21 @@ import LiquidGlassKit
 
 /// iOS 26 스타일 Liquid Glass 버튼
 /// - 특징: Dual state (contracted ↔ expanded), 굴절 효과, 햅틱 피드백
-/// - Contracted (resting): 일반 블러 배경
+/// - Contracted (resting): LiquidGlassEffect 적용 (LiquidGlassPlatter와 동일)
 /// - Expanded (pressed): 확장 + 굴절 효과 (LiquidGlassEffect)
 final class GlassButton: UIButton {
 
     // MARK: - UI Components
 
     /// Contracted 상태 뷰 (resting)
-    /// 일반 블러 배경 + 틴트 + 하이라이트
-    private let contractedView: UIView = {
-        let view = UIView()
+    /// LiquidGlassEffect 사용 - LiquidGlassPlatter와 동일한 구현
+    private lazy var contractedView: AnyVisualEffectView = {
+        let effect = LiquidGlassEffect(style: .regular, isNative: true)
+        effect.tintColor = UIColor(white: 0.5, alpha: 0.2)  // 중간회색 20%
+        let view = VisualEffectView(effect: effect)
         view.isUserInteractionEnabled = false
         return view
     }()
-
-    /// Contracted 상태의 블러
-    private lazy var blurView: UIVisualEffectView = {
-        let effect = UIBlurEffect(style: LiquidGlassStyle.blurStyle)
-        let view = UIVisualEffectView(effect: effect)
-        view.isUserInteractionEnabled = false
-        view.clipsToBounds = true
-        return view
-    }()
-
-    /// Contracted 상태의 틴트
-    private lazy var tintView: UIView = {
-        let view = UIView()
-        view.backgroundColor = overlayTintColor.withAlphaComponent(LiquidGlassStyle.tintAlpha)
-        view.isUserInteractionEnabled = false
-        return view
-    }()
-
-    /// Contracted 상태의 하이라이트 레이어
-    private var highlightLayer: CAGradientLayer?
 
     /// Expanded 상태 뷰 (pressed)
     /// LiquidGlassEffect 사용하여 굴절 효과 적용
@@ -55,7 +37,6 @@ final class GlassButton: UIButton {
 
     // MARK: - Properties
 
-    private let overlayTintColor: UIColor
     private let useCapsuleStyle: Bool
 
     /// 현재 확장 상태
@@ -69,8 +50,11 @@ final class GlassButton: UIButton {
 
     // MARK: - Init
 
+    /// Glass 버튼 생성
+    /// - Parameters:
+    ///   - tintColor: 아이콘/텍스트 색상 (배경색이 아님 - 배경은 LiquidGlassEffect 기본값)
+    ///   - useCapsuleStyle: true면 pill shape (height/2), false면 기본 코너
     init(tintColor: UIColor, useCapsuleStyle: Bool = false) {
-        self.overlayTintColor = tintColor
         self.useCapsuleStyle = useCapsuleStyle
 
         super.init(frame: .zero)
@@ -90,21 +74,8 @@ final class GlassButton: UIButton {
         // 그림자를 위해 버튼 자체의 clipsToBounds는 false여야 함
         self.layer.masksToBounds = false
 
-        // Contracted View 계층 구성: Blur -> Tint -> Highlight
-        contractedView.addSubview(blurView)
-        blurView.contentView.addSubview(tintView)
-
-        // Specular Highlight
-        highlightLayer = LiquidGlassStyle.createSpecularHighlightLayer()
-        if let highlightLayer = highlightLayer {
-            blurView.contentView.layer.addSublayer(highlightLayer)
-        }
-
-        // Border
-        blurView.layer.borderWidth = LiquidGlassStyle.borderWidth
-        blurView.layer.borderColor = UIColor.white.withAlphaComponent(LiquidGlassStyle.borderAlpha).cgColor
-
         // 뷰 계층에 추가 (Expanded가 위, Contracted가 아래)
+        // LiquidGlassEffect가 블러, 굴절, 테두리를 모두 처리
         insertSubview(contractedView, at: 0)
         insertSubview(expandedView, aboveSubview: contractedView)
     }
@@ -116,36 +87,22 @@ final class GlassButton: UIButton {
 
         let cornerRadius = useCapsuleStyle ? bounds.height / 2 : LiquidGlassStyle.defaultCornerRadius
 
-        // 1. Contracted View 프레임 업데이트
+        // 1. Contracted View 프레임 및 코너 업데이트
         contractedView.frame = bounds
-        blurView.frame = contractedView.bounds
-        tintView.frame = blurView.contentView.bounds
-
-        // 2. Update Corner Radius
         contractedView.layer.cornerRadius = cornerRadius
         contractedView.layer.cornerCurve = .continuous
         contractedView.clipsToBounds = true
 
-        blurView.layer.cornerRadius = cornerRadius
-        blurView.layer.cornerCurve = .continuous
-
-        // 3. Update Highlight
-        if let highlightLayer = highlightLayer {
-            highlightLayer.frame = blurView.contentView.bounds
-            highlightLayer.cornerRadius = cornerRadius
-            highlightLayer.cornerCurve = .continuous
-        }
-
-        // 4. Expanded View 프레임 업데이트
+        // 2. Expanded View 프레임 및 코너 업데이트
         expandedView.frame = bounds
         expandedView.layer.cornerRadius = cornerRadius
         expandedView.layer.cornerCurve = .continuous
         expandedView.clipsToBounds = true
 
-        // 5. Update Shadow (버튼 레이어에 직접 적용)
+        // 3. Update Shadow (버튼 레이어에 직접 적용)
         LiquidGlassStyle.applyShadow(to: self.layer, cornerRadius: cornerRadius)
 
-        // 6. Ensure Content is Visible (블러 뷰 위로 올림)
+        // 4. Ensure Content is Visible (Glass 뷰 위로 올림)
         if let imageView = imageView {
             bringSubviewToFront(imageView)
         }

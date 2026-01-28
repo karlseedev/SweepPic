@@ -40,7 +40,7 @@ extension GridViewController {
         selectionCountBarItem = countItem
 
         let deleteItem = UIBarButtonItem(
-            title: "Delete",
+            title: "삭제",
             style: .plain,
             target: self,
             action: #selector(gridDeleteSelectedTapped)
@@ -166,7 +166,7 @@ extension AlbumGridViewController {
         selectionCountBarItem = countItem
 
         let deleteItem = UIBarButtonItem(
-            title: "Delete",
+            title: "삭제",
             style: .plain,
             target: self,
             action: #selector(albumDeleteSelectedTapped)

@@ -410,6 +410,14 @@ final class SystemUIInspector3 {
             savedFiles.append(contentsOf: files)
         }
 
+        // 전체 뷰 계층 (rootViewController.view)
+        // 커스텀 뷰(GlassButton 등)의 iOS 26 스타일 실측용
+        if let rootVC = window.rootViewController {
+            let rootView = rootVC.view!
+            let files = saveComponent(views: [rootView], name: "allviews", timestamp: timestamp, meta: meta)
+            savedFiles.append(contentsOf: files)
+        }
+
         // 로그
         print("")
         print("==================================================")

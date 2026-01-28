@@ -4,17 +4,19 @@
 //
 //  Created by Claude on 2026-01-28.
 //
-//  기존 로직 vs AestheticsScore 비교 분석 테스터 (DEBUG 전용)
+//  통합 로직 테스터 (DEBUG 전용)
 //
-//  목적:
-//  - 기존 로직(Laplacian, 노출 등)과 AestheticsScore를 동시에 실행
-//  - 각 로직이 잡아낸 저품질 사진을 분류하여 비교
-//  - "기존 로직이 놓친 저품질을 AestheticsScore가 잡아내는가?" 검증
+//  새 통합 로직:
+//  - 경로1: 기존 로직 기반
+//    - Strong 신호 → 동의 없이 저품질 확정
+//    - Weak/Conditional 신호 → AestheticsScore < 0.2 동의 시 저품질
+//  - 경로2: AestheticsScore 기반
+//    - AestheticsScore < 0.0 AND isUtility == false → 저품질
 //
-//  분류:
-//  - 🟣 both: 둘 다 저품질 판정
-//  - 🔵 onlyOld: 기존 로직만 저품질 판정
-//  - 🟡 onlyNew: AestheticsScore만 저품질 판정 ← 핵심 (기존이 놓친 것)
+//  배지 분류:
+//  - ⚪ 회색 (both): 경로1 + 경로2 둘 다 해당
+//  - 🔵 파랑 (path1Only): 경로1만 해당
+//  - 🟡 노랑 (path2Only): 경로2만 해당
 //
 
 #if DEBUG
@@ -25,14 +27,14 @@ import AppCore
 // MARK: - CompareCategory
 
 /// 비교 분석 카테고리
-/// 어떤 로직에서 저품질로 판정되었는지 분류
+/// 어떤 경로에서 저품질로 판정되었는지 분류
 enum CompareCategory: String, Codable {
-    /// 둘 다 저품질 (🟣 보라)
+    /// 경로1 + 경로2 둘 다 (⚪ 회색)
     case both
-    /// 기존 로직만 저품질 (🔵 파랑)
-    case onlyOld
-    /// AestheticsScore만 저품질 (🟡 노랑) - 핵심: 기존이 놓친 것
-    case onlyNew
+    /// 경로1만 해당 (🔵 파랑) - 기존 로직 기반
+    case path1Only
+    /// 경로2만 해당 (🟡 노랑) - AestheticsScore 기반
+    case path2Only
 }
 
 // MARK: - CompareAnalysisResult
@@ -42,15 +44,15 @@ enum CompareCategory: String, Codable {
 struct CompareAnalysisResult {
     /// 총 검색된 사진 수
     let totalScanned: Int
-    /// 둘 다 저품질 (🟣)
+    /// 경로1 + 경로2 둘 다 (⚪)
     let bothCount: Int
-    /// 기존만 저품질 (🔵)
-    let onlyOldCount: Int
-    /// AestheticsScore만 저품질 (🟡)
-    let onlyNewCount: Int
+    /// 경로1만 (🔵)
+    let path1OnlyCount: Int
+    /// 경로2만 (🟡)
+    let path2OnlyCount: Int
     /// 총 휴지통 이동 수
     var totalTrashed: Int {
-        bothCount + onlyOldCount + onlyNewCount
+        bothCount + path1OnlyCount + path2OnlyCount
     }
 }
 
@@ -109,7 +111,9 @@ final class CompareCategoryStore {
 
 // MARK: - CompareAnalysisTester
 
-/// 기존 로직 vs AestheticsScore 비교 분석 테스터
+/// 통합 로직 테스터
+///
+/// 경로1 (기존 로직 기반) + 경로2 (AestheticsScore 기반) 테스트
 @available(iOS 18.0, *)
 final class CompareAnalysisTester {
 
@@ -119,11 +123,14 @@ final class CompareAnalysisTester {
 
     // MARK: - Constants
 
-    /// AestheticsScore 저품질 임계값
-    private let aestheticsThreshold: Float = 0.2
+    /// 경로1: 동의용 임계값 (Weak/Conditional 신호에만 적용)
+    private let path1AgreeThreshold: Float = 0.2
+
+    /// 경로2: 임계값 (AestheticsScore 기반)
+    private let path2Threshold: Float = 0.0
 
     /// 최대 검색 수
-    private let maxScanCount: Int = 4000
+    private let maxScanCount: Int = 2000
 
     // MARK: - Dependencies
 
@@ -149,19 +156,18 @@ final class CompareAnalysisTester {
 
     // MARK: - Test Execution
 
-    /// 비교 분석 테스트 실행
+    /// 통합 로직 테스트 실행
     ///
-    /// 각 사진에 대해 기존 로직과 AestheticsScore를 모두 실행하고
-    /// 결과를 비교하여 카테고리별로 분류합니다.
+    /// 경로1과 경로2를 각각 계산하고 결과를 비교하여 카테고리별로 분류합니다.
     ///
-    /// - Parameter onProgress: 진행 콜백 (scanned, both, onlyOld, onlyNew)
+    /// - Parameter onProgress: 진행 콜백 (scanned, both, path1Only, path2Only)
     /// - Returns: 테스트 결과
     func runTest(
         onProgress: ((Int, Int, Int, Int) -> Void)? = nil
     ) async -> CompareAnalysisResult {
         guard !isRunning else {
             Log.print("[CompareAnalysis] 이미 실행 중")
-            return CompareAnalysisResult(totalScanned: 0, bothCount: 0, onlyOldCount: 0, onlyNewCount: 0)
+            return CompareAnalysisResult(totalScanned: 0, bothCount: 0, path1OnlyCount: 0, path2OnlyCount: 0)
         }
 
         isRunning = true
@@ -170,12 +176,15 @@ final class CompareAnalysisTester {
         // 카테고리 스토어 초기화
         categoryStore.clear()
 
-        Log.print("[CompareAnalysis] 테스트 시작 - maxScan=\(maxScanCount), aestheticsThreshold=\(aestheticsThreshold)")
+        Log.print("[CompareAnalysis] 테스트 시작")
+        Log.print("[CompareAnalysis] - 경로1 동의 임계값: \(path1AgreeThreshold)")
+        Log.print("[CompareAnalysis] - 경로2 임계값: \(path2Threshold)")
+        Log.print("[CompareAnalysis] - 최대 검색 수: \(maxScanCount)")
 
         var totalScanned = 0
         var bothCount = 0
-        var onlyOldCount = 0
-        var onlyNewCount = 0
+        var path1OnlyCount = 0
+        var path2OnlyCount = 0
         var trashedAssetIDs: [String] = []
 
         // 사진 가져오기
@@ -206,44 +215,49 @@ final class CompareAnalysisTester {
 
                 // 1. 기존 로직 실행
                 let oldResult = await qualityAnalyzer.analyze(asset)
-                let isOldLowQuality = oldResult.verdict.isLowQuality
 
-                // 2. AestheticsScore 실행
-                var isNewLowQuality = false
-                if let image = try? await imageLoader.loadImage(for: asset),
-                   let metrics = try? await aestheticsAnalyzer.analyze(image) {
-                    // isUtility는 스킵 (스크린샷 등)
-                    if !metrics.isUtility && metrics.overallScore < aestheticsThreshold {
-                        isNewLowQuality = true
-                    }
+                // 2. AestheticsScore 분석
+                var aestheticsMetrics: AestheticsMetrics?
+                if let image = try? await imageLoader.loadImage(for: asset) {
+                    aestheticsMetrics = try? await aestheticsAnalyzer.analyze(image)
                 }
 
-                // 3. 분류
+                // 3. 경로1 판정 (기존 로직 기반)
+                let path1Result = evaluatePath1(
+                    oldResult: oldResult,
+                    aestheticsMetrics: aestheticsMetrics
+                )
+
+                // 4. 경로2 판정 (AestheticsScore 기반)
+                let path2Result = evaluatePath2(aestheticsMetrics: aestheticsMetrics)
+
+                // 5. 분류
                 let category: CompareCategory?
-                if isOldLowQuality && isNewLowQuality {
+                if path1Result && path2Result {
                     category = .both
                     bothCount += 1
-                } else if isOldLowQuality {
-                    category = .onlyOld
-                    onlyOldCount += 1
-                } else if isNewLowQuality {
-                    category = .onlyNew
-                    onlyNewCount += 1
+                } else if path1Result {
+                    category = .path1Only
+                    path1OnlyCount += 1
+                } else if path2Result {
+                    category = .path2Only
+                    path2OnlyCount += 1
                 } else {
                     category = nil  // 둘 다 정상 → 휴지통 안 감
                 }
 
-                // 4. 휴지통 이동 + 카테고리 저장
+                // 6. 휴지통 이동 + 카테고리 저장
                 if let cat = category {
                     let assetID = asset.localIdentifier
                     trashedAssetIDs.append(assetID)
                     categoryStore.setCategory(cat, for: assetID)
 
-                    Log.print("[CompareAnalysis] \(cat.rawValue): \(assetID.prefix(8))...")
+                    let scoreStr = aestheticsMetrics.map { String(format: "%.3f", $0.overallScore) } ?? "N/A"
+                    Log.print("[CompareAnalysis] \(cat.rawValue): score=\(scoreStr), \(assetID.prefix(8))...")
                 }
 
                 // 진행 콜백
-                onProgress?(totalScanned, bothCount, onlyOldCount, onlyNewCount)
+                onProgress?(totalScanned, bothCount, path1OnlyCount, path2OnlyCount)
             }
 
             currentIndex = endIndex
@@ -262,13 +276,77 @@ final class CompareAnalysisTester {
         let result = CompareAnalysisResult(
             totalScanned: totalScanned,
             bothCount: bothCount,
-            onlyOldCount: onlyOldCount,
-            onlyNewCount: onlyNewCount
+            path1OnlyCount: path1OnlyCount,
+            path2OnlyCount: path2OnlyCount
         )
 
-        Log.print("[CompareAnalysis] 완료: 검색=\(totalScanned), 둘다=\(bothCount), 기존만=\(onlyOldCount), 신규만=\(onlyNewCount)")
+        Log.print("[CompareAnalysis] 완료:")
+        Log.print("[CompareAnalysis] - 검색: \(totalScanned)장")
+        Log.print("[CompareAnalysis] - ⚪ 둘다(both): \(bothCount)장")
+        Log.print("[CompareAnalysis] - 🔵 경로1(path1): \(path1OnlyCount)장")
+        Log.print("[CompareAnalysis] - 🟡 경로2(path2): \(path2OnlyCount)장")
 
         return result
+    }
+
+    // MARK: - Path Evaluation
+
+    /// 경로1 판정: 기존 로직 기반
+    ///
+    /// - Strong 신호 → 동의 없이 저품질 확정
+    /// - Weak/Conditional 신호 → AestheticsScore < 0.2 동의 시 저품질
+    private func evaluatePath1(
+        oldResult: QualityResult,
+        aestheticsMetrics: AestheticsMetrics?
+    ) -> Bool {
+        // 기존 로직이 정상이면 경로1 해당 안 함
+        guard oldResult.verdict.isLowQuality else {
+            return false
+        }
+
+        // Strong 신호 확인 (동의 없이 통과)
+        if oldResult.signals.hasStrongSignal {
+            Log.print("[CompareAnalysis] 경로1: Strong 신호로 확정")
+            return true
+        }
+
+        // Weak/Conditional 신호는 AestheticsScore 동의 필요
+        guard let metrics = aestheticsMetrics else {
+            // AestheticsScore 없으면 기존 판정 유지
+            return true
+        }
+
+        if metrics.overallScore < path1AgreeThreshold {
+            // AestheticsScore 동의 → 저품질
+            Log.print("[CompareAnalysis] 경로1: AestheticsScore 동의 (score=\(String(format: "%.3f", metrics.overallScore)))")
+            return true
+        } else {
+            // AestheticsScore 동의 안 함 → 제외
+            Log.print("[CompareAnalysis] 경로1: AestheticsScore 동의 안 함 (score=\(String(format: "%.3f", metrics.overallScore))) → 제외")
+            return false
+        }
+    }
+
+    /// 경로2 판정: AestheticsScore 기반
+    ///
+    /// - AestheticsScore < 0.0 AND isUtility == false → 저품질
+    private func evaluatePath2(aestheticsMetrics: AestheticsMetrics?) -> Bool {
+        guard let metrics = aestheticsMetrics else {
+            return false
+        }
+
+        // 유틸리티 이미지(스크린샷 등)는 제외
+        if metrics.isUtility {
+            return false
+        }
+
+        // AestheticsScore < 0.0 → 저품질
+        if metrics.overallScore < path2Threshold {
+            Log.print("[CompareAnalysis] 경로2: AestheticsScore 기반 감지 (score=\(String(format: "%.3f", metrics.overallScore)))")
+            return true
+        }
+
+        return false
     }
 }
 #endif

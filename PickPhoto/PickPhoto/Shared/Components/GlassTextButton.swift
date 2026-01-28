@@ -1,54 +1,35 @@
-// GlassIconButton.swift
-// 아이콘 전용 Liquid Glass 버튼 컴포넌트
+// GlassTextButton.swift
+// 텍스트 전용 Liquid Glass 버튼 컴포넌트
 //
 // - 특징: Dual state (contracted ↔ expanded), 굴절 효과, 햅틱 피드백
 // - Contracted (resting): LiquidGlassEffect 적용 (LiquidGlassPlatter와 동일)
 // - Expanded (pressed): 확장 + 굴절 효과 (LiquidGlassEffect)
-// - Size: small(36pt), medium(44pt), large(56pt)
+// - 높이: 38pt 고정, 너비: 텍스트에 따라 동적
+// - 용도: cancelButton, deleteButton 등 텍스트 버튼에 사용
 
 import UIKit
 import LiquidGlassKit
 
-/// 아이콘 전용 Liquid Glass 버튼
-/// - backButton, closeButton, cycleButton 등 아이콘만 있는 버튼에 사용
+/// 텍스트 전용 Liquid Glass 버튼
+/// - cancelButton, deleteButton 등 텍스트만 있는 버튼에 사용
 /// - Dual state: contracted(resting) ↔ expanded(pressed)
-final class GlassIconButton: UIButton {
+class GlassTextButton: UIButton {
 
     // MARK: - Types
 
-    /// 버튼 크기 사전 정의
-    enum Size {
-        case small   // 36×36, 아이콘 18pt
-        case medium  // 44×44, 아이콘 22pt
-        case large   // 56×56, 아이콘 28pt
+    /// 버튼 스타일
+    enum Style {
+        case plain      // Glass 배경 + 텍스트 (취소 버튼 등)
+        case filled     // Glass 배경 + 색상 오버레이 + 흰색 텍스트 (삭제 버튼 등)
+    }
 
-        /// 버튼 전체 크기 (정사각형)
-        var dimension: CGFloat {
-            switch self {
-            case .small: return 36
-            case .medium: return 44
-            case .large: return 56
-            }
-        }
+    // MARK: - Constants
 
-        /// SF Symbol point size
-        var iconPointSize: CGFloat {
-            switch self {
-            case .small: return 14
-            case .medium: return 22
-            case .large: return 22
-            }
-        }
-
-        /// 코너 반경 (완전한 원형: dimension / 2)
-        /// iOS 26 실측 기준: 44×44 버튼에 cornerRadius 22
-        var cornerRadius: CGFloat {
-            switch self {
-            case .small: return 18   // 36 / 2
-            case .medium: return 22  // 44 / 2, iOS 26 실측값
-            case .large: return 28   // 56 / 2
-            }
-        }
+    private enum Constants {
+        static let height: CGFloat = 44
+        static let cornerRadius: CGFloat = 22  // height / 2, pill shape
+        static let fontSize: CGFloat = 17
+        static let horizontalPadding: CGFloat = 32  // 좌우 패딩 (16pt × 2)
     }
 
     // MARK: - UI Components
@@ -74,13 +55,21 @@ final class GlassIconButton: UIButton {
         return view
     }()
 
-    /// 아이콘 이미지 뷰
-    private let iconImageView: UIImageView = {
-        let view = UIImageView()
-        view.contentMode = .center
-        view.tintColor = .white
+    /// 색상 오버레이 (filled 스타일용)
+    private lazy var colorOverlay: UIView = {
+        let view = UIView()
         view.isUserInteractionEnabled = false
+        view.alpha = 0.3
         return view
+    }()
+
+    /// 텍스트 라벨
+    private let textLabel: UILabel = {
+        let label = UILabel()
+        label.font = .systemFont(ofSize: Constants.fontSize, weight: .regular)
+        label.textAlignment = .center
+        label.isUserInteractionEnabled = false
+        return label
     }()
 
     // MARK: - Haptic Feedback
@@ -90,17 +79,17 @@ final class GlassIconButton: UIButton {
 
     // MARK: - Properties
 
-    /// 버튼 크기
-    private let buttonSize: Size
+    /// 버튼 스타일
+    private let style: Style
 
-    /// 아이콘 틴트 색상
-    private let iconTintColor: UIColor
+    /// 텍스트 색상
+    private let textTintColor: UIColor
 
     /// 현재 확장 상태
     private var isExpanded = false
 
-    /// 현재 아이콘 이름 (변경 추적용)
-    private var currentIconName: String
+    /// 현재 텍스트 (변경 추적용)
+    private var buttonTitle: String
 
     // MARK: - State Management
 
@@ -108,27 +97,21 @@ final class GlassIconButton: UIButton {
         didSet { updateStateStyles() }
     }
 
-    override var isHighlighted: Bool {
-        didSet {
-            // isHighlighted 변경 시 추가 처리 (기본 동작 외)
-        }
-    }
-
     // MARK: - Init
 
-    /// 아이콘 버튼 생성
+    /// 텍스트 버튼 생성
     /// - Parameters:
-    ///   - icon: SF Symbol 이름
-    ///   - size: 버튼 크기 (기본: .medium)
-    ///   - tintColor: 아이콘/배경 틴트 색상 (기본: .white)
-    init(icon: String, size: Size = .medium, tintColor: UIColor = .white) {
-        self.buttonSize = size
-        self.iconTintColor = tintColor
-        self.currentIconName = icon
+    ///   - title: 버튼 텍스트
+    ///   - style: 버튼 스타일 (기본: .plain)
+    ///   - tintColor: 텍스트 색상 (기본: .white, filled 스타일에서는 배경색으로도 사용)
+    init(title: String, style: Style = .plain, tintColor: UIColor = .white) {
+        self.style = style
+        self.textTintColor = tintColor
+        self.buttonTitle = title
 
         super.init(frame: .zero)
 
-        setupIcon(icon)
+        setupText(title)
         setupLayers()
 
         // 햅틱 준비
@@ -141,42 +124,51 @@ final class GlassIconButton: UIButton {
 
     // MARK: - Setup
 
-    /// 아이콘 설정
-    /// iOS 26 실측: 그림자 없음, weight light (regular보다 가늘게)
-    private func setupIcon(_ icon: String) {
-        let config = UIImage.SymbolConfiguration(
-            pointSize: buttonSize.iconPointSize,
-            weight: .light  // regular보다 한 단계 가늘게
-        )
-        iconImageView.image = UIImage(systemName: icon, withConfiguration: config)
-        iconImageView.tintColor = iconTintColor
-        // iOS 26 실측: 아이콘 그림자 없음
+    /// 텍스트 설정
+    private func setupText(_ title: String) {
+        textLabel.text = title
+
+        switch style {
+        case .plain:
+            // Glass 배경 + 컬러 텍스트
+            textLabel.textColor = textTintColor
+        case .filled:
+            // Glass 배경 + 색상 오버레이 + 흰색 텍스트
+            textLabel.textColor = .white
+            colorOverlay.backgroundColor = textTintColor
+        }
     }
 
     private func setupLayers() {
         // 그림자를 위해 버튼 자체의 clipsToBounds는 false여야 함
         self.layer.masksToBounds = false
 
-        // 뷰 계층에 추가 (Expanded가 위, Contracted가 아래)
-        // LiquidGlassEffect가 블러, 굴절, 테두리를 모두 처리
+        // 뷰 계층에 추가
         insertSubview(contractedView, at: 0)
         insertSubview(expandedView, aboveSubview: contractedView)
 
-        // 아이콘은 최상단
-        addSubview(iconImageView)
+        // filled 스타일이면 색상 오버레이 추가
+        if style == .filled {
+            insertSubview(colorOverlay, aboveSubview: expandedView)
+        }
+
+        // 텍스트는 최상단
+        addSubview(textLabel)
     }
 
     // MARK: - Layout
 
-    /// 고정 크기 반환
+    /// 고정 높이, 동적 너비 반환
     override var intrinsicContentSize: CGSize {
-        return CGSize(width: buttonSize.dimension, height: buttonSize.dimension)
+        let textWidth = textLabel.intrinsicContentSize.width
+        let totalWidth = textWidth + Constants.horizontalPadding
+        return CGSize(width: totalWidth, height: Constants.height)
     }
 
     override func layoutSubviews() {
         super.layoutSubviews()
 
-        let cornerRadius = buttonSize.cornerRadius
+        let cornerRadius = Constants.cornerRadius
 
         // 1. Contracted View 프레임 및 코너 업데이트
         contractedView.frame = bounds
@@ -190,40 +182,45 @@ final class GlassIconButton: UIButton {
         expandedView.layer.cornerCurve = .continuous
         expandedView.clipsToBounds = true
 
-        // 3. Update Shadow (버튼 레이어에 직접 적용)
+        // 3. 색상 오버레이 (filled 스타일)
+        if style == .filled {
+            colorOverlay.frame = bounds
+            colorOverlay.layer.cornerRadius = cornerRadius
+            colorOverlay.layer.cornerCurve = .continuous
+            colorOverlay.clipsToBounds = true
+        }
+
+        // 4. Update Shadow (버튼 레이어에 직접 적용)
         LiquidGlassStyle.applyShadow(to: self.layer, cornerRadius: cornerRadius)
 
-        // 4. 아이콘 중앙 배치
-        iconImageView.frame = bounds
+        // 5. 텍스트 중앙 배치
+        textLabel.frame = bounds
     }
 
     // MARK: - Public Methods
 
-    /// 아이콘 변경
+    /// 텍스트 변경
     /// - Parameters:
-    ///   - icon: 새 SF Symbol 이름
+    ///   - title: 새 텍스트
     ///   - animated: 애니메이션 적용 여부 (기본: false)
-    func setIcon(_ icon: String, animated: Bool = false) {
-        guard icon != currentIconName else { return }
-        currentIconName = icon
-
-        let config = UIImage.SymbolConfiguration(
-            pointSize: buttonSize.iconPointSize,
-            weight: .light  // setupIcon과 동일하게 light
-        )
-        let newImage = UIImage(systemName: icon, withConfiguration: config)
+    func setButtonTitle(_ title: String, animated: Bool = false) {
+        guard title != buttonTitle else { return }
+        buttonTitle = title
 
         if animated {
             // 크로스페이드 애니메이션
             UIView.transition(
-                with: iconImageView,
+                with: textLabel,
                 duration: 0.2,
                 options: .transitionCrossDissolve
             ) {
-                self.iconImageView.image = newImage
+                self.textLabel.text = title
+            } completion: { _ in
+                self.invalidateIntrinsicContentSize()
             }
         } else {
-            iconImageView.image = newImage
+            textLabel.text = title
+            invalidateIntrinsicContentSize()
         }
     }
 
@@ -248,7 +245,6 @@ final class GlassIconButton: UIButton {
     // MARK: - Dual State Animations
 
     /// 버튼 확장 (pressed → expanded)
-    /// LiquidGlassSwitch 패턴 참고: 커지면서 굴절 효과 활성화
     private func expandButton(animated: Bool) {
         guard !isExpanded else { return }
         isExpanded = true

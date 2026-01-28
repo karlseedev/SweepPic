@@ -173,7 +173,7 @@ class TabBarController: UITabBarController {
         // Photos 탭에 Select 버튼 추가
         if let photosVC = photosNav?.viewControllers.first as? GridViewController {
             let selectButton = UIBarButtonItem(
-                title: "Select",
+                title: "선택",
                 style: .plain,
                 target: self,
                 action: #selector(systemSelectButtonTapped)

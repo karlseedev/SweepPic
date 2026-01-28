@@ -90,24 +90,12 @@ final class FaceButtonOverlay: UIView {
     /// zoomScale, contentOffset, imageViewFrame 저장
     private var lastZoomInfo: (zoomScale: CGFloat, contentOffset: CGPoint, imageViewFrame: CGRect)?
 
-    /// 토글 버튼
-    private lazy var toggleButton: UIButton = {
-        let button = UIButton(type: .system)
+    /// 토글 버튼 - GlassCircleButton (Liquid Glass 스타일)
+    /// iOS 16~25 전용: 뷰어 우상단에 eye/eye.slash 아이콘 토글
+    private lazy var toggleButton: GlassCircleButton = {
+        let button = GlassCircleButton(icon: "eye.fill", size: .small, tintColor: .white)
         button.translatesAutoresizingMaskIntoConstraints = false
-
-        // SF Symbol 설정
-        let config = UIImage.SymbolConfiguration(pointSize: 20, weight: .medium)
-        let image = UIImage(systemName: "eye.fill", withConfiguration: config)
-        button.setImage(image, for: .normal)
-        button.tintColor = .white
-
-        // 배경 스타일
-        button.backgroundColor = UIColor.black.withAlphaComponent(0.5)
-        button.layer.cornerRadius = 18
-
-        // 탭 핸들러
         button.addTarget(self, action: #selector(toggleButtonTapped), for: .touchUpInside)
-
         return button
     }()
 
@@ -461,11 +449,10 @@ final class FaceButtonOverlay: UIView {
     }
 
     /// 토글 아이콘 업데이트
+    /// GlassCircleButton의 setIcon 메서드 사용
     private func updateToggleIcon() {
-        let config = UIImage.SymbolConfiguration(pointSize: 20, weight: .medium)
         let iconName = isOverlayHidden ? "eye.slash.fill" : "eye.fill"
-        let image = UIImage(systemName: iconName, withConfiguration: config)
-        toggleButton.setImage(image, for: .normal)
+        toggleButton.setIcon(iconName, animated: true)
     }
 
     // MARK: - Actions
@@ -534,9 +521,12 @@ final class FaceButtonOverlay: UIView {
 
 // MARK: - FaceButton
 
-/// 얼굴 위에 표시되는 + 버튼
+/// 얼굴 위에 표시되는 + 버튼 (GlassCircleButton 상속)
 /// 탭 시 해당 얼굴의 비교 화면으로 이동
-final class FaceButton: UIButton {
+/// - Liquid Glass 스타일 적용
+/// - Dual state 애니메이션 (GlassCircleButton 기본 동작)
+/// - 햅틱 피드백 (GlassCircleButton 기본 동작)
+final class FaceButton: GlassCircleButton {
 
     // MARK: - Properties
 
@@ -547,8 +537,8 @@ final class FaceButton: UIButton {
 
     init(face: CachedFace) {
         self.face = face
-        super.init(frame: .zero)
-        setupUI()
+        super.init(icon: "plus.circle.fill", size: .medium, tintColor: .white)
+        setupAccessibility()
     }
 
     required init?(coder: NSCoder) {
@@ -557,39 +547,9 @@ final class FaceButton: UIButton {
 
     // MARK: - Setup
 
-    private func setupUI() {
-        // SF Symbol + 아이콘
-        let config = UIImage.SymbolConfiguration(pointSize: 22, weight: .medium)
-        let image = UIImage(systemName: "plus.circle.fill", withConfiguration: config)
-        setImage(image, for: .normal)
-
-        // 스타일
-        tintColor = .white
-        backgroundColor = UIColor.black.withAlphaComponent(0.5)
-        layer.cornerRadius = 22
-
-        // 그림자
-        layer.shadowColor = UIColor.black.cgColor
-        layer.shadowOffset = CGSize(width: 0, height: 2)
-        layer.shadowRadius = 4
-        layer.shadowOpacity = 0.3
-
-        // 접근성
+    private func setupAccessibility() {
         isAccessibilityElement = true
         accessibilityLabel = "인물 \(face.personIndex) 비교"
         accessibilityHint = "탭하여 이 인물의 사진들을 비교합니다"
-    }
-
-    // MARK: - Touch Feedback
-
-    override var isHighlighted: Bool {
-        didSet {
-            UIView.animate(withDuration: 0.1) {
-                self.transform = self.isHighlighted
-                    ? CGAffineTransform(scaleX: 0.9, y: 0.9)
-                    : .identity
-                self.alpha = self.isHighlighted ? 0.7 : 1.0
-            }
-        }
     }
 }

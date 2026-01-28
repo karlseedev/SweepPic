@@ -37,7 +37,7 @@ extension TrashAlbumViewController {
     override func setupSelectionToolbar() -> [UIBarButtonItem] {
         // Restore 버튼
         let restoreItem = UIBarButtonItem(
-            title: "Restore",
+            title: "복구",
             style: .plain,
             target: self,
             action: #selector(trashRestoreSelectedTapped)
@@ -57,7 +57,7 @@ extension TrashAlbumViewController {
 
         // Delete 버튼
         let deleteItem = UIBarButtonItem(
-            title: "Delete",
+            title: "삭제",
             style: .plain,
             target: self,
             action: #selector(trashDeleteSelectedTapped)

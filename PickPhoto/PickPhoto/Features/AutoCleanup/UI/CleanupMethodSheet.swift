@@ -27,17 +27,10 @@ protocol CleanupMethodSheetDelegate: AnyObject {
     func cleanupMethodSheetDidCancel(_ sheet: CleanupMethodSheet)
 
     #if DEBUG
-    /// AestheticsScore 단독 테스트 선택됨 (DEBUG 전용)
-    /// - Parameters:
-    ///   - sheet: 시트
-    ///   - method: 정리 방식 (.fromLatest 또는 .continueFromLast)
+    /// 통합 로직 테스트 선택됨 (DEBUG 전용)
+    /// 경로1 (기존 로직 기반) + 경로2 (AestheticsScore 기반) 테스트
     @available(iOS 18.0, *)
-    func cleanupMethodSheet(_ sheet: CleanupMethodSheet, didSelectAestheticsOnlyMode method: CleanupMethod)
-
-    /// 비교 분석 테스트 선택됨 (DEBUG 전용)
-    /// 기존 로직 vs AestheticsScore 비교
-    @available(iOS 18.0, *)
-    func cleanupMethodSheetDidSelectCompareAnalysis(_ sheet: CleanupMethodSheet)
+    func cleanupMethodSheetDidSelectIntegratedTest(_ sheet: CleanupMethodSheet)
     #endif
 }
 
@@ -138,25 +131,16 @@ final class CleanupMethodSheet {
             self.loadYearsAndShowSelection(from: viewController)
         })
 
-        // DEBUG: AestheticsScore 단독 테스트 (iOS 18+)
+        // DEBUG: 통합 로직 테스트 (iOS 18+)
         #if DEBUG
         if #available(iOS 18.0, *) {
-            // AestheticsScore 단독 테스트 버튼
-            // 기존 로직(Laplacian, 노출 등)을 무시하고 AestheticsScore만으로 판정
+            // 통합 로직 테스트 버튼
+            // 경로1 (기존 로직 기반) + 경로2 (AestheticsScore 기반) 테스트
             alert.addAction(UIAlertAction(
-                title: "[DEBUG] AestheticsScore 단독",
+                title: "[DEBUG] 통합 로직 테스트",
                 style: .default
             ) { [self] _ in
-                self.delegate?.cleanupMethodSheet(self, didSelectAestheticsOnlyMode: .fromLatest)
-            })
-
-            // 비교 분석 테스트 버튼
-            // 기존 로직 vs AestheticsScore 동시 실행, 결과 비교
-            alert.addAction(UIAlertAction(
-                title: "[DEBUG] 비교 분석",
-                style: .default
-            ) { [self] _ in
-                self.delegate?.cleanupMethodSheetDidSelectCompareAnalysis(self)
+                self.delegate?.cleanupMethodSheetDidSelectIntegratedTest(self)
             })
         }
         #endif

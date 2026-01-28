@@ -169,7 +169,8 @@ protocol FaceComparisonTitleBarDelegate: AnyObject {
 
 /// 얼굴 비교 타이틀바 (iOS 16~25)
 ///
-/// 상단에 블러 배경 + 타이틀 + 순환 버튼을 표시합니다.
+/// 상단에 타이틀 + 닫기/순환 버튼을 표시합니다.
+/// 버튼은 GlassIconButton 사용 (Liquid Glass 스타일)
 final class FaceComparisonTitleBar: UIView {
 
     // MARK: - Properties
@@ -178,29 +179,22 @@ final class FaceComparisonTitleBar: UIView {
 
     // MARK: - UI Components
 
-    private lazy var blurView: UIVisualEffectView = {
-        let blur = UIBlurEffect(style: .systemThinMaterialDark)
-        let view = UIVisualEffectView(effect: blur)
-        view.translatesAutoresizingMaskIntoConstraints = false
-        return view
-    }()
-
+    /// 컨텐츠 영역
     private lazy var contentView: UIView = {
         let view = UIView()
         view.translatesAutoresizingMaskIntoConstraints = false
         return view
     }()
 
-    private lazy var closeButton: UIButton = {
-        var config = UIButton.Configuration.plain()
-        config.image = UIImage(systemName: "xmark")
-        config.baseForegroundColor = .white
-        let button = UIButton(configuration: config)
+    /// 닫기 버튼 - GlassIconButton (Liquid Glass 스타일)
+    private lazy var closeButton: GlassIconButton = {
+        let button = GlassIconButton(icon: "xmark", size: .medium, tintColor: .white)
         button.addTarget(self, action: #selector(closeButtonTapped), for: .touchUpInside)
         button.translatesAutoresizingMaskIntoConstraints = false
         return button
     }()
 
+    /// 타이틀 라벨
     private lazy var titleLabel: UILabel = {
         let label = UILabel()
         label.font = .systemFont(ofSize: 17, weight: .semibold)
@@ -210,16 +204,17 @@ final class FaceComparisonTitleBar: UIView {
         return label
     }()
 
-    private lazy var cycleButton: UIButton = {
-        var config = UIButton.Configuration.plain()
-        config.image = UIImage(systemName: "arrow.trianglehead.2.clockwise.rotate.90")
-        config.baseForegroundColor = .systemBlue
-        let button = UIButton(configuration: config)
+    /// 다음 인물 순환 버튼 - GlassIconButton (Liquid Glass 스타일)
+    private lazy var cycleButton: GlassIconButton = {
+        let button = GlassIconButton(
+            icon: "arrow.trianglehead.2.clockwise.rotate.90",
+            size: .medium,
+            tintColor: .white
+        )
         button.addTarget(self, action: #selector(cycleButtonTapped), for: .touchUpInside)
         button.translatesAutoresizingMaskIntoConstraints = false
         return button
     }()
-
 
     // MARK: - Initialization
 
@@ -235,31 +230,33 @@ final class FaceComparisonTitleBar: UIView {
     // MARK: - Setup
 
     private func setupUI() {
-        addSubview(blurView)
         addSubview(contentView)
         contentView.addSubview(closeButton)
         contentView.addSubview(titleLabel)
         contentView.addSubview(cycleButton)
 
         NSLayoutConstraint.activate([
-            blurView.topAnchor.constraint(equalTo: topAnchor),
-            blurView.leadingAnchor.constraint(equalTo: leadingAnchor),
-            blurView.trailingAnchor.constraint(equalTo: trailingAnchor),
-            blurView.bottomAnchor.constraint(equalTo: bottomAnchor),
-
+            // contentView: 하단 정렬, 좌우 16pt 패딩
             contentView.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 16),
             contentView.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -16),
             contentView.bottomAnchor.constraint(equalTo: bottomAnchor),
             contentView.heightAnchor.constraint(equalToConstant: 44),
 
+            // closeButton: 좌측 정렬, 44×44 (intrinsicContentSize)
             closeButton.leadingAnchor.constraint(equalTo: contentView.leadingAnchor),
             closeButton.centerYAnchor.constraint(equalTo: contentView.centerYAnchor),
+            closeButton.widthAnchor.constraint(equalToConstant: 44),
+            closeButton.heightAnchor.constraint(equalToConstant: 44),
 
+            // titleLabel: 중앙 정렬
             titleLabel.centerXAnchor.constraint(equalTo: contentView.centerXAnchor),
             titleLabel.centerYAnchor.constraint(equalTo: contentView.centerYAnchor),
 
+            // cycleButton: 우측 정렬, 44×44 (intrinsicContentSize)
             cycleButton.trailingAnchor.constraint(equalTo: contentView.trailingAnchor),
-            cycleButton.centerYAnchor.constraint(equalTo: contentView.centerYAnchor)
+            cycleButton.centerYAnchor.constraint(equalTo: contentView.centerYAnchor),
+            cycleButton.widthAnchor.constraint(equalToConstant: 44),
+            cycleButton.heightAnchor.constraint(equalToConstant: 44)
         ])
     }
 
@@ -270,9 +267,9 @@ final class FaceComparisonTitleBar: UIView {
     }
 
     /// 순환 버튼 활성화 상태 설정
+    /// GlassIconButton은 isEnabled 변경 시 자동으로 alpha 조정
     func setCycleButtonEnabled(_ isEnabled: Bool) {
         cycleButton.isEnabled = isEnabled
-        cycleButton.alpha = isEnabled ? 1.0 : 0.4
     }
 
     // MARK: - Actions
