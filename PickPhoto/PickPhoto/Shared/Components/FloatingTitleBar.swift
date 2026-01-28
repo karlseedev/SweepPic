@@ -9,6 +9,7 @@
 import UIKit
 import AppCore
 import BlurUIKit
+import LiquidGlassKit
 
 /// 플로팅 타이틀바 델리게이트
 /// Select 버튼, 뒤로가기 버튼 탭 이벤트 전달
@@ -122,16 +123,9 @@ final class FloatingTitleBar: UIView {
     }()
 
     /// 뒤로가기 버튼 (push된 화면에서 사용)
-    private lazy var backButton: UIButton = {
-        var config = UIButton.Configuration.plain()
-        config.image = UIImage(systemName: "chevron.left")
-        config.baseForegroundColor = .white
-        config.contentInsets = NSDirectionalEdgeInsets(top: 8, leading: 8, bottom: 8, trailing: 8)
-        let button = UIButton(configuration: config)
-        button.layer.shadowColor = UIColor.black.cgColor
-        button.layer.shadowOffset = CGSize(width: 0, height: 1)
-        button.layer.shadowOpacity = 0.3
-        button.layer.shadowRadius = 2
+    /// GlassIconButton 사용 - Liquid Glass 배경 + Dual state 애니메이션
+    private lazy var backButton: GlassIconButton = {
+        let button = GlassIconButton(icon: "chevron.left", size: .medium)
         button.addTarget(self, action: #selector(backButtonTapped), for: .touchUpInside)
         button.translatesAutoresizingMaskIntoConstraints = false
         button.isHidden = true // 기본 숨김

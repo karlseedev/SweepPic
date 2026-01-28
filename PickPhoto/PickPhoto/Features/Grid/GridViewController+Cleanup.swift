@@ -267,6 +267,15 @@ extension GridViewController: CleanupMethodSheetDelegate {
     func cleanupMethodSheetDidCancel(_ sheet: CleanupMethodSheet) {
         // 아무 동작 없음
     }
+
+    #if DEBUG
+    /// AestheticsScore 단독 테스트 선택됨 (DEBUG 전용)
+    /// 기존 로직(Laplacian, 노출 등)을 무시하고 AestheticsScore만으로 저품질 판정
+    @available(iOS 18.0, *)
+    func cleanupMethodSheet(_ sheet: CleanupMethodSheet, didSelectAestheticsOnlyMode method: CleanupMethod) {
+        startAestheticsOnlyTest(with: method)
+    }
+    #endif
 }
 
 // MARK: - CleanupProgressViewDelegate
@@ -278,3 +287,88 @@ extension GridViewController: CleanupProgressViewDelegate {
         view.hide()
     }
 }
+
+// MARK: - DEBUG: AestheticsScore 단독 테스트
+
+#if DEBUG
+extension GridViewController {
+
+    /// AestheticsScore 단독 테스트 시작 (DEBUG 전용)
+    ///
+    /// 기존 로직(Laplacian, 노출 등)을 무시하고
+    /// AestheticsScore < 0.2 만으로 저품질 판정
+    ///
+    /// - Parameter method: 정리 방식 (.fromLatest 또는 .continueFromLast)
+    @available(iOS 18.0, *)
+    func startAestheticsOnlyTest(with method: CleanupMethod) {
+        let tester = AestheticsOnlyTester.shared
+
+        // 이어서 테스트할 날짜 결정
+        let continueFrom: Date?
+        switch method {
+        case .continueFromLast:
+            continueFrom = tester.lastAssetDate
+        case .fromLatest:
+            tester.clearSession()
+            continueFrom = nil
+        default:
+            continueFrom = nil
+        }
+
+        // 진행 Alert 생성
+        let progressAlert = UIAlertController(
+            title: "AestheticsScore 단독 테스트",
+            message: "검색: 0장\n저품질: 0장",
+            preferredStyle: .alert
+        )
+
+        // 취소 버튼 없음 (일단 완료까지 대기)
+        present(progressAlert, animated: true)
+
+        // 테스트 실행
+        Task {
+            let result = await tester.runTest(continueFrom: continueFrom) { scanned, lowQuality in
+                // 진행 상황 업데이트 (메인 스레드)
+                Task { @MainActor in
+                    progressAlert.message = "검색: \(scanned)장\n저품질: \(lowQuality)장"
+                }
+            }
+
+            // 결과 표시 (메인 스레드)
+            await MainActor.run {
+                progressAlert.dismiss(animated: true) { [weak self] in
+                    self?.showAestheticsOnlyResult(result)
+                }
+            }
+        }
+    }
+
+    /// AestheticsScore 단독 테스트 결과 표시
+    @available(iOS 18.0, *)
+    private func showAestheticsOnlyResult(_ result: AestheticsOnlyResult) {
+        let message = """
+        검색: \(result.totalScanned)장
+        저품질: \(result.lowQualityCount)장
+
+        (임계값: AestheticsScore < 0.2)
+        """
+
+        let alert = UIAlertController(
+            title: "테스트 완료",
+            message: message,
+            preferredStyle: .alert
+        )
+
+        alert.addAction(UIAlertAction(title: "확인", style: .default))
+
+        // 저품질 사진이 있으면 휴지통 보기 버튼 추가
+        if result.lowQualityCount > 0 {
+            alert.addAction(UIAlertAction(title: "휴지통 보기", style: .default) { [weak self] _ in
+                self?.navigateToTrash()
+            })
+        }
+
+        present(alert, animated: true)
+    }
+}
+#endif

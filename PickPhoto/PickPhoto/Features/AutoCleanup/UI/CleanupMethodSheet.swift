@@ -25,6 +25,15 @@ protocol CleanupMethodSheetDelegate: AnyObject {
 
     /// 취소됨
     func cleanupMethodSheetDidCancel(_ sheet: CleanupMethodSheet)
+
+    #if DEBUG
+    /// AestheticsScore 단독 테스트 선택됨 (DEBUG 전용)
+    /// - Parameters:
+    ///   - sheet: 시트
+    ///   - method: 정리 방식 (.fromLatest 또는 .continueFromLast)
+    @available(iOS 18.0, *)
+    func cleanupMethodSheet(_ sheet: CleanupMethodSheet, didSelectAestheticsOnlyMode method: CleanupMethod)
+    #endif
 }
 
 // MARK: - CleanupMethodSheet
@@ -123,6 +132,20 @@ final class CleanupMethodSheet {
         ) { [self] _ in
             self.loadYearsAndShowSelection(from: viewController)
         })
+
+        // DEBUG: AestheticsScore 단독 테스트 (iOS 18+)
+        #if DEBUG
+        if #available(iOS 18.0, *) {
+            // AestheticsScore 단독 테스트 버튼
+            // 기존 로직(Laplacian, 노출 등)을 무시하고 AestheticsScore만으로 판정
+            alert.addAction(UIAlertAction(
+                title: "[DEBUG] AestheticsScore 단독",
+                style: .default
+            ) { [self] _ in
+                self.delegate?.cleanupMethodSheet(self, didSelectAestheticsOnlyMode: .fromLatest)
+            })
+        }
+        #endif
 
         // 취소
         alert.addAction(UIAlertAction(
