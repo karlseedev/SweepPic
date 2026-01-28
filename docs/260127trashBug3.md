@@ -1,5 +1,43 @@
 # sourceViewProvider 타이밍 의존성 제거 계획
 
+## ⚠️ 계획 취소 - 되돌림 (2026-01-28)
+
+### 되돌린 이유
+
+이 계획을 구현했으나, 조사 결과 **assetID 기반 변경이 불필요**함이 확인되어 되돌림.
+
+| ViewController | 기존 방식 | assetID 필요 여부 |
+|---|---|---|
+| GridViewController | `transitionCoordinator`로 reloadData 스킵 | ❌ 불필요 |
+| AlbumGridViewController | reloadData 자체 없음 | ❌ 불필요 |
+| TrashAlbumViewController | 타이밍 조절 코드로 해결됨 | ❌ 불필요 |
+
+### 분석 결과
+
+1. **GridViewController**: `viewWillAppear()`에서 `transitionCoordinator != nil`이면 `reloadData()` 호출 안 함. 뷰어 복귀 시 문제없음.
+
+2. **AlbumGridViewController**: `viewWillAppear()`에서 `reloadData()` 호출 자체가 없음. 문제없음.
+
+3. **TrashAlbumViewController**: 기존 타이밍 조절 코드(`isViewerOpen`, `pendingDataRefresh`)가 이미 문제를 해결함. assetID 기반은 이중 안전장치에 불과.
+
+### 결론
+
+- 기존 indexPath 기반 + 타이밍 조절이 **이미 잘 작동 중**
+- assetID 기반 변경은 **코드만 늘어나고 실질적 개선 없음**
+- 타이밍 조절 코드 유지, assetID 변경 취소
+
+### 실제 수정 사항
+
+대신 발견된 깜빡임 문제만 수정:
+- `viewWillAppear()`에서 뷰어 복귀 시 `loadTrashedAssets()` 스킵
+- 불필요한 `reloadData()` 방지로 상단 셀 깜빡임 해결
+
+---
+
+## (아래는 취소된 원래 계획)
+
+---
+
 ## 목표
 
 **sourceViewProvider의 타이밍 의존성을 제거하여 잘못된 셀 반환을 근본적으로 해결**
