@@ -142,7 +142,13 @@ final class TrashAlbumViewController: BaseGridViewController {
         trashStore.onStateChange { [weak self] _ in
             self?.loadTrashedAssets()
         }
-        loadTrashedAssets()
+
+        // 뷰어 복귀 시에는 loadTrashedAssets() 스킵 (불필요한 reloadData 방지)
+        // - 실제 데이터 변경 시에만 pendingDataRefresh가 true가 됨
+        // - applyPendingViewerReturn()에서 필요 시 갱신
+        if !isViewerOpen {
+            loadTrashedAssets()
+        }
 
         if useFloatingUI {
             // FloatingOverlay 상태 세팅 (공유 UI 사용)
@@ -522,8 +528,6 @@ final class TrashAlbumViewController: BaseGridViewController {
 
         // 뷰어 열림 상태 설정 (데이터 갱신 지연용)
         isViewerOpen = true
-
-        let selectedAssetID = asset.localIdentifier
 
         let coordinator = ViewerCoordinator(
             fetchResult: fetchResult,
