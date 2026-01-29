@@ -195,11 +195,22 @@ final class ZoomAnimator: NSObject, UIViewControllerAnimatedTransitioning {
             return
         }
 
-        container.addSubview(snapshotView)
-
-        // ⚠️ 5. Push 시 toView 숨기고 스냅샷만 보여줌
+        // ⚠️ 5. Push 시: 배경 뷰 추가 (스냅샷과 함께 fade in)
+        var backgroundView: UIView?
         if isPush {
+            let bg = UIView(frame: container.bounds)
+            bg.backgroundColor = .black
+            bg.alpha = 0
+            container.addSubview(bg)
+            backgroundView = bg
+
+            // 스냅샷은 배경 위에
+            container.addSubview(snapshotView)
+
+            // toView는 완전히 숨김 (completion에서 표시)
             toView.alpha = 0
+        } else {
+            container.addSubview(snapshotView)
         }
 
         Log.debug("ZoomAnimator", "Animating from \(startFrame) to \(endFrame)")
@@ -212,14 +223,19 @@ final class ZoomAnimator: NSObject, UIViewControllerAnimatedTransitioning {
             options: .curveEaseOut
         ) {
             snapshotView.frame = endFrame
-            // ⚠️ 6. Push 시 toView.alpha는 여기서 변경하지 않음!
-            if !self.isPush {
+
+            if self.isPush {
+                // Push: 배경 fade in (스냅샷 줌과 동시에)
+                backgroundView?.alpha = 1
+            } else {
+                // Pop: fromView fade out
                 fromView.alpha = 0
             }
         } completion: { _ in
-            // ⚠️ 7. Push 시 completion에서 toView 표시
+            // Push 시 toView 표시 및 배경 제거
             if self.isPush {
                 toView.alpha = 1
+                backgroundView?.removeFromSuperview()
             }
 
             snapshotView.removeFromSuperview()

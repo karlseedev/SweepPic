@@ -131,7 +131,7 @@ final class CompareAnalysisTester {
     private let path2Threshold: Float = 0.0
 
     /// 최대 검색 수
-    private let maxScanCount: Int = 2000
+    private let maxScanCount: Int = 3000
 
     // MARK: - Dependencies
 
