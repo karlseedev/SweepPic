@@ -288,10 +288,33 @@ override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
 
 ## 체크리스트
 
-- [ ] Phase 1: FaceComparisonTitleBar 그라데이션 추가
-- [ ] Phase 2: 하단바 그라데이션 스타일로 변경
-- [ ] Phase 3: PageViewController 레이아웃 변경
-- [ ] Phase 4: PersonPageViewController contentInset 적용
-- [ ] Phase 5: hitTest 조정
-- [ ] iOS 16~25 테스트
-- [ ] iOS 26+ 테스트
+- [x] Phase 1: FaceComparisonTitleBar 그라데이션 추가
+- [x] Phase 2: 하단바 그라데이션 스타일로 변경
+- [x] Phase 3: PageViewController 레이아웃 변경
+- [x] Phase 4: PersonPageViewController contentInset 적용
+- [x] Phase 5: hitTest 조정
+- [x] iOS 16~25 테스트
+- [x] iOS 26+ 테스트
+
+---
+
+## 구현 완료 (2026-01-29)
+
+### 관련 커밋
+
+| 커밋 | 내용 |
+|------|------|
+| `7edeaf6` | Unify face comparison UI with floating overlays (GPT 구현) |
+| `7829b4b` | fix(similar-ui): iOS 버전별 contentInset 계산 수정 |
+
+### 구현 중 발견된 이슈 및 수정
+
+1. **iOS 26+ bottomInset 중복 문제**
+   - `.automatic` 모드에서 시스템이 safeAreaBottom을 자동 추가
+   - contentInset에도 safeAreaBottom을 포함하면 중복 적용
+   - **수정**: iOS 26+에서 bottomInset에서 safeAreaBottom 제외
+
+2. **iOS 16~25 상단 여백 부족 문제**
+   - 버튼 하단과 그리드 첫 셀 상단이 같은 위치(106pt)
+   - gradientExtension(15pt)은 safeArea-버튼 사이 영역이지, 버튼-셀 사이 여백이 아님
+   - **수정**: topInset에 gradientExtension을 한번 더 추가 (`gradientExtension * 2`)
