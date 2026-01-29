@@ -20,41 +20,11 @@ final class ZoomTransitionController: NSObject {
     /// 목적지 제공자 (뷰어 VC)
     weak var destinationProvider: ZoomTransitionDestinationProviding?
 
-    /// Interactive 전환 컨트롤러 (Phase 3)
-    private(set) var interactionController: ZoomInteractionController?
+    /// Interactive 전환 컨트롤러 (Phase 3에서 구현)
+    var interactionController: UIPercentDrivenInteractiveTransition?
 
-    /// Interactive 전환 진행 중 여부 (ZoomInteractionController에서 관리)
-    var isInteractive: Bool {
-        interactionController?.isInteractive ?? false
-    }
-
-    // MARK: - Interaction Controller Setup
-
-    /// Interactive dismiss 설정
-    /// - Parameters:
-    ///   - viewController: 대상 VC (ViewerViewController)
-    ///   - imageView: 애니메이션 대상 이미지 뷰
-    ///   - backgroundView: 투명도 조절 대상 배경 뷰
-    func setupInteractiveTransition(
-        for viewController: UIViewController,
-        imageView: UIView?,
-        backgroundView: UIView?
-    ) {
-        let controller = ZoomInteractionController()
-        controller.attach(
-            to: viewController,
-            imageView: imageView,
-            backgroundView: backgroundView
-        )
-        interactionController = controller
-        Log.debug("ZoomTransition", "Interactive transition setup complete")
-    }
-
-    /// 이미지 뷰 업데이트 (페이지 전환 시)
-    /// - Parameter imageView: 새 이미지 뷰
-    func updateInteractionImageView(_ imageView: UIView?) {
-        interactionController?.updateImageView(imageView)
-    }
+    /// Interactive 전환 진행 중 여부
+    var isInteractive: Bool = false
 
     // MARK: - Init
 

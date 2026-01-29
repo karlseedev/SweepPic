@@ -40,6 +40,7 @@ public enum Log {
         "FaceButton": false,         // 얼굴 버튼 위치 (기존 debugButtonPosition)
         "ViewerPerf": false,         // 뷰어 성능 측정
         "Viewer:Hitch": true,        // 뷰어 스와이프 히치 측정
+        "Viewer:Hitch:Abs": true,    // 뷰어 히치 절대값 로그
         "Viewer:Swipe": true,        // 뷰어 스와이프 로그
         "Viewer:Scroll": true,       // 뷰어 스크롤 델리게이트 로그
 
@@ -105,6 +106,10 @@ public enum Log {
         "CleanupSessionStore": true, // 현재 작업 중 (ON)
         "AutoCleanup": false,
         "VideoFrameExtractor": false,
+        "TextDetect": true,          // Vision 텍스트 감지 디버그 (ON)
+        "QA-TextDetect": true,       // QualityAnalyzer 텍스트 감지 디버그 (ON)
+        "CompareAnalysis": true,     // 통합 로직 테스트 (ON)
+        "CompareCategoryStore": true,// 카테고리 저장소 (ON)
 
         // =============================================
         // ImagePipeline / 썸네일
@@ -158,8 +163,6 @@ public enum Log {
         "ButtonInspector": true,
         "LayerPropertyTest": false,
         "Debug": true,                   // 분석 버튼 로그
-        "CompareAnalysis": true,         // 비교 분석 테스터 로그
-        "CompareCategoryStore": true,    // 비교 카테고리 저장소 로그
         "AestheticsOnly": true,          // AestheticsScore 단독 테스터 로그
     ]
 

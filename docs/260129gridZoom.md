@@ -638,6 +638,88 @@ springDamping: 0.9
 ### 미구현 (Phase 3)
 - Interactive Dismiss: 아래 드래그로 닫기
 
+---
+
+## Phase 3 시도 실패 분석 (2026-01-29)
+
+### 시도한 구현
+- `UIPercentDrivenInteractiveTransition` 상속
+- `handlePanBegan`에서 `popViewController(animated: true)` 호출
+- `handlePanChanged`에서 `update(progress)` 호출
+- `handlePanEnded`에서 `finish()` 또는 `cancel()` 호출
+
+### 발생한 문제
+
+**로그 증거:**
+```
+[ZoomInteraction] Pan began - initialCenter: (195.0, 260.0)
+[ZoomTransition] Pop: using ZoomAnimator (interactive: true)
+[ZoomAnimator] Animating from ... to ...  ← 즉시 전체 애니메이션 시작!
+[ZoomInteraction] handlePan - state: 2    ← 이미 늦음
+```
+
+**현상:**
+- Pan began 시점에 `popViewController(animated: true)` 호출
+- `ZoomAnimator`가 **전체 애니메이션을 즉시 실행**
+- 드래그하는 동안 이미 애니메이션 완료됨
+- `update(progress)` 호출이 무시됨
+
+### 근본 원인
+
+`UIPercentDrivenInteractiveTransition`은 **CA 레이어 기반 애니메이션**을 가로채서 progress 제어함.
+`ZoomAnimator`는 **스냅샷 UIImageView**를 사용하는 커스텀 애니메이션.
+→ 두 가지가 **호환되지 않음**
+
+### 해결 방안: ZoomAnimator 우회
+
+**핵심 아이디어:**
+Interactive dismiss에서는 `popViewController` + `ZoomAnimator`를 사용하지 않고,
+Pan 제스처에서 **직접 transform 제어**
+
+**구현 방식:**
+```swift
+class ZoomInteractionController {
+    // Navigation transition을 사용하지 않음
+    // 직접 이미지 transform + 배경 alpha 제어
+
+    func handlePanChanged(translation: CGPoint) {
+        // 1. 이미지 스케일 + 위치 직접 변경
+        let scale = 1 - (1 - minScale) * progress
+        imageView.transform = CGAffineTransform.identity
+            .translatedBy(x: translation.x, y: translation.y)
+            .scaledBy(x: scale, y: scale)
+
+        // 2. 배경 투명도 직접 변경
+        backgroundView.alpha = 1 - progress
+    }
+
+    func handlePanEnded(shouldComplete: Bool) {
+        if shouldComplete {
+            // 줌 아웃 애니메이션 후 pop (animated: false)
+            animateToSourceFrame {
+                navigationController?.popViewController(animated: false)
+            }
+        } else {
+            // 원위치 복귀 애니메이션
+            animateToOriginalPosition()
+        }
+    }
+}
+```
+
+**장점:**
+- Navigation transition과 독립적으로 동작
+- progress에 따라 정확히 제어 가능
+- 기본 사진 앱과 동일한 UX
+
+### 다음 구현 시 핵심 체크리스트
+
+1. [ ] `popViewController(animated: true)` 사용하지 않기
+2. [ ] Pan 제스처에서 직접 imageView.transform 제어
+3. [ ] 완료 시 줌 아웃 애니메이션 후 `popViewController(animated: false)`
+4. [ ] 취소 시 원위치 복귀 애니메이션
+5. [ ] ZoomTransitionSourceProviding으로 소스 프레임 가져오기
+
 ### 커밋 이력
 ```
 a9c078f fix(transition): 배경 fade 애니메이션 개선 및 duration 조정

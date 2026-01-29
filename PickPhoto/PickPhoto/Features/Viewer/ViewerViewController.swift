@@ -167,19 +167,18 @@ final class ViewerViewController: UIViewController {
         return view
     }()
 
-    /// 닫기 애니메이션 중 여부
-    private var isDismissing = false
-
-    /// Interactive dismiss를 위한 레거시 Pan 제스처 (iOS 26+용)
-    /// - Note: iOS 16~25에서는 ZoomInteractionController 사용
-    private lazy var legacyDismissPanGesture: UIPanGestureRecognizer = {
-        let gesture = UIPanGestureRecognizer(target: self, action: #selector(handleLegacyDismissPan(_:)))
+    /// 아래 스와이프 닫기 팬 제스처
+    private lazy var dismissPanGesture: UIPanGestureRecognizer = {
+        let gesture = UIPanGestureRecognizer(target: self, action: #selector(handleDismissPan(_:)))
         gesture.delegate = self
         return gesture
     }()
 
-    /// 레거시 드래그 시작 위치 (iOS 26+용)
-    private var legacyDragStartY: CGFloat = 0
+    /// 닫기 애니메이션 중 여부
+    private var isDismissing = false
+
+    /// 드래그 시작 위치
+    private var dragStartY: CGFloat = 0
 
     /// 최초 표시 페이드 인 적용 여부 (시스템 전환 대신 사용)
     private var didPerformInitialFadeIn: Bool = false
@@ -282,9 +281,6 @@ final class ViewerViewController: UIViewController {
         if #available(iOS 26.0, *) {
             setupSystemUIIfNeeded()
         }
-
-        // iOS 16~25: Interactive dismiss 설정 (ZoomInteractionController)
-        setupInteractiveDismiss()
 
         // 초기 버튼 상태 설정 (현재 사진의 휴지통 상태에 따라)
         // iOS 26에서는 setupSystemUIIfNeeded() 이후에 호출해야 함
@@ -585,52 +581,8 @@ final class ViewerViewController: UIViewController {
 
     /// 제스처 설정
     private func setupGestures() {
-        // iOS 26+: 레거시 dismiss 제스처 (ZoomInteractionController 미사용)
-        // iOS 16~25: ZoomInteractionController가 dismiss 제스처 처리
-        if #available(iOS 26.0, *) {
-            view.addGestureRecognizer(legacyDismissPanGesture)
-        }
-        // Note: iOS 16~25의 dismiss 제스처는 setupInteractiveDismiss()에서 설정
-    }
-
-    /// Interactive dismiss 설정 (iOS 16~25)
-    /// - viewWillAppear에서 navigationController 확인 후 호출
-    private func setupInteractiveDismiss() {
-        // iOS 26+에서는 사용 안 함
-        if #available(iOS 26.0, *) { return }
-
-        // NavigationController → TabBarController 찾기
-        guard let navController = navigationController,
-              let tabBarController = navController.tabBarController as? TabBarController else {
-            Log.debug("ZoomInteraction", "setupInteractiveDismiss: TabBarController not found")
-            return
-        }
-
-        // 현재 페이지의 이미지 뷰 가져오기
-        let imageView = currentPageImageView
-
-        // ZoomTransitionController에 interactive dismiss 설정
-        tabBarController.zoomTransitionController.setupInteractiveTransition(
-            for: self,
-            imageView: imageView,
-            backgroundView: backgroundView
-        )
-
-        Log.debug("ZoomInteraction", "setupInteractiveDismiss: complete")
-    }
-
-    /// 페이지 전환 시 interactive dismiss의 imageView 업데이트
-    private func updateInteractiveDismissImageView() {
-        // iOS 26+에서는 사용 안 함
-        if #available(iOS 26.0, *) { return }
-
-        guard let navController = navigationController,
-              let tabBarController = navController.tabBarController as? TabBarController else {
-            return
-        }
-
-        let imageView = currentPageImageView
-        tabBarController.zoomTransitionController.updateInteractionImageView(imageView)
+        // 아래 스와이프로 닫기
+        view.addGestureRecognizer(dismissPanGesture)
     }
 
     /// 스와이프 삭제 핸들러 설정
@@ -809,28 +761,33 @@ final class ViewerViewController: UIViewController {
         )
     }
 
-    // MARK: - Legacy Dismiss Pan Gesture (iOS 26+)
+    // MARK: - Dismiss Pan Gesture (T031)
 
-    /// 아래 스와이프로 닫기 처리 (iOS 26+ 전용)
-    /// - Note: iOS 16~25에서는 ZoomInteractionController가 처리
-    @objc private func handleLegacyDismissPan(_ gesture: UIPanGestureRecognizer) {
+    /// 아래 스와이프로 닫기 처리
+    @objc private func handleDismissPan(_ gesture: UIPanGestureRecognizer) {
         let translation = gesture.translation(in: view)
         let velocity = gesture.velocity(in: view)
 
         switch gesture.state {
         case .began:
-            legacyDragStartY = translation.y
+            dragStartY = translation.y
 
         case .changed:
             // 아래로만 드래그 가능
-            let offsetY = max(0, translation.y - legacyDragStartY)
+            let offsetY = max(0, translation.y - dragStartY)
             let progress = min(offsetY / view.bounds.height, 1.0)
 
-            // iOS 26: 배경 투명도만 조절 (transform 생략으로 dismiss 충돌 방지)
-            backgroundView.alpha = 1.0 - progress * 0.5
+            if #available(iOS 26.0, *) {
+                // iOS 26: 배경 투명도만 조절 (transform 생략으로 dismiss 충돌 방지)
+                backgroundView.alpha = 1.0 - progress * 0.5
+            } else {
+                // iOS 16~25: 기존 드래그 애니메이션
+                backgroundView.alpha = 1.0 - progress * 0.5
+                pageViewController.view.transform = CGAffineTransform(translationX: 0, y: offsetY)
+            }
 
         case .ended, .cancelled:
-            let offsetY = translation.y - legacyDragStartY
+            let offsetY = translation.y - dragStartY
             let screenHeight = view.bounds.height
             let threshold = screenHeight * Self.dismissThreshold
 
@@ -838,9 +795,18 @@ final class ViewerViewController: UIViewController {
             if offsetY > threshold || velocity.y > 1000 {
                 dismissWithAnimation()
             } else {
-                // 원위치로 복귀 (배경 투명도만)
-                UIView.animate(withDuration: 0.2) {
-                    self.backgroundView.alpha = 1.0
+                // 원위치로 복귀
+                if #available(iOS 26.0, *) {
+                    // iOS 26: 배경 투명도만 복귀 (transform 미사용)
+                    UIView.animate(withDuration: 0.2) {
+                        self.backgroundView.alpha = 1.0
+                    }
+                } else {
+                    // iOS 16~25: 배경 + transform 복귀
+                    UIView.animate(withDuration: 0.2) {
+                        self.backgroundView.alpha = 1.0
+                        self.pageViewController.view.transform = .identity
+                    }
                 }
             }
 
@@ -1207,6 +1173,7 @@ extension ViewerViewController: UIPageViewControllerDelegate {
 
         // 성능 로그 출력
         Log.print("[Viewer:Hitch] \(swipeType): \(hitchResult.formatted())")
+        Log.print("[Viewer:Hitch:Abs] totalHitchMs=\(String(format: "%.1f", hitchResult.totalHitchTimeMs)), duration=\(String(format: "%.3f", hitchResult.durationSeconds))s")
         Log.print("[Viewer:Swipe] completed=\(completed), duration=\(String(format: "%.1f", swipeDuration))ms")
         #endif
 
@@ -1256,9 +1223,6 @@ extension ViewerViewController: UIPageViewControllerDelegate {
 
         // 스와이프 탐색 후 버튼 상태 업데이트 (다음 사진이 휴지통일 수 있음)
         updateToolbarForCurrentPhoto()
-
-        // Interactive dismiss의 imageView 업데이트 (iOS 16~25)
-        updateInteractiveDismissImageView()
     }
 
     /// LOD1 요청 스케줄링 (150ms 디바운스)
@@ -1291,7 +1255,7 @@ extension ViewerViewController: UIGestureRecognizerDelegate {
 
         // 아래 스와이프 닫기와 다른 제스처가 동시에 인식되지 않도록
         // (UIPageViewController의 좌우 스와이프와 충돌 방지)
-        if gestureRecognizer == legacyDismissPanGesture || otherGestureRecognizer == legacyDismissPanGesture {
+        if gestureRecognizer == dismissPanGesture || otherGestureRecognizer == dismissPanGesture {
             return false
         }
 
@@ -1299,10 +1263,10 @@ extension ViewerViewController: UIGestureRecognizerDelegate {
     }
 
     func gestureRecognizerShouldBegin(_ gestureRecognizer: UIGestureRecognizer) -> Bool {
-        guard gestureRecognizer == legacyDismissPanGesture else { return true }
+        guard gestureRecognizer == dismissPanGesture else { return true }
 
         // 아래 방향 스와이프만 허용
-        let velocity = legacyDismissPanGesture.velocity(in: view)
+        let velocity = dismissPanGesture.velocity(in: view)
         return velocity.y > 0 && abs(velocity.y) > abs(velocity.x)
     }
 }
