@@ -1295,10 +1295,45 @@ extension ViewerViewController: ZoomTransitionDestinationProviding {
     }
 
     /// 줌 애니메이션 목적지 프레임 (window 좌표계)
+    /// - Note: imageView.frame 대신 asset 비율로 계산하여 레이아웃 완료 전에도 정확한 프레임 반환
     var zoomDestinationFrame: CGRect? {
-        guard let imageView = currentPageImageView else { return nil }
-        // window 좌표계로 변환 (to: nil)
-        return imageView.superview?.convert(imageView.frame, to: nil)
+        // 현재 asset의 크기로 aspect fit 프레임 계산
+        guard let asset = coordinator.asset(at: currentIndex) else { return nil }
+
+        let assetSize = CGSize(width: asset.pixelWidth, height: asset.pixelHeight)
+        let containerSize = view.bounds.size
+
+        // aspect fit 계산
+        let aspectFitFrame = calculateAspectFitFrame(
+            assetSize: assetSize,
+            containerSize: containerSize
+        )
+
+        // window 좌표계로 변환
+        return view.convert(aspectFitFrame, to: nil)
+    }
+
+    /// aspect fit 프레임 계산
+    /// - Parameters:
+    ///   - assetSize: 미디어 원본 크기
+    ///   - containerSize: 컨테이너 크기
+    /// - Returns: 컨테이너 중앙에 aspect fit으로 배치된 프레임
+    private func calculateAspectFitFrame(assetSize: CGSize, containerSize: CGSize) -> CGRect {
+        guard assetSize.width > 0 && assetSize.height > 0 else {
+            return CGRect(origin: .zero, size: containerSize)
+        }
+
+        let widthRatio = containerSize.width / assetSize.width
+        let heightRatio = containerSize.height / assetSize.height
+        let ratio = min(widthRatio, heightRatio)
+
+        let fitWidth = assetSize.width * ratio
+        let fitHeight = assetSize.height * ratio
+
+        let x = (containerSize.width - fitWidth) / 2
+        let y = (containerSize.height - fitHeight) / 2
+
+        return CGRect(x: x, y: y, width: fitWidth, height: fitHeight)
     }
 
     /// 현재 페이지의 이미지 뷰 (Photo/Video 공통)
