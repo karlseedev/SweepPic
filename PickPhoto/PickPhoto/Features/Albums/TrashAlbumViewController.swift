@@ -171,10 +171,6 @@ final class TrashAlbumViewController: BaseGridViewController {
 
         // iOS 18+ Zoom Transition 안정화: fallback (transitionCoordinator 없을 때)
         applyPendingViewerReturn()
-
-        // 레이아웃 디버깅 로그
-        let firstCellY = collectionView.cellForItem(at: IndexPath(item: 0, section: 0))?.frame.origin.y ?? -1
-        Log.print("[GridLayout] TrashGrid - contentInset: \(collectionView.contentInset), contentOffset.y: \(collectionView.contentOffset.y), safeArea: \(view.safeAreaInsets), firstCellY: \(firstCellY)")
     }
 
     // MARK: - Setup

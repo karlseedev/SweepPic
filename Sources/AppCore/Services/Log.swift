@@ -59,7 +59,6 @@ public enum Log {
         "GridGestures": false,
         "GridScroll": false,
         "PinchZoom": false,
-        "GridLayout": true,          // 그리드 레이아웃 디버깅 (contentInset, contentOffset)
 
         // =============================================
         // Navigation / UI
