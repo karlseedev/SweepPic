@@ -312,6 +312,9 @@ extension GridViewController {
     /// 셀에 테두리 표시
     /// - Parameter cell: 테두리를 표시할 PhotoCell
     private func showBorder(on cell: PhotoCell) {
+        // 스크롤 중이면 테두리 표시하지 않음 (방어 코드)
+        guard !isScrolling else { return }
+
         // 기존 테두리 레이어 찾기
         if let existingLayer = cell.contentView.layer.sublayers?.first(where: { $0 is BorderAnimationLayer }) as? BorderAnimationLayer {
             existingLayer.frame = cell.contentView.bounds
