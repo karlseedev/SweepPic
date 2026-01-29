@@ -28,7 +28,8 @@ class TabBarController: UITabBarController {
     private var trashNav: UINavigationController?
 
     /// 줌 트랜지션 컨트롤러 (커스텀 줌 애니메이션)
-    private let zoomTransitionController = ZoomTransitionController()
+    /// - Note: ViewerViewController에서 interactive dismiss 설정 시 접근 필요
+    let zoomTransitionController = ZoomTransitionController()
 
     /// 커스텀 플로팅 UI 사용 여부
     /// iOS 26+에서는 false (시스템 기본 사용)
