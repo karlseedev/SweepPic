@@ -72,8 +72,10 @@ guard !Task.isCancelled else {
 
 #### 2-2. TaskGroup 내 child task 취소 (중요)
 
+**주의**: CancellationError를 throw하려면 `withThrowingTaskGroup` 사용 필수
+
 ```swift
-return await withTaskGroup(of: ...) { group in
+return try await withThrowingTaskGroup(of: (Int, VNFeaturePrintObservation?).self) { group in
     for (index, photo) in photos.enumerated() {
         group.addTask {
             // child task 내부에서도 취소 체크
@@ -82,8 +84,8 @@ return await withTaskGroup(of: ...) { group in
         }
     }
 
-    var results = ...
-    for await (index, fp) in group {
+    var results = [VNFeaturePrintObservation?](repeating: nil, count: photos.count)
+    for try await (index, fp) in group {
         // 취소 감지 시 나머지 작업 취소
         if Task.isCancelled {
             group.cancelAll()
@@ -138,17 +140,37 @@ private var activeRequestIDs: [UUID: PHImageRequestID] = [:]
 func loadImage(for asset: PHAsset) async throws -> CGImage {
     let requestUUID = UUID()
     var hasResumed = false  // 중복 resume 방지
+    var isTimeout = false   // timeout/cancelled 구분용
 
     return try await withTaskCancellationHandler {
         try await withCheckedThrowingContinuation { continuation in
+            // 타임아웃 로직 유지 (cancelImageRequest 후 콜백 미보장 대비)
+            let timeoutItem = DispatchWorkItem { [weak self] in
+                guard let self = self else { return }
+                self.lock.lock()
+                isTimeout = true
+                if let id = self.activeRequestIDs.removeValue(forKey: requestUUID) {
+                    self.imageManager.cancelImageRequest(id)
+                }
+                self.lock.unlock()
+            }
+            DispatchQueue.global().asyncAfter(deadline: .now() + timeout, execute: timeoutItem)
+
             let requestID = imageManager.requestImage(...) { [weak self] image, info in
+                timeoutItem.cancel()
                 guard let self = self else { return }
 
-                // 정상 완료 시 activeRequestIDs에서 제거
+                // degraded 이미지는 ID 유지하고 스킵 (high-quality 대기)
+                if let isDegraded = info?[PHImageResultIsDegradedKey] as? Bool, isDegraded {
+                    return  // ID 제거하지 않음!
+                }
+
+                // 최종 콜백에서만 ID 제거
                 self.lock.lock()
                 self.activeRequestIDs.removeValue(forKey: requestUUID)
                 let alreadyResumed = hasResumed
                 hasResumed = true
+                let wasTimeout = isTimeout
                 self.lock.unlock()
 
                 // 중복 resume 방지
@@ -156,7 +178,12 @@ func loadImage(for asset: PHAsset) async throws -> CGImage {
 
                 // 취소된 경우
                 if let cancelled = info?[PHImageCancelledKey] as? Bool, cancelled {
-                    continuation.resume(throwing: SimilarityImageLoadError.cancelled)
+                    // timeout과 cancelled 구분
+                    if wasTimeout {
+                        continuation.resume(throwing: SimilarityImageLoadError.timeout)
+                    } else {
+                        continuation.resume(throwing: SimilarityImageLoadError.cancelled)
+                    }
                     return
                 }
 
@@ -177,6 +204,8 @@ func loadImage(for asset: PHAsset) async throws -> CGImage {
         if let id = requestID {
             self.imageManager.cancelImageRequest(id)
         }
+        // 주의: 콜백이 보장되므로 여기서 resume하지 않음
+        // 만약 콜백 미보장 시 타임아웃이 fallback 역할
     }
 }
 ```
@@ -219,6 +248,7 @@ group.addTask {
 ### 1. 취소 동작 확인
 - 분석 중 스크롤 → `[SimilarPhoto] Cancelled` 로그 출력 확인
 - **캐시 미변경 확인**: 취소 후 `cache.setState` 로그 없어야 함
+- **알림 미발송 확인**: 취소 후 `postAnalysisComplete` 로그 없어야 함
 
 ### 2. 성능 확인
 - 분석 중 스크롤 시 버벅임 감소 확인

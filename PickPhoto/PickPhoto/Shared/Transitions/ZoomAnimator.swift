@@ -77,7 +77,7 @@ final class ZoomAnimator: NSObject, UIViewControllerAnimatedTransitioning {
         toView.layoutIfNeeded()
 
         // 현재 인덱스 가져오기
-        let currentIndex = destinationProvider?.currentIndex ?? 0
+        let currentIndex = destinationProvider?.currentOriginalIndex ?? 0
 
         // 소스/목적지 프레임 계산
         let sourceFrame = sourceProvider?.zoomSourceFrame(for: currentIndex)
@@ -156,7 +156,7 @@ final class ZoomAnimator: NSObject, UIViewControllerAnimatedTransitioning {
         endFrame: CGRect
     ) {
         let duration = transitionDuration(using: transitionContext)
-        let currentIndex = destinationProvider?.currentIndex ?? 0
+        let currentIndex = destinationProvider?.currentOriginalIndex ?? 0
 
         // 스냅샷 생성 (소스 뷰에서)
         let sourceView = isPush

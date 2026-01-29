@@ -31,8 +31,10 @@ protocol ZoomTransitionSourceProviding: AnyObject {
 /// 그리드 → 뷰어 전환 시 목적지 정보 제공
 protocol ZoomTransitionDestinationProviding: AnyObject {
 
-    /// 현재 표시 중인 인덱스
-    var currentIndex: Int { get }
+    /// 현재 표시 중인 원본 인덱스 (그리드 셀 찾기용)
+    /// - Note: 뷰어가 필터링된 인덱스를 사용하는 경우,
+    ///         coordinator를 통해 원본 인덱스로 변환하여 반환해야 함
+    var currentOriginalIndex: Int { get }
 
     /// 줌 애니메이션 대상 뷰 (이미지 뷰)
     var zoomDestinationView: UIView? { get }

@@ -39,6 +39,8 @@ public enum Log {
         "VideoControls": false,      // 비디오 컨트롤 (기존 debugControls)
         "FaceButton": false,         // 얼굴 버튼 위치 (기존 debugButtonPosition)
         "ViewerPerf": false,         // 뷰어 성능 측정
+        "Viewer:Hitch": true,        // 뷰어 스와이프 히치 측정
+        "Viewer:Swipe": true,        // 뷰어 스와이프 로그
 
         // =============================================
         // Grid 관련

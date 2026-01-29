@@ -1282,6 +1282,13 @@ extension ViewerViewController: BarsVisibilityControlling {
 
 extension ViewerViewController: ZoomTransitionDestinationProviding {
 
+    /// 현재 표시 중인 원본 인덱스 (ZoomTransitionSourceProviding에서 셀 찾기용)
+    /// - Note: ViewerViewController.currentIndex는 filteredIndex이므로
+    ///         coordinator를 통해 originalIndex로 변환
+    var currentOriginalIndex: Int {
+        coordinator.originalIndex(from: currentIndex) ?? currentIndex
+    }
+
     /// 줌 애니메이션 대상 뷰 (현재 페이지의 이미지 뷰)
     var zoomDestinationView: UIView? {
         currentPageImageView

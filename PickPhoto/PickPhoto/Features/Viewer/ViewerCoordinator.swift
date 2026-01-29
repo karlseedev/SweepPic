@@ -52,6 +52,11 @@ protocol ViewerCoordinatorProtocol: AnyObject {
 
     /// 삭제/복구 후 필터링 인덱스 갱신
     func refreshFilteredIndices()
+
+    /// 필터링된 인덱스를 원본 인덱스로 변환
+    /// - Parameter filteredIndex: 필터링된 인덱스
+    /// - Returns: 원본 인덱스 또는 nil
+    func originalIndex(from filteredIndex: Int) -> Int?
 }
 
 // MARK: - ViewerCoordinator
