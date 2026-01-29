@@ -397,6 +397,11 @@ override func viewWillDisappear(_ animated: Bool) {
 | 2026-01-29 | 초기 버벅임 원인 발견: 유사사진 분석과 GPU 경쟁 |
 | 2026-01-29 | ViewerViewController 성능 분석 추가 (Baseline: 434~489 ms/s Critical) |
 | 2026-01-29 | ViewerViewController 최적화 계획: UIScrollViewDelegate 방식 |
+| 2026-01-29 | ViewerViewController Test B/C 비교: Test C 효과 없음, Test B만 Good 달성 |
+| 2026-01-29 | Viewer Test C 원인 분석: blur 애니메이션과 측정 구간 겹침 가설 |
+| 2026-01-29 | 검증 1 완료: transitionDuration=0 → 애니메이션 원인 아님 |
+| 2026-01-29 | 검증 2 완료: 그리드 Good vs Viewer Critical, 새 가설 - UIVisualEffectView가 페이지 전환 시 문제 |
+| 2026-01-29 | 검증 3 완료: Viewer view 내 MTKView 0개, 개수 문제 아님 |
 
 ---
 
@@ -537,15 +542,204 @@ UIPageViewController 내부 UIScrollView의 delegate를 직접 사용하여 더 
 
 ### 테스트 결과
 
+#### Test C (blurReplacement) - scrollViewWillBeginDragging 적용
+
 ```
-(측정 예정)
+[Viewer:Hitch] L2 Steady: hitch: 403.6 ms/s [Critical], fps: 66.3, frames: 26, dropped: 19
+[Viewer:Hitch] L2 Steady: hitch: 417.9 ms/s [Critical], fps: 68.1, frames: 91, dropped: 62
 ```
 
-### 예상 효과
+#### Test B (isPaused) - scrollViewWillBeginDragging 적용
 
-| 항목 | 현재 (willTransitionTo) | 개선 (willBeginDragging) |
-|------|------------------------|-------------------------|
-| 최적화 시작 | 스크롤 중반 | 터치 직후 |
-| 초기 드랍 | 10~15프레임 | 0~2프레임 |
-| Hitch Ratio | ~450 ms/s | 목표 <100 ms/s |
+```
+[Viewer:Hitch] L1 First: hitch: 0.0 ms/s [Good], fps: 119.9, frames: 40, dropped: 0
+[Viewer:Hitch] L2 Steady: hitch: 0.0 ms/s [Good], fps: 117.5, frames: 44, dropped: 0
+```
+
+#### 결과 비교
+
+| 테스트 | Hitch Ratio | FPS | Dropped | 등급 |
+|--------|-------------|-----|---------|------|
+| Baseline (willTransitionTo) | 434~489 ms/s | 50~63 | 17~19 | Critical |
+| Test C (willBeginDragging) | 403~417 ms/s | 66~68 | 19~62 | Critical |
+| **Test B (willBeginDragging)** | **0.0 ms/s** | **117~120** | **0** | **Good** |
+
+### 분석
+
+#### 확인된 사실
+- **Test B (isPaused)**: 0.0 ms/s [Good] → Viewer 자체는 문제없음
+- **Test C (blurReplacement)**: 400+ ms/s [Critical] → blurReplacement가 Viewer에서 문제
+
+#### 그리드 vs Viewer 차이
+
+| 항목 | 그리드 | Viewer |
+|------|--------|--------|
+| Test C 결과 | 67 ms/s | 400+ ms/s |
+| 스크롤 특성 | 연속 스크롤 (길게 지속) | 페이징 (짧은 전환 ~350ms) |
+
+#### 원인 가설: 측정 구간과 애니메이션 타이밍 겹침
+
+```
+그리드: scrollDidBegin ─────────────────────────── scrollDidEnd
+           blur show(0.1s)  [긴 스크롤 구간]        blur hide
+           └─ 애니메이션 완료 후 대부분 측정 ─┘
+
+Viewer:        willTransitionTo ─── didFinishAnimating
+                   blur show(0.1s) [짧은 전환 ~350ms]
+                   └─ 애니메이션이 측정 구간과 겹침 ─┘
+```
+
+- **그리드**: 스크롤이 길어서 blur 애니메이션(0.1s)이 측정 전에 완료
+- **Viewer**: 전환이 짧아서 blur 애니메이션이 측정 중에 진행
+
+### 검증 계획
+
+| 순서 | 테스트 | 목적 |
+|------|--------|------|
+| 1 | transitionDuration = 0 | blur 애니메이션이 원인인지 확인 |
+| 2 | 절대값 로그 추가 | Hitch Ratio가 과대 평가인지 확인 |
+| 3 | Viewer 전용 2개만 처리 | MTKView 개수(14개 vs 2개) 영향 확인 |
+
+### 검증 결과
+
+#### 검증 1: transitionDuration = 0 (애니메이션 제거)
+
+```
+[Viewer:Hitch] L2 Steady: hitch: 558.6 ms/s [Critical], fps: 50.8, dropped: 62
+[Viewer:Hitch] L2 Steady: hitch: 450.9 ms/s [Critical], fps: 59.4, dropped: 20
+```
+
+| 설정 | Hitch Ratio | 결과 |
+|------|-------------|------|
+| transitionDuration = 0.1 | 400+ ms/s | Critical |
+| transitionDuration = 0 | 450~558 ms/s | Critical (오히려 악화) |
+
+**결론**: blur 애니메이션은 원인 아님
+
+#### 검증 2: 절대값 로그
+
+**그리드 결과:**
+```
+[Hitch] L1 First: hitch: 0.0 ms/s [Good], fps: 120.1, frames: 125, dropped: 0
+[Hitch] L2 Steady: hitch: 0.0 ms/s [Good], fps: 120.2, frames: 236, dropped: 0
+```
+
+**Viewer 결과:**
+```
+[Viewer:Hitch] L1 First: hitch: 482.5 ms/s [Critical], fps: 57.5, dropped: 23
+[Viewer:Hitch:Abs] totalHitchMs=193.1, duration=0.400s
+
+[Viewer:Hitch] L2 Steady: hitch: 428.9 ms/s [Critical], fps: 61.3, dropped: 20
+[Viewer:Hitch:Abs] totalHitchMs=167.9, duration=0.392s
+
+[Viewer:Hitch] L2 Steady: hitch: 572.4 ms/s [Critical], fps: 49.4, dropped: 77
+[Viewer:Hitch:Abs] totalHitchMs=660.0, duration=1.153s
+
+[Viewer:Hitch] L2 Steady: hitch: 368.9 ms/s [Critical], fps: 67.8, dropped: 12
+[Viewer:Hitch:Abs] totalHitchMs=108.9, duration=0.295s
+```
+
+**비교:**
+
+| 화면 | totalHitchMs | duration | Hitch Ratio | 등급 |
+|------|-------------|----------|-------------|------|
+| 그리드 | ~0 | ~1s | 0.0 ms/s | **Good** |
+| Viewer | 108~660ms | 0.3~1.2s | 368~572 ms/s | **Critical** |
+
+**결론:**
+- 그리드: Test C로 **Good** 달성 (이전 67ms/s에서 개선)
+- Viewer: 여전히 **Critical**
+- **같은 blurReplacement, 같은 14개 MTKView인데 결과가 다름**
+- Viewer totalHitchMs = 108~660ms → 비율 문제 아님, **실제 hitch 발생**
+
+**새로운 가설:**
+- UIVisualEffectView가 **Viewer 페이지 전환 시에만** 문제
+- 페이지 전환 시 배경이 급격히 변화 → blur 계산 비용 증가
+- 그리드는 배경이 서서히 변화 (셀 스크롤)
+
+#### 검증 3: Viewer 전용 2개만 처리
+
+**목적:** MTKView 개수(14개 vs 2개) 영향 확인
+
+**방법:** static 변수 우회하여 Viewer view 내 MTKView만 처리
+
+**결과:**
+```
+[LiquidGlass] Blur preload 완료: 14개  ← 그리드의 LiquidGlassOptimizer
+[Viewer:Blur] preload 완료: 0개        ← Viewer view 내 MTKView 없음
+```
+
+| 항목 | 값 |
+|------|-----|
+| Viewer view 내 MTKView | **0개** |
+| Hitch Ratio | 479~597 ms/s |
+| 등급 | Critical |
+
+**결론:**
+- Viewer 화면 자체에는 MTKView가 없음
+- 14개 MTKView는 모두 **window 레벨** (FloatingTabBar, FloatingTitleBar 등)
+- MTKView 개수 문제가 아님
+
+### 검증 종합 결론
+
+| 검증 | 가설 | 결과 |
+|------|------|------|
+| 1 | blur 애니메이션이 원인 | ❌ 아님 (제거해도 Critical) |
+| 2 | 비율 과대 평가 | ❌ 아님 (절대값도 큼) |
+| 3 | MTKView 개수 문제 | ❌ 아님 (Viewer에 0개) |
+| 4 | cornerRadius/clipsToBounds offscreen rendering | ⚠️ 부분 원인 (64% 개선, 여전히 Critical) |
+
+#### 검증 4: cornerRadius/clipsToBounds 제거
+
+**방법:** `createBlurView()`에서 cornerRadius, clipsToBounds 주석 처리
+
+```swift
+// 검증 4: cornerRadius/clipsToBounds 주석 처리
+// blurView.layer.cornerRadius = mtkView.layer.cornerRadius
+// blurView.layer.cornerCurve = mtkView.layer.cornerCurve
+// blurView.clipsToBounds = true
+```
+
+**결과:**
+```
+[Viewer:Hitch] L1 First: hitch: 158.1 ms/s [Critical], fps: 95.5, dropped: 7
+[Viewer:Hitch:Abs] totalHitchMs=58.0, duration=0.367s
+
+[Viewer:Hitch] L2 Steady: hitch: 228.1 ms/s [Critical], fps: 87.1, dropped: 11
+[Viewer:Hitch:Abs] totalHitchMs=91.7, duration=0.402s
+
+[Viewer:Hitch] L2 Steady: hitch: 448.6 ms/s [Critical], fps: 59.5, dropped: 19
+[Viewer:Hitch:Abs] totalHitchMs=158.3, duration=0.353s
+
+[Viewer:Hitch] L2 Steady: hitch: 472.1 ms/s [Critical], fps: 56.6, dropped: 20
+[Viewer:Hitch:Abs] totalHitchMs=166.7, duration=0.353s
+```
+
+**비교:**
+
+| 항목 | 기존 (cornerRadius 있음) | 검증 4 (제거) | 변화 |
+|------|-------------------------|---------------|------|
+| L1 First | 434~489 ms/s | **158 ms/s** | **64% 개선** |
+| L2 Steady | 400~489 ms/s | 228~472 ms/s | 부분 개선 |
+| 등급 | Critical | Critical | 여전히 Critical |
+
+**분석:**
+- cornerRadius/clipsToBounds = **부분 원인** (offscreen rendering 유발)
+- L1에서 64% 개선되었으나 여전히 Critical
+- L2에서 점점 악화 (228 → 448 → 472) → 누적 문제
+- 나머지 원인 = **UIVisualEffectView 실시간 blur 계산 비용** 추정
+
+**미해결 문제:**
+- 그리드: Test C로 **Good**
+- Viewer: Test C로 **Critical**
+- 같은 14개 MTKView, 같은 blurReplacement인데 결과가 다름
+- **UIVisualEffectView 실시간 blur + 급격한 배경 변화**가 원인으로 추정
+
+### 추가 검증 계획
+
+| 순서 | 검증 | 목적 | 구현 난이도 |
+|------|------|------|-------------|
+| 5 | `effect = nil` | blur 제거, 투명 뷰만 → 실시간 blur가 원인인지 확정 | 쉬움 |
+| 6 | 정적 CoreImage blur | 한 번만 blur 처리 → 실시간 계산이 원인인지 확정 | 중간 |
+| 7 | 배경 스냅샷 고정 | 배경 변화 없이 테스트 → 급격한 배경 변화가 원인인지 확정 | 복잡 |
 

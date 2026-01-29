@@ -598,14 +598,19 @@ final class ViewerViewController: UIViewController {
         if #available(iOS 26.0, *) {
             // iOS 26+: 기존 방식 (배경 투명도만 조절)
             view.addGestureRecognizer(legacyDismissPanGesture)
+            Log.debug("ZoomInteraction", "setupGestures: iOS 26+ - using legacy gesture")
         } else {
             // iOS 16~25: 줌 Interactive Dismiss
             // sourceProvider 및 gridView 연결 (Navigation stack에서 그리드 VC 찾기)
             if let (sourceProvider, gridVC) = findSourceProviderWithVC() {
                 zoomInteractionController.sourceProvider = sourceProvider
                 zoomInteractionController.gridView = gridVC.view
+                Log.debug("ZoomInteraction", "setupGestures: sourceProvider=\(type(of: sourceProvider)), gridView=\(gridVC.view)")
+            } else {
+                Log.debug("ZoomInteraction", "setupGestures: ⚠️ sourceProvider NOT FOUND")
             }
             view.addGestureRecognizer(zoomInteractionController.panGesture)
+            Log.debug("ZoomInteraction", "setupGestures: iOS 16~25 - using ZoomInteractionController")
         }
     }
 
