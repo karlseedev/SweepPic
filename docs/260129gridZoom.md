@@ -730,3 +730,91 @@ d398665 feat(transition): Pop 전 그리드 스크롤 추가 (기본 사진 앱 
 6261dac feat(transition): Phase 2 - iOS 18 네이티브 줌 제거
 d34059e feat(transition): Phase 1 구현
 ```
+
+---
+
+## Phase 3 두 번째 시도 실패 (2026-01-29)
+
+### 구현 내용
+
+**접근 방식**: UIPercentDrivenInteractiveTransition 대신 직접 transform 제어
+
+```swift
+// ZoomInteractionController.swift
+// - UIPercentDrivenInteractiveTransition 상속 안 함
+// - Pan 제스처에서 직접 imageView.transform + backgroundView.alpha 제어
+// - 완료 시: sourceFrame으로 줌 아웃 후 popViewController(animated: false)
+// - 취소 시: 스프링 애니메이션으로 원위치 복귀
+
+func handlePanChanged(translation: CGPoint) {
+    let scale = 1 - (1 - minScale) * progress
+    imageView.transform = CGAffineTransform.identity
+        .scaledBy(x: scale, y: scale)
+        .translatedBy(x: translation.x / scale, y: translation.y / scale)
+    backgroundView.alpha = 1 - progress
+}
+```
+
+**파일 구조**:
+- `ZoomInteractionController.swift` 신규 생성
+- `ViewerViewController.swift` 수정 (iOS 16~25에서 ZoomInteractionController 사용)
+
+### 발생한 문제
+
+**증상**:
+1. 아래로 드래그 시 이미지가 작아지면서 따라옴 ✅ (정상)
+2. 배경이 검은색으로 유지됨 ❌ (그리드가 안 보임)
+3. 손 떼면 좌측 최상단(0,0)으로 줌 ❌ (원래 셀 위치가 아님)
+
+**로그 분석**:
+```
+[ZoomInteraction] setupGridSnapshot: ⚠️ snapshot creation failed
+Snapshotting a view that is not in a visible window requires afterScreenUpdates:YES.
+
+[ZoomInteraction] animateToSourceFrame: originalIndex=3467
+[ZoomInteraction] animateToSourceFrame: sourceFrame=(0.0, 0.0, 128.0, 128.0)  ← 잘못된 좌표!
+```
+
+### 근본 원인
+
+**Navigation push 후 그리드 view가 window에서 제거됨**
+
+1. **스냅샷 실패**: `gridView.snapshotView(afterScreenUpdates: false)` 실패
+   - 그리드가 visible window에 없어서 스냅샷 생성 불가
+   - 배경이 투명해져도 그리드가 안 보임
+
+2. **좌표 변환 실패**: `sourceProvider.zoomSourceFrame(for:)` → `(0,0,128,128)`
+   - 그리드가 window에 없으므로 `convert(frame, to: nil)` 실패
+   - 결과: 좌상단으로 줌
+
+**ZoomAnimator와의 차이**:
+- ZoomAnimator: Navigation transition 중이므로 container에 fromView/toView 모두 존재
+- ZoomInteractionController: Navigation transition 없이 직접 제어하므로 그리드가 window에 없음
+
+### 시도한 수정
+
+**1차 수정: originalIndex 사용**
+```swift
+// currentIndex(filteredIndex) 대신 currentOriginalIndex 사용
+let originalIndex = pageProvider.currentOriginalIndex
+```
+→ 효과 없음 (좌표 변환 자체가 실패)
+
+**2차 수정: 그리드 view를 window에 직접 추가**
+```swift
+// 스냅샷 대신 실제 gridView를 window에 추가
+window.insertSubview(gridView, at: 0)
+```
+→ 효과 없음 (여전히 동일 증상)
+
+### 결론
+
+**직접 transform 제어 방식의 한계**:
+- Navigation transition을 사용하지 않으면 그리드가 window에 없음
+- 그리드가 window에 없으면 좌표 변환과 스냅샷 모두 실패
+- 기본 사진 앱처럼 동작하려면 Navigation container 활용 필수
+
+**가능한 대안**:
+1. Interactive Navigation transition 사용 (UIPercentDrivenInteractiveTransition + 커스텀 애니메이터)
+2. 커스텀 presentation으로 전환 (Navigation 대신)
+3. iOS 18+ preferredTransition = .zoom 유지 (iOS 16~17만 fallback)
