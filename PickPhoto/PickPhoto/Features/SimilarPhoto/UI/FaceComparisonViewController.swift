@@ -684,7 +684,8 @@ extension FaceComparisonViewController: FaceComparisonDataSource {
             bottomInset = Self.bottomBarHeight + Self.bottomBarGradientExtension
         } else {
             // .never이므로 safeArea 수동 추가
-            topInset = safeAreaTop + FaceComparisonTitleBar.contentHeight + FaceComparisonTitleBar.gradientExtension
+            // 버튼과 셀 사이 여백을 위해 gradientExtension을 한번 더 추가
+            topInset = safeAreaTop + FaceComparisonTitleBar.contentHeight + FaceComparisonTitleBar.gradientExtension * 2
             bottomInset = safeAreaBottom + Self.bottomBarHeight + Self.bottomBarGradientExtension
         }
 

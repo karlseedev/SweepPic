@@ -144,11 +144,6 @@ final class PersonPageViewController: UIViewController {
         if let inset = dataSource?.contentInsetForGrid {
             collectionView.contentInset = inset
             collectionView.scrollIndicatorInsets = inset
-
-            // DEBUG: inset 값 확인
-            Log.print("[PersonPage] contentInset.top: \(inset.top), bottom: \(inset.bottom)")
-            Log.print("[PersonPage] adjustedContentInset: \(collectionView.adjustedContentInset)")
-            Log.print("[PersonPage] view.safeAreaInsets: \(view.safeAreaInsets)")
         }
     }
 

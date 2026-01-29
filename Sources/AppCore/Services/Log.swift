@@ -78,7 +78,6 @@ public enum Log {
         "SimilarityAnalyzer": false,
         "FaceComparisonViewController": false,
         "PersonPageViewController": false,
-        "PersonPage": true,               // 디버그용 (임시)
         "ViewerViewController+SimilarPhoto": false,
         "GridViewController+SimilarPhoto": false,
 
