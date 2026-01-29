@@ -176,10 +176,12 @@ enum LiquidGlassOptimizer {
     // MARK: - Test C: Blur Replacement Mode (Preloaded)
 
     /// 사전 생성된 블러 오버레이 보이기 (스크롤 시작)
-    /// 방안 E: 애니메이션 완전 제거
+    /// 방안 D: 즉시 isPaused + 단일 애니메이션
     private static func showBlurOverlays() {
         var count = 0
+        var blurViewsToAnimate: [UIVisualEffectView] = []
 
+        // 1단계: 모든 MTKView 즉시 정지 (렌더링 즉시 중단)
         for (_, overlay) in preloadedOverlays {
             guard let mtkView = overlay.mtkView else { continue }
 
@@ -189,34 +191,54 @@ enum LiquidGlassOptimizer {
             // 프레임 동기화
             overlay.blurView.frame = mtkView.frame
 
-            // 즉시 전환 (애니메이션 없음)
+            // 즉시 isPaused 설정 (렌더링 즉시 중단)
             mtkView.isPaused = true
             mtkView.alpha = 0
-            overlay.blurView.alpha = blurAlpha
 
+            blurViewsToAnimate.append(overlay.blurView)
             count += 1
+        }
+
+        // 2단계: 블러 뷰만 단일 애니메이션으로 fade in
+        if !blurViewsToAnimate.isEmpty {
+            UIView.animate(withDuration: transitionDuration) {
+                for blurView in blurViewsToAnimate {
+                    blurView.alpha = blurAlpha
+                }
+            }
         }
 
         Log.print("[LiquidGlass] Blur show: \(count)개")
     }
 
     /// 사전 생성된 블러 오버레이 숨기기 (스크롤 종료)
-    /// 방안 E: 애니메이션 완전 제거
+    /// 방안 D: 즉시 isPaused 해제 + 단일 애니메이션
     private static func hideBlurOverlays() {
         var count = 0
+        var viewsToAnimate: [(mtkView: MTKView, blurView: UIVisualEffectView, originalAlpha: CGFloat)] = []
 
+        // 1단계: 모든 MTKView 즉시 재개
         for (_, overlay) in preloadedOverlays {
             guard let mtkView = overlay.mtkView else { continue }
 
             // 이미 숨긴 상태면 스킵
             guard overlay.blurView.alpha > 0 else { continue }
 
-            // 즉시 전환 (애니메이션 없음)
+            // 즉시 isPaused 해제 (렌더링 즉시 시작)
             mtkView.isPaused = false
-            mtkView.alpha = overlay.originalAlpha
-            overlay.blurView.alpha = 0
 
+            viewsToAnimate.append((mtkView, overlay.blurView, overlay.originalAlpha))
             count += 1
+        }
+
+        // 2단계: 단일 애니메이션으로 전환
+        if !viewsToAnimate.isEmpty {
+            UIView.animate(withDuration: transitionDuration) {
+                for item in viewsToAnimate {
+                    item.mtkView.alpha = item.originalAlpha
+                    item.blurView.alpha = 0
+                }
+            }
         }
 
         Log.print("[LiquidGlass] Blur hide: \(count)개")
