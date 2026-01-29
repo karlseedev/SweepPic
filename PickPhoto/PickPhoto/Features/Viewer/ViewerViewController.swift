@@ -167,24 +167,11 @@ final class ViewerViewController: UIViewController {
         return view
     }()
 
-    /// 아래 스와이프 닫기 팬 제스처 (iOS 26+ 전용, 기존 방식)
-    /// iOS 16~25에서는 zoomInteractionController 사용
-    private lazy var legacyDismissPanGesture: UIPanGestureRecognizer = {
+    /// 아래 스와이프 닫기 팬 제스처
+    private lazy var dismissPanGesture: UIPanGestureRecognizer = {
         let gesture = UIPanGestureRecognizer(target: self, action: #selector(handleDismissPan(_:)))
         gesture.delegate = self
         return gesture
-    }()
-
-    /// 줌 Interactive Dismiss 컨트롤러 (iOS 16~25)
-    /// Navigation transition 없이 직접 transform 제어
-    private lazy var zoomInteractionController: ZoomInteractionController = {
-        let controller = ZoomInteractionController()
-        controller.pageProvider = self
-        controller.backgroundView = backgroundView
-        controller.onDismissComplete = { [weak self] in
-            self?.navigationController?.popViewController(animated: false)
-        }
-        return controller
     }()
 
     /// 닫기 애니메이션 중 여부
@@ -595,36 +582,7 @@ final class ViewerViewController: UIViewController {
     /// 제스처 설정
     private func setupGestures() {
         // 아래 스와이프로 닫기
-        if #available(iOS 26.0, *) {
-            // iOS 26+: 기존 방식 (배경 투명도만 조절)
-            view.addGestureRecognizer(legacyDismissPanGesture)
-            Log.debug("ZoomInteraction", "setupGestures: iOS 26+ - using legacy gesture")
-        } else {
-            // iOS 16~25: 줌 Interactive Dismiss
-            // sourceProvider 및 gridView 연결 (Navigation stack에서 그리드 VC 찾기)
-            if let (sourceProvider, gridVC) = findSourceProviderWithVC() {
-                zoomInteractionController.sourceProvider = sourceProvider
-                zoomInteractionController.gridView = gridVC.view
-                Log.debug("ZoomInteraction", "setupGestures: sourceProvider=\(type(of: sourceProvider)), gridView=\(gridVC.view)")
-            } else {
-                Log.debug("ZoomInteraction", "setupGestures: ⚠️ sourceProvider NOT FOUND")
-            }
-            view.addGestureRecognizer(zoomInteractionController.panGesture)
-            Log.debug("ZoomInteraction", "setupGestures: iOS 16~25 - using ZoomInteractionController")
-        }
-    }
-
-    /// Navigation stack에서 ZoomTransitionSourceProviding 및 VC 찾기
-    private func findSourceProviderWithVC() -> (ZoomTransitionSourceProviding, UIViewController)? {
-        guard let navController = navigationController else { return nil }
-
-        // 뷰어 이전의 VC 중 ZoomTransitionSourceProviding 채택한 VC 찾기
-        for vc in navController.viewControllers.reversed() {
-            if vc !== self, let provider = vc as? ZoomTransitionSourceProviding {
-                return (provider, vc)
-            }
-        }
-        return nil
+        view.addGestureRecognizer(dismissPanGesture)
     }
 
     /// 스와이프 삭제 핸들러 설정
@@ -1297,8 +1255,7 @@ extension ViewerViewController: UIGestureRecognizerDelegate {
 
         // 아래 스와이프 닫기와 다른 제스처가 동시에 인식되지 않도록
         // (UIPageViewController의 좌우 스와이프와 충돌 방지)
-        // iOS 26+: legacyDismissPanGesture 사용
-        if gestureRecognizer == legacyDismissPanGesture || otherGestureRecognizer == legacyDismissPanGesture {
+        if gestureRecognizer == dismissPanGesture || otherGestureRecognizer == dismissPanGesture {
             return false
         }
 
@@ -1306,11 +1263,10 @@ extension ViewerViewController: UIGestureRecognizerDelegate {
     }
 
     func gestureRecognizerShouldBegin(_ gestureRecognizer: UIGestureRecognizer) -> Bool {
-        // iOS 26+: legacyDismissPanGesture 처리
-        guard gestureRecognizer == legacyDismissPanGesture else { return true }
+        guard gestureRecognizer == dismissPanGesture else { return true }
 
         // 아래 방향 스와이프만 허용
-        let velocity = legacyDismissPanGesture.velocity(in: view)
+        let velocity = dismissPanGesture.velocity(in: view)
         return velocity.y > 0 && abs(velocity.y) > abs(velocity.x)
     }
 }
@@ -1390,8 +1346,7 @@ extension ViewerViewController: ZoomTransitionDestinationProviding {
     }
 
     /// 현재 페이지의 이미지 뷰 (Photo/Video 공통)
-    /// ZoomInteractionPageProviding에서 접근하므로 internal
-    var currentPageImageView: UIView? {
+    private var currentPageImageView: UIView? {
         guard let currentVC = pageViewController.viewControllers?.first else { return nil }
 
         // PhotoPageViewController
@@ -1450,36 +1405,3 @@ extension ViewerViewController: UIScrollViewDelegate {
     }
 }
 #endif
-
-// MARK: - ZoomInteractionPageProviding
-
-extension ViewerViewController: ZoomInteractionPageProviding {
-
-    /// 현재 페이지의 줌 스케일
-    var currentPageZoomScale: CGFloat {
-        guard let currentVC = pageViewController.viewControllers?.first else { return 1.0 }
-
-        if let photoPage = currentVC as? PhotoPageViewController {
-            return photoPage.zoomScale
-        }
-        if let videoPage = currentVC as? VideoPageViewController {
-            return videoPage.zoomScale
-        }
-        return 1.0
-    }
-
-    /// 현재 페이지가 상단 가장자리인지
-    var currentPageIsAtTopEdge: Bool {
-        guard let currentVC = pageViewController.viewControllers?.first else { return true }
-
-        if let photoPage = currentVC as? PhotoPageViewController {
-            return photoPage.isAtTopEdge
-        }
-        if let videoPage = currentVC as? VideoPageViewController {
-            return videoPage.isAtTopEdge
-        }
-        return true
-    }
-
-    // currentOriginalIndex는 ZoomTransitionDestinationProviding extension에서 이미 정의됨
-}
