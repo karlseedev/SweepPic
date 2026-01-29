@@ -89,6 +89,7 @@ final class AlbumGridViewController: BaseGridViewController {
         if #available(iOS 26.0, *) {
             setContentScrollView(collectionView, for: .top)
             setContentScrollView(collectionView, for: .bottom)
+            collectionView.contentInsetAdjustmentBehavior = .automatic
         }
 
         Log.print("[AlbumGridViewController] Initialized with \(fetchResult.count) photos in '\(albumTitle)'")
