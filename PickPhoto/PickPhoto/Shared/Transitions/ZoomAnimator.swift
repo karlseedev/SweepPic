@@ -79,7 +79,14 @@ final class ZoomAnimator: NSObject, UIViewControllerAnimatedTransitioning {
         // 현재 인덱스 가져오기
         let currentIndex = destinationProvider?.currentOriginalIndex ?? 0
 
-        // 소스/목적지 프레임 계산
+        // ⚠️ Pop 시: 셀이 보이도록 먼저 스크롤 (기본 사진 앱 스타일)
+        if !isPush {
+            sourceProvider?.scrollToSourceCell(for: currentIndex)
+            // 스크롤 후 레이아웃 즉시 반영
+            toView.layoutIfNeeded()
+        }
+
+        // 소스/목적지 프레임 계산 (스크롤 후에 계산해야 정확함)
         let sourceFrame = sourceProvider?.zoomSourceFrame(for: currentIndex)
         let destinationFrame = destinationProvider?.zoomDestinationFrame
 

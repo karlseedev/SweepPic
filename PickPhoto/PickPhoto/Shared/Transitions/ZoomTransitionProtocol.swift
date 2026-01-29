@@ -23,6 +23,11 @@ protocol ZoomTransitionSourceProviding: AnyObject {
     /// - Returns: window 좌표계 기준 프레임 또는 nil
     /// - Important: 반드시 `convert(frame, to: nil)` 사용하여 window 좌표계로 반환
     func zoomSourceFrame(for index: Int) -> CGRect?
+
+    /// 해당 인덱스의 셀이 보이도록 스크롤 (Pop 전 호출)
+    /// - Parameter index: 스크롤할 인덱스
+    /// - Note: animated: false로 즉시 스크롤하여 줌 아웃 전에 셀이 보이도록 함
+    func scrollToSourceCell(for index: Int)
 }
 
 // MARK: - 목적지 제공 프로토콜

@@ -713,4 +713,19 @@ extension TrashAlbumViewController: ZoomTransitionSourceProviding {
         // window 좌표계로 변환 (to: nil)
         return sourceView.superview?.convert(sourceView.frame, to: nil)
     }
+
+    /// 해당 인덱스의 셀이 보이도록 스크롤 (Pop 전 호출)
+    /// - Parameter index: 스크롤할 원본 인덱스
+    func scrollToSourceCell(for index: Int) {
+        let cellIndexPath = IndexPath(item: index + paddingCellCount, section: 0)
+
+        // 이미 화면에 보이면 스크롤 불필요
+        if collectionView.indexPathsForVisibleItems.contains(cellIndexPath) {
+            return
+        }
+
+        // 즉시 스크롤 (animated: false)
+        collectionView.scrollToItem(at: cellIndexPath, at: .centeredVertically, animated: false)
+        collectionView.layoutIfNeeded()
+    }
 }
