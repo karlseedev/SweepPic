@@ -359,6 +359,11 @@ final class GridViewController: BaseGridViewController {
         // iOS 18+ Zoom Transition 안정화: fallback (transitionCoordinator 없을 때)
         applyPendingViewerReturn()
 
+        // [LiquidGlass 최적화] 블러 뷰 사전 생성
+        #if DEBUG
+        LiquidGlassOptimizer.preload(in: view.window)
+        #endif
+
         // 런치 아규먼트 로깅 (디버깅용)
         let args = ProcessInfo.processInfo.arguments
         Log.print("[LaunchArgs] count=\(args.count), contains --auto-scroll: \(args.contains("--auto-scroll"))")

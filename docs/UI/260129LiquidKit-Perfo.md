@@ -151,13 +151,28 @@ Memory Delta: +1.4MB
 Thermal State: nominal
 ```
 
+### Test C: blurReplacement (UIBlurEffect 대체)
+
+**개념**: 스크롤 중 LiquidGlass(MTKView)를 UIVisualEffectView로 대체
+
+```
+[Performance] Blur replacement: 13개
+[Hitch] L2 Steady: hitch: 74.6 ms/s [Critical], fps: 111.2 (avg 8.33ms), frames: 284, dropped: 23, longest: 23 (191.7ms)
+[Performance] Blur restored: 13개
+
+[Performance] Blur replacement: 13개
+[Hitch] L2 Steady: hitch: 60.3 ms/s [Critical], fps: 112.8 (avg 8.33ms), frames: 317, dropped: 20, longest: 20 (166.7ms)
+[Performance] Blur restored: 13개
+```
+
 ### 결과 비교
 
-| 테스트 | Hitch Ratio | FPS | Dropped | 개선율 |
-|--------|-------------|-----|---------|--------|
-| Baseline | 745.2 ms/s | 29.9 | 329 | - |
-| Test A | (예정) | | | |
-| **Test B** | **0.7 ms/s** | **119.9** | **0** | **99.9%** |
+| 테스트 | Hitch Ratio | FPS | Dropped | 개선율 | 등급 |
+|--------|-------------|-----|---------|--------|------|
+| Baseline | 745.2 ms/s | 29.9 | 329 | - | Critical |
+| Test A | (예정) | | | | |
+| **Test B** | **0.7 ms/s** | **119.9** | **0** | **99.9%** | **Good** |
+| Test C | 67.5 ms/s | 112.0 | 22 | 91% | Critical |
 
 ### Test B 분석
 
@@ -166,6 +181,27 @@ Thermal State: nominal
 - **Dropped**: 329 → 0 (**100% 개선**)
 - **MTKView 개수**: 13개 (FloatingTabBar, FloatingTitleBar, GlassButton 등)
 - **등급**: Critical → **Good**
+- **단점**: 스크롤 중 배경이 freeze (마지막 캡처된 이미지 유지)
+
+### Test C 분석
+
+- **Hitch**: 745.2 → 67.5 ms/s (**91% 개선**)
+- **FPS**: 29.9 → 112.0 (**3.7배 개선**)
+- **Dropped**: 329 → 22 (**93% 개선**)
+- **블러 스타일**: `UIBlurEffect(style: .systemThinMaterial)`
+- **등급**: Critical → **Critical** (여전히 10ms/s 초과)
+- **원인**: UIVisualEffectView 13개 생성/제거 오버헤드 + 0.15s 애니메이션
+- **시각적**: 자연스러운 블러 (배경이 실시간 반영됨)
+
+### Test B vs Test C 비교
+
+| 항목 | Test B (isPaused) | Test C (blurReplacement) |
+|------|-------------------|--------------------------|
+| 성능 | **Good (0.7ms/s)** | Critical (67.5ms/s) |
+| FPS | **119.9** | 112.0 |
+| 시각적 | 배경 freeze | 자연스러운 블러 |
+| 구현 복잡도 | 단순 | 복잡 |
+| 추천 | **성능 우선** | 시각적 품질 우선 |
 
 ---
 
@@ -191,7 +227,56 @@ Thermal State: nominal
 
 ---
 
-## 7. 구현 코드 (Test B)
+## 7. 구현 코드
+
+### Test C: blurReplacement 모드
+
+```swift
+enum LiquidGlassOptimizeMode {
+    case normal         // 최적화 없음 (baseline)
+    case paused         // isPaused = true (Test B)
+    case blurReplacement // UIBlurEffect로 대체 (Test C)
+}
+
+// 스크롤 시작 시
+static func replaceWithBlur(in rootView: UIView) {
+    let mtkViews = findAllMTKViews(in: rootView)
+    for mtkView in mtkViews {
+        // 블러 뷰 생성
+        let blurView = UIVisualEffectView(effect: UIBlurEffect(style: .systemThinMaterial))
+        blurView.frame = mtkView.frame
+        blurView.layer.cornerRadius = mtkView.layer.cornerRadius
+        blurView.clipsToBounds = true
+
+        // MTKView 아래에 삽입
+        mtkView.superview?.insertSubview(blurView, belowSubview: mtkView)
+        blurView.alpha = 0
+        blurOverlays[ObjectIdentifier(mtkView)] = (blurView, mtkView.alpha)
+
+        // 애니메이션 전환
+        UIView.animate(withDuration: 0.15) {
+            mtkView.alpha = 0
+            blurView.alpha = 1
+        } completion: { _ in
+            mtkView.isPaused = true
+        }
+    }
+}
+
+// 스크롤 종료 시
+static func restoreFromBlur() {
+    for (identifier, overlay) in blurOverlays {
+        let blurView = overlay.blurView
+        // MTKView 복원 후 블러 뷰 제거
+        UIView.animate(withDuration: 0.15) { ... }
+    }
+    blurOverlays.removeAll()
+}
+```
+
+---
+
+## 8. 구현 코드 (Test B)
 
 ### LiquidGlassOptimizer.swift
 
@@ -289,3 +374,4 @@ LiquidGlassOptimizer.resumeAllMTKViews(in: self.view.window)
 |------|------|
 | 2026-01-29 | 문서 생성, Baseline 측정 완료 |
 | 2026-01-29 | Test B 구현 및 측정 완료 (99.9% 개선, 120fps 달성) |
+| 2026-01-29 | Test C (blurReplacement) 구현 및 측정 - 91% 개선, 여전히 Critical |
