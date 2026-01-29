@@ -395,6 +395,8 @@ override func viewWillDisappear(_ animated: Bool) {
 | 2026-01-29 | viewWillDisappear 안전 복구 로직 추가 (유리 고정 버그 방지) |
 | 2026-01-29 | Test C 개선 - Preload + 방안 D/E 테스트 |
 | 2026-01-29 | 초기 버벅임 원인 발견: 유사사진 분석과 GPU 경쟁 |
+| 2026-01-29 | ViewerViewController 성능 분석 추가 (Baseline: 434~489 ms/s Critical) |
+| 2026-01-29 | ViewerViewController 최적화 계획: UIScrollViewDelegate 방식 |
 
 ---
 
@@ -470,4 +472,80 @@ let blurEffect = UIBlurEffect(style: .systemThinMaterial)
 **커밋 포인트**:
 - `4b097ef` - 방안 E (애니메이션 완전 제거)
 - `823aab9` - 방안 D (즉시 isPaused + 단일 애니메이션)
+
+---
+
+## 11. ViewerViewController 최적화
+
+### 문제 상황
+
+ViewerViewController (사진 뷰어)에서 좌우 스와이프 시 심각한 성능 저하 발생.
+
+### Baseline 측정 (willTransitionTo 시점 최적화)
+
+```
+[LiquidGlass] Blur show: 14개
+[Viewer:Hitch] L1 First: hitch: 434.3 ms/s [Critical], fps: 63.0, frames: 22, dropped: 17
+[Viewer:Swipe] completed=true, duration=349.4ms
+
+[LiquidGlass] Blur show: 14개
+[Viewer:Hitch] L2 Steady: hitch: 489.3 ms/s [Critical], fps: 50.6, frames: 16, dropped: 19
+[Viewer:Swipe] completed=true, duration=316.3ms
+```
+
+| 항목 | L1 First | L2 Steady |
+|------|----------|-----------|
+| Hitch Ratio | 434.3 ms/s | 489.3 ms/s |
+| 등급 | Critical | Critical |
+| FPS | 63.0 | 50.6 |
+| Dropped | 17 | 19 |
+
+### 원인 분석
+
+`willTransitionTo`는 스크롤이 **이미 진행된 후** 호출됨:
+
+```
+사용자 터치 시작
+    ↓
+[scrollViewWillBeginDragging] ← 여기서 최적화해야 빠름 ✅
+    ↓
+    ... 스크롤 진행 중 (프레임 렌더링) ...
+    ↓
+[willTransitionTo] ← 현재 여기서 최적화 (이미 늦음) ❌
+    ↓
+    ... 계속 스크롤 ...
+```
+
+- 초기 10~15프레임이 MTKView 부하로 드랍
+- 최적화 적용 전 프레임들이 버벅임
+
+### 개선 방안: UIScrollViewDelegate 사용
+
+UIPageViewController 내부 UIScrollView의 delegate를 직접 사용하여 더 빠른 시점에 최적화 적용.
+
+**구현 내용:**
+
+| 메서드 | 시점 | 동작 |
+|--------|------|------|
+| `viewDidAppear` | 화면 표시 후 | `preload()` - 블러 뷰 사전 생성 |
+| `scrollViewWillBeginDragging` | 터치 직후 | `optimize()` - MTKView 정지 |
+| `scrollViewDidEndDecelerating` | 스크롤 완료 | `restore()` - MTKView 재개 |
+| `scrollViewDidEndDragging(willDecelerate: false)` | 드래그만 종료 | `restore()` |
+
+**수정 파일:**
+- `ViewerViewController.swift` - UIScrollViewDelegate 구현
+
+### 테스트 결과
+
+```
+(측정 예정)
+```
+
+### 예상 효과
+
+| 항목 | 현재 (willTransitionTo) | 개선 (willBeginDragging) |
+|------|------------------------|-------------------------|
+| 최적화 시작 | 스크롤 중반 | 터치 직후 |
+| 초기 드랍 | 10~15프레임 | 0~2프레임 |
+| Hitch Ratio | ~450 ms/s | 목표 <100 ms/s |
 

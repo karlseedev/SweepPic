@@ -41,6 +41,7 @@ public enum Log {
         "ViewerPerf": false,         // 뷰어 성능 측정
         "Viewer:Hitch": true,        // 뷰어 스와이프 히치 측정
         "Viewer:Swipe": true,        // 뷰어 스와이프 로그
+        "Viewer:Scroll": true,       // 뷰어 스크롤 델리게이트 로그
 
         // =============================================
         // Grid 관련

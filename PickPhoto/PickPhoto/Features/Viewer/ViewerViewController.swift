@@ -264,6 +264,11 @@ final class ViewerViewController: UIViewController {
 
         // T026: 유사 사진 기능 설정
         setupSimilarPhotoFeature()
+
+        // [LiquidGlass 최적화] 페이지 스크롤뷰 델리게이트 설정
+        #if DEBUG
+        setupPageScrollViewDelegate()
+        #endif
     }
 
     override func viewWillAppear(_ animated: Bool) {
@@ -294,6 +299,11 @@ final class ViewerViewController: UIViewController {
 
         // T026: 유사 사진 오버레이 표시
         showSimilarPhotoOverlay()
+
+        // [LiquidGlass 최적화] 블러 뷰 사전 생성
+        #if DEBUG
+        LiquidGlassOptimizer.preload(in: view.window)
+        #endif
     }
 
     // MARK: - Rotation
@@ -1125,11 +1135,10 @@ extension ViewerViewController: UIPageViewControllerDelegate {
         lod1DebounceTimer?.invalidate()
         lod1DebounceTimer = nil
 
-        // [Debug] 성능 측정 시작
+        // [Debug] 성능 측정 시작 (optimize는 scrollViewWillBeginDragging에서 호출)
         #if DEBUG
         swipeStartTime = CACurrentMediaTime()
         hitchMonitor.start()
-        LiquidGlassOptimizer.optimize(in: view.window)
         #endif
 
         guard Log.categories["Viewer"] == true else { return }
@@ -1153,10 +1162,9 @@ extension ViewerViewController: UIPageViewControllerDelegate {
     func pageViewController(_ pageViewController: UIPageViewController, didFinishAnimating finished: Bool, previousViewControllers: [UIViewController], transitionCompleted completed: Bool) {
         isTransitioning = false
 
-        // [Debug] 성능 측정 종료
+        // [Debug] 성능 측정 종료 (restore는 scrollViewDidEndDecelerating에서 호출)
         #if DEBUG
         let hitchResult = hitchMonitor.stop()
-        LiquidGlassOptimizer.restore(in: view.window)
 
         // 스와이프 카운터 증가 (completed 여부 관계없이 측정)
         swipeCount += 1
@@ -1353,3 +1361,46 @@ extension ViewerViewController: ZoomTransitionDestinationProviding {
         return nil
     }
 }
+
+// MARK: - LiquidGlass 최적화 (UIScrollViewDelegate)
+
+#if DEBUG
+extension ViewerViewController: UIScrollViewDelegate {
+
+    /// UIPageViewController 내부 스크롤뷰의 delegate 설정
+    /// - Note: 더 빠른 시점(터치 직후)에 LiquidGlass 최적화 적용
+    func setupPageScrollViewDelegate() {
+        // UIPageViewController 내부의 UIScrollView 찾기
+        guard let scrollView = pageViewController.view.subviews.first(where: { $0 is UIScrollView }) as? UIScrollView else {
+            Log.print("[Viewer:Scroll] UIScrollView를 찾을 수 없음")
+            return
+        }
+
+        scrollView.delegate = self
+        Log.print("[Viewer:Scroll] UIScrollView delegate 설정 완료")
+    }
+
+    // MARK: - UIScrollViewDelegate
+
+    /// 드래그 시작 (터치 직후) - 최적화 시작
+    func scrollViewWillBeginDragging(_ scrollView: UIScrollView) {
+        LiquidGlassOptimizer.optimize(in: view.window)
+        Log.print("[Viewer:Scroll] willBeginDragging - optimize 시작")
+    }
+
+    /// 감속 완료 - 최적화 해제
+    func scrollViewDidEndDecelerating(_ scrollView: UIScrollView) {
+        LiquidGlassOptimizer.restore(in: view.window)
+        Log.print("[Viewer:Scroll] didEndDecelerating - restore 완료")
+    }
+
+    /// 드래그 종료 (감속 없이 멈춤) - 최적화 해제
+    func scrollViewDidEndDragging(_ scrollView: UIScrollView, willDecelerate decelerate: Bool) {
+        // 감속이 없으면 여기서 restore (감속 있으면 didEndDecelerating에서 처리)
+        if !decelerate {
+            LiquidGlassOptimizer.restore(in: view.window)
+            Log.print("[Viewer:Scroll] didEndDragging(willDecelerate=false) - restore 완료")
+        }
+    }
+}
+#endif
