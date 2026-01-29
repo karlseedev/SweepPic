@@ -581,3 +581,70 @@ UIView.animate(...) {
 3. **Pop 구현**: 뷰어 → 그리드 줌 아웃
 4. **Interactive 추가**: 아래 드래그 dismiss
 5. **나머지 화면 적용**: 휴지통, 앨범 등
+
+---
+
+## 두 번째 구현 완료 (2026-01-29)
+
+### 완료된 기능
+
+#### Phase 1-2: 기본 줌 트랜지션 ✅
+- **Push (그리드 → 뷰어)**: 썸네일에서 뷰어로 줌 인 애니메이션
+- **Pop (뷰어 → 그리드)**: 뷰어에서 썸네일로 줌 아웃 애니메이션
+- **Fallback**: 셀이 화면 밖이거나 이미지 미로드 시 crossfade
+
+#### 적용 범위
+- GridViewController (보관함) ✅
+- TrashAlbumViewController (휴지통) ✅
+- AlbumGridViewController (앨범 상세) ✅
+- AlbumsViewController (앨범 목록 → 앨범 그리드) - Phase 4 예정
+
+### 구현 세부사항
+
+#### 파일 구조
+```
+PickPhoto/PickPhoto/Shared/Transitions/
+├── ZoomTransitionProtocol.swift      # 소스/목적지 프로토콜
+├── ZoomTransitionController.swift    # UINavigationControllerDelegate
+└── ZoomAnimator.swift                # 애니메이션 구현
+```
+
+#### 핵심 해결책
+
+1. **filteredIndex → originalIndex 변환**
+   - ViewerViewController.currentIndex는 filteredIndex
+   - coordinator.originalIndex(from:)로 변환하여 셀 찾기
+
+2. **Pop 전 그리드 스크롤 (기본 사진 앱 스타일)**
+   - 셀이 화면 밖이어도 해당 위치로 스크롤 후 줌 아웃
+   - scrollToSourceCell(for:) 메서드 추가
+
+3. **destinationFrame을 asset 비율로 계산**
+   - imageView.frame 대신 PHAsset.pixelWidth/Height 기반
+   - 레이아웃 완료 전에도 정확한 프레임 반환
+   - 비디오 줌 시 화면 전체로 확대되는 문제 해결
+
+4. **배경 fade in 애니메이션**
+   - Push 시 스냅샷 줌 + 검은 배경 fade in 동시 진행
+   - 별도 curveEaseOut 애니메이션으로 부드러운 전환
+
+#### 애니메이션 파라미터 (최종)
+```swift
+pushDuration: 0.35       // 그리드 → 뷰어
+popDuration: 0.37        // 뷰어 → 그리드
+springDamping: 0.9
+```
+
+### 미구현 (Phase 3)
+- Interactive Dismiss: 아래 드래그로 닫기
+
+### 커밋 이력
+```
+a9c078f fix(transition): 배경 fade 애니메이션 개선 및 duration 조정
+8d3aa9a fix(transition): Push 시 배경 fade in 애니메이션 추가
+ae1d5eb fix(transition): destinationFrame을 asset 비율 기반으로 계산
+d398665 feat(transition): Pop 전 그리드 스크롤 추가 (기본 사진 앱 스타일)
+87a18d1 fix(transition): filteredIndex → originalIndex 변환 추가
+6261dac feat(transition): Phase 2 - iOS 18 네이티브 줌 제거
+d34059e feat(transition): Phase 1 구현
+```
