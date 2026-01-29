@@ -16,7 +16,7 @@ final class ZoomAnimator: NSObject, UIViewControllerAnimatedTransitioning {
     // MARK: - 애니메이션 파라미터
 
     /// 줌 인 (Push) 애니메이션 시간
-    private let pushDuration: TimeInterval = 0.25
+    private let pushDuration: TimeInterval = 0.35
 
     /// 줌 아웃 (Pop) 애니메이션 시간
     private let popDuration: TimeInterval = 0.37
@@ -215,6 +215,18 @@ final class ZoomAnimator: NSObject, UIViewControllerAnimatedTransitioning {
 
         Log.debug("ZoomAnimator", "Animating from \(startFrame) to \(endFrame)")
 
+        // 배경 fade 애니메이션 (별도 curve로 부드럽게)
+        if isPush, let bg = backgroundView {
+            UIView.animate(
+                withDuration: duration,
+                delay: 0,
+                options: .curveEaseOut
+            ) {
+                bg.alpha = 1
+            }
+        }
+
+        // 스냅샷 줌 애니메이션 (spring)
         UIView.animate(
             withDuration: duration,
             delay: 0,
@@ -224,10 +236,7 @@ final class ZoomAnimator: NSObject, UIViewControllerAnimatedTransitioning {
         ) {
             snapshotView.frame = endFrame
 
-            if self.isPush {
-                // Push: 배경 fade in (스냅샷 줌과 동시에)
-                backgroundView?.alpha = 1
-            } else {
+            if !self.isPush {
                 // Pop: fromView fade out
                 fromView.alpha = 0
             }
