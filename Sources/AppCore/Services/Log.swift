@@ -133,6 +133,13 @@ public enum Log {
         "AlbumService": false,
 
         // =============================================
+        // Performance / Scroll 측정
+        // =============================================
+        "Hitch": true,               // 스크롤 히치 측정 (HitchMonitor)
+        "Scroll": true,              // 스크롤 시작/종료 로그
+        "Performance": true,         // 성능 모니터 (PerformanceMonitor)
+
+        // =============================================
         // Debug / 기타
         // =============================================
         "Permission": false,

@@ -74,6 +74,11 @@ extension GridViewController {
         currentScrollStartTime = CACurrentMediaTime()
         hitchMonitor.start()
 
+        // [LiquidGlass 최적화] 스크롤 시작 시 MTKView 일시정지
+        #if DEBUG
+        LiquidGlassOptimizer.pauseAllMTKViews(in: view.window)
+        #endif
+
         // 첫 스크롤 시작 시간 기록
         if !hasCompletedFirstScroll && firstScrollStartTime == 0 {
             firstScrollStartTime = currentScrollStartTime
@@ -131,6 +136,11 @@ extension GridViewController {
 
             // [SimilarPhoto] 스크롤 종료 시 분석 시작 (0.3초 디바운싱)
             self.handleSimilarPhotoScrollEnd()
+
+            // [LiquidGlass 최적화] 스크롤 종료 시 MTKView 재개
+            #if DEBUG
+            LiquidGlassOptimizer.resumeAllMTKViews(in: self.view.window)
+            #endif
 
             // [--log-thumb] 스크롤 종료 후 visible 셀 해상도 검사 (2회: 0.2s, 0.6s)
             if FileLogger.logThumbEnabled {
