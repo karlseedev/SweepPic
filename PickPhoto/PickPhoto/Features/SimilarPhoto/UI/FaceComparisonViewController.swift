@@ -27,6 +27,7 @@ import UIKit
 import Photos
 import Vision
 import AppCore
+import BlurUIKit
 
 // MARK: - FaceComparisonDelegate
 
@@ -57,6 +58,9 @@ final class FaceComparisonViewController: UIViewController {
 
     /// 하단바 높이
     private static let bottomBarHeight: CGFloat = 56
+
+    /// 하단 그라데이션 확장 높이
+    private static let bottomBarGradientExtension: CGFloat = 15
 
     // MARK: - Properties
 
@@ -124,19 +128,41 @@ final class FaceComparisonViewController: UIViewController {
     }()
 
     /// 하단바 컨테이너
-    private lazy var bottomBarContainer: UIView = {
-        let view = UIView()
-        view.backgroundColor = UIColor.black.withAlphaComponent(0.8)
+    private lazy var bottomBarContainer: FaceComparisonBottomBar = {
+        let view = FaceComparisonBottomBar()
+        view.backgroundColor = .clear
+        view.insetsLayoutMarginsFromSafeArea = false
+        view.layoutMargins = UIEdgeInsets(top: Self.bottomBarGradientExtension, left: 0, bottom: 0, right: 0)
         view.translatesAutoresizingMaskIntoConstraints = false
         return view
     }()
 
-    /// 하단바 블러 효과
-    private lazy var bottomBarBlur: UIVisualEffectView = {
-        let blur = UIBlurEffect(style: .systemThinMaterialDark)
-        let view = UIVisualEffectView(effect: blur)
+    /// 하단바 progressive blur
+    private lazy var bottomProgressiveBlurView: VariableBlurView = {
+        let view = VariableBlurView()
         view.translatesAutoresizingMaskIntoConstraints = false
+        view.isUserInteractionEnabled = false
+        view.direction = .up
+        view.maximumBlurRadius = 1.5
+        view.dimmingTintColor = UIColor.black
+        view.dimmingAlpha = .interfaceStyle(lightModeAlpha: 0.45, darkModeAlpha: 0.3)
         return view
+    }()
+
+    /// 하단바 그라데이션 레이어
+    private lazy var bottomGradientLayer: CAGradientLayer = {
+        let layer = CAGradientLayer()
+        layer.colors = [
+            UIColor.clear.cgColor,
+            UIColor.black.withAlphaComponent(LiquidGlassStyle.maxDimAlpha * 0.1).cgColor,
+            UIColor.black.withAlphaComponent(LiquidGlassStyle.maxDimAlpha * 0.3).cgColor,
+            UIColor.black.withAlphaComponent(LiquidGlassStyle.maxDimAlpha * 0.7).cgColor,
+            UIColor.black.withAlphaComponent(LiquidGlassStyle.maxDimAlpha).cgColor
+        ]
+        layer.locations = [0, 0.25, 0.5, 0.75, 1.0]
+        layer.startPoint = CGPoint(x: 0.5, y: 0)
+        layer.endPoint = CGPoint(x: 0.5, y: 1)
+        return layer
     }()
 
     /// Cancel 버튼 - GlassTextButton (Liquid Glass 스타일)
@@ -214,18 +240,24 @@ final class FaceComparisonViewController: UIViewController {
         }
     }
 
+    override func viewDidLayoutSubviews() {
+        super.viewDidLayoutSubviews()
+        bottomGradientLayer.frame = bottomBarContainer.bounds
+    }
+
     // MARK: - Setup
 
     /// UI 구성
     private func setupUI() {
-        setupBottomBar()
+        setupPageViewController()
 
         if #available(iOS 26.0, *) {
-            setupPageViewControllerWithSystemNav()
+            // iOS 26+: 시스템 네비게이션바 사용
         } else {
             setupCustomTitleBar()
-            setupPageViewControllerWithCustomNav()
         }
+
+        setupBottomBar()
     }
 
     /// 커스텀 타이틀바 설정 (iOS 16~25)
@@ -239,38 +271,27 @@ final class FaceComparisonViewController: UIViewController {
             titleBar.topAnchor.constraint(equalTo: view.topAnchor),
             titleBar.leadingAnchor.constraint(equalTo: view.leadingAnchor),
             titleBar.trailingAnchor.constraint(equalTo: view.trailingAnchor),
-            titleBar.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 44)
+            titleBar.bottomAnchor.constraint(
+                equalTo: view.safeAreaLayoutGuide.topAnchor,
+                constant: FaceComparisonTitleBar.contentHeight + FaceComparisonTitleBar.gradientExtension
+            )
         ])
 
         customTitleBar = titleBar
         updateTitleBar()
     }
 
-    /// 페이지 뷰 컨트롤러 설정 (커스텀 네비게이션)
-    private func setupPageViewControllerWithCustomNav() {
+    /// 페이지 뷰 컨트롤러 설정 (전체 화면)
+    private func setupPageViewController() {
         addChild(pageViewController)
-        view.insertSubview(pageViewController.view, belowSubview: bottomBarContainer)
+        view.addSubview(pageViewController.view)
         pageViewController.didMove(toParent: self)
 
         NSLayoutConstraint.activate([
-            pageViewController.view.topAnchor.constraint(equalTo: customTitleBar!.bottomAnchor),
+            pageViewController.view.topAnchor.constraint(equalTo: view.topAnchor),
             pageViewController.view.leadingAnchor.constraint(equalTo: view.leadingAnchor),
             pageViewController.view.trailingAnchor.constraint(equalTo: view.trailingAnchor),
-            pageViewController.view.bottomAnchor.constraint(equalTo: bottomBarContainer.topAnchor)
-        ])
-    }
-
-    /// 페이지 뷰 컨트롤러 설정 (시스템 네비게이션)
-    private func setupPageViewControllerWithSystemNav() {
-        addChild(pageViewController)
-        view.insertSubview(pageViewController.view, belowSubview: bottomBarContainer)
-        pageViewController.didMove(toParent: self)
-
-        NSLayoutConstraint.activate([
-            pageViewController.view.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor),
-            pageViewController.view.leadingAnchor.constraint(equalTo: view.leadingAnchor),
-            pageViewController.view.trailingAnchor.constraint(equalTo: view.trailingAnchor),
-            pageViewController.view.bottomAnchor.constraint(equalTo: bottomBarContainer.topAnchor)
+            pageViewController.view.bottomAnchor.constraint(equalTo: view.bottomAnchor)
         ])
     }
 
@@ -304,7 +325,8 @@ final class FaceComparisonViewController: UIViewController {
     /// 하단바 설정
     private func setupBottomBar() {
         view.addSubview(bottomBarContainer)
-        bottomBarContainer.addSubview(bottomBarBlur)
+        bottomBarContainer.addSubview(bottomProgressiveBlurView)
+        bottomBarContainer.layer.addSublayer(bottomGradientLayer)
         bottomBarContainer.addSubview(cancelButton)
         bottomBarContainer.addSubview(selectionCountLabel)
         bottomBarContainer.addSubview(deleteButton)
@@ -313,21 +335,24 @@ final class FaceComparisonViewController: UIViewController {
             bottomBarContainer.leadingAnchor.constraint(equalTo: view.leadingAnchor),
             bottomBarContainer.trailingAnchor.constraint(equalTo: view.trailingAnchor),
             bottomBarContainer.bottomAnchor.constraint(equalTo: view.bottomAnchor),
-            bottomBarContainer.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor, constant: -Self.bottomBarHeight),
+            bottomBarContainer.topAnchor.constraint(
+                equalTo: view.safeAreaLayoutGuide.bottomAnchor,
+                constant: -(Self.bottomBarHeight + Self.bottomBarGradientExtension)
+            ),
 
-            bottomBarBlur.topAnchor.constraint(equalTo: bottomBarContainer.topAnchor),
-            bottomBarBlur.leadingAnchor.constraint(equalTo: bottomBarContainer.leadingAnchor),
-            bottomBarBlur.trailingAnchor.constraint(equalTo: bottomBarContainer.trailingAnchor),
-            bottomBarBlur.bottomAnchor.constraint(equalTo: bottomBarContainer.bottomAnchor),
+            bottomProgressiveBlurView.topAnchor.constraint(equalTo: bottomBarContainer.topAnchor),
+            bottomProgressiveBlurView.leadingAnchor.constraint(equalTo: bottomBarContainer.leadingAnchor),
+            bottomProgressiveBlurView.trailingAnchor.constraint(equalTo: bottomBarContainer.trailingAnchor),
+            bottomProgressiveBlurView.bottomAnchor.constraint(equalTo: bottomBarContainer.bottomAnchor),
 
             cancelButton.leadingAnchor.constraint(equalTo: bottomBarContainer.leadingAnchor, constant: 16),
-            cancelButton.topAnchor.constraint(equalTo: bottomBarContainer.topAnchor, constant: 8),
+            cancelButton.topAnchor.constraint(equalTo: bottomBarContainer.layoutMarginsGuide.topAnchor, constant: 8),
 
             selectionCountLabel.centerXAnchor.constraint(equalTo: bottomBarContainer.centerXAnchor),
-            selectionCountLabel.topAnchor.constraint(equalTo: bottomBarContainer.topAnchor, constant: 16),
+            selectionCountLabel.topAnchor.constraint(equalTo: bottomBarContainer.layoutMarginsGuide.topAnchor, constant: 16),
 
             deleteButton.trailingAnchor.constraint(equalTo: bottomBarContainer.trailingAnchor, constant: -16),
-            deleteButton.topAnchor.constraint(equalTo: bottomBarContainer.topAnchor, constant: 8)
+            deleteButton.topAnchor.constraint(equalTo: bottomBarContainer.layoutMarginsGuide.topAnchor, constant: 8)
         ])
     }
 
@@ -563,6 +588,16 @@ final class FaceComparisonViewController: UIViewController {
     }
 }
 
+// MARK: - FaceComparisonBottomBar
+
+/// 버튼 외 영역은 터치 통과시키는 하단바 컨테이너
+private final class FaceComparisonBottomBar: UIView {
+    override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+        let hitView = super.hitTest(point, with: event)
+        return hitView === self ? nil : hitView
+    }
+}
+
 // MARK: - FaceComparisonDataSource
 
 extension FaceComparisonViewController: FaceComparisonDataSource {
@@ -634,6 +669,22 @@ extension FaceComparisonViewController: FaceComparisonDataSource {
                 }
             }
         }
+    }
+
+    var contentInsetForGrid: UIEdgeInsets {
+        let safeAreaTop = view.safeAreaInsets.top
+        let safeAreaBottom = view.safeAreaInsets.bottom
+
+        let topInset: CGFloat
+        if #available(iOS 26.0, *) {
+            topInset = 0
+        } else {
+            topInset = safeAreaTop + FaceComparisonTitleBar.contentHeight + FaceComparisonTitleBar.gradientExtension
+        }
+
+        let bottomInset = safeAreaBottom + Self.bottomBarHeight + Self.bottomBarGradientExtension
+
+        return UIEdgeInsets(top: topInset, left: 0, bottom: bottomInset, right: 0)
     }
 }
 

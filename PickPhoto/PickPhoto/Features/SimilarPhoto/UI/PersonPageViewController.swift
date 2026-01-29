@@ -60,6 +60,9 @@ protocol FaceComparisonDataSource: AnyObject {
 
     /// 유효 인물 인덱스 목록
     var validPersonIndices: [Int] { get }
+
+    /// 그리드 contentInset (플로팅 UI 높이 반영)
+    var contentInsetForGrid: UIEdgeInsets { get }
 }
 
 // MARK: - PersonPageViewController
@@ -99,7 +102,6 @@ final class PersonPageViewController: UIViewController {
         cv.register(FaceComparisonCell.self, forCellWithReuseIdentifier: FaceComparisonCell.reuseIdentifier)
         cv.dataSource = self
         cv.delegate = self
-        cv.contentInsetAdjustmentBehavior = .automatic
         cv.translatesAutoresizingMaskIntoConstraints = false
         return cv
     }()
@@ -128,6 +130,21 @@ final class PersonPageViewController: UIViewController {
 
         view.backgroundColor = .black
         setupCollectionView()
+
+        if #available(iOS 26.0, *) {
+            collectionView.contentInsetAdjustmentBehavior = .automatic
+        } else {
+            collectionView.contentInsetAdjustmentBehavior = .never
+        }
+    }
+
+    override func viewDidLayoutSubviews() {
+        super.viewDidLayoutSubviews()
+
+        if let inset = dataSource?.contentInsetForGrid {
+            collectionView.contentInset = inset
+            collectionView.scrollIndicatorInsets = inset
+        }
     }
 
     // MARK: - Setup

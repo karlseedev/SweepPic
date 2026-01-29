@@ -15,6 +15,8 @@
 //
 
 import UIKit
+import AppCore
+import BlurUIKit
 
 // MARK: - FaceComparisonCell
 
@@ -175,9 +177,46 @@ final class FaceComparisonTitleBar: UIView {
 
     // MARK: - Properties
 
+    /// 타이틀바 콘텐츠 높이 (safe area 제외)
+    static let contentHeight: CGFloat = 44
+
+    /// 그라데이션 추가 높이 (딤/블러가 더 아래까지 내려오도록)
+    static let gradientExtension: CGFloat = 15
+
+    /// 최대 딤 알파 (가장 어두운 부분 45%)
+    private static let maxDimAlpha: CGFloat = LiquidGlassStyle.maxDimAlpha
+
     weak var delegate: FaceComparisonTitleBarDelegate?
 
     // MARK: - UI Components
+
+    /// Progressive blur 뷰 (BlurUIKit)
+    private lazy var progressiveBlurView: VariableBlurView = {
+        let view = VariableBlurView()
+        view.translatesAutoresizingMaskIntoConstraints = false
+        view.isUserInteractionEnabled = false
+        view.direction = .down
+        view.maximumBlurRadius = 1.5
+        view.dimmingTintColor = UIColor.black
+        view.dimmingAlpha = .interfaceStyle(lightModeAlpha: 0.45, darkModeAlpha: 0.3)
+        return view
+    }()
+
+    /// 그라데이션 딤 레이어 (상단 → 하단 페이드)
+    private lazy var gradientLayer: CAGradientLayer = {
+        let layer = CAGradientLayer()
+        layer.colors = [
+            UIColor.black.withAlphaComponent(Self.maxDimAlpha).cgColor,
+            UIColor.black.withAlphaComponent(Self.maxDimAlpha * 0.7).cgColor,
+            UIColor.black.withAlphaComponent(Self.maxDimAlpha * 0.3).cgColor,
+            UIColor.black.withAlphaComponent(Self.maxDimAlpha * 0.1).cgColor,
+            UIColor.clear.cgColor
+        ]
+        layer.locations = [0, 0.25, 0.5, 0.75, 1.0]
+        layer.startPoint = CGPoint(x: 0.5, y: 0)
+        layer.endPoint = CGPoint(x: 0.5, y: 1)
+        return layer
+    }()
 
     /// 컨텐츠 영역
     private lazy var contentView: UIView = {
@@ -230,17 +269,25 @@ final class FaceComparisonTitleBar: UIView {
     // MARK: - Setup
 
     private func setupUI() {
+        addSubview(progressiveBlurView)
+        layer.addSublayer(gradientLayer)
+
         addSubview(contentView)
         contentView.addSubview(closeButton)
         contentView.addSubview(titleLabel)
         contentView.addSubview(cycleButton)
 
         NSLayoutConstraint.activate([
+            progressiveBlurView.topAnchor.constraint(equalTo: topAnchor),
+            progressiveBlurView.leadingAnchor.constraint(equalTo: leadingAnchor),
+            progressiveBlurView.trailingAnchor.constraint(equalTo: trailingAnchor),
+            progressiveBlurView.bottomAnchor.constraint(equalTo: bottomAnchor),
+
             // contentView: 하단 정렬, 좌우 16pt 패딩
             contentView.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 16),
             contentView.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -16),
             contentView.bottomAnchor.constraint(equalTo: bottomAnchor),
-            contentView.heightAnchor.constraint(equalToConstant: 44),
+            contentView.heightAnchor.constraint(equalToConstant: Self.contentHeight),
 
             // closeButton: 좌측 정렬, 44×44 (intrinsicContentSize)
             closeButton.leadingAnchor.constraint(equalTo: contentView.leadingAnchor),
@@ -258,6 +305,13 @@ final class FaceComparisonTitleBar: UIView {
             cycleButton.widthAnchor.constraint(equalToConstant: 44),
             cycleButton.heightAnchor.constraint(equalToConstant: 44)
         ])
+    }
+
+    // MARK: - Layout
+
+    override func layoutSubviews() {
+        super.layoutSubviews()
+        gradientLayer.frame = bounds
     }
 
     // MARK: - Configuration
@@ -280,5 +334,22 @@ final class FaceComparisonTitleBar: UIView {
 
     @objc private func cycleButtonTapped() {
         delegate?.faceComparisonTitleBarDidTapCycle(self)
+    }
+
+    // MARK: - Hit Testing (터치 통과)
+
+    /// 버튼만 터치 반응, 나머지 영역은 터치 통과
+    override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+        let closePoint = convert(point, to: closeButton)
+        if closeButton.bounds.contains(closePoint) {
+            return closeButton
+        }
+
+        let cyclePoint = convert(point, to: cycleButton)
+        if cycleButton.bounds.contains(cyclePoint) {
+            return cycleButton
+        }
+
+        return nil
     }
 }
