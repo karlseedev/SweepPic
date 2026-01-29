@@ -158,9 +158,9 @@ final class FaceComparisonViewController: UIViewController {
         return label
     }()
 
-    /// Delete 버튼 - GlassTextButton (Liquid Glass 스타일, filled)
+    /// Delete 버튼 - GlassTextButton (Liquid Glass 스타일)
     private lazy var deleteButton: GlassTextButton = {
-        let button = GlassTextButton(title: "삭제", style: .filled, tintColor: .systemRed)
+        let button = GlassTextButton(title: "삭제", style: .plain, tintColor: .systemRed)
         button.addTarget(self, action: #selector(deleteButtonTapped), for: .touchUpInside)
         button.isEnabled = false
         button.translatesAutoresizingMaskIntoConstraints = false

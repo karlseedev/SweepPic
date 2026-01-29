@@ -43,8 +43,8 @@ final class FaceButtonOverlay: UIView {
 
     /// UI 관련 상수
     private enum Constants {
-        /// 버튼 크기 (지름)
-        static let buttonDiameter: CGFloat = 44
+        /// 버튼 크기 (지름) - FaceButton 커스텀 크기
+        static let buttonDiameter: CGFloat = 34
 
         /// 버튼 반지름
         static let buttonRadius: CGFloat = buttonDiameter / 2
@@ -92,8 +92,9 @@ final class FaceButtonOverlay: UIView {
 
     /// 토글 버튼 - GlassCircleButton (Liquid Glass 스타일)
     /// iOS 16~25 전용: 뷰어 우상단에 eye/eye.slash 아이콘 토글
+    /// 뒤로가기 버튼과 동일 크기 (44×44)
     private lazy var toggleButton: GlassCircleButton = {
-        let button = GlassCircleButton(icon: "eye.fill", size: .small, tintColor: .white)
+        let button = GlassCircleButton(icon: "eye.fill", size: .medium, tintColor: .white)
         button.translatesAutoresizingMaskIntoConstraints = false
         button.addTarget(self, action: #selector(toggleButtonTapped), for: .touchUpInside)
         return button
@@ -123,13 +124,11 @@ final class FaceButtonOverlay: UIView {
         if #available(iOS 26.0, *) {
             // 토글 버튼 생성하지 않음
         } else {
-            // iOS 16~25: 토글 버튼 추가 (화면 우측 상단, 뒤로가기 버튼과 같은 높이)
+            // iOS 16~25: 토글 버튼 추가 (화면 우측 상단, 뒤로가기 버튼과 같은 높이/여백)
             addSubview(toggleButton)
             NSLayoutConstraint.activate([
                 toggleButton.topAnchor.constraint(equalTo: safeAreaLayoutGuide.topAnchor, constant: 16),
-                toggleButton.trailingAnchor.constraint(equalTo: safeAreaLayoutGuide.trailingAnchor, constant: -16),
-                toggleButton.widthAnchor.constraint(equalToConstant: 36),
-                toggleButton.heightAnchor.constraint(equalToConstant: 36)
+                toggleButton.trailingAnchor.constraint(equalTo: safeAreaLayoutGuide.trailingAnchor, constant: -16)
             ])
 
             // 토글 버튼은 초기에는 숨김 (버튼이 있을 때만 표시)
@@ -526,6 +525,7 @@ final class FaceButtonOverlay: UIView {
 /// - Liquid Glass 스타일 적용
 /// - Dual state 애니메이션 (GlassCircleButton 기본 동작)
 /// - 햅틱 피드백 (GlassCircleButton 기본 동작)
+/// - 크기: 32×32 (.mini), 아이콘: 18pt .semibold
 final class FaceButton: GlassCircleButton {
 
     // MARK: - Properties
@@ -537,7 +537,7 @@ final class FaceButton: GlassCircleButton {
 
     init(face: CachedFace) {
         self.face = face
-        super.init(icon: "plus.circle.fill", size: .medium, tintColor: .white)
+        super.init(icon: "plus", size: .mini, tintColor: .white)
         setupAccessibility()
     }
 

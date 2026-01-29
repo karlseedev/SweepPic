@@ -121,8 +121,8 @@ final class ViewerViewController: UIViewController {
     /// 삭제 버튼 (일반 모드 - Liquid Glass 아이콘 버튼)
     /// iOS 26 스펙: 38×38, iconSize 28 (medium 44×44 사용)
     private lazy var deleteButton: GlassIconButton = {
-        // iOS 26 스펙: tintColor #FF4245 (빨간색)
-        let button = GlassIconButton(icon: "trash.fill", size: .medium, tintColor: .systemRed)
+        // iOS 26 시스템 .trash와 동일하게 outline 스타일 사용
+        let button = GlassIconButton(icon: "trash", size: .medium, tintColor: .systemRed)
         button.translatesAutoresizingMaskIntoConstraints = false
         button.addTarget(self, action: #selector(deleteButtonTapped), for: .touchUpInside)
         return button

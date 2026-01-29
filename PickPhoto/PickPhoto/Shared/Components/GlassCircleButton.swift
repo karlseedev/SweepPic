@@ -21,6 +21,7 @@ class GlassCircleButton: UIButton {
 
     /// 버튼 크기 사전 정의
     enum Size {
+        case mini    // 34×34, 아이콘 18pt, .semibold (FaceButton용)
         case small   // 36×36, 아이콘 14pt
         case medium  // 44×44, 아이콘 22pt
         case large   // 56×56, 아이콘 22pt
@@ -28,6 +29,7 @@ class GlassCircleButton: UIButton {
         /// 버튼 전체 크기 (정사각형)
         var dimension: CGFloat {
             switch self {
+            case .mini: return 34
             case .small: return 36
             case .medium: return 44
             case .large: return 56
@@ -37,15 +39,25 @@ class GlassCircleButton: UIButton {
         /// SF Symbol point size
         var iconPointSize: CGFloat {
             switch self {
+            case .mini: return 18
             case .small: return 14
             case .medium: return 22
             case .large: return 22
             }
         }
 
+        /// SF Symbol weight
+        var iconWeight: UIImage.SymbolWeight {
+            switch self {
+            case .mini: return .semibold  // FaceButton용: 굵게
+            default: return .light
+            }
+        }
+
         /// 코너 반경 (완전한 원형: dimension / 2)
         var cornerRadius: CGFloat {
             switch self {
+            case .mini: return 17    // 34 / 2
             case .small: return 18   // 36 / 2
             case .medium: return 22  // 44 / 2
             case .large: return 28   // 56 / 2
@@ -144,11 +156,11 @@ class GlassCircleButton: UIButton {
     // MARK: - Setup
 
     /// 아이콘 설정
-    /// weight: .light (GlassIconButton과 동일)
+    /// weight는 Size에 따라 결정 (.mini는 .semibold, 나머지는 .light)
     private func setupIcon(_ icon: String) {
         let config = UIImage.SymbolConfiguration(
             pointSize: buttonSize.iconPointSize,
-            weight: .light
+            weight: buttonSize.iconWeight
         )
         iconImageView.image = UIImage(systemName: icon, withConfiguration: config)
         iconImageView.tintColor = iconTintColor
@@ -210,7 +222,7 @@ class GlassCircleButton: UIButton {
 
         let config = UIImage.SymbolConfiguration(
             pointSize: buttonSize.iconPointSize,
-            weight: .light
+            weight: buttonSize.iconWeight
         )
         let newImage = UIImage(systemName: icon, withConfiguration: config)
 

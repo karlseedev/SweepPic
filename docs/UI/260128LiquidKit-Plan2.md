@@ -760,3 +760,59 @@ git revert HEAD
 | 2026-01-28 | GlassIconButton 최종 스펙: LiquidGlassEffect, iconSize 22pt, weight .light, tintColor .white |
 | 2026-01-28 | Phase 2c~6 구현 계획을 GlassIconButton 스펙 기준으로 통일 |
 | 2026-01-28 | GlassCircleButton, GlassTextButton 구현 스펙 상세화 |
+| 2026-01-29 | **Phase 7 완료 후 추가 수정** - 아래 참조 |
+
+---
+
+## 8. Phase 7 완료 후 추가 수정 (2026-01-29)
+
+### 8.1. FaceButton (+버튼) 스타일 변경
+
+| 항목 | 변경 전 | 변경 후 |
+|------|---------|---------|
+| **아이콘** | `plus.circle.fill` (흰 원 + 아이콘) | `plus` (아이콘만) |
+| **버튼 크기** | 44×44 (.medium) | **34×34** (.mini) |
+| **아이콘 크기** | 22pt | **18pt** |
+| **아이콘 굵기** | .light | **.semibold** (약 1.5배) |
+| **cornerRadius** | 22 | **17** |
+
+**GlassCircleButton에 `.mini` Size 추가:**
+```swift
+enum Size {
+    case mini    // 34×34, 아이콘 18pt, .semibold
+    case small   // 36×36, 아이콘 14pt, .light
+    case medium  // 44×44, 아이콘 22pt, .light
+    case large   // 56×56, 아이콘 22pt, .light
+}
+```
+
+### 8.2. 눈버튼 (토글) 크기 통일
+
+| 항목 | 변경 전 | 변경 후 |
+|------|---------|---------|
+| **크기** | .small (36×36) | **.medium** (44×44) |
+| **여백** | top: 16, trailing: -16 | 동일 (뒤로가기 버튼과 일치) |
+
+### 8.3. 뷰어 휴지통 아이콘 통일
+
+| 항목 | 변경 전 | 변경 후 |
+|------|---------|---------|
+| **아이콘** | `trash.fill` (채워진) | `trash` (outline) |
+| **사유** | iOS 26 시스템 `.trash`와 동일하게 통일 | |
+
+### 8.4. 얼굴 비교 화면 삭제 버튼 스타일 통일
+
+| 항목 | 변경 전 | 변경 후 |
+|------|---------|---------|
+| **Style** | `.filled` (빨간 배경) | `.plain` (글씨만 빨간색) |
+| **사유** | 다른 삭제 버튼들과 스타일 통일 | |
+
+### 8.5. 수정된 파일 목록
+
+| 파일 | 수정 내용 |
+|------|----------|
+| `GlassCircleButton.swift` | `.mini` Size 추가 (34×34, 18pt, .semibold) |
+| `FaceButtonOverlay.swift` | FaceButton: `.mini` 사용, 아이콘 `plus`, Constants 34pt |
+| `FaceButtonOverlay.swift` | toggleButton: `.small` → `.medium` (44×44) |
+| `ViewerViewController.swift` | deleteButton 아이콘: `trash.fill` → `trash` |
+| `FaceComparisonViewController.swift` | deleteButton: `.filled` → `.plain` |
