@@ -176,6 +176,7 @@ enum LiquidGlassOptimizer {
     // MARK: - Test C: Blur Replacement Mode (Preloaded)
 
     /// 사전 생성된 블러 오버레이 보이기 (스크롤 시작)
+    /// 방안 E: 애니메이션 완전 제거
     private static func showBlurOverlays() {
         var count = 0
 
@@ -185,16 +186,13 @@ enum LiquidGlassOptimizer {
             // 이미 보이는 상태면 스킵
             guard overlay.blurView.alpha == 0 else { continue }
 
-            // 프레임 동기화 (레이아웃 변경 대응)
+            // 프레임 동기화
             overlay.blurView.frame = mtkView.frame
 
-            // 애니메이션으로 전환
-            UIView.animate(withDuration: transitionDuration) {
-                mtkView.alpha = 0
-                overlay.blurView.alpha = blurAlpha
-            } completion: { _ in
-                mtkView.isPaused = true
-            }
+            // 즉시 전환 (애니메이션 없음)
+            mtkView.isPaused = true
+            mtkView.alpha = 0
+            overlay.blurView.alpha = blurAlpha
 
             count += 1
         }
@@ -203,23 +201,20 @@ enum LiquidGlassOptimizer {
     }
 
     /// 사전 생성된 블러 오버레이 숨기기 (스크롤 종료)
+    /// 방안 E: 애니메이션 완전 제거
     private static func hideBlurOverlays() {
         var count = 0
 
-        for (identifier, overlay) in preloadedOverlays {
+        for (_, overlay) in preloadedOverlays {
             guard let mtkView = overlay.mtkView else { continue }
 
             // 이미 숨긴 상태면 스킵
             guard overlay.blurView.alpha > 0 else { continue }
 
-            // MTKView 먼저 재개
+            // 즉시 전환 (애니메이션 없음)
             mtkView.isPaused = false
-
-            // 애니메이션으로 전환
-            UIView.animate(withDuration: transitionDuration) {
-                mtkView.alpha = overlay.originalAlpha
-                overlay.blurView.alpha = 0
-            }
+            mtkView.alpha = overlay.originalAlpha
+            overlay.blurView.alpha = 0
 
             count += 1
         }

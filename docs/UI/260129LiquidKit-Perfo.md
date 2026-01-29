@@ -356,6 +356,22 @@ LiquidGlassOptimizer.resumeAllMTKViews(in: self.view.window)
 #endif
 ```
 
+### BaseGridViewController 안전 복구 (필수)
+
+**문제**: 스크롤 중 화면 전환 시 resume 콜백 누락 → MTKView가 영구 paused 상태로 남음
+
+```swift
+// BaseGridViewController.swift
+override func viewWillDisappear(_ animated: Bool) {
+    super.viewWillDisappear(animated)
+
+    // 스크롤 중이었다면 MTKView 복구 보장 (유리 고정 버그 방지)
+    #if DEBUG
+    LiquidGlassOptimizer.resumeAllMTKViews(in: view.window)
+    #endif
+}
+```
+
 ---
 
 ## 8. 관련 파일
@@ -363,6 +379,7 @@ LiquidGlassOptimizer.resumeAllMTKViews(in: self.view.window)
 - `LiquidGlassKit/Sources/LiquidGlassKit/LiquidGlassView.swift` - 라이브러리 소스
 - `PickPhoto/PickPhoto/Debug/LiquidGlassOptimizer.swift` - 최적화 유틸리티 (신규)
 - `PickPhoto/PickPhoto/Features/Grid/GridScroll.swift` - 스크롤 감지
+- `PickPhoto/PickPhoto/Features/Grid/BaseGridViewController.swift` - viewWillDisappear 안전 복구
 - `Sources/AppCore/Services/HitchMonitor.swift` - 성능 측정
 - `Sources/AppCore/Services/Log.swift` - 로그 카테고리 (Hitch, Scroll, Performance)
 
@@ -375,3 +392,4 @@ LiquidGlassOptimizer.resumeAllMTKViews(in: self.view.window)
 | 2026-01-29 | 문서 생성, Baseline 측정 완료 |
 | 2026-01-29 | Test B 구현 및 측정 완료 (99.9% 개선, 120fps 달성) |
 | 2026-01-29 | Test C (blurReplacement) 구현 및 측정 - 91% 개선, 여전히 Critical |
+| 2026-01-29 | viewWillDisappear 안전 복구 로직 추가 (유리 고정 버그 방지) |

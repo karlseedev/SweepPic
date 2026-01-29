@@ -40,10 +40,15 @@ PickPhoto/PickPhoto/Shared/Transitions/
 
 ### 1-1. ZoomTransitionProtocol.swift 생성
 
+**⚠️ 좌표계 원칙: 모든 Frame은 window 기준 좌표로 통일**
+- `zoomSourceFrame` → `convert(frame, to: nil)` 필수
+- `zoomDestinationFrame` → `convert(frame, to: nil)` 필수
+
 ```swift
 /// 줌 전환 소스 제공 (그리드 VC들이 채택)
 protocol ZoomTransitionSourceProviding: AnyObject {
     func zoomSourceView(for index: Int) -> UIView?
+    /// ⚠️ window 좌표계 기준으로 반환 필수
     func zoomSourceFrame(for index: Int) -> CGRect?
 }
 
@@ -51,6 +56,7 @@ protocol ZoomTransitionSourceProviding: AnyObject {
 protocol ZoomTransitionDestinationProviding: AnyObject {
     var currentIndex: Int { get }
     var zoomDestinationView: UIView? { get }
+    /// ⚠️ window 좌표계 기준으로 반환 필수
     var zoomDestinationFrame: CGRect? { get }
 }
 ```
@@ -264,6 +270,31 @@ var posterImageView: UIImageView { posterView }
 - 2곳의 preferredTransition = .zoom 제거
 - AlbumCell용 ZoomTransitionSourceProviding 구현
 
+**AlbumCell 접근자 추가:**
+```swift
+// AlbumCell.swift
+/// 줌 트랜지션용 대표 이미지 뷰 접근자
+var thumbnailImageView: UIImageView { coverImageView }
+```
+
+**AlbumsViewController 프로토콜 채택:**
+```swift
+extension AlbumsViewController: ZoomTransitionSourceProviding {
+    func zoomSourceView(for index: Int) -> UIView? {
+        let indexPath = IndexPath(item: index, section: 0)
+        guard let cell = collectionView.cellForItem(at: indexPath) as? AlbumCell else {
+            return nil
+        }
+        return cell.thumbnailImageView
+    }
+
+    func zoomSourceFrame(for index: Int) -> CGRect? {
+        guard let sourceView = zoomSourceView(for: index) else { return nil }
+        return sourceView.superview?.convert(sourceView.frame, to: nil)  // window 좌표
+    }
+}
+```
+
 ---
 
 ## Phase 5: 정리
@@ -298,6 +329,7 @@ var posterImageView: UIImageView { posterView }
 | `Features/Albums/TrashAlbumViewController.swift` | 수정 |
 | `Features/Albums/AlbumGridViewController.swift` | 수정 |
 | `Features/Albums/AlbumsViewController.swift` | 수정 |
+| `Features/Albums/AlbumCell.swift` | 수정 (thumbnailImageView 접근자 추가) |
 | `Features/Viewer/ViewerViewController.swift` | 수정 |
 | `Features/Viewer/PhotoPageViewController.swift` | 수정 (접근자 추가: zoomableImageView, zoomScale, isAtTopEdge) |
 | `Features/Viewer/VideoPageViewController.swift` | 수정 (접근자 추가: posterImageView, zoomScale, isAtTopEdge) |
@@ -353,9 +385,16 @@ let minScale: CGFloat = 0.68
 let scale = 1 - (1 - minScale) * percentageComplete
 
 // 위치 + 스케일 변환
+// ⚠️ 중요: translation을 scale로 나눠서 보정해야 손가락 위치와 일치
+// CGAffineTransform은 오른쪽부터 적용되므로 translate → scale 순서
+// scale 적용 시 translation도 증폭되므로 미리 보정
+let adjustedTranslation = CGPoint(
+    x: translation.x / scale,
+    y: translation.y / scale
+)
 imageView.transform = CGAffineTransform.identity
     .scaledBy(x: scale, y: scale)
-    .translatedBy(x: translation.x, y: translation.y)
+    .translatedBy(x: adjustedTranslation.x, y: adjustedTranslation.y)
 
 // 배경 투명도
 backgroundView.alpha = 1 - percentageComplete
