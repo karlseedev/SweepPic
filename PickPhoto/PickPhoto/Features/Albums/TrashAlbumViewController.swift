@@ -544,45 +544,10 @@ final class TrashAlbumViewController: BaseGridViewController {
         )
         viewerVC.delegate = self
 
-        // iOS 18+: 네이티브 zoom transition
-        if #available(iOS 18.0, *) {
-            // iOS 18에서는 ViewerViewController의 커스텀 페이드 애니메이션 비활성화 (이중 애니메이션 방지)
-            viewerVC.disableCustomFadeAnimation = true
+        // 커스텀 줌 트랜지션 사용 - 커스텀 페이드 애니메이션 비활성화
+        viewerVC.disableCustomFadeAnimation = true
 
-            viewerVC.preferredTransition = .zoom(sourceViewProvider: { [weak self, weak coordinator] context in
-                guard let self = self,
-                      let coordinator = coordinator,
-                      let viewer = context.zoomedViewController as? ViewerViewController else {
-                    return nil
-                }
-
-                // 뷰어의 현재 인덱스 (fetchResult 기준)
-                let currentIndex = viewer.currentIndex
-
-                // 다른 VC들과 동일한 패턴: originalIndex 직접 사용
-                // (trash 모드는 identity 매핑이므로 currentIndex == originalIndex)
-                guard let originalIndex = coordinator.originalIndex(from: currentIndex) else {
-                    return nil
-                }
-
-                // padding 셀 적용하여 실제 collectionView indexPath 계산
-                let cellIndexPath = IndexPath(item: originalIndex + self.paddingCellCount, section: 0)
-
-                // 셀이 화면에 없으면 nil 반환 (중앙에서 줌 fallback)
-                guard let cell = self.collectionView.cellForItem(at: cellIndexPath) as? PhotoCell else {
-                    return nil
-                }
-
-                // placeholder가 아닌 실제 이미지가 로드된 경우에만 줌 전환
-                guard cell.hasLoadedImage else {
-                    return nil  // 이미지 미로드 시 중앙에서 줌 (fallback)
-                }
-
-                return cell.thumbnailImageView
-            })
-        }
-
-        // Push 방식으로 뷰어 표시 (모든 iOS 버전 공통)
+        // Push 방식으로 뷰어 표시 (커스텀 줌 트랜지션 사용)
         navigationController?.pushViewController(viewerVC, animated: true)
     }
 
@@ -715,5 +680,37 @@ extension TrashAlbumViewController: ViewerViewControllerDelegate {
         if !visibleIndexPaths.contains(indexPath) {
             collectionView.scrollToItem(at: indexPath, at: .centeredVertically, animated: false)
         }
+    }
+}
+
+// MARK: - ZoomTransitionSourceProviding (커스텀 줌 트랜지션)
+
+extension TrashAlbumViewController: ZoomTransitionSourceProviding {
+
+    /// 줌 애니메이션 시작 뷰 (셀의 이미지 뷰)
+    /// - Parameter index: 현재 뷰어의 인덱스
+    /// - Returns: PhotoCell의 thumbnailImageView 또는 nil
+    func zoomSourceView(for index: Int) -> UIView? {
+        // padding 보정하여 실제 셀 IndexPath 계산
+        let cellIndexPath = IndexPath(item: index + paddingCellCount, section: 0)
+
+        // 셀이 화면에 있는지 확인
+        guard let cell = collectionView.cellForItem(at: cellIndexPath) as? PhotoCell else {
+            return nil
+        }
+
+        // 이미지가 로드된 셀만 반환 (로드 전이면 nil → crossfade)
+        guard cell.hasLoadedImage else { return nil }
+
+        return cell.thumbnailImageView
+    }
+
+    /// 줌 애니메이션 시작 프레임 (window 좌표계)
+    /// - Parameter index: 현재 뷰어의 인덱스
+    /// - Returns: window 좌표계 기준 프레임 또는 nil
+    func zoomSourceFrame(for index: Int) -> CGRect? {
+        guard let sourceView = zoomSourceView(for: index) else { return nil }
+        // window 좌표계로 변환 (to: nil)
+        return sourceView.superview?.convert(sourceView.frame, to: nil)
     }
 }

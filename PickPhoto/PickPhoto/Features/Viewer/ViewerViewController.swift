@@ -98,6 +98,19 @@ final class ViewerViewController: UIViewController {
     /// 마지막 스크롤 로그 시간 (쓰로틀용)
     private var lastPageScrollLogTime: CFTimeInterval = 0
 
+    // MARK: - Debug: 성능 분석용
+
+    #if DEBUG
+    /// HitchMonitor (페이지 스와이프 성능 측정)
+    private let hitchMonitor = HitchMonitor()
+
+    /// 스와이프 시작 시간
+    private var swipeStartTime: CFTimeInterval = 0
+
+    /// 스와이프 카운터 (L1/L2 구분)
+    private var swipeCount: Int = 0
+    #endif
+
     // MARK: - Phase 2: LOD1 디바운스
 
     /// LOD1 디바운스 타이머 (150ms)
@@ -1112,6 +1125,13 @@ extension ViewerViewController: UIPageViewControllerDelegate {
         lod1DebounceTimer?.invalidate()
         lod1DebounceTimer = nil
 
+        // [Debug] 성능 측정 시작
+        #if DEBUG
+        swipeStartTime = CACurrentMediaTime()
+        hitchMonitor.start()
+        LiquidGlassOptimizer.optimize(in: view.window)
+        #endif
+
         guard Log.categories["Viewer"] == true else { return }
         let now = CACurrentMediaTime()
         let pendingIndex = pendingViewControllers.first.flatMap { index(from: $0) }
@@ -1132,6 +1152,21 @@ extension ViewerViewController: UIPageViewControllerDelegate {
 
     func pageViewController(_ pageViewController: UIPageViewController, didFinishAnimating finished: Bool, previousViewControllers: [UIViewController], transitionCompleted completed: Bool) {
         isTransitioning = false
+
+        // [Debug] 성능 측정 종료
+        #if DEBUG
+        let hitchResult = hitchMonitor.stop()
+        LiquidGlassOptimizer.restore(in: view.window)
+
+        // 스와이프 카운터 증가 (completed 여부 관계없이 측정)
+        swipeCount += 1
+        let swipeType = swipeCount == 1 ? "L1 First" : "L2 Steady"
+        let swipeDuration = (CACurrentMediaTime() - swipeStartTime) * 1000
+
+        // 성능 로그 출력
+        Log.print("[Viewer:Hitch] \(swipeType): \(hitchResult.formatted())")
+        Log.print("[Viewer:Swipe] completed=\(completed), duration=\(String(format: "%.1f", swipeDuration))ms")
+        #endif
 
         // 전환 완료 시에만 처리
         if Log.categories["Viewer"] == true {

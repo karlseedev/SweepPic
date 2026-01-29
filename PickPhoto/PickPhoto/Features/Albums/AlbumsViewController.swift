@@ -432,31 +432,8 @@ extension AlbumsViewController: UICollectionViewDelegate {
             fetchResult: fetchResult
         )
 
-        // iOS 18+: 네이티브 zoom transition
-        if #available(iOS 18.0, *) {
-            albumGridVC.preferredTransition = .zoom(sourceViewProvider: { [weak self, weak collectionView] context in
-                guard let self = self,
-                      let collectionView = collectionView else {
-                    return nil
-                }
-
-                guard let albumGrid = context.zoomedViewController as? AlbumGridViewController else {
-                    return nil
-                }
-
-                // 앨범 제목으로 해당 셀 찾기
-                guard let indexPath = self.findIndexPath(for: albumGrid.albumTitle),
-                      let cell = collectionView.cellForItem(at: indexPath) as? AlbumCell else {
-                    return nil
-                }
-
-                guard cell.hasLoadedImage else {
-                    return nil
-                }
-
-                return cell.albumThumbnailImageView
-            })
-        }
+        // 커스텀 줌 트랜지션은 Phase 4에서 구현 예정
+        // (현재는 시스템 기본 전환 사용)
 
         navigationController?.pushViewController(albumGridVC, animated: true)
 
@@ -475,31 +452,8 @@ extension AlbumsViewController: UICollectionViewDelegate {
             fetchResult: fetchResult
         )
 
-        // iOS 18+: 네이티브 zoom transition
-        if #available(iOS 18.0, *) {
-            albumGridVC.preferredTransition = .zoom(sourceViewProvider: { [weak self, weak collectionView] context in
-                guard let self = self,
-                      let collectionView = collectionView else {
-                    return nil
-                }
-
-                guard let albumGrid = context.zoomedViewController as? AlbumGridViewController else {
-                    return nil
-                }
-
-                // 앨범 제목으로 해당 셀 찾기
-                guard let indexPath = self.findIndexPath(for: albumGrid.albumTitle),
-                      let cell = collectionView.cellForItem(at: indexPath) as? AlbumCell else {
-                    return nil
-                }
-
-                guard cell.hasLoadedImage else {
-                    return nil
-                }
-
-                return cell.albumThumbnailImageView
-            })
-        }
+        // 커스텀 줌 트랜지션은 Phase 4에서 구현 예정
+        // (현재는 시스템 기본 전환 사용)
 
         navigationController?.pushViewController(albumGridVC, animated: true)
 
