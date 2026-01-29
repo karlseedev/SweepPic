@@ -393,3 +393,81 @@ override func viewWillDisappear(_ animated: Bool) {
 | 2026-01-29 | Test B 구현 및 측정 완료 (99.9% 개선, 120fps 달성) |
 | 2026-01-29 | Test C (blurReplacement) 구현 및 측정 - 91% 개선, 여전히 Critical |
 | 2026-01-29 | viewWillDisappear 안전 복구 로직 추가 (유리 고정 버그 방지) |
+| 2026-01-29 | Test C 개선 - Preload + 방안 D/E 테스트 |
+| 2026-01-29 | 초기 버벅임 원인 발견: 유사사진 분석과 GPU 경쟁 |
+
+---
+
+## 10. Test C 개선 (Preload + 방안 D)
+
+### 문제점
+기존 Test C에서 스크롤 시작할 때 UIVisualEffectView 생성 오버헤드로 초기 랙 발생.
+
+### 해결: Preload 방식
+
+**viewDidAppear에서 블러 뷰 사전 생성:**
+```swift
+static func preload(in rootView: UIView?) {
+    let mtkViews = findAllMTKViews(in: rootView)
+    for mtkView in mtkViews {
+        let blurView = createBlurView(matching: mtkView)
+        blurView.alpha = 0
+        superview.insertSubview(blurView, belowSubview: mtkView)
+        preloadedOverlays[identifier] = PreloadedOverlay(blurView, mtkView, originalAlpha)
+    }
+}
+```
+
+**스크롤 시에는 alpha만 전환:**
+- 생성 비용 제거
+- 프레임 동기화만 수행
+
+### 방안 D: 즉시 isPaused + 단일 애니메이션
+
+**문제**: 기존 구현에서 `isPaused = true`가 애니메이션 완료 후(0.1초 뒤) 실행됨
+
+**해결**:
+```swift
+// 1단계: 모든 MTKView 즉시 정지 (렌더링 즉시 중단)
+for (_, overlay) in preloadedOverlays {
+    mtkView.isPaused = true
+    mtkView.alpha = 0
+    blurViewsToAnimate.append(overlay.blurView)
+}
+
+// 2단계: 블러 뷰만 단일 애니메이션으로 fade in
+UIView.animate(withDuration: transitionDuration) {
+    for blurView in blurViewsToAnimate {
+        blurView.alpha = blurAlpha
+    }
+}
+```
+
+**개선 효과**:
+- 애니메이션 14개 → 1개로 통합
+- isPaused 즉시 설정 (0.1초 지연 제거)
+
+### 방안 E: 애니메이션 완전 제거
+
+```swift
+for (_, overlay) in preloadedOverlays {
+    mtkView.isPaused = true
+    mtkView.alpha = 0
+    overlay.blurView.alpha = blurAlpha
+}
+```
+
+**테스트 결과**: 방안 D와 큰 차이 없음
+
+### 현재 적용 설정
+
+```swift
+static var mode: LiquidGlassOptimizeMode = .blurReplacement
+static var blurAlpha: CGFloat = 0.3
+let blurEffect = UIBlurEffect(style: .systemThinMaterial)
+```
+
+**커밋 포인트**:
+- `4b097ef` - 방안 E (애니메이션 완전 제거)
+- `823aab9` - 방안 D (즉시 isPaused + 단일 애니메이션)
+

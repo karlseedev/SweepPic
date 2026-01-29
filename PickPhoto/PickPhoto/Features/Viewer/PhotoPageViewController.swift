@@ -765,3 +765,20 @@ extension PhotoPageViewController: UIScrollViewDelegate {
         )
     }
 }
+
+// MARK: - ZoomableImageProviding (커스텀 줌 트랜지션)
+
+extension PhotoPageViewController: ZoomableImageProviding {
+
+    /// 줌 애니메이션 대상 이미지 뷰
+    var zoomableImageView: UIImageView? { imageView }
+
+    /// 현재 줌 스케일 (1.0 = 기본)
+    var zoomScale: CGFloat { scrollView.zoomScale }
+
+    /// 스크롤이 상단 가장자리인지 (dismiss 허용 판단용)
+    /// - contentOffset.y가 -contentInset.top 이하이면 상단에 있음
+    var isAtTopEdge: Bool {
+        scrollView.contentOffset.y <= -scrollView.contentInset.top + 1  // 1pt 여유
+    }
+}

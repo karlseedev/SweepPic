@@ -27,6 +27,9 @@ class TabBarController: UITabBarController {
     /// Trash 탭 NavigationController
     private var trashNav: UINavigationController?
 
+    /// 줌 트랜지션 컨트롤러 (커스텀 줌 애니메이션)
+    private let zoomTransitionController = ZoomTransitionController()
+
     /// 커스텀 플로팅 UI 사용 여부
     /// iOS 26+에서는 false (시스템 기본 사용)
     private var useFloatingUI: Bool {
@@ -306,7 +309,7 @@ extension TabBarController: FloatingOverlayContainerDelegate {
     }
 }
 
-// MARK: - UINavigationControllerDelegate (BarsVisibilityPolicy)
+// MARK: - UINavigationControllerDelegate (BarsVisibilityPolicy + ZoomTransition)
 
 extension TabBarController: UINavigationControllerDelegate {
 
@@ -319,6 +322,28 @@ extension TabBarController: UINavigationControllerDelegate {
         animated: Bool
     ) {
         applyBarsVisibilityPolicy(for: viewController, in: navigationController)
+    }
+
+    /// 커스텀 애니메이션 컨트롤러 제공 (줌 트랜지션)
+    func navigationController(
+        _ navigationController: UINavigationController,
+        animationControllerFor operation: UINavigationController.Operation,
+        from fromVC: UIViewController,
+        to toVC: UIViewController
+    ) -> UIViewControllerAnimatedTransitioning? {
+        return zoomTransitionController.animationController(
+            for: operation,
+            from: fromVC,
+            to: toVC
+        )
+    }
+
+    /// Interactive 전환 컨트롤러 제공
+    func navigationController(
+        _ navigationController: UINavigationController,
+        interactionControllerFor animationController: UIViewControllerAnimatedTransitioning
+    ) -> UIViewControllerInteractiveTransitioning? {
+        return zoomTransitionController.interactionControllerForAnimation(using: animationController)
     }
 
     /// Bar 가시성 정책 적용

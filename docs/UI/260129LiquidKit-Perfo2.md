@@ -49,11 +49,11 @@ SimilarityAnalysisQueue.shared.registerTask(task, id: taskID, source: .grid)
 
 ---
 
-### Phase 2: Task.isCancelled 체크 추가 (~40줄)
+### Phase 2: Task.isCancelled 체크 추가 (~50줄)
 
 **파일**: `SimilarityAnalysisQueue.swift`
 
-체크 포인트:
+#### 2-1. 체크 포인트
 | 위치 | 메서드 | 설명 |
 |------|--------|------|
 | ~236행 | formGroupsForRange | FP 생성 후 |
@@ -70,17 +70,65 @@ guard !Task.isCancelled else {
 }
 ```
 
+#### 2-2. TaskGroup 내 child task 취소 (중요)
+
+```swift
+return await withTaskGroup(of: ...) { group in
+    for (index, photo) in photos.enumerated() {
+        group.addTask {
+            // child task 내부에서도 취소 체크
+            try Task.checkCancellation()
+            ...
+        }
+    }
+
+    var results = ...
+    for await (index, fp) in group {
+        // 취소 감지 시 나머지 작업 취소
+        if Task.isCancelled {
+            group.cancelAll()
+            break
+        }
+        results[index] = fp
+    }
+    return results
+}
+```
+
+#### 2-3. 취소 시 캐시 정책 (중요)
+
+**원칙**: 취소 시 캐시/알림 완전히 스킵
+
+```swift
+guard !Task.isCancelled else {
+    // ❌ cache.setState() 호출 금지
+    // ❌ postAnalysisComplete() 호출 금지
+    Log.print("[SimilarPhoto] Cancelled - skipping cache update")
+    return []
+}
+```
+
+**이유**: 부분 완료 상태로 캐시 업데이트하면 "그룹 아님" 상태로 덮어쓰기 위험
+
 ---
 
-### Phase 3: PHImageRequest 취소 연동 (~60줄)
+### Phase 3: PHImageRequest 취소 연동 (~70줄)
 
 **파일**: `SimilarityImageLoader.swift`
 
 **핵심**: GPU 경쟁 해결을 위해 이미지 디코딩도 즉시 중단 필요
 
-1. 클래스에 `activeRequestID` 프로퍼티 추가 (thread-safe)
-2. `withTaskCancellationHandler` 래핑
-3. onCancel에서 `cancelImageRequest()` 호출
+#### 3-1. CancellationError 정의
+
+```swift
+enum SimilarityImageLoadError: Error {
+    case timeout
+    case cancelled  // 추가: 취소 전용 에러
+    case loadFailed(String)
+}
+```
+
+#### 3-2. 취소 연동 구현
 
 ```swift
 // 클래스 레벨에 추가
@@ -89,10 +137,31 @@ private var activeRequestIDs: [UUID: PHImageRequestID] = [:]
 
 func loadImage(for asset: PHAsset) async throws -> CGImage {
     let requestUUID = UUID()
+    var hasResumed = false  // 중복 resume 방지
 
     return try await withTaskCancellationHandler {
         try await withCheckedThrowingContinuation { continuation in
-            let requestID = imageManager.requestImage(...) { ... }
+            let requestID = imageManager.requestImage(...) { [weak self] image, info in
+                guard let self = self else { return }
+
+                // 정상 완료 시 activeRequestIDs에서 제거
+                self.lock.lock()
+                self.activeRequestIDs.removeValue(forKey: requestUUID)
+                let alreadyResumed = hasResumed
+                hasResumed = true
+                self.lock.unlock()
+
+                // 중복 resume 방지
+                guard !alreadyResumed else { return }
+
+                // 취소된 경우
+                if let cancelled = info?[PHImageCancelledKey] as? Bool, cancelled {
+                    continuation.resume(throwing: SimilarityImageLoadError.cancelled)
+                    return
+                }
+
+                // 정상 처리...
+            }
 
             // requestID 저장 (thread-safe)
             lock.lock()
@@ -112,39 +181,63 @@ func loadImage(for asset: PHAsset) async throws -> CGImage {
 }
 ```
 
+#### 3-3. 에러 전파 정책 (중요)
+
+**generateFeaturePrints에서 CancellationError 처리:**
+```swift
+group.addTask {
+    do {
+        let image = try await self.imageLoader.loadImage(for: photo)
+        let fp = try await self.analyzer.generateFeaturePrint(for: image)
+        return (index, fp)
+    } catch is CancellationError {
+        throw CancellationError()  // 상위로 전파 (nil로 흡수 금지)
+    } catch SimilarityImageLoadError.cancelled {
+        throw CancellationError()  // 상위로 전파
+    } catch {
+        return (index, nil)  // 다른 에러만 nil로 처리
+    }
+}
+```
+
 ---
 
 ## 수정 파일 목록
 
 | 파일 | 변경량 | 내용 |
 |------|--------|------|
-| `SimilarityAnalysisQueue.swift` | ~80줄 | Task 등록/취소 체크 |
-| `SimilarityImageLoader.swift` | ~40줄 | PHImageRequest 취소 |
+| `SimilarityAnalysisQueue.swift` | ~90줄 | Task 등록/취소 체크/캐시 정책 |
+| `SimilarityImageLoader.swift` | ~50줄 | PHImageRequest 취소/에러 처리 |
 | `GridViewController+SimilarPhoto.swift` | ~15줄 | Task 등록 호출 |
 
-**총 예상**: ~135줄
+**총 예상**: ~155줄
 
 ---
 
 ## 테스트 방법
 
-1. **취소 동작 확인**
-   - 분석 중 스크롤 → `[SimilarPhoto] Cancelled` 로그 출력 확인
+### 1. 취소 동작 확인
+- 분석 중 스크롤 → `[SimilarPhoto] Cancelled` 로그 출력 확인
+- **캐시 미변경 확인**: 취소 후 `cache.setState` 로그 없어야 함
 
-2. **성능 확인**
-   - 분석 중 스크롤 시 버벅임 감소 확인
-   - HitchMonitor 로그로 hitch ratio 확인
+### 2. 성능 확인
+- 분석 중 스크롤 시 버벅임 감소 확인
+- HitchMonitor 로그로 hitch ratio 확인
+- **PHImageRequest 취소 타이밍**: 스크롤 시작 직후 `cancelImageRequest` 로그 확인
 
-3. **viewer 영향 없음 확인**
-   - 뷰어에서 분석은 취소되지 않아야 함
+### 3. viewer 영향 없음 확인
+- 뷰어에서 분석은 취소되지 않아야 함
+
+### 4. 재분석 정상 동작 확인
+- 취소 → 스크롤 멈춤 → 재분석 시 테두리 정상 복원 확인
 
 ---
 
 ## 구현 순서
 
 1. Phase 1: Task 등록 (기본 취소 메커니즘)
-2. Phase 2: 취소 체크 추가
-3. Phase 3: PHImageRequest 취소 (GPU 경쟁 해결 핵심)
+2. Phase 2: 취소 체크 + 캐시 정책 추가
+3. Phase 3: PHImageRequest 취소 + 에러 전파 (GPU 경쟁 해결 핵심)
 4. 테스트
 
 **참고**: GPU가 병목이므로 Phase 3까지 모두 필수

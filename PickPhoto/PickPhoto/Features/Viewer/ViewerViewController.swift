@@ -1242,3 +1242,37 @@ extension ViewerViewController: BarsVisibilityControlling {
         return nil  // iOS 16~25: 기본 정책 (숨김)
     }
 }
+
+// MARK: - ZoomTransitionDestinationProviding (커스텀 줌 트랜지션)
+
+extension ViewerViewController: ZoomTransitionDestinationProviding {
+
+    /// 줌 애니메이션 대상 뷰 (현재 페이지의 이미지 뷰)
+    var zoomDestinationView: UIView? {
+        currentPageImageView
+    }
+
+    /// 줌 애니메이션 목적지 프레임 (window 좌표계)
+    var zoomDestinationFrame: CGRect? {
+        guard let imageView = currentPageImageView else { return nil }
+        // window 좌표계로 변환 (to: nil)
+        return imageView.superview?.convert(imageView.frame, to: nil)
+    }
+
+    /// 현재 페이지의 이미지 뷰 (Photo/Video 공통)
+    private var currentPageImageView: UIView? {
+        guard let currentVC = pageViewController.viewControllers?.first else { return nil }
+
+        // PhotoPageViewController
+        if let photoPage = currentVC as? PhotoPageViewController {
+            return photoPage.zoomableImageView
+        }
+
+        // VideoPageViewController (포스터 이미지 사용)
+        if let videoPage = currentVC as? VideoPageViewController {
+            return videoPage.zoomableImageView
+        }
+
+        return nil
+    }
+}

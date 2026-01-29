@@ -1023,3 +1023,35 @@ extension GridViewController: ViewerViewControllerDelegate {
 }
 
 // Select Mode 코드 → GridSelectMode.swift로 이동됨
+
+// MARK: - ZoomTransitionSourceProviding (커스텀 줌 트랜지션)
+
+extension GridViewController: ZoomTransitionSourceProviding {
+
+    /// 줌 애니메이션 시작 뷰 (셀의 이미지 뷰)
+    /// - Parameter index: 현재 뷰어의 인덱스
+    /// - Returns: PhotoCell의 thumbnailImageView 또는 nil
+    func zoomSourceView(for index: Int) -> UIView? {
+        // padding 보정하여 실제 셀 IndexPath 계산
+        let cellIndexPath = IndexPath(item: index + paddingCellCount, section: 0)
+
+        // 셀이 화면에 있는지 확인
+        guard let cell = collectionView.cellForItem(at: cellIndexPath) as? PhotoCell else {
+            return nil
+        }
+
+        // 이미지가 로드된 셀만 반환 (로드 전이면 nil → crossfade)
+        guard cell.hasLoadedImage else { return nil }
+
+        return cell.thumbnailImageView
+    }
+
+    /// 줌 애니메이션 시작 프레임 (window 좌표계)
+    /// - Parameter index: 현재 뷰어의 인덱스
+    /// - Returns: window 좌표계 기준 프레임 또는 nil
+    func zoomSourceFrame(for index: Int) -> CGRect? {
+        guard let sourceView = zoomSourceView(for: index) else { return nil }
+        // window 좌표계로 변환 (to: nil)
+        return sourceView.superview?.convert(sourceView.frame, to: nil)
+    }
+}
