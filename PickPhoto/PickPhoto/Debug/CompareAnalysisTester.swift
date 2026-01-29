@@ -150,10 +150,62 @@ final class CompareAnalysisTester {
     /// 카테고리 스토어
     private let categoryStore = CompareCategoryStore.shared
 
+    // MARK: - Session Storage Keys
+
+    private let lastTestDateKey = "CompareAnalysis.LastTestDate"
+    private let totalScannedKey = "CompareAnalysis.TotalScanned"
+    private let totalTrashedKey = "CompareAnalysis.TotalTrashed"
+
     // MARK: - State
 
     /// 진행 중 여부
     private(set) var isRunning = false
+
+    /// 마지막 테스트 날짜
+    var lastTestDate: Date? {
+        return UserDefaults.standard.object(forKey: lastTestDateKey) as? Date
+    }
+
+    /// 이어서 테스트 가능 여부
+    var canContinue: Bool {
+        return lastTestDate != nil
+    }
+
+    /// 누적 검색 수
+    var totalScannedCount: Int {
+        return UserDefaults.standard.integer(forKey: totalScannedKey)
+    }
+
+    /// 누적 휴지통 수
+    var totalTrashedCount: Int {
+        return UserDefaults.standard.integer(forKey: totalTrashedKey)
+    }
+
+    // MARK: - Session Management
+
+    /// 세션 저장
+    private func saveSession(lastDate: Date, scanned: Int, trashed: Int) {
+        UserDefaults.standard.set(lastDate, forKey: lastTestDateKey)
+        UserDefaults.standard.set(totalScannedCount + scanned, forKey: totalScannedKey)
+        UserDefaults.standard.set(totalTrashedCount + trashed, forKey: totalTrashedKey)
+        Log.print("[CompareAnalysis] 세션 저장: \(formatDate(lastDate)) 이전까지, 누적 검색 \(totalScannedCount + scanned)장")
+    }
+
+    /// 세션 초기화
+    func clearSession() {
+        UserDefaults.standard.removeObject(forKey: lastTestDateKey)
+        UserDefaults.standard.removeObject(forKey: totalScannedKey)
+        UserDefaults.standard.removeObject(forKey: totalTrashedKey)
+        categoryStore.clear()
+        Log.print("[CompareAnalysis] 세션 초기화됨")
+    }
+
+    /// 날짜 포맷
+    private func formatDate(_ date: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy년 M월"
+        return formatter.string(from: date)
+    }
 
     // MARK: - Test Execution
 
@@ -161,9 +213,12 @@ final class CompareAnalysisTester {
     ///
     /// 경로1과 경로2를 각각 계산하고 결과를 비교하여 카테고리별로 분류합니다.
     ///
-    /// - Parameter onProgress: 진행 콜백 (scanned, both, path1Only, path2Only)
+    /// - Parameters:
+    ///   - continueFromLast: true면 이어서 테스트 (마지막 날짜 이전부터)
+    ///   - onProgress: 진행 콜백 (scanned, both, path1Only, path2Only)
     /// - Returns: 테스트 결과
     func runTest(
+        continueFromLast: Bool = false,
         onProgress: ((Int, Int, Int, Int) -> Void)? = nil
     ) async -> CompareAnalysisResult {
         guard !isRunning else {
@@ -174,10 +229,18 @@ final class CompareAnalysisTester {
         isRunning = true
         defer { isRunning = false }
 
-        // 카테고리 스토어 초기화
-        categoryStore.clear()
+        // 처음부터 시작이면 세션 초기화
+        if !continueFromLast {
+            clearSession()
+        }
 
-        Log.print("[CompareAnalysis] 테스트 시작")
+        let continueDate = continueFromLast ? lastTestDate : nil
+
+        if let date = continueDate {
+            Log.print("[CompareAnalysis] 이어서 테스트 시작 (\(formatDate(date)) 이전부터)")
+        } else {
+            Log.print("[CompareAnalysis] 테스트 시작 (처음부터)")
+        }
         Log.print("[CompareAnalysis] - 경로1 동의 임계값: \(path1AgreeThreshold)")
         Log.print("[CompareAnalysis] - 경로2 임계값: \(path2Threshold)")
         Log.print("[CompareAnalysis] - 최대 검색 수: \(maxScanCount)")
@@ -187,11 +250,22 @@ final class CompareAnalysisTester {
         var path1OnlyCount = 0
         var path2OnlyCount = 0
         var trashedAssetIDs: [String] = []
+        var lastAssetDate: Date?
 
         // 사진 가져오기
         let fetchOptions = PHFetchOptions()
         fetchOptions.sortDescriptors = [NSSortDescriptor(key: "creationDate", ascending: false)]
-        fetchOptions.predicate = NSPredicate(format: "mediaType == %d", PHAssetMediaType.image.rawValue)
+
+        // 이어서 테스트: 마지막 날짜 이전 사진만
+        if let continueDate = continueDate {
+            fetchOptions.predicate = NSPredicate(
+                format: "mediaType == %d AND creationDate < %@",
+                PHAssetMediaType.image.rawValue,
+                continueDate as NSDate
+            )
+        } else {
+            fetchOptions.predicate = NSPredicate(format: "mediaType == %d", PHAssetMediaType.image.rawValue)
+        }
 
         let fetchResult = PHAsset.fetchAssets(with: fetchOptions)
         let assetCount = min(fetchResult.count, maxScanCount)
@@ -213,6 +287,11 @@ final class CompareAnalysisTester {
             // 배치 처리
             for asset in batchAssets {
                 totalScanned += 1
+
+                // 마지막 asset 날짜 기록 (이어서 테스트용)
+                if let date = asset.creationDate {
+                    lastAssetDate = date
+                }
 
                 // 1. 기존 로직 실행
                 let oldResult = await qualityAnalyzer.analyze(asset)
@@ -269,6 +348,11 @@ final class CompareAnalysisTester {
 
         // 카테고리 저장
         categoryStore.save()
+
+        // 세션 저장 (마지막 날짜 기록)
+        if let lastDate = lastAssetDate {
+            saveSession(lastDate: lastDate, scanned: totalScanned, trashed: trashedAssetIDs.count)
+        }
 
         // 휴지통 이동
         if !trashedAssetIDs.isEmpty {

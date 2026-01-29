@@ -138,6 +138,7 @@ public enum Log {
         "Hitch": true,               // 스크롤 히치 측정 (HitchMonitor)
         "Scroll": true,              // 스크롤 시작/종료 로그
         "Performance": true,         // 성능 모니터 (PerformanceMonitor)
+        "LiquidGlass": true,         // LiquidGlass 최적화 로그
 
         // =============================================
         // Debug / 기타

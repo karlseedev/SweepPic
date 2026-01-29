@@ -29,8 +29,9 @@ protocol CleanupMethodSheetDelegate: AnyObject {
     #if DEBUG
     /// 통합 로직 테스트 선택됨 (DEBUG 전용)
     /// 경로1 (기존 로직 기반) + 경로2 (AestheticsScore 기반) 테스트
+    /// - Parameter continueFromLast: true면 이어서 테스트
     @available(iOS 18.0, *)
-    func cleanupMethodSheetDidSelectIntegratedTest(_ sheet: CleanupMethodSheet)
+    func cleanupMethodSheetDidSelectIntegratedTest(_ sheet: CleanupMethodSheet, continueFromLast: Bool)
     #endif
 }
 
@@ -134,14 +135,35 @@ final class CleanupMethodSheet {
         // DEBUG: 통합 로직 테스트 (iOS 18+)
         #if DEBUG
         if #available(iOS 18.0, *) {
-            // 통합 로직 테스트 버튼
-            // 경로1 (기존 로직 기반) + 경로2 (AestheticsScore 기반) 테스트
+            let tester = CompareAnalysisTester.shared
+
+            // 통합 로직 테스트 버튼 (처음부터)
             alert.addAction(UIAlertAction(
-                title: "[DEBUG] 통합 로직 테스트",
+                title: "[DEBUG] 통합 테스트 (처음부터)",
                 style: .default
             ) { [self] _ in
-                self.delegate?.cleanupMethodSheetDidSelectIntegratedTest(self)
+                self.delegate?.cleanupMethodSheetDidSelectIntegratedTest(self, continueFromLast: false)
             })
+
+            // 이어서 테스트 버튼
+            let continueTestAction: UIAlertAction
+            if tester.canContinue, let lastDate = tester.lastTestDate {
+                let dateString = formatDate(lastDate)
+                continueTestAction = UIAlertAction(
+                    title: "[DEBUG] 이어서 테스트 (\(dateString) 이전)",
+                    style: .default
+                ) { [self] _ in
+                    self.delegate?.cleanupMethodSheetDidSelectIntegratedTest(self, continueFromLast: true)
+                }
+            } else {
+                continueTestAction = UIAlertAction(
+                    title: "[DEBUG] 이어서 테스트",
+                    style: .default,
+                    handler: nil
+                )
+                continueTestAction.isEnabled = false
+            }
+            alert.addAction(continueTestAction)
         }
         #endif
 

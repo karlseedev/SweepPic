@@ -71,7 +71,7 @@ enum LiquidGlassOptimizer {
         guard isEnabled, mode == .blurReplacement else { return }
         guard let rootView = rootView else { return }
         guard !isPreloaded else {
-            Log.debug("Performance", "Blur preload: 이미 완료됨")
+            Log.print("[LiquidGlass] Blur preload: 이미 완료됨")
             return
         }
 
@@ -102,7 +102,7 @@ enum LiquidGlassOptimizer {
         }
 
         isPreloaded = true
-        Log.debug("Performance", "Blur preload 완료: \(mtkViews.count)개")
+        Log.print("[LiquidGlass] Blur preload 완료: \(mtkViews.count)개")
     }
 
     /// 스크롤 시작 시 최적화 적용
@@ -152,7 +152,7 @@ enum LiquidGlassOptimizer {
         }
         preloadedOverlays.removeAll()
         isPreloaded = false
-        Log.debug("Performance", "Blur cleanup 완료")
+        Log.print("[LiquidGlass] Blur cleanup 완료")
     }
 
     // MARK: - Test B: Pause Mode
@@ -162,7 +162,7 @@ enum LiquidGlassOptimizer {
         for mtkView in mtkViews {
             mtkView.isPaused = true
         }
-        Log.debug("Performance", "MTKView paused: \(mtkViews.count)개")
+        Log.print("[LiquidGlass] MTKView paused: \(mtkViews.count)개")
     }
 
     private static func resumeAllMTKViews(in rootView: UIView) {
@@ -170,7 +170,7 @@ enum LiquidGlassOptimizer {
         for mtkView in mtkViews {
             mtkView.isPaused = false
         }
-        Log.debug("Performance", "MTKView resumed: \(mtkViews.count)개")
+        Log.print("[LiquidGlass] MTKView resumed: \(mtkViews.count)개")
     }
 
     // MARK: - Test C: Blur Replacement Mode (Preloaded)
@@ -199,7 +199,7 @@ enum LiquidGlassOptimizer {
             count += 1
         }
 
-        Log.debug("Performance", "Blur show: \(count)개")
+        Log.print("[LiquidGlass] Blur show: \(count)개")
     }
 
     /// 사전 생성된 블러 오버레이 숨기기 (스크롤 종료)
@@ -224,7 +224,7 @@ enum LiquidGlassOptimizer {
             count += 1
         }
 
-        Log.debug("Performance", "Blur hide: \(count)개")
+        Log.print("[LiquidGlass] Blur hide: \(count)개")
     }
 
     // MARK: - Helper Methods

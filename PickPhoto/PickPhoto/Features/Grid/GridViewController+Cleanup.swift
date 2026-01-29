@@ -273,9 +273,10 @@ extension GridViewController: CleanupMethodSheetDelegate {
     #if DEBUG
     /// 통합 로직 테스트 선택됨 (DEBUG 전용)
     /// 경로1 (기존 로직 기반) + 경로2 (AestheticsScore 기반) 테스트
+    /// - Parameter continueFromLast: true면 이어서 테스트
     @available(iOS 18.0, *)
-    func cleanupMethodSheetDidSelectIntegratedTest(_ sheet: CleanupMethodSheet) {
-        startIntegratedLogicTest()
+    func cleanupMethodSheetDidSelectIntegratedTest(_ sheet: CleanupMethodSheet, continueFromLast: Bool) {
+        startIntegratedLogicTest(continueFromLast: continueFromLast)
     }
     #endif
 }
@@ -302,13 +303,16 @@ extension GridViewController {
     /// - ⚪ 회색: 경로1 + 경로2 둘 다 해당
     /// - 🔵 파랑: 경로1만 해당 (기존 로직 기반)
     /// - 🟡 노랑: 경로2만 해당 (AestheticsScore 기반)
+    ///
+    /// - Parameter continueFromLast: true면 이어서 테스트
     @available(iOS 18.0, *)
-    func startIntegratedLogicTest() {
+    func startIntegratedLogicTest(continueFromLast: Bool) {
         let tester = CompareAnalysisTester.shared
 
         // 진행 Alert 생성
+        let titleText = continueFromLast ? "이어서 테스트" : "통합 로직 테스트"
         let progressAlert = UIAlertController(
-            title: "통합 로직 테스트",
+            title: titleText,
             message: "검색: 0장\n⚪ 둘다: 0  🔵 경로1: 0  🟡 경로2: 0",
             preferredStyle: .alert
         )
@@ -317,7 +321,7 @@ extension GridViewController {
 
         // 테스트 실행
         Task {
-            let result = await tester.runTest { scanned, both, path1Only, path2Only in
+            let result = await tester.runTest(continueFromLast: continueFromLast) { scanned, both, path1Only, path2Only in
                 // 진행 상황 업데이트 (메인 스레드)
                 Task { @MainActor in
                     progressAlert.message = """
@@ -330,29 +334,44 @@ extension GridViewController {
             // 결과 표시 (메인 스레드)
             await MainActor.run {
                 progressAlert.dismiss(animated: true) { [weak self] in
-                    self?.showIntegratedLogicResult(result)
+                    self?.showIntegratedLogicResult(result, continueFromLast: continueFromLast)
                 }
             }
         }
     }
 
     /// 통합 로직 테스트 결과 표시
+    /// - Parameters:
+    ///   - result: 테스트 결과
+    ///   - continueFromLast: 이어서 테스트 여부 (누적 정보 표시용)
     @available(iOS 18.0, *)
-    private func showIntegratedLogicResult(_ result: CompareAnalysisResult) {
-        let message = """
-        검색: \(result.totalScanned)장
+    private func showIntegratedLogicResult(_ result: CompareAnalysisResult, continueFromLast: Bool) {
+        let tester = CompareAnalysisTester.shared
+        let titleText = continueFromLast ? "이어서 테스트 완료" : "통합 로직 테스트 완료"
+
+        var message = """
+        이번 검색: \(result.totalScanned)장
 
         ⚪ 둘 다 해당: \(result.bothCount)장
         🔵 경로1만 (기존 로직): \(result.path1OnlyCount)장
         🟡 경로2만 (AestheticsScore): \(result.path2OnlyCount)장
 
-        총 휴지통: \(result.totalTrashed)장
-
-        (휴지통에서 배지로 구분 가능)
+        이번 휴지통: \(result.totalTrashed)장
         """
 
+        // 누적 정보 표시
+        message += "\n\n--- 누적 ---"
+        message += "\n총 검색: \(tester.totalScannedCount)장"
+        message += "\n총 휴지통: \(tester.totalTrashedCount)장"
+
+        if let lastDate = tester.lastTestDate {
+            let formatter = DateFormatter()
+            formatter.dateFormat = "yyyy년 M월"
+            message += "\n(\(formatter.string(from: lastDate)) 이전까지)"
+        }
+
         let alert = UIAlertController(
-            title: "통합 로직 테스트 완료",
+            title: titleText,
             message: message,
             preferredStyle: .alert
         )
