@@ -600,22 +600,23 @@ final class ViewerViewController: UIViewController {
             view.addGestureRecognizer(legacyDismissPanGesture)
         } else {
             // iOS 16~25: 줌 Interactive Dismiss
-            // sourceProvider 연결 (Navigation stack에서 그리드 VC 찾기)
-            if let sourceProvider = findSourceProvider() {
+            // sourceProvider 및 gridView 연결 (Navigation stack에서 그리드 VC 찾기)
+            if let (sourceProvider, gridVC) = findSourceProviderWithVC() {
                 zoomInteractionController.sourceProvider = sourceProvider
+                zoomInteractionController.gridView = gridVC.view
             }
             view.addGestureRecognizer(zoomInteractionController.panGesture)
         }
     }
 
-    /// Navigation stack에서 ZoomTransitionSourceProviding 찾기
-    private func findSourceProvider() -> ZoomTransitionSourceProviding? {
+    /// Navigation stack에서 ZoomTransitionSourceProviding 및 VC 찾기
+    private func findSourceProviderWithVC() -> (ZoomTransitionSourceProviding, UIViewController)? {
         guard let navController = navigationController else { return nil }
 
         // 뷰어 이전의 VC 중 ZoomTransitionSourceProviding 채택한 VC 찾기
         for vc in navController.viewControllers.reversed() {
             if vc !== self, let provider = vc as? ZoomTransitionSourceProviding {
-                return provider
+                return (provider, vc)
             }
         }
         return nil
@@ -1474,4 +1475,6 @@ extension ViewerViewController: ZoomInteractionPageProviding {
         }
         return true
     }
+
+    // currentOriginalIndex는 ZoomTransitionDestinationProviding extension에서 이미 정의됨
 }

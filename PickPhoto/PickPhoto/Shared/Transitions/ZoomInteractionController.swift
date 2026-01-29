@@ -21,8 +21,9 @@ protocol ZoomInteractionPageProviding: AnyObject {
     var currentPageZoomScale: CGFloat { get }
     /// 현재 페이지가 상단 가장자리인지
     var currentPageIsAtTopEdge: Bool { get }
-    /// 현재 표시 중인 인덱스
-    var currentIndex: Int { get }
+    /// 현재 표시 중인 원본 인덱스 (그리드 셀 찾기용)
+    /// - Note: filteredIndex가 아닌 originalIndex 반환 필요
+    var currentOriginalIndex: Int { get }
 }
 
 /// 줌 Interactive Dismiss 컨트롤러
@@ -60,6 +61,10 @@ final class ZoomInteractionController: NSObject {
     /// 소스 제공자 (그리드 VC)
     weak var sourceProvider: ZoomTransitionSourceProviding?
 
+    /// 그리드 뷰 (배경에 표시할 뷰)
+    /// Interactive dismiss 시 뷰어 뒤에 추가하여 드래그 중 보이도록 함
+    weak var gridView: UIView?
+
     /// 배경 뷰 참조
     weak var backgroundView: UIView?
 
@@ -84,6 +89,9 @@ final class ZoomInteractionController: NSObject {
 
     /// 드래그 시작 시 터치 위치
     private var initialTouchPoint: CGPoint = .zero
+
+    /// 그리드 뷰 스냅샷 (배경에 표시)
+    private var gridSnapshot: UIView?
 
     /// 완료 콜백 (pop 호출)
     var onDismissComplete: (() -> Void)?
@@ -131,7 +139,36 @@ final class ZoomInteractionController: NSObject {
         originalCenter = imageView.center
         initialTouchPoint = gesture.location(in: view)
 
+        // 그리드 뷰 스냅샷 생성하여 뷰어 뒤에 추가
+        // → 배경이 투명해질 때 그리드가 보이도록
+        setupGridSnapshot(behindView: view)
+
         Log.debug("ZoomInteraction", "Pan began - center: \(originalCenter)")
+    }
+
+    /// 그리드 뷰 스냅샷을 뷰어 뒤에 추가
+    private func setupGridSnapshot(behindView viewerView: UIView) {
+        guard let gridView = gridView,
+              let superview = viewerView.superview else { return }
+
+        // 기존 스냅샷 제거
+        gridSnapshot?.removeFromSuperview()
+
+        // 그리드 뷰 스냅샷 생성
+        guard let snapshot = gridView.snapshotView(afterScreenUpdates: false) else { return }
+
+        // 뷰어 뒤에 스냅샷 삽입
+        snapshot.frame = viewerView.frame
+        superview.insertSubview(snapshot, belowSubview: viewerView)
+        gridSnapshot = snapshot
+
+        Log.debug("ZoomInteraction", "Grid snapshot added behind viewer")
+    }
+
+    /// 그리드 스냅샷 제거
+    private func removeGridSnapshot() {
+        gridSnapshot?.removeFromSuperview()
+        gridSnapshot = nil
     }
 
     /// Pan 변경 처리 - 직접 transform 제어
@@ -203,9 +240,9 @@ final class ZoomInteractionController: NSObject {
             return
         }
 
-        // 소스 셀 프레임 가져오기
-        let currentIndex = pageProvider.currentIndex
-        guard let sourceFrame = sourceProvider.zoomSourceFrame(for: currentIndex) else {
+        // 소스 셀 프레임 가져오기 (originalIndex 사용)
+        let originalIndex = pageProvider.currentOriginalIndex
+        guard let sourceFrame = sourceProvider.zoomSourceFrame(for: originalIndex) else {
             // 셀이 화면 밖이면 페이드 아웃 fallback
             animateFadeOutDismiss(imageView: imageView, backgroundView: backgroundView)
             return
@@ -248,6 +285,7 @@ final class ZoomInteractionController: NSObject {
             imageView.isHidden = false
             imageView.transform = self?.originalTransform ?? .identity
 
+            self?.removeGridSnapshot()
             self?.isInteracting = false
             self?.onDismissComplete?()
 
@@ -270,6 +308,7 @@ final class ZoomInteractionController: NSObject {
             imageView.alpha = 1
             imageView.transform = self?.originalTransform ?? .identity
 
+            self?.removeGridSnapshot()
             self?.isInteracting = false
             self?.onDismissComplete?()
 
@@ -291,6 +330,7 @@ final class ZoomInteractionController: NSObject {
             imageView.transform = self?.originalTransform ?? .identity
             backgroundView.alpha = 1
         } completion: { [weak self] _ in
+            self?.removeGridSnapshot()
             self?.isInteracting = false
             Log.debug("ZoomInteraction", "Cancel complete - restored to original")
         }
