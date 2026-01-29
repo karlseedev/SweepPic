@@ -205,16 +205,18 @@ var contentInsetForGrid: UIEdgeInsets {
     let safeAreaTop = view.safeAreaInsets.top
     let safeAreaBottom = view.safeAreaInsets.bottom
 
-    // iOS 26+에서는 시스템 네비바 사용 + .automatic이므로 상단 inset 불필요
     let topInset: CGFloat
-    if #available(iOS 26.0, *) {
-        topInset = 0  // .automatic이 safeArea 처리
-    } else {
-        topInset = safeAreaTop + 44 + 15  // safeArea + contentHeight + gradientExtension
-    }
+    let bottomInset: CGFloat
 
-    // ⚠️ safeAreaBottom 포함 (홈 인디케이터 영역 확보)
-    let bottomInset = safeAreaBottom + 56 + 15  // safeArea + bottomBarHeight + gradientExtension
+    if #available(iOS 26.0, *) {
+        // .automatic이 safeArea 자동 처리하므로 제외
+        topInset = 0
+        bottomInset = 56 + 15  // bottomBarHeight + gradientExtension (safeArea 제외)
+    } else {
+        // .never이므로 safeArea 수동 추가
+        topInset = safeAreaTop + 44 + 15
+        bottomInset = safeAreaBottom + 56 + 15
+    }
 
     return UIEdgeInsets(top: topInset, left: 0, bottom: bottomInset, right: 0)
 }

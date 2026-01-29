@@ -11,7 +11,7 @@
 //    - Strong 신호 → 동의 없이 저품질 확정
 //    - Weak/Conditional 신호 → AestheticsScore < 0.2 동의 시 저품질
 //  - 경로2: AestheticsScore 기반
-//    - AestheticsScore < 0.0 AND isUtility == false → 저품질
+//    - AestheticsScore < 0.0 AND isUtility == false AND 텍스트 블록 < 5개 → 저품질
 //
 //  배지 분류:
 //  - ⚪ 회색 (both): 경로1 + 경로2 둘 다 해당
@@ -22,6 +22,7 @@
 #if DEBUG
 import Foundation
 import Photos
+import Vision
 import AppCore
 
 // MARK: - CompareCategory
@@ -218,7 +219,9 @@ final class CompareAnalysisTester {
 
                 // 2. AestheticsScore 분석
                 var aestheticsMetrics: AestheticsMetrics?
+                var loadedImage: CGImage?
                 if let image = try? await imageLoader.loadImage(for: asset) {
+                    loadedImage = image
                     aestheticsMetrics = try? await aestheticsAnalyzer.analyze(image)
                 }
 
@@ -228,8 +231,8 @@ final class CompareAnalysisTester {
                     aestheticsMetrics: aestheticsMetrics
                 )
 
-                // 4. 경로2 판정 (AestheticsScore 기반)
-                let path2Result = evaluatePath2(aestheticsMetrics: aestheticsMetrics)
+                // 4. 경로2 판정 (AestheticsScore 기반 + 텍스트 스크린샷 필터)
+                let path2Result = await evaluatePath2(aestheticsMetrics: aestheticsMetrics, image: loadedImage)
 
                 // 5. 분류
                 let category: CompareCategory?
@@ -329,8 +332,8 @@ final class CompareAnalysisTester {
 
     /// 경로2 판정: AestheticsScore 기반
     ///
-    /// - AestheticsScore < 0.0 AND isUtility == false → 저품질
-    private func evaluatePath2(aestheticsMetrics: AestheticsMetrics?) -> Bool {
+    /// - AestheticsScore < 0.0 AND isUtility == false AND 텍스트 블록 < 5개 → 저품질
+    private func evaluatePath2(aestheticsMetrics: AestheticsMetrics?, image: CGImage?) async -> Bool {
         guard let metrics = aestheticsMetrics else {
             return false
         }
@@ -340,13 +343,57 @@ final class CompareAnalysisTester {
             return false
         }
 
-        // AestheticsScore < 0.0 → 저품질
-        if metrics.overallScore < path2Threshold {
-            Log.print("[CompareAnalysis] 경로2: AestheticsScore 기반 감지 (score=\(String(format: "%.3f", metrics.overallScore)))")
-            return true
+        // AestheticsScore < 0.0 체크
+        guard metrics.overallScore < path2Threshold else {
+            return false
         }
 
-        return false
+        // 텍스트 스크린샷 감지 (텍스트 블록 >= 5개면 제외)
+        if let image = image {
+            let isTextScreenshot = await detectTextScreenshot(image)
+            if isTextScreenshot {
+                Log.print("[CompareAnalysis] 경로2: 텍스트 스크린샷으로 제외 (score=\(String(format: "%.3f", metrics.overallScore)))")
+                return false
+            }
+        }
+
+        Log.print("[CompareAnalysis] 경로2: AestheticsScore 기반 감지 (score=\(String(format: "%.3f", metrics.overallScore)))")
+        return true
+    }
+
+    /// 텍스트 스크린샷 감지 (Vision 프레임워크)
+    ///
+    /// - Parameter image: 분석할 이미지
+    /// - Returns: 텍스트 블록 >= 5개이면 true (스크린샷)
+    private func detectTextScreenshot(_ image: CGImage) async -> Bool {
+        return await withCheckedContinuation { continuation in
+            let request = VNRecognizeTextRequest { request, error in
+                guard error == nil,
+                      let observations = request.results as? [VNRecognizedTextObservation] else {
+                    continuation.resume(returning: false)
+                    return
+                }
+
+                let textBlockCount = observations.count
+                let isTextScreenshot = textBlockCount >= CleanupConstants.textBlockCountThreshold
+
+                if isTextScreenshot {
+                    Log.print("[CompareAnalysis] 텍스트 감지: \(textBlockCount)개 블록 → 스크린샷")
+                }
+
+                continuation.resume(returning: isTextScreenshot)
+            }
+
+            request.recognitionLevel = .fast
+            request.recognitionLanguages = ["ko-KR", "en-US"]
+
+            let handler = VNImageRequestHandler(cgImage: image, options: [:])
+            do {
+                try handler.perform([request])
+            } catch {
+                continuation.resume(returning: false)
+            }
+        }
     }
 }
 #endif

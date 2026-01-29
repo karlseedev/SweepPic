@@ -676,13 +676,17 @@ extension FaceComparisonViewController: FaceComparisonDataSource {
         let safeAreaBottom = view.safeAreaInsets.bottom
 
         let topInset: CGFloat
-        if #available(iOS 26.0, *) {
-            topInset = 0
-        } else {
-            topInset = safeAreaTop + FaceComparisonTitleBar.contentHeight + FaceComparisonTitleBar.gradientExtension
-        }
+        let bottomInset: CGFloat
 
-        let bottomInset = safeAreaBottom + Self.bottomBarHeight + Self.bottomBarGradientExtension
+        if #available(iOS 26.0, *) {
+            // .automatic이 safeArea 자동 처리하므로 제외
+            topInset = 0
+            bottomInset = Self.bottomBarHeight + Self.bottomBarGradientExtension
+        } else {
+            // .never이므로 safeArea 수동 추가
+            topInset = safeAreaTop + FaceComparisonTitleBar.contentHeight + FaceComparisonTitleBar.gradientExtension
+            bottomInset = safeAreaBottom + Self.bottomBarHeight + Self.bottomBarGradientExtension
+        }
 
         return UIEdgeInsets(top: topInset, left: 0, bottom: bottomInset, right: 0)
     }
