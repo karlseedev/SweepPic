@@ -75,6 +75,7 @@ public enum Log {
         "AlbumsViewController": false,
         "ZoomTransition": true,          // 커스텀 줌 트랜지션 (현재 작업 중)
         "ZoomAnimator": true,            // 줌 애니메이터 (현재 작업 중)
+        "ZoomInteraction": true,         // 줌 Interactive Dismiss (현재 작업 중)
 
         // =============================================
         // SimilarPhoto 분석
