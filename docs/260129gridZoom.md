@@ -65,8 +65,57 @@ protocol ZoomTransitionDestinationProviding: AnyObject {
 
 - `UIViewControllerAnimatedTransitioning` 구현
 - 줌 인: duration 0.25초, springDamping 0.9
-- 줌 아웃: duration 0.2초, springDamping 1.0
-- Fallback: 소스 뷰 없으면 중앙 줌
+- 줌 아웃: duration 0.37초, springDamping 0.9
+- Fallback: 소스 뷰 없으면 crossfade
+
+**⚠️ 핵심 구현 주의사항 (첫 번째 시도 실패 교훈)**:
+
+```swift
+func animateTransition(using transitionContext: UIViewControllerContextTransitioning) {
+    let container = transitionContext.containerView
+    guard let fromVC = transitionContext.viewController(forKey: .from),
+          let toVC = transitionContext.viewController(forKey: .to) else {
+        transitionContext.completeTransition(false)
+        return
+    }
+
+    // ⚠️ 1. view(forKey:) 대신 VC.view 직접 사용
+    let toView = toVC.view!
+    let fromView = fromVC.view!
+
+    // ⚠️ 2. finalFrame 반드시 설정
+    let finalFrame = transitionContext.finalFrame(for: toVC)
+    toView.frame = finalFrame
+
+    // ⚠️ 3. container에 뷰 추가
+    if isPush {
+        container.addSubview(toView)
+    } else {
+        container.insertSubview(toView, belowSubview: fromView)
+    }
+
+    // ⚠️ 4. layoutIfNeeded 호출
+    toView.layoutIfNeeded()
+
+    // ⚠️ 5. Push 시 toView 숨기고 스냅샷만 보여줌
+    toView.alpha = isPush ? 0 : 1
+
+    // 스냅샷 생성 및 애니메이션...
+
+    UIView.animate(...) {
+        snapshotView.frame = endFrame
+        // ⚠️ 6. Push 시 toView.alpha는 여기서 변경하지 않음!
+        if !isPush { fromView.alpha = 0 }
+    } completion: { _ in
+        // ⚠️ 7. Push 시 completion에서 toView 표시
+        if isPush { toView.alpha = 1 }
+
+        snapshotView.removeFromSuperview()
+        fromView.alpha = 1
+        transitionContext.completeTransition(!transitionContext.transitionWasCancelled)
+    }
+}
+```
 
 ### 1-3. ZoomTransitionController.swift 생성
 
@@ -353,6 +402,28 @@ extension AlbumsViewController: ZoomTransitionSourceProviding {
    - PlayerLayerView에 posterImageView 접근자 추가
 3. **메모리**: 스냅샷 이미지 생성 시 메모리 사용량 주의
 
+### ⚠️ UIViewControllerAnimatedTransitioning 구현 함정 (첫 번째 시도 실패 원인)
+
+1. **`transitionContext.view(forKey:)` nil 반환**
+   - Navigation push에서 nil 반환 가능
+   - 반드시 `toVC.view` 직접 사용
+
+2. **toView frame 미설정**
+   - `transitionContext.finalFrame(for:)` 사용 필수
+   - 미설정 시 뷰가 잘못된 위치에 표시됨
+
+3. **Push 시 toView.alpha 애니메이션**
+   - 뷰어의 imageView에 이미지 로드 전이므로 빈 화면
+   - completion에서 즉시 alpha = 1 설정해야 함
+
+4. **sourceView.isHidden 설정**
+   - 원본 셀이 검게 변함
+   - 스냅샷 사용 시 원본 숨길 필요 없음
+
+5. **LiquidGlassKit 경고**
+   - `afterScreenUpdates:YES` 필요 경고 발생
+   - 앱 동작에는 영향 없으나 확인 필요
+
 ---
 
 ## 애니메이션 파라미터 (조사 기반)
@@ -428,3 +499,85 @@ springDamping: 0.90
 5. **iOS 버전 테스트**: iOS 16, 17, 18+에서 동일 동작
 6. **확대 상태 dismiss 차단**: 사진 확대 후 아래 드래그 시 dismiss 안 됨 (패닝으로 동작)
 7. **비디오 줌 테스트**: 비디오 → 그리드 복귀 시 포스터 기반 줌 애니메이션
+
+---
+
+## 첫 번째 구현 시도 실패 기록 (2026-01-29)
+
+### 롤백 커밋
+- `823aab9` (줌 트랜지션 구현 전)으로 완전 롤백
+
+### 발생한 문제들
+
+#### 1. 애니메이션이 전혀 보이지 않음
+**원인**: `transitionContext.view(forKey: .to)`가 nil 반환
+- Navigation push에서는 이 API가 nil을 반환할 수 있음
+- toView가 nil이면 container에 뷰가 추가되지 않음
+
+**해결책**:
+```swift
+// ❌ 잘못된 방식
+let toView = transitionContext.view(forKey: .to)
+if let toView = toView { container.addSubview(toView) }
+
+// ✅ 올바른 방식
+let toView = toVC.view!
+let finalFrame = transitionContext.finalFrame(for: toVC)
+toView.frame = finalFrame
+container.addSubview(toView)
+```
+
+#### 2. 스냅샷은 이동하지만 빈 화면이 덮어버림
+**원인**: Push 시 `toView.alpha`를 애니메이션 중에 0→1로 변경
+- 스냅샷이 이동하는 동안 toView(뷰어)가 점점 보이기 시작
+- 뷰어의 imageView에 이미지가 아직 로드되지 않은 상태 (`image = null`)
+- 빈 뷰어 화면이 스냅샷을 덮어버림
+
+**로그 증거**:
+```
+destView: ... image = <(null):0x0 (null) anonymous; (0 0)@0>
+```
+
+**해결책**:
+```swift
+// ❌ 잘못된 방식 - 애니메이션 중 alpha 변경
+UIView.animate(...) {
+    snapshotView.frame = endFrame
+    toView.alpha = 1  // 빈 화면이 점점 보임
+}
+
+// ✅ 올바른 방식 - completion에서 즉시 변경
+UIView.animate(...) {
+    snapshotView.frame = endFrame
+    // toView.alpha는 여기서 변경하지 않음
+} completion: { _ in
+    toView.alpha = 1  // 스냅샷 애니메이션 완료 후 즉시 표시
+}
+```
+
+#### 3. 썸네일이 까맣게 변함
+**원인**: `sourceView?.isHidden = true` 설정
+- 애니메이션 중 원본 뷰를 숨기면 셀이 검은색으로 보임
+- 스냅샷을 사용하므로 원본을 숨길 필요 없음
+
+**해결책**: sourceView.isHidden 설정 제거 또는 다른 방식 사용
+
+#### 4. 그리드 복귀 시 스크롤 위치 변경
+**원인**: 조사 필요 (트랜지션 중 collectionView 레이아웃 영향 추정)
+
+### 다음 구현 시 핵심 체크리스트
+
+1. [ ] `transitionContext.view(forKey:)` 대신 `toVC.view` 사용
+2. [ ] `transitionContext.finalFrame(for:)` 으로 프레임 설정
+3. [ ] Push 시 toView.alpha는 completion에서만 변경
+4. [ ] sourceView.isHidden 설정하지 않기 (또는 completion에서만)
+5. [ ] destinationView 이미지 로드 타이밍 확인
+6. [ ] 각 단계마다 로그로 값 확인 후 진행
+
+### 권장 구현 순서
+
+1. **최소 동작 먼저**: crossfade만 동작하는 기본 구조 확인
+2. **스냅샷 줌 추가**: sourceView 스냅샷으로 줌 애니메이션
+3. **Pop 구현**: 뷰어 → 그리드 줌 아웃
+4. **Interactive 추가**: 아래 드래그 dismiss
+5. **나머지 화면 적용**: 휴지통, 앨범 등
