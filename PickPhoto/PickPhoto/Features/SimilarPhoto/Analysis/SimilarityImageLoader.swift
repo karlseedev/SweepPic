@@ -33,6 +33,9 @@ enum SimilarityImageLoadError: Error, LocalizedError {
     /// 사진 접근 권한 없음
     case accessDenied
 
+    /// Task 취소로 인한 요청 취소
+    case cancelled
+
     var errorDescription: String? {
         switch self {
         case .loadFailed(let reason):
@@ -43,6 +46,8 @@ enum SimilarityImageLoadError: Error, LocalizedError {
             return "잘못된 이미지 형식"
         case .accessDenied:
             return "사진 접근 권한이 없습니다"
+        case .cancelled:
+            return "Task 취소로 이미지 요청 취소됨"
         }
     }
 }
@@ -71,6 +76,10 @@ final class SimilarityImageLoader {
 
     /// 타임아웃 시간 (초)
     private let timeout: TimeInterval
+
+    /// 진행 중인 PHImageRequestID 관리 (Task 취소 시 cancelImageRequest 호출용)
+    private let lock = NSLock()
+    private var activeRequestIDs: [UUID: PHImageRequestID] = [:]
 
     // MARK: - Initialization
 
@@ -108,63 +117,102 @@ final class SimilarityImageLoader {
     ///
     /// - Important: 긴 변 480px 이하로 리사이즈되며, 원본 비율이 유지됩니다.
     func loadImage(for asset: PHAsset) async throws -> CGImage {
-        return try await withCheckedThrowingContinuation { continuation in
-            // 타겟 크기 계산 (긴 변 기준)
-            let targetSize = calculateTargetSize(for: asset)
+        let requestUUID = UUID()
+        var hasResumed = false  // 중복 resume 방지
+        var isTimeout = false   // timeout/cancelled 구분용
 
-            // 요청 ID 저장용
-            var requestID: PHImageRequestID?
+        return try await withTaskCancellationHandler {
+            try await withCheckedThrowingContinuation { continuation in
+                // 타겟 크기 계산 (긴 변 기준)
+                let targetSize = self.calculateTargetSize(for: asset)
 
-            // 타임아웃 작업 - resume하지 않고 요청 취소만 함
-            // 취소 후 콜백에서 cancelled 상태로 처리됨
-            let timeoutItem = DispatchWorkItem { [weak self] in
-                guard let self = self, let id = requestID else { return }
+                // 타임아웃 작업 - cancelImageRequest 후 콜백에서 처리
+                let timeoutItem = DispatchWorkItem { [weak self] in
+                    guard let self = self else { return }
+                    self.lock.lock()
+                    isTimeout = true
+                    if let id = self.activeRequestIDs.removeValue(forKey: requestUUID) {
+                        self.imageManager.cancelImageRequest(id)
+                    }
+                    self.lock.unlock()
+                }
+
+                // 타임아웃 스케줄
+                DispatchQueue.global().asyncAfter(deadline: .now() + self.timeout, execute: timeoutItem)
+
+                // 이미지 요청 및 ID 저장
+                let requestID = self.imageManager.requestImage(
+                    for: asset,
+                    targetSize: targetSize,
+                    contentMode: .aspectFit,  // 패딩/크롭 금지, 원본 비율 유지
+                    options: self.requestOptions
+                ) { [weak self] image, info in
+                    // 타임아웃 취소
+                    timeoutItem.cancel()
+                    guard let self = self else { return }
+
+                    // degraded (저품질) 이미지는 ID 유지하고 스킵 (high-quality 대기)
+                    if let isDegraded = info?[PHImageResultIsDegradedKey] as? Bool, isDegraded {
+                        return  // ID 제거하지 않음!
+                    }
+
+                    // 최종 콜백에서만 ID 제거 + 중복 resume 방지
+                    self.lock.lock()
+                    self.activeRequestIDs.removeValue(forKey: requestUUID)
+                    let alreadyResumed = hasResumed
+                    hasResumed = true
+                    let wasTimeout = isTimeout
+                    self.lock.unlock()
+
+                    guard !alreadyResumed else { return }
+
+                    // 취소된 경우: timeout과 Task 취소를 구분
+                    if let cancelled = info?[PHImageCancelledKey] as? Bool, cancelled {
+                        if wasTimeout {
+                            continuation.resume(throwing: SimilarityImageLoadError.timeout)
+                        } else {
+                            continuation.resume(throwing: SimilarityImageLoadError.cancelled)
+                        }
+                        return
+                    }
+
+                    // 에러 처리
+                    if let error = info?[PHImageErrorKey] as? Error {
+                        continuation.resume(throwing: SimilarityImageLoadError.loadFailed(error.localizedDescription))
+                        return
+                    }
+
+                    // 이미지 검증
+                    guard let uiImage = image else {
+                        continuation.resume(throwing: SimilarityImageLoadError.loadFailed("이미지 nil"))
+                        return
+                    }
+
+                    guard let cgImage = uiImage.cgImage else {
+                        continuation.resume(throwing: SimilarityImageLoadError.invalidImage)
+                        return
+                    }
+
+                    continuation.resume(returning: cgImage)
+                }
+
+                // requestID 저장 (thread-safe)
+                self.lock.lock()
+                self.activeRequestIDs[requestUUID] = requestID
+                self.lock.unlock()
+            }
+        } onCancel: { [weak self] in
+            // Task 취소 시 PHImageRequest도 즉시 취소 (GPU 경쟁 해결 핵심)
+            guard let self = self else { return }
+            self.lock.lock()
+            let requestID = self.activeRequestIDs.removeValue(forKey: requestUUID)
+            self.lock.unlock()
+
+            if let id = requestID {
                 self.imageManager.cancelImageRequest(id)
             }
-
-            // 타임아웃 스케줄
-            DispatchQueue.global().asyncAfter(deadline: .now() + timeout, execute: timeoutItem)
-
-            // 이미지 요청 및 ID 저장
-            requestID = imageManager.requestImage(
-                for: asset,
-                targetSize: targetSize,
-                contentMode: .aspectFit,  // 패딩/크롭 금지, 원본 비율 유지
-                options: requestOptions
-            ) { image, info in
-                // 타임아웃 취소
-                timeoutItem.cancel()
-
-                // degraded (저품질) 이미지는 무시 - 고품질 이미지가 뒤따라옴
-                if let isDegraded = info?[PHImageResultIsDegradedKey] as? Bool, isDegraded {
-                    return
-                }
-
-                // 취소됨 (타임아웃으로 인한 취소 포함)
-                if let cancelled = info?[PHImageCancelledKey] as? Bool, cancelled {
-                    continuation.resume(throwing: SimilarityImageLoadError.timeout)
-                    return
-                }
-
-                // 에러 처리
-                if let error = info?[PHImageErrorKey] as? Error {
-                    continuation.resume(throwing: SimilarityImageLoadError.loadFailed(error.localizedDescription))
-                    return
-                }
-
-                // 이미지 검증
-                guard let uiImage = image else {
-                    continuation.resume(throwing: SimilarityImageLoadError.loadFailed("이미지 nil"))
-                    return
-                }
-
-                guard let cgImage = uiImage.cgImage else {
-                    continuation.resume(throwing: SimilarityImageLoadError.invalidImage)
-                    return
-                }
-
-                continuation.resume(returning: cgImage)
-            }
+            // 콜백 보장 가정: cancelImageRequest 후 PHImageManager가 콜백 호출
+            // 타임아웃은 안전장치: 콜백 미보장 시 fallback으로 resume 처리
         }
     }
 

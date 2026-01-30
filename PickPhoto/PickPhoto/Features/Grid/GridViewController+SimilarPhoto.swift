@@ -209,8 +209,10 @@ extension GridViewController {
 
         Log.print("[SimilarPhoto] Starting analysis for range: \(analysisRange)")
 
-        // 분석 요청 (비동기)
-        Task {
+        // 분석 요청 (비동기) - Task 등록으로 스크롤 시 취소 가능
+        let taskID = UUID()
+        let task = Task {
+            defer { SimilarityAnalysisQueue.shared.unregisterTask(id: taskID) }
             let groupIDs = await SimilarityAnalysisQueue.shared.formGroupsForRange(
                 analysisRange,
                 source: .grid,
@@ -218,6 +220,7 @@ extension GridViewController {
             )
             Log.print("[SimilarPhoto] Analysis complete, found \(groupIDs.count) groups")
         }
+        SimilarityAnalysisQueue.shared.registerTask(task, id: taskID, source: .grid)
     }
 
     /// 분석 범위 계산

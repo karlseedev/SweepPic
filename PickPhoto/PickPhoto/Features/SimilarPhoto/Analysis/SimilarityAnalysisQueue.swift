@@ -177,6 +177,35 @@ final class SimilarityAnalysisQueue {
         }
     }
 
+    /// 분석 Task를 등록합니다.
+    ///
+    /// cancel(source:) 호출 시 등록된 Task를 취소할 수 있도록 합니다.
+    /// grid 소스만 등록됩니다 (viewer 소스는 취소 불가이므로 등록 불필요).
+    ///
+    /// - Parameters:
+    ///   - task: 등록할 Task
+    ///   - id: Task 식별용 UUID
+    ///   - source: 요청 소스 (.grid만 등록)
+    func registerTask(_ task: Task<Void, Never>, id: UUID, source: AnalysisSource) {
+        guard source == .grid else { return }
+        serialQueue.sync {
+            currentTasks[id] = task
+            activeRequests.insert(id)
+        }
+    }
+
+    /// 분석 Task 등록을 해제합니다.
+    ///
+    /// Task 완료 또는 취소 시 defer에서 호출합니다.
+    ///
+    /// - Parameter id: 해제할 Task의 UUID
+    func unregisterTask(id: UUID) {
+        serialQueue.sync {
+            currentTasks.removeValue(forKey: id)
+            activeRequests.remove(id)
+        }
+    }
+
     /// 특정 소스의 분석 요청을 취소합니다.
     ///
     /// - Parameter source: 취소할 소스 (.grid만 취소 가능)
@@ -192,6 +221,7 @@ final class SimilarityAnalysisQueue {
             for (requestID, task) in currentTasks {
                 if activeRequests.contains(requestID) {
                     task.cancel()
+                    Log.print("[SimilarPhoto] Cancelled task: \(requestID)")
                 }
             }
         }
@@ -236,6 +266,12 @@ final class SimilarityAnalysisQueue {
         let featurePrints = await generateFeaturePrints(for: photos)
         let fpTime = CFAbsoluteTimeGetCurrent() - fpStartTime
 
+        // 취소 체크: FP 생성 후 (캐시/알림 스킵)
+        guard !Task.isCancelled else {
+            Log.print("[SimilarPhoto] Cancelled after FP generation")
+            return []
+        }
+
         // T014.3 & T014.4: 인접 거리 계산 및 그룹 분리
         let rawGroups = analyzer.formGroups(
             featurePrints: featurePrints,
@@ -262,6 +298,12 @@ final class SimilarityAnalysisQueue {
         var totalFaceCount = 0
 
         for groupAssetIDs in rawGroups {
+            // 취소 체크: rawGroups 루프 (캐시/알림 스킵)
+            guard !Task.isCancelled else {
+                Log.print("[SimilarPhoto] Cancelled during group processing")
+                return []
+            }
+
             // 그룹 내 사진 가져오기
             let groupPhotos = photos.filter { groupAssetIDs.contains($0.localIdentifier) }
 
@@ -433,29 +475,55 @@ final class SimilarityAnalysisQueue {
 
         let semaphore = AsyncSemaphore(value: currentLimit)
 
-        return await withTaskGroup(of: (Int, VNFeaturePrintObservation?).self) { group in
-            for (index, photo) in photos.enumerated() {
-                group.addTask {
-                    await semaphore.wait()
-                    defer { semaphore.signal() }
+        // withThrowingTaskGroup 사용: child task에서 CancellationError throw 가능
+        // 외부 시그니처는 non-throws 유지 (CancellationError를 내부에서 흡수)
+        do {
+            return try await withThrowingTaskGroup(of: (Int, VNFeaturePrintObservation?).self) { group in
+                for (index, photo) in photos.enumerated() {
+                    group.addTask {
+                        // child task 내부에서도 취소 체크
+                        try Task.checkCancellation()
 
-                    do {
-                        let image = try await self.imageLoader.loadImage(for: photo)
-                        let fp = try await self.analyzer.generateFeaturePrint(for: image)
-                        return (index, fp)
-                    } catch {
-                        // 개별 실패 → nil 반환
-                        return (index, nil)
+                        await semaphore.wait()
+                        defer { semaphore.signal() }
+
+                        // 세마포어 획득 후 재확인
+                        try Task.checkCancellation()
+
+                        do {
+                            let image = try await self.imageLoader.loadImage(for: photo)
+                            let fp = try await self.analyzer.generateFeaturePrint(for: image)
+                            return (index, fp)
+                        } catch is CancellationError {
+                            throw CancellationError()  // 상위로 전파
+                        } catch SimilarityImageLoadError.cancelled {
+                            throw CancellationError()  // 취소를 CancellationError로 변환
+                        } catch {
+                            // 다른 에러만 nil로 처리
+                            return (index, nil)
+                        }
                     }
                 }
-            }
 
-            // 결과 수집
-            var results = [VNFeaturePrintObservation?](repeating: nil, count: photos.count)
-            for await (index, fp) in group {
-                results[index] = fp
+                // 결과 수집
+                var results = [VNFeaturePrintObservation?](repeating: nil, count: photos.count)
+                for try await (index, fp) in group {
+                    // 취소 감지 시 나머지 작업 취소
+                    if Task.isCancelled {
+                        group.cancelAll()
+                        break
+                    }
+                    results[index] = fp
+                }
+                return results
             }
-            return results
+        } catch is CancellationError {
+            // 취소 시 부분 결과 전부 버리고 빈 배열 반환 (캐시 오염 방지)
+            Log.print("[SimilarPhoto] generateFeaturePrints cancelled - returning empty")
+            return []
+        } catch {
+            Log.print("[SimilarPhoto] generateFeaturePrints error: \(error)")
+            return []
         }
     }
 
@@ -554,6 +622,12 @@ final class SimilarityAnalysisQueue {
 
         // 각 사진 처리
         for assetID in assetIDs {
+            // 취소 체크: 사진 처리 루프
+            guard !Task.isCancelled else {
+                Log.print("[SimilarPhoto] Cancelled during person assignment")
+                return result
+            }
+
             guard let faces = rawFacesMap[assetID] else {
                 result[assetID] = []
                 continue
