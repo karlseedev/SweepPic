@@ -269,6 +269,26 @@ present(viewerVC, animated: true)
 - **iOS 26+에서 커스텀 버튼(삭제, 복구, 뒤로가기) 정상 표시 확인**
 - 상태바 숨김 정상 동작 확인
 
+#### Phase 1-2 검증 결과 (2026-01-30)
+
+**iOS 18 + iOS 26 실기기 테스트 완료**
+
+구현 중 발견된 문제 및 수정:
+
+| 문제 | 원인 | 수정 |
+|-----|-----|------|
+| dismiss 후 검은 화면 | `shouldRemovePresentersView=false`인데 dismiss 시 toView(그리드)를 container에 insertSubview → container 제거 시 그리드도 사라짐 | dismiss 시 toView를 container에 추가하지 않음 |
+| iOS 26에서 멀리 스와이프 후 줌 아웃 안 됨 | `scrollToItem + layoutIfNeeded` 후에도 iOS 26에서 셀이 dequeue 안 됨 → `cellForItem` nil → sourceFrame nil | `layoutAttributesForItem` fallback 추가 (셀 없이도 프레임 계산) |
+
+검증 항목:
+- [x] 그리드 → 뷰어 줌 인 (iOS 18, 26)
+- [x] 뷰어 → 그리드 줌 아웃 (Back 버튼)
+- [x] 뷰어에서 사진 많이 넘긴 후 줌 아웃 → 해당 셀로 복귀
+- [x] 3개 그리드 (보관함, 앨범, 휴지통) 모두 정상
+- [x] FloatingOverlay 숨김/복원
+- [x] iOS 26+ 커스텀 버튼 정상 표시
+- [x] iOS 26+ 시스템 UI 분기 기존대로 유지
+
 ---
 
 ### Phase 3: Interactive Dismiss 구현
