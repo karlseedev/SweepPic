@@ -74,26 +74,44 @@ guard !Task.isCancelled else {
 
 **주의**: CancellationError를 throw하려면 `withThrowingTaskGroup` 사용 필수
 
-```swift
-return try await withThrowingTaskGroup(of: (Int, VNFeaturePrintObservation?).self) { group in
-    for (index, photo) in photos.enumerated() {
-        group.addTask {
-            // child task 내부에서도 취소 체크
-            try Task.checkCancellation()
-            ...
-        }
-    }
+**에러 흡수 정책**: `generateFeaturePrints`는 현재 non-throws (`async -> [VNFeaturePrintObservation?]`).
+이 시그니처를 유지하기 위해 내부에서 CancellationError를 catch하여 빈 배열로 반환한다.
+`formGroupsForRange`도 마찬가지로 non-throws 유지. throws 전파하지 않으므로
+`GridViewController`의 `Task<Void, Never>` 및 `currentTasks` 타입 변경 불필요.
 
-    var results = [VNFeaturePrintObservation?](repeating: nil, count: photos.count)
-    for try await (index, fp) in group {
-        // 취소 감지 시 나머지 작업 취소
-        if Task.isCancelled {
-            group.cancelAll()
-            break
+**부분 결과 정책**: 취소 시 부분 결과는 전부 버리고 빈 배열 반환 (캐시 오염 방지)
+
+```swift
+// generateFeaturePrints 내부
+func generateFeaturePrints(for photos: [PHAsset]) async -> [VNFeaturePrintObservation?] {
+    do {
+        return try await withThrowingTaskGroup(of: (Int, VNFeaturePrintObservation?).self) { group in
+            for (index, photo) in photos.enumerated() {
+                group.addTask {
+                    // child task 내부에서도 취소 체크
+                    try Task.checkCancellation()
+                    ...
+                }
+            }
+
+            var results = [VNFeaturePrintObservation?](repeating: nil, count: photos.count)
+            for try await (index, fp) in group {
+                // 취소 감지 시 나머지 작업 취소
+                if Task.isCancelled {
+                    group.cancelAll()
+                    break
+                }
+                results[index] = fp
+            }
+            return results
         }
-        results[index] = fp
+    } catch is CancellationError {
+        Log.print("[SimilarPhoto] generateFeaturePrints cancelled - returning empty")
+        return []  // 부분 결과 버림, throws 전파하지 않음
+    } catch {
+        Log.print("[SimilarPhoto] generateFeaturePrints error: \(error)")
+        return []
     }
-    return results
 }
 ```
 
@@ -120,13 +138,16 @@ guard !Task.isCancelled else {
 
 **핵심**: GPU 경쟁 해결을 위해 이미지 디코딩도 즉시 중단 필요
 
-#### 3-1. CancellationError 정의
+#### 3-1. cancelled 케이스 추가
 
+**기존 케이스 유지**, `cancelled`만 추가:
 ```swift
-enum SimilarityImageLoadError: Error {
-    case timeout
-    case cancelled  // 추가: 취소 전용 에러
-    case loadFailed(String)
+enum SimilarityImageLoadError: Error, LocalizedError {
+    case loadFailed(String)   // 기존
+    case timeout              // 기존
+    case invalidImage         // 기존
+    case accessDenied         // 기존
+    case cancelled            // 추가: Task 취소 전용 에러
 }
 ```
 
@@ -204,8 +225,8 @@ func loadImage(for asset: PHAsset) async throws -> CGImage {
         if let id = requestID {
             self.imageManager.cancelImageRequest(id)
         }
-        // 주의: 콜백이 보장되므로 여기서 resume하지 않음
-        // 만약 콜백 미보장 시 타임아웃이 fallback 역할
+        // 콜백 보장 가정: cancelImageRequest 후 PHImageManager가 콜백 호출
+        // 타임아웃은 안전장치: 콜백 미보장 시 fallback으로 resume 처리
     }
 }
 ```
