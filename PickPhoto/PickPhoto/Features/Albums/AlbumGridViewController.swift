@@ -483,9 +483,17 @@ extension AlbumGridViewController: ZoomTransitionSourceProviding {
     /// - Parameter index: 현재 뷰어의 인덱스
     /// - Returns: window 좌표계 기준 프레임 또는 nil
     func zoomSourceFrame(for index: Int) -> CGRect? {
-        guard let sourceView = zoomSourceView(for: index) else { return nil }
-        // window 좌표계로 변환 (to: nil)
-        return sourceView.superview?.convert(sourceView.frame, to: nil)
+        // 1. 셀이 있으면 직접 사용 (가장 정확)
+        if let sourceView = zoomSourceView(for: index) {
+            return sourceView.superview?.convert(sourceView.frame, to: nil)
+        }
+
+        // 2. 셀이 없으면 layout attributes로 프레임 계산
+        let cellIndexPath = IndexPath(item: index + paddingCellCount, section: 0)
+        guard let attributes = collectionView.layoutAttributesForItem(at: cellIndexPath) else {
+            return nil
+        }
+        return collectionView.convert(attributes.frame, to: nil)
     }
 
     /// 해당 인덱스의 셀이 보이도록 스크롤 (Pop 전 호출)
