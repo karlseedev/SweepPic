@@ -759,6 +759,9 @@ final class ViewerViewController: UIViewController {
             guard !isDismissing else { return }
             isDismissing = true
 
+            // [LiquidGlass 최적화] dismiss 드래그 시작 → MTKView pause
+            LiquidGlassOptimizer.optimize(in: view.window)
+
             guard let tc = zoomTransitionController else {
                 // fallback: ZoomTransitionController 없으면 일반 dismiss
                 dismissWithFadeOut()
@@ -773,7 +776,10 @@ final class ViewerViewController: UIViewController {
                 if !completed {
                     // 취소 시 isDismissing 복원
                     self?.isDismissing = false
+                    // [LiquidGlass 최적화] 취소 시 MTKView 복원
+                    LiquidGlassOptimizer.restore(in: self?.view.window)
                 }
+                // dismiss 완료 시에는 뷰어가 사라지므로 restore 불필요
             }
             tc.interactionController = ic
             tc.isInteractivelyDismissing = true

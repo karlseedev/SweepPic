@@ -155,7 +155,7 @@ final class ZoomDismissalInteractionController: NSObject, UIViewControllerIntera
     /// 드래그 중 스냅샷 위치 + 배경 alpha 업데이트
     private func updateInteractiveTransition(translation: CGPoint) {
         guard let snapshot = snapshotView,
-              let container = transitionContext?.containerView else { return }
+              transitionContext?.containerView != nil else { return }
 
         let progress = calculateProgress(translation: translation)
 

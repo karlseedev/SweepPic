@@ -446,6 +446,36 @@ func gestureRecognizerShouldBegin(_ gestureRecognizer: UIGestureRecognizer) -> B
 
 결론: 커스텀 줌 구현이 아니라 **LiquidGlassKit(MTKView 기반 블러 렌더링)이 메인 스레드에 상시 부하**를 주어, gesture callback 빈도가 저하됨. → LiquidGlass 최적화 또는 비활성화로 해결 필요.
 
+#### MTKView pause 검증 (2026-01-30)
+
+뷰어 표시 중 MTKView를 상시 pause하여 검증:
+- `viewDidAppear`에서 `LiquidGlassOptimizer.optimize()` 호출
+- 뷰어 내부 스크롤(페이지 전환, 줌)에서 `restore()` 호출 전부 스킵
+- → 뷰어가 열려있는 동안 MTKView가 계속 pause + UIBlurEffect 대체 상태
+
+결과:
+| 상태 | .changed 간격 | FPS |
+|------|-------------|-----|
+| MTKView 활성 (이전) | 55-90ms | ~12-16 FPS |
+| **MTKView pause** | **16.6-16.8ms** | **60 FPS** |
+
+**LiquidGlassKit MTKView 렌더링이 근본 원인 확정.**
+
+참고: 120Hz ProMotion 기기(iPhone 13 Pro)에서 60fps로 측정됨. UIKit interactive transition(`UIViewControllerInteractiveTransitioning`) 경로가 60Hz로 동작하는 것으로 추정. 120fps 달성에는 CADisplayLink 기반 애니메이션 드라이버가 필요할 수 있음.
+
+#### 해결: handleDismissPan에서 optimize 호출 (2026-01-30)
+
+기존 스크롤 최적화(optimize/restore)와 동일한 패턴을 interactive dismiss에 적용:
+- `handleDismissPan` `.began` → `LiquidGlassOptimizer.optimize(in: view.window)`
+- `onTransitionFinished` 취소 시 → `LiquidGlassOptimizer.restore(in: view.window)`
+- dismiss 완료 시에는 뷰어가 사라지므로 restore 불필요
+
+원인: interactive dismiss의 `dismissPanGesture`는 별도의 `UIPanGestureRecognizer`이므로, 기존 `UIScrollViewDelegate` 기반 optimize/restore가 트리거되지 않았음. dismiss 드래그 중 MTKView가 계속 활성 상태로 메인 스레드를 점유.
+
+결과: **체감 부드러움 확인 완료.** 55-90ms → 16.7ms (60fps) 수준으로 개선.
+
+**성능 이슈 해결 완료.**
+
 #### 코드 정리 완료 (2026-01-30)
 
 진단 테스트 코드 및 로그를 모두 제거하고 Phase 3 정상 코드로 복원:
