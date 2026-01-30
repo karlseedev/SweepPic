@@ -79,7 +79,7 @@ public enum Log {
         // =============================================
         // SimilarPhoto 분석
         // =============================================
-        "SimilarPhoto": false,
+        "SimilarPhoto": true,             // Task 취소 테스트 중 (ON)
         "SimilarityAnalysisQueue": false,
         "SimilarityAnalyzer": false,
         "FaceComparisonViewController": false,

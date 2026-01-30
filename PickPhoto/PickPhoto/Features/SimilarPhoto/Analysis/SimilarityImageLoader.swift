@@ -78,8 +78,9 @@ final class SimilarityImageLoader {
     private let timeout: TimeInterval
 
     /// 진행 중인 PHImageRequestID 관리 (Task 취소 시 cancelImageRequest 호출용)
+    /// nonisolated(unsafe): onCancel(@Sendable 클로저)에서 접근 필요, lock으로 thread safety 보장
     private let lock = NSLock()
-    private var activeRequestIDs: [UUID: PHImageRequestID] = [:]
+    nonisolated(unsafe) private var activeRequestIDs: [UUID: PHImageRequestID] = [:]
 
     // MARK: - Initialization
 

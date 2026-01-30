@@ -268,7 +268,7 @@ final class SimilarityAnalysisQueue {
 
         // 취소 체크: FP 생성 후 (캐시/알림 스킵)
         guard !Task.isCancelled else {
-            Log.print("[SimilarPhoto] Cancelled after FP generation")
+            Log.print("[SimilarPhoto] Cancelled after FP generation - skipping cache/notification")
             return []
         }
 
@@ -300,7 +300,7 @@ final class SimilarityAnalysisQueue {
         for groupAssetIDs in rawGroups {
             // 취소 체크: rawGroups 루프 (캐시/알림 스킵)
             guard !Task.isCancelled else {
-                Log.print("[SimilarPhoto] Cancelled during group processing")
+                Log.print("[SimilarPhoto] Cancelled during group processing - skipping cache/notification")
                 return []
             }
 
@@ -624,7 +624,7 @@ final class SimilarityAnalysisQueue {
         for assetID in assetIDs {
             // 취소 체크: 사진 처리 루프
             guard !Task.isCancelled else {
-                Log.print("[SimilarPhoto] Cancelled during person assignment")
+                Log.print("[SimilarPhoto] Cancelled during person assignment - skipping cache/notification")
                 return result
             }
 

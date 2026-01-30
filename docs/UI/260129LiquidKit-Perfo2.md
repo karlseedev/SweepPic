@@ -292,3 +292,56 @@ group.addTask {
 4. 테스트
 
 **참고**: GPU가 병목이므로 Phase 3까지 모두 필수
+
+---
+
+## 구현 완료 (2026-01-30)
+
+### 구현 결과
+
+| Phase | 파일 | 변경 |
+|-------|------|------|
+| 1 | `SimilarityAnalysisQueue.swift` | registerTask()/unregisterTask() 추가 |
+| 1 | `GridViewController+SimilarPhoto.swift` | startAnalysis에서 Task 등록/해제 |
+| 2 | `SimilarityAnalysisQueue.swift` | isCancelled 체크 3곳 (FP 생성 후, rawGroups 루프, person assignment) |
+| 2 | `SimilarityAnalysisQueue.swift` | generateFeaturePrints: withThrowingTaskGroup + CancellationError 흡수 |
+| 3 | `SimilarityImageLoader.swift` | cancelled 케이스 추가, withTaskCancellationHandler, activeRequestIDs |
+
+**총 변경**: +194줄, -69줄 (3파일)
+
+### Sendable 이슈 해결
+
+`onCancel`은 `@Sendable` 클로저이므로 main actor-isolated property에 접근 불가.
+`activeRequestIDs`에 `nonisolated(unsafe)` 적용하여 해결. `NSLock`으로 thread safety 보장.
+
+```swift
+nonisolated(unsafe) private var activeRequestIDs: [UUID: PHImageRequestID] = [:]
+```
+
+### 테스트 결과
+
+#### 1. 취소 동작 ✅
+```
+[SimilarPhoto] Cancelled task: CC7392E2-18B5-4C82-BBFD-4F713B834D11
+[SimilarPhoto] Cancelled during person assignment - skipping cache/notification
+[SimilarPhoto] Cancelled during group processing - skipping cache/notification
+[SimilarPhoto] Analysis complete, found 0 groups
+```
+- Task 취소 로그 출력 확인
+- 캐시/알림 스킵 확인 (취소 후 `Received analysis complete` 미출력)
+
+#### 2. 성능 ✅
+```
+[Hitch] L1 First: hitch: 2.5 ms/s [Good], fps: 120.0
+[Hitch] L2 Steady: hitch: 0.0 ms/s [Good], fps: 120.0
+[Hitch] L2 Steady: hitch: 0.1 ms/s [Good], fps: 118.0
+```
+- 분석 중 스크롤 시 120fps 유지, hitch 0.0~0.1 ms/s [Good]
+
+#### 3. 재분석 ✅
+```
+[SimilarPhoto] Starting analysis for range: 3400...3437
+[SimilarPhoto] Analysis complete, found 2 groups
+[SimilarPhoto] Received analysis complete - groups: 2, assets: 38
+```
+- 취소 후 스크롤 멈춤 → 재분석 정상 완료, 그룹 정상 감지
