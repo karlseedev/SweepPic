@@ -237,7 +237,7 @@ final class SimilarityAnalysisQueue {
     ///   - fetchResult: 사진 fetch 결과
     /// - Returns: 생성된 유효 그룹 ID 배열
     /// 성능 측정 활성화 플래그
-    private let performanceLoggingEnabled = false
+    private let performanceLoggingEnabled = true
 
     func formGroupsForRange(
         _ range: ClosedRange<Int>,

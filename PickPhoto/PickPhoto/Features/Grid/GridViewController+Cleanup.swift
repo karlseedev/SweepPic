@@ -278,6 +278,14 @@ extension GridViewController: CleanupMethodSheetDelegate {
     func cleanupMethodSheetDidSelectIntegratedTest(_ sheet: CleanupMethodSheet, continueFromLast: Bool) {
         startIntegratedLogicTest(continueFromLast: continueFromLast)
     }
+
+    /// 3모드 비교 테스트 선택됨 (DEBUG 전용)
+    /// 완화/기본/강화 모드 동시 비교
+    /// - Parameter continueFromLast: true면 이어서 테스트
+    @available(iOS 18.0, *)
+    func cleanupMethodSheetDidSelectModeTest(_ sheet: CleanupMethodSheet, continueFromLast: Bool) {
+        startModeComparisonTest(continueFromLast: continueFromLast)
+    }
     #endif
 }
 
@@ -355,6 +363,103 @@ extension GridViewController {
         ⚪ 둘 다 해당: \(result.bothCount)장
         🔵 경로1만 (기존 로직): \(result.path1OnlyCount)장
         🟡 경로2만 (AestheticsScore): \(result.path2OnlyCount)장
+
+        이번 휴지통: \(result.totalTrashed)장
+        """
+
+        // 누적 정보 표시
+        message += "\n\n--- 누적 ---"
+        message += "\n총 검색: \(tester.totalScannedCount)장"
+        message += "\n총 휴지통: \(tester.totalTrashedCount)장"
+
+        if let lastDate = tester.lastTestDate {
+            let formatter = DateFormatter()
+            formatter.dateFormat = "yyyy년 M월"
+            message += "\n(\(formatter.string(from: lastDate)) 이전까지)"
+        }
+
+        let alert = UIAlertController(
+            title: titleText,
+            message: message,
+            preferredStyle: .alert
+        )
+
+        alert.addAction(UIAlertAction(title: "확인", style: .default))
+
+        if result.totalTrashed > 0 {
+            alert.addAction(UIAlertAction(title: "휴지통 보기", style: .default) { [weak self] _ in
+                self?.navigateToTrash()
+            })
+        }
+
+        present(alert, animated: true)
+    }
+}
+#endif
+
+// MARK: - DEBUG: 3모드 비교 테스트
+
+#if DEBUG
+extension GridViewController {
+
+    /// 3모드 비교 테스트 시작 (DEBUG 전용)
+    ///
+    /// 완화/기본/강화 모드를 동시에 평가하여 딱지로 구별
+    /// - ⚪ 회색: 3모드 전부 잡음
+    /// - 🔵 파랑: 기본+강화만 잡음
+    /// - 🟡 노랑: 강화만 잡음
+    ///
+    /// - Parameter continueFromLast: true면 이어서 테스트
+    @available(iOS 18.0, *)
+    func startModeComparisonTest(continueFromLast: Bool) {
+        let tester = ModeComparisonTester.shared
+
+        // 진행 Alert 생성
+        let titleText = continueFromLast ? "3모드 이어서 테스트" : "3모드 비교 테스트"
+        let progressAlert = UIAlertController(
+            title: titleText,
+            message: "검색: 0장\n⚪ 전체: 0  🔵 기본↑: 0  🟡 강화만: 0",
+            preferredStyle: .alert
+        )
+
+        present(progressAlert, animated: true)
+
+        // 테스트 실행
+        Task {
+            let result = await tester.runTest(continueFromLast: continueFromLast) { scanned, allModes, standardUp, deepOnly in
+                // 진행 상황 업데이트 (메인 스레드)
+                Task { @MainActor in
+                    progressAlert.message = """
+                    검색: \(scanned)장
+                    ⚪ 전체: \(allModes)  🔵 기본↑: \(standardUp)  🟡 강화만: \(deepOnly)
+                    """
+                }
+            }
+
+            // 결과 표시 (메인 스레드)
+            await MainActor.run {
+                progressAlert.dismiss(animated: true) { [weak self] in
+                    self?.showModeComparisonResult(result, continueFromLast: continueFromLast)
+                }
+            }
+        }
+    }
+
+    /// 3모드 비교 테스트 결과 표시
+    /// - Parameters:
+    ///   - result: 테스트 결과
+    ///   - continueFromLast: 이어서 테스트 여부 (누적 정보 표시용)
+    @available(iOS 18.0, *)
+    private func showModeComparisonResult(_ result: ModeComparisonResult, continueFromLast: Bool) {
+        let tester = ModeComparisonTester.shared
+        let titleText = continueFromLast ? "3모드 이어서 완료" : "3모드 비교 테스트 완료"
+
+        var message = """
+        이번 검색: \(result.totalScanned)장
+
+        ⚪ 전체 모드: \(result.allModesCount)장
+        🔵 기본+강화: \(result.standardUpCount)장
+        🟡 강화만: \(result.deepOnlyCount)장
 
         이번 휴지통: \(result.totalTrashed)장
         """

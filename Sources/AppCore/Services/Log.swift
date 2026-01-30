@@ -110,6 +110,7 @@ public enum Log {
         "QA-TextDetect": true,       // QualityAnalyzer 텍스트 감지 디버그 (ON)
         "CompareAnalysis": true,     // 통합 로직 테스트 (ON)
         "CompareCategoryStore": true,// 카테고리 저장소 (ON)
+        "ModeComparison": true,      // 3모드 비교 테스트 (ON)
 
         // =============================================
         // ImagePipeline / 썸네일

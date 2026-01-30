@@ -32,6 +32,12 @@ protocol CleanupMethodSheetDelegate: AnyObject {
     /// - Parameter continueFromLast: true면 이어서 테스트
     @available(iOS 18.0, *)
     func cleanupMethodSheetDidSelectIntegratedTest(_ sheet: CleanupMethodSheet, continueFromLast: Bool)
+
+    /// 3모드 비교 테스트 선택됨 (DEBUG 전용)
+    /// 완화/기본/강화 모드를 동시에 비교 테스트
+    /// - Parameter continueFromLast: true면 이어서 테스트
+    @available(iOS 18.0, *)
+    func cleanupMethodSheetDidSelectModeTest(_ sheet: CleanupMethodSheet, continueFromLast: Bool)
     #endif
 }
 
@@ -164,6 +170,38 @@ final class CleanupMethodSheet {
                 continueTestAction.isEnabled = false
             }
             alert.addAction(continueTestAction)
+
+            // ── 3모드 비교 테스트 ──
+
+            let modeTester = ModeComparisonTester.shared
+
+            // 3모드 테스트 (처음부터)
+            alert.addAction(UIAlertAction(
+                title: "[DEBUG] 3모드 테스트 (처음부터)",
+                style: .default
+            ) { [self] _ in
+                self.delegate?.cleanupMethodSheetDidSelectModeTest(self, continueFromLast: false)
+            })
+
+            // 3모드 이어서 테스트
+            let continueMode: UIAlertAction
+            if modeTester.canContinue, let lastDate = modeTester.lastTestDate {
+                let dateString = formatDate(lastDate)
+                continueMode = UIAlertAction(
+                    title: "[DEBUG] 3모드 이어서 (\(dateString) 이전)",
+                    style: .default
+                ) { [self] _ in
+                    self.delegate?.cleanupMethodSheetDidSelectModeTest(self, continueFromLast: true)
+                }
+            } else {
+                continueMode = UIAlertAction(
+                    title: "[DEBUG] 3모드 이어서",
+                    style: .default,
+                    handler: nil
+                )
+                continueMode.isEnabled = false
+            }
+            alert.addAction(continueMode)
         }
         #endif
 

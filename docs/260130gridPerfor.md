@@ -213,20 +213,178 @@ withTaskCancellationHandler {
 
 ---
 
-## 현재 결론
+## 실험 3: LiquidGlass MTKView pause 유지
 
-**분석 코드(SimilarityImageLoader, SimilarityAnalysisQueue)의 변경은 성능 저하 원인이 아님.**
+**가설**: 스크롤 종료 시 `LiquidGlassOptimizer.restore()`가 MTKView를 재활성화하면서, Metal 리소스가 PHCachingImageManager 캐시 성능을 저하시킴.
 
-과거 코드로 완전 교체해도 성능이 동일하므로, 원인은 분석 코드 외부에 있음. 가능성:
+**방법**: `GridScroll.swift`의 `scrollDidEnd()`에서 `restore()` 호출을 주석 처리. 스크롤 종료 후에도 MTKView가 pause 상태를 유지하도록 변경.
 
-1. **앱 전체 메모리/리소스 증가**: LiquidGlass MTKView 14개의 Metal 텍스처/버퍼 할당, AutoCleanup 관련 코드/데이터가 기본 메모리 풋프린트를 높임
-   - 현재 앱 분석 시작 시 메모리: 170~183MB
-   - 과거 앱의 메모리 데이터 없음 (비교 불가)
-2. **PHCachingImageManager 캐시 동작 변화**: 시스템 메모리 압박이 높아지면 캐시 크기가 줄어들어 이미지 로딩 성능 저하
-3. **기타 환경 요인**: iOS 업데이트, 기기 상태 등
+**참고**: 그리드 셀(PhotoCell)에는 LiquidGlass/MTKView가 없음. MTKView는 플로팅 UI(탭바, 글래스 버튼 등)에 존재하며, `LiquidGlassOptimizer`가 스크롤 시 이들을 pause/restore하는 구조.
 
-## 다음 단계
+### 실험 결과
 
-- [ ] LiquidGlass를 그리드 셀에서 비활성화한 상태로 동일 테스트 → 메모리/리소스 경쟁 확인
-- [ ] 과거 커밋(8563973)으로 빌드한 앱에서 분석 시작 시 메모리 측정 → 메모리 차이 비교
-- [ ] `loadImage`를 현재 방식(withTaskCancellationHandler)으로 원복 (실험 완료)
+| | 과거 (8563973) | 현재 HEAD | MTKView pause 유지 | HEAD vs pause 유지 |
+|---|---|---|---|---|
+| **#1** FP Gen | 330ms | 766ms | 834ms | +9% |
+| **#1** Total | 1159ms | 1972ms | 2053ms | +4% |
+| **#2** FP Gen | **170ms** | 688ms | **183ms** | **-73%** ✅ |
+| **#2** Total | **376ms** | 2220ms | **829ms** | **-63%** ✅ |
+| **#3** FP Gen | **179ms** | 732ms | **207ms** | **-72%** ✅ |
+| **#3** Total | **601ms** | 3177ms | **1295ms** | **-59%** ✅ |
+
+### 메모리 측정
+
+| | Memory Start | Memory End | Delta |
+|---|---|---|---|
+| #1 | 139.9MB | 240.3MB | +100.4MB |
+| #2 | 262.0MB | 228.2MB | -33.8MB |
+| #3 | 218.3MB | 214.9MB | -3.4MB |
+
+### 핵심 발견
+
+1. **FP Generation이 과거 수준으로 회복**: #2(183ms vs 170ms), #3(207ms vs 179ms) — 거의 동일
+2. **캐시 효과 완전 회복**: #1(834ms) → #2(183ms)로 **78% 감소**. 과거(48%)보다 오히려 더 좋음
+3. **#1(콜드 스타트)만 여전히 느림**: 834ms vs 과거 330ms — 캐시 워밍 전 상태에서 다른 요인 존재
+4. **Face Detect+Match도 크게 개선**: #2(645ms vs 2220ms), #3(1086ms vs 3177ms)
+
+**결론: 원인 확인됨.** LiquidGlass MTKView의 `restore()`(재활성화)가 Metal 리소스를 점유하면서 PHCachingImageManager 캐시 성능을 저하시키고 있었음. MTKView를 pause 상태로 유지하면 캐시가 정상 작동하여 과거 수준의 성능 회복.
+
+---
+
+## 최종 결론
+
+### 근본 원인
+
+**LiquidGlass MTKView의 Metal 리소스가 PHCachingImageManager 캐시와 경쟁.**
+
+- 스크롤 종료 시 `LiquidGlassOptimizer.restore()`가 MTKView를 재활성화
+- 활성화된 MTKView의 Metal 텍스처/버퍼가 시스템 메모리를 점유
+- PHCachingImageManager의 캐시 크기가 축소되어 이미지 로딩 성능 저하
+- 특히 캐시 히트율이 급감 (과거 50% → 현재 10%)
+
+### 해결 방향
+
+분석 실행 중 MTKView를 pause 상태로 유지:
+- 스크롤 종료 → `restore()` 지연 (분석 완료 후 호출)
+- 또는 분석 시작 시 `optimize()` 호출, 완료 시 `restore()` 호출
+- 사용자 체감 영향: 플로팅 UI의 굴절 효과가 분석 중(1~3초) blur로 대체됨 — 실질적으로 눈치채기 어려운 수준
+
+### 제외된 원인 (검증 완료)
+
+- ~~SimilarityImageLoader degraded 체크~~ (실험 1: 10% 미만)
+- ~~SimilarityImageLoader 구조 변경~~ (실험 2: 영향 없음)
+- ~~SimilarityAnalysisQueue 코드 변경~~ (실험 2: 영향 없음)
+- ~~AutoCleanup 리소스 경쟁~~ (수동 트리거이므로 해당 없음)
+- ~~LiquidGlass MTKView GPU 경쟁~~ (1회 렌더 후 정지하므로 GPU는 아님 — **메모리가 원인**)
+
+---
+
+## 해결 구현: LiquidGlass restore 타이밍 최적화
+
+### 변경 전 흐름 (문제)
+
+```
+T+50ms: scrollDidEnd
+  → restore 즉시 호출 (Metal 활성화)
+  → debounce 0.3초 스케줄
+T+300ms: glass visible
+T+350ms: 분석 시작 (Metal 이미 300ms째 활성 → 캐시 경쟁 → 느림)
+```
+
+### 변경 후 흐름
+
+```
+T+50ms: scrollDidEnd
+  → restore 호출 안 함
+  → debounce 0.3초 스케줄
+T+350ms: debounce 발동
+  → 분석 시작 (MTKView 아직 paused → 캐시 경쟁 없이 빠름)
+  → restore 호출 (Metal 활성화 시작)
+T+600ms: glass visible
+```
+
+추가 blur 시간: **~0.3초** (debounce 구간만큼)
+
+### 수정 파일 및 내용
+
+#### 1. GridScroll.swift (line 138-139)
+
+**변경**: `LiquidGlassOptimizer.restore()` 호출 제거
+
+```swift
+// Before:
+// [LiquidGlass 최적화] 스크롤 종료 시 최적화 해제
+LiquidGlassOptimizer.restore(in: self.view.window)
+
+// After:
+// [LiquidGlass 최적화] restore를 분석 debounce 콜백으로 이동 (성능 최적화)
+// → GridViewController+SimilarPhoto.swift의 handleSimilarPhotoScrollEnd()에서 처리
+```
+
+#### 2. GridViewController+SimilarPhoto.swift — handleSimilarPhotoScrollEnd()
+
+**변경**: guard 실패 시 restore 직접 호출 + debounce 콜백에서 분석 후 restore 호출
+
+```swift
+func handleSimilarPhotoScrollEnd() {
+    guard shouldEnableSimilarPhoto() else {
+        // 분석 비활성 → 즉시 restore
+        LiquidGlassOptimizer.restore(in: view.window)
+        return
+    }
+
+    debounceWorkItem?.cancel()
+
+    let workItem = DispatchWorkItem { [weak self] in
+        guard let self = self else { return }
+        // 1. 분석 먼저 시작 (MTKView paused 상태 → 빠름)
+        self.startAnalysis()
+        // 2. restore (Metal 활성화)
+        LiquidGlassOptimizer.restore(in: self.view.window)
+    }
+    debounceWorkItem = workItem
+
+    DispatchQueue.main.asyncAfter(
+        deadline: .now() + SimilarPhotoConstants.debounceInterval,
+        execute: workItem
+    )
+}
+```
+
+### 엣지 케이스
+
+| 케이스 | 동작 |
+|--------|------|
+| 분석 비활성 (`shouldEnableSimilarPhoto()` false) | guard에서 즉시 restore |
+| debounce 중 다시 스크롤 | `handleSimilarPhotoScrollStart()`가 debounce 취소. 스크롤 시작 시 optimize 유지. 다음 scroll end에서 재스케줄 |
+| debounce 중 셀 탭 (뷰어 열기) | debounce 계속 실행 → 분석 + restore 정상 처리 |
+| startAnalysis early return | debounce 콜백에서 startAnalysis 후 restore가 순차 호출되므로 정상 복원 |
+| self가 nil (weak self 해제) | DispatchWorkItem에서 guard let self 실패 → VC가 해제된 상태이므로 문제없음 |
+
+### 잠재적 한계
+
+`startAnalysis()`는 `Task { ... }`를 생성할 뿐 동기 실행하지 않음. debounce 콜백에서 `startAnalysis()` → `restore()` 순서로 호출해도 두 작업이 거의 동시에 실행됨.
+
+다만, Metal 초기화에 ~150ms 소요 (hideBlurOverlays의 0.15s 대기) → 분석 Task가 Metal 초기화 중에 이미지 로딩 가능. 완전한 pause(183ms)만큼은 아니지만, 현재(688ms)보다 크게 개선 예상.
+
+### 2차 방안 (테스트 후 필요 시)
+
+restore 전에 100~200ms 딜레이 추가 → 분석에 더 확실한 head start 제공:
+
+```swift
+self.startAnalysis()
+DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+    LiquidGlassOptimizer.restore(in: self.view.window)
+}
+```
+
+추가 blur: 0.15초. 필요 시에만 적용.
+
+### 검증 계획
+
+1. 빌드 성공 확인
+2. `performanceLoggingEnabled = true` 상태에서 동일 3개 화면 테스트
+3. 과거 실험 결과와 비교:
+   - MTKView pause 유지 실험: #2 FP Gen 183ms, #3 FP Gen 207ms
+   - 현재 HEAD: #2 FP Gen 688ms, #3 FP Gen 732ms
+   - 목표: warm cache 기준 개선 (200~400ms 범위)
