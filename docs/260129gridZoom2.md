@@ -379,13 +379,84 @@ func gestureRecognizerShouldBegin(_ gestureRecognizer: UIGestureRecognizer) -> B
 }
 ```
 
-#### Phase 3 검증
+#### Phase 3 검증 항목
 - 아래 드래그 → 이미지 축소 + 그리드 배경 보임
 - 손 떼면 현재 사진의 셀로 줌 아웃
 - 드래그 취소 → 원위치 복귀
 - 뷰어에서 10장 넘긴 후 dismiss → 정확한 셀로 복귀
 - 줌 상태에서 아래 드래그 → dismiss 안 됨 (스크롤 동작)
 - 좌우 스와이프 → 사진 전환 정상
+
+#### Phase 3 검증 결과 (2026-01-30)
+
+**기능 동작: 정상**
+- [x] 아래 드래그 → 이미지 축소 + 배경 투명 + 그리드 보임
+- [x] 손 떼기 → 현재 사진의 셀 위치로 줌 아웃
+- [x] 드래그 취소 → 원위치 복귀
+- [x] 사진 많이 넘긴 후 드래그 → 정확한 셀로 복귀
+- [x] 줌 상태에서 아래 드래그 → dismiss 안 됨 (스크롤 동작)
+- [x] 좌우 스와이프 → 사진 전환 정상
+
+**성능 이슈: Interactive dismiss 드래그 부드러움 미흡 (미해결)**
+
+증상: 아래로 드래그 시 스냅샷 이동이 뚝뚝 끊기는 느낌. 측정 결과 gesture `.changed` 콜백이 55-90ms 간격으로 도착 (120Hz 기기에서 8.3ms가 정상).
+
+수정 완료된 항목:
+| 수정 | 내용 |
+|-----|------|
+| `animateTransition` 충돌 방지 | interactive dismiss 시 `animateTransition`이 호출되어 스냅샷 중복 + 스프링 애니메이션 충돌. `isInteractiveDismiss` 자체 플래그로 가드 (`transitionContext.isInteractive`는 호출 시점에 `false`) |
+
+배제된 원인:
+| # | 가설 | 테스트 방법 | 결과 (ms 간격) |
+|---|-----|-----------|---------------|
+| 1 | `animateTransition` 충돌 | `transitionContext.isInteractive` 가드 | 가드 미작동 (호출 시점에 `false`) → 자체 플래그로 대체 |
+| 2 | CATransaction implicit animation | `CATransaction.setDisableActions(true)` 래핑 | 차이 없음 (80-90ms) |
+| 3 | `updateInteractiveTransition` 시스템 호출 | 해당 줄 주석 처리 | 차이 없음 (80-90ms) |
+| 4 | Grid lifecycle/layout | `viewWillAppear`, `viewDidLayoutSubviews`에 로그 추가 | 드래그 중 호출 안 됨 |
+| 5 | 이미지 크기 (GPU 부하) | - | 10MB 미만 이미지, 해당 없음 |
+| 6 | UIKit `dismiss(animated:true)` transition 시스템 | dismiss 없이 직접 스냅샷 생성/이동 | 80-90ms → 55-75ms (일부 기여하나 주원인 아님) |
+| 7 | 로깅 I/O 오버헤드 (Swift.print USB 전송) | `Log.isEnabled=false`로 전체 비활성화 | 차이 없음 (55-75ms) |
+| 8 | Debug 빌드 성능 | Release 빌드 체감 테스트 | Release에서도 동일한 끊김 체감 |
+| 9 | UIPageViewController 내부 스크롤뷰 제스처 간섭 | `pageScrollView.isScrollEnabled=false` | 차이 없음 (55-70ms) |
+
+측정 환경: iPhone 13 Pro (120Hz ProMotion). 정상 기대값: 8.3ms (120Hz) 또는 16.7ms (60Hz).
+
+측정 요약:
+| 조건 | .changed 간격 |
+|-----|-------------|
+| 원본 (dismiss + transition) | 80-90ms (~12 FPS) |
+| dismiss 제거 (직접 스냅샷) | 55-75ms (~16 FPS) |
+| dismiss 제거 + 로그 비활성화 | 55-75ms (~16 FPS) |
+| dismiss 제거 + 스크롤뷰 비활성화 | 55-70ms (~16 FPS) |
+
+결론: dismiss 제거로 ~20ms 개선되나, 기본 55-75ms 간격은 **ViewerViewController 또는 앱 전체의 main thread 상시 부하**에서 발생. 코드 분석으로 특정 원인을 찾지 못함.
+
+#### 근본 원인 발견 (2026-01-30)
+
+**LiquidGlassKit이 메인 스레드 부하의 근본 원인으로 확인됨.**
+
+비교 테스트:
+| 시점 | LiquidGlass | 줌 방식 | 체감 |
+|------|------------|---------|------|
+| `decb029` (LiquidGlass 적용 전) | 없음 | 시스템 줌 | **매우 부드러움** |
+| `acd26ae` (LiquidGlass 적용 후, 커스텀 줌 전) | 있음 | 시스템 줌 | **끊김** |
+| 현재 코드 | 있음 | 커스텀 줌 | **끊김** |
+
+테스트 방법: git 히스토리에서 각 시점으로 체크아웃 후 실기기(iPhone 13 Pro)에서 뷰어 dismiss 드래그 체감 비교. 두 시점 모두 동일한 시스템 줌(preferredTransition = .zoom)을 사용하며, LiquidGlass 유무만 다름.
+
+결론: 커스텀 줌 구현이 아니라 **LiquidGlassKit(MTKView 기반 블러 렌더링)이 메인 스레드에 상시 부하**를 주어, gesture callback 빈도가 저하됨. → LiquidGlass 최적화 또는 비활성화로 해결 필요.
+
+#### 코드 정리 완료 (2026-01-30)
+
+진단 테스트 코드 및 로그를 모두 제거하고 Phase 3 정상 코드로 복원:
+- `handleDismissPan`: 진단 코드 제거 → Phase 3 interactive dismiss 코드 복원
+- `ZoomDismissalInteractionController.swift`: 프레임 간격 측정 진단 로그 제거
+- `BaseGridViewController.swift`: 진단 로그 제거
+- `GridViewController.swift`: 진단 로그 제거
+
+유지된 유효 수정:
+- `ZoomAnimator.swift`: `isInteractiveDismiss` 플래그 + 가드 (유효)
+- `ZoomTransitionController.swift`: `isInteractiveDismiss` 설정 (유효)
 
 ---
 

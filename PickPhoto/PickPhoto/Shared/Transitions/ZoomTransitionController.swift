@@ -57,6 +57,7 @@ final class ZoomTransitionController: NSObject, UIViewControllerTransitioningDel
         let animator = ZoomAnimator(isPresenting: false)
         animator.sourceProvider = sourceProvider
         animator.destinationProvider = destinationProvider
+        animator.isInteractiveDismiss = isInteractivelyDismissing
         Log.debug("ZoomTransition", "Dismiss: using ZoomAnimator (interactive: \(isInteractivelyDismissing))")
         return animator
     }

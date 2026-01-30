@@ -372,10 +372,28 @@ final class QualityAnalyzer {
     /// - Returns: 텍스트 스크린샷이면 true
     private func detectTextScreenshot(_ image: CGImage) async -> Bool {
         return await withCheckedContinuation { continuation in
+            // continuation 중복 resume 방지
+            // Vision에서 에러 발생 시 completion handler와 throw가 동시에 발생할 수 있음
+            var hasResumed = false
+
             let request = VNRecognizeTextRequest { request, error in
+                #if DEBUG
+                Log.print("[QA-TextDetect] completion 진입, hasResumed=\(hasResumed), error=\(error != nil)")
+                #endif
+                guard !hasResumed else {
+                    #if DEBUG
+                    Log.print("[QA-TextDetect] ⚠️ 중복 resume 방지됨 (completion)")
+                    #endif
+                    return
+                }
+                hasResumed = true
+
                 // 에러 발생 시 스크린샷 아님으로 처리 (안전한 방향)
                 guard error == nil,
                       let observations = request.results as? [VNRecognizedTextObservation] else {
+                    #if DEBUG
+                    Log.print("[QA-TextDetect] completion에서 resume (에러/nil)")
+                    #endif
                     continuation.resume(returning: false)
                     return
                 }
@@ -388,6 +406,7 @@ final class QualityAnalyzer {
                 if textBlockCount > 0 {
                     Log.print("[QualityAnalyzer] 텍스트 감지: \(textBlockCount)개 블록, 스크린샷=\(isTextScreenshot)")
                 }
+                Log.print("[QA-TextDetect] completion에서 resume (성공)")
                 #endif
 
                 continuation.resume(returning: isTextScreenshot)
@@ -409,10 +428,27 @@ final class QualityAnalyzer {
             // Vision 요청 실행
             let handler = VNImageRequestHandler(cgImage: image, options: [:])
             do {
+                #if DEBUG
+                Log.print("[QA-TextDetect] perform 시작")
+                #endif
                 try handler.perform([request])
+                #if DEBUG
+                Log.print("[QA-TextDetect] perform 종료 (정상)")
+                #endif
             } catch {
                 #if DEBUG
-                Log.print("[QualityAnalyzer] Vision 텍스트 감지 실패: \(error.localizedDescription)")
+                Log.print("[QA-TextDetect] perform 종료 (throw), hasResumed=\(hasResumed)")
+                #endif
+                guard !hasResumed else {
+                    #if DEBUG
+                    Log.print("[QA-TextDetect] ⚠️ 중복 resume 방지됨 (catch)")
+                    #endif
+                    return
+                }
+                hasResumed = true
+
+                #if DEBUG
+                Log.print("[QA-TextDetect] catch에서 resume, error=\(error.localizedDescription)")
                 #endif
                 continuation.resume(returning: false)
             }

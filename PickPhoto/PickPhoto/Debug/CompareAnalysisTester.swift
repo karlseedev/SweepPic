@@ -133,6 +133,10 @@ final class CompareAnalysisTester {
     /// 최대 검색 수
     private let maxScanCount: Int = 3000
 
+    /// 극단적 비율 임계값 (세로/가로 또는 가로/세로 > 이 값이면 제외)
+    /// 블로그 저장 이미지 등 세로로 매우 긴 이미지 제외용
+    private let extremeAspectRatioThreshold: CGFloat = 5.0
+
     // MARK: - Dependencies
 
     /// 기존 품질 분석기
@@ -293,6 +297,15 @@ final class CompareAnalysisTester {
                     lastAssetDate = date
                 }
 
+                // 0. 극단적 비율 체크 (블로그 저장 이미지 등 제외)
+                let aspectRatio = CGFloat(asset.pixelHeight) / CGFloat(asset.pixelWidth)
+                let isExtremeRatio = aspectRatio > extremeAspectRatioThreshold || aspectRatio < (1.0 / extremeAspectRatioThreshold)
+                if isExtremeRatio {
+                    Log.print("[CompareAnalysis] 극단적 비율 제외: \(asset.pixelWidth)×\(asset.pixelHeight) (ratio=\(String(format: "%.1f", aspectRatio)))")
+                    onProgress?(totalScanned, bothCount, path1OnlyCount, path2OnlyCount)
+                    continue
+                }
+
                 // 1. 기존 로직 실행
                 let oldResult = await qualityAnalyzer.analyze(asset)
 
@@ -451,9 +464,20 @@ final class CompareAnalysisTester {
     /// - Returns: 텍스트 블록 >= 5개이면 true (스크린샷)
     private func detectTextScreenshot(_ image: CGImage) async -> Bool {
         return await withCheckedContinuation { continuation in
+            // continuation 중복 resume 방지
+            var hasResumed = false
+
             let request = VNRecognizeTextRequest { request, error in
+                Log.print("[TextDetect] completion 진입, hasResumed=\(hasResumed), error=\(error != nil)")
+                guard !hasResumed else {
+                    Log.print("[TextDetect] ⚠️ 중복 resume 방지됨 (completion)")
+                    return
+                }
+                hasResumed = true
+
                 guard error == nil,
                       let observations = request.results as? [VNRecognizedTextObservation] else {
+                    Log.print("[TextDetect] completion에서 resume (에러/nil)")
                     continuation.resume(returning: false)
                     return
                 }
@@ -465,6 +489,7 @@ final class CompareAnalysisTester {
                     Log.print("[CompareAnalysis] 텍스트 감지: \(textBlockCount)개 블록 → 스크린샷")
                 }
 
+                Log.print("[TextDetect] completion에서 resume (성공)")
                 continuation.resume(returning: isTextScreenshot)
             }
 
@@ -473,8 +498,17 @@ final class CompareAnalysisTester {
 
             let handler = VNImageRequestHandler(cgImage: image, options: [:])
             do {
+                Log.print("[TextDetect] perform 시작")
                 try handler.perform([request])
+                Log.print("[TextDetect] perform 종료 (정상)")
             } catch {
+                Log.print("[TextDetect] perform 종료 (throw), hasResumed=\(hasResumed)")
+                guard !hasResumed else {
+                    Log.print("[TextDetect] ⚠️ 중복 resume 방지됨 (catch)")
+                    return
+                }
+                hasResumed = true
+                Log.print("[TextDetect] catch에서 resume")
                 continuation.resume(returning: false)
             }
         }

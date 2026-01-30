@@ -35,6 +35,10 @@ final class ZoomAnimator: NSObject, UIViewControllerAnimatedTransitioning {
     /// 목적지 제공자 (뷰어 VC)
     weak var destinationProvider: ZoomTransitionDestinationProviding?
 
+    /// Interactive dismiss 여부 (ZoomTransitionController에서 설정)
+    /// transitionContext.isInteractive가 호출 시점에 false일 수 있으므로 자체 플래그 사용
+    var isInteractiveDismiss: Bool = false
+
     // MARK: - Init
 
     init(isPresenting: Bool) {
@@ -49,6 +53,14 @@ final class ZoomAnimator: NSObject, UIViewControllerAnimatedTransitioning {
     }
 
     func animateTransition(using transitionContext: UIViewControllerContextTransitioning) {
+        // ⚠️ Interactive dismiss 시에는 ZoomDismissalInteractionController가 전담
+        // animateTransition이 호출되더라도 스킵 (스냅샷 중복 + 애니메이션 충돌 방지)
+        // Note: transitionContext.isInteractive가 호출 시점에 false일 수 있어 자체 플래그 사용
+        guard !isInteractiveDismiss else {
+            Log.debug("ZoomAnimator", "Interactive dismiss - skipping animateTransition")
+            return
+        }
+
         let container = transitionContext.containerView
 
         // ⚠️ 1. viewController에서 view 직접 가져오기 (view(forKey:)는 nil 반환 가능)

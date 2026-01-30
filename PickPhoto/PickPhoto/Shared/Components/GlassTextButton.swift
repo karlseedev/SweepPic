@@ -72,11 +72,6 @@ class GlassTextButton: UIButton {
         return label
     }()
 
-    // MARK: - Haptic Feedback
-
-    /// 햅틱 피드백 생성기
-    private let feedbackGenerator = UIImpactFeedbackGenerator(style: .light)
-
     // MARK: - Properties
 
     /// 버튼 스타일
@@ -113,9 +108,6 @@ class GlassTextButton: UIButton {
 
         setupText(title)
         setupLayers()
-
-        // 햅틱 준비
-        feedbackGenerator.prepare()
     }
 
     required init?(coder: NSCoder) {
@@ -229,7 +221,6 @@ class GlassTextButton: UIButton {
     override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
         super.touchesBegan(touches, with: event)
         expandButton(animated: true)
-        feedbackGenerator.impactOccurred()
     }
 
     override func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent?) {
