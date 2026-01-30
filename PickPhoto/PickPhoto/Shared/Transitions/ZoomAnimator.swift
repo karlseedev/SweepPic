@@ -68,16 +68,17 @@ final class ZoomAnimator: NSObject, UIViewControllerAnimatedTransitioning {
             toView.frame = finalFrame
         }
 
-        // ⚠️ 3. container에 뷰 추가 (중복 addSubview 방지)
+        // ⚠️ 3. container에 뷰 추가
+        // Present: toView(뷰어)를 container에 추가
+        // Dismiss: toView(그리드)는 추가하지 않음!
+        //   shouldRemovePresentersView=false이므로 그리드는 원래 window에 남아있음
+        //   container에 addSubview하면 원래 위치에서 빠져나와 container 제거 시 함께 사라짐
         if isPresenting {
             if toView.superview != container {
                 container.addSubview(toView)
             }
-        } else {
-            if toView.superview != container {
-                container.insertSubview(toView, belowSubview: fromView)
-            }
         }
+        // else: dismiss 시 toView 추가 안 함 (그리드가 container 뒤에서 이미 보임)
 
         // ⚠️ 4. layoutIfNeeded 호출
         toView.layoutIfNeeded()
