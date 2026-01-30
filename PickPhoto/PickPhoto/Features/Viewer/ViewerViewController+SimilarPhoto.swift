@@ -75,26 +75,23 @@ extension ViewerViewController {
             let totalMeasurements = cacheHitCount + cacheMissCount
             guard totalMeasurements > 0 else { return }
 
-            let btn = stats(buttonShowTimes)
-            let wait = stats(analysisWaitTimes)
-            let cmp = stats(comparisonGroupTimes)
-
-            print("""
-            ╔══════════════════════════════════════════════════════╗
-            ║     VIEWER PERFORMANCE (Vision) - \(totalMeasurements) views           ║
-            ╠══════════════════════════════════════════════════════╣
-            ║  Cache Hit: \(cacheHitCount), Cache Miss: \(cacheMissCount)
-            ╠══════════════════════════════════════════════════════╣
-            ║  Button Show (Cache Hit):
-            ║    avg: \(String(format: "%.2f", btn.avg))ms, min: \(String(format: "%.2f", btn.min))ms, max: \(String(format: "%.2f", btn.max))ms
-            ╠══════════════════════════════════════════════════════╣
-            ║  Button Show (Cache Miss, incl. analysis):
-            ║    avg: \(String(format: "%.2f", wait.avg))ms, min: \(String(format: "%.2f", wait.min))ms, max: \(String(format: "%.2f", wait.max))ms
-            ╠══════════════════════════════════════════════════════╣
-            ║  +Button → Comparison Screen:
-            ║    avg: \(String(format: "%.2f", cmp.avg))ms, min: \(String(format: "%.2f", cmp.min))ms, max: \(String(format: "%.2f", cmp.max))ms
-            ╚══════════════════════════════════════════════════════╝
-            """)
+            // 성능 로그 비활성화
+            // print("""
+            // ╔══════════════════════════════════════════════════════╗
+            // ║     VIEWER PERFORMANCE (Vision) - \(totalMeasurements) views           ║
+            // ╠══════════════════════════════════════════════════════╣
+            // ║  Cache Hit: \(cacheHitCount), Cache Miss: \(cacheMissCount)
+            // ╠══════════════════════════════════════════════════════╣
+            // ║  Button Show (Cache Hit):
+            // ║    avg: \(String(format: "%.2f", btn.avg))ms, min: \(String(format: "%.2f", btn.min))ms, max: \(String(format: "%.2f", btn.max))ms
+            // ╠══════════════════════════════════════════════════════╣
+            // ║  Button Show (Cache Miss, incl. analysis):
+            // ║    avg: \(String(format: "%.2f", wait.avg))ms, min: \(String(format: "%.2f", wait.min))ms, max: \(String(format: "%.2f", wait.max))ms
+            // ╠══════════════════════════════════════════════════════╣
+            // ║  +Button → Comparison Screen:
+            // ║    avg: \(String(format: "%.2f", cmp.avg))ms, min: \(String(format: "%.2f", cmp.min))ms, max: \(String(format: "%.2f", cmp.max))ms
+            // ╚══════════════════════════════════════════════════════╝
+            // """)
         }
     }
 
@@ -725,12 +722,12 @@ extension ViewerViewController: FaceComparisonDelegate {
         didDeletePhotos deletedAssetIDs: [String]
     ) {
         Log.print("[ViewerViewController+SimilarPhoto] Deleted \(deletedAssetIDs.count) photos from face comparison")
-        Log.print("[ViewerViewController+SimilarPhoto] Dismissing FaceComparison and popping to grid")
+        Log.print("[ViewerViewController+SimilarPhoto] Dismissing FaceComparison and viewer")
 
         // FaceComparisonViewController 닫기 (modal)
         viewController.dismiss(animated: false) { [weak self] in
-            // ViewerViewController는 push되었으므로 pop으로 그리드 복귀
-            self?.navigationController?.popViewController(animated: true)
+            // ViewerViewController도 modal이므로 dismiss로 그리드 복귀
+            self?.dismiss(animated: true)
         }
     }
 

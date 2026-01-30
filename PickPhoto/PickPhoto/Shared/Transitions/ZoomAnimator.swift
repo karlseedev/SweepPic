@@ -26,8 +26,8 @@ final class ZoomAnimator: NSObject, UIViewControllerAnimatedTransitioning {
 
     // MARK: - Properties
 
-    /// Push(true) 또는 Pop(false)
-    let isPush: Bool
+    /// Present(true) 또는 Dismiss(false)
+    let isPresenting: Bool
 
     /// 소스 제공자 (그리드 VC)
     weak var sourceProvider: ZoomTransitionSourceProviding?
@@ -37,15 +37,15 @@ final class ZoomAnimator: NSObject, UIViewControllerAnimatedTransitioning {
 
     // MARK: - Init
 
-    init(isPush: Bool) {
-        self.isPush = isPush
+    init(isPresenting: Bool) {
+        self.isPresenting = isPresenting
         super.init()
     }
 
     // MARK: - UIViewControllerAnimatedTransitioning
 
     func transitionDuration(using transitionContext: UIViewControllerContextTransitioning?) -> TimeInterval {
-        return isPush ? pushDuration : popDuration
+        return isPresenting ? pushDuration : popDuration
     }
 
     func animateTransition(using transitionContext: UIViewControllerContextTransitioning) {
@@ -62,15 +62,21 @@ final class ZoomAnimator: NSObject, UIViewControllerAnimatedTransitioning {
         let fromView = fromVC.view!
         let toView = toVC.view!
 
-        // ⚠️ 2. finalFrame 반드시 설정
+        // ⚠️ 2. finalFrame 설정 (Modal에서 .zero일 수 있으므로 폴백)
         let finalFrame = transitionContext.finalFrame(for: toVC)
-        toView.frame = finalFrame
+        if !finalFrame.isEmpty {
+            toView.frame = finalFrame
+        }
 
-        // ⚠️ 3. container에 뷰 추가
-        if isPush {
-            container.addSubview(toView)
+        // ⚠️ 3. container에 뷰 추가 (중복 addSubview 방지)
+        if isPresenting {
+            if toView.superview != container {
+                container.addSubview(toView)
+            }
         } else {
-            container.insertSubview(toView, belowSubview: fromView)
+            if toView.superview != container {
+                container.insertSubview(toView, belowSubview: fromView)
+            }
         }
 
         // ⚠️ 4. layoutIfNeeded 호출
@@ -79,8 +85,8 @@ final class ZoomAnimator: NSObject, UIViewControllerAnimatedTransitioning {
         // 현재 인덱스 가져오기
         let currentIndex = destinationProvider?.currentOriginalIndex ?? 0
 
-        // ⚠️ Pop 시: 셀이 보이도록 먼저 스크롤 (기본 사진 앱 스타일)
-        if !isPush {
+        // ⚠️ Dismiss 시: 셀이 보이도록 먼저 스크롤 (기본 사진 앱 스타일)
+        if !isPresenting {
             sourceProvider?.scrollToSourceCell(for: currentIndex)
             // 스크롤 후 레이아웃 즉시 반영
             toView.layoutIfNeeded()
@@ -90,13 +96,13 @@ final class ZoomAnimator: NSObject, UIViewControllerAnimatedTransitioning {
         let sourceFrame = sourceProvider?.zoomSourceFrame(for: currentIndex)
         let destinationFrame = destinationProvider?.zoomDestinationFrame
 
-        Log.debug("ZoomAnimator", "\(isPush ? "Push" : "Pop") - index: \(currentIndex)")
+        Log.debug("ZoomAnimator", "\(isPresenting ? "Present" : "Dismiss") - index: \(currentIndex)")
         Log.debug("ZoomAnimator", "sourceFrame: \(String(describing: sourceFrame))")
         Log.debug("ZoomAnimator", "destinationFrame: \(String(describing: destinationFrame))")
 
         // 소스 프레임이 없으면 crossfade
-        guard let startFrame = isPush ? sourceFrame : destinationFrame,
-              let endFrame = isPush ? destinationFrame : sourceFrame else {
+        guard let startFrame = isPresenting ? sourceFrame : destinationFrame,
+              let endFrame = isPresenting ? destinationFrame : sourceFrame else {
             Log.debug("ZoomAnimator", "Fallback to crossfade (no frames)")
             performCrossfade(
                 transitionContext: transitionContext,
@@ -129,7 +135,7 @@ final class ZoomAnimator: NSObject, UIViewControllerAnimatedTransitioning {
 
         // Push: toView를 투명하게 시작
         // Pop: fromView를 투명하게 만들며 종료
-        if isPush {
+        if isPresenting {
             toView.alpha = 0
         }
 
@@ -138,7 +144,7 @@ final class ZoomAnimator: NSObject, UIViewControllerAnimatedTransitioning {
             delay: 0,
             options: .curveEaseInOut
         ) {
-            if self.isPush {
+            if self.isPresenting {
                 toView.alpha = 1
             } else {
                 fromView.alpha = 0
@@ -166,7 +172,7 @@ final class ZoomAnimator: NSObject, UIViewControllerAnimatedTransitioning {
         let currentIndex = destinationProvider?.currentOriginalIndex ?? 0
 
         // 스냅샷 생성 (소스 뷰에서)
-        let sourceView = isPush
+        let sourceView = isPresenting
             ? sourceProvider?.zoomSourceView(for: currentIndex)
             : destinationProvider?.zoomDestinationView
 
@@ -197,7 +203,7 @@ final class ZoomAnimator: NSObject, UIViewControllerAnimatedTransitioning {
 
         // ⚠️ 5. Push 시: 배경 뷰 추가 (스냅샷과 함께 fade in)
         var backgroundView: UIView?
-        if isPush {
+        if isPresenting {
             let bg = UIView(frame: container.bounds)
             bg.backgroundColor = .black
             bg.alpha = 0
@@ -216,7 +222,7 @@ final class ZoomAnimator: NSObject, UIViewControllerAnimatedTransitioning {
         Log.debug("ZoomAnimator", "Animating from \(startFrame) to \(endFrame)")
 
         // 배경 fade 애니메이션 (별도 curve로 부드럽게)
-        if isPush, let bg = backgroundView {
+        if isPresenting, let bg = backgroundView {
             UIView.animate(
                 withDuration: duration,
                 delay: 0,
@@ -236,13 +242,13 @@ final class ZoomAnimator: NSObject, UIViewControllerAnimatedTransitioning {
         ) {
             snapshotView.frame = endFrame
 
-            if !self.isPush {
+            if !self.isPresenting {
                 // Pop: fromView fade out
                 fromView.alpha = 0
             }
         } completion: { _ in
             // Push 시 toView 표시 및 배경 제거
-            if self.isPush {
+            if self.isPresenting {
                 toView.alpha = 1
                 backgroundView?.removeFromSuperview()
             }

@@ -184,16 +184,17 @@ final class ViewerViewController: UIViewController {
     private var didPerformInitialFadeIn: Bool = false
 
 
-    /// iOS 18+ zoom transition 사용 시 커스텀 페이드 애니메이션 비활성화 플래그
-    /// preferredTransition = .zoom 설정 시 true로 설정해야 이중 애니메이션 방지
-    var disableCustomFadeAnimation: Bool = false
+    /// 줌 트랜지션 컨트롤러 (그리드에서 설정)
+    /// ⚠️ strong 참조: transitioningDelegate가 weak이므로 여기서 유지
+    var zoomTransitionController: ZoomTransitionController?
 
     // MARK: - iOS 26+ System UI Properties
 
     /// iOS 26+ 시스템 UI 사용 여부
+    /// Modal에서는 navigationController가 nil이므로 항상 커스텀 버튼 사용
     private var useSystemUI: Bool {
         if #available(iOS 26.0, *) {
-            return true
+            return navigationController != nil
         }
         return false
     }
@@ -241,12 +242,9 @@ final class ViewerViewController: UIViewController {
         self.viewerMode = mode
         super.init(nibName: nil, bundle: nil)
 
-        // iOS 16~25: hidesBottomBarWhenPushed 사용 안 함 (자동 복원 차단)
-        // iOS 26+: 시스템 UX 유지
-        if #available(iOS 26.0, *) {
-            hidesBottomBarWhenPushed = true
-        }
-        // else: 기본값 false 유지 (iOS 16~25에서 자동 복원 문제 방지)
+        // Modal 커스텀 전환 설정
+        modalPresentationStyle = .custom
+        modalPresentationCapturesStatusBarAppearance = true
     }
 
     required init?(coder: NSCoder) {
@@ -274,8 +272,9 @@ final class ViewerViewController: UIViewController {
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
 
-        // FloatingOverlay 가시성은 TabBarController의 UINavigationControllerDelegate가 관리
-        // (BarsVisibilityControlling 프로토콜 기반)
+        // Modal에서는 NavigationControllerDelegate.willShow가 호출 안 됨
+        // → FloatingOverlay를 수동으로 숨김
+        findTabBarController()?.floatingOverlay?.isHidden = true
 
         // iOS 26+: navigationController 존재 확인 후 시스템 UI 설정
         if #available(iOS 26.0, *) {
@@ -334,11 +333,11 @@ final class ViewerViewController: UIViewController {
     override func viewWillDisappear(_ animated: Bool) {
         super.viewWillDisappear(animated)
 
-        // FloatingOverlay 가시성은 TabBarController의 UINavigationControllerDelegate가 관리
-        // (BarsVisibilityControlling 프로토콜 기반 - pop 시 자동으로 다음 VC 정책 적용)
+        // dismiss 시에만 FloatingOverlay 복원 (interactive 취소 시 중복 방지)
+        guard isBeingDismissed else { return }
 
-        // 툴바 숨김은 TabBarController의 applyBarsVisibilityPolicy에서 처리
-        // (다음 VC의 prefersToolbarHidden 정책에 따라 자동 적용)
+        // Modal에서는 수동으로 FloatingOverlay 복원
+        findTabBarController()?.floatingOverlay?.isHidden = false
 
         // 현재 표시 중인 사진 ID 전달
         let currentAssetID = coordinator.assetID(at: currentIndex)
@@ -815,45 +814,22 @@ final class ViewerViewController: UIViewController {
         }
     }
 
-    /// 애니메이션과 함께 닫기 (Push → Pop)
+    /// 애니메이션과 함께 닫기 (Modal dismiss)
     private func dismissWithAnimation() {
         guard !isDismissing else { return }
         isDismissing = true
 
-        if #available(iOS 26.0, *) {
-            // iOS 26: 페이드 아웃 후 pop
-            UIView.animate(withDuration: 0.15) {
-                self.backgroundView.alpha = 0
-            } completion: { _ in
-                self.navigationController?.popViewController(animated: false)
-            }
-        } else {
-            // iOS 16~25: 기존 커스텀 애니메이션 후 pop
-            UIView.animate(withDuration: 0.25, animations: {
-                self.backgroundView.alpha = 0
-                self.pageViewController.view.transform = CGAffineTransform(translationX: 0, y: self.view.bounds.height)
-            }, completion: { _ in
-                self.navigationController?.popViewController(animated: false)
-            })
-        }
+        // Modal dismiss: ZoomAnimator가 줌 아웃 애니메이션 처리
+        dismiss(animated: true)
     }
 
-    /// 페이드 아웃으로 닫기 (Push → Pop)
+    /// 페이드 아웃으로 닫기 (Modal dismiss)
     private func dismissWithFadeOut() {
         guard !isDismissing else { return }
         isDismissing = true
 
-        if disableCustomFadeAnimation {
-            // iOS 18+: preferredTransition이 줌 아웃 처리
-            navigationController?.popViewController(animated: true)
-        } else {
-            // iOS 16~17: 기존 페이드 아웃 후 pop
-            UIView.animate(withDuration: 0.15, delay: 0, options: [.curveEaseIn, .beginFromCurrentState, .allowUserInteraction]) {
-                self.view.alpha = 0
-            } completion: { _ in
-                self.navigationController?.popViewController(animated: false)
-            }
-        }
+        // Modal dismiss: ZoomAnimator가 줌 아웃 애니메이션 처리
+        dismiss(animated: true)
     }
 
     // MARK: - iOS 26+ System UI Setup
@@ -1029,15 +1005,9 @@ final class ViewerViewController: UIViewController {
         }
     }
 
-    /// 뷰어 닫기 (Push → Pop, iOS 버전별 경로 통일)
+    /// 뷰어 닫기 (Modal dismiss)
     private func dismissViewer() {
-        if #available(iOS 26.0, *) {
-            // iOS 26+: 시스템 pop
-            navigationController?.popViewController(animated: true)
-        } else {
-            // iOS 16~25: 기존 페이드 아웃
-            dismissWithFadeOut()
-        }
+        dismissWithFadeOut()
     }
 
     // MARK: - Helpers
@@ -1088,6 +1058,27 @@ extension ViewerViewController: UIPageViewControllerDataSource {
         let nextIndex = currentIndex + 1
         guard nextIndex < coordinator.totalCount else { return nil }
         return createPageViewController(at: nextIndex)
+    }
+}
+
+// MARK: - Helpers (TabBarController 접근)
+
+extension ViewerViewController {
+
+    /// Modal에서 presenting VC 체인을 통해 TabBarController 찾기
+    /// self.tabBarController는 Modal에서 nil이므로 presentingViewController 체인 탐색
+    func findTabBarController() -> TabBarController? {
+        // 1. 직접 접근 (Navigation에 속한 경우)
+        if let tbc = tabBarController as? TabBarController { return tbc }
+        // 2. presenting VC 체인 탐색 (Modal인 경우)
+        var vc = presentingViewController
+        while let current = vc {
+            if let tbc = current as? TabBarController { return tbc }
+            if let nav = current as? UINavigationController,
+               let tbc = nav.tabBarController as? TabBarController { return tbc }
+            vc = current.presentingViewController
+        }
+        return nil
     }
 }
 

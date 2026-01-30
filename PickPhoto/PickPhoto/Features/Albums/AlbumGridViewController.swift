@@ -125,6 +125,11 @@ final class AlbumGridViewController: BaseGridViewController {
 
         // iOS 18+ Zoom Transition 안정화: fallback (transitionCoordinator 없을 때)
         applyPendingViewerReturn()
+
+        // [LiquidGlass 최적화] 블러 뷰 사전 생성
+        #if DEBUG
+        LiquidGlassOptimizer.preload(in: view.window)
+        #endif
     }
 
     override func viewDidLayoutSubviews() {
@@ -327,11 +332,16 @@ final class AlbumGridViewController: BaseGridViewController {
         )
         viewerVC.delegate = self
 
-        // 커스텀 줌 트랜지션 사용 - 커스텀 페이드 애니메이션 비활성화
-        viewerVC.disableCustomFadeAnimation = true
+        // 커스텀 줌 트랜지션 설정 (Modal 방식)
+        let transitionController = ZoomTransitionController()
+        transitionController.sourceProvider = self
+        transitionController.destinationProvider = viewerVC
+        // ⚠️ strong 참조 먼저 (transitioningDelegate는 weak)
+        viewerVC.zoomTransitionController = transitionController
+        viewerVC.transitioningDelegate = transitionController
 
-        // Push 방식으로 뷰어 표시 (커스텀 줌 트랜지션 사용)
-        navigationController?.pushViewController(viewerVC, animated: true)
+        // Modal present 방식으로 뷰어 표시
+        present(viewerVC, animated: true)
 
         Log.print("[AlbumGridViewController] Opening viewer at index \(filteredIndex), mode: \(mode)")
     }
@@ -345,6 +355,26 @@ extension AlbumGridViewController {
         // 사용자가 스크롤 시작하면 pending 스크롤 취소 (롤백 방지)
         pendingScrollAssetID = nil
         didUserScrollAfterReturn = true
+
+        // [LiquidGlass 최적화] 스크롤 시작 시 최적화 적용
+        #if DEBUG
+        LiquidGlassOptimizer.optimize(in: view.window)
+        #endif
+    }
+
+    func scrollViewDidEndDragging(_ scrollView: UIScrollView, willDecelerate decelerate: Bool) {
+        guard !decelerate else { return }
+        // [LiquidGlass 최적화] 스크롤 종료 시 최적화 해제
+        #if DEBUG
+        LiquidGlassOptimizer.restore(in: view.window)
+        #endif
+    }
+
+    func scrollViewDidEndDecelerating(_ scrollView: UIScrollView) {
+        // [LiquidGlass 최적화] 감속 완료 시 최적화 해제
+        #if DEBUG
+        LiquidGlassOptimizer.restore(in: view.window)
+        #endif
     }
 }
 

@@ -782,14 +782,19 @@ extension GridViewController {
         )
         viewerVC.delegate = self
 
-        // 커스텀 줌 트랜지션 사용 - 커스텀 페이드 애니메이션 비활성화
-        viewerVC.disableCustomFadeAnimation = true
+        // 커스텀 줌 트랜지션 설정 (Modal 방식)
+        let transitionController = ZoomTransitionController()
+        transitionController.sourceProvider = self
+        transitionController.destinationProvider = viewerVC
+        // ⚠️ strong 참조 먼저 (transitioningDelegate는 weak)
+        viewerVC.zoomTransitionController = transitionController
+        viewerVC.transitioningDelegate = transitionController
 
         let t4 = CACurrentMediaTime()
-        let t5 = t4  // 네이티브 zoom transition 제거됨
+        let t5 = t4
 
-        // 뷰어 표시 (push 방식)
-        navigationController?.pushViewController(viewerVC, animated: true)
+        // 뷰어 표시 (Modal present 방식)
+        present(viewerVC, animated: true)
 
         let t6 = CACurrentMediaTime()
 
