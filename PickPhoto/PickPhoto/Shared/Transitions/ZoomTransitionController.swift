@@ -22,8 +22,8 @@ final class ZoomTransitionController: NSObject, UIViewControllerTransitioningDel
     /// 목적지 제공자 (뷰어 VC)
     weak var destinationProvider: ZoomTransitionDestinationProviding?
 
-    /// Interactive dismiss 컨트롤러 (Phase 3에서 구현)
-    var interactionController: UIViewControllerInteractiveTransitioning?
+    /// Interactive dismiss 컨트롤러
+    var interactionController: ZoomDismissalInteractionController?
 
     /// Interactive dismiss 진행 중 여부
     var isInteractivelyDismissing: Bool = false

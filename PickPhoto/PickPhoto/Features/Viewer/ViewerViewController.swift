@@ -61,9 +61,6 @@ final class ViewerViewController: UIViewController {
     /// FloatingTabBar의 capsuleHeight/2와 동일 (56/2 = 28)
     private static let buttonCenterFromBottom: CGFloat = 28
 
-    /// 아래 스와이프 닫기 임계값 (화면 높이의 %)
-    private static let dismissThreshold: CGFloat = 0.15
-
     // MARK: - Properties
 
     /// 델리게이트
@@ -176,9 +173,6 @@ final class ViewerViewController: UIViewController {
 
     /// 닫기 애니메이션 중 여부
     private var isDismissing = false
-
-    /// 드래그 시작 위치
-    private var dragStartY: CGFloat = 0
 
     /// 최초 표시 페이드 인 적용 여부 (시스템 전환 대신 사용)
     private var didPerformInitialFadeIn: Bool = false
@@ -762,52 +756,41 @@ final class ViewerViewController: UIViewController {
 
     // MARK: - Dismiss Pan Gesture (T031)
 
-    /// 아래 스와이프로 닫기 처리
+    /// 아래 스와이프로 닫기 처리 (Interactive Dismiss)
     @objc private func handleDismissPan(_ gesture: UIPanGestureRecognizer) {
-        let translation = gesture.translation(in: view)
-        let velocity = gesture.velocity(in: view)
-
         switch gesture.state {
         case .began:
-            dragStartY = translation.y
+            guard !isDismissing else { return }
+            isDismissing = true
 
-        case .changed:
-            // 아래로만 드래그 가능
-            let offsetY = max(0, translation.y - dragStartY)
-            let progress = min(offsetY / view.bounds.height, 1.0)
-
-            if #available(iOS 26.0, *) {
-                // iOS 26: 배경 투명도만 조절 (transform 생략으로 dismiss 충돌 방지)
-                backgroundView.alpha = 1.0 - progress * 0.5
-            } else {
-                // iOS 16~25: 기존 드래그 애니메이션
-                backgroundView.alpha = 1.0 - progress * 0.5
-                pageViewController.view.transform = CGAffineTransform(translationX: 0, y: offsetY)
+            guard let tc = zoomTransitionController else {
+                // fallback: ZoomTransitionController 없으면 일반 dismiss
+                dismissWithFadeOut()
+                return
             }
 
-        case .ended, .cancelled:
-            let offsetY = translation.y - dragStartY
-            let screenHeight = view.bounds.height
-            let threshold = screenHeight * Self.dismissThreshold
-
-            // 임계값을 넘었거나 빠른 속도로 스와이프한 경우 닫기
-            if offsetY > threshold || velocity.y > 1000 {
-                dismissWithAnimation()
-            } else {
-                // 원위치로 복귀
-                if #available(iOS 26.0, *) {
-                    // iOS 26: 배경 투명도만 복귀 (transform 미사용)
-                    UIView.animate(withDuration: 0.2) {
-                        self.backgroundView.alpha = 1.0
-                    }
-                } else {
-                    // iOS 16~25: 배경 + transform 복귀
-                    UIView.animate(withDuration: 0.2) {
-                        self.backgroundView.alpha = 1.0
-                        self.pageViewController.view.transform = .identity
-                    }
+            // ⚠️ InteractionController 생성 (누락 시 non-interactive dismiss)
+            let ic = ZoomDismissalInteractionController()
+            ic.sourceProvider = tc.sourceProvider
+            ic.destinationProvider = tc.destinationProvider
+            ic.onTransitionFinished = { [weak self] completed in
+                if !completed {
+                    // 취소 시 isDismissing 복원
+                    self?.isDismissing = false
                 }
             }
+            tc.interactionController = ic
+            tc.isInteractivelyDismissing = true
+
+            // dismiss 트리거 → ZoomTransitionController가 interactionController 반환
+            dismiss(animated: true)
+
+        case .changed:
+            zoomTransitionController?.interactionController?.didPanWith(gestureRecognizer: gesture)
+
+        case .ended, .cancelled:
+            zoomTransitionController?.interactionController?.didPanWith(gestureRecognizer: gesture)
+            zoomTransitionController?.isInteractivelyDismissing = false
 
         default:
             break
@@ -1258,7 +1241,14 @@ extension ViewerViewController: UIGestureRecognizerDelegate {
 
         // 아래 방향 스와이프만 허용
         let velocity = dismissPanGesture.velocity(in: view)
-        return velocity.y > 0 && abs(velocity.y) > abs(velocity.x)
+        guard velocity.y > 0 && abs(velocity.y) > abs(velocity.x) else { return false }
+
+        // 줌 상태 체크: 확대 중이면 dismiss 안 함 (스크롤 동작으로 처리)
+        guard let zoomable = pageViewController.viewControllers?.first as? ZoomableImageProviding else {
+            return true
+        }
+        guard zoomable.zoomScale <= 1.01 else { return false }
+        return zoomable.isAtTopEdge
     }
 }
 
@@ -1374,25 +1364,46 @@ extension ViewerViewController: UIScrollViewDelegate {
 
     // MARK: - UIScrollViewDelegate
 
-    /// 드래그 시작 (터치 직후) - 최적화 시작
+    /// 드래그 시작 (터치 직후) - 최적화 시작 + 버튼 숨김
     func scrollViewWillBeginDragging(_ scrollView: UIScrollView) {
         LiquidGlassOptimizer.optimize(in: view.window)
+
+        // +버튼(FaceButtonOverlay) 즉시 숨김 (스와이프 시 제자리에 남는 문제 방지)
+        faceButtonOverlay?.hideButtonsImmediately()
+
         Log.print("[Viewer:Scroll] willBeginDragging - optimize 시작")
     }
 
-    /// 감속 완료 - 최적화 해제
+    /// 감속 완료 - 최적화 해제 + 버튼 복원
     func scrollViewDidEndDecelerating(_ scrollView: UIScrollView) {
         LiquidGlassOptimizer.restore(in: view.window)
+
+        // 스와이프 취소 시 +버튼 복원 (didFinishAnimating completed=false면 복원 안 됨)
+        restoreFaceButtonsIfNeeded()
+
         Log.print("[Viewer:Scroll] didEndDecelerating - restore 완료")
     }
 
-    /// 드래그 종료 (감속 없이 멈춤) - 최적화 해제
+    /// 드래그 종료 (감속 없이 멈춤) - 최적화 해제 + 버튼 복원
     func scrollViewDidEndDragging(_ scrollView: UIScrollView, willDecelerate decelerate: Bool) {
         // 감속이 없으면 여기서 restore (감속 있으면 didEndDecelerating에서 처리)
         if !decelerate {
             LiquidGlassOptimizer.restore(in: view.window)
+
+            // 스와이프 취소 시 +버튼 복원
+            restoreFaceButtonsIfNeeded()
+
             Log.print("[Viewer:Scroll] didEndDragging(willDecelerate=false) - restore 완료")
         }
+    }
+
+    /// 스와이프 취소 시 +버튼 복원
+    /// 전환 완료(completed=true) 시에는 updateSimilarPhotoOverlay()에서 처리되므로
+    /// 여기서는 전환 중이 아닐 때(취소됨)만 복원
+    private func restoreFaceButtonsIfNeeded() {
+        guard !isTransitioning else { return }
+        // 현재 사진에 대해 +버튼 재표시
+        updateSimilarPhotoOverlay(resetZoom: false)
     }
 }
 #endif
