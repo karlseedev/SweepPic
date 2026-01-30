@@ -397,7 +397,7 @@ func gestureRecognizerShouldBegin(_ gestureRecognizer: UIGestureRecognizer) -> B
 - [x] 줌 상태에서 아래 드래그 → dismiss 안 됨 (스크롤 동작)
 - [x] 좌우 스와이프 → 사진 전환 정상
 
-**성능 이슈: Interactive dismiss 드래그 부드러움 미흡 (미해결)**
+**성능 이슈: Interactive dismiss 드래그 부드러움 미흡 (해결 완료)**
 
 증상: 아래로 드래그 시 스냅샷 이동이 뚝뚝 끊기는 느낌. 측정 결과 gesture `.changed` 콜백이 55-90ms 간격으로 도착 (120Hz 기기에서 8.3ms가 정상).
 
