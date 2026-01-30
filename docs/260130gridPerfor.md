@@ -388,3 +388,50 @@ DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
    - MTKView pause 유지 실험: #2 FP Gen 183ms, #3 FP Gen 207ms
    - 현재 HEAD: #2 FP Gen 688ms, #3 FP Gen 732ms
    - 목표: warm cache 기준 개선 (200~400ms 범위)
+
+### 테스트 결과: debounce 콜백 순서 변경 (실패 → 롤백)
+
+**방법**: `handleSimilarPhotoScrollEnd()`의 debounce 콜백에서 `startAnalysis()` → `restore()` 순서로 호출.
+
+**실패 원인**: `startAnalysis()`가 `Task { ... }`만 생성하고 즉시 리턴하므로, `restore()`가 사실상 동시에 실행됨. 분석에 head start 없음.
+
+| | 현재 HEAD | debounce 순서 변경 | 차이 |
+|---|---|---|---|
+| **#1** FP Gen | 766ms | 696ms | -9% |
+| **#1** Total | 1972ms | 1927ms | -2% |
+| **#2** FP Gen | 688ms | 681ms | -1% |
+| **#2** Total | 2220ms | 2929ms | +32% |
+| **#3** FP Gen | 732ms | 1281ms | **+75%** |
+| **#3** Total | 3177ms | 3863ms | **+22%** |
+
+**결론: 효과 없음.** #3에서 오히려 악화. `startAnalysis()`가 동기 함수가 아니므로 호출 순서 변경만으로는 타이밍 제어 불가. 롤백 완료.
+
+### 2차 구현: 분석 완료 후 restore (방안 B)
+
+**방법**: `startAnalysis()`의 Task 내부 `defer`에서 분석 완료 후 `DispatchQueue.main.async`로 `restore()` 호출. 분석 전체가 MTKView paused 상태에서 실행.
+
+```swift
+let window = view.window
+let task = Task {
+    defer {
+        SimilarityAnalysisQueue.shared.unregisterTask(id: taskID)
+        DispatchQueue.main.async {
+            LiquidGlassOptimizer.restore(in: window)
+        }
+    }
+    let groupIDs = await SimilarityAnalysisQueue.shared.formGroupsForRange(...)
+}
+```
+
+**테스트 결과**:
+
+| | 과거 (8563973) | HEAD | 실험3 (pause유지) | **방안B** | HEAD vs 방안B |
+|---|---|---|---|---|---|
+| **#1** FP Gen | 330ms | 766ms | 834ms | 828ms | +8% |
+| **#1** Total | 1159ms | 1972ms | 2053ms | 2095ms | +6% |
+| **#2** FP Gen | **170ms** | 688ms | 183ms | **180ms** | **-74%** ✅ |
+| **#2** Total | **376ms** | 2220ms | 829ms | **830ms** | **-63%** ✅ |
+| **#3** FP Gen | **179ms** | 732ms | 207ms | **199ms** | **-73%** ✅ |
+| **#3** Total | **601ms** | 3177ms | 1295ms | **1284ms** | **-60%** ✅ |
+
+**결론: 성공.** 실험 3(MTKView pause 유지)과 동일 수준으로 회복. #1(콜드 스타트)은 캐시 미스이므로 동일한 패턴. warm cache(#2, #3)에서 과거 수준 성능 달성.
