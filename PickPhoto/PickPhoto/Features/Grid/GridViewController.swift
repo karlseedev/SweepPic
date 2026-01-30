@@ -360,9 +360,7 @@ final class GridViewController: BaseGridViewController {
         applyPendingViewerReturn()
 
         // [LiquidGlass 최적화] 블러 뷰 사전 생성
-        #if DEBUG
         LiquidGlassOptimizer.preload(in: view.window)
-        #endif
 
         // 런치 아규먼트 로깅 (디버깅용)
         let args = ProcessInfo.processInfo.arguments

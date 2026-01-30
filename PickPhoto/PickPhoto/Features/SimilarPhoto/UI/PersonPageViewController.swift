@@ -276,3 +276,28 @@ extension PersonPageViewController: UICollectionViewDelegateFlowLayout {
         return UIEdgeInsets(top: Self.gridSpacing, left: 0, bottom: Self.gridSpacing, right: 0)
     }
 }
+
+// MARK: - LiquidGlass 최적화 (수직 스크롤)
+
+extension PersonPageViewController {
+
+    /// 그리드 수직 스크롤 시작 - 최적화 적용
+    func scrollViewWillBeginDragging(_ scrollView: UIScrollView) {
+        LiquidGlassOptimizer.optimize(in: view.window)
+        Log.print("[PersonPage:Scroll] willBeginDragging - optimize 시작")
+    }
+
+    /// 감속 완료 - 최적화 해제
+    func scrollViewDidEndDecelerating(_ scrollView: UIScrollView) {
+        LiquidGlassOptimizer.restore(in: view.window)
+        Log.print("[PersonPage:Scroll] didEndDecelerating - restore 완료")
+    }
+
+    /// 드래그 종료 (감속 없이 멈춤) - 최적화 해제
+    func scrollViewDidEndDragging(_ scrollView: UIScrollView, willDecelerate decelerate: Bool) {
+        if !decelerate {
+            LiquidGlassOptimizer.restore(in: view.window)
+            Log.print("[PersonPage:Scroll] didEndDragging(willDecelerate=false) - restore 완료")
+        }
+    }
+}

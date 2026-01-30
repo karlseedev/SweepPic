@@ -538,6 +538,7 @@ final class FaceButton: GlassCircleButton {
     init(face: CachedFace) {
         self.face = face
         super.init(icon: "plus", size: .mini, tintColor: .white)
+        backgroundAlpha = 0.7
         setupAccessibility()
     }
 

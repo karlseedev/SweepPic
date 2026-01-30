@@ -110,6 +110,13 @@ final class AlbumsViewController: UIViewController {
         configureFloatingOverlayForAlbums()
     }
 
+    override func viewDidAppear(_ animated: Bool) {
+        super.viewDidAppear(animated)
+
+        // [LiquidGlass 최적화] 블러 뷰 사전 생성
+        LiquidGlassOptimizer.preload(in: view.window)
+    }
+
     override func viewDidLayoutSubviews() {
         super.viewDidLayoutSubviews()
         updateCellSize()
@@ -513,6 +520,33 @@ final class AlbumSectionHeaderView: UICollectionReusableView {
 
     func configure(title: String?) {
         titleLabel.text = title
+    }
+}
+
+// MARK: - PHPhotoLibraryChangeObserver
+
+// MARK: - LiquidGlass 최적화 (UIScrollViewDelegate)
+
+extension AlbumsViewController {
+
+    /// 드래그 시작 (터치 직후) - 최적화 시작
+    func scrollViewWillBeginDragging(_ scrollView: UIScrollView) {
+        LiquidGlassOptimizer.optimize(in: view.window)
+        Log.print("[Albums:Scroll] willBeginDragging - optimize 시작")
+    }
+
+    /// 감속 완료 - 최적화 해제
+    func scrollViewDidEndDecelerating(_ scrollView: UIScrollView) {
+        LiquidGlassOptimizer.restore(in: view.window)
+        Log.print("[Albums:Scroll] didEndDecelerating - restore 완료")
+    }
+
+    /// 드래그 종료 (감속 없이 멈춤) - 최적화 해제
+    func scrollViewDidEndDragging(_ scrollView: UIScrollView, willDecelerate decelerate: Bool) {
+        if !decelerate {
+            LiquidGlassOptimizer.restore(in: view.window)
+            Log.print("[Albums:Scroll] didEndDragging(willDecelerate=false) - restore 완료")
+        }
     }
 }
 

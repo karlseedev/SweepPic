@@ -75,9 +75,7 @@ extension GridViewController {
         hitchMonitor.start()
 
         // [LiquidGlass 최적화] 스크롤 시작 시 최적화 적용
-        #if DEBUG
         LiquidGlassOptimizer.optimize(in: view.window)
-        #endif
 
         // 첫 스크롤 시작 시간 기록
         if !hasCompletedFirstScroll && firstScrollStartTime == 0 {
@@ -138,9 +136,7 @@ extension GridViewController {
             self.handleSimilarPhotoScrollEnd()
 
             // [LiquidGlass 최적화] 스크롤 종료 시 최적화 해제
-            #if DEBUG
             LiquidGlassOptimizer.restore(in: self.view.window)
-            #endif
 
             // [--log-thumb] 스크롤 종료 후 visible 셀 해상도 검사 (2회: 0.2s, 0.6s)
             if FileLogger.logThumbEnabled {

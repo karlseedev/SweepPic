@@ -684,6 +684,9 @@ extension PhotoPageViewController: UIScrollViewDelegate {
     func scrollViewWillBeginZooming(_ scrollView: UIScrollView, with view: UIView?) {
         Log.debug("Zoom", "WillBegin - scale=\(String(format: "%.3f", scrollView.zoomScale)), origin=\(imageView.frame.origin)")
         isZoomInteractionActive = true
+
+        // [LiquidGlass 최적화] 줌 시작 시 최적화
+        LiquidGlassOptimizer.optimize(in: self.view.window)
     }
 
     func scrollViewDidZoom(_ scrollView: UIScrollView) {
@@ -708,6 +711,9 @@ extension PhotoPageViewController: UIScrollViewDelegate {
         isZoomInteractionActive = false
         needsLayoutUpdateAfterZoom = false
 
+        // [LiquidGlass 최적화] 줌 완료 시 복원
+        LiquidGlassOptimizer.restore(in: self.view.window)
+
         // 줌 완료 알림 (FaceButtonOverlay 재표시용)
         NotificationCenter.default.post(
             name: .photoDidEndZoom,
@@ -729,6 +735,15 @@ extension PhotoPageViewController: UIScrollViewDelegate {
 
     // MARK: - Scroll (Panning) in Zoomed State
 
+    /// 드래그 시작 (확대 상태에서 패닝)
+    func scrollViewWillBeginDragging(_ scrollView: UIScrollView) {
+        // 1x 스케일이면 페이지 스와이프 → ViewerViewController에서 처리
+        guard scrollView.zoomScale > 1.0 else { return }
+
+        // [LiquidGlass 최적화] 확대 상태 드래그 시작
+        LiquidGlassOptimizer.optimize(in: self.view.window)
+    }
+
     /// 스크롤 중 (확대 상태에서 패닝)
     func scrollViewDidScroll(_ scrollView: UIScrollView) {
         // 줌 중이거나 1x 스케일이면 무시 (줌은 별도 처리)
@@ -747,6 +762,9 @@ extension PhotoPageViewController: UIScrollViewDelegate {
         // 감속 없이 바로 멈추면 여기서 재표시
         guard scrollView.zoomScale > 1.0 && !decelerate else { return }
 
+        // [LiquidGlass 최적화] 확대 상태 드래그 종료 (감속 없음)
+        LiquidGlassOptimizer.restore(in: self.view.window)
+
         NotificationCenter.default.post(
             name: .photoDidEndScroll,
             object: self,
@@ -757,6 +775,9 @@ extension PhotoPageViewController: UIScrollViewDelegate {
     /// 감속 완료 시 (스크롤 완전히 멈춤)
     func scrollViewDidEndDecelerating(_ scrollView: UIScrollView) {
         guard scrollView.zoomScale > 1.0 else { return }
+
+        // [LiquidGlass 최적화] 확대 상태 감속 완료
+        LiquidGlassOptimizer.restore(in: self.view.window)
 
         NotificationCenter.default.post(
             name: .photoDidEndScroll,

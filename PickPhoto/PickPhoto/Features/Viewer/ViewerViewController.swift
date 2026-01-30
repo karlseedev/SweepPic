@@ -258,9 +258,7 @@ final class ViewerViewController: UIViewController {
         setupSimilarPhotoFeature()
 
         // [LiquidGlass 최적화] 페이지 스크롤뷰 델리게이트 설정
-        #if DEBUG
         setupPageScrollViewDelegate()
-        #endif
     }
 
     override func viewWillAppear(_ animated: Bool) {
@@ -294,9 +292,7 @@ final class ViewerViewController: UIViewController {
         showSimilarPhotoOverlay()
 
         // [LiquidGlass 최적화] 블러 뷰 사전 생성
-        #if DEBUG
         LiquidGlassOptimizer.preload(in: view.window)
-        #endif
     }
 
     // MARK: - Rotation
@@ -1346,7 +1342,6 @@ extension ViewerViewController: ZoomTransitionDestinationProviding {
 
 // MARK: - LiquidGlass 최적화 (UIScrollViewDelegate)
 
-#if DEBUG
 extension ViewerViewController: UIScrollViewDelegate {
 
     /// UIPageViewController 내부 스크롤뷰의 delegate 설정
@@ -1406,4 +1401,3 @@ extension ViewerViewController: UIScrollViewDelegate {
         updateSimilarPhotoOverlay(resetZoom: false)
     }
 }
-#endif

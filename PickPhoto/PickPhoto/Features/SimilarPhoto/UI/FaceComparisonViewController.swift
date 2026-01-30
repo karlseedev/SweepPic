@@ -240,6 +240,14 @@ final class FaceComparisonViewController: UIViewController {
         }
     }
 
+    override func viewDidAppear(_ animated: Bool) {
+        super.viewDidAppear(animated)
+
+        // [LiquidGlass 최적화] 블러 뷰 사전 생성 + 페이지 스크롤뷰 델리게이트 설정
+        LiquidGlassOptimizer.preload(in: view.window)
+        setupPageScrollViewDelegate()
+    }
+
     override func viewDidLayoutSubviews() {
         super.viewDidLayoutSubviews()
         bottomGradientLayer.frame = bottomBarContainer.bounds
@@ -771,5 +779,45 @@ extension FaceComparisonViewController: FaceComparisonTitleBarDelegate {
 
     func faceComparisonTitleBarDidTapClose(_ titleBar: FaceComparisonTitleBar) {
         cancelButtonTapped()
+    }
+}
+
+// MARK: - LiquidGlass 최적화 (UIScrollViewDelegate)
+
+extension FaceComparisonViewController: UIScrollViewDelegate {
+
+    /// UIPageViewController 내부 스크롤뷰의 delegate 설정
+    /// - Note: 더 빠른 시점(터치 직후)에 LiquidGlass 최적화 적용
+    func setupPageScrollViewDelegate() {
+        // UIPageViewController 내부의 UIScrollView 찾기
+        guard let scrollView = pageViewController.view.subviews.first(where: { $0 is UIScrollView }) as? UIScrollView else {
+            Log.print("[FaceComparison:Scroll] UIScrollView를 찾을 수 없음")
+            return
+        }
+
+        scrollView.delegate = self
+        Log.print("[FaceComparison:Scroll] UIScrollView delegate 설정 완료")
+    }
+
+    // MARK: - UIScrollViewDelegate
+
+    /// 드래그 시작 (터치 직후) - 최적화 시작
+    func scrollViewWillBeginDragging(_ scrollView: UIScrollView) {
+        LiquidGlassOptimizer.optimize(in: view.window)
+        Log.print("[FaceComparison:Scroll] willBeginDragging - optimize 시작")
+    }
+
+    /// 감속 완료 - 최적화 해제
+    func scrollViewDidEndDecelerating(_ scrollView: UIScrollView) {
+        LiquidGlassOptimizer.restore(in: view.window)
+        Log.print("[FaceComparison:Scroll] didEndDecelerating - restore 완료")
+    }
+
+    /// 드래그 종료 (감속 없이 멈춤) - 최적화 해제
+    func scrollViewDidEndDragging(_ scrollView: UIScrollView, willDecelerate decelerate: Bool) {
+        if !decelerate {
+            LiquidGlassOptimizer.restore(in: view.window)
+            Log.print("[FaceComparison:Scroll] didEndDragging(willDecelerate=false) - restore 완료")
+        }
     }
 }

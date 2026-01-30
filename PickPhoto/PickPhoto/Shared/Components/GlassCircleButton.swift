@@ -116,6 +116,14 @@ class GlassCircleButton: UIButton {
     /// 현재 아이콘 이름 (변경 추적용)
     private var currentIconName: String
 
+    /// 배경(LiquidGlass) alpha 값 (아이콘은 영향 없음)
+    var backgroundAlpha: CGFloat = 1.0 {
+        didSet {
+            contractedView.alpha = isExpanded ? 0 : backgroundAlpha
+            expandedView.alpha = isExpanded ? backgroundAlpha : 0
+        }
+    }
+
     // MARK: - State Management
 
     override var isEnabled: Bool {
@@ -279,7 +287,7 @@ class GlassCircleButton: UIButton {
 
             // Expanded → 원래 크기로 페이드인
             self.expandedView.transform = .identity
-            self.expandedView.alpha = 1
+            self.expandedView.alpha = self.backgroundAlpha
         }
     }
 
@@ -302,7 +310,7 @@ class GlassCircleButton: UIButton {
 
             // Contracted → 원래 크기로 페이드인
             self.contractedView.transform = .identity
-            self.contractedView.alpha = 1
+            self.contractedView.alpha = self.backgroundAlpha
         }
     }
 

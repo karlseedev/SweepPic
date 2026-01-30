@@ -14,7 +14,6 @@
 //  - scrollDidEnd() → LiquidGlassOptimizer.restore(in: view)
 //
 
-#if DEBUG
 import UIKit
 import MetalKit
 import AppCore
@@ -53,9 +52,6 @@ enum LiquidGlassOptimizer {
     /// value: (blurView, mtkView weak reference, originalAlpha)
     private static var preloadedOverlays: [ObjectIdentifier: PreloadedOverlay] = [:]
 
-    /// Preload 완료 여부
-    private static var isPreloaded: Bool = false
-
     /// Preloaded overlay 정보
     private struct PreloadedOverlay {
         let blurView: UIVisualEffectView
@@ -65,17 +61,15 @@ enum LiquidGlassOptimizer {
 
     // MARK: - Public Methods
 
-    /// 블러 뷰 사전 생성 (viewDidAppear에서 한 번만 호출)
+    /// 블러 뷰 사전 생성 (viewDidAppear에서 호출)
+    /// - Note: 새로운 MTKView만 추가 (incremental preload)
     /// - Parameter rootView: 탐색 시작 뷰 (보통 window)
     static func preload(in rootView: UIView?) {
         guard isEnabled, mode == .blurReplacement else { return }
         guard let rootView = rootView else { return }
-        guard !isPreloaded else {
-            Log.print("[LiquidGlass] Blur preload: 이미 완료됨")
-            return
-        }
 
         let mtkViews = findAllMTKViews(in: rootView)
+        var newCount = 0
 
         for mtkView in mtkViews {
             let identifier = ObjectIdentifier(mtkView)
@@ -99,10 +93,12 @@ enum LiquidGlassOptimizer {
                 mtkView: mtkView,
                 originalAlpha: mtkView.alpha
             )
+            newCount += 1
         }
 
-        isPreloaded = true
-        Log.print("[LiquidGlass] Blur preload 완료: \(mtkViews.count)개")
+        if newCount > 0 {
+            Log.print("[LiquidGlass] Blur preload: +\(newCount)개 (총 \(preloadedOverlays.count)개)")
+        }
     }
 
     /// 스크롤 시작 시 최적화 적용
@@ -119,10 +115,8 @@ enum LiquidGlassOptimizer {
             pauseAllMTKViews(in: rootView)
 
         case .blurReplacement:
-            // Preload 안 됐으면 먼저 preload
-            if !isPreloaded {
-                preload(in: rootView)
-            }
+            // 새로운 MTKView가 있으면 추가 (incremental)
+            preload(in: rootView)
             showBlurOverlays()
         }
     }
@@ -151,7 +145,6 @@ enum LiquidGlassOptimizer {
             overlay.blurView.removeFromSuperview()
         }
         preloadedOverlays.removeAll()
-        isPreloaded = false
         Log.print("[LiquidGlass] Blur cleanup 완료")
     }
 
@@ -178,6 +171,9 @@ enum LiquidGlassOptimizer {
     /// 사전 생성된 블러 오버레이 보이기 (스크롤 시작)
     /// 방안 D: 즉시 isPaused + 단일 애니메이션
     private static func showBlurOverlays() {
+        // 0단계: mtkView가 nil인 orphaned 항목 정리
+        cleanupOrphanedOverlays()
+
         var count = 0
         var blurViewsToAnimate: [UIVisualEffectView] = []
 
@@ -212,31 +208,36 @@ enum LiquidGlassOptimizer {
     }
 
     /// 사전 생성된 블러 오버레이 숨기기 (스크롤 종료)
-    /// 방안 D: 즉시 isPaused 해제 + 단일 애니메이션
+    /// MTKView를 숨긴 채 렌더링 재개 → 새 프레임 준비 후 크로스페이드
     private static func hideBlurOverlays() {
         var count = 0
         var viewsToAnimate: [(mtkView: MTKView, blurView: UIVisualEffectView, originalAlpha: CGFloat)] = []
 
-        // 1단계: 모든 MTKView 즉시 재개
+        // 1단계: 모든 MTKView 렌더링 재개 (alpha 0 유지 → 보이지 않음)
+        // showBlurOverlays()에서 mtkView.alpha = 0으로 설정됨, 그대로 유지
         for (_, overlay) in preloadedOverlays {
             guard let mtkView = overlay.mtkView else { continue }
 
             // 이미 숨긴 상태면 스킵
             guard overlay.blurView.alpha > 0 else { continue }
 
-            // 즉시 isPaused 해제 (렌더링 즉시 시작)
+            // isPaused 해제 (새 프레임 렌더링 시작, alpha 0이므로 보이지 않음)
             mtkView.isPaused = false
 
             viewsToAnimate.append((mtkView, overlay.blurView, overlay.originalAlpha))
             count += 1
         }
 
-        // 2단계: 단일 애니메이션으로 전환
+        // 2단계: 새 프레임 렌더링 대기 후 크로스페이드
+        // drawHierarchy() + blur + Metal shader 파이프라인 소요 시간 고려
+        // MTKView fade in + blur fade out 동시 진행으로 옛 배경 노출 방지
         if !viewsToAnimate.isEmpty {
-            UIView.animate(withDuration: transitionDuration) {
-                for item in viewsToAnimate {
-                    item.mtkView.alpha = item.originalAlpha
-                    item.blurView.alpha = 0
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+                UIView.animate(withDuration: transitionDuration) {
+                    for item in viewsToAnimate {
+                        item.mtkView.alpha = item.originalAlpha
+                        item.blurView.alpha = 0
+                    }
                 }
             }
         }
@@ -246,7 +247,31 @@ enum LiquidGlassOptimizer {
 
     // MARK: - Helper Methods
 
+    /// mtkView가 nil인 orphaned 항목 정리
+    /// - Viewer 닫힘 등으로 MTKView가 dealloc되면 weak reference가 nil이 됨
+    /// - 해당 blurView도 제거하고 딕셔너리에서 삭제
+    private static func cleanupOrphanedOverlays() {
+        var orphanedKeys: [ObjectIdentifier] = []
+
+        for (identifier, overlay) in preloadedOverlays {
+            if overlay.mtkView == nil {
+                // blurView가 아직 superview에 있으면 제거
+                overlay.blurView.removeFromSuperview()
+                orphanedKeys.append(identifier)
+            }
+        }
+
+        for key in orphanedKeys {
+            preloadedOverlays.removeValue(forKey: key)
+        }
+
+        if !orphanedKeys.isEmpty {
+            Log.print("[LiquidGlass] Orphaned cleanup: \(orphanedKeys.count)개 제거 (남은: \(preloadedOverlays.count)개)")
+        }
+    }
+
     /// MTKView와 동일한 모양의 블러 뷰 생성
+    /// LiquidGlass 원본과 최대한 유사하게 tintColor 오버레이 포함
     private static func createBlurView(matching mtkView: MTKView) -> UIVisualEffectView {
         let blurEffect = UIBlurEffect(style: .systemUltraThinMaterial)
         let blurView = UIVisualEffectView(effect: blurEffect)
@@ -261,6 +286,18 @@ enum LiquidGlassOptimizer {
             blurView.layer.cornerRadius = parent.layer.cornerRadius
             blurView.layer.cornerCurve = parent.layer.cornerCurve
         }
+
+        // LiquidGlass tintColor와 동일한 회색 오버레이 추가
+        // GlassIconButton: UIColor(white: 0.5, alpha: 0.2)
+        let tintOverlay = UIView()
+        tintOverlay.backgroundColor = UIColor(white: 1.0, alpha: 0.3)
+        tintOverlay.frame = blurView.bounds
+        tintOverlay.autoresizingMask = [.flexibleWidth, .flexibleHeight]
+        blurView.contentView.addSubview(tintOverlay)
+
+        // LiquidGlass 스타일 테두리 (흰색 1px, alpha 0.7)
+        blurView.layer.borderWidth = 2.0 / UIScreen.main.scale
+        blurView.layer.borderColor = UIColor(white: 1.0, alpha: 0.8).cgColor
 
         return blurView
     }
@@ -292,4 +329,3 @@ enum LiquidGlassOptimizer {
         resumeAllMTKViews(in: rootView)
     }
 }
-#endif

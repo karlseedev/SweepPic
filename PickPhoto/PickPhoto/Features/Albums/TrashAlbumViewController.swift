@@ -173,9 +173,7 @@ final class TrashAlbumViewController: BaseGridViewController {
         applyPendingViewerReturn()
 
         // [LiquidGlass 최적화] 블러 뷰 사전 생성
-        #if DEBUG
         LiquidGlassOptimizer.preload(in: view.window)
-        #endif
     }
 
     // MARK: - Setup
@@ -588,24 +586,18 @@ final class TrashAlbumViewController: BaseGridViewController {
         didUserScrollAfterReturn = true
 
         // [LiquidGlass 최적화] 스크롤 시작 시 최적화 적용
-        #if DEBUG
         LiquidGlassOptimizer.optimize(in: view.window)
-        #endif
     }
 
     func scrollViewDidEndDragging(_ scrollView: UIScrollView, willDecelerate decelerate: Bool) {
         guard !decelerate else { return }
         // [LiquidGlass 최적화] 스크롤 종료 시 최적화 해제
-        #if DEBUG
         LiquidGlassOptimizer.restore(in: view.window)
-        #endif
     }
 
     func scrollViewDidEndDecelerating(_ scrollView: UIScrollView) {
         // [LiquidGlass 최적화] 감속 완료 시 최적화 해제
-        #if DEBUG
         LiquidGlassOptimizer.restore(in: view.window)
-        #endif
     }
 }
 

@@ -402,6 +402,16 @@ override func viewWillDisappear(_ animated: Bool) {
 | 2026-01-29 | 검증 1 완료: transitionDuration=0 → 애니메이션 원인 아님 |
 | 2026-01-29 | 검증 2 완료: 그리드 Good vs Viewer Critical, 새 가설 - UIVisualEffectView가 페이지 전환 시 문제 |
 | 2026-01-29 | 검증 3 완료: Viewer view 내 MTKView 0개, 개수 문제 아님 |
+| 2026-01-30 | Viewer 버튼 누락 문제 발견: isPreloaded 플래그로 인해 Viewer 버튼들 preload 안 됨 |
+| 2026-01-30 | 해결 1: isPreloaded 제거, incremental preload 방식으로 변경 |
+| 2026-01-30 | 해결 2: orphaned cleanup 추가 (weak reference nil 처리) |
+| 2026-01-30 | 해결 3: PhotoPageViewController 줌/드래그 최적화 추가 |
+| 2026-01-30 | **Viewer Test C 최종 해결: 스와이프/줌/드래그 모두 Good 달성** |
+| 2026-01-30 | Test C 대체 블러 디자인 튜닝: tintColor 오버레이 + 테두리 추가 |
+| 2026-01-30 | Test C 적용 확대: 얼굴 비교(FaceComparisonVC), 앨범 목록(AlbumsVC) 추가 |
+| 2026-01-30 | PersonPageViewController 수직 스크롤 최적화 추가 |
+| 2026-01-30 | restore 크로스페이드 개선: 옛 배경 노출 방지 (MTKView alpha 0 유지 → 새 프레임 렌더링 후 동시 전환) |
+| 2026-01-30 | `#if DEBUG` 제거 → Release 빌드에서도 LiquidGlass 최적화 동작 |
 
 ---
 
@@ -688,6 +698,7 @@ Viewer:        willTransitionTo ─── didFinishAnimating
 | 2 | 비율 과대 평가 | ❌ 아님 (절대값도 큼) |
 | 3 | MTKView 개수 문제 | ❌ 아님 (Viewer에 0개) |
 | 4 | cornerRadius/clipsToBounds offscreen rendering | ⚠️ 부분 원인 (64% 개선, 여전히 Critical) |
+| 5 | blur effect 실시간 계산 | ❌ 아님 (effect=nil도 Critical) |
 
 #### 검증 4: cornerRadius/clipsToBounds 제거
 
@@ -729,17 +740,322 @@ Viewer:        willTransitionTo ─── didFinishAnimating
 - L2에서 점점 악화 (228 → 448 → 472) → 누적 문제
 - 나머지 원인 = **UIVisualEffectView 실시간 blur 계산 비용** 추정
 
-**미해결 문제:**
-- 그리드: Test C로 **Good**
-- Viewer: Test C로 **Critical**
-- 같은 14개 MTKView, 같은 blurReplacement인데 결과가 다름
-- **UIVisualEffectView 실시간 blur + 급격한 배경 변화**가 원인으로 추정
+#### 검증 5: effect = nil (blur 효과 제거)
 
-### 추가 검증 계획
+**방법:** `createBlurView()`에서 blur effect를 nil로 설정
 
-| 순서 | 검증 | 목적 | 구현 난이도 |
-|------|------|------|-------------|
-| 5 | `effect = nil` | blur 제거, 투명 뷰만 → 실시간 blur가 원인인지 확정 | 쉬움 |
-| 6 | 정적 CoreImage blur | 한 번만 blur 처리 → 실시간 계산이 원인인지 확정 | 중간 |
-| 7 | 배경 스냅샷 고정 | 배경 변화 없이 테스트 → 급격한 배경 변화가 원인인지 확정 | 복잡 |
+```swift
+// 검증 5: blur 효과 제거
+let blurEffect: UIBlurEffect? = nil
+let blurView = UIVisualEffectView(effect: blurEffect)
+```
 
+**결과:**
+```
+[Viewer:Hitch] L1 First: hitch: 476.4 ms/s [Critical], fps: 60.8, dropped: 55
+[Viewer:Hitch:Abs] totalHitchMs=478.3, duration=1.004s
+
+[Viewer:Hitch] L2 Steady: hitch: 422.3 ms/s [Critical], fps: 61.9, dropped: 17
+[Viewer:Hitch:Abs] totalHitchMs=143.3, duration=0.339s
+
+[Viewer:Hitch] L2 Steady: hitch: 473.5 ms/s [Critical], fps: 56.8, dropped: 21
+[Viewer:Hitch:Abs] totalHitchMs=175.0, duration=0.370s
+```
+
+**비교:**
+
+| 항목 | 기존 (blur 있음) | 검증 5 (blur 없음) | 변화 |
+|------|-----------------|-------------------|------|
+| L1 First | 434~489 ms/s | 476 ms/s | 변화 없음 |
+| L2 Steady | 400~489 ms/s | 422~473 ms/s | 변화 없음 |
+| 등급 | Critical | Critical | 동일 |
+
+**결론:**
+- blur effect 자체는 원인이 **아님**
+- UIVisualEffectView 뷰 자체가 문제
+- Test B (isPaused만) = 0.0 ms/s Good
+- Test C (UIVisualEffectView 14개) = 400+ ms/s Critical
+- → **UIVisualEffectView 14개를 show/hide하는 것 자체가 비용**
+
+### 최종 결론
+
+**Viewer에서 Test C (blurReplacement) 사용 불가**
+
+| 원인 후보 | 검증 결과 |
+|----------|----------|
+| blur 애니메이션 | ❌ 원인 아님 |
+| 비율 과대 평가 | ❌ 원인 아님 |
+| MTKView 개수 | ❌ 원인 아님 |
+| cornerRadius | ⚠️ 부분 원인 (64%) |
+| blur effect | ❌ 원인 아님 |
+| **UIVisualEffectView 자체** | ✅ **주 원인** |
+
+### Test B vs Test C 대안 평가
+
+#### Test B가 대안이 안 되는 이유
+
+- **배경 freeze** → 앱이 고장난 것처럼 느껴짐
+- LiquidGlass의 핵심 가치(실시간 배경 반영)가 완전히 사라짐
+- 성능은 Good이지만 UX 관점에서 부적절
+
+#### Test C가 괜찮은 이유
+
+- **실시간 배경 반영** → 프리징 없음
+- UIVisualEffectView는 시스템 블러로 배경을 실시간 반영
+- LiquidGlass 광택/굴절은 없지만 "살아있는 블러" 느낌 유지
+
+| 항목 | Test B (isPaused) | Test C (UIVisualEffectView) |
+|------|-------------------|----------------------------|
+| 배경 반영 | ❌ freeze (정지) | ✅ 실시간 |
+| 프리징 느낌 | ⚠️ 앱 고장난 느낌 | ✅ 없음 |
+| 성능 (Viewer) | Good | Critical |
+| 적용 가능 | ❌ UX 문제 | ⚠️ 성능 문제 |
+
+**결론**: Test B는 성능은 좋지만 UX가 나쁨. Test C는 UX는 좋지만 Viewer에서 성능 문제.
+→ **Test C를 Viewer에서도 쓸 수 있도록 개선하는 방향**이 필요
+
+### 다음 단계: Test C 개선 방향
+
+Viewer에서 Test C가 실패한 근본 원인:
+- UIVisualEffectView 14개가 빠르게 변하는 배경과 결합 → 합성 비용 폭증
+
+개선 방안:
+1. UIVisualEffectView **개수 줄이기** (14개 → 일부만)
+2. Viewer 전환 시에만 **다른 처리** 적용
+3. LiquidGlassKit **라이브러리 수정** (Low-FPS/Low-Res)
+
+---
+
+## 12. Viewer Test C 최종 해결 (2026-01-30)
+
+### 문제 발견
+
+Viewer 스와이프 시 Test C가 Critical (400+ ms/s)로 나오는 문제.
+
+**원인 분석:**
+
+```
+그리드: [LiquidGlass] Blur preload 완료: 14개
+뷰어:  [LiquidGlass] Blur preload: 이미 완료됨  ← 문제!
+```
+
+`isPreloaded` static 플래그로 인해 Viewer 버튼들(GlassIconButton)의 MTKView가 preload 대상에서 **누락**됨.
+
+### 해결 1: Incremental Preload
+
+`isPreloaded` 플래그를 제거하고, 매번 새로운 MTKView만 추가하는 방식으로 변경.
+
+```swift
+// 변경 전
+private static var isPreloaded: Bool = false
+guard !isPreloaded else { return }  // 한 번 완료되면 무시
+
+// 변경 후
+// 플래그 제거, ObjectIdentifier로 중복 체크하여 새로운 것만 추가
+for mtkView in mtkViews {
+    guard preloadedOverlays[identifier] == nil else { continue }
+    // 새로운 것만 추가
+}
+```
+
+**결과:**
+```
+그리드: [LiquidGlass] Blur preload: +14개 (총 14개)
+뷰어:  [LiquidGlass] Blur preload: +8개 (총 22개)  ← Viewer 버튼들 추가됨
+```
+
+### 해결 2: Orphaned Cleanup
+
+Viewer 닫힘 시 버튼들의 MTKView가 dealloc되어 weak reference가 nil이 됨.
+이전 항목들이 딕셔너리에 남아 문제 발생.
+
+```swift
+/// mtkView가 nil인 orphaned 항목 정리
+private static func cleanupOrphanedOverlays() {
+    var orphanedKeys: [ObjectIdentifier] = []
+
+    for (identifier, overlay) in preloadedOverlays {
+        if overlay.mtkView == nil {
+            overlay.blurView.removeFromSuperview()
+            orphanedKeys.append(identifier)
+        }
+    }
+
+    for key in orphanedKeys {
+        preloadedOverlays.removeValue(forKey: key)
+    }
+}
+```
+
+`showBlurOverlays()` 호출 시 먼저 orphaned 정리 후 처리.
+
+### 해결 3: 줌/드래그 최적화
+
+PhotoPageViewController에 LiquidGlassOptimizer 호출 추가.
+
+| 동작 | 메서드 | 호출 |
+|------|--------|------|
+| 줌 시작 | `scrollViewWillBeginZooming` | `optimize()` |
+| 줌 완료 | `scrollViewDidEndZooming` | `restore()` |
+| 확대 상태 드래그 시작 | `scrollViewWillBeginDragging` | `optimize()` |
+| 확대 상태 드래그 종료 | `scrollViewDidEndDragging` | `restore()` |
+| 확대 상태 감속 완료 | `scrollViewDidEndDecelerating` | `restore()` |
+
+**조건:** `zoomScale > 1.0`일 때만 동작 (1x에서는 페이지 스와이프 처리)
+
+### 최종 결과
+
+| 동작 | 이전 | 이후 | 등급 |
+|------|------|------|------|
+| Viewer 스와이프 | 400~489 ms/s | **0.0 ms/s** | **Good** |
+| Viewer 줌 | 미적용 | **0.0 ms/s** | **Good** |
+| Viewer 확대 후 드래그 | 미적용 | **0.0 ms/s** | **Good** |
+| 그리드 스크롤 | 0.0 ms/s | 0.0 ms/s | Good |
+
+### 수정 파일
+
+| 파일 | 수정 내용 |
+|------|----------|
+| `LiquidGlassOptimizer.swift` | `isPreloaded` 플래그 제거 (incremental preload) |
+| `LiquidGlassOptimizer.swift` | `cleanupOrphanedOverlays()` 추가 |
+| `ViewerViewController.swift` | viewDidAppear에서 preload 유지 |
+| `PhotoPageViewController.swift` | 줌/드래그 시 optimize/restore 호출 |
+
+---
+
+## 13. Test C 대체 블러 디자인 튜닝 (2026-01-30)
+
+### 목적
+
+스크롤 중 LiquidGlass → UIBlurEffect 전환 시 사용자가 디자인 차이를 최대한 느끼지 못하도록 튜닝.
+
+### LiquidGlass 원본 vs 대체 블러 차이점
+
+| 요소 | LiquidGlass (원본) | 대체 블러 (이전) | 대체 블러 (튜닝 후) |
+|------|-------------------|-----------------|-------------------|
+| 효과 | `LiquidGlassEffect(style: .regular)` | `UIBlurEffect(.systemUltraThinMaterial)` | 동일 |
+| tintColor | `UIColor(white: 0.5, alpha: 0.2)` | 없음 | `UIColor(white: 1.0, alpha: 0.3)` |
+| 테두리 | Metal 셰이더 (프레넬/글레어) | 없음 | 흰색 2px, alpha 0.8 |
+| 특수 효과 | 굴절/프레넬/글레어 (병목 3) | 없음 | 없음 (파이프라인 의존으로 불가) |
+
+### 수정 내용
+
+#### 1. tintColor 오버레이 추가
+
+LiquidGlass 원본의 색감에 가깝도록 블러 뷰 위에 반투명 오버레이 추가.
+
+```swift
+// createBlurView() 내
+let tintOverlay = UIView()
+tintOverlay.backgroundColor = UIColor(white: 1.0, alpha: 0.3)
+tintOverlay.frame = blurView.bounds
+tintOverlay.autoresizingMask = [.flexibleWidth, .flexibleHeight]
+blurView.contentView.addSubview(tintOverlay)
+```
+
+#### 2. 테두리 추가
+
+LiquidGlass의 프레넬/글레어 효과가 만드는 가장자리 빛남을 근사하기 위해 테두리 추가.
+
+```swift
+// createBlurView() 내
+blurView.layer.borderWidth = 2.0 / UIScreen.main.scale  // 2물리픽셀
+blurView.layer.borderColor = UIColor(white: 1.0, alpha: 0.8).cgColor
+```
+
+### 최종 설정값 요약
+
+```swift
+// LiquidGlassOptimizer.swift - createBlurView()
+블러 스타일:   UIBlurEffect(style: .systemUltraThinMaterial)
+블러 alpha:   0.2
+tintOverlay:  UIColor(white: 1.0, alpha: 0.3)
+테두리 두께:   2물리픽셀 (2.0 / UIScreen.main.scale)
+테두리 색상:   UIColor(white: 1.0, alpha: 0.8)
+```
+
+### 적용 범위
+
+대체 블러는 window 내 모든 MTKView에 적용됨 (findAllMTKViews 재귀 탐색):
+
+| 요소 | 개수 | 위치 |
+|------|------|------|
+| FloatingTabBar 배경/버튼 | ~6개 | 그리드 하단 |
+| FloatingTitleBar 배경/버튼 | ~4개 | 그리드 상단 |
+| SelectionPill | ~1개 | TabBar 내부 |
+| Viewer 버튼 (delete/restore 등) | ~4개 | 뷰어 하단 |
+| GlassIconButton (back 등) | ~2개 | 뷰어/타이틀바 |
+| 기타 (FaceButton, GlassTextButton 등) | ~5개 | 상황별 |
+
+### Metal 셰이더(병목 3) 유지 불가 이유
+
+LiquidGlassKit의 3가지 병목은 파이프라인으로 연결됨:
+
+```
+병목 1: drawHierarchy() → 배경 텍스처 생성
+    ↓
+병목 2: waitUntilCompleted() → 블러 텍스처 생성
+    ↓
+병목 3: Metal 셰이더 → 굴절/프레넬/글레어 렌더링
+```
+
+병목 3은 병목 1+2의 출력(블러 텍스처)을 입력으로 사용하므로, 배경 캡처를 중지하면 셰이더에 넣을 텍스처가 없어 단독 실행 불가.
+
+---
+
+## 14. Test C 적용 확대 및 릴리즈 전환 (2026-01-30)
+
+### 적용 화면 확대
+
+기존 5곳에 2곳을 추가하여 총 7곳에서 Test C 동작:
+
+| 화면 | 파일 | 트리거 | 상태 |
+|------|------|--------|------|
+| 메인 그리드 | `GridScroll.swift` | 스크롤 | 기존 |
+| 앨범 그리드 | `AlbumGridViewController.swift` | 스크롤 | 기존 |
+| 휴지통 그리드 | `TrashAlbumViewController.swift` | 스크롤 | 기존 |
+| 뷰어 (스와이프) | `ViewerViewController.swift` | 좌우 페이지 스와이프 | 기존 |
+| 뷰어 (줌/드래그) | `PhotoPageViewController.swift` | 핀치 줌, 확대 드래그 | 기존 |
+| **얼굴 비교** | `FaceComparisonViewController.swift` | 수평 스와이프 (UIPageVC) | **신규** |
+| **얼굴 비교 그리드** | `PersonPageViewController.swift` | 수직 스크롤 (UICollectionView) | **신규** |
+| **앨범 목록** | `AlbumsViewController.swift` | 스크롤 | **신규** |
+
+### Restore 크로스페이드 개선
+
+스크롤 종료 시 LiquidGlass 복원에서 옛 배경이 순간적으로 보이는 문제 수정.
+
+**이전 방식:**
+```
+1. MTKView alpha 즉시 복원 (isPaused=false) → 옛 배경 노출
+2. 0.05초 후 blur fade out
+```
+
+**개선 방식:**
+```
+1. MTKView 렌더링만 재개 (alpha 0 유지, 보이지 않음)
+2. 0.15초 대기 (drawHierarchy + blur + Metal shader 파이프라인 완료)
+3. 크로스페이드: MTKView fade in + blur fade out 동시 진행
+```
+
+사용자가 옛 배경을 보지 않고 blur → 새 LiquidGlass로 자연스럽게 전환됨.
+
+### Release 빌드 전환
+
+테스트 완료 후 `#if DEBUG` 가드를 모두 제거하여 Release 빌드에서도 LiquidGlass 최적화가 동작하도록 변경.
+
+**제거된 파일 (10개):**
+
+| 파일 | 제거 내용 |
+|------|----------|
+| `LiquidGlassOptimizer.swift` | 파일 전체 `#if DEBUG` 가드 제거 |
+| `FaceComparisonViewController.swift` | preload/setupDelegate + UIScrollViewDelegate extension |
+| `PersonPageViewController.swift` | UIScrollViewDelegate extension |
+| `PhotoPageViewController.swift` | optimize/restore 호출 5곳 |
+| `ViewerViewController.swift` | setup/preload + UIScrollViewDelegate extension |
+| `GridScroll.swift` | optimize/restore 호출 2곳 |
+| `GridViewController.swift` | preload 호출 |
+| `AlbumGridViewController.swift` | preload/optimize/restore 호출 4곳 |
+| `TrashAlbumViewController.swift` | preload/optimize/restore 호출 4곳 |
+| `AlbumsViewController.swift` | preload + UIScrollViewDelegate extension |
+
+**유지된 `#if DEBUG`:** 디버그 로그(Log.print), 성능 측정(HitchMonitor), 디버그 버튼(debugAnalyzeButton) 등 기존 디버그 전용 코드는 그대로 유지.
