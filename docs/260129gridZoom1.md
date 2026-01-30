@@ -818,3 +818,34 @@ window.insertSubview(gridView, at: 0)
 1. Interactive Navigation transition 사용 (UIPercentDrivenInteractiveTransition + 커스텀 애니메이터)
 2. 커스텀 presentation으로 전환 (Navigation 대신)
 3. iOS 18+ preferredTransition = .zoom 유지 (iOS 16~17만 fallback)
+
+---
+
+## 최종 결론: Navigation 기반 Interactive Dismiss 불가
+
+### 근본 문제
+
+| 방식 | 문제점 |
+|-----|-------|
+| UIPercentDrivenInteractiveTransition | 커스텀 스냅샷 애니메이션과 호환 안 됨 |
+| 직접 Transform 제어 | Navigation push 후 그리드가 window에서 제거됨 |
+
+**결론:** Navigation 기반으로는 기본 사진 앱 스타일의 Interactive Dismiss 구현이 **구조적으로 불가능**
+
+### 선택한 방향: Modal Presentation
+
+Custom Modal Presentation 방식으로 전환하여 Phase 3 구현 진행.
+
+**핵심:**
+```swift
+// UIPresentationController
+override var shouldRemovePresentersView: Bool {
+    return false  // presenting VC(그리드)가 containerView에 유지됨
+}
+```
+
+**PoC 검증 결과 (2026-01-30):**
+- Modal dismiss 시 좌표 변환 정상 작동 확인
+- `sourceFrame = (0.0, 100.0, 128.0, 128.0)` ← 실제 좌표 반환
+
+→ **Modal 방식 구현 계획: `260129gridZoom2.md` 참조**
