@@ -80,8 +80,8 @@ final class LiquidGlassTabBar: UIView {
             UIColor.clear.cgColor,
             UIColor.black.withAlphaComponent(Self.maxDimAlpha * 0.33).cgColor,
             UIColor.black.withAlphaComponent(Self.maxDimAlpha * 0.66).cgColor,
-            UIColor.black.withAlphaComponent(Self.maxDimAlpha).cgColor,
-            UIColor.black.withAlphaComponent(Self.maxDimAlpha).cgColor
+            UIColor.black.withAlphaComponent(0.60).cgColor,
+            UIColor.black.withAlphaComponent(0.60).cgColor
         ]
         layer.locations = [0, 0.23, 0.47, 0.7, 1.0]
         layer.startPoint = CGPoint(x: 0.5, y: 0)
@@ -177,7 +177,7 @@ final class LiquidGlassTabBar: UIView {
     /// Trash Restore 버튼
     /// iOS 26 스펙: 높이 44pt, fontSize 17pt
     private lazy var trashRestoreButton: GlassTextButton = {
-        let button = GlassTextButton(title: "복구", style: .plain, tintColor: .systemBlue)
+        let button = GlassTextButton(title: "복구", style: .plain, tintColor: .white)
         button.addTarget(self, action: #selector(trashRestoreButtonTapped), for: .touchUpInside)
         button.translatesAutoresizingMaskIntoConstraints = false
         return button

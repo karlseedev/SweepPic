@@ -12,6 +12,21 @@ import UIKit
 import Photos
 import AppCore
 
+// MARK: - NavTitleContainerView
+
+/// 네비게이션 바 titleView용 컨테이너
+/// intrinsicContentSize를 타이틀 높이만 반환하여 서브타이틀 추가 시 타이틀 위치 고정
+/// clipsToBounds = false로 서브타이틀은 아래로 overflow 표시
+private class NavTitleContainerView: UIView {
+    weak var titleLabel: UILabel?
+
+    override var intrinsicContentSize: CGSize {
+        // 타이틀 높이만 반환하여 네비게이션 바 중앙 배치 기준 유지
+        let titleSize = titleLabel?.intrinsicContentSize ?? .zero
+        return CGSize(width: UIView.noIntrinsicMetric, height: titleSize.height)
+    }
+}
+
 // MARK: - Swipe Delete State (PRD7)
 
 /// 스와이프 삭제 상태 관리
@@ -387,10 +402,45 @@ class BaseGridViewController: UIViewController {
         }
     }
 
+    /// iOS 26+ 서브타이틀 라벨 참조 (서브클래스에서 업데이트용)
+    private(set) var navSubtitleLabel: UILabel?
+
     /// iOS 26+: 시스템 네비게이션 바 설정 (서브클래스에서 오버라이드 가능)
     @available(iOS 26.0, *)
     func setupSystemNavigationBar() {
-        navigationItem.title = navigationTitle
+        // 커스텀 titleView: 타이틀 위치 고정 + 서브타이틀 overflow
+        let container = NavTitleContainerView()
+        container.clipsToBounds = false
+
+        let titleLabel = UILabel()
+        titleLabel.attributedText = NSAttributedString(string: navigationTitle, attributes: [
+            .font: UIFont.systemFont(ofSize: 36, weight: .light),
+            .kern: -1.0
+        ])
+        titleLabel.textColor = .label
+        titleLabel.translatesAutoresizingMaskIntoConstraints = false
+        container.addSubview(titleLabel)
+        container.titleLabel = titleLabel
+
+        let subtitleLabel = UILabel()
+        subtitleLabel.font = .systemFont(ofSize: 14, weight: .black)
+        subtitleLabel.textColor = .label
+        subtitleLabel.isHidden = true
+        subtitleLabel.translatesAutoresizingMaskIntoConstraints = false
+        container.addSubview(subtitleLabel)
+        navSubtitleLabel = subtitleLabel
+
+        NSLayoutConstraint.activate([
+            // 타이틀: 컨테이너 기준 배치 (intrinsicContentSize로 중앙 유지)
+            titleLabel.topAnchor.constraint(equalTo: container.topAnchor),
+            titleLabel.leadingAnchor.constraint(equalTo: container.leadingAnchor),
+            titleLabel.bottomAnchor.constraint(equalTo: container.bottomAnchor),
+            // 서브타이틀: 타이틀 바로 아래 (overflow)
+            subtitleLabel.topAnchor.constraint(equalTo: titleLabel.bottomAnchor, constant: 0),
+            subtitleLabel.leadingAnchor.constraint(equalTo: titleLabel.leadingAnchor),
+        ])
+
+        navigationItem.titleView = container
         // 서브클래스에서 추가 버튼 설정
     }
 

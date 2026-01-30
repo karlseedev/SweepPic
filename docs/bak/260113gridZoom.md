@@ -205,6 +205,9 @@ alongside 블록 안에서 UIView.animate(delay: 0.2)로 시도.
 1. iOS 18 zoom transition 포기 → 커스텀 `UIViewControllerAnimatedTransitioning` 구현
 2. 현재 상태 유지 (기본 사진 앱과 동일하지 않음을 수용)
 
+## 최종 결론2
+- 260129gridZoom2.md 로 커스텀 구현하여 본 문서에서 달성하려던 목표 달성
+
 ## 참고 자료
 - [Zoom transitions - Douglas Hill](https://douglashill.co/zoom-transitions/)
 - [How to make zoom transition animation in iOS 18](https://github.com/onmyway133/blog/issues/995)

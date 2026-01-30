@@ -36,7 +36,7 @@ enum LiquidGlassStyle {
     static let highlightLocation: NSNumber = 0.5 // 버튼 높이의 50%까지만 빛이 맺힘
 
     // MARK: - Gradient Dim
-    static let maxDimAlpha: CGFloat = 0.45
+    static let maxDimAlpha: CGFloat = 0.60
 
     // MARK: - Helper Methods
 

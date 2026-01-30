@@ -248,7 +248,6 @@ final class AlbumGridViewController: BaseGridViewController {
             target: self,
             action: #selector(selectButtonTapped)
         )
-
         // 빈 앨범이면 Select 버튼 비활성화
         let isEmpty = gridDataSource.assetCount == 0
         selectButton.isEnabled = !isEmpty

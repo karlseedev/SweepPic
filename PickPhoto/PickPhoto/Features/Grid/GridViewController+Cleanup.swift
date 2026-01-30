@@ -46,14 +46,12 @@ extension GridViewController {
             action: #selector(cleanupButtonTapped)
         )
         cleanupItem.tintColor = .systemBlue
-
         let selectItem = UIBarButtonItem(
             title: "선택",
             style: .plain,
             target: self,
             action: #selector(selectButtonTapped)
         )
-        selectItem.tintColor = .systemBlue
 
         // [Select] [정리] 순서
         navigationItem.rightBarButtonItems = [selectItem, cleanupItem]
@@ -72,12 +70,12 @@ extension GridViewController {
         // 기존 Select 버튼 대신 [Select] [정리] 두 개 버튼으로 변경
         overlay.titleBar.setTwoRightButtons(
             firstTitle: "선택",
-            firstColor: .systemBlue,
+            firstColor: .white,
             firstAction: { [weak self] in
                 self?.selectButtonTapped()
             },
             secondTitle: "정리",
-            secondColor: .systemBlue,
+            secondColor: UIColor(red: 0, green: 200/255, blue: 1.0, alpha: 1.0),  // #00C8FF
             secondAction: { [weak self] in
                 self?.cleanupButtonTapped()
             }

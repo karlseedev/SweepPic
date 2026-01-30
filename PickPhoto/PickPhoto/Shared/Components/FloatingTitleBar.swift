@@ -40,7 +40,7 @@ final class FloatingTitleBar: UIView {
     static let contentHeight: CGFloat = 44
 
     /// 그라데이션 추가 높이 (딤/블러가 더 아래까지 내려오도록)
-    private static let gradientExtension: CGFloat = 15
+    private static let gradientExtension: CGFloat = 27
 
     /// 최대 딤 알파 (가장 어두운 부분 45%)
     private static let maxDimAlpha: CGFloat = LiquidGlassStyle.maxDimAlpha
@@ -54,7 +54,23 @@ final class FloatingTitleBar: UIView {
     // - TabBarController.swift, GridViewController.swift, FloatingOverlayContainer.swift, FloatingTitleBar.swift (여기)
     var title: String = "사진보관함" {
         didSet {
-            titleLabel.text = title
+            titleLabel.attributedText = Self.styledTitle(title)
+        }
+    }
+
+    /// 타이틀 스타일 적용 (자간 -0.5pt, 36pt ultraLight)
+    private static func styledTitle(_ text: String) -> NSAttributedString {
+        NSAttributedString(string: text, attributes: [
+            .font: UIFont.systemFont(ofSize: 36, weight: .light),
+            .kern: -1.0
+        ])
+    }
+
+    /// 서브타이틀 텍스트 (사진 개수 등)
+    var subtitle: String? {
+        didSet {
+            subtitleLabel.text = subtitle
+            subtitleLabel.isHidden = (subtitle == nil || subtitle?.isEmpty == true)
         }
     }
 
@@ -136,9 +152,24 @@ final class FloatingTitleBar: UIView {
     /// 타이틀 라벨
     private lazy var titleLabel: UILabel = {
         let label = UILabel()
-        label.text = title
-        label.font = .systemFont(ofSize: 17, weight: .semibold)
+        label.attributedText = Self.styledTitle(title)
+        label.font = .systemFont(ofSize: 36, weight: .light)
         label.textColor = .white
+        // 그림자 효과로 가독성 향상
+        label.layer.shadowColor = UIColor.black.cgColor
+        label.layer.shadowOffset = CGSize(width: 0, height: 1)
+        label.layer.shadowOpacity = 0.3
+        label.layer.shadowRadius = 2
+        label.translatesAutoresizingMaskIntoConstraints = false
+        return label
+    }()
+
+    /// 서브타이틀 라벨 (사진 개수 표시)
+    private lazy var subtitleLabel: UILabel = {
+        let label = UILabel()
+        label.font = .systemFont(ofSize: 14, weight: .black)
+        label.textColor = .white
+        label.isHidden = true
         // 그림자 효과로 가독성 향상
         label.layer.shadowColor = UIColor.black.cgColor
         label.layer.shadowOffset = CGSize(width: 0, height: 1)
@@ -151,7 +182,7 @@ final class FloatingTitleBar: UIView {
     /// Select 버튼 (Liquid Glass 스타일) - 가장 오른쪽
     /// iOS 26 스펙: 높이 44pt, fontSize 17pt
     private lazy var selectButton: GlassTextButton = {
-        let button = GlassTextButton(title: "선택", style: .plain, tintColor: .systemBlue)
+        let button = GlassTextButton(title: "선택", style: .plain, tintColor: .white)
         button.addTarget(self, action: #selector(selectButtonTapped), for: .touchUpInside)
         button.translatesAutoresizingMaskIntoConstraints = false
         return button
@@ -161,7 +192,7 @@ final class FloatingTitleBar: UIView {
     /// 휴지통 탭에서 [Select] [비우기] 동시 표시용
     /// iOS 26 스펙: 높이 38pt, fontSize 17pt
     private lazy var secondRightButton: GlassTextButton = {
-        let button = GlassTextButton(title: "", style: .plain, tintColor: .systemRed)
+        let button = GlassTextButton(title: "", style: .plain, tintColor: .white)
         button.addTarget(self, action: #selector(secondRightButtonTapped), for: .touchUpInside)
         button.translatesAutoresizingMaskIntoConstraints = false
         button.isHidden = true // 기본 숨김
@@ -200,6 +231,7 @@ final class FloatingTitleBar: UIView {
         addSubview(contentContainer)
         contentContainer.addSubview(backButton)
         contentContainer.addSubview(titleLabel)
+        contentContainer.addSubview(subtitleLabel)
         contentContainer.addSubview(secondRightButton)
         contentContainer.addSubview(selectButton)
 
@@ -218,20 +250,24 @@ final class FloatingTitleBar: UIView {
             progressiveBlurView.topAnchor.constraint(equalTo: topAnchor),
             progressiveBlurView.leadingAnchor.constraint(equalTo: leadingAnchor),
             progressiveBlurView.trailingAnchor.constraint(equalTo: trailingAnchor),
-            progressiveBlurView.bottomAnchor.constraint(equalTo: bottomAnchor),
+            progressiveBlurView.bottomAnchor.constraint(equalTo: bottomAnchor, constant: 8),
 
             // 콘텐츠 컨테이너: safe area 아래에 44pt 높이
             contentContainer.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 16),
             contentContainer.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -16),
-            contentContainer.bottomAnchor.constraint(equalTo: bottomAnchor),
+            contentContainer.bottomAnchor.constraint(equalTo: bottomAnchor, constant: -20),
             contentContainer.heightAnchor.constraint(equalToConstant: Self.contentHeight),
 
             // 뒤로가기 버튼: 좌측 정렬, 세로 중앙
             backButton.leadingAnchor.constraint(equalTo: contentContainer.leadingAnchor),
             backButton.centerYAnchor.constraint(equalTo: contentContainer.centerYAnchor),
 
-            // 타이틀 라벨: 세로 중앙 (좌측 제약은 동적으로 변경)
-            titleLabel.centerYAnchor.constraint(equalTo: contentContainer.centerYAnchor),
+            // 타이틀 라벨: 상단 쪽 배치 (서브타이틀 공간 확보, 좌측 제약은 동적으로 변경)
+            titleLabel.topAnchor.constraint(equalTo: contentContainer.topAnchor, constant: 2),
+
+            // 서브타이틀 라벨: 타이틀 바로 아래
+            subtitleLabel.topAnchor.constraint(equalTo: titleLabel.bottomAnchor, constant: -1),
+            subtitleLabel.leadingAnchor.constraint(equalTo: titleLabel.leadingAnchor),
 
             // Select 버튼: 우측 정렬, 세로 중앙
             selectButton.trailingAnchor.constraint(equalTo: contentContainer.trailingAnchor),
@@ -320,6 +356,12 @@ final class FloatingTitleBar: UIView {
     /// - Parameter title: 새로운 타이틀
     func setTitle(_ title: String) {
         self.title = title
+    }
+
+    /// 서브타이틀 변경 (사진 개수 등 동적 표시)
+    /// - Parameter subtitle: 서브타이틀 텍스트 (nil이면 숨김)
+    func setSubtitle(_ subtitle: String?) {
+        self.subtitle = subtitle
     }
 
     /// 뒤로가기 버튼 표시/숨김 설정 (push된 화면에서 사용)
@@ -429,6 +471,7 @@ final class FloatingTitleBar: UIView {
     ) {
         // 첫 번째 버튼 (Select 위치 - 가장 오른쪽)
         selectButton.setButtonTitle(firstTitle)
+        selectButton.setTextColor(firstColor)
 
         isSelectButtonHidden = false  // 프로퍼티를 통해 설정 (다른 탭에서 숨겼을 수 있음)
         rightButtonAction = firstAction
@@ -440,6 +483,7 @@ final class FloatingTitleBar: UIView {
 
         // 두 번째 버튼 (왼쪽에 추가)
         secondRightButton.setButtonTitle(secondTitle)
+        secondRightButton.setTextColor(secondColor)
 
         secondRightButton.isHidden = false
         secondRightButtonAction = secondAction

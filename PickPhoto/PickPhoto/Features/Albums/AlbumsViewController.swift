@@ -136,7 +136,21 @@ final class AlbumsViewController: UIViewController {
         // - AlbumsViewController.swift: navigationItem.title (여기), setTitle()
         // - FloatingOverlayContainer.swift: titleBar.title
         // 주의: title 대신 navigationItem.title 사용 (tabBarItem.title 덮어쓰기 방지)
-        navigationItem.title = "앨범"
+        // 커스텀 titleView로 좌측 정렬 타이틀 설정 (컨테이너로 전체 너비 확보)
+        let titleContainer = UIView()
+        let titleLabel = UILabel()
+        titleLabel.attributedText = NSAttributedString(string: "앨범", attributes: [
+            .font: UIFont.systemFont(ofSize: 36, weight: .light),
+            .kern: -1.0
+        ])
+        titleLabel.textColor = .label
+        titleLabel.translatesAutoresizingMaskIntoConstraints = false
+        titleContainer.addSubview(titleLabel)
+        NSLayoutConstraint.activate([
+            titleLabel.leadingAnchor.constraint(equalTo: titleContainer.leadingAnchor),
+            titleLabel.centerYAnchor.constraint(equalTo: titleContainer.centerYAnchor)
+        ])
+        navigationItem.titleView = titleContainer
 
         // 컬렉션 뷰
         view.addSubview(collectionView)
@@ -181,6 +195,7 @@ final class AlbumsViewController: UIViewController {
         // - AlbumsViewController.swift: title, setTitle() (여기)
         // - FloatingOverlayContainer.swift: titleBar.title
         overlay.titleBar.setTitle("앨범")
+        overlay.titleBar.setSubtitle(nil)
 
         // 뒤로가기 버튼 숨김
         overlay.titleBar.setShowsBackButton(false)

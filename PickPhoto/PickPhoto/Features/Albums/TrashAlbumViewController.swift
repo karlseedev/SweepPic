@@ -91,7 +91,7 @@ final class TrashAlbumViewController: BaseGridViewController {
     /// - TabBarController.swift: tabBarItem.title
     /// - configureFloatingOverlayForTrash의 setTitle()
     override var navigationTitle: String {
-        "PickPhoto 휴지통"
+        "휴지통"
     }
 
     // MARK: - Initialization
@@ -223,7 +223,7 @@ final class TrashAlbumViewController: BaseGridViewController {
     }
 
     /// FloatingOverlay 상태를 휴지통 탭용으로 설정
-    /// - 타이틀: "PickPhoto 휴지통"
+    /// - 타이틀: "휴지통"
     /// - 뒤로가기 버튼: 숨김 (별도 탭이므로)
     /// - 오른쪽 버튼: [Select] [비우기] (휴지통이 비어있지 않을 때만 표시)
     /// Note: TrashSelectMode.swift의 exitSelectModeFloatingUI()에서 호출하므로 internal
@@ -234,6 +234,7 @@ final class TrashAlbumViewController: BaseGridViewController {
         }
 
         overlay.titleBar.setTitle(navigationTitle)
+        updateTrashItemCountSubtitle()
 
         // 뒤로가기 버튼 숨김 (별도 탭이므로)
         overlay.titleBar.setShowsBackButton(false, action: nil)
@@ -242,7 +243,7 @@ final class TrashAlbumViewController: BaseGridViewController {
         let isEmpty = _trashDataSource.isEmpty
         overlay.titleBar.setTwoRightButtons(
             firstTitle: "선택",
-            firstColor: .systemBlue,
+            firstColor: .white,
             firstAction: { [weak self] in
                 self?.enterSelectMode()
             },
@@ -333,6 +334,8 @@ final class TrashAlbumViewController: BaseGridViewController {
         }
 
         let endTime = CFAbsoluteTimeGetCurrent()
+
+        updateTrashItemCountSubtitle()
 
         Log.print("[TrashAlbumViewController] Loaded \(_trashDataSource.assetCount) trashed assets")
         Log.print("[TrashAlbumViewController.Timing] reloadData: \(String(format: "%.1f", (reloadTime - reloadStartTime) * 1000))ms, total: \(String(format: "%.1f", (endTime - startTime) * 1000))ms")
@@ -495,6 +498,29 @@ final class TrashAlbumViewController: BaseGridViewController {
     @objc func emptyTrashButtonTapped() {
         guard !_trashDataSource.isEmpty else { return }
         performEmptyTrash()
+    }
+
+    // MARK: - Subtitle (사진 개수 표시)
+
+    /// 휴지통 사진 개수 서브타이틀 업데이트
+    private func updateTrashItemCountSubtitle() {
+        let count = _trashDataSource.assetCount
+        let formatter = NumberFormatter()
+        formatter.numberStyle = .decimal
+        let formatted = formatter.string(from: NSNumber(value: count)) ?? "\(count)"
+        let subtitleText = "\(formatted)개의 항목"
+
+        // iOS 18: FloatingTitleBar 서브타이틀
+        if let tabBarController = tabBarController as? TabBarController,
+           let overlay = tabBarController.floatingOverlay {
+            overlay.titleBar.setSubtitle(subtitleText)
+        }
+
+        // iOS 26: 네비게이션 바 서브타이틀
+        if let subtitleLabel = navSubtitleLabel {
+            subtitleLabel.text = subtitleText
+            subtitleLabel.isHidden = false
+        }
     }
 
     /// 휴지통 비우기 (외부에서 호출 가능)

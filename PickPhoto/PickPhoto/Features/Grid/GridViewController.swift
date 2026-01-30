@@ -345,6 +345,7 @@ final class GridViewController: BaseGridViewController {
         // - FloatingOverlayContainer.swift: titleBar.title
         // - FloatingTitleBar.swift: title 기본값
         overlay.titleBar.setTitle("사진보관함")
+        updateItemCountSubtitle()
 
         // 뒤로가기 버튼 숨김
         overlay.titleBar.setShowsBackButton(false)
@@ -591,6 +592,29 @@ final class GridViewController: BaseGridViewController {
         Log.print("[GridViewController] Updated \(changedIDs.count) changed cells (no reloadItems)")
     }
 
+    // MARK: - Subtitle (사진 개수 표시)
+
+    /// 사진 개수 서브타이틀 업데이트
+    private func updateItemCountSubtitle() {
+        let count = dataSourceDriver.count
+        let formatter = NumberFormatter()
+        formatter.numberStyle = .decimal
+        let formatted = formatter.string(from: NSNumber(value: count)) ?? "\(count)"
+        let subtitleText = "\(formatted)개의 항목"
+
+        // iOS 18: FloatingTitleBar 서브타이틀
+        if let tabBarController = tabBarController as? TabBarController,
+           let overlay = tabBarController.floatingOverlay {
+            overlay.titleBar.setSubtitle(subtitleText)
+        }
+
+        // iOS 26: 네비게이션 바 서브타이틀
+        if let subtitleLabel = navSubtitleLabel {
+            subtitleLabel.text = subtitleText
+            subtitleLabel.isHidden = false
+        }
+    }
+
     // MARK: - Empty State (T070)
 
     /// 빈 상태 업데이트 (extension에서 접근 필요)
@@ -598,6 +622,7 @@ final class GridViewController: BaseGridViewController {
         let isEmpty = dataSourceDriver.count == 0
         emptyStateView.isHidden = !isEmpty
         collectionView.isHidden = isEmpty
+        updateItemCountSubtitle()
     }
 
     // Scroll Optimization / Initial Display / Initial Preheat → GridScroll.swift로 이동됨

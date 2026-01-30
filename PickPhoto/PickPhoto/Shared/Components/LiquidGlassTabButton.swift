@@ -123,9 +123,10 @@ final class LiquidGlassTabButton: UIControl {
     // MARK: - Private Methods
 
     private func updateAppearance() {
-        // 실측값 기반 선택 색상: RGB(0, 0.569, 1.0) - 시안 계열 파랑
-        let selectedColor = UIColor(red: 0, green: 0.569, blue: 1.0, alpha: 1.0)
-        let color: UIColor = isSelectedTab ? selectedColor : .secondaryLabel
+        // 활성: systemBlue, 비활성: 흰색 100%
+        // 활성: 네온 스카이 #32C8FF, 비활성: 흰색 100%
+        let neonSky = UIColor(red: 50/255, green: 200/255, blue: 255/255, alpha: 1.0)
+        let color: UIColor = isSelectedTab ? neonSky : .white
 
         // 아이콘 변경
         let config = UIImage.SymbolConfiguration(
@@ -135,6 +136,9 @@ final class LiquidGlassTabButton: UIControl {
         let iconSystemName = isSelectedTab ? selectedIconName : iconName
         iconImageView.image = UIImage(systemName: iconSystemName, withConfiguration: config)
         iconImageView.tintColor = color
+
+        // 아이콘 그림자 적용 (가독성)
+        LiquidGlassStyle.applyIconShadow(to: iconImageView)
 
         // 레이블 색상 변경
         titleLabel.textColor = color

@@ -78,7 +78,7 @@ class GlassTextButton: UIButton {
     private let style: Style
 
     /// 텍스트 색상
-    private let textTintColor: UIColor
+    private var textTintColor: UIColor
 
     /// 현재 확장 상태
     private var isExpanded = false
@@ -191,6 +191,18 @@ class GlassTextButton: UIButton {
 
     // MARK: - Public Methods
 
+    /// 텍스트 색상 변경 (plain 스타일: 텍스트 색상, filled 스타일: 배경 오버레이 색상)
+    /// - Parameter color: 새 텍스트 색상
+    func setTextColor(_ color: UIColor) {
+        textTintColor = color
+        switch style {
+        case .plain:
+            textLabel.textColor = color
+        case .filled:
+            colorOverlay.backgroundColor = color
+        }
+    }
+
     /// 텍스트 변경
     /// - Parameters:
     ///   - title: 새 텍스트
@@ -285,7 +297,14 @@ class GlassTextButton: UIButton {
 
     private func updateStateStyles() {
         UIView.animate(withDuration: 0.2) {
-            self.alpha = self.isEnabled ? 1.0 : 0.4
+            // 배경 alpha는 항상 100% 유지, 글씨 색상만 변경
+            if self.isEnabled {
+                // 활성화: 원래 텍스트 색상 복원
+                self.textLabel.textColor = self.style == .plain ? self.textTintColor : .white
+            } else {
+                // 비활성화: 50% 중간 그레이
+                self.textLabel.textColor = UIColor(white: 0.5, alpha: 1.0)
+            }
         }
     }
 }
