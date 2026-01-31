@@ -39,6 +39,7 @@ final class ZoomAnimator: NSObject, UIViewControllerAnimatedTransitioning {
     /// transitionContext.isInteractive가 호출 시점에 false일 수 있으므로 자체 플래그 사용
     var isInteractiveDismiss: Bool = false
 
+
     // MARK: - Init
 
     init(isPresenting: Bool) {

@@ -595,11 +595,16 @@ final class TrashAlbumViewController: BaseGridViewController {
         cell.updateTrashState(false)
 
         // DEBUG: 비교 분석 배지 표시 (iOS 18+)
+        // ModeCategoryStore 우선, 없으면 CompareCategoryStore 참조
         #if DEBUG
         if #available(iOS 18.0, *) {
             let assetID = asset.localIdentifier
-            let category = CompareCategoryStore.shared.category(for: assetID)
-            cell.setCompareBadge(category)
+            if let modeCategory = ModeCategoryStore.shared.category(for: assetID) {
+                cell.setModeBadge(modeCategory)
+            } else {
+                let category = CompareCategoryStore.shared.category(for: assetID)
+                cell.setCompareBadge(category)
+            }
         }
         #endif
     }

@@ -76,5 +76,59 @@ extension PhotoCell {
             existingBadge.removeFromSuperview()
         }
     }
+
+    // MARK: - Mode Comparison Badge
+
+    /// 3모드 비교 배지 표시
+    /// - Parameter category: 모드 카테고리 (nil이면 배지 숨김)
+    ///
+    /// 배지 색상:
+    /// - ⚪ 회색 (allModes): 완화/기본/강화 3모드 전부
+    /// - 🔵 파랑 (standardUp): 기본+강화만
+    /// - 🟡 노랑 (deepOnly): 강화만
+    func setModeBadge(_ category: ModeCategory?) {
+        // 기존 배지 제거 (같은 태그 사용)
+        if let existingBadge = contentView.viewWithTag(Self.compareBadgeTag) {
+            existingBadge.removeFromSuperview()
+        }
+
+        guard let category = category else { return }
+
+        // 배지 색상 결정
+        let badgeColor: UIColor
+        switch category {
+        case .allModes:
+            badgeColor = .systemGray     // ⚪ 회색 (3모드 전부)
+        case .standardUp:
+            badgeColor = .systemBlue     // 🔵 파랑 (기본+강화)
+        case .deepOnly:
+            badgeColor = .systemYellow   // 🟡 노랑 (강화만)
+        }
+
+        // 배지 뷰 생성 (좌측 상단 원형) - 크기 2배
+        let badgeSize: CGFloat = 24
+        let badgeView = UIView()
+        badgeView.tag = Self.compareBadgeTag
+        badgeView.backgroundColor = badgeColor
+        badgeView.layer.cornerRadius = badgeSize / 2
+        badgeView.layer.borderWidth = 2.0
+        badgeView.layer.borderColor = UIColor.white.cgColor
+        badgeView.translatesAutoresizingMaskIntoConstraints = false
+
+        // 그림자 효과
+        badgeView.layer.shadowColor = UIColor.black.cgColor
+        badgeView.layer.shadowOffset = CGSize(width: 0, height: 1)
+        badgeView.layer.shadowRadius = 3
+        badgeView.layer.shadowOpacity = 0.4
+
+        contentView.addSubview(badgeView)
+
+        NSLayoutConstraint.activate([
+            badgeView.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 4),
+            badgeView.topAnchor.constraint(equalTo: contentView.topAnchor, constant: 4),
+            badgeView.widthAnchor.constraint(equalToConstant: badgeSize),
+            badgeView.heightAnchor.constraint(equalToConstant: badgeSize)
+        ])
+    }
 }
 #endif

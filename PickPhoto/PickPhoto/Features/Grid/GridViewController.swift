@@ -804,6 +804,8 @@ extension GridViewController {
             mode: mode
         )
         viewerVC.delegate = self
+        // [Timing] 탭 시점을 뷰어에 전달 (전체 구간 측정용)
+        viewerVC.openStartTime = t0
 
         // 커스텀 줌 트랜지션 설정 (Modal 방식)
         let transitionController = ZoomTransitionController()

@@ -232,15 +232,24 @@ extension ViewerViewController {
         // 비활성화 조건 확인
         guard shouldEnableSimilarPhoto else { return }
 
+        // [Timing] 세부 단계 측정
+        let s0 = CACurrentMediaTime()
+
         // UI 컴포넌트 생성
         setupFaceButtonOverlay()
+        let s1 = CACurrentMediaTime()
+
         setupLoadingIndicator()
+        let s2 = CACurrentMediaTime()
 
         // 분석 완료 알림 구독
         setupAnalysisObserver()
 
         // 줌 알림 구독
         setupZoomObserver()
+        let s3 = CACurrentMediaTime()
+
+        Log.print("[Viewer Timing]   setupSimilarPhoto 내부 — faceButtonOverlay: \(String(format: "%.1f", (s1 - s0) * 1000))ms, loadingIndicator: \(String(format: "%.1f", (s2 - s1) * 1000))ms, observers: \(String(format: "%.1f", (s3 - s2) * 1000))ms")
     }
 
     /// 뷰어가 표시될 때 호출
