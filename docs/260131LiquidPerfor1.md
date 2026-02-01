@@ -276,6 +276,14 @@ func moveTo(button: UIView, animated: Bool) {
 - 전환 완료 후 진단 로그에서 pause 확인
 - 연속 빠른 탭 전환 시 문제 없는지 확인
 
+### Phase 2 테스트 결과 ❌ 롤백
+
+**현상**: 탭 전환 시 Pill이 이전 위치의 배경 이미지를 가진 채 이동. resume 후 새 프레임 렌더링까지 1~2프레임 지연이 있어 이동 초반에 이전 배경이 보임.
+
+**원인**: pause 상태의 MTKView는 마지막 캡처한 배경을 유지. resume → setLifted → 이동 시작이 거의 동시에 발생하여, 새 위치의 배경을 캡처하기 전에 이동이 시작됨.
+
+**결론**: MTKView 1개 추가 pause 효과(미미)에 비해 UX 저하가 크므로 롤백. SelectionPill은 항상 active 유지.
+
 ---
 
 ## Phase 3: preferredFramesPerSecond 제한
@@ -506,7 +514,7 @@ func setupMetal() {
 | 적용 전 | 최대 8개 (진단 로그로 확인) | — |
 | Phase 1 | **최대 4개** (expanded 제거) | 생성 자체를 절반으로 줄임 |
 | Phase 1.1 (폴백) | 동일 8개, pause -4개 | Phase 1 실패 시만 적용 |
-| Phase 2 | -1 | Pill pause |
+| ~~Phase 2~~ | ~~-1~~ | ~~Pill pause~~ (롤백: 이동 시 배경 프리즈 문제) |
 | Phase 3 | 동일 (30fps 제한) | GPU 작업량 감소 |
 | Phase 4 | **active 0개** | 전체 idle pause |
 | Phase 5 | 동일 | 뷰당 초기화 비용 감소 (Metal 리소스 공유) |
