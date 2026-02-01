@@ -42,11 +42,6 @@ enum LiquidGlassOptimizer {
     /// 블러 뷰 alpha 값 (스크롤 중)
     static var blurAlpha: CGFloat = 0.2
 
-    /// MTKView fps 제한 (Phase 3)
-    /// 기본값 30: 120fps 기기에서 75% GPU 감소, 60fps 기기에서 50% 감소
-    /// Glass 효과는 배경 굴절이므로 높은 fps 불필요
-    static var preferredFPS: Int = 30
-
     /// 전환 애니메이션 시간 (초)
     private static let transitionDuration: TimeInterval = 0.1
 
@@ -93,9 +88,6 @@ enum LiquidGlassOptimizer {
             superview.insertSubview(blurView, belowSubview: mtkView)
 
             // 저장
-            // Phase 3: fps 제한 적용
-            mtkView.preferredFramesPerSecond = preferredFPS
-
             preloadedOverlays[identifier] = PreloadedOverlay(
                 blurView: blurView,
                 mtkView: mtkView,
@@ -324,20 +316,6 @@ enum LiquidGlassOptimizer {
         }
 
         return result
-    }
-
-    // MARK: - Phase 3: FPS 제한
-
-    /// 모든 MTKView에 fps 제한 적용 (Phase 3)
-    /// preload()를 거치지 않는 시점에서도 독립적으로 호출 가능
-    /// - Parameter rootView: 탐색 시작 뷰 (보통 window)
-    static func applyFPSLimit(in rootView: UIView?) {
-        guard let rootView = rootView else { return }
-        let mtkViews = findAllMTKViews(in: rootView)
-        for mtkView in mtkViews {
-            mtkView.preferredFramesPerSecond = preferredFPS
-        }
-        Log.print("[LiquidGlass] FPS limit applied: \(preferredFPS)fps to \(mtkViews.count)개 MTKView")
     }
 
     // MARK: - MTKView Pause/Resume 유틸리티
