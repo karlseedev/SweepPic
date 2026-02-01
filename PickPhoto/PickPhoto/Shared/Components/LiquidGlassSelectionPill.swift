@@ -21,9 +21,6 @@ final class LiquidGlassSelectionPill: UIView {
     /// leading constraint 저장 (애니메이션용)
     private(set) var leadingConstraint: NSLayoutConstraint?
 
-    /// MTKView 초기 pause 설정 완료 여부
-    private var hasInitializedPause = false
-
     // MARK: - UI Components
 
     /// LiquidGlassKit 기반 Lens 뷰
@@ -79,21 +76,6 @@ final class LiquidGlassSelectionPill: UIView {
         ])
     }
 
-    // MARK: - Layout
-
-    override func layoutSubviews() {
-        super.layoutSubviews()
-
-        // 최초 1회: lensView 내부 MTKView를 pause (resting 상태에서 렌더링 불필요)
-        if !hasInitializedPause {
-            let mtkViews = LiquidGlassOptimizer.findAllMTKViews(in: lensView)
-            if !mtkViews.isEmpty {
-                LiquidGlassOptimizer.setMTKViewsPaused(true, in: lensView)
-                hasInitializedPause = true
-            }
-        }
-    }
-
     // MARK: - Public Methods
 
     /// 특정 버튼 위치로 이동
@@ -108,9 +90,6 @@ final class LiquidGlassSelectionPill: UIView {
         let newLeading = button.frame.origin.x
 
         if animated {
-            // lifted 전 MTKView 활성화 (렌더링 재개)
-            LiquidGlassOptimizer.setMTKViewsPaused(false, in: lensView)
-
             // lifted 상태로 전환 → 이동 → resting 상태로 복귀
             // setLifted(true) 시 굴절 효과 활성화 + squash/stretch 애니메이션
             lensView.setLifted(true, animated: true, alongsideAnimations: {
@@ -120,19 +99,11 @@ final class LiquidGlassSelectionPill: UIView {
                 // 이동 완료 후 resting 상태로 복귀
                 self.lensView.setLifted(false, animated: true,
                                         alongsideAnimations: nil,
-                                        completion: { _ in
-                    // resting 복귀 완료 후 pause (렌더링 불필요)
-                    LiquidGlassOptimizer.setMTKViewsPaused(true, in: self.lensView)
-                })
+                                        completion: nil)
             })
         } else {
-            // 비애니메이션: resume → 위치 변경 → 1프레임 렌더 후 pause
-            LiquidGlassOptimizer.setMTKViewsPaused(false, in: lensView)
             leadingConstraint?.constant = newLeading
             superview?.layoutIfNeeded()
-            DispatchQueue.main.async {
-                LiquidGlassOptimizer.setMTKViewsPaused(true, in: self.lensView)
-            }
         }
 
         Log.print("[LiquidGlassSelectionPill] Moved to x: \(newLeading), animated: \(animated)")
