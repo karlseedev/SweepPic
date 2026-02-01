@@ -9,6 +9,7 @@
 
 import UIKit
 import LiquidGlassKit
+import AppCore
 
 /// 원형 Liquid Glass 버튼
 /// - toggleButton, faceButtons[] 등 원형 버튼에 사용
@@ -148,13 +149,21 @@ class GlassCircleButton: UIButton {
         self.iconTintColor = tintColor
         self.currentIconName = icon
 
+        let t0 = CACurrentMediaTime()
         super.init(frame: .zero)
+        let t1 = CACurrentMediaTime()
 
         setupIcon(icon)
+        let t2 = CACurrentMediaTime()
+
         setupLayers()
+        let t3 = CACurrentMediaTime()
 
         // 햅틱 준비
         feedbackGenerator.prepare()
+        let t4 = CACurrentMediaTime()
+
+        Log.print("[Viewer Timing]       GlassCircleButton.init(\(icon)) — super.init: \(String(format: "%.1f", (t1-t0)*1000))ms, setupIcon: \(String(format: "%.1f", (t2-t1)*1000))ms, setupLayers: \(String(format: "%.1f", (t3-t2)*1000))ms, haptic: \(String(format: "%.1f", (t4-t3)*1000))ms")
     }
 
     required init?(coder: NSCoder) {
@@ -180,11 +189,17 @@ class GlassCircleButton: UIButton {
 
         // 뷰 계층에 추가 (Expanded가 위, Contracted가 아래)
         // LiquidGlassEffect가 블러, 굴절, 테두리를 모두 처리
+        let sl0 = CACurrentMediaTime()
         insertSubview(contractedView, at: 0)
+        let sl1 = CACurrentMediaTime()
         insertSubview(expandedView, aboveSubview: contractedView)
+        let sl2 = CACurrentMediaTime()
 
         // 아이콘은 최상단
         addSubview(iconImageView)
+        let sl3 = CACurrentMediaTime()
+
+        Log.print("[Viewer Timing]         setupLayers — contractedView: \(String(format: "%.1f", (sl1-sl0)*1000))ms, expandedView: \(String(format: "%.1f", (sl2-sl1)*1000))ms, iconImageView: \(String(format: "%.1f", (sl3-sl2)*1000))ms")
     }
 
     // MARK: - Layout

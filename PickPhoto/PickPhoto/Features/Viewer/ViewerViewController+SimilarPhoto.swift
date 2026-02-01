@@ -329,10 +329,13 @@ extension ViewerViewController {
 
     /// +버튼 오버레이 설정
     private func setupFaceButtonOverlay() {
+        let fb0 = CACurrentMediaTime()
         let overlay = FaceButtonOverlay()
+        let fb1 = CACurrentMediaTime()
         overlay.translatesAutoresizingMaskIntoConstraints = false
         overlay.delegate = self
         view.addSubview(overlay)
+        let fb2 = CACurrentMediaTime()
 
         NSLayoutConstraint.activate([
             overlay.topAnchor.constraint(equalTo: view.topAnchor),
@@ -340,15 +343,20 @@ extension ViewerViewController {
             overlay.trailingAnchor.constraint(equalTo: view.trailingAnchor),
             overlay.bottomAnchor.constraint(equalTo: view.bottomAnchor)
         ])
+        let fb3 = CACurrentMediaTime()
 
         faceButtonOverlay = overlay
+        Log.print("[Viewer Timing]     setupFaceButtonOverlay — FaceButtonOverlay(): \(String(format: "%.1f", (fb1-fb0)*1000))ms, addSubview: \(String(format: "%.1f", (fb2-fb1)*1000))ms, constraints: \(String(format: "%.1f", (fb3-fb2)*1000))ms")
     }
 
     /// 로딩 인디케이터 설정
     private func setupLoadingIndicator() {
+        let li0 = CACurrentMediaTime()
         let indicator = AnalysisLoadingIndicator()
+        let li1 = CACurrentMediaTime()
         indicator.translatesAutoresizingMaskIntoConstraints = false
         view.addSubview(indicator)
+        let li2 = CACurrentMediaTime()
 
         NSLayoutConstraint.activate([
             indicator.topAnchor.constraint(equalTo: view.topAnchor),
@@ -356,8 +364,10 @@ extension ViewerViewController {
             indicator.trailingAnchor.constraint(equalTo: view.trailingAnchor),
             indicator.bottomAnchor.constraint(equalTo: view.bottomAnchor)
         ])
+        let li3 = CACurrentMediaTime()
 
         analysisLoadingIndicator = indicator
+        Log.print("[Viewer Timing]     setupLoadingIndicator — AnalysisLoadingIndicator(): \(String(format: "%.1f", (li1-li0)*1000))ms, addSubview: \(String(format: "%.1f", (li2-li1)*1000))ms, constraints: \(String(format: "%.1f", (li3-li2)*1000))ms")
     }
 
     /// 분석 완료 알림 옵저버 설정

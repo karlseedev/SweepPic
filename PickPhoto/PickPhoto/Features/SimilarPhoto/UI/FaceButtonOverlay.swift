@@ -125,14 +125,21 @@ final class FaceButtonOverlay: UIView {
             // 토글 버튼 생성하지 않음
         } else {
             // iOS 16~25: 토글 버튼 추가 (화면 우측 상단, 뒤로가기 버튼과 같은 높이/여백)
+            let ui0 = CACurrentMediaTime()
+            let _ = toggleButton  // lazy 초기화 트리거 (GlassCircleButton 생성)
+            let ui1 = CACurrentMediaTime()
             addSubview(toggleButton)
+            let ui2 = CACurrentMediaTime()
             NSLayoutConstraint.activate([
                 toggleButton.topAnchor.constraint(equalTo: safeAreaLayoutGuide.topAnchor, constant: 16),
                 toggleButton.trailingAnchor.constraint(equalTo: safeAreaLayoutGuide.trailingAnchor, constant: -16)
             ])
+            let ui3 = CACurrentMediaTime()
 
             // 토글 버튼은 초기에는 숨김 (버튼이 있을 때만 표시)
             toggleButton.isHidden = true
+
+            Log.print("[Viewer Timing]     FaceButtonOverlay.setupUI — toggleButton lazy생성: \(String(format: "%.1f", (ui1-ui0)*1000))ms, addSubview: \(String(format: "%.1f", (ui2-ui1)*1000))ms, constraints: \(String(format: "%.1f", (ui3-ui2)*1000))ms")
         }
     }
 
