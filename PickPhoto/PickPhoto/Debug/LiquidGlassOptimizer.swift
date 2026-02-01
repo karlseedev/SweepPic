@@ -303,7 +303,8 @@ enum LiquidGlassOptimizer {
     }
 
     /// 뷰 계층에서 모든 MTKView 찾기 (재귀 탐색)
-    private static func findAllMTKViews(in view: UIView) -> [MTKView] {
+    /// Phase 1.1 등 외부에서도 사용 가능하도록 internal 접근 수준
+    static func findAllMTKViews(in view: UIView) -> [MTKView] {
         var result: [MTKView] = []
 
         if let mtkView = view as? MTKView {
@@ -315,6 +316,26 @@ enum LiquidGlassOptimizer {
         }
 
         return result
+    }
+
+    // MARK: - MTKView Pause/Resume 유틸리티
+
+    /// 특정 뷰 내부의 모든 MTKView isPaused 일괄 설정
+    /// Phase 1.1, Phase 2 등에서 개별 컴포넌트의 MTKView 관리에 사용
+    static func setMTKViewsPaused(_ paused: Bool, in view: UIView) {
+        for mtkView in findAllMTKViews(in: view) {
+            mtkView.isPaused = paused
+        }
+    }
+
+    /// 진단: 전체 MTKView 상태 로그
+    /// 각 Phase 적용 전후에 호출하여 active/paused 수치 변화 확인
+    static func logMTKViewStatus(in rootView: UIView?, label: String) {
+        guard let rootView = rootView else { return }
+        let all = findAllMTKViews(in: rootView)
+        let active = all.filter { !$0.isPaused }.count
+        let paused = all.count - active
+        Log.print("[LiquidGlass:Status] \(label): active=\(active), paused=\(paused), total=\(all.count)")
     }
 
     // MARK: - Legacy API (호환성)

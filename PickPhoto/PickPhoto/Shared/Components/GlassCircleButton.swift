@@ -1,10 +1,10 @@
 // GlassCircleButton.swift
 // 원형 Liquid Glass 버튼 컴포넌트
 //
-// - 특징: Dual state (contracted ↔ expanded), 굴절 효과, 햅틱 피드백
-// - Contracted (resting): LiquidGlassEffect 적용 (LiquidGlassPlatter와 동일)
-// - Expanded (pressed): 확장 + 굴절 효과 (LiquidGlassEffect)
-// - Size: small(36pt), medium(44pt), large(56pt)
+// - 특징: 1뷰 scale 애니메이션, 굴절 효과, 햅틱 피드백
+// - Resting: LiquidGlassEffect 적용
+// - Pressed: scale 확대 (1.08)
+// - Size: mini(34pt), small(36pt), medium(44pt), large(56pt)
 // - 용도: toggleButton, faceButtons[] 등 원형 버튼에 사용
 
 import UIKit
@@ -14,7 +14,7 @@ import AppCore
 /// 원형 Liquid Glass 버튼
 /// - toggleButton, faceButtons[] 등 원형 버튼에 사용
 /// - GlassIconButton과 동일한 구현, 용도 구분을 위해 별도 클래스
-/// - Dual state: contracted(resting) ↔ expanded(pressed)
+/// - 터치 시 scale 애니메이션으로 피드백 제공
 /// - 상속 허용 (FaceButton 등)
 class GlassCircleButton: UIButton {
 
@@ -68,24 +68,13 @@ class GlassCircleButton: UIButton {
 
     // MARK: - UI Components
 
-    /// Contracted 상태 뷰 (resting)
-    /// LiquidGlassEffect 사용 - LiquidGlassPlatter와 동일한 구현
-    private lazy var contractedView: AnyVisualEffectView = {
+    /// Glass 효과 뷰 (1뷰 구조)
+    /// LiquidGlassEffect 사용 - 터치 시 scale 애니메이션으로 피드백
+    private lazy var glassView: AnyVisualEffectView = {
         let effect = LiquidGlassEffect(style: .regular, isNative: true)
         effect.tintColor = UIColor(white: 0.5, alpha: 0.2)  // 중간회색 20%
         let view = VisualEffectView(effect: effect)
         view.isUserInteractionEnabled = false
-        return view
-    }()
-
-    /// Expanded 상태 뷰 (pressed)
-    /// LiquidGlassEffect 사용하여 굴절 효과 적용
-    private lazy var expandedView: AnyVisualEffectView = {
-        let effect = LiquidGlassEffect(style: .regular, isNative: true)
-        let view = VisualEffectView(effect: effect)
-        view.isUserInteractionEnabled = false
-        view.alpha = 0 // 초기에는 숨김
-        view.transform = CGAffineTransform(scaleX: 0.87, y: 0.87) // 축소 상태
         return view
     }()
 
@@ -111,17 +100,13 @@ class GlassCircleButton: UIButton {
     /// 아이콘 틴트 색상
     private let iconTintColor: UIColor
 
-    /// 현재 확장 상태
-    private var isExpanded = false
-
     /// 현재 아이콘 이름 (변경 추적용)
     private var currentIconName: String
 
     /// 배경(LiquidGlass) alpha 값 (아이콘은 영향 없음)
     var backgroundAlpha: CGFloat = 1.0 {
         didSet {
-            contractedView.alpha = isExpanded ? 0 : backgroundAlpha
-            expandedView.alpha = isExpanded ? backgroundAlpha : 0
+            glassView.alpha = backgroundAlpha
         }
     }
 
@@ -129,12 +114,6 @@ class GlassCircleButton: UIButton {
 
     override var isEnabled: Bool {
         didSet { updateStateStyles() }
-    }
-
-    override var isHighlighted: Bool {
-        didSet {
-            // isHighlighted 변경 시 추가 처리 (기본 동작 외)
-        }
     }
 
     // MARK: - Init
@@ -187,19 +166,16 @@ class GlassCircleButton: UIButton {
         // 그림자를 위해 버튼 자체의 clipsToBounds는 false여야 함
         self.layer.masksToBounds = false
 
-        // 뷰 계층에 추가 (Expanded가 위, Contracted가 아래)
-        // LiquidGlassEffect가 블러, 굴절, 테두리를 모두 처리
+        // Glass 뷰 추가 (1뷰 구조)
         let sl0 = CACurrentMediaTime()
-        insertSubview(contractedView, at: 0)
+        insertSubview(glassView, at: 0)
         let sl1 = CACurrentMediaTime()
-        insertSubview(expandedView, aboveSubview: contractedView)
-        let sl2 = CACurrentMediaTime()
 
         // 아이콘은 최상단
         addSubview(iconImageView)
-        let sl3 = CACurrentMediaTime()
+        let sl2 = CACurrentMediaTime()
 
-        Log.print("[Viewer Timing]         setupLayers — contractedView: \(String(format: "%.1f", (sl1-sl0)*1000))ms, expandedView: \(String(format: "%.1f", (sl2-sl1)*1000))ms, iconImageView: \(String(format: "%.1f", (sl3-sl2)*1000))ms")
+        Log.print("[Viewer Timing]         setupLayers — glassView: \(String(format: "%.1f", (sl1-sl0)*1000))ms, iconImageView: \(String(format: "%.1f", (sl2-sl1)*1000))ms")
     }
 
     // MARK: - Layout
@@ -214,22 +190,16 @@ class GlassCircleButton: UIButton {
 
         let cornerRadius = buttonSize.cornerRadius
 
-        // 1. Contracted View 프레임 및 코너 업데이트
-        contractedView.frame = bounds
-        contractedView.layer.cornerRadius = cornerRadius
-        contractedView.layer.cornerCurve = .continuous
-        contractedView.clipsToBounds = true
+        // Glass View 프레임 및 코너 업데이트
+        glassView.frame = bounds
+        glassView.layer.cornerRadius = cornerRadius
+        glassView.layer.cornerCurve = .continuous
+        glassView.clipsToBounds = true
 
-        // 2. Expanded View 프레임 및 코너 업데이트
-        expandedView.frame = bounds
-        expandedView.layer.cornerRadius = cornerRadius
-        expandedView.layer.cornerCurve = .continuous
-        expandedView.clipsToBounds = true
-
-        // 3. Update Shadow (버튼 레이어에 직접 적용)
+        // Update Shadow (버튼 레이어에 직접 적용)
         LiquidGlassStyle.applyShadow(to: self.layer, cornerRadius: cornerRadius)
 
-        // 4. 아이콘 중앙 배치
+        // 아이콘 중앙 배치
         iconImageView.frame = bounds
     }
 
@@ -263,7 +233,7 @@ class GlassCircleButton: UIButton {
         }
     }
 
-    // MARK: - Touch Handling (Dual State)
+    // MARK: - Touch Handling
 
     override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
         super.touchesBegan(touches, with: event)
@@ -281,13 +251,11 @@ class GlassCircleButton: UIButton {
         contractButton(animated: true)
     }
 
-    // MARK: - Dual State Animations
+    // MARK: - Scale Animations
 
-    /// 버튼 확장 (pressed → expanded)
+    /// 버튼 확장 (pressed)
+    /// 1뷰 scale 애니메이션 — 살짝 커지면서 터치 피드백 제공
     private func expandButton(animated: Bool) {
-        guard !isExpanded else { return }
-        isExpanded = true
-
         let duration: TimeInterval = animated ? 0.4 : 0
         UIView.animate(
             withDuration: duration,
@@ -296,21 +264,13 @@ class GlassCircleButton: UIButton {
             initialSpringVelocity: 0,
             options: .beginFromCurrentState
         ) {
-            // Contracted → 확대 후 페이드아웃
-            self.contractedView.transform = CGAffineTransform(scaleX: 1.15, y: 1.15)
-            self.contractedView.alpha = 0
-
-            // Expanded → 원래 크기로 페이드인
-            self.expandedView.transform = .identity
-            self.expandedView.alpha = self.backgroundAlpha
+            self.glassView.transform = CGAffineTransform(scaleX: 1.08, y: 1.08)
         }
     }
 
-    /// 버튼 수축 (released → contracted)
+    /// 버튼 수축 (released)
+    /// 1뷰 scale 복원 — 원래 크기로 돌아옴
     private func contractButton(animated: Bool) {
-        guard isExpanded else { return }
-        isExpanded = false
-
         let duration: TimeInterval = animated ? 0.6 : 0
         UIView.animate(
             withDuration: duration,
@@ -319,13 +279,7 @@ class GlassCircleButton: UIButton {
             initialSpringVelocity: 0,
             options: .beginFromCurrentState
         ) {
-            // Expanded → 축소 후 페이드아웃
-            self.expandedView.transform = CGAffineTransform(scaleX: 0.87, y: 0.87)
-            self.expandedView.alpha = 0
-
-            // Contracted → 원래 크기로 페이드인
-            self.contractedView.transform = .identity
-            self.contractedView.alpha = self.backgroundAlpha
+            self.glassView.transform = .identity
         }
     }
 
