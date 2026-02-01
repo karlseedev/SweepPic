@@ -147,8 +147,9 @@ class GlassTextButton: UIButton {
 
         let cornerRadius = Constants.cornerRadius
 
-        // Glass View 프레임 및 코너 업데이트
-        glassView.frame = bounds
+        // Glass View 크기/위치 업데이트 (bounds+center 사용 — transform과 독립적)
+        glassView.bounds = CGRect(origin: .zero, size: bounds.size)
+        glassView.center = CGPoint(x: bounds.midX, y: bounds.midY)
         glassView.layer.cornerRadius = cornerRadius
         glassView.layer.cornerCurve = .continuous
         glassView.clipsToBounds = true
@@ -237,7 +238,7 @@ class GlassTextButton: UIButton {
             initialSpringVelocity: 0,
             options: .beginFromCurrentState
         ) {
-            self.glassView.transform = CGAffineTransform(scaleX: 1.08, y: 1.08)
+            self.glassView.transform = CGAffineTransform(scaleX: 1.15, y: 1.15)
         }
     }
 

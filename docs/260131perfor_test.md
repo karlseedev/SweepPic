@@ -83,6 +83,130 @@
 
 → **병목 총량은 비슷하나 분포가 다름**. LiquidGlassKit 첫 초기화 비용이 setViewControllers / faceButtonOverlay / loadingIndicator 사이에서 이동하는 패턴. BackdropView 경고 8건 일관 발생.
 
+### 추가 측정 — GlassCircleButton 1뷰 구조 변경 후 (expandedView 제거)
+
+| 구간 | 수치 | 비고 |
+|------|------|------|
+| createPageVC | 0.2ms | |
+| setViewControllers | 2.5ms | |
+| setupLayers (glassView 1개) | **2,124.7ms** | 측정1과 큰 차이 |
+| GlassCircleButton.init(eye.fill) | 2,130.2ms | |
+| toggleButton lazy생성 | 2,130.6ms | |
+| FaceButtonOverlay() | 3,021.8ms | |
+| **faceButtonOverlay** | **5,025.9ms** | |
+| loadingIndicator | 4.5ms | |
+| displayInitialPhoto 총 | 2.7ms | |
+| setupSimilarPhoto 총 | 5,030.7ms | |
+| push | 5,049.8ms | |
+| GridVC 총 | 5,054.6ms | |
+| **탭~화면표시 총** | **5,473.9ms** | |
+| **Hang 감지** | **5.10s** | |
+| BackdropView 경고 | 4건 | |
+
+### 추가 측정 2차 — 동일 조건
+
+| 구간 | 수치 |
+|------|------|
+| createPageVC | 0.2ms |
+| setViewControllers | 2.9ms |
+| setupLayers (glassView 1개) | **1.9ms** |
+| GlassCircleButton.init(eye.fill) | 6.0ms |
+| toggleButton lazy생성 | 6.4ms |
+| FaceButtonOverlay() | **1,205.7ms** |
+| **faceButtonOverlay** | **1,205.9ms** |
+| loadingIndicator | 1.0ms |
+| displayInitialPhoto 총 | 3.2ms |
+| setupSimilarPhoto 총 | 1,207.1ms |
+| push | 1,229.6ms |
+| GridVC 총 | 1,235.4ms |
+| **탭~화면표시 총** | **14,761.7ms** |
+| **Hang 감지** | **14.39s** |
+| BackdropView 경고 | 4건 |
+| AVHapticClient 오류 | XPC call failed |
+
+→ 우리 코드에서 잡힌 시간 ~1.2초, 전체 14.8초 → **약 13초가 로그 밖에서 소비됨**.
+
+### 1차 vs 2차 비교
+
+| | 1차 | 2차 |
+|---|---|---|
+| setupLayers | 2,124ms | 1.9ms |
+| faceButtonOverlay | 5,025ms | 1,205ms |
+| 우리 코드 총 | ~5초 | ~1.2초 |
+| Hang | 5.10s | **14.39s** |
+| 탭~화면표시 총 | 5,473ms | **14,761ms** |
+
+### 추가 측정 3차 — 동일 조건
+
+| 구간 | 수치 |
+|------|------|
+| createPageVC | 0.2ms |
+| setViewControllers | 2.9ms |
+| setupLayers (glassView 1개) | 3.5ms |
+| **setupIcon** | **3,183.8ms** |
+| GlassCircleButton.init(eye.fill) | 3,187.6ms |
+| toggleButton lazy생성 | 3,187.7ms |
+| FaceButtonOverlay() | 3,187.9ms |
+| **faceButtonOverlay** | **3,188.0ms** |
+| loadingIndicator | 0.8ms |
+| displayInitialPhoto 총 | 3.2ms |
+| setupSimilarPhoto 총 | 3,189.0ms |
+| push | 3,209.6ms |
+| GridVC 총 | 3,215.4ms |
+| **탭~화면표시 총** | **7,392.8ms** |
+| **Hang 감지** | **7.03s** |
+| BackdropView 경고 | 4건 |
+
+### 3회 측정 종합 비교
+
+| | 1차 | 2차 | 3차 |
+|---|---|---|---|
+| **병목 위치** | setupLayers 2,124ms | FaceButtonOverlay() 1,205ms | **setupIcon 3,183ms** |
+| setupLayers | **2,124ms** | 1.9ms | 3.5ms |
+| setupIcon | 4.8ms | 3.5ms | **3,183ms** |
+| FaceButtonOverlay() | 3,021ms | **1,205ms** | 3,187ms |
+| 우리 코드 총 | ~5초 | ~1.2초 | ~3.2초 |
+| Hang | 5.10s | **14.39s** | 7.03s |
+| 탭~화면표시 총 | 5,473ms | **14,761ms** | 7,392ms |
+
+### 추가 측정 4차 — 동일 조건
+
+| 구간 | 수치 |
+|------|------|
+| createPageVC | 0.2ms |
+| setViewControllers | 2.7ms |
+| setupLayers (glassView 1개) | 2.2ms |
+| **setupIcon** | **1,915.0ms** |
+| GlassCircleButton.init(eye.fill) | 1,917.4ms |
+| toggleButton lazy생성 | 1,917.5ms |
+| FaceButtonOverlay() | 1,917.7ms |
+| **faceButtonOverlay** | **1,917.9ms** |
+| loadingIndicator | 1.1ms |
+| displayInitialPhoto 총 | 3.0ms |
+| setupSimilarPhoto 총 | 1,919.1ms |
+| push | 1,939.1ms |
+| GridVC 총 | 1,945.1ms |
+| **탭~화면표시 총** | **8,004.4ms** |
+| **Hang 감지** | **7.63s** |
+| BackdropView 경고 | 4건 |
+
+### 4회 측정 종합 비교
+
+| | 1차 | 2차 | 3차 | 4차 |
+|---|---|---|---|---|
+| **병목 위치** | setupLayers | FaceButtonOverlay() | setupIcon | setupIcon |
+| setupLayers | **2,124ms** | 1.9ms | 3.5ms | 2.2ms |
+| setupIcon | 4.8ms | 3.5ms | **3,183ms** | **1,915ms** |
+| faceButtonOverlay | 5,025ms | 1,205ms | 3,188ms | 1,917ms |
+| 우리 코드 총 | ~5초 | ~1.2초 | ~3.2초 | ~1.9초 |
+| Hang | 5.10s | **14.39s** | 7.03s | 7.63s |
+| 탭~화면표시 총 | 5,473ms | **14,761ms** | 7,392ms | 8,004ms |
+| BackdropView 경고 | 4건 | 4건 | 4건 | 4건 |
+
+→ 병목이 잡히는 코드 위치는 매번 다르지만, **원인은 동일** — LiquidGlassKit BackdropView/Metal 첫 초기화.
+→ 이 비용이 우리 코드의 어느 줄에서 메인 스레드를 블로킹하느냐만 달라짐.
+→ BackdropView 경고 4건은 항상 일관.
+
 ### 현재 상태 2번째 클릭 (e88957b)
 
 | 구간 | 수치 |
