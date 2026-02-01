@@ -578,4 +578,16 @@ expandedView 제거로 MTKView 수를 절반(8→4개)으로 줄인 결과, 웜 
 | #2 Total | 2,220ms | **1,113ms** | **-50%** | 376ms |
 | #3 Total | 3,177ms | **1,819ms** | **-43%** | 601ms |
 
+### 3단계 Phase 3 결과 (fps 30 제한)
+
+Phase 1 + preferredFramesPerSecond 30 제한 적용 (3회 평균):
+
+| | Phase 1 | Phase 3 | 추가 개선 | 과거 (8563973) |
+|---|---|---|---|---|
+| #1 FP Gen (콜드) | 507ms | **394ms** | **-22%** | 330ms |
+| #2 FP Gen (웜) | 216ms | **182ms** | -16% | 170ms |
+| #3 FP Gen (웜) | 199ms | **190ms** | -5% | 179ms |
+| #2 Total | 1,113ms | **982ms** | -12% | 376ms |
+| #3 Total | 1,819ms | **1,477ms** | **-19%** | 601ms |
+
 상세 결과 및 후속 Phase는 [260131LiquidPerfor1.md](260131LiquidPerfor1.md) 참조.
