@@ -1,8 +1,13 @@
 # LiquidGlass MTKView 최적화 계획
 
+> **선행 문서**: [260130gridPerfor.md](260130gridPerfor.md) — 유사사진 분석 성능 저하 조사
+> 해당 문서의 **대안 B (Metal 경량화)** 구현 계획. 대안 A (점진적 결과 표시)는 [260131perfo_UI.md](similar/260131perfo_UI.md).
+
 ## 목표
-LiquidGlassKit의 MTKView가 불필요하게 GPU 렌더링하는 것을 줄여 성능 개선.
-4개 방안을 **1개씩 순차 적용 + 테스트**하여 효과를 수치로 확인.
+
+유사사진 분석 시 LiquidGlassKit MTKView의 Metal 메모리가 PHCachingImageManager 캐시와 경쟁하여 분석 속도 2~5배 저하.
+MTKView의 불필요한 GPU 렌더링과 Metal 리소스를 줄여 캐시 경쟁을 완화하고 분석 성능을 회복.
+각 Phase를 **1개씩 순차 적용 + 테스트**하여 효과를 수치로 확인.
 
 ## 현황
 
@@ -156,12 +161,40 @@ if let titleLabel = titleLabel {
 - 버튼 터치 시 scale 애니메이션이 자연스러운지 시각 확인
 - scale 값 미세 조정 (1.05, 1.08, 1.10, 1.12 등 비교)
 
+### Phase 1 테스트 결과 ✅
+
+**시각 검증**: scale 1.15 적용. 기존 2뷰 크로스페이드 대비 품질 차이 미미. Phase 1.1 폴백 불필요.
+
+**성능 측정** (선행 문서 260130gridPerfor.md와 동일 3개 화면):
+
+| | 기존 HEAD | **Phase 1** | Phase 1 개선 | pause 유지 (실험3) | 과거 (8563973) |
+|---|---|---|---|---|---|
+| **#1** FP Gen (콜드) | 766ms | **507ms** | **-34%** | 834ms | 330ms |
+| **#1** Total | 1,972ms | **1,928ms** | -2% | 2,053ms | 1,159ms |
+| **#2** FP Gen (웜) | 688ms | **216ms** | **-69%** | 183ms | 170ms |
+| **#2** Total | 2,220ms | **1,113ms** | **-50%** | 829ms | 376ms |
+| **#3** FP Gen (웜) | 732ms | **199ms** | **-73%** | 207ms | 179ms |
+| **#3** Total | 3,177ms | **1,819ms** | **-43%** | 1,295ms | 601ms |
+
+| | Memory Start | Memory End | Delta |
+|---|---|---|---|
+| #1 | 171.4MB | 231.2MB | +59.9MB |
+| #2 | 255.1MB | 228.5MB | -26.6MB |
+| #3 | 211.5MB | 208.1MB | -3.5MB |
+
+**핵심 발견**:
+1. **웜 캐시 FP가 과거 수준으로 회복**: 216ms/199ms vs 과거 170ms/179ms
+2. **pause 유지 실험과 FP가 거의 동일**: expandedView 제거만으로 pause 유지와 동등한 효과
+3. **콜드 FP도 34% 개선**: 766ms → 507ms
+4. **Total은 아직 과거보다 느림**: Face Detect+Match가 지배적 (Phase 4 idle pause로 추가 개선 가능)
+5. **Phase 1.1(폴백) 불필요**: Phase 1만으로 FP 캐시 경쟁 사실상 해소
+
 ---
 
 ## Phase 1.1 (폴백): expandedView 평소 pause
 
-> **Phase 1에서 시각적 문제가 발생할 경우에만 적용.**
-> Phase 1이 성공하면 Phase 1.1은 불필요 (expandedView 자체가 없으므로).
+> **Phase 1 테스트 결과 시각적/성능적으로 모두 성공하여 Phase 1.1은 불필요.**
+> 아래는 참고용으로 보존.
 
 **대상 파일**: Phase 1과 동일 (4개)
 
