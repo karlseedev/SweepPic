@@ -15,6 +15,7 @@
 import UIKit
 import Photos
 import AppCore
+import LiquidGlassKit
 
 /// PickPhoto 앱의 SceneDelegate
 /// Scene 기반 윈도우 관리 및 루트 뷰컨트롤러 설정
@@ -54,6 +55,17 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
 
         window.makeKeyAndVisible()
         self.window = window
+
+        // 워밍업 실험: LiquidGlassKit Metal/BackdropView 초기화 비용을 앱 시작 시 선 소화
+        let warmupStart = CACurrentMediaTime()
+        let warmupEffect = LiquidGlassEffect(style: .regular, isNative: true)
+        let warmupView = VisualEffectView(effect: warmupEffect)
+        warmupView.frame = CGRect(x: -100, y: -100, width: 1, height: 1)
+        window.addSubview(warmupView)
+        window.layoutIfNeeded()
+        warmupView.removeFromSuperview()
+        let warmupEnd = CACurrentMediaTime()
+        Log.print("[Warmup] LiquidGlass 워밍업: \(String(format: "%.1f", (warmupEnd - warmupStart) * 1000))ms")
 
         // T065: 권한 체크 후 적절한 ViewController 표시
         configureRootViewController()

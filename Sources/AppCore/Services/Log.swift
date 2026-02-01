@@ -77,6 +77,7 @@ public enum Log {
         "ZoomAnimator": true,            // 줌 애니메이터 (현재 작업 중)
         "Zoom Timing": true,             // 그리드→뷰어 줌 전환 단계별 타이밍
         "Viewer Timing": true,           // 뷰어 열림 전체 라이프사이클 타이밍
+        "Warmup": true,                  // LiquidGlass 워밍업 실험 타이밍
 
         // =============================================
         // SimilarPhoto 분석
