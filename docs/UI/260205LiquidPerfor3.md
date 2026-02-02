@@ -81,7 +81,7 @@ ID `CB9721C02EF4000000F85BF4`는 유지하고 타입만 변경.
 **A. packageReferences 배열 (라인 228):**
 ```
 변경 전: CB9721C02EF4000000F85BF4 /* XCRemoteSwiftPackageReference "LiquidGlassKit" */,
-변경 후: CB9721C02EF4000000F85BF4 /* XCLocalSwiftPackageReference "../../LiquidGlassKit" */,
+변경 후: CB9721C02EF4000000F85BF4 /* XCLocalSwiftPackageReference "../LiquidGlassKit" */,
 ```
 
 **B. 패키지 정의 (라인 636-643):**
@@ -99,18 +99,18 @@ XCRemoteSwiftPackageReference section에서 삭제하고 XCLocalSwiftPackageRefe
     };
 
 변경 후 (XCLocalSwiftPackageReference section에):
-    CB9721C02EF4000000F85BF4 /* XCLocalSwiftPackageReference "../../LiquidGlassKit" */ = {
+    CB9721C02EF4000000F85BF4 /* XCLocalSwiftPackageReference "../LiquidGlassKit" */ = {
         isa = XCLocalSwiftPackageReference;
-        relativePath = ../../LiquidGlassKit;
+        relativePath = ../LiquidGlassKit;
     };
 ```
 
-상대 경로: `../../LiquidGlassKit` (AppCore의 `../../iOS` 패턴과 동일)
+상대 경로: `../LiquidGlassKit` (AppCore의 `../../iOS` 패턴과 동일)
 
 **C. ProductDependency 주석 (라인 658):**
 ```
 변경 전: package = CB9721C02EF4000000F85BF4 /* XCRemoteSwiftPackageReference "LiquidGlassKit" */;
-변경 후: package = CB9721C02EF4000000F85BF4 /* XCLocalSwiftPackageReference "../../LiquidGlassKit" */;
+변경 후: package = CB9721C02EF4000000F85BF4 /* XCLocalSwiftPackageReference "../LiquidGlassKit" */;
 ```
 
 ### Step 4: Package.resolved 정리
