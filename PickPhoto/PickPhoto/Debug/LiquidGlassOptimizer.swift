@@ -80,6 +80,17 @@ enum LiquidGlassOptimizer {
         }
         Log.print("[LiquidGlass] FPS limit: \(preferredFPS)fps → \(mtkViews.count)개 MTKView")
 
+        // 디버그: 각 MTKView의 superview 체인 출력 (4번째 MTKView 추적용)
+        for (i, mtkView) in mtkViews.enumerated() {
+            var chain: [String] = []
+            var current: UIView? = mtkView
+            while let v = current {
+                chain.append(String(describing: type(of: v)))
+                current = v.superview
+            }
+            Log.print("[LiquidGlass] MTKView[\(i)]: \(chain.joined(separator: " → "))")
+        }
+
         // blur 뷰 생성은 blurReplacement 모드에서만
         guard mode == .blurReplacement else { return }
 
@@ -178,6 +189,17 @@ enum LiquidGlassOptimizer {
             mtkView.isPaused = false
         }
         Log.print("[LiquidGlass] MTKView resumed: \(mtkViews.count)개")
+
+        // 디버그: resumed 시점의 superview 체인 출력 (4→3 변화 추적용)
+        for (i, mtkView) in mtkViews.enumerated() {
+            var chain: [String] = []
+            var current: UIView? = mtkView
+            while let v = current {
+                chain.append(String(describing: type(of: v)))
+                current = v.superview
+            }
+            Log.print("[LiquidGlass] Resumed[\(i)]: \(chain.joined(separator: " → "))")
+        }
     }
 
     // MARK: - Test C: Blur Replacement Mode (Preloaded)
