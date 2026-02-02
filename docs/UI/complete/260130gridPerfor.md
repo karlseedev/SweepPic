@@ -1,5 +1,8 @@
 # 유사사진 분석 성능 저하 조사
 
+> **✅ 완료** — 근본 원인 확인됨: LiquidGlass MTKView Metal 리소스가 PHCachingImageManager 캐시와 경쟁.
+> 해결 구현은 [260131LiquidPerfor1.md](260131LiquidPerfor1.md) (Phase 1~6)에서 진행 완료.
+
 ## 현상
 
 - 그리드 화면에서 스크롤 멈춤 → 유사사진 분석 → 테두리 표시까지의 시간이 체감상 크게 느려짐

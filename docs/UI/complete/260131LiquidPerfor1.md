@@ -1,5 +1,9 @@
 # LiquidGlass MTKView 최적화 계획
 
+> **✅ 완료** — Phase 1(2뷰→1뷰), 3(fps 30), 4(idle pause), 6(hidden lazy 생성) 적용 완료.
+> 결과: MTKView 8→3개, idle active 0개, 콜드 FP 766→340ms(-56%), 웜 FP 과거 수준 회복.
+> 스크롤 중 LiquidGlass 유지 최적화(Phase 5 확장)는 [260205LiquidPerfor2.md](UI/260205LiquidPerfor2.md)에서 진행.
+
 > **선행 문서**: [260130gridPerfor.md](260130gridPerfor.md) — 유사사진 분석 성능 저하 조사
 > 해당 문서의 **대안 B (Metal 경량화)** 구현 계획. 대안 A (점진적 결과 표시)는 [260131perfo_UI.md](similar/260131perfo_UI.md).
 
