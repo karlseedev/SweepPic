@@ -312,10 +312,13 @@ final class LiquidGlassTabBar: UIView {
         }
 
         // Select 모드 컨테이너 (Grid/Album)
+        // priority 999: 초기 레이아웃 시 _UITemporaryLayoutWidth(width=0) 충돌 방지
+        let selectTrailing = selectModeContainer.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -16)
+        selectTrailing.priority = UILayoutPriority(999)
         NSLayoutConstraint.activate([
             selectModeContainer.topAnchor.constraint(equalTo: topAnchor),
             selectModeContainer.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 16),
-            selectModeContainer.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -16),
+            selectTrailing,
             selectModeContainer.heightAnchor.constraint(equalToConstant: platterConst.height),
 
             selectionCountLabel.centerXAnchor.constraint(equalTo: selectModeContainer.centerXAnchor),
@@ -326,10 +329,13 @@ final class LiquidGlassTabBar: UIView {
         ])
 
         // Trash Select 모드 컨테이너
+        // priority 999: 초기 레이아웃 시 _UITemporaryLayoutWidth(width=0) 충돌 방지
+        let trashTrailing = trashSelectModeContainer.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -16)
+        trashTrailing.priority = UILayoutPriority(999)
         NSLayoutConstraint.activate([
             trashSelectModeContainer.topAnchor.constraint(equalTo: topAnchor),
             trashSelectModeContainer.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 16),
-            trashSelectModeContainer.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -16),
+            trashTrailing,
             trashSelectModeContainer.heightAnchor.constraint(equalToConstant: platterConst.height),
 
             trashRestoreButton.leadingAnchor.constraint(equalTo: trashSelectModeContainer.leadingAnchor),
