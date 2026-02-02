@@ -156,8 +156,9 @@ final class LiquidGlassTabBar: UIView {
 
     /// Delete 버튼
     /// iOS 26 스펙: 높이 44pt, fontSize 17pt
+    /// Phase 6: select 모드 전용이므로 Glass 효과(MTKView) 생성 지연
     private lazy var deleteButton: GlassTextButton = {
-        let button = GlassTextButton(title: "삭제", style: .plain, tintColor: .systemRed)
+        let button = GlassTextButton(title: "삭제", style: .plain, tintColor: .systemRed, deferGlassEffect: true)
         button.addTarget(self, action: #selector(deleteButtonTapped), for: .touchUpInside)
         button.translatesAutoresizingMaskIntoConstraints = false
         return button
@@ -176,8 +177,9 @@ final class LiquidGlassTabBar: UIView {
 
     /// Trash Restore 버튼
     /// iOS 26 스펙: 높이 44pt, fontSize 17pt
+    /// Phase 6: trash select 모드 전용이므로 Glass 효과(MTKView) 생성 지연
     private lazy var trashRestoreButton: GlassTextButton = {
-        let button = GlassTextButton(title: "복구", style: .plain, tintColor: .white)
+        let button = GlassTextButton(title: "복구", style: .plain, tintColor: .white, deferGlassEffect: true)
         button.addTarget(self, action: #selector(trashRestoreButtonTapped), for: .touchUpInside)
         button.translatesAutoresizingMaskIntoConstraints = false
         return button
@@ -196,8 +198,9 @@ final class LiquidGlassTabBar: UIView {
 
     /// Trash Delete 버튼
     /// iOS 26 스펙: 높이 44pt, fontSize 17pt
+    /// Phase 6: trash select 모드 전용이므로 Glass 효과(MTKView) 생성 지연
     private lazy var trashDeleteButton: GlassTextButton = {
-        let button = GlassTextButton(title: "삭제", style: .plain, tintColor: .systemRed)
+        let button = GlassTextButton(title: "삭제", style: .plain, tintColor: .systemRed, deferGlassEffect: true)
         button.addTarget(self, action: #selector(trashDeleteButtonTapped), for: .touchUpInside)
         button.translatesAutoresizingMaskIntoConstraints = false
         return button
@@ -433,6 +436,8 @@ extension LiquidGlassTabBar {
 
     /// Select 모드 진입 (Grid/Album용)
     func enterSelectMode(animated: Bool = true) {
+        // Phase 6: deferred된 Glass 효과 생성 (select 모드 진입 시점)
+        deleteButton.setupGlassEffectIfNeeded()
         isSelectMode = true
         selectionCountLabel.text = "항목 선택"
         deleteButton.isEnabled = false
@@ -492,6 +497,9 @@ extension LiquidGlassTabBar {
 
     /// Trash Select 모드 진입
     func enterTrashSelectMode(animated: Bool = true) {
+        // Phase 6: deferred된 Glass 효과 생성 (trash select 모드 진입 시점)
+        trashRestoreButton.setupGlassEffectIfNeeded()
+        trashDeleteButton.setupGlassEffectIfNeeded()
         isTrashSelectMode = true
         trashSelectionCountLabel.text = "항목 선택"
         trashRestoreButton.isEnabled = false

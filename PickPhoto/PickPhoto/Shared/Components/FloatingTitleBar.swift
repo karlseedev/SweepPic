@@ -142,7 +142,9 @@ final class FloatingTitleBar: UIView {
     /// GlassIconButton 사용 - Liquid Glass 배경 + Dual state 애니메이션
     /// iOS 26 실측: 44×44, cornerRadius 22, tintColor 흰색
     private lazy var backButton: GlassIconButton = {
-        let button = GlassIconButton(icon: "chevron.left", size: .medium, tintColor: .white)
+        // Phase 6: hidden 상태이므로 Glass 효과(MTKView) 생성 지연
+        // showsBackButton = true 시 isHidden didSet에서 자동 생성
+        let button = GlassIconButton(icon: "chevron.left", size: .medium, tintColor: .white, deferGlassEffect: true)
         button.addTarget(self, action: #selector(backButtonTapped), for: .touchUpInside)
         button.translatesAutoresizingMaskIntoConstraints = false
         button.isHidden = true // 기본 숨김

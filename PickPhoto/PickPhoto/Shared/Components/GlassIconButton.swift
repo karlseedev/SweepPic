@@ -83,6 +83,9 @@ final class GlassIconButton: UIButton {
     /// 현재 아이콘 이름 (변경 추적용)
     private var currentIconName: String
 
+    /// Glass 효과 생성 지연 플래그 (Phase 6: hidden 상태 버튼의 MTKView 절약)
+    private var glassViewSetupDeferred = false
+
     // MARK: - State Management
 
     override var isEnabled: Bool {
@@ -96,10 +99,11 @@ final class GlassIconButton: UIButton {
     ///   - icon: SF Symbol 이름
     ///   - size: 버튼 크기 (기본: .medium)
     ///   - tintColor: 아이콘/배경 틴트 색상 (기본: .white)
-    init(icon: String, size: Size = .medium, tintColor: UIColor = .white) {
+    init(icon: String, size: Size = .medium, tintColor: UIColor = .white, deferGlassEffect: Bool = false) {
         self.buttonSize = size
         self.iconTintColor = tintColor
         self.currentIconName = icon
+        self.glassViewSetupDeferred = deferGlassEffect
 
         super.init(frame: .zero)
 
@@ -128,8 +132,10 @@ final class GlassIconButton: UIButton {
         // 그림자를 위해 버튼 자체의 clipsToBounds는 false여야 함
         self.layer.masksToBounds = false
 
-        // Glass 뷰 추가 (1뷰 구조)
-        insertSubview(glassView, at: 0)
+        // Glass 뷰 추가 (deferred 아닌 경우만 — lazy 트리거 방지)
+        if !glassViewSetupDeferred {
+            insertSubview(glassView, at: 0)
+        }
 
         // 아이콘은 최상단
         addSubview(iconImageView)
@@ -147,12 +153,15 @@ final class GlassIconButton: UIButton {
 
         let cornerRadius = buttonSize.cornerRadius
 
-        // Glass View 크기/위치 업데이트 (bounds+center 사용 — transform과 독립적)
-        glassView.bounds = CGRect(origin: .zero, size: bounds.size)
-        glassView.center = CGPoint(x: bounds.midX, y: bounds.midY)
-        glassView.layer.cornerRadius = cornerRadius
-        glassView.layer.cornerCurve = .continuous
-        glassView.clipsToBounds = true
+        // deferred 상태면 glassView 접근 스킵 (lazy 트리거 방지)
+        if !glassViewSetupDeferred {
+            // Glass View 크기/위치 업데이트 (bounds+center 사용 — transform과 독립적)
+            glassView.bounds = CGRect(origin: .zero, size: bounds.size)
+            glassView.center = CGPoint(x: bounds.midX, y: bounds.midY)
+            glassView.layer.cornerRadius = cornerRadius
+            glassView.layer.cornerCurve = .continuous
+            glassView.clipsToBounds = true
+        }
 
         // Update Shadow (버튼 레이어에 직접 적용)
         LiquidGlassStyle.applyShadow(to: self.layer, cornerRadius: cornerRadius)
@@ -191,6 +200,29 @@ final class GlassIconButton: UIButton {
         }
     }
 
+    // MARK: - Glass Effect Lazy Setup (Phase 6)
+
+    /// Glass 효과 생성 (보일 때 호출)
+    /// hidden 상태에서 deferred된 MTKView를 실제로 생성
+    func setupGlassEffectIfNeeded() {
+        guard glassViewSetupDeferred else { return }
+        glassViewSetupDeferred = false
+
+        // Glass 뷰를 최하단에 삽입
+        insertSubview(glassView, at: 0)
+
+        setNeedsLayout()
+    }
+
+    /// isHidden 변경 시 deferred된 Glass 효과 자동 생성
+    override var isHidden: Bool {
+        didSet {
+            if !isHidden && glassViewSetupDeferred {
+                setupGlassEffectIfNeeded()
+            }
+        }
+    }
+
     // MARK: - Touch Handling
 
     override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
@@ -213,6 +245,7 @@ final class GlassIconButton: UIButton {
     /// 버튼 확장 (pressed)
     /// 1뷰 scale 애니메이션 — 살짝 커지면서 터치 피드백 제공
     private func expandButton(animated: Bool) {
+        guard !glassViewSetupDeferred else { return }
         let duration: TimeInterval = animated ? 0.4 : 0
         UIView.animate(
             withDuration: duration,
@@ -228,6 +261,7 @@ final class GlassIconButton: UIButton {
     /// 버튼 수축 (released)
     /// 1뷰 scale 복원 — 원래 크기로 돌아옴
     private func contractButton(animated: Bool) {
+        guard !glassViewSetupDeferred else { return }
         let duration: TimeInterval = animated ? 0.6 : 0
         UIView.animate(
             withDuration: duration,

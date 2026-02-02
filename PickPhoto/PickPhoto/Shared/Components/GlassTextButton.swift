@@ -72,6 +72,9 @@ class GlassTextButton: UIButton {
     /// 현재 텍스트 (변경 추적용)
     private var buttonTitle: String
 
+    /// Glass 효과 생성 지연 플래그 (Phase 6: hidden 상태 버튼의 MTKView 절약)
+    private var glassViewSetupDeferred = false
+
     // MARK: - State Management
 
     override var isEnabled: Bool {
@@ -85,10 +88,11 @@ class GlassTextButton: UIButton {
     ///   - title: 버튼 텍스트
     ///   - style: 버튼 스타일 (기본: .plain)
     ///   - tintColor: 텍스트 색상 (기본: .white, filled 스타일에서는 배경색으로도 사용)
-    init(title: String, style: Style = .plain, tintColor: UIColor = .white) {
+    init(title: String, style: Style = .plain, tintColor: UIColor = .white, deferGlassEffect: Bool = false) {
         self.style = style
         self.textTintColor = tintColor
         self.buttonTitle = title
+        self.glassViewSetupDeferred = deferGlassEffect
 
         super.init(frame: .zero)
 
@@ -121,12 +125,19 @@ class GlassTextButton: UIButton {
         // 그림자를 위해 버튼 자체의 clipsToBounds는 false여야 함
         self.layer.masksToBounds = false
 
-        // Glass 뷰 추가 (1뷰 구조)
-        insertSubview(glassView, at: 0)
+        if !glassViewSetupDeferred {
+            // Glass 뷰 추가 (1뷰 구조)
+            insertSubview(glassView, at: 0)
 
-        // filled 스타일이면 색상 오버레이 추가 (glassView 위에)
-        if style == .filled {
-            insertSubview(colorOverlay, aboveSubview: glassView)
+            // filled 스타일이면 색상 오버레이 추가 (glassView 위에)
+            if style == .filled {
+                insertSubview(colorOverlay, aboveSubview: glassView)
+            }
+        } else {
+            // deferred: glassView 접근 없이 colorOverlay만 추가 (lazy 트리거 방지)
+            if style == .filled {
+                addSubview(colorOverlay)
+            }
         }
 
         // 텍스트는 최상단
@@ -147,12 +158,15 @@ class GlassTextButton: UIButton {
 
         let cornerRadius = Constants.cornerRadius
 
-        // Glass View 크기/위치 업데이트 (bounds+center 사용 — transform과 독립적)
-        glassView.bounds = CGRect(origin: .zero, size: bounds.size)
-        glassView.center = CGPoint(x: bounds.midX, y: bounds.midY)
-        glassView.layer.cornerRadius = cornerRadius
-        glassView.layer.cornerCurve = .continuous
-        glassView.clipsToBounds = true
+        // deferred 상태면 glassView 접근 스킵 (lazy 트리거 방지)
+        if !glassViewSetupDeferred {
+            // Glass View 크기/위치 업데이트 (bounds+center 사용 — transform과 독립적)
+            glassView.bounds = CGRect(origin: .zero, size: bounds.size)
+            glassView.center = CGPoint(x: bounds.midX, y: bounds.midY)
+            glassView.layer.cornerRadius = cornerRadius
+            glassView.layer.cornerCurve = .continuous
+            glassView.clipsToBounds = true
+        }
 
         // 색상 오버레이 (filled 스타일)
         if style == .filled {
@@ -208,6 +222,34 @@ class GlassTextButton: UIButton {
         }
     }
 
+    // MARK: - Glass Effect Lazy Setup (Phase 6)
+
+    /// Glass 효과 생성 (보일 때 호출)
+    /// hidden 상태에서 deferred된 MTKView를 실제로 생성
+    func setupGlassEffectIfNeeded() {
+        guard glassViewSetupDeferred else { return }
+        glassViewSetupDeferred = false
+
+        // Glass 뷰를 최하단에 삽입
+        insertSubview(glassView, at: 0)
+
+        // filled 스타일이면 colorOverlay를 glassView 바로 위로 이동
+        if style == .filled {
+            insertSubview(colorOverlay, aboveSubview: glassView)
+        }
+
+        setNeedsLayout()
+    }
+
+    /// isHidden 변경 시 deferred된 Glass 효과 자동 생성
+    override var isHidden: Bool {
+        didSet {
+            if !isHidden && glassViewSetupDeferred {
+                setupGlassEffectIfNeeded()
+            }
+        }
+    }
+
     // MARK: - Touch Handling
 
     override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
@@ -230,6 +272,7 @@ class GlassTextButton: UIButton {
     /// 버튼 확장 (pressed)
     /// 1뷰 scale 애니메이션 — 살짝 커지면서 터치 피드백 제공
     private func expandButton(animated: Bool) {
+        guard !glassViewSetupDeferred else { return }
         let duration: TimeInterval = animated ? 0.4 : 0
         UIView.animate(
             withDuration: duration,
@@ -245,6 +288,7 @@ class GlassTextButton: UIButton {
     /// 버튼 수축 (released)
     /// 1뷰 scale 복원 — 원래 크기로 돌아옴
     private func contractButton(animated: Bool) {
+        guard !glassViewSetupDeferred else { return }
         let duration: TimeInterval = animated ? 0.6 : 0
         UIView.animate(
             withDuration: duration,
