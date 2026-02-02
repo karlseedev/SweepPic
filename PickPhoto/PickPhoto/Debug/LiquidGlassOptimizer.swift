@@ -363,7 +363,7 @@ enum LiquidGlassOptimizer {
             for mtkView in findAllMTKViews(in: rootView) {
                 mtkView.isPaused = true
             }
-            logMTKViewStatus(in: rootView, label: "Idle 진입")
+            logMTKViewStatus(in: rootView, label: "Idle")
         }
         idleTimer = workItem
         DispatchQueue.main.asyncAfter(deadline: .now() + idleDelay, execute: workItem)
@@ -393,7 +393,7 @@ enum LiquidGlassOptimizer {
         let all = findAllMTKViews(in: rootView)
         let active = all.filter { !$0.isPaused }.count
         let paused = all.count - active
-        Log.print("[LiquidGlass:Status] \(label): active=\(active), paused=\(paused), total=\(all.count)")
+        Log.print("[LiquidGlass] Status(\(label)): active=\(active), paused=\(paused), total=\(all.count)")
     }
 
     // MARK: - Legacy API (호환성)
