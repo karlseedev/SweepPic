@@ -425,12 +425,12 @@ final class SimilarityAnalysisQueue {
             ==================================================
             """)
 
-            // 3회 이상 측정되면 통계 리포트 출력
-            if performanceStats.measurementCount >= 3 {
-                statsQueue.sync {
-                    performanceStats.printReport()
-                }
-            }
+            // 3회 이상 측정되면 통계 리포트 출력 (비활성화)
+            // if performanceStats.measurementCount >= 3 {
+            //     statsQueue.sync {
+            //         performanceStats.printReport()
+            //     }
+            // }
         }
 
         // T014.8: UI 알림 발송
