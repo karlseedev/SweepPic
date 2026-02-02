@@ -591,7 +591,7 @@ func setupMetal() {
 
 ---
 
-## Phase 6: hidden 버튼 Glass 효과 Lazy 생성
+## Phase 6: hidden 버튼 Glass 효과 Lazy 생성 ✅ 완료
 
 **배경**: 진단 로그(`total=8`)에서 hidden 상태인 버튼 5개가 불필요하게 MTKView를 생성하고 있음을 확인.
 
