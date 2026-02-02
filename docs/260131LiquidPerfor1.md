@@ -711,6 +711,45 @@ override var isHidden: Bool {
 - trash select 모드 복구/삭제 버튼 정상 표시
 - 탭 전환 시 SelectionPill squash/stretch 정상 동작
 
+### Phase 6 테스트 결과 ✅
+
+**진단 로그 검증**: `[LiquidGlass] Status(Idle): active=0, paused=4, total=4` (첫 idle) → 스크롤 후 `total=3`. 기존 8개에서 **4~3개**로 감소. hidden 버튼 4개(backButton, deleteButton, trashRestoreButton, trashDeleteButton)의 MTKView 생성 차단 확인.
+
+**시각 검증**: 스크롤 성능 변화 없음. blur 대체 모드 정상 동작.
+
+**스크롤 히치 측정** (Phase 1+3+4+6 누적, blurReplacement 모드):
+
+| 구간 | Hitch Ratio | 등급 | FPS | Dropped | Longest |
+|------|-------------|------|-----|---------|---------|
+| L1 First | 0.0 ms/s | Good | 119.4 | 0 | 0 |
+| L2 Steady | 0.0 ms/s | Good | 119.7 | 0 | 0 |
+
+> Baseline(Phase 1+3+4) 대비 동일 Good 등급 유지. MTKView 감소가 blur 모드 성능에 영향 없음.
+
+**유사사진 분석 성능** (Phase 1+3+4+6 누적):
+
+| | Phase 1+3+4 | **Phase 1+3+4+6** | Phase 4→6 개선 | 기존 HEAD | HEAD→6 개선 | 과거 (8563973) |
+|---|---|---|---|---|---|---|
+| **#1** FP (콜드) | 376ms | **328ms** | **-13%** | 766ms | **-57%** | 330ms |
+| **#1** Total | 1,290ms | **1,239ms** | -4% | 1,972ms | **-37%** | 1,159ms |
+| **#2** FP (웜) | 180ms | **176ms** | -2% | 688ms | **-74%** | 170ms |
+| **#2** Total | 776ms | **823ms** | +6% | 2,220ms | **-63%** | 376ms |
+| **#3** FP (웜) | 169ms | **171ms** | +1% | 732ms | **-77%** | 179ms |
+| **#3** Total | 1,242ms | **1,247ms** | +0.4% | 3,177ms | **-61%** | 601ms |
+
+| | Memory Start | Memory End | Delta |
+|---|---|---|---|
+| #1 | 178.5MB | 236.8MB | +58.3MB |
+| #2 | 260.9MB | 232.0MB | -28.9MB |
+| #3 | 216.5MB | 215.0MB | -1.4MB |
+
+**핵심 발견**:
+1. **idle MTKView 8→4개 (50% 감소)**: hidden 버튼 4개의 MTKView 생성 완전 차단
+2. **콜드 FP 13% 추가 개선**: 376ms → 328ms, **과거(330ms)와 동등 수준 달성**
+3. **웜 FP 과거 수준 유지**: 176ms/171ms vs 과거 170ms/179ms
+4. **스크롤 성능 영향 없음**: blur 모드에서 Good 등급 유지
+5. **메모리 절약**: 4개 MTKView + Metal 텍스처/버퍼 미생성 → 초기 메모리 감소 (정량 미측정)
+
 ---
 
 ## 최종 예상 결과
