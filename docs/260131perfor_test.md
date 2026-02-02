@@ -448,3 +448,126 @@ bd6577a에서는 조건 1은 동일하지만 빠름 → 앱 시작 시 **다른 
 - **1/29 (d34059e) ~ 1/30 (bd6577a)**: 병목 없음 (두 패턴 모두 해소)
 - **1/30 (f296691) 이후**: 병목 있음 (패턴 B: faceButtonOverlay)
 - 캐시/시뮬레이터 문제가 아닌 **코드 변경에 의한 회귀**임이 확인됨
+
+---
+
+## 추가 조사 (2026-02-02)
+
+### 1. 워밍업 실험 — 가설 부정
+
+**가설**: 앱 시작 시 LiquidGlassEffect를 미리 생성하면 뷰어 열기 시 Hang이 사라질 것.
+
+**구현**: SceneDelegate `scene(_:willConnectTo:)`에서 window 설정 직후:
+```swift
+let warmupEffect = LiquidGlassEffect(style: .regular, isNative: true)
+let warmupView = VisualEffectView(effect: warmupEffect)
+warmupView.frame = CGRect(x: -100, y: -100, width: 1, height: 1)
+window.addSubview(warmupView)
+window.layoutIfNeeded()
+warmupView.removeFromSuperview()
+```
+
+**결과**: 워밍업 자체는 1,175.8ms에 완료되었으나, 뷰어 진입 시 Hang 7.36s **여전히 발생**.
+
+→ **워밍업 가설 부정**. "같은 초기화를 반복"이 아니라 "매번 다른 문제가 발생"하는 것.
+→ 실험 코드는 제거 완료.
+
+### 2. Xcode Pause 디버깅 (bt / bt all)
+
+Hang 진행 중 Xcode Pause(Control+Cmd+Y) → LLDB `bt all`로 모든 스레드의 콜스택 캡처.
+
+#### 1차 Pause (탭 직후)
+
+```
+Thread #1 (Main Thread):
+  UIActivityIndicatorView type metadata accessor  ← Swift 타입 메타데이터 로드에서 블로킹
+    AnalysisLoadingIndicator.setupUI()
+      AnalysisLoadingIndicator.init()
+        ViewerViewController.setupLoadingIndicator()
+          ViewerViewController.setupSimilarPhotoFeature()
+            ViewerViewController.viewDidLoad()
+```
+
+→ Swift 런타임의 type metadata accessor에서 멈춰있었음. 정상적이라면 즉시 완료되어야 하는 작업.
+
+#### 2차 Pause (탭 후 2~3초)
+
+**Thread #1 (메인 스레드) — SF Symbol 벡터 렌더링 중 (CPU 작업)**
+```
+CoreGraphics`aa_render                     ← 안티앨리어싱 벡터 렌더링
+  CoreUI`CUIVectorGlyphLayer drawInContext  ← SF Symbol 벡터 글리프
+    UIImageView._setImage
+      GlassCircleButton.setupIcon()         ← 아이콘 설정
+        FaceButtonOverlay.toggleButton.getter
+          FaceButtonOverlay.setupUI()
+            ViewerViewController.viewDidLoad()
+```
+
+**Thread #9 — CHHapticEngine XPC 동기 대기**
+```
+mach_msg2_trap
+  xpc_connection_send_message_with_reply_sync
+    __NSXPCCONNECTION_IS_WAITING_FOR_A_SYNCHRONOUS_REPLY__
+      AVAudioSession privateCreateSessionInServerUsingXPC:
+        CHHapticEngine initWithAudioSession:
+          _UIFeedbackCoreHapticsEngine _internal_createCoreHapticsEngine
+            _UIFeedbackEngine _internal_prewarmEngine
+```
+→ `feedbackGenerator.prepare()` → CHHapticEngine → AVAudioSession XPC 서버 **동기 응답 대기**
+→ 이전 로그의 `CHHapticEngine error: Server timeout`의 정체
+
+**Thread #36 — AudioToolbox dlopen (동적 라이브러리 로드)**
+```
+dyld`dlopen_from
+  AudioToolboxCore`GetAudioDSPManager
+    AudioToolboxCore`AudioComponentFindNext
+      AudioConverterPrepare
+```
+→ 오디오 컴포넌트 탐색 중 동적 라이브러리 로드. dlopen은 전역 dyld 락을 잡음.
+
+**Thread #30~33 — H11ANEServices (Apple Neural Engine)**
+→ 4개의 ANE 스레드 mach_msg 대기 중 (Vision/CoreML 관련)
+
+**Thread #37 — PHImageRequest**
+→ PhotoKit 이미지 디코딩 (백그라운드, 정상)
+
+#### Pause 디버깅에서 발견한 중요 사실
+
+- Continue 누르자마자 뷰어가 바로 열림 → **Pause 중에 시스템 서비스(Metal 컴파일러 등)가 별도 프로세스에서 계속 작업을 진행**하여, Continue 시점에 이미 완료됨
+- 메인 스레드가 시스템 서비스 응답을 동기적으로 기다리고 있다는 증거
+
+### 3. feedbackGenerator 제거 테스트 — 원인 아님
+
+**가설**: GlassCircleButton의 `feedbackGenerator.prepare()`가 CHHapticEngine XPC 체인을 유발하여 메인 스레드를 간접 블로킹.
+
+**방법**: GlassCircleButton.swift에서 feedbackGenerator 관련 3줄 제거 (프로퍼티, prepare(), impactOccurred())
+
+**결과**:
+| 구간 | 수치 |
+|------|------|
+| setupIcon | **3,072.7ms** |
+| setupLoadingIndicator | **2,649.7ms** |
+| setViewControllers | **1,861.9ms** |
+| Hang 감지 | **7.65s** |
+| 탭~화면표시 총 | **7,997.7ms** |
+
+→ **feedbackGenerator는 원인이 아님.** Hang 7.65s로 동일.
+→ CHHapticEngine XPC 대기는 별도 스레드(#9)에서 진행되어 메인 스레드에 직접 영향 없음.
+→ 제거 코드 롤백 완료.
+
+### 4. 현재까지의 결론 업데이트
+
+**확인된 사실:**
+- 메인 스레드는 "블로킹 대기"뿐 아니라 **실제 CPU 작업**(SF Symbol 렌더링, UIKit 초기화)도 오래 걸림
+- 시간 분포 예시: setupIcon 3,072ms + loadingIndicator 2,649ms + setViewControllers 1,861ms = ~7.5초
+- CHHapticEngine XPC 타임아웃은 별도 스레드 → 메인 스레드 Hang의 직접 원인이 아님
+- 워밍업(LiquidGlass 사전 초기화)도 효과 없음
+
+**아직 미해결:**
+- 같은 UIKit/LiquidGlassKit 초기화인데 **왜 bd6577a에서는 빠르고 f296691부터 느린가?**
+- bd6577a..f296691 diff에서 직접적 원인 코드를 찾지 못함
+- feedbackGenerator 제거도, 워밍업도 효과 없음
+
+**다음 단계:**
+1. **bd6577a를 체크아웃하여 현재 환경에서 빠른지 재확인** — 빠르면 f296691 변경을 그룹별로 적용하면서 좁히기
+2. 또는 **Instruments Time Profiler**로 Hang 구간의 전체 콜스택 자동 샘플링

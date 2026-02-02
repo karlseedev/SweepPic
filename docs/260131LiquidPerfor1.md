@@ -591,6 +591,128 @@ func setupMetal() {
 
 ---
 
+## Phase 6: hidden 버튼 Glass 효과 Lazy 생성
+
+**배경**: 진단 로그(`total=8`)에서 hidden 상태인 버튼 5개가 불필요하게 MTKView를 생성하고 있음을 확인.
+
+| # | 컴포넌트 | 평상시 | MTKView |
+|---|---------|--------|---------|
+| #0 | 상단 backButton (GlassIconButton) | **hidden** | 불필요 |
+| #1 | 상단 selectButton (GlassTextButton) | 보임 | 필요 |
+| #2 | 상단 secondRightButton "정리" (GlassTextButton) | 보임 | 필요 |
+| #3 | 탭바 Platter 배경 (LiquidGlassPlatter) | 보임 | 필요 |
+| #4 | 탭바 SelectionPill (LiquidLensView) | **hidden** | 불필요 |
+| #5 | 탭바 deleteButton (GlassTextButton, select 모드) | **hidden** | 불필요 |
+| #6 | 탭바 trashRestoreButton (GlassTextButton, select 모드) | **hidden** | 불필요 |
+| #7 | 탭바 trashDeleteButton (GlassTextButton, select 모드) | **hidden** | 불필요 |
+
+**대상 파일 (5개)**:
+- `Shared/Components/GlassTextButton.swift` (#5, #6, #7)
+- `Shared/Components/GlassIconButton.swift` (#0)
+- `Shared/Components/FloatingTitleBar.swift` (backButton 호출 측)
+- `Shared/Components/LiquidGlassTabBar.swift` (select 모드 버튼 호출 측)
+- `Shared/Components/LiquidGlassSelectionPill.swift` (#4)
+
+### 핵심 위험: layoutSubviews() lazy 트리거
+
+`glassView`는 `private lazy var`인데, `layoutSubviews()`에서 `glassView.bounds = ...`로 접근하면 lazy 초기화가 발동하여 MTKView가 생성됨. 단순히 `setupLayers()`를 스킵하는 것만으로는 불충분 — `layoutSubviews()`에서도 조건부로 스킵해야 함.
+
+### 변경 내용
+
+**GlassTextButton / GlassIconButton 공통:**
+
+1. `deferGlassEffect` init 파라미터 추가 (기본값 false)
+2. `glassViewSetupDeferred` 플래그
+3. `setupLayers()` — deferred면 glassView 삽입 스킵
+4. `layoutSubviews()` — deferred면 glassView 접근 스킵 (lazy 트리거 방지)
+5. `setupGlassEffectIfNeeded()` public 메서드 — 보일 때 호출
+6. `isHidden` didSet — visible로 변경 시 자동 생성
+
+```swift
+// 프로퍼티
+private var glassViewSetupDeferred = false
+
+// setupLayers()
+if !glassViewSetupDeferred {
+    insertSubview(glassView, at: 0)
+}
+
+// layoutSubviews()
+if !glassViewSetupDeferred {
+    glassView.bounds = CGRect(origin: .zero, size: bounds.size)
+    // ...
+}
+
+// public
+func setupGlassEffectIfNeeded() {
+    guard glassViewSetupDeferred else { return }
+    glassViewSetupDeferred = false
+    insertSubview(glassView, at: 0)
+    setNeedsLayout()
+}
+
+// isHidden didSet (직접 hidden 제어 버튼용)
+override var isHidden: Bool {
+    didSet {
+        if !isHidden && glassViewSetupDeferred {
+            setupGlassEffectIfNeeded()
+        }
+    }
+}
+```
+
+**FloatingTitleBar:**
+- `backButton` 생성 시 `deferGlassEffect: true` → `isHidden = false` 시 자동 생성
+
+**LiquidGlassTabBar:**
+- `deleteButton`, `trashRestoreButton`, `trashDeleteButton`에 `deferGlassEffect: true`
+- 컨테이너 기반 hidden이라 isHidden didSet 안 타므로 `enterSelectMode()` / `enterTrashSelectMode()`에서 명시적 `setupGlassEffectIfNeeded()` 호출
+
+**예상 결과**: MTKView 8개 → **3개** (63% 절약, Metal 텍스처/버퍼 메모리 감소)
+
+### Phase 6 Baseline (구현 전, blur 대체 ON 상태)
+
+**스크롤 히치 측정** (Phase 1+3+4 누적, blurReplacement 모드):
+
+| 구간 | Hitch Ratio | 등급 | FPS | Dropped | Longest |
+|------|-------------|------|-----|---------|---------|
+| L1 First | 0.1 ms/s | Good | 119.2 | 0 | 0 |
+| L2 Steady #1 | 0.0 ms/s | Good | 118.1 | 0 | 0 |
+| L2 Steady #2 | 0.0 ms/s | Good | 119.4 | 0 | 0 |
+
+> 현재 blur 대체 상태에서 히치 없음 (120fps 기기에서 ~119fps 유지).
+
+**스크롤 히치 측정** (blur OFF, normal 모드 — MTKView 8개 active):
+
+| 구간 | Hitch Ratio | 등급 | FPS | Dropped | Longest |
+|------|-------------|------|-----|---------|---------|
+| L1 First | 648.7 ms/s | **Critical** | 38.7 | 95 | 39 (325ms) |
+| L2 Steady #1 | 583.2 ms/s | **Critical** | 48.7 | 121 | 12 (100ms) |
+| L2 Steady #2 | 550.5 ms/s | **Critical** | 52.1 | 78 | 12 (100ms) |
+
+> **blur OFF 시 심각한 성능 저하**: 120fps → 38~52fps, 히치 550~650 ms/s.
+> MTKView 8개 active 상태에서는 스크롤 사용 불가 수준.
+
+**Phase 6 시뮬레이션** (blur OFF, hidden MTKView pause — 3개만 active):
+
+| 구간 | Hitch Ratio | 등급 | FPS | Dropped | Longest |
+|------|-------------|------|-----|---------|---------|
+| L1 First | 292.1 ms/s | **Critical** | 83.8 | 42 | 9 (75ms) |
+
+> Phase6 sim 로그: `resumed=3, skipped=4, total=7`
+> 8개→3개로 히치 55% 감소, FPS 2배이지만 여전히 Critical (292 ms/s).
+> **결론: Phase 6만으로는 blur 제거 불가. 라이브러리 렌더링 파이프라인 최적화 필요.**
+> Phase 6은 blur 제거가 아닌 **메모리/리소스 절약 + 유사사진 분석 성능 개선** 목적으로 진행.
+
+**테스트**:
+- idle 진단 로그에서 `total=3` 확인
+- backButton 표시/숨김 정상 동작
+- select 모드 진입 시 Glass 버튼 정상 표시
+- trash select 모드 복구/삭제 버튼 정상 표시
+- 탭 전환 시 SelectionPill squash/stretch 정상 동작
+
+---
+
 ## 최종 예상 결과
 
 | Phase | MTKView 수 | 변화 |
@@ -598,10 +720,11 @@ func setupMetal() {
 | 적용 전 | 최대 8개 (진단 로그로 확인) | — |
 | Phase 1 | **최대 4개** (expanded 제거) | 생성 자체를 절반으로 줄임 |
 | Phase 1.1 (폴백) | 동일 8개, pause -4개 | Phase 1 실패 시만 적용 |
-| ~~Phase 2~~ | ~~-1~~ | ~~Pill pause~~ (롤백: 이동 시 배경 프리즈 문제) |
+| ~~Phase 2~~ | ~~-1~~ | ~~Pill pause~~ (롤백: 효과 미미) |
 | Phase 3 | 동일 (30fps 제한) | GPU 작업량 감소 |
 | Phase 4 | **active 0개** | 전체 idle pause |
 | Phase 5 | 동일 | 뷰당 초기화 비용 감소 (Metal 리소스 공유) |
+| Phase 6 | **total 3개** | hidden 버튼/Pill lazy 생성 (8→3) |
 
 ## 수정 파일 목록
 
@@ -624,6 +747,9 @@ func setupMetal() {
 | `Features/SimilarPhoto/UI/PersonPageViewController.swift` | 4 |
 | `LiquidGlassKit/.../LiquidGlassView.swift` | 5 |
 | `LiquidGlassKit/.../LiquidGlassRenderer.swift` | 5 |
+| `Shared/Components/FloatingTitleBar.swift` | 6 |
+| `Shared/Components/LiquidGlassTabBar.swift` | 6 |
+| `Shared/Components/LiquidGlassSelectionPill.swift` | 6 |
 
 ## 검증 방법
 
