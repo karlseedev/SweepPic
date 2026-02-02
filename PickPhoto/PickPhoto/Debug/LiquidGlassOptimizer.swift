@@ -49,7 +49,7 @@ enum LiquidGlassOptimizer {
     static var preferredFPS: Int = 30
 
     /// 스크롤 중 캡처 주기 (3 = 3프레임마다 1회 캡처, CPU 비용 66% 절감)
-    static var scrollCaptureInterval: Int = 3
+    static var scrollCaptureInterval: Int = 2
 
     /// 전환 애니메이션 시간 (초)
     private static let transitionDuration: TimeInterval = 0.1
@@ -137,6 +137,7 @@ enum LiquidGlassOptimizer {
 
         // C-1: 스크롤 시작 시 캡처 주기 낮추기 (3프레임마다 1회)
         LiquidGlassSettings.captureInterval = scrollCaptureInterval
+        Log.print("[LiquidGlass] captureInterval → \(scrollCaptureInterval)")
 
         switch mode {
         case .normal:
@@ -161,6 +162,7 @@ enum LiquidGlassOptimizer {
 
         // C-1: 스크롤 종료 시 캡처 주기 원복 (매 프레임)
         LiquidGlassSettings.captureInterval = 1
+        Log.print("[LiquidGlass] captureInterval → 1")
 
         switch mode {
         case .normal:
