@@ -340,6 +340,42 @@ enum LiquidGlassOptimizer {
         Log.print("[LiquidGlass] FPS limit applied: \(preferredFPS)fps to \(mtkViews.count)개 MTKView")
     }
 
+    // MARK: - Phase 4: Idle Pause
+
+    /// idle pause 딜레이 (restore 완료 대기)
+    /// restore()의 0.15s delay + transitionDuration 0.1s + 렌더링 여유 = 0.4s
+    private static let idleDelay: TimeInterval = 0.4
+
+    /// idle 타이머 (중복 방지)
+    private static var idleTimer: DispatchWorkItem?
+
+    /// 정지 상태 진입 (스크롤/인터랙션 종료 시 호출)
+    /// idleDelay 후 모든 MTKView를 pause하여 GPU 사용량 0으로 만듦
+    /// - Parameter rootView: 탐색 시작 뷰 (보통 window)
+    static func enterIdle(in rootView: UIView?) {
+        guard isEnabled else { return }
+
+        // 기존 타이머 취소 (중복 방지)
+        idleTimer?.cancel()
+
+        let workItem = DispatchWorkItem {
+            guard let rootView = rootView else { return }
+            for mtkView in findAllMTKViews(in: rootView) {
+                mtkView.isPaused = true
+            }
+            logMTKViewStatus(in: rootView, label: "Idle 진입")
+        }
+        idleTimer = workItem
+        DispatchQueue.main.asyncAfter(deadline: .now() + idleDelay, execute: workItem)
+    }
+
+    /// idle 타이머 취소 (스크롤/인터랙션 시작 시 호출)
+    /// MTKView resume은 Optimizer.restore()가 담당하므로 여기서는 타이머만 취소
+    static func cancelIdleTimer() {
+        idleTimer?.cancel()
+        idleTimer = nil
+    }
+
     // MARK: - MTKView Pause/Resume 유틸리티
 
     /// 특정 뷰 내부의 모든 MTKView isPaused 일괄 설정

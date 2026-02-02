@@ -243,8 +243,9 @@ final class FaceComparisonViewController: UIViewController {
     override func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
 
-        // [LiquidGlass 최적화] 블러 뷰 사전 생성 + 페이지 스크롤뷰 델리게이트 설정
+        // [LiquidGlass 최적화] 블러 뷰 사전 생성 + idle pause + 페이지 스크롤뷰 델리게이트 설정
         LiquidGlassOptimizer.preload(in: view.window)
+        LiquidGlassOptimizer.enterIdle(in: view.window)
         setupPageScrollViewDelegate()
     }
 
@@ -803,6 +804,7 @@ extension FaceComparisonViewController: UIScrollViewDelegate {
 
     /// 드래그 시작 (터치 직후) - 최적화 시작
     func scrollViewWillBeginDragging(_ scrollView: UIScrollView) {
+        LiquidGlassOptimizer.cancelIdleTimer()
         LiquidGlassOptimizer.optimize(in: view.window)
         Log.print("[FaceComparison:Scroll] willBeginDragging - optimize 시작")
     }
@@ -810,6 +812,7 @@ extension FaceComparisonViewController: UIScrollViewDelegate {
     /// 감속 완료 - 최적화 해제
     func scrollViewDidEndDecelerating(_ scrollView: UIScrollView) {
         LiquidGlassOptimizer.restore(in: view.window)
+        LiquidGlassOptimizer.enterIdle(in: view.window)
         Log.print("[FaceComparison:Scroll] didEndDecelerating - restore 완료")
     }
 
@@ -817,6 +820,7 @@ extension FaceComparisonViewController: UIScrollViewDelegate {
     func scrollViewDidEndDragging(_ scrollView: UIScrollView, willDecelerate decelerate: Bool) {
         if !decelerate {
             LiquidGlassOptimizer.restore(in: view.window)
+            LiquidGlassOptimizer.enterIdle(in: view.window)
             Log.print("[FaceComparison:Scroll] didEndDragging(willDecelerate=false) - restore 완료")
         }
     }

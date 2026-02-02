@@ -283,6 +283,7 @@ extension PersonPageViewController {
 
     /// 그리드 수직 스크롤 시작 - 최적화 적용
     func scrollViewWillBeginDragging(_ scrollView: UIScrollView) {
+        LiquidGlassOptimizer.cancelIdleTimer()
         LiquidGlassOptimizer.optimize(in: view.window)
         Log.print("[PersonPage:Scroll] willBeginDragging - optimize 시작")
     }
@@ -290,6 +291,7 @@ extension PersonPageViewController {
     /// 감속 완료 - 최적화 해제
     func scrollViewDidEndDecelerating(_ scrollView: UIScrollView) {
         LiquidGlassOptimizer.restore(in: view.window)
+        LiquidGlassOptimizer.enterIdle(in: view.window)
         Log.print("[PersonPage:Scroll] didEndDecelerating - restore 완료")
     }
 
@@ -297,6 +299,7 @@ extension PersonPageViewController {
     func scrollViewDidEndDragging(_ scrollView: UIScrollView, willDecelerate decelerate: Bool) {
         if !decelerate {
             LiquidGlassOptimizer.restore(in: view.window)
+            LiquidGlassOptimizer.enterIdle(in: view.window)
             Log.print("[PersonPage:Scroll] didEndDragging(willDecelerate=false) - restore 완료")
         }
     }

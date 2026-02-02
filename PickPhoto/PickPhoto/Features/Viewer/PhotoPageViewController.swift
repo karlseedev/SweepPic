@@ -686,6 +686,7 @@ extension PhotoPageViewController: UIScrollViewDelegate {
         isZoomInteractionActive = true
 
         // [LiquidGlass 최적화] 줌 시작 시 최적화
+        LiquidGlassOptimizer.cancelIdleTimer()
         LiquidGlassOptimizer.optimize(in: self.view.window)
     }
 
@@ -713,6 +714,7 @@ extension PhotoPageViewController: UIScrollViewDelegate {
 
         // [LiquidGlass 최적화] 줌 완료 시 복원
         LiquidGlassOptimizer.restore(in: self.view.window)
+        LiquidGlassOptimizer.enterIdle(in: self.view.window)
 
         // 줌 완료 알림 (FaceButtonOverlay 재표시용)
         NotificationCenter.default.post(
@@ -741,6 +743,7 @@ extension PhotoPageViewController: UIScrollViewDelegate {
         guard scrollView.zoomScale > 1.0 else { return }
 
         // [LiquidGlass 최적화] 확대 상태 드래그 시작
+        LiquidGlassOptimizer.cancelIdleTimer()
         LiquidGlassOptimizer.optimize(in: self.view.window)
     }
 
@@ -764,6 +767,7 @@ extension PhotoPageViewController: UIScrollViewDelegate {
 
         // [LiquidGlass 최적화] 확대 상태 드래그 종료 (감속 없음)
         LiquidGlassOptimizer.restore(in: self.view.window)
+        LiquidGlassOptimizer.enterIdle(in: self.view.window)
 
         NotificationCenter.default.post(
             name: .photoDidEndScroll,
@@ -778,6 +782,7 @@ extension PhotoPageViewController: UIScrollViewDelegate {
 
         // [LiquidGlass 최적화] 확대 상태 감속 완료
         LiquidGlassOptimizer.restore(in: self.view.window)
+        LiquidGlassOptimizer.enterIdle(in: self.view.window)
 
         NotificationCenter.default.post(
             name: .photoDidEndScroll,

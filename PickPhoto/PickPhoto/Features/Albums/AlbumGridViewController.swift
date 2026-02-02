@@ -126,8 +126,9 @@ final class AlbumGridViewController: BaseGridViewController {
         // iOS 18+ Zoom Transition 안정화: fallback (transitionCoordinator 없을 때)
         applyPendingViewerReturn()
 
-        // [LiquidGlass 최적화] 블러 뷰 사전 생성
+        // [LiquidGlass 최적화] 블러 뷰 사전 생성 + idle pause
         LiquidGlassOptimizer.preload(in: view.window)
+        LiquidGlassOptimizer.enterIdle(in: view.window)
     }
 
     override func viewDidLayoutSubviews() {
@@ -354,6 +355,7 @@ extension AlbumGridViewController {
         didUserScrollAfterReturn = true
 
         // [LiquidGlass 최적화] 스크롤 시작 시 최적화 적용
+        LiquidGlassOptimizer.cancelIdleTimer()
         LiquidGlassOptimizer.optimize(in: view.window)
     }
 
@@ -361,11 +363,13 @@ extension AlbumGridViewController {
         guard !decelerate else { return }
         // [LiquidGlass 최적화] 스크롤 종료 시 최적화 해제
         LiquidGlassOptimizer.restore(in: view.window)
+        LiquidGlassOptimizer.enterIdle(in: view.window)
     }
 
     func scrollViewDidEndDecelerating(_ scrollView: UIScrollView) {
         // [LiquidGlass 최적화] 감속 완료 시 최적화 해제
         LiquidGlassOptimizer.restore(in: view.window)
+        LiquidGlassOptimizer.enterIdle(in: view.window)
     }
 }
 

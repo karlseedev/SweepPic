@@ -307,8 +307,9 @@ final class ViewerViewController: UIViewController {
         // T026: 유사 사진 오버레이 표시
         showSimilarPhotoOverlay()
 
-        // [LiquidGlass 최적화] 블러 뷰 사전 생성
+        // [LiquidGlass 최적화] 블러 뷰 사전 생성 + idle pause
         LiquidGlassOptimizer.preload(in: view.window)
+        LiquidGlassOptimizer.enterIdle(in: view.window)
     }
 
     // MARK: - Rotation
@@ -783,6 +784,7 @@ final class ViewerViewController: UIViewController {
             isDismissing = true
 
             // [LiquidGlass 최적화] dismiss 드래그 시작 → MTKView pause
+            LiquidGlassOptimizer.cancelIdleTimer()
             LiquidGlassOptimizer.optimize(in: view.window)
 
             guard let tc = zoomTransitionController else {
@@ -801,6 +803,7 @@ final class ViewerViewController: UIViewController {
                     self?.isDismissing = false
                     // [LiquidGlass 최적화] 취소 시 MTKView 복원
                     LiquidGlassOptimizer.restore(in: self?.view.window)
+                    LiquidGlassOptimizer.enterIdle(in: self?.view.window)
                 }
                 // dismiss 완료 시에는 뷰어가 사라지므로 restore 불필요
             }
@@ -1390,6 +1393,7 @@ extension ViewerViewController: UIScrollViewDelegate {
 
     /// 드래그 시작 (터치 직후) - 최적화 시작 + 버튼 숨김
     func scrollViewWillBeginDragging(_ scrollView: UIScrollView) {
+        LiquidGlassOptimizer.cancelIdleTimer()
         LiquidGlassOptimizer.optimize(in: view.window)
 
         // +버튼(FaceButtonOverlay) 즉시 숨김 (스와이프 시 제자리에 남는 문제 방지)
@@ -1401,6 +1405,7 @@ extension ViewerViewController: UIScrollViewDelegate {
     /// 감속 완료 - 최적화 해제 + 버튼 복원
     func scrollViewDidEndDecelerating(_ scrollView: UIScrollView) {
         LiquidGlassOptimizer.restore(in: view.window)
+        LiquidGlassOptimizer.enterIdle(in: view.window)
 
         // 스와이프 취소 시 +버튼 복원 (didFinishAnimating completed=false면 복원 안 됨)
         restoreFaceButtonsIfNeeded()
@@ -1413,6 +1418,7 @@ extension ViewerViewController: UIScrollViewDelegate {
         // 감속이 없으면 여기서 restore (감속 있으면 didEndDecelerating에서 처리)
         if !decelerate {
             LiquidGlassOptimizer.restore(in: view.window)
+            LiquidGlassOptimizer.enterIdle(in: view.window)
 
             // 스와이프 취소 시 +버튼 복원
             restoreFaceButtonsIfNeeded()
