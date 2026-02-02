@@ -9,15 +9,6 @@
         "revision" : "072e29981974784724a6ea1d564bdd7ced1db968",
         "version" : "1.2.2"
       }
-    },
-    {
-      "identity" : "liquidglasskit",
-      "kind" : "remoteSourceControl",
-      "location" : "https://github.com/karlseedev/LiquidGlassKit.git",
-      "state" : {
-        "branch" : "master",
-        "revision" : "ec1239ffe38f416db428cadad42f8aa5bfd99e6e"
-      }
     }
   ],
   "version" : 3

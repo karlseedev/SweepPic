@@ -225,7 +225,7 @@
 			packageReferences = (
 				CB9721792EF2D37900F85BF4 /* XCLocalSwiftPackageReference "../../iOS" */,
 				CB9721B92EF3D12300F85BF4 /* XCRemoteSwiftPackageReference "BlurUIKit" */,
-				CB9721C02EF4000000F85BF4 /* XCRemoteSwiftPackageReference "LiquidGlassKit" */,
+				CB9721C02EF4000000F85BF4 /* XCLocalSwiftPackageReference "../LiquidGlassKit" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = CB9721522EF2D2AB00F85BF4 /* Products */;
@@ -622,6 +622,10 @@
 			isa = XCLocalSwiftPackageReference;
 			relativePath = ../../iOS;
 		};
+		CB9721C02EF4000000F85BF4 /* XCLocalSwiftPackageReference "../LiquidGlassKit" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = ../LiquidGlassKit;
+		};
 /* End XCLocalSwiftPackageReference section */
 
 /* Begin XCRemoteSwiftPackageReference section */
@@ -631,14 +635,6 @@
 			requirement = {
 				kind = upToNextMajorVersion;
 				minimumVersion = 1.2.2;
-			};
-		};
-		CB9721C02EF4000000F85BF4 /* XCRemoteSwiftPackageReference "LiquidGlassKit" */ = {
-			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/karlseedev/LiquidGlassKit.git";
-			requirement = {
-				branch = master;
-				kind = branch;
 			};
 		};
 /* End XCRemoteSwiftPackageReference section */
@@ -655,7 +651,7 @@
 		};
 		CB9721C12EF4000000F85BF4 /* LiquidGlassKit */ = {
 			isa = XCSwiftPackageProductDependency;
-			package = CB9721C02EF4000000F85BF4 /* XCRemoteSwiftPackageReference "LiquidGlassKit" */;
+			package = CB9721C02EF4000000F85BF4 /* XCLocalSwiftPackageReference "../LiquidGlassKit" */;
 			productName = LiquidGlassKit;
 		};
 /* End XCSwiftPackageProductDependency section */
