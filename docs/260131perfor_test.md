@@ -571,3 +571,58 @@ dyld`dlopen_from
 **다음 단계:**
 1. **bd6577a를 체크아웃하여 현재 환경에서 빠른지 재확인** — 빠르면 f296691 변경을 그룹별로 적용하면서 좁히기
 2. 또는 **Instruments Time Profiler**로 Hang 구간의 전체 콜스택 자동 샘플링
+
+---
+
+## 근본 원인 특정 (2026-02-02 후반)
+
+### 1. git worktree로 bd6577a 재확인
+
+`git worktree add ../iOS-test bd6577a`로 별도 폴더에 bd6577a 코드를 꺼내서 Xcode 빌드/테스트.
+
+**결과**: Hang 0.78초 (디버거 연결 상태). → **bd6577a는 현재 환경에서도 빠름 확정.**
+
+### 2. 그룹별 변경 적용 테스트
+
+bd6577a..f296691 diff의 6개 파일을 3그룹으로 나누어 순차 테스트:
+
+| 그룹 | 파일 | 변경 내용 |
+|------|------|-----------|
+| A | GlassIconButton + GlassTextButton | feedbackGenerator 제거 |
+| B | ZoomAnimator + ZoomTransitionController | isInteractiveDismiss 추가 |
+| C | QualityAnalyzer + CompareAnalysisTester | Vision continuation 보호 |
+
+**Group A 적용 (feedbackGenerator 둘 다 제거):**
+
+| 테스트 | Hang |
+|--------|------|
+| bd6577a + Group A (1차) | **9.71초** |
+| bd6577a + Group A (2차) | **6.53초** |
+
+→ **Group A가 원인 확정.** Group B, C 테스트 불필요.
+
+### 3. 개별 파일 좁히기
+
+| 테스트 | Hang |
+|--------|------|
+| GlassIconButton만 제거 (GlassTextButton 복원) | **없음** |
+| GlassTextButton만 제거 (GlassIconButton 복원) | **없음** |
+
+→ **둘 다 제거해야 Hang 발생.** 하나라도 feedbackGenerator.prepare()가 있으면 정상.
+
+### 4. 현재 코드(001-auto-cleanup)에 적용
+
+GlassIconButton에 feedbackGenerator를 다시 추가 (프로퍼티 + prepare() + impactOccurred()).
+
+**결과**: **Hang 없음. 해결 확인.**
+
+### 5. 근본 원인 분석
+
+`feedbackGenerator.prepare()`가 CHHapticEngine → AVAudioSession → AudioToolbox 시스템 서비스를 **미리 초기화(워밍업)**하는 부수 효과가 있었음. 이 워밍업이 LiquidGlassKit의 Metal/dyld cold-start 블로킹을 방지해주고 있었는데, f296691에서 GlassIconButton + GlassTextButton 모두에서 feedbackGenerator를 제거하면서 워밍업이 사라지고 Hang 발생.
+
+**핵심 메커니즘:**
+- feedbackGenerator.prepare() → CHHapticEngine 초기화 → AudioToolbox dyld 로딩 (백그라운드)
+- 이 백그라운드 로딩이 LiquidGlassKit MTKView 초기화 시 필요한 dyld 글로벌 락 경합을 미리 해소
+- 하나라도 있으면 충분 (시스템 서비스는 한 번만 초기화되면 됨)
+
+**해결**: GlassIconButton에 feedbackGenerator 복원. GlassTextButton은 햅틱 불필요하여 복원하지 않음.
