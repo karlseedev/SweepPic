@@ -34,7 +34,7 @@ enum LiquidGlassOptimizer {
     /// - normal: 최적화 없음
     /// - paused: 스크롤 중 isPaused (배경 프리즈)
     /// - blurReplacement: 스크롤 중 UIBlurEffect 대체 (자연스러운 블러)
-    static var mode: LiquidGlassOptimizeMode = .blurReplacement
+    static var mode: LiquidGlassOptimizeMode = .normal
 
     /// 최적화 활성화 여부
     static var isEnabled: Bool = true
@@ -70,10 +70,19 @@ enum LiquidGlassOptimizer {
     /// - Note: 새로운 MTKView만 추가 (incremental preload)
     /// - Parameter rootView: 탐색 시작 뷰 (보통 window)
     static func preload(in rootView: UIView?) {
-        guard isEnabled, mode == .blurReplacement else { return }
+        guard isEnabled else { return }
         guard let rootView = rootView else { return }
 
+        // Phase 3: FPS 제한은 mode에 무관하게 항상 적용
         let mtkViews = findAllMTKViews(in: rootView)
+        for mtkView in mtkViews {
+            mtkView.preferredFramesPerSecond = preferredFPS
+        }
+        Log.print("[LiquidGlass] FPS limit: \(preferredFPS)fps → \(mtkViews.count)개 MTKView")
+
+        // blur 뷰 생성은 blurReplacement 모드에서만
+        guard mode == .blurReplacement else { return }
+
         var newCount = 0
 
         for mtkView in mtkViews {
@@ -91,10 +100,6 @@ enum LiquidGlassOptimizer {
             // 블러 뷰를 MTKView 바로 아래에 삽입 (숨긴 상태)
             blurView.alpha = 0
             superview.insertSubview(blurView, belowSubview: mtkView)
-
-            // 저장
-            // Phase 3: fps 제한 적용
-            mtkView.preferredFramesPerSecond = preferredFPS
 
             preloadedOverlays[identifier] = PreloadedOverlay(
                 blurView: blurView,
@@ -117,7 +122,8 @@ enum LiquidGlassOptimizer {
 
         switch mode {
         case .normal:
-            break
+            // idle에서 pause된 MTKView를 resume (LiquidGlass 렌더링 재개)
+            resumeAllMTKViews(in: rootView)
 
         case .paused:
             pauseAllMTKViews(in: rootView)
@@ -137,7 +143,7 @@ enum LiquidGlassOptimizer {
 
         switch mode {
         case .normal:
-            break
+            break  // enterIdle()이 pause 담당
 
         case .paused:
             resumeAllMTKViews(in: rootView)

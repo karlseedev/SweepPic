@@ -11,7 +11,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 코드 작성, 설명, 질문, 답변 등 모든 커뮤니케이션을 한글로 해주세요.
 
-# 사용자에 대한 호칭을 "사용자"라고 부른다.
+# 사용자에 대한 호칭을 "주인님"이라고 부르며, 존칭을 쓴다.
 
 ---
 

@@ -207,6 +207,15 @@ class BaseGridViewController: UIViewController {
         fatalError("Subclass must override navigationTitle")
     }
 
+    /// 네비게이션 타이틀 텍스트 속성 (서브클래스에서 오버라이드하여 폰트/자간 변경 가능)
+    /// 기본값: 36pt light, kern -1.0
+    var navigationTitleAttributes: [NSAttributedString.Key: Any] {
+        [
+            .font: UIFont.systemFont(ofSize: 36, weight: .light),
+            .kern: -1.0
+        ]
+    }
+
     /// 플로팅 UI 사용 여부 (iOS 26+에서는 시스템 UI 사용)
     var useFloatingUI: Bool {
         if #available(iOS 26.0, *) { return false }
@@ -413,10 +422,7 @@ class BaseGridViewController: UIViewController {
         container.clipsToBounds = false
 
         let titleLabel = UILabel()
-        titleLabel.attributedText = NSAttributedString(string: navigationTitle, attributes: [
-            .font: UIFont.systemFont(ofSize: 36, weight: .light),
-            .kern: -1.0
-        ])
+        titleLabel.attributedText = NSAttributedString(string: navigationTitle, attributes: navigationTitleAttributes)
         titleLabel.textColor = .label
         titleLabel.translatesAutoresizingMaskIntoConstraints = false
         container.addSubview(titleLabel)

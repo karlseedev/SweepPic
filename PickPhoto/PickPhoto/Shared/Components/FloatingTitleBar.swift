@@ -360,6 +360,14 @@ final class FloatingTitleBar: UIView {
         self.title = title
     }
 
+    /// 커스텀 속성으로 타이틀 변경 (앨범 상세 등 별도 폰트 사용 시)
+    /// - Parameters:
+    ///   - title: 타이틀 텍스트
+    ///   - attributes: 텍스트 속성 (font, kern 등)
+    func setTitle(_ title: String, attributes: [NSAttributedString.Key: Any]) {
+        titleLabel.attributedText = NSAttributedString(string: title, attributes: attributes)
+    }
+
     /// 서브타이틀 변경 (사진 개수 등 동적 표시)
     /// - Parameter subtitle: 서브타이틀 텍스트 (nil이면 숨김)
     func setSubtitle(_ subtitle: String?) {
