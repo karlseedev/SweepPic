@@ -590,4 +590,18 @@ Phase 1 + preferredFramesPerSecond 30 제한 적용 (3회 평균):
 | #2 Total | 1,113ms | **982ms** | -12% | 376ms |
 | #3 Total | 1,819ms | **1,477ms** | **-19%** | 601ms |
 
+### 4단계 Phase 4 결과 (정지 시 전체 idle pause)
+
+Phase 1 + 3 + 정지 시 모든 MTKView idle pause 적용 (3회 평균):
+
+| | Phase 3 | Phase 4 | 추가 개선 | 과거 (8563973) |
+|---|---|---|---|---|
+| #1 FP Gen (콜드) | 394ms | **376ms** | -5% | 330ms |
+| #2 FP Gen (웜) | 182ms | **180ms** | -1% | 170ms |
+| #3 FP Gen (웜) | 190ms | **169ms** | **-11%** | 179ms |
+| #2 Total | 982ms | **776ms** | **-21%** | 376ms |
+| #3 Total | 1,477ms | **1,242ms** | **-16%** | 601ms |
+
+idle 상태에서 active MTKView = 0개 달성. 반복 분석(#3) FP가 과거보다 빨라짐.
+
 상세 결과 및 후속 Phase는 [260131LiquidPerfor1.md](260131LiquidPerfor1.md) 참조.
