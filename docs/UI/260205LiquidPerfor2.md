@@ -47,11 +47,25 @@ LiquidGlass 굴절 효과가 사라지는 UX 트레이드오프가 있음.
 
 ### 구현 그룹
 
-| 그룹 | 방안 | 수정 범위 | 측정 |
+| 그룹 | 방안 | 수정 범위 | 비고 |
 |------|------|----------|------|
-| **A** | 1+2+3 (blur 계열) | `blurTexture()` 한 함수 | 1회 |
-| **B** | 4 (half precision) | `.metal` shader 파일 | 1회 |
-| **C** | 5~8 (필요 시) | shader + Swift | A+B 결과 보고 결정 |
+| **A** | 1+2+3 (blur 계열) | `blurTexture()` 한 함수 | 병목② 해결 |
+| **B** | ~~4 (half precision)~~ | — | **스킵** — 셰이더 이미 최적화됨 |
+| **C** | 7→5→6→8 (필요 시) | shader + Swift + Optimizer | 병목①③ 해결 |
+
+> **그룹 B 스킵 사유**: Fragment shader 분석 결과, float 필수 영역(SDF, 굴절, 프레넬, 글레어, LCH)과
+> half 이미 사용 영역(텍스처, 출력, UV 오프셋)이 명확히 분리되어 있어 추가 전환 여지 없음.
+
+### 적용 순서
+
+1. **그룹 A** (blur 계열) → 측정
+2. Good 미달 시 → **C-1** (캡처 주기) → 측정
+3. 여전히 미달 시 → **C-2** (Function Constants) + **C-3** (축소 해상도) → 측정
+4. **C-4** (캡처 해상도)는 C-1과 함께 조합 가능
+
+> **현실적 예측**: 292ms/s에서 blur(병목②)는 전체의 일부.
+> 그룹 A만으로 Good(< 5ms/s) 달성은 어려울 가능성 높음.
+> C-1(캡처 주기)이 가장 큰 효과 — captureBackground()(병목①)가 주 병목.
 
 ### 대상 파일
 
@@ -209,23 +223,148 @@ blur 대체 OFF 상태에서 동일 스크롤 테스트 3회:
 
 ---
 
-## 그룹 B: half precision (방안 4)
+## 그룹 B: half precision (방안 4) — 스킵
 
-> 그룹 A 측정 후 작성 예정.
+Fragment shader 분석 결과, 셰이더가 이미 half/float 혼합 최적화되어 있음.
 
-**대상 파일**: `LiquidGlassFragment.metal`
-**변경 요약**: 셰이더 내 `float` → `half`, `float2/3/4` → `half2/3/4` 전환.
-텍스처 샘플링, SDF 계산, 굴절, 프레넬, 글레어, LCH 변환 등 전 영역.
+| 영역 | 현재 타입 | half 전환 가능? |
+|------|----------|----------------|
+| SDF, 법선, 굴절 | float | ❌ (pow, asin, tan, sqrt) |
+| 프레넬, 글레어 | float | ❌ (pow(x,5), sin, cos) |
+| LCH 색공간, 행렬 | float3, float3x3 | ❌ (행렬×벡터, 지수) |
+| UV 좌표 | float2 | ❌ (텍스처 정확성) |
+| 텍스처 색상 | **half4** | ✅ 이미 사용 중 |
+| 최종 출력, UV 오프셋 | **half4, half2** | ✅ 이미 사용 중 |
+
+**결론**: 추가 전환 여지 없음. 스킵.
 
 ---
 
 ## 그룹 C: 추가 최적화 (방안 5~8)
 
-> 그룹 A+B로 Good 미달성 시 작성 예정.
+### 앱 쪽 연동: LiquidGlassView 다운캐스팅
 
-| # | 방안 | 상태 |
-|---|------|------|
-| 5 | Function Constants (경량 모드) | 대기 |
-| 6 | 축소 해상도 렌더링 | 대기 |
-| 7 | 캡처 주기 낮추기 | 대기 |
-| 8 | 캡처 해상도 낮추기 | 대기 |
+C-1~C-3 모두 LiquidGlassView의 커스텀 프로퍼티를 동적 변경해야 함.
+현재 Optimizer는 `MTKView`로만 캐스팅 → `LiquidGlassView` 다운캐스팅 헬퍼 추가 필요.
+
+```swift
+// LiquidGlassOptimizer에 추가
+static func findAllLiquidGlassViews(in view: UIView) -> [LiquidGlassView] {
+    return findAllMTKViews(in: view).compactMap { $0 as? LiquidGlassView }
+}
+```
+
+### C-1: 방안 7 — 캡처 주기 낮추기
+
+**대상 파일**: `LiquidGlassView.swift`
+**병목**: ① captureBackground() — 매 프레임 rootView.layer.render(in:) 호출
+
+**변경**: 프레임 카운터로 N프레임마다 캡처, 나머지는 이전 텍스처 재사용
+
+```swift
+// 프로퍼티 추가
+var captureInterval: Int = 1        // 1=매 프레임(기존), 3=3프레임마다
+private var frameCounter: Int = 0
+
+override func draw(_ rect: CGRect) {
+    if autoCapture {
+        frameCounter += 1
+        if frameCounter >= captureInterval {
+            frameCounter = 0
+            captureBackground()
+        }
+    }
+    // ... render (backgroundTexture 사용) ...
+}
+```
+
+**텍스처 재사용 안전성 ✅**: ZeroCopyBridge는 `setupBuffer()`에서 1회 생성한 동일 pixelBuffer/CVMetalTexture를 `render()`마다 덮어씀. captureBackground() 스킵 시 이전 프레임 데이터가 그대로 남아있으므로 안전.
+
+**앱 연동**: Optimizer에서 `findAllLiquidGlassViews()`로 접근:
+- 스크롤 시: `captureInterval = 3`
+- 정지 시: `captureInterval = 1`
+
+**UX**: 유리 뒤 배경이 2~3프레임 지연 — 빠른 스크롤 중에는 인지 어려움
+**기대 효과**: CPU 캡처 비용 60~66% 감소
+
+### C-2: 방안 5 — Function Constants (프레넬/글레어 OFF)
+
+**대상 파일**: `LiquidGlassFragment.metal`, `LiquidGlassRenderer` (싱글톤), `LiquidGlassView.swift`
+
+**셰이더 변경** (`LiquidGlassFragment.metal`):
+```metal
+// Function Constants 선언 — default=true로 기존 파이프라인 호환 유지
+constant bool enableFresnel [[function_constant(0)]] = true;
+constant bool enableGlare [[function_constant(1)]] = true;
+
+fragment half4 liquidGlassEffect(...) {
+    // ... 기존 코드 ...
+    if (enableFresnel) { /* 프레넬 블록 (라인 482~499) */ }
+    if (enableGlare) { /* 글레어 블록 (라인 501~530) */ }
+}
+```
+
+> Function Constants의 `if`는 **컴파일 타임에 제거**됨. 런타임 분기 비용 0.
+
+**Swift 변경** (`LiquidGlassRenderer`):
+```swift
+// 기존 pipelineState 옆에 경량 버전 추가
+let lightPipelineState: MTLRenderPipelineState  // fresnel=false, glare=false
+```
+
+**LiquidGlassView 변경**:
+```swift
+var useLightMode: Bool = false
+// draw() 내: useLightMode ? lightPipelineState : pipelineState 선택
+```
+
+**UX**: 스크롤 중 프레넬/글레어 OFF → 반짝임 줄어들지만 굴절/분산은 유지
+**기대 효과**: shader 비용 30~50% 감소
+
+### C-3: 방안 6 — 축소 해상도 렌더링 ⚠️
+
+**대상 파일**: `LiquidGlassView.swift`
+
+**핵심 주의**: drawableSize를 줄이면 `uniforms.resolution`과 불일치 → SDF 계산 깨짐.
+→ resolution, contentsScale 모두 renderScale 반영 필수. `autoResizeDrawable = false` 필수.
+
+```swift
+var renderScale: CGFloat = 1.0  // 1.0=원본, 0.5=절반
+
+// layoutSubviews: drawableSize 수동 제어
+// updateUniforms: effectiveScale = contentsScale * renderScale 반영
+```
+
+**부작용**: resolution 변경 → SDF 거리 단위 변경 → cornerRadius 등 형상이 미묘하게 달라질 가능성. 실측 테스트 필수.
+
+**기대 효과**: fragment 호출 75% 감소 (renderScale=0.5 시)
+
+### C-4: 방안 8 — 캡처 해상도 낮추기
+
+**대상 파일**: `LiquidGlassView.swift` (LiquidGlass struct)
+
+현재 `regular` 프리셋: `backgroundTextureScaleCoefficient: 0.2` (20% 해상도)
+→ `0.1` (10%)로 변경
+
+**구체 크기** (44×44pt 버튼, contentsScale=3): 26×26px → 13×13px
+→ 매우 작음. 배경이 상당히 뿌옇게 보일 수 있음. UX 확인 필수.
+
+**기대 효과**: 캡처 텍스처 75% 감소 → render(in:) CPU 비용 감소
+
+---
+
+## 수정 파일 목록
+
+| 파일 | 그룹 |
+|------|------|
+| LiquidGlassView.swift | A, C-1, C-2, C-3, C-4 |
+| LiquidGlassFragment.metal | C-2 |
+| LiquidGlassRenderer (LiquidGlassView.swift 내 싱글톤) | C-2 |
+| LiquidGlassOptimizer.swift (앱 쪽) | C-1~C-3 연동 |
+
+## 검증
+
+각 그룹/방안 적용 후:
+1. blur 대체 OFF 상태에서 스크롤 히치 3회 측정
+2. 정지 상태에서 Glass 효과 시각 확인 (엣지, 배경 흐림, 프레넬/글레어)
+3. 빌드 성공 확인
