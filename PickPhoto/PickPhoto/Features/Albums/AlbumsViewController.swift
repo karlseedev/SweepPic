@@ -197,6 +197,7 @@ final class AlbumsViewController: UIViewController {
         // - FloatingOverlayContainer.swift: titleBar.title
         overlay.titleBar.setTitle("앨범")
         overlay.titleBar.setSubtitle(nil)
+        overlay.titleBar.isTitleCenteredVertically = false  // 앨범 상세에서 돌아올 때 상단 정렬 복원
 
         // 뒤로가기 버튼 숨김
         overlay.titleBar.setShowsBackButton(false)

@@ -40,7 +40,7 @@ final class FloatingTitleBar: UIView {
     static let contentHeight: CGFloat = 44
 
     /// 그라데이션 추가 높이 (딤/블러가 더 아래까지 내려오도록)
-    private static let gradientExtension: CGFloat = 27
+    private static let gradientExtension: CGFloat = 35
 
     /// 최대 딤 알파 (가장 어두운 부분 45%)
     private static let maxDimAlpha: CGFloat = LiquidGlassStyle.maxDimAlpha
@@ -100,6 +100,20 @@ final class FloatingTitleBar: UIView {
     /// 타이틀 라벨 좌측 제약조건 (뒤로가기 버튼 유무에 따라 변경)
     private var titleLabelLeadingConstraint: NSLayoutConstraint?
     private var titleLabelLeadingToBackButtonConstraint: NSLayoutConstraint?
+
+    /// 타이틀 라벨 세로 정렬 제약조건 (top 정렬 ↔ centerY 정렬 전환용)
+    private var titleLabelTopConstraint: NSLayoutConstraint?
+    private var titleLabelCenterYConstraint: NSLayoutConstraint?
+
+    /// 타이틀 세로 중앙 정렬 여부 (앨범 상세 등 작은 폰트 사용 시)
+    /// 기본값 false: 상단 정렬 (36pt + 서브타이틀 구조)
+    /// true: 뒤로가기 버튼과 세로 중앙 정렬 (20pt 등 작은 타이틀)
+    var isTitleCenteredVertically: Bool = false {
+        didSet {
+            titleLabelTopConstraint?.isActive = !isTitleCenteredVertically
+            titleLabelCenterYConstraint?.isActive = isTitleCenteredVertically
+        }
+    }
 
     // MARK: - UI Components
 
@@ -257,15 +271,14 @@ final class FloatingTitleBar: UIView {
             // 콘텐츠 컨테이너: safe area 아래에 44pt 높이
             contentContainer.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 16),
             contentContainer.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -16),
-            contentContainer.bottomAnchor.constraint(equalTo: bottomAnchor, constant: -20),
+            contentContainer.bottomAnchor.constraint(equalTo: bottomAnchor, constant: -28),
             contentContainer.heightAnchor.constraint(equalToConstant: Self.contentHeight),
 
             // 뒤로가기 버튼: 좌측 정렬, 세로 중앙
             backButton.leadingAnchor.constraint(equalTo: contentContainer.leadingAnchor),
             backButton.centerYAnchor.constraint(equalTo: contentContainer.centerYAnchor),
 
-            // 타이틀 라벨: 상단 쪽 배치 (서브타이틀 공간 확보, 좌측 제약은 동적으로 변경)
-            titleLabel.topAnchor.constraint(equalTo: contentContainer.topAnchor, constant: 2),
+            // 타이틀 라벨: 좌측 제약은 동적으로 변경 (뒤로가기 버튼 유무)
 
             // 서브타이틀 라벨: 타이틀 바로 아래
             subtitleLabel.topAnchor.constraint(equalTo: titleLabel.bottomAnchor, constant: -1),
@@ -279,6 +292,12 @@ final class FloatingTitleBar: UIView {
             secondRightButton.trailingAnchor.constraint(equalTo: selectButton.leadingAnchor, constant: -8),
             secondRightButton.centerYAnchor.constraint(equalTo: contentContainer.centerYAnchor),
         ])
+
+        // 타이틀 세로 정렬 제약 (top / centerY 전환용)
+        titleLabelTopConstraint = titleLabel.topAnchor.constraint(equalTo: contentContainer.topAnchor, constant: 2)
+        titleLabelCenterYConstraint = titleLabel.centerYAnchor.constraint(equalTo: contentContainer.centerYAnchor)
+        titleLabelTopConstraint?.isActive = true       // 기본: 상단 정렬
+        titleLabelCenterYConstraint?.isActive = false
 
         // 초기 타이틀 라벨 좌측 제약 활성화
         updateTitleLabelConstraints()

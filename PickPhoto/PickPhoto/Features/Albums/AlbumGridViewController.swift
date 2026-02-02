@@ -60,10 +60,10 @@ final class AlbumGridViewController: BaseGridViewController {
         albumTitle
     }
 
-    /// 앨범 상세 화면 타이틀: 22pt bold (메인 탭 36pt light와 별도 관리)
+    /// 앨범 상세 화면 타이틀: 20pt bold (메인 탭 36pt light와 별도 관리)
     override var navigationTitleAttributes: [NSAttributedString.Key: Any] {
         [
-            .font: UIFont.systemFont(ofSize: 22, weight: .bold),
+            .font: UIFont.systemFont(ofSize: 20, weight: .bold),
         ]
     }
 
@@ -224,8 +224,9 @@ final class AlbumGridViewController: BaseGridViewController {
             return
         }
 
-        // 타이틀 변경 (앨범 상세 전용 폰트 적용)
+        // 타이틀 변경 (앨범 상세 전용 폰트 적용) + 뒤로가기 버튼과 세로 중앙 정렬
         overlay.titleBar.setTitle(albumTitle, attributes: navigationTitleAttributes)
+        overlay.titleBar.isTitleCenteredVertically = true
 
         // 뒤로가기 버튼 표시 + pop 액션 설정
         overlay.titleBar.setShowsBackButton(true) { [weak self] in
