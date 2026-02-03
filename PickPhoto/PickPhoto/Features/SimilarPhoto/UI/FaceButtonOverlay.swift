@@ -71,6 +71,9 @@ final class FaceButtonOverlay: UIView {
     weak var delegate: FaceButtonOverlayDelegate?
 
 
+    /// 햅틱 피드백 생성기 (재사용하여 XPC 연결 유지)
+    private let feedbackGenerator = UIImpactFeedbackGenerator(style: .light)
+
     /// 현재 표시 중인 +버튼들
     private var faceButtons: [FaceButton] = []
 
@@ -168,6 +171,9 @@ final class FaceButtonOverlay: UIView {
     ///   - viewerFrame: 뷰어 프레임 (이미지가 표시되는 영역)
     ///   - assetID: 사진 ID (디버그용)
     func showButtons(for faces: [CachedFace], imageSize: CGSize, viewerFrame: CGRect, assetID: String = "") {
+        // 햅틱 엔진 사전 준비 (탭 시 지연 최소화)
+        feedbackGenerator.prepare()
+
         // 기존 버튼 제거
         removeAllButtons()
 
@@ -465,9 +471,8 @@ final class FaceButtonOverlay: UIView {
 
     /// +버튼 탭 핸들러
     @objc private func faceButtonTapped(_ sender: FaceButton) {
-        // 햅틱 피드백
-        let generator = UIImpactFeedbackGenerator(style: .light)
-        generator.impactOccurred()
+        // 햅틱 피드백 (인스턴스 generator 재사용 — XPC 연결 유지)
+        feedbackGenerator.impactOccurred()
 
         // 델리게이트 호출
         delegate?.faceButtonOverlay(self, didTapFaceAtPersonIndex: sender.face.personIndex, face: sender.face)

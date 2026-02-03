@@ -49,7 +49,7 @@ enum LiquidGlassOptimizer {
     static var preferredFPS: Int = 30
 
     /// 스크롤 중 캡처 주기 (3 = 3프레임마다 1회 캡처, CPU 비용 66% 절감)
-    static var scrollCaptureInterval: Int = 2
+    static var scrollCaptureInterval: Int = 3
 
     /// 전환 애니메이션 시간 (초)
     private static let transitionDuration: TimeInterval = 0.1
@@ -83,17 +83,6 @@ enum LiquidGlassOptimizer {
             mtkView.preferredFramesPerSecond = preferredFPS
         }
         Log.print("[LiquidGlass] FPS limit: \(preferredFPS)fps → \(mtkViews.count)개 MTKView")
-
-        // 디버그: 각 MTKView의 superview 체인 출력 (4번째 MTKView 추적용)
-        for (i, mtkView) in mtkViews.enumerated() {
-            var chain: [String] = []
-            var current: UIView? = mtkView
-            while let v = current {
-                chain.append(String(describing: type(of: v)))
-                current = v.superview
-            }
-            Log.print("[LiquidGlass] MTKView[\(i)]: \(chain.joined(separator: " → "))")
-        }
 
         // blur 뷰 생성은 blurReplacement 모드에서만
         guard mode == .blurReplacement else { return }
@@ -137,7 +126,6 @@ enum LiquidGlassOptimizer {
 
         // C-1: 스크롤 시작 시 캡처 주기 낮추기 (3프레임마다 1회)
         LiquidGlassSettings.captureInterval = scrollCaptureInterval
-        Log.print("[LiquidGlass] captureInterval → \(scrollCaptureInterval)")
 
         switch mode {
         case .normal:
@@ -162,7 +150,6 @@ enum LiquidGlassOptimizer {
 
         // C-1: 스크롤 종료 시 캡처 주기 원복 (매 프레임)
         LiquidGlassSettings.captureInterval = 1
-        Log.print("[LiquidGlass] captureInterval → 1")
 
         switch mode {
         case .normal:
@@ -201,17 +188,6 @@ enum LiquidGlassOptimizer {
             mtkView.isPaused = false
         }
         Log.print("[LiquidGlass] MTKView resumed: \(mtkViews.count)개")
-
-        // 디버그: resumed 시점의 superview 체인 출력 (4→3 변화 추적용)
-        for (i, mtkView) in mtkViews.enumerated() {
-            var chain: [String] = []
-            var current: UIView? = mtkView
-            while let v = current {
-                chain.append(String(describing: type(of: v)))
-                current = v.superview
-            }
-            Log.print("[LiquidGlass] Resumed[\(i)]: \(chain.joined(separator: " → "))")
-        }
     }
 
     // MARK: - Test C: Blur Replacement Mode (Preloaded)
