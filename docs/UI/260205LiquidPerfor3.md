@@ -178,3 +178,25 @@ static var scrollCaptureInterval: Int = 3  // 추가
 | public API 추가 | 모듈 인터페이스 미갱신 | 정상 동작 |
 | import LiquidGlassKit | 기존 심볼만 접근 | 새 심볼도 접근 |
 | C-1~C-4 구현 | KVC 우회 필요 | 타입 안전한 Swift 코드 |
+
+---
+
+## C-1 롤백 (2026-02-03)
+
+### 롤백 사유
+
+C-1(스크롤 중 캡처 주기 절감)을 구현하여 `scrollCaptureInterval = 3` (3프레임마다 1회 캡처)으로 테스트했으나, Glass 효과의 UX가 눈에 띄게 저하됨. `scrollCaptureInterval = 2`로 조절해봤으나 여전히 부족하여 C-1 기능 자체를 롤백.
+
+### 롤백 범위
+
+로컬 패키지 전환(Step 1~4)은 유지하고, **C-1 캡처 주기 로직만 제거**.
+
+| 파일 | 변경 내용 |
+|------|----------|
+| `LiquidGlassView.swift` | `frameCounter` 프로퍼티 제거, `draw()`를 원본으로 복원 (`if autoCapture { captureBackground() }` — 매 프레임 캡처) |
+| `LiquidGlassSettings.swift` | 유지 (향후 다른 설정에 활용 가능) |
+| `LiquidGlassOptimizer.swift` | `import LiquidGlassKit` 제거, `scrollCaptureInterval` 변수 제거, optimize/restore의 `LiquidGlassSettings.captureInterval` 연동 코드 제거 |
+
+### 결론
+
+캡처 주기를 줄이는 방식은 CPU 비용은 절감되나, Glass 효과의 배경 갱신이 지연되어 사용자 체감 품질이 떨어짐. 캡처 비용 절감은 다른 접근이 필요.

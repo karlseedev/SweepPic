@@ -59,10 +59,10 @@ LiquidGlass 굴절 효과가 사라지는 UX 트레이드오프가 있음.
 
 ### 적용 순서
 
-1. **그룹 A** (blur 계열) → 측정
-2. Good 미달 시 → **C-1** (캡처 주기) → 측정
-3. 여전히 미달 시 → **C-2** (Function Constants) + **C-3** (축소 해상도) → 측정
-4. **C-4** (캡처 해상도)는 C-1과 함께 조합 가능
+1. **그룹 A** (blur 계열) → 측정 ✅ 완료 (L2 550→65 ms/s, -88%)
+2. ~~Good 미달 시 → **C-1** (캡처 주기) → 측정~~ ❌ 롤백됨 (UX 저하)
+3. → **C-2** (Function Constants) + **C-3** (축소 해상도) → 측정
+4. **C-4** (캡처 해상도)는 단독 또는 C-2/C-3과 조합 가능
 
 > **현실적 예측**: 292ms/s에서 blur(병목②)는 전체의 일부.
 > 그룹 A만으로 Good(< 5ms/s) 달성은 어려울 가능성 높음.
@@ -273,7 +273,13 @@ DerivedData SPM checkout 직접 수정 방식에서는 새 public 심볼 추가 
 - public API 자유롭게 추가 가능
 - `LiquidGlassSettings` public enum으로 C-1~C-4 설정 제어
 
-### C-1: 방안 7 — 캡처 주기 낮추기
+### C-1: 방안 7 — 캡처 주기 낮추기 ❌ 롤백됨
+
+> **롤백 사유 (2026-02-03)**: `scrollCaptureInterval = 3` 및 `2`로 테스트했으나,
+> Glass 효과의 배경 갱신 지연이 체감되어 UX 저하. C-1 코드 전체 제거.
+> 롤백 상세: [260205LiquidPerfor3.md](260205LiquidPerfor3.md) 하단 참조.
+>
+> `LiquidGlassSettings.swift`는 향후 C-2~C-4에서 활용 가능하므로 유지.
 
 **대상 파일**: `LiquidGlassView.swift`, `LiquidGlassOptimizer.swift`
 **병목**: ① captureBackground() — 매 프레임 rootView.layer.render(in:) 호출
@@ -388,12 +394,28 @@ fragment half4 liquidGlassEffect(...) {
 ```swift
 // 기존 pipelineState 옆에 경량 버전 추가
 let lightPipelineState: MTLRenderPipelineState  // fresnel=false, glare=false
+
+// 기존 makeFunction(name:) → makeFunction(name:constantValues:) 변경
+// full: MTLFunctionConstantValues(enableFresnel=true, enableGlare=true)
+// light: MTLFunctionConstantValues(enableFresnel=false, enableGlare=false)
 ```
 
-**LiquidGlassView 변경**:
+**LiquidGlassSettings 변경** (LiquidGlassView 인스턴스 프로퍼티 대신 Settings static 사용):
 ```swift
-var useLightMode: Bool = false
-// draw() 내: useLightMode ? lightPipelineState : pipelineState 선택
+// LiquidGlassSettings.swift — captureInterval과 동일 패턴
+public nonisolated(unsafe) static var useLightMode: Bool = false
+```
+> View 인스턴스 프로퍼티 대신 Settings static 변수를 사용하는 이유:
+> MTKView가 3개 존재하므로 개별 접근보다 전역 1회 설정이 간편.
+> Optimizer에서 `LiquidGlassSettings.useLightMode = true/false`로 제어.
+
+**LiquidGlassView.draw() 변경**:
+```swift
+// draw() 내: Settings 참조로 파이프라인 선택
+let pipeline = LiquidGlassSettings.useLightMode
+    ? LiquidGlassRenderer.shared.lightPipelineState
+    : LiquidGlassRenderer.shared.pipelineState
+encoder.setRenderPipelineState(pipeline)
 ```
 
 **UX**: 스크롤 중 프레넬/글레어 OFF → 반짝임 줄어들지만 굴절/분산은 유지

@@ -223,9 +223,6 @@ final class LiquidGlassView: MTKView {
     /// Set to false for manual control via `captureBackground()`.
     var autoCapture: Bool = true
 
-    /// 프레임 카운터 — LiquidGlassSettings.captureInterval에 따라 캡처 주기 제어
-    private var frameCounter: Int = 0
-
     var touchPoint: CGPoint? = nil
 
     var frames: [CGRect] = []
@@ -448,13 +445,8 @@ final class LiquidGlassView: MTKView {
 
     override func draw(_ rect: CGRect) {
         // Auto-capture background from superview if enabled
-        // LiquidGlassSettings.captureInterval에 따라 N프레임마다 1회 캡처
         if autoCapture {
-            frameCounter += 1
-            if frameCounter >= LiquidGlassSettings.captureInterval {
-                frameCounter = 0
-                captureBackground()
-            }
+            captureBackground()
         }
         
         guard let drawable = currentDrawable,
