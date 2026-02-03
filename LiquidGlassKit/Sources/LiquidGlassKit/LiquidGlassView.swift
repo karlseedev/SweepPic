@@ -180,7 +180,13 @@ final class LiquidGlassRenderer {
     @MainActor static let shared = LiquidGlassRenderer()
 
     let device: MTLDevice
+
+    /// Full-quality pipeline (enableFresnel=true, enableGlare=true)
     let pipelineState: MTLRenderPipelineState
+
+    /// C-2: Light pipeline for scroll performance (enableFresnel=false, enableGlare=false)
+    /// Fresnel/glare blocks are compiled out — ~30-50% shader cost reduction.
+    let lightPipelineState: MTLRenderPipelineState
 
     private init() {
         guard let device = MTLCreateSystemDefaultDevice() else {
@@ -197,14 +203,42 @@ final class LiquidGlassRenderer {
 #endif
 
         let vertexFunction = library.makeFunction(name: "fullscreenQuad")!
-        let fragmentFunction = library.makeFunction(name: "liquidGlassEffect")!
+
+        // ── Full-quality fragment function (enableFresnel=true, enableGlare=true) ──
+        let fullConstants = MTLFunctionConstantValues()
+        var fresnelOn = true
+        var glareOn = true
+        fullConstants.setConstantValue(&fresnelOn, type: .bool, index: 0)
+        fullConstants.setConstantValue(&glareOn,   type: .bool, index: 1)
+        let fullFragmentFunction = try! library.makeFunction(
+            name: "liquidGlassEffect",
+            constantValues: fullConstants
+        )
 
         let pipelineDescriptor = MTLRenderPipelineDescriptor()
         pipelineDescriptor.vertexFunction = vertexFunction
-        pipelineDescriptor.fragmentFunction = fragmentFunction
+        pipelineDescriptor.fragmentFunction = fullFragmentFunction
         pipelineDescriptor.colorAttachments[0].pixelFormat = .bgra8Unorm  // Match MTKView
 
         self.pipelineState = try! device.makeRenderPipelineState(descriptor: pipelineDescriptor)
+
+        // ── C-2: Light fragment function (enableFresnel=false, enableGlare=false) ──
+        let lightConstants = MTLFunctionConstantValues()
+        var fresnelOff = false
+        var glareOff = false
+        lightConstants.setConstantValue(&fresnelOff, type: .bool, index: 0)
+        lightConstants.setConstantValue(&glareOff,   type: .bool, index: 1)
+        let lightFragmentFunction = try! library.makeFunction(
+            name: "liquidGlassEffect",
+            constantValues: lightConstants
+        )
+
+        let lightDescriptor = MTLRenderPipelineDescriptor()
+        lightDescriptor.vertexFunction = vertexFunction
+        lightDescriptor.fragmentFunction = lightFragmentFunction
+        lightDescriptor.colorAttachments[0].pixelFormat = .bgra8Unorm
+
+        self.lightPipelineState = try! device.makeRenderPipelineState(descriptor: lightDescriptor)
     }
 }
 
@@ -454,7 +488,12 @@ final class LiquidGlassView: MTKView {
               let commandBuffer = commandQueue.makeCommandBuffer(),
               let encoder = commandBuffer.makeRenderCommandEncoder(descriptor: renderPassDesc) else { return }
 
-        encoder.setRenderPipelineState(LiquidGlassRenderer.shared.pipelineState)
+        // C-2: Select pipeline based on light mode setting.
+        // Light mode disables fresnel/glare for lower shader cost during scroll.
+        let pipeline = LiquidGlassSettings.useLightMode
+            ? LiquidGlassRenderer.shared.lightPipelineState
+            : LiquidGlassRenderer.shared.pipelineState
+        encoder.setRenderPipelineState(pipeline)
         encoder.setFragmentBuffer(uniformsBuffer, offset: 0, index: 0)
         
         if let texture = backgroundTexture {

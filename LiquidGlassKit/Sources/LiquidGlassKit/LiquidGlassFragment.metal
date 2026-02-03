@@ -25,6 +25,12 @@ struct VertexOutput {
 // Maximum number of rectangles (must match Swift side)
 constant int maxRectangles = 16;
 
+// C-2: Function Constants for light pipeline.
+// When false, fresnel/glare blocks are compiled out (zero runtime cost).
+// Values set via MTLFunctionConstantValues in LiquidGlassRenderer.
+constant bool enableFresnel [[function_constant(0)]];
+constant bool enableGlare  [[function_constant(1)]];
+
 // Uniforms: Packed struct for Swift/Metal buffer binding
 struct ShaderUniforms {
     float2 resolution;               // Viewport resolution (pixels)
@@ -478,56 +484,62 @@ fragment half4 liquidGlassEffect(VertexOutput input [[stage_in]],
             // Base material tint
             outputColor = mix(refractedWithDispersion, half4(half3(uniforms.materialTint.rgb), 1.0h), half(uniforms.materialTint.a * 0.8f));
 
-            // Fresnel: LCH-lightness boosted reflection
-            float fresnelValue = clamp(
-                pow(
-                    1.0f + shapeDistance * logicalResolution.y / 1500.0f * pow(500.0f / uniforms.fresnelDistanceRange, 2.0f) + uniforms.fresnelEdgeSharpness,
-                    5.0f
-                ),
-                0.0f, 1.0f
-            );
+            // C-2: Fresnel block — compiled out when enableFresnel == false
+            if (enableFresnel) {
+                // Fresnel: LCH-lightness boosted reflection
+                float fresnelValue = clamp(
+                    pow(
+                        1.0f + shapeDistance * logicalResolution.y / 1500.0f * pow(500.0f / uniforms.fresnelDistanceRange, 2.0f) + uniforms.fresnelEdgeSharpness,
+                        5.0f
+                    ),
+                    0.0f, 1.0f
+                );
 
-            half3 fresnelBaseTint = mix(half3(1.0h), half3(uniforms.materialTint.rgb), half(uniforms.materialTint.a * 0.5f));
-            float3 fresnelLch = srgbToLch(fresnelBaseTint);
-            fresnelLch.x += 20.0f * fresnelValue * uniforms.fresnelIntensity;
-            fresnelLch.x = clamp(fresnelLch.x, 0.0f, 100.0f);
+                half3 fresnelBaseTint = mix(half3(1.0h), half3(uniforms.materialTint.rgb), half(uniforms.materialTint.a * 0.5f));
+                float3 fresnelLch = srgbToLch(fresnelBaseTint);
+                fresnelLch.x += 20.0f * fresnelValue * uniforms.fresnelIntensity;
+                fresnelLch.x = clamp(fresnelLch.x, 0.0f, 100.0f);
 
-            outputColor = mix(
-                outputColor,
-                half4(lchToSrgb(fresnelLch), 1.0h),
-                half(fresnelValue * uniforms.fresnelIntensity * 0.7f * length(surfaceNormal))
-            );
-
-            // Glare: Directional, LCH-boosted (lightness + chroma)
-            float glareGeometryValue = clamp(
-                pow(
-                    1.0f + shapeDistance * logicalResolution.y / 1500.0f * pow(500.0f / uniforms.glareDistanceRange, 2.0f) + uniforms.glareEdgeSharpness,
-                    5.0f
-                ),
-                0.0f, 1.0f
-            );
-
-            float glareAngle = (vectorToAngle(normalize(surfaceNormal)) - PI / 4.0f + uniforms.glareDirectionOffset) * 2.0f;
-            int isFarSide = 0;
-            if ((glareAngle > PI * (2.0f - 0.5f) && glareAngle < PI * (4.0f - 0.5f)) || glareAngle < PI * (0.0f - 0.5f)) {
-                isFarSide = 1;
+                outputColor = mix(
+                    outputColor,
+                    half4(lchToSrgb(fresnelLch), 1.0h),
+                    half(fresnelValue * uniforms.fresnelIntensity * 0.7f * length(surfaceNormal))
+                );
             }
-            float angularGlare = (0.5f + sin(glareAngle) * 0.5f) *
-                                 (isFarSide == 1 ? 1.2f * uniforms.glareOppositeSideBias : 1.2f) *
-                                 uniforms.glareIntensity;
-            angularGlare = clamp(pow(angularGlare, 0.1f + uniforms.glareAngleConvergence * 2.0f), 0.0f, 1.0f);
 
-            half3 baseGlare = mix(refractedWithDispersion.rgb, half3(uniforms.materialTint.rgb), half(uniforms.materialTint.a * 0.5f));
-            float3 glareLch = srgbToLch(baseGlare);
-            glareLch.x += 150.0f * angularGlare * glareGeometryValue;
-            glareLch.y += 30.0f * angularGlare * glareGeometryValue;
-            glareLch.x = clamp(glareLch.x, 0.0f, 120.0f);
+            // C-2: Glare block — compiled out when enableGlare == false
+            if (enableGlare) {
+                // Glare: Directional, LCH-boosted (lightness + chroma)
+                float glareGeometryValue = clamp(
+                    pow(
+                        1.0f + shapeDistance * logicalResolution.y / 1500.0f * pow(500.0f / uniforms.glareDistanceRange, 2.0f) + uniforms.glareEdgeSharpness,
+                        5.0f
+                    ),
+                    0.0f, 1.0f
+                );
 
-            outputColor = mix(
-                outputColor,
-                half4(lchToSrgb(glareLch), 1.0h),
-                half(angularGlare * glareGeometryValue * length(surfaceNormal))
-            );
+                float glareAngle = (vectorToAngle(normalize(surfaceNormal)) - PI / 4.0f + uniforms.glareDirectionOffset) * 2.0f;
+                int isFarSide = 0;
+                if ((glareAngle > PI * (2.0f - 0.5f) && glareAngle < PI * (4.0f - 0.5f)) || glareAngle < PI * (0.0f - 0.5f)) {
+                    isFarSide = 1;
+                }
+                float angularGlare = (0.5f + sin(glareAngle) * 0.5f) *
+                                     (isFarSide == 1 ? 1.2f * uniforms.glareOppositeSideBias : 1.2f) *
+                                     uniforms.glareIntensity;
+                angularGlare = clamp(pow(angularGlare, 0.1f + uniforms.glareAngleConvergence * 2.0f), 0.0f, 1.0f);
+
+                half3 baseGlare = mix(refractedWithDispersion.rgb, half3(uniforms.materialTint.rgb), half(uniforms.materialTint.a * 0.5f));
+                float3 glareLch = srgbToLch(baseGlare);
+                glareLch.x += 150.0f * angularGlare * glareGeometryValue;
+                glareLch.y += 30.0f * angularGlare * glareGeometryValue;
+                glareLch.x = clamp(glareLch.x, 0.0f, 120.0f);
+
+                outputColor = mix(
+                    outputColor,
+                    half4(lchToSrgb(glareLch), 1.0h),
+                    half(angularGlare * glareGeometryValue * length(surfaceNormal))
+                );
+            }
         }
     } else {
         outputColor = half4(0);//background.sample(textureSampler, float2(input.uv));

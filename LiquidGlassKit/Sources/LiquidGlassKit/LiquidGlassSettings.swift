@@ -17,4 +17,11 @@ public enum LiquidGlassSettings {
     /// 스크롤 중 3으로 설정하면 CPU captureBackground() 비용 66% 절감.
     /// draw()와 Optimizer 모두 메인 스레드에서 접근 — nonisolated(unsafe)로 안전
     public nonisolated(unsafe) static var captureInterval: Int = 1
+
+    /// C-2: Light mode — disables fresnel/glare in fragment shader.
+    /// When true, draw() uses lightPipelineState (fresnel=false, glare=false).
+    /// Default false preserves full-quality rendering.
+    /// Set to true during scroll to reduce shader cost by ~30-50%.
+    /// Accessed from main thread only (draw() + Optimizer) — nonisolated(unsafe) safe.
+    public nonisolated(unsafe) static var useLightMode: Bool = false
 }

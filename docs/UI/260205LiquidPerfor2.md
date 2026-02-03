@@ -419,25 +419,182 @@ encoder.setRenderPipelineState(pipeline)
 ```
 
 **UX**: 스크롤 중 프레넬/글레어 OFF → 반짝임 줄어들지만 굴절/분산은 유지
+**UX 확인**: 알고 보지 않으면 모를 정도 ✅
 **기대 효과**: shader 비용 30~50% 감소
 
-### C-3: 방안 6 — 축소 해상도 렌더링 ⚠️
+#### C-2 측정 결과
 
-**대상 파일**: `LiquidGlassView.swift`
+그룹 A 적용 상태(blur radius 0)에서 C-2 추가 적용 후 측정:
 
-**핵심 주의**: drawableSize를 줄이면 `uniforms.resolution`과 불일치 → SDF 계산 깨짐.
-→ resolution, contentsScale 모두 renderScale 반영 필수. `autoResizeDrawable = false` 필수.
+| 측정항목 | 그룹 A only | C-2 추가 (3회 평균) | 변화 |
+|---------|------------|-------------------|------|
+| L1 First Hitch | 154.4 ms/s | **81.6 ms/s** | **-47%** |
+| L2 Steady Hitch | 65.3 ms/s | **25.5 ms/s** | **-61%** |
+| L1 FPS | 100.3 | 109.5 | +9% |
+| L2 FPS | 111.2 | 115.1 | +4% |
 
-```swift
-var renderScale: CGFloat = 1.0  // 1.0=원본, 0.5=절반
+<details>
+<summary>3회 개별 측정값</summary>
 
-// layoutSubviews: drawableSize 수동 제어
-// updateUniforms: effectiveScale = contentsScale * renderScale 반영
-```
+| | L1 Hitch | L1 FPS | L2 Hitch | L2 FPS |
+|---|----------|--------|----------|--------|
+| 1회 | 111.4 ms/s | 105.9 | 35.1→23.1 ms/s | 114.7→109.9 |
+| 2회 | 93.0 ms/s | 108.0 | 26.6→18.1 ms/s | 116.2→116.1 |
+| 3회 | 40.3 ms/s | 114.5 | 46.3→4.0 ms/s | 113.3→119.2 |
 
-**부작용**: resolution 변경 → SDF 거리 단위 변경 → cornerRadius 등 형상이 미묘하게 달라질 가능성. 실측 테스트 필수.
+</details>
+
+### C-3: 방안 6 — 축소 해상도 렌더링
+
+**변경 파일 3개**
+
+| 순서 | 파일 | 변경 |
+|------|------|------|
+| 1 | `LiquidGlassSettings.swift` | `renderScale` public 프로퍼티 추가 |
+| 2 | `LiquidGlassView.swift` | `autoResizeDrawable = false` + layoutSubviews/updateUniforms/draw 수정 |
+| 3 | `LiquidGlassOptimizer.swift` | optimize/restore에서 renderScale ON/OFF |
 
 **기대 효과**: fragment 호출 75% 감소 (renderScale=0.5 시)
+
+---
+
+#### Step 1: LiquidGlassSettings.swift — `renderScale` 추가
+
+```swift
+/// C-3: Render scale — reduces drawable resolution during scroll.
+/// 1.0 = full resolution (default), 0.5 = half resolution (75% fewer fragments).
+/// drawableSize, uniforms.resolution, uniforms.contentsScale 모두 이 값 반영.
+/// Accessed from main thread only (draw() + Optimizer) — nonisolated(unsafe) safe.
+public nonisolated(unsafe) static var renderScale: CGFloat = 1.0
+```
+
+#### Step 2: LiquidGlassView.swift — 4곳 수정
+
+**2-A. init: `autoResizeDrawable = false` 활성화 (기존 주석 해제, 라인 284)**
+
+`autoResizeDrawable = true`(기본값)면 MTKView가 layoutSubviews에서 drawableSize를
+`bounds * contentsScale`로 자동 재설정 → renderScale 적용이 덮어씌워짐.
+`false`로 설정하여 drawableSize를 수동 제어.
+
+```swift
+init(_ liquidGlass: LiquidGlass) {
+    // ... 기존 코드 ...
+    setupMetal()
+    autoResizeDrawable = false  // C-3: drawableSize 수동 제어
+}
+```
+
+**2-B. layoutSubviews: drawableSize 수동 설정 (라인 467~478)**
+
+기존 `updateUniforms()` 호출 전에 drawableSize를 renderScale 반영하여 설정.
+zeroCopyBridge(배경 캡처 텍스처)는 renderScale과 무관 → 변경 없음.
+
+```swift
+override func layoutSubviews() {
+    super.layoutSubviews()
+
+    // C-3: Manually set drawable size (autoResizeDrawable = false)
+    // renderScale < 1.0이면 축소된 해상도로 렌더링
+    let renderScale = LiquidGlassSettings.renderScale
+    let effectiveScale = layer.contentsScale * renderScale
+    drawableSize = CGSize(
+        width: bounds.width * effectiveScale,
+        height: bounds.height * effectiveScale)
+
+    updateUniforms()
+
+    // zeroCopyBridge: 배경 캡처 해상도 (renderScale 무관, 변경 없음)
+    let scale = layer.contentsScale * liquidGlass.backgroundTextureSizeCoefficient * liquidGlass.backgroundTextureScaleCoefficient
+    let width = Int(bounds.width * scale)
+    let height = Int(bounds.height * scale)
+    zeroCopyBridge.setupBuffer(width: width, height: height)
+
+    shadowView?.frame = bounds
+}
+```
+
+**2-C. updateUniforms: effectiveScale 사용 (라인 414~420)**
+
+`layer.contentsScale` 대신 `layer.contentsScale * renderScale`을 scaleFactor로 사용.
+`uniforms.resolution`과 `uniforms.contentsScale` 모두 동일한 renderScale 적용.
+
+```swift
+func updateUniforms() {
+    var uniforms = liquidGlass.shaderUniforms
+    // C-3: Apply render scale for reduced resolution rendering
+    let renderScale = LiquidGlassSettings.renderScale
+    let scaleFactor = layer.contentsScale * renderScale
+
+    uniforms.resolution = .init(x: Float(bounds.width * scaleFactor),
+                                y: Float(bounds.height * scaleFactor))
+    uniforms.contentsScale = Float(scaleFactor)
+    // ... 나머지 동일 (shapeMergeSmoothness, rectangles 등)
+}
+```
+
+**2-D. draw(): renderScale 변경 감지 (라인 480, 기존 draw 시작 부분)**
+
+Optimizer가 renderScale을 변경해도 layoutSubviews()는 호출되지 않음.
+draw()에서 drawableSize 불일치를 감지하여 즉시 업데이트.
+
+```swift
+override func draw(_ rect: CGRect) {
+    // C-3: Update drawable size if renderScale changed since layoutSubviews
+    let renderScale = LiquidGlassSettings.renderScale
+    let effectiveScale = layer.contentsScale * renderScale
+    let targetW = bounds.width * effectiveScale
+    let targetH = bounds.height * effectiveScale
+    if abs(drawableSize.width - targetW) > 1 || abs(drawableSize.height - targetH) > 1 {
+        drawableSize = CGSize(width: targetW, height: targetH)
+        updateUniforms()
+    }
+
+    if autoCapture { captureBackground() }
+    // ... 나머지 동일
+}
+```
+
+#### Step 3: LiquidGlassOptimizer.swift — optimize/restore 연동
+
+```swift
+// optimize() — switch mode 전에 추가:
+LiquidGlassSettings.renderScale = 0.5  // C-3: 절반 해상도 (fragment 75% 감소)
+
+// restore() — switch mode 전에 추가:
+LiquidGlassSettings.renderScale = 1.0  // C-3: 원본 해상도 복원
+```
+
+---
+
+#### SDF 정합성 분석 (셰이더 코드 검증 완료)
+
+셰이더의 모든 좌표 변환이 `uniforms.resolution`과 `uniforms.contentsScale` 기준.
+둘 다 동일한 renderScale을 곱하므로:
+
+| 셰이더 연산 | renderScale=1.0 | renderScale=0.5 | 결과 |
+|------------|-----------------|-----------------|------|
+| `rectOriginPx = rect.xy * contentsScale` | 3.0 | 1.5 | 축소된 픽셀 공간 ✓ |
+| `fragmentPixelCoord = uv * resolution` | 동일 공간 | 동일 공간 | 좌표 정합 ✓ |
+| `normalizedDist = dist / resolution.y` | D/H | (D/2)/(H/2) = D/H | 비율 불변 ✓ |
+| `logicalResolution = resolution / contentsScale` | H*3/3 = H | H*1.5/1.5 = H | 상쇄 ✓ |
+
+**결론: SDF 형상은 renderScale에 완전히 독립적.**
+
+**알려진 부작용 — 굴절(refraction) 강도 감소**:
+셰이더의 offsetUv 계산(라인 478)에서 `uniforms.contentsScale`이 곱해짐.
+renderScale=0.5 시 contentsScale 3.0→1.5로 축소 → 화면상 굴절 효과 약 50% 약해짐.
+스크롤 중에만 일시적이고, C-2가 이미 프레넬/글레어 OFF 상태이므로 체감 미미.
+스크롤 종료 시 renderScale=1.0 복원 → 즉시 원래 강도로 복귀.
+
+---
+
+#### 기존 동작 보존
+
+| 상태 | renderScale | drawableSize | 해상도 |
+|------|-------------|-------------|--------|
+| 앱 시작 (기본값) | 1.0 | bounds * contentsScale | 원본 (Full Retina) |
+| 스크롤 중 | 0.5 | bounds * contentsScale * 0.5 | 절반 (fragment 75% 감소) |
+| 스크롤 종료 | 1.0 | bounds * contentsScale | 원본 복원 |
 
 ### C-4: 방안 8 — 캡처 해상도 낮추기
 

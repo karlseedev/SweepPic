@@ -17,6 +17,7 @@
 import UIKit
 import MetalKit
 import AppCore
+import LiquidGlassKit  // C-2: LiquidGlassSettings.useLightMode access
 
 /// LiquidGlassKit 성능 최적화 모드
 enum LiquidGlassOptimizeMode {
@@ -120,6 +121,9 @@ enum LiquidGlassOptimizer {
         guard isEnabled else { return }
         guard let rootView = rootView else { return }
 
+        // C-2: Enable light pipeline (fresnel/glare OFF) during scroll
+        LiquidGlassSettings.useLightMode = true
+
         switch mode {
         case .normal:
             // idle에서 pause된 MTKView를 resume (LiquidGlass 렌더링 재개)
@@ -140,6 +144,9 @@ enum LiquidGlassOptimizer {
     static func restore(in rootView: UIView?) {
         guard isEnabled else { return }
         guard let rootView = rootView else { return }
+
+        // C-2: Restore full-quality pipeline (fresnel/glare ON)
+        LiquidGlassSettings.useLightMode = false
 
         switch mode {
         case .normal:
