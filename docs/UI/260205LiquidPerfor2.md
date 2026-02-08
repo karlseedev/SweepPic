@@ -463,45 +463,55 @@ encoder.setRenderPipelineState(pipeline)
 ```swift
 /// C-3: Render scale — reduces drawable resolution during scroll.
 /// 1.0 = full resolution (default), 0.5 = half resolution (75% fewer fragments).
-/// drawableSize, uniforms.resolution, uniforms.contentsScale 모두 이 값 반영.
+/// Optimizer가 autoResizeDrawable 토글과 함께 사용.
 /// Accessed from main thread only (draw() + Optimizer) — nonisolated(unsafe) safe.
 public nonisolated(unsafe) static var renderScale: CGFloat = 1.0
 ```
 
-#### Step 2: LiquidGlassView.swift — 4곳 수정
+#### Step 2: LiquidGlassView.swift — layoutSubviews 1곳만 수정
 
-**2-A. init: `autoResizeDrawable = false` 활성화 (기존 주석 해제, 라인 284)**
+**v1 실패 원인과 v2 설계 원칙:**
 
-`autoResizeDrawable = true`(기본값)면 MTKView가 layoutSubviews에서 drawableSize를
-`bounds * contentsScale`로 자동 재설정 → renderScale 적용이 덮어씌워짐.
-`false`로 설정하여 drawableSize를 수동 제어.
+v1 실패 원인 3가지:
+1. `autoResizeDrawable = false`를 init에서 영구 설정 → drawable 수명 관리를 완전히 수동 전환
+2. `updateUniforms`에서 renderScale 반영 → 매 사이클 contentsScale 오차 누적 → 해상도 저하/검정/투명
+3. `draw()` 안에서 drawableSize 변경 → currentDrawable 무효화 → 렌더링 실패
 
-```swift
-init(_ liquidGlass: LiquidGlass) {
-    // ... 기존 코드 ...
-    setupMetal()
-    autoResizeDrawable = false  // C-3: drawableSize 수동 제어
-}
-```
+v2 핵심 원칙:
+1. **updateUniforms 수정 금지** — `layer.contentsScale`(3.0) 고정 사용, 셰이더는 변경을 인식하지 못함
+2. **draw() 수정 금지** — mid-frame drawable 변경 안 함
+3. **init 수정 금지** — autoResizeDrawable 기본값(true) 유지
+4. **Optimizer가 autoResizeDrawable 동적 토글** — 스크롤 시 false + drawableSize 직접 설정, 정지 시 drawableSize 직접 복원 + true
 
-**2-B. layoutSubviews: drawableSize 수동 설정 (라인 467~478)**
+**drawableSize ≠ uniforms.resolution (의도적 불일치):**
 
-기존 `updateUniforms()` 호출 전에 drawableSize를 renderScale 반영하여 설정.
-zeroCopyBridge(배경 캡처 텍스처)는 renderScale과 무관 → 변경 없음.
+v1은 drawableSize와 uniforms를 동기화했지만, v2는 **의도적으로 불일치**시킴:
+- drawableSize = 66 (절반) → fragment 수 75% 감소 (성능 목표)
+- uniforms.resolution = 132 (원본) → SDF 좌표 정확 (품질 목표)
+- 셰이더는 132x132 좌표계에서 작동하지만, 66x66 fragment만 실행
+- 각 fragment가 2x2 영역을 대표 → 해상도만 낮고, 형상/위치는 정확
+
+**2-A. layoutSubviews: autoResizeDrawable=false일 때만 drawableSize 수동 설정**
+
+스크롤 중 회전 등 레이아웃 변경에 대응하기 위한 안전장치.
+Optimizer가 직접 drawableSize를 설정하지만, mid-scroll layout 변경 시 이 코드가 보완.
 
 ```swift
 override func layoutSubviews() {
     super.layoutSubviews()
+    // autoResizeDrawable=true → super가 drawableSize = bounds * contentsScale 설정
+    // autoResizeDrawable=false → super가 drawableSize를 건드리지 않음
 
-    // C-3: Manually set drawable size (autoResizeDrawable = false)
-    // renderScale < 1.0이면 축소된 해상도로 렌더링
-    let renderScale = LiquidGlassSettings.renderScale
-    let effectiveScale = layer.contentsScale * renderScale
-    drawableSize = CGSize(
-        width: bounds.width * effectiveScale,
-        height: bounds.height * effectiveScale)
+    // C-3: Optimizer가 autoResizeDrawable=false로 설정한 경우에만
+    // renderScale 반영된 drawableSize를 수동 설정.
+    // autoResizeDrawable=true일 때는 super가 이미 원본 해상도로 설정 완료.
+    if !autoResizeDrawable {
+        drawableSize = CGSize(
+            width: bounds.width * layer.contentsScale * LiquidGlassSettings.renderScale,
+            height: bounds.height * layer.contentsScale * LiquidGlassSettings.renderScale)
+    }
 
-    updateUniforms()
+    updateUniforms()  // 변경 없음 — 항상 layer.contentsScale(3.0) 사용
 
     // zeroCopyBridge: 배경 캡처 해상도 (renderScale 무관, 변경 없음)
     let scale = layer.contentsScale * liquidGlass.backgroundTextureSizeCoefficient * liquidGlass.backgroundTextureScaleCoefficient
@@ -513,88 +523,73 @@ override func layoutSubviews() {
 }
 ```
 
-**2-C. updateUniforms: effectiveScale 사용 (라인 414~420)**
-
-`layer.contentsScale` 대신 `layer.contentsScale * renderScale`을 scaleFactor로 사용.
-`uniforms.resolution`과 `uniforms.contentsScale` 모두 동일한 renderScale 적용.
-
-```swift
-func updateUniforms() {
-    var uniforms = liquidGlass.shaderUniforms
-    // C-3: Apply render scale for reduced resolution rendering
-    let renderScale = LiquidGlassSettings.renderScale
-    let scaleFactor = layer.contentsScale * renderScale
-
-    uniforms.resolution = .init(x: Float(bounds.width * scaleFactor),
-                                y: Float(bounds.height * scaleFactor))
-    uniforms.contentsScale = Float(scaleFactor)
-    // ... 나머지 동일 (shapeMergeSmoothness, rectangles 등)
-}
-```
-
-**2-D. draw(): renderScale 변경 감지 (라인 480, 기존 draw 시작 부분)**
-
-Optimizer가 renderScale을 변경해도 layoutSubviews()는 호출되지 않음.
-draw()에서 drawableSize 불일치를 감지하여 즉시 업데이트.
-
-```swift
-override func draw(_ rect: CGRect) {
-    // C-3: Update drawable size if renderScale changed since layoutSubviews
-    let renderScale = LiquidGlassSettings.renderScale
-    let effectiveScale = layer.contentsScale * renderScale
-    let targetW = bounds.width * effectiveScale
-    let targetH = bounds.height * effectiveScale
-    if abs(drawableSize.width - targetW) > 1 || abs(drawableSize.height - targetH) > 1 {
-        drawableSize = CGSize(width: targetW, height: targetH)
-        updateUniforms()
-    }
-
-    if autoCapture { captureBackground() }
-    // ... 나머지 동일
-}
-```
-
 #### Step 3: LiquidGlassOptimizer.swift — optimize/restore 연동
+
+Optimizer가 drawableSize를 **직접 명시적으로** 설정. super의 자동 복원에 의존하지 않음.
 
 ```swift
 // optimize() — switch mode 전에 추가:
-LiquidGlassSettings.renderScale = 0.5  // C-3: 절반 해상도 (fragment 75% 감소)
+LiquidGlassSettings.renderScale = 0.5
+// autoResizeDrawable=false로 super의 자동 drawableSize 설정 방지
+// drawableSize를 직접 절반으로 설정
+for mtkView in findAllMTKViews(in: rootView) {
+    mtkView.autoResizeDrawable = false
+    mtkView.drawableSize = CGSize(
+        width: mtkView.bounds.width * mtkView.layer.contentsScale * 0.5,
+        height: mtkView.bounds.height * mtkView.layer.contentsScale * 0.5)
+}
 
 // restore() — switch mode 전에 추가:
-LiquidGlassSettings.renderScale = 1.0  // C-3: 원본 해상도 복원
+LiquidGlassSettings.renderScale = 1.0
+// drawableSize를 먼저 명시적으로 원본 복원, 그 후 autoResize 재활성화
+for mtkView in findAllMTKViews(in: rootView) {
+    mtkView.drawableSize = CGSize(
+        width: mtkView.bounds.width * mtkView.layer.contentsScale,
+        height: mtkView.bounds.height * mtkView.layer.contentsScale)
+    mtkView.autoResizeDrawable = true
+}
 ```
 
 ---
 
-#### SDF 정합성 분석 (셰이더 코드 검증 완료)
+#### SDF 정합성 분석 (v2 — 셰이더 코드 검증 완료)
 
-셰이더의 모든 좌표 변환이 `uniforms.resolution`과 `uniforms.contentsScale` 기준.
-둘 다 동일한 renderScale을 곱하므로:
+v2에서는 uniforms.resolution과 uniforms.contentsScale이 **항상 원본값 유지**.
+셰이더 입장에서는 renderScale 변경을 전혀 인식하지 못함 → SDF 완전 불변.
 
-| 셰이더 연산 | renderScale=1.0 | renderScale=0.5 | 결과 |
-|------------|-----------------|-----------------|------|
-| `rectOriginPx = rect.xy * contentsScale` | 3.0 | 1.5 | 축소된 픽셀 공간 ✓ |
-| `fragmentPixelCoord = uv * resolution` | 동일 공간 | 동일 공간 | 좌표 정합 ✓ |
-| `normalizedDist = dist / resolution.y` | D/H | (D/2)/(H/2) = D/H | 비율 불변 ✓ |
-| `logicalResolution = resolution / contentsScale` | H*3/3 = H | H*1.5/1.5 = H | 상쇄 ✓ |
+| 항목 | 값 | 변경 여부 |
+|------|-----|----------|
+| `uniforms.resolution` | bounds * contentsScale (132) | 불변 ✓ |
+| `uniforms.contentsScale` | layer.contentsScale (3.0) | 불변 ✓ |
+| `drawableSize` | 66 (스크롤) / 132 (정지) | 변경됨 (의도적) |
+| `fragmentPixelCoord` | 0~132, step=2 (스크롤) / step=1 (정지) | 샘플링 밀도만 변화 |
 
-**결론: SDF 형상은 renderScale에 완전히 독립적.**
+**알려진 부작용 — 굴절(refraction) 강도 감소 (~50%)**:
+drawableSize 절반 → `dfdx(fragmentCoord.x)` = 2.0 (정지 시 1.0) → surfaceNormal 크기 절반.
+셰이더의 offsetUv에서 surfaceNormal이 곱해지므로 굴절 효과 약 50% 약해짐.
+(v1은 contentsScale 축소가 원인이었고, v2는 dfdx 변화가 원인 — 결과적 감소량은 동일)
+스크롤 중에만 일시적이고, C-2가 프레넬/글레어 OFF 상태이므로 체감 미미.
+스크롤 종료 시 drawableSize 원본 복원 → 즉시 원래 강도로 복귀.
 
-**알려진 부작용 — 굴절(refraction) 강도 감소**:
-셰이더의 offsetUv 계산(라인 478)에서 `uniforms.contentsScale`이 곱해짐.
-renderScale=0.5 시 contentsScale 3.0→1.5로 축소 → 화면상 굴절 효과 약 50% 약해짐.
-스크롤 중에만 일시적이고, C-2가 이미 프레넬/글레어 OFF 상태이므로 체감 미미.
-스크롤 종료 시 renderScale=1.0 복원 → 즉시 원래 강도로 복귀.
+**v1 대비 개선점:**
+
+| 항목 | v1 (실패) | v2 (수정) |
+|------|-----------|-----------|
+| autoResizeDrawable | init에서 영구 false | Optimizer가 동적 토글 |
+| updateUniforms | renderScale 반영 → 오차 누적 | 수정 없음 (layer.contentsScale 고정) |
+| draw() | mid-frame drawableSize 변경 | 수정 없음 |
+| drawableSize 복원 | 수동 계산 (오차 가능) | Optimizer가 명시적 복원 + autoResize=true |
+| 상태 누적 위험 | 매 사이클 오차 축적 | 상태 없음 (매번 fresh 계산) |
 
 ---
 
 #### 기존 동작 보존
 
-| 상태 | renderScale | drawableSize | 해상도 |
-|------|-------------|-------------|--------|
-| 앱 시작 (기본값) | 1.0 | bounds * contentsScale | 원본 (Full Retina) |
-| 스크롤 중 | 0.5 | bounds * contentsScale * 0.5 | 절반 (fragment 75% 감소) |
-| 스크롤 종료 | 1.0 | bounds * contentsScale | 원본 복원 |
+| 상태 | renderScale | autoResizeDrawable | drawableSize | uniforms |
+|------|-------------|-------------------|-------------|----------|
+| 앱 시작 (기본값) | 1.0 | true (기본) | bounds * contentsScale (자동) | 원본 |
+| 스크롤 중 | 0.5 | false (Optimizer) | bounds * contentsScale * 0.5 (직접 설정) | 원본 (불변) |
+| 스크롤 종료 | 1.0 | true (Optimizer) | bounds * contentsScale (직접 복원 + 자동) | 원본 (불변) |
 
 ### C-4: 방안 8 — 캡처 해상도 낮추기
 

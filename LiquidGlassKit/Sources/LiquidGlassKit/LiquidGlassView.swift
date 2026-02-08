@@ -278,12 +278,11 @@ final class LiquidGlassView: MTKView {
             self.shadowView = shadowView
         }
         setupMetal()
-        // C-3: Disable auto drawable sizing — drawableSize is manually set
-        // in layoutSubviews() and draw() to support dynamic renderScale.
-        autoResizeDrawable = false
 //        layer.shouldRasterize = true
 //        preferredFramesPerSecond = 30
 //        clipsToBounds = true
+//        autoResizeDrawable = false
+//        contentMode = .center
     }
 
     required init(coder: NSCoder) {
@@ -414,16 +413,11 @@ final class LiquidGlassView: MTKView {
 
     func updateUniforms() {
         var uniforms = liquidGlass.shaderUniforms
-        // C-3: Derive resolution/contentsScale from actual drawableSize.
-        // This guarantees uniforms always match the render target,
-        // whether drawableSize was set by layoutSubviews or Optimizer.
-        // SDF coordinate ratios remain invariant (see Perfor2 SDF analysis).
-        uniforms.resolution = .init(x: Float(drawableSize.width),
-                                    y: Float(drawableSize.height))
-        let effectiveScale = bounds.height > 0
-            ? drawableSize.height / bounds.height
-            : layer.contentsScale
-        uniforms.contentsScale = Float(effectiveScale)
+        let scaleFactor = layer.contentsScale
+
+        uniforms.resolution = .init(x: Float(bounds.width * scaleFactor),
+                                    y: Float(bounds.height * scaleFactor))
+        uniforms.contentsScale = Float(scaleFactor)
 
         uniforms.shapeMergeSmoothness = 0.2
 
@@ -473,17 +467,8 @@ final class LiquidGlassView: MTKView {
     override func layoutSubviews() {
         super.layoutSubviews()
 
-        // C-3: Manually set drawable size (autoResizeDrawable = false).
-        // renderScale < 1.0 reduces pixel count for cheaper fragment shading.
-        let renderScale = LiquidGlassSettings.renderScale
-        let effectiveScale = layer.contentsScale * renderScale
-        drawableSize = CGSize(
-            width: bounds.width * effectiveScale,
-            height: bounds.height * effectiveScale)
-
         updateUniforms()
 
-        // zeroCopyBridge: background capture resolution (renderScale 무관, 변경 없음)
         let scale = layer.contentsScale * liquidGlass.backgroundTextureSizeCoefficient * liquidGlass.backgroundTextureScaleCoefficient
         let width = Int(bounds.width * scale)
         let height = Int(bounds.height * scale)
