@@ -123,6 +123,14 @@ enum LiquidGlassOptimizer {
 
         // C-2: Enable light pipeline (fresnel/glare OFF) during scroll
         LiquidGlassSettings.useLightMode = true
+        // C-3: Half resolution rendering (fragment 75% reduction).
+        // setNeedsLayout + layoutIfNeeded forces drawableSize update
+        // BEFORE the next draw(), avoiding drawable invalidation mid-frame.
+        LiquidGlassSettings.renderScale = 0.5
+        for mtkView in findAllMTKViews(in: rootView) {
+            mtkView.setNeedsLayout()
+            mtkView.layoutIfNeeded()
+        }
 
         switch mode {
         case .normal:
@@ -147,6 +155,13 @@ enum LiquidGlassOptimizer {
 
         // C-2: Restore full-quality pipeline (fresnel/glare ON)
         LiquidGlassSettings.useLightMode = false
+        // C-3: Restore full resolution rendering.
+        // Force layout to update drawableSize before next draw().
+        LiquidGlassSettings.renderScale = 1.0
+        for mtkView in findAllMTKViews(in: rootView) {
+            mtkView.setNeedsLayout()
+            mtkView.layoutIfNeeded()
+        }
 
         switch mode {
         case .normal:
