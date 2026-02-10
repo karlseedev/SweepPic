@@ -86,6 +86,16 @@ extension GridViewController {
 
         // [SimilarPhoto] 스크롤 시작 시 분석 취소 및 테두리 숨김
         handleSimilarPhotoScrollStart()
+
+        // [LayerDump] 스크롤 시작 0.5초 후 레이어 덤프 (한 번만 실행)
+        // render hitch 원인 분석용 — 합성 참여 레이어 + expensive 속성 태깅
+        #if DEBUG
+        if !LayerDumpInspector.hasDumped {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
+                LayerDumpInspector.dumpVisibleLayers(from: self?.view.window)
+            }
+        }
+        #endif
     }
 
     /// 스크롤 종료
