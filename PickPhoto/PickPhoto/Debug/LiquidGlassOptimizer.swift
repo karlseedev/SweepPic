@@ -124,6 +124,15 @@ enum LiquidGlassOptimizer {
         // C-2: Enable light pipeline (fresnel/glare OFF) during scroll
         LiquidGlassSettings.useLightMode = true
 
+        // C-3: Reduce drawable resolution during scroll.
+        // contentScaleFactor → layer.contentsScale → autoResizeDrawable auto-updates drawableSize.
+        // Always set absolute value from UIScreen.main.scale (never derive from previous value).
+        LiquidGlassSettings.renderScale = 0.5
+        for mtkView in findAllMTKViews(in: rootView) {
+            mtkView.contentScaleFactor = UIScreen.main.scale * 0.5  // 3.0 → 1.5
+            mtkView.setNeedsLayout()  // Trigger layoutSubviews → updateUniforms + buffer resize
+        }
+
         switch mode {
         case .normal:
             // idle에서 pause된 MTKView를 resume (LiquidGlass 렌더링 재개)
@@ -147,6 +156,36 @@ enum LiquidGlassOptimizer {
 
         // C-2: Restore full-quality pipeline (fresnel/glare ON)
         LiquidGlassSettings.useLightMode = false
+
+        // C-3: Restore full drawable resolution with smooth crossfade.
+        // Snapshot covers the MTKView during resolution change, then fades out
+        // to reveal the high-res content — eliminates the abrupt "tick" effect.
+        LiquidGlassSettings.renderScale = 1.0
+        for mtkView in findAllMTKViews(in: rootView) {
+            // Snapshot current low-res appearance for crossfade
+            let snapshot = mtkView.snapshotView(afterScreenUpdates: false)
+            if let snapshot, let superview = mtkView.superview {
+                snapshot.frame = mtkView.frame
+                superview.insertSubview(snapshot, aboveSubview: mtkView)
+
+                // Switch to high-res underneath the snapshot
+                mtkView.contentScaleFactor = UIScreen.main.scale  // 1.5 → 3.0
+                mtkView.setNeedsLayout()
+                mtkView.layoutIfNeeded()  // Sync layout — uniforms ready before next draw
+
+                // Fade out snapshot after first full-res frame is drawn
+                UIView.animate(withDuration: 0.3, delay: 0.05, options: []) {
+                    snapshot.alpha = 0
+                } completion: { _ in
+                    snapshot.removeFromSuperview()
+                }
+            } else {
+                // Fallback: direct change (no superview = no crossfade possible)
+                mtkView.contentScaleFactor = UIScreen.main.scale
+                mtkView.setNeedsLayout()
+                mtkView.layoutIfNeeded()
+            }
+        }
 
         switch mode {
         case .normal:
