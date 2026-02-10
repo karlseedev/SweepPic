@@ -87,14 +87,16 @@ extension GridViewController {
         // [SimilarPhoto] 스크롤 시작 시 분석 취소 및 테두리 숨김
         handleSimilarPhotoScrollStart()
 
-        // [LayerDump] 스크롤 시작 0.5초 후 레이어 덤프 (한 번만 실행)
-        // render hitch 원인 분석용 — 합성 참여 레이어 + expensive 속성 태깅
         #if DEBUG
+        // [LayerDump] 스크롤 시작 0.5초 후 레이어 덤프 (한 번만 실행)
         if !LayerDumpInspector.hasDumped {
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
                 LayerDumpInspector.dumpVisibleLayers(from: self?.view.window)
             }
         }
+
+        // [ABTest] 스크롤 시작 시 테스트 조건 적용
+        RenderABTest.applyTest(in: view.window)
         #endif
     }
 
@@ -106,6 +108,11 @@ extension GridViewController {
         scrollEndTimer = Timer.scheduledTimer(withTimeInterval: 0.05, repeats: false) { [weak self] _ in
             guard let self = self else { return }
             self.isScrolling = false
+
+            // [ABTest] 스크롤 종료 시 테스트 조건 복원
+            #if DEBUG
+            RenderABTest.restoreTest(in: self.view.window)
+            #endif
 
             // [B) HitchMonitor] 스크롤 종료 시 결과 로그
             let hitchResult = self.hitchMonitor.stop()
@@ -343,7 +350,12 @@ extension GridViewController {
         // - 완료되었으면 "L2 Steady"
         let scrollType = hasCompletedFirstScroll ? "L2 Steady" : "L1 First"
 
-        Log.print("[Hitch] \(scrollType): \(result.formatted())")
+        #if DEBUG
+        let testLabel = RenderABTest.activeTest == .baseline ? "" : " [\(RenderABTest.activeTestName)]"
+        #else
+        let testLabel = ""
+        #endif
+        Log.print("[Hitch] \(scrollType)\(testLabel): \(result.formatted())")
 
         // [Cache Stats] 구간별 캐시 통계 출력
         MemoryThumbnailCache.shared.logStats(label: scrollType)

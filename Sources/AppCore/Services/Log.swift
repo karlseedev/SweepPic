@@ -152,7 +152,8 @@ public enum Log {
         "Scroll": true,              // 스크롤 시작/종료 로그
         "Performance": true,         // 성능 모니터 (PerformanceMonitor)
         "LiquidGlass": true,         // LiquidGlass 최적화 로그
-        "LayerDump": true,           // 레이어 덤프 (render hitch 분석)
+        "LayerDump": false,          // 레이어 덤프 (render hitch 분석)
+        "ABTest": true,              // Render A/B 테스트
 
         // =============================================
         // Debug / 기타
