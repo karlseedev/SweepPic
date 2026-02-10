@@ -453,11 +453,14 @@ fragment half4 liquidGlassEffect(VertexOutput input [[stage_in]],
 
     half4 outputColor;
 
-    // Pixel size for anti-aliasing (y-dominant for aspect)
-//    float pixelSize = 2.0f / uniforms.resolution.y;
+    // C-3: Scale AA width inversely with contentsScale to maintain constant pixel-width AA.
+    // At 3x (full res): aaScale=1.0 → original values (no change).
+    // At 1.5x (half res): aaScale=2.0 → doubled AA band → same ~2px edge smoothness.
+    float aaScale = 3.0f / uniforms.contentsScale;
+    float aaOuter = 0.005f * aaScale;
+    float aaInner = -0.01f * aaScale;
 
-    // Slightly expanded threshold for smoother AA
-    if (shapeDistance < 0.005f) {
+    if (shapeDistance < aaOuter) {
         float normalizedDepth = -shapeDistance * logicalResolution.y;
 
         // Refraction shift factor
@@ -545,8 +548,8 @@ fragment half4 liquidGlassEffect(VertexOutput input [[stage_in]],
         outputColor = half4(0);//background.sample(textureSampler, float2(input.uv));
     }
 
-    // Boundary anti-aliasing (smoothstep blend)
-    outputColor = mix(outputColor, half4(0), smoothstep(-0.01f, 0.005f, shapeDistance));
+    // Boundary anti-aliasing (smoothstep blend, scaled by C-3 aaScale)
+    outputColor = mix(outputColor, half4(0), smoothstep(aaInner, aaOuter, shapeDistance));
 
     return outputColor;
 }

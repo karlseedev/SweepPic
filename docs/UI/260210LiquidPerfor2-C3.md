@@ -2,7 +2,7 @@
 
 > **상위 문서**: [260205LiquidPerfor2.md](260205LiquidPerfor2.md)
 > **작성일**: 2026-02-08
-> **상태**: v1, v2 실패 → v3 (contentScaleFactor) 구현 예정
+> **상태**: v3 구현 완료 (2026-02-10)
 
 ---
 
@@ -193,30 +193,57 @@ uniforms.resolution과 uniforms.contentsScale이 동일 비율로 변경 → SDF
 
 ---
 
-## 6. 구현 순서
+## 6. v3 구현 결과 (2026-02-10)
 
-1. 롤백 포인트 확인: `63bd08f` (현재 상태)
-2. Step 1: `LiquidGlassSettings.swift` — renderScale 추가 + import CoreGraphics
-3. Step 2: `LiquidGlassOptimizer.swift` — optimize/restore에 contentScaleFactor 코드 추가
-4. 빌드 확인
-5. 기기 테스트: 스크롤 반복 10회 이상, 정지 시 해상도 복원 확인
+### 변경 파일 4개
 
----
+| 파일 | 변경 내용 |
+|------|----------|
+| `LiquidGlassSettings.swift` | `renderScale: CGFloat = 1.0` 추가 + `import CoreGraphics` |
+| `LiquidGlassOptimizer.swift` | optimize/restore에 contentScaleFactor 설정 + 크로스페이드 복원 |
+| `LiquidGlassView.swift` | **변경 없음 (0곳)** |
+| `LiquidGlassFragment.metal` | AA 스케일 보정 (저해상도 계단 현상 방지) |
 
-## 7. 호출 흐름 참고
+### 구현 과정에서 발견/해결한 이슈
+
+1. **깜빡임 (blink)**: restore 시 contentScaleFactor 변경과 layout 사이에 1프레임 불일치
+   - 해결: `setNeedsLayout()` + `layoutIfNeeded()` 동기 layout 강제
+
+2. **해상도 전환 "띡" 현상**: 저해상도→고해상도 즉시 전환이 눈에 띔
+   - 해결: 스냅샷 크로스페이드 (delay 0.05s + fade 0.3s = 총 0.35s)
+   - C-2(fresnel/glare 복원)도 같은 크로스페이드에 자연스럽게 포함
+
+3. **테두리 계단 현상**: 저해상도에서 SDF AA 폭이 절반 → 둥근 테두리 우둘투둘
+   - 해결: 셰이더에서 `aaScale = 3.0 / contentsScale` → AA 폭을 해상도 비례로 보정
+   - 3x: 원본과 동일 / 1.5x: AA 2배 확장 → 항상 ~2px AA 유지
+
+### 커밋 히스토리
+
+| 커밋 | 내용 |
+|------|------|
+| `cde4379` | C-3 구현 전 롤백 포인트 |
+| `30d0b16` | v3 기본 구현 (contentScaleFactor + 크로스페이드) |
+| (현재) | + 셰이더 AA 보정 |
+
+### 최종 호출 흐름
 
 ```
 scrollDidBegin (GridScroll.swift:78)
   → cancelIdleTimer()
   → optimize(in: view.window)
-      → useLightMode = true
-      → [C-3: contentScaleFactor = 1.5]
+      → useLightMode = true                          (C-2)
+      → contentScaleFactor = UIScreen.main.scale * 0.5 (C-3)
+      → setNeedsLayout()
       → .normal: resumeAllMTKViews (isPaused = false)
 
 scrollDidEnd (GridScroll.swift:96, 50ms debounce)
   → restore(in: self.view.window)
-      → useLightMode = false
-      → [C-3: contentScaleFactor = 3.0]
+      → useLightMode = false                          (C-2)
+      → snapshot crossfade:                           (C-3)
+          1. snapshotView(afterScreenUpdates: false)
+          2. contentScaleFactor = UIScreen.main.scale
+          3. setNeedsLayout + layoutIfNeeded (동기)
+          4. UIView.animate(0.3s, delay 0.05s) → snapshot fadeOut
       → .normal: break
   → enterIdle(in: self.view.window)
       → 0.4s 후 isPaused = true
