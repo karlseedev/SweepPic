@@ -98,8 +98,8 @@ enum LiquidGlassOptimizer {
             // 블러 뷰 생성
             let blurView = createBlurView(matching: mtkView)
 
-            // 블러 뷰를 MTKView 바로 아래에 삽입 (숨긴 상태)
-            blurView.alpha = 0
+            // C-5 상시: 블러 뷰를 MTKView 바로 아래에 삽입 (즉시 보임)
+            blurView.alpha = LiquidGlassSettings.freezeCapture ? blurAlpha : 0
             superview.insertSubview(blurView, belowSubview: mtkView)
 
             preloadedOverlays[identifier] = PreloadedOverlay(
@@ -126,11 +126,6 @@ enum LiquidGlassOptimizer {
             // idle에서 pause된 MTKView를 resume (LiquidGlass 렌더링 재개)
             resumeAllMTKViews(in: rootView)
 
-            // C-5: Freeze capture + show blur overlays behind transparent MTKViews
-            LiquidGlassSettings.freezeCapture = true
-            preload(in: rootView)
-            showBlurOverlaysForC5()
-
         case .paused:
             pauseAllMTKViews(in: rootView)
 
@@ -149,9 +144,7 @@ enum LiquidGlassOptimizer {
 
         switch mode {
         case .normal:
-            // C-5: Unfreeze capture + hide blur overlays with crossfade
-            LiquidGlassSettings.freezeCapture = false
-            hideBlurOverlaysForC5()
+            break  // C-5 상시: enterIdle()이 pause 담당
 
         case .paused:
             resumeAllMTKViews(in: rootView)

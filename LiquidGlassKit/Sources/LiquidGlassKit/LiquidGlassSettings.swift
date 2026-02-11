@@ -22,5 +22,5 @@ public enum LiquidGlassSettings {
     /// When true, captureBackground() is skipped and a transparent fallback texture is used.
     /// The shader renders only SDF shape + tint + boundary AA over the UIVisualEffectView below.
     /// Accessed from main thread only — nonisolated(unsafe) safe.
-    public nonisolated(unsafe) static var freezeCapture: Bool = false
+    public nonisolated(unsafe) static var freezeCapture: Bool = true
 }

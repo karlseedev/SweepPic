@@ -419,7 +419,7 @@ half3 vectorToRainbowColor(float2 vector) {
 // Texture sample with per-channel dispersion offset (simulates prism fringing).
 // Samples R/G/B separately with refractive index-based UV shifts.
 half4 sampleWithDispersion(texture2d<half> texture, float2 baseUv, float2 offset, float dispersionFactor) {
-    half4 color = half4(1.0h);
+    half4 color = half4(0.0h);
     // Red: Minimal shift (lower index)
     color.r = texture.sample(textureSampler, baseUv + offset * (1.0f - (refractiveIndexRed - 1.0f) * dispersionFactor)).r;
     // Green: Neutral

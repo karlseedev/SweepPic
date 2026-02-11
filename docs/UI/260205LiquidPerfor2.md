@@ -502,40 +502,62 @@ C-3은 체감 성능보다는 GPU 부하 경감에 기여 (FPS 유지에 도움)
 **결과**: 배경이 너무 이상하게 보여 UX 문제. 해상도가 지나치게 낮아 유리 효과의 배경 품질이 허용 수준 이하.
 코드 원복 완료, C-4 미적용.
 
-### C-5: 스크롤 중 배경 캡처 → UIVisualEffectView 대체 (계획)
+### C-5: 상시 적용 — 배경 캡처 제거 + 셰이더 간소화
 
-**핵심 아이디어**: 스크롤 중 `captureBackground()` (`layer.render(in:)`)를 완전히 스킵하고,
-기존 `blurReplacement` 모드의 UIVisualEffectView를 배경으로 사용.
-MTKView는 계속 렌더링하되 SDF + 테두리 AA만 출력 (투명 유리 형태).
+**C-2/C-3 원복 완료**: C-5가 배경 캡처 자체를 제거하므로 C-2(Function Constants), C-3(축소 해상도) 불필요. 원복됨.
 
-**C-2/C-3 원복 필요**: C-5에서는 배경 텍스처가 없으므로 프레넬/글레어(C-2), 해상도 축소(C-3)가 불필요.
-단독 테스트를 위해 C-2, C-3 코드를 원복 후 C-5만 적용.
+#### 핵심 아이디어
 
-**스크롤 중 효과 변화**:
+`captureBackground()` (`layer.render(in:)`)를 **상시 제거**하고 아키텍처를 2레이어로 단순화:
 
-| # | 효과 | 정지 시 | 스크롤 중 | 이유 |
-|---|---|---|---|---|
-| 1 | 배경 캡처 | ✅ layer.render | ❌ → UIVisualEffectView 대체 | CPU 병목 제거 |
-| 2 | SDF 형상 계산 | ✅ | ✅ 유지 | 테두리에 필요 |
-| 3 | 굴절 | ✅ | ❌ 사라짐 | 배경 텍스처 없음 |
-| 4 | 색분산 | ✅ | ❌ 사라짐 | 굴절의 일부 |
-| 5 | 머티리얼 틴트 | ✅ | ❌ 사라짐 | 배경 텍스처에 섞는 것 |
-| 6 | 프레넬 반사 | ✅ | ❌ 사라짐 | 배경 텍스처 없음 |
-| 7 | 글레어 | ✅ | ❌ 사라짐 | 배경 텍스처 없음 |
-| 8 | 테두리 AA | ✅ | ✅ 유지 | SDF만 있으면 됨 |
+| 레이어 | 역할 | 담당 |
+|--------|------|------|
+| **UIVisualEffectView** (아래) | 블러 배경 + 틴트 색상 | 유리 본체 (면) |
+| **MTKView 셰이더** (위) | SDF + 프레넬 + 글레어 + 바운더리 AA | 테두리 빛남 (선) |
 
-**blurReplacement와의 차이**:
+#### 기존 셰이더 8개 효과 → 4개로 축소
+
+| # | 효과 | C-5 이전 | C-5 이후 | 이유 |
+|---|------|---------|---------|------|
+| 1 | 배경 캡처 | ✅ layer.render | ❌ **제거** | UIVisualEffectView로 대체 |
+| 2 | SDF 도형 | ✅ | ✅ 유지 | 모양 정의 (모든 효과의 기반) |
+| 3 | 굴절 | ✅ | ❌ **제거** | 배경 텍스처 없음 → 굴절 불가 |
+| 4 | 색분산 | ✅ | ❌ **제거** | 굴절의 일부 |
+| 5 | 틴트 | ✅ (셰이더) | ❌ **이동** | UIVisualEffectView tintOverlay로 이동 |
+| 6 | 프레넬 | ✅ | ✅ 유지 | 테두리 반짝임 (SDF만 필요) |
+| 7 | 글레어 | ✅ | ✅ 유지 | 방향성 하이라이트 (SDF만 필요) |
+| 8 | 바운더리 AA | ✅ | ✅ 유지 | 테두리 안티앨리어싱 |
+
+**틴트를 UIVisualEffectView로 이동하는 이유**:
+- 틴트는 단순한 반투명 색상 오버레이 — 셰이더에서 할 필요 없음
+- 셰이더에서 틴트를 빼면 **내부가 완전 투명 (alpha ≈ 0)** → UIVisualEffectView 블러가 100% 비침
+- 기존 문제: 셰이더 틴트 alpha ~0.64 → 블러가 36%만 비쳐서 안 보였음 → **자동 해결**
+
+#### blurReplacement 모드와의 비교
 
 | | blurReplacement | C-5 |
 |---|---|---|
-| UIVisualEffectView | ✅ | ✅ 그대로 재활용 |
-| MTKView | isPaused + alpha=0 (완전 숨김) | **계속 렌더링** (투명, 테두리만) |
-| 셰이더 | ❌ 안 돌아감 | ✅ SDF + 테두리 AA |
+| UIVisualEffectView | ✅ | ✅ |
+| MTKView | isPaused + alpha=0 (완전 숨김) | **계속 렌더링** (테두리 효과만) |
+| 셰이더 효과 | ❌ 안 돌아감 | SDF + 프레넬 + 글레어 + AA |
 | captureBackground | ❌ | ❌ |
-| 시각 결과 | 블러 판 | 블러 판 + **유리 테두리/형태** |
+| 시각 결과 | 블러 판 (밋밋함) | 블러 판 + **유리 테두리 빛남** |
 
-**기대 효과**: captureBackground() CPU 비용 완전 제거 (병목① 해소).
-셰이더는 SDF + AA만 계산하므로 GPU 부하도 극소.
+#### 수정 대상 파일
+
+| 파일 | 변경 내용 |
+|------|----------|
+| `LiquidGlassFragment.metal` | 굴절/색분산/틴트 코드 제거. SDF + 프레넬 + 글레어 + AA만 남김. 내부 alpha ≈ 0 출력 |
+| `LiquidGlassView.swift` | captureBackground() 호출 제거, transparentTexture 제거, draw() 간소화 |
+| `LiquidGlassSettings.swift` | freezeCapture 제거 (항상 캡처 안 함), captureInterval 제거 |
+| `LiquidGlassOptimizer.swift` | C-5 블러뷰 관리 (preload에서 항상 생성, 항상 표시) |
+
+#### 기대 효과
+
+- **병목① 완전 제거**: `captureBackground()` (`layer.render(in:)`) CPU 비용 0
+- **병목② 완전 제거**: `blurTexture()` (MPS Gaussian blur) 호출 없음
+- **병목③ 대폭 감소**: 셰이더 8→4개 효과, 내부 투명 출력 (굴절/색분산/틴트 연산 제거)
+- **투명도 문제 해결**: 셰이더 내부 alpha ≈ 0 → UIVisualEffectView 블러 100% 비침
 
 ---
 
