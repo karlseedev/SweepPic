@@ -365,6 +365,48 @@ if #available(iOS 26.0, *), let tbc = tabBarController as? TabBarController {
 
 ---
 
+## 구현 완료 (2026-02-11)
+
+### 달성 내용
+
+iOS 26+에서 뷰어를 Modal → Navigation Push로 전환 완료.
+
+| | iOS 16~25 | iOS 26+ |
+|---|---|---|
+| **열기** | Modal present | Navigation push |
+| **닫기 (드래그)** | Interactive modal dismiss | Interactive navigation pop |
+| **닫기 (버튼)** | dismiss(animated:) | popViewController(animated:) |
+| **시스템 UI** | 사용 불가 (커스텀 GlassIconButton) | 네비게이션 바/툴바 사용 가능 |
+| **탭바** | Modal이라 탭바 유지 | hidesBottomBarWhenPushed로 숨김 |
+
+- 기존 아래 드래그 Interactive Dismiss UX(손가락 추적, 스냅샷 축소, 배경 fade) 완전 유지
+- 드래그 취소(원위치 복귀) 정상 동작
+- iOS 16~25 기존 Modal 경로 변경 없음
+- 3개 그리드(보관함, 앨범, 휴지통) 모두 적용
+
+### 커밋
+
+- `374ffdf` — feat: Plan C 구현 (Phase 1~5, 7개 파일)
+- `e10627e` — fix: interactive dismiss freeze 버그 수정
+- `77586d6` — chore: 진단 로그 제거
+
+### 버그 수정: Interactive Dismiss Freeze
+
+**증상:** 뷰어에서 아래 드래그 시 앱 완전 멈춤 (터치 무반응)
+
+**원인:** `popViewController(animated: true)` 호출 즉시 `navigationController`가 `nil`이 됨.
+`.changed`/`.ended`에서 `isPushed`가 `false` 반환 → IC가 제스처 업데이트를 못 받음 → `completeTransition` 영원히 호출 안 됨 → UIKit이 터치 이벤트 차단.
+
+**수정:** `activeInteractionController` / `activeTabBarController` 프로퍼티를 `.began`에서 미리 저장하고, `.changed`/`.ended`에서 `isPushed` 재계산 없이 저장된 참조 사용.
+
+### 교훈
+
+- `popViewController(animated: true)` 호출 즉시 `viewControllers` 배열 업데이트 → 팝된 VC의 `navigationController` = `nil`
+- Interactive 트랜지션에서 필요한 참조는 `.began`에서 반드시 미리 저장
+- Custom `UIViewControllerInteractiveTransitioning` 사용 시 `animateTransition`은 호출되지 않음 (`UIPercentDrivenInteractiveTransition`과 다름)
+
+---
+
 ## 관련 문서
 
 - `docs/complete/260129gridZoom1.md` - Push 방식 1차/2차 시도 및 실패 기록
