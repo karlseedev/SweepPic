@@ -561,6 +561,36 @@ C-3은 체감 성능보다는 GPU 부하 경감에 기여 (FPS 유지에 도움)
 - **히치 해결**: 스크롤 중 히치/랙 체감 없음
 - **추가 정리**: 프레넬 코드 제거 (전 프리셋 fresnelIntensity: 0), blurView UIKit border 제거 (셰이더 AA와 중복)
 
+#### C-5 후속: 블러 디버깅 (2026-02-11)
+
+C-5 구현 후 실제 블러가 작동하지 않는 문제 발견. 회색 알파값처럼 보이는 현상 디버깅.
+
+**발견된 버그 2건:**
+
+| # | 버그 | 원인 | 수정 |
+|---|------|------|------|
+| 1 | deferred 버튼 블러 없음 | `deferGlassEffect: true` 버튼은 MTKView를 `preload()` 이후에 생성 → Optimizer가 못 찾음 | `setupGlassEffectIfNeeded()`에 `layoutIfNeeded()` + `preload(in: self)` 추가 |
+| 2 | 탭 전환 후 블러 사라짐 | MTKView dealloc 후 같은 메모리 주소에 새 MTKView 생성 → `ObjectIdentifier` 충돌로 기존 고아 엔트리가 새 블러 생성 차단 | `preload()` 시작에 `cleanupOrphanedOverlays()` 추가 |
+
+수정 파일: `LiquidGlassOptimizer.swift`, `GlassTextButton.swift`, `GlassIconButton.swift`
+
+**근본 원인: UIVisualEffectView alpha < 1.0**
+
+버그 2건 수정 후에도 블러가 회색 알파값처럼 보이는 문제 지속.
+빨간색 디버그 테스트(`effect: nil` + 빨간 오버레이)로 뷰 삽입 위치는 정상 확인.
+
+[Apple 공식 문서](https://developer.apple.com/documentation/uikit/uivisualeffectview):
+> *"Setting the alpha to less than 1 on the visual effect view or any of its superviews causes many effects to look incorrect or **not show up at all**."*
+
+`blurAlpha = 0.5`(원본) / `0.75`(중간 테스트) → 블러 렌더링 깨짐 (단순 반투명 회색으로 폴백)
+
+**수정 방향:**
+- `blurAlpha = 1.0` 고정 (UIVisualEffectView alpha는 절대 1.0 미만 사용 금지)
+- 블러 강도 조절은 alpha 대신:
+  - 블러 스타일 선택 (`.systemUltraThinMaterial` ~ `.systemThickMaterial`)
+  - 또는 `UIViewPropertyAnimator.fractionComplete`로 블러 강도 미세 제어
+- `blurReplacement` 모드에서 show/hide 시 alpha 대신 `effect` 프로퍼티 애니메이션 사용
+
 ---
 
 ## 수정 파일 목록

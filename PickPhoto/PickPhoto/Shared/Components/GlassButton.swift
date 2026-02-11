@@ -66,6 +66,17 @@ final class GlassButton: UIButton {
 
     // MARK: - Layout
 
+    // C-5: preload() 이후 동적 생성된 버튼도 블러 오버레이 자동 생성
+    override func didMoveToWindow() {
+        super.didMoveToWindow()
+        if window != nil {
+            DispatchQueue.main.async { [weak self] in
+                guard let self, self.window != nil else { return }
+                LiquidGlassOptimizer.preload(in: self)
+            }
+        }
+    }
+
     override func layoutSubviews() {
         super.layoutSubviews()
 

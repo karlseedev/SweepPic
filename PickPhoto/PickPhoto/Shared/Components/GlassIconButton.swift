@@ -156,6 +156,17 @@ final class GlassIconButton: UIButton {
         return CGSize(width: buttonSize.dimension, height: buttonSize.dimension)
     }
 
+    // C-5: preload() 이후 동적 생성된 버튼도 블러 오버레이 자동 생성
+    override func didMoveToWindow() {
+        super.didMoveToWindow()
+        if window != nil && !glassViewSetupDeferred {
+            DispatchQueue.main.async { [weak self] in
+                guard let self, self.window != nil else { return }
+                LiquidGlassOptimizer.preload(in: self)
+            }
+        }
+    }
+
     override func layoutSubviews() {
         super.layoutSubviews()
 
@@ -220,6 +231,10 @@ final class GlassIconButton: UIButton {
         insertSubview(glassView, at: 0)
 
         setNeedsLayout()
+        layoutIfNeeded()
+
+        // C-5: deferred된 MTKView에 대해 Optimizer 블러 오버레이 생성
+        LiquidGlassOptimizer.preload(in: self)
     }
 
     /// isHidden 변경 시 deferred된 Glass 효과 자동 생성

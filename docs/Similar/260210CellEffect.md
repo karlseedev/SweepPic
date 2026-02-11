@@ -108,8 +108,40 @@ final class SimilarGroupBadgeView: UIView {
 
 ### 검증
 
-- [ ] xcodebuild 빌드 성공
+- [x] xcodebuild 빌드 성공
 - [ ] 유사사진 그룹핑 시 뱃지 정상 표시
 - [ ] 스크롤 시 뱃지 숨김 → 멈추면 0.3초 후 재표시
 - [ ] 모션 감소 설정 시 정적 배경색
 - [ ] 셀 재사용 시 뱃지 정리 (풀에 반환) 정상 동작
+
+---
+
+## 구현 완료 (2026-02-10)
+
+### 생성된 파일
+- `Features/SimilarPhoto/UI/SimilarGroupBadgeView.swift` — Glass+Gradient 뱃지 뷰
+
+### 수정된 파일
+- `Features/Grid/GridViewController+SimilarPhoto.swift` — BorderAnimationLayer → SimilarGroupBadgeView 전면 교체
+
+### 최종 사양
+
+| 항목 | 값 |
+|------|-----|
+| 뱃지 크기 | 36x22pt, cornerRadius 6 |
+| 뱃지 위치 | 셀 우측 상단 (margin 4pt) |
+| 블러 효과 | systemUltraThinMaterialDark |
+| 라벨 | "⊞\u{2009}N" (thin space로 간격 축소) |
+| 색상 순환 | 무지개 7색: 빨→주→노→초→파→남→보 → 빨 반복 |
+| 전환 속도 | 0.75초/색상 (curveLinear, 부드러운 전환) |
+| 풀링 | 최대 20개 재사용 |
+| 접근성 | 모션 감소 시 정적 빨간색 배경 |
+| 메모리 안전 | isAnimating 플래그 + weak self 이중 안전장치 |
+
+### 튜닝 이력
+1. 초기: Intelligence Glow 4색 (보라/핑크/파랑/오렌지), 1.5초, curveEaseInOut
+2. 간격 축소: 아이콘-숫자 사이 thin space 적용 (70%)
+3. 빨주노연두초연두노주 8색으로 변경, 속도 2배 (0.75초)
+4. 초록 제거 → 빨주노연두노주 6색
+5. 무지개 7색 (빨주노초파남보)으로 최종 확정
+6. curveEaseInOut → curveLinear로 부드러운 전환

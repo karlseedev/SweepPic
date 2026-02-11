@@ -185,6 +185,20 @@ class GlassCircleButton: UIButton {
         return CGSize(width: buttonSize.dimension, height: buttonSize.dimension)
     }
 
+    // C-5: preload() 이후 동적 생성된 버튼도 블러 오버레이 자동 생성
+    // async: didMoveToWindow 시점에는 MTKView 레이아웃이 미완료일 수 있음
+    override func didMoveToWindow() {
+        super.didMoveToWindow()
+        if window != nil {
+            DispatchQueue.main.async { [weak self] in
+                guard let self, self.window != nil else { return }
+                self.layoutIfNeeded()
+                for subview in self.subviews { subview.layoutIfNeeded() }
+                LiquidGlassOptimizer.preload(in: self)
+            }
+        }
+    }
+
     override func layoutSubviews() {
         super.layoutSubviews()
 

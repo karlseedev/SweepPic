@@ -6,9 +6,9 @@
 //
 //  유사 사진 기능 관련 GridViewController Extension
 //  - 스크롤 멈춤 시 분석 트리거 (0.3초 디바운싱)
-//  - 분석 완료 시 BorderAnimationLayer 표시
-//  - 스크롤 재개 시 분석 취소 및 테두리 제거
-//  - 셀 레이어 관리 (T021)
+//  - 분석 완료 시 SimilarGroupBadgeView(Glass+Gradient 뱃지) 표시
+//  - 스크롤 재개 시 분석 취소 및 뱃지 제거
+//  - 셀 뱃지 관리 (T021)
 //  - 그룹 무효화 처리 (T022)
 //
 
@@ -26,8 +26,8 @@ private enum SimilarPhotoAssociatedKeys {
     static var currentAnalysisRange: UInt8 = 0
     /// 분석 완료 옵저버
     static var analysisObserver: UInt8 = 0
-    /// 테두리 레이어 재사용 풀
-    static var borderLayerPool: UInt8 = 0
+    /// 뱃지 뷰 재사용 풀
+    static var badgeViewPool: UInt8 = 0
     /// 삭제 옵저버 (그룹 무효화 처리용)
     static var trashObserver: UInt8 = 0
 }
@@ -64,10 +64,10 @@ extension GridViewController {
         set { objc_setAssociatedObject(self, &SimilarPhotoAssociatedKeys.analysisObserver, newValue, .OBJC_ASSOCIATION_RETAIN_NONATOMIC) }
     }
 
-    /// 테두리 레이어 재사용 풀
-    private var borderLayerPool: [BorderAnimationLayer] {
-        get { (objc_getAssociatedObject(self, &SimilarPhotoAssociatedKeys.borderLayerPool) as? [BorderAnimationLayer]) ?? [] }
-        set { objc_setAssociatedObject(self, &SimilarPhotoAssociatedKeys.borderLayerPool, newValue, .OBJC_ASSOCIATION_RETAIN_NONATOMIC) }
+    /// 뱃지 뷰 재사용 풀
+    private var badgeViewPool: [SimilarGroupBadgeView] {
+        get { (objc_getAssociatedObject(self, &SimilarPhotoAssociatedKeys.badgeViewPool) as? [SimilarGroupBadgeView]) ?? [] }
+        set { objc_setAssociatedObject(self, &SimilarPhotoAssociatedKeys.badgeViewPool, newValue, .OBJC_ASSOCIATION_RETAIN_NONATOMIC) }
     }
 
     /// 삭제 옵저버 (그룹 무효화 처리용)
@@ -161,8 +161,8 @@ extension GridViewController {
         // 현재 분석 범위 초기화
         currentAnalysisRange = nil
 
-        // 모든 테두리 숨김 (스크롤 중에는 테두리 미표시)
-        hideAllBorders()
+        // 모든 뱃지 숨김 (스크롤 중에는 뱃지 미표시)
+        hideAllBadges()
     }
 
     /// 스크롤 종료 시 호출
@@ -272,10 +272,10 @@ extension GridViewController {
         updateVisibleCellBorders()
     }
 
-    // MARK: - Border Management (T021)
+    // MARK: - Badge Management (T021)
 
-    /// 보이는 셀들의 테두리 상태 업데이트
-    /// - SimilarityCache를 Single Source of Truth로 사용하여 테두리 표시 여부 결정
+    /// 보이는 셀들의 뱃지 상태 업데이트
+    /// - SimilarityCache를 Single Source of Truth로 사용하여 뱃지 표시 여부 결정
     private func updateVisibleCellBorders() {
         let visibleIndexPaths = collectionView.indexPathsForVisibleItems
         let padding = paddingCellCount
@@ -295,78 +295,92 @@ extension GridViewController {
             cellsToUpdate.append((assetID: assetID, cell: cell))
         }
 
-        // SimilarityCache에서 각 셀의 그룹 상태 조회 후 테두리 업데이트
+        // SimilarityCache에서 각 셀의 그룹 상태 조회 후 뱃지 업데이트
         Task {
             for (assetID, cell) in cellsToUpdate {
                 let state = await SimilarityCache.shared.getState(for: assetID)
 
-                await MainActor.run {
-                    // 그룹에 속한 경우에만 테두리 표시
-                    if case .analyzed(true, _) = state {
-                        self.showBorder(on: cell)
-                    } else {
-                        self.hideBorder(on: cell)
+                // 그룹에 속한 경우: 멤버 수 조회 (actor 메서드이므로 MainActor.run 밖에서)
+                if case .analyzed(true, let groupID?) = state {
+                    let members = await SimilarityCache.shared.getGroupMembers(groupID: groupID)
+                    await MainActor.run {
+                        self.showBadge(on: cell, count: members.count)
+                    }
+                } else {
+                    await MainActor.run {
+                        self.hideBadge(on: cell)
                     }
                 }
             }
         }
     }
 
-    /// 셀에 테두리 표시
-    /// - Parameter cell: 테두리를 표시할 PhotoCell
-    private func showBorder(on cell: PhotoCell) {
-        // 스크롤 중이면 테두리 표시하지 않음 (방어 코드)
+    /// 셀에 Glass+Gradient 뱃지 표시
+    /// - Parameters:
+    ///   - cell: 뱃지를 표시할 PhotoCell
+    ///   - count: 그룹 멤버 수
+    private func showBadge(on cell: PhotoCell, count: Int) {
+        // 스크롤 중이면 뱃지 표시하지 않음 (방어 코드)
         guard !isScrolling else { return }
 
-        // 기존 테두리 레이어 찾기
-        if let existingLayer = cell.contentView.layer.sublayers?.first(where: { $0 is BorderAnimationLayer }) as? BorderAnimationLayer {
-            existingLayer.frame = cell.contentView.bounds
-            existingLayer.startAnimation()
+        // 기존 뱃지 찾기 (subviews에서)
+        if let existing = cell.contentView.subviews.first(where: { $0 is SimilarGroupBadgeView }) as? SimilarGroupBadgeView {
+            existing.show(count: count)
             return
         }
 
-        // 새 레이어 생성 또는 풀에서 가져오기
-        let borderLayer: BorderAnimationLayer
-        if var pool = borderLayerPool as [BorderAnimationLayer]?, !pool.isEmpty {
-            borderLayer = pool.removeFirst()
-            borderLayerPool = pool
+        // 새 뱃지 생성 또는 풀에서 가져오기
+        let badge: SimilarGroupBadgeView
+        if var pool = badgeViewPool as [SimilarGroupBadgeView]?, !pool.isEmpty {
+            badge = pool.removeFirst()
+            badgeViewPool = pool
         } else {
-            borderLayer = BorderAnimationLayer()
+            badge = SimilarGroupBadgeView()
         }
 
-        borderLayer.frame = cell.contentView.bounds
-        cell.contentView.layer.addSublayer(borderLayer)
-        borderLayer.startAnimation()
+        // 우측 상단 위치 설정
+        let margin = SimilarGroupBadgeView.BadgeConstants.margin
+        let badgeW = SimilarGroupBadgeView.BadgeConstants.width
+        let badgeH = SimilarGroupBadgeView.BadgeConstants.height
+        badge.frame = CGRect(
+            x: cell.contentView.bounds.width - badgeW - margin,
+            y: margin,
+            width: badgeW,
+            height: badgeH
+        )
+
+        cell.contentView.addSubview(badge)
+        badge.show(count: count)
     }
 
-    /// 셀에서 테두리 제거
-    /// - Parameter cell: 테두리를 제거할 PhotoCell
-    private func hideBorder(on cell: PhotoCell) {
-        guard let borderLayer = cell.contentView.layer.sublayers?.first(where: { $0 is BorderAnimationLayer }) as? BorderAnimationLayer else {
+    /// 셀에서 뱃지 제거
+    /// - Parameter cell: 뱃지를 제거할 PhotoCell
+    private func hideBadge(on cell: PhotoCell) {
+        guard let badge = cell.contentView.subviews.first(where: { $0 is SimilarGroupBadgeView }) as? SimilarGroupBadgeView else {
             return
         }
 
-        borderLayer.stopAnimation()
-        borderLayer.removeFromSuperlayer()
+        badge.stopAndHide()
+        badge.removeFromSuperview()
 
         // 풀에 반환
-        var pool = borderLayerPool
+        var pool = badgeViewPool
         if pool.count < 20 { // 최대 20개까지 풀링
-            pool.append(borderLayer)
-            borderLayerPool = pool
+            pool.append(badge)
+            badgeViewPool = pool
         }
     }
 
-    /// 모든 테두리 숨김
-    private func hideAllBorders() {
+    /// 모든 뱃지 숨김
+    private func hideAllBadges() {
         for cell in collectionView.visibleCells {
             guard let photoCell = cell as? PhotoCell else { continue }
-            hideBorder(on: photoCell)
+            hideBadge(on: photoCell)
         }
     }
 
-    /// 셀이 화면에 나타날 때 테두리 레이어 추가/갱신
-    /// - SimilarityCache를 Single Source of Truth로 사용하여 테두리 표시 여부 결정
+    /// 셀이 화면에 나타날 때 뱃지 추가/갱신
+    /// - SimilarityCache를 Single Source of Truth로 사용하여 뱃지 표시 여부 결정
     /// - Parameters:
     ///   - cell: 표시될 셀
     ///   - indexPath: 셀의 인덱스 경로
@@ -374,44 +388,47 @@ extension GridViewController {
         // Feature Flag 체크
         guard shouldEnableSimilarPhoto() else { return }
 
-        // 스크롤 중이면 테두리 미표시
+        // 스크롤 중이면 뱃지 미표시
         guard !isScrolling else {
-            hideBorder(on: cell)
+            hideBadge(on: cell)
             return
         }
 
         // padding 셀 제외
         let actualIndex = indexPath.item - paddingCellCount
         guard actualIndex >= 0 else {
-            hideBorder(on: cell)
+            hideBadge(on: cell)
             return
         }
 
         let actualIndexPath = IndexPath(item: actualIndex, section: 0)
         guard let assetID = dataSourceDriver.assetID(at: actualIndexPath) else {
-            hideBorder(on: cell)
+            hideBadge(on: cell)
             return
         }
 
-        // SimilarityCache에서 그룹 상태 조회 후 테두리 업데이트
+        // SimilarityCache에서 그룹 상태 조회 후 뱃지 업데이트
         Task {
             let state = await SimilarityCache.shared.getState(for: assetID)
 
-            await MainActor.run {
-                // 그룹에 속한 경우에만 테두리 표시
-                if case .analyzed(true, _) = state {
-                    self.showBorder(on: cell)
-                } else {
-                    self.hideBorder(on: cell)
+            // 그룹에 속한 경우: 멤버 수 조회 (actor 메서드이므로 MainActor.run 밖에서)
+            if case .analyzed(true, let groupID?) = state {
+                let members = await SimilarityCache.shared.getGroupMembers(groupID: groupID)
+                await MainActor.run {
+                    self.showBadge(on: cell, count: members.count)
+                }
+            } else {
+                await MainActor.run {
+                    self.hideBadge(on: cell)
                 }
             }
         }
     }
 
-    /// 셀이 화면에서 사라질 때 테두리 레이어 제거
+    /// 셀이 화면에서 사라질 때 뱃지 제거
     /// - Parameter cell: 사라지는 셀
     func removeSimilarPhotoBorder(from cell: PhotoCell) {
-        hideBorder(on: cell)
+        hideBadge(on: cell)
     }
 
     // MARK: - Group Invalidation (T022)
