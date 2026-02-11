@@ -40,8 +40,9 @@ enum LiquidGlassOptimizer {
     /// 최적화 활성화 여부
     static var isEnabled: Bool = true
 
-    /// 블러 뷰 alpha 값 (스크롤 중)
-    static var blurAlpha: CGFloat = 0.75
+    /// 블러 강도 (0.0~1.0, UIViewPropertyAnimator.fractionComplete로 제어)
+    /// alpha 대신 사용 — UIVisualEffectView alpha < 1.0이면 블러 렌더링 깨짐 (Apple 제한)
+    static var blurIntensity: CGFloat = 0.1
 
     /// 전환 애니메이션 시간 (초)
     private static let transitionDuration: TimeInterval = 0.1
@@ -56,6 +57,7 @@ enum LiquidGlassOptimizer {
     /// Preloaded overlay 정보
     private struct PreloadedOverlay {
         let blurView: UIVisualEffectView
+        let blurAnimator: UIViewPropertyAnimator  // 블러 강도 제어용 (fractionComplete)
         weak var mtkView: MTKView?
         var originalAlpha: CGFloat
     }
@@ -91,15 +93,19 @@ enum LiquidGlassOptimizer {
             // 부모 뷰 확인
             guard let superview = mtkView.superview else { continue }
 
-            // 블러 뷰 생성
-            let blurView = createBlurView(matching: mtkView)
+            // SelectionPill 내부 MTKView는 블러 제외 (자체 배경색 사용)
+            if isInsideSelectionPill(mtkView) { continue }
+
+            // 블러 뷰 생성 (animator로 강도 제어)
+            let (blurView, blurAnimator) = createBlurView(matching: mtkView)
 
             // C-5 상시: 블러 뷰를 MTKView 바로 아래에 삽입 (즉시 보임)
-            blurView.alpha = blurAlpha
+            // alpha는 항상 1.0 유지 (Apple 제한), 강도는 animator.fractionComplete로 제어
             superview.insertSubview(blurView, belowSubview: mtkView)
 
             preloadedOverlays[identifier] = PreloadedOverlay(
                 blurView: blurView,
+                blurAnimator: blurAnimator,
                 mtkView: mtkView,
                 originalAlpha: mtkView.alpha
             )
@@ -208,10 +214,11 @@ enum LiquidGlassOptimizer {
         }
 
         // 2단계: 블러 뷰만 단일 애니메이션으로 fade in
+        // alpha는 항상 1.0 유지, 강도는 이미 animator.fractionComplete로 설정됨
         if !blurViewsToAnimate.isEmpty {
             UIView.animate(withDuration: transitionDuration) {
                 for blurView in blurViewsToAnimate {
-                    blurView.alpha = blurAlpha
+                    blurView.alpha = 1.0
                 }
             }
         }
@@ -285,10 +292,10 @@ enum LiquidGlassOptimizer {
     }
 
     /// MTKView와 동일한 모양의 블러 뷰 생성
-    /// LiquidGlass 원본과 최대한 유사하게 tintColor 오버레이 포함
-    private static func createBlurView(matching mtkView: MTKView) -> UIVisualEffectView {
-        let blurEffect = UIBlurEffect(style: .systemThinMaterial)
-        let blurView = UIVisualEffectView(effect: blurEffect)
+    /// UIViewPropertyAnimator로 블러 강도 제어 (alpha 대신 — Apple 제한 우회)
+    private static func createBlurView(matching mtkView: MTKView) -> (UIVisualEffectView, UIViewPropertyAnimator) {
+        // effect: nil로 시작 → animator가 블러 강도를 fractionComplete로 제어
+        let blurView = UIVisualEffectView(effect: nil)
 
         blurView.frame = mtkView.frame
         blurView.layer.cornerRadius = mtkView.layer.cornerRadius
@@ -301,14 +308,32 @@ enum LiquidGlassOptimizer {
             blurView.layer.cornerCurve = parent.layer.cornerCurve
         }
 
-        // C-5: 검정 배경 20% 투명도 오버레이
+        // C-5: tint 오버레이 (현재 0% — 블러 확인 후 조정)
         let tintOverlay = UIView()
-        tintOverlay.backgroundColor = UIColor(white: 0.0, alpha: 0.0)
+        tintOverlay.backgroundColor = UIColor(white: 0.25, alpha: 0.2)
         tintOverlay.frame = blurView.bounds
         tintOverlay.autoresizingMask = [.flexibleWidth, .flexibleHeight]
         blurView.contentView.addSubview(tintOverlay)
 
-        return blurView
+        // UIViewPropertyAnimator로 블러 강도 제어
+        // alpha를 건드리지 않으므로 블러 렌더링이 정상 작동
+        let animator = UIViewPropertyAnimator(duration: 1, curve: .linear) {
+            blurView.effect = UIBlurEffect(style: .systemUltraThinMaterial)
+        }
+        animator.fractionComplete = blurIntensity
+        animator.pausesOnCompletion = true
+
+        return (blurView, animator)
+    }
+
+    /// MTKView가 SelectionPill 내부에 있는지 확인
+    private static func isInsideSelectionPill(_ view: UIView) -> Bool {
+        var current: UIView? = view.superview
+        while let parent = current {
+            if parent is LiquidGlassSelectionPill { return true }
+            current = parent.superview
+        }
+        return false
     }
 
     /// 뷰 계층에서 모든 MTKView 찾기 (재귀 탐색)

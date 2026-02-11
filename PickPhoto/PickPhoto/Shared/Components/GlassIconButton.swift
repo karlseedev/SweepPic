@@ -88,6 +88,9 @@ final class GlassIconButton: UIButton {
     /// 현재 아이콘 이름 (변경 추적용)
     private var currentIconName: String
 
+    /// 커스텀 아이콘 포인트 사이즈 (nil이면 size 기본값 사용)
+    private let customIconPointSize: CGFloat?
+
     /// Glass 효과 생성 지연 플래그 (Phase 6: hidden 상태 버튼의 MTKView 절약)
     private var glassViewSetupDeferred = false
 
@@ -104,10 +107,11 @@ final class GlassIconButton: UIButton {
     ///   - icon: SF Symbol 이름
     ///   - size: 버튼 크기 (기본: .medium)
     ///   - tintColor: 아이콘/배경 틴트 색상 (기본: .white)
-    init(icon: String, size: Size = .medium, tintColor: UIColor = .white, deferGlassEffect: Bool = false) {
+    init(icon: String, size: Size = .medium, tintColor: UIColor = .white, iconPointSize: CGFloat? = nil, deferGlassEffect: Bool = false) {
         self.buttonSize = size
         self.iconTintColor = tintColor
         self.currentIconName = icon
+        self.customIconPointSize = iconPointSize
         self.glassViewSetupDeferred = deferGlassEffect
 
         super.init(frame: .zero)
@@ -129,7 +133,7 @@ final class GlassIconButton: UIButton {
     /// iOS 26 실측: 그림자 없음, weight light (regular보다 가늘게)
     private func setupIcon(_ icon: String) {
         let config = UIImage.SymbolConfiguration(
-            pointSize: buttonSize.iconPointSize,
+            pointSize: customIconPointSize ?? buttonSize.iconPointSize,
             weight: .light  // regular보다 한 단계 가늘게
         )
         iconImageView.image = UIImage(systemName: icon, withConfiguration: config)
@@ -200,7 +204,7 @@ final class GlassIconButton: UIButton {
         currentIconName = icon
 
         let config = UIImage.SymbolConfiguration(
-            pointSize: buttonSize.iconPointSize,
+            pointSize: customIconPointSize ?? buttonSize.iconPointSize,
             weight: .light  // setupIcon과 동일하게 light
         )
         let newImage = UIImage(systemName: icon, withConfiguration: config)

@@ -132,7 +132,8 @@ final class ViewerViewController: UIViewController {
     /// iOS 26 스펙: 38×38, iconSize 28 (medium 44×44 사용)
     private lazy var deleteButton: GlassIconButton = {
         // iOS 26 시스템 .trash와 동일하게 outline 스타일 사용
-        let button = GlassIconButton(icon: "trash", size: .medium, tintColor: .systemRed)
+        // 아이콘을 기본 medium(22pt)의 80%인 17.6pt로 축소
+        let button = GlassIconButton(icon: "trash", size: .medium, tintColor: .systemRed, iconPointSize: 17.6)
         button.translatesAutoresizingMaskIntoConstraints = false
         button.addTarget(self, action: #selector(deleteButtonTapped), for: .touchUpInside)
         return button

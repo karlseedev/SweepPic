@@ -53,8 +53,10 @@
 | 필요 서류 | Apple ID + 실명 확인 | Apple ID + D-U-N-S 번호 + 법인 정보 |
 | 앱스토어 표시 이름 | 개인 실명 | 회사명 |
 | 팀원 관리 | 불가 | 여러 개발자 초대 가능 |
-| 한국 배포 추가 요건 | 없음 | 전화번호/이메일 인증, 사업자등록번호 |
+| 한국 배포 추가 요건 | 이메일, 사업자등록번호 (BRN) | 회사명, 이메일, 전화번호, 사업자등록번호 |
 
+> **한국 컴플라이언스**: 한국 기반 계정은 **Individual/Organization 모두** 전자상거래소비자보호법에 따른 식별 정보 제공 대상. ([근거](https://developer.apple.com/help/app-store-connect/manage-compliance-information/manage-korea-compliance-information))
+>
 > **D-U-N-S 번호**: Dun & Bradstreet 발급 사업자 고유번호. 무료 신청 (발급 최대 30일). Apple Developer 포털에서 직접 조회/신청 가능.
 
 ---
@@ -151,9 +153,9 @@
 
 | 항목 | 제한 |
 |------|------|
-| iOS 앱 최대 크기 | 4 GB |
-| 실행 파일 __TEXT 섹션 | 80 MB |
-| 셀룰러 다운로드 제한 | 200 MB (초과 시 Wi-Fi 필요) |
+| iOS 앱 최대 크기 (비압축) | 4 GB |
+| 실행 파일 __TEXT 섹션 합계 | 80 MB (아키텍처 슬라이스별 60 MB) |
+| 셀룰러 다운로드 기본 확인 | 200 MB 초과 시 사용자에게 확인 팝업 (기본값). 사용자가 설정 > App Store > Always Allow로 해제 가능. **제출 요건 아님** |
 
 ### 4-3. 아키텍처
 
@@ -181,7 +183,7 @@
 | 키 | 용도 | 구분 |
 |----|------|:----:|
 | UILaunchStoryboardName | Launch Screen 지정 | 필수 |
-| UIRequiredDeviceCapabilities | 필수 하드웨어 기능 선언 | 필수 |
+| UIRequiredDeviceCapabilities | 앱이 특정 하드웨어에 의존할 때만 선언 (불필요한 값 추가 시 설치 가능 기기 감소) | 해당시 |
 | ITSAppUsesNonExemptEncryption | 수출 규정 암호화 신고 | 필수 |
 | NSPhotoLibraryUsageDescription | 사진 라이브러리 접근 사유 | 사진 앱 필수 |
 | UIBackgroundModes | 사용하지 않으면 선언하지 말 것 | 주의 |
@@ -255,7 +257,7 @@
 
 | 항목 | 필수 | 현지화 |
 |------|:----:|:------:|
-| **Accessibility Support** | O | O |
+| **Accessibility Support** | 현재 선택 (향후 필수 예정) | O |
 
 ### 5-7. 스크린샷 사양
 
@@ -326,16 +328,23 @@
 
 ### 6-1. Privacy Manifest (PrivacyInfo.xcprivacy)
 
-> 2024년 5월 1일부터 시행. 모든 앱 제출 시 필수.
+> **단계별 시행:**
+> - 2024-03-13: Required Reason API 누락 시 경고 이메일 발송
+> - 2024-05-01: Required Reason API 사유 선언 필수 + 새로 추가하는 서드파티 SDK에 privacy manifest/서명 필수
+> - 2024-11-12: 기존 포함 SDK까지 유효한 privacy manifest 검증 확대 적용
+>
+> ([근거: TN3181](https://developer.apple.com/documentation/technotes/tn3181-debugging-an-invalid-privacy-manifest))
 
 **파일 구조:**
 
-| 키 | 설명 | 필수 |
-|----|------|:----:|
-| NSPrivacyTracking | ATT 정의에 따른 추적 여부 (Boolean) | O |
-| NSPrivacyTrackingDomains | 추적 도메인 목록 | 추적 시 |
-| NSPrivacyCollectedDataTypes | 수집 데이터 타입 배열 | O |
-| NSPrivacyAccessedAPITypes | 필수 사유 API 배열 | 해당 API 사용 시 |
+| 키 | 설명 | 필수 여부 |
+|----|------|----------|
+| NSPrivacyTracking | ATT 정의에 따른 추적 여부 (Boolean) | 추적 시 `true`, 안 하면 키 생략 가능 |
+| NSPrivacyTrackingDomains | 추적 도메인 목록 | 추적 도메인이 있을 때만 |
+| NSPrivacyCollectedDataTypes | 수집 데이터 타입 배열 | 데이터를 수집하는 경우에만 |
+| NSPrivacyAccessedAPITypes | 필수 사유 API 배열 | Required Reason API 사용 시에만 |
+
+> 각 키는 **해당 행위를 할 때만 선언** (opt-in 방식). Apple은 사용하지 않는 키는 제거를 안내.
 
 **수집 데이터 선언 구조 (각 데이터 타입별):**
 
@@ -429,7 +438,7 @@
 | **대체 텍스트** | 의미 있는 이미지/아이콘에 대체 텍스트 | 강력 권장 |
 | **터치 타겟** | 최소 44x44 포인트 | 권장 |
 
-> Apple은 접근성을 공식 "필수 거부 사유"로 명시하지는 않지만, 심사 시 접근성 미흡 앱이 거부될 수 있음. App Store Connect에서 Accessibility Support 항목은 **필수**.
+> App Store Connect의 Accessibility Nutrition Labels는 **현재 선택사항(voluntary)**. 단, Apple은 향후 필수로 전환 예정임을 명시. 정확한 필수화 시점은 미발표. **주의: "지원함"으로 체크할 경우, 해당 기능이 실제로 구현되어 있어야 함. 허위 체크 시 리젝 가능.** ([근거](https://developer.apple.com/help/app-store-connect/manage-app-accessibility/overview-of-accessibility-nutrition-labels/))
 
 ---
 
@@ -437,7 +446,7 @@
 
 ### 8-1. App Store Connect 지원 언어
 
-33개 언어/로케일 지원. 한국어 포함.
+39개 언어/로케일 지원. 한국어 포함. ([근거](https://developer.apple.com/help/app-store-connect/reference/app-store-localizations))
 
 ### 8-2. 현지화 가능 필드
 
@@ -447,10 +456,11 @@
 
 | 항목 | 요구사항 | 구분 |
 |------|---------|:----:|
-| 한국 규정 준수 정보 | 조직 개발자: 전화번호/이메일 인증, 사업자등록번호 | 조직 필수 |
+| 한국 규정 준수 정보 | Individual: 이메일, BRN / Organization: 회사명, 이메일, 전화번호, BRN | 개인/조직 모두 필수 |
 | 한국 연령 등급 | 전체이용가 / 12+ / 15+ / 19+ | 필수 |
 | 한국어 지역화 | 한국 사용자 대상 시 한국어 메타데이터 | 강력 권장 |
 | 개인정보 처리방침 | 한국 개인정보보호법 준수 (2025.04 개정 지침) | 필수 |
+| 통신판매업 신고 | 유료 앱/IAP로 수익 발생 시 통신판매업 신고번호 필요할 수 있음. 현재 PickPhoto는 무료 앱이므로 해당 없음. 향후 유료화 시 확인 필요 | 참고 |
 
 ### 8-4. 한국 개인정보 처리방침 필수 포함 내용
 
@@ -540,7 +550,7 @@
 | 9 | ITSAppUsesNonExemptEncryption | **Info.plist에 없음** | `false`로 추가 |
 | 10 | NSPhotoLibraryUsageDescription 한글 | 영어만 존재 | 한글 Localization 추가 |
 | 11 | 디버그 코드 분리 | Debug 폴더 존재, UserDefaults 사용 | 릴리즈 빌드에서 제거 확인 |
-| 12 | 서드파티 SDK Privacy Manifest | BlurUIKit — 미확인 / LiquidGlassKit — 없음 | 각 SDK 확인 및 추가 |
+| 12 | 서드파티 SDK Privacy Manifest | BlurUIKit — 미확인 / LiquidGlassKit — 없음 | 각 SDK가 Required Reason API(UserDefaults 등)를 내부적으로 사용하는지 확인 필수. SDK 제작자가 Manifest를 미제공하면 직접 포함해야 함 |
 | 13 | 크래시 안정성 | 미확인 | 전체 흐름 테스트 |
 | 14 | Review Notes | 없음 | 사진 접근 사유, Vision 기기 내 처리 명시 |
 
