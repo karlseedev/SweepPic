@@ -25,12 +25,6 @@ struct VertexOutput {
 // Maximum number of rectangles (must match Swift side)
 constant int maxRectangles = 16;
 
-// C-2: Function Constants for light pipeline.
-// When false, fresnel/glare blocks are compiled out (zero runtime cost).
-// Values set via MTLFunctionConstantValues in LiquidGlassRenderer.
-constant bool enableFresnel [[function_constant(0)]];
-constant bool enableGlare  [[function_constant(1)]];
-
 // Uniforms: Packed struct for Swift/Metal buffer binding
 struct ShaderUniforms {
     float2 resolution;               // Viewport resolution (pixels)
@@ -453,14 +447,7 @@ fragment half4 liquidGlassEffect(VertexOutput input [[stage_in]],
 
     half4 outputColor;
 
-    // C-3: Scale AA width inversely with contentsScale to maintain constant pixel-width AA.
-    // At 3x (full res): aaScale=1.0 → original values (no change).
-    // At 1.5x (half res): aaScale=2.0 → doubled AA band → same ~2px edge smoothness.
-    float aaScale = 3.0f / uniforms.contentsScale;
-    float aaOuter = 0.005f * aaScale;
-    float aaInner = -0.01f * aaScale;
-
-    if (shapeDistance < aaOuter) {
+    if (shapeDistance < 0.005f) {
         float normalizedDepth = -shapeDistance * logicalResolution.y;
 
         // Refraction shift factor
@@ -487,9 +474,8 @@ fragment half4 liquidGlassEffect(VertexOutput input [[stage_in]],
             // Base material tint
             outputColor = mix(refractedWithDispersion, half4(half3(uniforms.materialTint.rgb), 1.0h), half(uniforms.materialTint.a * 0.8f));
 
-            // C-2: Fresnel block — compiled out when enableFresnel == false
-            if (enableFresnel) {
-                // Fresnel: LCH-lightness boosted reflection
+            // Fresnel: LCH-lightness boosted reflection
+            {
                 float fresnelValue = clamp(
                     pow(
                         1.0f + shapeDistance * logicalResolution.y / 1500.0f * pow(500.0f / uniforms.fresnelDistanceRange, 2.0f) + uniforms.fresnelEdgeSharpness,
@@ -510,9 +496,8 @@ fragment half4 liquidGlassEffect(VertexOutput input [[stage_in]],
                 );
             }
 
-            // C-2: Glare block — compiled out when enableGlare == false
-            if (enableGlare) {
-                // Glare: Directional, LCH-boosted (lightness + chroma)
+            // Glare: Directional, LCH-boosted (lightness + chroma)
+            {
                 float glareGeometryValue = clamp(
                     pow(
                         1.0f + shapeDistance * logicalResolution.y / 1500.0f * pow(500.0f / uniforms.glareDistanceRange, 2.0f) + uniforms.glareEdgeSharpness,
@@ -548,8 +533,8 @@ fragment half4 liquidGlassEffect(VertexOutput input [[stage_in]],
         outputColor = half4(0);//background.sample(textureSampler, float2(input.uv));
     }
 
-    // Boundary anti-aliasing (smoothstep blend, scaled by C-3 aaScale)
-    outputColor = mix(outputColor, half4(0), smoothstep(aaInner, aaOuter, shapeDistance));
+    // Boundary anti-aliasing (smoothstep blend)
+    outputColor = mix(outputColor, half4(0), smoothstep(-0.01f, 0.005f, shapeDistance));
 
     return outputColor;
 }

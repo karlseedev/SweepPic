@@ -81,8 +81,8 @@ enum LiquidGlassOptimizer {
         }
         Log.print("[LiquidGlass] FPS limit: \(preferredFPS)fps → \(mtkViews.count)개 MTKView")
 
-        // blur 뷰 생성은 blurReplacement 모드에서만
-        guard mode == .blurReplacement else { return }
+        // blur 뷰 생성: blurReplacement 또는 normal 모드 (C-5)
+        guard mode == .blurReplacement || mode == .normal else { return }
 
         var newCount = 0
 
@@ -121,22 +121,15 @@ enum LiquidGlassOptimizer {
         guard isEnabled else { return }
         guard let rootView = rootView else { return }
 
-        // C-2: Enable light pipeline (fresnel/glare OFF) during scroll
-        LiquidGlassSettings.useLightMode = true
-
-        // C-3: Reduce drawable resolution during scroll.
-        // contentScaleFactor → layer.contentsScale → autoResizeDrawable auto-updates drawableSize.
-        // Always set absolute value from UIScreen.main.scale (never derive from previous value).
-        LiquidGlassSettings.renderScale = 0.5
-        for mtkView in findAllMTKViews(in: rootView) {
-            mtkView.contentScaleFactor = UIScreen.main.scale * 0.5  // 3.0 → 1.5
-            mtkView.setNeedsLayout()  // Trigger layoutSubviews → updateUniforms + buffer resize
-        }
-
         switch mode {
         case .normal:
             // idle에서 pause된 MTKView를 resume (LiquidGlass 렌더링 재개)
             resumeAllMTKViews(in: rootView)
+
+            // C-5: Freeze capture + show blur overlays behind transparent MTKViews
+            LiquidGlassSettings.freezeCapture = true
+            preload(in: rootView)
+            showBlurOverlaysForC5()
 
         case .paused:
             pauseAllMTKViews(in: rootView)
@@ -154,42 +147,11 @@ enum LiquidGlassOptimizer {
         guard isEnabled else { return }
         guard let rootView = rootView else { return }
 
-        // C-2: Restore full-quality pipeline (fresnel/glare ON)
-        LiquidGlassSettings.useLightMode = false
-
-        // C-3: Restore full drawable resolution with smooth crossfade.
-        // Snapshot covers the MTKView during resolution change, then fades out
-        // to reveal the high-res content — eliminates the abrupt "tick" effect.
-        LiquidGlassSettings.renderScale = 1.0
-        for mtkView in findAllMTKViews(in: rootView) {
-            // Snapshot current low-res appearance for crossfade
-            let snapshot = mtkView.snapshotView(afterScreenUpdates: false)
-            if let snapshot, let superview = mtkView.superview {
-                snapshot.frame = mtkView.frame
-                superview.insertSubview(snapshot, aboveSubview: mtkView)
-
-                // Switch to high-res underneath the snapshot
-                mtkView.contentScaleFactor = UIScreen.main.scale  // 1.5 → 3.0
-                mtkView.setNeedsLayout()
-                mtkView.layoutIfNeeded()  // Sync layout — uniforms ready before next draw
-
-                // Fade out snapshot after first full-res frame is drawn
-                UIView.animate(withDuration: 0.3, delay: 0.05, options: []) {
-                    snapshot.alpha = 0
-                } completion: { _ in
-                    snapshot.removeFromSuperview()
-                }
-            } else {
-                // Fallback: direct change (no superview = no crossfade possible)
-                mtkView.contentScaleFactor = UIScreen.main.scale
-                mtkView.setNeedsLayout()
-                mtkView.layoutIfNeeded()
-            }
-        }
-
         switch mode {
         case .normal:
-            break  // enterIdle()이 pause 담당
+            // C-5: Unfreeze capture + hide blur overlays with crossfade
+            LiquidGlassSettings.freezeCapture = false
+            hideBlurOverlaysForC5()
 
         case .paused:
             resumeAllMTKViews(in: rootView)
@@ -303,6 +265,68 @@ enum LiquidGlassOptimizer {
         }
 
         Log.print("[LiquidGlass] Blur hide: \(count)개")
+    }
+
+    // MARK: - C-5: Blur overlays (MTKView stays visible)
+
+    /// C-5: Show blur overlays behind MTKViews — MTKView keeps rendering (transparent tint only).
+    /// Unlike showBlurOverlays(), MTKView is NOT paused or hidden.
+    private static func showBlurOverlaysForC5() {
+        cleanupOrphanedOverlays()
+
+        var count = 0
+        var blurViewsToAnimate: [UIVisualEffectView] = []
+
+        for (_, overlay) in preloadedOverlays {
+            guard overlay.mtkView != nil else { continue }
+            guard overlay.blurView.alpha == 0 else { continue }
+
+            // Sync frame
+            if let mtkView = overlay.mtkView {
+                overlay.blurView.frame = mtkView.frame
+            }
+
+            blurViewsToAnimate.append(overlay.blurView)
+            count += 1
+        }
+
+        if !blurViewsToAnimate.isEmpty {
+            UIView.animate(withDuration: transitionDuration) {
+                for blurView in blurViewsToAnimate {
+                    blurView.alpha = blurAlpha
+                }
+            }
+        }
+
+        Log.print("[LiquidGlass] C-5 blur show: \(count)개")
+    }
+
+    /// C-5: Hide blur overlays — MTKView resumes normal capture.
+    /// Crossfade: blur fades out as MTKView starts capturing real background again.
+    private static func hideBlurOverlaysForC5() {
+        var count = 0
+        var blurViewsToAnimate: [UIVisualEffectView] = []
+
+        for (_, overlay) in preloadedOverlays {
+            guard overlay.mtkView != nil else { continue }
+            guard overlay.blurView.alpha > 0 else { continue }
+
+            blurViewsToAnimate.append(overlay.blurView)
+            count += 1
+        }
+
+        // Delay to let first real capture frame render, then fade out blur
+        if !blurViewsToAnimate.isEmpty {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
+                UIView.animate(withDuration: 0.3) {
+                    for blurView in blurViewsToAnimate {
+                        blurView.alpha = 0
+                    }
+                }
+            }
+        }
+
+        Log.print("[LiquidGlass] C-5 blur hide: \(count)개")
     }
 
     // MARK: - Helper Methods

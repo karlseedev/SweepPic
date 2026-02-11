@@ -181,12 +181,7 @@ final class LiquidGlassRenderer {
 
     let device: MTLDevice
 
-    /// Full-quality pipeline (enableFresnel=true, enableGlare=true)
     let pipelineState: MTLRenderPipelineState
-
-    /// C-2: Light pipeline for scroll performance (enableFresnel=false, enableGlare=false)
-    /// Fresnel/glare blocks are compiled out — ~30-50% shader cost reduction.
-    let lightPipelineState: MTLRenderPipelineState
 
     private init() {
         guard let device = MTLCreateSystemDefaultDevice() else {
@@ -203,42 +198,14 @@ final class LiquidGlassRenderer {
 #endif
 
         let vertexFunction = library.makeFunction(name: "fullscreenQuad")!
-
-        // ── Full-quality fragment function (enableFresnel=true, enableGlare=true) ──
-        let fullConstants = MTLFunctionConstantValues()
-        var fresnelOn = true
-        var glareOn = true
-        fullConstants.setConstantValue(&fresnelOn, type: .bool, index: 0)
-        fullConstants.setConstantValue(&glareOn,   type: .bool, index: 1)
-        let fullFragmentFunction = try! library.makeFunction(
-            name: "liquidGlassEffect",
-            constantValues: fullConstants
-        )
+        let fragmentFunction = library.makeFunction(name: "liquidGlassEffect")!
 
         let pipelineDescriptor = MTLRenderPipelineDescriptor()
         pipelineDescriptor.vertexFunction = vertexFunction
-        pipelineDescriptor.fragmentFunction = fullFragmentFunction
+        pipelineDescriptor.fragmentFunction = fragmentFunction
         pipelineDescriptor.colorAttachments[0].pixelFormat = .bgra8Unorm  // Match MTKView
 
         self.pipelineState = try! device.makeRenderPipelineState(descriptor: pipelineDescriptor)
-
-        // ── C-2: Light fragment function (enableFresnel=false, enableGlare=false) ──
-        let lightConstants = MTLFunctionConstantValues()
-        var fresnelOff = false
-        var glareOff = false
-        lightConstants.setConstantValue(&fresnelOff, type: .bool, index: 0)
-        lightConstants.setConstantValue(&glareOff,   type: .bool, index: 1)
-        let lightFragmentFunction = try! library.makeFunction(
-            name: "liquidGlassEffect",
-            constantValues: lightConstants
-        )
-
-        let lightDescriptor = MTLRenderPipelineDescriptor()
-        lightDescriptor.vertexFunction = vertexFunction
-        lightDescriptor.fragmentFunction = lightFragmentFunction
-        lightDescriptor.colorAttachments[0].pixelFormat = .bgra8Unorm
-
-        self.lightPipelineState = try! device.makeRenderPipelineState(descriptor: lightDescriptor)
     }
 }
 
@@ -252,6 +219,21 @@ final class LiquidGlassView: MTKView {
 
     // Background texture for the shader
     private var backgroundTexture: MTLTexture?
+
+    /// C-5: 1x1 transparent fallback texture — used when freezeCapture is on.
+    /// Shader samples transparent pixels → outputs semi-transparent tint only.
+    private lazy var transparentTexture: MTLTexture? = {
+        guard let device else { return nil }
+        let desc = MTLTextureDescriptor.texture2DDescriptor(
+            pixelFormat: .bgra8Unorm, width: 1, height: 1, mipmapped: false)
+        desc.usage = .shaderRead
+        let tex = device.makeTexture(descriptor: desc)
+        // Zero-fill → transparent black (0,0,0,0)
+        let zero: [UInt8] = [0, 0, 0, 0]
+        tex?.replace(region: MTLRegionMake2D(0, 0, 1, 1),
+                     mipmapLevel: 0, withBytes: zero, bytesPerRow: 4)
+        return tex
+    }()
 
     /// Whether to automatically capture superview on each frame.
     /// Set to false for manual control via `captureBackground()`.
@@ -479,24 +461,22 @@ final class LiquidGlassView: MTKView {
 
     override func draw(_ rect: CGRect) {
         // Auto-capture background from superview if enabled
-        if autoCapture {
+        // C-5: Skip capture when freezeCapture is on — use transparent fallback texture
+        if autoCapture && !LiquidGlassSettings.freezeCapture {
             captureBackground()
         }
-        
+
         guard let drawable = currentDrawable,
               let renderPassDesc = currentRenderPassDescriptor,
               let commandBuffer = commandQueue.makeCommandBuffer(),
               let encoder = commandBuffer.makeRenderCommandEncoder(descriptor: renderPassDesc) else { return }
 
-        // C-2: Select pipeline based on light mode setting.
-        // Light mode disables fresnel/glare for lower shader cost during scroll.
-        let pipeline = LiquidGlassSettings.useLightMode
-            ? LiquidGlassRenderer.shared.lightPipelineState
-            : LiquidGlassRenderer.shared.pipelineState
-        encoder.setRenderPipelineState(pipeline)
+        encoder.setRenderPipelineState(LiquidGlassRenderer.shared.pipelineState)
         encoder.setFragmentBuffer(uniformsBuffer, offset: 0, index: 0)
-        
-        if let texture = backgroundTexture {
+
+        // C-5: Use transparent texture when capture is frozen, so shader outputs tint-only
+        let texture = LiquidGlassSettings.freezeCapture ? transparentTexture : backgroundTexture
+        if let texture {
             encoder.setFragmentTexture(texture, index: 0)
         }
 
