@@ -486,17 +486,21 @@ v3는 `contentScaleFactor`만 변경하여 autoResizeDrawable(항상 true)이 dr
 C-3의 fragment 감소 효과보다 **captureBackground() (병목①)이 여전히 지배적**.
 C-3은 체감 성능보다는 GPU 부하 경감에 기여 (FPS 유지에 도움).
 
-### C-4: 방안 8 — 캡처 해상도 낮추기
+### C-4: 방안 8 — 캡처 해상도 낮추기 ❌ UX 불합격
 
 **대상 파일**: `LiquidGlassView.swift` (LiquidGlass struct)
 
 현재 `regular` 프리셋: `backgroundTextureScaleCoefficient: 0.2` (20% 해상도)
-→ `0.1` (10%)로 변경
+→ `0.1` (10%)로 변경 시도
 
 **구체 크기** (44×44pt 버튼, contentsScale=3): 26×26px → 13×13px
-→ 매우 작음. 배경이 상당히 뿌옇게 보일 수 있음. UX 확인 필수.
 
 **기대 효과**: 캡처 텍스처 75% 감소 → render(in:) CPU 비용 감소
+
+**구현**: `LiquidGlassSettings.captureScale` 동적 설정 (optimize 0.5 / restore 1.0)
+
+**결과**: 배경이 너무 이상하게 보여 UX 문제. 해상도가 지나치게 낮아 유리 효과의 배경 품질이 허용 수준 이하.
+코드 원복 완료, C-4 미적용.
 
 ---
 

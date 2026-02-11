@@ -362,7 +362,7 @@ final class LiquidGlassView: MTKView {
     /// Noticeable rendering delay.
     func captureBackdrop() {
         guard let superview else { return }
-        
+
         let sizeCoefficient = liquidGlass.backgroundTextureSizeCoefficient
         let scaleCoefficient = layer.contentsScale * liquidGlass.backgroundTextureScaleCoefficient
 
