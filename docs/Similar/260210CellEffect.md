@@ -58,9 +58,58 @@
 **셀 4 (Glass+Gradient)** 채택 방향.
 블러 뱃지 + 배경색 순환 방식이 세련되고 성능 부담 적음.
 
-## 다음 단계
+---
 
-- [ ] 셀 4 방식을 실제 `GridViewController+SimilarPhoto.swift`에 적용
-- [ ] 기존 `BorderAnimationLayer` 기반 shimmer 제거/교체
-- [ ] 뱃지 내 표시 정보 확정 (아이콘 + 숫자)
-- [ ] 스크롤 시 뱃지 표시/숨김 로직 연동
+## 구현 계획: Shimmer Border → Glass+Gradient Badge 교체
+
+### 수정 파일
+
+| 파일 | 변경 |
+|------|------|
+| `Features/SimilarPhoto/UI/SimilarGroupBadgeView.swift` | **신규** — 뱃지 UIView |
+| `Features/Grid/GridViewController+SimilarPhoto.swift` | BorderAnimationLayer → SimilarGroupBadgeView 교체 |
+| `Features/SimilarPhoto/UI/BorderAnimationLayer.swift` | 변경 없음 (삭제 안 함, 쇼케이스에서 참조) |
+
+### 주의사항
+
+1. **재귀 애니메이션 메모리 릭 방지**: `loopBackgroundColor` 재귀 호출 시 `removeFromSuperview()` 후에도 completion이 호출됨 → `isAnimating` 플래그 + `weak self` 이중 안전장치
+2. **SimilarityCache는 actor**: `getGroupMembers(groupID:)`에 `await` 필수. 기존 `Task { }` 블록 내에서 멤버 수 조회
+3. **showBadge에 count 파라미터 추가**: `.analyzed(true, let groupID?)` → groupID로 멤버 수 조회 → `showBadge(on:cell, count:)` 호출
+4. **접근성 (모션 감소)**: `isReduceMotionEnabled` 시 색상 순환 중지, 정적 보라색 배경 유지
+
+### Phase 1: SimilarGroupBadgeView 생성
+
+```swift
+final class SimilarGroupBadgeView: UIView {
+    // self (UIView, 36x22pt, cornerRadius 6, clipsToBounds)
+    // └── blurView (UIVisualEffectView, systemUltraThinMaterialDark)
+    //     └── contentView
+    //         ├── backgroundColor: 4색 순환 (보라→핑크→파랑→오렌지)
+    //         └── label ("⊞ N")
+
+    private var isAnimating = false  // 재귀 중단용 플래그
+
+    func show(count: Int)           // fade-in + 색상 순환 시작
+    func stopAndHide()              // isAnimating=false + 숨김
+    func updateCount(_ count: Int)  // 라벨만 업데이트
+}
+```
+
+색상 순환: `UIView.animate` 재귀, `isAnimating` 플래그로 중단 제어
+모션 감소: `show(count:)`에서 체크, 정적 보라색 설정
+
+### Phase 2: GridViewController+SimilarPhoto.swift 수정
+
+- Associated Property: `borderLayerPool: [BorderAnimationLayer]` → `badgeViewPool: [SimilarGroupBadgeView]`
+- `showBorder(on:)` → `showBadge(on:cell, count:)`: sublayers 탐색 → subviews 탐색
+- `hideBorder(on:)` → `hideBadge(on:)`: removeFromSuperlayer → removeFromSuperview
+- `hideAllBorders()` → `hideAllBadges()`
+- `updateVisibleCellBorders`, `configureSimilarPhotoBorder`: groupID에서 멤버 수 조회 후 전달
+
+### 검증
+
+- [ ] xcodebuild 빌드 성공
+- [ ] 유사사진 그룹핑 시 뱃지 정상 표시
+- [ ] 스크롤 시 뱃지 숨김 → 멈추면 0.3초 후 재표시
+- [ ] 모션 감소 설정 시 정적 배경색
+- [ ] 셀 재사용 시 뱃지 정리 (풀에 반환) 정상 동작
