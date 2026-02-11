@@ -174,6 +174,14 @@ final class ViewerViewController: UIViewController {
     /// 닫기 애니메이션 중 여부
     private var isDismissing = false
 
+    /// Interactive dismiss 중 활성 IC 참조
+    /// ⚠️ popViewController 후 navigationController가 nil이 되어
+    ///   isPushed/tabBarController 경로로 IC에 접근 불가능하므로 직접 저장
+    private weak var activeInteractionController: ZoomDismissalInteractionController?
+
+    /// Interactive dismiss 중 활성 TabBarController 참조 (cleanup용)
+    private weak var activeTabBarController: TabBarController?
+
     /// 최초 표시 페이드 인 적용 여부 (시스템 전환 대신 사용)
     private var didPerformInitialFadeIn: Bool = false
 
@@ -282,6 +290,7 @@ final class ViewerViewController: UIViewController {
 
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
+        Log.print("[Viewer Timing] ▶ viewWillAppear - isPushed: \(isPushed), navController: \(navigationController != nil)")
 
         // Modal에서는 NavigationControllerDelegate.willShow가 호출 안 됨
         // → FloatingOverlay를 수동으로 숨김
@@ -295,10 +304,12 @@ final class ViewerViewController: UIViewController {
         // 초기 버튼 상태 설정 (현재 사진의 휴지통 상태에 따라)
         // iOS 26에서는 setupSystemUIIfNeeded() 이후에 호출해야 함
         updateToolbarForCurrentPhoto()
+        Log.print("[Viewer Timing] ▶ viewWillAppear END")
     }
 
     override func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
+        Log.print("[Viewer Timing] ▶ viewDidAppear")
 
         // [Timing] viewDidAppear = 뷰어가 화면에 완전히 표시된 시점
         if openStartTime > 0 {
@@ -811,6 +822,9 @@ final class ViewerViewController: UIViewController {
                 ic.destinationProvider = tbc.zoomDestinationProvider
                 ic.transitionMode = .navigation
                 ic.onTransitionFinished = { [weak self, weak tbc] completed in
+                    // IC 참조 정리
+                    self?.activeInteractionController = nil
+                    self?.activeTabBarController = nil
                     if !completed {
                         self?.isDismissing = false
                         tbc?.zoomInteractionController = nil  // retain cycle 방지
@@ -821,7 +835,15 @@ final class ViewerViewController: UIViewController {
                 }
                 tbc.zoomInteractionController = ic
                 tbc.isInteractivelyPopping = true
+
+                // ⚠️ popViewController 후 navigationController가 nil이 되어
+                //   isPushed/tabBarController 접근 불가 → IC/TBC 참조를 미리 저장
+                self.activeInteractionController = ic
+                self.activeTabBarController = tbc
+
+                Log.print("[ZoomTransition] ▶ handleDismissPan: BEFORE popViewController")
                 navigationController?.popViewController(animated: true)
+                Log.print("[ZoomTransition] ▶ handleDismissPan: AFTER popViewController - navController=\(String(describing: navigationController))")
             } else {
                 // === iOS 16~25 Modal Dismiss 경로 (기존 코드) ===
                 guard let tc = zoomTransitionController else {
@@ -832,6 +854,8 @@ final class ViewerViewController: UIViewController {
                 ic.sourceProvider = tc.sourceProvider
                 ic.destinationProvider = tc.destinationProvider
                 ic.onTransitionFinished = { [weak self] completed in
+                    // IC 참조 정리
+                    self?.activeInteractionController = nil
                     if !completed {
                         self?.isDismissing = false
                         LiquidGlassOptimizer.restore(in: self?.view.window)
@@ -840,25 +864,28 @@ final class ViewerViewController: UIViewController {
                 }
                 tc.interactionController = ic
                 tc.isInteractivelyDismissing = true
+
+                // Modal 경로도 동일하게 IC 참조 저장 (일관성)
+                self.activeInteractionController = ic
+
                 dismiss(animated: true)
             }
 
         case .changed:
-            if isPushed {
-                (tabBarController as? TabBarController)?.zoomInteractionController?.didPanWith(gestureRecognizer: gesture)
-            } else {
-                zoomTransitionController?.interactionController?.didPanWith(gestureRecognizer: gesture)
+            // ⚠️ isPushed/tabBarController 대신 저장된 IC 참조 사용
+            //   popViewController 후 navigationController가 nil이 되어 isPushed가 false 반환하므로
+            if activeInteractionController == nil {
+                Log.print("[ZoomTransition] ⚠️ .changed but activeInteractionController is nil!")
             }
+            activeInteractionController?.didPanWith(gestureRecognizer: gesture)
 
         case .ended, .cancelled:
-            if isPushed {
-                let tbc = tabBarController as? TabBarController
-                tbc?.zoomInteractionController?.didPanWith(gestureRecognizer: gesture)
-                tbc?.isInteractivelyPopping = false
-            } else {
-                zoomTransitionController?.interactionController?.didPanWith(gestureRecognizer: gesture)
-                zoomTransitionController?.isInteractivelyDismissing = false
-            }
+            // ⚠️ 저장된 IC 참조로 제스처 전달
+            activeInteractionController?.didPanWith(gestureRecognizer: gesture)
+            // TabBarController의 isInteractivelyPopping 정리
+            activeTabBarController?.isInteractivelyPopping = false
+            // Modal 경로: isInteractivelyDismissing 정리
+            zoomTransitionController?.isInteractivelyDismissing = false
 
         default:
             break

@@ -345,11 +345,13 @@ extension TabBarController: UINavigationControllerDelegate {
         to toVC: UIViewController
     ) -> UIViewControllerAnimatedTransitioning? {
         // iOS 26+ 줌 트랜지션: Viewer push/pop 시에만
+        Log.print("[TabBarController] ▶ animationControllerFor - operation: \(operation.rawValue), from: \(type(of: fromVC)), to: \(type(of: toVC))")
         guard #available(iOS 26.0, *) else { return nil }
 
         switch operation {
         case .push where toVC is ViewerViewController:
             // 그리드 → 뷰어 줌 인
+            Log.print("[TabBarController] ▶ Returning ZoomAnimator for push")
             let animator = ZoomAnimator(isPresenting: true)
             animator.sourceProvider = zoomSourceProvider
             animator.destinationProvider = zoomDestinationProvider

@@ -65,6 +65,8 @@ final class ZoomAnimator: NSObject, UIViewControllerAnimatedTransitioning {
     }
 
     func animateTransition(using transitionContext: UIViewControllerContextTransitioning) {
+        Log.print("[ZoomAnimator] ▶ animateTransition START - isPresenting: \(isPresenting), mode: \(transitionMode), isInteractiveDismiss: \(isInteractiveDismiss)")
+
         // ⚠️ Interactive dismiss 시에는 ZoomDismissalInteractionController가 전담
         // animateTransition이 호출되더라도 스킵 (스냅샷 중복 + 애니메이션 충돌 방지)
         // Note: transitionContext.isInteractive가 호출 시점에 false일 수 있어 자체 플래그 사용
@@ -285,8 +287,9 @@ final class ZoomAnimator: NSObject, UIViewControllerAnimatedTransitioning {
             fromView.alpha = 1
 
             let cancelled = transitionContext.transitionWasCancelled
+            Log.print("[ZoomAnimator] ▶ completeTransition - cancelled: \(cancelled)")
             transitionContext.completeTransition(!cancelled)
-            Log.debug("ZoomAnimator", "Zoom completed, cancelled: \(cancelled)")
+            Log.print("[ZoomAnimator] ▶ animateTransition END")
         }
     }
 }
