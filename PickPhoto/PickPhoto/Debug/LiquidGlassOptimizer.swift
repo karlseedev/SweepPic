@@ -41,7 +41,7 @@ enum LiquidGlassOptimizer {
     static var isEnabled: Bool = true
 
     /// 블러 뷰 alpha 값 (스크롤 중)
-    static var blurAlpha: CGFloat = 0.2
+    static var blurAlpha: CGFloat = 0.5
 
     /// MTKView fps 제한 (Phase 3)
     /// 기본값 30: 120fps 기기에서 75% GPU 감소, 60fps 기기에서 50% 감소
@@ -304,17 +304,12 @@ enum LiquidGlassOptimizer {
             blurView.layer.cornerCurve = parent.layer.cornerCurve
         }
 
-        // LiquidGlass tintColor와 동일한 회색 오버레이 추가
-        // GlassIconButton: UIColor(white: 0.5, alpha: 0.2)
+        // C-5: 검정 배경 20% 투명도 오버레이
         let tintOverlay = UIView()
-        tintOverlay.backgroundColor = UIColor(white: 1.0, alpha: 0.3)
+        tintOverlay.backgroundColor = UIColor(white: 0.0, alpha: 0.2)
         tintOverlay.frame = blurView.bounds
         tintOverlay.autoresizingMask = [.flexibleWidth, .flexibleHeight]
         blurView.contentView.addSubview(tintOverlay)
-
-        // LiquidGlass 스타일 테두리 (흰색 1px, alpha 0.7)
-        blurView.layer.borderWidth = 2.0 / UIScreen.main.scale
-        blurView.layer.borderColor = UIColor(white: 1.0, alpha: 0.8).cgColor
 
         return blurView
     }

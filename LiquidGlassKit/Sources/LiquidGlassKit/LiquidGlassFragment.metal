@@ -433,33 +433,11 @@ fragment half4 liquidGlassEffect(VertexOutput input [[stage_in]],
         // C-5: Interior is transparent — UIVisualEffectView blur shows through
         outputColor = half4(0.0h);
 
-        // Edge detection: only compute fresnel/glare near the boundary
+        // Edge detection: only compute glare near the boundary
         // (deep interior has no edge effects, saves surfaceNormal computation)
         float normalizedDepth = -shapeDistance * logicalResolution.y;
         if (normalizedDepth < uniforms.glassThickness) {
             float2 surfaceNormal = computeSurfaceNormal(fragmentPixelCoord, uniforms);
-
-            // Fresnel: LCH-lightness boosted edge reflection
-            {
-                float fresnelValue = clamp(
-                    pow(
-                        1.0f + shapeDistance * logicalResolution.y / 1500.0f * pow(500.0f / uniforms.fresnelDistanceRange, 2.0f) + uniforms.fresnelEdgeSharpness,
-                        5.0f
-                    ),
-                    0.0f, 1.0f
-                );
-
-                half3 fresnelBaseTint = mix(half3(1.0h), half3(uniforms.materialTint.rgb), half(uniforms.materialTint.a * 0.5f));
-                float3 fresnelLch = srgbToLch(fresnelBaseTint);
-                fresnelLch.x += 20.0f * fresnelValue * uniforms.fresnelIntensity;
-                fresnelLch.x = clamp(fresnelLch.x, 0.0f, 100.0f);
-
-                outputColor = mix(
-                    outputColor,
-                    half4(lchToSrgb(fresnelLch), 1.0h),
-                    half(fresnelValue * uniforms.fresnelIntensity * 0.7f * length(surfaceNormal))
-                );
-            }
 
             // Glare: Directional, LCH-boosted (lightness + chroma)
             {

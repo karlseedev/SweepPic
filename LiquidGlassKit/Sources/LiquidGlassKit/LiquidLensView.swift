@@ -166,12 +166,12 @@ public final class LiquidLensView: UIView, AnyLiquidLensView {
         startPositionTracking()
         
         let animations = {
-            // Fade out resting pill
-            self.restingPillView.alpha = 0
+            // C-5: restingPill 유지 (이동 중 밝은 배경 유지)
+            // self.restingPillView.alpha = 0
 
             // Fade in liquid glass
             self.liquidGlassView.alpha = 1
-            
+
             alongsideAnimations?()
         }
         

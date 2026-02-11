@@ -513,7 +513,7 @@ C-3은 체감 성능보다는 GPU 부하 경감에 기여 (FPS 유지에 도움)
 | 레이어 | 역할 | 담당 |
 |--------|------|------|
 | **UIVisualEffectView** (아래) | 블러 배경 + 틴트 색상 | 유리 본체 (면) |
-| **MTKView 셰이더** (위) | SDF + 프레넬 + 글레어 + 바운더리 AA | 테두리 빛남 (선) |
+| **MTKView 셰이더** (위) | SDF + 글레어 + 바운더리 AA | 테두리 빛남 (선) |
 
 #### 기존 셰이더 8개 효과 → 4개로 축소
 
@@ -524,7 +524,7 @@ C-3은 체감 성능보다는 GPU 부하 경감에 기여 (FPS 유지에 도움)
 | 3 | 굴절 | ✅ | ❌ **제거** | 배경 텍스처 없음 → 굴절 불가 |
 | 4 | 색분산 | ✅ | ❌ **제거** | 굴절의 일부 |
 | 5 | 틴트 | ✅ (셰이더) | ❌ **이동** | UIVisualEffectView tintOverlay로 이동 |
-| 6 | 프레넬 | ✅ | ✅ 유지 | 테두리 반짝임 (SDF만 필요) |
+| 6 | 프레넬 | ✅ | ❌ **제거** | 전 프리셋 fresnelIntensity: 0 (미사용) |
 | 7 | 글레어 | ✅ | ✅ 유지 | 방향성 하이라이트 (SDF만 필요) |
 | 8 | 바운더리 AA | ✅ | ✅ 유지 | 테두리 안티앨리어싱 |
 
@@ -539,7 +539,7 @@ C-3은 체감 성능보다는 GPU 부하 경감에 기여 (FPS 유지에 도움)
 |---|---|---|
 | UIVisualEffectView | ✅ | ✅ |
 | MTKView | isPaused + alpha=0 (완전 숨김) | **계속 렌더링** (테두리 효과만) |
-| 셰이더 효과 | ❌ 안 돌아감 | SDF + 프레넬 + 글레어 + AA |
+| 셰이더 효과 | ❌ 안 돌아감 | SDF + 글레어 + AA |
 | captureBackground | ❌ | ❌ |
 | 시각 결과 | 블러 판 (밋밋함) | 블러 판 + **유리 테두리 빛남** |
 
@@ -547,17 +547,19 @@ C-3은 체감 성능보다는 GPU 부하 경감에 기여 (FPS 유지에 도움)
 
 | 파일 | 변경 내용 |
 |------|----------|
-| `LiquidGlassFragment.metal` | 굴절/색분산/틴트 코드 제거. SDF + 프레넬 + 글레어 + AA만 남김. 내부 alpha ≈ 0 출력 |
+| `LiquidGlassFragment.metal` | 굴절/색분산/틴트/프레넬 코드 제거. SDF + 글레어 + AA만 남김. 내부 alpha ≈ 0 출력 |
 | `LiquidGlassView.swift` | captureBackground() 호출 제거, transparentTexture 제거, draw() 간소화 |
 | `LiquidGlassSettings.swift` | freezeCapture 제거 (항상 캡처 안 함), captureInterval 제거 |
 | `LiquidGlassOptimizer.swift` | C-5 블러뷰 관리 (preload에서 항상 생성, 항상 표시) |
 
-#### 기대 효과
+#### 구현 결과 ✅ 완료
 
 - **병목① 완전 제거**: `captureBackground()` (`layer.render(in:)`) CPU 비용 0
 - **병목② 완전 제거**: `blurTexture()` (MPS Gaussian blur) 호출 없음
-- **병목③ 대폭 감소**: 셰이더 8→4개 효과, 내부 투명 출력 (굴절/색분산/틴트 연산 제거)
-- **투명도 문제 해결**: 셰이더 내부 alpha ≈ 0 → UIVisualEffectView 블러 100% 비침
+- **병목③ 대폭 감소**: 셰이더 8→3개 효과 (프레넬도 제거 — 전 프리셋 미사용), 내부 투명 출력
+- **투명도 문제 해결**: 셰이더 내부 alpha ≈ 0 → UIVisualEffectView 블러 비침
+- **히치 해결**: 스크롤 중 히치/랙 체감 없음
+- **추가 정리**: 프레넬 코드 제거 (전 프리셋 fresnelIntensity: 0), blurView UIKit border 제거 (셰이더 AA와 중복)
 
 ---
 

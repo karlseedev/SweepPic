@@ -86,7 +86,7 @@ struct LiquidGlass {
             fresnelIntensity: 0,
             fresnelEdgeSharpness: 0,
             glareDistanceRange: 30,
-            glareAngleConvergence: 0.1,
+            glareAngleConvergence: 0.4,
             glareOppositeSideBias: 1,
             glareIntensity: 0.1,
             glareEdgeSharpness: -0.1,
@@ -95,6 +95,7 @@ struct LiquidGlass {
         backgroundTextureSizeCoefficient: 1.1,
         backgroundTextureScaleCoefficient: 0.8,
         backgroundTextureBlurRadius: 0,
+        tintColor: UIColor.white.withAlphaComponent(0.2),
         shadowOverlay: true,
     )
 
@@ -109,7 +110,7 @@ struct LiquidGlass {
             glareDistanceRange: 30,
             glareAngleConvergence: 0.1,
             glareOppositeSideBias: 1,
-            glareIntensity: 0.1,
+            glareIntensity: 0.02,
             glareEdgeSharpness: -0.15,
             glareDirectionOffset: -.pi / 4,
         ),
@@ -258,9 +259,10 @@ final class LiquidGlassView: MTKView {
         // Uniforms buffer (update per frame)
         uniformsBuffer = device.makeBuffer(length: MemoryLayout<LiquidGlass.ShaderUniforms>.stride, options: [])!
 
-        // Make view transparent so UIVisualEffectView blur shows through
+        // C-5: Make view fully transparent so UIVisualEffectView blur shows through
         isOpaque = false
         layer.isOpaque = false
+        clearColor = MTLClearColor(red: 0, green: 0, blue: 0, alpha: 0)  // transparent clear
 
         isPaused = false // Enable to manually control drawing via `draw(_:)`
 //        enableSetNeedsDisplay = true  // Allow setNeedsDisplay() to trigger draws
