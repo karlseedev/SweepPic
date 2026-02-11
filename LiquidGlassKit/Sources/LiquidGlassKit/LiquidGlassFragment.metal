@@ -11,10 +11,8 @@ using namespace metal;
 
 #define PI M_PI_F
 
-// Refractive indices for chromatic dispersion (simulating glass-like prismatic effects)
-constant float refractiveIndexRed = 1.0f - 0.02f;   // Red channel (slightly lower for dispersion)
-constant float refractiveIndexGreen = 1.0f;         // Green channel (neutral)
-constant float refractiveIndexBlue = 1.0f + 0.02f;  // Blue channel (slightly higher for dispersion)
+// C-5: Refractive index constants removed — no background texture sampling.
+// Previously: refractiveIndexRed/Green/Blue for chromatic dispersion.
 
 // Vertex output: Position (NDC) and UVs [0,1]
 struct VertexOutput {
@@ -50,13 +48,7 @@ struct ShaderUniforms {
     float4 rectangles[maxRectangles]; // Array of rectangles (x, y, width, height) in points, upper-left origin
 };
 
-// Constant linear sampler for texture lookups (bilinear filtering, no wrap)
-constant sampler textureSampler(
-    filter::linear,
-    mag_filter::linear,
-    min_filter::linear,
-    address::clamp_to_edge
-);
+// C-5: textureSampler removed — no background texture sampling.
 
 // =============================================================================
 // Signed Distance Field (SDF) Primitives and Operations
@@ -416,25 +408,15 @@ half3 vectorToRainbowColor(float2 vector) {
     return hsvToRgb(hsv);
 }
 
-// Texture sample with per-channel dispersion offset (simulates prism fringing).
-// Samples R/G/B separately with refractive index-based UV shifts.
-half4 sampleWithDispersion(texture2d<half> texture, float2 baseUv, float2 offset, float dispersionFactor) {
-    half4 color = half4(0.0h);
-    // Red: Minimal shift (lower index)
-    color.r = texture.sample(textureSampler, baseUv + offset * (1.0f - (refractiveIndexRed - 1.0f) * dispersionFactor)).r;
-    // Green: Neutral
-    color.g = texture.sample(textureSampler, baseUv + offset * (1.0f - (refractiveIndexGreen - 1.0f) * dispersionFactor)).g;
-    // Blue: Maximal shift (higher index)
-    color.b = texture.sample(textureSampler, baseUv + offset * (1.0f - (refractiveIndexBlue - 1.0f) * dispersionFactor)).b;
-    return color;
-}
+// C-5: sampleWithDispersion() removed — no background texture sampling.
 
 // =============================================================================
-// Fragment Shader: Full Progressive Effect Pipeline
+// Fragment Shader: C-5 Simplified Pipeline
+// Background capture removed — UIVisualEffectView provides blur behind MTKView.
+// Shader outputs: SDF shape (transparent interior) + fresnel + glare + boundary AA.
 // =============================================================================
 fragment half4 liquidGlassEffect(VertexOutput input [[stage_in]],
-                                 constant ShaderUniforms& uniforms [[buffer(0)]],
-                                 texture2d<half> background [[texture(0)]]) {
+                                 constant ShaderUniforms& uniforms [[buffer(0)]]) {
 
     // Logical resolution (scale-normalized)
     float2 logicalResolution = uniforms.resolution / uniforms.contentsScale;
@@ -448,33 +430,16 @@ fragment half4 liquidGlassEffect(VertexOutput input [[stage_in]],
     half4 outputColor;
 
     if (shapeDistance < 0.005f) {
+        // C-5: Interior is transparent — UIVisualEffectView blur shows through
+        outputColor = half4(0.0h);
+
+        // Edge detection: only compute fresnel/glare near the boundary
+        // (deep interior has no edge effects, saves surfaceNormal computation)
         float normalizedDepth = -shapeDistance * logicalResolution.y;
-
-        // Refraction shift factor
-        float depthRatio = 1.0f - normalizedDepth / uniforms.glassThickness;
-        float incidentAngle = asin(pow(depthRatio, 2.0f));
-        float transmittedAngle = asin(1.0f / uniforms.refractiveIndex * sin(incidentAngle));
-        float edgeShiftFactor = -tan(transmittedAngle - incidentAngle);
-        if (normalizedDepth >= uniforms.glassThickness) {
-            edgeShiftFactor = 0.0f;
-        }
-
-        if (edgeShiftFactor <= 0.0f) {
-            outputColor = background.sample(textureSampler, float2(input.uv));
-            outputColor = mix(outputColor, half4(half3(uniforms.materialTint.rgb), 1.0h), half(uniforms.materialTint.a * 0.8f));
-        } else {
+        if (normalizedDepth < uniforms.glassThickness) {
             float2 surfaceNormal = computeSurfaceNormal(fragmentPixelCoord, uniforms);
-            // Dispersion-sampled refraction (scale/aspect corrected)
-            half2 offsetUv = half2(-surfaceNormal * edgeShiftFactor * 0.05f * uniforms.contentsScale * float2(
-                uniforms.resolution.y / (logicalResolution.x * uniforms.contentsScale),
-                1.0f
-            ));
-            half4 refractedWithDispersion = sampleWithDispersion(background, float2(input.uv), float2(offsetUv), uniforms.dispersionStrength);
 
-            // Base material tint
-            outputColor = mix(refractedWithDispersion, half4(half3(uniforms.materialTint.rgb), 1.0h), half(uniforms.materialTint.a * 0.8f));
-
-            // Fresnel: LCH-lightness boosted reflection
+            // Fresnel: LCH-lightness boosted edge reflection
             {
                 float fresnelValue = clamp(
                     pow(
@@ -516,7 +481,8 @@ fragment half4 liquidGlassEffect(VertexOutput input [[stage_in]],
                                      uniforms.glareIntensity;
                 angularGlare = clamp(pow(angularGlare, 0.1f + uniforms.glareAngleConvergence * 2.0f), 0.0f, 1.0f);
 
-                half3 baseGlare = mix(refractedWithDispersion.rgb, half3(uniforms.materialTint.rgb), half(uniforms.materialTint.a * 0.5f));
+                // C-5: Use materialTint as glare base color (no background texture)
+                half3 baseGlare = half3(uniforms.materialTint.rgb);
                 float3 glareLch = srgbToLch(baseGlare);
                 glareLch.x += 150.0f * angularGlare * glareGeometryValue;
                 glareLch.y += 30.0f * angularGlare * glareGeometryValue;
@@ -530,10 +496,11 @@ fragment half4 liquidGlassEffect(VertexOutput input [[stage_in]],
             }
         }
     } else {
-        outputColor = half4(0);//background.sample(textureSampler, float2(input.uv));
+        // Outside shape: fully transparent
+        outputColor = half4(0);
     }
 
-    // Boundary anti-aliasing (smoothstep blend)
+    // Boundary anti-aliasing (smoothstep blend to transparent)
     outputColor = mix(outputColor, half4(0), smoothstep(-0.01f, 0.005f, shapeDistance));
 
     return outputColor;

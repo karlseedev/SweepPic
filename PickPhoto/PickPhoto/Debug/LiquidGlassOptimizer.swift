@@ -17,7 +17,7 @@
 import UIKit
 import MetalKit
 import AppCore
-import LiquidGlassKit  // C-2: LiquidGlassSettings.useLightMode access
+// C-5: import LiquidGlassKit removed — LiquidGlassSettings no longer needed
 
 /// LiquidGlassKit 성능 최적화 모드
 enum LiquidGlassOptimizeMode {
@@ -99,7 +99,7 @@ enum LiquidGlassOptimizer {
             let blurView = createBlurView(matching: mtkView)
 
             // C-5 상시: 블러 뷰를 MTKView 바로 아래에 삽입 (즉시 보임)
-            blurView.alpha = LiquidGlassSettings.freezeCapture ? blurAlpha : 0
+            blurView.alpha = blurAlpha
             superview.insertSubview(blurView, belowSubview: mtkView)
 
             preloadedOverlays[identifier] = PreloadedOverlay(
@@ -260,67 +260,7 @@ enum LiquidGlassOptimizer {
         Log.print("[LiquidGlass] Blur hide: \(count)개")
     }
 
-    // MARK: - C-5: Blur overlays (MTKView stays visible)
-
-    /// C-5: Show blur overlays behind MTKViews — MTKView keeps rendering (transparent tint only).
-    /// Unlike showBlurOverlays(), MTKView is NOT paused or hidden.
-    private static func showBlurOverlaysForC5() {
-        cleanupOrphanedOverlays()
-
-        var count = 0
-        var blurViewsToAnimate: [UIVisualEffectView] = []
-
-        for (_, overlay) in preloadedOverlays {
-            guard overlay.mtkView != nil else { continue }
-            guard overlay.blurView.alpha == 0 else { continue }
-
-            // Sync frame
-            if let mtkView = overlay.mtkView {
-                overlay.blurView.frame = mtkView.frame
-            }
-
-            blurViewsToAnimate.append(overlay.blurView)
-            count += 1
-        }
-
-        if !blurViewsToAnimate.isEmpty {
-            UIView.animate(withDuration: transitionDuration) {
-                for blurView in blurViewsToAnimate {
-                    blurView.alpha = blurAlpha
-                }
-            }
-        }
-
-        Log.print("[LiquidGlass] C-5 blur show: \(count)개")
-    }
-
-    /// C-5: Hide blur overlays — MTKView resumes normal capture.
-    /// Crossfade: blur fades out as MTKView starts capturing real background again.
-    private static func hideBlurOverlaysForC5() {
-        var count = 0
-        var blurViewsToAnimate: [UIVisualEffectView] = []
-
-        for (_, overlay) in preloadedOverlays {
-            guard overlay.mtkView != nil else { continue }
-            guard overlay.blurView.alpha > 0 else { continue }
-
-            blurViewsToAnimate.append(overlay.blurView)
-            count += 1
-        }
-
-        // Delay to let first real capture frame render, then fade out blur
-        if !blurViewsToAnimate.isEmpty {
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
-                UIView.animate(withDuration: 0.3) {
-                    for blurView in blurViewsToAnimate {
-                        blurView.alpha = 0
-                    }
-                }
-            }
-        }
-
-        Log.print("[LiquidGlass] C-5 blur hide: \(count)개")
-    }
+    // C-5: showBlurOverlaysForC5/hideBlurOverlaysForC5 removed — blur is always visible.
 
     // MARK: - Helper Methods
 

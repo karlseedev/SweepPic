@@ -8,7 +8,7 @@
 import UIKit
 internal import simd
 internal import MetalKit
-internal import MetalPerformanceShaders
+// C-5: MetalPerformanceShaders import removed (was used for MPS blur)
 
 struct LiquidGlass {
 
@@ -215,29 +215,11 @@ final class LiquidGlassView: MTKView {
 
     var commandQueue: MTLCommandQueue!
     var uniformsBuffer: MTLBuffer!
-    var zeroCopyBridge: ZeroCopyBridge!
+    // C-5: zeroCopyBridge removed (was used for background capture)
 
-    // Background texture for the shader
-    private var backgroundTexture: MTLTexture?
-
-    /// C-5: 1x1 transparent fallback texture — used when freezeCapture is on.
-    /// Shader samples transparent pixels → outputs semi-transparent tint only.
-    private lazy var transparentTexture: MTLTexture? = {
-        guard let device else { return nil }
-        let desc = MTLTextureDescriptor.texture2DDescriptor(
-            pixelFormat: .bgra8Unorm, width: 1, height: 1, mipmapped: false)
-        desc.usage = .shaderRead
-        let tex = device.makeTexture(descriptor: desc)
-        // Zero-fill → transparent black (0,0,0,0)
-        let zero: [UInt8] = [0, 0, 0, 0]
-        tex?.replace(region: MTLRegionMake2D(0, 0, 1, 1),
-                     mipmapLevel: 0, withBytes: zero, bytesPerRow: 4)
-        return tex
-    }()
-
-    /// Whether to automatically capture superview on each frame.
-    /// Set to false for manual control via `captureBackground()`.
-    var autoCapture: Bool = true
+    // C-5: Background texture and capture removed.
+    // UIVisualEffectView (managed by LiquidGlassOptimizer) provides blur behind MTKView.
+    // Shader outputs transparent interior + edge effects only.
 
     var touchPoint: CGPoint? = nil
 
@@ -245,9 +227,6 @@ final class LiquidGlassView: MTKView {
 
     // Shadow overlay subview
     private weak var shadowView: ShadowView?
-
-    // Backdrop capture view (stays in superview, contains only CABackdropLayer)
-    private let backdropView = BackdropView()
 
     init(_ liquidGlass: LiquidGlass) {
         self.liquidGlass = liquidGlass
@@ -279,9 +258,7 @@ final class LiquidGlassView: MTKView {
         // Uniforms buffer (update per frame)
         uniformsBuffer = device.makeBuffer(length: MemoryLayout<LiquidGlass.ShaderUniforms>.stride, options: [])!
 
-        zeroCopyBridge = .init(device: device)
-
-        // Make view transparent so we can see the effect
+        // Make view transparent so UIVisualEffectView blur shows through
         isOpaque = false
         layer.isOpaque = false
 
@@ -289,109 +266,9 @@ final class LiquidGlassView: MTKView {
 //        enableSetNeedsDisplay = true  // Allow setNeedsDisplay() to trigger draws
     }
 
-    // MARK: - Background Capture
-
-    func captureBackground() {
-        if #available(iOS 26.2, *) {
-            captureRootView()
-        } else {
-            captureBackdrop()
-        }
-    }
-
-    /// Captures the background content via root View using (presentation) Layer render.
-    /// High CPU usage.
-    func captureRootView() {
-        guard let rootView = findRootView() else { return }
-
-        let sizeCoefficient = liquidGlass.backgroundTextureSizeCoefficient
-        let scaleCoefficient = layer.contentsScale * liquidGlass.backgroundTextureScaleCoefficient
-
-        // Determine our on-screen rect in the root view coordinate space.
-        // IMPORTANT: During `UIView.animate`, the view's *model* layer jumps to the final frame
-        // immediately; the in-flight position lives in the *presentation* layer. Using the
-        // presentation layer makes the captured background track the view while it animates.
-        let currentLayer = layer.presentation() ?? layer
-        let frameInRoot = currentLayer.convert(currentLayer.bounds, to: rootView.layer)
-
-        // Expand capture area around the MTKView center (in root view coordinates)
-        let captureSize = CGSize(width: frameInRoot.width * sizeCoefficient,
-                                 height: frameInRoot.height * sizeCoefficient)
-        let captureRectInRoot = CGRect(x: frameInRoot.midX - captureSize.width / 2,
-                                       y: frameInRoot.midY - captureSize.height / 2,
-                                       width: captureSize.width,
-                                       height: captureSize.height)
-
-        backgroundTexture = zeroCopyBridge.render { context in
-            // Hide self temporarily for clean background capture
-            let wasHidden = isHidden
-            isHidden = true
-            defer { isHidden = wasHidden }
-
-            // Transform to render the portion of root view under our capture rect:
-            context.scaleBy(x: scaleCoefficient, y: scaleCoefficient)
-            context.translateBy(x: -captureRectInRoot.origin.x, y: -captureRectInRoot.origin.y)
-//            context.interpolationQuality = .none
-
-            let rootViewLayer = rootView.layer.presentation() ?? rootView.layer
-            rootViewLayer.render(in: context)
-        }
-
-        blurTexture()
-    }
-
-    /// Captures the background content via CABackdropLayer using drawHierarchy.
-    /// Noticeable rendering delay.
-    func captureBackdrop() {
-        guard let superview else { return }
-
-        let sizeCoefficient = liquidGlass.backgroundTextureSizeCoefficient
-        let scaleCoefficient = layer.contentsScale * liquidGlass.backgroundTextureScaleCoefficient
-
-        // Calculate frame using presentation layer for smooth animation tracking
-        let currentLayer = layer.presentation() ?? layer
-        let frameInSuperview = currentLayer.convert(currentLayer.bounds, to: superview.layer)
-        let captureSize = CGSize(width: frameInSuperview.width * sizeCoefficient,
-                                 height: frameInSuperview.height * sizeCoefficient)
-        let captureOrigin = CGPoint(x: frameInSuperview.midX - captureSize.width / 2,
-                                    y: frameInSuperview.midY - captureSize.height / 2)
-        
-        // Position backdrop view and layer
-        backdropView.frame = CGRect(origin: captureOrigin, size: captureSize)
-
-        // Ensure backdrop view is in superview (below us)
-        if backdropView.superview !== superview {
-            superview.insertSubview(backdropView, belowSubview: self)
-        }
-        
-        // Capture using drawHierarchy (gets windowserver-composited content)
-        backgroundTexture = zeroCopyBridge.render { context in
-            context.scaleBy(x: scaleCoefficient, y: scaleCoefficient)
-
-            UIGraphicsPushContext(context)
-            backdropView.drawHierarchy(in: backdropView.bounds, afterScreenUpdates: false)
-            UIGraphicsPopContext()
-        }
-
-        blurTexture()
-    }
-
-    func blurTexture() {
-        guard liquidGlass.backgroundTextureBlurRadius > 0,
-              let device,
-              let commandBuffer = commandQueue.makeCommandBuffer(),
-              var backgroundTexture else { return }
-
-        // Apply GPU-accelerated Gaussian blur via MPS
-        // Scale blur radius to pixels
-        let sigma = Float(liquidGlass.backgroundTextureBlurRadius * layer.contentsScale)
-        let blur = MPSImageGaussianBlur(device: device, sigma: sigma)
-        blur.edgeMode = .clamp
-
-        blur.encode(commandBuffer: commandBuffer, inPlaceTexture: &backgroundTexture, fallbackCopyAllocator: nil)
-        commandBuffer.commit()
-        commandBuffer.waitUntilCompleted()
-    }
+    // C-5: captureBackground(), captureRootView(), captureBackdrop(), blurTexture() removed.
+    // Background capture was the main CPU bottleneck (layer.render(in:) every frame).
+    // Now UIVisualEffectView provides blur behind MTKView.
 
     func updateUniforms() {
         var uniforms = liquidGlass.shaderUniforms
@@ -450,22 +327,12 @@ final class LiquidGlassView: MTKView {
         super.layoutSubviews()
 
         updateUniforms()
-
-        let scale = layer.contentsScale * liquidGlass.backgroundTextureSizeCoefficient * liquidGlass.backgroundTextureScaleCoefficient
-        let width = Int(bounds.width * scale)
-        let height = Int(bounds.height * scale)
-        zeroCopyBridge.setupBuffer(width: width, height: height)
-
+        // C-5: zeroCopyBridge.setupBuffer removed (no capture)
         shadowView?.frame = bounds
     }
 
     override func draw(_ rect: CGRect) {
-        // Auto-capture background from superview if enabled
-        // C-5: Skip capture when freezeCapture is on — use transparent fallback texture
-        if autoCapture && !LiquidGlassSettings.freezeCapture {
-            captureBackground()
-        }
-
+        // C-5: No background capture. Shader outputs edge effects only (transparent interior).
         guard let drawable = currentDrawable,
               let renderPassDesc = currentRenderPassDescriptor,
               let commandBuffer = commandQueue.makeCommandBuffer(),
@@ -473,12 +340,7 @@ final class LiquidGlassView: MTKView {
 
         encoder.setRenderPipelineState(LiquidGlassRenderer.shared.pipelineState)
         encoder.setFragmentBuffer(uniformsBuffer, offset: 0, index: 0)
-
-        // C-5: Use transparent texture when capture is frozen, so shader outputs tint-only
-        let texture = LiquidGlassSettings.freezeCapture ? transparentTexture : backgroundTexture
-        if let texture {
-            encoder.setFragmentTexture(texture, index: 0)
-        }
+        // C-5: No texture binding — shader doesn't sample background
 
         // Draw fullscreen quad (vertices generated in vertex shader)
         encoder.drawPrimitives(type: .triangleStrip, vertexStart: 0, vertexCount: 4)
