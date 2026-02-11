@@ -7,6 +7,7 @@
 
 import UIKit
 import AppCore
+import LiquidGlassKit
 
 /// PickPhoto 앱의 메인 TabBarController
 /// Photos 탭과 Albums 탭을 관리
@@ -57,6 +58,7 @@ class TabBarController: UITabBarController {
         setupTabs()
         setupFloatingUIIfNeeded()
         setupSystemBarsVisibility()
+        warmUpMetalIfNeeded()
 
         // 탭 변경 감지
         delegate = self
@@ -213,6 +215,22 @@ class TabBarController: UITabBarController {
         tabBar.tintColor = .systemBlue
     }
 
+    // MARK: - Metal Warmup
+
+    /// iOS 26 전용 Metal shader 사전 워밍업
+    /// iOS 25에서는 FloatingOverlay(LiquidGlassTabBar)가 앱 시작 시 Metal 초기화를 수행하므로 불필요.
+    /// iOS 26에서는 FloatingOverlay 미생성 → 뷰어 첫 열기 시 Metal cold-start Hang 발생.
+    /// DispatchQueue.main.async로 viewDidLoad 완료 후 실행하여 UI 블로킹 최소화.
+    private func warmUpMetalIfNeeded() {
+        guard !useFloatingUI else { return }  // iOS 25는 FloatingOverlay가 처리
+        DispatchQueue.main.async {
+            let t0 = CACurrentMediaTime()
+            LiquidGlassSettings.warmUp()
+            let t1 = CACurrentMediaTime()
+            Log.print("[TabBarController] Metal warmup: \(String(format: "%.0f", (t1-t0)*1000))ms")
+        }
+    }
+
     // MARK: - Actions
 
     /// 시스템 네비바의 Select 버튼 탭 (iOS 26+)
@@ -345,13 +363,11 @@ extension TabBarController: UINavigationControllerDelegate {
         to toVC: UIViewController
     ) -> UIViewControllerAnimatedTransitioning? {
         // iOS 26+ 줌 트랜지션: Viewer push/pop 시에만
-        Log.print("[TabBarController] ▶ animationControllerFor - operation: \(operation.rawValue), from: \(type(of: fromVC)), to: \(type(of: toVC))")
         guard #available(iOS 26.0, *) else { return nil }
 
         switch operation {
         case .push where toVC is ViewerViewController:
             // 그리드 → 뷰어 줌 인
-            Log.print("[TabBarController] ▶ Returning ZoomAnimator for push")
             let animator = ZoomAnimator(isPresenting: true)
             animator.sourceProvider = zoomSourceProvider
             animator.destinationProvider = zoomDestinationProvider

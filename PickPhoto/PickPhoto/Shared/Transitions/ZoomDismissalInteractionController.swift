@@ -68,7 +68,6 @@ final class ZoomDismissalInteractionController: NSObject, UIViewControllerIntera
     // MARK: - UIViewControllerInteractiveTransitioning
 
     func startInteractiveTransition(_ transitionContext: UIViewControllerContextTransitioning) {
-        Log.print("[ZoomTransition] ▶ startInteractiveTransition START - mode: \(transitionMode)")
         self.transitionContext = transitionContext
         let container = transitionContext.containerView
 
@@ -88,21 +87,16 @@ final class ZoomDismissalInteractionController: NSObject, UIViewControllerIntera
         // Modal dismiss: shouldRemovePresentersView=false로 이미 window에 있음 → 추가 불필요
         // ⚠️ Interactive 경로에서는 ZoomAnimator.animateTransition이 스킵되므로 여기서 설정
         if transitionMode == .navigation {
-            Log.print("[ZoomTransition] ▶ inserting toView into container")
             container.insertSubview(toVC.view, at: 0)
             let finalFrame = transitionContext.finalFrame(for: toVC)
-            Log.print("[ZoomTransition] ▶ finalFrame: \(finalFrame)")
             if !finalFrame.isEmpty {
                 toVC.view.frame = finalFrame
             }
         }
 
         // 1. 그리드를 해당 셀 위치로 스크롤 (셀이 보이도록)
-        Log.print("[ZoomTransition] ▶ scrollToSourceCell")
         sourceProvider?.scrollToSourceCell(for: currentIndex)
-        Log.print("[ZoomTransition] ▶ layoutIfNeeded")
         toVC.view.layoutIfNeeded()
-        Log.print("[ZoomTransition] ▶ layoutIfNeeded DONE")
 
         // 2. 배경 뷰 생성 (검은색, alpha 1.0)
         let bg = UIView(frame: container.bounds)

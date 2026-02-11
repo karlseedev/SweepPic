@@ -290,7 +290,6 @@ final class ViewerViewController: UIViewController {
 
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
-        Log.print("[Viewer Timing] ▶ viewWillAppear - isPushed: \(isPushed), navController: \(navigationController != nil)")
 
         // Modal에서는 NavigationControllerDelegate.willShow가 호출 안 됨
         // → FloatingOverlay를 수동으로 숨김
@@ -304,12 +303,10 @@ final class ViewerViewController: UIViewController {
         // 초기 버튼 상태 설정 (현재 사진의 휴지통 상태에 따라)
         // iOS 26에서는 setupSystemUIIfNeeded() 이후에 호출해야 함
         updateToolbarForCurrentPhoto()
-        Log.print("[Viewer Timing] ▶ viewWillAppear END")
     }
 
     override func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
-        Log.print("[Viewer Timing] ▶ viewDidAppear")
 
         // [Timing] viewDidAppear = 뷰어가 화면에 완전히 표시된 시점
         if openStartTime > 0 {
@@ -841,9 +838,7 @@ final class ViewerViewController: UIViewController {
                 self.activeInteractionController = ic
                 self.activeTabBarController = tbc
 
-                Log.print("[ZoomTransition] ▶ handleDismissPan: BEFORE popViewController")
                 navigationController?.popViewController(animated: true)
-                Log.print("[ZoomTransition] ▶ handleDismissPan: AFTER popViewController - navController=\(String(describing: navigationController))")
             } else {
                 // === iOS 16~25 Modal Dismiss 경로 (기존 코드) ===
                 guard let tc = zoomTransitionController else {
@@ -874,9 +869,6 @@ final class ViewerViewController: UIViewController {
         case .changed:
             // ⚠️ isPushed/tabBarController 대신 저장된 IC 참조 사용
             //   popViewController 후 navigationController가 nil이 되어 isPushed가 false 반환하므로
-            if activeInteractionController == nil {
-                Log.print("[ZoomTransition] ⚠️ .changed but activeInteractionController is nil!")
-            }
             activeInteractionController?.didPanWith(gestureRecognizer: gesture)
 
         case .ended, .cancelled:
