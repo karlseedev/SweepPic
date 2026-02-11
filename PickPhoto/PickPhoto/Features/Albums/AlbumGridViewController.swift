@@ -338,16 +338,20 @@ final class AlbumGridViewController: BaseGridViewController {
         )
         viewerVC.delegate = self
 
-        // 커스텀 줌 트랜지션 설정 (Modal 방식)
-        let transitionController = ZoomTransitionController()
-        transitionController.sourceProvider = self
-        transitionController.destinationProvider = viewerVC
-        // ⚠️ strong 참조 먼저 (transitioningDelegate는 weak)
-        viewerVC.zoomTransitionController = transitionController
-        viewerVC.transitioningDelegate = transitionController
-
-        // Modal present 방식으로 뷰어 표시
-        present(viewerVC, animated: true)
+        // iOS 26+: Navigation Push 방식 (시스템 네비바/툴바 사용 가능)
+        // iOS 16~25: Modal 방식 (커스텀 줌 트랜지션)
+        if #available(iOS 26.0, *), let tbc = tabBarController as? TabBarController {
+            tbc.zoomSourceProvider = self
+            tbc.zoomDestinationProvider = viewerVC
+            navigationController?.pushViewController(viewerVC, animated: true)
+        } else {
+            let transitionController = ZoomTransitionController()
+            transitionController.sourceProvider = self
+            transitionController.destinationProvider = viewerVC
+            viewerVC.zoomTransitionController = transitionController
+            viewerVC.transitioningDelegate = transitionController
+            present(viewerVC, animated: true)
+        }
 
         Log.print("[AlbumGridViewController] Opening viewer at index \(filteredIndex), mode: \(mode)")
     }

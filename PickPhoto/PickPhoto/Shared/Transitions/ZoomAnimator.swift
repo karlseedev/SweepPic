@@ -39,6 +39,17 @@ final class ZoomAnimator: NSObject, UIViewControllerAnimatedTransitioning {
     /// transitionContext.isInteractive가 호출 시점에 false일 수 있으므로 자체 플래그 사용
     var isInteractiveDismiss: Bool = false
 
+    /// 트랜지션 모드 (.modal: 기존 Modal, .navigation: iOS 26+ Navigation Push/Pop)
+    /// Modal: shouldRemovePresentersView=false로 그리드가 window에 유지
+    /// Navigation: Pop 시 toView(그리드)를 container에 수동 추가 필요
+    var transitionMode: TransitionMode = .modal
+
+    /// Modal vs Navigation 트랜지션 모드
+    enum TransitionMode {
+        case modal       // iOS 16~25: Modal present/dismiss
+        case navigation  // iOS 26+: Navigation push/pop
+    }
+
 
     // MARK: - Init
 
@@ -83,15 +94,18 @@ final class ZoomAnimator: NSObject, UIViewControllerAnimatedTransitioning {
 
         // ⚠️ 3. container에 뷰 추가
         // Present: toView(뷰어)를 container에 추가
-        // Dismiss: toView(그리드)는 추가하지 않음!
+        // Dismiss (Modal): toView(그리드)는 추가하지 않음!
         //   shouldRemovePresentersView=false이므로 그리드는 원래 window에 남아있음
-        //   container에 addSubview하면 원래 위치에서 빠져나와 container 제거 시 함께 사라짐
+        // Dismiss (Navigation): toView(그리드)를 container 맨 뒤에 수동 추가
+        //   Navigation Pop에서는 toView가 container에 자동 추가되지 않음
         if isPresenting {
             if toView.superview != container {
                 container.addSubview(toView)
             }
+        } else if transitionMode == .navigation {
+            container.insertSubview(toView, at: 0)
         }
-        // else: dismiss 시 toView 추가 안 함 (그리드가 container 뒤에서 이미 보임)
+        // else (.modal dismiss): toView 추가 안 함 (그리드가 container 뒤에서 이미 보임)
 
         // ⚠️ 4. layoutIfNeeded 호출
         toView.layoutIfNeeded()

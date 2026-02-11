@@ -178,7 +178,14 @@ final class ViewerViewController: UIViewController {
     private var didPerformInitialFadeIn: Bool = false
 
 
-    /// 줌 트랜지션 컨트롤러 (그리드에서 설정)
+    /// Navigation Push로 열렸는지 여부 (iOS 26+)
+    /// Push: navigationController != nil, presentingViewController == nil
+    /// Modal: presentingViewController != nil
+    private var isPushed: Bool {
+        return navigationController != nil && presentingViewController == nil
+    }
+
+    /// 줌 트랜지션 컨트롤러 (그리드에서 설정, Modal 방식에서만 사용)
     /// ⚠️ strong 참조: transitioningDelegate가 weak이므로 여기서 유지
     var zoomTransitionController: ZoomTransitionController?
 
@@ -243,6 +250,9 @@ final class ViewerViewController: UIViewController {
         // Modal 커스텀 전환 설정
         modalPresentationStyle = .custom
         modalPresentationCapturesStatusBarAppearance = true
+
+        // iOS 26+ Navigation Push 시 탭바 숨김
+        hidesBottomBarWhenPushed = true
     }
 
     required init?(coder: NSCoder) {
@@ -340,8 +350,9 @@ final class ViewerViewController: UIViewController {
     override func viewWillDisappear(_ animated: Bool) {
         super.viewWillDisappear(animated)
 
-        // dismiss 시에만 FloatingOverlay 복원 (interactive 취소 시 중복 방지)
-        guard isBeingDismissed else { return }
+        // dismiss/pop 시에만 FloatingOverlay 복원 (interactive 취소 시 중복 방지)
+        // Modal: isBeingDismissed, Navigation Pop: isMovingFromParent
+        guard isBeingDismissed || isMovingFromParent else { return }
 
         // Modal에서는 수동으로 FloatingOverlay 복원
         findTabBarController()?.floatingOverlay?.isHidden = false
@@ -777,6 +788,8 @@ final class ViewerViewController: UIViewController {
     // MARK: - Dismiss Pan Gesture (T031)
 
     /// 아래 스와이프로 닫기 처리 (Interactive Dismiss)
+    /// iOS 26+ (isPushed): Navigation Pop 경로
+    /// iOS 16~25: Modal Dismiss 경로 (기존)
     @objc private func handleDismissPan(_ gesture: UIPanGestureRecognizer) {
         switch gesture.state {
         case .began:
@@ -787,60 +800,93 @@ final class ViewerViewController: UIViewController {
             LiquidGlassOptimizer.cancelIdleTimer()
             LiquidGlassOptimizer.optimize(in: view.window)
 
-            guard let tc = zoomTransitionController else {
-                // fallback: ZoomTransitionController 없으면 일반 dismiss
-                dismissWithFadeOut()
-                return
-            }
-
-            // ⚠️ InteractionController 생성 (누락 시 non-interactive dismiss)
-            let ic = ZoomDismissalInteractionController()
-            ic.sourceProvider = tc.sourceProvider
-            ic.destinationProvider = tc.destinationProvider
-            ic.onTransitionFinished = { [weak self] completed in
-                if !completed {
-                    // 취소 시 isDismissing 복원
-                    self?.isDismissing = false
-                    // [LiquidGlass 최적화] 취소 시 MTKView 복원
-                    LiquidGlassOptimizer.restore(in: self?.view.window)
-                    LiquidGlassOptimizer.enterIdle(in: self?.view.window)
+            if isPushed {
+                // === iOS 26+ Navigation Pop 경로 ===
+                guard let tbc = tabBarController as? TabBarController else {
+                    navigationController?.popViewController(animated: true)
+                    return
                 }
-                // dismiss 완료 시에는 뷰어가 사라지므로 restore 불필요
+                let ic = ZoomDismissalInteractionController()
+                ic.sourceProvider = tbc.zoomSourceProvider
+                ic.destinationProvider = tbc.zoomDestinationProvider
+                ic.transitionMode = .navigation
+                ic.onTransitionFinished = { [weak self, weak tbc] completed in
+                    if !completed {
+                        self?.isDismissing = false
+                        tbc?.zoomInteractionController = nil  // retain cycle 방지
+                        LiquidGlassOptimizer.restore(in: self?.view.window)
+                        LiquidGlassOptimizer.enterIdle(in: self?.view.window)
+                    }
+                    // 완료 시: didShow → cleanupZoomTransition() 자동 호출
+                }
+                tbc.zoomInteractionController = ic
+                tbc.isInteractivelyPopping = true
+                navigationController?.popViewController(animated: true)
+            } else {
+                // === iOS 16~25 Modal Dismiss 경로 (기존 코드) ===
+                guard let tc = zoomTransitionController else {
+                    dismissWithFadeOut()
+                    return
+                }
+                let ic = ZoomDismissalInteractionController()
+                ic.sourceProvider = tc.sourceProvider
+                ic.destinationProvider = tc.destinationProvider
+                ic.onTransitionFinished = { [weak self] completed in
+                    if !completed {
+                        self?.isDismissing = false
+                        LiquidGlassOptimizer.restore(in: self?.view.window)
+                        LiquidGlassOptimizer.enterIdle(in: self?.view.window)
+                    }
+                }
+                tc.interactionController = ic
+                tc.isInteractivelyDismissing = true
+                dismiss(animated: true)
             }
-            tc.interactionController = ic
-            tc.isInteractivelyDismissing = true
-
-            // dismiss 트리거 → ZoomTransitionController가 interactionController 반환
-            dismiss(animated: true)
 
         case .changed:
-            zoomTransitionController?.interactionController?.didPanWith(gestureRecognizer: gesture)
+            if isPushed {
+                (tabBarController as? TabBarController)?.zoomInteractionController?.didPanWith(gestureRecognizer: gesture)
+            } else {
+                zoomTransitionController?.interactionController?.didPanWith(gestureRecognizer: gesture)
+            }
 
         case .ended, .cancelled:
-            zoomTransitionController?.interactionController?.didPanWith(gestureRecognizer: gesture)
-            zoomTransitionController?.isInteractivelyDismissing = false
+            if isPushed {
+                let tbc = tabBarController as? TabBarController
+                tbc?.zoomInteractionController?.didPanWith(gestureRecognizer: gesture)
+                tbc?.isInteractivelyPopping = false
+            } else {
+                zoomTransitionController?.interactionController?.didPanWith(gestureRecognizer: gesture)
+                zoomTransitionController?.isInteractivelyDismissing = false
+            }
 
         default:
             break
         }
     }
 
-    /// 애니메이션과 함께 닫기 (Modal dismiss)
+    /// 애니메이션과 함께 닫기 (Modal dismiss 또는 Navigation pop)
     private func dismissWithAnimation() {
         guard !isDismissing else { return }
         isDismissing = true
 
-        // Modal dismiss: ZoomAnimator가 줌 아웃 애니메이션 처리
-        dismiss(animated: true)
+        if isPushed {
+            navigationController?.popViewController(animated: true)
+        } else {
+            dismiss(animated: true)
+        }
     }
 
-    /// 페이드 아웃으로 닫기 (Modal dismiss)
+    /// 페이드 아웃으로 닫기 (Modal dismiss 또는 Navigation pop)
     private func dismissWithFadeOut() {
         guard !isDismissing else { return }
         isDismissing = true
 
-        // Modal dismiss: ZoomAnimator가 줌 아웃 애니메이션 처리
-        dismiss(animated: true)
+        if isPushed {
+            navigationController?.popViewController(animated: true)
+        } else {
+            dismiss(animated: true)
+        }
     }
 
     // MARK: - iOS 26+ System UI Setup

@@ -27,6 +27,20 @@ class TabBarController: UITabBarController {
     /// Trash 탭 NavigationController
     private var trashNav: UINavigationController?
 
+    // MARK: - iOS 26+ 줌 트랜지션 프로퍼티
+
+    /// 줌 트랜지션 소스 제공자 (그리드 VC) — Push 시 설정, Pop 완료 후 해제
+    weak var zoomSourceProvider: ZoomTransitionSourceProviding?
+
+    /// 줌 트랜지션 목적지 제공자 (뷰어 VC) — Push 시 설정, Pop 완료 후 해제
+    weak var zoomDestinationProvider: ZoomTransitionDestinationProviding?
+
+    /// Interactive Pop용 Interaction Controller — drag 시작 시 생성, Pop 완료 후 해제
+    var zoomInteractionController: ZoomDismissalInteractionController?
+
+    /// Interactive Pop 진행 중 여부 — drag 시작 시 true, 끝나면 false
+    var isInteractivelyPopping: Bool = false
+
     /// 커스텀 플로팅 UI 사용 여부
     /// iOS 26+에서는 false (시스템 기본 사용)
     private var useFloatingUI: Bool {
@@ -322,23 +336,73 @@ extension TabBarController: UINavigationControllerDelegate {
     }
 
     /// 커스텀 애니메이션 컨트롤러 제공
-    /// 줌 트랜지션은 Modal 방식으로 전환됨 → Navigation에서는 nil 반환
+    /// iOS 26+: Viewer push/pop 시 줌 트랜지션 애니메이터 반환
+    /// iOS 16~25: nil 반환 (Modal 방식 사용)
     func navigationController(
         _ navigationController: UINavigationController,
         animationControllerFor operation: UINavigationController.Operation,
         from fromVC: UIViewController,
         to toVC: UIViewController
     ) -> UIViewControllerAnimatedTransitioning? {
-        return nil
+        // iOS 26+ 줌 트랜지션: Viewer push/pop 시에만
+        guard #available(iOS 26.0, *) else { return nil }
+
+        switch operation {
+        case .push where toVC is ViewerViewController:
+            // 그리드 → 뷰어 줌 인
+            let animator = ZoomAnimator(isPresenting: true)
+            animator.sourceProvider = zoomSourceProvider
+            animator.destinationProvider = zoomDestinationProvider
+            animator.transitionMode = .navigation
+            return animator
+
+        case .pop where fromVC is ViewerViewController:
+            // 뷰어 → 그리드 줌 아웃
+            let animator = ZoomAnimator(isPresenting: false)
+            animator.sourceProvider = zoomSourceProvider
+            animator.destinationProvider = zoomDestinationProvider
+            animator.isInteractiveDismiss = isInteractivelyPopping
+            animator.transitionMode = .navigation
+            return animator
+
+        default:
+            return nil  // Albums push/pop 등은 기본 애니메이션
+        }
     }
 
     /// Interactive 전환 컨트롤러 제공
-    /// 줌 트랜지션은 Modal 방식으로 전환됨 → Navigation에서는 nil 반환
+    /// isInteractivelyPopping이 true일 때만 반환 (아니면 non-interactive pop)
     func navigationController(
         _ navigationController: UINavigationController,
         interactionControllerFor animationController: UIViewControllerAnimatedTransitioning
     ) -> UIViewControllerInteractiveTransitioning? {
-        return nil
+        guard isInteractivelyPopping else { return nil }
+        return zoomInteractionController
+    }
+
+    /// 네비게이션 전환 완료 후 cleanup + edge swipe 관리
+    /// ⚠️ willShow가 아닌 didShow 사용: willShow는 전환 시작 시점에 호출되어
+    ///   interactive pop 중 cleanup하면 zoomInteractionController가 nil이 됨
+    func navigationController(
+        _ navigationController: UINavigationController,
+        didShow viewController: UIViewController,
+        animated: Bool
+    ) {
+        // Pop 완료 후 줌 트랜지션 리소스 해제
+        if !(viewController is ViewerViewController) {
+            cleanupZoomTransition()
+        }
+
+        // Edge swipe back: Viewer에서만 비활성화 (커스텀 drag dismiss 사용)
+        navigationController.interactivePopGestureRecognizer?.isEnabled = !(viewController is ViewerViewController)
+    }
+
+    /// 줌 트랜지션 리소스 해제
+    func cleanupZoomTransition() {
+        zoomSourceProvider = nil
+        zoomDestinationProvider = nil
+        zoomInteractionController = nil
+        isInteractivelyPopping = false
     }
 
     /// Bar 가시성 정책 적용

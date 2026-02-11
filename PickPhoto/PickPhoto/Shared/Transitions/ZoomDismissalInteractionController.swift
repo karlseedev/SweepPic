@@ -30,6 +30,10 @@ final class ZoomDismissalInteractionController: NSObject, UIViewControllerIntera
     /// 전환 완료/취소 콜백 (completed: true=완료, false=취소)
     var onTransitionFinished: ((Bool) -> Void)?
 
+    /// 트랜지션 모드 (.modal: 기존 Modal, .navigation: iOS 26+ Navigation Pop)
+    /// Navigation Pop: toView(그리드)를 container에 수동 추가 + finalFrame 설정 필요
+    var transitionMode: ZoomAnimator.TransitionMode = .modal
+
     // MARK: - Internal State
 
     /// 현재 transition context
@@ -78,6 +82,17 @@ final class ZoomDismissalInteractionController: NSObject, UIViewControllerIntera
 
         // 현재 인덱스
         let currentIndex = destinationProvider?.currentOriginalIndex ?? 0
+
+        // Navigation Pop: toView(그리드)를 container 맨 뒤에 추가 + finalFrame 설정
+        // Modal dismiss: shouldRemovePresentersView=false로 이미 window에 있음 → 추가 불필요
+        // ⚠️ Interactive 경로에서는 ZoomAnimator.animateTransition이 스킵되므로 여기서 설정
+        if transitionMode == .navigation {
+            container.insertSubview(toVC.view, at: 0)
+            let finalFrame = transitionContext.finalFrame(for: toVC)
+            if !finalFrame.isEmpty {
+                toVC.view.frame = finalFrame
+            }
+        }
 
         // 1. 그리드를 해당 셀 위치로 스크롤 (셀이 보이도록)
         sourceProvider?.scrollToSourceCell(for: currentIndex)
