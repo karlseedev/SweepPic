@@ -41,12 +41,7 @@ enum LiquidGlassOptimizer {
     static var isEnabled: Bool = true
 
     /// 블러 뷰 alpha 값 (스크롤 중)
-    static var blurAlpha: CGFloat = 0.5
-
-    /// MTKView fps 제한 (Phase 3)
-    /// 기본값 30: 120fps 기기에서 75% GPU 감소, 60fps 기기에서 50% 감소
-    /// Glass 효과는 배경 굴절이므로 높은 fps 불필요
-    static var preferredFPS: Int = 30
+    static var blurAlpha: CGFloat = 0.75
 
     /// 전환 애니메이션 시간 (초)
     private static let transitionDuration: TimeInterval = 0.1
@@ -74,23 +69,24 @@ enum LiquidGlassOptimizer {
         guard isEnabled else { return }
         guard let rootView = rootView else { return }
 
-        // Phase 3: FPS 제한은 mode에 무관하게 항상 적용
-        let mtkViews = findAllMTKViews(in: rootView)
-        for mtkView in mtkViews {
-            mtkView.preferredFramesPerSecond = preferredFPS
-        }
-        Log.print("[LiquidGlass] FPS limit: \(preferredFPS)fps → \(mtkViews.count)개 MTKView")
+        // C-5 fix: 해제된 MTKView의 고아 엔트리 정리
+        // ObjectIdentifier 충돌 방지 (메모리 재사용 시 새 MTKView가 블러 오버레이를 못 받는 버그)
+        cleanupOrphanedOverlays()
 
         // blur 뷰 생성: blurReplacement 또는 normal 모드 (C-5)
         guard mode == .blurReplacement || mode == .normal else { return }
 
+        let mtkViews = findAllMTKViews(in: rootView)
         var newCount = 0
 
         for mtkView in mtkViews {
             let identifier = ObjectIdentifier(mtkView)
 
-            // 이미 있으면 스킵
-            guard preloadedOverlays[identifier] == nil else { continue }
+            // 이미 있으면 프레임만 동기화
+            if let existing = preloadedOverlays[identifier] {
+                existing.blurView.frame = mtkView.frame
+                continue
+            }
 
             // 부모 뷰 확인
             guard let superview = mtkView.superview else { continue }
@@ -108,11 +104,12 @@ enum LiquidGlassOptimizer {
                 originalAlpha: mtkView.alpha
             )
             newCount += 1
+
+            // DEBUG: 각 MTKView 프레임 로그
+            Log.print("[LiquidGlass] NEW overlay: frame=\(mtkView.frame), superview=\(type(of: superview)), sv.frame=\(superview.frame)")
         }
 
-        if newCount > 0 {
-            Log.print("[LiquidGlass] Blur preload: +\(newCount)개 (총 \(preloadedOverlays.count)개)")
-        }
+        Log.print("[LiquidGlass] Blur preload: new=\(newCount), total=\(preloadedOverlays.count), found=\(mtkViews.count)")
     }
 
     /// 스크롤 시작 시 최적화 적용
@@ -290,7 +287,7 @@ enum LiquidGlassOptimizer {
     /// MTKView와 동일한 모양의 블러 뷰 생성
     /// LiquidGlass 원본과 최대한 유사하게 tintColor 오버레이 포함
     private static func createBlurView(matching mtkView: MTKView) -> UIVisualEffectView {
-        let blurEffect = UIBlurEffect(style: .systemUltraThinMaterial)
+        let blurEffect = UIBlurEffect(style: .systemThinMaterial)
         let blurView = UIVisualEffectView(effect: blurEffect)
 
         blurView.frame = mtkView.frame
@@ -306,7 +303,7 @@ enum LiquidGlassOptimizer {
 
         // C-5: 검정 배경 20% 투명도 오버레이
         let tintOverlay = UIView()
-        tintOverlay.backgroundColor = UIColor(white: 0.0, alpha: 0.2)
+        tintOverlay.backgroundColor = UIColor(white: 0.0, alpha: 0.0)
         tintOverlay.frame = blurView.bounds
         tintOverlay.autoresizingMask = [.flexibleWidth, .flexibleHeight]
         blurView.contentView.addSubview(tintOverlay)
@@ -328,20 +325,6 @@ enum LiquidGlassOptimizer {
         }
 
         return result
-    }
-
-    // MARK: - Phase 3: FPS 제한
-
-    /// 모든 MTKView에 fps 제한 적용 (Phase 3)
-    /// preload()를 거치지 않는 시점에서도 독립적으로 호출 가능
-    /// - Parameter rootView: 탐색 시작 뷰 (보통 window)
-    static func applyFPSLimit(in rootView: UIView?) {
-        guard let rootView = rootView else { return }
-        let mtkViews = findAllMTKViews(in: rootView)
-        for mtkView in mtkViews {
-            mtkView.preferredFramesPerSecond = preferredFPS
-        }
-        Log.print("[LiquidGlass] FPS limit applied: \(preferredFPS)fps to \(mtkViews.count)개 MTKView")
     }
 
     // MARK: - Phase 4: Idle Pause
