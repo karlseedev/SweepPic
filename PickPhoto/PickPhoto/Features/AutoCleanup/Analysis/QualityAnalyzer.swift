@@ -121,10 +121,6 @@ final class QualityAnalyzer {
                     threshold: CleanupConstants.tooShortVideoDuration
                 )
 
-                #if DEBUG
-                Log.print("[QualityAnalyzer] 동영상 1초 미만: \(String(format: "%.2f", asset.duration))초 → 저품질 확정")
-                #endif
-
                 return QualityResult.lowQuality(
                     assetID: assetID,
                     creationDate: creationDate,
@@ -230,9 +226,6 @@ final class QualityAnalyzer {
                     safeGuardResult = try await safeGuardChecker.checkFaceQuality(image)
                 } catch {
                     // Vision 에러는 무시하고 계속 진행
-                    #if DEBUG
-                    Log.print("[QualityAnalyzer] SafeGuard face check failed: \(error.localizedDescription)")
-                    #endif
                 }
             }
         }
@@ -377,23 +370,12 @@ final class QualityAnalyzer {
             var hasResumed = false
 
             let request = VNRecognizeTextRequest { request, error in
-                #if DEBUG
-                Log.print("[QA-TextDetect] completion 진입, hasResumed=\(hasResumed), error=\(error != nil)")
-                #endif
-                guard !hasResumed else {
-                    #if DEBUG
-                    Log.print("[QA-TextDetect] ⚠️ 중복 resume 방지됨 (completion)")
-                    #endif
-                    return
-                }
+                guard !hasResumed else { return }
                 hasResumed = true
 
                 // 에러 발생 시 스크린샷 아님으로 처리 (안전한 방향)
                 guard error == nil,
                       let observations = request.results as? [VNRecognizedTextObservation] else {
-                    #if DEBUG
-                    Log.print("[QA-TextDetect] completion에서 resume (에러/nil)")
-                    #endif
                     continuation.resume(returning: false)
                     return
                 }
@@ -401,14 +383,6 @@ final class QualityAnalyzer {
                 // 텍스트 블록 개수로 판정
                 let textBlockCount = observations.count
                 let isTextScreenshot = textBlockCount >= CleanupConstants.textBlockCountThreshold
-
-                #if DEBUG
-                if textBlockCount > 0 {
-                    Log.print("[QualityAnalyzer] 텍스트 감지: \(textBlockCount)개 블록, 스크린샷=\(isTextScreenshot)")
-                }
-                Log.print("[QA-TextDetect] completion에서 resume (성공)")
-                #endif
-
                 continuation.resume(returning: isTextScreenshot)
             }
 
@@ -428,28 +402,10 @@ final class QualityAnalyzer {
             // Vision 요청 실행
             let handler = VNImageRequestHandler(cgImage: image, options: [:])
             do {
-                #if DEBUG
-                Log.print("[QA-TextDetect] perform 시작")
-                #endif
                 try handler.perform([request])
-                #if DEBUG
-                Log.print("[QA-TextDetect] perform 종료 (정상)")
-                #endif
             } catch {
-                #if DEBUG
-                Log.print("[QA-TextDetect] perform 종료 (throw), hasResumed=\(hasResumed)")
-                #endif
-                guard !hasResumed else {
-                    #if DEBUG
-                    Log.print("[QA-TextDetect] ⚠️ 중복 resume 방지됨 (catch)")
-                    #endif
-                    return
-                }
+                guard !hasResumed else { return }
                 hasResumed = true
-
-                #if DEBUG
-                Log.print("[QA-TextDetect] catch에서 resume, error=\(error.localizedDescription)")
-                #endif
                 continuation.resume(returning: false)
             }
         }
@@ -473,10 +429,6 @@ final class QualityAnalyzer {
             frames = try await videoFrameExtractor.extractFrames(from: asset)
         } catch {
             // 프레임 추출 실패 → SKIP
-            #if DEBUG
-            Log.print("[QualityAnalyzer] 동영상 프레임 추출 실패: \(error.localizedDescription)")
-            #endif
-
             if let extractError = error as? VideoFrameExtractError {
                 switch extractError {
                 case .iCloudOnly:
@@ -506,10 +458,6 @@ final class QualityAnalyzer {
 
         // 중앙값 판정: 2개 이상 저품질 → LOW_QUALITY
         let isLowQuality = lowQualityCount >= 2
-
-        #if DEBUG
-        Log.print("[QualityAnalyzer] 동영상 분석: \(frames.count)프레임, 저품질=\(lowQualityCount), 판정=\(isLowQuality ? "LOW" : "OK")")
-        #endif
 
         if isLowQuality {
             return QualityResult.lowQuality(
@@ -543,9 +491,7 @@ final class QualityAnalyzer {
             let exposureSignals = exposureAnalyzer.detectSignals(from: exposureMetrics, mode: mode)
             signals.append(contentsOf: exposureSignals)
         } catch {
-            #if DEBUG
-            Log.print("[QualityAnalyzer] 프레임 노출 분석 실패: \(error.localizedDescription)")
-            #endif
+            // 프레임 노출 분석 실패 시 무시
         }
 
         // 블러 분석
@@ -559,9 +505,7 @@ final class QualityAnalyzer {
             let blurSignals = blurAnalyzer.detectSignals(from: blurMetrics, mode: mode)
             signals.append(contentsOf: blurSignals)
         } catch {
-            #if DEBUG
-            Log.print("[QualityAnalyzer] 프레임 블러 분석 실패: \(error.localizedDescription)")
-            #endif
+            // 프레임 블러 분석 실패 시 무시
         }
 
         // 판정 (동영상에서는 Safe Guard 적용 안 함)
@@ -675,43 +619,3 @@ extension QualityAnalyzer {
         return (total, lowQuality, skipped, averageTimeMs)
     }
 }
-
-// MARK: - Debug Support
-
-#if DEBUG
-extension QualityAnalyzer {
-
-    /// 디버그용: 상세 분석 결과 출력
-    func debugAnalyze(_ asset: PHAsset) async -> String {
-        let result = await analyze(asset)
-
-        var output = """
-        === Quality Analysis Debug ===
-        Asset ID: \(asset.localIdentifier)
-        Mode: \(mode.rawValue)
-
-        """
-
-        // 결과 요약
-        output += "Verdict: \(result.description)\n\n"
-
-        // 신호 상세
-        if !result.signals.isEmpty {
-            output += "Signals:\n"
-            for signal in result.signals {
-                output += "  - \(signal.description)\n"
-            }
-        }
-
-        // Safe Guard
-        if result.safeGuardApplied, let reason = result.safeGuardReason {
-            output += "\nSafeGuard: \(reason.rawValue)\n"
-        }
-
-        output += "\nAnalysis Time: \(String(format: "%.1f", result.analysisTimeMs))ms"
-        output += "\nMethod: \(result.analysisMethod.rawValue)"
-
-        return output
-    }
-}
-#endif

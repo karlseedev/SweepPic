@@ -25,16 +25,6 @@ protocol CleanupMethodSheetDelegate: AnyObject {
 
     /// 취소됨
     func cleanupMethodSheetDidCancel(_ sheet: CleanupMethodSheet)
-
-    #if DEBUG
-    /// 통합 로직 테스트 선택됨 (DEBUG 전용)
-    @available(iOS 18.0, *)
-    func cleanupMethodSheetDidSelectIntegratedTest(_ sheet: CleanupMethodSheet, continueFromLast: Bool)
-
-    /// 3모드 비교 테스트 선택됨 (DEBUG 전용)
-    @available(iOS 18.0, *)
-    func cleanupMethodSheetDidSelectModeTest(_ sheet: CleanupMethodSheet, continueFromLast: Bool)
-    #endif
 }
 
 // MARK: - CleanupMethodSheet
@@ -135,13 +125,6 @@ final class CleanupMethodSheet {
         ) { [self] _ in
             self.loadYearsAndShowSelection(from: viewController)
         })
-
-        // DEBUG: 통합 로직 테스트 (iOS 18+)
-        #if DEBUG
-        if #available(iOS 18.0, *) {
-            // 통합 테스트 / 3모드 비교 테스트 — 필요 시 여기에 추가
-        }
-        #endif
 
         // 취소
         alert.addAction(UIAlertAction(

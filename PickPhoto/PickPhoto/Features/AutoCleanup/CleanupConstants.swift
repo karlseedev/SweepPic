@@ -237,28 +237,3 @@ enum CleanupConstants {
         }
     }
 }
-
-// MARK: - Debug 확장
-
-#if DEBUG
-extension CleanupConstants {
-
-    /// 디버그 모드에서 임계값 오버라이드 활성화
-    /// - UserDefaults에서 "debug.cleanup.enabled" 키로 확인
-    static var isDebugOverrideEnabled: Bool {
-        UserDefaults.standard.bool(forKey: "debug.cleanup.enabled")
-    }
-
-    /// 디버그 모드에서 극단 어두움 임계값 오버라이드
-    static var debugExtremeDarkLuminance: Double {
-        let value = UserDefaults.standard.double(forKey: "debug.cleanup.darkLuminance")
-        return value > 0 ? value : extremeDarkLuminance
-    }
-
-    /// 디버그 모드에서 심각 블러 임계값 오버라이드
-    static var debugSevereBlurLaplacian: Double {
-        let value = UserDefaults.standard.double(forKey: "debug.cleanup.blurLaplacian")
-        return value > 0 ? value : severeBlurLaplacian
-    }
-}
-#endif

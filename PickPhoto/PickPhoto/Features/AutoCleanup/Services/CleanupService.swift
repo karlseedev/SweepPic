@@ -158,9 +158,6 @@ final class CleanupService: CleanupServiceProtocol {
             currentSession = session
         }
 
-        #if DEBUG
-        Log.print("[CleanupService] Cleanup cancelled - no photos moved to trash")
-        #endif
     }
 
     /// 정리 일시정지
@@ -174,9 +171,6 @@ final class CleanupService: CleanupServiceProtocol {
             currentSession = session
         }
 
-        #if DEBUG
-        Log.print("[CleanupService] Cleanup paused")
-        #endif
     }
 
     /// 정리 재개
@@ -190,9 +184,6 @@ final class CleanupService: CleanupServiceProtocol {
             currentSession = session
         }
 
-        #if DEBUG
-        Log.print("[CleanupService] Cleanup resumed")
-        #endif
     }
 
     // MARK: - Private Methods
@@ -233,10 +224,6 @@ final class CleanupService: CleanupServiceProtocol {
         // PHFetchResult 가져오기
         let fetchResult = createFetchResult(for: method)
         let totalCount = fetchResult.count
-
-        #if DEBUG
-        Log.print("[CleanupService] 스캔 시작: method=\(method), 대상 사진 수=\(totalCount)")
-        #endif
 
         guard totalCount > 0 else {
             // 사진이 없는 경우
@@ -321,14 +308,6 @@ final class CleanupService: CleanupServiceProtocol {
                         // 이 날짜 이전부터 다음 정리가 시작되어야 버려진 사진도 다시 탐색됨
                         if foundAssetIDs.count == maxFoundCount {
                             lastLowQualityDate = result.creationDate
-
-                            #if DEBUG
-                            if let date = lastLowQualityDate {
-                                let df = DateFormatter()
-                                df.dateFormat = "yyyy-MM-dd HH:mm"
-                                Log.print("[CleanupService] 50장 도달! 마지막 저품질 사진 날짜: \(df.string(from: date))")
-                            }
-                            #endif
                         }
                     }
                     // 50장 이후는 추가하지 않음 (다음 이어서 정리에서 다시 탐색)
@@ -355,17 +334,6 @@ final class CleanupService: CleanupServiceProtocol {
                 // 50장 도달 시 마지막 저품질 사진의 날짜 사용
                 currentDate = lastLowQualityDate ?? currentDate
             }
-
-            #if DEBUG
-            let dateFormatter = DateFormatter()
-            dateFormatter.dateFormat = "yyyy-MM-dd HH:mm"
-            let dateStr = dateFormatter.string(from: currentDate)
-
-            // SKIP 통계 문자열 생성
-            let skipStr = skipStats.isEmpty ? "없음" : skipStats.map { "\($0.key):\($0.value)" }.joined(separator: ", ")
-
-            Log.print("[CleanupService] 배치 완료: 스캔=\(scannedCount)/\(totalCount), 분석=\(analyzedCount), 발견=\(batchFoundCount), SKIP=[\(skipStr)], 시점=\(dateStr)")
-            #endif
 
             // 진행 상황 콜백 (메인 스레드)
             let progress = CleanupProgress(
@@ -532,10 +500,6 @@ final class CleanupService: CleanupServiceProtocol {
         guard !assetIDs.isEmpty else { return }
 
         trashStore.moveToTrash(assetIDs: assetIDs)
-
-        #if DEBUG
-        Log.print("[CleanupService] Moved \(assetIDs.count) photos to trash")
-        #endif
     }
 
     /// 세션 정리
@@ -553,10 +517,6 @@ final class CleanupService: CleanupServiceProtocol {
             session.foundCount = result.foundCount
             session.endReason = result.endReason  // 종료 사유 저장
             sessionStore.save(session)
-
-            #if DEBUG
-            Log.print("[CleanupService] Session saved - endReason: \(result.endReason), canContinue: \(session.canContinue)")
-            #endif
         }
 
         // 현재 세션 정리
