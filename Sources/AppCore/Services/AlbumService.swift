@@ -27,6 +27,23 @@ public protocol AlbumServiceProtocol {
     /// - Returns: PHFetchResult (nil이면 앨범을 찾지 못함)
     func fetchPhotosInAlbum(albumID: String) -> PHFetchResult<PHAsset>?
 
+    /// 비동기 앨범 전체 로드 (백그라운드 스레드에서 PhotoKit fetch 실행)
+    /// - completion: 메인 스레드에서 호출됨
+    /// - keyAssets: 앨범ID → PHAsset 딕셔너리 (셀에서 재 fetch 방지)
+    func fetchAllAlbumsAsync(
+        completion: @escaping (
+            _ smartAlbums: [SmartAlbum],
+            _ userAlbums: [Album],
+            _ keyAssets: [String: PHAsset]
+        ) -> Void
+    )
+
+    /// 앨범 메타데이터만 동기 로드 (빠른 초기 표시용)
+    /// - PHAsset.fetchAssets 호출 없음 → 매우 빠름 (~11회 collection 호출)
+    /// - estimatedAssetCount 사용 (정확하지 않을 수 있음)
+    /// - keyAsset 없음 (셀에서 placeholder 표시)
+    func fetchAlbumMetadataSync() -> (smartAlbums: [SmartAlbum], userAlbums: [Album])
+
     /// 스마트 앨범 내 사진 조회
     /// - Parameter type: 스마트 앨범 타입
     /// - Returns: PHFetchResult (nil이면 앨범을 찾지 못함)
@@ -50,6 +67,7 @@ public final class AlbumService: AlbumServiceProtocol {
 
     /// 사용자 생성 앨범 목록 조회
     /// PHAssetCollectionType.album 타입의 모든 앨범 반환
+    /// - fetchLimit=1로 keyAsset만 로드하여 성능 최적화
     public func fetchUserAlbums() -> [Album] {
         var albums: [Album] = []
 
@@ -65,15 +83,22 @@ public final class AlbumService: AlbumServiceProtocol {
         )
 
         userAlbums.enumerateObjects { collection, _, _ in
-            // 앨범 내 에셋 개수 조회
-            let assetsFetchOptions = PHFetchOptions()
-            assetsFetchOptions.predicate = NSPredicate(format: "mediaType = %d", PHAssetMediaType.image.rawValue)
+            // estimatedAssetCount == 0이면 빈 앨범 → 스킵 (빠른 필터)
+            // NSNotFound(-1)은 스킵하지 않고 실제 fetch로 확인
+            let estimated = collection.estimatedAssetCount
+            if estimated == 0 { return }
 
-            let assets = PHAsset.fetchAssets(in: collection, options: assetsFetchOptions)
-            let assetCount = assets.count
+            // 에셋 개수 조회 (mediaType 필터 적용)
+            let countOptions = PHFetchOptions()
+            countOptions.predicate = NSPredicate(format: "mediaType = %d", PHAssetMediaType.image.rawValue)
+            let assetCount = PHAsset.fetchAssets(in: collection, options: countOptions).count
 
-            // 키 에셋 (가장 최근 사진)
-            let keyAssetID = assets.lastObject?.localIdentifier
+            // keyAsset: fetchLimit=1 + 최신순 정렬 → 1개만 로드
+            let keyOptions = PHFetchOptions()
+            keyOptions.sortDescriptors = [NSSortDescriptor(key: "creationDate", ascending: false)]
+            keyOptions.fetchLimit = 1
+            keyOptions.predicate = NSPredicate(format: "mediaType = %d", PHAssetMediaType.image.rawValue)
+            let keyAssetID = PHAsset.fetchAssets(in: collection, options: keyOptions).firstObject?.localIdentifier
 
             let album = Album(
                 id: collection.localIdentifier,
@@ -184,9 +209,201 @@ public final class AlbumService: AlbumServiceProtocol {
         return assets
     }
 
+    // MARK: - Lightweight Sync API
+
+    /// 앨범 메타데이터만 동기 로드 (빠른 초기 표시용)
+    /// - PHAssetCollection만 조회, PHAsset.fetchAssets 호출 없음
+    /// - estimatedAssetCount 사용 (NSNotFound인 경우 0으로 표시, Phase 2에서 교정)
+    /// - keyAssetIdentifier nil → 셀에서 placeholder 표시
+    /// - 총 ~11회 PHAssetCollection 호출 (10 smart + 1 user)
+    public func fetchAlbumMetadataSync() -> (smartAlbums: [SmartAlbum], userAlbums: [Album]) {
+        var smartAlbums: [SmartAlbum] = []
+        var userAlbumsList: [Album] = []
+
+        // ── 스마트 앨범 (collection 메타데이터만) ──
+        let supportedTypes: [SmartAlbumType] = [
+            .screenshots, .selfies, .favorites, .videos,
+            .livePhotos, .panoramas, .bursts, .timelapses,
+            .slomoVideos, .depthEffect
+        ]
+
+        for albumType in supportedTypes {
+            guard let subtype = phAssetCollectionSubtype(for: albumType) else { continue }
+
+            let collections = PHAssetCollection.fetchAssetCollections(
+                with: .smartAlbum, subtype: subtype, options: nil
+            )
+            guard let collection = collections.firstObject else { continue }
+
+            let estimated = collection.estimatedAssetCount
+            if estimated == 0 { continue }
+
+            // NSNotFound → 0 (Phase 2에서 정확한 값으로 교정됨)
+            let displayCount = estimated == NSNotFound ? 0 : estimated
+
+            smartAlbums.append(SmartAlbum(
+                id: collection.localIdentifier,
+                type: albumType,
+                assetCount: displayCount,
+                keyAssetIdentifier: nil  // Phase 2에서 채워짐
+            ))
+        }
+
+        // ── 사용자 앨범 (collection 메타데이터만) ──
+        let albumOptions = PHFetchOptions()
+        albumOptions.sortDescriptors = [NSSortDescriptor(key: "localizedTitle", ascending: true)]
+
+        let userCollections = PHAssetCollection.fetchAssetCollections(
+            with: .album, subtype: .albumRegular, options: albumOptions
+        )
+
+        userCollections.enumerateObjects { collection, _, _ in
+            let estimated = collection.estimatedAssetCount
+            if estimated == 0 { return }
+
+            let displayCount = estimated == NSNotFound ? 0 : estimated
+
+            userAlbumsList.append(Album(
+                id: collection.localIdentifier,
+                title: collection.localizedTitle ?? "제목 없음",
+                assetCount: displayCount,
+                keyAssetIdentifier: nil,
+                creationDate: collection.startDate
+            ))
+        }
+
+        Log.print("[AlbumService] Metadata sync: \(smartAlbums.count) smart, \(userAlbumsList.count) user albums")
+        return (smartAlbums, userAlbumsList)
+    }
+
+    // MARK: - Async API
+
+    /// 비동기 앨범 전체 로드 (백그라운드 스레드에서 PhotoKit fetch 실행)
+    /// - 스마트 앨범 + 사용자 앨범 + keyAsset PHAsset을 한 번에 반환
+    /// - completion은 메인 스레드에서 호출
+    ///
+    /// 성능 최적화:
+    /// - 앨범당 단일 PHAsset.fetchAssets 호출 (count + keyAsset 병합)
+    ///   → PHFetchResult.count는 O(1), .firstObject로 최신 에셋 1개만 접근
+    /// - keyAsset PHAsset을 fetch 중 직접 캡처 → batch re-fetch 제거
+    /// - estimatedAssetCount == 0 빠른 필터
+    public func fetchAllAlbumsAsync(
+        completion: @escaping (
+            _ smartAlbums: [SmartAlbum],
+            _ userAlbums: [Album],
+            _ keyAssets: [String: PHAsset]
+        ) -> Void
+    ) {
+        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
+            guard let self = self else { return }
+
+            var smartAlbums: [SmartAlbum] = []
+            var userAlbumsList: [Album] = []
+            var keyAssets: [String: PHAsset] = [:]
+
+            // ── 스마트 앨범 (앨범당 1회 fetch) ──
+            let supportedTypes: [SmartAlbumType] = [
+                .screenshots, .selfies, .favorites, .videos,
+                .livePhotos, .panoramas, .bursts, .timelapses,
+                .slomoVideos, .depthEffect
+            ]
+
+            for albumType in supportedTypes {
+                guard let subtype = self.phAssetCollectionSubtype(for: albumType) else { continue }
+
+                let collections = PHAssetCollection.fetchAssetCollections(
+                    with: .smartAlbum, subtype: subtype, options: nil
+                )
+                guard let collection = collections.firstObject else { continue }
+
+                // estimatedAssetCount == 0이면 빈 앨범 → 스킵
+                let estimated = collection.estimatedAssetCount
+                if estimated == 0 { continue }
+
+                let needsImageFilter = albumType != .videos && albumType != .livePhotos
+                    && albumType != .timelapses && albumType != .slomoVideos
+
+                // 단일 fetch: 최신순 정렬 → .count로 개수, .firstObject로 keyAsset
+                let options = PHFetchOptions()
+                options.sortDescriptors = [NSSortDescriptor(key: "creationDate", ascending: false)]
+                if needsImageFilter {
+                    options.predicate = NSPredicate(
+                        format: "mediaType = %d", PHAssetMediaType.image.rawValue
+                    )
+                }
+
+                let fetchResult = PHAsset.fetchAssets(in: collection, options: options)
+                let assetCount = fetchResult.count  // O(1)
+                if assetCount == 0 { continue }
+
+                let keyAsset = fetchResult.firstObject  // 최신 에셋 1개
+                let albumID = collection.localIdentifier
+
+                smartAlbums.append(SmartAlbum(
+                    id: albumID,
+                    type: albumType,
+                    assetCount: assetCount,
+                    keyAssetIdentifier: keyAsset?.localIdentifier
+                ))
+
+                // PHAsset 직접 캡처 (batch re-fetch 불필요)
+                if let asset = keyAsset {
+                    keyAssets[albumID] = asset
+                }
+            }
+
+            // ── 사용자 앨범 (앨범당 1회 fetch) ──
+            let albumOptions = PHFetchOptions()
+            albumOptions.sortDescriptors = [NSSortDescriptor(key: "localizedTitle", ascending: true)]
+
+            let userCollections = PHAssetCollection.fetchAssetCollections(
+                with: .album, subtype: .albumRegular, options: albumOptions
+            )
+
+            userCollections.enumerateObjects { collection, _, _ in
+                // estimatedAssetCount == 0이면 빈 앨범 → 스킵
+                let estimated = collection.estimatedAssetCount
+                if estimated == 0 { return }
+
+                // 단일 fetch: 최신순 정렬 + 이미지 필터
+                let options = PHFetchOptions()
+                options.sortDescriptors = [NSSortDescriptor(key: "creationDate", ascending: false)]
+                options.predicate = NSPredicate(
+                    format: "mediaType = %d", PHAssetMediaType.image.rawValue
+                )
+
+                let fetchResult = PHAsset.fetchAssets(in: collection, options: options)
+                let assetCount = fetchResult.count
+                if assetCount == 0 { return }
+
+                let keyAsset = fetchResult.firstObject
+                let albumID = collection.localIdentifier
+
+                userAlbumsList.append(Album(
+                    id: albumID,
+                    title: collection.localizedTitle ?? "제목 없음",
+                    assetCount: assetCount,
+                    keyAssetIdentifier: keyAsset?.localIdentifier,
+                    creationDate: collection.startDate
+                ))
+
+                if let asset = keyAsset {
+                    keyAssets[albumID] = asset
+                }
+            }
+
+            Log.print("[AlbumService] Async fetched \(smartAlbums.count) smart, \(userAlbumsList.count) user albums")
+
+            // 메인 스레드에서 completion 호출
+            DispatchQueue.main.async {
+                completion(smartAlbums, userAlbumsList, keyAssets)
+            }
+        }
+    }
+
     // MARK: - Private Methods
 
-    /// 스마트 앨범 단일 조회
+    /// 스마트 앨범 단일 조회 (fetchLimit=1로 keyAsset만 로드)
     private func fetchSmartAlbum(type: SmartAlbumType) -> SmartAlbum? {
         guard let subtype = phAssetCollectionSubtype(for: type) else {
             return nil
@@ -203,19 +420,32 @@ public final class AlbumService: AlbumServiceProtocol {
             return nil
         }
 
+        // estimatedAssetCount == 0이면 빈 앨범 → 스킵
+        // NSNotFound(-1)은 스킵하지 않고 실제 fetch로 확인
+        let estimated = collection.estimatedAssetCount
+        if estimated == 0 { return nil }
+
+        // mediaType 필터 조건 (비디오 계열은 필터 제외)
+        let needsImageFilter = type != .videos && type != .livePhotos
+            && type != .timelapses && type != .slomoVideos
+
         // 에셋 개수 조회
-        let options = PHFetchOptions()
-
-        // 비디오 타입이 아니면 이미지만 필터
-        if type != .videos && type != .livePhotos && type != .timelapses && type != .slomoVideos {
-            options.predicate = NSPredicate(format: "mediaType = %d", PHAssetMediaType.image.rawValue)
+        let countOptions = PHFetchOptions()
+        if needsImageFilter {
+            countOptions.predicate = NSPredicate(format: "mediaType = %d", PHAssetMediaType.image.rawValue)
         }
+        let assetCount = PHAsset.fetchAssets(in: collection, options: countOptions).count
 
-        let assets = PHAsset.fetchAssets(in: collection, options: options)
-        let assetCount = assets.count
+        if assetCount == 0 { return nil }
 
-        // 키 에셋 (가장 최근 사진)
-        let keyAssetID = assets.lastObject?.localIdentifier
+        // keyAsset: fetchLimit=1 + 최신순 정렬 → 1개만 로드
+        let keyOptions = PHFetchOptions()
+        keyOptions.sortDescriptors = [NSSortDescriptor(key: "creationDate", ascending: false)]
+        keyOptions.fetchLimit = 1
+        if needsImageFilter {
+            keyOptions.predicate = NSPredicate(format: "mediaType = %d", PHAssetMediaType.image.rawValue)
+        }
+        let keyAssetID = PHAsset.fetchAssets(in: collection, options: keyOptions).firstObject?.localIdentifier
 
         return SmartAlbum(
             id: collection.localIdentifier,

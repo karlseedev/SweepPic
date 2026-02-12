@@ -6,6 +6,11 @@
 // - 앨범 제목
 // - 사진 수 표시
 // - iOS 사진 앱 스타일
+//
+// 최적화: PHAsset 직접 전달 + ImagePipeline 사용
+// - 셀마다 PHAsset.fetchAssets 동기 호출 제거
+// - ImagePipeline의 PHCachingImageManager + 백그라운드 OperationQueue 활용
+// - iCloud 에셋 썸네일 지원 (isNetworkAccessAllowed = true, fallback 경로)
 
 import UIKit
 import Photos
@@ -79,7 +84,10 @@ final class AlbumCell: UICollectionViewCell {
 
     // MARK: - Properties
 
-    /// 이미지 요청 ID (취소용)
+    /// ImagePipeline 요청 토큰 (취소용)
+    private var currentCancellable: Cancellable?
+
+    /// 이미지 요청 ID (기존 assetID 기반 fallback용)
     private var imageRequestID: PHImageRequestID?
 
     /// 현재 설정된 에셋 ID (재사용 검증용)
@@ -116,17 +124,20 @@ final class AlbumCell: UICollectionViewCell {
     override func prepareForReuse() {
         super.prepareForReuse()
 
-        // 이전 이미지 요청 취소
+        // ImagePipeline 요청 취소
+        currentCancellable?.cancel()
+        currentCancellable = nil
+
+        // 기존 PHImageManager 요청 취소 (assetID fallback용)
         if let requestID = imageRequestID {
             PHImageManager.default().cancelImageRequest(requestID)
             imageRequestID = nil
         }
 
-        // UI 초기화
-        thumbnailImageView.image = nil
+        // ⚠️ thumbnailImageView.image와 currentAssetID는 유지 (깜빡임 방지)
+        // reloadData() 시 같은 에셋이면 기존 이미지 유지, 다른 에셋이면 configure에서 교체
         titleLabel.text = nil
         countLabel.text = nil
-        currentAssetID = nil
         iconImageView.isHidden = true
         iconBackgroundView.isHidden = true
         thumbnailImageView.isHidden = false
@@ -185,66 +196,129 @@ final class AlbumCell: UICollectionViewCell {
         ])
     }
 
-    // MARK: - Configuration
+    // MARK: - Configuration (최적화 버전 — PHAsset 직접 전달)
 
-    /// 사용자 앨범 설정
-    /// - Parameters:
-    ///   - album: 앨범 정보
-    ///   - targetSize: 썸네일 크기
-    func configure(album: Album, targetSize: CGSize) {
+    /// 사용자 앨범 설정 (PHAsset 직접 전달)
+    /// - keyAsset이 nil이고 keyAssetIdentifier가 있으면 기존 assetID fallback
+    func configure(album: Album, keyAsset: PHAsset?, targetSize: CGSize) {
         titleLabel.text = album.title
         countLabel.text = "\(album.assetCount)"
 
-        // 키 에셋으로 썸네일 로드
-        if let keyAssetID = album.keyAssetIdentifier {
-            loadThumbnail(assetID: keyAssetID, targetSize: targetSize)
+        if let asset = keyAsset {
+            // 최적화 경로: PHAsset 직접 전달 → fetch 없이 ImagePipeline 사용
+            loadThumbnail(asset: asset, targetSize: targetSize)
+        } else if let keyAssetID = album.keyAssetIdentifier {
+            // fallback: keyAsset cache miss → 기존 assetID 기반 로드
+            loadThumbnailLegacy(assetID: keyAssetID, targetSize: targetSize)
         } else {
-            // 키 에셋이 없으면 기본 아이콘 표시
             showIcon(systemName: "photo.on.rectangle")
         }
     }
 
-    /// 스마트 앨범 설정
-    /// - Parameters:
-    ///   - smartAlbum: 스마트 앨범 정보
-    ///   - targetSize: 썸네일 크기
+    /// 스마트 앨범 설정 (PHAsset 직접 전달)
+    /// - keyAsset이 nil이고 keyAssetIdentifier가 있으면 기존 assetID fallback
+    func configure(smartAlbum: SmartAlbum, keyAsset: PHAsset?, targetSize: CGSize) {
+        titleLabel.text = smartAlbum.title
+        countLabel.text = "\(smartAlbum.assetCount)"
+
+        if let asset = keyAsset {
+            loadThumbnail(asset: asset, targetSize: targetSize)
+        } else if let keyAssetID = smartAlbum.keyAssetIdentifier {
+            loadThumbnailLegacy(assetID: keyAssetID, targetSize: targetSize)
+        } else {
+            showIcon(systemName: smartAlbum.type.systemIconName)
+        }
+    }
+
+    // MARK: - Configuration (기존 API — 하위 호환)
+
+    /// 사용자 앨범 설정 (기존 API — TrashAlbum 등에서 사용)
+    func configure(album: Album, targetSize: CGSize) {
+        titleLabel.text = album.title
+        countLabel.text = "\(album.assetCount)"
+
+        if let keyAssetID = album.keyAssetIdentifier {
+            loadThumbnailLegacy(assetID: keyAssetID, targetSize: targetSize)
+        } else {
+            showIcon(systemName: "photo.on.rectangle")
+        }
+    }
+
+    /// 스마트 앨범 설정 (기존 API)
     func configure(smartAlbum: SmartAlbum, targetSize: CGSize) {
         titleLabel.text = smartAlbum.title
         countLabel.text = "\(smartAlbum.assetCount)"
 
-        // 키 에셋으로 썸네일 로드
         if let keyAssetID = smartAlbum.keyAssetIdentifier {
-            loadThumbnail(assetID: keyAssetID, targetSize: targetSize)
+            loadThumbnailLegacy(assetID: keyAssetID, targetSize: targetSize)
         } else {
-            // 키 에셋이 없으면 스마트 앨범 타입에 맞는 아이콘 표시
             showIcon(systemName: smartAlbum.type.systemIconName)
         }
     }
 
     /// 휴지통 앨범 설정
-    /// - Parameters:
-    ///   - trashAlbum: 휴지통 앨범 정보
-    ///   - targetSize: 썸네일 크기
     func configure(trashAlbum: TrashAlbum, targetSize: CGSize) {
         titleLabel.text = trashAlbum.title
         countLabel.text = "\(trashAlbum.assetCount)"
 
-        // 키 에셋으로 썸네일 로드
         if let keyAssetID = trashAlbum.keyAssetIdentifier {
-            loadThumbnail(assetID: keyAssetID, targetSize: targetSize)
+            loadThumbnailLegacy(assetID: keyAssetID, targetSize: targetSize)
         } else {
-            // 키 에셋이 없으면 휴지통 아이콘 표시
             showIcon(systemName: "trash")
         }
     }
 
-    // MARK: - Private Methods
+    // MARK: - Thumbnail Loading (최적화)
 
-    /// 썸네일 로드
-    private func loadThumbnail(assetID: String, targetSize: CGSize) {
+    /// 썸네일 로드 (ImagePipeline 사용 — PHAsset 직접 전달)
+    /// - PHAsset.fetchAssets 동기 호출 제거
+    /// - ImagePipeline의 백그라운드 큐 + PHCachingImageManager 활용
+    private func loadThumbnail(asset: PHAsset, targetSize: CGSize) {
+        // 같은 에셋이 이미 로드되어 있으면 스킵 (reloadData 시 깜빡임 방지)
+        if currentAssetID == asset.localIdentifier && thumbnailImageView.image != nil {
+            return
+        }
+
+        currentAssetID = asset.localIdentifier
+        // 다른 에셋이면 기존 이미지 제거 (새 이미지 로드 전까지 placeholder 배경 표시)
+        thumbnailImageView.image = nil
+
+        // ImagePipeline을 통한 이미지 요청 (백그라운드에서 실행)
+        // .fast: opportunistic 모드로 빠른 로딩 (iCloud 로컬 캐시 썸네일 사용)
+        currentCancellable = ImagePipeline.shared.requestImage(
+            for: asset,
+            targetSize: targetSize,
+            contentMode: .aspectFill,
+            quality: .fast
+        ) { [weak self] image, isDegraded in
+            guard let self = self,
+                  self.currentAssetID == asset.localIdentifier else { return }
+
+            if let image = image {
+                self.thumbnailImageView.image = image
+                self.thumbnailImageView.isHidden = false
+                self.iconBackgroundView.isHidden = true
+            } else if !isDegraded {
+                // 최종 결과가 nil이면 아이콘 표시
+                self.showIcon(systemName: "photo.on.rectangle")
+            }
+        }
+    }
+
+    // MARK: - Thumbnail Loading (Legacy — assetID fallback)
+
+    /// 썸네일 로드 (기존 방식 — assetID로 PHAsset fetch 후 로드)
+    /// keyAsset cache miss 시 fallback 경로로 사용
+    private func loadThumbnailLegacy(assetID: String, targetSize: CGSize) {
+        // 같은 에셋이 이미 로드되어 있으면 스킵 (reloadData 시 깜빡임 방지)
+        if currentAssetID == assetID && thumbnailImageView.image != nil {
+            return
+        }
+
         currentAssetID = assetID
+        thumbnailImageView.image = nil
 
-        // PHAsset 조회
+        // PHAsset 조회 (동기 — fallback이므로 허용)
         let results = PHAsset.fetchAssets(
             withLocalIdentifiers: [assetID],
             options: nil

@@ -69,8 +69,28 @@ final class AlbumsViewController: UIViewController {
     /// 사용자 앨범 목록
     private var userAlbums: [Album] = []
 
+    /// keyAsset 캐시 (앨범ID → PHAsset, 셀에서 개별 fetch 방지)
+    private var keyAssetCache: [String: PHAsset] = [:]
+
     /// 현재 셀 크기
     private var currentCellSize: CGSize = .zero
+
+    // MARK: - Loading State
+
+    /// 비동기 로딩 중 여부 (중복 로딩 방지)
+    private var isLoading = false
+
+    /// 비동기 응답 역전(stale overwrite) 방지용 세대 카운터
+    private var loadGeneration: UInt = 0
+
+    /// 마지막 로드 완료 시간 (조건부 재로딩)
+    private var lastLoadTime: CFAbsoluteTime = 0
+
+    /// 로딩 중 또는 백그라운드 변경 플래그
+    private var needsReload = false
+
+    /// 최초 로드 완료 여부 (viewDidLoad + viewWillAppear 이중 호출 방지)
+    private var hasLoadedOnce = false
 
     // MARK: - Initialization
 
@@ -90,6 +110,12 @@ final class AlbumsViewController: UIViewController {
         super.viewDidLoad()
         setupUI()
         setupObservers()
+
+        // Phase 1: 동기 경량 로드 (컬렉션 메타데이터만, ~11회 호출)
+        // → 앨범명 + 개수 즉시 표시 (썸네일은 placeholder)
+        loadDataLightweight()
+
+        // Phase 2: 비동기 전체 로드 (정확한 개수 + 썸네일 + keyAsset)
         loadData()
 
         // T027-1f: iOS 26+에서 시스템 바 사용
@@ -102,8 +128,16 @@ final class AlbumsViewController: UIViewController {
 
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
-        // 화면 표시 시 데이터 갱신 (휴지통 상태 등 반영)
-        loadData()
+
+        // ⚠️ 최초 진입 시 viewDidLoad에서 이미 loadData() 호출됨 → 이중 호출 방지
+        // hasLoadedOnce = false: viewDidLoad의 loadData() 완료 전 → 스킵 (이중 reloadData 깜빡임 방지)
+        // hasLoadedOnce = true: 이후 진입 (앨범 상세에서 복귀 등) → 조건부 로드
+        if hasLoadedOnce {
+            let now = CFAbsoluteTimeGetCurrent()
+            if needsReload || (now - lastLoadTime > 1.0) {
+                loadData()
+            }
+        }
 
         // iOS 16~25: FloatingOverlay 기본 상태 세팅
         // (push에서 돌아올 때 앨범 화면 상태로 복원)
@@ -320,28 +354,66 @@ final class AlbumsViewController: UIViewController {
 
     // MARK: - Data Loading
 
-    /// 데이터 로드
-    private func loadData() {
-        // 스마트 앨범 조회
-        smartAlbums = albumService.fetchSmartAlbums()
-
-        // 사용자 앨범 조회
-        userAlbums = albumService.fetchUserAlbums()
-
-        // 빈 상태 업데이트
+    /// Phase 1: 경량 동기 로드 (컬렉션 메타데이터만)
+    /// - PHAsset.fetchAssets 호출 없음 → 매우 빠름 (~11회 collection 호출)
+    /// - estimatedAssetCount 사용 (정확하지 않을 수 있음)
+    /// - keyAsset 없음 → 셀에서 placeholder 표시
+    /// - viewDidLoad에서 1회만 호출 → 즉시 앨범 목록 표시
+    private func loadDataLightweight() {
+        let result = albumService.fetchAlbumMetadataSync()
+        smartAlbums = result.smartAlbums
+        userAlbums = result.userAlbums
         updateEmptyState()
-
-        // 컬렉션 뷰 리로드
         collectionView.reloadData()
+        hasLoadedOnce = true
+        lastLoadTime = CFAbsoluteTimeGetCurrent()
 
-        Log.print("[AlbumsViewController] Loaded \(smartAlbums.count) smart albums, \(userAlbums.count) user albums")
+        Log.print("[AlbumsViewController] Lightweight: \(smartAlbums.count) smart, \(userAlbums.count) user albums")
+    }
+
+    /// Phase 2: 비동기 전체 로드 (정확한 개수 + keyAsset + 썸네일)
+    /// - 중복 로딩 방지 (isLoading guard)
+    /// - 응답 역전 방지 (loadGeneration 비교)
+    /// - 깜빡임 방지 (completion 내 즉시 재호출 금지)
+    private func loadData() {
+        guard !isLoading else {
+            // 로딩 중 요청 → 완료 후 재로드 필요
+            needsReload = true
+            return
+        }
+        isLoading = true
+        needsReload = false  // 플래그 소비
+        loadGeneration += 1
+        let currentGeneration = loadGeneration
+
+        albumService.fetchAllAlbumsAsync { [weak self] smartAlbums, userAlbums, keyAssets in
+            guard let self = self else { return }
+            // stale 응답 무시 (더 새로운 요청이 발행된 경우)
+            guard currentGeneration == self.loadGeneration else { return }
+
+            self.isLoading = false
+            self.hasLoadedOnce = true
+            self.lastLoadTime = CFAbsoluteTimeGetCurrent()
+            self.smartAlbums = smartAlbums
+            self.userAlbums = userAlbums
+            self.keyAssetCache = keyAssets
+            self.updateEmptyState()
+            self.collectionView.reloadData()
+
+            Log.print("[AlbumsViewController] Loaded \(smartAlbums.count) smart albums, \(userAlbums.count) user albums")
+
+            // ⚠️ 깜빡임 방지: completion 내 즉시 재호출 금지
+            // needsReload은 다음 viewWillAppear 또는 photoLibraryDidChange(visible)에서 처리
+        }
     }
 
     /// 빈 상태 업데이트
+    /// ⚠️ collectionView.isHidden 토글 제거 — hidden→visible 전환 시
+    /// 모든 셀이 한꺼번에 생성되는 레이아웃 부하를 방지
     private func updateEmptyState() {
         let isEmpty = smartAlbums.isEmpty && userAlbums.isEmpty
         emptyStateView.isHidden = !isEmpty
-        collectionView.isHidden = isEmpty
+        // collectionView는 항상 visible (빈 컬렉션뷰는 시각적으로 문제없음)
     }
 
     // MARK: - Thumbnail Size
@@ -392,11 +464,13 @@ extension AlbumsViewController: UICollectionViewDataSource {
         switch albumSection {
         case .smartAlbums:
             let smartAlbum = smartAlbums[indexPath.item]
-            cell.configure(smartAlbum: smartAlbum, targetSize: targetSize)
+            let keyAsset = keyAssetCache[smartAlbum.id]
+            cell.configure(smartAlbum: smartAlbum, keyAsset: keyAsset, targetSize: targetSize)
 
         case .userAlbums:
             let album = userAlbums[indexPath.item]
-            cell.configure(album: album, targetSize: targetSize)
+            let keyAsset = keyAssetCache[album.id]
+            cell.configure(album: album, keyAsset: keyAsset, targetSize: targetSize)
         }
 
         return cell
@@ -577,10 +651,18 @@ extension AlbumsViewController: PHPhotoLibraryChangeObserver {
     /// PhotoKit 변경 감지
     /// 앨범 추가/삭제, 사진 변경 등 감지하여 UI 갱신
     nonisolated func photoLibraryDidChange(_ changeInstance: PHChange) {
-        // 메인 스레드에서 UI 업데이트
         DispatchQueue.main.async { [weak self] in
-            self?.loadData()
-            Log.print("[AlbumsViewController] PhotoLibrary changed, reloading data")
+            guard let self = self else { return }
+
+            if self.view.window != nil {
+                // 화면 보이는 중: 비동기 로드 (블로킹 없음)
+                self.loadData()
+                Log.print("[AlbumsViewController] PhotoLibrary changed, reloading data")
+            } else {
+                // 화면 안 보이는 중: 플래그만 설정 (viewWillAppear에서 처리)
+                self.needsReload = true
+                Log.print("[AlbumsViewController] PhotoLibrary changed, deferred reload")
+            }
         }
     }
 }
