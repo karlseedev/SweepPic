@@ -284,6 +284,12 @@ extension GridViewController: CleanupMethodSheetDelegate {
     func cleanupMethodSheetDidSelectModeTest(_ sheet: CleanupMethodSheet, continueFromLast: Bool) {
         startModeComparisonTest(continueFromLast: continueFromLast)
     }
+
+    /// 미리보기 정리 선택됨 (DEBUG 전용)
+    /// 분석 후 미리보기 그리드 표시 → 사용자 확인 → 휴지통 이동
+    func cleanupMethodSheetDidSelectPreview(_ sheet: CleanupMethodSheet, continueFromLast: Bool) {
+        startPreviewCleanup(continueFromLast: continueFromLast)
+    }
     #endif
 }
 
@@ -292,8 +298,116 @@ extension GridViewController: CleanupMethodSheetDelegate {
 extension GridViewController: CleanupProgressViewDelegate {
 
     func cleanupProgressViewDidTapCancel(_ view: CleanupProgressView) {
-        CleanupService.shared.cancelCleanup()
+        // 미리보기 서비스가 실행 중이면 그것을 취소, 아니면 기존 서비스 취소
+        if let previewService = previewService {
+            previewService.cancel()
+            self.previewService = nil
+        } else {
+            CleanupService.shared.cancelCleanup()
+        }
         view.hide()
+    }
+}
+
+// MARK: - Preview Cleanup (미리보기 정리)
+
+extension GridViewController {
+
+    /// 미리보기 분석 서비스 (취소 접근용, 프로퍼티로 보관)
+    ///
+    /// `private(set)` stored property는 extension에서 선언 불가하므로
+    /// `objc_getAssociatedObject`로 구현합니다.
+    var previewService: CleanupPreviewService? {
+        get {
+            return objc_getAssociatedObject(self, &AssociatedKeys.previewService) as? CleanupPreviewService
+        }
+        set {
+            objc_setAssociatedObject(self, &AssociatedKeys.previewService, newValue, .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
+        }
+    }
+
+    /// Associated object 키
+    private enum AssociatedKeys {
+        static var previewService = "previewService"
+    }
+
+    /// 미리보기 정리 시작
+    ///
+    /// 1. CleanupProgressView 표시
+    /// 2. CleanupPreviewService 실행 (분석만, 이동 없음)
+    /// 3. 결과 → PreviewGridViewController push
+    ///
+    /// - Parameter continueFromLast: true면 이어서 정리
+    func startPreviewCleanup(continueFromLast: Bool) {
+        // 1. 진행 뷰 표시
+        let progressView = CleanupProgressView()
+        progressView.delegate = self
+        progressView.configure(method: continueFromLast ? .continueFromLast : .fromLatest)
+        progressView.show(in: view)
+
+        // 2. 서비스 생성 및 보관 (취소 접근용)
+        let service = CleanupPreviewService()
+        self.previewService = service
+
+        // 3. 분석 실행
+        Task {
+            do {
+                let result = try await service.analyze(
+                    method: continueFromLast ? .continueFromLast : .fromLatest,
+                    progressHandler: { progress in
+                        progressView.update(with: progress)
+                    }
+                )
+
+                await MainActor.run { [weak self] in
+                    self?.previewService = nil
+                    progressView.hide {
+                        if result.totalCount > 0 {
+                            // 미리보기 그리드 push
+                            let previewVC = PreviewGridViewController(previewResult: result)
+                            previewVC.delegate = self
+                            self?.navigationController?.pushViewController(previewVC, animated: true)
+                        } else {
+                            // 결과 없음
+                            self?.showNoPreviewResultAlert()
+                        }
+                    }
+                }
+            } catch {
+                await MainActor.run { [weak self] in
+                    self?.previewService = nil
+                    progressView.hide {
+                        // 취소(CancellationError)면 에러 표시 안 함
+                        if error is CancellationError { return }
+                        self?.showCleanupError(.analysisFailed(error.localizedDescription))
+                    }
+                }
+            }
+        }
+    }
+
+    /// 미리보기 결과 없음 알림
+    private func showNoPreviewResultAlert() {
+        let alert = UIAlertController(
+            title: "정리할 사진 없음",
+            message: "정리할 저품질 사진을 찾지 못했습니다.",
+            preferredStyle: .alert
+        )
+        alert.addAction(UIAlertAction(title: "확인", style: .default))
+        present(alert, animated: true)
+    }
+}
+
+// MARK: - PreviewGridViewControllerDelegate
+
+extension GridViewController: PreviewGridViewControllerDelegate {
+
+    func previewGridVC(_ vc: PreviewGridViewController, didConfirmCleanup assetIDs: [String]) {
+        // 휴지통으로 이동
+        trashStore.moveToTrash(assetIDs: assetIDs)
+
+        // 완료 토스트 표시
+        Log.print("[PreviewCleanup] \(assetIDs.count)장 휴지통 이동 완료")
     }
 }
 

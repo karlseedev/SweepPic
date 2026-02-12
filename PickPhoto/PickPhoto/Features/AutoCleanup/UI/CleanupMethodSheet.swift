@@ -38,6 +38,11 @@ protocol CleanupMethodSheetDelegate: AnyObject {
     /// - Parameter continueFromLast: true면 이어서 테스트
     @available(iOS 18.0, *)
     func cleanupMethodSheetDidSelectModeTest(_ sheet: CleanupMethodSheet, continueFromLast: Bool)
+
+    /// 미리보기 정리 선택됨 (DEBUG 전용)
+    /// 분석 후 미리보기 그리드 표시 → 사용자 확인 → 휴지통 이동
+    /// - Parameter continueFromLast: true면 이어서 정리
+    func cleanupMethodSheetDidSelectPreview(_ sheet: CleanupMethodSheet, continueFromLast: Bool)
     #endif
 }
 
@@ -202,6 +207,36 @@ final class CleanupMethodSheet {
                 continueMode.isEnabled = false
             }
             alert.addAction(continueMode)
+
+            // ── 미리보기 정리 ──
+
+            // 미리보기 정리 (처음부터)
+            alert.addAction(UIAlertAction(
+                title: "[DEBUG] 미리보기 정리 (처음)",
+                style: .default
+            ) { [self] _ in
+                self.delegate?.cleanupMethodSheetDidSelectPreview(self, continueFromLast: false)
+            })
+
+            // 미리보기 이어서 정리
+            let continuePreview: UIAlertAction
+            if CleanupPreviewService.canContinue, let lastDate = CleanupPreviewService.lastScanDate {
+                let dateString = formatDate(lastDate)
+                continuePreview = UIAlertAction(
+                    title: "[DEBUG] 미리보기 이어서 (\(dateString) 이전)",
+                    style: .default
+                ) { [self] _ in
+                    self.delegate?.cleanupMethodSheetDidSelectPreview(self, continueFromLast: true)
+                }
+            } else {
+                continuePreview = UIAlertAction(
+                    title: "[DEBUG] 미리보기 이어서",
+                    style: .default,
+                    handler: nil
+                )
+                continuePreview.isEnabled = false
+            }
+            alert.addAction(continuePreview)
         }
         #endif
 
