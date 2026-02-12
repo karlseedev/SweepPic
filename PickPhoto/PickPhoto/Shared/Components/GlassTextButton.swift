@@ -196,8 +196,8 @@ class GlassTextButton: UIButton {
     override func layoutSubviews() {
         super.layoutSubviews()
 
-        // pill shape: 단일/멀티라인 모두 height/2 (원형 좌우 라운드)
-        let cornerRadius = multilineEnabled ? bounds.height / 2 : Constants.cornerRadius
+        // pill shape: 높이의 절반 (단일/멀티라인 모두)
+        let cornerRadius = bounds.height / 2
 
         // deferred 상태면 glassView 접근 스킵 (lazy 트리거 방지)
         if !glassViewSetupDeferred {
@@ -261,6 +261,12 @@ class GlassTextButton: UIButton {
             textLabel.text = title
             invalidateIntrinsicContentSize()
         }
+    }
+
+    /// Glass 뷰 배경색 설정 (iOS 18 이하에서 어두운 배경 위 가시성 확보용)
+    /// glassView가 이미 clipsToBounds + cornerRadius 적용이므로 pill shape으로 자연스럽게 잘림
+    func setGlassBackground(_ color: UIColor?) {
+        glassView.backgroundColor = color
     }
 
     // MARK: - Glass Effect Lazy Setup (Phase 6)

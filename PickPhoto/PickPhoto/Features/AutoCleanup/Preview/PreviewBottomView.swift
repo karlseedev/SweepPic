@@ -44,8 +44,8 @@ final class PreviewBottomView: UIView {
 
     // MARK: - UI Elements
 
-    /// 미리보기 전용 Glass 배경색 (중간회색 70% — 진한 배경 위 가시성 확보)
-    private static let previewGlassTint = UIColor(white: 0.5, alpha: 0.7)
+    /// 미리보기 전용 Glass 배경색 (중간회색 15% — iOS 26 현재 화면 전용)
+    private static let previewGlassTint = UIColor(white: 0.5, alpha: 0.15)
 
     /// 메인 정리 버튼 — Glass 스타일, 전체 너비
     private let primaryButton: GlassTextButton = {
@@ -113,7 +113,7 @@ final class PreviewBottomView: UIView {
 
     private func setupUI() {
         // 93% 진한 그레이 배경 — 상단 썸네일(검정)과 구분
-        backgroundColor = UIColor(white: 0.07, alpha: 1.0)
+        backgroundColor = UIColor(white: 0.09, alpha: 1.0)
 
         // 상단 구분선
         let separator = UIView()
@@ -142,16 +142,25 @@ final class PreviewBottomView: UIView {
             primaryButton.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -20),
             primaryButton.heightAnchor.constraint(equalToConstant: 44),
 
-            // 보조 스택: 메인 버튼 아래 8pt, 좌우 20pt
+            // 보조 스택: 메인 버튼 아래 8pt, 좌우 20pt, 높이 48pt 고정
             secondaryStack.topAnchor.constraint(equalTo: primaryButton.bottomAnchor, constant: 8),
             secondaryStack.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 20),
             secondaryStack.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -20),
+            secondaryStack.heightAnchor.constraint(equalToConstant: 48),
         ])
 
         // 액션 연결
         primaryButton.addTarget(self, action: #selector(primaryTapped), for: .touchUpInside)
         collapseButton.addTarget(self, action: #selector(collapseTapped), for: .touchUpInside)
         expandButton.addTarget(self, action: #selector(expandTapped), for: .touchUpInside)
+
+        // iOS 18 이하: Glass 셰이더가 어두운 배경(0.07)에서 투명 → 대체 배경 제공
+        if #unavailable(iOS 26) {
+            let legacyBg = UIColor(white: 0.25, alpha: 0.3)
+            primaryButton.setGlassBackground(legacyBg)
+            collapseButton.setGlassBackground(legacyBg)
+            expandButton.setGlassBackground(legacyBg)
+        }
     }
 
     // MARK: - Configuration
@@ -224,6 +233,10 @@ final class PreviewBottomView: UIView {
 
         // 둘 다 숨김이면 보조 스택도 숨김 (1단계에서 expand 불가 시)
         secondaryStack.isHidden = !showCollapse && !showExpand
+
+        // 레이아웃 확정 후 블러 오버레이 frame 동기화 (버튼 크기 변경 시 필수)
+        layoutIfNeeded()
+        LiquidGlassOptimizer.preload(in: self)
     }
 
     // MARK: - Actions

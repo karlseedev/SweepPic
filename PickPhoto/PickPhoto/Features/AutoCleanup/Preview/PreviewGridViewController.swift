@@ -375,11 +375,11 @@ final class PreviewGridViewController: UIViewController {
     // MARK: - Section Mapping
 
     /// 섹션 수 (currentStage에 따라 동적)
-    /// 각 단계: 배너 + 사진 = 2섹션씩
+    /// light: 사진만 (배너 없음), standard/deep: 배너+사진 쌍으로 구성
     private var numberOfSections: Int {
         switch currentStage {
         case .light:
-            return 2  // 배너, 사진
+            return 1  // 사진만 (배너 없음)
         case .standard:
             return 4  // 배너, 사진, 배너, 사진
         case .deep:
@@ -388,8 +388,17 @@ final class PreviewGridViewController: UIViewController {
     }
 
     /// 섹션 인덱스에 대한 섹션 타입
-    /// 0: 배너(30점이하), 1: light사진, 2: 배너(31~40점), 3: standard사진, 4: 배너(41~50점), 5: deep사진
+    ///
+    /// light: 0=사진
+    /// standard/deep: 0=배너(30점이하), 1=light사진, 2=배너(31~40점), 3=standard사진,
+    ///                4=배너(41~50점), 5=deep사진
     private func sectionType(for sectionIndex: Int) -> SectionType {
+        // light 단계: 배너 없이 사진만
+        if currentStage == .light {
+            return .photos(previewResult.lightCandidates)
+        }
+
+        // standard/deep: 배너 포함 전체 매핑
         switch sectionIndex {
         case 0:
             return .banner(scoreRange: "30점 이하", count: previewResult.lightCount)
@@ -521,13 +530,13 @@ final class PreviewGridViewController: UIViewController {
     /// 정리 확인 Alert 표시
     private func showCleanupConfirmation(assetIDs: [String]) {
         let alert = UIAlertController(
-            title: "\(assetIDs.count)장을 정리할까요?",
-            message: "선택한 사진이 휴지통으로 이동됩니다.",
+            title: "\(assetIDs.count)장을 휴지통으로 이동할까요?",
+            message: nil,
             preferredStyle: .alert
         )
 
         alert.addAction(UIAlertAction(title: "취소", style: .cancel))
-        alert.addAction(UIAlertAction(title: "정리하기", style: .destructive) { [weak self] _ in
+        alert.addAction(UIAlertAction(title: "이동하기", style: .destructive) { [weak self] _ in
             guard let self = self else { return }
             self.delegate?.previewGridVC(self, didConfirmCleanup: assetIDs)
             self.navigationController?.popViewController(animated: true)
@@ -654,14 +663,14 @@ extension PreviewGridViewController: PreviewBottomViewDelegate {
 
     func previewBottomViewDidTapCollapse(_ view: PreviewBottomView) {
         // 단계 축소 (expand의 역동작)
-        // .standard → .light: 섹션 [2, 3] 삭제 (배너 + standard 사진)
-        // .deep → .standard: 섹션 [4, 5] 삭제 (배너 + deep 사진)
+        // .standard → .light: 섹션 [0, 2, 3] 삭제 (light배너 + standard배너 + standard사진)
+        // .deep → .standard: 섹션 [4, 5] 삭제 (deep배너 + deep사진)
         let previousStage: PreviewStage
         let sectionsToDelete: IndexSet
         switch currentStage {
         case .standard:
             previousStage = .light
-            sectionsToDelete = IndexSet([2, 3])
+            sectionsToDelete = IndexSet([0, 2, 3])  // light배너도 함께 제거
         case .deep:
             previousStage = .standard
             sectionsToDelete = IndexSet([4, 5])
@@ -693,17 +702,17 @@ extension PreviewGridViewController: PreviewBottomViewDelegate {
             let newSections: IndexSet
             switch nextStage {
             case .standard:
-                newSections = IndexSet([2, 3])
+                newSections = IndexSet([0, 2, 3])  // light배너 + standard배너 + standard사진
             case .deep:
-                newSections = IndexSet([4, 5])
+                newSections = IndexSet([4, 5])      // deep배너 + deep사진
             default:
                 return
             }
             collectionView.insertSections(newSections)
         } completion: { [weak self] _ in
-            guard let self = self else { return }
+            guard let self else { return }
 
-            // 3. 배너 위치로 자동 스크롤
+            // 3. 삽입 애니메이션 완료 후 배너 위치로 스크롤
             let bannerSection: Int
             switch nextStage {
             case .standard:
