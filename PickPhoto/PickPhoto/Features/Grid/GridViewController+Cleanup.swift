@@ -128,12 +128,9 @@ extension GridViewController {
 
     /// 휴지통 비어있지 않음 알림 표시
     private func showTrashNotEmptyAlert() {
-        let trashCount = trashStore.trashedCount
-        let message = "휴지통에 \(trashCount)장의 사진이 있습니다.\n정리를 시작하려면 휴지통을 먼저 비워주세요."
-
         let alert = UIAlertController(
-            title: "휴지통을 비워주세요",
-            message: message,
+            title: "저품질 사진 자동 정리",
+            message: "저품질 사진 정리 기능을 사용하려면\n휴지통을 먼저 비워주세요",
             preferredStyle: .alert
         )
 

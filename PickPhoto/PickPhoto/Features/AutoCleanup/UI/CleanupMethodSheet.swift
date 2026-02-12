@@ -86,7 +86,7 @@ final class CleanupMethodSheet {
                 자동으로 찾아 정리합니다.
                 정리된 사진은 휴지통에서 복구할 수 있어요.
                 """,
-            preferredStyle: .actionSheet
+            preferredStyle: .alert
         )
 
         // 최신사진부터 정리
@@ -133,21 +133,6 @@ final class CleanupMethodSheet {
         ) { [self] _ in
             self.delegate?.cleanupMethodSheetDidCancel(self)
         })
-
-        // iPad 지원 (iOS 26 미만에서만)
-        // iOS 26에서는 기본 동작 사용 (중앙 표시, 취소 버튼 표시)
-        if #unavailable(iOS 26.0) {
-            if let popover = alert.popoverPresentationController {
-                popover.sourceView = viewController.view
-                popover.sourceRect = CGRect(
-                    x: viewController.view.bounds.midX,
-                    y: viewController.view.bounds.midY,
-                    width: 0,
-                    height: 0
-                )
-                popover.permittedArrowDirections = []
-            }
-        }
 
         viewController.present(alert, animated: true)
     }
