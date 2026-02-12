@@ -62,6 +62,9 @@ final class PreviewGridViewController: UIViewController {
     /// iOS 18 커스텀 헤더 그라데이션 딤 레이어
     private var headerGradientLayer: CAGradientLayer?
 
+    /// 하단 뷰 높이 제약 (safe area 변경 시 업데이트)
+    private var bottomViewHeightConstraint: NSLayoutConstraint?
+
     // MARK: - UI Elements
 
     /// 컬렉션뷰
@@ -71,6 +74,7 @@ final class PreviewGridViewController: UIViewController {
         cv.dataSource = self
         cv.delegate = self
         cv.prefetchDataSource = self
+        cv.contentInsetAdjustmentBehavior = .never  // 수동 inset 관리 (시스템 자동 inset 이중 적용 방지)
         cv.translatesAutoresizingMaskIntoConstraints = false
 
         // 셀 등록
@@ -147,9 +151,11 @@ final class PreviewGridViewController: UIViewController {
             bottomView.bottomAnchor.constraint(equalTo: view.bottomAnchor),
         ])
 
-        // 하단 뷰 높이: contentHeight + safe area bottom
-        let bottomHeight = PreviewBottomView.contentHeight + (view.safeAreaInsets.bottom > 0 ? 0 : 20)
-        bottomView.heightAnchor.constraint(equalToConstant: bottomHeight).isActive = true
+        // 하단 뷰 높이: contentHeight + safe area bottom (초기값, viewSafeAreaInsetsDidChange에서 업데이트)
+        let initialBottom = max(view.safeAreaInsets.bottom, 20)
+        let heightConstraint = bottomView.heightAnchor.constraint(equalToConstant: PreviewBottomView.contentHeight + initialBottom)
+        heightConstraint.isActive = true
+        bottomViewHeightConstraint = heightConstraint
 
         // 컬렉션뷰 inset (상단 헤더 + 하단 버튼 가려지지 않도록)
         updateCollectionViewInsets()
@@ -282,16 +288,20 @@ final class PreviewGridViewController: UIViewController {
 
     /// 컬렉션뷰 inset 업데이트 (상단 헤더 + 하단 버튼 영역)
     private func updateCollectionViewInsets() {
-        // 상단: iOS 18 커스텀 헤더 높이, iOS 26은 safe area가 자동 관리
+        // 상단: iOS 18 커스텀 헤더 높이, iOS 26은 safe area + 네비바 높이
         let topInset: CGFloat
         if let header = customHeaderView {
+            // iOS 18: 커스텀 헤더 높이 (블러+딤 오버레이)
             topInset = header.frame.height > 0 ? header.frame.height : (view.safeAreaInsets.top + 52)
         } else {
-            topInset = 0  // iOS 26: 시스템 네비바가 safe area 관리
+            // iOS 26: contentInsetAdjustmentBehavior = .never이므로 safe area 수동 적용
+            topInset = view.safeAreaInsets.top
         }
 
-        // 하단: 버튼 영역 높이
-        let bottomInset = PreviewBottomView.contentHeight + view.safeAreaInsets.bottom
+        // 하단: 버튼 영역 높이 + safe area bottom 반영
+        let safeBottom = max(view.safeAreaInsets.bottom, 20)
+        bottomViewHeightConstraint?.constant = PreviewBottomView.contentHeight + safeBottom
+        let bottomInset = PreviewBottomView.contentHeight + safeBottom
 
         collectionView.contentInset = UIEdgeInsets(top: topInset, left: 0, bottom: bottomInset, right: 0)
         collectionView.verticalScrollIndicatorInsets = UIEdgeInsets(top: topInset, left: 0, bottom: bottomInset, right: 0)
@@ -365,29 +375,33 @@ final class PreviewGridViewController: UIViewController {
     // MARK: - Section Mapping
 
     /// 섹션 수 (currentStage에 따라 동적)
+    /// 각 단계: 배너 + 사진 = 2섹션씩
     private var numberOfSections: Int {
         switch currentStage {
         case .light:
-            return 1  // 사진만
+            return 2  // 배너, 사진
         case .standard:
-            return 3  // 사진, 배너, 사진
+            return 4  // 배너, 사진, 배너, 사진
         case .deep:
-            return 5  // 사진, 배너, 사진, 배너, 사진
+            return 6  // 배너, 사진, 배너, 사진, 배너, 사진
         }
     }
 
     /// 섹션 인덱스에 대한 섹션 타입
+    /// 0: 배너(30점이하), 1: light사진, 2: 배너(31~40점), 3: standard사진, 4: 배너(41~50점), 5: deep사진
     private func sectionType(for sectionIndex: Int) -> SectionType {
         switch sectionIndex {
         case 0:
-            return .photos(previewResult.lightCandidates)
+            return .banner(scoreRange: "30점 이하", count: previewResult.lightCount)
         case 1:
-            return .banner(scoreRange: "31~40점", count: previewResult.standardCount)
+            return .photos(previewResult.lightCandidates)
         case 2:
-            return .photos(previewResult.standardCandidates)
+            return .banner(scoreRange: "31~40점", count: previewResult.standardCount)
         case 3:
-            return .banner(scoreRange: "41~50점", count: previewResult.deepCount)
+            return .photos(previewResult.standardCandidates)
         case 4:
+            return .banner(scoreRange: "41~50점", count: previewResult.deepCount)
+        case 5:
             return .photos(previewResult.deepCandidates)
         default:
             return .photos([])
@@ -640,17 +654,17 @@ extension PreviewGridViewController: PreviewBottomViewDelegate {
 
     func previewBottomViewDidTapCollapse(_ view: PreviewBottomView) {
         // 단계 축소 (expand의 역동작)
-        // .standard → .light: 섹션 [1, 2] 삭제 (배너 + standard 사진)
-        // .deep → .standard: 섹션 [3, 4] 삭제 (배너 + deep 사진)
+        // .standard → .light: 섹션 [2, 3] 삭제 (배너 + standard 사진)
+        // .deep → .standard: 섹션 [4, 5] 삭제 (배너 + deep 사진)
         let previousStage: PreviewStage
         let sectionsToDelete: IndexSet
         switch currentStage {
         case .standard:
             previousStage = .light
-            sectionsToDelete = IndexSet([1, 2])
+            sectionsToDelete = IndexSet([2, 3])
         case .deep:
             previousStage = .standard
-            sectionsToDelete = IndexSet([3, 4])
+            sectionsToDelete = IndexSet([4, 5])
         default:
             return
         }
@@ -679,9 +693,9 @@ extension PreviewGridViewController: PreviewBottomViewDelegate {
             let newSections: IndexSet
             switch nextStage {
             case .standard:
-                newSections = IndexSet([1, 2])
+                newSections = IndexSet([2, 3])
             case .deep:
-                newSections = IndexSet([3, 4])
+                newSections = IndexSet([4, 5])
             default:
                 return
             }
@@ -693,9 +707,9 @@ extension PreviewGridViewController: PreviewBottomViewDelegate {
             let bannerSection: Int
             switch nextStage {
             case .standard:
-                bannerSection = 1
+                bannerSection = 2
             case .deep:
-                bannerSection = 3
+                bannerSection = 4
             default:
                 return
             }

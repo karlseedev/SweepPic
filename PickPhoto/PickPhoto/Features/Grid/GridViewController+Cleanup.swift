@@ -11,6 +11,7 @@
 //
 
 import UIKit
+import Photos
 import AppCore
 
 // MARK: - Cleanup Support
@@ -331,6 +332,9 @@ extension GridViewController {
         static var previewService = "previewService"
     }
 
+    // TODO: 테스트 완료 후 제거 — 더미 데이터로 PreviewGrid 바로 열기
+    private static let useDebugDummyPreview = true
+
     /// 미리보기 정리 시작
     ///
     /// 1. CleanupProgressView 표시
@@ -339,6 +343,12 @@ extension GridViewController {
     ///
     /// - Parameter continueFromLast: true면 이어서 정리
     func startPreviewCleanup(continueFromLast: Bool) {
+        // [테스트] 더미 데이터로 바로 PreviewGrid 열기
+        if Self.useDebugDummyPreview {
+            openDebugDummyPreview()
+            return
+        }
+
         // 1. 진행 뷰 표시
         let progressView = CleanupProgressView()
         progressView.delegate = self
@@ -384,6 +394,45 @@ extension GridViewController {
                 }
             }
         }
+    }
+
+    /// [테스트] 최신 사진 90장을 50+20+20으로 쪼개서 PreviewGrid 바로 열기
+    private func openDebugDummyPreview() {
+        let options = PHFetchOptions()
+        options.sortDescriptors = [NSSortDescriptor(key: "creationDate", ascending: false)]
+        options.predicate = NSPredicate(format: "mediaType == %d", PHAssetMediaType.image.rawValue)
+        options.fetchLimit = 90
+
+        let fetchResult = PHAsset.fetchAssets(with: options)
+        var assets: [PHAsset] = []
+        fetchResult.enumerateObjects { asset, _, _ in
+            assets.append(asset)
+        }
+
+        // 50 + 20 + 20 분배 (부족하면 있는 만큼)
+        let lightEnd = min(50, assets.count)
+        let stdEnd = min(70, assets.count)
+        let deepEnd = min(90, assets.count)
+
+        let lightAssets = Array(assets[0..<lightEnd])
+        let stdAssets = Array(assets[lightEnd..<stdEnd])
+        let deepAssets = Array(assets[stdEnd..<deepEnd])
+
+        let toCandidates: (PHAsset, PreviewStage) -> PreviewCandidate = { asset, stage in
+            PreviewCandidate(assetID: asset.localIdentifier, asset: asset, stage: stage, score: nil)
+        }
+
+        let result = PreviewResult(
+            lightCandidates: lightAssets.reversed().map { toCandidates($0, .light) },
+            standardCandidates: stdAssets.reversed().map { toCandidates($0, .standard) },
+            deepCandidates: deepAssets.reversed().map { toCandidates($0, .deep) },
+            scannedCount: assets.count,
+            totalTimeSeconds: 0
+        )
+
+        let previewVC = PreviewGridViewController(previewResult: result)
+        previewVC.delegate = self
+        navigationController?.pushViewController(previewVC, animated: true)
     }
 
     /// 미리보기 결과 없음 알림

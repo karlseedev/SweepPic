@@ -4,13 +4,14 @@
 //
 //  Created by Claude on 2026-02-12.
 //
-//  하단 고정 버튼 영역
-//  - primaryButton: "탐색된 N장 휴지통으로 이동" (filled, tinted)
-//  - collapseButton: "31~40점 사진 N장 제외하기" (text, 2단계부터)
-//  - expandButton: "31~40점 사진 N장 더 보기 →" (text, 3단계 미만)
+//  하단 고정 버튼 영역 (GlassTextButton 스타일)
+//  - primaryButton: "탐색된 N장 휴지통으로 이동" (Glass, 전체 너비)
+//  - collapseButton: "31~40점 사진\nN장 제외하기" (Glass pill, 2줄, 가로 배치)
+//  - expandButton: "31~40점 사진\nN장 더 보기 →" (Glass pill, 2줄, 가로 배치)
 //
 
 import UIKit
+import LiquidGlassKit
 
 // MARK: - PreviewBottomViewDelegate
 
@@ -28,10 +29,10 @@ protocol PreviewBottomViewDelegate: AnyObject {
 
 /// 미리보기 그리드 하단 고정 버튼 영역
 ///
-/// 현재 단계에 따라 버튼 구성이 변합니다:
-/// - 1단계(light): "탐색된 N장 휴지통으로 이동" + "31~40점 사진 N장 더 보기 →"
-/// - 2단계(standard): + "31~40점 사진 N장 제외하기" + "41~50점 사진 N장 더 보기 →"
-/// - 3단계(deep): + "41~50점 사진 N장 제외하기" (expandButton 숨김)
+/// GlassTextButton 스타일로 통일. 현재 단계에 따라 버튼 구성이 변합니다:
+/// - 1단계(light): primaryButton + expandButton
+/// - 2단계(standard): primaryButton + collapseButton + expandButton (가로)
+/// - 3단계(deep): primaryButton + collapseButton (expandButton 숨김)
 final class PreviewBottomView: UIView {
 
     // MARK: - Properties
@@ -39,44 +40,60 @@ final class PreviewBottomView: UIView {
     weak var delegate: PreviewBottomViewDelegate?
 
     /// 뷰 전체 높이 (safe area 포함하지 않은 콘텐츠 높이)
-    static let contentHeight: CGFloat = 140
+    static let contentHeight: CGFloat = 110
 
     // MARK: - UI Elements
 
-    /// 메인 정리 버튼 ("N장 정리하기")
-    private let primaryButton: UIButton = {
-        var config = UIButton.Configuration.filled()
-        config.cornerStyle = .large
-        config.buttonSize = .large
-        let button = UIButton(configuration: config)
+    /// 미리보기 전용 Glass 배경색 (중간회색 70% — 진한 배경 위 가시성 확보)
+    private static let previewGlassTint = UIColor(white: 0.5, alpha: 0.7)
+
+    /// 메인 정리 버튼 — Glass 스타일, 전체 너비
+    private let primaryButton: GlassTextButton = {
+        let button = GlassTextButton(
+            title: "",
+            style: .plain,
+            tintColor: .white,
+            glassTintColor: PreviewBottomView.previewGlassTint
+        )
         button.translatesAutoresizingMaskIntoConstraints = false
         return button
     }()
 
-    /// 축소 버튼 ("N점 사진 N장 제외하기") — expandButton의 반대 동작
-    private let collapseButton: UIButton = {
-        var config = UIButton.Configuration.plain()
-        config.buttonSize = .medium
-        let button = UIButton(configuration: config)
+    /// 축소 버튼 — Glass pill, 가로 배치 (1개일 때 1줄, 2개일 때 2줄)
+    private let collapseButton: GlassTextButton = {
+        let button = GlassTextButton(
+            title: "",
+            style: .plain,
+            tintColor: .white,
+            multiline: true,
+            fontSize: 16,
+            glassTintColor: PreviewBottomView.previewGlassTint
+        )
         button.translatesAutoresizingMaskIntoConstraints = false
         return button
     }()
 
-    /// 확장 버튼 ("N점 사진 N장 더 보기 →")
-    private let expandButton: UIButton = {
-        var config = UIButton.Configuration.plain()
-        config.buttonSize = .medium
-        let button = UIButton(configuration: config)
+    /// 확장 버튼 — Glass pill, 가로 배치 (1개일 때 1줄, 2개일 때 2줄)
+    private let expandButton: GlassTextButton = {
+        let button = GlassTextButton(
+            title: "",
+            style: .plain,
+            tintColor: .white,
+            multiline: true,
+            fontSize: 16,
+            glassTintColor: PreviewBottomView.previewGlassTint
+        )
         button.translatesAutoresizingMaskIntoConstraints = false
         return button
     }()
 
-    /// 버튼 스택
-    private let stackView: UIStackView = {
+    /// 하단 보조 버튼 가로 스택 (collapse + expand)
+    private let secondaryStack: UIStackView = {
         let stack = UIStackView()
-        stack.axis = .vertical
-        stack.spacing = 4
-        stack.alignment = .center
+        stack.axis = .horizontal
+        stack.spacing = 8
+        stack.alignment = .fill
+        stack.distribution = .fillEqually
         stack.translatesAutoresizingMaskIntoConstraints = false
         return stack
     }()
@@ -95,7 +112,8 @@ final class PreviewBottomView: UIView {
     // MARK: - Setup
 
     private func setupUI() {
-        backgroundColor = .systemBackground
+        // 93% 진한 그레이 배경 — 상단 썸네일(검정)과 구분
+        backgroundColor = UIColor(white: 0.07, alpha: 1.0)
 
         // 상단 구분선
         let separator = UIView()
@@ -103,10 +121,13 @@ final class PreviewBottomView: UIView {
         separator.translatesAutoresizingMaskIntoConstraints = false
         addSubview(separator)
 
-        addSubview(stackView)
-        stackView.addArrangedSubview(primaryButton)
-        stackView.addArrangedSubview(collapseButton)
-        stackView.addArrangedSubview(expandButton)
+        // 메인 버튼
+        addSubview(primaryButton)
+
+        // 보조 버튼 가로 스택
+        secondaryStack.addArrangedSubview(collapseButton)
+        secondaryStack.addArrangedSubview(expandButton)
+        addSubview(secondaryStack)
 
         NSLayoutConstraint.activate([
             // 구분선
@@ -115,14 +136,16 @@ final class PreviewBottomView: UIView {
             separator.trailingAnchor.constraint(equalTo: trailingAnchor),
             separator.heightAnchor.constraint(equalToConstant: 1.0 / UIScreen.main.scale),
 
-            // 스택뷰
-            stackView.topAnchor.constraint(equalTo: topAnchor, constant: 12),
-            stackView.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 20),
-            stackView.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -20),
+            // 메인 버튼: 상단 12pt, 좌우 20pt, 높이 44pt
+            primaryButton.topAnchor.constraint(equalTo: topAnchor, constant: 12),
+            primaryButton.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 20),
+            primaryButton.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -20),
+            primaryButton.heightAnchor.constraint(equalToConstant: 44),
 
-            // 메인 버튼 전체 너비
-            primaryButton.leadingAnchor.constraint(equalTo: stackView.leadingAnchor),
-            primaryButton.trailingAnchor.constraint(equalTo: stackView.trailingAnchor),
+            // 보조 스택: 메인 버튼 아래 8pt, 좌우 20pt
+            secondaryStack.topAnchor.constraint(equalTo: primaryButton.bottomAnchor, constant: 8),
+            secondaryStack.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 20),
+            secondaryStack.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -20),
         ])
 
         // 액션 연결
@@ -148,44 +171,59 @@ final class PreviewBottomView: UIView {
         deepCount: Int,
         canExpand: Bool
     ) {
-        // 메인 버튼: "탐색된 N장 휴지통으로 이동"
-        primaryButton.configuration?.title = "탐색된 \(totalCount)장 휴지통으로 이동"
+        // 메인 버튼: "N점 이하 사진 N장 휴지통 이동" (상단 타이틀 점수와 동일)
+        let maxScore: Int
+        switch currentStage {
+        case .light:    maxScore = 30
+        case .standard: maxScore = 40
+        case .deep:     maxScore = 50
+        }
+        primaryButton.setButtonTitle("\(maxScore)점 이하 사진 \(totalCount)장 휴지통 이동")
 
-        // 축소 버튼 (2단계부터, expand의 역동작)
+        // 보조 버튼 visibility 결정
+        let showCollapse = currentStage > .light
+        let showExpand = canExpand
+
+        collapseButton.isHidden = !showCollapse
+        expandButton.isHidden = !showExpand
+
+        // 둘 다 보이면 2줄, 하나만 보이면 1줄
+        let useTwoLines = showCollapse && showExpand
+
+        // 축소 버튼 (2단계부터)
         // standard: "31~40점 사진 N장 제외하기", deep: "41~50점 사진 N장 제외하기"
-        if currentStage > .light {
+        if showCollapse {
+            let separator = useTwoLines ? "\n" : " "
             let collapseTitle: String
             switch currentStage {
             case .standard:
-                collapseTitle = "31~40점 사진 \(standardCount)장 제외하기"
+                collapseTitle = "31~40점 사진\(separator)\(standardCount)장 제외하기"
             case .deep:
-                collapseTitle = "41~50점 사진 \(deepCount)장 제외하기"
+                collapseTitle = "41~50점 사진\(separator)\(deepCount)장 제외하기"
             default:
                 collapseTitle = ""
             }
-            collapseButton.configuration?.title = collapseTitle
-            collapseButton.isHidden = false
-        } else {
-            collapseButton.isHidden = true
+            collapseButton.setButtonTitle(collapseTitle)
         }
 
         // 확장 버튼
-        // light: "31~40점 사진 N장 더 보기 →", standard: "41~50점 사진 N장 더 보기 →"
-        if canExpand {
+        // light: "31~40점 사진 N장 더 보기", standard: "41~50점 사진 N장 더 보기"
+        if showExpand {
+            let separator = useTwoLines ? "\n" : " "
             let expandTitle: String
             switch currentStage {
             case .light:
-                expandTitle = "31~40점 사진 \(standardCount)장 더 보기 →"
+                expandTitle = "31~40점 사진\(separator)\(standardCount)장 더 보기"
             case .standard:
-                expandTitle = "41~50점 사진 \(deepCount)장 더 보기 →"
+                expandTitle = "41~50점 사진\(separator)\(deepCount)장 더 보기"
             default:
                 expandTitle = ""
             }
-            expandButton.configuration?.title = expandTitle
-            expandButton.isHidden = false
-        } else {
-            expandButton.isHidden = true
+            expandButton.setButtonTitle(expandTitle)
         }
+
+        // 둘 다 숨김이면 보조 스택도 숨김 (1단계에서 expand 불가 시)
+        secondaryStack.isHidden = !showCollapse && !showExpand
     }
 
     // MARK: - Actions

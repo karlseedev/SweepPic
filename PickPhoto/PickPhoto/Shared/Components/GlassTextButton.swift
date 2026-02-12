@@ -30,15 +30,19 @@ class GlassTextButton: UIButton {
         static let cornerRadius: CGFloat = 22  // height / 2, pill shape
         static let fontSize: CGFloat = 17
         static let horizontalPadding: CGFloat = 32  // 좌우 패딩 (16pt × 2)
+        static let verticalPadding: CGFloat = 16    // 멀티라인 시 상하 패딩 (8pt × 2)
     }
 
     // MARK: - UI Components
+
+    /// Glass 배경 tintColor (nil이면 기본값 사용)
+    private let glassTintColor: UIColor
 
     /// Glass 효과 뷰 (1뷰 구조)
     /// LiquidGlassEffect 사용 - 터치 시 scale 애니메이션으로 피드백
     private lazy var glassView: AnyVisualEffectView = {
         let effect = LiquidGlassEffect(style: .regular, isNative: true)
-        effect.tintColor = UIColor(white: 0.5, alpha: 0.2)  // 중간회색 20%
+        effect.tintColor = glassTintColor
         let view = VisualEffectView(effect: effect)
         view.isUserInteractionEnabled = false
         return view
@@ -52,11 +56,18 @@ class GlassTextButton: UIButton {
         return view
     }()
 
+    /// 멀티라인 설정값 (init 시 결정)
+    private let multilineEnabled: Bool
+
+    /// 멀티라인용 폰트 크기
+    private let labelFontSize: CGFloat
+
     /// 텍스트 라벨
-    private let textLabel: UILabel = {
+    private lazy var textLabel: UILabel = {
         let label = UILabel()
-        label.font = .systemFont(ofSize: Constants.fontSize, weight: .regular)
+        label.font = .systemFont(ofSize: labelFontSize, weight: .regular)
         label.textAlignment = .center
+        label.numberOfLines = multilineEnabled ? 0 : 1
         label.isUserInteractionEnabled = false
         return label
     }()
@@ -88,11 +99,20 @@ class GlassTextButton: UIButton {
     ///   - title: 버튼 텍스트
     ///   - style: 버튼 스타일 (기본: .plain)
     ///   - tintColor: 텍스트 색상 (기본: .white, filled 스타일에서는 배경색으로도 사용)
-    init(title: String, style: Style = .plain, tintColor: UIColor = .white, deferGlassEffect: Bool = false) {
+    ///   - deferGlassEffect: Glass 효과 생성 지연 (hidden 상태 최적화)
+    ///   - multiline: 멀티라인 허용 (기본: false, true면 \n 줄바꿈 지원 + 동적 높이)
+    ///   - fontSize: 폰트 크기 (기본: 17, 멀티라인 보조 버튼 등에서 작은 크기 사용)
+    ///   - glassTintColor: Glass 배경 tintColor (기본: 중간회색 20%)
+    init(title: String, style: Style = .plain, tintColor: UIColor = .white,
+         deferGlassEffect: Bool = false, multiline: Bool = false, fontSize: CGFloat = Constants.fontSize,
+         glassTintColor: UIColor = UIColor(white: 0.5, alpha: 0.2)) {
         self.style = style
         self.textTintColor = tintColor
         self.buttonTitle = title
         self.glassViewSetupDeferred = deferGlassEffect
+        self.multilineEnabled = multiline
+        self.labelFontSize = fontSize
+        self.glassTintColor = glassTintColor
 
         super.init(frame: .zero)
 
@@ -146,11 +166,20 @@ class GlassTextButton: UIButton {
 
     // MARK: - Layout
 
-    /// 고정 높이, 동적 너비 반환
+    /// 높이/너비 반환 (멀티라인: 동적 높이, 단일: 고정 44pt)
     override var intrinsicContentSize: CGSize {
-        let textWidth = textLabel.intrinsicContentSize.width
-        let totalWidth = textWidth + Constants.horizontalPadding
-        return CGSize(width: totalWidth, height: Constants.height)
+        if multilineEnabled {
+            // 멀티라인: 텍스트 높이에 맞춰 동적 계산
+            let textSize = textLabel.intrinsicContentSize
+            let totalWidth = textSize.width + Constants.horizontalPadding
+            let totalHeight = max(Constants.height, textSize.height + Constants.verticalPadding)
+            return CGSize(width: totalWidth, height: totalHeight)
+        } else {
+            // 단일 라인: 고정 높이
+            let textWidth = textLabel.intrinsicContentSize.width
+            let totalWidth = textWidth + Constants.horizontalPadding
+            return CGSize(width: totalWidth, height: Constants.height)
+        }
     }
 
     // C-5: preload() 이후 동적 생성된 버튼도 블러 오버레이 자동 생성
@@ -167,7 +196,8 @@ class GlassTextButton: UIButton {
     override func layoutSubviews() {
         super.layoutSubviews()
 
-        let cornerRadius = Constants.cornerRadius
+        // pill shape: 단일/멀티라인 모두 height/2 (원형 좌우 라운드)
+        let cornerRadius = multilineEnabled ? bounds.height / 2 : Constants.cornerRadius
 
         // deferred 상태면 glassView 접근 스킵 (lazy 트리거 방지)
         if !glassViewSetupDeferred {

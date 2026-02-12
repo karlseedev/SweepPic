@@ -35,7 +35,7 @@ final class PreviewBannerCell: UICollectionViewCell {
     /// 배경 컨테이너 (라운드 코너)
     private let container: UIView = {
         let view = UIView()
-        view.backgroundColor = .systemGray6
+        view.backgroundColor = .systemGray5
         view.layer.cornerRadius = 8
         view.translatesAutoresizingMaskIntoConstraints = false
         return view
@@ -81,6 +81,6 @@ final class PreviewBannerCell: UICollectionViewCell {
     ///   - scoreRange: 품질지수 점수 구간 (예: "31~40점")
     ///   - count: 해당 구간의 사진 수
     func configure(scoreRange: String, count: Int) {
-        label.text = "품질지수 \(scoreRange) 사진 \(count)장"
+        label.text = "품질지수 \(scoreRange) 사진 \(count)장 ↓"
     }
 }
