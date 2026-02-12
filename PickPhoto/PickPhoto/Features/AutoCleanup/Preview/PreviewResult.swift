@@ -84,4 +84,19 @@ struct PreviewResult {
             return totalCount
         }
     }
+
+    // MARK: - Exclude Support
+
+    /// 특정 assetID들을 제외한 새 결과 반환
+    /// - Parameter assetIDs: 제외할 assetID 집합
+    /// - Returns: 필터링된 새 PreviewResult 인스턴스
+    func excluding(_ assetIDs: Set<String>) -> PreviewResult {
+        return PreviewResult(
+            lightCandidates: lightCandidates.filter { !assetIDs.contains($0.assetID) },
+            standardCandidates: standardCandidates.filter { !assetIDs.contains($0.assetID) },
+            deepCandidates: deepCandidates.filter { !assetIDs.contains($0.assetID) },
+            scannedCount: scannedCount,
+            totalTimeSeconds: totalTimeSeconds
+        )
+    }
 }

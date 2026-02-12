@@ -21,8 +21,8 @@ final class PreviewViewerCoordinator: ViewerCoordinatorProtocol {
 
     // MARK: - Properties
 
-    /// 사진 배열
-    private let assets: [PHAsset]
+    /// 사진 배열 (제외 기능으로 런타임에 제거 가능)
+    private var assets: [PHAsset]
 
     /// fetchResult (유사 사진 분석용 — 미리보기에서는 미사용)
     var fetchResult: PHFetchResult<PHAsset>? { nil }
@@ -36,6 +36,15 @@ final class PreviewViewerCoordinator: ViewerCoordinatorProtocol {
     /// - Parameter assets: 표시할 사진 배열
     init(assets: [PHAsset]) {
         self.assets = assets
+    }
+
+    // MARK: - Exclude Support
+
+    /// 에셋 제거 (정리 미리보기 제외 기능용)
+    /// - Parameter id: 제거할 에셋의 localIdentifier
+    /// - Note: 호출 후 assets.count가 줄어들므로 nextIndexAfterDelete가 정확히 동작
+    func removeAsset(id: String) {
+        assets.removeAll { $0.localIdentifier == id }
     }
 
     // MARK: - ViewerCoordinatorProtocol

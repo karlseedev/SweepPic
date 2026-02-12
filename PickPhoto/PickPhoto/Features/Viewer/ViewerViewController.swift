@@ -22,17 +22,20 @@ import AppCore
 import Vision
 
 /// 뷰어 모드
-/// 일반 모드 vs 휴지통 모드에 따라 버튼이 다르게 표시됨
+/// 모드에 따라 하단 버튼이 다르게 표시됨
 enum ViewerMode {
     /// 일반 모드: 삭제 버튼 표시
     case normal
 
     /// 휴지통 모드: 복구/완전삭제 버튼 표시
     case trash
+
+    /// 정리 미리보기 모드: 제외 버튼 표시 (스와이프 삭제 없음)
+    case cleanup
 }
 
 /// 뷰어 델리게이트
-/// 삭제/복구/완전삭제 액션을 처리
+/// 삭제/복구/완전삭제/제외 액션을 처리
 protocol ViewerViewControllerDelegate: AnyObject {
     /// 사진 삭제 요청 (앱 내 휴지통으로 이동)
     /// - Parameter assetID: 삭제할 사진 ID
@@ -49,6 +52,16 @@ protocol ViewerViewControllerDelegate: AnyObject {
     /// 뷰어가 닫힐 때 호출
     /// - Parameter currentAssetID: 마지막으로 표시한 사진 ID
     func viewerWillClose(currentAssetID: String?)
+
+    /// 정리 미리보기에서 사진 제외 요청
+    /// - Parameter assetID: 제외할 사진 ID
+    func viewerDidRequestExclude(assetID: String)
+}
+
+/// ViewerViewControllerDelegate 기본 구현
+/// 기존 Grid/Album/Trash 3곳에서 viewerDidRequestExclude를 구현하지 않아도 컴파일 안전
+extension ViewerViewControllerDelegate {
+    func viewerDidRequestExclude(assetID: String) {}
 }
 
 /// 전체 화면 사진 뷰어
@@ -154,6 +167,15 @@ final class ViewerViewController: UIViewController {
         let button = GlassTextButton(title: "삭제", style: .plain, tintColor: .systemRed)
         button.translatesAutoresizingMaskIntoConstraints = false
         button.addTarget(self, action: #selector(permanentDeleteButtonTapped), for: .touchUpInside)
+        return button
+    }()
+
+    /// 제외 버튼 (정리 미리보기 모드 - Liquid Glass 텍스트 버튼)
+    /// 정리 후보에서 개별 사진을 제외하는 버튼
+    private lazy var excludeButton: GlassTextButton = {
+        let button = GlassTextButton(title: "제외", style: .plain, tintColor: .white)
+        button.translatesAutoresizingMaskIntoConstraints = false
+        button.addTarget(self, action: #selector(excludeButtonTapped), for: .touchUpInside)
         return button
     }()
 
@@ -451,6 +473,14 @@ final class ViewerViewController: UIViewController {
                 permanentDeleteButton.trailingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.trailingAnchor, constant: -24),
                 permanentDeleteButton.centerYAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor, constant: -Self.buttonCenterFromBottom)
             ])
+
+        case .cleanup:
+            // 제외 버튼 (중앙 — deleteButton과 동일 위치)
+            view.addSubview(excludeButton)
+            NSLayoutConstraint.activate([
+                excludeButton.centerXAnchor.constraint(equalTo: view.centerXAnchor),
+                excludeButton.centerYAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor, constant: -Self.buttonCenterFromBottom)
+            ])
         }
     }
 
@@ -571,6 +601,29 @@ final class ViewerViewController: UIViewController {
     /// 삭제 완료 후 호출 (외부에서 호출)
     /// permanentDelete가 비동기이므로 삭제 완료 후 이 메서드를 호출해야 함
     func handleDeleteComplete() {
+        moveToNextAfterDelete()
+    }
+
+    // MARK: - Exclude (Cleanup Mode)
+
+    /// 제외 버튼 탭 (정리 미리보기 모드)
+    /// 실행 순서: removeAsset → moveToNextAfterDelete (인덱스 정합성 필수)
+    @objc private func excludeButtonTapped() {
+        guard let assetID = coordinator.assetID(at: currentIndex) else { return }
+
+        // 햅틱 피드백
+        let generator = UINotificationFeedbackGenerator()
+        generator.notificationOccurred(.success)
+
+        // 1. delegate에 제외 알림 (PreviewGridVC가 excludedAssetIDs에 기록)
+        delegate?.viewerDidRequestExclude(assetID: assetID)
+
+        // 2. 코디네이터에서 에셋 제거 (removeAsset 후 assets.count가 줄어듬)
+        //    moveToNextAfterDelete()가 nextIndexAfterDelete()로 삭제 후 count 기준 계산하므로
+        //    반드시 제거가 먼저 완료되어야 함
+        (coordinator as? PreviewViewerCoordinator)?.removeAsset(id: assetID)
+
+        // 3. 다음 사진으로 이동 (기존 메서드 재사용 — 모든 사진 제외 시 자동 닫힘)
         moveToNextAfterDelete()
     }
 
@@ -821,6 +874,8 @@ final class ViewerViewController: UIViewController {
             setupNormalModeToolbar()
         case .trash:
             setupTrashModeToolbar()
+        case .cleanup:
+            setupCleanupModeToolbar()
         }
     }
 
@@ -867,6 +922,22 @@ final class ViewerViewController: UIViewController {
         toolbarPermanentDeleteItem = permanentDeleteItem
 
         toolbarItems = [restoreItem, flexSpace, permanentDeleteItem]
+    }
+
+    /// iOS 26+ 정리 미리보기 모드 툴바 (제외 버튼)
+    @available(iOS 26.0, *)
+    private func setupCleanupModeToolbar() {
+        let flexSpace = UIBarButtonItem(systemItem: .flexibleSpace)
+
+        let excludeItem = UIBarButtonItem(
+            title: "제외",
+            primaryAction: UIAction { [weak self] _ in
+                self?.excludeButtonTapped()
+            }
+        )
+        excludeItem.tintColor = .white
+
+        toolbarItems = [flexSpace, excludeItem, flexSpace]
     }
 
     /// iOS 26+ 툴바 동적 교체 (현재 사진의 휴지통 상태에 따라)
@@ -1201,7 +1272,11 @@ extension ViewerViewController: BarsVisibilityControlling {
     /// Viewer에서는 floatingOverlay 숨김 (전체화면 뷰어이므로)
     var prefersFloatingOverlayHidden: Bool? { true }
 
-    /// iOS 26: 시스템 툴바 표시 (삭제/복구 버튼)
+    /// 모든 뷰어 모드에서 탭바 숨김
+    /// iOS 26에서 기본값이 "표시"이므로 명시적으로 숨겨야 함
+    var prefersSystemTabBarHidden: Bool? { true }
+
+    /// iOS 26: 시스템 툴바 표시 (삭제/복구/제외 버튼)
     /// iOS 16~25: 기본 정책 (커스텀 버튼 사용하므로 시스템 툴바 불필요)
     var prefersToolbarHidden: Bool? {
         if #available(iOS 26.0, *) {

@@ -42,11 +42,14 @@ final class PreviewGridViewController: UIViewController {
 
     // MARK: - Properties
 
-    /// 분석 결과
-    private let previewResult: PreviewResult
+    /// 분석 결과 (제외 시 새 인스턴스로 재할당)
+    private var previewResult: PreviewResult
 
     /// 현재 표시 단계
     private var currentStage: PreviewStage = .light
+
+    /// 뷰어에서 제외된 assetID (viewWillAppear에서 일괄 반영)
+    private var excludedAssetIDs: Set<String> = []
 
     /// delegate
     weak var delegate: PreviewGridViewControllerDelegate?
@@ -119,6 +122,14 @@ final class PreviewGridViewController: UIViewController {
         setupUI()
         updateHeader()
         updateBottomView()
+    }
+
+    override func viewWillAppear(_ animated: Bool) {
+        super.viewWillAppear(animated)
+        // 뷰어에서 돌아올 때 제외된 사진 반영
+        if !excludedAssetIDs.isEmpty {
+            applyExclusions()
+        }
     }
 
     // MARK: - Setup
@@ -615,9 +626,10 @@ extension PreviewGridViewController: UICollectionViewDelegate {
         let tappedAssetID = candidates[indexPath.item].assetID
         guard let viewerIndex = allAssets.firstIndex(where: { $0.localIdentifier == tappedAssetID }) else { return }
 
-        // 뷰어 push (미리보기 전용 코디네이터 사용)
+        // 뷰어 push (미리보기 전용 코디네이터, 정리 모드)
         let coordinator = PreviewViewerCoordinator(assets: allAssets)
-        let viewerVC = ViewerViewController(coordinator: coordinator, startIndex: viewerIndex)
+        let viewerVC = ViewerViewController(coordinator: coordinator, startIndex: viewerIndex, mode: .cleanup)
+        viewerVC.delegate = self
         navigationController?.pushViewController(viewerVC, animated: true)
     }
 }
@@ -742,4 +754,36 @@ extension PreviewGridViewController: PreviewBottomViewDelegate {
         updateBottomView()
         updateHeader()
     }
+
+    // MARK: - Exclude Support
+
+    /// 뷰어에서 제외된 사진들을 그리드에 반영
+    /// viewWillAppear에서 호출 (뷰어 pop 후)
+    private func applyExclusions() {
+        // previewResult에서 제외된 에셋 필터링
+        previewResult = previewResult.excluding(excludedAssetIDs)
+
+        // 적용 완료 — 제외 목록 초기화
+        excludedAssetIDs.removeAll()
+
+        // UI 갱신
+        collectionView.reloadData()
+        updateBottomView()
+        updateHeader()
+    }
+}
+
+// MARK: - ViewerViewControllerDelegate
+
+extension PreviewGridViewController: ViewerViewControllerDelegate {
+
+    func viewerDidRequestExclude(assetID: String) {
+        // 뷰어가 제외를 요청하면 ID 기록 (viewWillAppear에서 일괄 반영)
+        excludedAssetIDs.insert(assetID)
+    }
+
+    func viewerDidRequestDelete(assetID: String) {}
+    func viewerDidRequestRestore(assetID: String) {}
+    func viewerDidRequestPermanentDelete(assetID: String) {}
+    func viewerWillClose(currentAssetID: String?) {}
 }
