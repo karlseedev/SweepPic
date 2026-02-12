@@ -1,70 +1,145 @@
-# PickPhoto 앱스토어 심사 — 분류 체계
+# Gate 1. 업로드 차단
 
-> 작성일: 2026-02-12
-> 분류 기준: 심사 관문(Gate) × 작업 유형
-> 원본 조사 문서: [260211AppStore1.md](260211AppStore1.md)
-
----
-
-## 분류 체계
-
-**1차 분류 (대분류)**: 심사 관문 — "이것 없으면 어디서 막히는가?"
-**2차 분류 (소분류)**: 작업 유형 — "주요 결과물이 무엇인가?"
+> 바이너리가 Apple 서버에 올라가지 않음 (ITMS 자동 검증 실패)
+> 이 게이트가 해결 안 되면 나머지 Gate 2~4는 의미 없음
 
 ---
 
-### 1. 업로드 차단 — 바이너리가 Apple 서버에 올라가지 않음 (ITMS 자동 검증)
+### 분류 요약
 
-1) **코드/설정** — 프로젝트 파일 변경
-   - PrivacyInfo.xcprivacy 생성 (Required Reason API: 파일 타임스탬프 `DDA9.1`, UserDefaults `CA92.1`)
-   - SDK Privacy Manifest 확인/추가 (BlurUIKit, LiquidGlassKit)
-   - ITSAppUsesNonExemptEncryption = false (Info.plist)
-
-2) **에셋** — 이미지 파일 제작
-   - 앱 아이콘 1024x1024 불투명 PNG (sRGB/P3, 알파 채널 없음)
-
-### 2. 제출 차단 — Submit for Review 버튼을 누를 수 없음 (ASC 필수 필드)
-
-1) **에셋** — 이미지 파일 제작
-   - 스크린샷: iPhone 6.9" (1320x2868) + iPad 13" (2064x2752) 각 1~10장
-
-2) **문서** — 외부 호스팅 웹 문서
-   - Privacy Policy 작성 (Apple 요구 + 한국 개인정보보호법 8개 필수 항목)
-   - Privacy Policy URL 호스팅 (GitHub Pages 등)
-   - 지원 페이지 (Support URL)
-
-3) **포털 입력** — App Store Connect에서 입력
-   - 앱 메타데이터 (이름, 부제목, 설명, 키워드, 카테고리, 저작권)
-   - 연령 등급 설문 응답 (**긴급** — 2026.01.31 마감 이미 경과)
-   - 심사 연락처 (이름/이메일/전화번호)
-   - App Privacy Details 설문 ("Data Not Collected" 선택 가능)
-   - 한국 컴플라이언스 정보 (이메일, BRN)
-   - 수출 규정 응답
-
-### 3. 심사 차단 — 심사원이 리젝함 (Guideline 위반)
-
-1) **코드/설정** — 프로젝트 파일 변경
-   - `#if DEBUG` 래핑: SystemUIInspector.swift (Private API/KVC), AutoScrollTester.swift, LiquidGlassOptimizer.swift
-   - print문 정리: FeatureFlags.swift, CleanupSessionStore.swift, ViewerViewController+SimilarPhoto.swift
-   - Limited Photo Access UI (.limited 상태에서 정상 동작 + 업그레이드 안내)
-   - NSPhotoLibraryUsageDescription 한글 Localization
-
-2) **포털 입력** — App Store Connect에서 입력
-   - Review Notes 작성 (전체 사진 접근 정당화 3가지 사유, Vision 온디바이스 명시, 테스트 안내, 4.2 차별화)
-
-3) **검증** — 실기기/시뮬레이터 테스트
-   - 크래시 안정성 (전체 흐름)
-   - 권한 상태별 동작 (허용 / 제한 / 거부)
-   - 빈 상태 처리 (사진 0장)
-
-### 4. 품질 개선 — 통과와 무관하지만 앱 퀄리티 향상
-
-1) **코드/설정** — 프로젝트 파일 변경
-   - VoiceOver 전체 UI 확대
-   - Dynamic Type (UIFontMetrics)
-   - Localization 파일 분리 (한/영 .strings)
-
-2) **에셋** — 이미지 파일 제작
-   - LaunchScreen 브랜딩 (앱 로고 추가)
+```
+1. 업로드 차단
+   1) 코드/설정: PrivacyInfo.xcprivacy, SDK Privacy Manifest, Info.plist
+   2) 에셋: 앱 아이콘
+```
 
 ---
+
+## 1) 코드/설정 — 프로젝트 파일 변경
+
+### PrivacyInfo.xcprivacy 생성
+
+> 프로젝트 전체에 파일 없음 → ITMS-91053 오류로 업로드 차단
+
+**단계별 시행 이력:**
+- 2024-03-13: Required Reason API 누락 시 경고 이메일 발송
+- 2024-05-01: Required Reason API 사유 선언 필수 + 새 서드파티 SDK에 privacy manifest/서명 필수
+- 2024-11-12: 기존 포함 SDK까지 유효한 privacy manifest 검증 확대 적용
+- **2025-02-12: Privacy-impacting SDK에 Privacy Manifest 미포함 시 ITMS-91061 오류로 업로드 차단 (현재 시행 중)**
+
+([근거: TN3181](https://developer.apple.com/documentation/technotes/tn3181-debugging-an-invalid-privacy-manifest))
+
+**파일 구조:**
+
+| 키 | 설명 | 필수 여부 |
+|----|------|----------|
+| NSPrivacyTracking | ATT 정의에 따른 추적 여부 (Boolean) | 추적 시 `true`, 안 하면 키 생략 가능 |
+| NSPrivacyTrackingDomains | 추적 도메인 목록 | 추적 도메인이 있을 때만 |
+| NSPrivacyCollectedDataTypes | 수집 데이터 타입 배열 | 데이터를 수집하는 경우에만 |
+| NSPrivacyAccessedAPITypes | 필수 사유 API 배열 | Required Reason API 사용 시에만 |
+
+> 각 키는 **해당 행위를 할 때만 선언** (opt-in 방식). Apple은 사용하지 않는 키는 제거를 안내.
+
+**수집 데이터 선언 구조 (각 데이터 타입별):**
+
+```xml
+<dict>
+    <key>NSPrivacyCollectedDataType</key>
+    <string>NSPrivacyCollectedDataTypePhotos</string>
+    <key>NSPrivacyCollectedDataTypeLinked</key>       <!-- 사용자 신원과 연결 여부 -->
+    <false/>
+    <key>NSPrivacyCollectedDataTypeTracking</key>     <!-- 추적 목적 사용 여부 -->
+    <false/>
+    <key>NSPrivacyCollectedDataTypePurposes</key>     <!-- 사용 목적 -->
+    <array>
+        <string>NSPrivacyCollectedDataTypePurposeAppFunctionality</string>
+    </array>
+</dict>
+```
+
+### Required Reason API — PickPhoto 사용 현황
+
+| API 카테고리 | 사용 여부 | 위치 | 사유 코드 |
+|-------------|:--------:|------|----------|
+| **파일 타임스탬프** | O | ThumbnailCache.swift (contentModificationDateKey, setAttributes) | `DDA9.1` (앱 컨테이너 내 접근) |
+| **UserDefaults** | O | Debug 폴더, CleanupConstants | `CA92.1` (앱 자체 접근) |
+| 시스템 부팅 시간 | X | - | - |
+| 디스크 공간 | X | - | - |
+| 활성 키보드 | X | - | - |
+
+**Required Reason API 전체 5개 카테고리 (참고):**
+
+| # | 카테고리 | API 타입 키 | 주요 사유 코드 |
+|---|---------|------------|--------------|
+| 1 | 파일 타임스탬프 | NSPrivacyAccessedAPICategoryFileTimestamp | `DDA9.1` 앱 컨테이너 내 접근 / `C617.1` 사용자에게 표시 / `3B52.1` 검색 / `0A2A.1` 내부 파일 접근 |
+| 2 | 시스템 부팅 시간 | NSPrivacyAccessedAPICategorySystemBootTime | `35F9.1` 경과 시간 측정 / `8FFB.1` 타이머 / `3D61.1` 부팅 시간 확인 |
+| 3 | 디스크 공간 | NSPrivacyAccessedAPICategoryDiskSpace | `85F4.1` 표시 / `E174.1` 쓰기 확인 / `7D9E.1` 앱 기능 / `B728.1` 사용자에게 표시 |
+| 4 | 활성 키보드 | NSPrivacyAccessedAPICategoryActiveKeyboards | `3EC4.1` 커스텀 키보드 / `54BD.1` 활성 키보드 결정 |
+| 5 | UserDefaults | NSPrivacyAccessedAPICategoryUserDefaults | `CA92.1` 앱 자체 접근 / `1C8F.1` App Group 공유 / `C56D.1` 제3자 SDK / `AC6B.1` MDM 구성 |
+
+### SDK Privacy Manifest 확인/추가
+
+> 앱이 사용하는 모든 서드파티 SDK에 유효한 Privacy Manifest가 포함되어야 함
+> SDK 제작자가 미제공 시 앱 개발자가 직접 해당 SDK 번들 내에 PrivacyInfo.xcprivacy를 추가해야 함
+
+**PickPhoto 서드파티 라이브러리 현황:**
+
+| 라이브러리 | 유형 | Privacy Manifest | 비고 |
+|-----------|------|:----------------:|------|
+| AppCore | 로컬 패키지 | 없음 | CryptoKit(SHA256), 파일 타임스탬프 사용 |
+| BlurUIKit | 원격 (TimOliver/BlurUIKit >= 1.2.2) | **확인 필요** | - |
+| LiquidGlassKit | 로컬 패키지 | 없음 | Metal/MetalKit 사용 |
+
+### ITSAppUsesNonExemptEncryption (Info.plist)
+
+> Info.plist에 키 없음 → 매 제출마다 ASC에서 수동 답변 필요
+
+| 항목 | 요구사항 |
+|------|---------|
+| 키 | `ITSAppUsesNonExemptEncryption` |
+| 값 | `false` (PickPhoto는 HTTPS/OS 내장 암호화만 사용 → 면제) |
+| 근거 | HTTPS, OS 내장 암호화 → 수출 문서 제출 면제 |
+
+---
+
+## 2) 에셋 — 이미지 파일 제작
+
+### 앱 아이콘
+
+> 현재 상태: Contents.json만 존재, 실제 이미지 없음 → ITMS-90717 오류로 업로드 차단
+
+**사양:**
+
+| 항목 | 요구사항 |
+|------|---------|
+| 크기 | **1024 x 1024 px** |
+| 형식 | **PNG** (JPEG/GIF 불가) |
+| 투명도 | **불투명 필수** (알파 채널/투명 영역 없음) |
+| 모양 | 정사각형 (모서리 라운딩 Apple이 자동 적용) |
+| 색상 공간 | sRGB 또는 Display P3 |
+
+---
+
+## ITMS 오류 코드 대응 (Gate 1 관련)
+
+> 업로드 시 발생할 수 있는 ITMS 오류와 해결법
+
+| 오류 코드 | 제목 | 원인 | 해결법 |
+|----------|------|------|--------|
+| **ITMS-91053** | Missing API Declaration | Privacy Manifest에서 Required Reason API 사유 미선언 | PrivacyInfo.xcprivacy에 해당 API + 사유 코드 추가 |
+| **ITMS-91061** | Missing Privacy Manifest in SDK | 서드파티 SDK에 Privacy Manifest 미포함 | SDK 업데이트하거나, SDK 번들 내에 PrivacyInfo.xcprivacy 직접 추가 |
+| **ITMS-90717** | Invalid App Store Icon | 아이콘에 알파 채널/투명 영역 포함, 또는 PNG 아닌 형식 | 1024x1024 불투명 PNG로 교체, 알파 채널 제거 |
+| **ITMS-90032** | Invalid Binary Architecture | 32비트 아키텍처 포함 | arm64 전용 빌드 확인 |
+| **ITMS-90474** | Missing Bundle Version | CFBundleVersion 누락/무효 | Info.plist에 유효한 버전 번호 설정 |
+
+---
+
+## 참고 문서
+
+| 문서 | URL |
+|------|-----|
+| Privacy Manifest | https://developer.apple.com/documentation/bundleresources/privacy-manifest-files |
+| Required Reason API | https://developer.apple.com/documentation/bundleresources/describing-use-of-required-reason-api |
+| 앱 아이콘 가이드 (HIG) | https://developer.apple.com/design/human-interface-guidelines/app-icons |
+| 수출 규정 | https://developer.apple.com/documentation/security/complying-with-encryption-export-regulations |
+| TN3181 디버깅 가이드 | https://developer.apple.com/documentation/technotes/tn3181-debugging-an-invalid-privacy-manifest |
