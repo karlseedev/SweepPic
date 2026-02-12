@@ -144,8 +144,8 @@ final class PreviewBottomView: UIView {
         totalCount: Int,
         canExpand: Bool
     ) {
-        // 메인 버튼: "N장 정리하기"
-        primaryButton.configuration?.title = "\(totalCount)장 정리하기"
+        // 메인 버튼: "탐색된 N장 휴지통으로 이동"
+        primaryButton.configuration?.title = "탐색된 \(totalCount)장 휴지통으로 이동"
 
         // 축소 버튼: "기준 올려서 추가사진 제외하기" (2단계부터, expand의 역동작)
         if currentStage > .light {

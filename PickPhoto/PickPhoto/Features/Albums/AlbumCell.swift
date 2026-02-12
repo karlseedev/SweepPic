@@ -445,8 +445,15 @@ final class AlbumCell: UICollectionViewCell {
     }
 
     /// 앨범 사진 수만 업데이트 (Phase 2 정확한 개수 반영, 이미지 재로딩 없음)
+    /// - 값이 변경된 경우에만 crossDissolve 애니메이션 적용
     func updateCount(_ count: String) {
-        countLabel.text = count
+        guard countLabel.text != count else { return }
+        UIView.transition(
+            with: countLabel,
+            duration: 0.25,
+            options: .transitionCrossDissolve,
+            animations: { self.countLabel.text = count }
+        )
     }
 
     /// 아이콘 표시 (썸네일 대신)

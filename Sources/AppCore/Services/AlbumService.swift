@@ -334,9 +334,7 @@ public final class AlbumService: AlbumServiceProtocol {
 
                 let fetchResult = PHAsset.fetchAssets(in: collection, options: options)
                 let assetCount = fetchResult.count  // O(1)
-                // ⚠️ assetCount == 0 체크 제거: Phase 1(estimatedAssetCount 기반)과 동일한 앨범 목록 유지
-                // Phase 1에서 estimatedAssetCount > 0으로 포함된 앨범은 Phase 2에서도 유지
-                // → sameStructure=true 보장 → reloadData 스킵 → 깜빡임 방지
+                if assetCount == 0 { continue }  // 빈 스마트 앨범 제외
 
                 let keyAsset = fetchResult.firstObject  // 최신 에셋 1개
                 let albumID = collection.localIdentifier
