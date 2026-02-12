@@ -50,6 +50,14 @@ final class PreviewGridViewController: UIViewController {
     /// delegate
     weak var delegate: PreviewGridViewControllerDelegate?
 
+    // MARK: - Header (iOS 18 커스텀 헤더)
+
+    /// iOS 18 커스텀 헤더 뷰 (FloatingOverlay 대체)
+    private var customHeaderView: UIView?
+
+    /// iOS 18 커스텀 헤더 타이틀 라벨
+    private var headerTitleLabel: UILabel?
+
     // MARK: - UI Elements
 
     /// 컬렉션뷰
@@ -105,31 +113,13 @@ final class PreviewGridViewController: UIViewController {
         updateBottomView()
     }
 
-    override func viewWillAppear(_ animated: Bool) {
-        super.viewWillAppear(animated)
-
-        // iOS 18: FloatingOverlay 모드에서는 네비바가 숨겨져 있으므로 표시
-        // (iOS 26에서는 이미 표시 상태이므로 무해)
-        navigationController?.setNavigationBarHidden(false, animated: animated)
-    }
-
-    override func viewWillDisappear(_ animated: Bool) {
-        super.viewWillDisappear(animated)
-
-        // pop 시 iOS 18 네비바 복원 (숨김)
-        // push (다른 VC로 이동) 시에는 복원하지 않음
-        if isMovingFromParent {
-            if #unavailable(iOS 26.0) {
-                navigationController?.setNavigationBarHidden(true, animated: animated)
-            }
-        }
-    }
-
     // MARK: - Setup
 
     private func setupUI() {
         view.backgroundColor = .systemBackground
-        title = "정리 미리보기"
+
+        // 헤더 설정 (iOS 26: 시스템 네비바, iOS 18: 커스텀 헤더)
+        setupHeader()
 
         // 컬렉션뷰
         view.addSubview(collectionView)
@@ -139,9 +129,17 @@ final class PreviewGridViewController: UIViewController {
         bottomView.translatesAutoresizingMaskIntoConstraints = false
         view.addSubview(bottomView)
 
+        // 컬렉션뷰 상단: iOS 18은 커스텀 헤더 아래, iOS 26은 view 상단 (네비바가 safe area 관리)
+        let collectionTopAnchor: NSLayoutAnchor<NSLayoutYAxisAnchor>
+        if let header = customHeaderView {
+            collectionTopAnchor = header.bottomAnchor
+        } else {
+            collectionTopAnchor = view.topAnchor
+        }
+
         NSLayoutConstraint.activate([
-            // 컬렉션뷰: 전체 화면
-            collectionView.topAnchor.constraint(equalTo: view.topAnchor),
+            // 컬렉션뷰
+            collectionView.topAnchor.constraint(equalTo: collectionTopAnchor),
             collectionView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
             collectionView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
             collectionView.bottomAnchor.constraint(equalTo: view.bottomAnchor),
@@ -158,6 +156,90 @@ final class PreviewGridViewController: UIViewController {
 
         // 컬렉션뷰 하단 inset (하단 뷰에 사진이 가려지지 않도록)
         updateCollectionViewInsets()
+    }
+
+    // MARK: - Header Setup
+
+    /// 헤더 설정 (iOS 버전별 분기)
+    private func setupHeader() {
+        if #available(iOS 26.0, *) {
+            setupSystemNavHeader()
+        } else {
+            setupCustomHeader()
+        }
+    }
+
+    /// iOS 26: 시스템 네비게이션 바에 X 버튼 설정
+    @available(iOS 26.0, *)
+    private func setupSystemNavHeader() {
+        // 뒤로가기 버튼 숨기고 X 버튼으로 대체
+        navigationItem.hidesBackButton = true
+        navigationItem.leftBarButtonItem = UIBarButtonItem(
+            image: UIImage(systemName: "xmark"),
+            style: .plain,
+            target: self,
+            action: #selector(closeTapped)
+        )
+    }
+
+    /// iOS 18: 커스텀 헤더 뷰 생성 (네비바 대체)
+    private func setupCustomHeader() {
+        let header = UIView()
+        header.backgroundColor = .systemBackground
+        header.translatesAutoresizingMaskIntoConstraints = false
+        view.addSubview(header)
+
+        // X 버튼
+        let closeButton = UIButton(type: .system)
+        closeButton.setImage(UIImage(systemName: "xmark"), for: .normal)
+        closeButton.tintColor = .label
+        closeButton.translatesAutoresizingMaskIntoConstraints = false
+        closeButton.addTarget(self, action: #selector(closeTapped), for: .touchUpInside)
+        header.addSubview(closeButton)
+
+        // 타이틀 라벨
+        let titleLabel = UILabel()
+        titleLabel.font = .systemFont(ofSize: 17, weight: .semibold)
+        titleLabel.textColor = .label
+        titleLabel.textAlignment = .center
+        titleLabel.translatesAutoresizingMaskIntoConstraints = false
+        header.addSubview(titleLabel)
+
+        // 하단 구분선
+        let separator = UIView()
+        separator.backgroundColor = .separator
+        separator.translatesAutoresizingMaskIntoConstraints = false
+        header.addSubview(separator)
+
+        NSLayoutConstraint.activate([
+            // 헤더: safe area 상단에 배치
+            header.topAnchor.constraint(equalTo: view.topAnchor),
+            header.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+            header.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+            // 헤더 높이: safe area 상단 + 콘텐츠 52pt
+            header.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 52),
+
+            // X 버튼: 좌측, safe area 기준
+            closeButton.leadingAnchor.constraint(equalTo: header.leadingAnchor, constant: 16),
+            closeButton.bottomAnchor.constraint(equalTo: header.bottomAnchor, constant: -14),
+            closeButton.widthAnchor.constraint(equalToConstant: 24),
+            closeButton.heightAnchor.constraint(equalToConstant: 24),
+
+            // 타이틀: 중앙
+            titleLabel.centerXAnchor.constraint(equalTo: header.centerXAnchor),
+            titleLabel.centerYAnchor.constraint(equalTo: closeButton.centerYAnchor),
+            // X 버튼과 겹치지 않도록 여유
+            titleLabel.leadingAnchor.constraint(greaterThanOrEqualTo: closeButton.trailingAnchor, constant: 8),
+
+            // 구분선
+            separator.leadingAnchor.constraint(equalTo: header.leadingAnchor),
+            separator.trailingAnchor.constraint(equalTo: header.trailingAnchor),
+            separator.bottomAnchor.constraint(equalTo: header.bottomAnchor),
+            separator.heightAnchor.constraint(equalToConstant: 1.0 / UIScreen.main.scale),
+        ])
+
+        self.customHeaderView = header
+        self.headerTitleLabel = titleLabel
     }
 
     override func viewSafeAreaInsetsDidChange() {
@@ -294,7 +376,12 @@ final class PreviewGridViewController: UIViewController {
     /// 헤더 제목 업데이트
     private func updateHeader() {
         let count = previewResult.count(upToStage: currentStage)
-        title = "저품질 사진 \(count)장"
+        let titleText = "저품질 사진 \(count)장"
+
+        // iOS 26: 시스템 네비바 타이틀
+        title = titleText
+        // iOS 18: 커스텀 헤더 라벨
+        headerTitleLabel?.text = titleText
     }
 
     /// 하단 버튼 영역 업데이트
@@ -335,6 +422,39 @@ final class PreviewGridViewController: UIViewController {
             previousStageCount: previousStageCount,
             canExpand: canExpand
         )
+    }
+
+    // MARK: - Close Action
+
+    /// X 버튼 탭 — 실수 방지 확인 Alert
+    @objc private func closeTapped() {
+        let alert = UIAlertController(
+            title: "분석 결과를 닫으시겠습니까?",
+            message: "현재 화면을 닫으면 분석 결과가 사라집니다.",
+            preferredStyle: .alert
+        )
+
+        alert.addAction(UIAlertAction(title: "취소", style: .cancel))
+        alert.addAction(UIAlertAction(title: "닫기", style: .destructive) { [weak self] _ in
+            self?.navigationController?.popViewController(animated: true)
+        })
+
+        present(alert, animated: true)
+    }
+
+    // MARK: - Viewer
+
+    /// 현재 표시 중인 모든 사진 (뷰어용 flat 배열)
+    private func allVisibleAssets() -> [PHAsset] {
+        var assets: [PHAsset] = []
+        assets.append(contentsOf: previewResult.lightCandidates.map(\.asset))
+        if currentStage >= .standard {
+            assets.append(contentsOf: previewResult.standardCandidates.map(\.asset))
+        }
+        if currentStage >= .deep {
+            assets.append(contentsOf: previewResult.deepCandidates.map(\.asset))
+        }
+        return assets
     }
 
     // MARK: - Cleanup Actions
@@ -408,9 +528,21 @@ extension PreviewGridViewController: UICollectionViewDataSource {
 extension PreviewGridViewController: UICollectionViewDelegate {
 
     func collectionView(_ collectionView: UICollectionView, didSelectItemAt indexPath: IndexPath) {
-        // MVP: 사진 탭 시 전체화면 보기는 추후 구현
-        // 현재는 선택 해제만
         collectionView.deselectItem(at: indexPath, animated: true)
+
+        // 배너 셀은 무시
+        guard case .photos(let candidates) = sectionType(for: indexPath.section),
+              indexPath.item < candidates.count else { return }
+
+        // 탭한 사진의 flat 배열 내 인덱스 계산
+        let allAssets = allVisibleAssets()
+        let tappedAssetID = candidates[indexPath.item].assetID
+        guard let viewerIndex = allAssets.firstIndex(where: { $0.localIdentifier == tappedAssetID }) else { return }
+
+        // 뷰어 push (미리보기 전용 코디네이터 사용)
+        let coordinator = PreviewViewerCoordinator(assets: allAssets)
+        let viewerVC = ViewerViewController(coordinator: coordinator, startIndex: viewerIndex)
+        navigationController?.pushViewController(viewerVC, animated: true)
     }
 }
 
@@ -440,8 +572,6 @@ extension PreviewGridViewController: UICollectionViewDataSourcePrefetching {
         ImagePipeline.shared.stopPreheating(assetIDs: assetIDs)
     }
 }
-
-// MARK: - PreviewBottomViewDelegate
 
 // MARK: - BarsVisibilityControlling
 
