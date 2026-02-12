@@ -421,7 +421,15 @@ final class AlbumCell: UICollectionViewCell {
                 )
             }
 
-            let asset = PHAsset.fetchAssets(in: collection, options: options).firstObject
+            var asset = PHAsset.fetchAssets(in: collection, options: options).firstObject
+
+            // 이미지가 없으면 동영상 에셋으로 대체 (동영상 전용 앨범 썸네일)
+            if asset == nil && isImageOnly {
+                let fallbackOptions = PHFetchOptions()
+                fallbackOptions.fetchLimit = 1
+                fallbackOptions.sortDescriptors = [NSSortDescriptor(key: "creationDate", ascending: false)]
+                asset = PHAsset.fetchAssets(in: collection, options: fallbackOptions).firstObject
+            }
 
             DispatchQueue.main.async {
                 guard let self = self, self.currentAssetID == collectionKey else { return }

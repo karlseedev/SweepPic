@@ -367,19 +367,34 @@ public final class AlbumService: AlbumServiceProtocol {
                 let estimated = collection.estimatedAssetCount
                 if estimated == 0 { return }
 
-                // 단일 fetch: 최신순 정렬 + 이미지 필터
-                let options = PHFetchOptions()
-                options.sortDescriptors = [NSSortDescriptor(key: "creationDate", ascending: false)]
-                options.predicate = NSPredicate(
+                // 1) count: 전체 에셋 (필터 없음)
+                // → Phase 1의 estimatedAssetCount와 일치시켜 sameStructure=true 보장
+                // → 동영상 전용 앨범도 실제 개수 표시 (0이 아닌 동영상 수)
+                let countOptions = PHFetchOptions()
+                countOptions.sortDescriptors = [NSSortDescriptor(key: "creationDate", ascending: false)]
+                let countResult = PHAsset.fetchAssets(in: collection, options: countOptions)
+                let assetCount = countResult.count
+                if assetCount == 0 { return }
+
+                // 2) keyAsset: 이미지만 (fetchLimit=1)
+                // → 동영상 프레임 추출 회피 (iOS 18 썸네일 깜빡임 방지)
+                // → 동영상 전용 앨범은 keyAsset=nil → placeholder 아이콘 표시
+                let keyOptions = PHFetchOptions()
+                keyOptions.fetchLimit = 1
+                keyOptions.sortDescriptors = [NSSortDescriptor(key: "creationDate", ascending: false)]
+                keyOptions.predicate = NSPredicate(
                     format: "mediaType = %d", PHAssetMediaType.image.rawValue
                 )
+                var keyAsset = PHAsset.fetchAssets(in: collection, options: keyOptions).firstObject
 
-                let fetchResult = PHAsset.fetchAssets(in: collection, options: options)
-                let assetCount = fetchResult.count
-                // ⚠️ assetCount == 0 체크 제거: Phase 1과 동일한 앨범 목록 유지
-                // (동영상만 있는 앨범도 포함 → sameStructure=true 보장 → 깜빡임 방지)
+                // 이미지가 없으면 동영상 에셋으로 대체 (동영상 전용 앨범 썸네일)
+                if keyAsset == nil {
+                    let fallbackOptions = PHFetchOptions()
+                    fallbackOptions.fetchLimit = 1
+                    fallbackOptions.sortDescriptors = [NSSortDescriptor(key: "creationDate", ascending: false)]
+                    keyAsset = PHAsset.fetchAssets(in: collection, options: fallbackOptions).firstObject
+                }
 
-                let keyAsset = fetchResult.firstObject
                 let albumID = collection.localIdentifier
 
                 userAlbumsList.append(Album(
