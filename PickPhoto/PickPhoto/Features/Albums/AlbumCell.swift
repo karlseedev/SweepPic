@@ -200,6 +200,7 @@ final class AlbumCell: UICollectionViewCell {
 
     /// 사용자 앨범 설정 (PHAsset 직접 전달)
     /// - keyAsset이 nil이고 keyAssetIdentifier가 있으면 기존 assetID fallback
+    /// - 둘 다 nil이면 collectionID로 비동기 keyAsset fetch (Phase 1 대응)
     func configure(album: Album, keyAsset: PHAsset?, targetSize: CGSize) {
         titleLabel.text = album.title
         countLabel.text = "\(album.assetCount)"
@@ -211,12 +212,18 @@ final class AlbumCell: UICollectionViewCell {
             // fallback: keyAsset cache miss → 기존 assetID 기반 로드
             loadThumbnailLegacy(assetID: keyAssetID, targetSize: targetSize)
         } else {
-            showIcon(systemName: "photo.on.rectangle")
+            // Phase 1 상태: collectionID로 비동기 keyAsset fetch → 즉시 썸네일 로딩 시작
+            loadThumbnailFromCollection(
+                collectionID: album.id,
+                isImageOnly: true,  // 사용자 앨범은 이미지만
+                targetSize: targetSize
+            )
         }
     }
 
     /// 스마트 앨범 설정 (PHAsset 직접 전달)
     /// - keyAsset이 nil이고 keyAssetIdentifier가 있으면 기존 assetID fallback
+    /// - 둘 다 nil이면 collectionID로 비동기 keyAsset fetch (Phase 1 대응)
     func configure(smartAlbum: SmartAlbum, keyAsset: PHAsset?, targetSize: CGSize) {
         titleLabel.text = smartAlbum.title
         countLabel.text = "\(smartAlbum.assetCount)"
@@ -226,7 +233,15 @@ final class AlbumCell: UICollectionViewCell {
         } else if let keyAssetID = smartAlbum.keyAssetIdentifier {
             loadThumbnailLegacy(assetID: keyAssetID, targetSize: targetSize)
         } else {
-            showIcon(systemName: smartAlbum.type.systemIconName)
+            // Phase 1 상태: collectionID로 비동기 keyAsset fetch → 즉시 썸네일 로딩 시작
+            // 비디오 계열 앨범은 mediaType 필터 제외
+            let isImageOnly = smartAlbum.type != .videos && smartAlbum.type != .livePhotos
+                && smartAlbum.type != .timelapses && smartAlbum.type != .slomoVideos
+            loadThumbnailFromCollection(
+                collectionID: smartAlbum.id,
+                isImageOnly: isImageOnly,
+                targetSize: targetSize
+            )
         }
     }
 
@@ -355,6 +370,75 @@ final class AlbumCell: UICollectionViewCell {
                 }
             }
         }
+    }
+
+    // MARK: - Thumbnail Loading (Collection ID — Phase 1 비동기 fetch)
+
+    /// 썸네일 로드 (앨범 collectionID로 비동기 keyAsset fetch 후 ImagePipeline 사용)
+    /// Phase 1에서 keyAsset/keyAssetIdentifier 없이 호출됨
+    /// → 백그라운드에서 fetchLimit=1로 keyAsset 1개만 가져온 후 ImagePipeline으로 썸네일 로드
+    /// → Phase 2 완료를 기다리지 않고 셀이 독립적으로 썸네일 로딩 시작
+    ///
+    /// - Parameters:
+    ///   - collectionID: PHAssetCollection.localIdentifier
+    ///   - isImageOnly: true면 mediaType=image 필터 적용 (비디오 계열 앨범은 false)
+    ///   - targetSize: 썸네일 크기
+    private func loadThumbnailFromCollection(
+        collectionID: String,
+        isImageOnly: Bool,
+        targetSize: CGSize
+    ) {
+        // 같은 collection에 대한 요청이 이미 진행 중이면 스킵
+        let collectionKey = "col_\(collectionID)"
+        if currentAssetID == collectionKey {
+            return
+        }
+
+        currentAssetID = collectionKey
+
+        // 백그라운드에서 fetchLimit=1로 keyAsset 1개만 fetch
+        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
+            // collectionID로 PHAssetCollection 조회
+            let collections = PHAssetCollection.fetchAssetCollections(
+                withLocalIdentifiers: [collectionID],
+                options: nil
+            )
+            guard let collection = collections.firstObject else {
+                DispatchQueue.main.async {
+                    guard let self = self, self.currentAssetID == collectionKey else { return }
+                    self.showIcon(systemName: "photo.on.rectangle")
+                }
+                return
+            }
+
+            // fetchLimit=1 + 최신순 정렬 → keyAsset 1개만 로드
+            let options = PHFetchOptions()
+            options.fetchLimit = 1
+            options.sortDescriptors = [NSSortDescriptor(key: "creationDate", ascending: false)]
+            if isImageOnly {
+                options.predicate = NSPredicate(
+                    format: "mediaType = %d", PHAssetMediaType.image.rawValue
+                )
+            }
+
+            let asset = PHAsset.fetchAssets(in: collection, options: options).firstObject
+
+            DispatchQueue.main.async {
+                guard let self = self, self.currentAssetID == collectionKey else { return }
+
+                if let asset = asset {
+                    // keyAsset을 찾았으면 ImagePipeline으로 썸네일 로드
+                    self.loadThumbnail(asset: asset, targetSize: targetSize)
+                } else {
+                    self.showIcon(systemName: "photo.on.rectangle")
+                }
+            }
+        }
+    }
+
+    /// 앨범 사진 수만 업데이트 (Phase 2 정확한 개수 반영, 이미지 재로딩 없음)
+    func updateCount(_ count: String) {
+        countLabel.text = count
     }
 
     /// 아이콘 표시 (썸네일 대신)

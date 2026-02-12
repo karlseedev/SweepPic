@@ -374,7 +374,7 @@ final class AlbumsViewController: UIViewController {
     /// Phase 2: 비동기 전체 로드 (정확한 개수 + keyAsset + 썸네일)
     /// - 중복 로딩 방지 (isLoading guard)
     /// - 응답 역전 방지 (loadGeneration 비교)
-    /// - 깜빡임 방지 (completion 내 즉시 재호출 금지)
+    /// - 깜빡임 방지: 앨범 구조 동일 시 reloadData() 생략 → count 라벨만 업데이트
     private func loadData() {
         guard !isLoading else {
             // 로딩 중 요청 → 완료 후 재로드 필요
@@ -386,6 +386,10 @@ final class AlbumsViewController: UIViewController {
         loadGeneration += 1
         let currentGeneration = loadGeneration
 
+        // Phase 2 전 앨범 ID 스냅샷 (구조 변경 감지용)
+        let oldSmartIDs = smartAlbums.map { $0.id }
+        let oldUserIDs = userAlbums.map { $0.id }
+
         albumService.fetchAllAlbumsAsync { [weak self] smartAlbums, userAlbums, keyAssets in
             guard let self = self else { return }
             // stale 응답 무시 (더 새로운 요청이 발행된 경우)
@@ -394,16 +398,49 @@ final class AlbumsViewController: UIViewController {
             self.isLoading = false
             self.hasLoadedOnce = true
             self.lastLoadTime = CFAbsoluteTimeGetCurrent()
+
+            // 구조 비교: 앨범 ID 목록만 비교 (개수 값은 비교하지 않음)
+            let newSmartIDs = smartAlbums.map { $0.id }
+            let newUserIDs = userAlbums.map { $0.id }
+            let sameStructure = (oldSmartIDs == newSmartIDs) && (oldUserIDs == newUserIDs)
+
             self.smartAlbums = smartAlbums
             self.userAlbums = userAlbums
             self.keyAssetCache = keyAssets
             self.updateEmptyState()
-            self.collectionView.reloadData()
 
-            Log.print("[AlbumsViewController] Loaded \(smartAlbums.count) smart albums, \(userAlbums.count) user albums")
+            if sameStructure {
+                // 구조 동일: visible 셀의 count 라벨만 업데이트 (reloadData 없음)
+                self.updateVisibleCellCounts()
+                Log.print("[AlbumsViewController] Phase 2 sameStructure=TRUE → count만 업데이트 (reloadData 스킵)")
+            } else {
+                // 구조 변경: 전체 리로드 필요
+                self.collectionView.reloadData()
+                Log.print("[AlbumsViewController] Phase 2 sameStructure=FALSE → reloadData 실행")
+            }
+
+            Log.print("[AlbumsViewController] Phase 2: \(smartAlbums.count) smart, \(userAlbums.count) user | old: \(oldSmartIDs.count) smart, \(oldUserIDs.count) user")
 
             // ⚠️ 깜빡임 방지: completion 내 즉시 재호출 금지
             // needsReload은 다음 viewWillAppear 또는 photoLibraryDidChange(visible)에서 처리
+        }
+    }
+
+    /// Phase 2 완료 시 visible 셀의 count 라벨만 업데이트
+    private func updateVisibleCellCounts() {
+        for cell in collectionView.visibleCells {
+            guard let albumCell = cell as? AlbumCell,
+                  let indexPath = collectionView.indexPath(for: cell),
+                  let section = AlbumSection(rawValue: indexPath.section) else { continue }
+
+            switch section {
+            case .smartAlbums:
+                guard indexPath.item < smartAlbums.count else { continue }
+                albumCell.updateCount("\(smartAlbums[indexPath.item].assetCount)")
+            case .userAlbums:
+                guard indexPath.item < userAlbums.count else { continue }
+                albumCell.updateCount("\(userAlbums[indexPath.item].assetCount)")
+            }
         }
     }
 
