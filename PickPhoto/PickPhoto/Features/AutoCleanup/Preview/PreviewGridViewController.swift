@@ -14,6 +14,7 @@
 import UIKit
 import Photos
 import AppCore
+import BlurUIKit
 
 // MARK: - PreviewGridViewControllerDelegate
 
@@ -57,6 +58,9 @@ final class PreviewGridViewController: UIViewController {
 
     /// iOS 18 커스텀 헤더 타이틀 라벨
     private var headerTitleLabel: UILabel?
+
+    /// iOS 18 커스텀 헤더 그라데이션 딤 레이어
+    private var headerGradientLayer: CAGradientLayer?
 
     // MARK: - UI Elements
 
@@ -118,28 +122,21 @@ final class PreviewGridViewController: UIViewController {
     private func setupUI() {
         view.backgroundColor = .systemBackground
 
-        // 헤더 설정 (iOS 26: 시스템 네비바, iOS 18: 커스텀 헤더)
-        setupHeader()
-
-        // 컬렉션뷰
+        // 컬렉션뷰: 전체 화면 (헤더/하단 뷰 뒤에 깔림)
         view.addSubview(collectionView)
+
+        // 헤더 설정 (iOS 26: 시스템 네비바, iOS 18: 블러 오버레이 헤더)
+        // ⚠️ 컬렉션뷰 뒤에 addSubview되어야 오버레이가 위에 표시됨
+        setupHeader()
 
         // 하단 버튼 영역
         bottomView.delegate = self
         bottomView.translatesAutoresizingMaskIntoConstraints = false
         view.addSubview(bottomView)
 
-        // 컬렉션뷰 상단: iOS 18은 커스텀 헤더 아래, iOS 26은 view 상단 (네비바가 safe area 관리)
-        let collectionTopAnchor: NSLayoutAnchor<NSLayoutYAxisAnchor>
-        if let header = customHeaderView {
-            collectionTopAnchor = header.bottomAnchor
-        } else {
-            collectionTopAnchor = view.topAnchor
-        }
-
         NSLayoutConstraint.activate([
-            // 컬렉션뷰
-            collectionView.topAnchor.constraint(equalTo: collectionTopAnchor),
+            // 컬렉션뷰: 전체 화면 (헤더 아래로 콘텐츠 스크롤)
+            collectionView.topAnchor.constraint(equalTo: view.topAnchor),
             collectionView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
             collectionView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
             collectionView.bottomAnchor.constraint(equalTo: view.bottomAnchor),
@@ -154,7 +151,7 @@ final class PreviewGridViewController: UIViewController {
         let bottomHeight = PreviewBottomView.contentHeight + (view.safeAreaInsets.bottom > 0 ? 0 : 20)
         bottomView.heightAnchor.constraint(equalToConstant: bottomHeight).isActive = true
 
-        // 컬렉션뷰 하단 inset (하단 뷰에 사진이 가려지지 않도록)
+        // 컬렉션뷰 inset (상단 헤더 + 하단 버튼 가려지지 않도록)
         updateCollectionViewInsets()
     }
 
@@ -182,60 +179,91 @@ final class PreviewGridViewController: UIViewController {
         )
     }
 
-    /// iOS 18: 커스텀 헤더 뷰 생성 (네비바 대체)
+    /// iOS 18: FloatingTitleBar와 동일한 블러+딤 오버레이 헤더
+    /// - VariableBlurView (progressive blur, 상→하 페이드아웃)
+    /// - CAGradientLayer (딤, 상→하 5단계 페이드)
+    /// - 컬렉션뷰 위에 오버레이되어 콘텐츠가 아래로 스크롤됨
     private func setupCustomHeader() {
+        // FloatingTitleBar 상수와 동일
+        let contentHeight: CGFloat = 44
+        let gradientExtension: CGFloat = 35
+        let maxDimAlpha: CGFloat = LiquidGlassStyle.maxDimAlpha
+
         let header = UIView()
-        header.backgroundColor = .systemBackground
         header.translatesAutoresizingMaskIntoConstraints = false
+        // 배경 투명 (블러+딤이 처리)
+        header.backgroundColor = .clear
         view.addSubview(header)
 
-        // X 버튼
+        // Progressive blur (BlurUIKit) — FloatingTitleBar와 동일
+        let progressiveBlurView = VariableBlurView()
+        progressiveBlurView.translatesAutoresizingMaskIntoConstraints = false
+        progressiveBlurView.direction = .down
+        progressiveBlurView.maximumBlurRadius = 1.5
+        progressiveBlurView.dimmingTintColor = UIColor.black
+        progressiveBlurView.dimmingAlpha = .interfaceStyle(lightModeAlpha: 0.45, darkModeAlpha: 0.3)
+        header.addSubview(progressiveBlurView)
+
+        // 그라데이션 딤 레이어 — FloatingTitleBar와 동일
+        let gradientLayer = CAGradientLayer()
+        gradientLayer.colors = [
+            UIColor.black.withAlphaComponent(maxDimAlpha).cgColor,
+            UIColor.black.withAlphaComponent(maxDimAlpha * 0.7).cgColor,
+            UIColor.black.withAlphaComponent(maxDimAlpha * 0.3).cgColor,
+            UIColor.black.withAlphaComponent(maxDimAlpha * 0.1).cgColor,
+            UIColor.clear.cgColor
+        ]
+        gradientLayer.locations = [0, 0.25, 0.5, 0.75, 1.0]
+        gradientLayer.startPoint = CGPoint(x: 0.5, y: 0)
+        gradientLayer.endPoint = CGPoint(x: 0.5, y: 1)
+        header.layer.addSublayer(gradientLayer)
+        self.headerGradientLayer = gradientLayer
+
+        // X 버튼 (흰색 — 딤 배경 위에 표시)
         let closeButton = UIButton(type: .system)
         closeButton.setImage(UIImage(systemName: "xmark"), for: .normal)
-        closeButton.tintColor = .label
+        closeButton.tintColor = .white
         closeButton.translatesAutoresizingMaskIntoConstraints = false
         closeButton.addTarget(self, action: #selector(closeTapped), for: .touchUpInside)
         header.addSubview(closeButton)
 
-        // 타이틀 라벨
+        // 타이틀 라벨 (흰색 — 딤 배경 위에 표시)
         let titleLabel = UILabel()
         titleLabel.font = .systemFont(ofSize: 17, weight: .semibold)
-        titleLabel.textColor = .label
+        titleLabel.textColor = .white
         titleLabel.textAlignment = .center
         titleLabel.translatesAutoresizingMaskIntoConstraints = false
         header.addSubview(titleLabel)
 
-        // 하단 구분선
-        let separator = UIView()
-        separator.backgroundColor = .separator
-        separator.translatesAutoresizingMaskIntoConstraints = false
-        header.addSubview(separator)
-
         NSLayoutConstraint.activate([
-            // 헤더: safe area 상단에 배치
+            // 헤더: safe area + contentHeight + gradientExtension (FloatingTitleBar와 동일)
             header.topAnchor.constraint(equalTo: view.topAnchor),
             header.leadingAnchor.constraint(equalTo: view.leadingAnchor),
             header.trailingAnchor.constraint(equalTo: view.trailingAnchor),
-            // 헤더 높이: safe area 상단 + 콘텐츠 52pt
-            header.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 52),
+            header.bottomAnchor.constraint(
+                equalTo: view.safeAreaLayoutGuide.topAnchor,
+                constant: contentHeight + gradientExtension
+            ),
 
-            // X 버튼: 좌측, safe area 기준
+            // Progressive blur: 전체 + 8pt 넘침 (FloatingTitleBar와 동일)
+            progressiveBlurView.topAnchor.constraint(equalTo: header.topAnchor),
+            progressiveBlurView.leadingAnchor.constraint(equalTo: header.leadingAnchor),
+            progressiveBlurView.trailingAnchor.constraint(equalTo: header.trailingAnchor),
+            progressiveBlurView.bottomAnchor.constraint(equalTo: header.bottomAnchor, constant: 8),
+
+            // X 버튼: 좌측, safe area 기준 (콘텐츠 영역 중앙)
             closeButton.leadingAnchor.constraint(equalTo: header.leadingAnchor, constant: 16),
-            closeButton.bottomAnchor.constraint(equalTo: header.bottomAnchor, constant: -14),
+            closeButton.topAnchor.constraint(
+                equalTo: view.safeAreaLayoutGuide.topAnchor,
+                constant: (contentHeight - 24) / 2  // 콘텐츠 높이 내 세로 중앙
+            ),
             closeButton.widthAnchor.constraint(equalToConstant: 24),
             closeButton.heightAnchor.constraint(equalToConstant: 24),
 
-            // 타이틀: 중앙
+            // 타이틀: 중앙, X 버튼과 같은 세로 위치
             titleLabel.centerXAnchor.constraint(equalTo: header.centerXAnchor),
             titleLabel.centerYAnchor.constraint(equalTo: closeButton.centerYAnchor),
-            // X 버튼과 겹치지 않도록 여유
             titleLabel.leadingAnchor.constraint(greaterThanOrEqualTo: closeButton.trailingAnchor, constant: 8),
-
-            // 구분선
-            separator.leadingAnchor.constraint(equalTo: header.leadingAnchor),
-            separator.trailingAnchor.constraint(equalTo: header.trailingAnchor),
-            separator.bottomAnchor.constraint(equalTo: header.bottomAnchor),
-            separator.heightAnchor.constraint(equalToConstant: 1.0 / UIScreen.main.scale),
         ])
 
         self.customHeaderView = header
@@ -247,11 +275,29 @@ final class PreviewGridViewController: UIViewController {
         updateCollectionViewInsets()
     }
 
-    /// 컬렉션뷰 하단 inset 업데이트
+    override func viewDidLayoutSubviews() {
+        super.viewDidLayoutSubviews()
+        // 그라데이션 딤 레이어 프레임 업데이트 (FloatingTitleBar와 동일 패턴)
+        if let header = customHeaderView {
+            headerGradientLayer?.frame = header.bounds
+        }
+    }
+
+    /// 컬렉션뷰 inset 업데이트 (상단 헤더 + 하단 버튼 영역)
     private func updateCollectionViewInsets() {
+        // 상단: iOS 18 커스텀 헤더 높이, iOS 26은 safe area가 자동 관리
+        let topInset: CGFloat
+        if let header = customHeaderView {
+            topInset = header.frame.height > 0 ? header.frame.height : (view.safeAreaInsets.top + 52)
+        } else {
+            topInset = 0  // iOS 26: 시스템 네비바가 safe area 관리
+        }
+
+        // 하단: 버튼 영역 높이
         let bottomInset = PreviewBottomView.contentHeight + view.safeAreaInsets.bottom
-        collectionView.contentInset.bottom = bottomInset
-        collectionView.verticalScrollIndicatorInsets.bottom = bottomInset
+
+        collectionView.contentInset = UIEdgeInsets(top: topInset, left: 0, bottom: bottomInset, right: 0)
+        collectionView.verticalScrollIndicatorInsets = UIEdgeInsets(top: topInset, left: 0, bottom: bottomInset, right: 0)
     }
 
     // MARK: - Layout

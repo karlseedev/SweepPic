@@ -43,7 +43,11 @@ final class CleanupPreviewService {
     private let path2DeepThreshold: Float = 0.2
 
     /// 최대 검색 수 (CleanupConstants보다 넉넉하게)
+    // TODO: 테스트 완료 후 2000으로 복원
     private let maxScanCount: Int = 2000
+
+    /// [임시] 1단계(light) 최대 발견 수 — 테스트용 (0이면 제한 없음)
+    private let debugLightLimit: Int = 50
 
     /// 극단적 비율 임계값 (세로/가로 > 5.0 or < 0.2)
     private let extremeAspectRatioThreshold: CGFloat = 5.0
@@ -283,6 +287,17 @@ final class CleanupPreviewService {
                     date: asset.creationDate ?? Date(),
                     handler: progressHandler
                 )
+
+                // [임시] 1단계 발견 수 제한 — 테스트용
+                if debugLightLimit > 0 && lightCandidates.count >= debugLightLimit {
+                    Log.print("[PreviewService] debugLightLimit(\(debugLightLimit)) 도달, 스캔 중단")
+                    break
+                }
+            }
+
+            // [임시] 외부 루프도 중단
+            if debugLightLimit > 0 && lightCandidates.count >= debugLightLimit {
+                break
             }
 
             currentIndex = endIndex

@@ -474,6 +474,10 @@ extension ViewerViewController {
         // VoiceOver 확인
         guard !UIAccessibility.isVoiceOverRunning else { return false }
 
+        // fetchResult 없는 코디네이터에서는 비활성화 (미리보기 뷰어 등)
+        // 유사 사진 분석은 fetchResult 기반 컨텍스트가 필요
+        guard coordinator.fetchResult != nil else { return false }
+
         // 휴지통 모드 확인 (FR-037: 휴지통 화면에서는 유사사진정리 기능 비활성화)
         guard viewerMode != .trash else { return false }
 
