@@ -311,10 +311,11 @@ final class CleanupPreviewService {
 
         let elapsed = Date().timeIntervalSince(startTime)
 
+        // 스캔은 최신→오래된 순이지만, 그리드 표시는 오래된→최신 (다른 그리드와 통일)
         let result = PreviewResult(
-            lightCandidates: lightCandidates,
-            standardCandidates: standardCandidates,
-            deepCandidates: deepCandidates,
+            lightCandidates: lightCandidates.reversed(),
+            standardCandidates: standardCandidates.reversed(),
+            deepCandidates: deepCandidates.reversed(),
             scannedCount: totalScanned,
             totalTimeSeconds: elapsed
         )
