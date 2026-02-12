@@ -44,10 +44,10 @@ final class CleanupProgressView: UIView {
     private lazy var titleLabel: UILabel = {
         let label = UILabel()
         label.translatesAutoresizingMaskIntoConstraints = false
-        label.text = "사진 정리 중"
-        label.font = .systemFont(ofSize: 17, weight: .semibold)
+        label.font = .systemFont(ofSize: 19, weight: .bold)
         label.textColor = .label
         label.textAlignment = .center
+        label.numberOfLines = 0
         return label
     }()
 
@@ -159,14 +159,37 @@ final class CleanupProgressView: UIView {
     func configure(method: CleanupMethod) {
         self.method = method
 
+        let mainTitle = "저품질 사진 탐색 중"
+        let subTitle: String
+
         switch method {
         case .fromLatest:
-            titleLabel.text = "최신 사진부터 저품질 사진 탐색 중"
+            subTitle = "최신 사진부터"
         case .continueFromLast:
-            titleLabel.text = "이어서 저품질 사진 탐색 중"
+            subTitle = "이어서 탐색"
         case .byYear(let year, _):
-            titleLabel.text = "\(year)년 저품질 사진 탐색 중"
+            subTitle = "\(year)년"
         }
+
+        let mainAttributes: [NSAttributedString.Key: Any] = [
+            .font: UIFont.systemFont(ofSize: 19, weight: .bold),
+            .foregroundColor: UIColor.label
+        ]
+        let subAttributes: [NSAttributedString.Key: Any] = [
+            .font: UIFont.systemFont(ofSize: 13, weight: .regular),
+            .foregroundColor: UIColor.secondaryLabel
+        ]
+
+        let fullTitle = NSMutableAttributedString(string: mainTitle, attributes: mainAttributes)
+        fullTitle.append(NSAttributedString(string: "\n(\(subTitle))", attributes: subAttributes))
+
+        // 행간 및 정렬 설정
+        let paragraphStyle = NSMutableParagraphStyle()
+        paragraphStyle.lineSpacing = 4
+        paragraphStyle.alignment = .center
+        fullTitle.addAttribute(.paragraphStyle, value: paragraphStyle, range: NSRange(location: 0, length: fullTitle.length))
+
+        titleLabel.attributedText = fullTitle
     }
 
     /// 진행 상황 업데이트
