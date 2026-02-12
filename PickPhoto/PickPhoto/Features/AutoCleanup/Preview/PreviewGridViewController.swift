@@ -529,8 +529,16 @@ final class PreviewGridViewController: UIViewController {
 
     /// 정리 확인 Alert 표시
     private func showCleanupConfirmation(assetIDs: [String]) {
+        // 현재 단계에 따른 최대 점수
+        let maxScore: Int
+        switch currentStage {
+        case .light:    maxScore = 30
+        case .standard: maxScore = 40
+        case .deep:     maxScore = 50
+        }
+
         let alert = UIAlertController(
-            title: "\(assetIDs.count)장을 휴지통으로 이동할까요?",
+            title: "품질지수 \(maxScore)점 이하 사진 \(assetIDs.count)장을 휴지통으로 이동할까요?",
             message: nil,
             preferredStyle: .alert
         )
