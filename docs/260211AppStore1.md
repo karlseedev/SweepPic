@@ -18,8 +18,14 @@
 9. [보안 및 수출 규정](#9-보안-및-수출-규정)
 10. [테스트 관련 요구사항](#10-테스트-관련-요구사항)
 11. [PickPhoto 현재 상태 점검](#11-pickphoto-현재-상태-점검)
-12. [PickPhoto 실행 계획](#12-pickphoto-실행-계획)
-13. [Apple 공식 참고 문서](#13-apple-공식-참고-문서)
+12. [사진 앱 리젝 사례 분석](#12-사진-앱-리젝-사례-분석)
+13. [Review Notes 작성 가이드 (PickPhoto용)](#13-review-notes-작성-가이드-pickphoto용)
+14. [App Privacy Details 실전 응답 가이드](#14-app-privacy-details-실전-응답-가이드)
+15. [Guideline 4.2 방어 전략](#15-guideline-42-방어-전략)
+16. [ITMS 오류 코드 대응표](#16-itms-오류-코드-대응표)
+17. [심사 프로세스 실전 가이드](#17-심사-프로세스-실전-가이드)
+18. [PickPhoto 실행 계획](#18-pickphoto-실행-계획)
+19. [Apple 공식 참고 문서](#19-apple-공식-참고-문서)
 
 ---
 
@@ -263,19 +269,23 @@
 
 **iPhone (6.9" 또는 6.5" 중 하나 필수)**
 
-| 화면 크기 | 해상도 (세로) | 필수 여부 |
-|-----------|-------------|:---------:|
-| **6.9"** | 1260 x 2736 | 둘 중 하나 |
-| **6.5"** | 1284 x 2778 | 둘 중 하나 |
-| 6.3" | 1179 x 2556 | 6.5"에서 자동 축소 |
-| 6.1" | 1170 x 2532 | 6.5"에서 자동 축소 |
-| 5.5" | 1242 x 2208 | 6.1"에서 자동 축소 |
+| 화면 크기 | 해상도 (세로) | 필수 여부 | 대상 기기 |
+|-----------|-------------|:---------:|----------|
+| **6.9"** | 1320 x 2868 | 둘 중 하나 | iPhone 17 Pro Max, iPhone 16 Pro Max |
+| **6.7"** | 1290 x 2796 | 대체 가능 | iPhone 15 Pro Max, 16 Plus |
+| **6.5"** | 1284 x 2778 | 둘 중 하나 | iPhone 14 Pro Max |
+| 6.3" | 1179 x 2556 | 자동 축소 | iPhone 17 Pro, 15 Pro |
+| 6.1" | 1170 x 2532 | 자동 축소 | iPhone 14 |
+| **6.3" (Air)** | 1218 x 2640 | 자동 축소 | iPhone Air |
+| 5.5" | 1242 x 2208 | 자동 축소 | iPhone 8 Plus |
+
+> **2026년 기준**: iPhone 17 시리즈, iPhone Air 추가. 6.9" 스크린샷(1320x2868)이 최신 Pro Max에 대응.
 
 **iPad (iPad 앱이면 필수)**
 
-| 화면 크기 | 해상도 (세로) |
-|-----------|-------------|
-| **13"** | 2064 x 2752 |
+| 화면 크기 | 해상도 (세로) | 대상 기기 |
+|-----------|-------------|----------|
+| **13"** | 2064 x 2752 | iPad Pro M4/M5, iPad Air 13" |
 
 - 형식: JPEG, PNG
 - 수량: 기기당 1~10장
@@ -332,8 +342,11 @@
 > - 2024-03-13: Required Reason API 누락 시 경고 이메일 발송
 > - 2024-05-01: Required Reason API 사유 선언 필수 + 새로 추가하는 서드파티 SDK에 privacy manifest/서명 필수
 > - 2024-11-12: 기존 포함 SDK까지 유효한 privacy manifest 검증 확대 적용
+> - **2025-02-12: Privacy-impacting SDK에 Privacy Manifest 미포함 시 ITMS-91061 오류로 업로드 차단 (현재 시행 중)**
 >
 > ([근거: TN3181](https://developer.apple.com/documentation/technotes/tn3181-debugging-an-invalid-privacy-manifest))
+>
+> **⚠️ ITMS-91061 주의**: 앱이 사용하는 모든 서드파티 SDK(BlurUIKit, LiquidGlassKit 등)에 유효한 Privacy Manifest가 포함되어야 함. SDK 제작자가 미제공 시 앱 개발자가 직접 해당 SDK 번들 내에 PrivacyInfo.xcprivacy를 추가해야 함.
 
 **파일 구조:**
 
@@ -373,7 +386,32 @@
 | 4 | **활성 키보드** | NSPrivacyAccessedAPICategoryActiveKeyboards | `3EC4.1` 커스텀 키보드 / `54BD.1` 활성 키보드 결정 |
 | 5 | **UserDefaults** | NSPrivacyAccessedAPICategoryUserDefaults | `CA92.1` 앱 자체 접근 / `1C8F.1` App Group 공유 / `C56D.1` 제3자 SDK / `AC6B.1` MDM 구성 |
 
-### 6-3. App Tracking Transparency (ATT)
+### 6-3. 데이터 최소화 원칙 (Guideline 5.1.1(iii))
+
+> **사진 앱 특히 주의**: Apple은 "가능하면 PHPicker를 사용하라"고 명시. 전체 사진 접근(`PHAuthorizationStatus.authorized`)을 요구하는 앱은 Review Notes에서 그 이유를 설득해야 함.
+
+| 접근 방식 | 설명 | 심사 부담 |
+|----------|------|:---------:|
+| PHPicker | 사용자가 선택한 사진만 접근. 추가 권한 불필요 | 낮음 |
+| Limited Access | `.limited` 상태. 사용자가 선택한 사진만 노출 | 중간 |
+| Full Access | `.authorized` 상태. 전체 라이브러리 접근 | **높음 — 사유 필요** |
+
+**PickPhoto 정당화 논거**: 전체 라이브러리 정리가 핵심 목적이므로 PHPicker로는 불가. → Section 13 Review Notes 참조
+
+### 6-4. 얼굴 데이터 사용 제한 (Guideline 5.1.2(vi))
+
+> Photo APIs, 카메라, ARKit 등으로 수집한 **얼굴 매핑/데이터**는 마케팅, 광고, 데이터마이닝에 사용 금지.
+
+| 항목 | PickPhoto 해당 여부 |
+|------|:-----------------:|
+| Vision Framework 얼굴 인식 사용 | **O** |
+| 얼굴 데이터 외부 전송 | X (온디바이스 전용) |
+| 마케팅/광고 활용 | X |
+| 데이터마이닝 활용 | X |
+
+> PickPhoto는 얼굴 인식 결과를 뷰어에서 자동 줌에만 사용하고, 기기 밖으로 전송하지 않으므로 **준수 상태**. Privacy Policy에 이를 명시해야 함.
+
+### 6-5. App Tracking Transparency (ATT)
 
 | 항목 | 요구사항 | 구분 |
 |------|---------|:----:|
@@ -381,7 +419,7 @@
 | NSUserTrackingUsageDescription | 사용 목적 기재 | 해당시 |
 | 추적 거부 시 | 앱 기능 동일하게 제공 | 필수 |
 
-### 6-4. App Privacy Details (영양 라벨) 전체 데이터 타입
+### 6-6. App Privacy Details (영양 라벨) 전체 데이터 타입
 
 **15개 카테고리, 32개 하위 타입:**
 
@@ -411,7 +449,7 @@
 5. 앱 기능
 6. 기타 목적
 
-### 6-5. 프라이버시 정책 필수 요건
+### 6-7. 프라이버시 정책 필수 요건
 
 | 항목 | 설명 |
 |------|------|
@@ -419,7 +457,7 @@
 | **호스팅** | 공개 URL 필수 (GitHub Pages, Notion 등 활용 가능) |
 | **포함 내용** | 수집 데이터 종류, 수집 방법, 사용 목적, 서드파티 공유 여부, 보관 기간, 삭제 방법, 사용자 권리 |
 
-### 6-6. 계정/데이터 삭제 요구사항
+### 6-8. 계정/데이터 삭제 요구사항
 
 | 항목 | 요구사항 | 구분 |
 |------|---------|:----:|
@@ -461,6 +499,18 @@
 | 한국어 지역화 | 한국 사용자 대상 시 한국어 메타데이터 | 강력 권장 |
 | 개인정보 처리방침 | 한국 개인정보보호법 준수 (2025.04 개정 지침) | 필수 |
 | 통신판매업 신고 | 유료 앱/IAP로 수익 발생 시 통신판매업 신고번호 필요할 수 있음. 현재 PickPhoto는 무료 앱이므로 해당 없음. 향후 유료화 시 확인 필요 | 참고 |
+| **공정위 다크패턴 규제** | 2025년 강화. 기만적/조작적 UI 패턴 금지 (강제 구독, 숨겨진 비용, 탈퇴 방해 등). 위반 시 500만원 과태료 | 필수 |
+
+### 8-5. 한국 규정 준수 정보 입력 경로
+
+```
+App Store Connect > 앱 선택 > General > App Information >
+  "Compliance Information" 또는 "Korean Law" 섹션
+  → 이메일, 사업자등록번호(BRN) 입력
+```
+
+> **개인 개발자**: 이메일 + BRN 필수 (전화번호는 조직만)
+> **입력 시점**: 첫 제출 전 반드시 완료. 미입력 시 한국 앱스토어에서 표시 차단 가능
 
 ### 8-4. 한국 개인정보 처리방침 필수 포함 내용
 
@@ -543,18 +593,34 @@
 | 7 | 연령 등급 설문 | 미작성 | 새 양식 응답 |
 | 8 | 심사 연락처 | 미설정 | 이름/이메일/전화번호 |
 
-### 11-2. 리젝 고위험 항목
+### 11-2. 리젝 고위험 항목 (치명)
 
-| # | 요구사항 | 현재 상태 | 조치 필요 |
-|---|---------|----------|----------|
-| 9 | ITSAppUsesNonExemptEncryption | **Info.plist에 없음** | `false`로 추가 |
-| 10 | NSPhotoLibraryUsageDescription 한글 | 영어만 존재 | 한글 Localization 추가 |
-| 11 | 디버그 코드 분리 | Debug 폴더 존재, UserDefaults 사용 | 릴리즈 빌드에서 제거 확인 |
-| 12 | 서드파티 SDK Privacy Manifest | BlurUIKit — 미확인 / LiquidGlassKit — 없음 | 각 SDK가 Required Reason API(UserDefaults 등)를 내부적으로 사용하는지 확인 필수. SDK 제작자가 Manifest를 미제공하면 직접 포함해야 함 |
-| 13 | 크래시 안정성 | 미확인 | 전체 흐름 테스트 |
-| 14 | Review Notes | 없음 | 사진 접근 사유, Vision 기기 내 처리 명시 |
+| # | 요구사항 | 현재 상태 | 조치 필요 | 위험도 |
+|---|---------|----------|----------|:------:|
+| 9 | **Private API 사용 금지 (2.5.1)** | `SystemUIInspector.swift`가 KVC로 시스템 UI 접근 — `#if DEBUG` 미래핑 상태로 릴리즈 빌드에 포함됨 | `#if DEBUG`로 완전 래핑 또는 릴리즈에서 제외 | **치명** |
+| 10 | **Debug 파일 릴리즈 제외** | `LiquidGlassOptimizer.swift`, `AutoScrollTester.swift`, `SystemUIInspector.swift` 3개 파일이 `#if DEBUG` 미래핑 | 모든 Debug 파일을 `#if DEBUG`로 래핑, 또는 빌드 타겟에서 제외 | **치명** |
 
-### 11-3. 통과 항목 (문제 없음)
+### 11-3. 리젝 고위험 항목 (높음)
+
+| # | 요구사항 | 현재 상태 | 조치 필요 | 위험도 |
+|---|---------|----------|----------|:------:|
+| 11 | ITSAppUsesNonExemptEncryption | **Info.plist에 없음** | `false`로 추가 | 높음 |
+| 12 | NSPhotoLibraryUsageDescription 한글 | 영어만 존재 | 한글 Localization 추가 | 높음 |
+| 13 | **전체 사진 접근 정당화 (5.1.1(iii))** | 데이터 최소화 원칙 — "가능하면 PHPicker 사용" 명시. 전체 접근 필수인 이유를 Review Notes에서 설득해야 함 | Review Notes에 구체적 사유 3가지 명시 (아래 14-1 참조) | 높음 |
+| 14 | **얼굴 데이터 사용 제한 (5.1.2(vi))** | Vision Framework 얼굴 인식 사용 중. 수집 데이터를 마케팅/광고/데이터마이닝에 사용 금지 | 온디바이스 전용임을 Privacy Policy + Review Notes에 명시 | 높음 |
+| 15 | **Limited Photo Access 처리 (2.1)** | iOS 14+ `.limited` 상태에서 빈 화면/크래시 발생 시 Guideline 2.1 위반 | `.limited` 상태에서 정상 동작 확인, 접근 권한 업그레이드 안내 UI 구현 | 높음 |
+| 16 | 서드파티 SDK Privacy Manifest | BlurUIKit — 미확인 / LiquidGlassKit — 없음 | 각 SDK가 Required Reason API(UserDefaults 등)를 내부적으로 사용하는지 확인 필수. SDK 제작자가 Manifest를 미제공하면 직접 포함해야 함 (ITMS-91061 오류 발생) | 높음 |
+| 17 | **연령 등급 새 양식 응답** | 2026.01.31 마감 **이미 경과** — 미응답 시 앱 업데이트 제출 차단 | App Store Connect에서 즉시 새 양식 응답 | **긴급** |
+| 18 | 크래시 안정성 | 미확인 | 전체 흐름 테스트 | 높음 |
+| 19 | Review Notes | 없음 | 사진 접근 사유, Vision 기기 내 처리 명시 (아래 14-1 참조) | 높음 |
+
+### 11-4. 리젝 중간 위험 항목
+
+| # | 요구사항 | 현재 상태 | 조치 필요 | 위험도 |
+|---|---------|----------|----------|:------:|
+| 20 | **비 Debug 파일의 print문** | `FeatureFlags.swift`, `CleanupSessionStore.swift`, `ViewerViewController+SimilarPhoto.swift`에 print문 잔존 | `Log.print()` 또는 `#if DEBUG` 래핑으로 전환 | 중간 |
+
+### 11-5. 통과 항목 (문제 없음)
 
 | # | 요구사항 | 현재 상태 |
 |---|---------|----------|
@@ -569,7 +635,7 @@
 | 23 | 배경 모드 | UIBackgroundModes 미선언 (불필요) |
 | 24 | ProMotion 120fps | CADisableMinimumFrameDurationOnPhone = true |
 
-### 11-4. 개선 권장 항목
+### 11-6. 개선 권장 항목
 
 | # | 요구사항 | 현재 상태 | 조치 필요 |
 |---|---------|----------|----------|
@@ -579,7 +645,7 @@
 | 28 | 한국 개인정보 처리방침 | 없음 | 2025.04 개정 지침 기반 작성 |
 | 29 | LaunchScreen 브랜딩 | 빈 흰색 화면 | 앱 로고 추가 권장 |
 
-### 11-5. 해당 없음 (PickPhoto에 불필요)
+### 11-7. 해당 없음 (PickPhoto에 불필요)
 
 | 요구사항 | 이유 |
 |---------|------|
@@ -594,7 +660,7 @@
 | Sign in with Apple | 로그인 없음 |
 | EU DSA 트레이더 상태 | 한국만 배포 시 불필요 |
 
-### 11-6. Required Reason API 사용 현황
+### 11-8. Required Reason API 사용 현황
 
 | API | 사용 여부 | 위치 | Privacy Manifest 사유 코드 |
 |-----|:--------:|------|--------------------------|
@@ -604,7 +670,7 @@
 | 디스크 공간 | X | - | - |
 | 활성 키보드 | X | - | - |
 
-### 11-7. 서드파티 라이브러리 현황
+### 11-9. 서드파티 라이브러리 현황
 
 | 라이브러리 | 유형 | Privacy Manifest | 비고 |
 |-----------|------|:----------------:|------|
@@ -614,7 +680,238 @@
 
 ---
 
-## 12. PickPhoto 실행 계획
+## 12. 사진 앱 리젝 사례 분석
+
+> 사진/갤러리 앱에 특화된 리젝 유형과 대응 방법
+
+### 12-1. 사진 앱 특화 리젝 유형 TOP 5
+
+| 순위 | 리젝 유형 | Guideline | 빈도 | 설명 |
+|:----:|----------|:---------:|:----:|------|
+| 1 | 네이티브 사진 앱 복제 | 4.1 / 4.2 | 매우 높음 | "기본 사진 앱과 차별화 부족" — 스와이프 정리, 유사 사진 등 독자 기능 필수 |
+| 2 | 전체 사진 접근 미설명 | 5.1.1(iii) | 높음 | PHPicker 대신 전체 접근을 요구하는 이유 미설명 |
+| 3 | 프라이버시 정책 미흡 | 5.1.1 | 높음 | 사진/얼굴 데이터 처리 방식 미기재 |
+| 4 | 빈 상태 처리 | 2.1 | 중간 | 사진 0장, 권한 거부, Limited 접근 시 빈 화면/크래시 |
+| 5 | Private API 사용 | 2.5.1 | 중간 | 디버그용 코드가 릴리즈에 포함 |
+
+### 12-2. 최근 리젝 트렌드 (2025~2026)
+
+| 트렌드 | 내용 |
+|--------|------|
+| Privacy Manifest 강화 | 2025.02.12부터 SDK 포함 앱에 Privacy Manifest 미포함 시 ITMS-91061로 업로드 자체 차단 |
+| 데이터 최소화 원칙 | "가능하면 PHPicker 사용" 문구가 가이드라인에 명시. 전체 접근 앱은 Review Notes에서 설득 필요 |
+| Performance 리젝 1위 | 2024년 기준 1.2M건 리젝 중 가장 많은 유형이 Performance (크래시, 미완성 기능) |
+| 연령 등급 새 양식 | 2026.01.31 마감. 미응답 시 업데이트 제출 차단 |
+
+### 12-3. 리젝 통계 (2024년 기준)
+
+| 항목 | 수치 |
+|------|------|
+| 총 심사 건수 | 7.7M건 |
+| 리젝 건수 | 1.9M건 (약 25%) |
+| Performance 리젝 | 1.2M건 (1위) |
+| 리젝 후 수정 통과 | 295K건 |
+| 첫 제출 통과율 | 약 75% |
+
+---
+
+## 13. Review Notes 작성 가이드 (PickPhoto용)
+
+> Review Notes는 심사팀이 앱을 이해하는 핵심 창구. 4,000바이트 제한.
+
+### 13-1. PickPhoto Review Notes 템플릿
+
+```
+[App Overview]
+PickPhoto is a photo gallery app focused on fast photo organization.
+Users can quickly sort their photo library using swipe-to-delete and
+similar photo detection features.
+
+[Why Full Photo Library Access is Required]
+1. PHOTO ORGANIZATION: The core purpose is to help users efficiently
+   sort and organize their ENTIRE photo library. PHPicker only allows
+   selecting individual photos, which defeats the purpose of library-
+   wide organization.
+2. SIMILAR PHOTO DETECTION: Our similarity analysis needs to compare
+   ALL photos in the library to find duplicates and similar groups.
+   This is impossible with limited or picker-based access.
+3. GRID BROWSING: We provide a native-like grid browsing experience
+   where users can scroll through their complete library, just like
+   the built-in Photos app.
+
+[Face Detection — On-Device Only]
+- Vision Framework is used for face detection (auto-zoom feature)
+- ALL processing is done 100% on-device
+- No face data is ever transmitted, stored externally, or used for
+  tracking/advertising/data mining
+- Compliant with Guideline 5.1.2(vi)
+
+[Privacy]
+- No user data is collected or transmitted
+- No analytics, tracking, or advertising SDKs
+- All photo processing happens on-device only
+- Privacy Policy: [URL]
+
+[Testing Instructions]
+- Grant full photo library access when prompted
+- For similar photo feature: requires 50+ photos for meaningful results
+- Swipe up on any photo in the viewer to delete (undo available)
+- Tap the similar photo button to see grouped similar photos
+
+[Device Tested]
+- iPhone 15 Pro / iOS 17.x
+- iPhone 17 Pro / iOS 26.x
+```
+
+### 13-2. 핵심 포인트
+
+| 항목 | 작성 요령 |
+|------|----------|
+| 전체 사진 접근 사유 | 구체적 이유 3가지를 번호 매겨 설명. "전체 라이브러리 정리가 핵심 목적"이 가장 강한 논거 |
+| Vision 온디바이스 | "100% on-device", "no data transmitted" 를 반복 강조 |
+| 테스트 조건 | 최소 사진 수(유사 사진 기능 50장+), 스와이프 방향 등 심사원이 기능을 빠르게 체험할 수 있게 안내 |
+| 차별화 기능 | 스와이프 삭제, 유사 사진 분석 등 네이티브 앱에 없는 기능 나열 |
+
+---
+
+## 14. App Privacy Details 실전 응답 가이드
+
+> App Store Connect 제출 시 "App Privacy" 섹션 응답 방법
+
+### 14-1. PickPhoto 응답 전략
+
+PickPhoto는 **온디바이스 전용** 앱이므로 특별한 전략이 가능합니다.
+
+| 질문 | PickPhoto 답변 | 근거 |
+|------|---------------|------|
+| "Do you or your third-party partners collect data from this app?" | **No** | 모든 처리가 온디바이스. 외부 전송 없음 |
+| Photos/Videos 데이터 수집? | (위에서 No 선택 시 이 질문 표시 안됨) | - |
+| 추적(Tracking)? | **No** | ATT/IDFA 미사용, 광고 없음 |
+
+### 14-2. "Data Not Collected" 선택 조건
+
+Apple 기준에서 **다음 조건을 모두 만족**하면 "Data Not Collected" 선택 가능:
+
+| 조건 | PickPhoto 충족 여부 |
+|------|:-----------------:|
+| 데이터가 기기를 떠나지 않음 | **O** |
+| 서버로 전송하지 않음 | **O** |
+| 제3자와 공유하지 않음 | **O** |
+| 분석/광고 SDK 미사용 | **O** |
+| 사용자 추적 안 함 | **O** |
+
+> **결론**: PickPhoto는 **"Data Not Collected"** 선택 가능. 이 경우 개별 데이터 타입 질문이 표시되지 않아 가장 깔끔한 프라이버시 라벨이 됨.
+
+### 14-3. 주의사항
+
+- Privacy Policy URL은 "Data Not Collected"와 무관하게 **항상 필수**
+- 향후 분석 SDK(Firebase 등) 추가 시 응답 변경 필수
+- 허위 응답 적발 시 리젝 + 개발자 계정 경고
+
+---
+
+## 15. Guideline 4.2 방어 전략
+
+> "네이티브 사진 앱이랑 뭐가 달라?" — 심사 리젝 방어
+
+### 15-1. 차별화 근거
+
+| 차별화 기능 | 네이티브 사진 앱 | PickPhoto |
+|------------|:---------------:|:---------:|
+| 스와이프 삭제 | X | **O** — 위로 스와이프로 빠른 삭제 |
+| Undo 기반 안전장치 | X (삭제 확인 다이얼로그) | **O** — 확인 없이 삭제 + 실시간 Undo |
+| 유사 사진 그룹화 | X (iOS 16+은 중복 감지만) | **O** — Vision 기반 유사도 분석 |
+| 자동 얼굴 확대 | X | **O** — 뷰어에서 얼굴 자동 인식/줌 |
+| 사진 정리 생산성 | 범용 뷰어 | **정리 특화** — 빠른 분류에 최적화 |
+
+### 15-2. 경쟁 앱 참고
+
+| 앱 | 평점 | 차별화 | 심사 통과 여부 |
+|-----|------|--------|:------------:|
+| Slidebox | 4.8 | 스와이프 정리 | O — 수년간 운영 |
+| Gemini Photos | 4.7 | AI 중복 감지 | O |
+| Cleanup | 4.6 | 스마트 정리 | O |
+
+> 스와이프 기반 사진 정리만으로도 충분한 차별화 근거가 됨 (Slidebox 사례)
+
+### 15-3. App Store Connect 카테고리/포지셔닝
+
+| 항목 | 권장값 |
+|------|-------|
+| Primary Category | **Photo & Video** |
+| 앱 설명 키워드 | "사진 정리", "스와이프 삭제", "유사 사진 분석" |
+| 포지셔닝 | "사진 정리 생산성 도구" (범용 갤러리가 아닌 정리 특화) |
+
+---
+
+## 16. ITMS 오류 코드 대응표
+
+> 바이너리 업로드 시 자주 발생하는 ITMS 오류와 해결법
+
+| 오류 코드 | 제목 | 원인 | 해결법 |
+|----------|------|------|--------|
+| **ITMS-90717** | Invalid App Store Icon | 아이콘에 알파 채널/투명 영역 포함, 또는 PNG 아닌 형식 | 1024x1024 불투명 PNG로 교체, 알파 채널 제거 |
+| **ITMS-90683** | Missing Purpose String | `NSPhotoLibraryUsageDescription` 등 필수 Usage Description 누락 | Info.plist에 해당 키 + 사유 문자열 추가 |
+| **ITMS-91053** | Missing API Declaration | Privacy Manifest에서 Required Reason API 사유 미선언 | PrivacyInfo.xcprivacy에 해당 API + 사유 코드 추가 |
+| **ITMS-91061** | Missing Privacy Manifest in SDK | 서드파티 SDK에 Privacy Manifest 미포함 (2025.02.12~ 시행) | SDK 업데이트하거나, SDK 번들 내에 PrivacyInfo.xcprivacy 직접 추가 |
+| **ITMS-90032** | Invalid Binary Architecture | 32비트 아키텍처 포함 | arm64 전용 빌드 확인 |
+| **ITMS-90474** | Missing Bundle Version | CFBundleVersion 누락/무효 | Info.plist에 유효한 버전 번호 설정 |
+
+---
+
+## 17. 심사 프로세스 실전 가이드
+
+### 17-1. 심사 기간
+
+| 유형 | 기간 |
+|------|------|
+| 일반 심사 | 90%가 24시간 이내 |
+| 신규 앱 첫 제출 | 24~72시간 |
+| 업데이트 심사 | 대부분 24시간 이내 |
+| Expedited Review | 치명적 버그/보안 문제 시만 승인. App Store Connect에서 요청 |
+
+### 17-2. 심사 상태 흐름
+
+```
+Waiting for Review → In Review → [Approved / Rejected]
+                                       ↓
+                                 Rejected → 수정 → 재제출
+```
+
+### 17-3. 리젝 대응
+
+| 단계 | 행동 |
+|------|------|
+| 1. 리젝 사유 확인 | App Store Connect > Resolution Center에서 상세 사유 확인 |
+| 2. 사유 분석 | 구체적 Guideline 번호와 설명 확인 |
+| 3. 수정 | 코드/메타데이터 수정 |
+| 4. 재제출 | Resolution Center에서 답변 + 새 빌드 업로드 |
+| 5. 이의 신청 | 부당하다고 판단 시 App Review Board에 항소 가능 |
+
+### 17-4. 리젝 방지 체크리스트 (제출 전)
+
+- [ ] 모든 기능이 완전히 동작하는가? (빈 화면, 플레이스홀더 없음)
+- [ ] 사진 접근 거부/제한 시 정상 처리되는가?
+- [ ] 크래시 없이 모든 주요 흐름이 완료되는가?
+- [ ] Privacy Manifest가 올바르게 포함되어 있는가?
+- [ ] 디버그 코드가 릴리즈 빌드에서 제외되었는가?
+- [ ] 앱 아이콘이 불투명 PNG인가?
+- [ ] 스크린샷이 실제 앱 화면인가?
+- [ ] Review Notes에 사진 접근 사유가 명시되어 있는가?
+- [ ] 프라이버시 정책 URL이 접근 가능한가?
+- [ ] 연령 등급 설문이 완료되었는가?
+
+---
+
+## 18. PickPhoto 실행 계획
+
+### Phase 0 — 치명적 항목 즉시 수정 (최우선)
+
+| # | 작업 | 상세 | 위험도 |
+|---|------|------|:------:|
+| 0-1 | **디버그 코드 #if DEBUG 래핑** | `SystemUIInspector.swift` (Private API/KVC), `AutoScrollTester.swift`, `LiquidGlassOptimizer.swift`의 디버그 코드를 `#if DEBUG`로 래핑. 릴리즈 빌드에 포함 시 Guideline 2.5.1 위반으로 즉시 리젝 | 치명 |
+| 0-2 | **비 Debug 파일 print문 정리** | `FeatureFlags.swift`, `CleanupSessionStore.swift`, `ViewerViewController+SimilarPhoto.swift`의 print문을 `Log.print()` 또는 `#if DEBUG` 래핑으로 전환 | 중간 |
+| 0-3 | **연령 등급 새 양식 응답** | 2026.01.31 마감 이미 경과. App Store Connect에서 즉시 새 양식 응답 필요 (미응답 시 업데이트 제출 차단) | 긴급 |
 
 ### Phase 1 — 제출 차단 해소 (필수, 코드 작업)
 
@@ -623,7 +920,8 @@
 | 1 | PrivacyInfo.xcprivacy 생성 | 파일 타임스탬프(`DDA9.1`), UserDefaults(`CA92.1`) 선언. Photos 데이터는 온디바이스 전용이므로 NSPrivacyCollectedDataTypes 포함 여부 확인 후 결정 |
 | 2 | ITSAppUsesNonExemptEncryption 추가 | Info.plist에 `false` 설정 |
 | 3 | NSPhotoLibraryUsageDescription 한글화 | Localization 파일 추가 |
-| 4 | 서드파티 SDK Privacy Manifest 확인 | BlurUIKit, LiquidGlassKit 점검 |
+| 4 | 서드파티 SDK Privacy Manifest 확인 | BlurUIKit, LiquidGlassKit 점검 (ITMS-91061 방지) |
+| 5 | **Limited Photo Access 대응** | `.limited` 상태에서 빈 화면/크래시 방지. 정상 동작 + 전체 접근 업그레이드 안내 UI |
 
 ### Phase 2 — 프라이버시 정책 (필수, 문서 작업)
 
@@ -655,22 +953,21 @@
 
 | # | 작업 | 상세 |
 |---|------|------|
-| 16 | 디버그 코드 분리 확인 | 릴리즈 빌드에서 Debug 전용 코드 제외 |
-| 17 | 전체 흐름 크래시 테스트 | 모든 주요 시나리오 테스트 |
-| 18 | 접근성 확대 | VoiceOver 전체 UI, Dynamic Type |
-| 19 | Localization 파일 분리 | 한/영 .strings 파일 |
+| 16 | 전체 흐름 크래시 테스트 | 모든 주요 시나리오 테스트 (사진 0장, 권한 거부, Limited 접근 포함) |
+| 17 | 접근성 확대 | VoiceOver 전체 UI, Dynamic Type |
+| 18 | Localization 파일 분리 | 한/영 .strings 파일 |
 
 ### Phase 6 — 빌드 및 제출
 
 | # | 작업 | 상세 |
 |---|------|------|
-| 20 | Xcode 26 SDK 빌드 | 2026.04.28부터 필수 |
-| 21 | Archive & Upload | Product > Archive > Distribute App |
-| 22 | 심사 제출 | Submit for Review |
+| 19 | Xcode 26 SDK 빌드 | 2026.04.28부터 필수 |
+| 20 | Archive & Upload | Product > Archive > Distribute App |
+| 21 | 심사 제출 | Submit for Review |
 
 ---
 
-## 13. Apple 공식 참고 문서
+## 19. Apple 공식 참고 문서
 
 ### 핵심 문서 (북마크 권장)
 
