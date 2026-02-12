@@ -219,10 +219,8 @@ final class PreviewGridViewController: UIViewController {
         header.layer.addSublayer(gradientLayer)
         self.headerGradientLayer = gradientLayer
 
-        // X 버튼 (흰색 — 딤 배경 위에 표시)
-        let closeButton = UIButton(type: .system)
-        closeButton.setImage(UIImage(systemName: "xmark"), for: .normal)
-        closeButton.tintColor = .white
+        // X 버튼 (GlassIconButton — 앱 전체 통일 스타일)
+        let closeButton = GlassIconButton(icon: "xmark", size: .medium, tintColor: .white)
         closeButton.translatesAutoresizingMaskIntoConstraints = false
         closeButton.addTarget(self, action: #selector(closeTapped), for: .touchUpInside)
         header.addSubview(closeButton)
@@ -252,13 +250,12 @@ final class PreviewGridViewController: UIViewController {
             progressiveBlurView.bottomAnchor.constraint(equalTo: header.bottomAnchor, constant: 8),
 
             // X 버튼: 좌측, safe area 기준 (콘텐츠 영역 중앙)
-            closeButton.leadingAnchor.constraint(equalTo: header.leadingAnchor, constant: 16),
-            closeButton.topAnchor.constraint(
+            // GlassIconButton .medium = 44×44 (intrinsicContentSize로 크기 자동 결정)
+            closeButton.leadingAnchor.constraint(equalTo: header.leadingAnchor, constant: 8),
+            closeButton.centerYAnchor.constraint(
                 equalTo: view.safeAreaLayoutGuide.topAnchor,
-                constant: (contentHeight - 24) / 2  // 콘텐츠 높이 내 세로 중앙
+                constant: contentHeight / 2  // 콘텐츠 높이 내 세로 중앙
             ),
-            closeButton.widthAnchor.constraint(equalToConstant: 24),
-            closeButton.heightAnchor.constraint(equalToConstant: 24),
 
             // 타이틀: 중앙, X 버튼과 같은 세로 위치
             titleLabel.centerXAnchor.constraint(equalTo: header.centerXAnchor),

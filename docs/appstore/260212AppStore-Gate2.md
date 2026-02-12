@@ -254,6 +254,16 @@ App Store Connect > 앱 선택 > General > App Information >
 | 독점 암호화 알고리즘 | 미사용 → 면제 |
 | ASC 응답 | "No" (비면제 암호화 미사용) |
 
+### 가격 및 배포
+
+> 현재 상태: 미설정 → 제출 불가
+
+| 항목 | 필수 | 비고 |
+|------|:----:|------|
+| **Availability (배포 국가)** | O | 한국 선택 |
+| **Price (가격)** | O | 무료 |
+| **Tax Category** | O | App Store Connect에서 선택 |
+
 ### 콘텐츠 권리 (Content Rights)
 
 | 항목 | 설명 |
@@ -273,6 +283,7 @@ App Store Connect > 앱 선택 > General > App Information >
 - [ ] 심사 연락처가 입력되었는가? (이름/이메일/전화번호)
 - [ ] App Privacy Details 설문이 응답되었는가?
 - [ ] 한국 컴플라이언스 정보가 입력되었는가? (이메일, BRN)
+- [ ] 가격 및 배포 (Availability, Price, Tax Category)가 설정되었는가?
 - [ ] ITSAppUsesNonExemptEncryption이 Info.plist에 추가되었는가?
 - [ ] 수출 규정 응답이 완료되었는가?
 

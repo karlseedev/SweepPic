@@ -125,6 +125,7 @@
 
 | 오류 코드 | 제목 | 원인 | 해결법 |
 |----------|------|------|--------|
+| **ITMS-90683** | Missing Purpose String | `NSPhotoLibraryUsageDescription` 등 필수 Usage Description 누락 | Info.plist에 해당 키 + 사유 문자열 추가 |
 | **ITMS-91053** | Missing API Declaration | Privacy Manifest에서 Required Reason API 사유 미선언 | PrivacyInfo.xcprivacy에 해당 API + 사유 코드 추가 |
 | **ITMS-91061** | Missing Privacy Manifest in SDK | 서드파티 SDK에 Privacy Manifest 미포함 | SDK 업데이트하거나, SDK 번들 내에 PrivacyInfo.xcprivacy 직접 추가 |
 | **ITMS-90717** | Invalid App Store Icon | 아이콘에 알파 채널/투명 영역 포함, 또는 PNG 아닌 형식 | 1024x1024 불투명 PNG로 교체, 알파 채널 제거 |
