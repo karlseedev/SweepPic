@@ -146,35 +146,9 @@ final class CleanupMethodSheet {
         // DEBUG: 통합 로직 테스트 (iOS 18+)
         #if DEBUG
         if #available(iOS 18.0, *) {
-            let tester = CompareAnalysisTester.shared
-
-            // 통합 로직 테스트 버튼 (처음부터)
-            alert.addAction(UIAlertAction(
-                title: "[DEBUG] 통합 테스트 (처음부터)",
-                style: .default
-            ) { [self] _ in
-                self.delegate?.cleanupMethodSheetDidSelectIntegratedTest(self, continueFromLast: false)
-            })
-
-            // 이어서 테스트 버튼
-            let continueTestAction: UIAlertAction
-            if tester.canContinue, let lastDate = tester.lastTestDate {
-                let dateString = formatDate(lastDate)
-                continueTestAction = UIAlertAction(
-                    title: "[DEBUG] 이어서 테스트 (\(dateString) 이전)",
-                    style: .default
-                ) { [self] _ in
-                    self.delegate?.cleanupMethodSheetDidSelectIntegratedTest(self, continueFromLast: true)
-                }
-            } else {
-                continueTestAction = UIAlertAction(
-                    title: "[DEBUG] 이어서 테스트",
-                    style: .default,
-                    handler: nil
-                )
-                continueTestAction.isEnabled = false
-            }
-            alert.addAction(continueTestAction)
+            // ── 통합 테스트 (현재 미사용, 미리보기 정리로 대체) ──
+            // let tester = CompareAnalysisTester.shared
+            // 통합 테스트 (처음부터) / 이어서 테스트 버튼 — 숨김 처리
 
             // ── 3모드 비교 테스트 ──
 

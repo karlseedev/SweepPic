@@ -433,8 +433,9 @@ extension TabBarController: UINavigationControllerDelegate {
             }
         } else {
             // ===== iOS 26+ =====
-            // 시스템 탭바: 항상 표시 강제 (자동 복원 문제 방어)
-            tabBar.isHidden = false
+            // 시스템 탭바: 정책이 있으면 적용, nil이면 기본(표시)
+            // PreviewGridVC 등 탭바 숨김이 필요한 VC는 prefersSystemTabBarHidden = true 설정
+            tabBar.isHidden = policy?.prefersSystemTabBarHidden ?? false
             // floatingOverlay는 iOS 26에서 nil이므로 처리 불필요
         }
 

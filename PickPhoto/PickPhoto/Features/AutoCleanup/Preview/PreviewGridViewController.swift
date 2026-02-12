@@ -87,6 +87,9 @@ final class PreviewGridViewController: UIViewController {
     init(previewResult: PreviewResult) {
         self.previewResult = previewResult
         super.init(nibName: nil, bundle: nil)
+
+        // 탭바 숨김 (push 시 하단 탭 제거)
+        hidesBottomBarWhenPushed = true
     }
 
     required init?(coder: NSCoder) {
@@ -100,6 +103,26 @@ final class PreviewGridViewController: UIViewController {
         setupUI()
         updateHeader()
         updateBottomView()
+    }
+
+    override func viewWillAppear(_ animated: Bool) {
+        super.viewWillAppear(animated)
+
+        // iOS 18: FloatingOverlay 모드에서는 네비바가 숨겨져 있으므로 표시
+        // (iOS 26에서는 이미 표시 상태이므로 무해)
+        navigationController?.setNavigationBarHidden(false, animated: animated)
+    }
+
+    override func viewWillDisappear(_ animated: Bool) {
+        super.viewWillDisappear(animated)
+
+        // pop 시 iOS 18 네비바 복원 (숨김)
+        // push (다른 VC로 이동) 시에는 복원하지 않음
+        if isMovingFromParent {
+            if #unavailable(iOS 26.0) {
+                navigationController?.setNavigationBarHidden(true, animated: animated)
+            }
+        }
     }
 
     // MARK: - Setup
@@ -416,6 +439,18 @@ extension PreviewGridViewController: UICollectionViewDataSourcePrefetching {
         guard !assetIDs.isEmpty else { return }
         ImagePipeline.shared.stopPreheating(assetIDs: assetIDs)
     }
+}
+
+// MARK: - PreviewBottomViewDelegate
+
+// MARK: - BarsVisibilityControlling
+
+extension PreviewGridViewController: BarsVisibilityControlling {
+    /// iOS 18: FloatingOverlay 숨김 (자체 네비바 사용)
+    var prefersFloatingOverlayHidden: Bool? { true }
+
+    /// iOS 26: 시스템 탭바 숨김
+    var prefersSystemTabBarHidden: Bool? { true }
 }
 
 // MARK: - PreviewBottomViewDelegate
