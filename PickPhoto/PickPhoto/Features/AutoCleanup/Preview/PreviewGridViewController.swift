@@ -8,7 +8,7 @@
 //  - BaseGridViewController 상속 안 함 (PhotoCell + BannerCell 혼합 + 배열 기반)
 //  - CompositionalLayout: 사진 섹션(3열) + 배너 섹션(전체 너비)
 //  - 단계적 확장: "기준 낮춰서 더 보기" → 새 섹션 삽입 + 자동 스크롤
-//  - 하단 고정 버튼: "N장 정리하기" / "빼고 M장만" / "기준 낮춰서 더 보기"
+//  - 하단 고정 버튼: "N장 정리하기" / "기준 올려서 추가사진 제외하기" / "기준 낮춰서 더 보기"
 //
 
 import UIKit
@@ -431,17 +431,6 @@ final class PreviewGridViewController: UIViewController {
     private func updateBottomView() {
         let totalCount = previewResult.count(upToStage: currentStage)
 
-        // 이전 단계 개수 (1단계면 nil)
-        let previousStageCount: Int?
-        switch currentStage {
-        case .light:
-            previousStageCount = nil
-        case .standard:
-            previousStageCount = previewResult.lightCount
-        case .deep:
-            previousStageCount = previewResult.count(upToStage: .standard)
-        }
-
         // 확장 가능 여부: 다음 단계가 있고 + 추가분이 있고 + iOS 18 이상
         let canExpand: Bool
         if currentStage >= .deep {
@@ -462,7 +451,6 @@ final class PreviewGridViewController: UIViewController {
         bottomView.configure(
             currentStage: currentStage,
             totalCount: totalCount,
-            previousStageCount: previousStageCount,
             canExpand: canExpand
         )
     }
@@ -636,20 +624,34 @@ extension PreviewGridViewController: PreviewBottomViewDelegate {
         showCleanupConfirmation(assetIDs: assetIDs)
     }
 
-    func previewBottomViewDidTapExclude(_ view: PreviewBottomView) {
-        // 이전 단계까지만 정리 (현재 단계 추가분 제외)
+    func previewBottomViewDidTapCollapse(_ view: PreviewBottomView) {
+        // 단계 축소 (expand의 역동작)
+        // .standard → .light: 섹션 [1, 2] 삭제 (배너 + standard 사진)
+        // .deep → .standard: 섹션 [3, 4] 삭제 (배너 + deep 사진)
         let previousStage: PreviewStage
+        let sectionsToDelete: IndexSet
         switch currentStage {
         case .standard:
             previousStage = .light
+            sectionsToDelete = IndexSet([1, 2])
         case .deep:
             previousStage = .standard
+            sectionsToDelete = IndexSet([3, 4])
         default:
             return
         }
 
-        let assetIDs = previewResult.assetIDs(upToStage: previousStage)
-        showCleanupConfirmation(assetIDs: assetIDs)
+        // 1. currentStage 변경 (numberOfSections 먼저 업데이트되도록)
+        currentStage = previousStage
+
+        // 2. 섹션 삭제 애니메이션
+        collectionView.performBatchUpdates {
+            collectionView.deleteSections(sectionsToDelete)
+        }
+
+        // 3. 하단 버튼 + 헤더 업데이트
+        updateBottomView()
+        updateHeader()
     }
 
     func previewBottomViewDidTapExpand(_ view: PreviewBottomView) {
