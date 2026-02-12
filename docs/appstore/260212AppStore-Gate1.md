@@ -110,6 +110,15 @@
 
 ---
 
+## Gate 1 체크리스트
+
+- [ ] PrivacyInfo.xcprivacy가 프로젝트에 포함되어 있는가?
+- [ ] Required Reason API 사유 코드가 올바르게 선언되어 있는가? (파일 타임스탬프 `DDA9.1`, UserDefaults `CA92.1`)
+- [ ] 서드파티 SDK(BlurUIKit, LiquidGlassKit)에 Privacy Manifest가 포함되어 있는가?
+- [ ] 앱 아이콘이 1024x1024 불투명 PNG인가? (알파 채널 없음)
+
+---
+
 ## ITMS 오류 코드 대응 (Gate 1 관련)
 
 > 업로드 시 발생할 수 있는 ITMS 오류와 해결법

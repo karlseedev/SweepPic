@@ -262,6 +262,22 @@ App Store Connect > 앱 선택 > General > App Information >
 
 ---
 
+## Gate 2 체크리스트
+
+- [ ] 스크린샷이 실제 앱 화면으로 준비되었는가? (iPhone 6.9" + iPad 13")
+- [ ] Privacy Policy 문서가 작성되어 공개 URL에 호스팅되었는가?
+- [ ] Privacy Policy URL이 접근 가능한가?
+- [ ] 지원 페이지(Support URL)가 준비되었는가?
+- [ ] 앱 메타데이터가 모두 입력되었는가? (이름, 설명, 키워드, 카테고리, 저작권)
+- [ ] 연령 등급 설문이 완료되었는가?
+- [ ] 심사 연락처가 입력되었는가? (이름/이메일/전화번호)
+- [ ] App Privacy Details 설문이 응답되었는가?
+- [ ] 한국 컴플라이언스 정보가 입력되었는가? (이메일, BRN)
+- [ ] ITSAppUsesNonExemptEncryption이 Info.plist에 추가되었는가?
+- [ ] 수출 규정 응답이 완료되었는가?
+
+---
+
 ## 참고 문서
 
 | 문서 | URL |
