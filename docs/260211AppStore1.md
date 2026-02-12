@@ -184,7 +184,7 @@
 |----|------|:----:|
 | UILaunchStoryboardName | Launch Screen 지정 | 필수 |
 | UIRequiredDeviceCapabilities | 앱이 특정 하드웨어에 의존할 때만 선언 (불필요한 값 추가 시 설치 가능 기기 감소) | 해당시 |
-| ITSAppUsesNonExemptEncryption | 수출 규정 암호화 신고 | 필수 |
+| ITSAppUsesNonExemptEncryption | 수출 규정 암호화 신고. 미설정 시 매 제출마다 App Store Connect에서 수동 답변 필요 | 강력 권장 |
 | NSPhotoLibraryUsageDescription | 사진 라이브러리 접근 사유 | 사진 앱 필수 |
 | UIBackgroundModes | 사용하지 않으면 선언하지 말 것 | 주의 |
 
@@ -537,9 +537,9 @@
 | 1 | 앱 아이콘 1024x1024 PNG | **없음** (Contents.json만 존재) | 아이콘 디자인 및 추가 |
 | 2 | PrivacyInfo.xcprivacy | **프로젝트 전체에 없음** | 파일 생성 필수 |
 | 3 | 프라이버시 정책 URL | **없음** (앱 내/외부 모두) | 문서 작성 + URL 호스팅 |
-| 4 | 스크린샷 | 없음 | iPhone 6.9" 1~10장 준비 |
+| 4 | 스크린샷 | 없음 | iPhone 6.9" (1260x2736) 1~10장 + iPad 13" (2064x2752) 1~10장 준비 (TARGETED_DEVICE_FAMILY=1,2이므로 iPad도 필수) |
 | 5 | App Store Connect 메타데이터 | 미설정 | 전체 메타데이터 입력 |
-| 6 | App Privacy Details 설문 | 미작성 | Photos 데이터 수집 선언 |
+| 6 | App Privacy Details 설문 | 미작성 | 사진 데이터 접근 선언. **단, PickPhoto는 온디바이스 처리 전용 (외부 전송 없음)이므로 Apple 기준 "Data Not Collected" 선택 가능성 있음 — 제출 시 확인 필요** |
 | 7 | 연령 등급 설문 | 미작성 | 새 양식 응답 |
 | 8 | 심사 연락처 | 미설정 | 이름/이메일/전화번호 |
 
@@ -620,7 +620,7 @@
 
 | # | 작업 | 상세 |
 |---|------|------|
-| 1 | PrivacyInfo.xcprivacy 생성 | 파일 타임스탬프(`DDA9.1`), UserDefaults(`CA92.1`), Photos 수집 선언 |
+| 1 | PrivacyInfo.xcprivacy 생성 | 파일 타임스탬프(`DDA9.1`), UserDefaults(`CA92.1`) 선언. Photos 데이터는 온디바이스 전용이므로 NSPrivacyCollectedDataTypes 포함 여부 확인 후 결정 |
 | 2 | ITSAppUsesNonExemptEncryption 추가 | Info.plist에 `false` 설정 |
 | 3 | NSPhotoLibraryUsageDescription 한글화 | Localization 파일 추가 |
 | 4 | 서드파티 SDK Privacy Manifest 확인 | BlurUIKit, LiquidGlassKit 점검 |
@@ -638,7 +638,7 @@
 | # | 작업 | 상세 |
 |---|------|------|
 | 8 | 앱 아이콘 디자인 | 1024x1024 불투명 PNG, sRGB/P3 |
-| 9 | 스크린샷 준비 | iPhone 6.9" (1260x2736) 1~10장 |
+| 9 | 스크린샷 준비 | iPhone 6.9" (1260x2736) + iPad 13" (2064x2752) 각 1~10장 |
 | 10 | LaunchScreen 브랜딩 | 앱 로고 추가 (권장) |
 
 ### Phase 4 — App Store Connect 설정 (필수, 웹 작업)
