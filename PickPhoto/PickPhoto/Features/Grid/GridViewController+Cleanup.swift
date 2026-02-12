@@ -261,7 +261,17 @@ extension GridViewController {
 extension GridViewController: CleanupMethodSheetDelegate {
 
     func cleanupMethodSheet(_ sheet: CleanupMethodSheet, didSelect method: CleanupMethod) {
-        startCleanup(with: method)
+        switch method {
+        case .fromLatest:
+            // 미리보기 정리 (처음부터)
+            startPreviewCleanup(continueFromLast: false)
+        case .continueFromLast:
+            // 미리보기 정리 (이어서)
+            startPreviewCleanup(continueFromLast: true)
+        case .byYear:
+            // 연도별은 기존 즉시 정리 흐름 유지
+            startCleanup(with: method)
+        }
     }
 
     func cleanupMethodSheetDidCancel(_ sheet: CleanupMethodSheet) {
