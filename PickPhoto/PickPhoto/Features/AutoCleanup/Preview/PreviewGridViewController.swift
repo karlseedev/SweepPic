@@ -538,7 +538,7 @@ final class PreviewGridViewController: UIViewController {
         }
 
         let alert = UIAlertController(
-            title: "품질지수 \(maxScore)점 이하 사진 \(assetIDs.count)장을 휴지통으로 이동할까요?",
+            title: "품질지수 \(maxScore)점 이하 사진 \(assetIDs.count)장을\n휴지통으로 이동할까요?",
             message: nil,
             preferredStyle: .alert
         )
