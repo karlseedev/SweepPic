@@ -157,9 +157,107 @@ extension QualityAnalyzer {
 #endif
 ```
 
+### 8. TrashAlbumViewController.swift
+
+**휴지통 셀 비교 분석 배지 표시** (~12줄)
+```swift
+#if DEBUG
+if #available(iOS 18.0, *) {
+    // ModeCategoryStore / CompareCategoryStore 참조하여 배지 표시
+    cell.setModeBadge(modeCategory)
+    cell.setCompareBadge(category)
+}
+#endif
+```
+
+### 9. BlurAnalyzer.swift
+
+**디버그 description extension** (~18줄)
+```swift
+#if DEBUG
+extension BlurMetrics: CustomStringConvertible {
+    var description: String { ... }  // Laplacian 값 + Severe/Mild/Sharp 상태
+}
+#endif
+```
+
+### 10. MetadataFilter.swift
+
+**디버그 필터 결과 출력 extension** (~27줄)
+```swift
+#if DEBUG
+extension MetadataFilter {
+    func debugFilter(_ asset: PHAsset) -> String  // SKIP/ANALYZE 결과 + 메타데이터 상세
+}
+#endif
+```
+
+### 11. PHAsset+Cleanup.swift
+
+**디버그 요약 정보 extension** (~32줄)
+```swift
+#if DEBUG
+extension PHAsset {
+    var debugSummary: String  // ID, Type, Size, Date, Favorite, Screenshot 등
+}
+#endif
+```
+
+### 12. AestheticsAnalyzer.swift
+
+**디버그 description extension** (~22줄)
+```swift
+#if DEBUG
+@available(iOS 18.0, *)
+extension AestheticsMetrics: CustomStringConvertible {
+    var description: String { ... }  // score + utility + Low Quality/Acceptable 상태
+}
+#endif
+```
+
+### 13. VideoFrameExtractor.swift
+
+**인라인 로그** (~3줄)
+```swift
+#if DEBUG
+Log.print("[VideoFrameExtractor] 프레임 추출 실패 ...")
+#endif
+```
+
+**디버그 프레임 추출 extension** (~27줄)
+```swift
+#if DEBUG
+extension VideoFrameExtractor {
+    func debugExtractFrames(from asset: PHAsset) async -> String
+}
+#endif
+```
+
+### 14. ExposureAnalyzer.swift
+
+**디버그 description extension** (~16줄)
+```swift
+#if DEBUG
+extension ExposureMetrics: CustomStringConvertible {
+    var description: String { ... }  // Luminance, RGB Std, Center/Corner, Vignetting
+}
+#endif
+```
+
+### 15. SafeGuardChecker.swift
+
+**디버그 얼굴 품질 분석 extension** (~33줄)
+```swift
+#if DEBUG
+extension SafeGuardChecker {
+    func debugFaceQualityAnalysis(_ image: CGImage) async throws -> String
+}
+#endif
+```
+
 ---
 
-### 8. ViewerViewController.swift
+### 16. ViewerViewController.swift
 
 **디버그 분석 버튼 + 관련 메서드** (~130줄)
 ```swift
@@ -185,9 +283,9 @@ func debugPrintTextDetection()      // Vision 텍스트 감지 테스트
 
 | 항목 | 수량 |
 |------|------|
-| 수정 파일 | 8개 |
-| 삭제된 `#if DEBUG` 블록 | ~38개 |
-| 삭제된 코드 라인 (추정) | ~480줄 |
+| 수정 파일 | 16개 |
+| 삭제된 `#if DEBUG` 블록 | ~50개 |
+| 삭제된 코드 라인 (추정) | ~840줄 |
 | 유지된 Debug/ 파일 | 6개 |
 
 ## 비고
