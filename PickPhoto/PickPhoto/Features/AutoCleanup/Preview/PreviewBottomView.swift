@@ -5,9 +5,9 @@
 //  Created by Claude on 2026-02-12.
 //
 //  하단 고정 버튼 영역
-//  - primaryButton: "N장 정리하기" (filled, tinted)
-//  - collapseButton: "기준 올려서 추가사진 제외하기" (text, 2단계부터)
-//  - expandButton: "기준 낮춰서 더 보기 →" (text, 3단계 미만)
+//  - primaryButton: "탐색된 N장 휴지통으로 이동" (filled, tinted)
+//  - collapseButton: "31~40점 사진 N장 제외하기" (text, 2단계부터)
+//  - expandButton: "31~40점 사진 N장 더 보기 →" (text, 3단계 미만)
 //
 
 import UIKit
@@ -18,9 +18,9 @@ import UIKit
 protocol PreviewBottomViewDelegate: AnyObject {
     /// "N장 정리하기" 탭
     func previewBottomViewDidTapCleanup(_ view: PreviewBottomView)
-    /// "기준 올려서 추가사진 제외하기" 탭 (단계 축소)
+    /// "N점 사진 N장 제외하기" 탭 (단계 축소)
     func previewBottomViewDidTapCollapse(_ view: PreviewBottomView)
-    /// "기준 낮춰서 더 보기" 탭
+    /// "N점 사진 N장 더 보기" 탭 (단계 확장)
     func previewBottomViewDidTapExpand(_ view: PreviewBottomView)
 }
 
@@ -29,9 +29,9 @@ protocol PreviewBottomViewDelegate: AnyObject {
 /// 미리보기 그리드 하단 고정 버튼 영역
 ///
 /// 현재 단계에 따라 버튼 구성이 변합니다:
-/// - 1단계: "N장 정리하기" + "기준 낮춰서 더 보기"
-/// - 2~3단계: "N장 정리하기" + "기준 올려서 추가사진 제외하기" + "기준 낮춰서 더 보기"
-/// - 3단계: expandButton 숨김
+/// - 1단계(light): "탐색된 N장 휴지통으로 이동" + "31~40점 사진 N장 더 보기 →"
+/// - 2단계(standard): + "31~40점 사진 N장 제외하기" + "41~50점 사진 N장 더 보기 →"
+/// - 3단계(deep): + "41~50점 사진 N장 제외하기" (expandButton 숨김)
 final class PreviewBottomView: UIView {
 
     // MARK: - Properties
@@ -53,7 +53,7 @@ final class PreviewBottomView: UIView {
         return button
     }()
 
-    /// 축소 버튼 ("기준 올려서 추가사진 제외하기") — expandButton의 반대 동작
+    /// 축소 버튼 ("N점 사진 N장 제외하기") — expandButton의 반대 동작
     private let collapseButton: UIButton = {
         var config = UIButton.Configuration.plain()
         config.buttonSize = .medium
@@ -62,7 +62,7 @@ final class PreviewBottomView: UIView {
         return button
     }()
 
-    /// 확장 버튼 ("기준 낮춰서 더 보기 →")
+    /// 확장 버튼 ("N점 사진 N장 더 보기 →")
     private let expandButton: UIButton = {
         var config = UIButton.Configuration.plain()
         config.buttonSize = .medium
@@ -138,26 +138,50 @@ final class PreviewBottomView: UIView {
     /// - Parameters:
     ///   - currentStage: 현재 표시 단계
     ///   - totalCount: 현재 단계까지의 총 개수
+    ///   - standardCount: standard 단계 추가분 개수 (31~40점)
+    ///   - deepCount: deep 단계 추가분 개수 (41~50점)
     ///   - canExpand: 더 확장 가능한지 (3단계면 false)
     func configure(
         currentStage: PreviewStage,
         totalCount: Int,
+        standardCount: Int,
+        deepCount: Int,
         canExpand: Bool
     ) {
         // 메인 버튼: "탐색된 N장 휴지통으로 이동"
         primaryButton.configuration?.title = "탐색된 \(totalCount)장 휴지통으로 이동"
 
-        // 축소 버튼: "기준 올려서 추가사진 제외하기" (2단계부터, expand의 역동작)
+        // 축소 버튼 (2단계부터, expand의 역동작)
+        // standard: "31~40점 사진 N장 제외하기", deep: "41~50점 사진 N장 제외하기"
         if currentStage > .light {
-            collapseButton.configuration?.title = "기준 올려서 추가사진 제외하기"
+            let collapseTitle: String
+            switch currentStage {
+            case .standard:
+                collapseTitle = "31~40점 사진 \(standardCount)장 제외하기"
+            case .deep:
+                collapseTitle = "41~50점 사진 \(deepCount)장 제외하기"
+            default:
+                collapseTitle = ""
+            }
+            collapseButton.configuration?.title = collapseTitle
             collapseButton.isHidden = false
         } else {
             collapseButton.isHidden = true
         }
 
-        // 확장 버튼: "기준 낮춰서 더 보기 →"
+        // 확장 버튼
+        // light: "31~40점 사진 N장 더 보기 →", standard: "41~50점 사진 N장 더 보기 →"
         if canExpand {
-            expandButton.configuration?.title = "기준 낮춰서 더 보기 →"
+            let expandTitle: String
+            switch currentStage {
+            case .light:
+                expandTitle = "31~40점 사진 \(standardCount)장 더 보기 →"
+            case .standard:
+                expandTitle = "41~50점 사진 \(deepCount)장 더 보기 →"
+            default:
+                expandTitle = ""
+            }
+            expandButton.configuration?.title = expandTitle
             expandButton.isHidden = false
         } else {
             expandButton.isHidden = true

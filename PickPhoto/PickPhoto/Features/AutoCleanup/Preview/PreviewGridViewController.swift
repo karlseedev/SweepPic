@@ -8,7 +8,7 @@
 //  - BaseGridViewController 상속 안 함 (PhotoCell + BannerCell 혼합 + 배열 기반)
 //  - CompositionalLayout: 사진 섹션(3열) + 배너 섹션(전체 너비)
 //  - 단계적 확장: "기준 낮춰서 더 보기" → 새 섹션 삽입 + 자동 스크롤
-//  - 하단 고정 버튼: "N장 정리하기" / "기준 올려서 추가사진 제외하기" / "기준 낮춰서 더 보기"
+//  - 하단 고정 버튼: "탐색된 N장 휴지통으로 이동" / "N점 사진 N장 제외하기" / "N점 사진 N장 더 보기"
 //
 
 import UIKit
@@ -29,7 +29,7 @@ protocol PreviewGridViewControllerDelegate: AnyObject {
 /// 섹션 타입 (사진 그리드 또는 배너)
 private enum SectionType {
     case photos([PreviewCandidate])
-    case banner(Int)  // addedCount
+    case banner(scoreRange: String, count: Int)  // 품질지수 구간 + 개수
 }
 
 // MARK: - PreviewGridViewController
@@ -382,11 +382,11 @@ final class PreviewGridViewController: UIViewController {
         case 0:
             return .photos(previewResult.lightCandidates)
         case 1:
-            return .banner(previewResult.standardCount)
+            return .banner(scoreRange: "31~40점", count: previewResult.standardCount)
         case 2:
             return .photos(previewResult.standardCandidates)
         case 3:
-            return .banner(previewResult.deepCount)
+            return .banner(scoreRange: "41~50점", count: previewResult.deepCount)
         case 4:
             return .photos(previewResult.deepCandidates)
         default:
@@ -417,9 +417,21 @@ final class PreviewGridViewController: UIViewController {
     // MARK: - Header & Bottom Update
 
     /// 헤더 제목 업데이트
+    /// - light: "품질지수 30점 이하 사진 N장"
+    /// - standard: "품질지수 40점 이하 사진 N장"
+    /// - deep: "품질지수 50점 이하 사진 N장"
     private func updateHeader() {
         let count = previewResult.count(upToStage: currentStage)
-        let titleText = "저품질 사진 \(count)장"
+
+        // 단계별 누적 기준 점수
+        let maxScore: Int
+        switch currentStage {
+        case .light:    maxScore = 30
+        case .standard: maxScore = 40
+        case .deep:     maxScore = 50
+        }
+
+        let titleText = "품질지수 \(maxScore)점 이하 사진 \(count)장"
 
         // iOS 26: 시스템 네비바 타이틀
         title = titleText
@@ -451,6 +463,8 @@ final class PreviewGridViewController: UIViewController {
         bottomView.configure(
             currentStage: currentStage,
             totalCount: totalCount,
+            standardCount: previewResult.standardCount,
+            deepCount: previewResult.deepCount,
             canExpand: canExpand
         )
     }
@@ -542,13 +556,13 @@ extension PreviewGridViewController: UICollectionViewDataSource {
             )
             return cell
 
-        case .banner(let addedCount):
+        case .banner(let scoreRange, let count):
             let cell = collectionView.dequeueReusableCell(
                 withReuseIdentifier: PreviewBannerCell.reuseIdentifier,
                 for: indexPath
             ) as! PreviewBannerCell
 
-            cell.configure(addedCount: addedCount)
+            cell.configure(scoreRange: scoreRange, count: count)
             return cell
         }
     }

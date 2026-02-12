@@ -5,7 +5,7 @@
 //  Created by Claude on 2026-02-12.
 //
 //  인라인 배너 셀 — 단계 확장 시 추가분 구간 표시
-//  "↓ 기준을 낮춰 N장 추가" 형태로 그리드 내 섹션 구분
+//  "품질지수 31~40점 사진 N장" 형태로 그리드 내 섹션 구분
 //
 
 import UIKit
@@ -77,8 +77,10 @@ final class PreviewBannerCell: UICollectionViewCell {
 
     /// 배너 구성
     ///
-    /// - Parameter addedCount: 추가된 사진 수
-    func configure(addedCount: Int) {
-        label.text = "↓ 기준을 낮춰 \(addedCount)장 추가"
+    /// - Parameters:
+    ///   - scoreRange: 품질지수 점수 구간 (예: "31~40점")
+    ///   - count: 해당 구간의 사진 수
+    func configure(scoreRange: String, count: Int) {
+        label.text = "품질지수 \(scoreRange) 사진 \(count)장"
     }
 }
