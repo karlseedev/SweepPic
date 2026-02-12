@@ -28,21 +28,12 @@ protocol CleanupMethodSheetDelegate: AnyObject {
 
     #if DEBUG
     /// 통합 로직 테스트 선택됨 (DEBUG 전용)
-    /// 경로1 (기존 로직 기반) + 경로2 (AestheticsScore 기반) 테스트
-    /// - Parameter continueFromLast: true면 이어서 테스트
     @available(iOS 18.0, *)
     func cleanupMethodSheetDidSelectIntegratedTest(_ sheet: CleanupMethodSheet, continueFromLast: Bool)
 
     /// 3모드 비교 테스트 선택됨 (DEBUG 전용)
-    /// 완화/기본/강화 모드를 동시에 비교 테스트
-    /// - Parameter continueFromLast: true면 이어서 테스트
     @available(iOS 18.0, *)
     func cleanupMethodSheetDidSelectModeTest(_ sheet: CleanupMethodSheet, continueFromLast: Bool)
-
-    /// 미리보기 정리 선택됨 (DEBUG 전용)
-    /// 분석 후 미리보기 그리드 표시 → 사용자 확인 → 휴지통 이동
-    /// - Parameter continueFromLast: true면 이어서 정리
-    func cleanupMethodSheetDidSelectPreview(_ sheet: CleanupMethodSheet, continueFromLast: Bool)
     #endif
 }
 
@@ -117,12 +108,10 @@ final class CleanupMethodSheet {
             self.delegate?.cleanupMethodSheet(self, didSelect: .fromLatest)
         })
 
-        // 이어서 정리 (최신사진부터 정리의 연장선, canContinueFromLatest일 때만 활성화)
-        // - fromLatest 또는 continueFromLast 세션이고
-        // - 50장 도달 또는 2000장 검색 도달인 경우에만 활성화
+        // 이어서 정리 (미리보기 세션 기준으로 활성화)
         let continueAction: UIAlertAction
-        if let session = latestSession, session.canContinueFromLatest {
-            let dateString = formatDate(session.lastAssetDate)
+        if CleanupPreviewService.canContinue, let lastDate = CleanupPreviewService.lastScanDate {
+            let dateString = formatDate(lastDate)
             continueAction = UIAlertAction(
                 title: "이어서 정리 (\(dateString) 이전)",
                 style: .default
@@ -150,39 +139,7 @@ final class CleanupMethodSheet {
         // DEBUG: 통합 로직 테스트 (iOS 18+)
         #if DEBUG
         if #available(iOS 18.0, *) {
-            // ── 통합 테스트 (현재 미사용, 미리보기 정리로 대체) ──
-            // let tester = CompareAnalysisTester.shared
-            // 통합 테스트 (처음부터) / 이어서 테스트 버튼 — 숨김 처리
-
-            // ── 미리보기 정리 ──
-
-            // 미리보기 정리 (처음부터)
-            alert.addAction(UIAlertAction(
-                title: "[DEBUG] 미리보기 정리 (처음)",
-                style: .default
-            ) { [self] _ in
-                self.delegate?.cleanupMethodSheetDidSelectPreview(self, continueFromLast: false)
-            })
-
-            // 미리보기 이어서 정리
-            let continuePreview: UIAlertAction
-            if CleanupPreviewService.canContinue, let lastDate = CleanupPreviewService.lastScanDate {
-                let dateString = formatDate(lastDate)
-                continuePreview = UIAlertAction(
-                    title: "[DEBUG] 미리보기 이어서 (\(dateString) 이전)",
-                    style: .default
-                ) { [self] _ in
-                    self.delegate?.cleanupMethodSheetDidSelectPreview(self, continueFromLast: true)
-                }
-            } else {
-                continuePreview = UIAlertAction(
-                    title: "[DEBUG] 미리보기 이어서",
-                    style: .default,
-                    handler: nil
-                )
-                continuePreview.isEnabled = false
-            }
-            alert.addAction(continuePreview)
+            // 통합 테스트 / 3모드 비교 테스트 — 필요 시 여기에 추가
         }
         #endif
 

@@ -280,25 +280,15 @@ extension GridViewController: CleanupMethodSheetDelegate {
 
     #if DEBUG
     /// 통합 로직 테스트 선택됨 (DEBUG 전용)
-    /// 경로1 (기존 로직 기반) + 경로2 (AestheticsScore 기반) 테스트
-    /// - Parameter continueFromLast: true면 이어서 테스트
     @available(iOS 18.0, *)
     func cleanupMethodSheetDidSelectIntegratedTest(_ sheet: CleanupMethodSheet, continueFromLast: Bool) {
         startIntegratedLogicTest(continueFromLast: continueFromLast)
     }
 
     /// 3모드 비교 테스트 선택됨 (DEBUG 전용)
-    /// 완화/기본/강화 모드 동시 비교
-    /// - Parameter continueFromLast: true면 이어서 테스트
     @available(iOS 18.0, *)
     func cleanupMethodSheetDidSelectModeTest(_ sheet: CleanupMethodSheet, continueFromLast: Bool) {
         startModeComparisonTest(continueFromLast: continueFromLast)
-    }
-
-    /// 미리보기 정리 선택됨 (DEBUG 전용)
-    /// 분석 후 미리보기 그리드 표시 → 사용자 확인 → 휴지통 이동
-    func cleanupMethodSheetDidSelectPreview(_ sheet: CleanupMethodSheet, continueFromLast: Bool) {
-        startPreviewCleanup(continueFromLast: continueFromLast)
     }
     #endif
 }
