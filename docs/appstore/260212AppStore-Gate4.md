@@ -9,13 +9,27 @@
 
 ```
 4. 품질 개선
-   1) 코드/설정: VoiceOver, Dynamic Type, Localization
+   1) 코드/설정: print문 정리, VoiceOver, Dynamic Type, Localization
    2) 에셋: LaunchScreen 브랜딩
 ```
 
 ---
 
 ## 1) 코드/설정 — 프로젝트 파일 변경
+
+### print문 정리
+
+> 직접적 리젝 사유는 아니지만 코드 품질 및 정보 노출 우려
+
+| 파일 | 설명 |
+|------|------|
+| `FeatureFlags.swift` | print문 잔존 |
+| `CleanupSessionStore.swift` | print문 잔존 |
+| `ViewerViewController+SimilarPhoto.swift` | print문 잔존 |
+
+**조치:**
+- `Log.print()` (앱 내 로그 시스템)으로 전환
+- 또는 `#if DEBUG` 래핑으로 릴리즈에서 제외
 
 ### VoiceOver 전체 UI 확대
 

@@ -9,7 +9,7 @@
 
 ```
 1. 업로드 차단
-   1) 코드/설정: PrivacyInfo.xcprivacy, SDK Privacy Manifest, Info.plist
+   1) 코드/설정: PrivacyInfo.xcprivacy, SDK Privacy Manifest
    2) 에셋: 앱 아이콘
 ```
 
@@ -89,16 +89,6 @@
 | AppCore | 로컬 패키지 | 없음 | CryptoKit(SHA256), 파일 타임스탬프 사용 |
 | BlurUIKit | 원격 (TimOliver/BlurUIKit >= 1.2.2) | **확인 필요** | - |
 | LiquidGlassKit | 로컬 패키지 | 없음 | Metal/MetalKit 사용 |
-
-### ITSAppUsesNonExemptEncryption (Info.plist)
-
-> Info.plist에 키 없음 → 매 제출마다 ASC에서 수동 답변 필요
-
-| 항목 | 요구사항 |
-|------|---------|
-| 키 | `ITSAppUsesNonExemptEncryption` |
-| 값 | `false` (PickPhoto는 HTTPS/OS 내장 암호화만 사용 → 면제) |
-| 근거 | HTTPS, OS 내장 암호화 → 수출 문서 제출 면제 |
 
 ---
 

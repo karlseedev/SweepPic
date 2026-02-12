@@ -27,7 +27,7 @@
 | 화면 크기 | 해상도 (세로) | 필수 여부 | 대상 기기 |
 |-----------|-------------|:---------:|----------|
 | **6.9"** | 1320 x 2868 | 둘 중 하나 | iPhone 17 Pro Max, iPhone 16 Pro Max |
-| **6.7"** | 1290 x 2796 | 대체 가능 | iPhone 15 Pro Max, 16 Plus |
+| **6.7"** | 1290 x 2796 | 선택 (6.9" 또는 6.5" 필수) | iPhone 15 Pro Max, 16 Plus |
 | **6.5"** | 1284 x 2778 | 둘 중 하나 | iPhone 14 Pro Max |
 | 6.3" | 1179 x 2556 | 자동 축소 | iPhone 17 Pro, 15 Pro |
 | 6.1" | 1170 x 2532 | 자동 축소 | iPhone 14 |
@@ -242,15 +242,17 @@ App Store Connect > 앱 선택 > General > App Information >
 - **공정위 다크패턴 규제** (2025년 강화): 기만적/조작적 UI 패턴 금지. 위반 시 500만원 과태료
 - 통신판매업 신고: 현재 PickPhoto는 무료 앱이므로 해당 없음. 향후 유료화 시 확인 필요
 
-### 수출 규정 응답
+### 수출 규정 응답 + ITSAppUsesNonExemptEncryption
 
-> Info.plist의 ITSAppUsesNonExemptEncryption과 별도로, ASC 제출 과정에서도 수출 규정 질문에 답해야 함
+> Info.plist에 키 미설정 → 제출 과정에서 매번 수동 답변 필요
+> ASC 제출 시에도 수출 규정 질문에 답해야 함
 
-| 항목 | 설명 |
-|------|------|
+| 항목 | 요구사항 |
+|------|---------|
+| Info.plist 키 | `ITSAppUsesNonExemptEncryption = false` 추가 (코드/설정 작업) |
 | HTTPS/URLSession 사용 | OS 내장 암호화 → 면제 |
 | 독점 암호화 알고리즘 | 미사용 → 면제 |
-| 응답 | "No" (비면제 암호화 미사용) |
+| ASC 응답 | "No" (비면제 암호화 미사용) |
 
 ### 콘텐츠 권리 (Content Rights)
 

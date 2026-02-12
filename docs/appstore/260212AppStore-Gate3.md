@@ -9,7 +9,7 @@
 
 ```
 3. 심사 차단
-   1) 코드/설정: #if DEBUG 래핑, print문 정리, Limited Access UI, Usage Description 한글
+   1) 코드/설정: #if DEBUG 래핑, Limited Access UI, Usage Description 한글
    2) 포털 입력: Review Notes (접근 정당화 + 4.2 차별화)
    3) 검증: 크래시 테스트, 권한 테스트, 빈 상태 테스트
 ```
@@ -40,22 +40,6 @@
 |------|------|------|
 | 2.5.1 | 공개 API만 사용 | 비공개(private) API 사용 금지. Apple 자동 스캔으로 탐지 가능 |
 | 2.5.2 | 자체 완결 번들 | 외부 코드 다운로드 금지 |
-
-### print문 정리
-
-> **위험도: 중간** — 직접적 리젝 사유는 아니지만 코드 품질 및 정보 노출 우려
-
-**현재 문제:**
-
-| 파일 | 설명 |
-|------|------|
-| `FeatureFlags.swift` | print문 잔존 |
-| `CleanupSessionStore.swift` | print문 잔존 |
-| `ViewerViewController+SimilarPhoto.swift` | print문 잔존 |
-
-**조치:**
-- `Log.print()` (앱 내 로그 시스템)으로 전환
-- 또는 `#if DEBUG` 래핑으로 릴리즈에서 제외
 
 ### Limited Photo Access UI
 
@@ -217,18 +201,15 @@ similar photo detection features.
 | 9 | 앱 **백그라운드** → 포그라운드 복귀 | 상태 복원, 크래시 없음 |
 | 10 | **메모리 부족** 시나리오 | 우아한 처리, 크래시 없음 |
 
-### 리젝 방지 체크리스트 (제출 전 최종 확인)
+### 리젝 방지 체크리스트 (Gate 3 항목만)
 
+- [ ] 디버그 코드가 릴리즈 빌드에서 제외되었는가?
 - [ ] 모든 기능이 완전히 동작하는가? (빈 화면, 플레이스홀더 없음)
 - [ ] 사진 접근 거부/제한 시 정상 처리되는가?
 - [ ] 크래시 없이 모든 주요 흐름이 완료되는가?
-- [ ] Privacy Manifest가 올바르게 포함되어 있는가?
-- [ ] 디버그 코드가 릴리즈 빌드에서 제외되었는가?
-- [ ] 앱 아이콘이 불투명 PNG인가?
-- [ ] 스크린샷이 실제 앱 화면인가?
 - [ ] Review Notes에 사진 접근 사유가 명시되어 있는가?
-- [ ] 프라이버시 정책 URL이 접근 가능한가?
-- [ ] 연령 등급 설문이 완료되었는가?
+
+> Gate 1/2 항목(Privacy Manifest, 앱 아이콘, 스크린샷, 프라이버시 정책 URL, 연령 등급 등)은 해당 Gate 문서에서 확인
 
 ---
 
