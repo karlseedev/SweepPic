@@ -598,20 +598,6 @@ final class TrashAlbumViewController: BaseGridViewController {
         // 휴지통 내에서는 모두 삭제 대상이므로 딤드 표시 안 함
         // Base에서 isTrashed=true로 설정되었을 수 있으므로 false로 덮어씀
         cell.updateTrashState(false)
-
-        // DEBUG: 비교 분석 배지 표시 (iOS 18+)
-        // ModeCategoryStore 우선, 없으면 CompareCategoryStore 참조
-        #if DEBUG
-        if #available(iOS 18.0, *) {
-            let assetID = asset.localIdentifier
-            if let modeCategory = ModeCategoryStore.shared.category(for: assetID) {
-                cell.setModeBadge(modeCategory)
-            } else {
-                let category = CompareCategoryStore.shared.category(for: assetID)
-                cell.setCompareBadge(category)
-            }
-        }
-        #endif
     }
 
     // MARK: - UIScrollViewDelegate
