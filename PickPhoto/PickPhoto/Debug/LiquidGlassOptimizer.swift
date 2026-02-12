@@ -160,6 +160,9 @@ enum LiquidGlassOptimizer {
     /// Preload된 블러 뷰 정리 (뷰 컨트롤러 해제 시)
     static func cleanup() {
         for (_, overlay) in preloadedOverlays {
+            // pausesOnCompletion = true인 animator는 해제 전 반드시 stop + finish 필요
+            // (미수행 시 NSInternalInconsistencyException 크래시)
+            stopAnimatorSafely(overlay.blurAnimator)
             overlay.blurView.removeFromSuperview()
         }
         preloadedOverlays.removeAll()
@@ -268,6 +271,24 @@ enum LiquidGlassOptimizer {
 
     // MARK: - Helper Methods
 
+    /// pausesOnCompletion = true인 UIViewPropertyAnimator를 안전하게 정리
+    /// paused 상태에서 dealloc되면 NSInternalInconsistencyException 크래시 발생하므로
+    /// 반드시 inactive 상태로 전환 후 해제해야 함
+    private static func stopAnimatorSafely(_ animator: UIViewPropertyAnimator) {
+        switch animator.state {
+        case .active:
+            // active → stopAnimation(true) → inactive (즉시 종료)
+            animator.stopAnimation(true)
+        case .stopped:
+            // stopped → finishAnimation → inactive
+            animator.finishAnimation(at: .current)
+        case .inactive:
+            break
+        @unknown default:
+            break
+        }
+    }
+
     /// mtkView가 nil인 orphaned 항목 정리
     /// - Viewer 닫힘 등으로 MTKView가 dealloc되면 weak reference가 nil이 됨
     /// - 해당 blurView도 제거하고 딕셔너리에서 삭제
@@ -276,6 +297,8 @@ enum LiquidGlassOptimizer {
 
         for (identifier, overlay) in preloadedOverlays {
             if overlay.mtkView == nil {
+                // pausesOnCompletion = true인 animator는 해제 전 반드시 stop + finish 필요
+                stopAnimatorSafely(overlay.blurAnimator)
                 // blurView가 아직 superview에 있으면 제거
                 overlay.blurView.removeFromSuperview()
                 orphanedKeys.append(identifier)

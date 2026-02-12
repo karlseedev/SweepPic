@@ -584,11 +584,19 @@ C-5 구현 후 실제 블러가 작동하지 않는 문제 발견. 회색 알파
 
 `blurAlpha = 0.5`(원본) / `0.75`(중간 테스트) → 블러 렌더링 깨짐 (단순 반투명 회색으로 폴백)
 
-**수정 방향:**
-- `blurAlpha = 1.0` 고정 (UIVisualEffectView alpha는 절대 1.0 미만 사용 금지)
-- 블러 강도 조절은 alpha 대신:
-  - 블러 스타일 선택 (`.systemUltraThinMaterial` ~ `.systemThickMaterial`)
-  - 또는 `UIViewPropertyAnimator.fractionComplete`로 블러 강도 미세 제어
+**수정 완료 (2026-02-11):**
+
+| 항목 | 변경 전 | 변경 후 |
+|------|---------|---------|
+| 블러 강도 제어 | `blurView.alpha = blurAlpha (0.75)` | `UIViewPropertyAnimator.fractionComplete = 0.1` |
+| 블러 생성 | `UIBlurEffect(style: .systemThinMaterial)` 직접 적용 | `effect: nil`로 생성 → animator가 `.systemUltraThinMaterial` 적용 |
+| tint 오버레이 | `UIColor(white: 0.0, alpha: 0.0)` | `UIColor(white: 0.25, alpha: 0.2)` (진한 회색 20%) |
+| SelectionPill | 블러 오버레이 삽입됨 | `isInsideSelectionPill()` 체크로 제외 |
+| 프로퍼티명 | `blurAlpha` | `blurIntensity` |
+
+**핵심 원칙:**
+- UIVisualEffectView의 `alpha`는 절대 1.0 미만 사용 금지 (Apple 제한)
+- 블러 강도 미세 조절: `UIViewPropertyAnimator.fractionComplete` (0.0~1.0)
 - `blurReplacement` 모드에서 show/hide 시 alpha 대신 `effect` 프로퍼티 애니메이션 사용
 
 ---

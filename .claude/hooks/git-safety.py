@@ -160,10 +160,18 @@ def main():
             "실행을 허용하시겠습니까?"
         )
 
+    # codex exec는 -o 옵션으로 출력하므로 리다이렉션 위험 없음
+    if re.search(r"\bcodex\b", command):
+        sys.exit(0)
+
     # 리다이렉션으로 파일 덮어쓰기 (> file)
     # 주의: >>는 추가이므로 덜 위험, >는 덮어쓰기
-    # 패턴: 공백 후 > 하나만 (>>는 제외)
-    if re.search(r"\s+>(?!>)\s*\S+", command):
+    # 따옴표 안의 >는 비교 연산자/문자열이므로 제외
+    # 2>/dev/null 같은 안전한 리다이렉션도 제외
+    stripped = re.sub(r"'[^']*'", '', command)   # 작은따옴표 내용 제거
+    stripped = re.sub(r'"[^"]*"', '', stripped)   # 큰따옴표 내용 제거
+    stripped = re.sub(r'\d+>/dev/null', '', stripped)  # N>/dev/null 제거
+    if re.search(r"\s+>(?!>)\s*\S+", stripped):
         ask_permission(
             "WARNING: 리다이렉션(>)은 파일을 덮어씁니다. "
             "실행을 허용하시겠습니까?"
