@@ -373,21 +373,3 @@ final class ExposureAnalyzer {
     }
 }
 
-// MARK: - Debug Support
-
-#if DEBUG
-extension ExposureMetrics: CustomStringConvertible {
-
-    /// 디버그용 문자열 표현
-    var description: String {
-        return """
-        ExposureMetrics:
-          Luminance: \(String(format: "%.3f", luminance))
-          RGB Std: \(String(format: "%.2f", rgbStd))
-          Center Luminance: \(String(format: "%.3f", centerLuminance))
-          Corner Luminance: \(String(format: "%.3f", cornerLuminance))
-          Vignetting: \(String(format: "%.3f", vignetting))
-        """
-    }
-}
-#endif

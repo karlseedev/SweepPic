@@ -185,37 +185,3 @@ extension PHAsset {
     }
 }
 
-// MARK: - 디버그
-
-#if DEBUG
-extension PHAsset {
-
-    /// 디버그용 요약 정보
-    var debugSummary: String {
-        var parts: [String] = []
-
-        parts.append("ID: \(localIdentifier.prefix(8))...")
-        parts.append("Type: \(mediaType == .image ? "Image" : mediaType == .video ? "Video" : "Other")")
-        parts.append("Size: \(pixelWidth)×\(pixelHeight) (\(String(format: "%.1f", megapixels))MP)")
-
-        if let date = creationDate {
-            let formatter = DateFormatter()
-            formatter.dateFormat = "yyyy-MM-dd"
-            parts.append("Date: \(formatter.string(from: date))")
-        }
-
-        if isFavorite { parts.append("★") }
-        if isHidden { parts.append("Hidden") }
-        if mediaSubtypes.contains(.photoScreenshot) { parts.append("Screenshot") }
-        if isLivePhoto { parts.append("Live") }
-        if isBurstPhoto { parts.append("Burst") }
-        if isPortraitPhoto { parts.append("Portrait") }
-
-        if mediaType == .video {
-            parts.append("Duration: \(String(format: "%.1f", duration))s")
-        }
-
-        return parts.joined(separator: " | ")
-    }
-}
-#endif

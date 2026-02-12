@@ -147,38 +147,3 @@ final class SafeGuardChecker {
     }
 }
 
-// MARK: - Debug Support
-
-#if DEBUG
-extension SafeGuardChecker {
-
-    /// 디버그용: 얼굴 품질 상세 분석
-    func debugFaceQualityAnalysis(_ image: CGImage) async throws -> String {
-        let request = VNDetectFaceCaptureQualityRequest()
-        let handler = VNImageRequestHandler(cgImage: image, options: [:])
-
-        try handler.perform([request])
-
-        guard let observations = request.results, !observations.isEmpty else {
-            return "No faces detected"
-        }
-
-        var result = "Faces detected: \(observations.count)\n"
-
-        for (index, observation) in observations.enumerated() {
-            let quality = observation.faceCaptureQuality ?? 0
-            let boundingBox = observation.boundingBox
-
-            result += """
-            Face \(index + 1):
-              Quality: \(String(format: "%.3f", quality))
-              BoundingBox: (\(String(format: "%.2f", boundingBox.origin.x)), \(String(format: "%.2f", boundingBox.origin.y))) \
-            \(String(format: "%.2f", boundingBox.width))x\(String(format: "%.2f", boundingBox.height))
-              SafeGuard: \(quality >= faceQualityThreshold ? "APPLIED" : "NOT APPLIED")\n
-            """
-        }
-
-        return result
-    }
-}
-#endif

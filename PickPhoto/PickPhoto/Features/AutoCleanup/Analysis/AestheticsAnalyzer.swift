@@ -131,28 +131,3 @@ final class AestheticsAnalyzer {
     }
 }
 
-// MARK: - Debug Support
-
-#if DEBUG
-@available(iOS 18.0, *)
-extension AestheticsMetrics: CustomStringConvertible {
-
-    /// 디버그용 문자열 표현
-    var description: String {
-        let status: String
-        if !isValid {
-            status = "Invalid"
-        } else if isUtility {
-            status = "Utility"
-        } else if overallScore < CleanupConstants.aestheticsPrecisionThreshold {
-            status = "Low Quality (Precision)"
-        } else if overallScore < CleanupConstants.aestheticsRecallThreshold {
-            status = "Low Quality (Recall only)"
-        } else {
-            status = "Acceptable"
-        }
-
-        return "AestheticsMetrics: score=\(String(format: "%.3f", overallScore)), utility=\(isUtility) (\(status))"
-    }
-}
-#endif

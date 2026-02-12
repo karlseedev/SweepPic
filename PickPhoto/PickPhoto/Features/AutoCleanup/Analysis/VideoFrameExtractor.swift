@@ -149,9 +149,6 @@ final class VideoFrameExtractor {
                 frames.append(cgImage)
             } catch {
                 // 개별 프레임 실패는 계속 진행
-                #if DEBUG
-                Log.print("[VideoFrameExtractor] 프레임 추출 실패 (position: \(position)): \(error.localizedDescription)")
-                #endif
             }
         }
 
@@ -164,32 +161,3 @@ final class VideoFrameExtractor {
     }
 }
 
-// MARK: - Debug Support
-
-#if DEBUG
-extension VideoFrameExtractor {
-
-    /// 디버그용: 프레임 추출 상세 정보
-    func debugExtractFrames(from asset: PHAsset) async -> String {
-        var output = """
-        === Video Frame Extraction Debug ===
-        Asset ID: \(asset.localIdentifier.prefix(8))...
-        Duration: \(String(format: "%.2f", asset.duration))초
-
-        """
-
-        do {
-            let frames = try await extractFrames(from: asset)
-            output += "추출된 프레임: \(frames.count)개\n"
-            for (index, frame) in frames.enumerated() {
-                let position = framePositions[index]
-                output += "  - \(Int(position * 100))%: \(frame.width)x\(frame.height)\n"
-            }
-        } catch {
-            output += "에러: \(error.localizedDescription)\n"
-        }
-
-        return output
-    }
-}
-#endif

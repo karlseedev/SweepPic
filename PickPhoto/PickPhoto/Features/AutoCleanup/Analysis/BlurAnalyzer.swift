@@ -380,23 +380,3 @@ final class BlurAnalyzer {
     }
 }
 
-// MARK: - Debug Support
-
-#if DEBUG
-extension BlurMetrics: CustomStringConvertible {
-
-    /// 디버그용 문자열 표현
-    var description: String {
-        let status: String
-        if laplacianVariance < CleanupConstants.severeBlurLaplacian {
-            status = "Severe Blur"
-        } else if laplacianVariance < CleanupConstants.generalBlurLaplacian {
-            status = "Mild Blur"
-        } else {
-            status = "Sharp"
-        }
-
-        return "BlurMetrics: Laplacian=\(String(format: "%.2f", laplacianVariance)) (\(status))"
-    }
-}
-#endif

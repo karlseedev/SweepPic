@@ -123,32 +123,3 @@ struct MetadataFilter {
 // "Missing prefetched properties" 경고 발생 및 성능 저하
 // 필요 시 비동기 방식으로 재구현 필요
 
-// MARK: - Debug Support
-
-#if DEBUG
-extension MetadataFilter {
-
-    /// 디버그용: 필터 결과 상세 출력
-    func debugFilter(_ asset: PHAsset) -> String {
-        let skipReason = shouldAnalyze(asset)
-
-        var info: [String] = [
-            "ID: \(asset.localIdentifier.prefix(8))...",
-            "Type: \(asset.mediaType == .image ? "Photo" : "Video")"
-        ]
-
-        if asset.isFavorite { info.append("Favorite") }
-        if asset.hasAdjustments { info.append("Edited") }
-        if asset.isHidden { info.append("Hidden") }
-        if asset.sourceType == .typeCloudShared { info.append("SharedAlbum") }
-        if asset.mediaSubtypes.contains(.photoScreenshot) { info.append("Screenshot") }
-        if asset.mediaType == .video {
-            info.append("Duration: \(String(format: "%.1f", asset.duration))s")
-        }
-
-        let result = skipReason.map { "SKIP (\($0.rawValue))" } ?? "ANALYZE"
-
-        return "[\(result)] " + info.joined(separator: " | ")
-    }
-}
-#endif
