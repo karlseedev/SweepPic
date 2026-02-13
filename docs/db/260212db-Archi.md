@@ -15,6 +15,7 @@
 4. [세션 관리 설계](#4-세션-관리-설계)
 5. [이벤트 수집기 설계](#5-이벤트-수집기-설계)
 6. [파일 구조](#6-파일-구조)
+7. [데이터 접근 경로](#7-데이터-접근-경로)
 
 ---
 
@@ -27,6 +28,7 @@
 | **3** | 세션 관리 설계 | SessionManager 구조 | **완료** |
 | **4** | 이벤트 수집기 설계 | 7개 이벤트 데이터 모델 | **완료** |
 | **5** | 파일 구조 결정 | 폴더/파일 배치도 | **완료** |
+| **6** | 데이터 접근 경로 | Query API 활용 설계 | **완료** |
 
 **설계 원칙:**
 - 각 단계별로 주인님과 확인 후 다음 단계 진행
@@ -1238,3 +1240,205 @@ extension AnalyticsService {
     │  TelemetryDeck SDK                                 │
     └────────────────────────────────────────────────────┘
 ```
+
+---
+
+## 7. 데이터 접근 경로
+
+> **상태: 완료**
+
+### 7.1 목적
+
+수집된 분석 데이터를 두 가지 경로로 활용한다:
+
+| 경로 | 대상 | 방식 |
+|------|------|------|
+| **대시보드** | 사용자(주인님) | TelemetryDeck 웹 대시보드에서 직접 조회 |
+| **Query API** | Claude (AI 분석) | REST API로 데이터 조회 → JSON 파싱 → 인사이트 추출 |
+
+### 7.2 TelemetryDeck Query API 개요
+
+**공식 문서:** https://telemetrydeck.com/docs/api/api-run-query/
+
+| 항목 | 내용 |
+|------|------|
+| 호스트 | `api.telemetrydeck.com` |
+| 인증 | Bearer Token (이메일+비밀번호 → 토큰 발급) |
+| 쿼리 언어 | TQL (TelemetryDeck Query Language, Druid 기반) |
+| 응답 형식 | JSON (rows 배열 + 메타데이터) |
+| 실행 방식 | 비동기 3단계 (제출 → 상태 폴링 → 결과 조회) |
+
+### 7.3 인증 흐름
+
+```
+1. 토큰 발급
+   POST https://api.telemetrydeck.com/api/v3/users/login
+   Authorization: Basic <base64(email:password)>
+   → { "value": "<bearer_token>", "expiresAt": "..." }
+
+2. API 호출 시
+   Authorization: Bearer <bearer_token>
+```
+
+> **보안:** Bearer Token은 비밀번호와 동급. 환경변수 또는 키체인으로 관리. 코드에 하드코딩 금지.
+
+**참고:** https://telemetrydeck.com/docs/api/api-token/
+
+### 7.4 쿼리 실행 3단계
+
+```
+Step 1: 쿼리 제출
+  POST /api/v3/query/calculate-async/
+  Body: TQL 쿼리 (JSON)
+  → { "queryTaskID": "55b3487da8018369" }
+
+Step 2: 상태 확인 (폴링)
+  GET /api/v3/task/{taskID}/status/
+  → { "status": "running" }  또는
+  → { "status": "successful" }
+
+Step 3: 결과 조회
+  GET /api/v3/task/{taskID}/value/
+  → {
+      "calculationDuration": 0.218,
+      "result": {
+        "rows": [{"count": 516, "modelName": "iPhone13,1"}],
+        "type": "topNResult"
+      }
+    }
+```
+
+### 7.5 지원 쿼리 타입
+
+| 쿼리 타입 | 용도 | 우리 활용 예시 |
+|----------|------|-------------|
+| **timeseries** | 시간별 추이 | 일별 앱 실행 수, 주간 삭제 추이 |
+| **topN** | 상위 N개 값 | 가장 많은 오류 TOP 5 |
+| **groupBy** | 차원별 그룹화 | OS 버전별 사진 열람, 정리 방식별 비율 |
+| **scan** | 개별 이벤트 목록 | 특정 날짜 정리 이벤트 전체 |
+| **funnel** | 퍼널 분석 | 정리 도달 단계별 이탈률 |
+| **retention** | 리텐션 분석 | 주간 재방문율 |
+| **experiment** | A/B 테스트 | 향후 활용 |
+
+**참고:** https://telemetrydeck.com/docs/tql/query/
+
+### 7.6 우리 시그널별 쿼리 예시
+
+#### 일별 앱 실행 추이
+
+```json
+{
+  "queryType": "timeseries",
+  "dataSource": "telemetry-signals",
+  "granularity": "day",
+  "filter": {
+    "type": "selector",
+    "dimension": "type",
+    "value": "PickPhoto.app.launched"
+  },
+  "aggregations": [
+    { "type": "count", "name": "launchCount" }
+  ],
+  "relativeIntervals": [{ "beginningDate": { "component": "day", "offset": -30 }, "endDate": { "component": "day", "offset": 0 } }]
+}
+```
+
+#### 정리 방식별 사용 비율
+
+```json
+{
+  "queryType": "topN",
+  "dataSource": "telemetry-signals",
+  "dimension": "method",
+  "threshold": 10,
+  "metric": "count",
+  "filter": {
+    "type": "selector",
+    "dimension": "type",
+    "value": "PickPhoto.cleanup.completed"
+  },
+  "aggregations": [
+    { "type": "count", "name": "count" }
+  ],
+  "granularity": "all"
+}
+```
+
+#### 오류 발생 현황
+
+```json
+{
+  "queryType": "groupBy",
+  "dataSource": "telemetry-signals",
+  "dimensions": ["photoLoad.gridThumbnail", "face.detection", "cleanup.startFail"],
+  "filter": {
+    "type": "selector",
+    "dimension": "type",
+    "value": "PickPhoto.session.errors"
+  },
+  "aggregations": [
+    { "type": "count", "name": "sessionCount" }
+  ],
+  "granularity": "week"
+}
+```
+
+### 7.7 Claude 분석 워크플로우
+
+```
+주인님: "지난 주 분석 데이터 요약해줘"
+    │
+    ▼
+Claude: Bash로 curl 실행
+    │
+    ├─ 1. 토큰 발급 (환경변수에서 credentials 읽기)
+    ├─ 2. 시그널별 쿼리 제출 (병렬)
+    ├─ 3. 결과 JSON 수집
+    │
+    ▼
+Claude: JSON 파싱 → 인사이트 추출
+    │
+    ├─ 주간 활성 사용자 추이
+    ├─ 가장 많이 사용된 기능
+    ├─ 오류 발생률 변화
+    ├─ 정리 기능 전환율 (퍼널)
+    │
+    ▼
+주인님에게 요약 리포트 제공
+```
+
+**필요 환경 설정 (구현 시):**
+
+```bash
+# .env 또는 키체인에 저장 (git 추적 제외)
+TELEMETRYDECK_EMAIL=user@example.com
+TELEMETRYDECK_PASSWORD=****
+```
+
+### 7.8 Insight 활용 (저장된 쿼리)
+
+대시보드에서 자주 쓰는 쿼리를 Insight로 저장해두면, API로 바로 조회할 수 있다.
+
+```
+1. Insight 쿼리 가져오기
+   POST /api/v3/insights/{insightID}/query/
+   → TQL 쿼리 JSON 반환
+
+2. 가져온 쿼리로 실행
+   POST /api/v3/query/calculate-async/
+   → 결과 조회
+```
+
+> 대시보드에서 만든 차트를 그대로 API로 재현할 수 있어, 대시보드와 AI 분석 간 일관성 유지.
+
+**참고:** https://telemetrydeck.com/docs/api/api-query-from-insight/
+
+### 7.9 비용 및 접근 제한
+
+| 항목 | 현재 | 향후 |
+|------|------|------|
+| API 접근 | **무료 (제한 미적용)** | Tier 2 이상 유료 플랜 필요 예고 |
+| API 호출 비용 | 별도 과금 없음 | 미정 |
+| 시그널 한도 | Free: 100K/월 | 유료: €19/월~ (1.5M/월) |
+
+> 사용자 증가에 따라 자연스럽게 유료 전환 예정. API 접근도 유료 플랜에 포함되므로 추가 비용 없음.

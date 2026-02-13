@@ -28,99 +28,130 @@ applyPendingViewerReturn() → loadTrashedAssets() 시작
 
 핵심: fetch가 뷰어 열린 동안 미리 되어 있으면, 닫힐 때 `reloadData()`만 하면 즉시 반영됨.
 
-### 수정 계획
+### 수정 시도 #1: pre-fetch 캐싱 (실패)
 
-**핵심 원리:** 현재 `isViewerOpen` 시 fetch + reloadData를 통째로 차단하지만,
-차단이 필요한 것은 `reloadData()`뿐 (줌 트랜지션의 sourceViewProvider 셀 인덱스 보존).
-fetch는 UI와 무관한 백그라운드 작업이므로 즉시 실행 가능.
+> 커밋 `df55f7a` 이후 구현 → 테스트 실패 → 롤백
 
-**fetch는 즉시 실행, reloadData만 지연:**
+**접근:** `loadTrashedAssets()`에서 fetch는 즉시 실행하되, reloadData만 지연.
+`PendingFetchState` enum으로 `.empty`/`.fetched`/`.fetching` 상태를 관리하고,
+`applyPendingViewerReturn()`에서 캐싱된 결과를 즉시 적용.
+
+**결과:** 증상 동일 — 복구된 사진이 여전히 ~1초간 보임.
+
+**실패 원인:** 이 접근은 `viewDidDisappear` 이후(T=370ms~)의 fetch 지연만 단축.
+하지만 실제 문제는 dismiss 애니메이션 중(T=0~370ms)에 구 데이터가 보이는 것.
+pre-fetch가 `α`를 0에 가깝게 줄여도, 370ms의 애니메이션 구간은 건드리지 못함.
+
+### 재분석: 실제 원인
+
+**문제의 타이밍 구간이 잘못 특정되었음.**
+
+초기 분석은 "fetch가 느려서 지연된다"고 진단했지만, 실제로는 dismiss 애니메이션 동안
+`shouldRemovePresentersView = false`로 인해 그리드가 **항상 뷰어 뒤에 보이는 것**이 핵심.
+
+```
+T=0ms       viewerWillClose() 호출
+            ZoomAnimator.animateTransition 시작
+              → scrollToSourceCell() → 그리드 스크롤
+              → fromView(뷰어).alpha → 0 애니메이션 시작
+              ★ 이 순간부터 그리드가 드러나기 시작
+              ★ 그리드는 OLD 데이터 (복구된 사진 포함)
+
+T=0~370ms   줌 아웃 애니메이션 진행 중
+              → 뷰어 서서히 투명 → 그리드 점점 드러남
+              → 복구된 사진이 그리드에 보임 ← 사용자가 보는 구간
+
+T=370ms     애니메이션 완료 → viewDidDisappear
+              → viewerDidClose() → applyPendingViewerReturn()
+              → loadTrashedAssets() (async fetch 시작)
+
+T=370+α ms  fetch 완료 → reloadData() → 비로소 사라짐
+```
+
+| 구간 | 설명 | pre-fetch가 해결? |
+|------|------|------------------|
+| **T=0~370ms** (애니메이션) | 그리드가 구 데이터로 보임 | **아니오** |
+| T=370ms~ (애니메이션 후) | fetch → reloadData | 예 (α 단축) |
+
+사용자가 보는 ~1초 = 370ms(애니메이션) + 수백ms(fetch).
+pre-fetch는 두 번째만 줄이며, 첫 번째 370ms는 그대로.
+
+### 수정 계획 v2: dismiss 전 셀 숨김
+
+**핵심 원리:** 데이터소스는 변경하지 않고 (sourceViewProvider 셀 인덱스 보존),
+복구된 사진의 셀만 **시각적으로 숨긴다** (dismiss 애니메이션 시작 전).
+
+`viewerWillClose()`는 `ZoomAnimator.animateTransition` **이전에** 호출됨.
+이 시점에서 복구된 사진을 특정할 수 있음:
+- `trashedAssetIDSet` = 뷰어 열기 시점 기준 (이전 상태, isViewerOpen 중 갱신 안 됨)
+- `trashStore.trashedAssetIDs` = 현재 상태 (복구된 항목 제외)
+- 차집합 = 복구된 사진 ID들
 
 ```swift
-/// 뷰어 열린 동안 fetch 결과를 캐싱하는 상태
-private enum PendingFetchState {
-    case none                              // 대기 중 없음
-    case empty                             // 빈 결과 대기 (휴지통 비어있음)
-    case fetched(PHFetchResult<PHAsset>)   // fetch 완료, 적용 대기
-    case fetching                          // fetch 진행 중 (뷰어 닫힐 때 fallback 필요)
-}
-private var pendingFetchState: PendingFetchState = .none
+func viewerWillClose(currentAssetID: String?) {
+    pendingScrollAssetID = currentAssetID
+    didUserScrollAfterReturn = false
 
-private func loadTrashedAssets() {
-    let startTime = CFAbsoluteTimeGetCurrent()
-    trashedAssetIDSet = trashStore.trashedAssetIDs
-
-    if trashedAssetIDSet.isEmpty {
-        if isViewerOpen {
-            // fetch 결과를 저장만 하고 reloadData 스킵
-            pendingFetchState = .empty
-            pendingDataRefresh = true
-            return
-        }
-        _trashDataSource.setFetchResult(nil)
-        DispatchQueue.main.async { [weak self] in
-            self?.onDataLoaded(startTime: startTime)
-        }
-        return
-    }
-
-    if isViewerOpen {
-        pendingFetchState = .fetching  // fetch 시작 표시
-        pendingDataRefresh = true
-    }
-
-    DispatchQueue.global(qos: .userInitiated).async { [weak self] in
-        guard let self = self else { return }
-        // ... fetch 수행 ...
-        let fetchResult = PHAsset.fetchAssets(...)
-
-        DispatchQueue.main.async {
-            if self.isViewerOpen {
-                // fetch 결과를 저장만 하고 reloadData 스킵
-                self.pendingFetchState = .fetched(fetchResult)
-            } else {
-                self._trashDataSource.setFetchResult(fetchResult)
-                self.onDataLoaded(startTime: startTime)
-            }
+    // ★ dismiss 애니메이션 전: 복구된 사진 셀 숨김
+    // 데이터소스 변경 없이 시각적으로만 숨김 (sourceViewProvider 인덱스 보존)
+    let currentTrashedIDs = trashStore.trashedAssetIDs
+    let restoredIDs = trashedAssetIDSet.subtracting(currentTrashedIDs)
+    for restoredID in restoredIDs {
+        if let index = _trashDataSource.assetIndex(for: restoredID) {
+            let indexPath = IndexPath(item: index + paddingCellCount, section: 0)
+            collectionView.cellForItem(at: indexPath)?.isHidden = true
         }
     }
 }
 ```
 
-**applyPendingViewerReturn에서 즉시 적용:**
+**후처리 (applyPendingViewerReturn):**
 
 ```swift
 private func applyPendingViewerReturn() {
-    let wasViewerOpen = isViewerOpen
     isViewerOpen = false
 
     if pendingDataRefresh {
         pendingDataRefresh = false
-        switch pendingFetchState {
-        case .empty:
-            // 빈 결과 즉시 적용
-            _trashDataSource.setFetchResult(nil)
-            onDataLoaded(startTime: CFAbsoluteTimeGetCurrent())
-        case .fetched(let fetchResult):
-            // 미리 fetch된 결과 즉시 적용 → reloadData() 즉시 실행
-            _trashDataSource.setFetchResult(fetchResult)
-            onDataLoaded(startTime: CFAbsoluteTimeGetCurrent())
-        case .fetching, .none:
-            // fetch 진행 중 또는 미시작 → 기존 방식 fallback
-            loadTrashedAssets()
-        }
-        pendingFetchState = .none
+        // 숨긴 셀 복원 (reloadData 전에 — 셀 재사용 시 isHidden 잔존 방지)
+        collectionView.visibleCells.forEach { $0.isHidden = false }
+        loadTrashedAssets()
     }
 
     // ... 이하 scroll 로직 동일 ...
 }
 ```
 
+**동작 흐름:**
+
+```
+T=0ms       viewerWillClose()
+              → 복구된 사진 셀 isHidden = true ★
+              → dismiss 애니메이션 시작
+
+T=0~370ms   줌 아웃 애니메이션 진행
+              → 그리드 드러남 → 복구된 사진 셀은 이미 숨겨져 있음 ✅
+
+T=370ms     viewDidDisappear → applyPendingViewerReturn()
+              → visibleCells.isHidden = false (복원)
+              → loadTrashedAssets() → reloadData()
+              → 데이터소스에서 제거되어 자연스럽게 사라짐 ✅
+```
+
+**안전성:**
+
+| 항목 | 상태 |
+|------|------|
+| sourceViewProvider 셀 인덱스 | ✅ 데이터소스 변경 없음 — 인덱스 그대로 |
+| 줌 트랜지션 소스 뷰 | ✅ 현재 보고 있는 사진 셀은 숨기지 않음 (restoredIDs에 포함 안 됨) |
+| 셀 재사용 시 isHidden 잔존 | ✅ applyPendingViewerReturn에서 복원 후 reloadData |
+| 복구된 사진이 현재 뷰어 사진인 경우 | ✅ 뷰어에서 다음 사진으로 이동 후 닫히므로 해당 셀은 현재 인덱스 아님 |
+
 ### 수정 파일
 
 | 파일 | 수정 내용 |
 |-----|---------|
-| TrashAlbumViewController.swift | `PendingFetchState` enum 추가 + `loadTrashedAssets()` 분기 변경 + `applyPendingViewerReturn()` switch 적용 |
+| TrashAlbumViewController.swift | `viewerWillClose()` 복구된 셀 숨김 + `applyPendingViewerReturn()` 셀 복원 추가 |
 
 ---
 
