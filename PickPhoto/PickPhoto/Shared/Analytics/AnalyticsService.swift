@@ -36,9 +36,9 @@ protocol AnalyticsServiceProtocol: AnyObject {
     // 이벤트 4-1: 보관함/앨범 삭제·복구
     func countGridSwipeDelete(source: DeleteSource)
     func countGridSwipeRestore(source: DeleteSource)
-    func countViewerSwipeDelete(source: DeleteSource)
-    func countViewerTrashButton(source: DeleteSource)
-    func countViewerRestoreButton(source: DeleteSource)
+    func countViewerSwipeDelete(source: DeleteSource?)
+    func countViewerTrashButton(source: DeleteSource?)
+    func countViewerRestoreButton(source: DeleteSource?)
 
     // 이벤트 4-2: 휴지통 뷰어
     func countTrashPermanentDelete()
