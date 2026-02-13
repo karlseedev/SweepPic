@@ -152,9 +152,12 @@ await MainActor.run {
 Modal로 present된 ViewerVC는 `navigationController?.topViewController`에 나타나지 않음.
 `self.presentedViewController`로 접근해야 함.
 
+**동일 패턴 존재:** GridViewController(976행)에도 같은 `navigationController?.topViewController` 참조가 있음.
+현재 메인 그리드에서 완전삭제가 호출되는 경로는 없지만, 동일한 취약 패턴이므로 함께 수정.
+
 ### 수정 계획
 
-**방안: weak 참조 저장 후 사용**
+**방안: weak 참조 저장 후 사용 (presentation 방식에 무관)**
 
 `openViewer`에서 ViewerVC 생성 시 weak 참조를 저장하고, `viewerDidRequestPermanentDelete`에서 사용:
 
@@ -195,3 +198,4 @@ func viewerWillClose(currentAssetID: String?) {
 | 파일 | 수정 내용 |
 |-----|---------|
 | TrashAlbumViewController.swift | `activeViewerVC` weak 참조 추가 + `openViewer` 저장 + `viewerDidRequestPermanentDelete` 참조 변경 |
+| GridViewController.swift | 동일 패턴 수정 (976행) — `activeViewerVC` weak 참조로 변경 |
