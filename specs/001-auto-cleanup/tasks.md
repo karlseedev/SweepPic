@@ -233,20 +233,20 @@
 
 ### Video Analysis
 
-- [ ] T076 [P] VideoFrameExtractor 구현 (AVAssetImageGenerator로 프레임 3개 추출) in `Analysis/VideoFrameExtractor.swift`
-- [ ] T077 VideoFrameExtractor - 10분 초과/iCloud 전용 비디오 SKIP 처리 in `Analysis/VideoFrameExtractor.swift` (depends on T076)
-- [ ] T078 QualityAnalyzer - 비디오 분석 통합 (3개 중 2개 이상 저품질 = LOW_QUALITY) in `Analysis/QualityAnalyzer.swift` (depends on T077)
+- [x] T076 [P] VideoFrameExtractor 구현 (AVAssetImageGenerator로 프레임 3개 추출) in `Analysis/VideoFrameExtractor.swift`
+- [x] T077 VideoFrameExtractor - 10분 초과/iCloud 전용 비디오 SKIP 처리 in `Analysis/VideoFrameExtractor.swift` (depends on T076)
+- [x] T078 QualityAnalyzer - 비디오 분석 통합 (3개 중 2개 이상 저품질 = LOW_QUALITY) in `Analysis/QualityAnalyzer.swift` (depends on T077)
 
 ### Live Photo / Burst / RAW
 
-- [ ] T079 [P] PHAsset+Cleanup - Live Photo 처리 (정지 이미지만 분석) in `Models/PHAsset+Cleanup.swift`
-- [ ] T080 [P] PHAsset+Cleanup - Burst 처리 (대표 사진만, PHFetchResult 기본 동작 활용) in `Models/PHAsset+Cleanup.swift`
-- [ ] T081 [P] PHAsset+Cleanup - RAW+JPEG 처리 (JPEG로 분석) in `Models/PHAsset+Cleanup.swift`
+- [x] T079 [P] PHAsset+Cleanup - Live Photo 처리 (정지 이미지만 분석) in `Models/PHAsset+Cleanup.swift`
+- [x] T080 [P] PHAsset+Cleanup - Burst 처리 (대표 사진만, PHFetchResult 기본 동작 활용) in `Models/PHAsset+Cleanup.swift`
+- [x] T081 [P] PHAsset+Cleanup - RAW+JPEG 처리 (JPEG로 분석) in `Models/PHAsset+Cleanup.swift`
 
 ### Tests for Special Media
 
-- [ ] T082 [P] 비디오 분석 테스트 (프레임 추출, 중앙값 판정) in `PickPhoto/PickPhotoTests/AutoCleanup/Analysis/VideoAnalysisTests.swift`
-- [ ] T083 [P] 특수 미디어 처리 테스트 (Live Photo, Burst, RAW) in `PickPhoto/PickPhotoTests/AutoCleanup/Analysis/SpecialMediaTests.swift`
+- [x] T082 [P] 비디오 분석 테스트 (프레임 추출, 중앙값 판정) in `PickPhoto/PickPhotoTests/AutoCleanup/Analysis/VideoAnalysisTests.swift`
+- [x] T083 [P] 특수 미디어 처리 테스트 (Live Photo, Burst, RAW) in `PickPhoto/PickPhotoTests/AutoCleanup/Analysis/SpecialMediaTests.swift`
 
 **Checkpoint**: 특수 미디어 처리 완료
 
