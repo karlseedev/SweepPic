@@ -496,6 +496,16 @@ final class CleanupService: CleanupServiceProtocol {
     }
 
     /// 휴지통으로 이동
+    ///
+    /// TrashStore 연동 방식 (T074 문서화):
+    /// - 사용 API: `TrashStore.moveToTrash(assetIDs:)` (동기, 배열 기반)
+    /// - 저장 위치: Documents/TrashState.json (파일 기반, 앱 재시작 후 유지)
+    /// - 실패 처리: 부분 실패 시 건너뛰기 (롤백 없음, CHK040 결정사항)
+    /// - 복구 방법: `TrashStore.restore(assetIDs:)` 호출로 복구 가능
+    ///   - 휴지통 UI에서 개별 또는 일괄 복구
+    ///   - 복구 시 trashedAssetIDs에서 제거, GridViewController 자동 갱신
+    /// - 완전 삭제: `TrashStore.permanentlyDelete(assetIDs:)` 또는 `emptyTrash()`
+    ///   - 시스템 PHPhotoLibrary.performChanges 팝업 표시 후 삭제
     private func moveToTrash(assetIDs: [String]) {
         guard !assetIDs.isEmpty else { return }
 

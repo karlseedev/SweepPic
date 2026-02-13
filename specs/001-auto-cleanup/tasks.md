@@ -220,8 +220,8 @@
 
 ### Integration Verification
 
-- [ ] T074 [US5] TrashStore 복구 API 확인 및 문서화 in `Services/CleanupService.swift` (주석으로 연동 방식 기술)
-- [ ] T075 [US5] TrashStore Integration 테스트 (자동 정리 → 복구 플로우) in `PickPhoto/PickPhotoTests/AutoCleanup/Services/TrashStoreIntegrationTests.swift`
+- [x] T074 [US5] TrashStore 복구 API 확인 및 문서화 in `Services/CleanupService.swift` (주석으로 연동 방식 기술)
+- [x] T075 [US5] TrashStore Integration 테스트 (자동 정리 → 복구 플로우) in `PickPhoto/PickPhotoTests/AutoCleanup/Services/TrashStoreIntegrationTests.swift`
 
 **Checkpoint**: User Story 5 확인 완료 - 복구 플로우 정상 동작
 
