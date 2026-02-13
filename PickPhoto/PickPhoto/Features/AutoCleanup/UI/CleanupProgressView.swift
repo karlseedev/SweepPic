@@ -61,13 +61,24 @@ final class CleanupProgressView: UIView {
         return progress
     }()
 
-    /// 찾은 수 라벨
+    /// 찾은 수 라벨 ("23 / 50장 발견")
     private lazy var foundCountLabel: UILabel = {
         let label = UILabel()
         label.translatesAutoresizingMaskIntoConstraints = false
-        label.text = "0장 발견"
+        label.text = "0 / 50장 발견"
         label.font = .systemFont(ofSize: 28, weight: .bold)
         label.textColor = .label
+        label.textAlignment = .center
+        return label
+    }()
+
+    /// 검색 진행률 라벨 ("850 / 2,000장 검색")
+    private lazy var scannedCountLabel: UILabel = {
+        let label = UILabel()
+        label.translatesAutoresizingMaskIntoConstraints = false
+        label.text = ""
+        label.font = .systemFont(ofSize: 13, weight: .regular)
+        label.textColor = .secondaryLabel
         label.textAlignment = .center
         return label
     }()
@@ -97,6 +108,7 @@ final class CleanupProgressView: UIView {
             titleLabel,
             progressBar,
             foundCountLabel,
+            scannedCountLabel,
             dateLabel,
             cancelButton
         ])
@@ -134,6 +146,9 @@ final class CleanupProgressView: UIView {
 
         addSubview(containerView)
         containerView.contentView.addSubview(stackView)
+
+        // scannedCountLabel — dateLabel 사이 간격을 좁힘 (연관 정보)
+        stackView.setCustomSpacing(4, after: scannedCountLabel)
 
         NSLayoutConstraint.activate([
             // 컨테이너 - 화면 중앙
@@ -198,8 +213,17 @@ final class CleanupProgressView: UIView {
         // 진행바
         progressBar.setProgress(progress.progress, animated: true)
 
-        // 찾은 수
-        foundCountLabel.text = "\(progress.foundCount)장 발견"
+        // 찾은 수 ("23 / 50장 발견")
+        foundCountLabel.text = "\(progress.foundCount) / \(progress.maxFoundCount)장 발견"
+
+        // 검색 진행률 ("850 / 2,000장 검색")
+        let scannedFormatted = NumberFormatter.localizedString(
+            from: NSNumber(value: progress.scannedCount), number: .decimal
+        )
+        let maxScanFormatted = NumberFormatter.localizedString(
+            from: NSNumber(value: progress.maxScanCount), number: .decimal
+        )
+        scannedCountLabel.text = "\(scannedFormatted) / \(maxScanFormatted)장 검색"
 
         // 탐색 시점 (모든 모드에서 동일한 형식)
         let dateString = formatDate(progress.currentDate)

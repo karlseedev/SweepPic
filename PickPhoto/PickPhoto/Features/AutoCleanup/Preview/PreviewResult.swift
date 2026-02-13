@@ -31,6 +31,9 @@ struct PreviewResult {
     /// 분석 소요 시간 (초)
     let totalTimeSeconds: Double
 
+    /// 종료 사유
+    let endReason: EndReason
+
     // MARK: - Computed Properties
 
     /// 1단계 개수
@@ -96,7 +99,8 @@ struct PreviewResult {
             standardCandidates: standardCandidates.filter { !assetIDs.contains($0.assetID) },
             deepCandidates: deepCandidates.filter { !assetIDs.contains($0.assetID) },
             scannedCount: scannedCount,
-            totalTimeSeconds: totalTimeSeconds
+            totalTimeSeconds: totalTimeSeconds,
+            endReason: endReason
         )
     }
 }

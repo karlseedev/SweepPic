@@ -34,6 +34,14 @@ struct CleanupProgress: Equatable {
     /// - foundCount가 50에 가까워지면 빠르게 완료될 수 있음
     let progress: Float
 
+    /// 최대 찾기 수 (UI 분모용)
+    /// - "23 / 50장 발견"에서 50
+    let maxFoundCount: Int
+
+    /// 최대 검색 수 (UI 분모용)
+    /// - "850 / 2,000장 검색"에서 2,000
+    let maxScanCount: Int
+
     // MARK: - Computed Properties
 
     /// 최대 찾기 수(50)까지의 진행률
@@ -82,7 +90,9 @@ extension CleanupProgress {
             scannedCount: 0,
             foundCount: 0,
             currentDate: startDate,
-            progress: 0
+            progress: 0,
+            maxFoundCount: CleanupConstants.maxFoundCount,
+            maxScanCount: CleanupConstants.maxScanCount
         )
     }
 
@@ -90,15 +100,22 @@ extension CleanupProgress {
     static func updated(
         scannedCount: Int,
         foundCount: Int,
-        currentDate: Date
+        currentDate: Date,
+        maxFoundCount: Int = CleanupConstants.maxFoundCount,
+        maxScanCount: Int = CleanupConstants.maxScanCount
     ) -> CleanupProgress {
-        // 진행률 계산: 검색 수 기준 (최대 2,000장)
-        let progress = Float(scannedCount) / Float(CleanupConstants.maxScanCount)
+        // 진행률 계산: 발견 비율과 검색 비율 중 큰 값
+        // → 50장 먼저 찾으면 발견 비율이, 2000장 먼저 도달하면 검색 비율이 주도
+        let scanRatio = Float(scannedCount) / Float(maxScanCount)
+        let foundRatio = Float(foundCount) / Float(maxFoundCount)
+        let progress = max(scanRatio, foundRatio)
         return CleanupProgress(
             scannedCount: scannedCount,
             foundCount: foundCount,
             currentDate: currentDate,
-            progress: min(progress, 1.0)
+            progress: min(progress, 1.0),
+            maxFoundCount: maxFoundCount,
+            maxScanCount: maxScanCount
         )
     }
 }

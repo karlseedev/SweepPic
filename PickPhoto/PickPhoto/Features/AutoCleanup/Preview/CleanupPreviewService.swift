@@ -43,7 +43,10 @@ final class CleanupPreviewService {
     private let path2DeepThreshold: Float = 0.2
 
     /// 최대 검색 수
-    private let maxScanCount: Int = 2000
+    private let maxScanCount: Int = CleanupConstants.maxScanCount
+
+    /// 최대 발견 수 (light 기준, FR-007)
+    private let maxFoundCount: Int = CleanupConstants.maxFoundCount
 
     /// 극단적 비율 임계값 (세로/가로 > 5.0 or < 0.2)
     private let extremeAspectRatioThreshold: CGFloat = 5.0
@@ -159,6 +162,12 @@ final class CleanupPreviewService {
                 throw CancellationError()
             }
 
+            // 50장 제한 체크 (light 기준 — 그리드 첫 화면에 보이는 수, FR-007)
+            if lightCandidates.count >= maxFoundCount {
+                Log.print("[PreviewService] light \(maxFoundCount)장 도달, 탐색 중단")
+                break
+            }
+
             let endIndex = min(currentIndex + batchSize, totalToScan)
             var batchAssets: [PHAsset] = []
 
@@ -188,7 +197,7 @@ final class CleanupPreviewService {
                 if isExtremeRatio {
                     reportProgress(
                         scanned: totalScanned,
-                        found: lightCandidates.count + standardCandidates.count + deepCandidates.count,
+                        found: lightCandidates.count,
                         date: asset.creationDate ?? Date(),
                         handler: progressHandler
                     )
@@ -258,6 +267,7 @@ final class CleanupPreviewService {
                         stage: .light,
                         score: aestheticsScore
                     ))
+
                 } else if standard {
                     // 2단계(기본)에서 추가로 잡힘 → standard 추가분
                     standardCandidates.append(PreviewCandidate(
@@ -277,12 +287,18 @@ final class CleanupPreviewService {
                 }
 
                 // 프로그레스 보고
+                let currentFound = lightCandidates.count
                 reportProgress(
                     scanned: totalScanned,
-                    found: lightCandidates.count + standardCandidates.count + deepCandidates.count,
+                    found: currentFound,
                     date: asset.creationDate ?? Date(),
                     handler: progressHandler
                 )
+
+                // 50장 도달 시 배치 내에서도 즉시 중단 (light 기준)
+                if lightCandidates.count >= maxFoundCount {
+                    break
+                }
             }
 
             currentIndex = endIndex
@@ -296,13 +312,24 @@ final class CleanupPreviewService {
 
         let elapsed = Date().timeIntervalSince(startTime)
 
+        // 종료 사유 판정 (light 기준 — 그리드 첫 화면 수)
+        let endReason: EndReason
+        if lightCandidates.count >= maxFoundCount {
+            endReason = .maxFound
+        } else if totalScanned >= totalToScan && fetchResult.count > maxScanCount {
+            endReason = .maxScanned
+        } else {
+            endReason = .endOfRange
+        }
+
         // 스캔은 최신→오래된 순이지만, 그리드 표시는 오래된→최신 (다른 그리드와 통일)
         let result = PreviewResult(
             lightCandidates: lightCandidates.reversed(),
             standardCandidates: standardCandidates.reversed(),
             deepCandidates: deepCandidates.reversed(),
             scannedCount: totalScanned,
-            totalTimeSeconds: elapsed
+            totalTimeSeconds: elapsed,
+            endReason: endReason
         )
 
         Log.print("[PreviewService] 완료:")
@@ -490,7 +517,9 @@ final class CleanupPreviewService {
         let progress = CleanupProgress.updated(
             scannedCount: scanned,
             foundCount: found,
-            currentDate: date
+            currentDate: date,
+            maxFoundCount: maxFoundCount,
+            maxScanCount: maxScanCount
         )
         handler(progress)
     }

@@ -352,11 +352,15 @@ final class CleanupService: CleanupServiceProtocol {
             }
 
             // 진행 상황 콜백 (메인 스레드)
+            let scanRatio = Float(scannedCount) / Float(CleanupConstants.maxScanCount)
+            let foundRatio = Float(foundAssetIDs.count) / Float(CleanupConstants.maxFoundCount)
             let progress = CleanupProgress(
                 scannedCount: scannedCount,
                 foundCount: foundAssetIDs.count,
                 currentDate: currentDate,
-                progress: min(Float(scannedCount) / Float(CleanupConstants.maxScanCount), 1.0)
+                progress: min(max(scanRatio, foundRatio), 1.0),
+                maxFoundCount: CleanupConstants.maxFoundCount,
+                maxScanCount: CleanupConstants.maxScanCount
             )
             await MainActor.run {
                 progressHandler(progress)
