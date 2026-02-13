@@ -168,19 +168,19 @@
 
 ### Service Extension
 
-- [ ] T060 [US2] CleanupService - byYear 방식 탐색 로직 (선택 연도만) in `Services/CleanupService.swift`
-- [ ] T061 [US2] CleanupService - 연도 범위 끝에서 확장 없이 종료 in `Services/CleanupService.swift` (depends on T060)
-- [ ] T062 [US2] CleanupService - 연도 기준 PHFetchOptions 쿼리 구성 in `Services/CleanupService.swift` (depends on T061)
+- [x] T060 [US2] CleanupService - byYear 방식 탐색 로직 (선택 연도만) in `Services/CleanupService.swift`
+- [x] T061 [US2] CleanupService - 연도 범위 끝에서 확장 없이 종료 in `Services/CleanupService.swift` (depends on T060)
+- [x] T062 [US2] CleanupService - 연도 기준 PHFetchOptions 쿼리 구성 in `Services/CleanupService.swift` (depends on T061)
 
 ### UI Extension
 
-- [ ] T063 [US2] CleanupMethodSheet - 연도 선택 하위 메뉴 추가 (PHAsset에서 연도 목록 추출) in `UI/CleanupMethodSheet.swift` (depends on T051)
-- [ ] T064 [US2] CleanupProgressView - 연도 표시 ("2024년 5월부터 탐색 중...") in `UI/CleanupProgressView.swift` (depends on T063)
+- [x] T063 [US2] CleanupMethodSheet - 연도 선택 하위 메뉴 추가 (PHAsset에서 연도 목록 추출) in `UI/CleanupMethodSheet.swift` (depends on T051)
+- [x] T064 [US2] CleanupProgressView - 연도 표시 ("2024년 5월부터 탐색 중...") in `UI/CleanupProgressView.swift` (depends on T063)
 
 ### Tests for US2
 
-- [ ] T065 [P] [US2] byYear 탐색 Unit 테스트 (범위 제한, 확장 없이 종료) in `PickPhoto/PickPhotoTests/AutoCleanup/Services/CleanupServiceByYearTests.swift`
-- [ ] T066 [US2] 연도별 정리 Integration 테스트 in `PickPhoto/PickPhotoTests/AutoCleanup/Services/CleanupServiceByYearIntegrationTests.swift` (depends on T062)
+- [x] T065 [P] [US2] byYear 탐색 Unit 테스트 (범위 제한, 확장 없이 종료) in `PickPhoto/PickPhotoTests/AutoCleanup/Services/CleanupServiceByYearTests.swift`
+- [x] T066 [US2] 연도별 정리 Integration 테스트 in `PickPhoto/PickPhotoTests/AutoCleanup/Services/CleanupServiceByYearIntegrationTests.swift` (depends on T062)
 
 **Checkpoint**: User Story 2 완료 - 연도별 정리 기능 독립 테스트 가능
 
@@ -194,19 +194,19 @@
 
 ### Service Extension
 
-- [ ] T067 [US3] CleanupService - continueFromLast 방식 탐색 로직 in `Services/CleanupService.swift`
-- [ ] T068 [US3] CleanupService - 세션 저장/로드 연동 (lastAssetDate, lastAssetID 활용) in `Services/CleanupService.swift` (depends on T067, T015)
-- [ ] T069 [US3] CleanupService - 이전 이력 없으면 에러 반환 in `Services/CleanupService.swift` (depends on T068)
+- [x] T067 [US3] CleanupService - continueFromLast 방식 탐색 로직 in `Services/CleanupService.swift`
+- [x] T068 [US3] CleanupService - 세션 저장/로드 연동 (lastAssetDate, lastAssetID 활용) in `Services/CleanupService.swift` (depends on T067, T015)
+- [x] T069 [US3] CleanupService - 이전 이력 없으면 에러 반환 in `Services/CleanupService.swift` (depends on T068)
 
 ### UI Extension
 
-- [ ] T070 [US3] CleanupMethodSheet - "이어서 정리" 옵션 활성화/비활성화 로직 in `UI/CleanupMethodSheet.swift` (depends on T068)
-- [ ] T071 [US3] CleanupMethodSheet - 이전 세션 정보 표시 ("2024년 5월부터 계속") in `UI/CleanupMethodSheet.swift` (depends on T070)
+- [x] T070 [US3] CleanupMethodSheet - "이어서 정리" 옵션 활성화/비활성화 로직 in `UI/CleanupMethodSheet.swift` (depends on T068)
+- [x] T071 [US3] CleanupMethodSheet - 이전 세션 정보 표시 ("2024년 5월부터 계속") in `UI/CleanupMethodSheet.swift` (depends on T070)
 
 ### Tests for US3
 
-- [ ] T072 [P] [US3] continueFromLast 탐색 Unit 테스트 (세션 연속성 확인) in `PickPhoto/PickPhotoTests/AutoCleanup/Services/CleanupServiceContinueTests.swift`
-- [ ] T073 [US3] 이어서 정리 Integration 테스트 (세션 저장 후 재개) in `PickPhoto/PickPhotoTests/AutoCleanup/Services/CleanupServiceContinueIntegrationTests.swift` (depends on T069)
+- [x] T072 [P] [US3] continueFromLast 탐색 Unit 테스트 (세션 연속성 확인) in `PickPhoto/PickPhotoTests/AutoCleanup/Services/CleanupServiceContinueTests.swift`
+- [x] T073 [US3] 이어서 정리 Integration 테스트 (세션 저장 후 재개) in `PickPhoto/PickPhotoTests/AutoCleanup/Services/CleanupServiceContinueIntegrationTests.swift` (depends on T069)
 
 **Checkpoint**: User Story 3 완료 - 이어서 정리 기능 독립 테스트 가능
 
