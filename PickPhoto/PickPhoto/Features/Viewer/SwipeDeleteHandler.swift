@@ -29,6 +29,9 @@ final class SwipeDeleteHandler: NSObject {
     /// 삭제 콜백
     private let onDelete: () -> Void
 
+    /// transform 적용 대상 뷰 (사진 콘텐츠만 이동시키기 위해 외부에서 지정)
+    weak var transformTarget: UIView?
+
     /// 드래그 시작 여부
     private var isDragging = false
 
@@ -95,9 +98,8 @@ final class SwipeDeleteHandler: NSObject {
                     hasTriggered = true
                 }
 
-                // 뷰에 시각적 피드백 (선택적)
-                // 뷰어의 페이지 뷰에 변환 적용 가능
-                gesture.view?.superview?.transform = CGAffineTransform(translationX: 0, y: offsetY * 0.3)
+                // 사진 콘텐츠만 위로 이동 (UI 버튼은 제자리 유지)
+                transformTarget?.transform = CGAffineTransform(translationX: 0, y: offsetY * 0.3)
             }
 
         case .ended, .cancelled:
@@ -129,24 +131,24 @@ final class SwipeDeleteHandler: NSObject {
 
     /// 삭제 트리거
     private func triggerDelete(in view: UIView?) {
-        // 삭제 애니메이션
+        // 삭제 애니메이션 (사진 콘텐츠만 이동)
         UIView.animate(withDuration: 0.2, animations: {
-            view?.superview?.transform = CGAffineTransform(translationX: 0, y: -100)
-            view?.superview?.alpha = 0.5
+            self.transformTarget?.transform = CGAffineTransform(translationX: 0, y: -100)
+            self.transformTarget?.alpha = 0.5
         }, completion: { _ in
             // 삭제 콜백 호출
             self.onDelete()
 
             // 뷰 복원
-            view?.superview?.transform = .identity
-            view?.superview?.alpha = 1.0
+            self.transformTarget?.transform = .identity
+            self.transformTarget?.alpha = 1.0
         })
     }
 
     /// 뷰 원위치 복귀
     private func resetView(_ view: UIView?) {
         UIView.animate(withDuration: 0.2) {
-            view?.superview?.transform = .identity
+            self.transformTarget?.transform = .identity
         }
     }
 }

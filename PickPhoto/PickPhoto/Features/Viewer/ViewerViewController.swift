@@ -528,6 +528,8 @@ final class ViewerViewController: UIViewController {
         }
 
         if let handler = swipeDeleteHandler {
+            // transform 대상을 pageViewController.view로 지정 (사진만 이동, UI 버튼 제자리)
+            handler.transformTarget = pageViewController.view
             view.addGestureRecognizer(handler.panGesture)
         }
     }
