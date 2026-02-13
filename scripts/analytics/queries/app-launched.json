@@ -1,0 +1,13 @@
+{
+  "queryType": "timeseries",
+  "dataSource": "telemetry-signals",
+  "granularity": "day",
+  "filter": {
+    "type": "selector",
+    "dimension": "type",
+    "value": "PickPhoto.app.launched"
+  },
+  "aggregations": [
+    { "type": "eventCount", "name": "launchCount" }
+  ]
+}

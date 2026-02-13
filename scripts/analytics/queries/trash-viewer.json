@@ -1,0 +1,15 @@
+{
+  "queryType": "timeseries",
+  "dataSource": "telemetry-signals",
+  "granularity": "day",
+  "filter": {
+    "type": "selector",
+    "dimension": "type",
+    "value": "PickPhoto.session.trashViewer"
+  },
+  "aggregations": [
+    { "type": "eventCount", "name": "sessions" },
+    { "type": "longSum", "name": "permanentDelete", "fieldName": "permanentDelete" },
+    { "type": "longSum", "name": "restore", "fieldName": "restore" }
+  ]
+}

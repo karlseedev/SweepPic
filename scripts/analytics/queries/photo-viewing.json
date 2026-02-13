@@ -1,0 +1,17 @@
+{
+  "queryType": "timeseries",
+  "dataSource": "telemetry-signals",
+  "granularity": "day",
+  "filter": {
+    "type": "selector",
+    "dimension": "type",
+    "value": "PickPhoto.session.photoViewing"
+  },
+  "aggregations": [
+    { "type": "eventCount", "name": "sessions" },
+    { "type": "longSum", "name": "totalViews", "fieldName": "total" },
+    { "type": "longSum", "name": "fromLibrary", "fieldName": "fromLibrary" },
+    { "type": "longSum", "name": "fromAlbum", "fieldName": "fromAlbum" },
+    { "type": "longSum", "name": "fromTrash", "fieldName": "fromTrash" }
+  ]
+}

@@ -1,0 +1,20 @@
+{
+  "queryType": "timeseries",
+  "dataSource": "telemetry-signals",
+  "granularity": "day",
+  "filter": {
+    "type": "selector",
+    "dimension": "type",
+    "value": "PickPhoto.session.deleteRestore"
+  },
+  "aggregations": [
+    { "type": "eventCount", "name": "sessions" },
+    { "type": "longSum", "name": "gridSwipeDelete", "fieldName": "gridSwipeDelete" },
+    { "type": "longSum", "name": "gridSwipeRestore", "fieldName": "gridSwipeRestore" },
+    { "type": "longSum", "name": "viewerSwipeDelete", "fieldName": "viewerSwipeDelete" },
+    { "type": "longSum", "name": "viewerTrashButton", "fieldName": "viewerTrashButton" },
+    { "type": "longSum", "name": "viewerRestoreButton", "fieldName": "viewerRestoreButton" },
+    { "type": "longSum", "name": "fromLibrary", "fieldName": "fromLibrary" },
+    { "type": "longSum", "name": "fromAlbum", "fieldName": "fromAlbum" }
+  ]
+}

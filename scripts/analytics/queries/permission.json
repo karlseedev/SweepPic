@@ -1,0 +1,17 @@
+{
+  "queryType": "groupBy",
+  "dataSource": "telemetry-signals",
+  "granularity": "all",
+  "dimensions": [
+    { "dimension": "result", "type": "default", "outputName": "result" },
+    { "dimension": "timing", "type": "default", "outputName": "timing" }
+  ],
+  "filter": {
+    "type": "selector",
+    "dimension": "type",
+    "value": "PickPhoto.permission.result"
+  },
+  "aggregations": [
+    { "type": "eventCount", "name": "count" }
+  ]
+}

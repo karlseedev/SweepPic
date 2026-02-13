@@ -1,0 +1,16 @@
+{
+  "queryType": "groupBy",
+  "dataSource": "telemetry-signals",
+  "granularity": "all",
+  "dimensions": [
+    { "dimension": "deletedCount", "type": "default", "outputName": "deletedCount" }
+  ],
+  "filter": {
+    "type": "selector",
+    "dimension": "type",
+    "value": "PickPhoto.similar.groupClosed"
+  },
+  "aggregations": [
+    { "type": "eventCount", "name": "count" }
+  ]
+}

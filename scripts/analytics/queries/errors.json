@@ -1,0 +1,26 @@
+{
+  "queryType": "timeseries",
+  "dataSource": "telemetry-signals",
+  "granularity": "all",
+  "filter": {
+    "type": "selector",
+    "dimension": "type",
+    "value": "PickPhoto.session.errors"
+  },
+  "aggregations": [
+    { "type": "eventCount", "name": "errorSessions" },
+    { "type": "longSum", "name": "photoLoad_gridThumbnail", "fieldName": "photoLoad.gridThumbnail" },
+    { "type": "longSum", "name": "photoLoad_viewerOriginal", "fieldName": "photoLoad.viewerOriginal" },
+    { "type": "longSum", "name": "photoLoad_iCloudDownload", "fieldName": "photoLoad.iCloudDownload" },
+    { "type": "longSum", "name": "face_detection", "fieldName": "face.detection" },
+    { "type": "longSum", "name": "face_embedding", "fieldName": "face.embedding" },
+    { "type": "longSum", "name": "cleanup_startFail", "fieldName": "cleanup.startFail" },
+    { "type": "longSum", "name": "cleanup_imageLoad", "fieldName": "cleanup.imageLoad" },
+    { "type": "longSum", "name": "cleanup_trashMove", "fieldName": "cleanup.trashMove" },
+    { "type": "longSum", "name": "video_frameExtract", "fieldName": "video.frameExtract" },
+    { "type": "longSum", "name": "video_iCloudSkip", "fieldName": "video.iCloudSkip" },
+    { "type": "longSum", "name": "storage_diskSpace", "fieldName": "storage.diskSpace" },
+    { "type": "longSum", "name": "storage_thumbnailCache", "fieldName": "storage.thumbnailCache" },
+    { "type": "longSum", "name": "storage_trashData", "fieldName": "storage.trashData" }
+  ]
+}

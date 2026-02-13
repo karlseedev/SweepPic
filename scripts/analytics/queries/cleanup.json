@@ -1,0 +1,16 @@
+{
+  "queryType": "groupBy",
+  "dataSource": "telemetry-signals",
+  "granularity": "all",
+  "dimensions": [
+    { "dimension": "reachedStage", "type": "default", "outputName": "reachedStage" }
+  ],
+  "filter": {
+    "type": "selector",
+    "dimension": "type",
+    "value": "PickPhoto.cleanup.completed"
+  },
+  "aggregations": [
+    { "type": "eventCount", "name": "count" }
+  ]
+}

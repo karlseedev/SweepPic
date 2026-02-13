@@ -1,0 +1,16 @@
+{
+  "queryType": "timeseries",
+  "dataSource": "telemetry-signals",
+  "granularity": "day",
+  "filter": {
+    "type": "selector",
+    "dimension": "type",
+    "value": "PickPhoto.session.similarAnalysis"
+  },
+  "aggregations": [
+    { "type": "eventCount", "name": "sessions" },
+    { "type": "longSum", "name": "completedCount", "fieldName": "completedCount" },
+    { "type": "longSum", "name": "cancelledCount", "fieldName": "cancelledCount" },
+    { "type": "longSum", "name": "totalGroups", "fieldName": "totalGroups" }
+  ]
+}

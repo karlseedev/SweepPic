@@ -48,3 +48,4 @@ Carthage/Build/
 
 # Environment
 .env*
+!.env.example
