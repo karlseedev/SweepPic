@@ -39,32 +39,8 @@ final class CleanupMethodSheet {
     /// 델리게이트
     weak var delegate: CleanupMethodSheetDelegate?
 
-    /// 최신사진부터/이어서 정리 세션 (메인 "이어서 정리" 버튼용)
-    private let latestSession: CleanupSession?
-
-    /// 연도별 정리 세션 (연도 선택 화면 "이어서" 버튼용)
-    private let byYearSession: CleanupSession?
-
     /// 사용 가능한 연도 목록
     private var availableYears: [Int] = []
-
-    // MARK: - Initialization
-
-    /// 시트 초기화
-    /// - Parameters:
-    ///   - latestSession: 최신사진부터/이어서 정리 세션
-    ///   - byYearSession: 연도별 정리 세션
-    init(latestSession: CleanupSession?, byYearSession: CleanupSession?) {
-        self.latestSession = latestSession
-        self.byYearSession = byYearSession
-    }
-
-    /// 하위 호환용 초기화 (단일 세션)
-    /// - Parameter lastSession: 이전 세션
-    @available(*, deprecated, message: "Use init(latestSession:byYearSession:) instead")
-    convenience init(lastSession: CleanupSession?) {
-        self.init(latestSession: lastSession, byYearSession: lastSession)
-    }
 
     // MARK: - Presentation
 
@@ -188,13 +164,12 @@ final class CleanupMethodSheet {
         )
 
         // 연도별 이어서 정리 버튼 (조건 충족 시 최상단에 표시)
-        // - byYearSession이 존재하고 canContinueByYear일 때
+        // - CleanupPreviewService의 byYear 세션이 이어서 정리 가능할 때
         // - 50장 도달 또는 2000장 검색 도달인 경우
-        if let session = byYearSession,
-           session.canContinueByYear,
-           let targetYear = session.targetYear,
-           let continueFrom = session.lastAssetDate {
-            let monthString = formatMonth(session.lastAssetDate)
+        if CleanupPreviewService.canContinueByYear,
+           let targetYear = CleanupPreviewService.lastByYearYear,
+           let continueFrom = CleanupPreviewService.lastByYearScanDate {
+            let monthString = formatMonth(continueFrom)
             alert.addAction(UIAlertAction(
                 title: "\(targetYear)년 이어서 (\(monthString) 이전)",
                 style: .default

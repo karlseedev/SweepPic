@@ -145,86 +145,9 @@ extension GridViewController {
 
     /// 정리 방식 선택 시트 표시
     private func showCleanupMethodSheet() {
-        let sessionStore = CleanupSessionStore.shared
-        let latest = sessionStore.latestSession
-        let byYear = sessionStore.byYearSession
-        let sheet = CleanupMethodSheet(latestSession: latest, byYearSession: byYear)
+        let sheet = CleanupMethodSheet()
         sheet.delegate = self
         sheet.present(from: self)
-    }
-
-    /// 정리 시작
-    /// - Parameter method: 정리 방식
-    func startCleanup(with method: CleanupMethod) {
-        // 진행 뷰 표시
-        let progressView = CleanupProgressView()
-        progressView.delegate = self
-        progressView.configure(method: method)
-        progressView.show(in: view)
-
-        // 정리 서비스 실행
-        Task {
-            do {
-                let result = try await CleanupService.shared.startCleanup(
-                    method: method,
-                    mode: JudgmentMode.precision,
-                    progressHandler: { [weak progressView] progress in
-                        progressView?.update(with: progress)
-                    }
-                )
-
-                await MainActor.run {
-                    progressView.hide { [weak self] in
-                        self?.showCleanupResult(result, method: method)
-                    }
-                }
-            } catch let error as CleanupError {
-                await MainActor.run {
-                    progressView.hide { [weak self] in
-                        self?.showCleanupError(error)
-                    }
-                }
-            } catch {
-                await MainActor.run {
-                    progressView.hide { [weak self] in
-                        self?.showCleanupError(.analysisFailed(error.localizedDescription))
-                    }
-                }
-            }
-        }
-    }
-
-    /// 정리 결과 표시
-    ///
-    /// EndReason과 발견 수에 따라 적절한 메시지 표시
-    /// - Parameters:
-    ///   - result: 정리 결과
-    ///   - method: 정리 방식 (연도별인 경우 연도 표시용)
-    private func showCleanupResult(_ result: CleanupResult, method: CleanupMethod) {
-        // 취소된 경우 알림 없음
-        if case .cancelled = result.resultType {
-            return
-        }
-
-        let title = "정리 완료"
-        let message = CleanupConstants.resultMessage(
-            endReason: result.endReason,
-            foundCount: result.foundCount,
-            method: method
-        )
-        let showTrashButton = result.trashedAssetIDs.count > 0
-
-        let alert = UIAlertController(title: title, message: message, preferredStyle: .alert)
-
-        alert.addAction(UIAlertAction(title: "확인", style: .default))
-
-        if showTrashButton {
-            alert.addAction(UIAlertAction(title: "휴지통 보기", style: .default) { [weak self] _ in
-                self?.navigateToTrash()
-            })
-        }
-
-        present(alert, animated: true)
     }
 
     /// 정리 에러 표시
@@ -255,17 +178,8 @@ extension GridViewController {
 extension GridViewController: CleanupMethodSheetDelegate {
 
     func cleanupMethodSheet(_ sheet: CleanupMethodSheet, didSelect method: CleanupMethod) {
-        switch method {
-        case .fromLatest:
-            // 미리보기 정리 (처음부터)
-            startPreviewCleanup(continueFromLast: false)
-        case .continueFromLast:
-            // 미리보기 정리 (이어서)
-            startPreviewCleanup(continueFromLast: true)
-        case .byYear:
-            // 연도별은 기존 즉시 정리 흐름 유지
-            startCleanup(with: method)
-        }
+        // 모든 정리 방식에서 미리보기 그리드 사용
+        startPreviewCleanup(method: method)
     }
 
     func cleanupMethodSheetDidCancel(_ sheet: CleanupMethodSheet) {
@@ -313,16 +227,17 @@ extension GridViewController {
 
     /// 미리보기 정리 시작
     ///
+    /// 모든 정리 방식(fromLatest, continueFromLast, byYear)에서 공통으로 사용.
     /// 1. CleanupProgressView 표시
     /// 2. CleanupPreviewService 실행 (분석만, 이동 없음)
     /// 3. 결과 → PreviewGridViewController push
     ///
-    /// - Parameter continueFromLast: true면 이어서 정리
-    func startPreviewCleanup(continueFromLast: Bool) {
+    /// - Parameter method: 정리 방식
+    func startPreviewCleanup(method: CleanupMethod) {
         // 1. 진행 뷰 표시
         let progressView = CleanupProgressView()
         progressView.delegate = self
-        progressView.configure(method: continueFromLast ? .continueFromLast : .fromLatest)
+        progressView.configure(method: method)
         progressView.show(in: view)
 
         // 2. 서비스 생성 및 보관 (취소 접근용)
@@ -333,7 +248,7 @@ extension GridViewController {
         Task {
             do {
                 let result = try await service.analyze(
-                    method: continueFromLast ? .continueFromLast : .fromLatest,
+                    method: method,
                     progressHandler: { progress in
                         progressView.update(with: progress)
                     }
@@ -349,7 +264,7 @@ extension GridViewController {
                             self?.navigationController?.pushViewController(previewVC, animated: true)
                         } else {
                             // 결과 없음
-                            self?.showNoPreviewResultAlert()
+                            self?.showNoPreviewResultAlert(method: method)
                         }
                     }
                 }
@@ -367,10 +282,18 @@ extension GridViewController {
     }
 
     /// 미리보기 결과 없음 알림
-    private func showNoPreviewResultAlert() {
+    /// - Parameter method: 정리 방식 (byYear인 경우 연도 표시)
+    private func showNoPreviewResultAlert(method: CleanupMethod) {
+        let message: String
+        if case .byYear(let year, _) = method {
+            message = "\(year)년에서 정리할 저품질 사진을 찾지 못했습니다."
+        } else {
+            message = "정리할 저품질 사진을 찾지 못했습니다."
+        }
+
         let alert = UIAlertController(
             title: "정리할 사진 없음",
-            message: "정리할 저품질 사진을 찾지 못했습니다.",
+            message: message,
             preferredStyle: .alert
         )
         alert.addAction(UIAlertAction(title: "확인", style: .default))

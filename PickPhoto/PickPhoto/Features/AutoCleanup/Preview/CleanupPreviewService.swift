@@ -56,6 +56,11 @@ final class CleanupPreviewService {
     /// 미리보기 세션 키 (기존 CleanupSessionStore와 독립)
     private static let lastScanDateKey = "PreviewSession.lastScanDate"
 
+    /// 연도별 미리보기 세션 키 (byYear 이어서 정리용)
+    private static let byYearLastScanDateKey = "PreviewSession.byYear.lastScanDate"
+    private static let byYearYearKey = "PreviewSession.byYear.year"
+    private static let byYearCanContinueKey = "PreviewSession.byYear.canContinue"
+
     // MARK: - State
 
     /// 취소 플래그
@@ -86,6 +91,46 @@ final class CleanupPreviewService {
     static func clearSession() {
         UserDefaults.standard.removeObject(forKey: lastScanDateKey)
         Log.print("[PreviewService] 세션 초기화됨")
+    }
+
+    // MARK: - ByYear Session Management
+
+    /// 연도별 마지막 스캔 날짜
+    static var lastByYearScanDate: Date? {
+        return UserDefaults.standard.object(forKey: byYearLastScanDateKey) as? Date
+    }
+
+    /// 연도별 마지막 정리 대상 연도
+    static var lastByYearYear: Int? {
+        let value = UserDefaults.standard.integer(forKey: byYearYearKey)
+        return value == 0 ? nil : value
+    }
+
+    /// 연도별 이어서 정리 가능 여부
+    /// - 이전 byYear 세션이 존재하고, 범위 끝에 도달하지 않았을 때 true
+    static var canContinueByYear: Bool {
+        guard lastByYearScanDate != nil, lastByYearYear != nil else { return false }
+        return UserDefaults.standard.bool(forKey: byYearCanContinueKey)
+    }
+
+    /// 연도별 세션 저장
+    /// - Parameters:
+    ///   - year: 정리 대상 연도
+    ///   - lastDate: 마지막 스캔 날짜
+    ///   - canContinue: 이어서 정리 가능 여부 (maxFound/maxScanned이면 true)
+    private func saveByYearSession(year: Int, lastDate: Date, canContinue: Bool) {
+        UserDefaults.standard.set(lastDate, forKey: Self.byYearLastScanDateKey)
+        UserDefaults.standard.set(year, forKey: Self.byYearYearKey)
+        UserDefaults.standard.set(canContinue, forKey: Self.byYearCanContinueKey)
+        Log.print("[PreviewService] byYear 세션 저장: \(year)년, \(formatDate(lastDate)) 이전, 이어서=\(canContinue)")
+    }
+
+    /// 연도별 세션 초기화
+    static func clearByYearSession() {
+        UserDefaults.standard.removeObject(forKey: byYearLastScanDateKey)
+        UserDefaults.standard.removeObject(forKey: byYearYearKey)
+        UserDefaults.standard.removeObject(forKey: byYearCanContinueKey)
+        Log.print("[PreviewService] byYear 세션 초기화됨")
     }
 
     /// 날짜 포맷 (로그용)
@@ -134,6 +179,11 @@ final class CleanupPreviewService {
         // 처음부터 시작이면 세션 초기화
         if case .fromLatest = method {
             Self.clearSession()
+        }
+
+        // 연도별 새로 시작이면 byYear 세션 초기화
+        if case .byYear(_, let continueFrom) = method, continueFrom == nil {
+            Self.clearByYearSession()
         }
 
         Log.print("[PreviewService] 분석 시작: \(method)")
@@ -308,6 +358,13 @@ final class CleanupPreviewService {
         // 세션 저장 (마지막 날짜 기록)
         if let lastDate = lastAssetDate {
             saveSession(lastDate: lastDate)
+
+            // byYear일 때 연도별 세션도 저장 (이어서 정리용)
+            if case .byYear(let year, _) = method {
+                let canContinueByYear = lightCandidates.count >= maxFoundCount ||
+                    (totalScanned >= totalToScan && fetchResult.count > maxScanCount)
+                saveByYearSession(year: year, lastDate: lastDate, canContinue: canContinueByYear)
+            }
         }
 
         let elapsed = Date().timeIntervalSince(startTime)
