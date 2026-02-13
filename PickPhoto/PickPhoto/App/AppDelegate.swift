@@ -47,7 +47,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         ImagePipeline.shared.resetStats()
 
         // [Analytics] TelemetryDeck SDK 초기화 + AppCore 브릿지 주입
-        AnalyticsService.shared.configure(appID: "YOUR-APP-ID-HERE")
+        AnalyticsService.shared.configure(appID: "05D8BB3E-993C-46D1-B805-5E21EE4D20BB")
         Analytics.reporter = AnalyticsService.shared
 
         return true
