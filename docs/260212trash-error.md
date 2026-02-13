@@ -195,3 +195,212 @@ private func completeTransitionReturn() {
 - `applyPendingViewerReturn()` 내부가 아닌 **호출하는 쪽**에서 `reloadData()` 실행
   - 이유: `pendingScrollAssetID == nil`이면 `applyPendingViewerReturn()`이 조기 리턴하여 내부 코드 도달 불가
 - 단일 핸들러 구조는 이번 수정 범위가 아님 (현재 viewWillAppear 재등록 워크어라운드로 충분)
+
+---
+
+## 5. 수정 시도 #1: 실패 기록
+
+### 5.1 수정 내용
+
+섹션 4의 계획대로 GridViewController, AlbumGridViewController의 `transitionCoordinator` completion에 `reloadData()` 추가.
+
+- 체크포인트: `46f8ca2`
+- 수정 후 테스트 → **실패** → 수동 롤백
+
+### 5.2 실패 원인
+
+**증상을 잘못 파악함.**
+
+- "그리드에 반영이 안 됨" → "메인 사진보관함 그리드(GridViewController)"로 해석
+- 증상을 "딤드 오버레이가 유지됨"으로 추측
+
+**실제 증상**: 휴지통 뷰어에서 사진을 복구한 후 뷰어를 닫으면, **복구된 사진이 휴지통 그리드(TrashAlbumViewController)에서 사라지지 않음**.
+
+GridViewController/AlbumGridViewController를 수정했으나, 문제의 VC는 TrashAlbumViewController였음.
+
+---
+
+## 6. 재분석: 실제 문제
+
+### 6.1 문제를 잘못 파악한 이유
+
+1. **"그리드"를 오해**: 사용자가 말한 "그리드"는 휴지통 그리드(TrashAlbumVC)인데, 메인 사진보관함(GridVC)으로 해석
+2. **증상 추측**: "딤드 오버레이 유지"로 추측했으나, 실제로는 "복구된 사진이 휴지통 목록에서 안 사라짐"
+3. **섹션 2~4의 분석 범위 오류**: `5874234` 커밋의 reloadData 제거 분석은 GridVC/AlbumGridVC에는 유효하지만, 실제 증상(TrashAlbumVC)과는 무관
+4. **확인 없이 추측**: 증상을 정확히 모르는 상태에서 물어보지 않고 추측으로 진행
+
+### 6.2 실제 증상
+
+휴지통 뷰어에서 사진을 복구 → 뷰어 닫기 → **복구된 사진이 휴지통 그리드에 여전히 남아있음**
+
+### 6.3 TrashAlbumViewController의 복구 → 갱신 설계 흐름
+
+```
+[뷰어에서 복구 버튼 탭]
+viewerDidRequestRestore(assetID:)           ← TrashAlbumVC (delegate, 640행)
+  → trashStore.restore(assetIDs:)           ← TrashStore
+    → notifyChange()                        ← DispatchQueue.main.async로 dispatch
+      → changeHandler                       ← loadTrashedAssets() 호출
+        → isViewerOpen == true              ← 뷰어 열림 중이므로 지연!
+        → pendingDataRefresh = true          ← 플래그만 저장
+
+[뷰어 닫기]
+ViewerVC.viewWillDisappear (366행)
+  → delegate?.viewerWillClose()             ← TrashAlbumVC.viewerWillClose (679행)
+    → pendingScrollAssetID = currentAssetID
+    → isViewerOpen 유지 (true)              ← applyPendingViewerReturn에서 해제
+
+[TrashAlbumVC lifecycle 복귀]
+viewWillAppear → transitionCoordinator completion → applyPendingViewerReturn()
+  → isViewerOpen = false                    (697행)
+  → pendingDataRefresh == true → loadTrashedAssets() → reloadData() ✓
+```
+
+### 6.4 이 흐름이 깨지는 경우: iOS 16~25 Modal 경로
+
+TrashAlbumVC에서 뷰어를 여는 두 가지 경로 (`openViewer`, 552행):
+
+```swift
+// iOS 26+: Navigation Push
+navigationController?.pushViewController(viewerVC, animated: true)
+
+// iOS 16~25: Modal (커스텀 줌 트랜지션)
+present(viewerVC, animated: true)
+```
+
+**iOS 26+ (Navigation Push):**
+- Pop 시 `viewWillAppear`/`viewDidAppear` **정상 호출** → `applyPendingViewerReturn()` 실행 → 정상 동작
+
+**iOS 16~25 (Modal + `shouldRemovePresentersView = false`):**
+- `ZoomPresentationController`의 `shouldRemovePresentersView = false` (ZoomPresentationController.swift:18)
+- → present 시 TrashAlbumVC의 뷰가 제거되지 않음
+- → `viewWillDisappear`/`viewDidDisappear` **미호출** (present 시)
+- → dismiss 시 `viewWillAppear`/`viewDidAppear` **미호출**
+- → **`applyPendingViewerReturn()` 호출되지 않음**
+- → `pendingDataRefresh = true`이지만 처리 안 됨
+- → `isViewerOpen = true` 유지 → 이후 `onStateChange` 콜백이 와도 `loadTrashedAssets()`가 계속 defer
+- → **휴지통 그리드 갱신 안 됨** (탭 전환 후 복귀 시에만 복구)
+
+### 6.5 핵심 원인 정리
+
+| 경로 | viewWillAppear 호출? | applyPendingViewerReturn 호출? | 결과 |
+|------|---------------------|-------------------------------|------|
+| iOS 26+ Navigation Pop | ✅ | ✅ (transitionCoordinator + viewDidAppear) | 정상 |
+| iOS 16~25 Modal dismiss | ❌ (`shouldRemovePresentersView=false`) | ❌ | **버그** |
+| 탭 전환 후 복귀 | ✅ | ✅ (viewDidAppear fallback) | 지연 복구 |
+
+**근본 원인**: presenting VC의 lifecycle(`viewWillAppear`/`viewDidAppear`)에 후처리(`applyPendingViewerReturn`)를 의존하는 설계 + iOS 16~25 Modal 경로에서 `shouldRemovePresentersView=false`가 해당 lifecycle 호출을 차단하는 조합. `pendingDataRefresh`가 처리되지 않고, `isViewerOpen`이 `true`로 유지됨.
+
+---
+
+## 7. 수정 계획 (v2)
+
+### 7.1 핵심 문제
+
+iOS 16~25 Modal dismiss 시 `viewWillAppear`/`viewDidAppear`가 호출되지 않아 `applyPendingViewerReturn()`이 트리거되지 않음.
+
+### 7.2 수정 방안: `viewDidDisappear` + delegate `viewerDidClose`
+
+현재 `viewerWillClose`는 ViewerVC의 `viewWillDisappear`에서 호출됨.
+마찬가지로 **`viewDidDisappear`에서 `viewerDidClose` 콜백**을 추가하면 모든 경로에서 동작:
+
+```
+viewWillDisappear → viewerWillClose       ← 기존 (pendingScrollAssetID 저장)
+  ↓ (dismiss 애니메이션 + sourceViewProvider 호출)
+viewDidDisappear  → viewerDidClose        ← 신규 (applyPendingViewerReturn 실행)
+```
+
+**이 방식이 최적인 이유:**
+- `viewDidDisappear`는 **완료된 dismiss/pop 경로**에서 호출됨 (normal, fade, interactive 완료, navigation pop)
+- interactive dismiss **취소** 시에는 호출되지 않음 → 뷰어가 열린 상태 유지이므로 갱신 불필요 (의도된 동작)
+- dismiss 애니메이션 **완료 후** 호출 → `sourceViewProvider` 호출 이후이므로 안전
+- 별도의 completion handler 관리 불필요
+
+### 7.3 구현 상세
+
+**Step 1: ViewerViewControllerDelegate에 추가 (protocol extension으로 기본 no-op 제공)**
+```swift
+// ViewerViewControllerDelegate (ViewerViewController.swift:39)
+func viewerDidClose()
+
+// protocol extension - 기본 no-op (conformer 4개 모두에 빈 구현 불필요)
+extension ViewerViewControllerDelegate {
+    func viewerDidClose() {}
+}
+```
+
+**Step 2: ViewerVC에 플래그 + viewDidDisappear 추가**
+
+Apple SDK 헤더 권장에 따라 `isBeingDismissed`/`isMovingFromParent` 판별은 `viewWillDisappear`에서 수행.
+`viewDidDisappear`에서는 플래그만 읽음:
+
+```swift
+// ViewerViewController.swift
+private var isClosing = false  // viewWillDisappear에서 설정
+
+override func viewWillDisappear(_ animated: Bool) {
+    super.viewWillDisappear(animated)
+    guard isBeingDismissed || isMovingFromParent else { return }
+    isClosing = true  // ← 플래그 설정
+    // ... 기존 viewerWillClose 호출 코드
+}
+
+override func viewDidDisappear(_ animated: Bool) {
+    super.viewDidDisappear(animated)
+    guard isClosing else { return }  // ← 플래그로 판별
+    isClosing = false
+    delegate?.viewerDidClose()
+}
+```
+
+**Step 3: TrashAlbumVC에서 override**
+```swift
+// TrashAlbumViewController.swift (ViewerViewControllerDelegate extension)
+func viewerDidClose() {
+    applyPendingViewerReturn()
+}
+```
+
+**Step 4: GridVC, AlbumGridVC에서도 override** (동일 구조 예방)
+```swift
+func viewerDidClose() {
+    // iOS 26+ Navigation Pop에서는 viewDidAppear에서 이미 처리됨
+    // iOS 16~25 Modal에서는 이 콜백으로 처리
+    applyPendingViewerReturn()
+}
+```
+
+**Step 5: PreviewGridVC** → protocol extension의 기본 no-op으로 충분 (별도 구현 불필요)
+
+### 7.4 이중 호출 안전성 검증
+
+iOS 26+ Navigation Pop에서는 `viewerDidClose` + `viewDidAppear` 양쪽에서 `applyPendingViewerReturn()`이 호출될 수 있음:
+
+```swift
+// applyPendingViewerReturn() 내부:
+isViewerOpen = false           // 1차: false 설정, 2차: 이미 false → 무해
+pendingDataRefresh = false     // 1차: true→false, loadTrashedAssets() 호출
+                               // 2차: 이미 false → skip
+pendingScrollAssetID = nil     // 1차: 처리, 2차: 이미 nil → guard return
+```
+
+**결론: 이중 호출 시 2차는 no-op → 안전**
+
+### 7.5 적용 범위
+
+| VC | 수정 내용 | 비고 |
+|----|----------|------|
+| **ViewerViewController** | `viewDidDisappear` 추가 + `viewerDidClose` 호출 | 핵심 |
+| **ViewerViewControllerDelegate** | `viewerDidClose()` 메서드 추가 | 프로토콜 |
+| **TrashAlbumViewController** | `viewerDidClose()` 구현 | 버그 수정 대상 |
+| GridViewController | `viewerDidClose()` 구현 | 동일 구조 예방 |
+| AlbumGridViewController | `viewerDidClose()` 구현 | 동일 구조 예방 |
+| PreviewGridViewController | protocol extension 기본 no-op 사용 | 별도 구현 불필요 |
+
+### 7.6 주의사항
+
+- `viewerWillClose` 시점에서는 여전히 `loadTrashedAssets()` 호출 금지 (기존 주석 참고, 679행)
+  - `sourceViewProvider`가 이후 호출되므로 `reloadData()` 시 셀 불일치 발생
+- `viewerDidClose`는 dismiss 애니메이션 **완료 후** 호출 → `sourceViewProvider` 이미 완료 → 안전
+- `viewWillDisappear`에서 `isClosing` 플래그 설정 → `viewDidDisappear`에서 플래그로 판별 (Apple SDK 헤더 권장 패턴)
+- interactive dismiss 취소 시: `viewWillDisappear` 미호출 → `isClosing = false` 유지 → `viewerDidClose` 미호출 (정상)
