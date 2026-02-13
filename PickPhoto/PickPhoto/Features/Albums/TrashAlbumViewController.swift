@@ -59,8 +59,18 @@ final class TrashAlbumViewController: BaseGridViewController {
     private var isViewerOpen: Bool = false
 
     /// 지연된 데이터 갱신 플래그
-    /// 뷰어 닫힐 때 true면 loadTrashedAssets() 재호출
+    /// 뷰어 닫힐 때 true면 캐싱된 fetch 결과 즉시 적용
     private var pendingDataRefresh: Bool = false
+
+    /// 뷰어 열린 동안 fetch 결과를 캐싱하는 상태
+    /// fetch는 즉시 실행하되, reloadData만 지연 (줌 트랜지션 인덱스 보존)
+    private enum PendingFetchState {
+        case none                              // 대기 중 없음
+        case empty                             // 빈 결과 대기 (휴지통 비어있음)
+        case fetched(PHFetchResult<PHAsset>)   // fetch 완료, 적용 대기
+        case fetching                          // fetch 진행 중 (뷰어 닫힐 때 fallback 필요)
+    }
+    private var pendingFetchState: PendingFetchState = .none
 
     // MARK: - Initial Display Properties
 
@@ -266,23 +276,30 @@ final class TrashAlbumViewController: BaseGridViewController {
     /// TrashStore.trashedAssetIDs 기반으로 PHAsset 조회
     /// 뷰어 열린 상태면 갱신 지연 (dismiss 애니메이션 인덱스 일관성 보장)
     private func loadTrashedAssets() {
-        // 뷰어 열린 상태면 갱신 지연 (인덱스 불일치 방지)
-        if isViewerOpen {
-            pendingDataRefresh = true
-            Log.print("[TrashAlbumViewController] Data refresh deferred (viewer open)")
-            return
-        }
-
         let startTime = CFAbsoluteTimeGetCurrent()
 
         trashedAssetIDSet = trashStore.trashedAssetIDs
 
+        // 빈 결과: fetch 불필요
         if trashedAssetIDSet.isEmpty {
+            if isViewerOpen {
+                // 빈 결과를 캐싱만 하고 reloadData 스킵
+                pendingFetchState = .empty
+                pendingDataRefresh = true
+                Log.print("[TrashAlbumViewController] Empty result cached (viewer open)")
+                return
+            }
             _trashDataSource.setFetchResult(nil)
             DispatchQueue.main.async { [weak self] in
                 self?.onDataLoaded(startTime: startTime)
             }
             return
+        }
+
+        // 뷰어 열린 상태: fetch 시작 표시 (fetch는 즉시 실행)
+        if isViewerOpen {
+            pendingFetchState = .fetching
+            pendingDataRefresh = true
         }
 
         // 백그라운드에서 fetch 수행 (메인 스레드 블로킹 방지)
@@ -304,11 +321,17 @@ final class TrashAlbumViewController: BaseGridViewController {
 
             Log.print("[TrashAlbumViewController.Timing] fetch: \(String(format: "%.1f", (fetchTime - startTime) * 1000))ms (background)")
 
-            // 메인 스레드에서 UI 업데이트
-            // fetchResult를 직접 저장 (배열 변환 제거 - 인덱스 일관성 보장)
+            // 메인 스레드에서 결과 처리
             DispatchQueue.main.async {
-                self._trashDataSource.setFetchResult(fetchResult)
-                self.onDataLoaded(startTime: startTime)
+                if self.isViewerOpen {
+                    // fetch 결과를 캐싱만 하고 reloadData 스킵
+                    self.pendingFetchState = .fetched(fetchResult)
+                    Log.print("[TrashAlbumViewController] Fetch result cached (viewer open, \(fetchResult.count) assets)")
+                } else {
+                    // 뷰어 닫힌 상태: 즉시 적용
+                    self._trashDataSource.setFetchResult(fetchResult)
+                    self.onDataLoaded(startTime: startTime)
+                }
             }
         }
     }
@@ -317,6 +340,10 @@ final class TrashAlbumViewController: BaseGridViewController {
     private func onDataLoaded(startTime: CFAbsoluteTime) {
         let reloadStartTime = CFAbsoluteTimeGetCurrent()
 
+        // 숨긴 셀 복원 (reloadData와 같은 프레임에서 실행 — 깜빡임 방지)
+        // viewerWillClose에서 복구된 사진 셀을 isHidden=true로 설정한 경우,
+        // reloadData 전에 복원해야 셀 재사용 시 isHidden 잔존 방지
+        collectionView.visibleCells.forEach { $0.isHidden = false }
         collectionView.reloadData()
 
         let reloadTime = CFAbsoluteTimeGetCurrent()
@@ -672,18 +699,54 @@ extension TrashAlbumViewController: ViewerViewControllerDelegate {
     }
 
     /// 뷰어 닫기 시
-    /// iOS 18+ Zoom Transition 안정화: 전환 중 scrollToItem 금지
-    /// ⚠️ 중요: 여기서 loadTrashedAssets() 호출하면 안 됨!
-    ///    sourceViewProvider가 이 함수 이후에 호출되므로, reloadData()가 먼저 실행되면
-    ///    셀 내용이 바뀌어 잘못된 사진으로 축소됨
+    /// dismiss 애니메이션 전에 pre-fetch된 결과가 있으면 즉시 적용하여
+    /// 그리드가 이미 정렬된 상태로 애니메이션 시작
+    /// sourceViewProvider는 pendingScrollAssetID로 정확한 셀을 찾도록 보정
     func viewerWillClose(currentAssetID: String?) {
-        // 스크롤 위치만 저장 (전환 완료 후 처리)
+        // 스크롤 위치 저장 (sourceViewProvider 보정 + 전환 완료 후 스크롤용)
         pendingScrollAssetID = currentAssetID
         // 사용자 스크롤 플래그 초기화
         didUserScrollAfterReturn = false
 
-        // ⚠️ isViewerOpen = false와 loadTrashedAssets()는
-        //    applyPendingViewerReturn()에서 처리 (dismiss 애니메이션 완료 후)
+        // ★ dismiss 애니메이션 전: pre-fetch 결과가 있으면 즉시 적용
+        // reloadData 후 셀 인덱스가 바뀌지만, sourceViewProvider가
+        // pendingScrollAssetID로 정확한 셀을 찾으므로 줌 트랜지션 정상 동작
+        if pendingDataRefresh {
+            switch pendingFetchState {
+            case .fetched(let fetchResult):
+                pendingDataRefresh = false
+                pendingFetchState = .none
+                _trashDataSource.setFetchResult(fetchResult)
+                trashedAssetIDSet = trashStore.trashedAssetIDs
+                collectionView.reloadData()
+                updateEmptyState()
+                updateTrashItemCountSubtitle()
+                Log.print("[TrashAlbumViewController] viewerWillClose - applied cached fetch result before dismiss (\(fetchResult.count) assets)")
+            case .empty:
+                pendingDataRefresh = false
+                pendingFetchState = .none
+                _trashDataSource.setFetchResult(nil)
+                trashedAssetIDSet = trashStore.trashedAssetIDs
+                collectionView.reloadData()
+                updateEmptyState()
+                updateTrashItemCountSubtitle()
+                Log.print("[TrashAlbumViewController] viewerWillClose - applied cached empty result before dismiss")
+            default:
+                // fetch 미완료: 셀 숨김으로 fallback
+                let currentTrashedIDs = trashStore.trashedAssetIDs
+                let restoredIDs = trashedAssetIDSet.subtracting(currentTrashedIDs)
+                for restoredID in restoredIDs {
+                    if let index = _trashDataSource.assetIndex(for: restoredID) {
+                        let indexPath = IndexPath(item: index + paddingCellCount, section: 0)
+                        collectionView.cellForItem(at: indexPath)?.isHidden = true
+                    }
+                }
+                if !restoredIDs.isEmpty {
+                    Log.print("[TrashAlbumViewController] viewerWillClose - fetch not ready, hid \(restoredIDs.count) cell(s) as fallback")
+                }
+            }
+        }
+
         Log.print("[TrashAlbumViewController] viewerWillClose - pendingDataRefresh=\(pendingDataRefresh), keeping isViewerOpen=true until animation completes")
     }
 
@@ -704,11 +767,27 @@ extension TrashAlbumViewController: ViewerViewControllerDelegate {
         let wasViewerOpen = isViewerOpen
         isViewerOpen = false
 
-        // 지연된 데이터 갱신 처리 (dismiss 애니메이션 완료 후)
+        // 캐싱된 fetch 결과 즉시 적용 (dismiss 애니메이션 완료 후)
+        // unhide + setFetchResult + reloadData가 같은 프레임에서 실행 → 재정렬이 보이지 않음
         if pendingDataRefresh {
             pendingDataRefresh = false
-            Log.print("[TrashAlbumViewController] Processing deferred data refresh (after animation)")
-            loadTrashedAssets()
+            switch pendingFetchState {
+            case .empty:
+                // 빈 결과 즉시 적용
+                Log.print("[TrashAlbumViewController] Applying cached empty result (instant)")
+                _trashDataSource.setFetchResult(nil)
+                onDataLoaded(startTime: CFAbsoluteTimeGetCurrent())
+            case .fetched(let fetchResult):
+                // 미리 fetch된 결과 즉시 적용 → reloadData() 즉시 실행
+                Log.print("[TrashAlbumViewController] Applying cached fetch result (instant, \(fetchResult.count) assets)")
+                _trashDataSource.setFetchResult(fetchResult)
+                onDataLoaded(startTime: CFAbsoluteTimeGetCurrent())
+            case .fetching, .none:
+                // fetch 진행 중 또는 미시작 → 기존 방식 fallback
+                Log.print("[TrashAlbumViewController] No cached result, falling back to full load")
+                loadTrashedAssets()
+            }
+            pendingFetchState = .none
         }
 
         guard let assetID = pendingScrollAssetID else {
@@ -742,12 +821,23 @@ extension TrashAlbumViewController: ViewerViewControllerDelegate {
 
 extension TrashAlbumViewController: ZoomTransitionSourceProviding {
 
+    /// asset ID 기반으로 정확한 IndexPath 계산 (인덱스 시프트 보정)
+    /// viewerWillClose에서 reloadData 실행 시 원본 인덱스와 실제 셀 위치가 달라질 수 있으므로,
+    /// pendingScrollAssetID로 정확한 셀을 찾음
+    private func resolvedIndexPath(for originalIndex: Int) -> IndexPath {
+        if let assetID = pendingScrollAssetID,
+           let actualIndex = _trashDataSource.assetIndex(for: assetID) {
+            return IndexPath(item: actualIndex + paddingCellCount, section: 0)
+        }
+        // fallback: 원본 인덱스 사용
+        return IndexPath(item: originalIndex + paddingCellCount, section: 0)
+    }
+
     /// 줌 애니메이션 시작 뷰 (셀의 이미지 뷰)
     /// - Parameter index: 현재 뷰어의 인덱스
     /// - Returns: PhotoCell의 thumbnailImageView 또는 nil
     func zoomSourceView(for index: Int) -> UIView? {
-        // padding 보정하여 실제 셀 IndexPath 계산
-        let cellIndexPath = IndexPath(item: index + paddingCellCount, section: 0)
+        let cellIndexPath = resolvedIndexPath(for: index)
 
         // 셀이 화면에 있는지 확인
         guard let cell = collectionView.cellForItem(at: cellIndexPath) as? PhotoCell else {
@@ -770,7 +860,7 @@ extension TrashAlbumViewController: ZoomTransitionSourceProviding {
         }
 
         // 2. 셀이 없으면 layout attributes로 프레임 계산
-        let cellIndexPath = IndexPath(item: index + paddingCellCount, section: 0)
+        let cellIndexPath = resolvedIndexPath(for: index)
         guard let attributes = collectionView.layoutAttributesForItem(at: cellIndexPath) else {
             return nil
         }
@@ -780,7 +870,7 @@ extension TrashAlbumViewController: ZoomTransitionSourceProviding {
     /// 해당 인덱스의 셀이 보이도록 스크롤 (Pop 전 호출)
     /// - Parameter index: 스크롤할 원본 인덱스
     func scrollToSourceCell(for index: Int) {
-        let cellIndexPath = IndexPath(item: index + paddingCellCount, section: 0)
+        let cellIndexPath = resolvedIndexPath(for: index)
 
         // 이미 화면에 보이면 스크롤 불필요
         if collectionView.indexPathsForVisibleItems.contains(cellIndexPath) {
