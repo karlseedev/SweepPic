@@ -789,7 +789,8 @@ extension GridViewController {
         let coordinator = ViewerCoordinator(
             fetchResult: fetchResult,
             trashStore: trashStore,
-            viewerMode: mode
+            viewerMode: mode,
+            deleteSource: .library
         )
 
         let t2 = CACurrentMediaTime()

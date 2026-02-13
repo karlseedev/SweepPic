@@ -52,9 +52,16 @@ extension GridViewController {
             target: self,
             action: #selector(selectButtonTapped)
         )
+        // 전체 메뉴 버튼 (최우측)
+        let menuItem = UIBarButtonItem(
+            image: UIImage(systemName: "line.3.horizontal"),
+            style: .plain,
+            target: nil,
+            action: nil
+        )
 
-        // [Select] [정리] 순서
-        navigationItem.rightBarButtonItems = [selectItem, cleanupItem]
+        // [정리] [선택] [메뉴] 순서 (배열 첫 번째가 최우측)
+        navigationItem.rightBarButtonItems = [menuItem, selectItem, cleanupItem]
 
         // 버튼 활성화 상태 초기화
         updateCleanupButtonState()
@@ -92,10 +99,11 @@ extension GridViewController {
         let hasPhotos = gridDataSource.assetCount > 0
 
         if #available(iOS 26.0, *) {
-            // 시스템 네비바: rightBarButtonItems의 두 번째가 정리 버튼
-            if let items = navigationItem.rightBarButtonItems, items.count >= 2 {
-                items[0].isEnabled = hasPhotos  // Select
-                items[1].isEnabled = hasPhotos  // 정리
+            // 시스템 네비바: [메뉴, 선택, 정리] 순서
+            if let items = navigationItem.rightBarButtonItems, items.count >= 3 {
+                // items[0] = 메뉴 (항상 활성화)
+                items[1].isEnabled = hasPhotos  // 선택
+                items[2].isEnabled = hasPhotos  // 정리
             }
         } else {
             // FloatingUI
@@ -244,6 +252,9 @@ extension GridViewController {
         let service = CleanupPreviewService()
         self.previewService = service
 
+        // [Analytics] 분석 시작 시간 기록
+        let analysisStartTime = CFAbsoluteTimeGetCurrent()
+
         // 3. 분석 실행
         Task {
             do {
@@ -254,12 +265,16 @@ extension GridViewController {
                     }
                 )
 
+                // [Analytics] 분석 소요 시간 계산
+                let analysisDuration = CFAbsoluteTimeGetCurrent() - analysisStartTime
+
                 await MainActor.run { [weak self] in
                     self?.previewService = nil
                     progressView.hide {
                         if result.totalCount > 0 {
                             // 미리보기 그리드 push
                             let previewVC = PreviewGridViewController(previewResult: result)
+                            previewVC.analysisDuration = analysisDuration  // [Analytics]
                             previewVC.delegate = self
                             self?.navigationController?.pushViewController(previewVC, animated: true)
                         } else {

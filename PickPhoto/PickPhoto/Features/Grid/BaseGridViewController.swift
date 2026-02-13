@@ -882,14 +882,19 @@ extension BaseGridViewController {
             return
         }
 
+        // [Analytics] 이벤트 4-1: 그리드 스와이프 삭제/복구
+        let analyticsSource: DeleteSource = self is AlbumGridViewController ? .album : .library
+
         cell.confirmDimmedAnimation(toTrashed: toTrashed) { [weak self] in
             guard let self = self else { return }
 
             if toTrashed {
+                AnalyticsService.shared.countGridSwipeDelete(source: analyticsSource)
                 self.trashStore.moveToTrash(assetID) { [weak self] result in
                     self?.handleSwipeResult(result, cell: cell)
                 }
             } else {
+                AnalyticsService.shared.countGridSwipeRestore(source: analyticsSource)
                 self.trashStore.restore(assetID) { [weak self] result in
                     self?.handleSwipeResult(result, cell: cell)
                 }

@@ -706,6 +706,12 @@ extension ViewerViewController: FaceComparisonDelegate {
         Log.print("[ViewerViewController+SimilarPhoto] Deleted \(deletedAssetIDs.count) photos from face comparison")
         Log.print("[ViewerViewController+SimilarPhoto] Dismissing FaceComparison and viewer")
 
+        // [Analytics] 이벤트 5-2: 유사 그룹 닫기 (삭제 후)
+        AnalyticsService.shared.trackSimilarGroupClosed(
+            totalCount: viewController.totalPhotoCount,
+            deletedCount: deletedAssetIDs.count
+        )
+
         // FaceComparisonViewController 닫기 (modal)
         viewController.dismiss(animated: false) { [weak self] in
             // ViewerViewController도 modal이므로 dismiss로 그리드 복귀
@@ -716,6 +722,12 @@ extension ViewerViewController: FaceComparisonDelegate {
     /// 화면 닫기 시 호출 (Cancel 버튼)
     func faceComparisonViewControllerDidClose(_ viewController: FaceComparisonViewController) {
         Log.print("[ViewerViewController+SimilarPhoto] Face comparison closed")
+
+        // [Analytics] 이벤트 5-2: 유사 그룹 닫기 (삭제 없이)
+        AnalyticsService.shared.trackSimilarGroupClosed(
+            totalCount: viewController.totalPhotoCount,
+            deletedCount: 0
+        )
 
         // Cancel로 닫을 때는 버튼을 건드리지 않음
         // - 버튼이 이미 표시되어 있고, modal dismiss 후 그대로 보임

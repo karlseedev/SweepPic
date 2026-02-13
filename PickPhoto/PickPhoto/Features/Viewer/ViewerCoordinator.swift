@@ -57,6 +57,12 @@ protocol ViewerCoordinatorProtocol: AnyObject {
     /// - Parameter filteredIndex: 필터링된 인덱스
     /// - Returns: 원본 인덱스 또는 nil
     func originalIndex(from filteredIndex: Int) -> Int?
+
+    /// 삭제/복구 이벤트의 소스 (analytics용)
+    /// - library: 보관함에서 열린 뷰어
+    /// - album: 앨범에서 열린 뷰어
+    /// - nil: 소스 불필요 (휴지통/미리보기)
+    var deleteSource: DeleteSource? { get }
 }
 
 // MARK: - ViewerCoordinator
@@ -79,6 +85,9 @@ final class ViewerCoordinator: ViewerCoordinatorProtocol {
 
     /// 뷰어 모드 (일반/휴지통)
     private let viewerMode: ViewerMode
+
+    /// 삭제/복구 이벤트 소스 (analytics용)
+    let deleteSource: DeleteSource?
 
     /// 필터링 인덱스 매핑
     /// - 핵심 목표: 전체 fetchResult를 O(n)으로 스캔하지 않고(라이브러리 큰 경우 1초+ 히치),
@@ -121,11 +130,13 @@ final class ViewerCoordinator: ViewerCoordinatorProtocol {
     init(
         fetchResult: PHFetchResult<PHAsset>,
         trashStore: TrashStoreProtocol = TrashStore.shared,
-        viewerMode: ViewerMode = .normal
+        viewerMode: ViewerMode = .normal,
+        deleteSource: DeleteSource? = nil
     ) {
         self._fetchResult = fetchResult
         self.trashStore = trashStore
         self.viewerMode = viewerMode
+        self.deleteSource = deleteSource
 
         // 모드에 따라 인덱스 필터링
         rebuildIndexMapping()

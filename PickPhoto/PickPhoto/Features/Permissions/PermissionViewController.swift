@@ -298,6 +298,16 @@ final class PermissionViewController: UIViewController {
 
                 Log.print("[PermissionVC] Request completed, status: \(status)")
 
+                // [Analytics] 이벤트 2: 최초 권한 요청 결과 추적
+                let result: PermissionResultType = {
+                    switch status {
+                    case .authorized: return .fullAccess
+                    case .limited:    return .limitedAccess
+                    case .denied, .restricted, .notDetermined: return .denied
+                    }
+                }()
+                AnalyticsService.shared.trackPermissionResult(result: result, timing: .firstRequest)
+
                 // 권한 승인 시 델리게이트에 알림
                 if status.canAccessPhotos {
                     delegate?.permissionViewControllerDidGrantAccess(self)

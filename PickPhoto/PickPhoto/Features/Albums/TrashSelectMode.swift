@@ -151,6 +151,9 @@ extension TrashAlbumViewController {
             return
         }
 
+        // [Analytics] 이벤트 4-2: 휴지통 복구 (선택 모드)
+        AnalyticsService.shared.countTrashRestore()
+
         trashStore.restore(assetIDs: Array(selectedAssetIDs))
         Log.print("[TrashAlbumViewController] Restored \(selectedAssetIDs.count) photos from trash")
 
@@ -165,6 +168,9 @@ extension TrashAlbumViewController {
             Log.print("[TrashAlbumViewController] No photos selected for deletion")
             return
         }
+
+        // [Analytics] 이벤트 4-2: 휴지통 완전삭제 (선택 모드)
+        AnalyticsService.shared.countTrashPermanentDelete()
 
         Task {
             do {

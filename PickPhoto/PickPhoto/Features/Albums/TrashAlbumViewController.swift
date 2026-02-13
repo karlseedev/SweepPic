@@ -564,6 +564,9 @@ final class TrashAlbumViewController: BaseGridViewController {
 
     /// 휴지통 비우기 실행
     private func performEmptyTrash() {
+        // [Analytics] 이벤트 4-2: 휴지통 비우기 (완전삭제)
+        AnalyticsService.shared.countTrashPermanentDelete()
+
         Task {
             do {
                 try await trashStore.emptyTrash()
@@ -670,6 +673,9 @@ extension TrashAlbumViewController: ViewerViewControllerDelegate {
 
     /// 복구 요청 (T056)
     func viewerDidRequestRestore(assetID: String) {
+        // [Analytics] 이벤트 4-2: 휴지통 복구
+        AnalyticsService.shared.countTrashRestore()
+
         let startTime = CFAbsoluteTimeGetCurrent()
 
         trashStore.restore(assetIDs: [assetID])
@@ -684,6 +690,9 @@ extension TrashAlbumViewController: ViewerViewControllerDelegate {
     /// 완전 삭제 요청 (T057)
     /// 비동기 작업 - 삭제 완료 후 뷰어에 알림
     func viewerDidRequestPermanentDelete(assetID: String) {
+        // [Analytics] 이벤트 4-2: 휴지통 완전삭제
+        AnalyticsService.shared.countTrashPermanentDelete()
+
         Task {
             do {
                 try await trashStore.permanentlyDelete(assetIDs: [assetID])

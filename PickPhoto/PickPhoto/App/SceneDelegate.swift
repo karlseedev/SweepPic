@@ -232,8 +232,29 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         // T015: 포그라운드 진입 시 AppStateStore 처리
         AppStateStore.shared.handleForegroundTransition()
 
+        // [Analytics] 사진 규모 구간 갱신 + 앱 실행 시그널
+        AnalyticsService.shared.refreshPhotoLibraryBucket()
+        AnalyticsService.shared.trackAppLaunched()
+
+        // [Analytics] 이벤트 2: 설정 앱에서 권한 변경 감지 (전후 비교)
+        // ⚠️ handlePermissionChange에 넣지 않음 (requestAuthorization에서도 중복 발생하므로)
+        let permissionBefore = PermissionStore.shared.currentStatus
+
         // T066: 설정 앱에서 권한 변경 후 돌아왔을 때 상태 재확인
         PermissionStore.shared.checkAndNotifyIfChanged()
+
+        // [Analytics] 권한 변경이 있으면 settingsChange로 추적
+        let permissionAfter = PermissionStore.shared.currentStatus
+        if permissionBefore != permissionAfter {
+            let result: PermissionResultType = {
+                switch permissionAfter {
+                case .authorized: return .fullAccess
+                case .limited:    return .limitedAccess
+                case .denied, .restricted, .notDetermined: return .denied
+                }
+            }()
+            AnalyticsService.shared.trackPermissionResult(result: result, timing: .settingsChange)
+        }
 
         // T060: 외부 삭제 처리 - PhotoKit에서 삭제된 사진을 TrashState에서 제거
         cleanupInvalidTrashedAssets()
@@ -269,6 +290,10 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
     func sceneDidEnterBackground(_ scene: UIScene) {
         // T015: 백그라운드 진입 시 AppStateStore 처리
         AppStateStore.shared.handleBackgroundTransition()
+
+        // [Analytics] 세션 종료 — 누적 카운터 플러시
+        AnalyticsService.shared.handleSessionEnd()
+
         Log.print("[SceneDelegate] Scene did enter background")
     }
 

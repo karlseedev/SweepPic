@@ -321,7 +321,8 @@ final class AlbumGridViewController: BaseGridViewController {
         let coordinator = ViewerCoordinator(
             fetchResult: fetchResult,
             trashStore: trashStore,
-            viewerMode: mode
+            viewerMode: mode,
+            deleteSource: .album
         )
 
         // 필터링된 인덱스 계산

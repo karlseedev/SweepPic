@@ -96,6 +96,21 @@ final class ViewerViewController: UIViewController {
     /// 스와이프 삭제 핸들러
     private var swipeDeleteHandler: SwipeDeleteHandler?
 
+    /// 현재 뷰어의 ScreenSource (analytics용)
+    /// - .cleanup 모드는 카운트 제외 → nil 반환
+    private var analyticsScreenSource: ScreenSource? {
+        switch viewerMode {
+        case .trash:   return .trash
+        case .normal:
+            switch coordinator.deleteSource {
+            case .library: return .library
+            case .album:   return .album
+            case nil:      return .library  // 기본값 (안전 장치)
+            }
+        case .cleanup: return nil
+        }
+    }
+
     /// 현재 표시 중인 인덱스
     /// iOS 18+ zoom transition의 sourceViewProvider에서 외부 접근 필요
     private(set) var currentIndex: Int
@@ -331,6 +346,11 @@ final class ViewerViewController: UIViewController {
             Log.print("[Viewer Timing] ✅ viewDidAppear — 탭 후 +\(String(format: "%.1f", (CACurrentMediaTime() - openStartTime) * 1000))ms (뷰어 표시 완료)")
             // 1회만 로그 (이후 재진입 시 불필요)
             openStartTime = 0
+
+            // [Analytics] 이벤트 3: 최초 진입 시 사진 열람 카운트
+            if let source = analyticsScreenSource {
+                AnalyticsService.shared.countPhotoViewed(from: source)
+            }
         }
 
         if isBeingPresented && !didPerformInitialFadeIn {
@@ -582,6 +602,9 @@ final class ViewerViewController: UIViewController {
         let generator = UIImpactFeedbackGenerator(style: .medium)
         generator.impactOccurred()
 
+        // [Analytics] 이벤트 4-1: 뷰어 삭제 버튼
+        AnalyticsService.shared.countViewerTrashButton(source: coordinator.deleteSource)
+
         // 삭제 요청
         delegate?.viewerDidRequestDelete(assetID: assetID)
 
@@ -601,6 +624,9 @@ final class ViewerViewController: UIViewController {
         // 햅틱 피드백
         let generator = UINotificationFeedbackGenerator()
         generator.notificationOccurred(.success)
+
+        // [Analytics] 이벤트 4-1: 뷰어 복구 버튼
+        AnalyticsService.shared.countViewerRestoreButton(source: coordinator.deleteSource)
 
         // 복구 요청
         delegate?.viewerDidRequestRestore(assetID: assetID)
@@ -671,6 +697,9 @@ final class ViewerViewController: UIViewController {
         // 햅틱 피드백
         let generator = UINotificationFeedbackGenerator()
         generator.notificationOccurred(.success)
+
+        // [Analytics] 이벤트 4-1: 뷰어 스와이프 삭제
+        AnalyticsService.shared.countViewerSwipeDelete(source: coordinator.deleteSource)
 
         // 삭제 요청
         delegate?.viewerDidRequestDelete(assetID: assetID)
@@ -1223,6 +1252,11 @@ extension ViewerViewController: UIPageViewControllerDelegate {
 
         // 인덱스 업데이트
         currentIndex = newIndex
+
+        // [Analytics] 이벤트 3: 페이지 전환 시 사진 열람 카운트
+        if let source = analyticsScreenSource {
+            AnalyticsService.shared.countPhotoViewed(from: source)
+        }
 
         // 이전 페이지가 VideoPageViewController면 정지
         // (스와이프 취소 시에는 completed=false이므로 여기까지 오지 않음)

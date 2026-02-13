@@ -46,6 +46,10 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         // 파이프라인 통계 리셋 (앱 시작 시)
         ImagePipeline.shared.resetStats()
 
+        // [Analytics] TelemetryDeck SDK 초기화 + AppCore 브릿지 주입
+        AnalyticsService.shared.configure(appID: "YOUR-APP-ID-HERE")
+        Analytics.reporter = AnalyticsService.shared
+
         return true
     }
 

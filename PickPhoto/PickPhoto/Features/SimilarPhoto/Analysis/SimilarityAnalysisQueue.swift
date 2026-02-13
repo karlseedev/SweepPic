@@ -213,6 +213,9 @@ final class SimilarityAnalysisQueue {
         // viewer 소스는 취소 불가
         guard source == .grid else { return }
 
+        // [Analytics] 이벤트 5-1: 유사 분석 취소
+        AnalyticsService.shared.countSimilarAnalysisCancelled()
+
         serialQueue.sync {
             // 큐에서 해당 소스 요청 제거
             requestQueue.removeAll { $0.source == source }
@@ -432,6 +435,10 @@ final class SimilarityAnalysisQueue {
             //     }
             // }
         }
+
+        // [Analytics] 이벤트 5-1: 유사 분석 완료
+        let analysisDuration = CFAbsoluteTimeGetCurrent() - totalStartTime
+        AnalyticsService.shared.countSimilarAnalysisCompleted(groups: validGroupIDs.count, duration: analysisDuration)
 
         // T014.8: UI 알림 발송
         postAnalysisComplete(range: range, groupIDs: validGroupIDs, analyzedAssetIDs: assetIDs)

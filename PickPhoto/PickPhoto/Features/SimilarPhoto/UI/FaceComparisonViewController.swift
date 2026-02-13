@@ -67,6 +67,9 @@ final class FaceComparisonViewController: UIViewController {
     /// 비교 그룹 (현재 표시 중인 인물 기준)
     private var comparisonGroup: ComparisonGroup
 
+    /// 그룹 전체 사진 수 (analytics용)
+    var totalPhotoCount: Int { comparisonGroup.selectedAssetIDs.count }
+
     /// 유효 인물 번호 목록 (순환용)
     /// - 그룹 내에서 2장 이상 감지된 인물만 포함
     private(set) var validPersonIndices: [Int] = []

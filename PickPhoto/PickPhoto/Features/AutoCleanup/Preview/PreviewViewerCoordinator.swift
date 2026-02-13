@@ -27,6 +27,9 @@ final class PreviewViewerCoordinator: ViewerCoordinatorProtocol {
     /// fetchResult (유사 사진 분석용 — 미리보기에서는 미사용)
     var fetchResult: PHFetchResult<PHAsset>? { nil }
 
+    /// 삭제 소스 (미리보기에서는 불필요)
+    var deleteSource: DeleteSource? { nil }
+
     /// 전체 사진 수
     var totalCount: Int { assets.count }
 

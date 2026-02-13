@@ -54,6 +54,20 @@ final class PreviewGridViewController: UIViewController {
     /// delegate
     weak var delegate: PreviewGridViewControllerDelegate?
 
+    // MARK: - Analytics Tracking (이벤트 7-2)
+
+    /// 분석 소요 시간 (GridVC+Cleanup에서 설정)
+    var analysisDuration: TimeInterval = 0
+
+    /// "더 보기" 탭 횟수
+    private var analyticsExpandCount: Int = 0
+
+    /// 뷰어 열람 횟수
+    private var analyticsViewerOpenCount: Int = 0
+
+    /// 최종 행동이 기록되었는지 (중복 전송 방지)
+    private var analyticsEventSent: Bool = false
+
     // MARK: - Header (iOS 18 커스텀 헤더)
 
     /// iOS 18 커스텀 헤더 뷰 (FloatingOverlay 대체)
@@ -515,6 +529,8 @@ final class PreviewGridViewController: UIViewController {
 
         alert.addAction(UIAlertAction(title: "취소", style: .cancel))
         alert.addAction(UIAlertAction(title: "닫기", style: .destructive) { [weak self] _ in
+            // [Analytics] 이벤트 7-2: 닫기
+            self?.sendPreviewAnalyticsEvent(finalAction: .close, movedCount: 0)
             self?.navigationController?.popViewController(animated: true)
         })
 
@@ -557,11 +573,46 @@ final class PreviewGridViewController: UIViewController {
         alert.addAction(UIAlertAction(title: "취소", style: .cancel))
         alert.addAction(UIAlertAction(title: "이동하기", style: .destructive) { [weak self] _ in
             guard let self = self else { return }
+            // [Analytics] 이벤트 7-2: 휴지통 이동
+            self.sendPreviewAnalyticsEvent(finalAction: .moveToTrash, movedCount: assetIDs.count)
             self.delegate?.previewGridVC(self, didConfirmCleanup: assetIDs)
             self.navigationController?.popViewController(animated: true)
         })
 
         present(alert, animated: true)
+    }
+
+    // MARK: - Analytics Helper (이벤트 7-2)
+
+    /// 미리보기 정리 분석 이벤트 전송
+    /// - Parameters:
+    ///   - finalAction: 최종 행동 (휴지통 이동 or 닫기)
+    ///   - movedCount: 휴지통 이동 수
+    func sendPreviewAnalyticsEvent(finalAction: PreviewFinalAction, movedCount: Int) {
+        guard !analyticsEventSent else { return }
+        analyticsEventSent = true
+
+        // currentStage → PreviewMaxStage 변환
+        let maxStage: PreviewMaxStage
+        switch currentStage {
+        case .light:    maxStage = .light
+        case .standard: maxStage = .standard
+        case .deep:     maxStage = .deep
+        }
+
+        let data = PreviewCleanupEventData(
+            reachedStage: .finalAction,
+            foundCount: previewResult.totalCount,
+            durationSec: analysisDuration,
+            maxStageReached: maxStage,
+            expandCount: analyticsExpandCount,
+            excludeCount: excludedAssetIDs.count,
+            viewerOpenCount: analyticsViewerOpenCount,
+            finalAction: finalAction,
+            movedCount: movedCount
+        )
+
+        AnalyticsService.shared.trackPreviewCleanupCompleted(data: data)
     }
 }
 
@@ -625,6 +676,9 @@ extension PreviewGridViewController: UICollectionViewDelegate {
         let allAssets = allVisibleAssets()
         let tappedAssetID = candidates[indexPath.item].assetID
         guard let viewerIndex = allAssets.firstIndex(where: { $0.localIdentifier == tappedAssetID }) else { return }
+
+        // [Analytics] 이벤트 7-2: 뷰어 열람 카운트
+        analyticsViewerOpenCount += 1
 
         // 뷰어 push (미리보기 전용 코디네이터, 정리 모드)
         let coordinator = PreviewViewerCoordinator(assets: allAssets)
@@ -713,6 +767,9 @@ extension PreviewGridViewController: PreviewBottomViewDelegate {
 
     func previewBottomViewDidTapExpand(_ view: PreviewBottomView) {
         guard let nextStage = currentStage.next else { return }
+
+        // [Analytics] 이벤트 7-2: "더 보기" 카운트
+        analyticsExpandCount += 1
 
         // 1. currentStage 변경 (numberOfSections 먼저 업데이트되도록)
         currentStage = nextStage
