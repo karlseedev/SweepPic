@@ -36,10 +36,11 @@ enum CleanupMethodType: String {
     case byYear            = "byYear"
 }
 
-// MARK: - CleanupResultType
+// MARK: - AnalyticsCleanupResult
 
-/// 정리 결과 타입
-enum CleanupResultType: String {
+/// 정리 결과 타입 (분석 전용)
+/// - 기존 CleanupResultType과 이름 충돌 방지를 위해 Analytics 접두사 사용
+enum AnalyticsCleanupResult: String {
     /// N장 이동 완료
     case completed = "completed"
     /// 0장 발견 (저품질 사진 없음)
@@ -71,7 +72,7 @@ struct CleanupEventData {
     /// 선택 방식 (방식 선택 전 이탈이면 nil)
     let method: CleanupMethodType?
     /// 결과 (정리 미진행이면 nil)
-    let result: CleanupResultType?
+    let result: AnalyticsCleanupResult?
     /// 발견(이동) 수
     let foundCount: Int
     /// 소요시간 (초)
