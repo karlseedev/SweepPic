@@ -92,6 +92,15 @@ extension GridViewController {
             }
         )
 
+        // 메뉴 버튼 (최우측, 풀다운 메뉴)
+        overlay.titleBar.showMenuButton(menu: UIMenu(children: [
+            UIAction(title: "자동정리", image: UIImage(systemName: "wand.and.stars")) { _ in },
+            UIAction(title: "사용자", image: UIImage(systemName: "person.circle")) { _ in },
+            UIAction(title: "구독", image: UIImage(systemName: "creditcard")) { _ in },
+            UIAction(title: "기타", image: UIImage(systemName: "ellipsis")) { _ in },
+            UIAction(title: "고객센터", image: UIImage(systemName: "questionmark.circle")) { _ in },
+        ]))
+
         // 버튼 활성화 상태 초기화
         updateCleanupButtonState()
     }

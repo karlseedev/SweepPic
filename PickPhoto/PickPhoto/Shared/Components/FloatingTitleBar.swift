@@ -215,6 +215,20 @@ final class FloatingTitleBar: UIView {
         return button
     }()
 
+    /// 메뉴 버튼 (최우측, 햄버거 아이콘)
+    /// 탭 시 UIMenu 풀다운 메뉴 표시
+    private lazy var menuButton: GlassIconButton = {
+        let button = GlassIconButton(icon: "line.3.horizontal", size: .small, tintColor: .white)
+        button.translatesAutoresizingMaskIntoConstraints = false
+        button.showsMenuAsPrimaryAction = true
+        button.isHidden = true // 기본 숨김
+        return button
+    }()
+
+    /// Select 버튼 trailing 제약 (메뉴 버튼 유무에 따라 전환)
+    private var selectButtonTrailingToContainer: NSLayoutConstraint?
+    private var selectButtonTrailingToMenu: NSLayoutConstraint?
+
     /// 콘텐츠 컨테이너 (타이틀 + Select 버튼)
     private lazy var contentContainer: UIView = {
         let view = UIView()
@@ -250,6 +264,7 @@ final class FloatingTitleBar: UIView {
         contentContainer.addSubview(subtitleLabel)
         contentContainer.addSubview(secondRightButton)
         contentContainer.addSubview(selectButton)
+        contentContainer.addSubview(menuButton)
 
         setupConstraints()
 
@@ -284,14 +299,22 @@ final class FloatingTitleBar: UIView {
             subtitleLabel.topAnchor.constraint(equalTo: titleLabel.bottomAnchor, constant: -1),
             subtitleLabel.leadingAnchor.constraint(equalTo: titleLabel.leadingAnchor),
 
-            // Select 버튼: 우측 정렬, 세로 중앙
-            selectButton.trailingAnchor.constraint(equalTo: contentContainer.trailingAnchor),
+            // Select 버튼: 세로 중앙 (trailing은 동적 전환)
             selectButton.centerYAnchor.constraint(equalTo: contentContainer.centerYAnchor),
 
             // Second Right 버튼: Select 버튼 왼쪽, 세로 중앙
             secondRightButton.trailingAnchor.constraint(equalTo: selectButton.leadingAnchor, constant: -8),
             secondRightButton.centerYAnchor.constraint(equalTo: contentContainer.centerYAnchor),
+
+            // 메뉴 버튼: 최우측, 세로 중앙
+            menuButton.trailingAnchor.constraint(equalTo: contentContainer.trailingAnchor),
+            menuButton.centerYAnchor.constraint(equalTo: contentContainer.centerYAnchor),
         ])
+
+        // Select 버튼 trailing 제약 (메뉴 버튼 유무에 따라 전환)
+        selectButtonTrailingToContainer = selectButton.trailingAnchor.constraint(equalTo: contentContainer.trailingAnchor)
+        selectButtonTrailingToMenu = selectButton.trailingAnchor.constraint(equalTo: menuButton.leadingAnchor, constant: -8)
+        selectButtonTrailingToContainer?.isActive = true  // 기본: 컨테이너 우측 정렬
 
         // 타이틀 세로 정렬 제약 (top / centerY 전환용)
         titleLabelTopConstraint = titleLabel.topAnchor.constraint(equalTo: contentContainer.topAnchor, constant: 2)
@@ -344,6 +367,12 @@ final class FloatingTitleBar: UIView {
         let selectPoint = convert(point, to: selectButton)
         if selectButton.bounds.contains(selectPoint) && !selectButton.isHidden {
             return selectButton
+        }
+
+        // 메뉴 버튼 영역 체크 (최우측)
+        let menuPoint = convert(point, to: menuButton)
+        if menuButton.bounds.contains(menuPoint) && !menuButton.isHidden {
+            return menuButton
         }
 
         // 나머지 딤드 영역은 터치 차단 (self 반환)
@@ -542,9 +571,37 @@ final class FloatingTitleBar: UIView {
         // 두 번째 버튼 숨기기
         hideSecondRightButton()
 
+        // 메뉴 버튼 숨기기
+        hideMenuButton()
+
         // Select 버튼 복원
         resetToSelectButton()
 
         Log.print("[FloatingTitleBar] Reset to default - showing Select button only")
+    }
+
+    // MARK: - Menu Button
+
+    /// 메뉴 버튼 표시 (최우측, UIMenu 풀다운)
+    /// - Parameter menu: 표시할 UIMenu
+    func showMenuButton(menu: UIMenu) {
+        menuButton.menu = menu
+        menuButton.isHidden = false
+
+        // Select 버튼 trailing을 메뉴 버튼 왼쪽으로 전환
+        selectButtonTrailingToContainer?.isActive = false
+        selectButtonTrailingToMenu?.isActive = true
+
+        Log.print("[FloatingTitleBar] Menu button shown")
+    }
+
+    /// 메뉴 버튼 숨기기
+    func hideMenuButton() {
+        menuButton.isHidden = true
+        menuButton.menu = nil
+
+        // Select 버튼 trailing을 컨테이너 우측으로 복원
+        selectButtonTrailingToMenu?.isActive = false
+        selectButtonTrailingToContainer?.isActive = true
     }
 }
