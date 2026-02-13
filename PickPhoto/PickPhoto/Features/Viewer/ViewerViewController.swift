@@ -530,6 +530,11 @@ final class ViewerViewController: UIViewController {
         if let handler = swipeDeleteHandler {
             // transform 대상을 pageViewController.view로 지정 (사진만 이동, UI 버튼 제자리)
             handler.transformTarget = pageViewController.view
+            // 이미 휴지통인 사진이면 삭제 불가 → 바운스백
+            handler.canDelete = { [weak self] in
+                guard let self else { return false }
+                return !self.coordinator.isTrashed(at: self.currentIndex)
+            }
             view.addGestureRecognizer(handler.panGesture)
         }
     }

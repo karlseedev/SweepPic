@@ -32,6 +32,9 @@ final class SwipeDeleteHandler: NSObject {
     /// transform 적용 대상 뷰 (사진 콘텐츠만 이동시키기 위해 외부에서 지정)
     weak var transformTarget: UIView?
 
+    /// 삭제 가능 여부 판별 클로저 (false 반환 시 바운스백 + 경고 햅틱)
+    var canDelete: (() -> Bool)?
+
     /// 드래그 시작 여부
     private var isDragging = false
 
@@ -115,6 +118,11 @@ final class SwipeDeleteHandler: NSObject {
             let fastSwipe = velocity.y < Self.minimumVelocity
 
             if (reachedThreshold || fastSwipe) && offsetY < 0 {
+                // 삭제 가능 여부 확인 (이미 휴지통인 사진이면 바운스백)
+                if canDelete?() == false {
+                    bounceBack()
+                    return
+                }
                 // 삭제 트리거
                 triggerDelete(in: gesture.view)
             } else {
@@ -148,6 +156,16 @@ final class SwipeDeleteHandler: NSObject {
     /// 뷰 원위치 복귀
     private func resetView(_ view: UIView?) {
         UIView.animate(withDuration: 0.2) {
+            self.transformTarget?.transform = .identity
+        }
+    }
+
+    /// 바운스백 (삭제 불가 시 원위치 복귀 + 경고 햅틱)
+    private func bounceBack() {
+        let warning = UINotificationFeedbackGenerator()
+        warning.notificationOccurred(.warning)
+
+        UIView.animate(withDuration: 0.3, delay: 0, usingSpringWithDamping: 0.6, initialSpringVelocity: 0.5) {
             self.transformTarget?.transform = .identity
         }
     }
