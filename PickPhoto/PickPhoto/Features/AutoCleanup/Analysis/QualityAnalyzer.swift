@@ -16,6 +16,9 @@
 //  - 1초~5초: 프레임 3개 추출 (10%/50%/90%), 중앙값 판정
 //  - 5초 초과: SKIP (MetadataFilter에서 처리)
 //
+//  T094: autoreleasepool 적용 (Stage 2/3 동기 분석, 프레임 분석)
+//  T092: DEBUG 빌드에서 개별 분석 결과 로깅 (CleanupDebug)
+//
 
 import Foundation
 import AppCore
@@ -162,10 +165,12 @@ final class QualityAnalyzer {
             return QualityResult.skipped(assetID: assetID, creationDate: creationDate, reason: .analysisError)
         }
 
-        // Stage 2: 노출 분석
+        // T094: Stage 2 노출 분석 (동기) - autoreleasepool로 임시 버퍼 즉시 해제
         let exposureMetrics: ExposureMetrics
         do {
-            exposureMetrics = try exposureAnalyzer.analyze(image)
+            exposureMetrics = try autoreleasepool {
+                try exposureAnalyzer.analyze(image)
+            }
         } catch {
             return QualityResult.skipped(assetID: assetID, creationDate: creationDate, reason: .analysisError)
         }
@@ -193,13 +198,15 @@ final class QualityAnalyzer {
 
         var signals = exposureAnalyzer.detectSignals(from: exposureMetrics, mode: mode)
 
-        // Stage 3: 블러 분석
+        // T094: Stage 3 블러 분석 (동기) - autoreleasepool로 Metal/CG 임시 객체 즉시 해제
         let blurMetrics: BlurMetrics
         do {
-            if blurAnalyzer.isAvailable {
-                blurMetrics = try blurAnalyzer.analyze(image)
-            } else {
-                blurMetrics = try blurAnalyzer.analyzeCPU(image)
+            blurMetrics = try autoreleasepool {
+                if blurAnalyzer.isAvailable {
+                    return try blurAnalyzer.analyze(image)
+                } else {
+                    return try blurAnalyzer.analyzeCPU(image)
+                }
             }
         } catch {
             return QualityResult.skipped(assetID: assetID, creationDate: creationDate, reason: .analysisError)
@@ -234,7 +241,7 @@ final class QualityAnalyzer {
         let analysisTimeMs = (CFAbsoluteTimeGetCurrent() - startTime) * 1000
         let analysisMethod: AnalysisMethod = blurAnalyzer.isAvailable ? .metalPipeline : .fallback
 
-        return makeVerdict(
+        let result = makeVerdict(
             assetID: assetID,
             creationDate: creationDate,
             signals: signals,
@@ -242,6 +249,12 @@ final class QualityAnalyzer {
             analysisTimeMs: analysisTimeMs,
             method: analysisMethod
         )
+
+        #if DEBUG
+        CleanupDebug.logResult(result)
+        #endif
+
+        return result
     }
 
     /// 배치 분석 (병렬 처리)
@@ -480,46 +493,50 @@ final class QualityAnalyzer {
 
     /// 단일 프레임 분석 (노출 + 블러)
     ///
+    /// T094: autoreleasepool 적용 - Metal/CoreGraphics 내부 autorelease 객체 즉시 해제
+    ///
     /// - Parameter frame: 분석할 CGImage
     /// - Returns: (저품질 여부, 신호 배열)
     private func analyzeFrame(_ frame: CGImage) -> (isLowQuality: Bool, signals: [QualitySignal]) {
-        var signals: [QualitySignal] = []
+        return autoreleasepool {
+            var signals: [QualitySignal] = []
 
-        // 노출 분석
-        do {
-            let exposureMetrics = try exposureAnalyzer.analyze(frame)
-            let exposureSignals = exposureAnalyzer.detectSignals(from: exposureMetrics, mode: mode)
-            signals.append(contentsOf: exposureSignals)
-        } catch {
-            // 프레임 노출 분석 실패 시 무시
-        }
-
-        // 블러 분석
-        do {
-            let blurMetrics: BlurMetrics
-            if blurAnalyzer.isAvailable {
-                blurMetrics = try blurAnalyzer.analyze(frame)
-            } else {
-                blurMetrics = try blurAnalyzer.analyzeCPU(frame)
+            // 노출 분석
+            do {
+                let exposureMetrics = try exposureAnalyzer.analyze(frame)
+                let exposureSignals = exposureAnalyzer.detectSignals(from: exposureMetrics, mode: mode)
+                signals.append(contentsOf: exposureSignals)
+            } catch {
+                // 프레임 노출 분석 실패 시 무시
             }
-            let blurSignals = blurAnalyzer.detectSignals(from: blurMetrics, mode: mode)
-            signals.append(contentsOf: blurSignals)
-        } catch {
-            // 프레임 블러 분석 실패 시 무시
-        }
 
-        // 판정 (동영상에서는 Safe Guard 적용 안 함)
-        let isLowQuality: Bool
-        switch mode {
-        case .precision:
-            isLowQuality = signals.hasStrongSignal
-        case .recall:
-            isLowQuality = signals.hasStrongSignal ||
-                           signals.hasConditionalSignal ||
-                           signals.hasEnoughWeakSignals
-        }
+            // 블러 분석
+            do {
+                let blurMetrics: BlurMetrics
+                if blurAnalyzer.isAvailable {
+                    blurMetrics = try blurAnalyzer.analyze(frame)
+                } else {
+                    blurMetrics = try blurAnalyzer.analyzeCPU(frame)
+                }
+                let blurSignals = blurAnalyzer.detectSignals(from: blurMetrics, mode: mode)
+                signals.append(contentsOf: blurSignals)
+            } catch {
+                // 프레임 블러 분석 실패 시 무시
+            }
 
-        return (isLowQuality, signals)
+            // 판정 (동영상에서는 Safe Guard 적용 안 함)
+            let isLowQuality: Bool
+            switch mode {
+            case .precision:
+                isLowQuality = signals.hasStrongSignal
+            case .recall:
+                isLowQuality = signals.hasStrongSignal ||
+                               signals.hasConditionalSignal ||
+                               signals.hasEnoughWeakSignals
+            }
+
+            return (isLowQuality, signals)
+        }
     }
 
     /// 최종 판정 생성

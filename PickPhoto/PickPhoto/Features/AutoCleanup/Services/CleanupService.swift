@@ -9,6 +9,8 @@
 //  - 비동기 스캔 및 취소 지원
 //  - 배치 처리 (100장 단위)
 //  - 동시성 제어 (4개)
+//  - T093: 배치별 성능 측정 (DEBUG)
+//  - T094: autoreleasepool 적용 (배치 추출)
 //
 
 import Foundation
@@ -225,6 +227,10 @@ final class CleanupService: CleanupServiceProtocol {
         let fetchResult = createFetchResult(for: method)
         let totalCount = fetchResult.count
 
+        #if DEBUG
+        CleanupDebug.logScanStart(method: method, mode: session.mode, totalCount: totalCount)
+        #endif
+
         guard totalCount > 0 else {
             // 사진이 없는 경우
             let result = CleanupResult.noneFound(
@@ -273,22 +279,32 @@ final class CleanupService: CleanupServiceProtocol {
                 if shouldCancel() { break }
             }
 
-            // 배치 추출
+            // 배치 추출 (T094: autoreleasepool으로 PHAsset 열거 시 메모리 관리)
             let batchEndIndex = min(batchStartIndex + batchSize, totalCount)
-            var batchAssets: [PHAsset] = []
-
-            fetchResult.enumerateObjects(
-                at: IndexSet(integersIn: batchStartIndex..<batchEndIndex),
-                options: []
-            ) { asset, _, _ in
-                batchAssets.append(asset)
+            let batchAssets: [PHAsset] = autoreleasepool {
+                var assets: [PHAsset] = []
+                assets.reserveCapacity(batchEndIndex - batchStartIndex)
+                fetchResult.enumerateObjects(
+                    at: IndexSet(integersIn: batchStartIndex..<batchEndIndex),
+                    options: []
+                ) { asset, _, _ in
+                    assets.append(asset)
+                }
+                return assets
             }
 
-            // 배치 분석
+            // 배치 분석 (T093: 성능 측정)
+            let batchStartTime = CFAbsoluteTimeGetCurrent()
+
             let results = await qualityAnalyzer.analyzeBatch(
                 batchAssets,
                 maxConcurrent: CleanupConstants.concurrentAnalysis
             )
+
+            #if DEBUG
+            let batchElapsed = CFAbsoluteTimeGetCurrent() - batchStartTime
+            CleanupDebug.logBatchStats(results, batchIndex: batchStartIndex / batchSize, elapsed: batchElapsed)
+            #endif
 
             // 저품질 사진 수집 및 SKIP 통계
             // - 결과는 원본 순서 보장됨 (analyzeBatch에서 정렬)
@@ -514,6 +530,14 @@ final class CleanupService: CleanupServiceProtocol {
 
     /// 세션 정리
     private func cleanupSession(result: CleanupResult, lastScannedDate: Date? = nil) async {
+        #if DEBUG
+        CleanupDebug.logScanEnd(
+            scannedCount: result.scannedCount,
+            foundCount: result.foundCount,
+            elapsed: result.totalTimeSeconds,
+            endReason: result.endReason
+        )
+        #endif
         // 취소가 아닌 경우에만 세션 저장 (이어서 정리용)
         // - maxFound, maxScanned: 이어서 정리 가능
         // - endOfRange: 이어서 정리 불가 (범위 끝 도달)

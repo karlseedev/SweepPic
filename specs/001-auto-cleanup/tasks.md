@@ -283,18 +283,18 @@
 
 ### Debug Utilities
 
-- [ ] T092 [P] CleanupDebug 구현 (분석 로그, 임계값 오버라이드) in `Debug/CleanupDebug.swift`
+- [x] T092 [P] CleanupDebug 구현 (분석 로그, 임계값 오버라이드) in `Debug/CleanupDebug.swift`
 
 ### Performance Optimization
 
-- [ ] T093 성능 프로파일링 및 배치 크기/동시성 튜닝 (1000장 30초 목표) in `Services/CleanupService.swift`
-- [ ] T094 메모리 최적화 (autoreleasepool, 이미지 다운샘플링 확인) in `Analysis/QualityAnalyzer.swift`
+- [x] T093 성능 프로파일링 및 배치 크기/동시성 튜닝 (1000장 30초 목표) in `Services/CleanupService.swift`
+- [x] T094 메모리 최적화 (autoreleasepool, 이미지 다운샘플링 확인) in `Analysis/QualityAnalyzer.swift`
 
 ### Final Validation
 
-- [ ] T095 quickstart.md 시나리오 검증 (전체 플로우 E2E 테스트) in `PickPhoto/PickPhotoTests/AutoCleanup/E2E/CleanupE2ETests.swift`
-- [ ] T096 실기기 테스트 (iOS 18 AestheticsScore, Metal 성능) - Manual Test
-- [ ] T097 코드 정리 및 주석 보완
+- [x] T095 quickstart.md 시나리오 검증 (전체 플로우 E2E 테스트) in `PickPhoto/PickPhotoTests/AutoCleanup/E2E/CleanupE2ETests.swift`
+- [x] T096 실기기 테스트 (iOS 18 AestheticsScore, Metal 성능) - Manual Test
+- [x] T097 코드 정리 및 주석 보완
 
 **Checkpoint**: 기능 완료 - 출시 준비 완료
 
