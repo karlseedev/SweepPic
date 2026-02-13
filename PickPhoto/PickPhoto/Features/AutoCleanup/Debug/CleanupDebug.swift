@@ -225,8 +225,6 @@ enum CleanupDebug {
             return "OK"
         case .skipped(let reason):
             return "SKIP(\(reason.rawValue))"
-        case .safeGuarded(let reason):
-            return "GUARD(\(reason.rawValue))"
         }
     }
 
