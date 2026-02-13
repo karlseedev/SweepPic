@@ -65,9 +65,7 @@ final class CleanupProgressView: UIView {
     private lazy var foundCountLabel: UILabel = {
         let label = UILabel()
         label.translatesAutoresizingMaskIntoConstraints = false
-        label.text = "0 / 50장 발견"
-        label.font = .systemFont(ofSize: 28, weight: .bold)
-        label.textColor = .label
+        label.attributedText = makeFoundCountText(found: 0, max: CleanupConstants.maxFoundCount)
         label.textAlignment = .center
         return label
     }()
@@ -76,7 +74,10 @@ final class CleanupProgressView: UIView {
     private lazy var scannedCountLabel: UILabel = {
         let label = UILabel()
         label.translatesAutoresizingMaskIntoConstraints = false
-        label.text = ""
+        let maxFormatted = NumberFormatter.localizedString(
+            from: NSNumber(value: CleanupConstants.maxScanCount), number: .decimal
+        )
+        label.text = "0 / \(maxFormatted)장 검색"
         label.font = .systemFont(ofSize: 13, weight: .regular)
         label.textColor = .secondaryLabel
         label.textAlignment = .center
@@ -87,7 +88,7 @@ final class CleanupProgressView: UIView {
     private lazy var dateLabel: UILabel = {
         let label = UILabel()
         label.translatesAutoresizingMaskIntoConstraints = false
-        label.text = ""
+        label.text = "준비 중..."
         label.font = .systemFont(ofSize: 13, weight: .regular)
         label.textColor = .secondaryLabel
         label.textAlignment = .center
@@ -213,8 +214,11 @@ final class CleanupProgressView: UIView {
         // 진행바
         progressBar.setProgress(progress.progress, animated: true)
 
-        // 찾은 수 ("23 / 50장 발견")
-        foundCountLabel.text = "\(progress.foundCount) / \(progress.maxFoundCount)장 발견"
+        // 찾은 수 ("23 / 50장 발견") — "/" 는 regular 굵기
+        foundCountLabel.attributedText = makeFoundCountText(
+            found: progress.foundCount,
+            max: progress.maxFoundCount
+        )
 
         // 검색 진행률 ("850 / 2,000장 검색")
         let scannedFormatted = NumberFormatter.localizedString(
@@ -266,6 +270,26 @@ final class CleanupProgressView: UIView {
         let formatter = DateFormatter()
         formatter.dateFormat = "yyyy년 M월"
         return formatter.string(from: date)
+    }
+
+    /// "23 / 50장 발견" AttributedString 생성
+    /// - "23"과 "50장 발견"은 28pt bold, "/"는 28pt regular
+    private func makeFoundCountText(found: Int, max: Int) -> NSAttributedString {
+        let bold: [NSAttributedString.Key: Any] = [
+            .font: UIFont.systemFont(ofSize: 28, weight: .bold),
+            .foregroundColor: UIColor.label
+        ]
+        let regular: [NSAttributedString.Key: Any] = [
+            .font: UIFont.systemFont(ofSize: 28, weight: .regular),
+            .foregroundColor: UIColor.label,
+            .baselineOffset: 2
+        ]
+
+        let result = NSMutableAttributedString()
+        result.append(NSAttributedString(string: "\(found) ", attributes: bold))
+        result.append(NSAttributedString(string: "/ ", attributes: regular))
+        result.append(NSAttributedString(string: "\(max)장 발견", attributes: bold))
+        return result
     }
 
     // MARK: - Actions

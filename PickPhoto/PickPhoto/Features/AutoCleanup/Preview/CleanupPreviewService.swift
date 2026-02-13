@@ -357,13 +357,14 @@ final class CleanupPreviewService {
 
         // 세션 저장 (마지막 날짜 기록)
         if let lastDate = lastAssetDate {
-            saveSession(lastDate: lastDate)
-
-            // byYear일 때 연도별 세션도 저장 (이어서 정리용)
             if case .byYear(let year, _) = method {
+                // byYear: 연도별 세션만 저장 (메인 이어서 정리 세션에 영향 안 줌)
                 let canContinueByYear = lightCandidates.count >= maxFoundCount ||
                     (totalScanned >= totalToScan && fetchResult.count > maxScanCount)
                 saveByYearSession(year: year, lastDate: lastDate, canContinue: canContinueByYear)
+            } else {
+                // fromLatest / continueFromLast: 메인 세션만 저장
+                saveSession(lastDate: lastDate)
             }
         }
 
