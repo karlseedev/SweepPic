@@ -34,7 +34,6 @@ extension ViewerViewController {
     /// Associated 객체 키 정의
     private enum AssociatedKeys {
         static var faceButtonOverlay: UInt8 = 0
-        static var loadingIndicator: UInt8 = 0
         static var analysisObserver: UInt8 = 0
         static var isSimilarPhotoSetup: UInt8 = 0
         static var currentAnalyzingAssetID: UInt8 = 0
@@ -117,16 +116,6 @@ extension ViewerViewController {
         }
         set {
             objc_setAssociatedObject(self, &AssociatedKeys.faceButtonOverlay, newValue, .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
-        }
-    }
-
-    /// 분석 중 로딩 인디케이터
-    private var analysisLoadingIndicator: AnalysisLoadingIndicator? {
-        get {
-            objc_getAssociatedObject(self, &AssociatedKeys.loadingIndicator) as? AnalysisLoadingIndicator
-        }
-        set {
-            objc_setAssociatedObject(self, &AssociatedKeys.loadingIndicator, newValue, .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
         }
     }
 
@@ -239,17 +228,14 @@ extension ViewerViewController {
         setupFaceButtonOverlay()
         let s1 = CACurrentMediaTime()
 
-        setupLoadingIndicator()
-        let s2 = CACurrentMediaTime()
-
         // 분석 완료 알림 구독
         setupAnalysisObserver()
 
         // 줌 알림 구독
         setupZoomObserver()
-        let s3 = CACurrentMediaTime()
+        let s2 = CACurrentMediaTime()
 
-        Log.print("[Viewer Timing]   setupSimilarPhoto 내부 — faceButtonOverlay: \(String(format: "%.1f", (s1 - s0) * 1000))ms, loadingIndicator: \(String(format: "%.1f", (s2 - s1) * 1000))ms, observers: \(String(format: "%.1f", (s3 - s2) * 1000))ms")
+        Log.print("[Viewer Timing]   setupSimilarPhoto 내부 — faceButtonOverlay: \(String(format: "%.1f", (s1 - s0) * 1000))ms, observers: \(String(format: "%.1f", (s2 - s1) * 1000))ms")
     }
 
     /// 뷰어가 표시될 때 호출
@@ -321,8 +307,6 @@ extension ViewerViewController {
         faceButtonOverlay?.removeFromSuperview()
         faceButtonOverlay = nil
 
-        analysisLoadingIndicator?.removeFromSuperview()
-        analysisLoadingIndicator = nil
     }
 
     // MARK: - Private Methods - Setup
@@ -347,27 +331,6 @@ extension ViewerViewController {
 
         faceButtonOverlay = overlay
         Log.print("[Viewer Timing]     setupFaceButtonOverlay — FaceButtonOverlay(): \(String(format: "%.1f", (fb1-fb0)*1000))ms, addSubview: \(String(format: "%.1f", (fb2-fb1)*1000))ms, constraints: \(String(format: "%.1f", (fb3-fb2)*1000))ms")
-    }
-
-    /// 로딩 인디케이터 설정
-    private func setupLoadingIndicator() {
-        let li0 = CACurrentMediaTime()
-        let indicator = AnalysisLoadingIndicator()
-        let li1 = CACurrentMediaTime()
-        indicator.translatesAutoresizingMaskIntoConstraints = false
-        view.addSubview(indicator)
-        let li2 = CACurrentMediaTime()
-
-        NSLayoutConstraint.activate([
-            indicator.topAnchor.constraint(equalTo: view.topAnchor),
-            indicator.leadingAnchor.constraint(equalTo: view.leadingAnchor),
-            indicator.trailingAnchor.constraint(equalTo: view.trailingAnchor),
-            indicator.bottomAnchor.constraint(equalTo: view.bottomAnchor)
-        ])
-        let li3 = CACurrentMediaTime()
-
-        analysisLoadingIndicator = indicator
-        Log.print("[Viewer Timing]     setupLoadingIndicator — AnalysisLoadingIndicator(): \(String(format: "%.1f", (li1-li0)*1000))ms, addSubview: \(String(format: "%.1f", (li2-li1)*1000))ms, constraints: \(String(format: "%.1f", (li3-li2)*1000))ms")
     }
 
     /// 분석 완료 알림 옵저버 설정
@@ -516,13 +479,11 @@ extension ViewerViewController {
             case .notAnalyzed:
                 // 캐시 miss → 분석 시작
                 currentAnalyzingAssetID = assetID
-                analysisLoadingIndicator?.show()
                 await requestAnalysis(for: asset)
 
             case .analyzing:
                 // 이미 분석 중 → 대기
                 currentAnalyzingAssetID = assetID
-                analysisLoadingIndicator?.show()
             }
         }
     }
@@ -637,8 +598,6 @@ extension ViewerViewController {
             return
         }
 
-        // 로딩 인디케이터 숨김
-        analysisLoadingIndicator?.hide()
         currentAnalyzingAssetID = nil
 
         // 성능 측정: 캐시 miss (분석 포함) 시간 기록
