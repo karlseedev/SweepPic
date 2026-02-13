@@ -160,7 +160,7 @@ final class CleanupMethodSheet {
         let alert = UIAlertController(
             title: "연도 선택",
             message: "정리할 연도를 선택하세요",
-            preferredStyle: .actionSheet
+            preferredStyle: .alert
         )
 
         // 연도별 이어서 정리 버튼 (조건 충족 시 최상단에 표시)
@@ -196,21 +196,6 @@ final class CleanupMethodSheet {
         ) { [self] _ in
             self.showMainActionSheet(from: viewController)
         })
-
-        // iPad 지원 (iOS 26 미만에서만)
-        // iOS 26에서는 기본 동작 사용 (중앙 표시, 취소 버튼 표시)
-        if #unavailable(iOS 26.0) {
-            if let popover = alert.popoverPresentationController {
-                popover.sourceView = viewController.view
-                popover.sourceRect = CGRect(
-                    x: viewController.view.bounds.midX,
-                    y: viewController.view.bounds.midY,
-                    width: 0,
-                    height: 0
-                )
-                popover.permittedArrowDirections = []
-            }
-        }
 
         viewController.present(alert, animated: true)
     }

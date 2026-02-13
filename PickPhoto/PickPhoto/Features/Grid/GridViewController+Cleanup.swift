@@ -54,7 +54,7 @@ extension GridViewController {
         )
         // 전체 메뉴 버튼 (최우측, 탭 시 풀다운 메뉴)
         let menuItem = UIBarButtonItem(
-            image: UIImage(systemName: "line.3.horizontal"),
+            image: UIImage(systemName: "ellipsis"),
             menu: UIMenu(children: [
                 UIAction(title: "자동정리", image: UIImage(systemName: "wand.and.stars")) { _ in },
                 UIAction(title: "사용자", image: UIImage(systemName: "person.circle")) { _ in },

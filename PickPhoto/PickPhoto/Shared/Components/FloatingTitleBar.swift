@@ -218,7 +218,7 @@ final class FloatingTitleBar: UIView {
     /// 메뉴 버튼 (최우측, 햄버거 아이콘)
     /// 탭 시 UIMenu 풀다운 메뉴 표시
     private lazy var menuButton: GlassIconButton = {
-        let button = GlassIconButton(icon: "line.3.horizontal", size: .small, tintColor: .white)
+        let button = GlassIconButton(icon: "ellipsis", size: .medium, tintColor: .white)
         button.translatesAutoresizingMaskIntoConstraints = false
         button.showsMenuAsPrimaryAction = true
         button.isHidden = true // 기본 숨김
