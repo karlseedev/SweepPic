@@ -433,6 +433,13 @@ extension AlbumGridViewController: ViewerViewControllerDelegate {
         didUserScrollAfterReturn = false
     }
 
+    /// 뷰어가 완전히 닫힌 후 호출 (dismiss/pop 애니메이션 완료 후)
+    /// iOS 16~25 Modal (shouldRemovePresentersView=false) 경로에서
+    /// viewWillAppear/viewDidAppear가 호출되지 않으므로 이 콜백으로 처리
+    func viewerDidClose() {
+        applyPendingViewerReturn()
+    }
+
     /// 뷰어 닫힘 후 대기 중인 작업 처리 (전환 완료 후 호출)
     /// - reloadData() 제거: 변경은 viewerDidRequest*에서 이미 reloadItems() 처리됨
     /// - scroll만 수행하여 깜빡임 방지

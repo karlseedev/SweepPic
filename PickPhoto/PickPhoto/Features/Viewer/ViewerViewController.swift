@@ -56,12 +56,18 @@ protocol ViewerViewControllerDelegate: AnyObject {
     /// 정리 미리보기에서 사진 제외 요청
     /// - Parameter assetID: 제외할 사진 ID
     func viewerDidRequestExclude(assetID: String)
+
+    /// 뷰어가 완전히 닫힌 후 호출 (dismiss/pop 애니메이션 완료 후)
+    /// iOS 16~25 Modal (shouldRemovePresentersView=false) 경로에서
+    /// presenting VC의 viewWillAppear/viewDidAppear가 호출되지 않는 문제를 보완
+    func viewerDidClose()
 }
 
 /// ViewerViewControllerDelegate 기본 구현
 /// 기존 Grid/Album/Trash 3곳에서 viewerDidRequestExclude를 구현하지 않아도 컴파일 안전
 extension ViewerViewControllerDelegate {
     func viewerDidRequestExclude(assetID: String) {}
+    func viewerDidClose() {}
 }
 
 /// 전체 화면 사진 뷰어
@@ -196,6 +202,10 @@ final class ViewerViewController: UIViewController {
 
     /// 닫기 애니메이션 중 여부
     private var isDismissing = false
+
+    /// 뷰어 닫힘 확정 플래그 (viewWillDisappear에서 설정, viewDidDisappear에서 사용)
+    /// Apple SDK 권장: isBeingDismissed/isMovingFromParent 판별은 viewWillDisappear에서 수행
+    private var isClosing = false
 
     /// Interactive dismiss 중 활성 IC 참조
     /// ⚠️ popViewController 후 navigationController가 nil이 되어
@@ -370,12 +380,30 @@ final class ViewerViewController: UIViewController {
         // Modal: isBeingDismissed, Navigation Pop: isMovingFromParent
         guard isBeingDismissed || isMovingFromParent else { return }
 
+        // 닫힘 확정 플래그 설정 (viewDidDisappear에서 viewerDidClose 호출에 사용)
+        isClosing = true
+
         // Modal에서는 수동으로 FloatingOverlay 복원
         findTabBarController()?.floatingOverlay?.isHidden = false
 
         // 현재 표시 중인 사진 ID 전달
         let currentAssetID = coordinator.assetID(at: currentIndex)
         delegate?.viewerWillClose(currentAssetID: currentAssetID)
+    }
+
+    override func viewDidDisappear(_ animated: Bool) {
+        super.viewDidDisappear(animated)
+
+        // viewWillDisappear에서 설정한 플래그로 판별
+        // (Apple SDK 권장: isBeingDismissed/isMovingFromParent는 viewWillDisappear에서 체크)
+        guard isClosing else { return }
+        isClosing = false
+
+        // dismiss/pop 애니메이션 완료 후 delegate에 알림
+        // iOS 16~25 Modal (shouldRemovePresentersView=false) 경로에서
+        // presenting VC의 viewWillAppear/viewDidAppear가 호출되지 않으므로
+        // 이 콜백으로 applyPendingViewerReturn() 트리거
+        delegate?.viewerDidClose()
     }
 
     override var preferredStatusBarStyle: UIStatusBarStyle {

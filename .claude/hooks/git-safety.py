@@ -38,6 +38,19 @@ def main():
 
     command = input_data.get("tool_input", {}).get("command", "")
 
+    # codex exec는 -o 옵션으로 출력하므로 안전 — 명시적 허용
+    # (allow 목록 버그 우회: sys.exit(0)은 "의견 없음"이라 permission 재확인됨)
+    if re.search(r"\bcodex\b", command):
+        output = {
+            "hookSpecificOutput": {
+                "hookEventName": "PreToolUse",
+                "permissionDecision": "allow",
+                "permissionDecisionReason": "codex 명령어 — 자동 허용"
+            }
+        }
+        print(json.dumps(output))
+        sys.exit(0)
+
     # =========================================================================
     # 규칙 1: 파일/폴더 삭제 명령어 차단
     # =========================================================================
@@ -159,19 +172,6 @@ def main():
             "WARNING: shred는 파일을 복구 불가능하게 삭제합니다. "
             "실행을 허용하시겠습니까?"
         )
-
-    # codex exec는 -o 옵션으로 출력하므로 안전 — 명시적 허용
-    # (allow 목록 버그 우회: sys.exit(0)은 "의견 없음"이라 permission 재확인됨)
-    if re.search(r"\bcodex\b", command):
-        output = {
-            "hookSpecificOutput": {
-                "hookEventName": "PreToolUse",
-                "permissionDecision": "allow",
-                "permissionDecisionReason": "codex 명령어 — 자동 허용"
-            }
-        }
-        print(json.dumps(output))
-        sys.exit(0)
 
     # 리다이렉션으로 파일 덮어쓰기 (> file)
     # 주의: >>는 추가이므로 덜 위험, >는 덮어쓰기

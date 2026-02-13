@@ -687,6 +687,14 @@ extension TrashAlbumViewController: ViewerViewControllerDelegate {
         Log.print("[TrashAlbumViewController] viewerWillClose - pendingDataRefresh=\(pendingDataRefresh), keeping isViewerOpen=true until animation completes")
     }
 
+    /// 뷰어가 완전히 닫힌 후 호출 (dismiss/pop 애니메이션 완료 후)
+    /// iOS 16~25 Modal (shouldRemovePresentersView=false) 경로에서
+    /// viewWillAppear/viewDidAppear가 호출되지 않으므로 이 콜백으로 갱신 트리거
+    /// iOS 26+ Navigation Pop에서는 viewDidAppear에서도 호출되므로 이중 호출 가능 → 안전 (2차는 no-op)
+    func viewerDidClose() {
+        applyPendingViewerReturn()
+    }
+
     /// 뷰어 닫힘 후 대기 중인 작업 처리 (전환 완료 후 호출)
     /// - 뷰어 상태 해제 및 지연된 데이터 갱신 처리
     /// - scroll만 수행하여 깜빡임 방지
