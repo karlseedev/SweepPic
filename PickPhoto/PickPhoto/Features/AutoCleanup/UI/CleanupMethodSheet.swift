@@ -12,8 +12,6 @@
 
 import UIKit
 import Photos
-import QuartzCore  // CACurrentMediaTime
-import AppCore     // Log
 
 // MARK: - CleanupMethodSheetDelegate
 
@@ -81,7 +79,6 @@ final class CleanupMethodSheet {
 
     /// 메인 ActionSheet 표시
     private func showMainActionSheet(from viewController: UIViewController) {
-        let a0 = CACurrentMediaTime()
         let alert = UIAlertController(
             title: "저품질 사진 정리",
             message: """
@@ -91,7 +88,6 @@ final class CleanupMethodSheet {
                 """,
             preferredStyle: .alert
         )
-        let a1 = CACurrentMediaTime()
 
         // 최신사진부터 정리
         // Note: [self] 강참조 - ActionSheet가 닫힐 때까지 sheet 인스턴스 유지 필요
@@ -101,7 +97,6 @@ final class CleanupMethodSheet {
         ) { [self] _ in
             self.delegate?.cleanupMethodSheet(self, didSelect: .fromLatest)
         })
-        let a2 = CACurrentMediaTime()
 
         // 이어서 정리 (미리보기 세션 기준으로 활성화)
         let continueAction: UIAlertAction
@@ -122,7 +117,6 @@ final class CleanupMethodSheet {
             continueAction.isEnabled = false
         }
         alert.addAction(continueAction)
-        let a3 = CACurrentMediaTime()
 
         // 연도별 정리 (선택 시 연도 목록 로드)
         alert.addAction(UIAlertAction(
@@ -139,12 +133,8 @@ final class CleanupMethodSheet {
         ) { [self] _ in
             self.delegate?.cleanupMethodSheetDidCancel(self)
         })
-        let a4 = CACurrentMediaTime()
 
         viewController.present(alert, animated: true)
-        let a5 = CACurrentMediaTime()
-
-        Log.print("[CleanupLag] alertCreate: \(String(format: "%.1f", (a1-a0)*1000))ms, action1: \(String(format: "%.1f", (a2-a1)*1000))ms, previewService+continueAction: \(String(format: "%.1f", (a3-a2)*1000))ms, restActions: \(String(format: "%.1f", (a4-a3)*1000))ms, present: \(String(format: "%.1f", (a5-a4)*1000))ms, total: \(String(format: "%.1f", (a5-a0)*1000))ms")
     }
 
     /// 연도 목록 로드 후 연도 선택 시트 표시

@@ -110,70 +110,82 @@ extension GridViewController {
         }
     }
 
+    // MARK: - 격리 테스트 (검증 후 제거)
+
+    /// Test C: 빈 VC 위에서 alert — 뷰 계층이 원인인지 확인
+    /// ⚠️ 검증 후 제거
+    override func selectButtonTapped() {
+        let blankVC = UIViewController()
+        blankVC.view.backgroundColor = .white
+        present(blankVC, animated: false) {
+            let alert = UIAlertController(
+                title: "Test C", message: "빈 배경 위 alert", preferredStyle: .alert
+            )
+            alert.addAction(UIAlertAction(title: "OK", style: .default) { _ in
+                blankVC.dismiss(animated: false)
+            })
+            blankVC.present(alert, animated: true)
+        }
+    }
+
     // MARK: - Cleanup Actions
 
-    /// 정리 버튼 탭 핸들러
+    /// Test D: MTKView 숨김 후 alert — MTKView가 원인인지 확인
+    /// ⚠️ 검증 후 제거 (원래 코드 아래 주석)
     @objc func cleanupButtonTapped() {
-        let t0 = CACurrentMediaTime()
+        // 모든 MTKView 숨김
+        if let window = view.window {
+            let mtkViews = LiquidGlassOptimizer.findAllMTKViews(in: window)
+            for mtk in mtkViews {
+                mtk.isHidden = true
+            }
+            Log.print("[CleanupLag] MTKView hidden: \(mtkViews.count)개")
+        }
 
-        // 1. 휴지통 비어있는지 확인
+        let alert = UIAlertController(
+            title: "Test D", message: "MTKView 숨김 후 alert", preferredStyle: .alert
+        )
+        alert.addAction(UIAlertAction(title: "OK", style: .default))
+        present(alert, animated: true)
+    }
+
+    /* 원래 코드 (검증 후 복원)
+    @objc func cleanupButtonTapped() {
         if !CleanupService.shared.isTrashEmpty() {
-            let t1 = CACurrentMediaTime()
             showTrashNotEmptyAlert()
-            let t2 = CACurrentMediaTime()
-            Log.print("[CleanupLag] isTrashEmpty: \(String(format: "%.1f", (t1-t0)*1000))ms, showTrashAlert: \(String(format: "%.1f", (t2-t1)*1000))ms, TOTAL: \(String(format: "%.1f", (t2-t0)*1000))ms")
             return
         }
-        let t1 = CACurrentMediaTime()
-
-        // 2. 정리 방식 선택 시트 표시
         showCleanupMethodSheet()
-        let t2 = CACurrentMediaTime()
-
-        Log.print("[CleanupLag] isTrashEmpty: \(String(format: "%.1f", (t1-t0)*1000))ms, methodSheet: \(String(format: "%.1f", (t2-t1)*1000))ms, total: \(String(format: "%.1f", (t2-t0)*1000))ms")
     }
+    */
 
     // MARK: - Alerts (직접 UIAlertController 사용)
 
     /// 휴지통 비어있지 않음 알림 표시
     private func showTrashNotEmptyAlert() {
-        let b0 = CACurrentMediaTime()
         let alert = UIAlertController(
             title: "저품질 사진 자동 정리",
             message: "저품질 사진 정리 기능을 사용하려면\n휴지통을 먼저 비워주세요",
             preferredStyle: .alert
         )
-        let b1 = CACurrentMediaTime()
 
         alert.addAction(UIAlertAction(title: "휴지통 보기", style: .default) { [weak self] _ in
             self?.navigateToTrash()
         })
 
         alert.addAction(UIAlertAction(title: "취소", style: .cancel))
-        let b2 = CACurrentMediaTime()
 
         present(alert, animated: true)
-        let b3 = CACurrentMediaTime()
-
-        Log.print("[CleanupLag] alertCreate: \(String(format: "%.1f", (b1-b0)*1000))ms, addActions: \(String(format: "%.1f", (b2-b1)*1000))ms, present: \(String(format: "%.1f", (b3-b2)*1000))ms, alertTotal: \(String(format: "%.1f", (b3-b0)*1000))ms")
     }
 
     /// 정리 방식 선택 시트 표시
     private func showCleanupMethodSheet() {
-        let s0 = CACurrentMediaTime()
         let sessionStore = CleanupSessionStore.shared
-        let s1 = CACurrentMediaTime()
         let latest = sessionStore.latestSession
-        let s2 = CACurrentMediaTime()
         let byYear = sessionStore.byYearSession
-        let s3 = CACurrentMediaTime()
         let sheet = CleanupMethodSheet(latestSession: latest, byYearSession: byYear)
         sheet.delegate = self
-        let s4 = CACurrentMediaTime()
         sheet.present(from: self)
-        let s5 = CACurrentMediaTime()
-
-        Log.print("[CleanupLag] sessionStore.shared: \(String(format: "%.1f", (s1-s0)*1000))ms, latestSession: \(String(format: "%.1f", (s2-s1)*1000))ms, byYearSession: \(String(format: "%.1f", (s3-s2)*1000))ms, sheetCreate: \(String(format: "%.1f", (s4-s3)*1000))ms, sheetPresent: \(String(format: "%.1f", (s5-s4)*1000))ms")
     }
 
     /// 정리 시작
