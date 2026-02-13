@@ -218,6 +218,12 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
     func sceneWillResignActive(_ scene: UIScene) {
         // 앱이 비활성 상태가 될 때 처리
         Log.print("[SceneDelegate] Scene will resign active")
+
+        // T084: 자동 정리 진행 중이면 일시정지
+        if CleanupService.shared.isRunning {
+            CleanupService.shared.pauseCleanup()
+            Log.print("[SceneDelegate] Cleanup paused (background)")
+        }
     }
 
     /// Scene이 포그라운드로 진입할 때 호출
@@ -231,6 +237,12 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
 
         // T060: 외부 삭제 처리 - PhotoKit에서 삭제된 사진을 TrashState에서 제거
         cleanupInvalidTrashedAssets()
+
+        // T085: 자동 정리가 일시정지 상태면 자동 재개
+        if let session = CleanupService.shared.currentSession, session.status == .paused {
+            CleanupService.shared.resumeCleanup()
+            Log.print("[SceneDelegate] Cleanup resumed (foreground)")
+        }
 
         Log.print("[SceneDelegate] Scene will enter foreground")
     }

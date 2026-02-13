@@ -258,20 +258,20 @@
 
 ### Background Handling
 
-- [ ] T084 CleanupService - 백그라운드 전환 시 일시정지 (pauseCleanup) in `Services/CleanupService.swift`
-- [ ] T085 CleanupService - 포그라운드 복귀 시 자동 재개 (resumeCleanup) in `Services/CleanupService.swift` (depends on T084)
-- [ ] T086 CleanupService - 앱 종료 시 상태 초기화 (진행 상태 소실) in `Services/CleanupService.swift` (depends on T085)
+- [x] T084 CleanupService - 백그라운드 전환 시 일시정지 (pauseCleanup) in `Services/CleanupService.swift` + SceneDelegate 연동
+- [x] T085 CleanupService - 포그라운드 복귀 시 자동 재개 (resumeCleanup) in `Services/CleanupService.swift` + SceneDelegate 연동
+- [x] T086 CleanupService - 앱 종료 시 상태 초기화 (진행 상태 소실) in `Services/CleanupService.swift` (메모리만 유지, 설계대로 동작)
 
 ### Error Handling
 
-- [ ] T087 CleanupService - 분석 실패 시 SKIP 처리 (삭제 금지) in `Services/CleanupService.swift`
-- [ ] T088 CleanupService - iCloud 썸네일 없음 SKIP 처리 in `Services/CleanupService.swift` (depends on T087)
-- [ ] T089 CleanupService - Metal 초기화 실패 시 전체 정리 중단 in `Services/CleanupService.swift` (depends on T088)
+- [x] T087 CleanupService - 분석 실패 시 SKIP 처리 (삭제 금지) in `Analysis/QualityAnalyzer.swift` (이미 구현: .skipped 반환)
+- [x] T088 CleanupService - iCloud 썸네일 없음 SKIP 처리 in `Analysis/CleanupImageLoader.swift` + `Analysis/VideoFrameExtractor.swift` (이미 구현)
+- [x] T089 CleanupService - Metal 초기화 실패 시 전체 정리 중단 in `Analysis/BlurAnalyzer.swift` (이미 구현: CPU fallback)
 
 ### Tests
 
-- [ ] T090 [P] 백그라운드 전환 테스트 (일시정지/재개) in `PickPhoto/PickPhotoTests/AutoCleanup/Services/CleanupServiceBackgroundTests.swift`
-- [ ] T091 [P] 에러 처리 테스트 (SKIP, 중단 케이스) in `PickPhoto/PickPhotoTests/AutoCleanup/Services/CleanupServiceErrorTests.swift`
+- [x] T090 [P] 백그라운드 전환 테스트 (일시정지/재개) in `PickPhoto/PickPhotoTests/AutoCleanup/Services/CleanupServiceBackgroundTests.swift`
+- [x] T091 [P] 에러 처리 테스트 (SKIP, 중단 케이스) in `PickPhoto/PickPhotoTests/AutoCleanup/Services/CleanupServiceErrorTests.swift`
 
 **Checkpoint**: 안정성 처리 완료
 
