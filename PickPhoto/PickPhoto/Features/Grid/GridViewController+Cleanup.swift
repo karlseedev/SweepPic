@@ -52,12 +52,16 @@ extension GridViewController {
             target: self,
             action: #selector(selectButtonTapped)
         )
-        // 전체 메뉴 버튼 (최우측)
+        // 전체 메뉴 버튼 (최우측, 탭 시 풀다운 메뉴)
         let menuItem = UIBarButtonItem(
             image: UIImage(systemName: "line.3.horizontal"),
-            style: .plain,
-            target: nil,
-            action: nil
+            menu: UIMenu(children: [
+                UIAction(title: "자동정리", image: UIImage(systemName: "wand.and.stars")) { _ in },
+                UIAction(title: "사용자", image: UIImage(systemName: "person.circle")) { _ in },
+                UIAction(title: "구독", image: UIImage(systemName: "creditcard")) { _ in },
+                UIAction(title: "기타", image: UIImage(systemName: "ellipsis")) { _ in },
+                UIAction(title: "고객센터", image: UIImage(systemName: "questionmark.circle")) { _ in },
+            ])
         )
 
         // [정리] [선택] [메뉴] 순서 (배열 첫 번째가 최우측)
