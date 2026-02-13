@@ -68,6 +68,10 @@ final class PreviewGridViewController: UIViewController {
     /// 최종 행동이 기록되었는지 (중복 전송 방지)
     private var analyticsEventSent: Bool = false
 
+    /// 흐름 완료 콜백 (이벤트 7-1: 기존 정리 퍼널 추적용)
+    /// - Parameter: 실제 이동된 사진 수 (닫기면 0)
+    var onFlowComplete: ((Int) -> Void)?
+
     // MARK: - Header (iOS 18 커스텀 헤더)
 
     /// iOS 18 커스텀 헤더 뷰 (FloatingOverlay 대체)
@@ -613,6 +617,9 @@ final class PreviewGridViewController: UIViewController {
         )
 
         AnalyticsService.shared.trackPreviewCleanupCompleted(data: data)
+
+        // [Analytics] 이벤트 7-1: 기존 정리 퍼널 추적 콜백
+        onFlowComplete?(movedCount)
     }
 }
 

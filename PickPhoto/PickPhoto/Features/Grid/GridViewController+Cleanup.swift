@@ -135,8 +135,12 @@ extension GridViewController {
 
     /// 정리 버튼 탭 핸들러
     @objc func cleanupButtonTapped() {
+        // [Analytics] 정리 흐름 추적 시작
+        cleanupTracker = CleanupFlowTracker()
+
         // 1. 휴지통 비어있는지 확인
         if !CleanupService.shared.isTrashEmpty() {
+            cleanupTracker?.trashWarningShown = true
             showTrashNotEmptyAlert()
             return
         }
@@ -156,10 +160,17 @@ extension GridViewController {
         )
 
         alert.addAction(UIAlertAction(title: "휴지통 보기", style: .default) { [weak self] _ in
+            // [Analytics] 휴지통 경고에서 이탈 (휴지통 보기)
+            self?.cleanupTracker?.reachedStage = .trashWarningExit
+            self?.sendCleanupTrackerAndClear()
             self?.navigateToTrash()
         })
 
-        alert.addAction(UIAlertAction(title: "취소", style: .cancel))
+        alert.addAction(UIAlertAction(title: "취소", style: .cancel) { [weak self] _ in
+            // [Analytics] 휴지통 경고에서 이탈 (취소)
+            self?.cleanupTracker?.reachedStage = .trashWarningExit
+            self?.sendCleanupTrackerAndClear()
+        })
 
         present(alert, animated: true)
     }
@@ -199,12 +210,17 @@ extension GridViewController {
 extension GridViewController: CleanupMethodSheetDelegate {
 
     func cleanupMethodSheet(_ sheet: CleanupMethodSheet, didSelect method: CleanupMethod) {
+        // [Analytics] 방식 선택 기록
+        cleanupTracker?.reachedStage = .methodSelected
+        cleanupTracker?.method = mapCleanupMethod(method)
+
         // 모든 정리 방식에서 미리보기 그리드 사용
         startPreviewCleanup(method: method)
     }
 
     func cleanupMethodSheetDidCancel(_ sheet: CleanupMethodSheet) {
-        // 아무 동작 없음
+        // [Analytics] 방식 선택 없이 이탈
+        sendCleanupTrackerAndClear()
     }
 }
 
@@ -220,6 +236,11 @@ extension GridViewController: CleanupProgressViewDelegate {
         } else {
             CleanupService.shared.cancelCleanup()
         }
+
+        // [Analytics] 분석 취소
+        cleanupTracker?.result = .cancelled
+        sendCleanupTrackerAndClear()
+
         view.hide()
     }
 }
@@ -244,6 +265,57 @@ extension GridViewController {
     /// Associated object 키
     private enum AssociatedKeys {
         static var previewService = "previewService"
+        static var cleanupTracker = "cleanupTracker"
+    }
+
+    // MARK: - Cleanup Flow Tracker (이벤트 7-1)
+
+    /// 정리 흐름 추적기 — 버튼 탭부터 최종 이탈까지의 퍼널 데이터 수집
+    private class CleanupFlowTracker {
+        let startTime = CFAbsoluteTimeGetCurrent()
+        var reachedStage: CleanupReachedStage = .buttonTapped
+        var trashWarningShown = false
+        var method: CleanupMethodType?
+        var result: AnalyticsCleanupResult?
+        var foundCount = 0
+        var cancelProgress: Float?
+        var resultAction: CleanupResultAction?
+
+        /// 수집된 데이터를 CleanupEventData로 빌드
+        func buildEventData() -> CleanupEventData {
+            CleanupEventData(
+                reachedStage: reachedStage,
+                trashWarningShown: trashWarningShown,
+                method: method,
+                result: result,
+                foundCount: foundCount,
+                durationSec: CFAbsoluteTimeGetCurrent() - startTime,
+                cancelProgress: cancelProgress,
+                resultAction: resultAction
+            )
+        }
+    }
+
+    /// 정리 흐름 추적기 (associated object)
+    private var cleanupTracker: CleanupFlowTracker? {
+        get { objc_getAssociatedObject(self, &AssociatedKeys.cleanupTracker) as? CleanupFlowTracker }
+        set { objc_setAssociatedObject(self, &AssociatedKeys.cleanupTracker, newValue, .OBJC_ASSOCIATION_RETAIN_NONATOMIC) }
+    }
+
+    /// 추적기 전송 후 해제
+    private func sendCleanupTrackerAndClear() {
+        guard let tracker = cleanupTracker else { return }
+        AnalyticsService.shared.trackCleanupCompleted(data: tracker.buildEventData())
+        cleanupTracker = nil
+    }
+
+    /// CleanupMethod → CleanupMethodType 변환
+    private func mapCleanupMethod(_ method: CleanupMethod) -> CleanupMethodType {
+        switch method {
+        case .fromLatest:        return .fromLatest
+        case .continueFromLast:  return .continueFromLast
+        case .byYear:            return .byYear
+        }
     }
 
     /// 미리보기 정리 시작
@@ -285,13 +357,30 @@ extension GridViewController {
                     self?.previewService = nil
                     progressView.hide {
                         if result.totalCount > 0 {
+                            // [Analytics] 발견 수 기록
+                            self?.cleanupTracker?.foundCount = result.totalCount
+
                             // 미리보기 그리드 push
                             let previewVC = PreviewGridViewController(previewResult: result)
                             previewVC.analysisDuration = analysisDuration  // [Analytics]
                             previewVC.delegate = self
+
+                            // [Analytics] 이벤트 7-1: 미리보기 흐름 완료 콜백
+                            previewVC.onFlowComplete = { [weak self] movedCount in
+                                if movedCount > 0 {
+                                    self?.cleanupTracker?.reachedStage = .cleanupDone
+                                    self?.cleanupTracker?.result = .completed
+                                    self?.cleanupTracker?.foundCount = movedCount
+                                }
+                                self?.sendCleanupTrackerAndClear()
+                            }
+
                             self?.navigationController?.pushViewController(previewVC, animated: true)
                         } else {
-                            // 결과 없음
+                            // [Analytics] 결과 없음
+                            self?.cleanupTracker?.result = .noneFound
+                            self?.sendCleanupTrackerAndClear()
+
                             self?.showNoPreviewResultAlert(method: method)
                         }
                     }
@@ -301,7 +390,13 @@ extension GridViewController {
                     self?.previewService = nil
                     progressView.hide {
                         // 취소(CancellationError)면 에러 표시 안 함
+                        // (취소는 cleanupProgressViewDidTapCancel에서 이미 추적됨)
                         if error is CancellationError { return }
+
+                        // [Analytics] 분석 에러로 이탈
+                        self?.cleanupTracker?.result = .cancelled
+                        self?.sendCleanupTrackerAndClear()
+
                         self?.showCleanupError(.analysisFailed(error.localizedDescription))
                     }
                 }
