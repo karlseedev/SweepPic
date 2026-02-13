@@ -87,6 +87,10 @@ final class GridViewController: BaseGridViewController {
 
     // pendingScrollAssetID → BaseGridViewController로 이동됨
 
+    /// 현재 열린 뷰어 참조 (완전삭제 완료 후 알림용)
+    /// Push/Modal 방식에 무관하게 접근 가능하도록 weak 참조 저장
+    private weak var activeViewerVC: ViewerViewController?
+
     /// 뷰어 복귀 후 사용자가 스크롤했는지 여부
     /// - true이면 applyPendingViewerReturn()에서 강제 스크롤 skip
     private var didUserScrollAfterReturn: Bool = false
@@ -805,6 +809,7 @@ extension GridViewController {
             mode: mode
         )
         viewerVC.delegate = self
+        activeViewerVC = viewerVC  // weak 참조 저장 (완전삭제 완료 후 알림용)
         // [Timing] 탭 시점을 뷰어에 전달 (전체 구간 측정용)
         viewerVC.openStartTime = t0
 
@@ -971,11 +976,9 @@ extension GridViewController: ViewerViewControllerDelegate {
                 Log.print("[GridViewController] Permanently deleted: \(assetID.prefix(8))...")
 
                 // 삭제 완료 후 뷰어에 알림 (메인 스레드에서)
-                // Push 방식이므로 navigationController에서 확인
+                // weak 참조로 접근 (Push/Modal 방식에 무관)
                 await MainActor.run {
-                    if let viewerVC = self.navigationController?.topViewController as? ViewerViewController {
-                        viewerVC.handleDeleteComplete()
-                    }
+                    self.activeViewerVC?.handleDeleteComplete()
                 }
             } catch {
                 Log.print("[GridViewController] Failed to permanently delete: \(error)")
@@ -987,6 +990,8 @@ extension GridViewController: ViewerViewControllerDelegate {
     /// iOS 18+ Zoom Transition 안정화: 전환 중 reloadData/scrollToItem 금지
     /// 실제 처리는 전환 완료 후 applyPendingViewerReturn()에서 수행
     func viewerWillClose(currentAssetID: String?) {
+        // 뷰어 참조 정리
+        activeViewerVC = nil
         // 스크롤 위치만 저장 (전환 완료 후 처리)
         pendingScrollAssetID = currentAssetID
         // 사용자 스크롤 플래그 초기화

@@ -72,6 +72,10 @@ final class TrashAlbumViewController: BaseGridViewController {
     }
     private var pendingFetchState: PendingFetchState = .none
 
+    /// 현재 열린 뷰어 참조 (완전삭제 완료 후 알림용)
+    /// Push/Modal 방식에 무관하게 접근 가능하도록 weak 참조 저장
+    private weak var activeViewerVC: ViewerViewController?
+
     // MARK: - Initial Display Properties
 
     /// 초기 표시 완료 여부
@@ -600,6 +604,7 @@ final class TrashAlbumViewController: BaseGridViewController {
             mode: .trash
         )
         viewerVC.delegate = self
+        activeViewerVC = viewerVC  // weak 참조 저장 (완전삭제 완료 후 알림용)
 
         // iOS 26+: Navigation Push 방식 (시스템 네비바/툴바 사용 가능)
         // iOS 16~25: Modal 방식 (커스텀 줌 트랜지션)
@@ -686,11 +691,9 @@ extension TrashAlbumViewController: ViewerViewControllerDelegate {
                 Log.print("[TrashAlbumViewController] Permanently deleted: \(assetID.prefix(8))...")
 
                 // 삭제 완료 후 뷰어에 알림 (메인 스레드에서)
-                // Push 방식이므로 navigationController에서 확인
+                // weak 참조로 접근 (Push/Modal 방식에 무관)
                 await MainActor.run {
-                    if let viewerVC = self.navigationController?.topViewController as? ViewerViewController {
-                        viewerVC.handleDeleteComplete()
-                    }
+                    self.activeViewerVC?.handleDeleteComplete()
                 }
             } catch {
                 Log.print("[TrashAlbumViewController] Failed to permanently delete: \(error)")
@@ -703,6 +706,8 @@ extension TrashAlbumViewController: ViewerViewControllerDelegate {
     /// 그리드가 이미 정렬된 상태로 애니메이션 시작
     /// sourceViewProvider는 pendingScrollAssetID로 정확한 셀을 찾도록 보정
     func viewerWillClose(currentAssetID: String?) {
+        // 뷰어 참조 정리
+        activeViewerVC = nil
         // 스크롤 위치 저장 (sourceViewProvider 보정 + 전환 완료 후 스크롤용)
         pendingScrollAssetID = currentAssetID
         // 사용자 스크롤 플래그 초기화
@@ -871,6 +876,10 @@ extension TrashAlbumViewController: ZoomTransitionSourceProviding {
     /// - Parameter index: 스크롤할 원본 인덱스
     func scrollToSourceCell(for index: Int) {
         let cellIndexPath = resolvedIndexPath(for: index)
+
+        // 빈 컬렉션뷰에서는 스크롤 불필요 (마지막 사진 삭제 후 dismiss 시)
+        let totalItems = collectionView.numberOfItems(inSection: 0)
+        guard cellIndexPath.item < totalItems else { return }
 
         // 이미 화면에 보이면 스크롤 불필요
         if collectionView.indexPathsForVisibleItems.contains(cellIndexPath) {
