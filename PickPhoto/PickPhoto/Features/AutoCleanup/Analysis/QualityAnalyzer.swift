@@ -154,6 +154,8 @@ final class QualityAnalyzer {
             image = try await imageLoader.loadImage(for: asset)
         } catch {
             // 이미지 로딩 실패 → SKIP
+            // [Analytics] 정리 이미지 로드 실패
+            AnalyticsService.shared.countError(.imageLoad as AnalyticsError.Cleanup)
             if let loadError = error as? CleanupImageLoadError {
                 switch loadError {
                 case .timeout:
@@ -172,6 +174,8 @@ final class QualityAnalyzer {
                 try exposureAnalyzer.analyze(image)
             }
         } catch {
+            // [Analytics] 노출 분석 실패
+            AnalyticsService.shared.countError(.imageLoad as AnalyticsError.Cleanup)
             return QualityResult.skipped(assetID: assetID, creationDate: creationDate, reason: .analysisError)
         }
 
@@ -209,6 +213,8 @@ final class QualityAnalyzer {
                 }
             }
         } catch {
+            // [Analytics] 블러 분석 실패
+            AnalyticsService.shared.countError(.imageLoad as AnalyticsError.Cleanup)
             return QualityResult.skipped(assetID: assetID, creationDate: creationDate, reason: .analysisError)
         }
 
@@ -233,6 +239,8 @@ final class QualityAnalyzer {
                     safeGuardResult = try await safeGuardChecker.checkFaceQuality(image)
                 } catch {
                     // Vision 에러는 무시하고 계속 진행
+                    // [Analytics] SafeGuard 얼굴 감지 실패
+                    AnalyticsService.shared.countError(.detection as AnalyticsError.Face)
                 }
             }
         }
@@ -445,11 +453,17 @@ final class QualityAnalyzer {
             if let extractError = error as? VideoFrameExtractError {
                 switch extractError {
                 case .iCloudOnly:
+                    // [Analytics] iCloud 동영상 스킵
+                    AnalyticsService.shared.countError(.iCloudSkip as AnalyticsError.Video)
                     return QualityResult.skipped(assetID: assetID, creationDate: creationDate, reason: .iCloudOnly)
                 default:
+                    // [Analytics] 프레임 추출 실패
+                    AnalyticsService.shared.countError(.frameExtract as AnalyticsError.Video)
                     return QualityResult.skipped(assetID: assetID, creationDate: creationDate, reason: .analysisError)
                 }
             }
+            // [Analytics] 프레임 추출 실패 (알 수 없는 에러)
+            AnalyticsService.shared.countError(.frameExtract as AnalyticsError.Video)
             return QualityResult.skipped(assetID: assetID, creationDate: creationDate, reason: .analysisError)
         }
 

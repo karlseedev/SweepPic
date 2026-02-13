@@ -216,6 +216,8 @@ public final class TrashStore: TrashStoreProtocol {
                 // 롤백: 상태 복원
                 self?.state.restore(assetID)
                 Log.print("[TrashStore] Failed to move to trash, rolled back: \(error)")
+                // [Analytics] 휴지통 이동 실패
+                Analytics.reporter?.reportError(key: "cleanup.trashMove")
                 DispatchQueue.main.async {
                     completion(.failure(error))
                 }
@@ -245,6 +247,8 @@ public final class TrashStore: TrashStoreProtocol {
                 // 롤백: 상태 복원
                 self?.state.moveToTrash(assetID)
                 Log.print("[TrashStore] Failed to restore, rolled back: \(error)")
+                // [Analytics] 복구 실패
+                Analytics.reporter?.reportError(key: "cleanup.trashMove")
                 DispatchQueue.main.async {
                     completion(.failure(error))
                 }
@@ -342,6 +346,8 @@ public final class TrashStore: TrashStoreProtocol {
                 Log.print("[TrashStore] State saved (\(self.state.trashedCount) items)")
             } catch {
                 Log.print("[TrashStore] Failed to save state: \(error)")
+                // [Analytics] 상태 저장 실패
+                Analytics.reporter?.reportError(key: "storage.trashData")
             }
         }
     }
@@ -358,6 +364,8 @@ public final class TrashStore: TrashStoreProtocol {
                 if let attributes = try? fileManager.attributesOfFileSystem(forPath: NSHomeDirectory()),
                    let freeSpace = attributes[.systemFreeSize] as? Int64,
                    freeSpace < 10_000_000 { // 10MB 미만이면 공간 부족으로 판단
+                    // [Analytics] 디스크 공간 부족
+                    Analytics.reporter?.reportError(key: "storage.diskSpace")
                     completion(.failure(.diskSpaceFull))
                     return
                 }
@@ -369,8 +377,12 @@ public final class TrashStore: TrashStoreProtocol {
                 Log.print("[TrashStore] State saved with completion (\(self.state.trashedCount) items)")
                 completion(.success(()))
             } catch let error as EncodingError {
+                // [Analytics] 인코딩 실패
+                Analytics.reporter?.reportError(key: "storage.trashData")
                 completion(.failure(.encodingFailed(error)))
             } catch {
+                // [Analytics] 파일 시스템 오류
+                Analytics.reporter?.reportError(key: "storage.trashData")
                 completion(.failure(.fileSystemError(error)))
             }
         }
@@ -391,6 +403,8 @@ public final class TrashStore: TrashStoreProtocol {
             Log.print("[TrashStore] State loaded (\(state.trashedCount) items)")
         } catch {
             Log.print("[TrashStore] Failed to load state: \(error)")
+            // [Analytics] 상태 로드 실패
+            Analytics.reporter?.reportError(key: "storage.trashData")
             state = TrashState()
         }
     }

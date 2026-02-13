@@ -149,6 +149,8 @@ final class VideoFrameExtractor {
                 frames.append(cgImage)
             } catch {
                 // 개별 프레임 실패는 계속 진행
+                // [Analytics] 개별 프레임 추출 실패
+                AnalyticsService.shared.countError(.frameExtract as AnalyticsError.Video)
             }
         }
 

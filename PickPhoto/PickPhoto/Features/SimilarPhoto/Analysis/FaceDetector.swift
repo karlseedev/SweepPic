@@ -116,6 +116,8 @@ final class FaceDetector {
         do {
             cgImage = try await imageLoader.loadImage(for: photo)
         } catch {
+            // [Analytics] 얼굴 감지용 이미지 로딩 실패
+            AnalyticsService.shared.countError(.detection as AnalyticsError.Face)
             throw FaceDetectionError.imageLoadFailed(error.localizedDescription)
         }
 
@@ -173,6 +175,8 @@ final class FaceDetector {
         do {
             try handler.perform([request])
         } catch {
+            // [Analytics] Vision 얼굴 감지 실패
+            AnalyticsService.shared.countError(.detection as AnalyticsError.Face)
             throw FaceDetectionError.detectionFailed(error.localizedDescription)
         }
 

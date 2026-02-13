@@ -200,6 +200,8 @@ public final class ThumbnailCache {
                     #if DEBUG
                     Log.print("[ThumbnailCache] Save failed: \(error.localizedDescription)")
                     #endif
+                    // [Analytics] 썸네일 캐시 쓰기 실패
+                    Analytics.reporter?.reportError(key: "storage.thumbnailCache")
                 }
             }
         }
@@ -257,6 +259,8 @@ public final class ThumbnailCache {
                 #if DEBUG
                 Log.print("[ThumbnailCache] Clear failed: \(error.localizedDescription)")
                 #endif
+                // [Analytics] 캐시 클리어 실패
+                Analytics.reporter?.reportError(key: "storage.thumbnailCache")
             }
         }
     }

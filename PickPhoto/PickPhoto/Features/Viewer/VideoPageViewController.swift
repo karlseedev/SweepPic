@@ -332,6 +332,8 @@ final class VideoPageViewController: UIViewController {
                 // 에러 처리
                 if let error = VideoPipeline.error(from: info) {
                     self.hasRequestedVideo = false
+                    // [Analytics] 동영상 로드 실패
+                    AnalyticsService.shared.countError(.viewerOriginal as AnalyticsError.PhotoLoad)
                     self.showError(error.localizedDescription)
                     return
                 }
@@ -420,6 +422,8 @@ final class VideoPageViewController: UIViewController {
             Log.debug("Video", "🔍 KVO playerItem.status: \(item.status.rawValue) - index: \(self.index)")
 
             if item.status == .failed {
+                // [Analytics] 동영상 재생 실패
+                AnalyticsService.shared.countError(.viewerOriginal as AnalyticsError.PhotoLoad)
                 DispatchQueue.main.async {
                     self.showError(item.error?.localizedDescription ?? "재생 실패")
                 }

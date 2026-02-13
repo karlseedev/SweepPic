@@ -141,6 +141,8 @@ final class CleanupService: CleanupServiceProtocol {
         } catch {
             // 에러 발생 시 세션 정리
             currentSession = nil
+            // [Analytics] 정리 시작 실패
+            AnalyticsService.shared.countError(.startFail as AnalyticsError.Cleanup)
             throw error
         }
     }

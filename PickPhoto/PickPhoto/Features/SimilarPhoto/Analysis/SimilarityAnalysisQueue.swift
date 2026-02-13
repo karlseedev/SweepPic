@@ -738,6 +738,8 @@ final class SimilarityAnalysisQueue {
                     faceEmbeddings[faceIdx] = embedding
                 } catch {
                     Log.print("[EmbedFail] Face(\(faceIdx)): \(error.localizedDescription)")
+                    // [Analytics] 얼굴 임베딩 추출 실패
+                    AnalyticsService.shared.countError(.embedding as AnalyticsError.Face)
                     continue
                 }
             }
