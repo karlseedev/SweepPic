@@ -104,6 +104,7 @@ public enum Log {
         // AutoCleanup 기능
         // =============================================
         "QualityAnalyzer": true,     // 현재 작업 중 (ON)
+        "CleanupLag": true,          // 정리버튼 랙 진단 (ON)
         "CleanupService": true,      // 현재 작업 중 (ON)
         "CleanupSessionStore": true, // 현재 작업 중 (ON)
         "AutoCleanup": false,
