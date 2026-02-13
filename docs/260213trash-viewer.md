@@ -147,11 +147,46 @@ T=370ms     viewDidDisappear → applyPendingViewerReturn()
 | 셀 재사용 시 isHidden 잔존 | ✅ applyPendingViewerReturn에서 복원 후 reloadData |
 | 복구된 사진이 현재 뷰어 사진인 경우 | ✅ 뷰어에서 다음 사진으로 이동 후 닫히므로 해당 셀은 현재 인덱스 아님 |
 
+### 최종 수정: pre-fetch + viewerWillClose 즉시 적용 + asset ID 기반 셀 검색
+
+> 커밋 `d6d8783` (4차 시도에서 성공)
+
+**시도 #2 (셀 숨김 단독):** 애니메이션 중 플래시는 해결, 하지만 `isHidden`으로 숨긴 셀이
+`applyPendingViewerReturn`에서 복원될 때 2차 깜빡임 발생 → unhide를 `onDataLoaded`로 이동하여 해결.
+
+**시도 #3 (셀 숨김 + pre-fetch 조합):** 깜빡임은 해결, 하지만 `isHidden`은 레이아웃에 영향을 주지 않아
+복구된 셀의 빈 공간이 보인 후 `reloadData`로 재정렬되는 것이 보임.
+
+**시도 #4 (최종 — pre-fetch + 즉시 reloadData + asset ID 기반 셀 검색):**
+
+핵심: `viewerWillClose()`에서 pre-fetch된 결과를 **즉시 적용** (`reloadData()` 포함).
+reloadData 후 셀 인덱스가 바뀌므로, sourceViewProvider에서 asset ID 기반으로 정확한 셀을 찾는
+`resolvedIndexPath(for:)` 헬퍼 추가.
+
+```swift
+// viewerWillClose에서 pre-fetch 결과 즉시 적용
+case .fetched(let fetchResult):
+    _trashDataSource.setFetchResult(fetchResult)
+    trashedAssetIDSet = trashStore.trashedAssetIDs
+    collectionView.reloadData()  // ★ 애니메이션 전에 그리드 완전 갱신
+
+// sourceViewProvider: asset ID 기반 셀 검색 (인덱스 시프트 보정)
+private func resolvedIndexPath(for originalIndex: Int) -> IndexPath {
+    if let assetID = pendingScrollAssetID,
+       let actualIndex = _trashDataSource.assetIndex(for: assetID) {
+        return IndexPath(item: actualIndex + paddingCellCount, section: 0)
+    }
+    return IndexPath(item: originalIndex + paddingCellCount, section: 0)
+}
+```
+
+**fallback:** pre-fetch 미완료 시 셀 숨김(isHidden)으로 대체.
+
 ### 수정 파일
 
 | 파일 | 수정 내용 |
 |-----|---------|
-| TrashAlbumViewController.swift | `viewerWillClose()` 복구된 셀 숨김 + `applyPendingViewerReturn()` 셀 복원 추가 |
+| TrashAlbumViewController.swift | `PendingFetchState` enum, `viewerWillClose()` 즉시 적용, `resolvedIndexPath()` 헬퍼, sourceViewProvider 3개 메서드 보정 |
 
 ---
 
@@ -224,9 +259,28 @@ func viewerWillClose(currentAssetID: String?) {
 }
 ```
 
+### 수정 결과
+
+> 커밋 `b6de3a4` — 성공
+
+계획대로 `activeViewerVC` weak 참조 방식으로 수정. Push/Modal 방식에 무관하게 동작 확인.
+
+**추가 발견 — 마지막 1장 삭제 시 크래시:**
+
+마지막 사진 완전삭제 → `moveToNextAfterDelete()` → `totalCount == 0` → `dismissWithFadeOut()` 경로에서:
+1. `viewWillDisappear` → `viewerWillClose()` → `pendingFetchState = .empty` → `reloadData()` → 컬렉션뷰 0개 아이템
+2. ZoomAnimator dismiss → `scrollToSourceCell(for: 0)` → 존재하지 않는 IndexPath로 `scrollToItem` 호출
+3. `NSInternalInconsistencyException` 크래시
+
+**수정:** `scrollToSourceCell`에 범위 체크 추가:
+```swift
+let totalItems = collectionView.numberOfItems(inSection: 0)
+guard cellIndexPath.item < totalItems else { return }
+```
+
 ### 수정 파일
 
 | 파일 | 수정 내용 |
 |-----|---------|
-| TrashAlbumViewController.swift | `activeViewerVC` weak 참조 추가 + `openViewer` 저장 + `viewerDidRequestPermanentDelete` 참조 변경 |
-| GridViewController.swift | 동일 패턴 수정 (976행) — `activeViewerVC` weak 참조로 변경 |
+| TrashAlbumViewController.swift | `activeViewerVC` weak 참조 추가 + `openViewer` 저장 + `viewerDidRequestPermanentDelete` 참조 변경 + `scrollToSourceCell` 범위 체크 |
+| GridViewController.swift | 동일 패턴 수정 — `activeViewerVC` weak 참조로 변경 |
