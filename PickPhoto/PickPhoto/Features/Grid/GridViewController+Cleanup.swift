@@ -110,54 +110,19 @@ extension GridViewController {
         }
     }
 
-    // MARK: - 격리 테스트 (검증 후 제거)
-
-    /// Test C: 빈 VC 위에서 alert — 뷰 계층이 원인인지 확인
-    /// ⚠️ 검증 후 제거
-    override func selectButtonTapped() {
-        let blankVC = UIViewController()
-        blankVC.view.backgroundColor = .white
-        present(blankVC, animated: false) {
-            let alert = UIAlertController(
-                title: "Test C", message: "빈 배경 위 alert", preferredStyle: .alert
-            )
-            alert.addAction(UIAlertAction(title: "OK", style: .default) { _ in
-                blankVC.dismiss(animated: false)
-            })
-            blankVC.present(alert, animated: true)
-        }
-    }
-
     // MARK: - Cleanup Actions
 
-    /// Test D: MTKView 숨김 후 alert — MTKView가 원인인지 확인
-    /// ⚠️ 검증 후 제거 (원래 코드 아래 주석)
+    /// 정리 버튼 탭 핸들러
     @objc func cleanupButtonTapped() {
-        // 모든 MTKView 숨김
-        if let window = view.window {
-            let mtkViews = LiquidGlassOptimizer.findAllMTKViews(in: window)
-            for mtk in mtkViews {
-                mtk.isHidden = true
-            }
-            Log.print("[CleanupLag] MTKView hidden: \(mtkViews.count)개")
-        }
-
-        let alert = UIAlertController(
-            title: "Test D", message: "MTKView 숨김 후 alert", preferredStyle: .alert
-        )
-        alert.addAction(UIAlertAction(title: "OK", style: .default))
-        present(alert, animated: true)
-    }
-
-    /* 원래 코드 (검증 후 복원)
-    @objc func cleanupButtonTapped() {
+        // 1. 휴지통 비어있는지 확인
         if !CleanupService.shared.isTrashEmpty() {
             showTrashNotEmptyAlert()
             return
         }
+
+        // 2. 정리 방식 선택 시트 표시
         showCleanupMethodSheet()
     }
-    */
 
     // MARK: - Alerts (직접 UIAlertController 사용)
 

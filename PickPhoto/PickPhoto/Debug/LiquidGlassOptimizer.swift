@@ -69,6 +69,8 @@ enum LiquidGlassOptimizer {
     /// - Parameter rootView: 탐색 시작 뷰 (보통 window)
     static func preload(in rootView: UIView?) {
         guard isEnabled else { return }
+        // iOS 26+: 네이티브 UIGlassEffect 사용 → 앱 MTKView 0개 → Optimizer 불필요
+        if #available(iOS 26.0, *) { return }
         guard let rootView = rootView else { return }
 
         // C-5 fix: 해제된 MTKView의 고아 엔트리 정리
@@ -110,18 +112,14 @@ enum LiquidGlassOptimizer {
                 originalAlpha: mtkView.alpha
             )
             newCount += 1
-
-            // DEBUG: 각 MTKView 프레임 로그
-            Log.print("[LiquidGlass] NEW overlay: frame=\(mtkView.frame), superview=\(type(of: superview)), sv.frame=\(superview.frame)")
         }
-
-        Log.print("[LiquidGlass] Blur preload: new=\(newCount), total=\(preloadedOverlays.count), found=\(mtkViews.count)")
     }
 
     /// 스크롤 시작 시 최적화 적용
     /// - Parameter rootView: 탐색 시작 뷰 (보통 window)
     static func optimize(in rootView: UIView?) {
         guard isEnabled else { return }
+        if #available(iOS 26.0, *) { return }
         guard let rootView = rootView else { return }
 
         switch mode {
@@ -143,6 +141,7 @@ enum LiquidGlassOptimizer {
     /// - Parameter rootView: 탐색 시작 뷰
     static func restore(in rootView: UIView?) {
         guard isEnabled else { return }
+        if #available(iOS 26.0, *) { return }
         guard let rootView = rootView else { return }
 
         switch mode {
@@ -390,15 +389,17 @@ enum LiquidGlassOptimizer {
     static func enterIdle(in rootView: UIView?) {
         guard isEnabled else { return }
 
-        // 기존 타이머 취소 (중복 방지)
+        // 기존 타이머 취소 (중복 방지, iOS 26에서도 안전하게 정리)
         idleTimer?.cancel()
+
+        if #available(iOS 26.0, *) { return }
 
         let workItem = DispatchWorkItem {
             guard let rootView = rootView else { return }
             for mtkView in findAllMTKViews(in: rootView) {
                 mtkView.isPaused = true
             }
-            logMTKViewStatus(in: rootView, label: "Idle")
+            // logMTKViewStatus(in: rootView, label: "Idle")
         }
         idleTimer = workItem
         DispatchQueue.main.asyncAfter(deadline: .now() + idleDelay, execute: workItem)

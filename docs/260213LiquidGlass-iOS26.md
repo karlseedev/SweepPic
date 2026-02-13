@@ -159,3 +159,24 @@ override func didMoveToWindow() {
 3. iOS 26 디바이스에서 `[LiquidGlass]` 로그 미출력 확인
 
 > **참고**: `cancelIdleTimer()`는 가드 불필요. 함수 자체가 가볍고(nil 체크 + cancel), iOS 26에서도 항상 취소 동작을 허용하는 것이 안전.
+
+---
+
+## 수정 결과 (2026-02-13 완료)
+
+### 적용 내용
+- **방안 A + B 모두 적용**
+- 빌드 성공, iOS 26 / iOS 25 이하 모두 정상 동작 확인
+
+### 수정 파일 (5개)
+| 파일 | 수정 내용 |
+|-----|----------|
+| `Debug/LiquidGlassOptimizer.swift` | `preload`, `optimize`, `restore`에 `if #available(iOS 26.0, *) { return }` 추가. `enterIdle`은 `idleTimer?.cancel()` 뒤에 가드 배치 |
+| `Shared/Components/GlassButton.swift` | `didMoveToWindow()`에 iOS 26 가드 추가 |
+| `Shared/Components/GlassCircleButton.swift` | 동일 |
+| `Shared/Components/GlassIconButton.swift` | 동일 |
+| `Shared/Components/GlassTextButton.swift` | 동일 |
+
+### 검증 결과
+- iOS 26: `[LiquidGlass]` 로그 미출력, 그리드 스크롤·뷰어·UIAlertController 정상
+- iOS 25 이하: 기존 idle pause/resume 동작 유지 (mode=.normal 기준)

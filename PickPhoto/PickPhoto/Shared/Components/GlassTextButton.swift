@@ -183,8 +183,10 @@ class GlassTextButton: UIButton {
     }
 
     // C-5: preload() 이후 동적 생성된 버튼도 블러 오버레이 자동 생성
+    // iOS 26+: 네이티브 UIGlassEffect 사용 → MTKView 없음 → preload 불필요
     override func didMoveToWindow() {
         super.didMoveToWindow()
+        if #available(iOS 26.0, *) { return }
         if window != nil && !glassViewSetupDeferred {
             DispatchQueue.main.async { [weak self] in
                 guard let self, self.window != nil else { return }
