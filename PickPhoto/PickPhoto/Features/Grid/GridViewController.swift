@@ -358,6 +358,13 @@ final class GridViewController: BaseGridViewController {
         setupFloatingCleanupButton()
     }
 
+    override func viewWillDisappear(_ animated: Bool) {
+        super.viewWillDisappear(animated)
+
+        // 코치마크가 표시 중이면 dismiss (화면 이탈 시)
+        CoachMarkManager.shared.dismissCurrent()
+    }
+
     override func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
 

@@ -793,6 +793,9 @@ extension BaseGridViewController {
 
     /// 스와이프 시작
     private func handleSwipeDeleteBegan(_ gesture: UIPanGestureRecognizer) {
+        // 코치마크가 표시 중이면 dismiss (실제 제스처 수행 = 학습 완료)
+        CoachMarkManager.shared.dismissCurrent()
+
         let location = gesture.location(in: collectionView)
         guard let indexPath = collectionView.indexPathForItem(at: location),
               indexPath.item >= paddingCellCount,

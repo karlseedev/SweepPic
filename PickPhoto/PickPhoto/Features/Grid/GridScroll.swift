@@ -86,6 +86,9 @@ extension GridViewController {
 
         // [SimilarPhoto] 스크롤 시작 시 분석 취소 및 테두리 숨김
         handleSimilarPhotoScrollStart()
+
+        // 코치마크가 표시 중이면 dismiss (스크롤 시 하이라이트 위치 어긋남 방지)
+        CoachMarkManager.shared.dismissCurrent()
     }
 
     /// 스크롤 종료
@@ -418,6 +421,9 @@ extension GridViewController {
 
         // 정리 버튼 활성화 상태 업데이트 (초기 로딩 완료 후)
         updateCleanupButtonState()
+
+        // 코치마크 A 스케줄 (초기 로딩 완료 후 2초 뒤 표시)
+        scheduleCoachMarkIfNeeded()
     }
 
     /// 맨 아래로 스크롤 (FR-003)
