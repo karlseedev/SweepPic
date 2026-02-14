@@ -4,6 +4,7 @@
 // - 참조: docs/db/260212db-Archi.md 섹션 5.4, 4.2
 
 import Foundation
+import AppCore
 
 extension AnalyticsService {
 
@@ -21,6 +22,7 @@ extension AnalyticsService {
             case .album:   self.counters.photoViewing.fromAlbum += 1
             case .trash:   self.counters.photoViewing.fromTrash += 1
             }
+            Log.print("[Analytics] photoViewed +1 (total=\(self.counters.photoViewing.total), source=\(source))")
         }
     }
 }

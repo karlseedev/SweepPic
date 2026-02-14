@@ -62,6 +62,19 @@ extension GridViewController {
 
 extension GridViewController {
 
+    /// 코치마크 표시를 위한 스크롤 즉시 정지
+    /// - 스크롤 상태 플래그, 타이머, LiquidGlass 최적화를 정리
+    func stopScrollForCoachMark() {
+        collectionView.setContentOffset(collectionView.contentOffset, animated: false)
+        scrollEndTimer?.invalidate()
+        scrollEndTimer = nil
+        isScrolling = false
+
+        // LiquidGlass 최적화 해제
+        LiquidGlassOptimizer.restore(in: view.window)
+        LiquidGlassOptimizer.enterIdle(in: view.window)
+    }
+
     /// 스크롤 시작
     func scrollDidBegin() {
         guard !isScrolling else { return }
@@ -154,6 +167,7 @@ extension GridViewController {
                     self?.logVisibleCellResolution(seq: currentSeq, timing: "0.6s", velocity: velocity)
                 }
             }
+
         }
     }
 
@@ -422,8 +436,8 @@ extension GridViewController {
         // 정리 버튼 활성화 상태 업데이트 (초기 로딩 완료 후)
         updateCleanupButtonState()
 
-        // 코치마크 A 스케줄 (초기 로딩 완료 후 2초 뒤 표시)
-        scheduleCoachMarkIfNeeded()
+        // 코치마크 A: 초기 로딩 완료 후 스크롤 추적 시작
+        // (실제 표시는 1화면 이상 스크롤 후 scrollDidEnd에서 트리거)
     }
 
     /// 맨 아래로 스크롤 (FR-003)

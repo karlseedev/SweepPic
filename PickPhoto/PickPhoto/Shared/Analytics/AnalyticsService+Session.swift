@@ -7,6 +7,7 @@
 
 import Foundation
 import TelemetryDeck
+import AppCore
 
 // MARK: - SessionCounters
 
@@ -84,7 +85,10 @@ extension AnalyticsService {
     /// - sceneDidEnterBackground에서 호출
     /// - barrier sync로 스냅샷 + 리셋 원자적 수행 후 플러시
     func handleSessionEnd() {
-        guard !shouldSkip() else { return }
+        guard !shouldSkip() else {
+            Log.print("[Analytics] handleSessionEnd 스킵 (shouldSkip=true)")
+            return
+        }
 
         // 데드락 방지: queue 자체에서 호출되지 않는지 확인
         dispatchPrecondition(condition: .notOnQueue(queue))
@@ -95,12 +99,14 @@ extension AnalyticsService {
             self.counters = SessionCounters()  // 리셋
             return current
         }
+        Log.print("[Analytics] 세션 종료 — 플러시 시작 (views=\(snapshot.photoViewing.total), deletes=\(snapshot.deleteRestore.gridSwipeDelete))")
         flushCounters(snapshot)
     }
 
     /// 세션 카운터 스냅샷을 시그널로 변환하여 전송
     /// - 각 그룹별로 isZero 확인 → 0이면 해당 시그널 스킵
     private func flushCounters(_ c: SessionCounters) {
+        var sentCount = 0
 
         // ── 이벤트 3: 사진 열람 ──
         if !c.photoViewing.isZero {
@@ -110,6 +116,7 @@ extension AnalyticsService {
                 "fromAlbum":   String(c.photoViewing.fromAlbum),
                 "fromTrash":   String(c.photoViewing.fromTrash),
             ])
+            sentCount += 1
         }
 
         // ── 이벤트 4-1: 보관함/앨범 삭제·복구 ──
@@ -123,6 +130,7 @@ extension AnalyticsService {
                 "fromLibrary":         String(c.deleteRestore.fromLibrary),
                 "fromAlbum":           String(c.deleteRestore.fromAlbum),
             ])
+            sentCount += 1
         }
 
         // ── 이벤트 4-2: 휴지통 뷰어 행동 ──
@@ -131,6 +139,7 @@ extension AnalyticsService {
                 "permanentDelete": String(c.trashViewer.permanentDelete),
                 "restore":         String(c.trashViewer.restore),
             ])
+            sentCount += 1
         }
 
         // ── 이벤트 5-1: 유사 사진 분석 ──
@@ -141,6 +150,7 @@ extension AnalyticsService {
                 "totalGroups":     String(c.similarAnalysis.totalGroups),
                 "avgDurationSec":  String(format: "%.1f", c.similarAnalysis.averageDuration),
             ])
+            sentCount += 1
         }
 
         // ── 이벤트 6: 앱 오류 (비어있으면 스킵) ──
@@ -149,7 +159,10 @@ extension AnalyticsService {
             let params = c.errors.compactMapValues { $0 > 0 ? String($0) : nil }
             if !params.isEmpty {
                 TelemetryDeck.signal("session.errors", parameters: params)
+                sentCount += 1
             }
         }
+
+        Log.print("[Analytics] 플러시 완료 — \(sentCount)건 시그널 전송")
     }
 }

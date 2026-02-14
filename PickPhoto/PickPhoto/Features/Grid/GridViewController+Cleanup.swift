@@ -264,8 +264,8 @@ extension GridViewController {
 
     /// Associated object 키
     private enum AssociatedKeys {
-        static var previewService = "previewService"
-        static var cleanupTracker = "cleanupTracker"
+        static var previewService: UInt8 = 0
+        static var cleanupTracker: UInt8 = 0
     }
 
     // MARK: - Cleanup Flow Tracker (이벤트 7-1)

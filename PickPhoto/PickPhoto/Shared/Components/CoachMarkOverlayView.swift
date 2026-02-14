@@ -83,8 +83,8 @@ final class CoachMarkOverlayView: UIView {
     /// Maroon 딤드 알파 (PhotoCell.dimmedOverlayAlpha와 동일)
     private static let maroonAlpha: CGFloat = 0.60
 
-    /// 스와이프 거리 비율 (셀 너비의 55%)
-    private static let swipeRatio: CGFloat = 0.55
+    /// 스와이프 거리 비율 (셀 너비의 100%)
+    private static let swipeRatio: CGFloat = 1.0
 
     /// 확인 버튼 높이
     private static let buttonHeight: CGFloat = 44
@@ -139,7 +139,7 @@ final class CoachMarkOverlayView: UIView {
     /// 안내 텍스트 라벨
     private let messageLabel: UILabel = {
         let label = UILabel()
-        label.text = "사진을 밀어서 바로 정리하세요\n다시 밀면 복원돼요"
+        label.text = "사진을 밀어서 바로 휴지통으로 보내세요\n다시 밀면 복원돼요"
         label.textColor = .white
         label.font = .systemFont(ofSize: 17, weight: .medium)
         label.textAlignment = .center
@@ -246,10 +246,10 @@ final class CoachMarkOverlayView: UIView {
         )
         snapshot.addSubview(overlay.maroonView)
 
-        // 손가락 아이콘 배치
+        // 손가락 아이콘 배치 (빨간딤드 우측 끝과 x 일치)
         overlay.fingerView.sizeToFit()
         overlay.fingerView.center = CGPoint(
-            x: highlightFrame.midX + highlightFrame.width * 0.1,
+            x: highlightFrame.minX,
             y: highlightFrame.midY
         )
         overlay.fingerView.alpha = 0
@@ -316,16 +316,16 @@ final class CoachMarkOverlayView: UIView {
 
     // MARK: - Hit Test
 
-    /// 확인 버튼만 터치 받고, 나머지는 아래로 통과
-    /// (사용자가 스와이프 시도 가능하도록)
+    /// 확인 버튼만 터치 받고, 나머지는 모두 차단
+    /// (스크롤, 스와이프, 탭 등 모든 상호작용 방지)
     override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
         // 확인 버튼 영역이면 버튼에 전달
         let buttonPoint = confirmButton.convert(point, from: self)
         if confirmButton.bounds.contains(buttonPoint) {
             return confirmButton
         }
-        // 나머지는 아래로 통과
-        return nil
+        // 나머지 터치는 오버레이가 흡수 (아래로 통과 안 함)
+        return self
     }
 
     // MARK: - Actions
@@ -341,7 +341,7 @@ final class CoachMarkOverlayView: UIView {
         // Maroon 딤드를 55% 채운 정적 상태로
         maroonView.frame.size.width = swipeDistance
 
-        // 손가락 아이콘을 셀 오른쪽에 정지 상태로 배치
+        // 손가락 아이콘을 빨간딤드 우측 끝에 정지 상태로 배치
         fingerView.center = CGPoint(
             x: highlightFrame.minX + swipeDistance,
             y: highlightFrame.midY
@@ -359,11 +359,19 @@ final class CoachMarkOverlayView: UIView {
 
     // MARK: - Gesture Animation Loop
 
-    /// 제스처 시연 애니메이션 시작 (5단계 completion 체인, 무한 반복)
+    /// 제스처 시연 애니메이션 루프 (삭제 → 텀 → 복원 → 텀 → 반복)
     private func startGestureLoop() {
         guard !shouldStopAnimation else { return }
+        performDeleteSwipe()
+    }
 
-        // Stage 1: Touch Down — 등장 (0.3초, easeOut)
+    // MARK: - Delete Swipe (→ 오른쪽)
+
+    /// 삭제 스와이프 시연: 터치다운 → 누르기 → 드래그(→) → 릴리즈
+    private func performDeleteSwipe() {
+        guard !shouldStopAnimation else { return }
+
+        // 1) Touch Down — 손가락 등장 (0.3초)
         UIView.animate(
             withDuration: 0.3,
             delay: 0,
@@ -377,7 +385,7 @@ final class CoachMarkOverlayView: UIView {
         ) { [weak self] _ in
             guard let self, !self.shouldStopAnimation else { return }
 
-            // Stage 2: Press — 누르기 (0.2초, spring)
+            // 2) Press — 누르기 (0.2초, spring)
             UIView.animate(
                 withDuration: 0.2,
                 delay: 0,
@@ -392,26 +400,22 @@ final class CoachMarkOverlayView: UIView {
             ) { [weak self] _ in
                 guard let self, !self.shouldStopAnimation else { return }
 
-                // Stage 3: Drag — 스와이프 (0.6초, custom cubic-bezier)
+                // 3) Drag → 오른쪽 (0.3초, cubic-bezier)
                 let timing = UICubicTimingParameters(
                     controlPoint1: CGPoint(x: 0.4, y: 0.0),
                     controlPoint2: CGPoint(x: 0.2, y: 1.0)
                 )
-                let dragAnimator = UIViewPropertyAnimator(
-                    duration: 0.6,
-                    timingParameters: timing
-                )
-                dragAnimator.addAnimations {
+                let animator = UIViewPropertyAnimator(duration: 0.3, timingParameters: timing)
+                animator.addAnimations {
                     self.fingerView.center.x += self.swipeDistance
                     self.fingerView.transform = CGAffineTransform(scaleX: 0.95, y: 0.95)
                         .rotated(by: .pi / 24)
                     self.maroonView.frame.size.width = self.swipeDistance
                 }
-                dragAnimator.addCompletion { [weak self] _ in
+                animator.addCompletion { [weak self] _ in
                     guard let self, !self.shouldStopAnimation else { return }
 
-                    // Stage 4: Release — 떼기 (0.35초)
-                    // 손가락 페이드아웃 (0.2초)
+                    // 4) Release — 손가락만 페이드아웃 (maroon은 유지)
                     UIView.animate(
                         withDuration: 0.2,
                         delay: 0,
@@ -421,37 +425,110 @@ final class CoachMarkOverlayView: UIView {
                             self.fingerView.transform = CGAffineTransform(scaleX: 1.05, y: 1.05)
                             self.fingerView.center.y -= 10
                         }
-                    ) { _ in }
+                    ) { [weak self] _ in
+                        guard let self, !self.shouldStopAnimation else { return }
 
-                    // Maroon 딤드 페이드아웃 (0.15초, 0.2초 delay)
+                        // 텀 (0.5초) → 복원 스와이프
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
+                            self?.performRestoreSwipe()
+                        }
+                    }
+                }
+                animator.startAnimation()
+            }
+        }
+    }
+
+    // MARK: - Restore Swipe (← 왼쪽)
+
+    /// 복원 스와이프 시연: 손가락 오른쪽에서 등장 → 누르기 → 드래그(←) → 릴리즈
+    private func performRestoreSwipe() {
+        guard !shouldStopAnimation else { return }
+
+        // 손가락을 오른쪽 끝(삭제 완료 위치)에 배치
+        fingerView.center = CGPoint(
+            x: highlightFrame.minX + swipeDistance,
+            y: highlightFrame.midY
+        )
+        fingerView.alpha = 0
+        fingerView.transform = CGAffineTransform(scaleX: 1.1, y: 1.1)
+        fingerView.layer.shadowOpacity = 0
+
+        // 1) Touch Down — 손가락 등장 (0.3초)
+        UIView.animate(
+            withDuration: 0.3,
+            delay: 0,
+            options: .curveEaseOut,
+            animations: {
+                self.fingerView.alpha = 1.0
+                self.fingerView.transform = .identity
+                self.fingerView.layer.shadowOpacity = 0.3
+                self.fingerView.layer.shadowRadius = 8
+            }
+        ) { [weak self] _ in
+            guard let self, !self.shouldStopAnimation else { return }
+
+            // 2) Press — 누르기 (0.2초, spring)
+            UIView.animate(
+                withDuration: 0.2,
+                delay: 0,
+                usingSpringWithDamping: 0.7,
+                initialSpringVelocity: 0,
+                options: [],
+                animations: {
+                    self.fingerView.transform = CGAffineTransform(scaleX: 0.95, y: 0.95)
+                    self.fingerView.layer.shadowRadius = 4
+                    self.fingerView.layer.shadowOpacity = 0.2
+                }
+            ) { [weak self] _ in
+                guard let self, !self.shouldStopAnimation else { return }
+
+                // 3) Drag ← 왼쪽 (0.3초, cubic-bezier) — maroon 축소
+                let timing = UICubicTimingParameters(
+                    controlPoint1: CGPoint(x: 0.4, y: 0.0),
+                    controlPoint2: CGPoint(x: 0.2, y: 1.0)
+                )
+                let animator = UIViewPropertyAnimator(duration: 0.3, timingParameters: timing)
+                animator.addAnimations {
+                    self.fingerView.center.x -= self.swipeDistance
+                    self.fingerView.transform = CGAffineTransform(scaleX: 0.95, y: 0.95)
+                        .rotated(by: -.pi / 24)
+                    self.maroonView.frame.size.width = 0
+                }
+                animator.addCompletion { [weak self] _ in
+                    guard let self, !self.shouldStopAnimation else { return }
+
+                    // 4) Release — 손가락 페이드아웃
                     UIView.animate(
-                        withDuration: 0.15,
-                        delay: 0.2,
-                        options: .curveEaseOut,
+                        withDuration: 0.2,
+                        delay: 0,
+                        options: .curveEaseIn,
                         animations: {
-                            self.maroonView.alpha = 0
+                            self.fingerView.alpha = 0
+                            self.fingerView.transform = CGAffineTransform(scaleX: 1.05, y: 1.05)
+                            self.fingerView.center.y -= 10
                         }
                     ) { [weak self] _ in
                         guard let self, !self.shouldStopAnimation else { return }
 
-                        // Stage 5: Pause — 대기 (1.4초) → 리셋 → 재시작
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 1.4) { [weak self] in
+                        // 텀 (0.5초) → 리셋 → 다시 삭제 스와이프부터 반복
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
                             guard let self, !self.shouldStopAnimation else { return }
                             self.resetPositions()
                             self.startGestureLoop()
                         }
                     }
                 }
-                dragAnimator.startAnimation()
+                animator.startAnimation()
             }
         }
     }
 
     /// 모든 뷰를 초기 상태로 리셋
     private func resetPositions() {
-        // 손가락 위치/상태 리셋
+        // 손가락 위치/상태 리셋 (빨간딤드 우측 끝과 x 일치)
         fingerView.center = CGPoint(
-            x: highlightFrame.midX + highlightFrame.width * 0.1,
+            x: highlightFrame.minX,
             y: highlightFrame.midY
         )
         fingerView.alpha = 0

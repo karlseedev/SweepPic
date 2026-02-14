@@ -101,7 +101,7 @@ final class AnalyticsService: AnalyticsServiceProtocol {
     var counters = SessionCounters()
 
     /// 사진 규모 구간 캐싱 값 (포그라운드 진입 시 갱신)
-    private var photoLibraryBucket: String = "unknown"
+    nonisolated(unsafe) private var photoLibraryBucket: String = "unknown"
 
     /// SDK 초기화 여부
     private var isConfigured = false
@@ -133,11 +133,13 @@ final class AnalyticsService: AnalyticsServiceProtocol {
         // 사진 규모 구간을 defaultParameters로 자동 첨부
         config.defaultParameters = { [weak self] in
             guard let self = self else { return [:] }
-            return ["photoLibraryBucket": self.photoLibraryBucket]
+            let bucket = self.queue.sync { self.photoLibraryBucket }
+            return ["photoLibraryBucket": bucket]
         }
 
         TelemetryDeck.initialize(config: config)
         isConfigured = true
+        Log.print("[Analytics] SDK 초기화 완료 (appID: \(appID.prefix(8))...)")
     }
 
     // MARK: - Photo Library Bucket
@@ -148,7 +150,8 @@ final class AnalyticsService: AnalyticsServiceProtocol {
     func refreshPhotoLibraryBucket() {
         let fetchResult = PHAsset.fetchAssets(with: nil)
         let count = fetchResult.count
-        photoLibraryBucket = Self.bucketString(for: count)
+        let bucket = Self.bucketString(for: count)
+        queue.async(flags: .barrier) { self.photoLibraryBucket = bucket }
     }
 
     /// 사진 수 → 규모 구간 문자열 변환

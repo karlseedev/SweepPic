@@ -5,12 +5,12 @@
 //  Created by Claude Code on 2026-02-14.
 //
 //  코치마크 A: 그리드 스와이프 삭제 안내
-//  - finishInitialDisplay 완료 후 2초 뒤 표시
+//  - 사용자가 약 1화면 높이 이상 스크롤하면 즉시 표시 (스크롤 중)
 //  - 화면 중앙 셀을 하이라이트하여 스와이프 시연
 //  - 1회만 표시 (UserDefaults)
 //
-//  트리거: GridScroll.finishInitialDisplay → scheduleCoachMarkIfNeeded()
-//  dismiss: 확인 버튼, 스와이프 시작, 스크롤 시작, 화면 이탈
+//  트리거: scrollViewDidScroll → trackCoachMarkScroll → 누적 >= 1화면 → 즉시 표시
+//  dismiss: 확인 버튼, 스와이프 시작, 새 스크롤 시작, 화면 이탈
 
 import UIKit
 import ObjectiveC
@@ -19,98 +19,107 @@ import ObjectiveC
 
 /// extension stored property를 위한 키
 private enum CoachMarkAssociatedKeys {
-    static var hasScheduledCoachMark: UInt8 = 0
+    static var scrollAccumulated: UInt8 = 0
+    static var lastTrackedOffset: UInt8 = 0
 }
 
 // MARK: - Coach Mark A: Grid Swipe Delete
 
 extension GridViewController {
 
-    /// 코치마크 스케줄 여부 (중복 스케줄 방지)
-    /// extension에서 stored property 불가 → objc_getAssociatedObject 패턴
-    private var hasScheduledCoachMark: Bool {
+    /// 코치마크 트리거용 스크롤 누적 거리 (절대값 합산)
+    private var coachMarkScrollAccumulated: CGFloat {
         get {
-            (objc_getAssociatedObject(self, &CoachMarkAssociatedKeys.hasScheduledCoachMark) as? Bool) ?? false
+            (objc_getAssociatedObject(self, &CoachMarkAssociatedKeys.scrollAccumulated) as? CGFloat) ?? 0
         }
         set {
             objc_setAssociatedObject(
                 self,
-                &CoachMarkAssociatedKeys.hasScheduledCoachMark,
+                &CoachMarkAssociatedKeys.scrollAccumulated,
                 newValue,
                 .OBJC_ASSOCIATION_RETAIN_NONATOMIC
             )
         }
     }
 
-    /// 코치마크 스케줄 (조건 충족 시 2초 후 표시)
-    /// GridScroll.finishInitialDisplay() 끝에서 호출됨
-    func scheduleCoachMarkIfNeeded() {
-        // 중복 스케줄 방지
-        guard !hasScheduledCoachMark else { return }
+    /// 마지막으로 추적한 contentOffset.y (프레임 간 delta 계산용)
+    private var coachMarkLastTrackedOffset: CGFloat {
+        get {
+            (objc_getAssociatedObject(self, &CoachMarkAssociatedKeys.lastTrackedOffset) as? CGFloat) ?? 0
+        }
+        set {
+            objc_setAssociatedObject(
+                self,
+                &CoachMarkAssociatedKeys.lastTrackedOffset,
+                newValue,
+                .OBJC_ASSOCIATION_RETAIN_NONATOMIC
+            )
+        }
+    }
 
+    // MARK: - Scroll Tracking
+
+    /// 스크롤 시작 시 추적 기준점 설정 (scrollViewWillBeginDragging에서 호출)
+    func recordCoachMarkScrollStart(offset: CGFloat) {
+        coachMarkLastTrackedOffset = offset
+    }
+
+    /// scrollViewDidScroll에서 호출 — 누적 거리 실시간 추적, threshold 도달 시 스크롤 정지 후 표시
+    func trackCoachMarkScroll(currentOffset: CGFloat) {
         // 이미 표시된 적 있으면 스킵
         guard !CoachMarkType.gridSwipeDelete.hasBeenShown else { return }
 
-        // 다른 코치마크가 표시 중이면 스킵
+        // 현재 표시 중이거나 표시 대기 중이면 스킵
         guard !CoachMarkManager.shared.isShowing else { return }
 
-        // 초기 표시 완료 확인
+        // 사용자 스크롤만 추적 (프로그래밍 스크롤 제외)
+        guard isScrolling else { return }
+
+        // 초기 표시 완료 전이면 스킵
         guard hasFinishedInitialDisplay else { return }
 
-        // 스크롤 중이면 스킵
-        guard !isScrolling else { return }
+        // 프레임 간 이동 거리 누적 (방향 무관)
+        let delta = abs(currentOffset - coachMarkLastTrackedOffset)
+        coachMarkLastTrackedOffset = currentOffset
+        coachMarkScrollAccumulated += delta
 
-        // VoiceOver 활성화 시 스킵
-        guard !UIAccessibility.isVoiceOverRunning else { return }
+        // 1화면 높이 이상 스크롤했으면 → 스크롤 정지 → 코치마크 표시
+        let threshold = collectionView.bounds.height
+        guard threshold > 0, coachMarkScrollAccumulated >= threshold else { return }
 
-        // 빈 그리드 방어
-        guard dataSourceDriver.count > 0 else { return }
+        // 누적 거리 리셋 (재트리거 방지 + 다음 표시를 위한 초기화)
+        coachMarkScrollAccumulated = 0
 
-        hasScheduledCoachMark = true
+        // 스크롤 즉시 정지 (상태 플래그, 타이머 정리 포함)
+        stopScrollForCoachMark()
 
-        // 2초 후 표시
-        DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) { [weak self] in
+        // 스크롤 정지 후 잠시 안정화 → 셀 위치 정확히 잡은 뒤 표시
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) { [weak self] in
             self?.showGridSwipeDeleteCoachMark()
         }
     }
 
-    /// 코치마크 A 표시
+    // MARK: - Show
+
+    /// 코치마크 A 즉시 표시
     private func showGridSwipeDeleteCoachMark() {
-        // 2초 사이 조건 변경 가능 → 재확인
         guard !CoachMarkType.gridSwipeDelete.hasBeenShown else { return }
         guard !CoachMarkManager.shared.isShowing else { return }
-        guard !isScrolling else {
-            // 스크롤 중이면 다음 기회에 재스케줄 가능하도록 리셋
-            hasScheduledCoachMark = false
-            return
-        }
         guard !UIAccessibility.isVoiceOverRunning else { return }
         guard dataSourceDriver.count > 0 else { return }
 
-        // 화면이 여전히 활성 상태인지 확인
-        guard view.window != nil else {
-            hasScheduledCoachMark = false
-            return
-        }
+        // 화면이 활성 상태인지 확인
+        guard view.window != nil else { return }
 
         // 화면 중앙 셀 찾기
-        guard let (cell, _) = findCenterCell() else {
-            hasScheduledCoachMark = false
-            return
-        }
+        guard let (cell, _) = findCenterCell() else { return }
 
         // 셀 스냅샷 캡처
-        guard let snapshot = cell.snapshotView(afterScreenUpdates: false) else {
-            hasScheduledCoachMark = false
-            return
-        }
+        guard let snapshot = cell.snapshotView(afterScreenUpdates: false) else { return }
 
         // 셀 프레임을 윈도우 좌표로 변환
         guard let window = view.window,
-              let cellFrame = cell.superview?.convert(cell.frame, to: window) else {
-            hasScheduledCoachMark = false
-            return
-        }
+              let cellFrame = cell.superview?.convert(cell.frame, to: window) else { return }
 
         // 코치마크 표시
         CoachMarkOverlayView.show(

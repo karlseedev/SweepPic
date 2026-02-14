@@ -878,9 +878,11 @@ extension BaseGridViewController {
     private func confirmSwipeDelete(cell: PhotoCell, indexPath: IndexPath) {
         let isTrashed = swipeDeleteState.targetIsTrashed
         let toTrashed = !isTrashed
+        Log.print("[Analytics] confirmSwipeDelete 진입 (isTrashed=\(isTrashed), toTrashed=\(toTrashed))")
 
         let actualIndex = indexPath.item - paddingCellCount
         guard let assetID = gridDataSource.assetID(at: actualIndex) else {
+            Log.print("[Analytics] confirmSwipeDelete: assetID 없음 — 취소")
             cancelSwipeDelete(cell: cell)
             return
         }
@@ -890,6 +892,7 @@ extension BaseGridViewController {
 
         cell.confirmDimmedAnimation(toTrashed: toTrashed) { [weak self] in
             guard let self = self else { return }
+            Log.print("[Analytics] confirmDimmedAnimation 완료 — toTrashed=\(toTrashed)")
 
             if toTrashed {
                 AnalyticsService.shared.countGridSwipeDelete(source: analyticsSource)

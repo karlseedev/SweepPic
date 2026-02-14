@@ -851,6 +851,9 @@ extension GridViewController {
     func scrollViewWillBeginDragging(_ scrollView: UIScrollView) {
         scrollDidBegin()
 
+        // [코치마크 A] 스크롤 세션 시작 offset 기록
+        recordCoachMarkScrollStart(offset: scrollView.contentOffset.y)
+
         // 사용자가 스크롤 시작하면 pending 스크롤 취소 (롤백 방지)
         pendingScrollAssetID = nil
         didUserScrollAfterReturn = true
@@ -866,6 +869,9 @@ extension GridViewController {
     }
 
     func scrollViewDidScroll(_ scrollView: UIScrollView) {
+        // [코치마크 A] 스크롤 중 실시간 추적 → threshold 도달 시 즉시 표시
+        trackCoachMarkScroll(currentOffset: scrollView.contentOffset.y)
+
         // [R2] 실시간 velocity 계산 (스크롤 중 최대 속도 측정)
         let currentOffset = scrollView.contentOffset.y
         let currentTime = CACurrentMediaTime()

@@ -25,8 +25,8 @@ public enum Log {
         // =============================================
         // App 라이프사이클
         // =============================================
-        "AppDelegate": false,
-        "SceneDelegate": false,
+        "AppDelegate": true,
+        "SceneDelegate": true,
 
         // =============================================
         // Viewer 관련
@@ -155,6 +155,11 @@ public enum Log {
         "LiquidGlass": true,         // LiquidGlass 최적화 로그
         "LayerDump": false,          // 레이어 덤프 (render hitch 분석)
         "ABTest": true,              // Render A/B 테스트
+
+        // =============================================
+        // Analytics
+        // =============================================
+        "Analytics": true,               // TelemetryDeck SDK 초기화/전송 로그
 
         // =============================================
         // Debug / 기타
