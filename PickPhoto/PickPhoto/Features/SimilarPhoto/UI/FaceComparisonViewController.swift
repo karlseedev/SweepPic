@@ -439,8 +439,7 @@ final class FaceComparisonViewController: UIViewController {
 
     /// 타이틀바 업데이트
     private func updateTitleBar() {
-        let photosForCurrentPerson = photosForPerson(currentPersonIndex)
-        let title = "인물 \(currentPersonIndex) (\(photosForCurrentPerson.count)장)"
+        let title = "유사사진정리 - 인물\(currentPersonIndex)"
 
         if #available(iOS 26.0, *) {
             self.title = title
@@ -452,8 +451,7 @@ final class FaceComparisonViewController: UIViewController {
     /// 네비게이션 타이틀 업데이트 (iOS 26+)
     @available(iOS 26.0, *)
     private func updateNavigationTitle() {
-        let photosForCurrentPerson = photosForPerson(currentPersonIndex)
-        self.title = "인물 \(currentPersonIndex) (\(photosForCurrentPerson.count)장)"
+        self.title = "유사사진정리 - 인물\(currentPersonIndex)"
     }
 
     /// 선택 개수 업데이트

@@ -121,6 +121,7 @@ extension AnalyticsService {
 
         // ── 이벤트 4-1: 보관함/앨범 삭제·복구 ──
         if !c.deleteRestore.isZero {
+            Log.print("[Analytics] flush deleteRestore → gridDel=\(c.deleteRestore.gridSwipeDelete) gridRes=\(c.deleteRestore.gridSwipeRestore) viewerDel=\(c.deleteRestore.viewerSwipeDelete) viewerTrash=\(c.deleteRestore.viewerTrashButton) viewerRes=\(c.deleteRestore.viewerRestoreButton)")
             TelemetryDeck.signal("session.deleteRestore", parameters: [
                 "gridSwipeDelete":     String(c.deleteRestore.gridSwipeDelete),
                 "gridSwipeRestore":    String(c.deleteRestore.gridSwipeRestore),

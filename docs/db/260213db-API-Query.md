@@ -80,6 +80,58 @@ TelemetryDeck SDK가 **빌드 환경에 따라 자동 설정**:
 }
 ```
 
+## 시간별 조회 (granularity + intervals)
+
+`granularity: "hour"`로 시간 단위 데이터 확인 가능. 데이터 도착 여부 디버깅에 유용.
+
+td-query.sh는 `--start/--end/--granularity` 플래그 미지원. **stdin으로 직접 쿼리** 전달:
+
+```bash
+cat <<'QUERY' | bash td-query.sh --test-mode
+{
+  "queryType": "timeseries",
+  "dataSource": "com.simon",
+  "granularity": "hour",
+  "filter": {
+    "type": "selector",
+    "dimension": "type",
+    "value": "PickPhoto.session.deleteRestore"
+  },
+  "intervals": ["2026-02-14T00:00:00Z/2026-02-14T04:00:00Z"],
+  "aggregations": [
+    { "type": "count", "name": "sessions" },
+    { "type": "longSum", "name": "viewerTrashButton", "fieldName": "viewerTrashButton" }
+  ]
+}
+QUERY
+```
+
+- `intervals`: ISO 8601 형식 `"시작/끝"`. relativeIntervals 대신 사용
+- `granularity`: `"all"`, `"day"`, `"hour"` 지원
+
+## 타임스탬프 시간대
+
+서버 응답 타임스탬프는 **UTC+0**. KST 변환 시 +9시간.
+
+| KST | UTC |
+|-----|-----|
+| 10:00 | 01:00 |
+| 22:00 | 13:00 |
+
+세션 시그널 타임스탬프 = **백그라운드 진입(flush) 시점**. 개별 액션 시점이 아님.
+예: 20:50에 삭제 → 21:05에 백그라운드 → 서버 기록은 21:00 UTC 버킷(=06:00 KST 버킷이 아닌 12:00 UTC 버킷)
+
+## longSum aggregation
+
+TelemetryDeck SDK는 파라미터를 **문자열**로 전송하지만, `longSum` aggregation이 숫자 파싱/합산 정상 작동:
+
+```json
+{ "type": "longSum", "name": "viewerTrashButton", "fieldName": "viewerTrashButton" }
+```
+
+- 세션 카운터(gridSwipeDelete, viewerTrashButton 등) 합산에 사용
+- `count`는 시그널 건수(세션 수), `longSum`은 파라미터 값 합산 — 용도 구분 필수
+
 ## 동기 vs 비동기 엔드포인트
 
 | 방식 | 엔드포인트 | 용도 |
@@ -90,6 +142,7 @@ TelemetryDeck SDK가 **빌드 환경에 따라 자동 설정**:
 ## 삽질 기록
 
 - `"dataSource": "telemetry-signals"` → 모든 쿼리 0건. namespace 모드 조직은 `"com.simon"` 필수
-- `"type": "eventCount"` → null 반환. `"type": "count"`만 작동
+- `"type": "eventCount"` → null 반환. `"type": "count"`만 작동. ⚠️ queries/ 내 9개 파일에 아직 `eventCount` 잔존 — `count`로 변경 필요
 - isTestMode 필터 빠뜨리면 디버그+릴리스 합산됨 (의도적이면 OK)
 - dimension을 문자열로 넣으면 에러 → `{"type": "default", "dimension": "...", "outputName": "..."}` 객체 형태 필요
+- 수집 지연: 초기 테스트 시 2~6시간 지연 관찰. 이후 정상화됨 (수분 내 도착). 데이터 미도착 시 시간별 조회로 확인
