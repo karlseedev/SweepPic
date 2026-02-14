@@ -529,12 +529,12 @@
 
 ### Implementation for User Story 4
 
-- [ ] T034 [P] [US4] 토글 버튼 UI 추가 in `PickPhoto/PickPhoto/Features/SimilarPhoto/UI/FaceButtonOverlay.swift`
+- [X] T034 [P] [US4] 토글 버튼 UI 추가 in `PickPhoto/PickPhoto/Features/SimilarPhoto/UI/FaceButtonOverlay.swift`
   - eye/eye.slash 토글 아이콘 (SF Symbol)
   - 위치: 화면 우측 하단 또는 상단 (기존 UI와 충돌 방지)
   - 탭 제스처 핸들러
 
-- [ ] T035 [US4] 토글 상태 관리 in `PickPhoto/PickPhoto/Features/Viewer/ViewerViewController+SimilarPhoto.swift`
+- [X] T035 [US4] 토글 상태 관리 in `PickPhoto/PickPhoto/Features/Viewer/ViewerViewController+SimilarPhoto.swift`
   - `isOverlayHidden: Bool` 상태 변수
   - 토글 시 FaceButtonOverlay.isHidden 설정
   - 다른 사진으로 스와이프 시 `isOverlayHidden = false` 리셋
@@ -550,67 +550,67 @@
 
 ### Edge Cases
 
-- [ ] T036 [P] 유사 사진 3장 미만 처리 in `PickPhoto/PickPhoto/Features/SimilarPhoto/Analysis/SimilarityAnalyzer.swift`
+- [X] T036 [P] 유사 사진 3장 미만 처리 in `PickPhoto/PickPhoto/Features/SimilarPhoto/Analysis/SimilarityAnalyzer.swift`
   - 그룹 생성 조건: 최소 3장 이상
   - 미충족 시 테두리/+버튼 미표시
 
-- [ ] T037 [P] 얼굴 없는 사진 처리 in `PickPhoto/PickPhoto/Features/Viewer/ViewerViewController+SimilarPhoto.swift`
+- [X] T037 [P] 얼굴 없는 사진 처리 in `PickPhoto/PickPhoto/Features/Viewer/ViewerViewController+SimilarPhoto.swift`
   - CachedFace 배열이 비어있으면 +버튼 미표시
   - 로딩 인디케이터 없이 정상 뷰어 표시
 
-- [ ] T038 [P] 작은 얼굴 필터링 in `PickPhoto/PickPhoto/Features/SimilarPhoto/Analysis/FaceDetector.swift`
+- [X] T038 [P] 작은 얼굴 필터링 in `PickPhoto/PickPhoto/Features/SimilarPhoto/Analysis/FaceDetector.swift`
   - 화면 너비 5% 미만 얼굴 제외
   - `isValidFace(boundingBox:viewWidth:)` 메서드
 
-- [ ] T039 [P] 유효 슬롯 미달 처리 in `PickPhoto/PickPhoto/Features/SimilarPhoto/UI/FaceButtonOverlay.swift`
+- [X] T039 [P] 유효 슬롯 미달 처리 in `PickPhoto/PickPhoto/Features/SimilarPhoto/UI/FaceButtonOverlay.swift`
   - 인물 슬롯에 2장 미만 시 해당 인물 +버튼 미표시
   - `isValidSlot` 필터링
 
-- [ ] T040 분석 타임아웃 처리 in `PickPhoto/PickPhoto/Features/SimilarPhoto/Analysis/SimilarityAnalysisQueue.swift`
+- [X] T040 분석 타임아웃 처리 in `PickPhoto/PickPhoto/Features/SimilarPhoto/Analysis/SimilarityAnalysisQueue.swift`
   - 단일 사진 분석 **3초 초과** 시 실패 처리
   - `DispatchWorkItem` 타임아웃 설정
   - 실패 사진은 그룹에 미포함
 
 ### System State Handling
 
-- [ ] T041 [P] 메모리 경고 처리 in `PickPhoto/PickPhoto/Features/SimilarPhoto/Analysis/SimilarityCache.swift`
+- [X] T041 [P] 메모리 경고 처리 in `PickPhoto/PickPhoto/Features/SimilarPhoto/Analysis/SimilarityCache.swift`
   - `UIApplication.didReceiveMemoryWarningNotification` 구독
   - 캐시 **50% LRU 제거**
   - 현재 분석 중인 사진은 eviction 제외
 
-- [ ] T042 [P] 디바이스 과열 처리 in `PickPhoto/PickPhoto/Features/SimilarPhoto/Analysis/SimilarityAnalysisQueue.swift`
+- [X] T042 [P] 디바이스 과열 처리 in `PickPhoto/PickPhoto/Features/SimilarPhoto/Analysis/SimilarityAnalysisQueue.swift`
   - `ProcessInfo.thermalState` 모니터링
   - `.serious`/`.critical` 시 동시 분석 **5개 → 2개**
   - 상태 복구 시 원래 제한으로 복원
 
-- [ ] T043 [P] 백그라운드 전환 처리 in `PickPhoto/PickPhoto/Features/SimilarPhoto/Analysis/SimilarityAnalysisQueue.swift`
+- [X] T043 [P] 백그라운드 전환 처리 in `PickPhoto/PickPhoto/Features/SimilarPhoto/Analysis/SimilarityAnalysisQueue.swift`
   - `UIApplication.didEnterBackgroundNotification` 구독
   - 진행 중인 분석 취소, 캐시 유지
   - 포그라운드 복귀 시 재분석 없음
 
-- [ ] T044 외부 라이브러리 변경 처리 in `PickPhoto/PickPhoto/Features/SimilarPhoto/Analysis/SimilarityCache.swift`
+- [X] T044 외부 라이브러리 변경 처리 in `PickPhoto/PickPhoto/Features/SimilarPhoto/Analysis/SimilarityCache.swift`
   - `PHPhotoLibraryChangeObserver` 연동
   - 변경된 사진의 캐시 무효화
   - 그룹 멤버 변경 시 그룹 재계산
 
 ### Error Handling
 
-- [ ] T045 [P] Vision API 오류 처리 in `PickPhoto/PickPhoto/Features/SimilarPhoto/Analysis/SimilarityAnalyzer.swift`
+- [X] T045 [P] Vision API 오류 처리 in `PickPhoto/PickPhoto/Features/SimilarPhoto/Analysis/SimilarityAnalyzer.swift`
   - 개별 사진 분석 실패 시 해당 사진만 건너뛰기
   - 다른 사진 분석은 계속 진행
   - silent failure (사용자 알림 없음)
   - **전체 분석 실패 시 (화면 내 모든 사진 실패) 기능 비활성화처럼 동작** (spec Error Handling)
 
-- [ ] T046 [P] 이미지 로드 실패 처리 in `PickPhoto/PickPhoto/Features/SimilarPhoto/Analysis/SimilarityImageLoader.swift`
+- [X] T046 [P] 이미지 로드 실패 처리 in `PickPhoto/PickPhoto/Features/SimilarPhoto/Analysis/SimilarityImageLoader.swift`
   - 로드 실패 사진은 분석 실패로 처리
   - 유사 사진 그룹에서 제외
   - 에러 로깅만 수행
 
-- [ ] T047 얼굴 감지 실패 폴백 in `PickPhoto/PickPhoto/Features/SimilarPhoto/Analysis/FaceDetector.swift`
+- [X] T047 얼굴 감지 실패 폴백 in `PickPhoto/PickPhoto/Features/SimilarPhoto/Analysis/FaceDetector.swift`
   - API 오류 시 "얼굴 없음"으로 처리
   - +버튼 미표시, 정상 동작 유지
 
-- [ ] T048 권한 거부 시 기능 비활성화 in `PickPhoto/PickPhoto/Shared/FeatureFlags.swift`
+- [X] T048 권한 거부 시 기능 비활성화 in `PickPhoto/PickPhoto/Shared/FeatureFlags.swift`
   - PHPhotoLibrary 권한 상태 체크 (`PHPhotoLibrary.authorizationStatus()`)
   - 권한 거부/제한 시 `isSimilarPhotoEnabled` false 반환
   - 기존 앱 권한 요청 UI 따름 (spec System State)
@@ -623,30 +623,30 @@
 
 **Purpose**: 전체 기능에 걸친 개선 및 마무리
 
-- [ ] T049 [P] 접근성 처리 통합 in `PickPhoto/PickPhoto/Features/SimilarPhoto/Analysis/SimilarityCache.swift`
+- [X] T049 [P] 접근성 처리 통합 in `PickPhoto/PickPhoto/Features/SimilarPhoto/Analysis/SimilarityCache.swift`
   - VoiceOver 활성화 체크 통합 (`UIAccessibility.isVoiceOverRunning`)
   - 기능 전체 비활성화 로직 일원화
 
-- [ ] T050 [P] 모션 감소 설정 처리 in `PickPhoto/PickPhoto/Features/SimilarPhoto/UI/BorderAnimationLayer.swift`
+- [X] T050 [P] 모션 감소 설정 처리 in `PickPhoto/PickPhoto/Features/SimilarPhoto/UI/BorderAnimationLayer.swift`
   - `UIAccessibility.isReduceMotionEnabled` 체크
   - 정적 테두리로 대체 (흰색 2pt 실선, cornerRadius = 0)
 
-- [ ] T051 [P] 성능 검증 in `PickPhoto/PickPhoto/Features/Grid/GridViewController+SimilarPhoto.swift`
+- [X] T051 [P] 성능 검증 in `PickPhoto/PickPhoto/Features/Grid/GridViewController+SimilarPhoto.swift`
   - 60fps/120fps 스크롤 유지 확인
   - 10개 이상 테두리 동시 표시 시 프레임 드롭 없음
   - Instruments 프로파일링
 
-- [ ] T052 [P] 메모리 누수 검증 in `PickPhoto/PickPhoto/Features/SimilarPhoto/Analysis/SimilarityCache.swift`
+- [X] T052 [P] 메모리 누수 검증 in `PickPhoto/PickPhoto/Features/SimilarPhoto/Analysis/SimilarityCache.swift`
   - Instruments Leaks 도구로 검증
   - 10분간 기능 사용 후 누수 0건 확인
   - LRU eviction 정상 동작 확인
 
-- [ ] T053 quickstart.md 체크리스트 검증
+- [X] T053 quickstart.md 체크리스트 검증
   - 그리드 테두리 체크리스트 통과
   - 뷰어 +버튼 체크리스트 통과
   - 얼굴 비교 화면 체크리스트 통과
 
-- [ ] T054 코드 정리 및 주석 보강
+- [X] T054 코드 정리 및 주석 보강
   - 모든 public 메서드에 상세 주석
   - 복잡한 로직에 인라인 주석
   - CLAUDE.md 코딩 스타일 준수 확인

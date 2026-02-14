@@ -181,8 +181,15 @@
 | 가드 | 설명 |
 |------|------|
 | `!UIAccessibility.isVoiceOverRunning` | VoiceOver 시 제스처/유사사진 기능 비활성화이므로 코치마크도 표시하지 않음 |
-| `!isScrolling` | 스크롤 중에는 표시하지 않음 |
 | 현재 표시 중인 코치마크 없음 | `CoachMarkOverlay.shared`의 큐로 관리 |
+| `targetVC.view.window != nil` | 표시 직전 해당 화면이 여전히 활성 상태인지 재검증 (2초 대기 중 화면 전환 대응) |
+
+화면별 추가 가드:
+
+| 화면 | 가드 | 설명 |
+|------|------|------|
+| Grid (A, C-1, D) | `!isScrolling` | 스크롤 중에는 표시하지 않음 |
+| Viewer (B, C-2) | `!isTransitioning && !isDismissing` | 페이지 전환 중이거나 닫기 제스처 중에는 표시하지 않음 |
 
 ---
 
