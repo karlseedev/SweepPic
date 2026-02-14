@@ -75,7 +75,7 @@ Sources/AppCore/
 │   ├── PhotoLibraryService.swift   # PhotoKit fetch, change observer
 │   ├── AlbumService.swift          # 앨범 목록, 스마트 앨범
 │   ├── ImageCacheManager.swift     # PHCachingImageManager 래퍼
-│   ├── DeletionService.swift       # 삭제 처리 (Undo 없음)
+│   ├── DeletionService.swift       # 삭제 처리
 │   └── ImageRequestCoordinator.swift
 └── Stores/
     ├── PermissionStore.swift
@@ -403,4 +403,4 @@ func handleDeletion(currentIndex: Int, totalCount: Int) -> NavigationAction {
 |------|------|-----------|
 | 1.0 | 2025-12-15 | 초안 작성 |
 | 1.1 | 2025-12-15 | 타깃 디바이스 명시 (iPhone 12~17 Pro, iOS 16+), 120fps 목표 추가 |
-| 1.2 | 2025-12-15 | PRD2와 통합 결정 반영: Undo 제거, 앨범/핀치줌/멀티선택 MVP 포함, 삭제 후 이전 사진 이동 |
+| 1.2 | 2025-12-15 | PRD2와 통합 결정 반영: 앨범/핀치줌/멀티선택 MVP 포함, 삭제 후 이전 사진 이동 |

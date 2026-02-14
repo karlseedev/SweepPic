@@ -138,7 +138,7 @@
 
 - [ ] T047 [US3] 현재 사진 삭제 시 이전/다음 사진 이동 + 모든 사진 삭제 시 그리드 복귀 in `Features/Viewer/ViewerViewController+SimilarPhoto.swift`
 - [ ] T048 [US3] 그룹 멤버 3장 미만 시 그룹 무효화 + 테두리/+버튼 제거, **삭제 후 즉시 재분석하지 않고 다음 스크롤 멈춤 시 자동 재분석** (spec Gesture & Layout) in `Features/SimilarPhoto/Analysis/SimilarityCache.swift`
-- [ ] T049 [US3] Undo 기능 통합 - 기존 TrashStore와 동일 in `Stores/TrashStore.swift`
+- [ ] T049 [US3] 휴지통 복구 통합 - 기존 TrashStore와 동일 in `Stores/TrashStore.swift`
 
 **Checkpoint**: 얼굴 비교 및 삭제 완료 - 핵심 MVP 완성
 

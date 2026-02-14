@@ -487,7 +487,7 @@ eligible = faceWidthOnScreen >= viewerSize.width * 0.05
 
 **TrashStore 동기화:**
 - `TrashStore.moveToTrash(assetIDs:)` 일괄 호출
-- 기존 Undo 기능과 동일하게 동작
+- 기존 휴지통 복구 기능과 동일하게 동작
 - PHPhotoLibraryChangeRequest는 TrashStore 내부에서 처리
 
 **삭제 후 캐시 무효화:**

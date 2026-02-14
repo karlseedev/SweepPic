@@ -755,7 +755,7 @@ similar photo detection features.
 [Testing Instructions]
 - Grant full photo library access when prompted
 - For similar photo feature: requires 50+ photos for meaningful results
-- Swipe up on any photo in the viewer to delete (undo available)
+- Swipe up on any photo in the viewer to delete (restore from trash available)
 - Tap the similar photo button to see grouped similar photos
 
 [Device Tested]
@@ -819,7 +819,7 @@ Apple 기준에서 **다음 조건을 모두 만족**하면 "Data Not Collected"
 | 차별화 기능 | 네이티브 사진 앱 | PickPhoto |
 |------------|:---------------:|:---------:|
 | 스와이프 삭제 | X | **O** — 위로 스와이프로 빠른 삭제 |
-| Undo 기반 안전장치 | X (삭제 확인 다이얼로그) | **O** — 확인 없이 삭제 + 실시간 Undo |
+| 휴지통 복구 기반 안전장치 | X (삭제 확인 다이얼로그) | **O** — 확인 없이 삭제 + 즉시 복구 가능 |
 | 유사 사진 그룹화 | X (iOS 16+은 중복 감지만) | **O** — Vision 기반 유사도 분석 |
 | 자동 얼굴 확대 | X | **O** — 뷰어에서 얼굴 자동 인식/줌 |
 | 사진 정리 생산성 | 범용 뷰어 | **정리 특화** — 빠른 분류에 최적화 |

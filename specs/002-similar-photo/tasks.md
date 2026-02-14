@@ -469,7 +469,7 @@
 - 순환 버튼으로 다음 인물 전환 (선택 상태 유지)
 - 사진 탭으로 선택/해제 토글, 체크마크 표시
 - Delete 탭 시 휴지통 이동 + 그리드 복귀
-- 기존 Undo 기능과 통합
+- 기존 휴지통 복구와 통합
 
 ### Implementation for User Story 3
 
@@ -506,12 +506,12 @@
   - Delete 탭 시 TrashStore.moveToTrash 호출
   - 삭제 후 그리드로 복귀 (뷰어와 얼굴 비교 화면 모두 닫힘)
   - 그룹 멤버 3장 미만 시 그룹 무효화 + 테두리/+버튼 즉시 제거
-  - Undo 지원: 기존 앱 Undo 기능과 동일하게 복구 가능
+  - 휴지통 복구 지원: 기존 앱 휴지통 복구와 동일하게 복구 가능
 
 - [X] T033 [US3] TrashStore 연동 in `PickPhoto/PickPhoto/Stores/TrashStore.swift` (기존 파일 수정)
   - `moveToTrash(assetIDs:)` 호출 시 SimilarityCache 알림
   - NotificationCenter.post로 삭제 이벤트 전파
-  - Undo 시 SimilarityCache 상태 복원
+  - 복구 시 SimilarityCache 상태 복원
 
 **Checkpoint**: 얼굴 비교 화면에서 사진 비교 → 선택 → 삭제 → 그리드 복귀 가능
 

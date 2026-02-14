@@ -129,7 +129,7 @@ similar photo detection features.
 [Testing Instructions]
 - Grant full photo library access when prompted
 - For similar photo feature: requires 50+ photos for meaningful results
-- Swipe up on any photo in the viewer to delete (undo available)
+- Swipe up on any photo in the viewer to delete (restore from trash available)
 - Tap the similar photo button to see grouped similar photos
 
 [Device Tested]
@@ -155,7 +155,7 @@ similar photo detection features.
 | 차별화 기능 | 네이티브 사진 앱 | PickPhoto |
 |------------|:---------------:|:---------:|
 | 스와이프 삭제 | X | **O** — 위로 스와이프로 빠른 삭제 |
-| Undo 기반 안전장치 | X (삭제 확인 다이얼로그) | **O** — 확인 없이 삭제 + 실시간 Undo |
+| 휴지통 복구 기반 안전장치 | X (삭제 확인 다이얼로그) | **O** — 확인 없이 삭제 + 즉시 복구 가능 |
 | 유사 사진 그룹화 | X (iOS 16+은 중복 감지만) | **O** — Vision 기반 유사도 분석 |
 | 자동 얼굴 확대 | X | **O** — 뷰어에서 얼굴 자동 인식/줌 |
 | 사진 정리 생산성 | 범용 뷰어 | **정리 특화** — 빠른 분류에 최적화 |
@@ -194,7 +194,7 @@ similar photo detection features.
 | 2 | 사진 접근 권한: **제한 (.limited)** | 선택된 사진만 표시 + 업그레이드 안내 |
 | 3 | 사진 접근 권한: **거부** | 안내 화면 + 설정 이동 버튼 |
 | 4 | 사진 **0장** | 빈 상태 뷰 (크래시 없음) |
-| 5 | **스와이프 삭제** → Undo → 복구 | 정상 동작, 데이터 무결성 |
+| 5 | **스와이프 삭제** → 휴지통 → 복구 | 정상 동작, 데이터 무결성 |
 | 6 | **유사 사진 분석** | 결과 표시 (50장+ 필요) |
 | 7 | **얼굴 인식** → 자동 줌 | 정상 동작 |
 | 8 | 그리드 ↔ 뷰어 전환 | 자연스러운 전환, 크래시 없음 |
