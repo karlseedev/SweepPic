@@ -1,6 +1,6 @@
 {
   "queryType": "timeseries",
-  "dataSource": "telemetry-signals",
+  "dataSource": "com.simon",
   "granularity": "day",
   "filter": {
     "type": "selector",

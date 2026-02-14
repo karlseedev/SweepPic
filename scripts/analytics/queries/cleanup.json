@@ -1,6 +1,6 @@
 {
   "queryType": "groupBy",
-  "dataSource": "telemetry-signals",
+  "dataSource": "com.simon",
   "granularity": "all",
   "dimensions": [
     { "dimension": "reachedStage", "type": "default", "outputName": "reachedStage" }

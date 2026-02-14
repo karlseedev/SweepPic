@@ -18,8 +18,8 @@
 
 | 파일 | 역할 |
 |------|------|
-| `PickPhoto/Shared/Components/CoachMarkOverlayView.swift` | 코치마크 오버레이 뷰 + CoachMarkManager 싱글톤 + CoachMarkType enum |
-| `PickPhoto/Features/Grid/GridViewController+CoachMark.swift` | 코치마크 A 트리거/표시/dismiss 로직 |
+| `PickPhoto/PickPhoto/Shared/Components/CoachMarkOverlayView.swift` | 코치마크 오버레이 뷰 + CoachMarkManager 싱글톤 + CoachMarkType enum |
+| `PickPhoto/PickPhoto/Features/Grid/GridViewController+CoachMark.swift` | 코치마크 A 트리거/표시/dismiss 로직 |
 
 ### 수정 (2개, 각 1줄)
 
@@ -103,7 +103,7 @@ fingerView:
 
 ```
 duration: 0.6초
-easing: UIView.animate + CAMediaTimingFunction(controlPoints: 0.4, 0.0, 0.2, 1.0)
+easing: UIViewPropertyAnimator + UICubicTimingParameters(controlPoints: 0.4, 0.0, 0.2, 1.0)
         → Google Authentic Motion: 빠른 가속 + 부드러운 감속, 사람 손동작과 유사
 
 fingerView:
@@ -170,16 +170,18 @@ func startGestureLoop() {
         }) { [weak self] _ in
             guard let self, !self.shouldStopAnimation else { return }
 
-            // Stage 3: Drag (0.6초, custom curve via CATransaction)
-            CATransaction.begin()
-            CATransaction.setAnimationTimingFunction(
-                CAMediaTimingFunction(controlPoints: 0.4, 0.0, 0.2, 1.0))
-            UIView.animate(withDuration: 0.6, animations: {
+            // Stage 3: Drag (0.6초, custom curve via UIViewPropertyAnimator)
+            let timing = UICubicTimingParameters(
+                controlPoint1: CGPoint(x: 0.4, y: 0.0),
+                controlPoint2: CGPoint(x: 0.2, y: 1.0))
+            let dragAnimator = UIViewPropertyAnimator(duration: 0.6, timingParameters: timing)
+            dragAnimator.addAnimations {
                 self.fingerView.center.x += self.swipeDistance
                 self.fingerView.transform = CGAffineTransform(scaleX: 0.95, y: 0.95)
                     .rotated(by: .pi / 24)
                 self.maroonView.frame.size.width = self.swipeDistance
-            }) { [weak self] _ in
+            }
+            dragAnimator.addCompletion { [weak self] _ in
                 guard let self, !self.shouldStopAnimation else { return }
 
                 // Stage 4: Release (0.35초, easeIn)
@@ -203,7 +205,7 @@ func startGestureLoop() {
                     }
                 }
             }
-            CATransaction.commit()
+            dragAnimator.startAnimation()
         }
     }
 }
@@ -221,7 +223,7 @@ func stopAnimation() {
 |------|------|------|
 | Touch Down | `.curveEaseOut` | 빠르게 나타나고 부드럽게 안착. 나타나는 애니메이션은 ease-out이 표준 (Val Head) |
 | Press | spring (damping 0.7) | 물리적 누름 + 미세한 바운스. WWDC23 권장: 제스처 피드백에 spring이 가장 자연스러움 |
-| Drag | cubic-bezier(0.4, 0, 0.2, 1) | Google Authentic Motion. 빠른 가속 + 부드러운 감속이 사람 손동작의 속도 곡선과 일치 |
+| Drag | UIViewPropertyAnimator + UICubicTimingParameters(0.4, 0, 0.2, 1) | Google Authentic Motion. 빠른 가속 + 부드러운 감속이 사람 손동작의 속도 곡선과 일치 |
 | Release | `.curveEaseIn` | 사라지는 애니메이션은 ease-in이 표준. 나타나는 것보다 짧게 (300ms 등장 vs 200ms 퇴장) |
 
 ### 타이밍 근거 (NNGroup / Val Head 기반)
@@ -297,8 +299,8 @@ if UIAccessibility.isReduceMotionEnabled {
 - 텍스트: "사진을 밀어서 바로 정리하세요\n다시 밀면 복원돼요"
 - [확인] 버튼: 캡슐형, systemBlue 배경, 흰색 텍스트
 - `show()`: UIWindow에 직접 추가 (ToastView 패턴)
-- `dismiss()`: shouldStopAnimation + removeAllAnimations + 페이드아웃 → removeFromSuperview
-- `hitTest` 오버라이드: [확인] 버튼만 터치 받고, 나머지는 아래로 통과
+- `dismiss()`: shouldStopAnimation + removeAllAnimations + 페이드아웃 → removeFromSuperview. **내부에서 `markAsShown()` 자동 호출** (확인 버튼/제스처 dismiss 모두 동일)
+- `hitTest` 오버라이드: [확인] 버튼만 터치 받고, 나머지는 아래로 통과 (스와이프 가능하되, 스크롤 시작 시 dismiss)
 
 ### Phase 2: 애니메이션 구현
 
@@ -322,17 +324,18 @@ scheduleCoachMarkIfNeeded()
 └── DispatchQueue.main.asyncAfter(2초) → showGridSwipeDeleteCoachMark()
 
 showGridSwipeDeleteCoachMark()
-├── 조건 재확인
+├── 조건 재확인 (실패 시 hasScheduledCoachMark = false로 리셋 → 다음 기회에 재스케줄)
 ├── findCenterCell()
 ├── targetCell.snapshotView(afterScreenUpdates: false)
 ├── cellFrameInWindow()
 └── CoachMarkOverlayView.show(...)
 ```
 
-**화면 이탈 시 dismiss:**
+**dismiss 트리거:**
 ```
-viewWillDisappear()
-└── CoachMarkManager.shared.dismissCurrent()
+viewWillDisappear()           → CoachMarkManager.shared.dismissCurrent()
+scrollViewWillBeginDragging() → CoachMarkManager.shared.dismissCurrent()
+handleSwipeDeleteBegan()      → CoachMarkManager.shared.dismissCurrent()
 ```
 
 ### Phase 4: 기존 파일 수정 (각 1줄)

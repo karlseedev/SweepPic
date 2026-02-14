@@ -1,7 +1,7 @@
 # Query API 분석 스크립트 구현 계획
 
 > **작성일:** 2026-02-13
-> **상태:** 작성 완료
+> **상태:** 구현 완료 + 실측 검증 반영 (2026-02-14)
 > **기반 문서:** 260212db-Archi.md 섹션 7.2~7.9
 > **목적:** Claude가 TelemetryDeck 데이터를 조회·분석할 수 있는 스크립트 구축
 
@@ -176,8 +176,8 @@ jq --arg appID "$APP_ID" --arg testMode "$TEST_MODE" \
 | `cleanup.json` | groupBy | `cleanup.completed` | eventCount | reachedStage별 퍼널 |
 | `preview-cleanup.json` | groupBy | `cleanup.previewCompleted` | eventCount | finalAction별 분포 |
 
-> **aggregation 타입 주의:**
-> - `eventCount`: TelemetryDeck 시그널 건수 카운팅 (~~`count`~~ 는 Druid 내부 row 수이므로 사용 금지)
+> **aggregation 타입 주의 (실측 검증 완료 2026-02-14):**
+> - `count`: 시그널 건수 카운팅 (✅ 정상 작동 확인). ~~`eventCount`~~ 는 `null`을 반환하므로 사용 금지
 > - `longSum`: 파라미터 값(문자열 숫자)을 세션 간 합산 — Druid가 자동 형변환 수행 (구현 후 실측 검증 필수)
 
 #### 예시: app-launched.json (단순 카운팅)
@@ -185,7 +185,7 @@ jq --arg appID "$APP_ID" --arg testMode "$TEST_MODE" \
 ```json
 {
   "queryType": "timeseries",
-  "dataSource": "telemetry-signals",
+  "dataSource": "com.simon",
   "granularity": "day",
   "filter": {
     "type": "selector",
@@ -193,7 +193,7 @@ jq --arg appID "$APP_ID" --arg testMode "$TEST_MODE" \
     "value": "PickPhoto.app.launched"
   },
   "aggregations": [
-    { "type": "eventCount", "name": "launchCount" }
+    { "type": "count", "name": "launchCount" }
   ]
 }
 ```
@@ -203,12 +203,12 @@ jq --arg appID "$APP_ID" --arg testMode "$TEST_MODE" \
 #### 예시: photo-viewing.json (세션 카운터 합산)
 
 세션 카운터 시그널은 파라미터에 숫자 문자열(`"total": "5"`)을 담아 보냄.
-`eventCount`는 세션 수만 세므로, `longSum`으로 실제 값을 합산해야 함.
+`count`는 세션 수만 세므로, `longSum`으로 실제 값을 합산해야 함.
 
 ```json
 {
   "queryType": "timeseries",
-  "dataSource": "telemetry-signals",
+  "dataSource": "com.simon",
   "granularity": "day",
   "filter": {
     "type": "selector",
@@ -216,7 +216,7 @@ jq --arg appID "$APP_ID" --arg testMode "$TEST_MODE" \
     "value": "PickPhoto.session.photoViewing"
   },
   "aggregations": [
-    { "type": "eventCount", "name": "sessions" },
+    { "type": "count", "name": "sessions" },
     { "type": "longSum", "name": "totalViews", "fieldName": "total" },
     { "type": "longSum", "name": "fromLibrary", "fieldName": "fromLibrary" },
     { "type": "longSum", "name": "fromAlbum", "fieldName": "fromAlbum" },
@@ -234,7 +234,7 @@ groupBy의 `dimensions`는 DimensionSpec 객체 배열 필수 (문자열 배열 
 ```json
 {
   "queryType": "groupBy",
-  "dataSource": "telemetry-signals",
+  "dataSource": "com.simon",
   "dimensions": [
     { "dimension": "reachedStage", "type": "default", "outputName": "reachedStage" }
   ],
@@ -244,7 +244,7 @@ groupBy의 `dimensions`는 DimensionSpec 객체 배열 필수 (문자열 배열 
     "value": "PickPhoto.cleanup.completed"
   },
   "aggregations": [
-    { "type": "eventCount", "name": "count" }
+    { "type": "count", "name": "count" }
   ],
   "granularity": "all"
 }
@@ -260,7 +260,7 @@ groupBy의 `dimensions`는 DimensionSpec 객체 배열 필수 (문자열 배열 
 ```json
 {
   "queryType": "timeseries",
-  "dataSource": "telemetry-signals",
+  "dataSource": "com.simon",
   "granularity": "all",
   "filter": {
     "type": "selector",
@@ -268,7 +268,7 @@ groupBy의 `dimensions`는 DimensionSpec 객체 배열 필수 (문자열 배열 
     "value": "PickPhoto.session.errors"
   },
   "aggregations": [
-    { "type": "eventCount", "name": "errorSessions" },
+    { "type": "count", "name": "errorSessions" },
     { "type": "longSum", "name": "photoLoad_gridThumbnail", "fieldName": "photoLoad.gridThumbnail" },
     { "type": "longSum", "name": "photoLoad_viewerOriginal", "fieldName": "photoLoad.viewerOriginal" },
     { "type": "longSum", "name": "photoLoad_iCloudDownload", "fieldName": "photoLoad.iCloudDownload" },
@@ -403,7 +403,20 @@ Claude: "버튼 탭 23건 → 방식 선택 18건(78%) → 완료 15건(65%) →
 - BSD `date`와 GNU `date` 문법 차이 → macOS 호환 코드 작성 필수
 - `isTestMode` 필터: 개발 중엔 `--test-mode` 플래그로 테스트 데이터 포함, 프로덕션에선 기본 제외
 
-### 구현 후 검증 필수 항목
+### 실측 검증 결과 (2026-02-14)
 
-- **`longSum` + 문자열 파라미터 호환성**: 우리 SDK가 `String(count)` 로 보낸 값이 Druid `longSum`으로 합산 가능한지 실측 확인. 안 되면 `doubleSum`으로 대체하거나, `scan` 쿼리 + Claude 파싱 방식으로 전환
+| 항목 | 결과 | 비고 |
+|------|------|------|
+| **dataSource** | ❌→✅ 수정 | `"telemetry-signals"` → 조직 namespace (`"com.simon"`) 사용 필수. namespace 모드 조직은 `GET /api/v3/organizations/` 응답의 `namespace` 값을 사용해야 함 |
+| **aggregation `eventCount`** | ❌ 사용 불가 | `null` 반환. `"count"` 타입이 정상 작동 |
+| **aggregation `count`** | ✅ 정상 | 시그널 건수 카운팅 정상 확인 |
+| **필터 래핑 (appID + isTestMode)** | ✅ 정상 | and 필터로 감싸는 방식 정상 작동 |
+| **relativeIntervals** | ✅ 정상 | offset 기반 날짜 범위 정상 작동 |
+| **groupBy DimensionSpec** | ✅ 정상 | 객체 배열 방식 정상 작동 |
+| **비동기 3단계 (submit→poll→value)** | ✅ 정상 | 동기 endpoint(`/calculate/`)도 사용 가능 |
+| **td-report.sh 8개 쿼리 일괄** | ✅ 정상 | 실패 0건으로 전체 리포트 생성 확인 |
+
+### 미검증 항목 (데이터 축적 후 확인 필요)
+
+- **`longSum` + 문자열 파라미터 호환성**: 우리 SDK가 `String(count)` 로 보낸 값이 Druid `longSum`으로 합산 가능한지 실측 확인 필요. 안 되면 `doubleSum`으로 대체하거나, `scan` 쿼리 + Claude 파싱 방식으로 전환
 - **파라미터 키의 점(.) 포함 이름**: `"photoLoad.gridThumbnail"` 같은 키가 TQL dimension/fieldName으로 정상 작동하는지 확인. 문제 시 에러 파라미터 키를 밑줄(`_`)로 변경 필요
