@@ -103,6 +103,21 @@ final class FaceButtonOverlay: UIView {
         return button
     }()
 
+    /// 사진 번호 라벨 (유사 그룹 내 순서 표시)
+    /// "3 / 8" 형식으로 현재 사진의 그룹 내 위치를 표시합니다.
+    private lazy var photoNumberLabel: UILabel = {
+        let label = UILabel()
+        label.font = .systemFont(ofSize: 14, weight: .bold)
+        label.textColor = .white
+        label.backgroundColor = UIColor.black.withAlphaComponent(0.6)
+        label.textAlignment = .center
+        label.layer.cornerRadius = 4
+        label.clipsToBounds = true
+        label.translatesAutoresizingMaskIntoConstraints = false
+        label.isHidden = true
+        return label
+    }()
+
     // MARK: - Initialization
 
     override init(frame: CGRect) {
@@ -144,6 +159,26 @@ final class FaceButtonOverlay: UIView {
 
             Log.print("[Viewer Timing]     FaceButtonOverlay.setupUI — toggleButton lazy생성: \(String(format: "%.1f", (ui1-ui0)*1000))ms, addSubview: \(String(format: "%.1f", (ui2-ui1)*1000))ms, constraints: \(String(format: "%.1f", (ui3-ui2)*1000))ms")
         }
+
+        // 사진 번호 라벨 추가 (iOS 버전별 위치 분기)
+        addSubview(photoNumberLabel)
+        if #available(iOS 26.0, *) {
+            // iOS 26+: 시스템 네비바 사용 → safeArea 바로 아래에 배치
+            NSLayoutConstraint.activate([
+                photoNumberLabel.topAnchor.constraint(equalTo: safeAreaLayoutGuide.topAnchor, constant: 16),
+                photoNumberLabel.leadingAnchor.constraint(equalTo: safeAreaLayoutGuide.leadingAnchor, constant: 16),
+                photoNumberLabel.widthAnchor.constraint(greaterThanOrEqualToConstant: 44),
+                photoNumberLabel.heightAnchor.constraint(equalToConstant: 24)
+            ])
+        } else {
+            // iOS 16~25: 커스텀 뒤로가기 버튼(safeArea+16) 아래에 배치
+            NSLayoutConstraint.activate([
+                photoNumberLabel.topAnchor.constraint(equalTo: safeAreaLayoutGuide.topAnchor, constant: 68),
+                photoNumberLabel.leadingAnchor.constraint(equalTo: safeAreaLayoutGuide.leadingAnchor, constant: 16),
+                photoNumberLabel.widthAnchor.constraint(greaterThanOrEqualToConstant: 44),
+                photoNumberLabel.heightAnchor.constraint(equalToConstant: 24)
+            ])
+        }
     }
 
     // MARK: - Public Methods
@@ -161,6 +196,21 @@ final class FaceButtonOverlay: UIView {
     /// 외부에서 토글 기능 호출 (iOS 26 네비게이션 바 버튼용)
     func toggleOverlay() {
         toggleButtonTapped()
+    }
+
+    /// 사진 번호를 표시합니다.
+    /// - Parameters:
+    ///   - number: 그룹 내 순서 (1-based)
+    ///   - total: 그룹 총 멤버 수
+    func showPhotoNumber(_ number: Int, total: Int) {
+        photoNumberLabel.text = " \(number) / \(total) "
+        // 라벨 표시는 +버튼 표시 시 함께 처리 (showButtons 내부)
+    }
+
+    /// 사진 번호를 숨기고 초기화합니다.
+    func hidePhotoNumber() {
+        photoNumberLabel.isHidden = true
+        photoNumberLabel.text = nil
     }
 
     /// 얼굴에 +버튼을 표시합니다.
@@ -228,13 +278,18 @@ final class FaceButtonOverlay: UIView {
         toggleButton.isHidden = false
         bringSubviewToFront(toggleButton)
 
-        // 페이드인 애니메이션
+        // 페이드인 애니메이션 (+버튼 + 사진 번호 라벨)
         for button in faceButtons {
             button.alpha = 0
         }
+        photoNumberLabel.alpha = 0
+        photoNumberLabel.isHidden = (photoNumberLabel.text == nil)
         UIView.animate(withDuration: Constants.animationDuration) {
             for button in self.faceButtons {
                 button.alpha = 1
+            }
+            if self.photoNumberLabel.text != nil {
+                self.photoNumberLabel.alpha = 1
             }
         }
     }
@@ -245,8 +300,10 @@ final class FaceButtonOverlay: UIView {
             for button in self.faceButtons {
                 button.alpha = 0
             }
+            self.photoNumberLabel.alpha = 0
         }, completion: { _ in
             self.removeAllButtons()
+            self.photoNumberLabel.isHidden = true
         })
     }
 
@@ -256,6 +313,7 @@ final class FaceButtonOverlay: UIView {
         for button in faceButtons {
             button.alpha = 0
         }
+        photoNumberLabel.alpha = 0
     }
 
     /// 줌 상태 기반으로 +버튼을 재표시합니다.
@@ -311,10 +369,14 @@ final class FaceButtonOverlay: UIView {
             }
         }
 
-        // 페이드인 애니메이션
+        // 페이드인 애니메이션 (+버튼 + 사진 번호 라벨)
+        photoNumberLabel.isHidden = (photoNumberLabel.text == nil)
         UIView.animate(withDuration: Constants.animationDuration) {
             for button in self.faceButtons {
                 button.alpha = 1
+            }
+            if self.photoNumberLabel.text != nil {
+                self.photoNumberLabel.alpha = 1
             }
         }
     }
@@ -365,6 +427,7 @@ final class FaceButtonOverlay: UIView {
         updateToggleIcon()
         removeAllButtons()
         toggleButton.isHidden = true
+        hidePhotoNumber()
     }
 
     /// 버튼만 제거하고 줌/토글 상태는 유지 (얼굴 그리드에서 복귀 시)
@@ -484,11 +547,12 @@ final class FaceButtonOverlay: UIView {
         updateToggleIcon()
 
         if isOverlayHidden {
-            // 버튼 숨기기 (페이드아웃)
+            // 버튼 + 라벨 숨기기 (페이드아웃)
             UIView.animate(withDuration: Constants.animationDuration) {
                 for button in self.faceButtons {
                     button.alpha = 0
                 }
+                self.photoNumberLabel.alpha = 0
             }
         } else {
             // 버튼 다시 표시 (기존 얼굴로)

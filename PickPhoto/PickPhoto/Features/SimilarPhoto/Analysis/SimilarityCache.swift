@@ -36,6 +36,9 @@ protocol SimilarityCacheProtocol: Actor {
     /// 그룹별 유효 인물 슬롯을 조회합니다.
     func getGroupValidPersonIndices(for groupID: String) -> Set<Int>
 
+    /// 그룹 멤버 목록을 조회합니다.
+    func getGroupMembers(groupID: String) -> [String]
+
     /// 그룹에서 멤버를 제거합니다.
     @discardableResult
     func removeMemberFromGroup(_ assetID: String, groupID: String) -> Bool

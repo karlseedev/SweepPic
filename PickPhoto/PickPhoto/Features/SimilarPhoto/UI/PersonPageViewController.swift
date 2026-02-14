@@ -63,6 +63,11 @@ protocol FaceComparisonDataSource: AnyObject {
 
     /// 그리드 contentInset (플로팅 UI 높이 반영)
     var contentInsetForGrid: UIEdgeInsets { get }
+
+    /// 사진 번호 조회 (SimilarThumbnailGroup.memberAssetIDs 기반 1-based)
+    /// - Parameter assetID: 사진 ID
+    /// - Returns: 그룹 내 순서 번호 (없으면 0)
+    func photoNumber(for assetID: String) -> Int
 }
 
 // MARK: - PersonPageViewController
@@ -170,13 +175,12 @@ final class PersonPageViewController: UIViewController {
 
     // MARK: - Helpers
 
-    /// 디버그 텍스트 생성 (예: a1, a2, b1, b2)
-    private func debugText(for indexPath: IndexPath) -> String {
+    /// 사진 번호 텍스트 생성 (SimilarThumbnailGroup.memberAssetIDs 기반)
+    /// 뷰어에 표시되는 번호와 동일하여 사진-얼굴 매칭 확인이 가능합니다.
+    private func photoNumberText(for assetID: String) -> String {
         guard let dataSource = dataSource else { return "" }
-
-        let personAlphabetIndex = dataSource.validPersonIndices.firstIndex(of: personIndex) ?? 0
-        let personAlphabet = String(UnicodeScalar("a".unicodeScalars.first!.value + UInt32(personAlphabetIndex))!)
-        return "\(personAlphabet)\(indexPath.item + 1)"
+        let number = dataSource.photoNumber(for: assetID)
+        return number > 0 ? "\(number)" : ""
     }
 }
 
@@ -207,7 +211,7 @@ extension PersonPageViewController: UICollectionViewDataSource {
 
         let assetID = photos[indexPath.item]
         let isSelected = dataSource.isSelected(assetID)
-        let debugText = debugText(for: indexPath)
+        let numberText = photoNumberText(for: assetID)
 
         // 셀 재사용 안전장치: 현재 assetID 저장
         cell.currentAssetID = assetID
@@ -218,12 +222,12 @@ extension PersonPageViewController: UICollectionViewDataSource {
             guard cell?.currentAssetID == assetID else { return }
 
             DispatchQueue.main.async {
-                cell?.configure(with: image, isSelected: isSelected, assetID: assetID, debugText: debugText)
+                cell?.configure(with: image, isSelected: isSelected, assetID: assetID, debugText: numberText)
             }
         }
 
         // 이미지 로드 전 placeholder 표시
-        cell.configure(with: nil, isSelected: isSelected, assetID: assetID, debugText: debugText)
+        cell.configure(with: nil, isSelected: isSelected, assetID: assetID, debugText: numberText)
 
         return cell
     }

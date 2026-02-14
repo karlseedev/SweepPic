@@ -88,6 +88,10 @@ final class FaceComparisonViewController: UIViewController {
     /// 사진별 얼굴 정보 (assetID → [CachedFace])
     private var photoFaces: [String: [CachedFace]] = [:]
 
+    /// 사진 번호 맵 (assetID → 1-based 순서)
+    /// SimilarThumbnailGroup.memberAssetIDs 기반으로, 뷰어와 동일한 번호를 보장합니다.
+    private var memberNumberMap: [String: Int] = [:]
+
     /// 선택된 사진 ID 집합
     private var selectedAssetIDs: Set<String> = []
 
@@ -383,13 +387,21 @@ final class FaceComparisonViewController: UIViewController {
         Log.print("[FaceComparisonViewController] Asset cache built: \(assetCache.count) assets")
     }
 
-    /// 사진별 얼굴 정보 로드
+    /// 사진별 얼굴 정보 로드 + 사진 번호 맵 구축
     private func loadPhotoFaces() {
         Task { @MainActor in
+            // 얼굴 정보 로드
             for assetID in comparisonGroup.selectedAssetIDs {
                 let faces = await cache.getFaces(for: assetID)
                 photoFaces[assetID] = faces
             }
+
+            // 사진 번호 맵 구축 (SimilarThumbnailGroup.memberAssetIDs 기반)
+            let groupMembers = await cache.getGroupMembers(groupID: comparisonGroup.sourceGroupID)
+            for (index, assetID) in groupMembers.enumerated() {
+                memberNumberMap[assetID] = index + 1  // 1-based
+            }
+
             isPhotoFacesLoaded = true
             setupInitialPageIfReady()
         }
@@ -621,6 +633,10 @@ extension FaceComparisonViewController: FaceComparisonDataSource {
 
     func isSelected(_ assetID: String) -> Bool {
         return selectedAssetIDs.contains(assetID)
+    }
+
+    func photoNumber(for assetID: String) -> Int {
+        return memberNumberMap[assetID] ?? 0
     }
 
     func toggleSelection(for assetID: String) {

@@ -502,6 +502,15 @@ extension ViewerViewController {
             return
         }
 
+        // 사진 번호 계산: SimilarThumbnailGroup.memberAssetIDs 기반 1-based 인덱스
+        let state = await SimilarityCache.shared.getState(for: assetID)
+        if case .analyzed(true, let groupID?) = state,
+           let group = await SimilarityCache.shared.getGroup(groupID: groupID) {
+            if let memberIndex = group.memberAssetIDs.firstIndex(of: assetID) {
+                faceButtonOverlay?.showPhotoNumber(memberIndex + 1, total: group.memberCount)
+            }
+        }
+
         // 현재 사진 크기 가져오기
         guard let asset = coordinator.asset(at: currentIndex) else { return }
         let imageSize = CGSize(width: asset.pixelWidth, height: asset.pixelHeight)
