@@ -366,6 +366,9 @@ final class ViewerViewController: UIViewController {
         // [LiquidGlass 최적화] 블러 뷰 사전 생성 + idle pause
         LiquidGlassOptimizer.preload(in: view.window)
         LiquidGlassOptimizer.enterIdle(in: view.window)
+
+        // [진단] 빨간 사각형 애니메이션 테스트
+        scheduleViewerCoachMarkIfNeeded()
     }
 
     // MARK: - Rotation

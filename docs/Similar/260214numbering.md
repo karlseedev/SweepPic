@@ -32,12 +32,18 @@ ComparisonGroup.selectedAssetIDs = [A, C, D]  (거리순 3장 선택)
 
 | 항목 | 내용 |
 |------|------|
-| 위치 | 좌측 상단, **뒤로가기 버튼 아래** (leading: 16, top: safeArea + 68) |
 | 형태 | 반투명 검정 배경 배지 (cornerRadius: 4) |
 | 폰트 | .systemFont(ofSize: 14, weight: .bold), 흰색 |
 | 내용 | `3 / 8` (그룹 내 순서 / 총 멤버 수) |
 | 표시 조건 | +버튼이 보일 때만 함께 표시 |
 | 숨김 조건 | 아래 상태별 동작 표 참조 |
+
+#### 라벨 위치 (iOS 버전별 분기)
+
+| iOS 버전 | 위치 | 이유 |
+|---------|------|------|
+| iOS 16~25 | leading: 16, top: **safeArea + 68** | 커스텀 뒤로가기 버튼(safeArea+16)과 겹침 방지 |
+| iOS 26+ | leading: 16, top: **safeArea + 16** | 시스템 네비바가 뒤로가기 처리, FaceButtonOverlay에 커스텀 버튼 없음 |
 
 #### FaceButtonOverlay 상태별 photoNumberLabel 동작
 
@@ -65,10 +71,10 @@ ComparisonGroup.selectedAssetIDs = [A, C, D]  (거리순 3장 선택)
 | # | 파일 | 수정 내용 |
 |---|------|----------|
 | 1 | `SimilarityCache.swift` | SimilarityCacheProtocol에 `getGroupMembers(groupID:)` 추가 |
-| 2 | `FaceButtonOverlay.swift` | photoNumberLabel 추가, showPhotoNumber/hidePhotoNumber, 각 상태 메서드에 라벨 처리 |
+| 2 | `FaceButtonOverlay.swift` | photoNumberLabel 추가, showPhotoNumber/hidePhotoNumber, 각 상태 메서드에 라벨 처리, iOS 버전별 위치 분기 |
 | 3 | `ViewerViewController+SimilarPhoto.swift` | showFaceButtons 내에서 그룹 조회 → 번호 전달 |
 | 4 | `FaceComparisonViewController.swift` | memberAssetIDs 순서 맵 캐싱, photoNumber(for:) 구현 |
-| 5 | `PersonPageViewController.swift` | debugText 로직: "a1" → 사진 번호 기반으로 변경 |
+| 5 | `PersonPageViewController.swift` | FaceComparisonDataSource 프로토콜에 `photoNumber(for:) -> Int` 추가, debugText 로직 변경 |
 
 ## 데이터 흐름
 
@@ -81,9 +87,10 @@ showFaceButtons(for: assetID)
   → faceButtonOverlay.showPhotoNumber(photoNumber, total: memberCount)
 
 [얼굴 그리드]
-FaceComparisonViewController.viewDidLoad
+FaceComparisonViewController.loadPhotoFaces()   ← 기존 로딩 흐름에 통합
   → cache.getGroupMembers(sourceGroupID) → memberAssetIDs
   → memberNumberMap 구축: [assetID: 1-based index]
+  → (photoFaces 로딩과 동시에 완료되므로 별도 준비 플래그 불필요)
 
 PersonPageViewController.cellForItemAt
   → dataSource.photoNumber(for: assetID) → memberNumberMap에서 조회

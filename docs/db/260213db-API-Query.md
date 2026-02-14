@@ -8,7 +8,8 @@
 |------|-----|------|
 | dataSource | `"com.simon"` | 조직 namespace. `"telemetry-signals"` 사용하면 0건 반환 |
 | appID 필터 | `"B42FE72D-8A4F-4EA8-90C5-6E2EFA0E7ECC"` | .env의 TELEMETRYDECK_APP_ID |
-| aggregation type | `"count"` | `"eventCount"`는 null 반환. 절대 쓰지 말 것 |
+| aggregation type (건수) | `"eventCount"` | 원본 이벤트 수 (rollup 전). TelemetryDeck 커스텀 |
+| aggregation type (행수) | `"count"` | Druid 물리적 행 수 (rollup 후). 일반적으로 불필요 |
 
 ## isTestMode 분리
 
@@ -142,7 +143,7 @@ TelemetryDeck SDK는 파라미터를 **문자열**로 전송하지만, `longSum`
 ## 삽질 기록
 
 - `"dataSource": "telemetry-signals"` → 모든 쿼리 0건. namespace 모드 조직은 `"com.simon"` 필수
-- `"type": "eventCount"` → null 반환. `"type": "count"`만 작동. ⚠️ queries/ 내 9개 파일에 아직 `eventCount` 잔존 — `count`로 변경 필요
+- `eventCount` vs `count` 혼동 주의: `eventCount`=원본 이벤트 수(rollup 전), `count`=Druid 행 수(rollup 후). 세션 시그널 건수에는 `eventCount` 사용. 동일 구간에서 eventCount=16, count=12 차이 확인됨 (4건이 rollup으로 합쳐짐)
 - isTestMode 필터 빠뜨리면 디버그+릴리스 합산됨 (의도적이면 OK)
 - dimension을 문자열로 넣으면 에러 → `{"type": "default", "dimension": "...", "outputName": "..."}` 객체 형태 필요
 - 수집 지연: 초기 테스트 시 2~6시간 지연 관찰. 이후 정상화됨 (수분 내 도착). 데이터 미도착 시 시간별 조회로 확인
