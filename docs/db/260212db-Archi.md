@@ -352,21 +352,29 @@ struct SessionCounters {
     /// 값: 발생 횟수
     var errors: [String: Int] = [:]
 
+    // ── 이벤트 8: 그리드 성능 ──
+    struct GridPerformance {
+        var grayShown: Int = 0       // 회색 셀 노출 횟수
+
+        var isZero: Bool { grayShown == 0 }
+    }
+
     // ── 그룹 인스턴스 ──
     var photoViewing = PhotoViewing()
     var deleteRestore = DeleteRestore()
     var trashViewer = TrashViewer()
     var similarAnalysis = SimilarAnalysis()
+    var gridPerformance = GridPerformance()
 }
 ```
 
 **오류 키 규칙:**
 
-| 카테고리 | 항목 | 키 |
-|---------|------|-----|
-| 사진 로딩 | 그리드 썸네일 | `photoLoad.gridThumbnail` |
-| 사진 로딩 | 뷰어 원본 | `photoLoad.viewerOriginal` |
-| 사진 로딩 | iCloud 다운로드 | `photoLoad.iCloudDownload` |
+| 카테고리 | 항목 | 키 | 구현 상태 |
+|---------|------|-----|----------|
+| 사진 로딩 | 그리드 썸네일 | `photoLoad.gridThumbnail` | **미연결** — ImagePipeline에서 PHImageErrorKey 체크 후 연결 필요 |
+| 사진 로딩 | 뷰어 원본 | `photoLoad.viewerOriginal` | 연결됨 |
+| 사진 로딩 | iCloud 다운로드 | `photoLoad.iCloudDownload` | **해당없음** — MVP에서 iCloud 다운로드 비활성화 (`isNetworkAccessAllowed = false`) |
 | 얼굴 감지 | 감지 실패 | `face.detection` |
 | 얼굴 감지 | 임베딩 실패 | `face.embedding` |
 | 정리 | 시작 불가 | `cleanup.startFail` |
@@ -486,6 +494,13 @@ private func flushCounters(_ c: SessionCounters) {
             TelemetryDeck.signal("session.errors", parameters: params)
         }
     }
+
+    // ── 이벤트 8: 그리드 성능 ──
+    if !c.gridPerformance.isZero {
+        TelemetryDeck.signal("session.gridPerformance", parameters: [
+            "grayShown": String(c.gridPerformance.grayShown),
+        ])
+    }
 }
 ```
 
@@ -498,6 +513,7 @@ private func flushCounters(_ c: SessionCounters) {
 | `session.trashViewer` | 4-2 | 세션당 0~1건 |
 | `session.similarAnalysis` | 5-1 | 세션당 0~1건 |
 | `session.errors` | 6 | 세션당 0~1건 |
+| `session.gridPerformance` | 8 | 세션당 0~1건 |
 
 > `defaultSignalPrefix`를 `"PickPhoto."`로 설정하면 실제 전송되는 이름은 `PickPhoto.session.photoViewing` 등이 된다.
 
@@ -614,6 +630,7 @@ flushCounters(snapshot)
 | 6 | 앱 오류 | `session.errors` | 세션 요약 | 0~13 |
 | 7-1 | 기존 정리 | `cleanup.completed` | 즉시 (종료 시) | 8 |
 | 7-2 | 미리보기 정리 | `cleanup.previewCompleted` | 즉시 (종료 시) | 9 |
+| 8 | 그리드 성능 | `session.gridPerformance` | 세션 요약 | 1 |
 
 > `defaultSignalPrefix`를 `"PickPhoto."`로 설정 시 실제 전송 이름은 `PickPhoto.app.launched` 등이 된다.
 
@@ -795,6 +812,10 @@ func countError(_ error: AnalyticsError.Cleanup)
 func countError(_ error: AnalyticsError.Video)
 func countError(_ error: AnalyticsError.Storage)
 // → errors[error.rawValue, default: 0] += 1
+
+// ── 이벤트 8: 그리드 성능 ──
+func countGrayShown()
+// → counters.gridPerformance.grayShown += 1
 ```
 
 > **오류 카운팅 참고:** 오버로드된 `countError()` 메서드로 enum별 타입 안전성 확보. 내부적으로 모두 `errors[key] += 1`로 통일.
@@ -955,6 +976,9 @@ protocol AnalyticsServiceProtocol: AnyObject {
     func countError(_ error: AnalyticsError.Cleanup)
     func countError(_ error: AnalyticsError.Video)
     func countError(_ error: AnalyticsError.Storage)
+
+    // 이벤트 8: 그리드 성능
+    func countGrayShown()
 
     // ══════════════════════════════════════
     // 그룹별 즉시 전송
