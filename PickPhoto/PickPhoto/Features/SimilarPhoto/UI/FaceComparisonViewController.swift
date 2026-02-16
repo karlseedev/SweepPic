@@ -451,7 +451,7 @@ final class FaceComparisonViewController: UIViewController {
 
     /// 타이틀바 업데이트
     private func updateTitleBar() {
-        let title = "유사사진정리 - 인물\(currentPersonIndex)"
+        let title = "유사사진정리 - 인물 \(currentPersonArrayIndex + 1)"
 
         if #available(iOS 26.0, *) {
             self.title = title
