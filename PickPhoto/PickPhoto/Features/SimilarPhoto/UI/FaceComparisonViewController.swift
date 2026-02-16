@@ -783,6 +783,9 @@ extension FaceComparisonViewController: UIPageViewControllerDelegate {
         // 타이틀바 업데이트
         updateTitleBar()
 
+        // 선택 상태 경량 갱신 (prefetch된 페이지의 stale 선택 상태 보정)
+        currentPage.refreshSelectionStates()
+
         Log.print("[FaceComparisonViewController] Page transition completed to person \(currentPage.personIndex)")
     }
 }

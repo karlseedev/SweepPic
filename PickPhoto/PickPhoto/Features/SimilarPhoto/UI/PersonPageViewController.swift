@@ -173,6 +173,18 @@ final class PersonPageViewController: UIViewController {
         collectionView.reloadData()
     }
 
+    /// 화면에 보이는 셀의 선택 상태를 최신 값으로 갱신합니다.
+    /// 이미지 재로드 없이 체크마크만 갱신하므로 깜빡임이 없습니다.
+    func refreshSelectionStates() {
+        guard let dataSource = dataSource else { return }
+        for cell in collectionView.visibleCells {
+            if let faceCell = cell as? FaceComparisonCell,
+               let assetID = faceCell.currentAssetID {
+                faceCell.setSelected(dataSource.isSelected(assetID))
+            }
+        }
+    }
+
     // MARK: - Helpers
 
     /// 사진 번호 텍스트 생성 (SimilarThumbnailGroup.memberAssetIDs 기반)
@@ -216,13 +228,13 @@ extension PersonPageViewController: UICollectionViewDataSource {
         // 셀 재사용 안전장치: 현재 assetID 저장
         cell.currentAssetID = assetID
 
-        // 이미지 로드 (비동기)
+        // 이미지 로드 (비동기) — 이미지만 설정, 선택 상태 미접촉
         dataSource.loadFaceImage(assetID: assetID, personIndex: personIndex) { [weak cell] image in
-            // 셀 재사용 안전장치: assetID가 변경되었으면 무시
-            guard cell?.currentAssetID == assetID else { return }
-
             DispatchQueue.main.async {
-                cell?.configure(with: image, isSelected: isSelected, assetID: assetID, debugText: numberText)
+                // 셀 재사용 안전장치: 메인 큐에서 최종 확인
+                guard let cell = cell,
+                      cell.currentAssetID == assetID else { return }
+                cell.setImage(image)
             }
         }
 

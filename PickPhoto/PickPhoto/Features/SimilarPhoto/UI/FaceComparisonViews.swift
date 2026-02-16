@@ -140,6 +140,12 @@ final class FaceComparisonCell: UICollectionViewCell {
         debugLabel.isHidden = (debugText == nil)
     }
 
+    /// 이미지만 설정 (선택 상태, debugText 등 기존 상태 유지)
+    /// 비동기 이미지 로드 완료 시 사용 — 선택 상태를 건드리지 않아 깜빡임 방지
+    func setImage(_ image: UIImage?) {
+        imageView.image = image
+    }
+
     /// 선택 상태 설정
     func setSelected(_ selected: Bool) {
         selectionOverlay.isHidden = !selected
