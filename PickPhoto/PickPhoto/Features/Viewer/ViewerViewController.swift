@@ -1299,6 +1299,9 @@ extension ViewerViewController: UIPageViewControllerDelegate {
 
         // 스와이프 탐색 후 버튼 상태 업데이트 (다음 사진이 휴지통일 수 있음)
         updateToolbarForCurrentPhoto()
+
+        // 코치마크 B: 동영상 → 이미지 스와이프 시 트리거
+        showViewerSwipeDeleteCoachMarkIfNeeded()
     }
 
     /// LOD1 요청 스케줄링 (150ms 디바운스)

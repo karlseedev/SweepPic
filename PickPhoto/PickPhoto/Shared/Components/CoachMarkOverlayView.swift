@@ -379,7 +379,7 @@ final class CoachMarkOverlayView: UIView {
         overlay.addSubview(overlay.arrowView)
 
         // 안내 텍스트 (화면 높이의 2/3 지점)
-        overlay.messageLabel.text = "위로 밀면 바로 삭제돼요\n삭제된 사진은 휴지통에서 복구할 수 있어요"
+        overlay.messageLabel.text = "이미지를 위로 밀면 바로 휴지통으로 이동돼요\n잘못 삭제된 사진은 휴지통에서 복구할 수 있어요"
         let textY = window.bounds.height * 2 / 3
         overlay.messageLabel.frame = CGRect(
             x: 20,

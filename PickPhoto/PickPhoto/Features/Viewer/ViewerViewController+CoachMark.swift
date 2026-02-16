@@ -3,17 +3,19 @@
 //  PickPhoto
 //
 //  코치마크 B: 뷰어 스와이프 삭제 안내
-//  - viewDidAppear에서 조건 확인 후 즉시 오버레이 배치
+//  - viewDidAppear + 페이지 스와이프 완료 시 조건 확인 후 오버레이 배치
+//  - 동영상은 스킵, 이미지일 때만 표시
 //  - 0.5초 후 페이드인 + 애니메이션 시작
 //  - 1회만 표시 (UserDefaults)
 //
 
 import UIKit
+import Photos
 
 extension ViewerViewController {
 
     /// 뷰어 코치마크 B 표시 조건 확인 + 즉시 오버레이 배치
-    /// viewDidAppear에서 호출
+    /// viewDidAppear 및 페이지 스와이프 완료(didFinishAnimating) 시 호출
     func showViewerSwipeDeleteCoachMarkIfNeeded() {
         // 이미 표시된 적 있으면 스킵 (테스트 중 임시 비활성화)
         // guard !CoachMarkType.viewerSwipeDelete.hasBeenShown else { return }
@@ -23,6 +25,9 @@ extension ViewerViewController {
 
         // 일반 모드에서만 표시 (휴지통/정리 모드 제외)
         guard viewerMode == .normal else { return }
+
+        // 동영상이면 스킵 (이미지일 때만 코치마크 표시)
+        guard coordinator.asset(at: currentIndex)?.mediaType != .video else { return }
 
         // VoiceOver 활성 시 스킵
         guard !UIAccessibility.isVoiceOverRunning else { return }
