@@ -192,7 +192,7 @@ final class PersonPageViewController: UIViewController {
     private func photoNumberText(for assetID: String) -> String {
         guard let dataSource = dataSource else { return "" }
         let number = dataSource.photoNumber(for: assetID)
-        return number > 0 ? "\(number)" : ""
+        return number > 0 ? "Pic \(number)" : ""
     }
 }
 

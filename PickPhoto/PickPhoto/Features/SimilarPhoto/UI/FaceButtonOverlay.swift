@@ -203,7 +203,7 @@ final class FaceButtonOverlay: UIView {
     ///   - number: 그룹 내 순서 (1-based)
     ///   - total: 그룹 총 멤버 수
     func showPhotoNumber(_ number: Int, total: Int) {
-        photoNumberLabel.text = " \(number) / \(total) "
+        photoNumberLabel.text = " Pic \(number) / \(total) "
         // 라벨 표시는 +버튼 표시 시 함께 처리 (showButtons 내부)
     }
 
