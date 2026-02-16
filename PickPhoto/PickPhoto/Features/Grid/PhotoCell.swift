@@ -143,19 +143,21 @@ final class PhotoCell: UICollectionViewCell {
         return (shown, resolved)
     }
 
-    /// 회색 셀 표시 카운트 증가 (willDisplay에서 호출)
+    /// 회색 셀 표시 카운트 증가 (디버그 통계 전용)
     static func incrementGrayShown() {
         grayCellLock.withLock {
             grayShownCount += 1
         }
-        // TelemetryDeck 세션 카운터에도 누적
-        AnalyticsService.shared.countGrayShown()
     }
 
     /// 현재 이미지가 nil인지 확인 (willDisplay에서 회색 셀 체크용)
     var isShowingGray: Bool {
         return imageView.image == nil
     }
+
+    /// 사용자가 회색 셀을 본 것으로 표시 (willDisplay에서 세팅)
+    /// - 카운트는 이미지 도착 또는 prepareForReuse 시 수행
+    var wasShownAsGray = false
 
     // MARK: - iOS 18+ Zoom Transition Support
 
@@ -335,6 +337,13 @@ final class PhotoCell: UICollectionViewCell {
     override func prepareForReuse() {
         super.prepareForReuse()
 
+        // 회색 셀: 이미지 안 온 채 사라진 경우 카운트
+        if wasShownAsGray {
+            wasShownAsGray = false
+            Self.incrementGrayShown()
+            AnalyticsService.shared.countGrayShown()
+        }
+
         // 이전 요청 취소 (오표시 방지)
         cancelCurrentRequest()
 
@@ -347,7 +356,6 @@ final class PhotoCell: UICollectionViewCell {
 
         // 상태 초기화
         imageView.image = nil
-        // 회색 셀 카운트는 willDisplay에서 측정 (화면에 실제 노출될 때만)
         currentAssetID = nil
         isTrashed = false
         isSelectedForDeletion = false
@@ -631,7 +639,15 @@ final class PhotoCell: UICollectionViewCell {
                 // 이미지 표시
                 let wasNil = self.imageView.image == nil
                 self.imageView.image = image
-                if wasNil { Self.incrementGrayResolved() }  // nil → non-nil 전환 시에만
+                if wasNil {
+                    Self.incrementGrayResolved()
+                    // 사용자가 회색을 본 뒤 이미지 도착 → 카운트
+                    if self.wasShownAsGray {
+                        self.wasShownAsGray = false
+                        Self.incrementGrayShown()
+                        AnalyticsService.shared.countGrayShown()
+                    }
+                }
 
                 // [--log-thumb] 파이프라인 응답 로그 (샘플링: 10개마다)
                 if FileLogger.logThumbEnabled {
@@ -745,7 +761,14 @@ final class PhotoCell: UICollectionViewCell {
             // 이미지 설정
             let wasNil = self.imageView.image == nil
             self.imageView.image = image
-            if wasNil { Self.incrementGrayResolved() }  // nil → non-nil 전환 시에만
+            if wasNil {
+                Self.incrementGrayResolved()
+                if self.wasShownAsGray {
+                    self.wasShownAsGray = false
+                    Self.incrementGrayShown()
+                    AnalyticsService.shared.countGrayShown()
+                }
+            }
         }
     }
 

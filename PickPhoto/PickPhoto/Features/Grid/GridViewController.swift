@@ -752,9 +752,9 @@ extension GridViewController {
             Log.print("[Timing] D) 첫 셀 표시: +\(String(format: "%.1f", sinceStart))ms (indexPath: \(indexPath))")
         }
 
-        // 회색 셀 측정: 화면에 표시되는 순간 이미지가 nil이면 카운트
+        // 회색 셀 측정: 이미지 nil이면 플래그 세팅 (카운트는 이미지 도착 또는 재사용 시)
         if let photoCell = cell as? PhotoCell, photoCell.isShowingGray {
-            PhotoCell.incrementGrayShown()
+            photoCell.wasShownAsGray = true
         }
     }
 

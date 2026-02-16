@@ -48,11 +48,13 @@
     ├── [확인] ← 유일한 터치 허용 (2회차)
     ├── 확인 버튼+카피 페이드아웃
     ├── 손가락 탭 모션 on + 버튼 (0.6초)
-    ├── 오버레이 dismiss + 터치 차단 해제 + markAsShown()
+    ├── 오버레이 dismiss + 터치 차단 해제
     ├── 자동 네비게이션 → 얼굴 비교 화면 (delegate 메서드 호출)
     │       ⚠️ .fullScreen present 시 UIKit transition container가
     │          window 최상단에 삽입되어 오버레이를 가림
     │          → dismiss 후 present 순서로 해결
+    ├── present 성공 후 markAsShown()
+    │       ⚠️ present 실패 시 markAsShown() 미호출 → 다음 기회에 재시도
     │
 [C-2 완료]
 ```
@@ -65,8 +67,8 @@
 
 | 파일 | 수정 내용 |
 |------|-----------|
-| `CoachMarkOverlayView.swift` | `.similarBadge`, `.faceButton` case 추가 + C-1/C-2 show 메서드 + 탭 모션 애니메이션 + 자동 네비게이션 콜백 |
-| `CoachMarkType` | `similarBadge`, `faceButton` 케이스 추가 (단, C-1/C-2는 하나의 플래그로 관리) |
+| `CoachMarkOverlayView.swift` | `.similarPhoto` case 추가 + C-1/C-2 show 메서드 + 탭 모션 애니메이션 + `confirmTapped()` C 분기 + `onConfirm` 콜백 |
+| `CoachMarkType` | `similarPhoto` 케이스 추가 (C-1/C-2 통합 플래그) |
 | `FaceButtonOverlay.swift` | 첫 번째 + 버튼의 프레임을 외부에 노출하는 접근자 추가 |
 
 ### 신규 (1개)
@@ -75,11 +77,12 @@
 |------|------|
 | `GridViewController+CoachMarkC.swift` | C-1 트리거 로직 (뱃지 최초 표시 감지 + 조건 확인 + show) |
 
-### 기존 수정 (2개)
+### 기존 수정 (3개)
 
 | 파일 | 수정 내용 |
 |------|-----------|
-| `GridViewController+SimilarPhoto.swift` | `showBadge(on:count:)` 에서 C-1 트리거 호출 추가 |
+| `CoachMarkManager` (CoachMarkOverlayView.swift 내) | `isWaitingForC2` 플래그 + `dismissCurrent()` 가드 추가 |
+| `GridViewController+SimilarPhoto.swift` | `showBadge(on:count:)` 끝에 C-1 트리거 메서드 호출 1줄 추가 |
 | `ViewerViewController+SimilarPhoto.swift` | C-2 트리거 (+ 버튼 표시 후 코치마크 C-2 표시) |
 
 ---
@@ -93,9 +96,15 @@ showBadge(on:count:) 호출 시
   └── 이미 C가 표시된 적 있으면 스킵 (hasBeenShown)
   └── CoachMarkManager.isShowing이면 스킵
   └── 첫 번째 뱃지만 트리거 (hasTriggeredC1 associated object 플래그)
-  └── indexPath 역추적: collectionView.indexPath(for: cell)
+  └── indexPath + assetID 캡처: collectionView.indexPath(for: cell) + asset.localIdentifier
         ⚠️ showBadge(on:count:)는 cell만 파라미터로 받음
            indexPath는 collectionView.indexPath(for:)로 역추적 필요
+        ⚠️ indexPath만 캡처 시 주의: 1.0초 딜레이 동안 PHChange로 fetchResult가
+           갱신되면 indexPath가 다른 사진을 가리킬 수 있음.
+           assetID(localIdentifier)를 함께 캡처하고, confirm 시점에
+           fetchResult에서 assetID로 indexPath를 재해석하면 안전.
+           (PHChange는 1.6초 window 중 극히 드물고, 실패 시 filteredIndex nil
+            → 3초 타임아웃 폴백이 동작하므로 치명적이지는 않으나, 저비용 개선)
   └── 1.0초 딜레이 (뱃지 안정 표시 확인)
         └── 재검증: 해당 셀이 여전히 visible한지
         └── 재검증: 뱃지가 여전히 표시 중인지
@@ -105,12 +114,52 @@ showBadge(on:count:) 호출 시
               └── CoachMarkOverlayView.showSimilarBadge(
                       highlightFrame:,
                       in: window,
-                      onConfirm: { self.navigateToViewer(at: indexPath) }
+                      onConfirm: { self.navigateToViewer(at: indexPath, assetID: assetID) }
                   )
+                  // confirm 시점에 assetID로 indexPath를 재해석하여 PHChange 안전성 확보
 ```
 
+**`showBadge` 접근 레벨 대응:**
+`showBadge(on:count:)`는 `GridViewController+SimilarPhoto.swift` 내의 `private` 메서드.
+별도 파일(`+CoachMarkC.swift`)에서 직접 호출 불가.
+→ `showBadge` 마지막에 `triggerCoachMarkCIfNeeded(for: cell)` 1줄 추가.
+  `triggerCoachMarkCIfNeeded`는 `+CoachMarkC.swift`에 `internal`로 정의.
+
 **중복 방지:**
-`hasTriggeredC1`을 associated object로 관리. `showBadge`는 visible 셀 전체에 대해 반복 호출되므로, 첫 호출에서 플래그를 true로 설정하여 이후 호출을 스킵. 코치마크 dismiss 또는 타임아웃 시 false로 리셋.
+`hasTriggeredC1`을 associated object로 관리. `showBadge`는 visible 셀 전체에 대해 반복 호출되므로, 첫 호출에서 플래그를 true로 설정하여 이후 호출을 스킵.
+리셋 조건:
+- 코치마크 dismiss 시 → false
+- 타임아웃 시 → false
+- **1초 딜레이 재검증 실패 시 → false** (셀이 사라지거나 뱃지가 없어진 경우, 다음 뱃지 표시 시 재트리거 가능하도록)
+
+### `confirmTapped()` 분기 설계
+
+현재 `confirmTapped()`은 바로 `dismiss()`를 호출. C에서는 dismiss 대신 탭 모션 → 네비게이션 시퀀스가 필요.
+
+```swift
+@objc private func confirmTapped() {
+    switch coachMarkType {
+    case .gridSwipeDelete, .viewerSwipeDelete:
+        dismiss()                    // A/B: 즉시 dismiss + markAsShown
+    case .similarPhoto:
+        confirmButton.isEnabled = false  // ⚠️ 재진입 방지 (중복 탭 차단)
+        startC_ConfirmSequence()     // C: 페이드아웃 → 탭 모션 → onConfirm 콜백
+    }
+}
+
+private func startC_ConfirmSequence() {
+    // ⚠️ 0.8초 이상 비동기 시퀀스 — 연타 시 이중 push/present 위험
+    //    confirmButton.isEnabled = false로 재진입 차단 (위에서 설정)
+    // 1. 확인 버튼 + 카피 페이드아웃 (0.2초)
+    // 2. performTapMotion (0.6초)
+    // 3. onConfirm?() 호출
+    //    C-1: isWaitingForC2 = true → didSelectItemAt
+    //    C-2: dismiss → triggerFaceComparison → present 성공 후 markAsShown()
+}
+```
+
+C에서는 `dismiss()`의 `markAsShown()`이 호출되면 안 됨 (C-2 완료 시에만 호출).
+→ `startC_ConfirmSequence()`가 `dismiss()` 대신 직접 시퀀스를 관리.
 
 ### C-1 → C-2 전환
 
@@ -147,6 +196,10 @@ ViewerViewController viewDidAppear
         └── + 버튼 표시 대기 (hasVisibleButtons == true)
               ⚠️ hasVisibleButtons는 faceButtons.append 직후 true
                  실제 alpha=1은 200ms 후. 0.3초 딜레이로 커버됨.
+              ⚠️ 캐시 miss 시: showSimilarPhotoOverlay() → checkAndShowFaceButtons()가
+                 async 체인 (SimilarityCache → Vision 분석 → showButtons). 수초 소요 가능.
+                 C-1 뱃지가 표시된 사진이므로 캐시 hit 가능성 높지만,
+                 메모리 압박으로 캐시 퇴거된 경우 miss. 5초 타임아웃으로 폴백.
         └── 0.3초 딜레이 (버튼 페이드인 완료 + 인식 시간)
         └── + 버튼 프레임 → 윈도우 좌표 변환
               (faceButtonOverlay.firstButtonFrameInWindow())
@@ -163,7 +216,6 @@ ViewerViewController viewDidAppear
 [확인] 탭
   └── 확인 버튼 + 카피 페이드아웃 (0.2초)
   └── 손가락 탭 모션 on + 버튼 (0.6초)
-  └── CoachMarkType.similarPhoto.markAsShown()
   └── 오버레이 dismiss + 터치 차단 해제
         ⚠️ dismiss를 먼저 해야 함!
            showFaceComparisonViewController는 .fullScreen present 사용.
@@ -174,6 +226,13 @@ ViewerViewController viewDidAppear
         └── 첫 번째 + 버튼의 face 정보로 delegate 메서드 호출
         └── faceButtonOverlay(_:didTapFaceAtPersonIndex:face:)
         └── → showFaceComparisonViewController (.fullScreen present)
+  └── present 성공 후 CoachMarkType.similarPhoto.markAsShown()
+        ⚠️ markAsShown()은 반드시 present 성공 이후에 호출!
+           present 실패 시(firstFace nil, present 충돌 등)
+           markAsShown()이 먼저 찍히면 재노출이 영구 차단되어
+           사용자가 C-2 안내를 영영 볼 수 없게 됨.
+           → present completion 콜백에서 호출하거나,
+             presentedViewController != nil 확인 후 호출.
 ```
 
 ---
@@ -264,16 +323,49 @@ C-1 표시 중:
   overlay 유지 (터치 차단 계속)
   카피/확인 페이드아웃
   탭 모션 실행
+  isWaitingForC2 = true        ← dismissCurrent() 차단 시작
   자동 네비게이션 트리거
 
 화면 전환 중:
   overlay 유지 (dim만 남아 전환 덮음)
+  ⚠️ GridViewController.viewWillDisappear → dismissCurrent() 호출됨!
+     → isWaitingForC2 가드로 차단 (오버레이 파괴 방지)
   화면 전환 완료 대기 (viewDidAppear)
 
 C-2 시작:
   기존 overlay에 새 dim path + 카피 + 확인을 재구성
   (removeFromSuperview 하지 않으므로 터치 차단 끊김 없음)
+
+C-2 완료:
+  isWaitingForC2 = false       ← dismissCurrent() 차단 해제
 ```
+
+### `isWaitingForC2` 리셋 체크리스트
+
+`isWaitingForC2 = true` 고착 시 앱 전체의 dismiss 경로가 차단되므로, **모든 종료 경로에서 반드시 `false`로 리셋**해야 한다.
+
+| # | 경로 | 리셋 위치 |
+|---|------|-----------|
+| 1 | C-2 정상 완료 | `startC_ConfirmSequence()` 시퀀스 끝 (present 성공 후) |
+| 2 | C-1→뷰어 전환 타임아웃 (3초) | 타임아웃 핸들러에서 `isWaitingForC2 = false` + 오버레이 dismiss |
+| 3 | C-2 + 버튼 대기 타임아웃 (5초) | 타임아웃 핸들러에서 `isWaitingForC2 = false` + 오버레이 dismiss |
+| 4 | C-2 present 실패 | `onConfirm` 콜백 실패 경로에서 `isWaitingForC2 = false` |
+| 5 | 앱 백그라운드 진입 | `sceneDidEnterBackground` 또는 `applicationDidEnterBackground`에서 `isWaitingForC2 = false` + 오버레이 dismiss |
+
+### `dismissCurrent()` 가드 — 오버레이 보호의 핵심
+
+C-1 → C-2 전환 중 `dismissCurrent()`를 호출하는 코드가 **5곳** 존재:
+
+| 호출 위치 | 발동 시점 | C 전환 중 도달 가능? |
+|-----------|-----------|---------------------|
+| `GridViewController.viewWillDisappear` (라인 365) | 뷰어로 전환 시 | **YES — 반드시 발동** |
+| `ViewerViewController.viewWillDisappear` (라인 403) | 뷰어 닫힐 때 | NO (hitTest가 차단) |
+| `BaseGridViewController.handleSwipeDeleteBegan` (라인 809) | 그리드 스와이프 시 | NO (hitTest가 차단) |
+| `GridScroll.scrollDidBegin` (라인 104) | 그리드 스크롤 시 | NO (hitTest가 차단) |
+| `SwipeDeleteHandler.swift` (라인 80) | 뷰어 스와이프 삭제 시작 시 | NO (hitTest가 차단) |
+
+**GridVC.viewWillDisappear만이 실제 위협.** 뷰어 열림(push/present) 시 GridVC가 disappear하면서 반드시 발동.
+이 한 줄이 오버레이를 파괴하고 markAsShown()까지 호출하므로, **`isWaitingForC2` 가드 없이는 C 전체가 실패.**
 
 ### CoachMarkManager 확장
 
@@ -287,7 +379,13 @@ final class CoachMarkManager {
     var isWaitingForC2: Bool = false       // C-1 완료 후 C-2 대기 중
     var c2OnConfirm: (() -> Void)?         // C-2 확인 후 실행할 콜백
 
-    func dismissCurrent()                  // 기존 (markAsShown 호출)
+    /// 현재 코치마크 dismiss
+    /// ⚠️ C-1 → C-2 전환 중에는 dismiss 차단 (오버레이 보호)
+    func dismissCurrent() {
+        guard !isWaitingForC2 else { return }  // ← 핵심 가드
+        currentOverlay?.dismiss()
+    }
+
     func transitionToC2(...)               // C-1 → C-2 전환 (오버레이 유지, 내용 교체)
 }
 ```
@@ -348,7 +446,7 @@ func firstButtonFrameInWindow() -> CGRect? {
 |------|-----------|------|
 | C-1 트리거 | 뱃지 셀이 1초 내 사라짐 | 트리거 취소, 다음 기회 대기 |
 | C-1 → 뷰어 전환 | viewDidAppear 3초 내 미호출 | 오버레이 dismiss, 차단 해제 |
-| C-2 + 버튼 대기 | hasVisibleButtons 2초 내 미달성 | 오버레이 dismiss, 차단 해제, C 전체 스킵 (markAsShown) |
+| C-2 + 버튼 대기 | hasVisibleButtons 5초 내 미달성 | 오버레이 dismiss, 차단 해제, C 전체 스킵 (markAsShown) |
 | C-2 → 비교 화면 | present 실패 | 오버레이 dismiss, 차단 해제 |
 
 타임아웃 시 `CoachMarkType.similarPhoto.markAsShown()` 호출하여 재시도하지 않음 (실패한 코치마크 반복은 UX 악화).
@@ -384,7 +482,7 @@ C-1, C-2를 하나의 플래그(`similarPhoto`)로 관리. 이유:
 | 탭 모션 총 시간 | 0.6초 | |
 | 뱃지 안정 대기 | 1.0초 | 뱃지가 1초 이상 표시 후 트리거 |
 | C-1 → C-2 전환 타임아웃 | 3.0초 | viewDidAppear 미호출 시 폴백 |
-| C-2 + 버튼 대기 타임아웃 | 2.0초 | hasVisibleButtons 미달성 시 폴백 |
+| C-2 + 버튼 대기 타임아웃 | 5.0초 | hasVisibleButtons 미달성 시 폴백. 캐시 miss 시 Vision 분석 수초 소요 가능하므로 2초는 과소. 5초 이상은 딤 화면 응시 시간이 길어 UX 악화. |
 
 ### 접근성: Reduce Motion 대응
 
@@ -457,3 +555,30 @@ C-2 (뷰어):
 | 4 | viewDidAppear에서 B와 C-2 충돌 | 중간 | B 트리거에 `isWaitingForC2` 가드 추가 |
 | 5 | padding 계산 | 낮음 | 문제 없음 (indexPath(for:) 사용으로 자동 포함) |
 | 6 | + 버튼 alpha 타이밍 | 낮음 | 기존 0.3초 딜레이로 충분 (200ms 애니메이션 + 100ms 여유) |
+
+### 2차 검토 (2026-02-16, Claude)
+
+코드 심층 분석으로 7가지 이슈 발견, 문서 반영 완료:
+
+| # | 이슈 | 위험도 | 대응 |
+|---|------|--------|------|
+| 1 | `GridVC.viewWillDisappear` → `dismissCurrent()` 호출로 C-1 오버레이 강제 파괴 + markAsShown() | **치명** | `dismissCurrent()`에 `isWaitingForC2` 가드 추가. 터치 차단 연속성 섹션에 상세 기술 |
+| 2 | `confirmTapped()`이 바로 `dismiss()` 호출 — C 모드 분기 미설계 | 높음 | `confirmTapped()` 분기 설계 섹션 추가 (A/B: dismiss, C: startC_ConfirmSequence) |
+| 3 | `dismiss()`가 무조건 `markAsShown()` 호출 — C 전환 중 오발동 | 높음 | C는 `dismiss()` 경유하지 않고 `startC_ConfirmSequence()`가 직접 시퀀스 관리. C-2 완료 시에만 명시적 markAsShown() |
+| 4 | `showBadge(on:count:)`가 `private` — 별도 파일 접근 불가 | 중간 | `showBadge` 끝에 `triggerCoachMarkCIfNeeded(for:)` 1줄 추가, 트리거 메서드는 `+CoachMarkC.swift`에 internal로 정의 |
+| 5 | `hasTriggeredC1` 재검증 실패 시 리셋 경로 누락 | 중간 | 재검증 실패 시 `hasTriggeredC1 = false` 리셋 추가 |
+| 6 | 파일 구조 표의 CoachMarkType case 명칭 불일치 (`.similarBadge`/`.faceButton` vs `.similarPhoto`) | 중간 | `.similarPhoto` 단일 case로 통일 |
+| 7 | 캐시 miss 시 C-2 + 버튼 대기 2초 타임아웃 부족 가능성 | 낮음 | C-2 트리거 섹션에 캐시 miss 시나리오 주의사항 추가 |
+
+### 3차 검토 (2026-02-16, GPT 교차검토)
+
+GPT Codex 교차 검토 피드백 6건 반영:
+
+| # | 이슈 | 위험도 | 대응 |
+|---|------|--------|------|
+| 1 | `markAsShown()` 순서 — present 실패 시 영구 스킵 | 높음 | C-2 완료 섹션: markAsShown()을 present 성공 후로 이동 |
+| 2 | `confirmTapped()` 재진입 방지 미설계 | 높음 | confirmTapped() 분기에 `confirmButton.isEnabled = false` 추가 |
+| 3 | C-2 대기 2초 타임아웃이 캐시 miss와 충돌 | 높음 | 2초 → 5초로 변경 (상수 테이블, 롤백 테이블, C-2 트리거 섹션) |
+| 4 | `isWaitingForC2` 고착 시 dismiss 전체 차단 | 중간 | 리셋 체크리스트 5개 경로 추가 (정상 완료, 타임아웃 2종, present 실패, 앱 백그라운드) |
+| 5 | `dismissCurrent()` 호출 지점 4곳 → 5곳 (SwipeDeleteHandler 누락) | 중간 | 호출 테이블에 `SwipeDeleteHandler.swift:80` 추가 |
+| 6 | indexPath만 캡처 시 PHChange 오탐 가능성 | 중간 | C-1 트리거에 assetID 함께 캡처 주의사항 추가 |
