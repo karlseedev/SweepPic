@@ -367,8 +367,6 @@ final class ViewerViewController: UIViewController {
         LiquidGlassOptimizer.preload(in: view.window)
         LiquidGlassOptimizer.enterIdle(in: view.window)
 
-        // [진단] 빨간 사각형 애니메이션 테스트
-        scheduleViewerCoachMarkIfNeeded()
     }
 
     // MARK: - Rotation
