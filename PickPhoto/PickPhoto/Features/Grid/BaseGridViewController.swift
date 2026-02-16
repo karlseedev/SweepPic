@@ -667,6 +667,18 @@ extension BaseGridViewController: UICollectionViewDataSource {
 
 extension BaseGridViewController: UICollectionViewDelegate {
 
+    /// 셀이 화면에 표시되기 직전 호출
+    /// - 회색 셀(이미지 미로드) 노출 횟수를 세션 카운터에 누적
+    /// - GridViewController는 자체 willDisplay에서 동일 로직 포함 (타이밍 로그 추가)
+    func collectionView(_ collectionView: UICollectionView,
+                        willDisplay cell: UICollectionViewCell,
+                        forItemAt indexPath: IndexPath) {
+        // 회색 셀 측정: 화면에 표시되는 순간 이미지가 nil이면 카운트
+        if let photoCell = cell as? PhotoCell, photoCell.isShowingGray {
+            PhotoCell.incrementGrayShown()
+        }
+    }
+
     func collectionView(_ collectionView: UICollectionView,
                         didSelectItemAt indexPath: IndexPath) {
         // 빈 셀 무시

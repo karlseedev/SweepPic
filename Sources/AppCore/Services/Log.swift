@@ -62,6 +62,7 @@ public enum Log {
         "SelectionManager": false,
         "GridGestures": false,
         "GridScroll": false,
+        "GridStats": true,           // 그리드 통계 (grayShown, mismatch)
         "PinchZoom": false,
 
         // =============================================

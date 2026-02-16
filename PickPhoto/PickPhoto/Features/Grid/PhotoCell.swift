@@ -112,7 +112,7 @@ final class PhotoCell: UICollectionViewCell {
         let pipelineMismatch = pipelineMismatchCount
         mismatchLock.unlock()
 
-        Log.print("[\(label)] diskCacheMismatch: \(diskMismatch), pipelineMismatch: \(pipelineMismatch)")
+        Log.print("[GridStats] \(label) — diskCacheMismatch: \(diskMismatch), pipelineMismatch: \(pipelineMismatch)")
     }
 
     // MARK: - Gray Cell Statistics (회색 셀 측정)
@@ -148,6 +148,8 @@ final class PhotoCell: UICollectionViewCell {
         grayCellLock.withLock {
             grayShownCount += 1
         }
+        // TelemetryDeck 세션 카운터에도 누적
+        AnalyticsService.shared.countGrayShown()
     }
 
     /// 현재 이미지가 nil인지 확인 (willDisplay에서 회색 셀 체크용)
@@ -180,7 +182,7 @@ final class PhotoCell: UICollectionViewCell {
     static func logGrayCellStats(label: String = "PhotoCell") {
         let stats = getGrayCellStats()
         let pending = stats.shown - stats.resolved
-        Log.print("[\(label)] grayShown: \(stats.shown), grayResolved: \(stats.resolved), pending: \(pending)")
+        Log.print("[GridStats] \(label) — grayShown: \(stats.shown), grayResolved: \(stats.resolved), pending: \(pending)")
     }
 
     // MARK: - UI Components

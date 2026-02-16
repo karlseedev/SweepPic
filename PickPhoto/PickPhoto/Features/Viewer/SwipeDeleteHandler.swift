@@ -76,6 +76,9 @@ final class SwipeDeleteHandler: NSObject {
 
         switch gesture.state {
         case .began:
+            // 코치마크 방어 코드 (hitTest가 차단하므로 실제로는 도달하지 않음)
+            CoachMarkManager.shared.dismissCurrent()
+
             // 위쪽 방향만 시작
             if velocity.y < 0 {
                 isDragging = true

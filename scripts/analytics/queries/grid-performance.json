@@ -1,0 +1,14 @@
+{
+  "queryType": "timeseries",
+  "dataSource": "com.simon",
+  "granularity": "day",
+  "filter": {
+    "type": "selector",
+    "dimension": "type",
+    "value": "PickPhoto.session.gridPerformance"
+  },
+  "aggregations": [
+    { "type": "eventCount", "name": "sessions" },
+    { "type": "longSum", "name": "grayShown", "fieldName": "grayShown" }
+  ]
+}

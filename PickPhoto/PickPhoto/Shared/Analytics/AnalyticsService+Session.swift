@@ -70,11 +70,19 @@ struct SessionCounters {
     /// 값: 발생 횟수
     var errors: [String: Int] = [:]
 
+    // ── 이벤트 8: 그리드 성능 ──
+    struct GridPerformance {
+        var grayShown: Int = 0    // 회색 셀이 사용자에게 노출된 횟수
+
+        var isZero: Bool { grayShown == 0 }
+    }
+
     // ── 그룹 인스턴스 ──
     var photoViewing = PhotoViewing()
     var deleteRestore = DeleteRestore()
     var trashViewer = TrashViewer()
     var similarAnalysis = SimilarAnalysis()
+    var gridPerformance = GridPerformance()
 }
 
 // MARK: - Session Management
@@ -162,6 +170,14 @@ extension AnalyticsService {
                 TelemetryDeck.signal("session.errors", parameters: params)
                 sentCount += 1
             }
+        }
+
+        // ── 이벤트 8: 그리드 성능 ──
+        if !c.gridPerformance.isZero {
+            TelemetryDeck.signal("session.gridPerformance", parameters: [
+                "grayShown": String(c.gridPerformance.grayShown),
+            ])
+            sentCount += 1
         }
 
         Log.print("[Analytics] 플러시 완료 — \(sentCount)건 시그널 전송")

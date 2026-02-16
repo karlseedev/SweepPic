@@ -105,9 +105,9 @@ final class FaceButtonOverlay: UIView {
 
     /// 사진 번호 라벨 (유사 그룹 내 순서 표시)
     /// "3 / 8" 형식으로 현재 사진의 그룹 내 위치를 표시합니다.
-    private lazy var photoNumberLabel: UILabel = {
-        let label = UILabel()
-        label.font = .systemFont(ofSize: 14, weight: .bold)
+    private lazy var photoNumberLabel: PaddedLabel = {
+        let label = PaddedLabel()
+        label.font = .systemFont(ofSize: 14, weight: .regular)
         label.textColor = .white
         label.backgroundColor = UIColor.black.withAlphaComponent(0.6)
         label.textAlignment = .center
@@ -203,14 +203,24 @@ final class FaceButtonOverlay: UIView {
     ///   - number: 그룹 내 순서 (1-based)
     ///   - total: 그룹 총 멤버 수
     func showPhotoNumber(_ number: Int, total: Int) {
-        photoNumberLabel.text = " Pic \(number) / \(total) "
+        let regular = UIFont.systemFont(ofSize: 14, weight: .regular)
+        let bold = UIFont.systemFont(ofSize: 14, weight: .bold)
+        let white: [NSAttributedString.Key: Any] = [.foregroundColor: UIColor.white]
+
+        let attr = NSMutableAttributedString()
+        attr.append(NSAttributedString(string: "Pic ", attributes: white.merging([.font: regular]) { _, b in b }))
+        attr.append(NSAttributedString(string: "\(number)", attributes: white.merging([.font: bold, .kern: 2.0 as CGFloat]) { _, b in b }))
+        attr.append(NSAttributedString(string: "/", attributes: white.merging([.font: regular, .kern: 2.0 as CGFloat]) { _, b in b }))
+        attr.append(NSAttributedString(string: "\(total)", attributes: white.merging([.font: bold]) { _, b in b }))
+
+        photoNumberLabel.attributedText = attr
         // 라벨 표시는 +버튼 표시 시 함께 처리 (showButtons 내부)
     }
 
     /// 사진 번호를 숨기고 초기화합니다.
     func hidePhotoNumber() {
         photoNumberLabel.isHidden = true
-        photoNumberLabel.text = nil
+        photoNumberLabel.attributedText = nil
     }
 
     /// 얼굴에 +버튼을 표시합니다.

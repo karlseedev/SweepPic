@@ -56,7 +56,7 @@ public final class MemoryThumbnailCache {
         let total = hit + miss
         let hitRate = total > 0 ? Double(hit) / Double(total) * 100 : 0
 
-        Log.print("[\(label)] memHit: \(hit), memMiss: \(miss), hitRate: \(String(format: "%.1f", hitRate))%")
+        Log.print("[GridStats] \(label) — memHit: \(hit), memMiss: \(miss), hitRate: \(String(format: "%.1f", hitRate))%")
     }
 
     // MARK: - Private Properties

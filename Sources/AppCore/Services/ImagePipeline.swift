@@ -288,10 +288,10 @@ public final class ImagePipeline: ImagePipelineProtocol {
         let canPerSec = elapsed > 0 ? Double(canCount) / elapsed : 0
         let compPerSec = elapsed > 0 ? Double(compCount) / elapsed : 0
 
-        Log.print("[\(label)] req: \(reqCount) (\(String(format: "%.1f", reqPerSec))/s), cancel: \(canCount) (\(String(format: "%.1f", canPerSec))/s), complete: \(compCount) (\(String(format: "%.1f", compPerSec))/s)")
-        Log.print("[\(label)] degraded: \(degCount), maxInFlight: \(maxInFlight)")
-        Log.print("[\(label)] latency avg: \(String(format: "%.1f", avgLatency))ms, p95: \(String(format: "%.1f", p95Latency))ms, max: \(String(format: "%.1f", maxLatency))ms")
-        Log.print("[\(label)] preheat: \(phCount)회, 총 \(phAssetCount)개 에셋")
+        Log.print("[GridStats] \(label) — req: \(reqCount) (\(String(format: "%.1f", reqPerSec))/s), cancel: \(canCount) (\(String(format: "%.1f", canPerSec))/s), complete: \(compCount) (\(String(format: "%.1f", compPerSec))/s)")
+        Log.print("[GridStats] \(label) — degraded: \(degCount), maxInFlight: \(maxInFlight)")
+        Log.print("[GridStats] \(label) — latency avg: \(String(format: "%.1f", avgLatency))ms, p95: \(String(format: "%.1f", p95Latency))ms, max: \(String(format: "%.1f", maxLatency))ms")
+        Log.print("[GridStats] \(label) — preheat: \(phCount)회, 총 \(phAssetCount)개 에셋")
     }
 
     // MARK: - Private Properties
@@ -448,6 +448,13 @@ public final class ImagePipeline: ImagePipelineProtocol {
                         let ratio = targetSize.width > 0 ? Double(imgPx) / Double(targetSize.width) * 100 : 0
                         Log.print("[Pipeline] #\(currentCompleteCount) target=\(Int(targetSize.width))x\(Int(targetSize.height))px → img=\(imgPx)x\(imgPy)px (\(String(format: "%.0f", ratio))%), degraded=\(isDegraded)")
                     }
+                }
+
+                // 썸네일 로딩 실패 감지 (최종 콜백에서 이미지 없음 + PHImageErrorKey 존재)
+                if image == nil && !isDegraded,
+                   let error = info?[PHImageErrorKey] as? NSError {
+                    Log.print("[Pipeline] gridThumbnail 에러: \(error.localizedDescription)")
+                    Analytics.reporter?.reportError(key: "photoLoad.gridThumbnail")
                 }
 
                 // 메인 스레드에서 completion 호출

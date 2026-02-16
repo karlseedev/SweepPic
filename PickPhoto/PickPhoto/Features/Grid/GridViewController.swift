@@ -744,7 +744,7 @@ extension GridViewController {
 extension GridViewController {
 
     // [Timing] D) 첫 셀 표시 완료
-    func collectionView(_ collectionView: UICollectionView, willDisplay cell: UICollectionViewCell, forItemAt indexPath: IndexPath) {
+    override func collectionView(_ collectionView: UICollectionView, willDisplay cell: UICollectionViewCell, forItemAt indexPath: IndexPath) {
         if !hasLoggedFirstCellDisplay && loadStartTime > 0 {
             hasLoggedFirstCellDisplay = true
             let displayTime = CACurrentMediaTime()

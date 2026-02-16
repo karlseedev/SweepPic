@@ -816,6 +816,8 @@ func countError(_ error: AnalyticsError.Storage)
 // ── 이벤트 8: 그리드 성능 ──
 func countGrayShown()
 // → counters.gridPerformance.grayShown += 1
+// 호출 지점: BaseGridViewController.willDisplay (앨범/휴지통), GridViewController.willDisplay (보관함)
+// 수집 범위: 보관함, 앨범, 휴지통 — 모든 그리드 화면
 ```
 
 > **오류 카운팅 참고:** 오버로드된 `countError()` 메서드로 enum별 타입 안전성 확보. 내부적으로 모두 `errors[key] += 1`로 통일.

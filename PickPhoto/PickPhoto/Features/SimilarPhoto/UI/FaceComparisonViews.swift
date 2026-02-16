@@ -18,6 +18,23 @@ import UIKit
 import AppCore
 import BlurUIKit
 
+// MARK: - PaddedLabel
+
+/// 좌우 패딩이 있는 UILabel (사진 번호 표시용)
+final class PaddedLabel: UILabel {
+    var horizontalPadding: CGFloat = 6
+
+    override func drawText(in rect: CGRect) {
+        let insets = UIEdgeInsets(top: 0, left: horizontalPadding, bottom: 0, right: horizontalPadding)
+        super.drawText(in: rect.inset(by: insets))
+    }
+
+    override var intrinsicContentSize: CGSize {
+        let size = super.intrinsicContentSize
+        return CGSize(width: size.width + horizontalPadding * 2, height: size.height)
+    }
+}
+
 // MARK: - FaceComparisonCell
 
 /// 얼굴 비교 셀
@@ -69,10 +86,10 @@ final class FaceComparisonCell: UICollectionViewCell {
         return iv
     }()
 
-    /// 디버그 넘버링 라벨 (좌측 상단)
-    private lazy var debugLabel: UILabel = {
-        let label = UILabel()
-        label.font = .systemFont(ofSize: 14, weight: .bold)
+    /// 사진 번호 라벨 (좌측 상단, 좌우 6pt 패딩)
+    private lazy var debugLabel: PaddedLabel = {
+        let label = PaddedLabel()
+        label.font = .systemFont(ofSize: 14, weight: .regular)
         label.textColor = .white
         label.backgroundColor = UIColor.black.withAlphaComponent(0.6)
         label.textAlignment = .center
@@ -136,8 +153,33 @@ final class FaceComparisonCell: UICollectionViewCell {
         self.assetID = assetID
         imageView.image = image
         setSelected(isSelected)
-        debugLabel.text = debugText
-        debugLabel.isHidden = (debugText == nil)
+
+        if let text = debugText {
+            debugLabel.attributedText = Self.styledPhotoNumberText(text)
+            debugLabel.isHidden = false
+        } else {
+            debugLabel.attributedText = nil
+            debugLabel.isHidden = true
+        }
+    }
+
+    /// "Pic 3" → "Pic " regular + "3" bold 스타일 적용
+    private static func styledPhotoNumberText(_ text: String) -> NSAttributedString {
+        let regular = UIFont.systemFont(ofSize: 14, weight: .regular)
+        let bold = UIFont.systemFont(ofSize: 14, weight: .bold)
+
+        let attr = NSMutableAttributedString(string: text, attributes: [
+            .font: regular,
+            .foregroundColor: UIColor.white
+        ])
+
+        for (index, char) in text.enumerated() {
+            if char.isNumber {
+                attr.addAttribute(.font, value: bold, range: NSRange(location: index, length: 1))
+            }
+        }
+
+        return attr
     }
 
     /// 이미지만 설정 (선택 상태, debugText 등 기존 상태 유지)
@@ -160,7 +202,7 @@ final class FaceComparisonCell: UICollectionViewCell {
         assetID = nil
         currentAssetID = nil
         setSelected(false)
-        debugLabel.text = nil
+        debugLabel.attributedText = nil
         debugLabel.isHidden = true
     }
 }

@@ -26,6 +26,7 @@ import UIKit
 /// 코치마크 종류 (향후 B/C/D 추가)
 enum CoachMarkType: String {
     case gridSwipeDelete = "coachMark_gridSwipe"
+    case viewerSwipeDelete = "coachMark_viewerSwipe"
 
     /// UserDefaults 키
     var shownKey: String { rawValue }
@@ -92,6 +93,23 @@ final class CoachMarkOverlayView: UIView {
     /// 확인 버튼 좌우 패딩
     private static let buttonHorizontalPadding: CGFloat = 32
 
+    // MARK: B (뷰어) 전용 상수
+
+    /// B: 사진 위 딤 알파 (텍스트 가독성 + 사진 인식 균형)
+    private static let viewerPhotoDimAlpha: CGFloat = 0.50
+
+    /// B: 드래그 시 스냅샷 이동 비율 (화면 높이 × 0.5)
+    private static let viewerSnapshotMoveRatio: CGFloat = 0.5
+
+    /// B: Release 후 스냅샷 최종 이동 비율 (화면 높이 × 0.9, alpha 0으로 사라짐)
+    private static let viewerSnapshotFinalMoveRatio: CGFloat = 0.9
+
+    /// B: 손가락 이동 거리 (pt)
+    private static let viewerFingerMoveDistance: CGFloat = 300
+
+    /// B: 최대 반복 횟수 (NNGroup 권장: 과다 반복 시 사용자 무시)
+    private static let maxVerticalLoopCount: Int = 3
+
     // MARK: - Properties
 
     /// 코치마크 타입 (dismiss 시 markAsShown에 사용)
@@ -105,6 +123,9 @@ final class CoachMarkOverlayView: UIView {
 
     /// 스와이프 이동 거리
     private var swipeDistance: CGFloat = 0
+
+    /// B: 애니메이션 루프 카운트 (3회 후 정지)
+    private var loopCount: Int = 0
 
     // MARK: - Subviews
 
@@ -194,12 +215,16 @@ final class CoachMarkOverlayView: UIView {
 
     // MARK: - Layout
 
-    /// 딤 레이어에 하이라이트 구멍 업데이트
+    /// 딤 레이어 경로 업데이트
+    /// A: evenOdd로 하이라이트 구멍 / B: 구멍 없음 (전체 딤)
     private func updateDimPath() {
         let fullPath = UIBezierPath(rect: bounds)
-        // 하이라이트 영역은 투명 (셀 크기 + 약간의 여유)
-        let holePath = UIBezierPath(rect: highlightFrame)
-        fullPath.append(holePath)
+        // A: 하이라이트 영역은 투명 (셀 크기 + 약간의 여유)
+        if coachMarkType == .gridSwipeDelete {
+            let holePath = UIBezierPath(rect: highlightFrame)
+            fullPath.append(holePath)
+        }
+        // B: 구멍 없음 (dim 전체 영역)
         dimLayer.path = fullPath.cgPath
     }
 
@@ -295,6 +320,109 @@ final class CoachMarkOverlayView: UIView {
         }
     }
 
+    // MARK: - Show B (Viewer Swipe Delete)
+
+    /// 코치마크 B: 뷰어 스와이프 삭제 표시
+    /// - 즉시: 오버레이 생성 + 윈도우에 추가 (터치 차단 시작)
+    /// - 0.5초 후: 페이드인 + 애니메이션 시작
+    /// - Parameters:
+    ///   - photoSnapshot: 사진 이미지뷰 스냅샷 (검은 여백 제외)
+    ///   - photoFrame: 사진 영역 프레임 (윈도우 좌표)
+    ///   - window: 표시할 윈도우
+    static func showViewerSwipeDelete(
+        photoSnapshot: UIView,
+        photoFrame: CGRect,
+        in window: UIWindow
+    ) {
+        let overlay = CoachMarkOverlayView(frame: window.bounds)
+        overlay.coachMarkType = .viewerSwipeDelete
+
+        // 즉시 터치 차단 (0.01 = hitTest 통과 최소값, 시각적으로 투명)
+        overlay.alpha = 0.01
+
+        // 솔리드 검정 배경 (원본 뷰어 이미지 완전 차단)
+        overlay.backgroundColor = .black
+
+        // 윈도우에 추가 (터치 차단 즉시 시작)
+        window.addSubview(overlay)
+        CoachMarkManager.shared.currentOverlay = overlay
+
+        // 스냅샷 배치 (사진 영역만, 검은 여백 제외)
+        photoSnapshot.frame = photoFrame
+        overlay.addSubview(photoSnapshot)
+        overlay.snapshotView = photoSnapshot
+
+        // 딤 뷰 (스냅샷 위에 배치, 텍스트 가독성 확보)
+        // sublayer가 아닌 subview로 스냅샷 위에 올라감
+        let dimView = UIView(frame: window.bounds)
+        dimView.backgroundColor = UIColor.black.withAlphaComponent(viewerPhotoDimAlpha)
+        dimView.isUserInteractionEnabled = false
+        overlay.addSubview(dimView)
+
+        // 손가락 아이콘 배치 (화면 중앙 약간 아래, 딤 뷰 위에 배치)
+        overlay.fingerView.sizeToFit()
+        overlay.fingerView.center = CGPoint(
+            x: window.bounds.midX,
+            y: window.bounds.midY + 50
+        )
+        overlay.fingerView.alpha = 0
+        overlay.fingerView.transform = CGAffineTransform(scaleX: 1.1, y: 1.1)
+        overlay.addSubview(overlay.fingerView)
+
+        // 화살표 아이콘 (Reduce Motion용 — B는 arrow.up)
+        let upConfig = UIImage.SymbolConfiguration(pointSize: 24, weight: .bold)
+        overlay.arrowView.image = UIImage(systemName: "arrow.up", withConfiguration: upConfig)
+        overlay.arrowView.center = CGPoint(
+            x: window.bounds.midX,
+            y: window.bounds.midY + 80
+        )
+        overlay.addSubview(overlay.arrowView)
+
+        // 안내 텍스트 (화면 높이의 2/3 지점)
+        overlay.messageLabel.text = "위로 밀면 바로 삭제돼요\n삭제된 사진은 휴지통에서 복구할 수 있어요"
+        let textY = window.bounds.height * 2 / 3
+        overlay.messageLabel.frame = CGRect(
+            x: 20,
+            y: textY,
+            width: window.bounds.width - 40,
+            height: 60
+        )
+        overlay.addSubview(overlay.messageLabel)
+
+        // 확인 버튼 (iOS 26: glass / iOS 25-: 기존 파란 라운드)
+        if #available(iOS 26.0, *) {
+            var config = UIButton.Configuration.glass()
+            config.title = "확인"
+            config.baseForegroundColor = .white
+            overlay.confirmButton.configuration = config
+            overlay.confirmButton.backgroundColor = .clear
+        }
+        let buttonWidth: CGFloat = 120
+        overlay.confirmButton.frame = CGRect(
+            x: (window.bounds.width - buttonWidth) / 2,
+            y: overlay.messageLabel.frame.maxY + 16,
+            width: buttonWidth,
+            height: buttonHeight
+        )
+        overlay.addSubview(overlay.confirmButton)
+
+        // 0.5초 후 페이드인 + 애니메이션 시작
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak overlay] in
+            guard let overlay, !overlay.shouldStopAnimation else { return }
+
+            UIView.animate(withDuration: 0.3) {
+                overlay.alpha = 1
+            } completion: { _ in
+                guard !overlay.shouldStopAnimation else { return }
+                if UIAccessibility.isReduceMotionEnabled {
+                    overlay.showStaticVerticalGuide()
+                } else {
+                    overlay.startVerticalGestureLoop()
+                }
+            }
+        }
+    }
+
     // MARK: - Dismiss
 
     /// 코치마크 dismiss (markAsShown 자동 호출)
@@ -303,6 +431,7 @@ final class CoachMarkOverlayView: UIView {
         shouldStopAnimation = true
         fingerView.layer.removeAllAnimations()
         maroonView.layer.removeAllAnimations()
+        snapshotView?.layer.removeAllAnimations()  // B: 진행 중 스냅샷 애니메이션 중단
 
         // 표시 완료 마킹
         coachMarkType.markAsShown()
@@ -310,6 +439,9 @@ final class CoachMarkOverlayView: UIView {
         UIView.animate(withDuration: 0.2, animations: {
             self.alpha = 0
         }) { _ in
+            // B: 풀스크린 스냅샷 메모리 즉시 해제
+            self.snapshotView?.removeFromSuperview()
+            self.snapshotView = nil
             self.removeFromSuperview()
         }
     }
@@ -523,6 +655,154 @@ final class CoachMarkOverlayView: UIView {
             }
         }
     }
+
+    // MARK: - B: Vertical Gesture Animation Loop
+
+    /// B: 수직 제스처 시연 루프 (3회 후 정지)
+    private func startVerticalGestureLoop() {
+        guard !shouldStopAnimation else { return }
+        guard loopCount < Self.maxVerticalLoopCount else { return }
+        loopCount += 1
+        performUpSwipe()
+    }
+
+    /// B: 위로 스와이프 시연 (Touch Down → Press → Drag ↑ → Release)
+    private func performUpSwipe() {
+        guard !shouldStopAnimation else { return }
+
+        // 안전 규칙: 스냅샷 로컬 변수로 캡처 (옵셔널 체이닝 사용 금지)
+        guard let snapshot = snapshotView else { return }
+
+        // 1) Touch Down — 손가락 등장 (0.3초)
+        UIView.animate(
+            withDuration: 0.3,
+            delay: 0,
+            options: .curveEaseOut,
+            animations: {
+                self.fingerView.alpha = 1.0
+                self.fingerView.transform = .identity
+            }
+        ) { [weak self] _ in
+            guard let self, !self.shouldStopAnimation else { return }
+
+            // 2) Press — 누르기 (0.35초, spring, "여기를 누르는구나" 인지 시간)
+            UIView.animate(
+                withDuration: 0.35,
+                delay: 0,
+                usingSpringWithDamping: 0.7,
+                initialSpringVelocity: 0,
+                options: [],
+                animations: {
+                    self.fingerView.transform = CGAffineTransform(scaleX: 0.95, y: 0.95)
+                }
+            ) { [weak self] _ in
+                guard let self, !self.shouldStopAnimation else { return }
+
+                // 3) Drag ↑ — 끝까지 하나의 연속 모션 + 후반부 알파 페이드
+                // 손가락과 스냅샷 이동 거리를 동일하게 (속도 일치)
+                let moveDistance = Self.viewerFingerMoveDistance
+                UIView.animateKeyframes(
+                    withDuration: 0.7,
+                    delay: 0,
+                    options: [.calculationModeCubic],
+                    animations: {
+                        // 전체 구간: 손가락 + 스냅샷 동일 거리로 이동 (속도 일치)
+                        UIView.addKeyframe(withRelativeStartTime: 0, relativeDuration: 1.0) {
+                            self.fingerView.center.y -= moveDistance
+                            self.fingerView.transform = CGAffineTransform(scaleX: 0.95, y: 0.95)
+                            snapshot.transform = CGAffineTransform(translationX: 0, y: -moveDistance)
+                        }
+                        // 후반 45%: 스냅샷 알파 페이드 (이동 중간부터 부드럽게 사라짐)
+                        UIView.addKeyframe(withRelativeStartTime: 0.55, relativeDuration: 0.45) {
+                            snapshot.alpha = 0
+                        }
+                    }
+                ) { [weak self] _ in
+                    guard let self, !self.shouldStopAnimation else { return }
+
+                    // 4) Release — 손가락만 페이드아웃
+                    UIView.animate(
+                        withDuration: 0.2,
+                        delay: 0,
+                        options: .curveEaseIn,
+                        animations: {
+                            self.fingerView.alpha = 0
+                            self.fingerView.transform = CGAffineTransform(scaleX: 1.05, y: 1.05)
+                            self.fingerView.center.y += 10  // 떼기 반동
+                        }
+                    ) { [weak self] _ in
+                        guard let self, !self.shouldStopAnimation else { return }
+
+                        // 텀 (0.8초) → 리셋
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) { [weak self] in
+                            self?.resetVerticalPositions()
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    /// B: 스냅샷+손가락 원위치 리셋 (삭제 후 다음 사진 나타나는 효과)
+    private func resetVerticalPositions() {
+        guard !shouldStopAnimation else { return }
+        guard let snapshot = snapshotView else { return }
+
+        // 즉시 리셋: 스냅샷 원위치 + alpha 0 (투명 상태에서 시작)
+        snapshot.transform = .identity
+        snapshot.alpha = 0
+
+        // 손가락 초기 위치로 복귀
+        fingerView.center = CGPoint(
+            x: bounds.midX,
+            y: bounds.midY + 50
+        )
+        fingerView.alpha = 0
+        fingerView.transform = CGAffineTransform(scaleX: 1.1, y: 1.1)
+
+        // 페이드인 (0.3초) — 다음 사진이 나타나는 효과
+        // 0.3초로 짧아 dim(70%)과 합쳐져 원본 겹침이 거의 보이지 않음
+        UIView.animate(
+            withDuration: 0.3,
+            delay: 0,
+            options: .curveEaseOut,
+            animations: {
+                snapshot.alpha = 1.0
+            }
+        ) { [weak self] _ in
+            guard let self, !self.shouldStopAnimation else { return }
+
+            // 텀 (0.8초) → 다음 루프 (3회째 완료 후 스냅샷 원위치에서 정지)
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) { [weak self] in
+                self?.startVerticalGestureLoop()
+            }
+        }
+    }
+
+    /// B: Reduce Motion 정적 안내
+    private func showStaticVerticalGuide() {
+        guard let snapshot = snapshotView else { return }
+
+        // 스냅샷 위로 150pt 이동 상태
+        snapshot.transform = CGAffineTransform(translationX: 0, y: -150)
+
+        // 손가락 정지 상태
+        fingerView.center = CGPoint(
+            x: bounds.midX,
+            y: bounds.midY - 50
+        )
+        fingerView.alpha = 1
+        fingerView.transform = .identity
+
+        // arrow.up 화살표 방향 표시
+        arrowView.center = CGPoint(
+            x: bounds.midX,
+            y: bounds.midY + 80
+        )
+        arrowView.alpha = 0.8
+    }
+
+    // MARK: - A: Reset Positions
 
     /// 모든 뷰를 초기 상태로 리셋
     private func resetPositions() {

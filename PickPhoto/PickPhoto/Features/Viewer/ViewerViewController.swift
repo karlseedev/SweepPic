@@ -367,6 +367,8 @@ final class ViewerViewController: UIViewController {
         LiquidGlassOptimizer.preload(in: view.window)
         LiquidGlassOptimizer.enterIdle(in: view.window)
 
+        // 코치마크 B: 뷰어 스와이프 삭제 안내
+        showViewerSwipeDeleteCoachMarkIfNeeded()
     }
 
     // MARK: - Rotation
@@ -396,6 +398,9 @@ final class ViewerViewController: UIViewController {
 
     override func viewWillDisappear(_ animated: Bool) {
         super.viewWillDisappear(animated)
+
+        // 코치마크 dismiss — guard 앞에 배치 (모달 등 모든 disappear에서 동작)
+        CoachMarkManager.shared.dismissCurrent()
 
         // dismiss/pop 시에만 FloatingOverlay 복원 (interactive 취소 시 중복 방지)
         // Modal: isBeingDismissed, Navigation Pop: isMovingFromParent
@@ -1070,6 +1075,19 @@ final class ViewerViewController: UIViewController {
     /// 뷰어 닫기 (Modal dismiss)
     private func dismissViewer() {
         dismissWithFadeOut()
+    }
+
+    // MARK: - Snapshot (Coach Mark B)
+
+    /// 사진 이미지뷰 스냅샷 + 프레임 (코치마크용)
+    /// 검은 여백 없이 사진 영역만 캡처 (pageViewController가 private이므로 우회)
+    /// - Returns: (스냅샷 뷰, 윈도우 좌표 프레임) 또는 nil
+    func capturePhotoSnapshot() -> (snapshot: UIView, frame: CGRect)? {
+        guard let imageView = currentPageImageView,
+              let snapshot = imageView.snapshotView(afterScreenUpdates: false),
+              let window = view.window else { return nil }
+        let frameInWindow = imageView.convert(imageView.bounds, to: window)
+        return (snapshot, frameInWindow)
     }
 
     // MARK: - Helpers

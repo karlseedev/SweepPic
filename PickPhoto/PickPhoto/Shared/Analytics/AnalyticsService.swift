@@ -55,6 +55,9 @@ protocol AnalyticsServiceProtocol: AnyObject {
     func countError(_ error: AnalyticsError.Video)
     func countError(_ error: AnalyticsError.Storage)
 
+    // 이벤트 8: 그리드 성능
+    func countGrayShown()
+
     // ══════════════════════════════════════
     // 그룹별 즉시 전송
     // ══════════════════════════════════════
