@@ -2,16 +2,15 @@
 //  PreScanBenchmark.swift
 //  PickPhoto
 //
-//  코치마크 D 사전 스캔 벤치마크 — 병렬 처리 테스트 (DEBUG 전용)
+//  코치마크 D 사전 스캔 벤치마크 — 이미지 로딩 방식 비교 (DEBUG 전용)
 //
-//  동시 처리 수별 속도 비교:
-//  - P1: 2개 동시
-//  - P2: 4개 동시
-//  - P3: 8개 동시
+//  PHImageRequestOptions.deliveryMode 별 속도 및 분석 결과 비교:
+//  - Q1: .highQualityFormat (현재 방식)
+//  - Q2: .fastFormat (빠른 로딩)
 //
 //  파이프라인: T2 (MetadataFilter → Exposure → SKIP필터 → Blur, SafeGuard 제외)
-//  측정: 총 시간, 3장 확보 시점, 저품질 수
-//  각 테스트 간 1초 딜레이 (GPU/캐시 안정화)
+//  측정: 총 시간, 저품질 수, 판정 일치 여부
+//  테스트 간 1초 딜레이 (캐시 안정화)
 //
 
 #if DEBUG
@@ -22,14 +21,14 @@ import AppCore
 
 // MARK: - 결과 모델
 
-/// 병렬 벤치마크 결과
-struct ParallelBenchmarkResult {
+/// 로딩 방식 벤치마크 결과
+struct DeliveryBenchmarkResult {
     let label: String
-    let concurrency: Int
     let totalCount: Int
     let analyzedCount: Int
     let lowQualityCount: Int
     let skippedCount: Int
+    let loadFailedCount: Int
     let totalTimeSeconds: Double
     let avgTimeMs: Double
     /// 저품질 상세 정보
@@ -38,10 +37,9 @@ struct ParallelBenchmarkResult {
 
 // MARK: - 벤치마크 본체
 
-/// 코치마크 D 사전 스캔 — 병렬 처리 벤치마크
+/// 코치마크 D 사전 스캔 — 이미지 로딩 방식 벤치마크
 ///
-/// T2 파이프라인(SKIP필터 포함, SafeGuard 제외)을 동시 처리 수 2/4/8로 실행하여
-/// 3장 확보까지의 시간을 비교합니다.
+/// highQualityFormat vs fastFormat 로딩 속도 및 분석 결과 차이를 비교합니다.
 final class PreScanBenchmark {
 
     // MARK: - Properties
@@ -52,7 +50,7 @@ final class PreScanBenchmark {
     /// 테스트할 사진 수
     private static let sampleCount = 1000
 
-    /// 테스트 간 딜레이 (초) — GPU/캐시 안정화용
+    /// 테스트 간 딜레이 (초)
     private static let interTestDelay: TimeInterval = 1.0
 
     // MARK: - Public
@@ -66,7 +64,8 @@ final class PreScanBenchmark {
         isRunning = true
 
         Log.print("[PreScanBM] ========================================")
-        Log.print("[PreScanBM] 병렬 처리 벤치마크 시작 (\(sampleCount)장, 동시 1/2/4/8)")
+        Log.print("[PreScanBM] 로딩 방식 벤치마크 시작 (\(sampleCount)장)")
+        Log.print("[PreScanBM] Q1: highQualityFormat / Q2: fastFormat")
         Log.print("[PreScanBM] 파이프라인: T2 (SKIP필터 포함, SafeGuard 제외)")
         Log.print("[PreScanBM] ========================================")
 
@@ -81,41 +80,23 @@ final class PreScanBenchmark {
                 return
             }
 
-            // 2. P0 — 순차 (동시 1개, 기준선)
+            // 2. Q1 — highQualityFormat (현재 방식)
             Log.print("[PreScanBM]")
-            Log.print("[PreScanBM] --- P0: 순차 (동시 1개) ---")
-            let p0 = await runParallel(assets: assets, concurrency: 1, label: "P0: 순차")
-            printResult(p0)
+            Log.print("[PreScanBM] --- Q1: highQualityFormat (현재) ---")
+            let q1 = await runWithDeliveryMode(assets: assets, mode: .highQualityFormat, label: "Q1: highQuality")
+            printResult(q1)
 
             // 딜레이
             try? await Task.sleep(nanoseconds: UInt64(interTestDelay * 1_000_000_000))
 
-            // 3. P1 — 동시 2개
+            // 3. Q2 — fastFormat
             Log.print("[PreScanBM]")
-            Log.print("[PreScanBM] --- P1: 동시 2개 ---")
-            let p1 = await runParallel(assets: assets, concurrency: 2, label: "P1: 동시2")
-            printResult(p1)
+            Log.print("[PreScanBM] --- Q2: fastFormat ---")
+            let q2 = await runWithDeliveryMode(assets: assets, mode: .fastFormat, label: "Q2: fastFormat")
+            printResult(q2)
 
-            // 딜레이
-            try? await Task.sleep(nanoseconds: UInt64(interTestDelay * 1_000_000_000))
-
-            // 4. P2 — 동시 4개
-            Log.print("[PreScanBM]")
-            Log.print("[PreScanBM] --- P2: 동시 4개 ---")
-            let p2 = await runParallel(assets: assets, concurrency: 4, label: "P2: 동시4")
-            printResult(p2)
-
-            // 딜레이
-            try? await Task.sleep(nanoseconds: UInt64(interTestDelay * 1_000_000_000))
-
-            // 5. P3 — 동시 8개
-            Log.print("[PreScanBM]")
-            Log.print("[PreScanBM] --- P3: 동시 8개 ---")
-            let p3 = await runParallel(assets: assets, concurrency: 8, label: "P3: 동시8")
-            printResult(p3)
-
-            // 6. 비교 요약
-            printComparison(p0: p0, p1: p1, p2: p2, p3: p3)
+            // 4. 비교 요약
+            printComparison(q1: q1, q2: q2)
 
             isRunning = false
             Log.print("[PreScanBM] ========================================")
@@ -142,173 +123,131 @@ final class PreScanBenchmark {
         return assets
     }
 
-    // MARK: - 병렬 실행
+    // MARK: - 로딩 방식별 실행
 
-    /// T2 파이프라인을 지정된 동시 수로 병렬 실행
-    ///
-    /// TaskGroup + 동시 수 제한 패턴:
-    /// - 초기에 concurrency 만큼 태스크 투입
-    /// - 하나 완료될 때마다 다음 하나 투입
-    /// - 3장 확보 시점 타임스탬프 기록 (조기 종료 안 함, 전체 측정)
-    private static func runParallel(
+    /// 지정된 deliveryMode로 T2 파이프라인 순차 실행
+    private static func runWithDeliveryMode(
         assets: [PHAsset],
-        concurrency: Int,
+        mode: PHImageRequestOptionsDeliveryMode,
         label: String
-    ) async -> ParallelBenchmarkResult {
+    ) async -> DeliveryBenchmarkResult {
+        let metadataFilter = MetadataFilter()
+        let exposureAnalyzer = ExposureAnalyzer.shared
+        let blurAnalyzer = BlurAnalyzer.shared
+
+        // 로딩 방식별 전용 이미지 로더 생성
+        let imageLoader = makeImageLoader(deliveryMode: mode)
+
         let startTime = CFAbsoluteTimeGetCurrent()
+        var results: [LightResult] = []
 
-        // 스레드 안전 결과 수집용 actor
-        let collector = ResultCollector(startTime: startTime)
+        for (i, asset) in assets.enumerated() {
+            let assetID = asset.localIdentifier
 
-        await withTaskGroup(of: Void.self) { group in
-            var nextIndex = 0
+            // Stage 1: MetadataFilter
+            if metadataFilter.shouldAnalyze(asset) != nil {
+                results.append(LightResult(assetID: assetID, isLowQuality: false, isSkipped: true, loadFailed: false, signals: []))
+                continue
+            }
 
-            // 초기 concurrency 만큼 태스크 투입
-            for _ in 0..<min(concurrency, assets.count) {
-                let asset = assets[nextIndex]
-                let index = nextIndex
-                nextIndex += 1
-                group.addTask {
-                    let result = await analyzeOneT2(asset: asset)
-                    await collector.add(result, index: index, totalCount: assets.count)
+            // 이미지 로딩 (deliveryMode별 차이)
+            guard let image = try? await imageLoader.loadImage(for: asset) else {
+                results.append(LightResult(assetID: assetID, isLowQuality: false, isSkipped: false, loadFailed: true, signals: []))
+                continue
+            }
+
+            // Stage 2: Exposure
+            guard let exposureMetrics = try? exposureAnalyzer.analyze(image) else {
+                results.append(LightResult(assetID: assetID, isLowQuality: false, isSkipped: true, loadFailed: false, signals: []))
+                continue
+            }
+
+            // SKIP필터: 유틸리티 이미지
+            if isUtilityImage(exposureMetrics) {
+                results.append(LightResult(assetID: assetID, isLowQuality: false, isSkipped: true, loadFailed: false, signals: []))
+                continue
+            }
+
+            // SKIP필터: 텍스트 스크린샷
+            if hasExtremeExposure(exposureMetrics) {
+                let isText = await detectTextScreenshot(image)
+                if isText {
+                    results.append(LightResult(assetID: assetID, isLowQuality: false, isSkipped: true, loadFailed: false, signals: []))
+                    continue
                 }
             }
 
-            // 하나 완료 → 다음 하나 투입
-            for await _ in group {
-                if nextIndex < assets.count {
-                    let asset = assets[nextIndex]
-                    let index = nextIndex
-                    nextIndex += 1
-                    group.addTask {
-                        let result = await analyzeOneT2(asset: asset)
-                        await collector.add(result, index: index, totalCount: assets.count)
-                    }
+            // SKIP필터: 흰 배경 이미지
+            if isWhiteBackgroundImage(exposureMetrics) {
+                results.append(LightResult(assetID: assetID, isLowQuality: false, isSkipped: true, loadFailed: false, signals: []))
+                continue
+            }
+
+            var signals = exposureAnalyzer.detectSignals(from: exposureMetrics, mode: .precision)
+
+            // Stage 3: Blur
+            do {
+                let blurMetrics: BlurMetrics
+                if blurAnalyzer.isAvailable {
+                    blurMetrics = try blurAnalyzer.analyze(image)
+                } else {
+                    blurMetrics = try blurAnalyzer.analyzeCPU(image)
                 }
+                signals.append(contentsOf: blurAnalyzer.detectSignals(from: blurMetrics, mode: .precision))
+            } catch {
+                // 블러 분석 실패
+            }
+
+            let isLow = signals.hasStrongSignal
+            results.append(LightResult(assetID: assetID, isLowQuality: isLow, isSkipped: false, loadFailed: false, signals: signals))
+
+            if (i + 1) % 100 == 0 {
+                let elapsed = CFAbsoluteTimeGetCurrent() - startTime
+                Log.print("[PreScanBM]   진행: \(i + 1)/\(assets.count) (\(String(format: "%.1f", elapsed))초)")
             }
         }
 
         let totalTime = CFAbsoluteTimeGetCurrent() - startTime
-        return await collector.buildResult(label: label, concurrency: concurrency, totalTime: totalTime)
+        return buildResult(results, label: label, totalTime: totalTime)
     }
 
-    // MARK: - 개별 분석 (T2 파이프라인)
+    // MARK: - 이미지 로더 생성
 
-    /// 단일 asset 분석 — T2 (SKIP필터 포함, SafeGuard 제외)
-    private static func analyzeOneT2(asset: PHAsset) async -> LightResult {
-        let metadataFilter = MetadataFilter()
-        let exposureAnalyzer = ExposureAnalyzer.shared
-        let blurAnalyzer = BlurAnalyzer.shared
-        let imageLoader = CleanupImageLoader.shared
-
-        let assetID = asset.localIdentifier
-
-        // Stage 1: MetadataFilter
-        if metadataFilter.shouldAnalyze(asset) != nil {
-            return LightResult(assetID: assetID, isLowQuality: false, isSkipped: true, signals: [])
-        }
-
-        // 이미지 로딩
-        guard let image = try? await imageLoader.loadImage(for: asset) else {
-            return LightResult(assetID: assetID, isLowQuality: false, isSkipped: true, signals: [])
-        }
-
-        // Stage 2: Exposure
-        guard let exposureMetrics = try? exposureAnalyzer.analyze(image) else {
-            return LightResult(assetID: assetID, isLowQuality: false, isSkipped: true, signals: [])
-        }
-
-        // SKIP필터: 유틸리티 이미지
-        if isUtilityImage(exposureMetrics) {
-            return LightResult(assetID: assetID, isLowQuality: false, isSkipped: true, signals: [])
-        }
-
-        // SKIP필터: 텍스트 스크린샷
-        if hasExtremeExposure(exposureMetrics) {
-            let isText = await detectTextScreenshot(image)
-            if isText {
-                return LightResult(assetID: assetID, isLowQuality: false, isSkipped: true, signals: [])
-            }
-        }
-
-        // SKIP필터: 흰 배경 이미지
-        if isWhiteBackgroundImage(exposureMetrics) {
-            return LightResult(assetID: assetID, isLowQuality: false, isSkipped: true, signals: [])
-        }
-
-        var signals = exposureAnalyzer.detectSignals(from: exposureMetrics, mode: .precision)
-
-        // Stage 3: Blur (SafeGuard 없이)
-        do {
-            let blurMetrics: BlurMetrics
-            if blurAnalyzer.isAvailable {
-                blurMetrics = try blurAnalyzer.analyze(image)
-            } else {
-                blurMetrics = try blurAnalyzer.analyzeCPU(image)
-            }
-            signals.append(contentsOf: blurAnalyzer.detectSignals(from: blurMetrics, mode: .precision))
-        } catch {
-            // 블러 분석 실패 — 무시
-        }
-
-        let isLow = signals.hasStrongSignal
-        return LightResult(assetID: assetID, isLowQuality: isLow, isSkipped: false, signals: signals)
+    /// deliveryMode를 지정하여 벤치마크용 이미지 로더 생성
+    private static func makeImageLoader(deliveryMode: PHImageRequestOptionsDeliveryMode) -> DeliveryModeImageLoader {
+        return DeliveryModeImageLoader(deliveryMode: deliveryMode)
     }
 
-    // MARK: - 결과 수집 Actor
+    // MARK: - 결과 빌드
 
-    /// 병렬 태스크에서 결과를 스레드 안전하게 수집하는 actor
-    private actor ResultCollector {
-        let startTime: Double
-        var results: [LightResult] = []
-        var lowQualityCount = 0
-        /// 진행 로그용 카운터
-        var processedCount = 0
+    /// LightResult 배열 → DeliveryBenchmarkResult
+    private static func buildResult(
+        _ results: [LightResult],
+        label: String,
+        totalTime: Double
+    ) -> DeliveryBenchmarkResult {
+        let lowQuality = results.filter { $0.isLowQuality }
+        let skipped = results.filter { $0.isSkipped }
+        let loadFailed = results.filter { $0.loadFailed }
+        let analyzed = results.filter { !$0.isSkipped && !$0.loadFailed }
+        let avgTime = analyzed.isEmpty ? 0 : (totalTime * 1000) / Double(results.count)
 
-        init(startTime: Double) {
-            self.startTime = startTime
+        let details = lowQuality.map { r in
+            let signalStr = r.signals.map { $0.kind.rawValue }.joined(separator: ", ")
+            return (assetID: r.assetID, signals: signalStr)
         }
 
-        /// 결과 추가 (저품질 발견 시점 기록 포함)
-        func add(_ result: LightResult, index: Int, totalCount: Int) {
-            results.append(result)
-            processedCount += 1
-
-            if result.isLowQuality {
-                lowQualityCount += 1
-            }
-
-            // 100장마다 진행 로그
-            if processedCount % 100 == 0 {
-                let elapsed = CFAbsoluteTimeGetCurrent() - startTime
-                Log.print("[PreScanBM]   진행: \(processedCount)/\(totalCount) (\(String(format: "%.1f", elapsed))초)")
-            }
-        }
-
-        /// 최종 결과 빌드
-        func buildResult(label: String, concurrency: Int, totalTime: Double) -> ParallelBenchmarkResult {
-            let lowQuality = results.filter { $0.isLowQuality }
-            let skipped = results.filter { $0.isSkipped }
-            let analyzed = results.filter { !$0.isSkipped }
-            let avgTime = analyzed.isEmpty ? 0 : (totalTime * 1000) / Double(analyzed.count)
-
-            let details = lowQuality.map { r in
-                let signalStr = r.signals.map { $0.kind.rawValue }.joined(separator: ", ")
-                return (assetID: r.assetID, signals: signalStr)
-            }
-
-            return ParallelBenchmarkResult(
-                label: label,
-                concurrency: concurrency,
-                totalCount: results.count,
-                analyzedCount: analyzed.count,
-                lowQualityCount: lowQuality.count,
-                skippedCount: skipped.count,
-                totalTimeSeconds: totalTime,
-                avgTimeMs: avgTime,
-                lowQualityDetails: details
-            )
-        }
+        return DeliveryBenchmarkResult(
+            label: label,
+            totalCount: results.count,
+            analyzedCount: analyzed.count,
+            lowQualityCount: lowQuality.count,
+            skippedCount: skipped.count,
+            loadFailedCount: loadFailed.count,
+            totalTimeSeconds: totalTime,
+            avgTimeMs: avgTime,
+            lowQualityDetails: details
+        )
     }
 
     // MARK: - 경량 결과 모델
@@ -318,6 +257,7 @@ final class PreScanBenchmark {
         let assetID: String
         let isLowQuality: Bool
         let isSkipped: Bool
+        let loadFailed: Bool
         let signals: [QualitySignal]
     }
 
@@ -377,12 +317,12 @@ final class PreScanBenchmark {
     // MARK: - 출력
 
     /// 개별 테스트 결과 출력
-    private static func printResult(_ result: ParallelBenchmarkResult) {
-        Log.print("[PreScanBM] [\(result.label)] (동시 \(result.concurrency)개)")
+    private static func printResult(_ result: DeliveryBenchmarkResult) {
+        Log.print("[PreScanBM] [\(result.label)]")
         Log.print("[PreScanBM]   총 시간: \(String(format: "%.2f", result.totalTimeSeconds))초")
-        Log.print("[PreScanBM]   분석 \(result.analyzedCount)장, 스킵 \(result.skippedCount)장")
+        Log.print("[PreScanBM]   평균/장: \(String(format: "%.1f", result.avgTimeMs))ms")
+        Log.print("[PreScanBM]   분석 \(result.analyzedCount)장, 스킵 \(result.skippedCount)장, 로딩실패 \(result.loadFailedCount)장")
         Log.print("[PreScanBM]   저품질: \(result.lowQualityCount)장")
-        Log.print("[PreScanBM]   평균/장: \(String(format: "%.1f", result.avgTimeMs))ms (전체 시간 기준)")
 
         // 저품질 상세 (최대 10개)
         if !result.lowQualityDetails.isEmpty {
@@ -395,49 +335,155 @@ final class PreScanBenchmark {
         }
     }
 
-    /// 4종 병렬 비교 요약
+    /// 2종 비교 요약
     private static func printComparison(
-        p0: ParallelBenchmarkResult,
-        p1: ParallelBenchmarkResult,
-        p2: ParallelBenchmarkResult,
-        p3: ParallelBenchmarkResult
+        q1: DeliveryBenchmarkResult,
+        q2: DeliveryBenchmarkResult
     ) {
         Log.print("[PreScanBM]")
-        Log.print("[PreScanBM] ============ 병렬 처리 비교 요약 ============")
+        Log.print("[PreScanBM] ============ 로딩 방식 비교 요약 ============")
 
-        // 총 시간 비교
+        // 속도 비교
         Log.print("[PreScanBM] 총 시간:")
-        Log.print("[PreScanBM]   P0 (순차):    \(String(format: "%.2f", p0.totalTimeSeconds))초")
-        Log.print("[PreScanBM]   P1 (동시 2):  \(String(format: "%.2f", p1.totalTimeSeconds))초")
-        Log.print("[PreScanBM]   P2 (동시 4):  \(String(format: "%.2f", p2.totalTimeSeconds))초")
-        Log.print("[PreScanBM]   P3 (동시 8):  \(String(format: "%.2f", p3.totalTimeSeconds))초")
+        Log.print("[PreScanBM]   Q1 (highQuality): \(String(format: "%.2f", q1.totalTimeSeconds))초 (avg \(String(format: "%.1f", q1.avgTimeMs))ms)")
+        Log.print("[PreScanBM]   Q2 (fastFormat):  \(String(format: "%.2f", q2.totalTimeSeconds))초 (avg \(String(format: "%.1f", q2.avgTimeMs))ms)")
 
-        // 속도 향상 비율 (P0 기준)
-        if p0.totalTimeSeconds > 0 {
-            Log.print("[PreScanBM]   P1 속도향상: \(String(format: "%.1f", p0.totalTimeSeconds / p1.totalTimeSeconds))x")
-            Log.print("[PreScanBM]   P2 속도향상: \(String(format: "%.1f", p0.totalTimeSeconds / p2.totalTimeSeconds))x")
-            Log.print("[PreScanBM]   P3 속도향상: \(String(format: "%.1f", p0.totalTimeSeconds / p3.totalTimeSeconds))x")
+        if q1.totalTimeSeconds > 0 {
+            let speedup = q1.totalTimeSeconds / q2.totalTimeSeconds
+            let saved = q1.totalTimeSeconds - q2.totalTimeSeconds
+            Log.print("[PreScanBM]   속도향상: \(String(format: "%.2f", speedup))x (\(String(format: "%.1f", saved))초 절약)")
         }
 
-        // 저품질 수 비교
+        // 로딩 실패 비교
         Log.print("[PreScanBM]")
-        Log.print("[PreScanBM] 저품질: P0=\(p0.lowQualityCount)장, P1=\(p1.lowQualityCount)장, P2=\(p2.lowQualityCount)장, P3=\(p3.lowQualityCount)장")
+        Log.print("[PreScanBM] 로딩 실패: Q1=\(q1.loadFailedCount)장, Q2=\(q2.loadFailedCount)장")
 
-        // 판정 일치 여부
-        let p0IDs = Set(p0.lowQualityDetails.map { $0.assetID })
-        let p1IDs = Set(p1.lowQualityDetails.map { $0.assetID })
-        let p2IDs = Set(p2.lowQualityDetails.map { $0.assetID })
-        let p3IDs = Set(p3.lowQualityDetails.map { $0.assetID })
-        if p0IDs == p1IDs && p1IDs == p2IDs && p2IDs == p3IDs {
-            Log.print("[PreScanBM] 판정 일치: ✅ 4종 모두 동일한 사진 판정")
+        // 저품질 판정 비교
+        Log.print("[PreScanBM]")
+        Log.print("[PreScanBM] 저품질: Q1=\(q1.lowQualityCount)장, Q2=\(q2.lowQualityCount)장")
+
+        // 판정 일치 여부 (핵심)
+        let q1IDs = Set(q1.lowQualityDetails.map { $0.assetID })
+        let q2IDs = Set(q2.lowQualityDetails.map { $0.assetID })
+
+        if q1IDs == q2IDs {
+            Log.print("[PreScanBM] 판정 일치: ✅ 동일한 사진 판정")
         } else {
-            let diff01 = p0IDs.symmetricDifference(p1IDs).count
-            let diff12 = p1IDs.symmetricDifference(p2IDs).count
-            let diff23 = p2IDs.symmetricDifference(p3IDs).count
-            Log.print("[PreScanBM] 판정 차이: P0↔P1 = \(diff01)장, P1↔P2 = \(diff12)장, P2↔P3 = \(diff23)장")
+            let onlyQ1 = q1IDs.subtracting(q2IDs)
+            let onlyQ2 = q2IDs.subtracting(q1IDs)
+            let common = q1IDs.intersection(q2IDs)
+            Log.print("[PreScanBM] 판정 차이:")
+            Log.print("[PreScanBM]   공통: \(common.count)장")
+            Log.print("[PreScanBM]   Q1에만: \(onlyQ1.count)장")
+            Log.print("[PreScanBM]   Q2에만: \(onlyQ2.count)장")
+
+            // Q1에만 있는 상세
+            if !onlyQ1.isEmpty {
+                Log.print("[PreScanBM]   Q1에만 저품질 (highQuality에서만 감지):")
+                for id in onlyQ1.prefix(5) {
+                    let shortID = String(id.prefix(12))
+                    if let detail = q1.lowQualityDetails.first(where: { $0.assetID == id }) {
+                        Log.print("[PreScanBM]     \(shortID)... → [\(detail.signals)]")
+                    }
+                }
+            }
+
+            // Q2에만 있는 상세
+            if !onlyQ2.isEmpty {
+                Log.print("[PreScanBM]   Q2에만 저품질 (fastFormat에서만 감지):")
+                for id in onlyQ2.prefix(5) {
+                    let shortID = String(id.prefix(12))
+                    if let detail = q2.lowQualityDetails.first(where: { $0.assetID == id }) {
+                        Log.print("[PreScanBM]     \(shortID)... → [\(detail.signals)]")
+                    }
+                }
+            }
         }
 
         Log.print("[PreScanBM] ==========================================")
+    }
+}
+
+// MARK: - DeliveryMode 전용 이미지 로더
+
+/// deliveryMode를 지정 가능한 벤치마크용 이미지 로더
+///
+/// CleanupImageLoader와 동일한 로직이지만 deliveryMode를 외부에서 지정 가능합니다.
+private final class DeliveryModeImageLoader: CleanupImageLoader {
+
+    /// 지정된 deliveryMode로 초기화
+    init(deliveryMode: PHImageRequestOptionsDeliveryMode) {
+        super.init()
+        // requestOptions의 deliveryMode 변경
+        // (부모의 requestOptions가 private이므로 별도 옵션 사용)
+        self.overrideDeliveryMode = deliveryMode
+    }
+
+    /// deliveryMode 오버라이드
+    private var overrideDeliveryMode: PHImageRequestOptionsDeliveryMode = .highQualityFormat
+
+    /// 오버라이드된 deliveryMode로 이미지 로딩
+    override func loadImage(for asset: PHAsset) async throws -> CGImage {
+        // 부모의 requestOptions를 직접 변경할 수 없으므로
+        // 별도 요청 옵션으로 직접 로딩
+        let options = PHImageRequestOptions()
+        options.deliveryMode = overrideDeliveryMode
+        options.resizeMode = .fast
+        options.isNetworkAccessAllowed = true
+        options.isSynchronous = false
+
+        let targetSize = calculateTargetSizeForBenchmark(asset: asset, minSize: 360)
+        let imageManager = PHCachingImageManager()
+
+        return try await withCheckedThrowingContinuation { continuation in
+            var hasResumed = false
+
+            imageManager.requestImage(
+                for: asset,
+                targetSize: targetSize,
+                contentMode: .aspectFit,
+                options: options
+            ) { image, info in
+                // degraded 처리: fastFormat은 degraded가 올 수 있음
+                if let isDegraded = info?[PHImageResultIsDegradedKey] as? Bool, isDegraded {
+                    return
+                }
+
+                guard !hasResumed else { return }
+                hasResumed = true
+
+                if let cancelled = info?[PHImageCancelledKey] as? Bool, cancelled {
+                    continuation.resume(throwing: CleanupImageLoadError.timeout)
+                    return
+                }
+
+                if let error = info?[PHImageErrorKey] as? Error {
+                    continuation.resume(throwing: CleanupImageLoadError.loadFailed(error.localizedDescription))
+                    return
+                }
+
+                guard let uiImage = image, let cgImage = uiImage.cgImage else {
+                    continuation.resume(throwing: CleanupImageLoadError.loadFailed("이미지 nil"))
+                    return
+                }
+
+                continuation.resume(returning: cgImage)
+            }
+        }
+    }
+
+    /// 타겟 크기 계산 (짧은 변 기준)
+    private func calculateTargetSizeForBenchmark(asset: PHAsset, minSize: CGFloat) -> CGSize {
+        let pixelWidth = CGFloat(asset.pixelWidth)
+        let pixelHeight = CGFloat(asset.pixelHeight)
+        let shorterSide = min(pixelWidth, pixelHeight)
+
+        if shorterSide <= minSize {
+            return CGSize(width: pixelWidth, height: pixelHeight)
+        }
+
+        let scale = minSize / shorterSide
+        return CGSize(width: pixelWidth * scale, height: pixelHeight * scale)
     }
 }
 #endif
