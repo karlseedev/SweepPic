@@ -551,6 +551,9 @@ final class ViewerViewController: UIViewController {
             titleLabel.centerYAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 38)
         ])
 
+        // 초기 상태: 숨김 (+버튼 표시 시 함께 나타남)
+        titleLabel.alpha = 0
+
         similarPhotoTitleLabel = titleLabel
     }
 
@@ -983,12 +986,7 @@ final class ViewerViewController: UIViewController {
         )
         eyeItem.tintColor = .white
         navBarEyeItem = eyeItem
-        // +버튼 표시 시 rightBarButtonItem으로 설정됨
-
-        // .normal 모드: "유사사진 정리가능" 타이틀 설정
-        if viewerMode == .normal {
-            title = "유사사진 정리가능"
-        }
+        // +버튼 표시 시 rightBarButtonItem + title 설정됨 (showNavBarEyeButton에서)
     }
 
     /// iOS 26+ 네비게이션 바 눈 아이콘 탭 핸들러
@@ -1008,10 +1006,21 @@ final class ViewerViewController: UIViewController {
         navBarEyeItem?.image = UIImage(systemName: iconName)
     }
 
-    /// iOS 26+ 네비게이션 바 눈 아이콘 표시/숨김
+    /// 눈 아이콘 + 타이틀 표시/숨김
+    /// +버튼이 표시/숨겨질 때 호출되어 타이틀도 함께 연동
     func showNavBarEyeButton(_ show: Bool) {
-        guard #available(iOS 26.0, *) else { return }
-        navigationItem.rightBarButtonItem = show ? navBarEyeItem : nil
+        // iOS 26 Push: 시스템 네비바 눈 아이콘 + 타이틀
+        if #available(iOS 26.0, *) {
+            navigationItem.rightBarButtonItem = show ? navBarEyeItem : nil
+            if useSystemUI {
+                title = show ? "유사사진 정리가능" : nil
+            }
+        }
+
+        // iOS 16~25 + iOS 26 Modal: 커스텀 타이틀 라벨
+        UIView.animate(withDuration: 0.2) {
+            self.similarPhotoTitleLabel?.alpha = show ? 1 : 0
+        }
     }
 
     /// iOS 26+ 시스템 툴바 설정

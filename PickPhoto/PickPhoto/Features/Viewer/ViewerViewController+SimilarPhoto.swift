@@ -254,6 +254,9 @@ extension ViewerViewController {
         if resetZoom {
             // 스와이프: 오버레이 상태 완전 리셋
             faceButtonOverlay?.resetState()
+            // 타이틀도 즉시 숨김 (새 사진의 분석 결과 나올 때까지)
+            similarPhotoTitleLabel?.alpha = 0
+            if #available(iOS 26.0, *) { title = nil }
         } else {
             // 얼굴 그리드 복귀: 버튼만 제거하고 줌/토글 상태 유지
             faceButtonOverlay?.clearButtonsOnly()
