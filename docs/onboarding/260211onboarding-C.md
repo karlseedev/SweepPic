@@ -71,19 +71,22 @@
 | `CoachMarkType` | `similarPhoto` 케이스 추가 (C-1/C-2 통합 플래그) |
 | `FaceButtonOverlay.swift` | 첫 번째 + 버튼의 프레임을 외부에 노출하는 접근자 추가 |
 
-### 신규 (1개)
+### 신규 (2개)
 
 | 파일 | 내용 |
 |------|------|
-| `GridViewController+CoachMarkC.swift` | C-1 트리거 로직 (뱃지 최초 표시 감지 + 조건 확인 + show) |
+| `GridViewController+CoachMarkC.swift` | C-1 트리거 로직 (zone 검증 + 뱃지 감지 + 안전 타임아웃) |
+| `CoachMarkOverlayView+CoachMarkC.swift` | C-1/C-2 show/transition + 탭 모션 + 눌림 피드백 + fillDimHole |
+| `ViewerViewController+CoachMarkC.swift` | C-2 트리거 (폴링 + 전환 + 얼굴 비교 자동 진입) |
 
-### 기존 수정 (3개)
+### 기존 수정 (4개)
 
 | 파일 | 수정 내용 |
 |------|-----------|
-| `CoachMarkManager` (CoachMarkOverlayView.swift 내) | `isWaitingForC2` 플래그 + `dismissCurrent()` 가드 추가 |
-| `GridViewController+SimilarPhoto.swift` | `showBadge(on:count:)` 끝에 C-1 트리거 메서드 호출 1줄 추가 |
-| `ViewerViewController+SimilarPhoto.swift` | C-2 트리거 (+ 버튼 표시 후 코치마크 C-2 표시) |
+| `CoachMarkOverlayView.swift` | `dimLayer` internal 접근 + `CoachMarkManager`에 `safetyTimeoutWork`/`resetC2State()` 추가 + 버튼 흰색 통일 + 딤 70% |
+| `GridViewController+SimilarPhoto.swift` | `showBadge(on:count:)` — 신규 뱃지 + 기존 뱃지 양쪽에서 C-1 트리거 호출 |
+| `GridViewController.swift` | `viewDidAppear`에서 `hasTriggeredC1` 리셋 |
+| `Log.swift` | CoachMarkC1, CoachMarkC2, CoachMarkManager 카테고리 추가 |
 
 ---
 
@@ -95,7 +98,9 @@
 showBadge(on:count:) 호출 시
   └── 이미 C가 표시된 적 있으면 스킵 (hasBeenShown)
   └── CoachMarkManager.isShowing이면 스킵
-  └── 첫 번째 뱃지만 트리거 (hasTriggeredC1 associated object 플래그)
+  └── 가시 영역 검증: 상하 12.5% 마진 제외한 중앙 75%에 셀이 완전히 들어와야 함
+        (zone 밖 셀은 lock을 잡지 않아 다른 셀에 기회를 줌)
+  └── 첫 번째 뱃지만 트리거 (hasTriggeredC1 associated object 플래그, zone 체크 후에 설정)
   └── indexPath + assetID 캡처: collectionView.indexPath(for: cell) + asset.localIdentifier
         ⚠️ showBadge(on:count:)는 cell만 파라미터로 받음
            indexPath는 collectionView.indexPath(for:)로 역추적 필요
@@ -128,9 +133,13 @@ showBadge(on:count:) 호출 시
 **중복 방지:**
 `hasTriggeredC1`을 associated object로 관리. `showBadge`는 visible 셀 전체에 대해 반복 호출되므로, 첫 호출에서 플래그를 true로 설정하여 이후 호출을 스킵.
 리셋 조건:
-- 코치마크 dismiss 시 → false
+- **`viewDidAppear`**: 그리드 복귀 시 (코치마크 미표시 중일 때) → false
 - 타임아웃 시 → false
 - **1초 딜레이 재검증 실패 시 → false** (셀이 사라지거나 뱃지가 없어진 경우, 다음 뱃지 표시 시 재트리거 가능하도록)
+
+**기존 뱃지 재트리거:**
+`showBadge(on:count:)`에서 기존 뱃지가 이미 있는 셀도 `triggerCoachMarkCIfNeeded(for:)` 호출.
+(뷰어에서 그리드 복귀 시 뱃지는 이미 셀에 붙어있어 새 뱃지 생성 경로를 타지 않으므로 필요)
 
 ### `confirmTapped()` 분기 설계
 
@@ -243,19 +252,20 @@ ViewerViewController viewDidAppear
 
 ```
 ┌──────────────────────────────┐
-│  Dim 배경 (black 60%)        │
+│  Dim 배경 (black 70%)        │
 │  ┌────┐ ┌────┐ ┌────┐       │
 │  │    │ │    │ │    │       │
 │  ├────┤ ├────┤ ├────┤       │
-│  │    │ │ ⊞3 │ │    │       │ ← evenOdd 구멍으로 뱃지 셀 하이라이트
-│  ├────┤ ├────┤ ├────┤       │     (A와 동일 방식)
+│  │    │ │ ⊞3 │ │    │       │ ← evenOdd rounded rect 구멍 (margin 8pt)
+│  ├────┤ ├────┤ ├────┤       │
 │  │    │ │    │ │    │       │
 │  └────┘ └────┘ └────┘       │
 │                              │
 │  "유사사진 정리기능이 표시된    │ ← 하이라이트 셀 아래
-│   사진이에요. 각 사진의 얼굴을  │
-│   비교해서 정리할 수 있어요"    │
-│         [확인]               │
+│   사진이에요                   │
+│   각 사진의 얼굴을 비교해서    │
+│   정리할 수 있어요"            │
+│         [확인]               │ ← 흰색 버튼 (검정 텍스트)
 └──────────────────────────────┘
 ```
 
@@ -263,47 +273,59 @@ ViewerViewController viewDidAppear
 
 ```
 ┌──────────────────────────────┐
-│  Dim 배경 (black 60%)        │
+│  Dim 배경 (black 70%)        │
 │                              │
-│        [+] ← evenOdd 구멍    │ ← + 버튼만 하이라이트
+│       ╭───╮                  │
+│       │ + │ ← 원형 구멍      │ ← 버튼 크기 × 1.2 원형
+│       ╰───╯                  │
 │                              │
-│  "+버튼을 눌러 얼굴비교화면    │ ← + 버튼 아래
-│   으로 이동하세요.             │
+│  "+버튼을 눌러 얼굴비교화면    │ ← 원형 구멍 아래 기준
+│   으로 이동하세요              │
 │   인물이 여러 명이면 좌우로    │
-│   넘겨볼 수 있어요."          │
-│         [확인]               │
+│   넘겨볼 수 있어요"            │
+│         [확인]               │ ← 흰색 버튼 (검정 텍스트)
 └──────────────────────────────┘
 ```
 
 **레이어 Z-순서 (아래→위):**
-1. `dimLayer` — CAShapeLayer, black 60%, evenOdd (A와 동일, 구멍으로 대상 하이라이트)
+1. `dimLayer` — CAShapeLayer, black 70%, evenOdd (구멍으로 대상 하이라이트)
 2. `fingerView` — 손가락 아이콘 ([확인] 후 탭 모션에서만 표시)
-3. `messageLabel` + `confirmButton` — 안내 텍스트 + 버튼
+3. `messageLabel` + `confirmButton` — 안내 텍스트 + 흰색 버튼
 
 C는 스냅샷이 필요 없음 — 하이라이트 대상(셀/버튼)은 구멍을 통해 실제 UI가 보임.
+
+### iOS 26 전환 대응: `fillDimHole()`
+
+C-1 탭 모션 완료 후 `onConfirm()` 호출 전에 `fillDimHole()`로 evenOdd 구멍을 제거.
+iOS 26에서 push 전환 시 오버레이가 뷰 계층 최상단에 유지되어 C-1 구멍이 전환 중 노출되는 것을 방지.
 
 ---
 
 ## 탭 모션 애니메이션
 
-### 공통: `performTapMotion(at:completion:)`
+### 공통: `performCTapMotion(at:completion:)`
 
-[확인] 후 대상을 "탭한다"는 느낌을 주는 애니메이션.
+[확인] 후 대상을 "탭한다"는 느낌을 주는 1회성 애니메이션.
+**회전 없음** — 실제 손가락은 화면을 누를 때 기울어지지 않으므로, Scale + Y이동 + 그림자 변화 3가지로 "표면 밀착감"을 표현.
 
 | 단계 | 시간 | 이징 | 동작 |
 |------|------|------|------|
-| 손가락 나타남 | 0.2초 | `.curveEaseOut` | fingerView alpha 0→1, 대상 중앙 약간 위에 배치 |
-| 내려오기 | 0.15초 | `.curveEaseIn` | fingerView center → 대상 중앙 |
-| 누르기 | 0.1초 | spring (damping 0.7) | fingerView scale 0.90, 대상 영역 밝기 변화 (tap 피드백) |
-| 떼기 | 0.15초 | `.curveEaseOut` | fingerView scale 1.0, alpha 0 |
+| 등장 | 0.15초 | `.curveEaseOut` | fingerView alpha 0→1, 타겟 위치에 즉시 배치 (이동 없음) |
+| 누르기 | 0.12초 | spring (damping 0.6) | scale 0.93 + center.y +2.5pt + 그림자 축소 (radius 6→2, offset 2→1, opacity 0.3→0.15) |
+| 유지 | 0.05초 | — | 누른 상태 유지 |
+| 떼기 | 0.2초 | spring (damping 0.7, velocity 2.0) | 원상 복원 + alpha 0 |
 
-총 0.6초. A/B의 반복 시연과 달리 **1회성 탭** 모션.
+총 ~0.52초. A/B의 반복 시연과 달리 **1회성 탭** 모션.
 
-### 대상 눌림 피드백
+**손가락 위치 보정**: `hand.point.up.fill`은 손가락 끝이 이미지 상단 좌측에 치우침.
+- x: `targetCenter.x + fingerWidth * 0.08` (우측 보정)
+- y: `targetCenter.y + fingerHeight * 0.4` (손가락 끝이 타겟 중앙을 가리키도록)
 
-탭 모션 중 하이라이트 구멍 영역에 눌림 효과:
-- C-1: 셀 위에 반투명 흰색 오버레이 flash (UIView, alpha 0→0.3→0)
-- C-2: + 버튼에 scale 축소 효과 (실제 버튼은 오버레이 아래이므로 시각적으로만)
+### 대상 눌림 피드백 (`showCTapPressFeedback`)
+
+탭 모션 중 하이라이트 구멍 영역에 눌림 효과 (2중):
+1. **스냅샷 축소**: 타겟 영역 스냅샷 → scale 0.93 축소 (spring) → 복원 + 페이드아웃 (실제 뷰를 건드리지 않음)
+2. **흰색 플래시**: 반투명 흰색 오버레이 (alpha 0→1→0, 0.25초 keyframe)
 
 ---
 
@@ -378,6 +400,7 @@ final class CoachMarkManager {
     // C 전용 상태
     var isWaitingForC2: Bool = false       // C-1 완료 후 C-2 대기 중
     var c2OnConfirm: (() -> Void)?         // C-2 확인 후 실행할 콜백
+    var safetyTimeoutWork: DispatchWorkItem?  // 안전 타임아웃 (C-2 성공 시 cancel)
 
     /// 현재 코치마크 dismiss
     /// ⚠️ C-1 → C-2 전환 중에는 dismiss 차단 (오버레이 보호)
@@ -386,7 +409,13 @@ final class CoachMarkManager {
         currentOverlay?.dismiss()
     }
 
-    func transitionToC2(...)               // C-1 → C-2 전환 (오버레이 유지, 내용 교체)
+    /// C 상태 완전 리셋 (모든 실패/완료 경로에서 호출)
+    func resetC2State() {
+        isWaitingForC2 = false
+        c2OnConfirm = nil
+        safetyTimeoutWork?.cancel()
+        safetyTimeoutWork = nil
+    }
 }
 ```
 
@@ -444,12 +473,15 @@ func firstButtonFrameInWindow() -> CGRect? {
 
 | 단계 | 실패 조건 | 대응 |
 |------|-----------|------|
-| C-1 트리거 | 뱃지 셀이 1초 내 사라짐 | 트리거 취소, 다음 기회 대기 |
-| C-1 → 뷰어 전환 | viewDidAppear 3초 내 미호출 | 오버레이 dismiss, 차단 해제 |
+| C-1 트리거 | 뱃지 셀이 1초 내 사라짐 | 트리거 취소 (hasTriggeredC1=false), 다음 기회 대기 |
+| C-1 → C-2 전환 | 확인 탭 후 10초 내 C-2 미전환 | DispatchWorkItem 타임아웃 → resetC2State + dismiss |
 | C-2 + 버튼 대기 | hasVisibleButtons 5초 내 미달성 | 오버레이 dismiss, 차단 해제, C 전체 스킵 (markAsShown) |
 | C-2 → 비교 화면 | present 실패 | 오버레이 dismiss, 차단 해제 |
 
-타임아웃 시 `CoachMarkType.similarPhoto.markAsShown()` 호출하여 재시도하지 않음 (실패한 코치마크 반복은 UX 악화).
+**안전 타임아웃 구현**: `DispatchWorkItem`을 `CoachMarkManager.safetyTimeoutWork`에 저장.
+- 생성 시점: C-1 **확인 버튼 탭 시점** (`onConfirm` 내부)
+- Cancel 시점: C-2 전환 성공 시 (`ViewerViewController+CoachMarkC`에서 cancel)
+- 발동 시: `resetC2State()` + overlay dismiss + `hasTriggeredC1 = false`
 
 ---
 
@@ -473,16 +505,19 @@ C-1, C-2를 하나의 플래그(`similarPhoto`)로 관리. 이유:
 
 | 항목 | 값 | 비고 |
 |------|-----|------|
-| 딤 배경 알파 | 0.60 | A와 동일 |
-| 하이라이트 구멍 margin | 8pt | 셀/버튼보다 약간 크게 (A와 동일) |
+| 딤 배경 알파 | 0.70 | A/B/C 공통 |
+| C-1 하이라이트 구멍 | rounded rect, margin 8pt | 셀 크기 + 여유 |
+| C-2 하이라이트 구멍 | **원형**, scale 1.2 | 버튼 중심 기준 원형 (버튼이 원형이므로) |
 | 손가락 아이콘 | `hand.point.up.fill`, 48pt, white | A/B와 동일 |
-| C-1 카피 | "유사사진 정리기능이 표시된 사진이에요.\n각 사진의 얼굴을 비교해서 정리할 수 있어요" | |
-| C-2 카피 | "+버튼을 눌러 얼굴비교화면으로 이동하세요.\n인물이 여러 명이면 좌우로 넘겨볼 수 있어요." | |
+| 확인 버튼 | 흰색 배경 + 검정 텍스트 | A/B/C 공통, iOS 버전 무관 |
+| C-1 카피 | "유사사진 정리기능이 표시된 사진이에요\n각 사진의 얼굴을 비교해서 정리할 수 있어요" | 마침표 없음 |
+| C-2 카피 | "+버튼을 눌러 얼굴비교화면으로 이동하세요\n인물이 여러 명이면 좌우로 넘겨볼 수 있어요" | 마침표 없음 |
 | 버튼 텍스트 | "확인" | A/B와 동일 |
-| 탭 모션 총 시간 | 0.6초 | |
+| 탭 모션 총 시간 | ~0.52초 | |
 | 뱃지 안정 대기 | 1.0초 | 뱃지가 1초 이상 표시 후 트리거 |
-| C-1 → C-2 전환 타임아웃 | 3.0초 | viewDidAppear 미호출 시 폴백 |
-| C-2 + 버튼 대기 타임아웃 | 5.0초 | hasVisibleButtons 미달성 시 폴백. 캐시 miss 시 Vision 분석 수초 소요 가능하므로 2초는 과소. 5초 이상은 딤 화면 응시 시간이 길어 UX 악화. |
+| C-1 zone 검증 | 상하 12.5% 마진 (중앙 75%) | 셀이 완전히 zone 내에 있어야 트리거 |
+| 안전 타임아웃 | 10초 (**확인 버튼 탭 시점부터**) | DispatchWorkItem, C-2 성공 시 cancel |
+| C-2 + 버튼 대기 타임아웃 | 5.0초 | hasVisibleButtons 미달성 시 폴백 |
 
 ### 접근성: Reduce Motion 대응
 
@@ -582,3 +617,22 @@ GPT Codex 교차 검토 피드백 6건 반영:
 | 4 | `isWaitingForC2` 고착 시 dismiss 전체 차단 | 중간 | 리셋 체크리스트 5개 경로 추가 (정상 완료, 타임아웃 2종, present 실패, 앱 백그라운드) |
 | 5 | `dismissCurrent()` 호출 지점 4곳 → 5곳 (SwipeDeleteHandler 누락) | 중간 | 호출 테이블에 `SwipeDeleteHandler.swift:80` 추가 |
 | 6 | indexPath만 캡처 시 PHChange 오탐 가능성 | 중간 | C-1 트리거에 assetID 함께 캡처 주의사항 추가 |
+
+### 4차: 구현 후 디버깅 + 폴리싱 (2026-02-17)
+
+실기기 테스트에서 발견된 이슈 수정:
+
+| # | 이슈 | 대응 |
+|---|------|------|
+| 1 | C-2 오버레이가 뷰어 뒤에 가려짐 | `transitionToC2()`에서 `superview?.bringSubviewToFront(self)` 추가 |
+| 2 | C-1이 그리드 상단 끝 셀에서 레이아웃 깨짐 | zone 검증 추가 (상하 12.5% 마진, 중앙 75%) + scrollToItem으로 중앙 배치 |
+| 3 | zone 밖 셀이 lock 선점 → zone 안 셀 차단 | zone 체크를 `hasTriggeredC1 = true` 전으로 이동 |
+| 4 | 탭 모션 회전(-5°)이 부자연스러움 | 회전 제거 → Scale(0.93) + Y이동(+2.5pt) + 그림자 축소 조합 |
+| 5 | 눌림 피드백 약함 | 스냅샷 기반 scale 0.93 축소 + 흰색 플래시 2중 피드백 |
+| 6 | C-2가 10초 후 자동 사라짐 | 안전 타임아웃을 C-1 표시 시점 → 확인 탭 시점으로 이동 + DispatchWorkItem cancel 패턴 |
+| 7 | iOS 26에서 C-1 구멍이 push 전환 중 노출 | `fillDimHole()`로 onConfirm 전 evenOdd 구멍 제거 |
+| 8 | 1회 후 재트리거 안됨 | `hasTriggeredC1` viewDidAppear 리셋 + 기존 뱃지 경로에서도 트리거 |
+| 9 | 손가락 위치가 + 버튼과 불일치 | x/y 오프셋 보정 (hand.point.up.fill 손가락 끝 기준) |
+| 10 | C-2 하이라이트가 사각형 | 원형 구멍으로 변경 (scale 1.2) |
+| 11 | 버튼/딤 스타일 불일치 | 버튼 흰색 통일, 딤 70%, 텍스트 마침표 제거 |
+| 12 | 로그가 안 찍힘 | Log.swift에 CoachMarkC1/C2/Manager 카테고리 등록 |
