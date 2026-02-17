@@ -813,10 +813,14 @@ func countError(_ error: AnalyticsError.Video)
 func countError(_ error: AnalyticsError.Storage)
 // → errors[error.rawValue, default: 0] += 1
 
-// ── 이벤트 8: 그리드 성능 ──
+// ── 이벤트 8: 그리드 성능 (인지 기반 측정) ──
 func countGrayShown()
 // → counters.gridPerformance.grayShown += 1
-// 호출 지점: BaseGridViewController.willDisplay (앨범/휴지통), GridViewController.willDisplay (보관함)
+// 측정 방식: Time Threshold (인지 임계값 50ms, Del Cul et al. 2007)
+// - willDisplay에서 image==nil이면 플래그 + 타임스탬프 기록
+// - 이미지 도착 (pipeline completion): elapsed > 50ms일 때만 카운트 (역방향 마스킹)
+// - 셀 재사용 (prepareForReuse): 이미지 미도착 → 무조건 카운트 (마스킹 자극 없음)
+// 호출 지점: PhotoCell.prepareForReuse, PhotoCell.requestFromPipeline completion (2곳)
 // 수집 범위: 보관함, 앨범, 휴지통 — 모든 그리드 화면
 ```
 
