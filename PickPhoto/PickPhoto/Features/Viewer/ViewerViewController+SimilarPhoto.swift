@@ -674,6 +674,16 @@ extension ViewerViewController: FaceButtonOverlayDelegate {
         }
     }
 
+    /// 눈 버튼 토글 시 타이틀 숨김/표시 연동
+    /// iOS 16~25 + iOS 26 Modal: 커스텀 타이틀 라벨 show/hide
+    /// 딤드(그라데이션)는 토글과 무관하게 항상 유지
+    func faceButtonOverlay(_ overlay: FaceButtonOverlay, didToggleVisibility isHidden: Bool) {
+        // 커스텀 타이틀 라벨 (iOS 16~25 + iOS 26 Modal)
+        UIView.animate(withDuration: 0.2) {
+            self.similarPhotoTitleLabel?.alpha = isHidden ? 0 : 1
+        }
+    }
+
     /// 얼굴 비교 화면 표시
     /// - iOS 26+: UINavigationController로 감싸서 Liquid Glass 네비게이션바 사용
     /// - iOS 16~25: 커스텀 타이틀바 사용, 직접 present

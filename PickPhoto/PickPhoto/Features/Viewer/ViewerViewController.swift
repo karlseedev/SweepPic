@@ -275,6 +275,19 @@ final class ViewerViewController: UIViewController {
     /// iOS 26+ 네비게이션 바 눈 아이콘 버튼 참조 (유사 사진 토글)
     private var navBarEyeItem: UIBarButtonItem?
 
+    // MARK: - 상단 그라데이션 + 타이틀 (유사사진 안내)
+
+    /// 상단 그라데이션 딤드 뷰 (iOS 16~25 + iOS 26 Modal, .normal 모드 전용)
+    /// 눈 버튼 토글과 무관하게 항상 표시
+    private var topGradientView: UIView?
+
+    /// 상단 그라데이션 레이어 (layoutSubviews에서 frame 갱신 필요)
+    private var topGradientLayer: CAGradientLayer?
+
+    /// "유사사진 정리가능" 타이틀 라벨
+    /// 눈 버튼 토글 시 숨김/표시
+    var similarPhotoTitleLabel: UILabel?
+
     // MARK: - Initialization
 
     /// 초기화
@@ -443,6 +456,12 @@ final class ViewerViewController: UIViewController {
         return true
     }
 
+    override func viewDidLayoutSubviews() {
+        super.viewDidLayoutSubviews()
+        // 그라데이션 레이어 frame 갱신 (Auto Layout 적용 후)
+        topGradientLayer?.frame = topGradientView?.bounds ?? .zero
+    }
+
     // MARK: - Setup
 
     /// UI 설정
@@ -468,6 +487,12 @@ final class ViewerViewController: UIViewController {
         ])
         pageViewController.didMove(toParent: self)
 
+        // 상단 그라데이션 + 타이틀 (normal 모드, 커스텀 UI일 때만)
+        // pageVC 위, 버튼/오버레이 아래에 삽입
+        if viewerMode == .normal && !useSystemUI {
+            setupTopGradientAndTitle()
+        }
+
         // iOS 16~25: 커스텀 버튼 추가
         // iOS 26+: viewWillAppear에서 시스템 UI 설정 (navigationController 필요)
         if !useSystemUI {
@@ -477,6 +502,62 @@ final class ViewerViewController: UIViewController {
 
     }
 
+
+    /// 상단 그라데이션 딤드 + "유사사진 정리가능" 타이틀 설정
+    /// .normal 모드 && !useSystemUI 조건에서만 호출
+    /// z-order: pageVC 위, backButton/faceButtonOverlay 아래
+    private func setupTopGradientAndTitle() {
+        // --- 그라데이션 딤드 뷰 ---
+        let gradientContainer = UIView()
+        gradientContainer.translatesAutoresizingMaskIntoConstraints = false
+        gradientContainer.isUserInteractionEnabled = false
+        view.addSubview(gradientContainer)
+
+        // 그라데이션 레이어: black 50% → clear (상단→하단)
+        let gradientLayer = CAGradientLayer()
+        let dimAlpha: CGFloat = 0.50
+        gradientLayer.colors = [
+            UIColor.black.withAlphaComponent(dimAlpha).cgColor,
+            UIColor.black.withAlphaComponent(dimAlpha * 0.7).cgColor,
+            UIColor.black.withAlphaComponent(dimAlpha * 0.3).cgColor,
+            UIColor.black.withAlphaComponent(dimAlpha * 0.1).cgColor,
+            UIColor.clear.cgColor
+        ]
+        gradientLayer.locations = [0, 0.25, 0.5, 0.75, 1.0]
+        gradientLayer.startPoint = CGPoint(x: 0.5, y: 0)
+        gradientLayer.endPoint = CGPoint(x: 0.5, y: 1)
+        gradientContainer.layer.addSublayer(gradientLayer)
+
+        // 그라데이션 영역: view.top ~ safeArea top + 60pt
+        NSLayoutConstraint.activate([
+            gradientContainer.topAnchor.constraint(equalTo: view.topAnchor),
+            gradientContainer.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+            gradientContainer.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+            gradientContainer.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 60)
+        ])
+
+        topGradientView = gradientContainer
+        topGradientLayer = gradientLayer
+
+        // --- 타이틀 라벨 ---
+        let titleLabel = UILabel()
+        titleLabel.text = "유사사진 정리가능"
+        titleLabel.font = .systemFont(ofSize: 15, weight: .semibold)
+        titleLabel.textColor = .white
+        titleLabel.textAlignment = .center
+        titleLabel.translatesAutoresizingMaskIntoConstraints = false
+        titleLabel.isUserInteractionEnabled = false
+        view.addSubview(titleLabel)
+
+        // centerY = safeArea top + 38pt (backButton의 centerY와 수평 정렬)
+        // backButton: topAnchor = safeArea + 16, size 44×44 → centerY = safeArea + 38
+        NSLayoutConstraint.activate([
+            titleLabel.centerXAnchor.constraint(equalTo: view.centerXAnchor),
+            titleLabel.centerYAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 38)
+        ])
+
+        similarPhotoTitleLabel = titleLabel
+    }
 
     /// iOS 16~25 전용 뒤로가기 버튼 설정
     /// Push 전환 방식이지만 네비바는 숨긴 상태로 유지하고 커스텀 버튼 사용
@@ -915,12 +996,21 @@ final class ViewerViewController: UIViewController {
         eyeItem.tintColor = .white
         navBarEyeItem = eyeItem
         // +버튼 표시 시 rightBarButtonItem으로 설정됨
+
+        // .normal 모드: "유사사진 정리가능" 타이틀 설정
+        if viewerMode == .normal {
+            title = "유사사진 정리가능"
+        }
     }
 
     /// iOS 26+ 네비게이션 바 눈 아이콘 탭 핸들러
     private func navBarEyeButtonTapped() {
         faceButtonOverlay?.toggleOverlay()
         updateNavBarEyeIcon()
+
+        // 타이틀 토글: 눈 버튼 OFF → 타이틀 숨김, ON → 타이틀 복원
+        let isHidden = faceButtonOverlay?.isCurrentlyHidden == true
+        title = isHidden ? nil : "유사사진 정리가능"
     }
 
     /// iOS 26+ 네비게이션 바 눈 아이콘 업데이트

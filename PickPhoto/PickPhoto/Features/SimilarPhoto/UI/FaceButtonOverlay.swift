@@ -31,6 +31,17 @@ protocol FaceButtonOverlayDelegate: AnyObject {
     ///   - personIndex: 탭된 얼굴의 인물 번호
     ///   - face: 탭된 얼굴 정보
     func faceButtonOverlay(_ overlay: FaceButtonOverlay, didTapFaceAtPersonIndex personIndex: Int, face: CachedFace)
+
+    /// 눈 버튼으로 오버레이 표시/숨김이 토글되었을 때 호출
+    /// - Parameters:
+    ///   - overlay: 오버레이 인스턴스
+    ///   - isHidden: true면 오버레이 숨김 상태 (눈 슬래시)
+    func faceButtonOverlay(_ overlay: FaceButtonOverlay, didToggleVisibility isHidden: Bool)
+}
+
+/// FaceButtonOverlayDelegate 기본 구현
+extension FaceButtonOverlayDelegate {
+    func faceButtonOverlay(_ overlay: FaceButtonOverlay, didToggleVisibility isHidden: Bool) {}
 }
 
 /// 뷰어에서 얼굴 위에 +버튼을 표시하는 오버레이 뷰
@@ -591,6 +602,9 @@ final class FaceButtonOverlay: UIView {
                 }
             }
         }
+
+        // 델리게이트에 토글 상태 알림 (타이틀 숨김/표시 연동)
+        delegate?.faceButtonOverlay(self, didToggleVisibility: isOverlayHidden)
     }
 
     // MARK: - Hit Testing
