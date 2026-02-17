@@ -108,6 +108,7 @@ public enum Log {
         "CleanupLag": true,          // 정리버튼 랙 진단 (ON)
         "CleanupService": true,      // 현재 작업 중 (ON)
         "CleanupSessionStore": true, // 현재 작업 중 (ON)
+        "PreScanBM": true,           // 코치마크 D 사전 스캔 벤치마크 (ON)
         "AutoCleanup": false,
         "VideoFrameExtractor": false,
         "TextDetect": true,          // Vision 텍스트 감지 디버그 (ON)
