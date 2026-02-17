@@ -256,7 +256,6 @@ extension ViewerViewController {
             faceButtonOverlay?.resetState()
             // 타이틀도 즉시 숨김 (새 사진의 분석 결과 나올 때까지)
             similarPhotoTitleLabel?.alpha = 0
-            if #available(iOS 26.0, *) { title = nil }
         } else {
             // 얼굴 그리드 복귀: 버튼만 제거하고 줌/토글 상태 유지
             faceButtonOverlay?.clearButtonsOnly()
@@ -400,7 +399,6 @@ extension ViewerViewController {
         // 버튼 + 타이틀 숨김 (애니메이션 없이 즉시)
         faceButtonOverlay?.hideButtonsImmediately()
         similarPhotoTitleLabel?.alpha = 0
-        if #available(iOS 26.0, *) { title = nil }
     }
 
     /// 줌 완료 처리 - 디바운스 후 버튼 재표시
@@ -436,7 +434,6 @@ extension ViewerViewController {
             UIView.animate(withDuration: 0.2) {
                 self.similarPhotoTitleLabel?.alpha = 1
             }
-            if #available(iOS 26.0, *) { title = "유사사진정리 가능" }
         }
     }
 

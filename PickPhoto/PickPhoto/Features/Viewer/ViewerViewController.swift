@@ -391,7 +391,6 @@ final class ViewerViewController: UIViewController {
             // 회전 중: FaceButtonOverlay + 타이틀 즉시 숨김 (위치 오류 방지)
             self?.faceButtonOverlay?.hideButtonsImmediately()
             self?.similarPhotoTitleLabel?.alpha = 0
-            if #available(iOS 26.0, *) { self?.title = nil }
         }, completion: { [weak self] _ in
             // 회전 완료: FaceButtonOverlay 재표시
             self?.refreshFaceButtonsAfterRotation()
@@ -481,10 +480,15 @@ final class ViewerViewController: UIViewController {
         ])
         pageViewController.didMove(toParent: self)
 
-        // 상단 그라데이션 + 타이틀 (normal 모드, 커스텀 UI일 때만)
+        // 상단 그라데이션 + 타이틀 (normal 모드)
+        // iOS 16~25: 딤드 + 타이틀, iOS 26: titleView로 타이틀만
         // pageVC 위, 버튼/오버레이 아래에 삽입
-        if viewerMode == .normal && !useSystemUI {
-            setupTopGradientAndTitle()
+        if viewerMode == .normal {
+            if !useSystemUI {
+                setupTopGradientAndTitle()  // 딤드 + 타이틀
+            } else {
+                setupSimilarPhotoTitleLabel()  // iOS 26: navigationItem.titleView
+            }
         }
 
         // iOS 16~25: 커스텀 버튼 추가
@@ -522,8 +526,7 @@ final class ViewerViewController: UIViewController {
         gradientLayer.endPoint = CGPoint(x: 0.5, y: 1)
         gradientContainer.layer.addSublayer(gradientLayer)
 
-        // 그라데이션 영역: view.top ~ safeArea top + 79pt
-        // FloatingTitleBar와 동일: contentHeight(44) + gradientExtension(35)
+        // 그라데이션 영역: view.top ~ safeArea top + 90pt
         NSLayoutConstraint.activate([
             gradientContainer.topAnchor.constraint(equalTo: view.topAnchor),
             gradientContainer.leadingAnchor.constraint(equalTo: view.leadingAnchor),
@@ -534,26 +537,40 @@ final class ViewerViewController: UIViewController {
         topGradientView = gradientContainer
         topGradientLayer = gradientLayer
 
-        // --- 타이틀 라벨 ---
+        // 딤드 위에 타이틀 라벨 추가
+        setupSimilarPhotoTitleLabel()
+    }
+
+    /// "유사사진정리 가능" 커스텀 타이틀 라벨 설정
+    /// iOS 16~25: setupTopGradientAndTitle()에서 딤드와 함께 호출 → view.addSubview
+    /// iOS 26: navigationItem.titleView에 설정 → 네비바 버튼과 자동 수평 정렬
+    private func setupSimilarPhotoTitleLabel() {
         let titleLabel = UILabel()
         titleLabel.text = "유사사진정리 가능"
         // FaceComparisonTitleBar와 동일한 스타일 (17pt semibold)
         titleLabel.font = .systemFont(ofSize: 17, weight: .semibold)
         titleLabel.textColor = .white
         titleLabel.textAlignment = .center
-        titleLabel.translatesAutoresizingMaskIntoConstraints = false
-        titleLabel.isUserInteractionEnabled = false
-        view.addSubview(titleLabel)
 
-        // centerY = safeArea top + 29pt (backButton의 centerY와 수평 정렬)
-        // backButton: topAnchor = safeArea + 7, size 44×44 → centerY = safeArea + 29
-        NSLayoutConstraint.activate([
-            titleLabel.centerXAnchor.constraint(equalTo: view.centerXAnchor),
-            titleLabel.centerYAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 29)
-        ])
+        if useSystemUI {
+            // iOS 26: navigationItem.titleView → 네비바 내부에서 버튼과 자동 정렬
+            titleLabel.sizeToFit()
+            titleLabel.alpha = 0
+            navigationItem.titleView = titleLabel
+        } else {
+            // iOS 16~25: view에 직접 추가 + Auto Layout
+            titleLabel.translatesAutoresizingMaskIntoConstraints = false
+            titleLabel.isUserInteractionEnabled = false
+            view.addSubview(titleLabel)
 
-        // 초기 상태: 숨김 (+버튼 표시 시 함께 나타남)
-        titleLabel.alpha = 0
+            // centerY = safeArea + 29 (backButton centerY와 수평 정렬)
+            NSLayoutConstraint.activate([
+                titleLabel.centerXAnchor.constraint(equalTo: view.centerXAnchor),
+                titleLabel.centerYAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 29)
+            ])
+
+            titleLabel.alpha = 0
+        }
 
         similarPhotoTitleLabel = titleLabel
     }
@@ -991,13 +1008,10 @@ final class ViewerViewController: UIViewController {
     }
 
     /// iOS 26+ 네비게이션 바 눈 아이콘 탭 핸들러
+    /// 타이틀 토글은 toggleOverlay → 델리게이트 didToggleVisibility에서 처리
     private func navBarEyeButtonTapped() {
         faceButtonOverlay?.toggleOverlay()
         updateNavBarEyeIcon()
-
-        // 타이틀 토글: 눈 버튼 OFF → 타이틀 숨김, ON → 타이틀 복원
-        let isHidden = faceButtonOverlay?.isCurrentlyHidden == true
-        title = isHidden ? nil : "유사사진정리 가능"
     }
 
     /// iOS 26+ 네비게이션 바 눈 아이콘 업데이트
@@ -1007,18 +1021,15 @@ final class ViewerViewController: UIViewController {
         navBarEyeItem?.image = UIImage(systemName: iconName)
     }
 
-    /// 눈 아이콘 + 타이틀 표시/숨김
+    /// 눈 아이콘 + 커스텀 타이틀 표시/숨김
     /// +버튼이 표시/숨겨질 때 호출되어 타이틀도 함께 연동
     func showNavBarEyeButton(_ show: Bool) {
-        // iOS 26 Push: 시스템 네비바 눈 아이콘 + 타이틀
+        // iOS 26: 네비바 눈 아이콘 (타이틀은 커스텀 라벨로 통일)
         if #available(iOS 26.0, *) {
             navigationItem.rightBarButtonItem = show ? navBarEyeItem : nil
-            if useSystemUI {
-                title = show ? "유사사진정리 가능" : nil
-            }
         }
 
-        // iOS 16~25 + iOS 26 Modal: 커스텀 타이틀 라벨
+        // 커스텀 타이틀 라벨 (iOS 16~25 + iOS 26 공통)
         UIView.animate(withDuration: 0.2) {
             self.similarPhotoTitleLabel?.alpha = show ? 1 : 0
         }
@@ -1571,7 +1582,6 @@ extension ViewerViewController: UIScrollViewDelegate {
         // +버튼 + 타이틀 즉시 숨김 (스와이프 시 제자리에 남는 문제 방지)
         faceButtonOverlay?.hideButtonsImmediately()
         similarPhotoTitleLabel?.alpha = 0
-        if #available(iOS 26.0, *) { title = nil }
 
         Log.print("[Viewer:Scroll] willBeginDragging - optimize 시작")
     }
