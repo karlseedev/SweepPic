@@ -20,6 +20,11 @@ import UIKit
 
 extension CoachMarkOverlayView {
 
+    // MARK: - Constants
+
+    /// C-2 테두리 링 식별용 태그
+    static let borderRingTag = 99876
+
     // MARK: - C-1: Show (Grid Badge Highlight)
 
     /// C-1: 유사사진 뱃지 셀 하이라이트 코치마크 표시
@@ -38,7 +43,7 @@ extension CoachMarkOverlayView {
         overlay.coachMarkType = .similarPhoto
         overlay.highlightFrame = highlightFrame
         overlay.onConfirm = onConfirm
-        overlay.alpha = 0
+        overlay.alpha = 0.01  // hitTest 오버라이드로 터치 차단 즉시 시작 (alpha >= 0.01 필요)
 
         // 윈도우에 추가 (터치 차단 시작)
         window.addSubview(overlay)
@@ -130,6 +135,22 @@ extension CoachMarkOverlayView {
             height: 44
         )
 
+        // + 버튼 강조용 흰색 테두리 링 (FaceButton 바깥에 밀착)
+        let diameter: CGFloat = 39  // FaceButton(34pt) + 테두리(2.5pt×2)
+        let borderRing = UIView()
+        borderRing.frame = CGRect(
+            x: newHighlightFrame.midX - diameter / 2,
+            y: newHighlightFrame.midY - diameter / 2,
+            width: diameter,
+            height: diameter
+        )
+        borderRing.backgroundColor = .clear
+        borderRing.layer.cornerRadius = diameter / 2
+        borderRing.layer.borderColor = UIColor.white.cgColor
+        borderRing.layer.borderWidth = 2.5
+        borderRing.tag = Self.borderRingTag
+        addSubview(borderRing)
+
         // 오버레이 alpha 복원 + 새 카피/버튼 페이드인 (0.3초)
         // C-1에서 alpha=0.01이었으므로 dim 배경과 함께 자연스럽게 복원
         UIView.animate(withDuration: 0.3) {
@@ -147,12 +168,18 @@ extension CoachMarkOverlayView {
     /// 3. onConfirm 콜백 실행
     /// ⚠️ 호출 전 confirmButton.isEnabled = false 필수 (confirmTapped에서 설정)
     func startC_ConfirmSequence() {
-        // 1. 확인 버튼 + 카피 페이드아웃 (0.2초)
+        // 1. 확인 버튼 + 카피 + 테두리 링 페이드아웃 (0.2초)
+        let borderRing = viewWithTag(Self.borderRingTag)
+
         UIView.animate(withDuration: 0.2, animations: {
             self.messageLabel.alpha = 0
             self.confirmButton.alpha = 0
+            borderRing?.alpha = 0
         }) { [weak self] _ in
             guard let self, !self.shouldStopAnimation else { return }
+
+            // 테두리 링 제거
+            borderRing?.removeFromSuperview()
 
             let targetCenter = CGPoint(
                 x: self.highlightFrame.midX,

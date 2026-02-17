@@ -44,13 +44,21 @@ extension ViewerViewController {
 
         Log.print("[CoachMarkC2] START polling — overlay=\(CoachMarkManager.shared.currentOverlay != nil), faceOverlay=\(faceButtonOverlay != nil)")
 
+        // 즉시 터치 차단: C-2 준비까지 뷰어 조작(이미지 스와이프 등) 방지
+        // C-1에서 overlay를 alpha=0.01로 투명화한 뒤 push/present 하면,
+        // UIKit이 뷰 계층 재정렬하여 overlay가 뷰어 뒤로 밀림
+        // → transitionToC2의 bringSubviewToFront까지 뷰어에 터치 전달됨
+        // 이를 방지하기 위해 뷰어의 userInteraction을 비활성화
+        view.isUserInteractionEnabled = false
+
         // + 버튼 표시 대기 (최대 5초, 0.3초 간격 폴링)
         waitForFaceButtons(timeout: 5.0) { [weak self] success in
             guard let self else { return }
 
             guard success else {
-                // 타임아웃 — C 전체 스킵
+                // 타임아웃 — 터치 복원 + C 전체 스킵
                 Log.print("[CoachMarkC2] TIMEOUT — faceButtons never appeared")
+                self.view.isUserInteractionEnabled = true
                 CoachMarkManager.shared.resetC2State()
                 CoachMarkManager.shared.currentOverlay?.dismiss()
                 CoachMarkType.similarPhoto.markAsShown()
@@ -60,6 +68,7 @@ extension ViewerViewController {
             // + 버튼 프레임 가져오기
             guard let buttonFrame = self.faceButtonOverlay?.firstButtonFrameInWindow() else {
                 Log.print("[CoachMarkC2] FAIL — firstButtonFrameInWindow=nil")
+                self.view.isUserInteractionEnabled = true
                 CoachMarkManager.shared.resetC2State()
                 CoachMarkManager.shared.currentOverlay?.dismiss()
                 return
@@ -68,6 +77,7 @@ extension ViewerViewController {
             // 기존 C-1 오버레이를 C-2로 전환
             guard let overlay = CoachMarkManager.shared.currentOverlay else {
                 Log.print("[CoachMarkC2] FAIL — currentOverlay=nil (weak ref lost)")
+                self.view.isUserInteractionEnabled = true
                 CoachMarkManager.shared.resetC2State()
                 return
             }
@@ -77,6 +87,10 @@ extension ViewerViewController {
             // C-2 전환 성공 → 안전 타임아웃 취소 (C-2는 사용자 confirm까지 유지)
             CoachMarkManager.shared.safetyTimeoutWork?.cancel()
             CoachMarkManager.shared.safetyTimeoutWork = nil
+
+            // 터치 복원 (overlay가 bringSubviewToFront로 최상단 → overlay의 hitTest가 터치 차단)
+            // 같은 동기 블록 내이므로 복원↔bringSubviewToFront 사이 터치 유입 없음
+            self.view.isUserInteractionEnabled = true
 
             // C-2 전환: dim hole을 + 버튼으로 이동 + 새 카피/확인 표시
             overlay.transitionToC2(

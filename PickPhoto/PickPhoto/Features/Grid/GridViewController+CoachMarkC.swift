@@ -55,8 +55,7 @@ extension GridViewController {
     /// - Parameter cell: 뱃지가 표시된 PhotoCell
     func triggerCoachMarkCIfNeeded(for cell: PhotoCell) {
         // 이미 표시된 적 있으면 스킵
-        // ⚠️ 테스트용 임시 해제 — 테스트 완료 후 복원 필요
-        // guard !CoachMarkType.similarPhoto.hasBeenShown else { return }
+        guard !CoachMarkType.similarPhoto.hasBeenShown else { return }
 
         // B(뷰어 스와이프) 완료 후에만 C 표시 (기본 기능 B → 고급 기능 C 순서)
         guard CoachMarkType.viewerSwipeDelete.hasBeenShown else { return }
@@ -75,6 +74,10 @@ extension GridViewController {
 
         // 화면이 활성 상태인지
         guard let window = view.window else { return }
+
+        // 그리드가 최상위 화면인지 (뷰어가 push/present된 상태면 스킵)
+        guard navigationController?.topViewController === self,
+              presentedViewController == nil else { return }
 
         // 초기 로딩 완료 후에만
         guard hasFinishedInitialDisplay else { return }
@@ -104,8 +107,20 @@ extension GridViewController {
             return
         }
 
-        // 1.0초 딜레이 (뱃지 안정 표시 확인)
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { [weak self, weak cell] in
+        // 즉시 터치 차단: 투명 뷰로 window 전체를 덮어 스크롤/탭 등 모든 입력 차단
+        // 뱃지 등장 → C-1 발동 사이에 사용자가 다른 조작을 할 수 없도록 보장
+        // UIView의 기본 hitTest가 터치를 가로채므로 하위 뷰에 이벤트 전달 안 됨
+        let blocker = UIView(frame: window.bounds)
+        window.addSubview(blocker)
+
+        // 셀을 화면 중앙으로 즉시 스크롤 (1초 대기 없이)
+        collectionView.scrollToItem(at: indexPath, at: .centeredVertically, animated: true)
+
+        // 스크롤 애니메이션 완료 대기 후 코치마크 표시
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) { [weak self, weak cell, weak blocker] in
+            // 터치 차단 해제 (코치마크 오버레이가 대신 차단)
+            blocker?.removeFromSuperview()
+
             guard let self, let cell else {
                 self?.hasTriggeredC1 = false
                 self?.retriggerForVisibleBadges()
@@ -127,44 +142,20 @@ extension GridViewController {
                 return
             }
 
-            // 재검증: indexPath가 여전히 유효한지
-            guard self.collectionView.indexPath(for: cell) != nil else {
-                self.hasTriggeredC1 = false
-                self.retriggerForVisibleBadges()
-                return
-            }
-
             // 재검증: 다른 코치마크가 안 뜨고 있는지
             guard !CoachMarkManager.shared.isShowing else {
                 self.hasTriggeredC1 = false
-                // 다른 코치마크 표시 중이면 재스캔 불필요 (어차피 가드에서 걸림)
                 return
             }
 
-            // 셀을 화면 중앙으로 스크롤 (코치마크 레이아웃 안정성 확보)
-            guard let currentIndexPath = self.collectionView.indexPath(for: cell) else {
+            // 재검증: 그리드가 최상위 화면인지
+            guard self.navigationController?.topViewController === self,
+                  self.presentedViewController == nil else {
                 self.hasTriggeredC1 = false
-                self.retriggerForVisibleBadges()
                 return
             }
-            self.collectionView.scrollToItem(at: currentIndexPath, at: .centeredVertically, animated: true)
 
-            // 스크롤 애니메이션 완료 대기 후 코치마크 표시
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) { [weak self, weak cell] in
-                guard let self, let cell else {
-                    self?.hasTriggeredC1 = false
-                    self?.retriggerForVisibleBadges()
-                    return
-                }
-
-                // 스크롤 후 재검증: 다른 코치마크 안 떠있는지
-                guard !CoachMarkManager.shared.isShowing else {
-                    self.hasTriggeredC1 = false
-                    return
-                }
-
-                self.showSimilarBadgeCoachMark(cell: cell, assetID: assetID)
-            }
+            self.showSimilarBadgeCoachMark(cell: cell, assetID: assetID)
         }
     }
 

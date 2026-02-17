@@ -26,23 +26,28 @@
 ## 전체 플로우
 
 ```
-[C-1 시작] 윈도우 레벨 터치 차단 시작
+[C-1 시작] 뱃지 표시 즉시 터치 차단 (투명 blocker)
     │
+    ├── scrollToItem 셀 중앙 배치 (0.4초)
+    ├── blocker 제거 → 코치마크 오버레이 표시 (터치 차단 이어받음)
     ├── 그리드: 뱃지 셀 하이라이트 (evenOdd 구멍)
     ├── 카피: "유사사진 정리기능이 표시된 사진이에요.
     │         각 사진의 얼굴을 비교해서 정리할 수 있어요"
     ├── [확인] ← 유일한 터치 허용 (1회차)
-    ├── 확인 버튼+카피 페이드아웃
+    ├── 확인 버튼+카피+테두리 링 페이드아웃
     ├── 손가락 탭 모션 on 뱃지 셀 (0.5초)
+    ├── fillDimHole (CA 암묵적 애니메이션 제거) + 오버레이 alpha=0.01
     ├── 자동 네비게이션 → 뷰어 (didSelectItemAt 호출)
-    │       (전환 중에도 터치 차단 유지)
+    │       (오버레이 alpha=0.01 + 뷰어 isUserInteractionEnabled=false)
     │
     ├── 뷰어 viewDidAppear 대기
     ├── + 버튼 표시 대기 (~100ms, 캐시 hit)
     │
 [C-2 시작] 터치 차단 유지
     │
-    ├── 뷰어: + 버튼 하이라이트 (evenOdd 구멍)
+    ├── 뷰어 isUserInteractionEnabled 복원
+    ├── 오버레이 bringSubviewToFront + alpha 0.01→1.0 페이드인
+    ├── 뷰어: + 버튼 하이라이트 (원형 구멍) + 흰색 테두리 링 강조
     ├── 카피: "+버튼을 눌러 얼굴비교화면으로 이동하세요.
     │         인물이 여러 명이면 좌우로 넘겨볼 수 있어요."
     ├── [확인] ← 유일한 터치 허용 (2회차)
@@ -101,20 +106,14 @@ showBadge(on:count:) 호출 시
   └── 가시 영역 검증: 상하 12.5% 마진 제외한 중앙 75%에 셀이 완전히 들어와야 함
         (zone 밖 셀은 lock을 잡지 않아 다른 셀에 기회를 줌)
   └── 첫 번째 뱃지만 트리거 (hasTriggeredC1 associated object 플래그, zone 체크 후에 설정)
+  └── 그리드가 최상위 화면인지 확인 (topViewController + presentedViewController)
   └── indexPath + assetID 캡처: collectionView.indexPath(for: cell) + asset.localIdentifier
-        ⚠️ showBadge(on:count:)는 cell만 파라미터로 받음
-           indexPath는 collectionView.indexPath(for:)로 역추적 필요
-        ⚠️ indexPath만 캡처 시 주의: 1.0초 딜레이 동안 PHChange로 fetchResult가
-           갱신되면 indexPath가 다른 사진을 가리킬 수 있음.
-           assetID(localIdentifier)를 함께 캡처하고, confirm 시점에
-           fetchResult에서 assetID로 indexPath를 재해석하면 안전.
-           (PHChange는 1.6초 window 중 극히 드물고, 실패 시 filteredIndex nil
-            → 3초 타임아웃 폴백이 동작하므로 치명적이지는 않으나, 저비용 개선)
-  └── 1.0초 딜레이 (뱃지 안정 표시 확인)
-        └── 재검증: 해당 셀이 여전히 visible한지
-        └── 재검증: 뱃지가 여전히 표시 중인지
-        └── 재검증: collectionView.indexPath(for: cell) != nil
-        └── showSimilarBadgeCoachMark(cell:indexPath:)
+  └── 즉시 터치 차단 (투명 UIView를 window에 addSubview)
+  └── scrollToItem으로 셀 중앙 배치
+  └── 0.4초 딜레이 (스크롤 완료 대기)
+        └── 터치 차단 해제 (코치마크 오버레이가 대신 차단)
+        └── 재검증: 셀 visible, 뱃지 존재, 다른 코치마크 없음, 그리드 최상위
+        └── showSimilarBadgeCoachMark(cell:assetID:)
               ├── 셀 프레임 → 윈도우 좌표 변환
               └── CoachMarkOverlayView.showSimilarBadge(
                       highlightFrame:,
@@ -514,7 +513,7 @@ C-1, C-2를 하나의 플래그(`similarPhoto`)로 관리. 이유:
 | C-2 카피 | "+버튼을 눌러 얼굴비교화면으로 이동하세요\n인물이 여러 명이면 좌우로 넘겨볼 수 있어요" | 마침표 없음 |
 | 버튼 텍스트 | "확인" | A/B와 동일 |
 | 탭 모션 총 시간 | ~0.52초 | |
-| 뱃지 안정 대기 | 1.0초 | 뱃지가 1초 이상 표시 후 트리거 |
+| 뱃지 안정 대기 | 즉시 (0초) | 뱃지 표시 즉시 터치 차단 + 스크롤 → 0.4초 후 코치마크 표시 |
 | C-1 zone 검증 | 상하 12.5% 마진 (중앙 75%) | 셀이 완전히 zone 내에 있어야 트리거 |
 | 안전 타임아웃 | 10초 (**확인 버튼 탭 시점부터**) | DispatchWorkItem, C-2 성공 시 cancel |
 | C-2 + 버튼 대기 타임아웃 | 5.0초 | hasVisibleButtons 미달성 시 폴백 |
@@ -536,12 +535,13 @@ if UIAccessibility.isReduceMotionEnabled {
 C-1 (그리드):
 - `!CoachMarkType.similarPhoto.hasBeenShown`
 - `!CoachMarkManager.shared.isShowing`
+- `!hasTriggeredC1` — 중복 트리거 방지 (associated object)
 - `!isSelectMode` — didSelectItemAt의 isSelectMode 가드 통과 보장
 - `!UIAccessibility.isVoiceOverRunning`
 - `view.window != nil`
-- `FeatureFlags.isSimilarPhotoEnabled`
+- `navigationController?.topViewController === self && presentedViewController == nil` — 뷰어 표시 중이면 스킵
 - `hasFinishedInitialDisplay` — 초기 로딩 완료 후에만
-- `!hasTriggeredC1` — 중복 트리거 방지 (associated object)
+- zone 검증 (상하 12.5% 마진, 중앙 75%)
 
 B 코치마크 (C-2 충돌 방지 가드 추가):
 - `!CoachMarkManager.shared.isWaitingForC2` — C-2 대기 중이면 B 스킵
@@ -556,7 +556,7 @@ C-2 (뷰어):
 
 ## 검증 방법
 
-1. 그리드에서 유사사진 뱃지 표시 → 1초 후 C-1 코치마크 표시
+1. 그리드에서 유사사진 뱃지 표시 → 즉시 C-1 코치마크 트리거 (터치 차단 + 스크롤 → 0.4초 후 표시)
 2. C-1 표시 중 [확인] 외 모든 터치 차단
 3. [확인] 탭 → 손가락 탭 모션 → 자동으로 뷰어 진입
 4. 뷰어 전환 중에도 터치 차단 유지
@@ -636,3 +636,17 @@ GPT Codex 교차 검토 피드백 6건 반영:
 | 10 | C-2 하이라이트가 사각형 | 원형 구멍으로 변경 (scale 1.2) |
 | 11 | 버튼/딤 스타일 불일치 | 버튼 흰색 통일, 딤 70%, 텍스트 마침표 제거 |
 | 12 | 로그가 안 찍힘 | Log.swift에 CoachMarkC1/C2/Manager 카테고리 등록 |
+
+### 5차: 터치 차단 강화 + UX 개선 (2026-02-17)
+
+실기기 테스트에서 발견된 터치 차단 구멍 및 UX 이슈 수정:
+
+| # | 이슈 | 대응 |
+|---|------|------|
+| 1 | C-1→뷰어 전환 시 iOS 26에서 암흑 화면 (dim overlay가 줌 전환을 가림) | `fillDimHole()`에 `CATransaction.setDisableActions(true)` + 탭 모션 후 `alpha=0.01` → `transitionToC2()`에서 `alpha=1.0` 복원 |
+| 2 | C-1 재트리거 안 됨 (hasTriggeredC1 타이밍 락) | `retriggerForVisibleBadges()` 추가 — 재검증 실패 시 visible 뱃지 재스캔 |
+| 3 | 뱃지 표시 전 뷰어 진입 시 뷰어 위에서 C-1 발동 | `triggerCoachMarkCIfNeeded`에 `topViewController === self && presentedViewController == nil` 가드 추가 (초기 + 재검증 3곳) |
+| 4 | 1초 대기 중 사용자 스크롤/탭 가능 | 1초 딜레이 제거 → 뱃지 즉시 터치 차단(투명 blocker) + 스크롤 → 0.4초 후 코치마크 표시 |
+| 5 | C-1→C-2 전환 중 뷰어 이미지 스와이프 가능 | `triggerCoachMarkC2IfNeeded()` 진입 즉시 `view.isUserInteractionEnabled = false`, C-2 overlay 준비 시 복원 |
+| 6 | C-2 + 버튼이 Glass 반투명이라 잘 안 보임 | + 버튼 바깥에 흰색 테두리 링(39pt, borderWidth 2.5pt) 추가 — [확인] 시 함께 페이드아웃 |
+| 7 | 테스트용 hasBeenShown 가드 해제 코드 잔존 | `guard !CoachMarkType.similarPhoto.hasBeenShown` 복원 |
