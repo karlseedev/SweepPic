@@ -135,6 +135,12 @@ extension GridViewController {
 
     /// 정리 버튼 탭 핸들러
     @objc func cleanupButtonTapped() {
+        #if DEBUG
+        // 병렬 처리 벤치마크 (임시)
+        PreScanBenchmark.run(from: self)
+        return
+        #endif
+
         // [Analytics] 정리 흐름 추적 시작
         cleanupTracker = CleanupFlowTracker()
 
