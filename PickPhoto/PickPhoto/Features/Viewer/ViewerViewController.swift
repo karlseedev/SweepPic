@@ -322,13 +322,8 @@ final class ViewerViewController: UIViewController {
         setupGestures()
         setupSwipeDeleteHandler()
 
-        // [Timing] 병목 구간: displayInitialPhoto + setupSimilarPhotoFeature
-        let t0 = CACurrentMediaTime()
         displayInitialPhoto()
-        let t1 = CACurrentMediaTime()
         setupSimilarPhotoFeature()
-        let t2 = CACurrentMediaTime()
-        Log.print("[Viewer Timing] displayInitialPhoto: \(String(format: "%.1f", (t1 - t0) * 1000))ms, setupSimilarPhoto: \(String(format: "%.1f", (t2 - t1) * 1000))ms")
 
         // [LiquidGlass 최적화] 페이지 스크롤뷰 델리게이트 설정
         setupPageScrollViewDelegate()
@@ -354,10 +349,7 @@ final class ViewerViewController: UIViewController {
     override func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
 
-        // [Timing] viewDidAppear = 뷰어가 화면에 완전히 표시된 시점
         if openStartTime > 0 {
-            Log.print("[Viewer Timing] ✅ viewDidAppear — 탭 후 +\(String(format: "%.1f", (CACurrentMediaTime() - openStartTime) * 1000))ms (뷰어 표시 완료)")
-            // 1회만 로그 (이후 재진입 시 불필요)
             openStartTime = 0
 
             // [Analytics] 이벤트 3: 최초 진입 시 사진 열람 카운트
@@ -513,9 +505,10 @@ final class ViewerViewController: UIViewController {
         gradientContainer.isUserInteractionEnabled = false
         view.addSubview(gradientContainer)
 
-        // 그라데이션 레이어: black 50% → clear (상단→하단)
+        // 그라데이션 레이어: FloatingTitleBar와 동일한 스펙
+        // maxDimAlpha = LiquidGlassStyle.maxDimAlpha (0.60)
         let gradientLayer = CAGradientLayer()
-        let dimAlpha: CGFloat = 0.50
+        let dimAlpha: CGFloat = LiquidGlassStyle.maxDimAlpha
         gradientLayer.colors = [
             UIColor.black.withAlphaComponent(dimAlpha).cgColor,
             UIColor.black.withAlphaComponent(dimAlpha * 0.7).cgColor,
@@ -528,12 +521,13 @@ final class ViewerViewController: UIViewController {
         gradientLayer.endPoint = CGPoint(x: 0.5, y: 1)
         gradientContainer.layer.addSublayer(gradientLayer)
 
-        // 그라데이션 영역: view.top ~ safeArea top + 60pt
+        // 그라데이션 영역: view.top ~ safeArea top + 79pt
+        // FloatingTitleBar와 동일: contentHeight(44) + gradientExtension(35)
         NSLayoutConstraint.activate([
             gradientContainer.topAnchor.constraint(equalTo: view.topAnchor),
             gradientContainer.leadingAnchor.constraint(equalTo: view.leadingAnchor),
             gradientContainer.trailingAnchor.constraint(equalTo: view.trailingAnchor),
-            gradientContainer.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 60)
+            gradientContainer.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 79)
         ])
 
         topGradientView = gradientContainer
@@ -542,7 +536,8 @@ final class ViewerViewController: UIViewController {
         // --- 타이틀 라벨 ---
         let titleLabel = UILabel()
         titleLabel.text = "유사사진 정리가능"
-        titleLabel.font = .systemFont(ofSize: 15, weight: .semibold)
+        // FaceComparisonTitleBar와 동일한 스타일 (17pt semibold)
+        titleLabel.font = .systemFont(ofSize: 17, weight: .semibold)
         titleLabel.textColor = .white
         titleLabel.textAlignment = .center
         titleLabel.translatesAutoresizingMaskIntoConstraints = false
@@ -651,11 +646,7 @@ final class ViewerViewController: UIViewController {
 
     /// 초기 미디어 표시 (사진/동영상)
     private func displayInitialPhoto() {
-        // [Timing] 세부 단계 측정
-        let d0 = CACurrentMediaTime()
-
         guard let pageVC = createPageViewController(at: currentIndex) else { return }
-        let d1 = CACurrentMediaTime()
 
         pageViewController.setViewControllers(
             [pageVC],
@@ -663,7 +654,6 @@ final class ViewerViewController: UIViewController {
             animated: false,
             completion: nil
         )
-        let d2 = CACurrentMediaTime()
 
         // 초기 페이지가 VideoPageViewController면 비디오 요청 트리거
         if let videoVC = pageVC as? VideoPageViewController {
@@ -673,8 +663,6 @@ final class ViewerViewController: UIViewController {
         // Phase 2: LOD1 원본 이미지 요청 스케줄링
         // (setViewControllers는 delegate를 호출하지 않으므로 수동 호출)
         scheduleLOD1Request()
-
-        Log.print("[Viewer Timing]   displayInitialPhoto 내부 — createPageVC: \(String(format: "%.1f", (d1 - d0) * 1000))ms, setViewControllers: \(String(format: "%.1f", (d2 - d1) * 1000))ms")
     }
 
     // MARK: - Actions

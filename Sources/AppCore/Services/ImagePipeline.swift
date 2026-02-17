@@ -288,10 +288,7 @@ public final class ImagePipeline: ImagePipelineProtocol {
         let canPerSec = elapsed > 0 ? Double(canCount) / elapsed : 0
         let compPerSec = elapsed > 0 ? Double(compCount) / elapsed : 0
 
-        Log.print("[GridStats] \(label) — req: \(reqCount) (\(String(format: "%.1f", reqPerSec))/s), cancel: \(canCount) (\(String(format: "%.1f", canPerSec))/s), complete: \(compCount) (\(String(format: "%.1f", compPerSec))/s)")
-        Log.print("[GridStats] \(label) — degraded: \(degCount), maxInFlight: \(maxInFlight)")
-        Log.print("[GridStats] \(label) — latency avg: \(String(format: "%.1f", avgLatency))ms, p95: \(String(format: "%.1f", p95Latency))ms, max: \(String(format: "%.1f", maxLatency))ms")
-        Log.print("[GridStats] \(label) — preheat: \(phCount)회, 총 \(phAssetCount)개 에셋")
+        // 통계는 수집만 하고 로그 출력하지 않음
     }
 
     // MARK: - Private Properties

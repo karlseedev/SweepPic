@@ -221,21 +221,14 @@ extension ViewerViewController {
         // 비활성화 조건 확인
         guard shouldEnableSimilarPhoto else { return }
 
-        // [Timing] 세부 단계 측정
-        let s0 = CACurrentMediaTime()
-
         // UI 컴포넌트 생성
         setupFaceButtonOverlay()
-        let s1 = CACurrentMediaTime()
 
         // 분석 완료 알림 구독
         setupAnalysisObserver()
 
         // 줌 알림 구독
         setupZoomObserver()
-        let s2 = CACurrentMediaTime()
-
-        Log.print("[Viewer Timing]   setupSimilarPhoto 내부 — faceButtonOverlay: \(String(format: "%.1f", (s1 - s0) * 1000))ms, observers: \(String(format: "%.1f", (s2 - s1) * 1000))ms")
     }
 
     /// 뷰어가 표시될 때 호출
@@ -313,13 +306,10 @@ extension ViewerViewController {
 
     /// +버튼 오버레이 설정
     private func setupFaceButtonOverlay() {
-        let fb0 = CACurrentMediaTime()
         let overlay = FaceButtonOverlay()
-        let fb1 = CACurrentMediaTime()
         overlay.translatesAutoresizingMaskIntoConstraints = false
         overlay.delegate = self
         view.addSubview(overlay)
-        let fb2 = CACurrentMediaTime()
 
         NSLayoutConstraint.activate([
             overlay.topAnchor.constraint(equalTo: view.topAnchor),
@@ -327,10 +317,8 @@ extension ViewerViewController {
             overlay.trailingAnchor.constraint(equalTo: view.trailingAnchor),
             overlay.bottomAnchor.constraint(equalTo: view.bottomAnchor)
         ])
-        let fb3 = CACurrentMediaTime()
 
         faceButtonOverlay = overlay
-        Log.print("[Viewer Timing]     setupFaceButtonOverlay — FaceButtonOverlay(): \(String(format: "%.1f", (fb1-fb0)*1000))ms, addSubview: \(String(format: "%.1f", (fb2-fb1)*1000))ms, constraints: \(String(format: "%.1f", (fb3-fb2)*1000))ms")
     }
 
     /// 분석 완료 알림 옵저버 설정

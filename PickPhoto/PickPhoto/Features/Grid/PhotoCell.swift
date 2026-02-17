@@ -112,7 +112,7 @@ final class PhotoCell: UICollectionViewCell {
         let pipelineMismatch = pipelineMismatchCount
         mismatchLock.unlock()
 
-        Log.print("[GridStats] \(label) — diskCacheMismatch: \(diskMismatch), pipelineMismatch: \(pipelineMismatch)")
+        // 통계는 수집만 하고 로그 출력하지 않음
     }
 
     // MARK: - Gray Cell Statistics (회색 셀 측정)

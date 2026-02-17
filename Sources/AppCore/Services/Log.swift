@@ -62,7 +62,7 @@ public enum Log {
         "SelectionManager": false,
         "GridGestures": false,
         "GridScroll": false,
-        "GridStats": true,           // 그리드 통계 (grayShown, mismatch)
+        "GridStats": false,          // 그리드 통계 (로그 출력 코드 제거됨)
         "PinchZoom": false,
 
         // =============================================
@@ -77,7 +77,7 @@ public enum Log {
         "ZoomTransition": true,          // 커스텀 줌 트랜지션 (현재 작업 중)
         "ZoomAnimator": true,            // 줌 애니메이터 (현재 작업 중)
         "Zoom Timing": true,             // 그리드→뷰어 줌 전환 단계별 타이밍
-        "Viewer Timing": true,           // 뷰어 열림 전체 라이프사이클 타이밍
+        "Viewer Timing": false,          // 뷰어 열림 전체 라이프사이클 타이밍 (코드 제거됨)
 
         // =============================================
         // SimilarPhoto 분석
