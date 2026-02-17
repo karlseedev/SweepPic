@@ -15,13 +15,6 @@ import AppCore
 @main
 class AppDelegate: UIResponder, UIApplicationDelegate {
 
-    // MARK: - Launch Timestamps (finishInitialDisplay에서 합산 로그용)
-
-    /// 프로세스 생성 시각 (sysctl로 조회, OS가 fork한 시점)
-    static var processStartTime: CFAbsoluteTime = 0
-    /// didFinishLaunchingWithOptions 도달 시각
-    static var didFinishLaunchingTime: CFAbsoluteTime = 0
-
     // MARK: - UIApplicationDelegate
 
     /// 앱 시작 시 호출
@@ -33,9 +26,6 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         _ application: UIApplication,
         didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?
     ) -> Bool {
-        // [Launch] 타임스탬프 기록 (finishInitialDisplay에서 합산 로그 출력)
-        recordLaunchTimestamps()
-
         // AppCore 초기화 로그
         Log.print("[AppDelegate] PickPhoto started with AppCore \(AppCore.version)")
 
@@ -61,32 +51,6 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         Analytics.reporter = AnalyticsService.shared
 
         return true
-    }
-
-    // MARK: - Launch Time Logging
-
-    /// 프로세스 생성 시각과 didFinishLaunching 도달 시각을 static에 저장
-    /// finishInitialDisplay()에서 한 줄 합산 로그 출력에 사용
-    private func recordLaunchTimestamps() {
-        // didFinishLaunching 도달 시각 (CFAbsoluteTime = Date 기반)
-        AppDelegate.didFinishLaunchingTime = CFAbsoluteTimeGetCurrent()
-
-        // sysctl로 현재 프로세스의 생성 시각 조회
-        var kinfo = kinfo_proc()
-        var size = MemoryLayout<kinfo_proc>.stride
-        var mib: [Int32] = [CTL_KERN, KERN_PROC, KERN_PROC_PID, getpid()]
-
-        guard sysctl(&mib, UInt32(mib.count), &kinfo, &size, nil, 0) == 0 else {
-            Log.print("[Launch] sysctl 실패 — 프로세스 시작 시각을 가져올 수 없음")
-            return
-        }
-
-        // kp_proc.p_starttime → CFAbsoluteTime으로 변환
-        let startSec = kinfo.kp_proc.p_starttime.tv_sec
-        let startUsec = kinfo.kp_proc.p_starttime.tv_usec
-        let unixTime = TimeInterval(startSec) + TimeInterval(startUsec) / 1_000_000
-        // Unix epoch → CFAbsoluteTime (2001-01-01 기준) 변환
-        AppDelegate.processStartTime = unixTime - kCFAbsoluteTimeIntervalSince1970
     }
 
     // MARK: - Environment Info Logging
