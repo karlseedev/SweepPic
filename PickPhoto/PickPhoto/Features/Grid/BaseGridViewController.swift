@@ -673,9 +673,11 @@ extension BaseGridViewController: UICollectionViewDelegate {
     func collectionView(_ collectionView: UICollectionView,
                         willDisplay cell: UICollectionViewCell,
                         forItemAt indexPath: IndexPath) {
-        // 회색 셀 측정: 이미지 nil이면 플래그 세팅 (카운트는 이미지 도착 또는 재사용 시)
+        // 회색 셀 측정: 이미지 nil이면 플래그 + 시각 기록
+        // - 카운트는 이미지 도착 또는 재사용 시, 인지 임계값(50ms) 초과 시에만 수행
         if let photoCell = cell as? PhotoCell, photoCell.isShowingGray {
             photoCell.wasShownAsGray = true
+            photoCell.grayStartTime = CACurrentMediaTime()
         }
     }
 

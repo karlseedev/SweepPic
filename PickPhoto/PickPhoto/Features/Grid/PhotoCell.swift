@@ -159,6 +159,16 @@ final class PhotoCell: UICollectionViewCell {
     /// - 카운트는 이미지 도착 또는 prepareForReuse 시 수행
     var wasShownAsGray = false
 
+    /// 회색 셀 표시 시작 시각 (willDisplay에서 기록)
+    /// - 인지 임계값(50ms) 초과 시에만 "사용자가 인지한 회색"으로 카운트
+    /// - 근거: Del Cul et al.(2007) 역방향 마스킹 의식 접근 분기점 = 50ms
+    var grayStartTime: CFTimeInterval = 0
+
+    /// 회색 셀 인지 임계값 (50ms)
+    /// - 120Hz: 6프레임, 60Hz: 3프레임
+    /// - 이 시간 이내에 이미지가 도착하면 사용자는 회색을 의식적으로 인지하지 못함
+    private static let grayPerceptibleThreshold: CFTimeInterval = 0.050
+
     // MARK: - iOS 18+ Zoom Transition Support
 
     /// 실제 이미지가 로드되었는지 확인 (placeholder가 아닌 경우)
@@ -338,10 +348,15 @@ final class PhotoCell: UICollectionViewCell {
         super.prepareForReuse()
 
         // 회색 셀: 이미지 안 온 채 사라진 경우 카운트
+        // - 셀이 화면에서 사라질 때까지 이미지 미도착 → 사용자가 회색을 봤음
+        // - 인지 임계값(50ms) 초과 시에만 카운트 (짧은 플래시는 인지 불가)
         if wasShownAsGray {
             wasShownAsGray = false
-            Self.incrementGrayShown()
-            AnalyticsService.shared.countGrayShown()
+            let elapsed = CACurrentMediaTime() - grayStartTime
+            if elapsed > Self.grayPerceptibleThreshold {
+                Self.incrementGrayShown()
+                AnalyticsService.shared.countGrayShown()
+            }
         }
 
         // 이전 요청 취소 (오표시 방지)
@@ -641,11 +656,14 @@ final class PhotoCell: UICollectionViewCell {
                 self.imageView.image = image
                 if wasNil {
                     Self.incrementGrayResolved()
-                    // 사용자가 회색을 본 뒤 이미지 도착 → 카운트
+                    // 사용자가 회색을 본 뒤 이미지 도착 → 인지 임계값 초과 시 카운트
                     if self.wasShownAsGray {
                         self.wasShownAsGray = false
-                        Self.incrementGrayShown()
-                        AnalyticsService.shared.countGrayShown()
+                        let elapsed = CACurrentMediaTime() - self.grayStartTime
+                        if elapsed > Self.grayPerceptibleThreshold {
+                            Self.incrementGrayShown()
+                            AnalyticsService.shared.countGrayShown()
+                        }
                     }
                 }
 
@@ -765,8 +783,11 @@ final class PhotoCell: UICollectionViewCell {
                 Self.incrementGrayResolved()
                 if self.wasShownAsGray {
                     self.wasShownAsGray = false
-                    Self.incrementGrayShown()
-                    AnalyticsService.shared.countGrayShown()
+                    let elapsed = CACurrentMediaTime() - self.grayStartTime
+                    if elapsed > Self.grayPerceptibleThreshold {
+                        Self.incrementGrayShown()
+                        AnalyticsService.shared.countGrayShown()
+                    }
                 }
             }
         }
