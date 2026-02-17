@@ -417,6 +417,20 @@ extension GridViewController {
         let totalMs = (e2Time - loadStartTime) * 1000
         Log.print("[Timing] === 초기 로딩 완료: +\(String(format: "%.1f", totalMs))ms (E0→E1: \(String(format: "%.1f", e0ToE1Ms))ms, E1→E2: \(String(format: "%.1f", e1ToE2Ms))ms) ===")
 
+        // [Launch] 프로세스 시작 → 첫 화면 표시 전체 타임라인 (한 줄 합산)
+        // A: LLDB+dyld (프로세스 fork → didFinishLaunching)
+        // B: 앱 초기화 (didFinishLaunching → 화면 표시)
+        // A+B: 총 소요 시간
+        let processStart = AppDelegate.processStartTime
+        let didFinish = AppDelegate.didFinishLaunchingTime
+        if processStart != 0, didFinish != 0 {
+            let now = CFAbsoluteTimeGetCurrent()
+            let aMs = (didFinish - processStart) * 1000   // LLDB + dyld + pre-main
+            let bMs = (now - didFinish) * 1000             // didFinish → 화면 표시
+            let totalLaunchMs = (now - processStart) * 1000
+            Log.print("[Launch] 총 \(String(format: "%.0f", totalLaunchMs))ms | LLDB+dyld: \(String(format: "%.0f", aMs))ms | 앱→화면: \(String(format: "%.0f", bMs))ms")
+        }
+
         // [DEBUG] 최종 통계 출력
         Log.print("[Timing] 최종 통계: cellForItemAt \(cellForItemAtCount)회, 총 \(String(format: "%.1f", cellForItemAtTotalTime))ms, 평균 \(String(format: "%.2f", cellForItemAtCount > 0 ? cellForItemAtTotalTime / Double(cellForItemAtCount) : 0))ms")
 

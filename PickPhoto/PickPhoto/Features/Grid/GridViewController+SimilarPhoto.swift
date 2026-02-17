@@ -326,6 +326,8 @@ extension GridViewController {
         // 기존 뱃지 찾기 (subviews에서)
         if let existing = cell.contentView.subviews.first(where: { $0 is SimilarGroupBadgeView }) as? SimilarGroupBadgeView {
             existing.show(count: count)
+            // 코치마크 C-1 트리거 시도 (기존 뱃지에서도 재트리거 필요 — 뷰어에서 복귀 시)
+            triggerCoachMarkCIfNeeded(for: cell)
             return
         }
 

@@ -68,6 +68,9 @@ final class CoachMarkManager {
     /// C-2 확인 후 실행할 콜백 (얼굴 비교 화면 진입)
     var c2OnConfirm: (() -> Void)?
 
+    /// C-1 → C-2 안전 타임아웃 WorkItem (C-2 전환 성공 시 cancel)
+    var safetyTimeoutWork: DispatchWorkItem?
+
     /// 현재 코치마크 dismiss
     /// ⚠️ C-1 → C-2 전환 중에는 dismiss 차단 (오버레이 보호)
     func dismissCurrent() {
@@ -83,6 +86,8 @@ final class CoachMarkManager {
     func resetC2State() {
         isWaitingForC2 = false
         c2OnConfirm = nil
+        safetyTimeoutWork?.cancel()
+        safetyTimeoutWork = nil
     }
 }
 
@@ -95,7 +100,7 @@ final class CoachMarkOverlayView: UIView {
     // MARK: - Constants
 
     /// 딤 배경 알파
-    private static let dimAlpha: CGFloat = 0.6
+    private static let dimAlpha: CGFloat = 0.7
 
     /// 손가락 아이콘 크기
     private static let fingerSize: CGFloat = 48
@@ -155,7 +160,7 @@ final class CoachMarkOverlayView: UIView {
     // MARK: - Subviews
 
     /// 딤 배경 레이어 (evenOdd로 하이라이트 구멍)
-    private let dimLayer = CAShapeLayer()
+    let dimLayer = CAShapeLayer()
 
     /// 셀 스냅샷 뷰
     private var snapshotView: UIView?
@@ -197,9 +202,9 @@ final class CoachMarkOverlayView: UIView {
     let confirmButton: UIButton = {
         let button = UIButton(type: .system)
         button.setTitle("확인", for: .normal)
-        button.setTitleColor(.white, for: .normal)
+        button.setTitleColor(.black, for: .normal)
         button.titleLabel?.font = .systemFont(ofSize: 17, weight: .semibold)
-        button.backgroundColor = .systemBlue
+        button.backgroundColor = .white
         button.layer.cornerRadius = buttonHeight / 2
         button.clipsToBounds = true
         return button
@@ -416,14 +421,9 @@ final class CoachMarkOverlayView: UIView {
         )
         overlay.addSubview(overlay.messageLabel)
 
-        // 확인 버튼 (iOS 26: glass / iOS 25-: 기존 파란 라운드)
-        if #available(iOS 26.0, *) {
-            var config = UIButton.Configuration.glass()
-            config.title = "확인"
-            config.baseForegroundColor = .white
-            overlay.confirmButton.configuration = config
-            overlay.confirmButton.backgroundColor = .clear
-        }
+        // 확인 버튼 (흰색 라운드, iOS 버전 공통)
+        overlay.confirmButton.setTitleColor(.black, for: .normal)
+        overlay.confirmButton.backgroundColor = .white
         let buttonWidth: CGFloat = 120
         overlay.confirmButton.frame = CGRect(
             x: (window.bounds.width - buttonWidth) / 2,

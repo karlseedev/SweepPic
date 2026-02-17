@@ -79,12 +79,13 @@ extension GridViewController {
         // 초기 로딩 완료 후에만
         guard hasFinishedInitialDisplay else { return }
 
-        // 가시 영역 사전 검증: 화면 6등분 중 2~5 영역에 셀이 완전히 들어와야 함
+        // 가시 영역 사전 검증: 상하 12.5% 마진 제외한 중앙 75% 영역에 셀이 완전히 들어와야 함
         // 락(hasTriggeredC1) 잡기 전에 체크 → zone 밖 셀은 락을 잡지 않아 다른 셀에 기회를 줌
         guard let cellFrame = cell.superview?.convert(cell.frame, to: window) else { return }
         let screenHeight = window.bounds.height
-        let zoneHeight = screenHeight / 6
-        guard cellFrame.minY >= zoneHeight && cellFrame.maxY <= zoneHeight * 5 else { return }
+        let topMargin = screenHeight * 0.125
+        let bottomMargin = screenHeight * 0.875
+        guard cellFrame.minY >= topMargin && cellFrame.maxY <= bottomMargin else { return }
 
         // 중복 트리거 방지 — zone 안 첫 뱃지에서만 동작
         hasTriggeredC1 = true
@@ -185,6 +186,18 @@ extension GridViewController {
                 CoachMarkManager.shared.isWaitingForC2 = true
                 Log.print("[CoachMarkC1] onConfirm — isWaitingForC2=true, overlay=\(CoachMarkManager.shared.currentOverlay != nil)")
 
+                // C-1 → C-2 안전 타임아웃 (확인 버튼 탭 시점부터 10초)
+                // 뷰어 전환(~0.5초) + 버튼 대기(최대 5초) + 여유를 포함한 안전장치
+                // C-2 전환 성공 시 ViewerViewController+CoachMarkC에서 cancel하여 무효화
+                let timeoutWork = DispatchWorkItem { [weak self] in
+                    guard CoachMarkManager.shared.isWaitingForC2 else { return }
+                    CoachMarkManager.shared.resetC2State()
+                    CoachMarkManager.shared.currentOverlay?.dismiss()
+                    self?.hasTriggeredC1 = false
+                }
+                CoachMarkManager.shared.safetyTimeoutWork = timeoutWork
+                DispatchQueue.main.asyncAfter(deadline: .now() + 10.0, execute: timeoutWork)
+
                 // assetID로 indexPath 재해석 (PHChange 안전성)
                 // confirm 시점에 fetchResult가 바뀌었을 수 있으므로 assetID → indexPath 재검색
                 let resolvedIndexPath: IndexPath
@@ -205,17 +218,6 @@ extension GridViewController {
                 self.navigateToViewerForCoachMark(at: resolvedIndexPath)
             }
         )
-
-        // C-1 → C-2 통합 안전 타임아웃 (10초)
-        // 뷰어 전환(~0.5초) + C-2 + 버튼 대기(최대 5초) + 여유를 포함한 최종 안전장치
-        // 정상 경로에서는 C-2 자체 타임아웃(5초)이 먼저 처리됨
-        DispatchQueue.main.asyncAfter(deadline: .now() + 10.0) { [weak self] in
-            guard CoachMarkManager.shared.isWaitingForC2 else { return }
-            // 타임아웃 도달 — C 전체 스킵
-            CoachMarkManager.shared.resetC2State()
-            CoachMarkManager.shared.currentOverlay?.dismiss()
-            self?.hasTriggeredC1 = false
-        }
     }
 
     // MARK: - Navigate

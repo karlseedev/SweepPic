@@ -74,6 +74,10 @@ extension ViewerViewController {
 
             Log.print("[CoachMarkC2] SUCCESS — transitioning to C-2, buttonFrame=\(buttonFrame)")
 
+            // C-2 전환 성공 → 안전 타임아웃 취소 (C-2는 사용자 confirm까지 유지)
+            CoachMarkManager.shared.safetyTimeoutWork?.cancel()
+            CoachMarkManager.shared.safetyTimeoutWork = nil
+
             // C-2 전환: dim hole을 + 버튼으로 이동 + 새 카피/확인 표시
             overlay.transitionToC2(
                 newHighlightFrame: buttonFrame,

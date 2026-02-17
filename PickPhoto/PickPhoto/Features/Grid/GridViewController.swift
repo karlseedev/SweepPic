@@ -381,6 +381,11 @@ final class GridViewController: BaseGridViewController {
 
         AutoScrollTester.shared.startIfRequestedByLaunchArguments(scrollView: collectionView)
 
+        // C-1 트리거 락 리셋 (뷰어에서 돌아올 때 재트리거 허용)
+        if !CoachMarkManager.shared.isShowing {
+            hasTriggeredC1 = false
+        }
+
         // [A) preheat OFF 테스트] 초기 프리히트 비활성화
         // v6: visible indexPaths가 확실히 채워진 시점에 초기 프리히트
         // preheatInitialScreen()

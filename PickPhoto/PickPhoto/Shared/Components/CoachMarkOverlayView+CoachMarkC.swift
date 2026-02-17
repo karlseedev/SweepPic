@@ -48,7 +48,7 @@ extension CoachMarkOverlayView {
         overlay.updateDimPath()
 
         // 안내 텍스트 (하이라이트 셀 아래)
-        overlay.messageLabel.text = "유사사진 정리기능이 표시된 사진이에요.\n각 사진의 얼굴을 비교해서 정리할 수 있어요"
+        overlay.messageLabel.text = "유사사진 정리기능이 표시된 사진이에요\n각 사진의 얼굴을 비교해서 정리할 수 있어요"
         overlay.messageLabel.frame = CGRect(
             x: 20,
             y: highlightFrame.maxY + 24,
@@ -57,14 +57,9 @@ extension CoachMarkOverlayView {
         )
         overlay.addSubview(overlay.messageLabel)
 
-        // 확인 버튼 (iOS 26: glass / iOS 25-: 파란 라운드)
-        if #available(iOS 26.0, *) {
-            var config = UIButton.Configuration.glass()
-            config.title = "확인"
-            config.baseForegroundColor = .white
-            overlay.confirmButton.configuration = config
-            overlay.confirmButton.backgroundColor = .clear
-        }
+        // 확인 버튼 (흰색 라운드, iOS 버전 공통)
+        overlay.confirmButton.setTitleColor(.black, for: .normal)
+        overlay.confirmButton.backgroundColor = .white
         let buttonWidth: CGFloat = 120
         let buttonHeight: CGFloat = 44
         overlay.confirmButton.frame = CGRect(
@@ -102,19 +97,21 @@ extension CoachMarkOverlayView {
         // 뷰어 전환 후 오버레이가 뷰 계층에서 뒤로 밀릴 수 있으므로 최상단으로
         superview?.bringSubviewToFront(self)
 
-        // 하이라이트 영역 업데이트 (+ 버튼)
+        // 하이라이트 영역 업데이트 (+ 버튼, 원형 구멍 2배)
         highlightFrame = newHighlightFrame
-        updateDimPath()
+        updateDimPathCircle(for: newHighlightFrame, scale: 1.2)
 
         // C-2 onConfirm 설정
         onConfirm = c2OnConfirm
 
-        // 안내 텍스트 교체
-        messageLabel.text = "+버튼을 눌러 얼굴비교화면으로 이동하세요.\n인물이 여러 명이면 좌우로 넘겨볼 수 있어요."
+        // 안내 텍스트 교체 (원형 구멍 아래 기준으로 배치)
+        let circleDiameter = max(newHighlightFrame.width, newHighlightFrame.height) * 1.2
+        let circleBottom = newHighlightFrame.midY + circleDiameter / 2
+        messageLabel.text = "+버튼을 눌러 얼굴비교화면으로 이동하세요\n인물이 여러 명이면 좌우로 넘겨볼 수 있어요"
         messageLabel.alpha = 0
         messageLabel.frame = CGRect(
             x: 20,
-            y: newHighlightFrame.maxY + 24,
+            y: circleBottom + 24,
             width: bounds.width - 40,
             height: 60
         )
@@ -159,11 +156,13 @@ extension CoachMarkOverlayView {
 
             // 2. 탭 모션 (Reduce Motion 시 생략)
             if UIAccessibility.isReduceMotionEnabled {
-                // Reduce Motion: 탭 모션 생략, 즉시 콜백
+                // dim 구멍 제거 (전체 dim으로 전환 — 뷰어 전환 중 C-1 구멍 노출 방지)
+                self.fillDimHole()
                 self.onConfirm?()
             } else {
                 self.performCTapMotion(at: targetCenter) { [weak self] in
-                    // 3. onConfirm 콜백
+                    // 3. dim 구멍 제거 후 onConfirm 콜백
+                    self?.fillDimHole()
                     self?.onConfirm?()
                 }
             }
@@ -173,23 +172,33 @@ extension CoachMarkOverlayView {
     // MARK: - Tap Motion Animation
 
     /// 대상을 "탭한다"는 느낌을 주는 1회성 애니메이션
-    /// 총 0.6초: 나타남(0.2s) → 내려오기(0.15s) → 누르기(0.1s) → 떼기(0.15s)
-    /// A/B의 반복 스와이프 시연과 달리 1회성 탭 모션
+    /// 이동 없이 타겟 위치에서 바로 등장 → 누르기 → 떼기
+    /// 누르기 표현: 회전 없이 Scale + Y이동 + 그림자 변화로 표면 밀착감 전달
+    /// 총 ~0.65초: 등장(0.15s) → 누르기(0.12s) → 유지(0.05s) → 떼기(0.2s)
     /// - Parameters:
     ///   - targetCenter: 탭 대상 중앙점 (overlay 좌표 = 윈도우 좌표)
     ///   - completion: 모션 완료 후 콜백
     private func performCTapMotion(at targetCenter: CGPoint, completion: @escaping () -> Void) {
-        // 손가락을 대상 약간 위에 배치 (약간 오른쪽 오프셋 — 자연스러운 탭 각도)
-        fingerView.center = CGPoint(
-            x: targetCenter.x + 10,
-            y: targetCenter.y - 40
+        // 타겟 위치에 바로 배치
+        // hand.point.up.fill: 손가락 끝이 이미지 상단에서 약간 왼쪽에 위치
+        // → x를 오른쪽으로 보정 (손가락 끝 ≈ 이미지 중앙 좌측), y를 아래로 오프셋
+        let fingerWidth = fingerView.bounds.width
+        let fingerHeight = fingerView.bounds.height
+        let initialCenter = CGPoint(
+            x: targetCenter.x + fingerWidth * 0.08,
+            y: targetCenter.y + fingerHeight * 0.4
         )
+        fingerView.center = initialCenter
         fingerView.alpha = 0
         fingerView.transform = .identity
+        // 초기 그림자 상태 (화면에서 떠있는 상태)
+        fingerView.layer.shadowRadius = 6
+        fingerView.layer.shadowOffset = CGSize(width: 0, height: 2)
+        fingerView.layer.shadowOpacity = 0.3
 
-        // Phase 1: 나타남 (0.2초)
+        // Phase 1: 등장 (0.15초)
         UIView.animate(
-            withDuration: 0.2,
+            withDuration: 0.15,
             delay: 0,
             options: .curveEaseOut,
             animations: {
@@ -198,67 +207,136 @@ extension CoachMarkOverlayView {
         ) { [weak self] _ in
             guard let self, !self.shouldStopAnimation else { completion(); return }
 
-            // Phase 2: 대상 중앙으로 이동 (0.15초)
+            // 눌림 피드백 (하이라이트 구멍에 스냅샷 축소 + 흰색 플래시)
+            self.showCTapPressFeedback()
+
+            // Phase 2: 누르기 (0.12초, spring)
+            // 회전 없이 3가지 깊이 단서: 축소 + 아래 이동 + 그림자 축소
             UIView.animate(
-                withDuration: 0.15,
+                withDuration: 0.12,
                 delay: 0,
-                options: .curveEaseIn,
+                usingSpringWithDamping: 0.6,
+                initialSpringVelocity: 0,
+                options: [],
                 animations: {
-                    self.fingerView.center = CGPoint(
-                        x: targetCenter.x + 10,
-                        y: targetCenter.y
-                    )
+                    // 1. 축소 (화면에 가까워지는 원근)
+                    self.fingerView.transform = CGAffineTransform(scaleX: 0.93, y: 0.93)
+                    // 2. 아래로 이동 (누르는 방향)
+                    self.fingerView.center.y = initialCenter.y + 2.5
+                    // 3. 그림자 축소 (표면 밀착 → 그림자 짧아짐)
+                    self.fingerView.layer.shadowRadius = 2
+                    self.fingerView.layer.shadowOffset = CGSize(width: 0, height: 1)
+                    self.fingerView.layer.shadowOpacity = 0.15
                 }
             ) { [weak self] _ in
                 guard let self, !self.shouldStopAnimation else { completion(); return }
 
-                // 눌림 피드백 (하이라이트 구멍에 흰색 플래시)
-                self.showCTapPressFeedback()
-
-                // Phase 3: 누르기 (0.1초, spring — 손가락 scale 축소)
+                // Phase 3: 떼기 (0.2초, 누른 상태 0.05초 유지 후 spring 반동)
                 UIView.animate(
-                    withDuration: 0.1,
-                    delay: 0,
+                    withDuration: 0.2,
+                    delay: 0.05,
                     usingSpringWithDamping: 0.7,
-                    initialSpringVelocity: 0,
+                    initialSpringVelocity: 2.0,
                     options: [],
                     animations: {
-                        self.fingerView.transform = CGAffineTransform(scaleX: 0.90, y: 0.90)
+                        // 원래 상태로 복원 + 페이드아웃
+                        self.fingerView.transform = .identity
+                        self.fingerView.center = initialCenter
+                        self.fingerView.alpha = 0
+                        // 그림자 복원
+                        self.fingerView.layer.shadowRadius = 6
+                        self.fingerView.layer.shadowOffset = CGSize(width: 0, height: 2)
+                        self.fingerView.layer.shadowOpacity = 0.3
                     }
-                ) { [weak self] _ in
-                    guard let self, !self.shouldStopAnimation else { completion(); return }
-
-                    // Phase 4: 떼기 (0.15초 — 원래 크기 + 페이드아웃)
-                    UIView.animate(
-                        withDuration: 0.15,
-                        delay: 0,
-                        options: .curveEaseOut,
-                        animations: {
-                            self.fingerView.transform = .identity
-                            self.fingerView.alpha = 0
-                        }
-                    ) { _ in
-                        completion()
-                    }
+                ) { _ in
+                    completion()
                 }
             }
         }
     }
 
+    // MARK: - Dim Hole Control
+
+    /// C-2용 원형 dim 구멍 — 버튼 중심 기준 원형 투명 영역
+    /// - Parameters:
+    ///   - frame: 버튼 프레임 (윈도우 좌표)
+    ///   - scale: 구멍 크기 배율 (1.0 = 버튼 크기, 1.5 = 1.5배)
+    private func updateDimPathCircle(for frame: CGRect, scale: CGFloat) {
+        let fullPath = UIBezierPath(rect: bounds)
+        // 버튼의 긴 변 기준 지름 계산 후 scale 적용
+        let diameter = max(frame.width, frame.height) * scale
+        let center = CGPoint(x: frame.midX, y: frame.midY)
+        let circleRect = CGRect(
+            x: center.x - diameter / 2,
+            y: center.y - diameter / 2,
+            width: diameter,
+            height: diameter
+        )
+        let holePath = UIBezierPath(ovalIn: circleRect)
+        fullPath.append(holePath)
+        dimLayer.path = fullPath.cgPath
+    }
+
+    /// dim 구멍 제거 — evenOdd 구멍 없이 전체 dim으로 전환
+    /// C-1 탭 모션 완료 후 뷰어 네비게이션 전에 호출
+    /// iOS 26 push 전환 시 C-1 구멍이 전환 중 노출되는 것을 방지
+    private func fillDimHole() {
+        let fullPath = UIBezierPath(rect: bounds)
+        dimLayer.path = fullPath.cgPath
+    }
+
     // MARK: - Press Feedback
 
     /// 탭 모션 중 눌림 피드백
-    /// 하이라이트 구멍 영역에 반투명 흰색 플래시 (alpha 0→0.3→0)
-    /// C-1: 셀 위에 플래시 / C-2: + 버튼 위에 플래시
+    /// 1. dim 구멍 안 실제 콘텐츠를 스냅샷 → scale 0.95 축소 (눌림감)
+    /// 2. 반투명 흰색 플래시 (alpha 0→0.3→0)
+    /// C-1: 셀 눌림 / C-2: + 버튼 눌림
     private func showCTapPressFeedback() {
         let margin: CGFloat = 8
-        let flashRect = highlightFrame.insetBy(dx: -margin, dy: -margin)
-        let flashView = UIView(frame: flashRect)
+        let holeRect = highlightFrame.insetBy(dx: -margin, dy: -margin)
+
+        // 1. 타겟 영역 스냅샷 → 축소 효과 (실제 뷰를 건드리지 않음)
+        if let window = superview,
+           let snapshot = window.resizableSnapshotView(
+               from: highlightFrame,
+               afterScreenUpdates: false,
+               withCapInsets: .zero
+           ) {
+            snapshot.frame = highlightFrame
+            insertSubview(snapshot, belowSubview: fingerView)
+
+            // 축소 + 복원 spring
+            UIView.animate(
+                withDuration: 0.1,
+                delay: 0,
+                usingSpringWithDamping: 0.6,
+                initialSpringVelocity: 0,
+                options: [],
+                animations: {
+                    snapshot.transform = CGAffineTransform(scaleX: 0.93, y: 0.93)
+                }
+            ) { _ in
+                UIView.animate(
+                    withDuration: 0.2,
+                    delay: 0.05,
+                    usingSpringWithDamping: 0.7,
+                    initialSpringVelocity: 2.0,
+                    options: [],
+                    animations: {
+                        snapshot.transform = .identity
+                        snapshot.alpha = 0
+                    }
+                ) { _ in
+                    snapshot.removeFromSuperview()
+                }
+            }
+        }
+
+        // 2. 흰색 플래시 (기존)
+        let flashView = UIView(frame: holeRect)
         flashView.backgroundColor = UIColor.white.withAlphaComponent(0.3)
         flashView.layer.cornerRadius = 8
         flashView.alpha = 0
-
-        // 손가락 아래에 삽입 (손가락이 플래시 위에 보이도록)
         insertSubview(flashView, belowSubview: fingerView)
 
         UIView.animateKeyframes(withDuration: 0.25, delay: 0, options: [], animations: {
