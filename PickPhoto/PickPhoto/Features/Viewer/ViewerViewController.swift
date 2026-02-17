@@ -505,10 +505,9 @@ final class ViewerViewController: UIViewController {
         gradientContainer.isUserInteractionEnabled = false
         view.addSubview(gradientContainer)
 
-        // 그라데이션 레이어: FloatingTitleBar와 동일한 스펙
-        // maxDimAlpha = LiquidGlassStyle.maxDimAlpha (0.60)
+        // 그라데이션 레이어: 뷰어 전용 (0.90)
         let gradientLayer = CAGradientLayer()
-        let dimAlpha: CGFloat = LiquidGlassStyle.maxDimAlpha
+        let dimAlpha: CGFloat = 0.90
         gradientLayer.colors = [
             UIColor.black.withAlphaComponent(dimAlpha).cgColor,
             UIColor.black.withAlphaComponent(dimAlpha * 0.7).cgColor,
