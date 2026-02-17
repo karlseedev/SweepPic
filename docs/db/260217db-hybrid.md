@@ -174,7 +174,8 @@ final class SupabaseProvider {
 
     /// 배치 전송 (flushCounters → sendEventBatch에서 호출)
     /// - PostgREST bulk INSERT: POST /rest/v1/events + JSON 배열
-    func sendBatch(events: [EventPayload])
+    /// - completion: URLSession 응답 후 호출 (beginBackgroundTask 종료용)
+    func sendBatch(events: [EventPayload], completion: (() -> Void)? = nil)
 
     // MARK: - EventPayload (전송 단위)
 
@@ -242,21 +243,29 @@ iOS가 ~5초 내에 앱을 suspend할 수 있으므로:
 
        // Supabase POST 완료를 위한 백그라운드 시간 확보 (~30초)
        var bgTaskID: UIBackgroundTaskIdentifier = .invalid
+
+       // 스레드 안전한 종료 헬퍼 (만료 핸들러와 completion이 동시 호출되는 경합 방지)
+       let endTask = {
+           DispatchQueue.main.async {
+               guard bgTaskID != .invalid else { return }  // 이미 종료됨
+               UIApplication.shared.endBackgroundTask(bgTaskID)
+               bgTaskID = .invalid
+           }
+       }
+
        bgTaskID = UIApplication.shared.beginBackgroundTask(withName: "AnalyticsFlush") {
-           // 만료 핸들러: 시간 초과 시 즉시 종료 (1초 이내)
-           UIApplication.shared.endBackgroundTask(bgTaskID)
-           bgTaskID = .invalid
+           // 만료 핸들러: 시간 초과 시 즉시 종료
+           endTask()
+       }
+
+       // Supabase POST 완료 콜백에서 endBackgroundTask 호출
+       // ⚠️ handleSessionEnd 내부 동기 경로에서 호출될 수 있으므로 반드시 먼저 설정
+       AnalyticsService.shared.onFlushComplete = {
+           endTask()
        }
 
        // [Analytics] 세션 종료 — TD 전송(동기) + Supabase POST(비동기)
        AnalyticsService.shared.handleSessionEnd()
-
-       // Supabase POST 완료 콜백에서 endBackgroundTask 호출
-       // → SupabaseProvider.sendBatch() completion에서 호출
-       AnalyticsService.shared.onFlushComplete = {
-           UIApplication.shared.endBackgroundTask(bgTaskID)
-           bgTaskID = .invalid
-       }
 
        // 코치마크 C: 백그라운드 진입 시 대기 상태 리셋
        // ... (기존 코드 유지)
@@ -269,7 +278,7 @@ iOS가 ~5초 내에 앱을 suspend할 수 있으므로:
 
 ## Phase 3: AnalyticsService 수정
 
-### 3-1. `AnalyticsService.swift` 수정 (~35줄 추가)
+### 3-1. `AnalyticsService.swift` 수정 (~50줄 추가)
 
 **추가할 프로퍼티** (Properties 섹션, L104 이후):
 
@@ -356,12 +365,14 @@ func sendEventBatch(_ events: [(name: String, parameters: [String: String])]) {
             photoBucket: bucket
         )}
 
-    if !payloads.isEmpty {
-        supabaseProvider?.sendBatch(events: payloads) { [weak self] in
+    // supabaseProvider가 nil(xcconfig 미설정)이면 completion 누락 방지를 위해 guard let 사용
+    if let provider = supabaseProvider, !payloads.isEmpty {
+        provider.sendBatch(events: payloads) { [weak self] in
             self?.onFlushComplete?()
             self?.onFlushComplete = nil
         }
     } else {
+        // provider nil 또는 Supabase 대상 이벤트 없음 → 즉시 완료
         onFlushComplete?()
         onFlushComplete = nil
     }
@@ -415,6 +426,27 @@ TelemetryDeck.signal("cleanup.previewCompleted", parameters: [...])
 // After:
 sendEvent("cleanup.completed", parameters: params)
 sendEvent("cleanup.previewCompleted", parameters: [...])
+```
+
+#### +Session.swift handleSessionEnd() 수정 (shouldSkip 경로 보강)
+
+```swift
+// Before:
+func handleSessionEnd() {
+    guard !shouldSkip() else { return }  // ← shouldSkip이면 flushCounters 미호출
+    // ...
+}
+
+// After:
+func handleSessionEnd() {
+    guard !shouldSkip() else {
+        // shouldSkip이어도 onFlushComplete 호출 필요 (SceneDelegate의 endBackgroundTask 해제)
+        onFlushComplete?()
+        onFlushComplete = nil
+        return
+    }
+    // ... (기존 코드 그대로)
+}
 ```
 
 #### +Session.swift flushCounters() 리팩토링 (가장 큰 변경)
@@ -523,7 +555,7 @@ private func flushCounters(_ c: SessionCounters) {
 ### 3-4. Credentials 전달
 
 - `Supabase.xcconfig` (git-ignored) → Info.plist에 `$(SUPABASE_URL)`, `$(SUPABASE_ANON_KEY)` 참조
-- anon key는 클라이언트용이라 노출되어도 RLS가 INSERT만 허용 (INSERT 전용 + 화이트리스트, SELECT/UPDATE/DELETE 정책 없음)
+- anon key는 JWT 기반 클라이언트용 키로, 노출되어도 RLS가 INSERT만 허용 (INSERT 전용 + 화이트리스트, SELECT/UPDATE/DELETE 정책 없음)
 - **Xcode 프로젝트 설정 필요**: Project > Info > Configurations에서 Debug/Release 모두 `Supabase.xcconfig` 지정
   (현재 xcconfig 없음, baseConfigurationReference 미설정 상태)
 - **xcconfig URL 이스케이프**: `//`가 xcconfig에서 주석으로 해석되므로 반드시 이스케이프
@@ -536,8 +568,11 @@ private func flushCounters(_ c: SessionCounters) {
 
 ### 3-5. photo_bucket 처리
 
-현재 코드의 `bucketString(for:)` 반환값(`"0-1k"`, `"1k-5k"` 등)을 그대로 TEXT 컬럼에 저장.
+현재 코드의 `bucketString(for:)` 반환값을 그대로 TEXT 컬럼에 저장.
 별도 매핑 함수 불필요 — 기존 `photoLibraryBucket` 문자열을 그대로 전달.
+
+실제 반환값 (AnalyticsService.swift:162~173):
+`"0"`, `"1-100"`, `"101-500"`, `"501-1K"`, `"1K-5K"`, `"5K-10K"`, `"10K-50K"`, `"50K-100K"`, `"100K+"` (9단계)
 
 ### 볼륨 추정 (DAU 1,000 기준)
 
@@ -600,7 +635,7 @@ SUPABASE_SERVICE_KEY=
 | **신규** | `scripts/analytics/sb-query.sh` | ~80줄 |
 | **신규** | `scripts/analytics/sb-report.sh` | ~40줄 |
 | **확장** | `scripts/analytics/.env.example` | Supabase 변수 3개 추가 |
-| **수정** | `AnalyticsService.swift` | +30줄 (provider, sendEvent, sendEventBatch, configureSupabase) |
+| **수정** | `AnalyticsService.swift` | +50줄 (provider, sendEvent, sendEventBatch, configureSupabase, onFlushComplete) |
 | **수정** | `+Lifecycle.swift` | 2줄 변경, import 제거 |
 | **수정** | `+Session.swift` | flushCounters 리팩토링 (배치), import 제거 |
 | **수정** | `+Similar.swift` | 1줄 변경, import 제거 |
@@ -630,7 +665,7 @@ SUPABASE_SERVICE_KEY=
 **2026-02-17 2차 점검 (GPT Codex 교차 리뷰 → 타당성 검증):**
 - GPT 7개 이슈 중 5개 반영, 1개 부분 반영, 1개 기각 (publishable/secret 키 — GPT 사실 오류)
 10. RLS `WITH CHECK (true)` → 이벤트명 화이트리스트 CHECK 추가 (무단 INSERT 방지)
-11. 배치 insert 시 `Prefer: missing=default` 헤더 + 동일 키 강제 주의사항 추가
+11. 배치 insert 시 동일 키 강제 주의사항 추가 (`Prefer: missing=default`는 동일 키 설계이므로 불필요, 미적용)
 12. 백그라운드 전송: "필요시 추가" → `beginBackgroundTask` / `endBackgroundTask` / 만료 핸들러 구체 명시
 13. pause 문구 완화: "7일간 API 호출 없으면" → "일정 기간 비활성 시" + pause 시 cron 중단 주의
 14. pg_cron 경로: "Database > Extensions" → "Integrations > Cron (내부 pg_cron)"
@@ -646,3 +681,19 @@ SUPABASE_SERVICE_KEY=
 21. 파일 변경 요약: SceneDelegate.swift 누락 → 추가, 총 수정 7개 → 8개
 22. 상단에 Phase 1 체크리스트 추가 (주인님 수동 작업 가이드)
 23. xcconfig 현재 상태 명시: baseConfigurationReference 없음, 신규 연결 필요
+
+**2026-02-17 4차 점검 (실행 흐름 추적 검증):**
+- SceneDelegate → handleSessionEnd → flushCounters → sendEventBatch 전체 경로 추적
+24. **(Critical)** onFlushComplete 설정 순서: handleSessionEnd() 후 설정 → **전으로 이동** (동기 경로에서 nil 호출 방지)
+25. **(Critical)** supabaseProvider nil 시 completion 누락: `supabaseProvider?.sendBatch()` → **`guard let provider`로 변경** (else에서 onFlushComplete 호출)
+26. sendBatch 시그니처: `func sendBatch(events:)` → **`func sendBatch(events:completion:)` 추가**
+27. photo_bucket 예시값: `"0-1k"` 등 → 실제 코드 9단계 값으로 수정
+28. AnalyticsService 수정 줄수: ~35줄 → ~50줄
+
+**2026-02-17 5차 점검 (GPT Codex 교차 리뷰 #2 → 타당성 검증):**
+- GPT 6개 이슈 중 4개 반영, 2개 기각
+29. **(High)** handleSessionEnd `shouldSkip()` 조기 리턴 시 `onFlushComplete?()` 미호출 → 호출 추가
+30. **(High)** SceneDelegate endBackgroundTask 경합 방지: 만료 핸들러/completion 동시 호출 대비 `endTask()` 헬퍼 추출 + `.invalid` 가드 + `DispatchQueue.main.async`
+31. Credentials 섹션에 "JWT 기반 anon key" 명시
+32. 검토 기록 11번 정정: `Prefer: missing=default` 추가 → 동일 키 설계이므로 불필요, 미적용
+- 기각: RLS params 크기 제한 (1인 개발 앱, 과도), 응답코드 범위 (이미 커버됨)
