@@ -284,7 +284,7 @@ final class ViewerViewController: UIViewController {
     /// 상단 그라데이션 레이어 (layoutSubviews에서 frame 갱신 필요)
     private var topGradientLayer: CAGradientLayer?
 
-    /// "유사사진 정리가능" 타이틀 라벨
+    /// "유사사진정리 가능" 타이틀 라벨
     /// 눈 버튼 토글 시 숨김/표시
     var similarPhotoTitleLabel: UILabel?
 
@@ -495,7 +495,7 @@ final class ViewerViewController: UIViewController {
     }
 
 
-    /// 상단 그라데이션 딤드 + "유사사진 정리가능" 타이틀 설정
+    /// 상단 그라데이션 딤드 + "유사사진정리 가능" 타이틀 설정
     /// .normal 모드 && !useSystemUI 조건에서만 호출
     /// z-order: pageVC 위, backButton/faceButtonOverlay 아래
     private func setupTopGradientAndTitle() {
@@ -535,7 +535,7 @@ final class ViewerViewController: UIViewController {
 
         // --- 타이틀 라벨 ---
         let titleLabel = UILabel()
-        titleLabel.text = "유사사진 정리가능"
+        titleLabel.text = "유사사진정리 가능"
         // FaceComparisonTitleBar와 동일한 스타일 (17pt semibold)
         titleLabel.font = .systemFont(ofSize: 17, weight: .semibold)
         titleLabel.textColor = .white
@@ -996,7 +996,7 @@ final class ViewerViewController: UIViewController {
 
         // 타이틀 토글: 눈 버튼 OFF → 타이틀 숨김, ON → 타이틀 복원
         let isHidden = faceButtonOverlay?.isCurrentlyHidden == true
-        title = isHidden ? nil : "유사사진 정리가능"
+        title = isHidden ? nil : "유사사진정리 가능"
     }
 
     /// iOS 26+ 네비게이션 바 눈 아이콘 업데이트
@@ -1013,7 +1013,7 @@ final class ViewerViewController: UIViewController {
         if #available(iOS 26.0, *) {
             navigationItem.rightBarButtonItem = show ? navBarEyeItem : nil
             if useSystemUI {
-                title = show ? "유사사진 정리가능" : nil
+                title = show ? "유사사진정리 가능" : nil
             }
         }
 
