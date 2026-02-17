@@ -378,15 +378,29 @@ extension ViewerViewController {
 
     /// 줌 중 처리 - 버튼 즉시 숨김
     private func handleZoom(_ notification: Notification) {
-        // 타이머 취소 (연속 줌 시 재표시 방지)
-        zoomDebounceTimer?.invalidate()
-        zoomDebounceTimer = nil
-
         // 줌 정보 저장
         lastZoomInfo = notification.userInfo as? [String: Any]
 
-        // 버튼 숨김 (애니메이션 없이 즉시)
+        if notification.name == .photoDidScroll {
+            // 스크롤 이벤트: 타이머를 취소가 아닌 리셋 (0.3초 후 복원)
+            // 줌 종료 직후 스크롤뷰 정착 과정에서 scrollViewDidScroll이 발생하지만
+            // scrollViewDidEndDragging/Decelerating는 발생하지 않아
+            // photoDidEndScroll이 오지 않는 엣지케이스 방어
+            zoomDebounceTimer?.invalidate()
+            zoomDebounceTimer = Timer.scheduledTimer(withTimeInterval: 0.3, repeats: false) { [weak self] _ in
+                self?.showButtonsAfterZoom()
+            }
+        } else {
+            // 줌 이벤트 (photoDidZoom): 타이머 완전 취소
+            // photoDidEndZoom이 반드시 뒤따르므로 거기서 타이머 재시작
+            zoomDebounceTimer?.invalidate()
+            zoomDebounceTimer = nil
+        }
+
+        // 버튼 + 타이틀 숨김 (애니메이션 없이 즉시)
         faceButtonOverlay?.hideButtonsImmediately()
+        similarPhotoTitleLabel?.alpha = 0
+        if #available(iOS 26.0, *) { title = nil }
     }
 
     /// 줌 완료 처리 - 디바운스 후 버튼 재표시
@@ -416,6 +430,14 @@ extension ViewerViewController {
             contentOffset: contentOffset,
             imageViewFrame: imageViewFrame
         )
+
+        // 타이틀 복원 (눈 버튼 OFF 상태가 아닐 때만)
+        if faceButtonOverlay?.isCurrentlyHidden == false && faceButtonOverlay?.hasVisibleButtons == true {
+            UIView.animate(withDuration: 0.2) {
+                self.similarPhotoTitleLabel?.alpha = 1
+            }
+            if #available(iOS 26.0, *) { title = "유사사진정리 가능" }
+        }
     }
 
     // MARK: - Private Methods - Feature Check

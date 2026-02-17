@@ -289,7 +289,7 @@ final class PreviewGridViewController: UIViewController {
             closeButton.leadingAnchor.constraint(equalTo: header.leadingAnchor, constant: 8),
             closeButton.centerYAnchor.constraint(
                 equalTo: view.safeAreaLayoutGuide.topAnchor,
-                constant: contentHeight / 2  // 콘텐츠 높이 내 세로 중앙
+                constant: 29  // FloatingTitleBar와 동일한 centerY
             ),
 
             // 타이틀: 중앙, X 버튼과 같은 세로 위치

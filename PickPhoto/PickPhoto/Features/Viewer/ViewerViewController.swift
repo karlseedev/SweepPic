@@ -388,8 +388,10 @@ final class ViewerViewController: UIViewController {
         super.viewWillTransition(to: size, with: coordinator)
 
         coordinator.animate(alongsideTransition: { [weak self] _ in
-            // 회전 중: FaceButtonOverlay 즉시 숨김 (위치 오류 방지)
+            // 회전 중: FaceButtonOverlay + 타이틀 즉시 숨김 (위치 오류 방지)
             self?.faceButtonOverlay?.hideButtonsImmediately()
+            self?.similarPhotoTitleLabel?.alpha = 0
+            if #available(iOS 26.0, *) { self?.title = nil }
         }, completion: { [weak self] _ in
             // 회전 완료: FaceButtonOverlay 재표시
             self?.refreshFaceButtonsAfterRotation()
@@ -526,7 +528,7 @@ final class ViewerViewController: UIViewController {
             gradientContainer.topAnchor.constraint(equalTo: view.topAnchor),
             gradientContainer.leadingAnchor.constraint(equalTo: view.leadingAnchor),
             gradientContainer.trailingAnchor.constraint(equalTo: view.trailingAnchor),
-            gradientContainer.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 79)
+            gradientContainer.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 90)
         ])
 
         topGradientView = gradientContainer
@@ -543,11 +545,11 @@ final class ViewerViewController: UIViewController {
         titleLabel.isUserInteractionEnabled = false
         view.addSubview(titleLabel)
 
-        // centerY = safeArea top + 38pt (backButton의 centerY와 수평 정렬)
-        // backButton: topAnchor = safeArea + 16, size 44×44 → centerY = safeArea + 38
+        // centerY = safeArea top + 29pt (backButton의 centerY와 수평 정렬)
+        // backButton: topAnchor = safeArea + 7, size 44×44 → centerY = safeArea + 29
         NSLayoutConstraint.activate([
             titleLabel.centerXAnchor.constraint(equalTo: view.centerXAnchor),
-            titleLabel.centerYAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 38)
+            titleLabel.centerYAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 29)
         ])
 
         // 초기 상태: 숨김 (+버튼 표시 시 함께 나타남)
@@ -567,7 +569,7 @@ final class ViewerViewController: UIViewController {
 
         view.addSubview(backButton)
         NSLayoutConstraint.activate([
-            backButton.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 16),
+            backButton.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 7),
             backButton.leadingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.leadingAnchor, constant: 16)
         ])
     }
@@ -1566,8 +1568,10 @@ extension ViewerViewController: UIScrollViewDelegate {
         LiquidGlassOptimizer.cancelIdleTimer()
         LiquidGlassOptimizer.optimize(in: view.window)
 
-        // +버튼(FaceButtonOverlay) 즉시 숨김 (스와이프 시 제자리에 남는 문제 방지)
+        // +버튼 + 타이틀 즉시 숨김 (스와이프 시 제자리에 남는 문제 방지)
         faceButtonOverlay?.hideButtonsImmediately()
+        similarPhotoTitleLabel?.alpha = 0
+        if #available(iOS 26.0, *) { title = nil }
 
         Log.print("[Viewer:Scroll] willBeginDragging - optimize 시작")
     }

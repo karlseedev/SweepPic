@@ -334,7 +334,7 @@ final class FaceComparisonTitleBar: UIView {
             // contentView: 하단 정렬, 좌우 16pt 패딩
             contentView.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 16),
             contentView.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -16),
-            contentView.bottomAnchor.constraint(equalTo: bottomAnchor),
+            contentView.bottomAnchor.constraint(equalTo: bottomAnchor, constant: -8),
             contentView.heightAnchor.constraint(equalToConstant: Self.contentHeight),
 
             // closeButton: 좌측 정렬, 44×44 (intrinsicContentSize)

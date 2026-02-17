@@ -120,7 +120,7 @@ final class FaceButtonOverlay: UIView {
         let label = PaddedLabel()
         label.font = .systemFont(ofSize: 14, weight: .regular)
         label.textColor = .white
-        label.backgroundColor = UIColor.black.withAlphaComponent(0.6)
+        label.backgroundColor = UIColor.black.withAlphaComponent(0.4)
         label.textAlignment = .center
         label.layer.cornerRadius = 4
         label.clipsToBounds = true
@@ -157,7 +157,7 @@ final class FaceButtonOverlay: UIView {
             let _ = toggleButton  // lazy 초기화 트리거 (GlassCircleButton 생성)
             addSubview(toggleButton)
             NSLayoutConstraint.activate([
-                toggleButton.topAnchor.constraint(equalTo: safeAreaLayoutGuide.topAnchor, constant: 16),
+                toggleButton.topAnchor.constraint(equalTo: safeAreaLayoutGuide.topAnchor, constant: 7),
                 toggleButton.trailingAnchor.constraint(equalTo: safeAreaLayoutGuide.trailingAnchor, constant: -16)
             ])
 
@@ -166,11 +166,17 @@ final class FaceButtonOverlay: UIView {
         }
 
         // 사진 번호 라벨 추가 — 중앙 타이틀 바로 아래에 배치
-        // 타이틀 centerY = safeArea+38, 폰트 17pt → bottom ≈ safeArea+48
-        // photoNumberLabel top = safeArea+52 (타이틀과 4pt 간격)
+        // iOS 16~25: 커스텀 타이틀 centerY=safeArea+29, bottom≈39 → top=43 (4pt 간격)
+        // iOS 26: 시스템 네비바가 safeArea에 포함 → safeArea+2 (네비바 직후)
+        let photoNumberTop: CGFloat
+        if #available(iOS 26.0, *) {
+            photoNumberTop = -17
+        } else {
+            photoNumberTop = 43
+        }
         addSubview(photoNumberLabel)
         NSLayoutConstraint.activate([
-            photoNumberLabel.topAnchor.constraint(equalTo: safeAreaLayoutGuide.topAnchor, constant: 52),
+            photoNumberLabel.topAnchor.constraint(equalTo: safeAreaLayoutGuide.topAnchor, constant: photoNumberTop),
             photoNumberLabel.centerXAnchor.constraint(equalTo: centerXAnchor),
             photoNumberLabel.widthAnchor.constraint(greaterThanOrEqualToConstant: 44),
             photoNumberLabel.heightAnchor.constraint(equalToConstant: 24)
@@ -217,7 +223,7 @@ final class FaceButtonOverlay: UIView {
         let attr = NSMutableAttributedString()
         attr.append(NSAttributedString(string: "Pic ", attributes: white.merging([.font: regular]) { _, b in b }))
         attr.append(NSAttributedString(string: "\(number)", attributes: white.merging([.font: bold, .kern: 2.0 as CGFloat]) { _, b in b }))
-        attr.append(NSAttributedString(string: "/", attributes: white.merging([.font: regular, .kern: 2.0 as CGFloat]) { _, b in b }))
+        attr.append(NSAttributedString(string: "/", attributes: white.merging([.font: regular, .kern: 2.0 as CGFloat, .baselineOffset: 1.0]) { _, b in b }))
         attr.append(NSAttributedString(string: "\(total)", attributes: white.merging([.font: bold]) { _, b in b }))
 
         photoNumberLabel.attributedText = attr
