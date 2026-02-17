@@ -347,16 +347,13 @@ final class PhotoCell: UICollectionViewCell {
     override func prepareForReuse() {
         super.prepareForReuse()
 
-        // 회색 셀: 이미지 안 온 채 사라진 경우 카운트
-        // - 셀이 화면에서 사라질 때까지 이미지 미도착 → 사용자가 회색을 봤음
-        // - 인지 임계값(50ms) 초과 시에만 카운트 (짧은 플래시는 인지 불가)
+        // 회색 셀: 이미지 안 온 채 사라진 경우 → 무조건 카운트
+        // - 마스킹 자극(이미지)이 없으므로 50ms 임계값 미적용
+        // - 셀이 화면에서 사라질 때까지 회색이었으면 사용자가 인지한 것
         if wasShownAsGray {
             wasShownAsGray = false
-            let elapsed = CACurrentMediaTime() - grayStartTime
-            if elapsed > Self.grayPerceptibleThreshold {
-                Self.incrementGrayShown()
-                AnalyticsService.shared.countGrayShown()
-            }
+            Self.incrementGrayShown()
+            AnalyticsService.shared.countGrayShown()
         }
 
         // 이전 요청 취소 (오표시 방지)
