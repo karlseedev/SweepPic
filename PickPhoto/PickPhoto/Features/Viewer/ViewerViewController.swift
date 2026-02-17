@@ -546,10 +546,17 @@ final class ViewerViewController: UIViewController {
     /// iOS 26: navigationItem.titleView에 설정 → 네비바 버튼과 자동 수평 정렬
     private func setupSimilarPhotoTitleLabel() {
         let titleLabel = UILabel()
-        titleLabel.text = "유사사진정리 가능"
-        // FaceComparisonTitleBar와 동일한 스타일 (17pt semibold)
-        titleLabel.font = .systemFont(ofSize: 17, weight: .semibold)
-        titleLabel.textColor = .white
+        // "유사사진정리"(레귤러/흰색) + " 가능"(볼드/밝은 노란색)
+        let attr = NSMutableAttributedString()
+        attr.append(NSAttributedString(
+            string: "유사사진정리 ",
+            attributes: [.font: UIFont.systemFont(ofSize: 17, weight: .regular), .foregroundColor: UIColor.white]
+        ))
+        attr.append(NSAttributedString(
+            string: "가능",
+            attributes: [.font: UIFont.systemFont(ofSize: 17, weight: .heavy), .foregroundColor: UIColor.yellow]
+        ))
+        titleLabel.attributedText = attr
         titleLabel.textAlignment = .center
 
         if useSystemUI {
