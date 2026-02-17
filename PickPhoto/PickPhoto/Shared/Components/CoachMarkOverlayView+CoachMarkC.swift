@@ -97,6 +97,9 @@ extension CoachMarkOverlayView {
         // 뷰어 전환 후 오버레이가 뷰 계층에서 뒤로 밀릴 수 있으므로 최상단으로
         superview?.bringSubviewToFront(self)
 
+        // C-1에서 alpha 0.01로 투명화된 상태 → dim + 구멍 + UI와 함께 복원
+        // 먼저 dim path와 레이아웃을 준비한 후 alpha를 페이드인
+
         // 하이라이트 영역 업데이트 (+ 버튼, 원형 구멍 2배)
         highlightFrame = newHighlightFrame
         updateDimPathCircle(for: newHighlightFrame, scale: 1.2)
@@ -127,8 +130,10 @@ extension CoachMarkOverlayView {
             height: 44
         )
 
-        // 새 카피 + 확인 버튼 페이드인
+        // 오버레이 alpha 복원 + 새 카피/버튼 페이드인 (0.3초)
+        // C-1에서 alpha=0.01이었으므로 dim 배경과 함께 자연스럽게 복원
         UIView.animate(withDuration: 0.3) {
+            self.alpha = 1.0
             self.messageLabel.alpha = 1
             self.confirmButton.alpha = 1
         }
@@ -158,11 +163,19 @@ extension CoachMarkOverlayView {
             if UIAccessibility.isReduceMotionEnabled {
                 // dim 구멍 제거 (전체 dim으로 전환 — 뷰어 전환 중 C-1 구멍 노출 방지)
                 self.fillDimHole()
+                // 오버레이를 거의 투명하게 → 줌 전환 애니메이션이 보이도록
+                // alpha 0.01: hitTest 오버라이드로 터치 차단 유지 (UIKit은 alpha >= 0.01에서 hitTest 호출)
+                // transitionToC2()에서 alpha 1.0으로 복원
+                self.alpha = 0.01
                 self.onConfirm?()
             } else {
                 self.performCTapMotion(at: targetCenter) { [weak self] in
-                    // 3. dim 구멍 제거 후 onConfirm 콜백
+                    // 3. dim 구멍 제거 후 오버레이 투명화 → onConfirm 콜백
                     self?.fillDimHole()
+                    // 오버레이를 거의 투명하게 → push 줌 전환 애니메이션이 보이도록
+                    // alpha 0.01: hitTest 오버라이드로 터치 차단 유지
+                    // transitionToC2()에서 alpha 1.0으로 복원
+                    self?.alpha = 0.01
                     self?.onConfirm?()
                 }
             }
@@ -280,9 +293,13 @@ extension CoachMarkOverlayView {
     /// dim 구멍 제거 — evenOdd 구멍 없이 전체 dim으로 전환
     /// C-1 탭 모션 완료 후 뷰어 네비게이션 전에 호출
     /// iOS 26 push 전환 시 C-1 구멍이 전환 중 노출되는 것을 방지
+    /// CATransaction으로 암묵적 CA 애니메이션(0.25초) 제거 → 즉시 전환
     private func fillDimHole() {
+        CATransaction.begin()
+        CATransaction.setDisableActions(true)
         let fullPath = UIBezierPath(rect: bounds)
         dimLayer.path = fullPath.cgPath
+        CATransaction.commit()
     }
 
     // MARK: - Press Feedback

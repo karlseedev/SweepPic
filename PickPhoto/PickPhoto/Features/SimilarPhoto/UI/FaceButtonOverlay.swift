@@ -165,25 +165,16 @@ final class FaceButtonOverlay: UIView {
             toggleButton.isHidden = true
         }
 
-        // 사진 번호 라벨 추가 (iOS 버전별 위치 분기)
+        // 사진 번호 라벨 추가 — 중앙 타이틀 바로 아래에 배치
+        // 타이틀 centerY = safeArea+38, 폰트 17pt → bottom ≈ safeArea+48
+        // photoNumberLabel top = safeArea+52 (타이틀과 4pt 간격)
         addSubview(photoNumberLabel)
-        if #available(iOS 26.0, *) {
-            // iOS 26+: 시스템 네비바 사용 → safeArea 바로 아래에 배치
-            NSLayoutConstraint.activate([
-                photoNumberLabel.topAnchor.constraint(equalTo: safeAreaLayoutGuide.topAnchor, constant: 16),
-                photoNumberLabel.leadingAnchor.constraint(equalTo: safeAreaLayoutGuide.leadingAnchor, constant: 16),
-                photoNumberLabel.widthAnchor.constraint(greaterThanOrEqualToConstant: 44),
-                photoNumberLabel.heightAnchor.constraint(equalToConstant: 24)
-            ])
-        } else {
-            // iOS 16~25: 커스텀 뒤로가기 버튼(safeArea+16) 아래에 배치
-            NSLayoutConstraint.activate([
-                photoNumberLabel.topAnchor.constraint(equalTo: safeAreaLayoutGuide.topAnchor, constant: 68),
-                photoNumberLabel.leadingAnchor.constraint(equalTo: safeAreaLayoutGuide.leadingAnchor, constant: 16),
-                photoNumberLabel.widthAnchor.constraint(greaterThanOrEqualToConstant: 44),
-                photoNumberLabel.heightAnchor.constraint(equalToConstant: 24)
-            ])
-        }
+        NSLayoutConstraint.activate([
+            photoNumberLabel.topAnchor.constraint(equalTo: safeAreaLayoutGuide.topAnchor, constant: 52),
+            photoNumberLabel.centerXAnchor.constraint(equalTo: centerXAnchor),
+            photoNumberLabel.widthAnchor.constraint(greaterThanOrEqualToConstant: 44),
+            photoNumberLabel.heightAnchor.constraint(equalToConstant: 24)
+        ])
     }
 
     // MARK: - Public Methods

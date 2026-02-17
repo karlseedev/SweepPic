@@ -108,12 +108,14 @@ extension GridViewController {
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { [weak self, weak cell] in
             guard let self, let cell else {
                 self?.hasTriggeredC1 = false
+                self?.retriggerForVisibleBadges()
                 return
             }
 
             // 재검증: 셀이 여전히 visible한지
             guard self.collectionView.visibleCells.contains(cell) else {
                 self.hasTriggeredC1 = false
+                self.retriggerForVisibleBadges()
                 return
             }
 
@@ -121,24 +123,28 @@ extension GridViewController {
             let hasBadge = cell.contentView.subviews.contains(where: { $0 is SimilarGroupBadgeView })
             guard hasBadge else {
                 self.hasTriggeredC1 = false
+                self.retriggerForVisibleBadges()
                 return
             }
 
             // 재검증: indexPath가 여전히 유효한지
             guard self.collectionView.indexPath(for: cell) != nil else {
                 self.hasTriggeredC1 = false
+                self.retriggerForVisibleBadges()
                 return
             }
 
             // 재검증: 다른 코치마크가 안 뜨고 있는지
             guard !CoachMarkManager.shared.isShowing else {
                 self.hasTriggeredC1 = false
+                // 다른 코치마크 표시 중이면 재스캔 불필요 (어차피 가드에서 걸림)
                 return
             }
 
             // 셀을 화면 중앙으로 스크롤 (코치마크 레이아웃 안정성 확보)
             guard let currentIndexPath = self.collectionView.indexPath(for: cell) else {
                 self.hasTriggeredC1 = false
+                self.retriggerForVisibleBadges()
                 return
             }
             self.collectionView.scrollToItem(at: currentIndexPath, at: .centeredVertically, animated: true)
@@ -147,6 +153,7 @@ extension GridViewController {
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) { [weak self, weak cell] in
                 guard let self, let cell else {
                     self?.hasTriggeredC1 = false
+                    self?.retriggerForVisibleBadges()
                     return
                 }
 
@@ -218,6 +225,32 @@ extension GridViewController {
                 self.navigateToViewerForCoachMark(at: resolvedIndexPath)
             }
         )
+    }
+
+    // MARK: - Retrigger
+
+    /// hasTriggeredC1 리셋 후 visible 뱃지 셀 재스캔
+    /// 타이밍 문제 해결: Badge A가 락을 잡고 1초 타이머 진행 중에 Badge B가 등장하면,
+    /// Badge B의 showBadge 호출은 이미 완료되어 재호출되지 않음.
+    /// Badge A 재검증 실패 → hasTriggeredC1 = false 리셋 시,
+    /// 현재 visible한 뱃지 셀 중 zone 안에 있는 첫 셀로 재트리거 시도
+    private func retriggerForVisibleBadges() {
+        // hasTriggeredC1이 이미 true면 중복 방지 (다른 경로에서 이미 트리거됨)
+        guard !hasTriggeredC1 else { return }
+
+        // 현재 visible한 셀 중 SimilarGroupBadgeView가 있는 셀 수집
+        for cell in collectionView.visibleCells {
+            guard let photoCell = cell as? PhotoCell else { continue }
+            let hasBadge = photoCell.contentView.subviews.contains(where: { $0 is SimilarGroupBadgeView })
+            guard hasBadge else { continue }
+
+            // triggerCoachMarkCIfNeeded에서 zone 검증 + 모든 가드를 다시 수행하므로
+            // 여기서는 뱃지가 있는 셀만 넘겨주면 됨
+            triggerCoachMarkCIfNeeded(for: photoCell)
+
+            // hasTriggeredC1이 true로 설정되면 (트리거 성공) 더 이상 스캔 불필요
+            if hasTriggeredC1 { break }
+        }
     }
 
     // MARK: - Navigate
