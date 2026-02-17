@@ -20,13 +20,15 @@
 //    )
 
 import UIKit
+import AppCore
 
 // MARK: - CoachMarkType
 
-/// 코치마크 종류 (향후 B/C/D 추가)
+/// 코치마크 종류
 enum CoachMarkType: String {
-    case gridSwipeDelete = "coachMark_gridSwipe"
-    case viewerSwipeDelete = "coachMark_viewerSwipe"
+    case gridSwipeDelete = "coachMark_gridSwipe"       // A: 그리드 스와이프 삭제
+    case viewerSwipeDelete = "coachMark_viewerSwipe"   // B: 뷰어 스와이프 삭제
+    case similarPhoto = "coachMark_similarPhoto"       // C: 유사사진·얼굴 비교 (C-1 + C-2 통합 플래그)
 
     /// UserDefaults 키
     var shownKey: String { rawValue }
@@ -58,9 +60,29 @@ final class CoachMarkManager {
         currentOverlay != nil
     }
 
-    /// 현재 코치마크 dismiss (내부에서 markAsShown 자동 호출)
+    // MARK: - C 전용 상태
+
+    /// C-1 완료 후 C-2 대기 중 (true 동안 dismissCurrent() 차단)
+    var isWaitingForC2: Bool = false
+
+    /// C-2 확인 후 실행할 콜백 (얼굴 비교 화면 진입)
+    var c2OnConfirm: (() -> Void)?
+
+    /// 현재 코치마크 dismiss
+    /// ⚠️ C-1 → C-2 전환 중에는 dismiss 차단 (오버레이 보호)
     func dismissCurrent() {
+        if isWaitingForC2 {
+            Log.print("[CoachMarkManager] dismissCurrent BLOCKED — isWaitingForC2=true, overlay=\(currentOverlay != nil)")
+            return
+        }
+        Log.print("[CoachMarkManager] dismissCurrent — overlay=\(currentOverlay != nil)")
         currentOverlay?.dismiss()
+    }
+
+    /// C 상태 완전 리셋 (모든 실패/완료 경로에서 호출)
+    func resetC2State() {
+        isWaitingForC2 = false
+        c2OnConfirm = nil
     }
 }
 
@@ -113,13 +135,16 @@ final class CoachMarkOverlayView: UIView {
     // MARK: - Properties
 
     /// 코치마크 타입 (dismiss 시 markAsShown에 사용)
-    private var coachMarkType: CoachMarkType = .gridSwipeDelete
+    var coachMarkType: CoachMarkType = .gridSwipeDelete
 
     /// 애니메이션 중단 플래그
-    private var shouldStopAnimation = false
+    var shouldStopAnimation = false
 
     /// 하이라이트 영역 (윈도우 좌표)
-    private var highlightFrame: CGRect = .zero
+    var highlightFrame: CGRect = .zero
+
+    /// C 전용: [확인] + 탭 모션 후 실행할 콜백
+    var onConfirm: (() -> Void)?
 
     /// 스와이프 이동 거리
     private var swipeDistance: CGFloat = 0
@@ -143,8 +168,8 @@ final class CoachMarkOverlayView: UIView {
         return view
     }()
 
-    /// 손가락 아이콘 뷰
-    private let fingerView: UIImageView = {
+    /// 손가락 아이콘 뷰 (C 확장에서 탭 모션 사용)
+    let fingerView: UIImageView = {
         let config = UIImage.SymbolConfiguration(pointSize: fingerSize, weight: .regular)
         let image = UIImage(systemName: "hand.point.up.fill", withConfiguration: config)
         let iv = UIImageView(image: image)
@@ -157,8 +182,8 @@ final class CoachMarkOverlayView: UIView {
         return iv
     }()
 
-    /// 안내 텍스트 라벨
-    private let messageLabel: UILabel = {
+    /// 안내 텍스트 라벨 (C 확장에서 텍스트 교체/페이드 사용)
+    let messageLabel: UILabel = {
         let label = UILabel()
         label.text = "사진을 밀어서 바로 휴지통으로 보내세요\n다시 밀면 복원돼요"
         label.textColor = .white
@@ -168,8 +193,8 @@ final class CoachMarkOverlayView: UIView {
         return label
     }()
 
-    /// 확인 버튼
-    private let confirmButton: UIButton = {
+    /// 확인 버튼 (C 확장에서 enable/disable/페이드 사용)
+    let confirmButton: UIButton = {
         let button = UIButton(type: .system)
         button.setTitle("확인", for: .normal)
         button.setTitleColor(.white, for: .normal)
@@ -216,12 +241,14 @@ final class CoachMarkOverlayView: UIView {
     // MARK: - Layout
 
     /// 딤 레이어 경로 업데이트
-    /// A: evenOdd로 하이라이트 구멍 / B: 구멍 없음 (전체 딤)
-    private func updateDimPath() {
+    /// A/C: evenOdd로 하이라이트 구멍 / B: 구멍 없음 (전체 딤)
+    func updateDimPath() {
         let fullPath = UIBezierPath(rect: bounds)
-        // A: 하이라이트 영역은 투명 (셀 크기 + 약간의 여유)
-        if coachMarkType == .gridSwipeDelete {
-            let holePath = UIBezierPath(rect: highlightFrame)
+        // A, C: 하이라이트 영역은 투명 (셀/버튼 크기 + 약간의 여유)
+        if coachMarkType == .gridSwipeDelete || coachMarkType == .similarPhoto {
+            let margin: CGFloat = 8
+            let holeRect = highlightFrame.insetBy(dx: -margin, dy: -margin)
+            let holePath = UIBezierPath(roundedRect: holeRect, cornerRadius: 8)
             fullPath.append(holePath)
         }
         // B: 구멍 없음 (dim 전체 영역)
@@ -425,7 +452,9 @@ final class CoachMarkOverlayView: UIView {
 
     // MARK: - Dismiss
 
-    /// 코치마크 dismiss (markAsShown 자동 호출)
+    /// 코치마크 dismiss
+    /// - A/B: markAsShown 자동 호출
+    /// - C: markAsShown 호출하지 않음 (present 성공 후 별도 호출)
     func dismiss() {
         guard superview != nil else { return }
         shouldStopAnimation = true
@@ -433,8 +462,13 @@ final class CoachMarkOverlayView: UIView {
         maroonView.layer.removeAllAnimations()
         snapshotView?.layer.removeAllAnimations()  // B: 진행 중 스냅샷 애니메이션 중단
 
-        // 표시 완료 마킹
-        coachMarkType.markAsShown()
+        // C 타입은 markAsShown을 별도 관리 (present 성공 후 호출)
+        if coachMarkType != .similarPhoto {
+            coachMarkType.markAsShown()
+        }
+
+        // C 상태 리셋
+        CoachMarkManager.shared.resetC2State()
 
         UIView.animate(withDuration: 0.2, animations: {
             self.alpha = 0
@@ -462,8 +496,17 @@ final class CoachMarkOverlayView: UIView {
 
     // MARK: - Actions
 
-    @objc private func confirmTapped() {
-        dismiss()
+    @objc func confirmTapped() {
+        switch coachMarkType {
+        case .gridSwipeDelete, .viewerSwipeDelete:
+            // A/B: 즉시 dismiss + markAsShown
+            dismiss()
+        case .similarPhoto:
+            // C: 재진입 방지 (0.8초+ 비동기 시퀀스 — 연타 시 이중 push/present 위험)
+            confirmButton.isEnabled = false
+            // C 전용 시퀀스 (CoachMarkOverlayView+CoachMarkC.swift)
+            startC_ConfirmSequence()
+        }
     }
 
     // MARK: - Static Guide (Reduce Motion)

@@ -17,8 +17,11 @@ extension ViewerViewController {
     /// 뷰어 코치마크 B 표시 조건 확인 + 즉시 오버레이 배치
     /// viewDidAppear 및 페이지 스와이프 완료(didFinishAnimating) 시 호출
     func showViewerSwipeDeleteCoachMarkIfNeeded() {
-        // 이미 표시된 적 있으면 스킵 (테스트 중 임시 비활성화)
-        // guard !CoachMarkType.viewerSwipeDelete.hasBeenShown else { return }
+        // 이미 표시된 적 있으면 스킵
+        guard !CoachMarkType.viewerSwipeDelete.hasBeenShown else { return }
+
+        // C-2 대기 중이면 B 스킵 (C-2와 B 충돌 방지)
+        guard !CoachMarkManager.shared.isWaitingForC2 else { return }
 
         // 다른 코치마크 표시 중이면 스킵 (A/B 동시 표시 방지)
         guard !CoachMarkManager.shared.isShowing else { return }

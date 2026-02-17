@@ -294,6 +294,12 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         // [Analytics] 세션 종료 — 누적 카운터 플러시
         AnalyticsService.shared.handleSessionEnd()
 
+        // 코치마크 C: 백그라운드 진입 시 대기 상태 리셋 (isWaitingForC2 고착 방지)
+        if CoachMarkManager.shared.isWaitingForC2 {
+            CoachMarkManager.shared.resetC2State()
+            CoachMarkManager.shared.currentOverlay?.dismiss()
+        }
+
         Log.print("[SceneDelegate] Scene did enter background")
     }
 

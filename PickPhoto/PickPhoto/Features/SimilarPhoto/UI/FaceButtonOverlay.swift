@@ -193,6 +193,17 @@ final class FaceButtonOverlay: UIView {
         return !faceButtons.isEmpty
     }
 
+    /// 첫 번째 표시 중인 + 버튼의 얼굴 정보 (코치마크 C-2 자동 탭용)
+    var firstVisibleFace: CachedFace? {
+        faceButtons.first?.face
+    }
+
+    /// 첫 번째 표시 중인 + 버튼의 윈도우 좌표 프레임 (코치마크 C-2 하이라이트용)
+    func firstButtonFrameInWindow() -> CGRect? {
+        guard let button = faceButtons.first else { return nil }
+        return convert(button.frame, to: nil)
+    }
+
     /// 외부에서 토글 기능 호출 (iOS 26 네비게이션 바 버튼용)
     func toggleOverlay() {
         toggleButtonTapped()

@@ -369,6 +369,9 @@ final class ViewerViewController: UIViewController {
 
         // 코치마크 B: 뷰어 스와이프 삭제 안내
         showViewerSwipeDeleteCoachMarkIfNeeded()
+
+        // 코치마크 C-2: + 버튼 하이라이트 (C-1에서 자동 네비게이션 후)
+        triggerCoachMarkC2IfNeeded()
     }
 
     // MARK: - Rotation

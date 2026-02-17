@@ -351,6 +351,9 @@ extension GridViewController {
 
         cell.contentView.addSubview(badge)
         badge.show(count: count)
+
+        // 코치마크 C-1 트리거 시도 (첫 뱃지에서만 동작)
+        triggerCoachMarkCIfNeeded(for: cell)
     }
 
     /// 셀에서 뱃지 제거
