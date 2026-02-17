@@ -108,8 +108,8 @@ final class PhotoCell: UICollectionViewCell {
     /// 통계 로그 출력
     static func logMismatchStats(label: String = "PhotoCell") {
         mismatchLock.lock()
-        let diskMismatch = diskCacheMismatchCount
-        let pipelineMismatch = pipelineMismatchCount
+        _ = diskCacheMismatchCount
+        _ = pipelineMismatchCount
         mismatchLock.unlock()
 
         // 통계는 수집만 하고 로그 출력하지 않음
