@@ -42,6 +42,7 @@ ALTER TABLE events ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "anon_insert" ON events FOR INSERT TO anon
     WITH CHECK (
         event_name IN (
+            'app.launched',
             'session.photoViewing',
             'session.deleteRestore',
             'session.trashViewer',
@@ -160,7 +161,7 @@ iOS가 ~5초 내에 앱을 suspend할 수 있으므로:
 
 | 파일 | 교체 수 | Supabase 전송 여부 |
 |------|:---:|---|
-| `+Lifecycle.swift` | 2곳 | X (app.launched, permission.result 제외) |
+| `+Lifecycle.swift` | 2곳 | 1개 O (app.launched), 1개 X (permission.result 제외) |
 | `+Session.swift` (flushCounters 내부) | 6곳 → sendEventBatch() 1회 | 5개 O, 1개 X (gridPerformance 제외) |
 | `+Similar.swift` | 1곳 | O |
 | `+Cleanup.swift` | 2곳 | O |
@@ -169,13 +170,14 @@ iOS가 ~5초 내에 앱을 suspend할 수 있으므로:
 
 **flushCounters() 변경 상세**: 기존 6개 개별 `TelemetryDeck.signal()` 호출을 이벤트 배열 구성 후 `sendEventBatch()`로 교체. TD 전송은 내부에서 개별 호출, Supabase는 배치 1회.
 
-### 3-3. Supabase에 보내지 않을 이벤트 (3종, 비용 절감)
+### 3-3. Supabase에 보내지 않을 이벤트 (2종, 비용 절감)
 
 | 이벤트 | 제외 이유 |
 |--------|----------|
-| `app.launched` | 가장 빈번, TD가 DAU/리텐션 자동 계산 |
-| `permission.result` | 극소량, TD에서 충분 |
+| `permission.result` | 극소량 (첫 실행/설정변경 시만), TD에서 충분 |
 | `session.gridPerformance` | 카운트만, 드릴다운 가치 낮음 |
+
+> `app.launched`는 포함: Supabase 단독 분석 시 세션 수(분모) 역할 필수. DAU 1,000 기준 +30K rows/월로 비용 영향 미미.
 
 ### 3-4. Credentials 전달
 
@@ -191,8 +193,8 @@ iOS가 ~5초 내에 앱을 suspend할 수 있으므로:
 
 ### 볼륨 추정 (DAU 1,000 기준)
 
-- 제외 후: ~4-5 signals/session → 240K rows/month → ~120MB/month
-- 90일 보존 (pg_cron 자동 삭제): ~360MB → 500MB 무료 한도 내
+- 제외 후: ~5-6 signals/session → 270K rows/month → ~135MB/month
+- 90일 보존 (pg_cron 자동 삭제): ~405MB → 500MB 무료 한도 내
 
 ---
 
