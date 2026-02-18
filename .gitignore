@@ -49,3 +49,6 @@ Carthage/Build/
 # Environment
 .env*
 !.env.example
+
+# Supabase credentials (xcconfig)
+Supabase.xcconfig

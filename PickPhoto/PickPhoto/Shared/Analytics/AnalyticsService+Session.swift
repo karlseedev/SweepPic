@@ -6,7 +6,6 @@
 // - 참조: docs/db/260212db-Archi.md 섹션 4.1~4.4
 
 import Foundation
-import TelemetryDeck
 import AppCore
 
 // MARK: - SessionCounters
@@ -95,6 +94,9 @@ extension AnalyticsService {
     func handleSessionEnd() {
         guard !shouldSkip() else {
             Log.print("[Analytics] handleSessionEnd 스킵 (shouldSkip=true)")
+            // shouldSkip이어도 onFlushComplete 호출 필요 (SceneDelegate의 endBackgroundTask 해제)
+            onFlushComplete?()
+            onFlushComplete = nil
             return
         }
 
@@ -111,26 +113,26 @@ extension AnalyticsService {
         flushCounters(snapshot)
     }
 
-    /// 세션 카운터 스냅샷을 시그널로 변환하여 전송
-    /// - 각 그룹별로 isZero 확인 → 0이면 해당 시그널 스킵
+    /// 세션 카운터 스냅샷을 이벤트 배열로 구성 → 이중 전송
+    /// - 각 그룹별로 isZero 확인 → 0이면 해당 이벤트 스킵
+    /// - sendEventBatch()로 TD 개별 + Supabase 배치 전송
     private func flushCounters(_ c: SessionCounters) {
-        var sentCount = 0
+        var events: [(name: String, parameters: [String: String])] = []
 
         // ── 이벤트 3: 사진 열람 ──
         if !c.photoViewing.isZero {
-            TelemetryDeck.signal("session.photoViewing", parameters: [
+            events.append(("session.photoViewing", [
                 "total":       String(c.photoViewing.total),
                 "fromLibrary": String(c.photoViewing.fromLibrary),
                 "fromAlbum":   String(c.photoViewing.fromAlbum),
                 "fromTrash":   String(c.photoViewing.fromTrash),
-            ])
-            sentCount += 1
+            ]))
         }
 
         // ── 이벤트 4-1: 보관함/앨범 삭제·복구 ──
         if !c.deleteRestore.isZero {
             Log.print("[Analytics] flush deleteRestore → gridDel=\(c.deleteRestore.gridSwipeDelete) gridRes=\(c.deleteRestore.gridSwipeRestore) viewerDel=\(c.deleteRestore.viewerSwipeDelete) viewerTrash=\(c.deleteRestore.viewerTrashButton) viewerRes=\(c.deleteRestore.viewerRestoreButton)")
-            TelemetryDeck.signal("session.deleteRestore", parameters: [
+            events.append(("session.deleteRestore", [
                 "gridSwipeDelete":     String(c.deleteRestore.gridSwipeDelete),
                 "gridSwipeRestore":    String(c.deleteRestore.gridSwipeRestore),
                 "viewerSwipeDelete":   String(c.deleteRestore.viewerSwipeDelete),
@@ -138,28 +140,25 @@ extension AnalyticsService {
                 "viewerRestoreButton": String(c.deleteRestore.viewerRestoreButton),
                 "fromLibrary":         String(c.deleteRestore.fromLibrary),
                 "fromAlbum":           String(c.deleteRestore.fromAlbum),
-            ])
-            sentCount += 1
+            ]))
         }
 
         // ── 이벤트 4-2: 휴지통 뷰어 행동 ──
         if !c.trashViewer.isZero {
-            TelemetryDeck.signal("session.trashViewer", parameters: [
+            events.append(("session.trashViewer", [
                 "permanentDelete": String(c.trashViewer.permanentDelete),
                 "restore":         String(c.trashViewer.restore),
-            ])
-            sentCount += 1
+            ]))
         }
 
         // ── 이벤트 5-1: 유사 사진 분석 ──
         if !c.similarAnalysis.isZero {
-            TelemetryDeck.signal("session.similarAnalysis", parameters: [
+            events.append(("session.similarAnalysis", [
                 "completedCount":  String(c.similarAnalysis.completedCount),
                 "cancelledCount":  String(c.similarAnalysis.cancelledCount),
                 "totalGroups":     String(c.similarAnalysis.totalGroups),
                 "avgDurationSec":  String(format: "%.1f", c.similarAnalysis.averageDuration),
-            ])
-            sentCount += 1
+            ]))
         }
 
         // ── 이벤트 6: 앱 오류 (비어있으면 스킵) ──
@@ -167,19 +166,24 @@ extension AnalyticsService {
             // 0이 아닌 항목만 파라미터에 포함
             let params = c.errors.compactMapValues { $0 > 0 ? String($0) : nil }
             if !params.isEmpty {
-                TelemetryDeck.signal("session.errors", parameters: params)
-                sentCount += 1
+                events.append(("session.errors", params))
             }
         }
 
         // ── 이벤트 8: 그리드 성능 ──
         if !c.gridPerformance.isZero {
-            TelemetryDeck.signal("session.gridPerformance", parameters: [
+            events.append(("session.gridPerformance", [
                 "grayShown": String(c.gridPerformance.grayShown),
-            ])
-            sentCount += 1
+            ]))
         }
 
-        Log.print("[Analytics] 플러시 완료 — \(sentCount)건 시그널 전송")
+        // ── 이중 전송 (TD 개별 + Supabase 배치) ──
+        guard !events.isEmpty else {
+            onFlushComplete?()
+            onFlushComplete = nil
+            return
+        }
+        sendEventBatch(events)
+        Log.print("[Analytics] 플러시 완료 — \(events.count)건 시그널 전송")
     }
 }

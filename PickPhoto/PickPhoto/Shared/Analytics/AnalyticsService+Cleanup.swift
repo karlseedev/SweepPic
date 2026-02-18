@@ -5,7 +5,6 @@
 // - 참조: docs/db/260212db-Archi.md 섹션 5.5
 
 import Foundation
-import TelemetryDeck
 
 extension AnalyticsService {
 
@@ -37,7 +36,7 @@ extension AnalyticsService {
             params["resultAction"] = action.rawValue
         }
 
-        TelemetryDeck.signal("cleanup.completed", parameters: params)
+        sendEvent("cleanup.completed", parameters: params)
     }
 
     // MARK: - 이벤트 7-2: 미리보기 정리
@@ -47,7 +46,7 @@ extension AnalyticsService {
     func trackPreviewCleanupCompleted(data: PreviewCleanupEventData) {
         guard !shouldSkip() else { return }
 
-        TelemetryDeck.signal("cleanup.previewCompleted", parameters: [
+        sendEvent("cleanup.previewCompleted", parameters: [
             "reachedStage":    data.reachedStage.rawValue,
             "foundCount":      String(data.foundCount),
             "durationSec":     String(format: "%.1f", data.durationSec),

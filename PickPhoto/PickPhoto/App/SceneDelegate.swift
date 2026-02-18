@@ -291,7 +291,30 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         // T015: 백그라운드 진입 시 AppStateStore 처리
         AppStateStore.shared.handleBackgroundTransition()
 
-        // [Analytics] 세션 종료 — 누적 카운터 플러시
+        // Supabase POST 완료를 위한 백그라운드 시간 확보 (~30초)
+        var bgTaskID: UIBackgroundTaskIdentifier = .invalid
+
+        // 스레드 안전한 종료 헬퍼 (만료 핸들러와 completion이 동시 호출되는 경합 방지)
+        let endTask = {
+            DispatchQueue.main.async {
+                guard bgTaskID != .invalid else { return }  // 이미 종료됨
+                UIApplication.shared.endBackgroundTask(bgTaskID)
+                bgTaskID = .invalid
+            }
+        }
+
+        bgTaskID = UIApplication.shared.beginBackgroundTask(withName: "AnalyticsFlush") {
+            // 만료 핸들러: 시간 초과 시 즉시 종료
+            endTask()
+        }
+
+        // Supabase POST 완료 콜백에서 endBackgroundTask 호출
+        // ⚠️ handleSessionEnd 내부 동기 경로에서 호출될 수 있으므로 반드시 먼저 설정
+        AnalyticsService.shared.onFlushComplete = {
+            endTask()
+        }
+
+        // [Analytics] 세션 종료 — TD 전송(동기) + Supabase POST(비동기)
         AnalyticsService.shared.handleSessionEnd()
 
         // 코치마크 C: 백그라운드 진입 시 대기 상태 리셋 (isWaitingForC2 고착 방지)

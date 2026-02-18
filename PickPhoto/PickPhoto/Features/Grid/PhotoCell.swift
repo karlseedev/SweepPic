@@ -265,6 +265,22 @@ final class PhotoCell: UICollectionViewCell {
     /// 그라데이션 레이어 (비디오 배지용)
     private var gradientLayer: CAGradientLayer?
 
+    /// 휴지통 아이콘 (우측 상단, 휴지통 상태일 때 표시)
+    private let trashIconView: UIImageView = {
+        let iv = UIImageView()
+        iv.contentMode = .scaleAspectFit
+        iv.tintColor = .white
+        iv.isHidden = true
+        iv.translatesAutoresizingMaskIntoConstraints = false
+        iv.image = UIImage(systemName: "trash.fill")
+        // 그림자 효과 (빨간 오버레이 위에서 가독성 향상)
+        iv.layer.shadowColor = UIColor.black.cgColor
+        iv.layer.shadowOffset = CGSize(width: 0, height: 1)
+        iv.layer.shadowRadius = 2
+        iv.layer.shadowOpacity = 0.5
+        return iv
+    }()
+
     /// T073: iCloud 전용 사진 아이콘 (우측 상단 구름 아이콘)
     private let iCloudIconView: UIImageView = {
         let iv = UIImageView()
@@ -375,6 +391,7 @@ final class PhotoCell: UICollectionViewCell {
         // UI 초기화
         dimmedOverlayView.isHidden = true
         dimmedOverlayView.alpha = 0
+        trashIconView.isHidden = true
         selectionCheckmarkView.isHidden = true
         videoDurationLabel.isHidden = true
         videoIconView.isHidden = true
@@ -455,6 +472,15 @@ final class PhotoCell: UICollectionViewCell {
             selectionCheckmarkView.heightAnchor.constraint(equalToConstant: 24)
         ])
 
+        // 휴지통 아이콘 (우측 상단)
+        contentView.addSubview(trashIconView)
+        NSLayoutConstraint.activate([
+            trashIconView.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -4),
+            trashIconView.topAnchor.constraint(equalTo: contentView.topAnchor, constant: 4),
+            trashIconView.widthAnchor.constraint(equalToConstant: 16),
+            trashIconView.heightAnchor.constraint(equalToConstant: 16)
+        ])
+
         // T073: iCloud 전용 사진 아이콘 (우측 상단)
         contentView.addSubview(iCloudIconView)
         NSLayoutConstraint.activate([
@@ -475,6 +501,7 @@ final class PhotoCell: UICollectionViewCell {
         imageView.image = nil
         imageView.backgroundColor = .clear
         dimmedOverlayView.isHidden = true
+        trashIconView.isHidden = true
         selectionCheckmarkView.isHidden = true
         videoDurationLabel.isHidden = true
         videoIconView.isHidden = true
@@ -811,9 +838,11 @@ final class PhotoCell: UICollectionViewCell {
         if isTrashed {
             dimmedOverlayView.isHidden = false
             dimmedOverlayView.alpha = Self.dimmedOverlayAlpha
+            trashIconView.isHidden = false
         } else {
             dimmedOverlayView.isHidden = true
             dimmedOverlayView.alpha = 0
+            trashIconView.isHidden = true
         }
     }
 
@@ -949,6 +978,7 @@ extension PhotoCell {
             self.isTrashed = toTrashed
             self.dimmedOverlayView.isHidden = !toTrashed
             self.dimmedOverlayView.alpha = toTrashed ? Self.dimmedOverlayAlpha : 0
+            self.trashIconView.isHidden = !toTrashed
 
             completion()
         }
@@ -986,6 +1016,7 @@ extension PhotoCell {
             // 원래 상태로 복원
             self.dimmedOverlayView.isHidden = !self.isTrashed
             self.dimmedOverlayView.alpha = self.isTrashed ? Self.dimmedOverlayAlpha : 0
+            self.trashIconView.isHidden = !self.isTrashed
 
             completion()
         }
@@ -1005,6 +1036,7 @@ extension PhotoCell {
             guard let self = self else { return }
 
             self.isTrashed = toTrashed
+            self.trashIconView.isHidden = !toTrashed
             if !toTrashed {
                 self.dimmedOverlayView.isHidden = true
             }

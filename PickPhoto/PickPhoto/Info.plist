@@ -4,6 +4,10 @@
 <dict>
 	<key>CADisableMinimumFrameDurationOnPhone</key>
 	<true/>
+	<key>SUPABASE_URL</key>
+	<string>$(SUPABASE_URL)</string>
+	<key>SUPABASE_ANON_KEY</key>
+	<string>$(SUPABASE_ANON_KEY)</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>PickPhoto needs access to your photo library to browse and manage your photos.</string>
 	<key>UIApplicationSceneManifest</key>

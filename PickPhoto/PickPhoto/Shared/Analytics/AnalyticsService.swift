@@ -109,6 +109,20 @@ final class AnalyticsService: AnalyticsServiceProtocol {
     /// SDK 초기화 여부
     private var isConfigured = false
 
+    /// Supabase 이벤트 전송 프로바이더 (credentials 없으면 nil → 비활성)
+    private var supabaseProvider: SupabaseProvider?
+
+    /// Supabase에 보내지 않을 이벤트 목록 (비용 절감)
+    /// - permission.result: 극소량, TD에서 충분
+    /// - session.gridPerformance: 카운트만, 드릴다운 가치 낮음
+    private static let supabaseExcluded: Set<String> = [
+        "permission.result",
+        "session.gridPerformance",
+    ]
+
+    /// 백그라운드 플러시 완료 콜백 (SceneDelegate의 endBackgroundTask용)
+    var onFlushComplete: (() -> Void)?
+
     // MARK: - Opt-out
 
     /// 옵트아웃 여부 확인
@@ -142,6 +156,7 @@ final class AnalyticsService: AnalyticsServiceProtocol {
 
         TelemetryDeck.initialize(config: config)
         isConfigured = true
+        configureSupabase()
         Log.print("[Analytics] SDK 초기화 완료 (appID: \(appID.prefix(8))...)")
     }
 
@@ -186,5 +201,70 @@ final class AnalyticsService: AnalyticsServiceProtocol {
             return true
         }
         return false
+    }
+
+    // MARK: - Supabase Configuration
+
+    /// Supabase 프로바이더 초기화
+    /// - Info.plist에서 SUPABASE_URL, SUPABASE_ANON_KEY 읽기
+    /// - 키가 없으면 (xcconfig 미설정) 비활성 → TD만 동작
+    private func configureSupabase() {
+        guard let url = Bundle.main.infoDictionary?["SUPABASE_URL"] as? String,
+              let key = Bundle.main.infoDictionary?["SUPABASE_ANON_KEY"] as? String,
+              !url.isEmpty, !key.isEmpty else {
+            Log.print("[Supabase] credentials 없음 — 비활성")
+            return
+        }
+        supabaseProvider = SupabaseProvider(baseURL: url, anonKey: key)
+        Log.print("[Supabase] 초기화 완료 (url: \(url.prefix(30))...)")
+    }
+
+    // MARK: - Dual Send Helpers
+
+    /// TD + Supabase 이중 전송 (즉시 전송형 이벤트용)
+    /// - TelemetryDeck: 항상 전송 (SDK가 "PickPhoto." prefix 자동 추가)
+    /// - Supabase: supabaseExcluded에 없을 때만 전송
+    func sendEvent(_ name: String, parameters: [String: String] = [:]) {
+        TelemetryDeck.signal(name, parameters: parameters)
+
+        guard !Self.supabaseExcluded.contains(name) else { return }
+        let bucket = queue.sync { photoLibraryBucket }
+        supabaseProvider?.send(
+            eventName: name,
+            params: parameters,
+            photoBucket: bucket
+        )
+    }
+
+    /// TD 개별 전송 + Supabase 배치 전송 (flushCounters용)
+    /// - TD: 이벤트 개별 signal (기존 동작 유지)
+    /// - Supabase: 제외 필터링 후 남은 이벤트를 1회 배치 POST
+    func sendEventBatch(_ events: [(name: String, parameters: [String: String])]) {
+        // 1) TD 개별 전송
+        for event in events {
+            TelemetryDeck.signal(event.name, parameters: event.parameters)
+        }
+
+        // 2) Supabase 배치 전송 (제외 목록 필터링)
+        let bucket = queue.sync { photoLibraryBucket }
+        let payloads = events
+            .filter { !Self.supabaseExcluded.contains($0.name) }
+            .map { SupabaseProvider.EventPayload(
+                eventName: $0.name,
+                params: $0.parameters,
+                photoBucket: bucket
+            )}
+
+        // supabaseProvider가 nil(xcconfig 미설정)이면 즉시 완료 콜백
+        if let provider = supabaseProvider, !payloads.isEmpty {
+            provider.sendBatch(events: payloads) { [weak self] in
+                self?.onFlushComplete?()
+                self?.onFlushComplete = nil
+            }
+        } else {
+            // provider nil 또는 Supabase 대상 이벤트 없음 → 즉시 완료
+            onFlushComplete?()
+            onFlushComplete = nil
+        }
     }
 }

@@ -13,13 +13,11 @@
 ## 전체 플로우
 
 ```
-앱 실행 → 그리드 로딩 완료
-  │
-  ├── hasFinishedInitialDisplay → 사전 스캔 시작 (백그라운드)
-  │     └── 최근 사진 30장 → BlurAnalyzer + ExposureAnalyzer
+앱 실행 → 즉시 사전 스캔 시작 (백그라운드)
+  │         └── 최근 사진부터 순차 스캔 (3장 확보 또는 D 트리거까지 계속)
   │
   ├── 사용자 스크롤 → A 코치마크 트리거 (기존)
-  ├── A 표시 중 (~5초+) → 스캔 완료 (스캔 시간 확보)
+  ├── A 표시 중 (~5초+) → 스캔 진행 중 (시간 확보)
   │
   ├── A dismiss
   │     ├── 3초 타이머 시작 + 휴지통 감시 시작
@@ -45,7 +43,7 @@
 
 | 파일 | 역할 |
 |------|------|
-| `Features/AutoCleanup/CoachMarkDPreScanner.swift` | 경량 사전 스캔 (30장 샘플, blur+exposure) |
+| `Features/AutoCleanup/CoachMarkDPreScanner.swift` | 사전 스캔 (T2 파이프라인, 3장 확보까지 계속) |
 | `Features/Grid/GridViewController+CoachMarkD.swift` | D 트리거 로직 + 레이아웃 |
 
 ### 수정 (4개)
@@ -54,7 +52,7 @@
 |------|-----------|
 | `CoachMarkOverlayView.swift` | `.autoCleanup` case 추가, `showAutoCleanup()` 정적 메서드 (썸네일 그리드 레이아웃), `confirmTapped()` D 분기, `updateDimPath()` 조건 추가, `onDismiss` 콜백 프로퍼티 추가 |
 | `FloatingTitleBar.swift` | `secondRightButtonFrameInWindow()` 접근자 메서드 추가 |
-| `GridViewController.swift` | `viewDidAppear`에서 D 사전 스캔 시작 호출 추가 |
+| `GridViewController.swift` | 앱 시작 직후 사전 스캔 시작 호출 추가 |
 | `GridViewController+CoachMark.swift` | A의 show 시점에 `onDismiss` 콜백 설정 (D 트리거 연결) |
 
 ---
@@ -68,9 +66,8 @@ final class CoachMarkDPreScanner {
     static let shared = CoachMarkDPreScanner()
 
     struct Result {
-        let lowQualityCount: Int          // 저품질 판정 수
-        let worstAssets: [PHAsset]        // 점수 최하위 최대 3개
-        let worstScores: [Double]         // 각 asset의 점수 (정렬용)
+        let lowQualityAssets: [PHAsset]   // 저품질 판정된 asset (최대 3개)
+        let totalScanned: Int             // 스캔한 총 사진 수
     }
 
     private(set) var result: Result?
@@ -85,51 +82,64 @@ final class CoachMarkDPreScanner {
 }
 ```
 
+### 파이프라인 (벤치마크 검증 완료)
+
+**T2: MetadataFilter → Exposure → SKIP필터 → Blur (SafeGuard 제외)**
+
+- SafeGuard: 0.18~3.62초 추가 비용, 구제 0건 → 제외
+- SKIP필터: 1.43초로 7장 오판 방지 → 포함 필수
+- 상세: `docs/onboarding/260217onboarding-D-prescan-benchmark.md`
+
 ### 스캔 로직
 
 ```
-1. PHAsset.fetchAssets(options: ascending=false, fetchLimit=30, mediaType=image)
-2. 각 asset에 대해 (백그라운드 큐):
-   a. ImagePipeline.shared.requestImage(targetSize: 256x256, quality: .fast)
-   b. cgImage 변환
-   c. BlurAnalyzer.shared.analyze(cgImage) → laplacianVariance
-   d. ExposureAnalyzer.shared.analyze(cgImage) → luminance
-   e. 종합 점수 = laplacianVariance 정규화 + luminance 정규화
-   f. 임계값 이하 → lowQuality 카운트 증가
-3. 점수 기준 정렬 → 최하위 3개 asset 저장
-4. 메인 스레드에서 onComplete 콜백
+1. 앱 시작 직후 startIfNeeded() 호출
+2. PHAsset.fetchAssets(ascending=false, mediaType=image, fetchLimit 없음)
+3. 각 asset에 대해 순차 처리 (백그라운드):
+   a. MetadataFilter → 비디오/스크린샷 등 스킵
+   b. CleanupImageLoader.loadImage (짧은변 360px, highQualityFormat)
+   c. ExposureAnalyzer.analyze → 노출 신호
+   d. SKIP필터 (유틸리티/텍스트스크린샷/화이트배경) → 해당 시 스킵
+   e. BlurAnalyzer.analyze (Metal GPU 256x256) → 블러 신호
+   f. Strong 신호 있으면 lowQuality → 저품질 목록에 추가
+4. 종료 조건: 3장 확보 또는 전체 사진 소진
+5. 메인 스레드에서 onComplete 콜백
 ```
 
-### 임계값 (기존 분석기 기준 활용)
+### 성능 (벤치마크 실측)
 
-- blur: `laplacianVariance < 50` (BlurAnalyzer 기준 "심각한 블러")
-- exposure: `luminance < 0.08` (ExposureAnalyzer 기준 "매우 어두움")
-- 둘 중 하나라도 해당 → lowQuality
+- 장당 평균 14~18ms (이미지 로딩 ~93%, 분석 ~7%)
+- 순차 처리 (병렬 효과 없음 — PHImageManager가 병목)
+- 앱 시작 → D 트리거까지 ~13초 → ~930장 처리 가능
+- 앨범 A (0.5% 비율): ~930장 중 ~4.6장 → 3장 확보 가능
+- 극단적으로 깨끗한 앨범 (0.2% 미만): 부족 가능 → 텍스트 폴백
 
-### 성능 예상
+### 속도 개선 시도 및 결과
 
-- 30장 x (썸네일 로드 ~80ms + 분석 ~30ms) = **3~4초**
-- A 표시 중에 완료되므로 사용자 대기 없음
+| 방안 | 결과 | 비고 |
+|------|------|------|
+| 병렬 처리 (2/4/8) | ❌ 최대 1.16x | PHImageManager가 병목 |
+| fastFormat 로딩 | ❌ 블러 오판 심각 | 168장 vs 48장 (120장 거짓양성) |
+| 해상도 축소 | ❌ 검토 제외 | BlurAnalyzer 정확도 하락 |
+| Exposure만 선행 | ❌ 검토 제외 | 블러(핵심 신호)를 못 잡음 |
 
 ---
 
 ## 2. 트리거 설계 (GridViewController+CoachMarkD.swift)
 
-### 진입 조건 (viewDidAppear에서 호출)
+### 사전 스캔 시작 (앱 시작 직후)
 
 ```swift
+// GridViewController.swift — viewDidLoad 또는 hasFinishedInitialDisplay 시점
 func startCoachMarkDPreScanIfNeeded() {
     guard !CoachMarkType.autoCleanup.hasBeenShown else { return }
-    guard CoachMarkType.gridSwipeDelete.hasBeenShown else { return }  // A 완료 후만
-    guard !CoachMarkDPreScanner.shared.isScanning else { return }
-    guard !CoachMarkDPreScanner.shared.isComplete else { return }
     CoachMarkDPreScanner.shared.startIfNeeded()
 }
 ```
 
-- `viewDidAppear`에서 호출 (A가 이미 hasBeenShown이면 스캔 시작)
-- 최초 실행 시에는 A가 아직 안 뜬 상태이므로 스캔 시작 안 됨
-- A dismiss → `hasBeenShown = true` → viewDidAppear 재진입 없이도 별도 경로로 D 트리거
+- 앱 시작 직후 가능한 빨리 호출 (A 코치마크와 무관하게 즉시 시작)
+- D가 이미 표시된 적 있으면 스캔 안 함
+- 스캔은 백그라운드에서 진행, D 트리거 시점까지 최대한 많은 사진 처리
 
 ### A dismiss → D 트리거 연결
 
@@ -151,8 +161,7 @@ CoachMarkManager.shared.currentOverlay?.onDismiss = { [weak self] in
 func startCoachMarkDTrigger() {
     guard !CoachMarkType.autoCleanup.hasBeenShown else { return }
 
-    // 사전 스캔 시작 (아직 안 했으면)
-    CoachMarkDPreScanner.shared.startIfNeeded()
+    // 사전 스캔은 앱 시작 시 이미 진행 중
 
     // A dismiss 시점의 휴지통 수 기록
     let initialTrashCount = TrashStore.shared.trashedCount

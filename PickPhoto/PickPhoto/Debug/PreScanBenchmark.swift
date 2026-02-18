@@ -408,32 +408,32 @@ final class PreScanBenchmark {
 
 /// deliveryMode를 지정 가능한 벤치마크용 이미지 로더
 ///
-/// CleanupImageLoader와 동일한 로직이지만 deliveryMode를 외부에서 지정 가능합니다.
-private final class DeliveryModeImageLoader: CleanupImageLoader {
+/// CleanupImageLoader가 final class이므로 서브클래싱 불가.
+/// 동일한 로딩 로직을 독립 구현하여 deliveryMode만 변경 가능하게 합니다.
+final class DeliveryModeImageLoader {
+
+    /// 이미지 매니저
+    private let imageManager = PHCachingImageManager()
+
+    /// 요청 옵션
+    private let requestOptions: PHImageRequestOptions
+
+    /// 분석용 이미지 최소 크기 (짧은 변 기준)
+    private let minSize: CGFloat = 360
 
     /// 지정된 deliveryMode로 초기화
     init(deliveryMode: PHImageRequestOptionsDeliveryMode) {
-        super.init()
-        // requestOptions의 deliveryMode 변경
-        // (부모의 requestOptions가 private이므로 별도 옵션 사용)
-        self.overrideDeliveryMode = deliveryMode
-    }
-
-    /// deliveryMode 오버라이드
-    private var overrideDeliveryMode: PHImageRequestOptionsDeliveryMode = .highQualityFormat
-
-    /// 오버라이드된 deliveryMode로 이미지 로딩
-    override func loadImage(for asset: PHAsset) async throws -> CGImage {
-        // 부모의 requestOptions를 직접 변경할 수 없으므로
-        // 별도 요청 옵션으로 직접 로딩
         let options = PHImageRequestOptions()
-        options.deliveryMode = overrideDeliveryMode
+        options.deliveryMode = deliveryMode
         options.resizeMode = .fast
         options.isNetworkAccessAllowed = true
         options.isSynchronous = false
+        self.requestOptions = options
+    }
 
-        let targetSize = calculateTargetSizeForBenchmark(asset: asset, minSize: 360)
-        let imageManager = PHCachingImageManager()
+    /// 분석용 이미지 로딩
+    func loadImage(for asset: PHAsset) async throws -> CGImage {
+        let targetSize = calculateTargetSize(for: asset)
 
         return try await withCheckedThrowingContinuation { continuation in
             var hasResumed = false
@@ -442,9 +442,9 @@ private final class DeliveryModeImageLoader: CleanupImageLoader {
                 for: asset,
                 targetSize: targetSize,
                 contentMode: .aspectFit,
-                options: options
+                options: requestOptions
             ) { image, info in
-                // degraded 처리: fastFormat은 degraded가 올 수 있음
+                // degraded (저품질 선행 전달) 무시
                 if let isDegraded = info?[PHImageResultIsDegradedKey] as? Bool, isDegraded {
                     return
                 }
@@ -473,7 +473,7 @@ private final class DeliveryModeImageLoader: CleanupImageLoader {
     }
 
     /// 타겟 크기 계산 (짧은 변 기준)
-    private func calculateTargetSizeForBenchmark(asset: PHAsset, minSize: CGFloat) -> CGSize {
+    private func calculateTargetSize(for asset: PHAsset) -> CGSize {
         let pixelWidth = CGFloat(asset.pixelWidth)
         let pixelHeight = CGFloat(asset.pixelHeight)
         let shorterSide = min(pixelWidth, pixelHeight)

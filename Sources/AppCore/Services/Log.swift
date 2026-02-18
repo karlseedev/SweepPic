@@ -75,7 +75,7 @@ public enum Log {
         "PermissionVC": false,
         "AlbumsViewController": true,       // 앨범 탭 깜빡임 디버깅 (ON)
         "ZoomTransition": true,          // 커스텀 줌 트랜지션 (현재 작업 중)
-        "ZoomAnimator": true,            // 줌 애니메이터 (현재 작업 중)
+        "ZoomAnimator": false,           // 줌 애니메이터
         "Zoom Timing": true,             // 그리드→뷰어 줌 전환 단계별 타이밍
         "Viewer Timing": false,          // 뷰어 열림 전체 라이프사이클 타이밍 (코드 제거됨)
 

@@ -6,7 +6,6 @@
 // - 참조: docs/db/260212db-Archi.md 섹션 5.3, 5.4
 
 import Foundation
-import TelemetryDeck
 
 extension AnalyticsService {
 
@@ -39,7 +38,7 @@ extension AnalyticsService {
     /// - Parameter deletedCount: 삭제 장수 (0이면 삭제 없이 닫기)
     func trackSimilarGroupClosed(totalCount: Int, deletedCount: Int) {
         guard !shouldSkip() else { return }
-        TelemetryDeck.signal("similar.groupClosed", parameters: [
+        sendEvent("similar.groupClosed", parameters: [
             "totalCount":   String(totalCount),
             "deletedCount": String(deletedCount),
         ])
