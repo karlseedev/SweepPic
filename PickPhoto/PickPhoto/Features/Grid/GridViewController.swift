@@ -247,8 +247,6 @@ final class GridViewController: BaseGridViewController {
     override func viewDidLoad() {
         // [Timing] 로딩 시작 시간 기록 (super.viewDidLoad 전에)
         loadStartTime = CACurrentMediaTime()
-        Log.print("[Timing] === 초기 로딩 시작 ===")
-
         // BaseGridViewController.viewDidLoad()에서 setupUI, setupGestures, additionalSetup 호출
         super.viewDidLoad()
 
@@ -309,13 +307,8 @@ final class GridViewController: BaseGridViewController {
         }
         handleTrashStateChange(trashStore.trashedAssetIDs)
 
-        // [DEBUG] viewWillAppear 호출 시점
-        let vwaTime = CACurrentMediaTime()
-        let vwaMs = loadStartTime > 0 ? (vwaTime - loadStartTime) * 1000 : -1
-
         // 초기 진입 시에는 startInitialDisplay()에서 처리하므로 스킵
         if !hasFinishedInitialDisplay {
-            Log.print("[Timing] viewWillAppear: +\(String(format: "%.1f", vwaMs))ms (초기 진입 - reloadData 스킵)")
             return
         }
 
@@ -324,11 +317,9 @@ final class GridViewController: BaseGridViewController {
             coordinator.animate(alongsideTransition: nil) { [weak self] _ in
                 self?.applyPendingViewerReturn()
             }
-            Log.print("[Timing] viewWillAppear: +\(String(format: "%.1f", vwaMs))ms (전환 중 - completion 예약)")
             return
         }
 
-        Log.print("[Timing] viewWillAppear.reloadData: +\(String(format: "%.1f", vwaMs))ms")
         // 화면 표시 시 변경사항 반영 (탭 전환 등)
         collectionView.reloadData()
     }
@@ -375,10 +366,6 @@ final class GridViewController: BaseGridViewController {
         LiquidGlassOptimizer.preload(in: view.window)
         LiquidGlassOptimizer.enterIdle(in: view.window)
 
-        // 런치 아규먼트 로깅 (디버깅용)
-        let args = ProcessInfo.processInfo.arguments
-        Log.print("[LaunchArgs] count=\(args.count), contains --auto-scroll: \(args.contains("--auto-scroll"))")
-
         AutoScrollTester.shared.startIfRequestedByLaunchArguments(scrollView: collectionView)
 
         // C-1 트리거 락 리셋 (뷰어에서 돌아올 때 재트리거 허용)
@@ -405,9 +392,6 @@ final class GridViewController: BaseGridViewController {
         // [Timing] C) 첫 레이아웃 완료 (1회만)
         if !hasLoggedFirstLayout && loadStartTime > 0 {
             hasLoggedFirstLayout = true
-            let layoutTime = CACurrentMediaTime()
-            let sinceStart = (layoutTime - loadStartTime) * 1000
-            Log.print("[Timing] C) 첫 레이아웃 완료: +\(String(format: "%.1f", sinceStart))ms")
         }
     }
 
@@ -526,7 +510,6 @@ final class GridViewController: BaseGridViewController {
         collectionView.contentInset = inset
         collectionView.scrollIndicatorInsets = inset
 
-        Log.print("[GridViewController] ContentInset updated - top: \(heights.top), bottom: \(heights.bottom)")
     }
 
     /// 현재 썸네일 크기 반환 (스크롤 상태에 따라 품질 저하 적용)
@@ -606,7 +589,6 @@ final class GridViewController: BaseGridViewController {
             cell.updateTrashState(trashedAssetIDs.contains(assetID))
         }
 
-        Log.print("[GridViewController] Updated \(changedIDs.count) changed cells (no reloadItems)")
     }
 
     // MARK: - Subtitle (사진 개수 표시)
@@ -752,9 +734,6 @@ extension GridViewController {
     override func collectionView(_ collectionView: UICollectionView, willDisplay cell: UICollectionViewCell, forItemAt indexPath: IndexPath) {
         if !hasLoggedFirstCellDisplay && loadStartTime > 0 {
             hasLoggedFirstCellDisplay = true
-            let displayTime = CACurrentMediaTime()
-            let sinceStart = (displayTime - loadStartTime) * 1000
-            Log.print("[Timing] D) 첫 셀 표시: +\(String(format: "%.1f", sinceStart))ms (indexPath: \(indexPath))")
         }
 
         // 회색 셀 측정: 이미지 nil이면 플래그 + 시각 기록
@@ -811,7 +790,6 @@ extension GridViewController {
 
         // 원본 인덱스를 필터링된 인덱스로 변환 (padding 제외한 실제 인덱스 사용)
         guard let filteredIndex = coordinator.filteredIndex(from: assetIndexPath.item) else {
-            Log.print("[GridViewController] Failed to find filtered index for \(assetIndexPath.item)")
             return
         }
 
@@ -850,9 +828,6 @@ extension GridViewController {
 
         let t6 = CACurrentMediaTime()
 
-        // [Timing] 각 단계별 소요 시간 출력
-        Log.print("[Zoom Timing] 준비: \(String(format: "%.1f", (t1-t0)*1000))ms, Coordinator: \(String(format: "%.1f", (t2-t1)*1000))ms, filteredIndex: \(String(format: "%.1f", (t3-t2)*1000))ms, ViewerVC: \(String(format: "%.1f", (t4-t3)*1000))ms, transition설정: \(String(format: "%.1f", (t5-t4)*1000))ms, push: \(String(format: "%.1f", (t6-t5)*1000))ms, 총: \(String(format: "%.1f", (t6-t0)*1000))ms")
-        Log.print("[GridViewController] Opening viewer at filtered index \(filteredIndex) (original: \(indexPath.item)), mode: \(mode)")
     }
 
     func scrollViewWillBeginDragging(_ scrollView: UIScrollView) {
@@ -962,29 +937,18 @@ extension GridViewController: ViewerViewControllerDelegate {
 
         // [SimilarPhoto] 그룹 무효화 처리 (T022)
         handleSimilarPhotoAssetDeleted(assetID: assetID)
-
-        Log.print("[GridViewController] Moved to trash: \(assetID.prefix(8))...")
     }
 
     /// 사진 복구 요청 (휴지통에서 복원)
     func viewerDidRequestRestore(assetID: String) {
-        let startTime = CFAbsoluteTimeGetCurrent()
-
         // TrashStore에서 복구 (즉시 저장됨)
         trashStore.restore(assetIDs: [assetID])
-
-        let trashStoreTime = CFAbsoluteTimeGetCurrent()
 
         // 그리드 셀 업데이트 (딤드 제거)
         // padding 보정 적용 (Base의 collectionIndexPath 사용)
         if let indexPath = collectionIndexPath(for: assetID) {
             collectionView.reloadItems(at: [indexPath])
         }
-
-        let uiUpdateTime = CFAbsoluteTimeGetCurrent()
-
-        Log.print("[GridViewController] Restored: \(assetID.prefix(8))...")
-        Log.print("[GridViewController.Timing] trashStore: \(String(format: "%.1f", (trashStoreTime - startTime) * 1000))ms, uiUpdate: \(String(format: "%.1f", (uiUpdateTime - trashStoreTime) * 1000))ms, total: \(String(format: "%.1f", (uiUpdateTime - startTime) * 1000))ms")
     }
 
     /// 사진 완전삭제 요청 (iOS 휴지통으로 이동)
@@ -994,7 +958,6 @@ extension GridViewController: ViewerViewControllerDelegate {
         Task {
             do {
                 try await trashStore.permanentlyDelete(assetIDs: [assetID])
-                Log.print("[GridViewController] Permanently deleted: \(assetID.prefix(8))...")
 
                 // 삭제 완료 후 뷰어에 알림 (메인 스레드에서)
                 // weak 참조로 접근 (Push/Modal 방식에 무관)
@@ -1002,7 +965,7 @@ extension GridViewController: ViewerViewControllerDelegate {
                     self.activeViewerVC?.handleDeleteComplete()
                 }
             } catch {
-                Log.print("[GridViewController] Failed to permanently delete: \(error)")
+                // 삭제 실패 시 에러 무시 (사용자가 시스템 팝업에서 취소)
             }
         }
     }

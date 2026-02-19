@@ -69,12 +69,10 @@ extension GridViewController {
     @objc func gridDeleteSelectedTapped() {
         let selectedAssetIDs = selectionManager.selectedAssetIDs
         guard !selectedAssetIDs.isEmpty else {
-            Log.print("[GridViewController] No photos selected for deletion")
             return
         }
 
         trashStore.moveToTrash(assetIDs: Array(selectedAssetIDs))
-        Log.print("[GridViewController] Moved \(selectedAssetIDs.count) photos to trash")
 
         selectionManager.clearSelection()
         exitSelectMode()
@@ -131,7 +129,6 @@ extension GridViewController {
 
         // 딤드 사진(휴지통)은 선택 불가
         guard !trashStore.isTrashed(assetID) else {
-            Log.print("[GridViewController] Cannot select trashed photo")
             return false
         }
 

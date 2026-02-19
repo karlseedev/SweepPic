@@ -192,9 +192,7 @@ final class PhotoCell: UICollectionViewCell {
 
     /// 회색 셀 통계 로그 출력
     static func logGrayCellStats(label: String = "PhotoCell") {
-        let stats = getGrayCellStats()
-        let pending = stats.shown - stats.resolved
-        Log.print("[GridStats] \(label) — grayShown: \(stats.shown), grayResolved: \(stats.resolved), pending: \(pending)")
+        // 통계는 수집만 하고 로그 출력하지 않음
     }
 
     // MARK: - UI Components
@@ -566,14 +564,6 @@ final class PhotoCell: UICollectionViewCell {
         // 여기서 다시 scale을 곱하면 이중 곱셈 버그 발생
         let pixelSize = targetSize
 
-        // [--log-thumb] 썸네일 요청 로그 (샘플링: 10개마다)
-        if FileLogger.logThumbEnabled {
-            Self.configureCallCount += 1
-            if Self.configureCallCount <= 5 || Self.configureCallCount % 10 == 0 {
-                Log.print("[Thumb:Req] #\(Self.configureCallCount) target=\(Int(pixelSize.width))x\(Int(pixelSize.height))px, fullSize=\(isFullSizeRequest)")
-            }
-        }
-
         // 스크롤 중 로그 비활성화 - hitch 방지
         // 원복: git checkout a5414d4 -- PickPhoto/PickPhoto/Features/Grid/PhotoCell.swift
         #if false  // DEBUG 로그 임시 비활성화
@@ -683,16 +673,6 @@ final class PhotoCell: UICollectionViewCell {
                             Self.incrementGrayShown()
                             AnalyticsService.shared.countGrayShown()
                         }
-                    }
-                }
-
-                // [--log-thumb] 파이프라인 응답 로그 (샘플링: 10개마다)
-                if FileLogger.logThumbEnabled {
-                    Self.pipelineResponseCount += 1
-                    if Self.pipelineResponseCount <= 5 || Self.pipelineResponseCount % 10 == 0 {
-                        let imgPx = Int(image.size.width * image.scale)
-                        let imgPy = Int(image.size.height * image.scale)
-                        Log.print("[Thumb:Res] #\(Self.pipelineResponseCount) img=\(imgPx)x\(imgPy)px, target=\(Int(pixelSize.width))x\(Int(pixelSize.height))px, degraded=\(isDegraded)")
                     }
                 }
 

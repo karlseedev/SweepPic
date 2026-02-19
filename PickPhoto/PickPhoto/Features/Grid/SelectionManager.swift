@@ -134,7 +134,5 @@ final class SelectionManager {
     private func notifyChange(assetIDs: Set<String>) {
         delegate?.selectionManager(self, didChangeSelection: assetIDs)
         delegate?.selectionManager(self, selectionCountDidChange: selectedCount)
-
-        Log.print("[SelectionManager] Selection changed: \(selectedCount) items selected")
     }
 }

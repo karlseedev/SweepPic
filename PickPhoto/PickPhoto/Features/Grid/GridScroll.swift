@@ -137,11 +137,6 @@ extension GridViewController {
             // 스크롤 중 peak velocity 사용 (손가락으로 멈추든 플릭으로 멈추든 측정됨)
             let velocity = Int(max(self.peakScrollVelocityY, self.lastEndVelocityY))
 
-            // [R2:Timing] 로그
-            if FileLogger.logThumbEnabled {
-                Log.print("[R2:Timing] seq=\(currentSeq), velocity=\(velocity)pt/s, 디바운스=50ms")
-            }
-
             // [R2] 스크롤 정지 후 visible 셀 고해상도 업그레이드
             // - 스크롤 중 50% 크기로 요청된 셀을 100% 크기로 재요청
             // - Gate2 spike test에서 검증된 R2 정지 복구 패턴
@@ -155,18 +150,6 @@ extension GridViewController {
             // [LiquidGlass 최적화] 스크롤 종료 시 최적화 해제
             LiquidGlassOptimizer.restore(in: self.view.window)
             LiquidGlassOptimizer.enterIdle(in: self.view.window)
-
-            // [--log-thumb] 스크롤 종료 후 visible 셀 해상도 검사 (2회: 0.2s, 0.6s)
-            if FileLogger.logThumbEnabled {
-                // 0.2초 후 첫 번째 체크
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) { [weak self] in
-                    self?.logVisibleCellResolution(seq: currentSeq, timing: "0.2s", velocity: velocity)
-                }
-                // 0.6초 후 두 번째 체크 (수렴 확인)
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) { [weak self] in
-                    self?.logVisibleCellResolution(seq: currentSeq, timing: "0.6s", velocity: velocity)
-                }
-            }
 
         }
     }
@@ -205,43 +188,6 @@ extension GridViewController {
             }
         }
 
-        if FileLogger.logThumbEnabled {
-            Log.print("[R2] seq=\(scrollSeq), visible=\(visibleCount), upgraded=\(upgradedCount)")
-        }
-    }
-
-    /// [--log-thumb] visible 셀의 실제 이미지 해상도 vs 기대 해상도 로그
-    /// - Parameters:
-    ///   - seq: 스크롤 시퀀스 번호 (로그 매칭용)
-    ///   - timing: 체크 시점 문자열 (예: "0.2s", "0.6s")
-    ///   - velocity: 스크롤 종료 시 velocity (pt/s)
-    private func logVisibleCellResolution(seq: Int, timing: String, velocity: Int) {
-        guard FileLogger.logThumbEnabled else { return }
-
-        let expectedSize = thumbnailSize(forScrolling: false)  // 스크롤 정지 상태의 기대 크기
-        let visibleCells = collectionView.visibleCells.compactMap { $0 as? PhotoCell }
-
-        var underSizedCount = 0
-        var matchCount = 0
-        var totalCount = 0
-
-        for cell in visibleCells {
-            guard let image = cell.thumbnailImageView.image else { continue }
-            totalCount += 1
-
-            let imgPx = image.size.width * image.scale
-            let expectedPx = expectedSize.width
-
-            // 이미지가 기대 크기의 90% 미만이면 undersized
-            if imgPx < expectedPx * 0.9 {
-                underSizedCount += 1
-            } else {
-                matchCount += 1
-            }
-        }
-
-        // 로그 형식: [Thumb:Check] seq=5, t=0.2s, velocity=3200, underSized=10/24
-        Log.print("[Thumb:Check] seq=\(seq), t=\(timing), velocity=\(velocity), underSized=\(underSizedCount)/\(totalCount)")
     }
 
     // MARK: - Phase 2: 감속 중 preheat
@@ -288,11 +234,6 @@ extension GridViewController {
         guard !assets.isEmpty else {
             isDecelerationPreheatScheduled = false
             return
-        }
-
-        // [Phase 2 로그]
-        if FileLogger.logThumbEnabled {
-            Log.print("[Preheat:Decel] seq=\(scrollSeq), \(assets.count)개 에셋, targetSize=\(Int(fullSize.width))px")
         }
 
         // 백그라운드에서 preheat
@@ -580,7 +521,6 @@ extension GridViewController {
         guard !visibleIndexPaths.isEmpty else {
             // 만약을 위한 fallback
             hasPreheatedInitialScreen = false
-            Log.print("[GridViewController] preheatInitialScreen: visible empty, will retry")
             return
         }
 
@@ -597,7 +537,6 @@ extension GridViewController {
         // PHAsset 배열 가져오기
         let assets = extendedIndexPaths.compactMap { dataSourceDriver.asset(at: $0) }
         guard !assets.isEmpty else {
-            Log.print("[GridViewController] preheatInitialScreen: no assets to preheat")
             return
         }
 
@@ -606,7 +545,6 @@ extension GridViewController {
             ImagePipeline.shared.preheatAssets(assets, targetSize: targetSize)
         }
 
-        Log.print("[GridViewController] preheatInitialScreen: \(assets.count) assets")
     }
 
     /// IndexPath 배열을 확장 (앞뒤로 지정 개수만큼)

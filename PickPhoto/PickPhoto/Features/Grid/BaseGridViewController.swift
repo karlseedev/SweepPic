@@ -997,10 +997,6 @@ extension BaseGridViewController: UIGestureRecognizerDelegate {
             // 수평 이동 속도가 수직 이동 속도보다 커야 드래그 선택 모드
             let isHorizontalDrag = abs(velocity.x) > abs(velocity.y)
 
-            if isHorizontalDrag {
-                Log.print("[BaseGridViewController] Drag select gesture began (horizontal drag detected)")
-            }
-
             return isHorizontalDrag
         }
 

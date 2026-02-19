@@ -431,9 +431,6 @@ extension GridViewController: PreviewGridViewControllerDelegate {
     func previewGridVC(_ vc: PreviewGridViewController, didConfirmCleanup assetIDs: [String]) {
         // 휴지통으로 이동
         trashStore.moveToTrash(assetIDs: assetIDs)
-
-        // 완료 토스트 표시
-        Log.print("[PreviewCleanup] \(assetIDs.count)장 휴지통 이동 완료")
     }
 }
 

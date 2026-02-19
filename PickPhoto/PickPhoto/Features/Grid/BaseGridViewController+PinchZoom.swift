@@ -44,7 +44,6 @@ extension BaseGridViewController {
     func setupPinchZoomGesture() {
         // 비활성화 상태면 제스처 등록 안함
         guard Self.isPinchZoomEnabled else {
-            Log.print("[PinchZoom] 핀치줌 비활성화 상태 - 제스처 미등록")
             return
         }
 
@@ -53,7 +52,6 @@ extension BaseGridViewController {
             action: #selector(handlePinchGesture(_:))
         )
         collectionView.addGestureRecognizer(pinchGesture)
-        Log.print("[PinchZoom] 핀치줌 제스처 등록 완료")
     }
 
     // MARK: - 제스처 핸들러
@@ -157,6 +155,5 @@ extension BaseGridViewController {
             self?.didPerformZoom(to: columns)
         }
 
-        Log.print("[PinchZoom] Zoom to \(columns.rawValue) columns")
     }
 }
