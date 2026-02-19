@@ -101,11 +101,12 @@ final class TrashAlbumViewController: BaseGridViewController {
     }
 
     /// 네비게이션 타이틀
-    /// ⚠️ 휴지통 명칭 변경 시 동시 수정 필요:
+    /// ⚠️ 명칭 변경 시 동시 수정 필요:
     /// - TabBarController.swift: tabBarItem.title
+    /// - LiquidGlassTabBar.swift: tabButtons title
     /// - configureFloatingOverlayForTrash의 setTitle()
     override var navigationTitle: String {
-        "휴지통"
+        "삭제대기함"
     }
 
     // MARK: - Initialization

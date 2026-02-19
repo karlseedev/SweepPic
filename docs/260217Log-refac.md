@@ -29,17 +29,25 @@
 import OSLog
 
 extension Logger {
-    private static let subsystem = Bundle.main.bundleIdentifier!
+    /// 테스트 환경에서 nil 가능 → 폴백 제공
+    private static let subsystem = Bundle.main.bundleIdentifier ?? "com.pickphoto.appcore"
 
-    static let viewer       = Logger(subsystem: subsystem, category: "Viewer")
-    static let grid         = Logger(subsystem: subsystem, category: "Grid")
-    static let similarPhoto = Logger(subsystem: subsystem, category: "SimilarPhoto")
-    static let pipeline     = Logger(subsystem: subsystem, category: "ImagePipeline")
-    static let cleanup      = Logger(subsystem: subsystem, category: "AutoCleanup")
-    static let transition   = Logger(subsystem: subsystem, category: "Transition")
-    static let analytics    = Logger(subsystem: subsystem, category: "Analytics")
+    public static let viewer       = Logger(subsystem: subsystem, category: "Viewer")
+    public static let grid         = Logger(subsystem: subsystem, category: "Grid")
+    public static let similarPhoto = Logger(subsystem: subsystem, category: "SimilarPhoto")
+    public static let pipeline     = Logger(subsystem: subsystem, category: "Pipeline")
+    public static let cleanup      = Logger(subsystem: subsystem, category: "Cleanup")
+    public static let transition   = Logger(subsystem: subsystem, category: "Transition")
+    public static let analytics    = Logger(subsystem: subsystem, category: "Analytics")
     // ... 기능별로 추가
 }
+```
+
+**주의: 사용하는 파일에서 `import OSLog` 필수** (Swift는 transitive import를 re-export하지 않음)
+
+```swift
+import OSLog      // Logger 타입 자체를 위해 필수
+import AppCore    // Logger.viewer 등 extension 멤버를 위해 필수
 ```
 
 ### 호출 변환 예시
@@ -107,10 +115,10 @@ Logger.viewer.info("user: \(userID, privacy: .private(mask: .hash))")
 
 ```bash
 # Mac에서 USB 연결 기기 실시간 로그 스트리밍
-log stream --predicate 'subsystem == "com.pickphoto.app"' --level debug
+log stream --predicate 'subsystem == "com.karl.PickPhoto"' --level debug
 
 # 특정 카테고리만 필터
-log stream --predicate 'subsystem == "com.pickphoto.app" AND category == "Viewer"'
+log stream --predicate 'subsystem == "com.karl.PickPhoto" AND category == "Viewer"'
 
 # 로그 아카이브 수집 (사후 분석용)
 log collect --device --output pickphoto.logarchive
@@ -144,7 +152,7 @@ Console.app에서도 subsystem/category 기반 필터링 가능.
 | Analytics | `Logger.analytics` | 분석 |
 | CoachMarkC1, CoachMarkC2, CoachMarkManager | `Logger.coachMark` | 코치마크 통합 |
 | Permission, PermissionVC | `Logger.permission` | 권한 |
-| Debug, ButtonInspector, SystemUIInspector 등 | `Logger.debug` | 디버그 전용 |
+| Debug, ButtonInspector, SystemUIInspector 등 | `Logger.appDebug` | 디버그 전용 (`debug`는 인스턴스 메서드 충돌) |
 
 **~100개 → ~17개 카테고리**로 통합
 
@@ -186,9 +194,22 @@ Console.app에서도 subsystem/category 기반 필터링 가능.
 ---
 ---
 
-# 구현 계획 (검토 완료)
+# 구현 계획 (2차 검토 완료)
 
 ## 검토에서 발견된 핵심 리스크
+
+### 리스크 0: `public` 키워드 누락 + `import OSLog` 필요 (심각도: 치명적)
+
+**문제 A**: Logger extension의 static property에 `public`이 없으면 AppCore 외부(PickPhoto)에서 사용 불가.
+Swift의 extension 멤버는 기본 `internal`이므로 **반드시 `public` 명시 필요**.
+
+**문제 B**: PickPhoto 파일에서 `import AppCore`만으로는 `Logger` 타입이 보이지 않음.
+Swift는 transitive import를 re-export하지 않으므로, 각 파일에 **`import OSLog` 추가 필수**.
+
+**대응**:
+- `Logger+App.swift`의 모든 static let에 `public` 추가
+- PickPhoto의 모든 마이그레이션 대상 파일(~71개)에 `import OSLog` 추가
+- Phase 0 검증에서 모듈 간 가시성도 함께 테스트
 
 ### 리스크 1: OSLogMessage 문자열 보간 ≠ Swift String 보간 (심각도: 높음)
 
@@ -206,6 +227,9 @@ logger.debug("v: \(isOn ? "ON" : "OFF")")              // 삼항 연산자
 logger.debug("v: \(opt.map(String.init) ?? "nil")")     // .map + ??
 logger.debug("v: \(arr.joined(separator: ", "))")       // .joined()
 logger.debug("v: \(self.someProperty)")                 // self. 필요?
+logger.debug("frame: \(view.frame)")                    // CGRect
+logger.debug("size: \(image.size)")                     // CGSize
+logger.debug("origin: \(view.frame.origin)")            // CGPoint
 ```
 
 ### 리스크 2: 메시지 크기 제한 1024바이트 (심각도: 중간)
@@ -224,8 +248,13 @@ Logger 보간은 `@autoclosure @escaping`이므로 클래스 메서드 내에서
 ## Phase 0: 사전 커밋 + 패턴 검증
 
 1. 현재 변경사항 커밋 후 롤백 포인트 생성
-2. **검증용 테스트 파일** 생성 → 위 리스크 1의 5개 패턴을 실제 컴파일하여 확인
-3. 결과에 따라 Phase 1 이후 변환 전략 확정 (직접 사용 or 변수 추출)
+2. **검증용 테스트 파일** 생성 → 다음 패턴들을 실제 컴파일하여 확인:
+   - `String(format:)` 보간 (리스크 1)
+   - 삼항 연산자, `.map()??`, `.joined()` 보간 (리스크 1)
+   - `self.` 필요 여부 (리스크 3)
+   - **PickPhoto에서 `import OSLog` + `import AppCore`로 `Logger.viewer` 접근 가능한지** (리스크 0)
+   - **`public static let`이 모듈 외부에서 보이는지** (리스크 0)
+3. 결과에 따라 Phase 1 이후 변환 전략 확정
 4. 검증 후 테스트 파일 삭제
 
 ---
@@ -241,33 +270,33 @@ extension Logger {
     private static let subsystem = Bundle.main.bundleIdentifier ?? "com.pickphoto.appcore"
 
     // 뷰어/미디어
-    static let viewer       = Logger(subsystem: subsystem, category: "Viewer")
+    public static let viewer       = Logger(subsystem: subsystem, category: "Viewer")
 
     // 그리드
-    static let grid         = Logger(subsystem: subsystem, category: "Grid")
-    static let selection    = Logger(subsystem: subsystem, category: "Selection")
+    public static let grid         = Logger(subsystem: subsystem, category: "Grid")
+    public static let selection    = Logger(subsystem: subsystem, category: "Selection")
 
     // 분석
-    static let similarPhoto = Logger(subsystem: subsystem, category: "SimilarPhoto")
-    static let faceDetect   = Logger(subsystem: subsystem, category: "FaceDetect")
-    static let cleanup      = Logger(subsystem: subsystem, category: "Cleanup")
+    public static let similarPhoto = Logger(subsystem: subsystem, category: "SimilarPhoto")
+    public static let faceDetect   = Logger(subsystem: subsystem, category: "FaceDetect")
+    public static let cleanup      = Logger(subsystem: subsystem, category: "Cleanup")
 
     // 인프라
-    static let pipeline     = Logger(subsystem: subsystem, category: "Pipeline")
-    static let transition   = Logger(subsystem: subsystem, category: "Transition")
-    static let navigation   = Logger(subsystem: subsystem, category: "Navigation")
-    static let albums       = Logger(subsystem: subsystem, category: "Albums")
-    static let performance  = Logger(subsystem: subsystem, category: "Performance")
+    public static let pipeline     = Logger(subsystem: subsystem, category: "Pipeline")
+    public static let transition   = Logger(subsystem: subsystem, category: "Transition")
+    public static let navigation   = Logger(subsystem: subsystem, category: "Navigation")
+    public static let albums       = Logger(subsystem: subsystem, category: "Albums")
+    public static let performance  = Logger(subsystem: subsystem, category: "Performance")
 
     // 앱 레벨
-    static let app          = Logger(subsystem: subsystem, category: "App")
-    static let store        = Logger(subsystem: subsystem, category: "Store")
-    static let analytics    = Logger(subsystem: subsystem, category: "Analytics")
-    static let coachMark    = Logger(subsystem: subsystem, category: "CoachMark")
-    static let permission   = Logger(subsystem: subsystem, category: "Permission")
+    public static let app          = Logger(subsystem: subsystem, category: "App")
+    public static let store        = Logger(subsystem: subsystem, category: "Store")
+    public static let analytics    = Logger(subsystem: subsystem, category: "Analytics")
+    public static let coachMark    = Logger(subsystem: subsystem, category: "CoachMark")
+    public static let permission   = Logger(subsystem: subsystem, category: "Permission")
 
     // 디버그 ("debug"는 인스턴스 메서드 충돌 → "appDebug")
-    static let appDebug     = Logger(subsystem: subsystem, category: "Debug")
+    public static let appDebug     = Logger(subsystem: subsystem, category: "Debug")
 }
 ```
 
@@ -439,7 +468,7 @@ current.debugSnapshot(tag: "current@will", transitionId: transitionId)
 
 **검증**:
 - Console.app에서 subsystem 필터로 로그 확인
-- `log stream --predicate 'subsystem == "com.pickphoto.app"' --level debug`
+- `log stream --predicate 'subsystem == "com.karl.PickPhoto"' --level debug`
 
 **커밋**: `refactor(Phase6): Log.swift 삭제 + 문서 업데이트 — Logger 마이그레이션 완료`
 
@@ -473,13 +502,17 @@ Phase 0에서 패턴 검증 후 일괄 적용할 변환 전략을 확정한다.
 
 ## 주의사항
 
-1. **OSLogMessage 보간 제약**: Phase 0에서 반드시 검증. `String(format:)`, 삼항 연산자, `.map()??`, `.joined()` 패턴 확인
-2. **메시지 크기 제한**: Logger는 ~1024바이트 제한. callStack 등 긴 메시지는 `#if DEBUG print()` 유지
-3. **`self.` 명시**: Logger 보간이 `@escaping`이므로 클래스 메서드에서 인스턴스 프로퍼티 접근 시 `self.` 필요할 수 있음 (컴파일러가 알려줌, 기계적 수정)
-4. **Privacy**: 초기 마이그레이션에서는 미지정 (`.debug` 레벨은 릴리즈에서 제거). 추후 `.info` 이상 검토
-5. **Git 규칙**: 각 Phase 전후 커밋 (50줄 이상 수정)
-6. **파일 삭제**: Log.swift 삭제는 Phase 6에서 사용자 확인 후 진행
-7. **FileLogger**: `FileLogger.swift`와 `FileLogger.logThumbEnabled`는 독립적 → 마이그레이션 대상 아님
+1. **`public` 필수**: Logger extension의 모든 static let에 `public` 키워드 필수 (없으면 AppCore 외부에서 접근 불가)
+2. **`import OSLog` 필수**: PickPhoto의 모든 마이그레이션 대상 파일(~71개)에 `import OSLog` 추가 필요 (Swift는 transitive import를 re-export하지 않음)
+3. **OSLogMessage 보간 제약**: Phase 0에서 반드시 검증. `String(format:)`, 삼항 연산자, `.map()??`, `.joined()` 패턴 확인
+4. **메시지 크기 제한**: Logger는 ~1024바이트 제한. callStack 등 긴 메시지는 `#if DEBUG print()` 유지
+5. **`self.` 명시**: Logger 보간이 `@escaping`이므로 클래스 메서드에서 인스턴스 프로퍼티 접근 시 `self.` 필요할 수 있음 (컴파일러가 알려줌, 기계적 수정)
+6. **FileLogger.logThumbEnabled 패턴**: 7곳(GridScroll 5, PhotoCell 2, ImagePipeline 1)에서 `FileLogger.logThumbEnabled` 분기 안에 `Log.print()`를 사용 → Logger로 동일하게 변환, `FileLogger.logThumbEnabled` 분기는 그대로 유지
+7. **debugSnapshot()**: PhotoPageViewController.swift:228에 `#if DEBUG` 없이 존재. 내부에서 `Log.debug()` 사용 → Logger로 변환. 호출부는 이미 계획대로 `#if DEBUG`로 감싸기
+8. **이미 #if DEBUG 안의 Log.print()**: ImagePipeline.swift 3곳에서 존재. Logger.x.debug()로 변환하면 이중 가드가 되지만 기능적 문제 없음. 정리 원하면 `#if DEBUG` 제거 가능 (Logger.debug가 릴리즈에서 자동 제거하므로)
+9. **Privacy**: 초기 마이그레이션에서는 미지정 (`.debug` 레벨은 릴리즈에서 제거). 추후 `.info` 이상 검토
+10. **Git 규칙**: 각 Phase 전후 커밋 (50줄 이상 수정)
+11. **파일 삭제**: Log.swift 삭제는 Phase 6에서 사용자 확인 후 진행
 
 ---
 
