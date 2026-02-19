@@ -73,9 +73,6 @@ public final class MemoryThumbnailCache {
         cache.countLimit = 100
         cache.totalCostLimit = 50 * 1024 * 1024
 
-        #if DEBUG
-        Log.print("[MemoryCache] 초기화: countLimit=100, costLimit=50MB")
-        #endif
     }
 
     // MARK: - Public API
@@ -125,10 +122,6 @@ public final class MemoryThumbnailCache {
     /// 전체 캐시 삭제
     public func removeAll() {
         cache.removeAllObjects()
-
-        #if DEBUG
-        Log.print("[MemoryCache] 전체 삭제")
-        #endif
     }
 
     // MARK: - Private Methods

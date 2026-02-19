@@ -239,27 +239,7 @@ public final class ImagePipeline: ImagePipelineProtocol {
     /// 파이프라인 설정값 로그 출력 (전/후 비교용)
     /// 앱 시작 시 1회 호출하여 설정값 기록
     public func logConfig() {
-        // 현재 deliveryMode 확인
-        let deliveryModeStr: String
-        switch thumbnailOptions.deliveryMode {
-        case .opportunistic:
-            deliveryModeStr = "opportunistic"
-        case .highQualityFormat:
-            deliveryModeStr = "highQualityFormat"
-        case .fastFormat:
-            deliveryModeStr = "fastFormat"
-        @unknown default:
-            deliveryModeStr = "unknown"
-        }
-
-        // cancelPolicy: 현재 prepareForReuse만 사용 (didEndDisplaying 미사용)
-        // R2Recovery: 현재 미구현
-        let cancelPolicy = "prepareForReuse"  // TODO: Gate2 적용 시 didEndDisplaying 추가
-        let r2Recovery = "disabled"           // TODO: Gate2 적용 시 enabled로 변경
-
-        Log.print("[Config] deliveryMode: \(deliveryModeStr)")
-        Log.print("[Config] cancelPolicy: \(cancelPolicy)")
-        Log.print("[Config] R2Recovery: \(r2Recovery)")
+        // 설정값 로그 출력 비활성화 (false 카테고리 정리)
     }
 
     /// 통계 로그 출력
@@ -371,12 +351,6 @@ public final class ImagePipeline: ImagePipelineProtocol {
         let currentReqCount = requestCount
         statsLock.unlock()
 
-        // [Stats] 10/20/30회마다 로그
-        if currentReqCount == 10 || currentReqCount == 20 || currentReqCount == 30 {
-            let elapsed = (CACurrentMediaTime() - statsStartTime) * 1000
-            Log.print("[Pipeline] requestImage #\(currentReqCount): +\(String(format: "%.1f", elapsed))ms")
-        }
-
         // 백그라운드 OperationQueue에서 PhotoKit 호출
         requestQueue.addOperation { [weak self] in
 
@@ -431,26 +405,9 @@ public final class ImagePipeline: ImagePipelineProtocol {
                 let currentCompleteCount = self.completeCount + self.degradedCount
                 statsLock.unlock()
 
-                // [Stats] 50회 도달 시점 로그
-                if currentCompleteCount == 50 {
-                    let elapsed = (CACurrentMediaTime() - self.statsStartTime) * 1000
-                    Log.print("[Pipeline] completion #50 도달: +\(String(format: "%.1f", elapsed))ms")
-                }
-
-                // [--log-thumb] 파이프라인 응답 상세 로그 (샘플링: 20개마다)
-                if FileLogger.logThumbEnabled && (currentCompleteCount <= 3 || currentCompleteCount % 20 == 0) {
-                    if let img = image {
-                        let imgPx = Int(img.size.width * img.scale)
-                        let imgPy = Int(img.size.height * img.scale)
-                        let ratio = targetSize.width > 0 ? Double(imgPx) / Double(targetSize.width) * 100 : 0
-                        Log.print("[Pipeline] #\(currentCompleteCount) target=\(Int(targetSize.width))x\(Int(targetSize.height))px → img=\(imgPx)x\(imgPy)px (\(String(format: "%.0f", ratio))%), degraded=\(isDegraded)")
-                    }
-                }
-
                 // 썸네일 로딩 실패 감지 (최종 콜백에서 이미지 없음 + PHImageErrorKey 존재)
                 if image == nil && !isDegraded,
-                   let error = info?[PHImageErrorKey] as? NSError {
-                    Log.print("[Pipeline] gridThumbnail 에러: \(error.localizedDescription)")
+                   info?[PHImageErrorKey] != nil {
                     Analytics.reporter?.reportError(key: "photoLoad.gridThumbnail")
                 }
 
@@ -493,13 +450,6 @@ public final class ImagePipeline: ImagePipelineProtocol {
         preheatAssetCount += assets.count
         statsLock.unlock()
 
-        // [가드레일] 메인 스레드에서 호출 시 경고
-        #if DEBUG
-        if Thread.isMainThread {
-            Log.print("[ImagePipeline] Warning: preheatAssets called on main thread")
-        }
-        #endif
-
         imageManager.startCachingImages(
             for: assets,
             targetSize: targetSize,
@@ -532,10 +482,6 @@ public final class ImagePipeline: ImagePipelineProtocol {
         cacheQueue.async { [weak self] in
             self?.assetCache.removeAll()
         }
-
-        #if DEBUG
-        Log.print("[ImagePipeline] Cache cleared")
-        #endif
     }
 
     // MARK: - Legacy API (하위 호환)
@@ -549,9 +495,6 @@ public final class ImagePipeline: ImagePipelineProtocol {
         completion: @escaping (UIImage?, RequestToken) -> Void
     ) -> RequestToken? {
         guard let asset = fetchAsset(for: assetID) else {
-            #if DEBUG
-            Log.print("[ImagePipeline] Asset not found: \(assetID.prefix(8))...")
-            #endif
             return nil
         }
 

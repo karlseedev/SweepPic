@@ -111,7 +111,6 @@ public final class AlbumService: AlbumServiceProtocol {
             albums.append(album)
         }
 
-        Log.print("[AlbumService] Fetched \(albums.count) user albums")
         return albums
     }
 
@@ -143,7 +142,6 @@ public final class AlbumService: AlbumServiceProtocol {
             }
         }
 
-        Log.print("[AlbumService] Fetched \(smartAlbums.count) smart albums")
         return smartAlbums
     }
 
@@ -158,7 +156,6 @@ public final class AlbumService: AlbumServiceProtocol {
         )
 
         guard let collection = collections.firstObject else {
-            Log.print("[AlbumService] Album not found: \(albumID)")
             return nil
         }
 
@@ -169,7 +166,6 @@ public final class AlbumService: AlbumServiceProtocol {
 
         let assets = PHAsset.fetchAssets(in: collection, options: options)
 
-        Log.print("[AlbumService] Fetched \(assets.count) photos in album: \(collection.localizedTitle ?? "Unknown")")
         return assets
     }
 
@@ -178,7 +174,6 @@ public final class AlbumService: AlbumServiceProtocol {
     /// - Returns: PHFetchResult (nil이면 앨범을 찾지 못함)
     public func fetchPhotosInSmartAlbum(type: SmartAlbumType) -> PHFetchResult<PHAsset>? {
         guard let subtype = phAssetCollectionSubtype(for: type) else {
-            Log.print("[AlbumService] Unsupported smart album type: \(type)")
             return nil
         }
 
@@ -190,7 +185,6 @@ public final class AlbumService: AlbumServiceProtocol {
         )
 
         guard let collection = collections.firstObject else {
-            Log.print("[AlbumService] Smart album not found: \(type)")
             return nil
         }
 
@@ -205,7 +199,6 @@ public final class AlbumService: AlbumServiceProtocol {
 
         let assets = PHAsset.fetchAssets(in: collection, options: options)
 
-        Log.print("[AlbumService] Fetched \(assets.count) photos in smart album: \(type.displayTitle)")
         return assets
     }
 
@@ -272,7 +265,6 @@ public final class AlbumService: AlbumServiceProtocol {
             ))
         }
 
-        Log.print("[AlbumService] Metadata sync: \(smartAlbums.count) smart, \(userAlbumsList.count) user albums")
         return (smartAlbums, userAlbumsList)
     }
 
@@ -407,8 +399,6 @@ public final class AlbumService: AlbumServiceProtocol {
                     keyAssets[albumID] = asset
                 }
             }
-
-            Log.print("[AlbumService] Async fetched \(smartAlbums.count) smart, \(userAlbumsList.count) user albums")
 
             // 메인 스레드에서 completion 호출
             DispatchQueue.main.async {

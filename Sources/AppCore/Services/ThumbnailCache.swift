@@ -85,9 +85,6 @@ public final class ThumbnailCache {
         // 디렉토리 생성
         try? FileManager.default.createDirectory(at: cacheDirectory, withIntermediateDirectories: true)
 
-        #if DEBUG
-        Log.print("[ThumbnailCache] Cache directory: \(cacheDirectory.path)")
-        #endif
     }
 
     // MARK: - Public API
@@ -118,30 +115,10 @@ public final class ThumbnailCache {
                 // 캐시 미스
                 #if DEBUG
                 Self.counterLock.withLock { Self.missCount += 1 }
-                let total = Self.hitCount + Self.missCount
-                if total <= 50 {
-                    Log.print("[ThumbnailCache] MISS #\(total): \(assetID.prefix(8))...")
-                }
-                if total == 50 {
-                    Log.print("[ThumbnailCache] === 첫 50셀 히트율: \(String(format: "%.1f", Self.hitRate * 100))% (hit=\(Self.hitCount), miss=\(Self.missCount)) ===")
-                }
                 #endif
                 DispatchQueue.main.async { completion(nil) }
                 return
             }
-
-            // 캐시 히트 (스크롤 중 로그 비활성화 - hitch 방지)
-            // 원복: git checkout a5414d4 -- Sources/AppCore/Services/ThumbnailCache.swift
-            #if false  // DEBUG 로그 임시 비활성화
-            Self.counterLock.withLock { Self.hitCount += 1 }
-            let total = Self.hitCount + Self.missCount
-            if total <= 50 {
-                Log.print("[ThumbnailCache] HIT #\(total): \(assetID.prefix(8))...")
-            }
-            if total == 50 {
-                Log.print("[ThumbnailCache] === 첫 50셀 히트율: \(String(format: "%.1f", Self.hitRate * 100))% (hit=\(Self.hitCount), miss=\(Self.missCount)) ===")
-            }
-            #endif
 
             // LRU: 접근 시 수정일 갱신 (touch)
             // - 가장 최근에 접근한 파일이 가장 나중에 삭제됨
@@ -190,16 +167,7 @@ public final class ThumbnailCache {
             if let data = image.jpegData(compressionQuality: self.jpegQuality) {
                 do {
                     try data.write(to: path)
-                    #if DEBUG
-                    let sizeKB = data.count / 1024
-                    if sizeKB > 100 {
-                        Log.print("[ThumbnailCache] Saved large file: \(sizeKB)KB")
-                    }
-                    #endif
                 } catch {
-                    #if DEBUG
-                    Log.print("[ThumbnailCache] Save failed: \(error.localizedDescription)")
-                    #endif
                     // [Analytics] 썸네일 캐시 쓰기 실패
                     Analytics.reporter?.reportError(key: "storage.thumbnailCache")
                 }
@@ -252,13 +220,7 @@ public final class ThumbnailCache {
                     try? FileManager.default.removeItem(at: file)
                 }
 
-                #if DEBUG
-                Log.print("[ThumbnailCache] Cleared all cache: \(files.count) files")
-                #endif
             } catch {
-                #if DEBUG
-                Log.print("[ThumbnailCache] Clear failed: \(error.localizedDescription)")
-                #endif
                 // [Analytics] 캐시 클리어 실패
                 Analytics.reporter?.reportError(key: "storage.thumbnailCache")
             }
@@ -316,17 +278,8 @@ public final class ThumbnailCache {
 
         // 용량 초과 시만 트림
         guard totalSize > maxCacheSize else {
-            #if DEBUG
-            let usedMB = totalSize / (1024 * 1024)
-            let maxMB = maxCacheSize / (1024 * 1024)
-            Log.print("[ThumbnailCache] Cache size OK: \(usedMB)MB / \(maxMB)MB (\(files.count) files)")
-            #endif
             return
         }
-
-        #if DEBUG
-        let beforeMB = totalSize / (1024 * 1024)
-        #endif
 
         // 오래된 순 정렬 (가장 오래 접근 안 한 것부터)
         fileInfos.sort { $0.date < $1.date }
@@ -344,10 +297,5 @@ public final class ThumbnailCache {
                 // 삭제 실패 시 무시하고 계속
             }
         }
-
-        #if DEBUG
-        let afterMB = totalSize / (1024 * 1024)
-        Log.print("[ThumbnailCache] Trimmed: \(beforeMB)MB → \(afterMB)MB, deleted \(deletedCount) files")
-        #endif
     }
 }

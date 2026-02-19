@@ -59,40 +59,28 @@ public final class AppStateStore: AppStateStoreProtocol {
     /// 메모리 경고 처리
     /// 헌법 V. 메모리 제한 (250MB) 준수를 위해 캐시 즉시 해제
     public func handleMemoryWarning() {
-        Log.print("[AppStateStore] Memory warning received, clearing caches")
-
         // ImagePipeline 캐시 비우기
         ImagePipeline.shared.clearCache()
 
         // 추가 메모리 확보 작업 (필요시)
         // 예: 오프스크린 뷰 해제, 임시 데이터 삭제 등
-
-        Log.print("[AppStateStore] Memory warning handled")
     }
 
     /// 백그라운드 전환 처리
     public func handleBackgroundTransition() {
-        Log.print("[AppStateStore] App entering background")
-
         // 프리히트 중지 (배터리 절약)
         ImagePipeline.shared.stopAllPreheating()
 
         // 추가 정리 작업 (필요시)
         // 예: 진행 중인 네트워크 요청 취소, 타이머 정지 등
-
-        Log.print("[AppStateStore] Background transition handled")
     }
 
     /// 포그라운드 전환 처리
     public func handleForegroundTransition() {
-        Log.print("[AppStateStore] App entering foreground")
-
         // 권한 상태 변경 확인
         PermissionStore.shared.checkAndNotifyIfChanged()
 
         // 추가 복원 작업 (필요시)
         // 예: 데이터 갱신, 타이머 재시작 등
-
-        Log.print("[AppStateStore] Foreground transition handled")
     }
 }

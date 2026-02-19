@@ -169,8 +169,6 @@ public final class TrashStore: TrashStoreProtocol {
 
         // 변경 알림
         notifyChange()
-
-        Log.print("[TrashStore] Moved to trash: \(assetIDs.count) items")
     }
 
     /// 사진을 휴지통에서 복구
@@ -178,26 +176,15 @@ public final class TrashStore: TrashStoreProtocol {
     public func restore(assetIDs: [String]) {
         guard !assetIDs.isEmpty else { return }
 
-        let startTime = CFAbsoluteTimeGetCurrent()
-
         for assetID in assetIDs {
             state.restore(assetID)
         }
 
-        let stateUpdateTime = CFAbsoluteTimeGetCurrent()
-
         // 즉시 저장
         saveState()
 
-        let saveTime = CFAbsoluteTimeGetCurrent()
-
         // 변경 알림
         notifyChange()
-
-        let notifyTime = CFAbsoluteTimeGetCurrent()
-
-        Log.print("[TrashStore] Restored: \(assetIDs.count) items")
-        Log.print("[TrashStore.Timing] stateUpdate: \(String(format: "%.1f", (stateUpdateTime - startTime) * 1000))ms, save: \(String(format: "%.1f", (saveTime - stateUpdateTime) * 1000))ms, notify: \(String(format: "%.1f", (notifyTime - saveTime) * 1000))ms")
     }
 
     // MARK: - PRD7: Completion Handler API
@@ -216,14 +203,12 @@ public final class TrashStore: TrashStoreProtocol {
             switch result {
             case .success:
                 self?.notifyChange()
-                Log.print("[TrashStore] Moved to trash with completion: \(assetID.prefix(8))...")
                 DispatchQueue.main.async {
                     completion(.success(()))
                 }
             case .failure(let error):
                 // 롤백: 상태 복원
                 self?.state.restore(assetID)
-                Log.print("[TrashStore] Failed to move to trash, rolled back: \(error)")
                 // [Analytics] 휴지통 이동 실패
                 Analytics.reporter?.reportError(key: "cleanup.trashMove")
                 DispatchQueue.main.async {
@@ -247,14 +232,12 @@ public final class TrashStore: TrashStoreProtocol {
             switch result {
             case .success:
                 self?.notifyChange()
-                Log.print("[TrashStore] Restored with completion: \(assetID.prefix(8))...")
                 DispatchQueue.main.async {
                     completion(.success(()))
                 }
             case .failure(let error):
                 // 롤백: 상태 복원
                 self?.state.moveToTrash(assetID)
-                Log.print("[TrashStore] Failed to restore, rolled back: \(error)")
                 // [Analytics] 복구 실패
                 Analytics.reporter?.reportError(key: "cleanup.trashMove")
                 DispatchQueue.main.async {
@@ -304,8 +287,6 @@ public final class TrashStore: TrashStoreProtocol {
 
         // 변경 알림
         notifyChange()
-
-        Log.print("[TrashStore] Permanently deleted: \(assetIDs.count) items")
     }
 
     /// 휴지통 비우기
@@ -335,7 +316,6 @@ public final class TrashStore: TrashStoreProtocol {
         if beforeCount != afterCount {
             saveState()
             notifyChange()
-            Log.print("[TrashStore] Removed \(beforeCount - afterCount) invalid assets")
         }
     }
 
@@ -351,9 +331,7 @@ public final class TrashStore: TrashStoreProtocol {
                 encoder.dateEncodingStrategy = .iso8601
                 let data = try encoder.encode(self.state)
                 try data.write(to: self.trashStateURL, options: .atomic)
-                Log.print("[TrashStore] State saved (\(self.state.trashedCount) items)")
             } catch {
-                Log.print("[TrashStore] Failed to save state: \(error)")
                 // [Analytics] 상태 저장 실패
                 Analytics.reporter?.reportError(key: "storage.trashData")
             }
@@ -382,7 +360,6 @@ public final class TrashStore: TrashStoreProtocol {
                 encoder.dateEncodingStrategy = .iso8601
                 let data = try encoder.encode(self.state)
                 try data.write(to: self.trashStateURL, options: .atomic)
-                Log.print("[TrashStore] State saved with completion (\(self.state.trashedCount) items)")
                 completion(.success(()))
             } catch let error as EncodingError {
                 // [Analytics] 인코딩 실패
@@ -399,7 +376,6 @@ public final class TrashStore: TrashStoreProtocol {
     /// 상태 로드 (파일)
     private func loadState() {
         guard FileManager.default.fileExists(atPath: trashStateURL.path) else {
-            Log.print("[TrashStore] No saved state found, using empty state")
             return
         }
 
@@ -408,9 +384,7 @@ public final class TrashStore: TrashStoreProtocol {
             let decoder = JSONDecoder()
             decoder.dateDecodingStrategy = .iso8601
             state = try decoder.decode(TrashState.self, from: data)
-            Log.print("[TrashStore] State loaded (\(state.trashedCount) items)")
         } catch {
-            Log.print("[TrashStore] Failed to load state: \(error)")
             // [Analytics] 상태 로드 실패
             Analytics.reporter?.reportError(key: "storage.trashData")
             state = TrashState()

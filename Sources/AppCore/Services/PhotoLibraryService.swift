@@ -109,7 +109,6 @@ public final class PhotoLibraryService: NSObject, PhotoLibraryServiceProtocol {
         guard !isObserving else { return }
         PHPhotoLibrary.shared().register(self)
         isObserving = true
-        Log.print("[PhotoLibraryService] Started observing changes")
     }
 
     /// 변경 감지 중지
@@ -117,7 +116,6 @@ public final class PhotoLibraryService: NSObject, PhotoLibraryServiceProtocol {
         guard isObserving else { return }
         PHPhotoLibrary.shared().unregisterChangeObserver(self)
         isObserving = false
-        Log.print("[PhotoLibraryService] Stopped observing changes")
     }
 
     /// 변경 콜백 등록
