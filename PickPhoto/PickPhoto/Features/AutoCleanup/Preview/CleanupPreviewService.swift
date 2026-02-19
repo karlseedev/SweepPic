@@ -84,13 +84,11 @@ final class CleanupPreviewService {
     /// 세션 저장
     private func saveSession(lastDate: Date) {
         UserDefaults.standard.set(lastDate, forKey: Self.lastScanDateKey)
-        Log.print("[PreviewService] 세션 저장: \(formatDate(lastDate)) 이전까지")
     }
 
     /// 세션 초기화
     static func clearSession() {
         UserDefaults.standard.removeObject(forKey: lastScanDateKey)
-        Log.print("[PreviewService] 세션 초기화됨")
     }
 
     // MARK: - ByYear Session Management
@@ -122,7 +120,6 @@ final class CleanupPreviewService {
         UserDefaults.standard.set(lastDate, forKey: Self.byYearLastScanDateKey)
         UserDefaults.standard.set(year, forKey: Self.byYearYearKey)
         UserDefaults.standard.set(canContinue, forKey: Self.byYearCanContinueKey)
-        Log.print("[PreviewService] byYear 세션 저장: \(year)년, \(formatDate(lastDate)) 이전, 이어서=\(canContinue)")
     }
 
     /// 연도별 세션 초기화
@@ -130,14 +127,6 @@ final class CleanupPreviewService {
         UserDefaults.standard.removeObject(forKey: byYearLastScanDateKey)
         UserDefaults.standard.removeObject(forKey: byYearYearKey)
         UserDefaults.standard.removeObject(forKey: byYearCanContinueKey)
-        Log.print("[PreviewService] byYear 세션 초기화됨")
-    }
-
-    /// 날짜 포맷 (로그용)
-    private func formatDate(_ date: Date) -> String {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "yyyy년 M월"
-        return formatter.string(from: date)
     }
 
     // MARK: - Cancel
@@ -147,7 +136,6 @@ final class CleanupPreviewService {
         lock.lock()
         isCancelled = true
         lock.unlock()
-        Log.print("[PreviewService] 취소 요청됨")
     }
 
     /// 취소 여부 확인 (thread-safe)
@@ -186,13 +174,9 @@ final class CleanupPreviewService {
             Self.clearByYearSession()
         }
 
-        Log.print("[PreviewService] 분석 시작: \(method)")
-
         // PHFetchResult 생성 (이미지만)
         let fetchResult = createFetchResult(for: method)
         let totalToScan = min(fetchResult.count, maxScanCount)
-
-        Log.print("[PreviewService] 총 \(fetchResult.count)장 중 \(totalToScan)장 검색 예정")
 
         // 결과 수집
         var lightCandidates: [PreviewCandidate] = []
@@ -208,13 +192,11 @@ final class CleanupPreviewService {
         while currentIndex < totalToScan {
             // 취소 체크
             if cancelled {
-                Log.print("[PreviewService] 취소됨 (scanned: \(totalScanned))")
                 throw CancellationError()
             }
 
             // 50장 제한 체크 (light 기준 — 그리드 첫 화면에 보이는 수, FR-007)
             if lightCandidates.count >= maxFoundCount {
-                Log.print("[PreviewService] light \(maxFoundCount)장 도달, 탐색 중단")
                 break
             }
 
@@ -229,7 +211,6 @@ final class CleanupPreviewService {
             for asset in batchAssets {
                 // 취소 체크 (배치 내에서도)
                 if cancelled {
-                    Log.print("[PreviewService] 취소됨 (scanned: \(totalScanned))")
                     throw CancellationError()
                 }
 
@@ -389,13 +370,6 @@ final class CleanupPreviewService {
             totalTimeSeconds: elapsed,
             endReason: endReason
         )
-
-        Log.print("[PreviewService] 완료:")
-        Log.print("[PreviewService] - 검색: \(totalScanned)장, 소요: \(String(format: "%.1f", elapsed))초")
-        Log.print("[PreviewService] - light: \(result.lightCount)장")
-        Log.print("[PreviewService] - standard 추가분: \(result.standardCount)장")
-        Log.print("[PreviewService] - deep 추가분: \(result.deepCount)장")
-        Log.print("[PreviewService] - 전체: \(result.totalCount)장")
 
         return result
     }

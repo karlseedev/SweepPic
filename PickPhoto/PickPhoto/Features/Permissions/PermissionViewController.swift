@@ -132,7 +132,6 @@ final class PermissionViewController: UIViewController {
         setupUI()
         updateUI(for: permissionStore.currentStatus)
 
-        Log.print("[PermissionVC] View loaded, current status: \(permissionStore.currentStatus)")
     }
 
     override func viewWillAppear(_ animated: Bool) {
@@ -210,7 +209,6 @@ final class PermissionViewController: UIViewController {
         case .authorized:
             // 전체 접근 권한 있음 - 이 화면이 표시되면 안 됨
             // 델리게이트가 화면 전환 처리
-            Log.print("[PermissionVC] Already authorized, should transition to main")
             delegate?.permissionViewControllerDidGrantAccess(self)
         }
     }
@@ -228,7 +226,6 @@ final class PermissionViewController: UIViewController {
         actionButton.backgroundColor = .systemBlue
         secondaryLabel.isHidden = true
 
-        Log.print("[PermissionVC] Showing request UI")
     }
 
     /// T063: 거부/제한 상태 UI 표시
@@ -259,7 +256,6 @@ final class PermissionViewController: UIViewController {
             secondaryLabel.isHidden = true
         }
 
-        Log.print("[PermissionVC] Showing denied UI (isRestricted: \(isRestricted), isLimited: \(isLimited))")
     }
 
     // MARK: - Actions
@@ -283,7 +279,6 @@ final class PermissionViewController: UIViewController {
 
     /// T062: 사진 접근 권한 요청
     private func requestPhotoAccess() {
-        Log.print("[PermissionVC] Requesting photo access...")
 
         // 버튼 비활성화 (중복 요청 방지)
         actionButton.isEnabled = false
@@ -295,8 +290,6 @@ final class PermissionViewController: UIViewController {
             await MainActor.run {
                 actionButton.isEnabled = true
                 updateUI(for: status)
-
-                Log.print("[PermissionVC] Request completed, status: \(status)")
 
                 // [Analytics] 이벤트 2: 최초 권한 요청 결과 추적
                 let result: PermissionResultType = {
@@ -319,15 +312,10 @@ final class PermissionViewController: UIViewController {
     /// T063: 설정 앱 열기
     private func openSettings() {
         guard let settingsURL = URL(string: UIApplication.openSettingsURLString) else {
-            Log.print("[PermissionVC] Failed to create settings URL")
             return
         }
 
-        Log.print("[PermissionVC] Opening settings...")
-
-        UIApplication.shared.open(settingsURL) { success in
-            Log.print("[PermissionVC] Settings opened: \(success)")
-        }
+        UIApplication.shared.open(settingsURL)
     }
 
     // MARK: - Public Methods

@@ -458,7 +458,6 @@ final class TrashAlbumViewController: BaseGridViewController {
             }
         }
 
-        Log.print("[TrashAlbumViewController] Preload started: \(count) assets")
     }
 
     /// 프리로드 카운터 증가 (스레드 안전)
@@ -501,7 +500,6 @@ final class TrashAlbumViewController: BaseGridViewController {
             self.collectionView.alpha = 1
         }
 
-        Log.print("[TrashAlbumViewController] Initial display: \(reason), preloaded: \(completed)/\(target)")
     }
 
     // MARK: - Actions
@@ -552,10 +550,8 @@ final class TrashAlbumViewController: BaseGridViewController {
         Task {
             do {
                 try await trashStore.emptyTrash()
-                Log.print("[TrashAlbumViewController] Trash emptied successfully")
             } catch {
                 // 취소 또는 오류 시 조용히 무시 (사진이 그대로 남아있음)
-                Log.print("[TrashAlbumViewController] Empty trash cancelled or failed: \(error)")
             }
             // 성공/실패 무관하게 UI 갱신 (onStateChange 콜백으로 처리됨)
         }
@@ -568,7 +564,6 @@ final class TrashAlbumViewController: BaseGridViewController {
     override func openViewer(for asset: PHAsset, at assetIndex: Int) {
         // 기존 fetchResult 사용 (새로 생성하지 않음 - 인덱스 일관성 보장)
         guard let fetchResult = _trashDataSource.fetchResult else {
-            Log.print("[TrashAlbumViewController] Cannot open viewer: fetchResult is nil")
             return
         }
 
@@ -658,15 +653,8 @@ extension TrashAlbumViewController: ViewerViewControllerDelegate {
         // [Analytics] 이벤트 4-2: 휴지통 복구
         AnalyticsService.shared.countTrashRestore()
 
-        let startTime = CFAbsoluteTimeGetCurrent()
-
         trashStore.restore(assetIDs: [assetID])
         // loadTrashedAssets()는 onStateChange 콜백으로 자동 호출됨
-
-        let trashStoreTime = CFAbsoluteTimeGetCurrent()
-
-        Log.print("[TrashAlbumViewController] Restored: \(assetID.prefix(8))...")
-        Log.print("[TrashAlbumViewController.Timing] trashStore: \(String(format: "%.1f", (trashStoreTime - startTime) * 1000))ms")
     }
 
     /// 완전 삭제 요청 (T057)
@@ -679,7 +667,6 @@ extension TrashAlbumViewController: ViewerViewControllerDelegate {
             do {
                 try await trashStore.permanentlyDelete(assetIDs: [assetID])
                 // loadTrashedAssets()는 onStateChange 콜백으로 자동 호출됨
-                Log.print("[TrashAlbumViewController] Permanently deleted: \(assetID.prefix(8))...")
 
                 // 삭제 완료 후 뷰어에 알림 (메인 스레드에서)
                 // weak 참조로 접근 (Push/Modal 방식에 무관)
@@ -687,7 +674,7 @@ extension TrashAlbumViewController: ViewerViewControllerDelegate {
                     self.activeViewerVC?.handleDeleteComplete()
                 }
             } catch {
-                Log.print("[TrashAlbumViewController] Failed to permanently delete: \(error)")
+                // 취소 또는 오류 시 조용히 무시
             }
         }
     }
@@ -717,7 +704,6 @@ extension TrashAlbumViewController: ViewerViewControllerDelegate {
                 collectionView.reloadData()
                 updateEmptyState()
                 updateTrashItemCountSubtitle()
-                Log.print("[TrashAlbumViewController] viewerWillClose - applied cached fetch result before dismiss (\(fetchResult.count) assets)")
             case .empty:
                 pendingDataRefresh = false
                 pendingFetchState = .none
@@ -726,7 +712,6 @@ extension TrashAlbumViewController: ViewerViewControllerDelegate {
                 collectionView.reloadData()
                 updateEmptyState()
                 updateTrashItemCountSubtitle()
-                Log.print("[TrashAlbumViewController] viewerWillClose - applied cached empty result before dismiss")
             default:
                 // fetch 미완료: 셀 숨김으로 fallback
                 let currentTrashedIDs = trashStore.trashedAssetIDs
@@ -737,13 +722,8 @@ extension TrashAlbumViewController: ViewerViewControllerDelegate {
                         collectionView.cellForItem(at: indexPath)?.isHidden = true
                     }
                 }
-                if !restoredIDs.isEmpty {
-                    Log.print("[TrashAlbumViewController] viewerWillClose - fetch not ready, hid \(restoredIDs.count) cell(s) as fallback")
-                }
             }
         }
-
-        Log.print("[TrashAlbumViewController] viewerWillClose - pendingDataRefresh=\(pendingDataRefresh), keeping isViewerOpen=true until animation completes")
     }
 
     /// 뷰어가 완전히 닫힌 후 호출 (dismiss/pop 애니메이션 완료 후)
@@ -760,7 +740,6 @@ extension TrashAlbumViewController: ViewerViewControllerDelegate {
     /// - 사용자가 이미 스크롤 중이면 강제 스크롤 skip (롤백 방지)
     private func applyPendingViewerReturn() {
         // ⚠️ dismiss 애니메이션 완료 후에야 뷰어 상태 해제
-        let wasViewerOpen = isViewerOpen
         isViewerOpen = false
 
         // 캐싱된 fetch 결과 즉시 적용 (dismiss 애니메이션 완료 후)
@@ -770,24 +749,20 @@ extension TrashAlbumViewController: ViewerViewControllerDelegate {
             switch pendingFetchState {
             case .empty:
                 // 빈 결과 즉시 적용
-                Log.print("[TrashAlbumViewController] Applying cached empty result (instant)")
                 _trashDataSource.setFetchResult(nil)
-                onDataLoaded(startTime: CFAbsoluteTimeGetCurrent())
+                onDataLoaded()
             case .fetched(let fetchResult):
                 // 미리 fetch된 결과 즉시 적용 → reloadData() 즉시 실행
-                Log.print("[TrashAlbumViewController] Applying cached fetch result (instant, \(fetchResult.count) assets)")
                 _trashDataSource.setFetchResult(fetchResult)
-                onDataLoaded(startTime: CFAbsoluteTimeGetCurrent())
+                onDataLoaded()
             case .fetching, .none:
                 // fetch 진행 중 또는 미시작 → 기존 방식 fallback
-                Log.print("[TrashAlbumViewController] No cached result, falling back to full load")
                 loadTrashedAssets()
             }
             pendingFetchState = .none
         }
 
         guard let assetID = pendingScrollAssetID else {
-            Log.print("[TrashAlbumViewController] applyPendingViewerReturn - wasViewerOpen=\(wasViewerOpen), no pendingScrollAssetID")
             return
         }
         pendingScrollAssetID = nil

@@ -99,7 +99,6 @@ final class AlbumGridViewController: BaseGridViewController {
             collectionView.contentInsetAdjustmentBehavior = .automatic
         }
 
-        Log.print("[AlbumGridViewController] Initialized with \(fetchResult.count) photos in '\(albumTitle)'")
     }
 
     override func viewWillAppear(_ animated: Bool) {
@@ -204,7 +203,6 @@ final class AlbumGridViewController: BaseGridViewController {
             cell.updateTrashState(trashedAssetIDs.contains(assetID))
         }
 
-        Log.print("[AlbumGridViewController] Updated \(changedIDs.count) changed cells (no reloadItems)")
     }
 
     // MARK: - FloatingOverlay Configuration
@@ -241,7 +239,6 @@ final class AlbumGridViewController: BaseGridViewController {
         let isEmpty = gridDataSource.assetCount == 0
         overlay.titleBar.isSelectButtonEnabled = !isEmpty
 
-        Log.print("[AlbumGridViewController] FloatingOverlay configured for album: \(albumTitle), isEmpty: \(isEmpty)")
     }
 
     /// iOS 26+: 시스템 네비바 설정 (Select 버튼 추가)
@@ -263,7 +260,6 @@ final class AlbumGridViewController: BaseGridViewController {
 
         navigationItem.rightBarButtonItem = selectButton
 
-        Log.print("[AlbumGridViewController] iOS 26+ navigation bar configured with Select button, isEmpty: \(isEmpty)")
     }
 
     // MARK: - Album 고유 기능
@@ -327,7 +323,6 @@ final class AlbumGridViewController: BaseGridViewController {
 
         // 필터링된 인덱스 계산
         guard let filteredIndex = coordinator.filteredIndex(from: assetIndex) else {
-            Log.print("[AlbumGridViewController] Failed to find filtered index for \(assetIndex)")
             return
         }
 
@@ -354,7 +349,6 @@ final class AlbumGridViewController: BaseGridViewController {
             present(viewerVC, animated: true)
         }
 
-        Log.print("[AlbumGridViewController] Opening viewer at index \(filteredIndex), mode: \(mode)")
     }
 }
 
@@ -400,7 +394,6 @@ extension AlbumGridViewController: ViewerViewControllerDelegate {
             collectionView.reloadItems(at: [indexPath])
         }
 
-        Log.print("[AlbumGridViewController] Moved to trash: \(assetID.prefix(8))...")
     }
 
     func viewerDidRequestRestore(assetID: String) {
@@ -411,16 +404,14 @@ extension AlbumGridViewController: ViewerViewControllerDelegate {
             collectionView.reloadItems(at: [indexPath])
         }
 
-        Log.print("[AlbumGridViewController] Restored: \(assetID.prefix(8))...")
     }
 
     func viewerDidRequestPermanentDelete(assetID: String) {
         Task {
             do {
                 try await trashStore.permanentlyDelete(assetIDs: [assetID])
-                Log.print("[AlbumGridViewController] Permanently deleted: \(assetID.prefix(8))...")
             } catch {
-                Log.print("[AlbumGridViewController] Failed to permanently delete: \(error)")
+                // 취소 또는 오류 시 조용히 무시
             }
         }
     }
