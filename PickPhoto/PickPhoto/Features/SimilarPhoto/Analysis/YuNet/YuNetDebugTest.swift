@@ -65,8 +65,6 @@ final class YuNetDebugTest {
             return results
         }
 
-        Log.print("[Image] Size: \(image.width)×\(image.height)")
-
         // 2. Core ML 출력 범위 검증
         let coreMLResult = await testCoreMLOutputRange(image: image)
         results.append(coreMLResult)
@@ -252,24 +250,17 @@ final class YuNetDebugTest {
 
         // 1. 이미지 로드
         guard let image = try? await imageLoader.loadImage(for: photo) else {
-            Log.print("[Error] 이미지 로드 실패")
             return nil
         }
 
-        Log.print("[Image] Size: \(image.width)×\(image.height)")
-
         // 2. YuNet 얼굴 감지
         guard let detector = YuNetFaceDetector.shared else {
-            Log.print("[Error] YuNetFaceDetector 초기화 실패")
             return nil
         }
 
         guard let detections = try? detector.detect(in: image), !detections.isEmpty else {
-            Log.print("[Error] 얼굴 감지 실패")
             return nil
         }
-
-        Log.print("[Detection] \(detections.count)개 얼굴 감지")
 
         // 3. 이미지 위에 랜드마크 그리기
         let width = image.width
@@ -288,7 +279,6 @@ final class YuNetDebugTest {
             space: CGColorSpaceCreateDeviceRGB(),
             bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
         ) else {
-            Log.print("[Error] CGContext 생성 실패")
             return nil
         }
         srcContext.draw(image, in: CGRect(x: 0, y: 0, width: width, height: height))
@@ -345,7 +335,6 @@ final class YuNetDebugTest {
             bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
         ),
         let outputImage = outputContext.makeImage() else {
-            Log.print("[Error] 출력 이미지 생성 실패")
             return nil
         }
 
@@ -868,15 +857,8 @@ final class YuNetDebugTest {
         print("\n" + String(repeating: "=", count: 60))
         print("Group Matching Simulation Test")
         print(String(repeating: "=", count: 60))
-        Log.print("[Config] Photos: \(photos.count)")
-        Log.print("[Config] greyZoneThreshold: \(SimilarityConstants.greyZoneThreshold)")
-        Log.print("[Config] rejectThreshold: \(SimilarityConstants.personMatchThreshold)")
-        Log.print("[Config] greyZonePosLimit: \(SimilarityConstants.greyZonePositionLimit)")
-        Log.print("[Config] minEmbeddingNorm: 7.0")
-
         guard let yunet = YuNetFaceDetector.shared,
               let sface = SFaceRecognizer.shared else {
-            Log.print("[ERROR] Model not available")
             return
         }
 
@@ -964,7 +946,6 @@ final class YuNetDebugTest {
                         center: data.center,
                         boundingBox: data.boundingBox
                     ))
-                    Log.print("[NewSlot] Face(\(faceIdx)) -> Slot(\(nextSlotID)): Bootstrap, norm=\(String(format: "%.2f", norm))\(qualityTag)")
                     nextSlotID += 1
                 }
                 continue
@@ -1023,19 +1004,13 @@ final class YuNetDebugTest {
                 if c.cost < greyZoneThreshold {
                     usedFaces.insert(c.faceIdx)
                     usedSlots.insert(c.slotID)
-                    Log.print("[Match] Face(\(c.faceIdx)) -> Slot(\(c.slotID)): Cost=\(String(format: "%.3f", c.cost)), norm=\(String(format: "%.2f", c.norm)) (Confident)")
                     updateSlot(&activeSlots, slotID: c.slotID, embedding: c.embedding, norm: c.norm, center: c.center, boundingBox: c.boundingBox)
                 } else if c.cost < rejectThreshold {
                     if c.posDistNorm < greyZonePosLimit {
                         usedFaces.insert(c.faceIdx)
                         usedSlots.insert(c.slotID)
-                        Log.print("[GreyMatch] Face(\(c.faceIdx)) -> Slot(\(c.slotID)): Cost=\(String(format: "%.3f", c.cost)), PosNorm=\(String(format: "%.2f", c.posDistNorm)), norm=\(String(format: "%.2f", c.norm))")
                         updateSlot(&activeSlots, slotID: c.slotID, embedding: c.embedding, norm: c.norm, center: c.center, boundingBox: c.boundingBox)
-                    } else {
-                        Log.print("[GreyReject] Face(\(c.faceIdx)) -> Slot(\(c.slotID)): Cost=\(String(format: "%.3f", c.cost)), PosNorm=\(String(format: "%.2f", c.posDistNorm))")
                     }
-                } else {
-                    Log.print("[Reject] Face(\(c.faceIdx)) -> Slot(\(c.slotID)): Cost=\(String(format: "%.3f", c.cost))")
                 }
             }
 
@@ -1054,10 +1029,7 @@ final class YuNetDebugTest {
                 if best.posDistNorm <= lowQualityPosLimit && best.cost < lowQualityCostLimit {
                     usedFaces.insert(faceIdx)
                     usedSlots.insert(best.slotID)
-                    Log.print("[LowQMatch] Face(\(faceIdx)) -> Slot(\(best.slotID)): Cost=\(String(format: "%.3f", best.cost)), PosNorm=\(String(format: "%.2f", best.posDistNorm)), norm=\(String(format: "%.2f", best.norm)) (PositionFirst)")
                     updateSlot(&activeSlots, slotID: best.slotID, embedding: [], norm: 0, center: best.center, boundingBox: best.boundingBox)
-                } else {
-                    Log.print("[LowQReject] Face(\(faceIdx)) -> Slot(\(best.slotID)): Cost=\(String(format: "%.3f", best.cost)), PosNorm=\(String(format: "%.2f", best.posDistNorm)), norm=\(String(format: "%.2f", best.norm)) (limit: pos<=\(String(format: "%.2f", lowQualityPosLimit)), cost<\(String(format: "%.2f", lowQualityCostLimit)))")
                 }
             }
 
@@ -1067,7 +1039,6 @@ final class YuNetDebugTest {
                 guard let data = faceData[faceIdx], let norm = faceNorms[faceIdx] else { continue }
 
                 if norm < minEmbeddingNorm {
-                    Log.print("[LowQuality] Face(\(faceIdx)): norm=\(String(format: "%.2f", norm)) < 7.0, skip new slot")
                     continue
                 }
 
@@ -1079,7 +1050,6 @@ final class YuNetDebugTest {
                 }
 
                 activeSlots.append(SimSlot(id: nextSlotID, embedding: embedding, norm: norm, center: data.center, boundingBox: data.boundingBox))
-                Log.print("[NewSlot] Face(\(faceIdx)) -> Slot(\(nextSlotID)): norm=\(String(format: "%.2f", norm)), minCost=\(String(format: "%.3f", minCost)) to Slot(\(minSlotID)) (threshold=\(String(format: "%.3f", rejectThreshold)))")
                 nextSlotID += 1
             }
         }
@@ -1115,10 +1085,8 @@ final class YuNetDebugTest {
         slots[idx].center = center
         slots[idx].boundingBox = boundingBox
         if norm > slots[idx].norm {
-            let oldNorm = slots[idx].norm
             slots[idx].embedding = embedding
             slots[idx].norm = norm
-            Log.print("[KeepBest] Slot(\(slotID)): norm \(String(format: "%.2f", oldNorm)) -> \(String(format: "%.2f", norm))")
         }
     }
 }

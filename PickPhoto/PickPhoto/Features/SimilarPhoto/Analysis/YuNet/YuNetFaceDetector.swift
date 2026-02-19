@@ -36,7 +36,6 @@ final class YuNetFaceDetector {
         do {
             return try YuNetFaceDetector()
         } catch {
-            Log.print("[YuNetFaceDetector] 초기화 실패: \(error)")
             return nil
         }
     }()
@@ -244,7 +243,7 @@ final class YuNetFaceDetector {
 extension YuNetFaceDetector {
     /// 디버그용: 모델 정보 출력
     func printModelInfo() {
-        Log.print("[YuNet] Model Description:")
+        print("[YuNet] Model Description:")
         print("  - Score Threshold: \(scoreThreshold)")
         print("  - NMS Threshold: \(nmsThreshold)")
         print("  - Top-K: \(topK)")
@@ -254,7 +253,7 @@ extension YuNetFaceDetector {
 
     /// 디버그용: 감지 결과 요약 출력
     func printDetectionSummary(_ detections: [YuNetDetection]) {
-        Log.print("[YuNet] Detected \(detections.count) face(s)")
+        print("[YuNet] Detected \(detections.count) face(s)")
         for (i, det) in detections.enumerated() {
             print("  [\(i)] score=\(String(format: "%.3f", det.score)), " +
                   "bbox=(\(Int(det.boundingBox.origin.x)), \(Int(det.boundingBox.origin.y)), " +

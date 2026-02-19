@@ -78,7 +78,6 @@ final class S2DebugAnalyzer {
         let imageLoader = SimilarityImageLoader.shared
         guard let yunet = YuNetFaceDetector.shared,
               let sface = SFaceRecognizer.shared else {
-            Log.print("[S2Debug] Required components not available")
             return
         }
         let aligner = FaceAligner.shared

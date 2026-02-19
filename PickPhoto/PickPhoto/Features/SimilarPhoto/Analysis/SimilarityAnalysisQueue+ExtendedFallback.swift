@@ -65,17 +65,6 @@ extension SimilarityAnalysisQueue {
             }
         }
 
-        // 로그 출력
-        if !missedFaces.isEmpty {
-            let shortID = String(assetID.prefix(8))
-            Log.print("[ExtendedFallback] Photo \(shortID): YuNet=\(yunetFaceData.count), Vision=\(visionFaces.count), SmallMissed=\(missedFaces.count)")
-            for missed in missedFaces {
-                let size = missed.face.boundingBox.width
-                let center = CGPoint(x: missed.face.boundingBox.midX, y: missed.face.boundingBox.midY)
-                Log.print("[ExtendedFallback] +Vision[\(missed.visionIdx)] size=\(String(format: "%.2f", size)) at (\(String(format: "%.2f", center.x)), \(String(format: "%.2f", center.y)))")
-            }
-        }
-
         return missedFaces
     }
 

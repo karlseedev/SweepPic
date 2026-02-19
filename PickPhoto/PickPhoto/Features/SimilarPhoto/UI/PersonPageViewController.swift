@@ -265,7 +265,6 @@ extension PersonPageViewController: UICollectionViewDelegate {
             cell.setSelected(dataSource.isSelected(assetID))
         }
 
-        Log.print("[PersonPageViewController] Toggled selection for \(assetID.prefix(8))...")
     }
 }
 
@@ -301,14 +300,12 @@ extension PersonPageViewController {
     func scrollViewWillBeginDragging(_ scrollView: UIScrollView) {
         LiquidGlassOptimizer.cancelIdleTimer()
         LiquidGlassOptimizer.optimize(in: view.window)
-        Log.print("[PersonPage:Scroll] willBeginDragging - optimize 시작")
     }
 
     /// 감속 완료 - 최적화 해제
     func scrollViewDidEndDecelerating(_ scrollView: UIScrollView) {
         LiquidGlassOptimizer.restore(in: view.window)
         LiquidGlassOptimizer.enterIdle(in: view.window)
-        Log.print("[PersonPage:Scroll] didEndDecelerating - restore 완료")
     }
 
     /// 드래그 종료 (감속 없이 멈춤) - 최적화 해제
@@ -316,7 +313,6 @@ extension PersonPageViewController {
         if !decelerate {
             LiquidGlassOptimizer.restore(in: view.window)
             LiquidGlassOptimizer.enterIdle(in: view.window)
-            Log.print("[PersonPage:Scroll] didEndDragging(willDecelerate=false) - restore 완료")
         }
     }
 }

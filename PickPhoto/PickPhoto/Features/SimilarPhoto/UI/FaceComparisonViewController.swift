@@ -236,7 +236,6 @@ final class FaceComparisonViewController: UIViewController {
         loadPhotoFaces()
         loadValidPersonIndices()
 
-        Log.print("[FaceComparisonViewController] Loaded with \(comparisonGroup.count) photos, person \(comparisonGroup.personIndex)")
     }
 
     override func viewWillAppear(_ animated: Bool) {
@@ -384,7 +383,6 @@ final class FaceComparisonViewController: UIViewController {
         result.enumerateObjects { [weak self] asset, _, _ in
             self?.assetCache[asset.localIdentifier] = asset
         }
-        Log.print("[FaceComparisonViewController] Asset cache built: \(assetCache.count) assets")
     }
 
     /// 사진별 얼굴 정보 로드 + 사진 번호 맵 구축
@@ -444,7 +442,6 @@ final class FaceComparisonViewController: UIViewController {
         let initialPage = PersonPageViewController(personIndex: currentPersonIndex, dataSource: self)
         pageViewController.setViewControllers([initialPage], direction: .forward, animated: false)
 
-        Log.print("[FaceComparisonViewController] Initial page set for person \(currentPersonIndex)")
     }
 
     // MARK: - UI Updates
@@ -505,8 +502,6 @@ final class FaceComparisonViewController: UIViewController {
 
     /// Cancel 버튼 탭
     @objc private func cancelButtonTapped() {
-        Log.print("[FaceComparisonViewController] Cancel tapped")
-
         selectedAssetIDs.removeAll()
 
         dismiss(animated: true) { [weak self] in
@@ -518,8 +513,6 @@ final class FaceComparisonViewController: UIViewController {
     /// Delete 버튼 탭
     @objc private func deleteButtonTapped() {
         guard !selectedAssetIDs.isEmpty else { return }
-
-        Log.print("[FaceComparisonViewController] Delete tapped: \(selectedAssetIDs.count) photos")
 
         let deletedIDs = Array(selectedAssetIDs)
 
@@ -542,8 +535,6 @@ final class FaceComparisonViewController: UIViewController {
 
         let nextIndex = (currentPersonArrayIndex + 1) % validPersonIndices.count
 
-        Log.print("[FaceComparisonViewController] Cycled to person \(validPersonIndices[nextIndex])")
-
         navigateToPerson(at: nextIndex, direction: .forward)
     }
 
@@ -551,12 +542,9 @@ final class FaceComparisonViewController: UIViewController {
 
     /// 디버그 버튼 탭
     @objc private func debugButtonTapped() {
-        Log.print("[FaceComparisonViewController] Debug button tapped - Running Group Matching Simulation")
-
         Task { @MainActor in
             let assetIDs = comparisonGroup.selectedAssetIDs
             guard !assetIDs.isEmpty else {
-                Log.print("[MatchingTest] No photos available")
                 return
             }
 
@@ -568,7 +556,6 @@ final class FaceComparisonViewController: UIViewController {
             let photos = assetIDs.compactMap { photosDict[$0] }
 
             guard !photos.isEmpty else {
-                Log.print("[MatchingTest] Failed to fetch PHAssets")
                 return
             }
 
@@ -589,7 +576,6 @@ final class FaceComparisonViewController: UIViewController {
         Task { @MainActor in
             let assetIDs = comparisonGroup.selectedAssetIDs
             guard !assetIDs.isEmpty else {
-                Log.print("[ExtendedTest] No photos available")
                 return
             }
 
@@ -601,7 +587,6 @@ final class FaceComparisonViewController: UIViewController {
             let photos = assetIDs.compactMap { photosDict[$0] }
 
             guard !photos.isEmpty else {
-                Log.print("[ExtendedTest] Failed to fetch PHAssets")
                 return
             }
 
@@ -648,7 +633,6 @@ extension FaceComparisonViewController: FaceComparisonDataSource {
 
         updateSelectionCount()
 
-        Log.print("[FaceComparisonViewController] Toggled selection for \(assetID.prefix(8))..., now \(selectedAssetIDs.count) selected")
     }
 
     func face(for assetID: String, personIndex: Int) -> CachedFace? {
@@ -690,7 +674,6 @@ extension FaceComparisonViewController: FaceComparisonDataSource {
                     let croppedImage = try FaceCropper.cropFace(from: image, boundingBox: boundingBox)
                     DispatchQueue.main.async { completion(croppedImage) }
                 } catch {
-                    Log.print("[FaceComparisonViewController] Failed to crop face: \(error)")
                     DispatchQueue.main.async { completion(nil) }
                 }
             }
@@ -786,7 +769,6 @@ extension FaceComparisonViewController: UIPageViewControllerDelegate {
         // 선택 상태 경량 갱신 (prefetch된 페이지의 stale 선택 상태 보정)
         currentPage.refreshSelectionStates()
 
-        Log.print("[FaceComparisonViewController] Page transition completed to person \(currentPage.personIndex)")
     }
 }
 
@@ -812,12 +794,10 @@ extension FaceComparisonViewController: UIScrollViewDelegate {
     func setupPageScrollViewDelegate() {
         // UIPageViewController 내부의 UIScrollView 찾기
         guard let scrollView = pageViewController.view.subviews.first(where: { $0 is UIScrollView }) as? UIScrollView else {
-            Log.print("[FaceComparison:Scroll] UIScrollView를 찾을 수 없음")
             return
         }
 
         scrollView.delegate = self
-        Log.print("[FaceComparison:Scroll] UIScrollView delegate 설정 완료")
     }
 
     // MARK: - UIScrollViewDelegate
@@ -826,14 +806,12 @@ extension FaceComparisonViewController: UIScrollViewDelegate {
     func scrollViewWillBeginDragging(_ scrollView: UIScrollView) {
         LiquidGlassOptimizer.cancelIdleTimer()
         LiquidGlassOptimizer.optimize(in: view.window)
-        Log.print("[FaceComparison:Scroll] willBeginDragging - optimize 시작")
     }
 
     /// 감속 완료 - 최적화 해제
     func scrollViewDidEndDecelerating(_ scrollView: UIScrollView) {
         LiquidGlassOptimizer.restore(in: view.window)
         LiquidGlassOptimizer.enterIdle(in: view.window)
-        Log.print("[FaceComparison:Scroll] didEndDecelerating - restore 완료")
     }
 
     /// 드래그 종료 (감속 없이 멈춤) - 최적화 해제
@@ -841,7 +819,6 @@ extension FaceComparisonViewController: UIScrollViewDelegate {
         if !decelerate {
             LiquidGlassOptimizer.restore(in: view.window)
             LiquidGlassOptimizer.enterIdle(in: view.window)
-            Log.print("[FaceComparison:Scroll] didEndDragging(willDecelerate=false) - restore 완료")
         }
     }
 }

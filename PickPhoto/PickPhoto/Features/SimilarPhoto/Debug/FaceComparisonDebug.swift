@@ -431,7 +431,6 @@ enum FaceComparisonDebugHelper {
                 print("")
             }
         } catch {
-            Log.print("[FaceComparisonDebugHelper] Failed to encode debug info: \(error)")
         }
     }
 }
