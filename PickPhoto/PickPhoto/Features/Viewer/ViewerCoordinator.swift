@@ -288,8 +288,6 @@ final class ViewerCoordinator: ViewerCoordinatorProtocol {
 
     /// rebuildIndexMapping 완료 로그
     private func logRebuildComplete(_ startTime: CFAbsoluteTime, _ totalOriginal: Int, _ trashedCount: Int) {
-        let elapsed = (CACurrentMediaTime() - startTime) * 1000
-        Log.print("[ViewerCoordinator] rebuildIndexMapping() 완료: \(String(format: "%.1f", elapsed))ms, Mode: \(viewerMode), totalOriginal: \(totalOriginal), trashedIDs: \(trashedCount)")
     }
 
     // MARK: - iOS 18+ Zoom Transition Support

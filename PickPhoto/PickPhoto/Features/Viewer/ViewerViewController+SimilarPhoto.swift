@@ -698,11 +698,6 @@ extension ViewerViewController: FaceButtonOverlayDelegate {
     /// - iOS 26+: UINavigationController로 감싸서 Liquid Glass 네비게이션바 사용
     /// - iOS 16~25: 커스텀 타이틀바 사용, 직접 present
     private func showFaceComparisonViewController(with comparisonGroup: ComparisonGroup) {
-        Log.print("[ViewerViewController+SimilarPhoto] FaceComparisonViewController 표시")
-        print("  - sourceGroupID: \(comparisonGroup.sourceGroupID)")
-        print("  - personIndex: \(comparisonGroup.personIndex)")
-        print("  - selectedAssetIDs: \(comparisonGroup.selectedAssetIDs.count)장")
-
         // FaceComparisonViewController 생성
         let faceComparisonVC = FaceComparisonViewController(
             comparisonGroup: comparisonGroup
@@ -732,9 +727,6 @@ extension ViewerViewController: FaceComparisonDelegate {
         _ viewController: FaceComparisonViewController,
         didDeletePhotos deletedAssetIDs: [String]
     ) {
-        Log.print("[ViewerViewController+SimilarPhoto] Deleted \(deletedAssetIDs.count) photos from face comparison")
-        Log.print("[ViewerViewController+SimilarPhoto] Dismissing FaceComparison and viewer")
-
         // [Analytics] 이벤트 5-2: 유사 그룹 닫기 (삭제 후)
         AnalyticsService.shared.trackSimilarGroupClosed(
             totalCount: viewController.totalPhotoCount,
@@ -750,8 +742,6 @@ extension ViewerViewController: FaceComparisonDelegate {
 
     /// 화면 닫기 시 호출 (Cancel 버튼)
     func faceComparisonViewControllerDidClose(_ viewController: FaceComparisonViewController) {
-        Log.print("[ViewerViewController+SimilarPhoto] Face comparison closed")
-
         // [Analytics] 이벤트 5-2: 유사 그룹 닫기 (삭제 없이)
         AnalyticsService.shared.trackSimilarGroupClosed(
             totalCount: viewController.totalPhotoCount,

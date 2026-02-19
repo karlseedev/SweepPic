@@ -256,7 +256,6 @@ final class VideoControlsOverlay: UIView {
         // 총 시간 설정
         updateDuration()
 
-        Log.debug("VideoControls", "configured with player")
     }
 
     /// 재생 상태 업데이트
@@ -286,8 +285,6 @@ final class VideoControlsOverlay: UIView {
         guard !isVisible else { return }
         isVisible = true
 
-        Log.debug("VideoControls", "show")
-
         let duration = animated ? Self.fadeAnimationDuration : 0
         UIView.animate(withDuration: duration) {
             self.controlsContainer.alpha = 1
@@ -304,8 +301,6 @@ final class VideoControlsOverlay: UIView {
     func hide(animated: Bool = true) {
         guard isVisible else { return }
         isVisible = false
-
-        Log.debug("VideoControls", "hide")
 
         cancelAutoHideTimer()
 
@@ -330,7 +325,6 @@ final class VideoControlsOverlay: UIView {
         removeTimeObserver()
         player = nil
 
-        Log.debug("VideoControls", "cleanup")
     }
 
     // MARK: - Time Observer
@@ -355,7 +349,6 @@ final class VideoControlsOverlay: UIView {
             self.timelineSlider.value = Float(seconds)
         }
 
-        Log.debug("VideoControls", "timeObserver setup")
     }
 
     /// 타임 옵저버 제거
@@ -363,8 +356,6 @@ final class VideoControlsOverlay: UIView {
         if let observer = timeObserver, let player = player {
             player.removeTimeObserver(observer)
             timeObserver = nil
-
-            Log.debug("VideoControls", "timeObserver removed")
         }
     }
 
@@ -382,7 +373,6 @@ final class VideoControlsOverlay: UIView {
         timelineSlider.minimumValue = 0
         timelineSlider.maximumValue = Float(durationSeconds)
 
-        Log.debug("VideoControls", "duration set: \(durationSeconds)s")
     }
 
     /// Duration 로드 완료 옵저버 설정
@@ -416,7 +406,6 @@ final class VideoControlsOverlay: UIView {
             self.hide(animated: true)
         }
 
-        Log.debug("VideoControls", "autoHideTimer started")
     }
 
     /// 자동 숨김 타이머 취소
@@ -486,7 +475,6 @@ final class VideoControlsOverlay: UIView {
             delegate?.controlsDidRequestPause()
         }
 
-        Log.debug("VideoControls", "slider drag started, wasPlaying: \(wasPlayingBeforeScrubbing)")
     }
 
     /// 슬라이더 터치 종료
@@ -504,7 +492,6 @@ final class VideoControlsOverlay: UIView {
             startAutoHideTimer()
         }
 
-        Log.debug("VideoControls", "slider drag ended, seek to: \(seconds)s, resumePlay: \(wasPlayingBeforeScrubbing)")
     }
 
     // MARK: - Hit Test

@@ -334,7 +334,6 @@ final class VideoPageViewController: UIViewController {
 
     /// 비디오 요청 취소 (페이지 이탈 시)
     private func cancelVideoRequest() {
-        let hadRequest = videoRequestCancellable != nil
         videoRequestCancellable?.cancel()
         videoRequestCancellable = nil
         hasRequestedVideo = false
@@ -373,16 +372,12 @@ final class VideoPageViewController: UIViewController {
 
     /// KVO 설정
     private func setupKVO() {
-        Log.debug("Video", "🔍 KVO setup started - index: \(index)")
-
         // AVPlayerLayer.isReadyForDisplay 관찰
         readyForDisplayObserver = playerLayerView.playerLayer.observe(
             \.isReadyForDisplay,
             options: [.initial, .new]
         ) { [weak self] layer, _ in
             guard let self = self else { return }
-
-            Log.debug("Video", "🔍 KVO isReadyForDisplay: \(layer.isReadyForDisplay) - index: \(self.index)")
 
             guard layer.isReadyForDisplay else { return }
 
@@ -398,8 +393,6 @@ final class VideoPageViewController: UIViewController {
         ) { [weak self] item, _ in
             guard let self = self else { return }
 
-            Log.debug("Video", "🔍 KVO playerItem.status: \(item.status.rawValue) - index: \(self.index)")
-
             if item.status == .failed {
                 // [Analytics] 동영상 재생 실패
                 AnalyticsService.shared.countError(.viewerOriginal as AnalyticsError.PhotoLoad)
@@ -413,10 +406,7 @@ final class VideoPageViewController: UIViewController {
     /// 첫 프레임 표시 준비 완료
     private func onReadyForDisplay() {
         // 중복 호출 방지
-        guard !hasShownFirstFrame else {
-            Log.debug("Video", "⚠️ onReadyForDisplay skipped (already shown) - index: \(index)")
-            return
-        }
+        guard !hasShownFirstFrame else { return }
         hasShownFirstFrame = true
 
         // 포스터 fade-out
@@ -429,7 +419,6 @@ final class VideoPageViewController: UIViewController {
             controlsOverlay.updatePlayPauseState(isPlaying: true)
         }
 
-        Log.debug("Video", "✅ Ready for display, indicator stopped - index: \(index)")
     }
 
     /// KVO 해제
@@ -468,7 +457,6 @@ final class VideoPageViewController: UIViewController {
                 self.scrollView.maximumZoomScale = self.calculateMaxZoomScale()
                 self.updateVideoLayout()
 
-                Log.debug("Video", "Display size: \(self.videoDisplaySize) - index: \(self.index)")
             }
         }
     }
@@ -569,7 +557,6 @@ final class VideoPageViewController: UIViewController {
         // maxZoomScale 재계산
         scrollView.maximumZoomScale = calculateMaxZoomScale()
 
-        Log.debug("Video", "🔄 recalculateLayoutForRotation - index: \(index), fit=\(fitSize)")
     }
 
     // MARK: - Double Tap Zoom
@@ -598,7 +585,6 @@ final class VideoPageViewController: UIViewController {
         errorLabel.text = message
         errorLabel.isHidden = false
 
-        Log.debug("Video", "Error: \(message) - index: \(index)")
     }
 
     // MARK: - Cleanup
@@ -630,7 +616,6 @@ final class VideoPageViewController: UIViewController {
         controlsOverlay.updatePlayPauseState(isPlaying: true)
         controlsOverlay.updateMuteState(isMuted: muted)
 
-        Log.debug("Video", "Play - muted: \(muted), index: \(index)")
     }
 
     /// 재생 일시정지
@@ -638,7 +623,6 @@ final class VideoPageViewController: UIViewController {
         player?.pause()
         controlsOverlay.updatePlayPauseState(isPlaying: false)
 
-        Log.debug("Video", "Pause - index: \(index)")
     }
 
     /// 재생 정지 및 처음으로 이동
@@ -647,7 +631,6 @@ final class VideoPageViewController: UIViewController {
         player?.seek(to: .zero)
         controlsOverlay.updatePlayPauseState(isPlaying: false)
 
-        Log.debug("Video", "Stop - index: \(index)")
     }
 
     /// 자동 재생 비활성화
@@ -699,7 +682,6 @@ extension VideoPageViewController: VideoControlsOverlayDelegate {
         player.play()
         controlsOverlay.updatePlayPauseState(isPlaying: true)
 
-        Log.debug("Video", "Controls requested play - index: \(index)")
     }
 
     /// 일시정지 요청
@@ -709,7 +691,6 @@ extension VideoPageViewController: VideoControlsOverlayDelegate {
         player.pause()
         controlsOverlay.updatePlayPauseState(isPlaying: false)
 
-        Log.debug("Video", "Controls requested pause - index: \(index)")
     }
 
     /// 시킹 요청
@@ -718,8 +699,6 @@ extension VideoPageViewController: VideoControlsOverlayDelegate {
 
         player.seek(to: time, toleranceBefore: .zero, toleranceAfter: .zero)
 
-        let seconds = CMTimeGetSeconds(time)
-        Log.debug("Video", "Controls requested seek to \(String(format: "%.1f", seconds))s - index: \(index)")
     }
 
     /// 음소거 토글 요청
@@ -729,7 +708,6 @@ extension VideoPageViewController: VideoControlsOverlayDelegate {
         player.isMuted = muted
         controlsOverlay.updateMuteState(isMuted: muted)
 
-        Log.debug("Video", "Controls requested mute: \(muted) - index: \(index)")
     }
 }
 

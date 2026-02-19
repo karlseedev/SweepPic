@@ -1281,23 +1281,11 @@ extension ViewerViewController {
         if let sv = pageViewController.view.subviews.first(where: { $0 is UIScrollView }) as? UIScrollView {
             pageScrollView = sv
             sv.panGestureRecognizer.addTarget(self, action: #selector(handlePageScrollPan(_:)))
-            Log.debug("Viewer", "[PageScroll] attach - frame=\(sv.frame), contentSize=\(sv.contentSize)")
         }
     }
 
     /// 페이지 스크롤 진행률 로깅
     @objc private func handlePageScrollPan(_ gesture: UIPanGestureRecognizer) {
-        guard Log.categories["Viewer"] == true, let sv = pageScrollView else { return }
-        guard isTransitioning else { return }
-
-        let now = CACurrentMediaTime()
-        if now - lastPageScrollLogTime < 0.05 { return } // 50ms 쓰로틀
-        lastPageScrollLogTime = now
-
-        let w = sv.bounds.width
-        let offsetX = sv.contentOffset.x
-        let progress = w > 0 ? (offsetX - w) / w : 0
-        Log.debug("Viewer", "[PageScroll] tid=\(transitionId) state=\(gesture.state.rawValue) offsetX=\(String(format: "%.1f", offsetX)) progress=\(String(format: "%.2f", progress))")
     }
 }
 
@@ -1321,22 +1309,6 @@ extension ViewerViewController: UIPageViewControllerDelegate {
         hitchMonitor.start()
         #endif
 
-        guard Log.categories["Viewer"] == true else { return }
-        let now = CACurrentMediaTime()
-        let pendingIndex = pendingViewControllers.first.flatMap { index(from: $0) }
-        Log.debug("Viewer", "➡️ willTransition - tid=\(transitionId), from: \(currentIndex), to: \(pendingIndex.map(String.init) ?? "nil"), t=\(String(format: "%.3f", now))")
-
-        // 현재/다음 페이지 스냅샷
-        if let current = pageViewController.viewControllers?.first as? PhotoPageViewController {
-            current.debugSnapshot(tag: "current@will", transitionId: transitionId)
-        }
-        if let pending = pendingViewControllers.first as? PhotoPageViewController {
-            pending.debugSnapshot(tag: "pending@will", transitionId: transitionId)
-            let tid = transitionId
-            DispatchQueue.main.async {
-                pending.debugSnapshot(tag: "pending@nextRunLoop", transitionId: tid)
-            }
-        }
     }
 
     func pageViewController(_ pageViewController: UIPageViewController, didFinishAnimating finished: Bool, previousViewControllers: [UIViewController], transitionCompleted completed: Bool) {
@@ -1356,19 +1328,6 @@ extension ViewerViewController: UIPageViewControllerDelegate {
         Log.print("[Viewer:Hitch:Abs] totalHitchMs=\(String(format: "%.1f", hitchResult.totalHitchTimeMs)), duration=\(String(format: "%.3f", hitchResult.durationSeconds))s")
         Log.print("[Viewer:Swipe] completed=\(completed), duration=\(String(format: "%.1f", swipeDuration))ms")
         #endif
-
-        // 전환 완료 시에만 처리
-        if Log.categories["Viewer"] == true {
-            let now = CACurrentMediaTime()
-            let prevIndex = previousViewControllers.first.flatMap { index(from: $0) }
-            let nextIndex = pageViewController.viewControllers?.first.flatMap { index(from: $0) }
-            Log.debug("Viewer", "✅ didFinishAnimating - tid=\(transitionId), completed=\(completed), prev=\(prevIndex.map(String.init) ?? "nil"), next=\(nextIndex.map(String.init) ?? "nil"), t=\(String(format: "%.3f", now))")
-
-            // 현재 페이지 스냅샷
-            if let current = pageViewController.viewControllers?.first as? PhotoPageViewController {
-                current.debugSnapshot(tag: "current@finish", transitionId: transitionId)
-            }
-        }
 
         guard completed else { return }
 
@@ -1423,7 +1382,6 @@ extension ViewerViewController: UIPageViewControllerDelegate {
 
             // 현재 페이지가 PhotoPageViewController면 LOD1 요청
             if let photoVC = self.pageViewController.viewControllers?.first as? PhotoPageViewController {
-                Log.debug("Viewer", "🔍 LOD1 디바운스 완료 - index: \(photoVC.index)")
                 photoVC.requestHighQualityImage()
             }
         }
