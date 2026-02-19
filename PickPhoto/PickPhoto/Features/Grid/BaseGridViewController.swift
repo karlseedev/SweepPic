@@ -258,6 +258,10 @@ class BaseGridViewController: UIViewController {
 
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
+        // 메뉴 버튼 기본 숨김 (사진보관함만 configureFloatingOverlay에서 다시 표시)
+        if let tabBar = tabBarController as? TabBarController {
+            tabBar.floatingOverlay?.titleBar.hideMenuButton()
+        }
         configureFloatingOverlay()
     }
 

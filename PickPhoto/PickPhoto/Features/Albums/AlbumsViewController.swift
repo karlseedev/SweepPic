@@ -141,6 +141,10 @@ final class AlbumsViewController: UIViewController {
 
         // iOS 16~25: FloatingOverlay 기본 상태 세팅
         // (push에서 돌아올 때 앨범 화면 상태로 복원)
+        // 메뉴 버튼 기본 숨김 (사진보관함만 configure에서 다시 표시)
+        if let tabBar = tabBarController as? TabBarController {
+            tabBar.floatingOverlay?.titleBar.hideMenuButton()
+        }
         configureFloatingOverlayForAlbums()
     }
 
