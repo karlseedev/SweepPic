@@ -120,9 +120,9 @@ final class LiquidGlassTabBar: UIView {
             ),
             LiquidGlassTabButton(
                 index: 2,
-                icon: "trash",
-                selectedIcon: "trash.fill",
-                title: "휴지통"
+                icon: "xmark.bin",
+                selectedIcon: "xmark.bin.fill",
+                title: "삭제대기함"
             ),
         ]
         buttons.forEach { button in
@@ -558,6 +558,19 @@ extension LiquidGlassTabBar {
         trashSelectionCountLabel.text = count > 0 ? "\(count)개 항목 선택됨" : "항목 선택"
         trashRestoreButton.isEnabled = count > 0
         trashDeleteButton.isEnabled = count > 0
+    }
+}
+
+// MARK: - Public Methods (Badge)
+
+extension LiquidGlassTabBar {
+
+    /// 휴지통 탭 배지 업데이트
+    /// - Parameter count: 휴지통에 있는 사진 수 (0이면 배지 숨김)
+    func updateTrashBadge(_ count: Int) {
+        // 휴지통 버튼은 index 2
+        guard tabButtons.count > 2 else { return }
+        tabButtons[2].updateBadge(count: count)
     }
 }
 

@@ -255,6 +255,12 @@ final class FloatingOverlayContainer: UIView {
         tabBar.updateSelectionCount(count)
     }
 
+    /// 휴지통 탭 배지 업데이트
+    /// - Parameter count: 휴지통에 있는 사진 수 (0이면 배지 숨김)
+    func updateTrashBadge(_ count: Int) {
+        tabBar.updateTrashBadge(count)
+    }
+
     /// 오버레이 높이 정보 제공 (contentInset 계산용)
     /// - Returns: (top: 타이틀바 높이, bottom: 탭바 높이)
     func getOverlayHeights() -> (top: CGFloat, bottom: CGFloat) {

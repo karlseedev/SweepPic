@@ -69,6 +69,9 @@ class TabBarController: UITabBarController {
         // 탭 변경 감지
         delegate = self
 
+        // 휴지통 배지 관찰 시작
+        setupTrashBadgeObserver()
+
         Log.print("[TabBarController] Initialized - useFloatingUI: \(useFloatingUI)")
     }
 
@@ -124,9 +127,9 @@ class TabBarController: UITabBarController {
         let trashVC = TrashAlbumViewController()
         let trashNavController = UINavigationController(rootViewController: trashVC)
         trashNavController.tabBarItem = UITabBarItem(
-            title: "휴지통",
-            image: UIImage(systemName: "trash"),
-            selectedImage: UIImage(systemName: "trash.fill")
+            title: "삭제대기함",
+            image: UIImage(systemName: "xmark.bin"),
+            selectedImage: UIImage(systemName: "xmark.bin.fill")
         )
         trashNavController.delegate = self  // BarsVisibilityPolicy 적용을 위한 delegate
         self.trashNav = trashNavController
@@ -219,6 +222,45 @@ class TabBarController: UITabBarController {
 
         // 틴트 색상 (시스템 블루)
         tabBar.tintColor = .systemBlue
+    }
+
+    // MARK: - Trash Badge
+
+    /// 휴지통 배지 관찰 설정
+    /// TrashStore 상태 변경 시 배지 숫자를 즉시 갱신
+    /// NotificationCenter 기반 (onStateChange와 독립적으로 동작)
+    private func setupTrashBadgeObserver() {
+        // 초기 배지 설정
+        updateTrashBadge(count: TrashStore.shared.trashedCount)
+
+        // NotificationCenter로 상태 변경 관찰 (메인 스레드에서 호출됨)
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(trashStoreDidChange(_:)),
+            name: .trashStoreDidChange,
+            object: nil
+        )
+
+        Log.print("[TabBarController] Trash badge observer registered")
+    }
+
+    /// TrashStore 상태 변경 알림 수신
+    @objc private func trashStoreDidChange(_ notification: Notification) {
+        let count = notification.userInfo?["trashedCount"] as? Int ?? 0
+        updateTrashBadge(count: count)
+    }
+
+    /// 휴지통 배지 숫자 업데이트
+    /// iOS 16~25: floatingOverlay를 통해 LiquidGlassTabBar에 전달
+    /// iOS 26+: 시스템 tabBarItem.badgeValue 사용
+    private func updateTrashBadge(count: Int) {
+        if useFloatingUI {
+            // iOS 16~25: 플로팅 탭바 배지
+            floatingOverlay?.updateTrashBadge(count)
+        } else {
+            // iOS 26+: 시스템 탭바 배지
+            trashNav?.tabBarItem.badgeValue = count > 0 ? "\(count)" : nil
+        }
     }
 
     // MARK: - Actions

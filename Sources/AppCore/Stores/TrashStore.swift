@@ -39,6 +39,14 @@ public enum TrashStoreError: Error, LocalizedError {
     }
 }
 
+// MARK: - TrashStore Notification
+
+extension Notification.Name {
+    /// 휴지통 상태 변경 알림
+    /// userInfo에 "trashedCount" (Int) 포함
+    public static let trashStoreDidChange = Notification.Name("trashStoreDidChange")
+}
+
 // MARK: - TrashStoreProtocol (T013)
 
 /// 휴지통 스토어 프로토콜
@@ -412,8 +420,15 @@ public final class TrashStore: TrashStoreProtocol {
     /// 변경 알림
     private func notifyChange() {
         let currentIDs = state.trashedAssetIDs
+        let count = currentIDs.count
         DispatchQueue.main.async { [weak self] in
             self?.changeHandler?(currentIDs)
+            // NotificationCenter로도 발송 (다중 관찰자 지원)
+            NotificationCenter.default.post(
+                name: .trashStoreDidChange,
+                object: nil,
+                userInfo: ["trashedCount": count]
+            )
         }
     }
 }

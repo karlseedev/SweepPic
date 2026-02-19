@@ -272,12 +272,7 @@ final class PhotoCell: UICollectionViewCell {
         iv.tintColor = .white
         iv.isHidden = true
         iv.translatesAutoresizingMaskIntoConstraints = false
-        iv.image = UIImage(systemName: "trash.fill")
-        // 그림자 효과 (빨간 오버레이 위에서 가독성 향상)
-        iv.layer.shadowColor = UIColor.black.cgColor
-        iv.layer.shadowOffset = CGSize(width: 0, height: 1)
-        iv.layer.shadowRadius = 2
-        iv.layer.shadowOpacity = 0.5
+        iv.image = UIImage(systemName: "xmark.bin")
         return iv
     }()
 
@@ -477,8 +472,8 @@ final class PhotoCell: UICollectionViewCell {
         NSLayoutConstraint.activate([
             trashIconView.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -4),
             trashIconView.topAnchor.constraint(equalTo: contentView.topAnchor, constant: 4),
-            trashIconView.widthAnchor.constraint(equalToConstant: 16),
-            trashIconView.heightAnchor.constraint(equalToConstant: 16)
+            trashIconView.widthAnchor.constraint(equalToConstant: 25),
+            trashIconView.heightAnchor.constraint(equalToConstant: 25)
         ])
 
         // T073: iCloud 전용 사진 아이콘 (우측 상단)

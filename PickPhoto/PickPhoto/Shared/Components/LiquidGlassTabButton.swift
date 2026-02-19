@@ -65,6 +65,34 @@ final class LiquidGlassTabButton: UIControl {
         return label
     }()
 
+    /// 배지 컨테이너 (빨간 원형 배경 + 숫자)
+    private lazy var badgeContainer: UIView = {
+        let view = UIView()
+        view.backgroundColor = .systemRed
+        view.isHidden = true
+        view.isUserInteractionEnabled = false
+        view.translatesAutoresizingMaskIntoConstraints = false
+        // 그림자 효과 (가독성)
+        view.layer.shadowColor = UIColor.black.cgColor
+        view.layer.shadowOpacity = 0.3
+        view.layer.shadowRadius = 2
+        view.layer.shadowOffset = CGSize(width: 0, height: 1)
+        return view
+    }()
+
+    /// 배지 숫자 라벨
+    private lazy var badgeLabel: UILabel = {
+        let label = UILabel()
+        label.font = .systemFont(ofSize: 11, weight: .bold)
+        label.textColor = .white
+        label.textAlignment = .center
+        label.translatesAutoresizingMaskIntoConstraints = false
+        return label
+    }()
+
+    /// 배지 너비 제약조건 (숫자 길이에 따라 동적 변경)
+    private var badgeWidthConstraint: NSLayoutConstraint?
+
     // MARK: - Initialization
 
     /// 탭 버튼 초기화
@@ -97,6 +125,10 @@ final class LiquidGlassTabButton: UIControl {
         addSubview(iconImageView)
         addSubview(titleLabel)
 
+        // 배지 추가 (아이콘 위에 표시되도록 마지막에 추가)
+        addSubview(badgeContainer)
+        badgeContainer.addSubview(badgeLabel)
+
         // 접근성
         isAccessibilityElement = true
         accessibilityLabel = title
@@ -117,6 +149,19 @@ final class LiquidGlassTabButton: UIControl {
             titleLabel.topAnchor.constraint(equalTo: topAnchor, constant: const.labelTopOffset),
             titleLabel.centerXAnchor.constraint(equalTo: centerXAnchor),
             titleLabel.heightAnchor.constraint(equalToConstant: const.labelHeight),
+        ])
+
+        // 배지 제약조건: 아이콘 우상단에 배치
+        let badgeWidth = badgeContainer.widthAnchor.constraint(equalToConstant: 18)
+        badgeWidthConstraint = badgeWidth
+        NSLayoutConstraint.activate([
+            badgeContainer.centerXAnchor.constraint(equalTo: iconImageView.trailingAnchor, constant: 2),
+            badgeContainer.centerYAnchor.constraint(equalTo: iconImageView.topAnchor, constant: 2),
+            badgeContainer.heightAnchor.constraint(equalToConstant: 18),
+            badgeWidth,
+
+            badgeLabel.centerXAnchor.constraint(equalTo: badgeContainer.centerXAnchor),
+            badgeLabel.centerYAnchor.constraint(equalTo: badgeContainer.centerYAnchor),
         ])
     }
 
@@ -145,6 +190,35 @@ final class LiquidGlassTabButton: UIControl {
 
         // 접근성 상태 업데이트
         accessibilityTraits = isSelectedTab ? [.button, .selected] : .button
+    }
+
+    // MARK: - Layout
+
+    override func layoutSubviews() {
+        super.layoutSubviews()
+        // 배지를 항상 원형으로 유지
+        badgeContainer.layer.cornerRadius = badgeContainer.bounds.height / 2
+    }
+
+    // MARK: - Public Methods
+
+    /// 배지 숫자 업데이트
+    /// - Parameter count: 표시할 숫자 (0이면 배지 숨김)
+    func updateBadge(count: Int) {
+        if count > 0 {
+            // 숫자 텍스트 설정 (99+까지 표시)
+            let text = count > 99 ? "99+" : "\(count)"
+            badgeLabel.text = text
+
+            // 텍스트 길이에 따라 너비 동적 조정 (최소 18pt, 패딩 포함)
+            let textWidth = (text as NSString).size(withAttributes: [.font: badgeLabel.font!]).width
+            let badgeWidth = max(18, textWidth + 8)
+            badgeWidthConstraint?.constant = badgeWidth
+
+            badgeContainer.isHidden = false
+        } else {
+            badgeContainer.isHidden = true
+        }
     }
 
     // MARK: - Touch Handling
