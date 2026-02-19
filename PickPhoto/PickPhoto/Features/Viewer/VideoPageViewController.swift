@@ -174,7 +174,6 @@ final class VideoPageViewController: UIViewController {
         thumbnailRequestCancellable?.cancel()
         videoRequestCancellable?.cancel()
 
-        Log.debug("Video", "deinit - index: \(index)")
     }
 
     // MARK: - Audio Session
@@ -186,9 +185,7 @@ final class VideoPageViewController: UIViewController {
             try audioSession.setCategory(.playback, mode: .moviePlayback)
             try audioSession.setActive(true)
 
-            Log.debug("Video", "Audio session configured for playback")
         } catch {
-            Log.debug("Video", "Failed to configure audio session: \(error)")
         }
     }
 
@@ -261,8 +258,6 @@ final class VideoPageViewController: UIViewController {
 
     /// 포스터 이미지 로드
     private func loadPoster() {
-        Log.debug("Video", "🖼️ loadPoster() called - index: \(index)")
-
         // bounds가 아직 설정되지 않은 경우 기본 크기 사용
         let screenSize = UIScreen.main.bounds.size
         let width = view.bounds.width > 0 ? view.bounds.width : screenSize.width
@@ -281,8 +276,6 @@ final class VideoPageViewController: UIViewController {
             guard let self = self, let image = image else { return }
 
             self.playerLayerView.setPoster(image)
-
-            Log.debug("Video", "🖼️ Poster loaded - index: \(self.index), degraded: \(isDegraded), size: \(image.size)")
         }
     }
 
@@ -293,7 +286,6 @@ final class VideoPageViewController: UIViewController {
     func requestVideoIfNeeded() {
         // 이미 첫 프레임이 표시됐으면 재요청 불필요 (취소 후 재진입 시)
         guard !hasShownFirstFrame else {
-            Log.debug("Video", "⏭️ Skip request (already shown) - index: \(index)")
             // 플레이어가 있으면 재생 재개
             if player != nil {
                 player?.play()
@@ -307,17 +299,9 @@ final class VideoPageViewController: UIViewController {
         playerLayerView.loadingIndicator.startAnimating()
         errorLabel.isHidden = true
 
-        if Log.categories["Video"] == true {
-            // 호출 스택 추적 (디버그용)
-            let callStack = Thread.callStackSymbols.prefix(6).joined(separator: "\n")
-            Log.debug("Video", "Requesting video - index: \(index), asset: \(asset.localIdentifier.prefix(8))...")
-            Log.debug("Video", "Call stack:\n\(callStack)")
-        }
-
         videoRequestCancellable = VideoPipeline.shared.requestPlayerItem(
             for: asset,
             progressHandler: { progress in
-                Log.debug("Video", "Download progress: \(Int(progress * 100))%")
             },
             completion: { [weak self] playerItem, info in
                 guard let self = self else { return }
@@ -325,7 +309,6 @@ final class VideoPageViewController: UIViewController {
                 // 취소된 경우
                 if VideoPipeline.isCancelled(from: info) {
                     self.hasRequestedVideo = false
-                    Log.debug("Video", "Request cancelled - index: \(self.index)")
                     return
                 }
 
@@ -359,9 +342,6 @@ final class VideoPageViewController: UIViewController {
         // 로딩 인디케이터 중지 (이전에 누락됨!)
         playerLayerView.loadingIndicator.stopAnimating()
 
-        if hadRequest {
-            Log.debug("Video", "⏹️ Request cancelled & indicator stopped - index: \(index)")
-        }
     }
 
     // MARK: - Player Setup
@@ -387,7 +367,6 @@ final class VideoPageViewController: UIViewController {
         controlsOverlay.configure(with: player)
         controlsOverlay.updateMuteState(isMuted: true)
 
-        Log.debug("Video", "Player setup complete - index: \(index)")
     }
 
     // MARK: - KVO

@@ -147,7 +147,6 @@ final class TrashAlbumViewController: BaseGridViewController {
             collectionView.contentInsetAdjustmentBehavior = .automatic
         }
 
-        Log.print("[TrashAlbumViewController] Initialized")
     }
 
     override func viewWillAppear(_ animated: Bool) {
@@ -272,7 +271,6 @@ final class TrashAlbumViewController: BaseGridViewController {
         // 빈 휴지통: 버튼 비활성화 (숨김 X)
         overlay.titleBar.setTwoRightButtonsEnabled(firstEnabled: !isEmpty, secondEnabled: !isEmpty)
 
-        Log.print("[TrashAlbumViewController] FloatingOverlay configured for trash tab")
     }
 
     // MARK: - Data Loading
@@ -281,8 +279,6 @@ final class TrashAlbumViewController: BaseGridViewController {
     /// TrashStore.trashedAssetIDs 기반으로 PHAsset 조회
     /// 뷰어 열린 상태면 갱신 지연 (dismiss 애니메이션 인덱스 일관성 보장)
     private func loadTrashedAssets() {
-        let startTime = CFAbsoluteTimeGetCurrent()
-
         trashedAssetIDSet = trashStore.trashedAssetIDs
 
         // 빈 결과: fetch 불필요
@@ -291,12 +287,11 @@ final class TrashAlbumViewController: BaseGridViewController {
                 // 빈 결과를 캐싱만 하고 reloadData 스킵
                 pendingFetchState = .empty
                 pendingDataRefresh = true
-                Log.print("[TrashAlbumViewController] Empty result cached (viewer open)")
                 return
             }
             _trashDataSource.setFetchResult(nil)
             DispatchQueue.main.async { [weak self] in
-                self?.onDataLoaded(startTime: startTime)
+                self?.onDataLoaded()
             }
             return
         }
@@ -322,36 +317,27 @@ final class TrashAlbumViewController: BaseGridViewController {
                 options: options
             )
 
-            let fetchTime = CFAbsoluteTimeGetCurrent()
-
-            Log.print("[TrashAlbumViewController.Timing] fetch: \(String(format: "%.1f", (fetchTime - startTime) * 1000))ms (background)")
-
             // 메인 스레드에서 결과 처리
             DispatchQueue.main.async {
                 if self.isViewerOpen {
                     // fetch 결과를 캐싱만 하고 reloadData 스킵
                     self.pendingFetchState = .fetched(fetchResult)
-                    Log.print("[TrashAlbumViewController] Fetch result cached (viewer open, \(fetchResult.count) assets)")
                 } else {
                     // 뷰어 닫힌 상태: 즉시 적용
                     self._trashDataSource.setFetchResult(fetchResult)
-                    self.onDataLoaded(startTime: startTime)
+                    self.onDataLoaded()
                 }
             }
         }
     }
 
     /// 데이터 로드 완료 후 호출 (메인 스레드)
-    private func onDataLoaded(startTime: CFAbsoluteTime) {
-        let reloadStartTime = CFAbsoluteTimeGetCurrent()
-
+    private func onDataLoaded() {
         // 숨긴 셀 복원 (reloadData와 같은 프레임에서 실행 — 깜빡임 방지)
         // viewerWillClose에서 복구된 사진 셀을 isHidden=true로 설정한 경우,
         // reloadData 전에 복원해야 셀 재사용 시 isHidden 잔존 방지
         collectionView.visibleCells.forEach { $0.isHidden = false }
         collectionView.reloadData()
-
-        let reloadTime = CFAbsoluteTimeGetCurrent()
 
         updateEmptyState()
 
@@ -366,12 +352,7 @@ final class TrashAlbumViewController: BaseGridViewController {
             emptyTrashBarButtonItem?.isEnabled = !isEmpty
         }
 
-        let endTime = CFAbsoluteTimeGetCurrent()
-
         updateTrashItemCountSubtitle()
-
-        Log.print("[TrashAlbumViewController] Loaded \(_trashDataSource.assetCount) trashed assets")
-        Log.print("[TrashAlbumViewController.Timing] reloadData: \(String(format: "%.1f", (reloadTime - reloadStartTime) * 1000))ms, total: \(String(format: "%.1f", (endTime - startTime) * 1000))ms")
 
         // 프리로드 시작 (초기 로드 시에만)
         if !hasFinishedInitialDisplay {
