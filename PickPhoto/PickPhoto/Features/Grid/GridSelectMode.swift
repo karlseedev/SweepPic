@@ -192,12 +192,10 @@ extension AlbumGridViewController {
     @objc func albumDeleteSelectedTapped() {
         let selectedAssetIDs = selectionManager.selectedAssetIDs
         guard !selectedAssetIDs.isEmpty else {
-            Log.print("[AlbumGridViewController] No photos selected for deletion")
             return
         }
 
         trashStore.moveToTrash(assetIDs: Array(selectedAssetIDs))
-        Log.print("[AlbumGridViewController] Moved \(selectedAssetIDs.count) photos to trash")
 
         selectionManager.clearSelection()
         exitSelectMode()

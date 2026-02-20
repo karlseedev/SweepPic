@@ -471,8 +471,5 @@ extension TabBarController: UINavigationControllerDelegate {
         let hideToolbar = policy?.prefersToolbarHidden ?? true
         navigationController.setToolbarHidden(hideToolbar, animated: false)
 
-        // 디버그 로그
-        let vcName = String(describing: type(of: viewController))
-        let hasPolicy = policy != nil
     }
 }

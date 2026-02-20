@@ -938,7 +938,6 @@ final class YuNetDebugTest {
                           let data = faceData[faceIdx],
                           let norm = faceNorms[faceIdx] else { continue }
 
-                    let qualityTag = norm < minEmbeddingNorm ? " [LowQ]" : ""
                     activeSlots.append(SimSlot(
                         id: nextSlotID,
                         embedding: embedding,
@@ -1040,13 +1039,6 @@ final class YuNetDebugTest {
 
                 if norm < minEmbeddingNorm {
                     continue
-                }
-
-                var minCost: Float = .infinity
-                var minSlotID: Int = -1
-                for slot in activeSlots {
-                    let cost = 1.0 - sface.cosineSimilarity(embedding, slot.embedding)
-                    if cost < minCost { minCost = cost; minSlotID = slot.id }
                 }
 
                 activeSlots.append(SimSlot(id: nextSlotID, embedding: embedding, norm: norm, center: data.center, boundingBox: data.boundingBox))

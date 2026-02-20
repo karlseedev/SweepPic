@@ -60,27 +60,6 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         let buildConfig = "Release"
         #endif
 
-        // Low Power Mode
-        let isLowPowerMode = ProcessInfo.processInfo.isLowPowerModeEnabled
-
-        // Photos 권한 상태
-        let photoAuthStatus: String
-        let status = PHPhotoLibrary.authorizationStatus(for: .readWrite)
-        switch status {
-        case .authorized:
-            photoAuthStatus = "authorized"
-        case .limited:
-            photoAuthStatus = "limited"
-        case .denied:
-            photoAuthStatus = "denied"
-        case .restricted:
-            photoAuthStatus = "restricted"
-        case .notDetermined:
-            photoAuthStatus = "notDetermined"
-        @unknown default:
-            photoAuthStatus = "unknown"
-        }
-
     }
 
     // MARK: - UISceneSession Lifecycle

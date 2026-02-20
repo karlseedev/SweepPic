@@ -759,19 +759,6 @@ final class SimilarityAnalysisQueue {
                 }
             }
 
-            // 감지 소스 표시 (YuNet, Vision, 또는 YuNet+Vision)
-            let detectionSource: String
-            let totalFaces: Int
-            if yunetDetections.isEmpty && !faces.isEmpty {
-                detectionSource = "Vision"
-                totalFaces = faces.count
-            } else if !visionFallbackFaces.isEmpty {
-                detectionSource = "YuNet+Vision"
-                totalFaces = yunetDetections.count + visionFallbackFaces.count
-            } else {
-                detectionSource = "YuNet"
-                totalFaces = yunetDetections.count
-            }
             // === Step 2: 부팅 (ActiveSlots 비어있을 때) ===
             // 부팅 시에는 저품질 포함 모든 얼굴로 슬롯 생성 (모든 인물이 슬롯 보유)
             if activeSlots.isEmpty {
@@ -798,9 +785,6 @@ final class SimilarityAnalysisQueue {
 
                     // norm 계산
                     let norm = sqrt(embedding.reduce(0) { $0 + $1 * $1 })
-
-                    // 부팅 시에는 저품질 얼굴도 슬롯 생성 허용 (모든 인물 포함)
-                    let qualityTag = norm < minEmbeddingNorm ? " [LowQ]" : ""
 
                     let slot = PersonSlot(
                         id: nextSlotID,
@@ -1046,18 +1030,6 @@ final class SimilarityAnalysisQueue {
                 // 저품질 얼굴은 신규 슬롯 생성 금지
                 if norm < minEmbeddingNorm {
                     continue
-                }
-
-                // 기존 슬롯들과의 최소 cost 계산 (디버그용)
-                var minCost: Float = Float.infinity
-                var minCostSlotID: Int = -1
-                for slot in activeSlots {
-                    let similarity = sface.cosineSimilarity(embedding, slot.embedding)
-                    let cost = 1.0 - similarity
-                    if cost < minCost {
-                        minCost = cost
-                        minCostSlotID = slot.id
-                    }
                 }
 
                 // 신규 슬롯 생성

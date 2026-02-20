@@ -481,8 +481,6 @@ final class PhotoPageViewController: UIViewController {
         let fitWidth = imageSize.width * ratio
         let fitHeight = imageSize.height * ratio
 
-        let oldFrame = imageView.frame
-
         // 이미지 뷰 크기 설정
         imageView.frame = CGRect(x: 0, y: 0, width: fitWidth, height: fitHeight)
 

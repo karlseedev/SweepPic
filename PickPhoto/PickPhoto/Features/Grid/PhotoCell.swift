@@ -42,26 +42,6 @@ final class PhotoCell: UICollectionViewCell {
     /// [--log-thumb] pipeline 응답 횟수 (샘플링 로그용)
     static var pipelineResponseCount: Int = 0
 
-    #if DEBUG
-    /// 첫 번째 이미지 할당 여부 (T_firstThumbnailVisible 측정용)
-    private static var hasLoggedFirstThumbnail = false
-    /// 이미지 할당 카운터 (visible count 측정용)
-    private static var imageApplyCounter: Int = 0
-    /// 캐시 히트로 할당된 카운터
-    private static var cacheHitApplyCounter: Int = 0
-    /// 카운터 락
-    private static let applyLock = NSLock()
-
-    /// 카운터 리셋 (앱 시작 시 호출)
-    static func resetApplyCounters() {
-        applyLock.withLock {
-            hasLoggedFirstThumbnail = false
-            imageApplyCounter = 0
-            cacheHitApplyCounter = 0
-        }
-    }
-    #endif
-
     // MARK: - Mismatch Statistics (스크롤 중 버려진 작업 추적)
 
     /// 통계 락
@@ -564,15 +544,6 @@ final class PhotoCell: UICollectionViewCell {
         // 여기서 다시 scale을 곱하면 이중 곱셈 버그 발생
         let pixelSize = targetSize
 
-        // 스크롤 중 로그 비활성화 - hitch 방지
-        // 원복: git checkout a5414d4 -- PickPhoto/PickPhoto/Features/Grid/PhotoCell.swift
-        #if false  // DEBUG 로그 임시 비활성화
-        // 검증 로그: PhotoCell에서 조회하는 pixelSize (1회만)
-        if Self.imageApplyCounter == 0 {
-            Log.print("[PhotoCell] 메모리 캐시 조회 pixelSize: \(Int(pixelSize.width))x\(Int(pixelSize.height))px")
-        }
-        #endif
-
         // B+A v2: 0) 메모리 캐시에서 동기 로드 (즉시 반환)
         // - 프리로드된 이미지가 있으면 셀 생성과 동시에 이미지 할당
         if let memoryImage = MemoryThumbnailCache.shared.get(assetID: assetID, pixelSize: pixelSize) {
@@ -580,18 +551,6 @@ final class PhotoCell: UICollectionViewCell {
             imageView.image = memoryImage
             if wasNil { Self.incrementGrayResolved() }  // nil → non-nil 전환 시에만
 
-            #if false  // DEBUG 로그 임시 비활성화
-            Self.applyLock.withLock {
-                Self.imageApplyCounter += 1
-                Self.cacheHitApplyCounter += 1
-
-                // 첫 번째 이미지 할당 시 T_firstThumbnailVisible 로그
-                if !Self.hasLoggedFirstThumbnail {
-                    Self.hasLoggedFirstThumbnail = true
-                    Log.print("[PhotoCell] T_firstThumbnailVisible: 첫 이미지 할당 (메모리 캐시 히트)")
-                }
-            }
-            #endif
             return // 메모리 캐시 히트 → 완료
         }
 
@@ -675,26 +634,6 @@ final class PhotoCell: UICollectionViewCell {
                         }
                     }
                 }
-
-                #if false  // DEBUG 로그 임시 비활성화
-                Self.applyLock.withLock {
-                    Self.imageApplyCounter += 1
-                    // Pipeline에서 받은 건 캐시 미스
-                    let count = Self.imageApplyCounter
-
-                    // 첫 번째 이미지 할당 시 T_firstThumbnailVisible 로그
-                    if !Self.hasLoggedFirstThumbnail {
-                        Self.hasLoggedFirstThumbnail = true
-                        Log.print("[PhotoCell] T_firstThumbnailVisible: 첫 이미지 할당 (Pipeline, isDegraded=\(isDegraded))")
-                    }
-
-                    // 20개마다 visible/hit 비율 로그
-                    if count == 20 || count == 50 {
-                        let hitRate = Double(Self.cacheHitApplyCounter) / Double(count) * 100
-                        Log.print("[PhotoCell] 이미지 할당 #\(count): 캐시 히트율 \(String(format: "%.1f", hitRate))% (\(Self.cacheHitApplyCounter)/\(count))")
-                    }
-                }
-                #endif
 
                 // degraded가 아닌 최종 이미지만 캐시에 저장
                 // [Phase 1] 디스크 캐시 저장 조건:

@@ -131,11 +131,8 @@ extension GridViewController {
             // - 정지 후에만 visible + 1화면 범위 캐싱
             self.preheatAfterScrollStop()
 
-            // [R2 로그] 스크롤 종료 시간 및 시퀀스 저장
             self.lastScrollEndTime = CACurrentMediaTime()
             let currentSeq = self.scrollSeq
-            // 스크롤 중 peak velocity 사용 (손가락으로 멈추든 플릭으로 멈추든 측정됨)
-            let velocity = Int(max(self.peakScrollVelocityY, self.lastEndVelocityY))
 
             // [R2] 스크롤 정지 후 visible 셀 고해상도 업그레이드
             // - 스크롤 중 50% 크기로 요청된 셀을 100% 크기로 재요청

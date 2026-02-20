@@ -776,8 +776,6 @@ extension GridViewController {
         // 휴지통 사진도 마룬 테두리와 함께 표시되고, 복구 버튼이 표시됨
         let mode: ViewerMode = .normal
 
-        let t1 = CACurrentMediaTime()
-
         // 뷰어 코디네이터 생성 (모드에 따라 필터링됨)
         let coordinator = ViewerCoordinator(
             fetchResult: fetchResult,
@@ -786,14 +784,10 @@ extension GridViewController {
             deleteSource: .library
         )
 
-        let t2 = CACurrentMediaTime()
-
         // 원본 인덱스를 필터링된 인덱스로 변환 (padding 제외한 실제 인덱스 사용)
         guard let filteredIndex = coordinator.filteredIndex(from: assetIndexPath.item) else {
             return
         }
-
-        let t3 = CACurrentMediaTime()
 
         // 뷰어 뷰컨트롤러 생성
         let viewerVC = ViewerViewController(
@@ -805,9 +799,6 @@ extension GridViewController {
         activeViewerVC = viewerVC  // weak 참조 저장 (완전삭제 완료 후 알림용)
         // [Timing] 탭 시점을 뷰어에 전달 (전체 구간 측정용)
         viewerVC.openStartTime = t0
-
-        let t4 = CACurrentMediaTime()
-        let t5 = t4
 
         // iOS 26+: Navigation Push 방식 (시스템 네비바/툴바 사용 가능)
         // iOS 16~25: Modal 방식 (커스텀 줌 트랜지션)
@@ -825,8 +816,6 @@ extension GridViewController {
             viewerVC.transitioningDelegate = transitionController
             present(viewerVC, animated: true)
         }
-
-        let t6 = CACurrentMediaTime()
 
     }
 
