@@ -31,122 +31,36 @@ public enum Log {
         // =============================================
         // Viewer 관련
         // =============================================
-        "Video": false,              // 비디오 재생 로그 (VideoPageViewController)
-        "Photo": false,              // 사진 표시 로그 (PhotoPageViewController)
-        "Zoom": false,               // 줌 동작 (기존 debugZoom)
-        "Overlay": false,            // 오버레이 (기존 debugOverlayEnabled)
-        "Viewer": false,             // 뷰어 일반 (기존 debugViewer)
-        "VideoControls": false,      // 비디오 컨트롤 (기존 debugControls)
-        "FaceButton": false,         // 얼굴 버튼 위치 (기존 debugButtonPosition)
-        "ViewerPerf": false,         // 뷰어 성능 측정
         "Viewer:Hitch": true,        // 뷰어 스와이프 히치 측정
         "Viewer:Hitch:Abs": true,    // 뷰어 히치 절대값 로그
         "Viewer:Swipe": true,        // 뷰어 스와이프 로그
         "Viewer:Scroll": true,       // 뷰어 스크롤 델리게이트 로그
 
         // =============================================
-        // Grid 관련
-        // =============================================
-        "GridViewController": false,
-        "GridVC.sourceViewProvider": false,
-        "BaseGridViewController": false,
-        "AlbumGridViewController": false,
-        "TrashAlbumViewController": false,
-        "TrashAlbumViewController.Timing": false,
-        "TrashAlbumVC.sourceViewProvider": false,
-        "GridDataSource": false,
-        "GridDataSourceDriver": false,
-        "GridSelectMode": false,
-        "BaseSelectMode": false,
-        "TrashSelectMode": false,
-        "SelectionManager": false,
-        "GridGestures": false,
-        "GridScroll": false,
-        "GridStats": false,          // 그리드 통계 (로그 출력 코드 제거됨)
-        "PinchZoom": false,
-
-        // =============================================
         // Navigation / UI
         // =============================================
-        "TabBarController": false,
-        "FloatingTabBar": false,
-        "FloatingTitleBar": false,
-        "FloatingOverlayContainer": false,
-        "PermissionVC": false,
-        "AlbumsViewController": true,       // 앨범 탭 깜빡임 디버깅 (ON)
-        "ZoomTransition": true,          // 커스텀 줌 트랜지션 (현재 작업 중)
-        "ZoomAnimator": false,           // 줌 애니메이터
+        "AlbumsViewController": true,    // 앨범 탭 깜빡임 디버깅
+        "ZoomTransition": true,          // 커스텀 줌 트랜지션
         "Zoom Timing": true,             // 그리드→뷰어 줌 전환 단계별 타이밍
-        "Viewer Timing": false,          // 뷰어 열림 전체 라이프사이클 타이밍 (코드 제거됨)
 
         // =============================================
         // SimilarPhoto 분석
         // =============================================
-        "SimilarPhoto": true,             // Task 취소 테스트 중 (ON)
-        "SimilarityAnalysisQueue": false,
-        "SimilarityAnalyzer": false,
-        "FaceComparisonViewController": false,
-        "PersonPageViewController": false,
-        "ViewerViewController+SimilarPhoto": false,
-        "GridViewController+SimilarPhoto": false,
-
-        // =============================================
-        // 얼굴 인식 (YuNet / Vision)
-        // =============================================
-        "YuNet": false,
-        "YuNetDebugTest": false,
-        "YuNetFaceDetector": false,
-        "SFace": false,
-        "FaceMatching": false,
-        "VisionFallback": false,
-        "NewSlot": false,
+        "SimilarPhoto": true,            // Task 취소 테스트 중
 
         // =============================================
         // AutoCleanup 기능
         // =============================================
-        "QualityAnalyzer": true,     // 현재 작업 중 (ON)
-        "CleanupLag": true,          // 정리버튼 랙 진단 (ON)
-        "CleanupService": true,      // 현재 작업 중 (ON)
-        "CleanupSessionStore": true, // 현재 작업 중 (ON)
-        "PreScanBM": true,           // 코치마크 D 사전 스캔 벤치마크 (ON)
-        "AutoCleanup": false,
-        "VideoFrameExtractor": false,
-        "TextDetect": true,          // Vision 텍스트 감지 디버그 (ON)
-        "QA-TextDetect": true,       // QualityAnalyzer 텍스트 감지 디버그 (ON)
-        "CompareAnalysis": true,     // 통합 로직 테스트 (ON)
-        "CompareCategoryStore": true,// 카테고리 저장소 (ON)
-        "ModeComparison": true,      // 3모드 비교 테스트 (ON)
-
-        // =============================================
-        // ImagePipeline / 썸네일
-        // =============================================
-        "ImagePipeline": false,
-        "Pipeline": false,
-        "ThumbnailCache": false,
-        "MemoryCache": false,
-        "DiskSave": false,
-        "Thumb:Req": false,
-        "Thumb:Res": false,
-        "Preload": false,
-
-        // =============================================
-        // 앱 상태 / 초기화
-        // =============================================
-        "LaunchArgs": false,
-        "Env": false,
-        "Config": false,
-        "TrashStore": false,
-        "AppStateStore": false,
-        "Timing": false,
-        "InitialDisplay": false,
-        "Initial Load": false,
-
-        // =============================================
-        // 서비스
-        // =============================================
-        "PhotoLibraryService": false,
-        "VideoPipeline": false,
-        "AlbumService": false,
+        "QualityAnalyzer": true,         // 품질 분석기
+        "CleanupLag": true,              // 정리버튼 랙 진단
+        "CleanupService": true,          // 정리 서비스
+        "CleanupSessionStore": true,     // 정리 세션 저장소
+        "PreScanBM": true,               // 코치마크 D 사전 스캔 벤치마크
+        "TextDetect": true,              // Vision 텍스트 감지 디버그
+        "QA-TextDetect": true,           // QualityAnalyzer 텍스트 감지 디버그
+        "CompareAnalysis": true,         // 통합 로직 테스트
+        "CompareCategoryStore": true,    // 카테고리 저장소
+        "ModeComparison": true,          // 3모드 비교 테스트
 
         // =============================================
         // Performance / Scroll 측정
@@ -155,7 +69,6 @@ public enum Log {
         "Scroll": true,              // 스크롤 시작/종료 로그
         "Performance": true,         // 성능 모니터 (PerformanceMonitor)
         "LiquidGlass": true,         // LiquidGlass 최적화 로그
-        "LayerDump": false,          // 레이어 덤프 (render hitch 분석)
         "ABTest": true,              // Render A/B 테스트
 
         // =============================================
@@ -173,15 +86,7 @@ public enum Log {
         // =============================================
         // Debug / 기타
         // =============================================
-        "Permission": false,
-        "Trash": false,
-        "Album": false,
-        "Error": false,
-        "SystemUIInspector": false,
-        "SystemUIInspector2": false,
-        "SystemUIInspector3": false,
         "ButtonInspector": true,
-        "LayerPropertyTest": false,
         "Debug": true,                   // 분석 버튼 로그
         "AestheticsOnly": true,          // AestheticsScore 단독 테스터 로그
     ]
@@ -192,11 +97,6 @@ public enum Log {
 
     /// 전체 로그 ON/OFF (false면 모든 로그 비활성화)
     public static var isEnabled = true
-
-    /// 카테고리 없는 로그 출력 여부
-    /// - true: [Category] 형식이 아닌 로그도 출력
-    /// - false: 카테고리가 없는 로그는 무시
-    public static var showUncategorized = false
 
     // ========================================
     // MARK: - 로그 출력 함수
@@ -217,8 +117,8 @@ public enum Log {
         if let category = extractCategory(from: message) {
             // 카테고리가 등록되어 있고 true인 경우에만 출력
             guard categories[category] == true else { return }
-        } else if !showUncategorized {
-            // 카테고리가 없는 로그는 showUncategorized가 true일 때만 출력
+        } else {
+            // 카테고리가 없는 로그는 무시
             return
         }
 
@@ -244,36 +144,6 @@ public enum Log {
         Swift.print("[\(category)] \(message)")
     }
 
-
-    // ========================================
-    // MARK: - 유틸리티 함수
-    // ========================================
-
-    /// 특정 카테고리 활성화
-    /// - Parameter category: 활성화할 카테고리
-    public static func enable(_ category: String) {
-        categories[category] = true
-    }
-
-    /// 특정 카테고리 비활성화
-    /// - Parameter category: 비활성화할 카테고리
-    public static func disable(_ category: String) {
-        categories[category] = false
-    }
-
-    /// 모든 카테고리 비활성화
-    public static func disableAll() {
-        for key in categories.keys {
-            categories[key] = false
-        }
-    }
-
-    /// 모든 카테고리 활성화
-    public static func enableAll() {
-        for key in categories.keys {
-            categories[key] = true
-        }
-    }
 
     // ========================================
     // MARK: - Private
