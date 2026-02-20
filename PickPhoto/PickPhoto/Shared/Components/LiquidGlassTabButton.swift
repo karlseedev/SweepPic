@@ -134,7 +134,6 @@ final class LiquidGlassTabButton: UIControl {
         accessibilityLabel = title
         accessibilityTraits = .button
 
-        Log.print("[LiquidGlassTabButton] Initialized: \(title)")
     }
 
     private func setupConstraints() {

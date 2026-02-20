@@ -69,7 +69,6 @@ final class ZoomAnimator: NSObject, UIViewControllerAnimatedTransitioning {
         // animateTransition이 호출되더라도 스킵 (스냅샷 중복 + 애니메이션 충돌 방지)
         // Note: transitionContext.isInteractive가 호출 시점에 false일 수 있어 자체 플래그 사용
         guard !isInteractiveDismiss else {
-            Log.debug("ZoomAnimator", "Interactive dismiss - skipping animateTransition")
             return
         }
 
@@ -78,7 +77,6 @@ final class ZoomAnimator: NSObject, UIViewControllerAnimatedTransitioning {
         // ⚠️ 1. viewController에서 view 직접 가져오기 (view(forKey:)는 nil 반환 가능)
         guard let fromVC = transitionContext.viewController(forKey: .from),
               let toVC = transitionContext.viewController(forKey: .to) else {
-            Log.debug("ZoomAnimator", "❌ fromVC 또는 toVC 없음")
             transitionContext.completeTransition(false)
             return
         }
@@ -124,14 +122,9 @@ final class ZoomAnimator: NSObject, UIViewControllerAnimatedTransitioning {
         let sourceFrame = sourceProvider?.zoomSourceFrame(for: currentIndex)
         let destinationFrame = destinationProvider?.zoomDestinationFrame
 
-        Log.debug("ZoomAnimator", "\(isPresenting ? "Present" : "Dismiss") - index: \(currentIndex)")
-        Log.debug("ZoomAnimator", "sourceFrame: \(String(describing: sourceFrame))")
-        Log.debug("ZoomAnimator", "destinationFrame: \(String(describing: destinationFrame))")
-
         // 소스 프레임이 없으면 crossfade
         guard let startFrame = isPresenting ? sourceFrame : destinationFrame,
               let endFrame = isPresenting ? destinationFrame : sourceFrame else {
-            Log.debug("ZoomAnimator", "Fallback to crossfade (no frames)")
             performCrossfade(
                 transitionContext: transitionContext,
                 fromView: fromView,
@@ -181,7 +174,6 @@ final class ZoomAnimator: NSObject, UIViewControllerAnimatedTransitioning {
             fromView.alpha = 1
             let cancelled = transitionContext.transitionWasCancelled
             transitionContext.completeTransition(!cancelled)
-            Log.debug("ZoomAnimator", "Crossfade completed, cancelled: \(cancelled)")
         }
     }
 
@@ -220,7 +212,6 @@ final class ZoomAnimator: NSObject, UIViewControllerAnimatedTransitioning {
 
         // 스냅샷이 없으면 crossfade
         guard snapshotView.image != nil else {
-            Log.debug("ZoomAnimator", "Fallback to crossfade (no snapshot)")
             performCrossfade(
                 transitionContext: transitionContext,
                 fromView: fromView,
@@ -246,8 +237,6 @@ final class ZoomAnimator: NSObject, UIViewControllerAnimatedTransitioning {
         } else {
             container.addSubview(snapshotView)
         }
-
-        Log.debug("ZoomAnimator", "Animating from \(startFrame) to \(endFrame)")
 
         // 배경 fade 애니메이션 (별도 curve로 부드럽게)
         if isPresenting, let bg = backgroundView {
@@ -286,7 +275,6 @@ final class ZoomAnimator: NSObject, UIViewControllerAnimatedTransitioning {
 
             let cancelled = transitionContext.transitionWasCancelled
             transitionContext.completeTransition(!cancelled)
-            Log.debug("ZoomAnimator", "Zoom completed, cancelled: \(cancelled)")
         }
     }
 }

@@ -340,7 +340,6 @@ final class FloatingTabBar: UIView {
         setupConstraints()
         updateTabSelection()
 
-        Log.print("[FloatingTabBar] Initialized")
     }
 
     private func setupConstraints() {
@@ -552,28 +551,23 @@ final class FloatingTabBar: UIView {
 
     @objc private func tabButtonTapped(_ sender: UIButton) {
         let index = sender.tag
-        Log.print("[FloatingTabBar] Tab \(index) tapped")
         selectedIndex = index
         delegate?.floatingTabBar(self, didSelectTabAt: index)
     }
 
     @objc private func deleteButtonTapped() {
-        Log.print("[FloatingTabBar] Delete tapped")
         delegate?.floatingTabBarDidTapDelete(self)
     }
 
     @objc private func emptyTrashButtonTapped() {
-        Log.print("[FloatingTabBar] Empty Trash tapped")
         delegate?.floatingTabBarDidTapEmptyTrash(self)
     }
 
     @objc private func trashRestoreButtonTapped() {
-        Log.print("[FloatingTabBar] Trash Restore tapped")
         delegate?.floatingTabBarDidTapRestore(self)
     }
 
     @objc private func trashDeleteButtonTapped() {
-        Log.print("[FloatingTabBar] Trash Delete tapped")
         delegate?.floatingTabBarDidTapTrashDelete(self)
     }
 
@@ -602,7 +596,6 @@ final class FloatingTabBar: UIView {
             selectModeContainer.alpha = 1
         }
 
-        Log.print("[FloatingTabBar] Entered select mode")
     }
 
     /// Select 모드 종료
@@ -626,7 +619,6 @@ final class FloatingTabBar: UIView {
             selectModeContainer.alpha = 0
         }
 
-        Log.print("[FloatingTabBar] Exited select mode")
     }
 
     /// 선택 개수 업데이트 (Select 모드에서) - Grid/Album용
@@ -663,7 +655,6 @@ final class FloatingTabBar: UIView {
             trashSelectModeContainer.alpha = 1
         }
 
-        Log.print("[FloatingTabBar] Entered trash select mode")
     }
 
     /// Trash Select 모드 종료 (Trash 전용)
@@ -687,7 +678,6 @@ final class FloatingTabBar: UIView {
             trashSelectModeContainer.alpha = 0
         }
 
-        Log.print("[FloatingTabBar] Exited trash select mode")
     }
 
     /// Trash 선택 개수 업데이트 (Trash Select 모드에서)

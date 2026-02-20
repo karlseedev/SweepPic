@@ -212,11 +212,9 @@ final class AnalyticsService: AnalyticsServiceProtocol {
         guard let url = Bundle.main.infoDictionary?["SUPABASE_URL"] as? String,
               let key = Bundle.main.infoDictionary?["SUPABASE_ANON_KEY"] as? String,
               !url.isEmpty, !key.isEmpty else {
-            Log.print("[Supabase] credentials 없음 — 비활성")
             return
         }
         supabaseProvider = SupabaseProvider(baseURL: url, anonKey: key)
-        Log.print("[Supabase] 초기화 완료 (url: \(url.prefix(30))...)")
     }
 
     // MARK: - Dual Send Helpers

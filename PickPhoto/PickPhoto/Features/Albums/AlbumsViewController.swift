@@ -665,14 +665,12 @@ extension AlbumsViewController {
     func scrollViewWillBeginDragging(_ scrollView: UIScrollView) {
         LiquidGlassOptimizer.cancelIdleTimer()
         LiquidGlassOptimizer.optimize(in: view.window)
-        Log.print("[Albums:Scroll] willBeginDragging - optimize 시작")
     }
 
     /// 감속 완료 - 최적화 해제
     func scrollViewDidEndDecelerating(_ scrollView: UIScrollView) {
         LiquidGlassOptimizer.restore(in: view.window)
         LiquidGlassOptimizer.enterIdle(in: view.window)
-        Log.print("[Albums:Scroll] didEndDecelerating - restore 완료")
     }
 
     /// 드래그 종료 (감속 없이 멈춤) - 최적화 해제
@@ -680,7 +678,6 @@ extension AlbumsViewController {
         if !decelerate {
             LiquidGlassOptimizer.restore(in: view.window)
             LiquidGlassOptimizer.enterIdle(in: view.window)
-            Log.print("[Albums:Scroll] didEndDragging(willDecelerate=false) - restore 완료")
         }
     }
 }

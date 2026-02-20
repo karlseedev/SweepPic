@@ -268,7 +268,7 @@ final class FloatingTitleBar: UIView {
 
         setupConstraints()
 
-        Log.print("[FloatingTitleBar] Initialized with title: \(title)")
+ Initialized with title: \(title)")
     }
 
     private func setupConstraints() {
@@ -382,12 +382,12 @@ final class FloatingTitleBar: UIView {
     // MARK: - Actions
 
     @objc private func backButtonTapped() {
-        Log.print("[FloatingTitleBar] Back button tapped")
+ Back button tapped")
         executeBackAction()
     }
 
     @objc private func selectButtonTapped() {
-        Log.print("[FloatingTitleBar] Select button tapped")
+ Select button tapped")
         delegate?.floatingTitleBarDidTapSelect(self)
     }
 
@@ -487,17 +487,17 @@ final class FloatingTitleBar: UIView {
     /// - Parameter cancelAction: Cancel 버튼 탭 시 실행할 클로저
     func enterSelectMode(cancelAction: @escaping () -> Void) {
         setRightButton(title: "취소", backgroundColor: .systemBlue, action: cancelAction)
-        Log.print("[FloatingTitleBar] Entered select mode - showing Cancel button")
+ Entered select mode - showing Cancel button")
     }
 
     /// Select 모드 종료 - Select 버튼으로 복원
     func exitSelectMode() {
         resetToSelectButton()
-        Log.print("[FloatingTitleBar] Exited select mode - showing Select button")
+ Exited select mode - showing Select button")
     }
 
     @objc private func rightButtonTapped() {
-        Log.print("[FloatingTitleBar] Right button tapped")
+ Right button tapped")
         rightButtonAction?()
     }
 
@@ -507,7 +507,7 @@ final class FloatingTitleBar: UIView {
     private var secondRightButtonAction: (() -> Void)?
 
     @objc private func secondRightButtonTapped() {
-        Log.print("[FloatingTitleBar] Second right button tapped")
+ Second right button tapped")
         secondRightButtonAction?()
     }
 
@@ -546,7 +546,7 @@ final class FloatingTitleBar: UIView {
         secondRightButton.isHidden = false
         secondRightButtonAction = secondAction
 
-        Log.print("[FloatingTitleBar] Two right buttons set: [\(firstTitle)] [\(secondTitle)]")
+ Two right buttons set: [\(firstTitle)] [\(secondTitle)]")
     }
 
     /// 두 번째 오른쪽 버튼 숨기기 (일반 모드 복원 시)
@@ -577,7 +577,7 @@ final class FloatingTitleBar: UIView {
         // Select 버튼 복원
         resetToSelectButton()
 
-        Log.print("[FloatingTitleBar] Reset to default - showing Select button only")
+ Reset to default - showing Select button only")
     }
 
     // MARK: - Menu Button
@@ -592,7 +592,7 @@ final class FloatingTitleBar: UIView {
         selectButtonTrailingToContainer?.isActive = false
         selectButtonTrailingToMenu?.isActive = true
 
-        Log.print("[FloatingTitleBar] Menu button shown")
+ Menu button shown")
     }
 
     /// 메뉴 버튼 숨기기

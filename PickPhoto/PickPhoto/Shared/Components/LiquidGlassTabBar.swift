@@ -244,7 +244,6 @@ final class LiquidGlassTabBar: UIView {
         trashSelectModeContainer.addSubview(trashSelectionCountLabel)
         trashSelectModeContainer.addSubview(trashDeleteButton)
 
-        Log.print("[LiquidGlassTabBar] Initialized")
     }
 
     private func setupConstraints() {
@@ -415,23 +414,19 @@ final class LiquidGlassTabBar: UIView {
 
     @objc private func tabButtonTapped(_ sender: LiquidGlassTabButton) {
         let index = sender.tabIndex
-        Log.print("[LiquidGlassTabBar] Tab \(index) tapped")
         selectedIndex = index
         delegate?.liquidGlassTabBar(self, didSelectTabAt: index)
     }
 
     @objc private func deleteButtonTapped() {
-        Log.print("[LiquidGlassTabBar] Delete tapped")
         delegate?.liquidGlassTabBarDidTapDelete(self)
     }
 
     @objc private func trashRestoreButtonTapped() {
-        Log.print("[LiquidGlassTabBar] Trash Restore tapped")
         delegate?.liquidGlassTabBarDidTapRestore(self)
     }
 
     @objc private func trashDeleteButtonTapped() {
-        Log.print("[LiquidGlassTabBar] Trash Delete tapped")
         delegate?.liquidGlassTabBarDidTapTrashDelete(self)
     }
 }
@@ -464,7 +459,6 @@ extension LiquidGlassTabBar {
             selectModeContainer.alpha = 1
         }
 
-        Log.print("[LiquidGlassTabBar] Entered select mode")
     }
 
     /// Select 모드 종료 (Grid/Album용)
@@ -487,7 +481,6 @@ extension LiquidGlassTabBar {
             selectModeContainer.alpha = 0
         }
 
-        Log.print("[LiquidGlassTabBar] Exited select mode")
     }
 
     /// 선택 개수 업데이트 (Grid/Album용)
@@ -527,7 +520,6 @@ extension LiquidGlassTabBar {
             trashSelectModeContainer.alpha = 1
         }
 
-        Log.print("[LiquidGlassTabBar] Entered trash select mode")
     }
 
     /// Trash Select 모드 종료
@@ -550,7 +542,6 @@ extension LiquidGlassTabBar {
             trashSelectModeContainer.alpha = 0
         }
 
-        Log.print("[LiquidGlassTabBar] Exited trash select mode")
     }
 
     /// Trash 선택 개수 업데이트

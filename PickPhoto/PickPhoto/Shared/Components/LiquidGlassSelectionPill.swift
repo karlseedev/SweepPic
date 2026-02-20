@@ -63,7 +63,6 @@ final class LiquidGlassSelectionPill: UIView {
         // LiquidGlassKit이 블러, 굴절, 테두리를 처리
         addSubview(lensView)
 
-        Log.print("[LiquidGlassSelectionPill] Initialized with LiquidGlassKit")
     }
 
     private func setupConstraints() {
@@ -106,7 +105,6 @@ final class LiquidGlassSelectionPill: UIView {
             superview?.layoutIfNeeded()
         }
 
-        Log.print("[LiquidGlassSelectionPill] Moved to x: \(newLeading), animated: \(animated)")
     }
 
     /// leading constraint를 외부에서 설정

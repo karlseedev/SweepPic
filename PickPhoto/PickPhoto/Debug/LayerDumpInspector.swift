@@ -30,7 +30,6 @@ enum LayerDumpInspector {
     /// 앱에서 reset() 호출 후 다시 스크롤하면 재덤프됨
     static func reset() {
         hasDumped = false
-        Log.print("[LayerDump] Reset — 다음 스크롤에서 재덤프됩니다")
     }
 
     // MARK: - Public
@@ -43,7 +42,6 @@ enum LayerDumpInspector {
 
         // keyWindow 확보
         guard let window = rootView ?? findKeyWindow() else {
-            Log.print("[LayerDump] Key Window not found")
             return
         }
 
@@ -59,27 +57,6 @@ enum LayerDumpInspector {
                   visibleCount: &visibleCount,
                   flagCounts: &flagCounts)
 
-        // === 콘솔 출력 ===
-        Log.print("[LayerDump] ========== Visible Layer Tree ==========")
-        Log.print("[LayerDump] Total layers: \(totalCount), Visible (합성 참여): \(visibleCount)")
-
-        // expensive 속성 요약 (많은 순)
-        if !flagCounts.isEmpty {
-            let summary = flagCounts
-                .sorted { $0.value > $1.value }
-                .map { "\($0.key): \($0.value)" }
-                .joined(separator: ", ")
-            Log.print("[LayerDump] Expensive 속성 요약: \(summary)")
-        }
-
-        Log.print("[LayerDump] ------------------------------------------")
-
-        // 트리 출력
-        for line in lines {
-            Log.print("[LayerDump] \(line)")
-        }
-
-        Log.print("[LayerDump] ==========================================")
 
         // 파일로 저장
         saveToFile(lines: lines,
@@ -273,7 +250,6 @@ enum LayerDumpInspector {
         content += "\n"
 
         try? content.write(to: file, atomically: true, encoding: .utf8)
-        Log.print("[LayerDump] 파일 저장: \(file.path)")
     }
 }
 

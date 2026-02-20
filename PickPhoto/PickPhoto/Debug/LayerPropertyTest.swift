@@ -703,9 +703,7 @@ final class LayerPropertyTest {
 
         do {
             try content.write(to: filePath, atomically: true, encoding: .utf8)
-            Log.print("[LayerPropertyTest] 저장: \(filePath.path)")
         } catch {
-            Log.print("[LayerPropertyTest] 저장 실패: \(error)")
         }
     }
 

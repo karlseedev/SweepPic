@@ -59,7 +59,6 @@ final class LiquidGlassPlatter: UIView {
         addSubview(liquidGlassEffectView)
         liquidGlassEffectView.layer.zPosition = LiquidGlassConstants.ZPosition.platterBackground
 
-        Log.print("[LiquidGlassPlatter] Initialized with LiquidGlassKit (isNative: true)")
     }
 
     private func setupConstraints() {

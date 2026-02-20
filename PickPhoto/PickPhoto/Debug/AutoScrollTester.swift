@@ -186,20 +186,7 @@ final class AutoScrollTester {
         self.completion = completion
         self.isRunning = true
 
-        Log.print("[AutoScroll] === 시작 ===")
-        Log.print("[AutoScroll] 속도: \(self.speed) pt/s, 방향: \(direction), 지속: \(duration)초, 경계: \(boundaryBehavior)")
 
-        // 프로파일 로깅
-        switch profile {
-        case .continuous:
-            if self.speedOscillationAmplitude > 0 && self.speedOscillationFrequency > 0 {
-                Log.print("[AutoScroll] 프로파일: continuous, 속도변조: amplitude=\(self.speedOscillationAmplitude), frequency=\(self.speedOscillationFrequency)Hz")
-            } else {
-                Log.print("[AutoScroll] 프로파일: continuous (일정 속도)")
-            }
-        case .burst(let burstDuration, let restDuration, let restSpeedRatio):
-            Log.print("[AutoScroll] 프로파일: burst (flick 리듬), burst=\(String(format: "%.2f", burstDuration))초, rest=\(String(format: "%.2f", restDuration))초, restRatio=\(String(format: "%.0f", restSpeedRatio * 100))%")
-        }
 
         // 스크롤 측정 시작 알림
         NotificationCenter.default.post(name: AutoScrollTester.didBeginScrollingNotification, object: nil)
@@ -262,8 +249,7 @@ final class AutoScrollTester {
         scrollView = nil
 
         if activeStartTime > 0 {
-            let elapsed = CACurrentMediaTime() - activeStartTime
-            Log.print("[AutoScroll] === 중지: \(String(format: "%.2f", elapsed))초 경과 ===")
+            _ = CACurrentMediaTime() - activeStartTime
 
             // 스크롤 측정 종료 알림
             NotificationCenter.default.post(name: AutoScrollTester.didEndScrollingNotification, object: nil)
@@ -364,7 +350,6 @@ final class AutoScrollTester {
         if (direction == .up && isAtMin) || (direction == .down && isAtMax) {
             switch boundaryBehavior {
             case .stop:
-                Log.print("[AutoScroll] 경계 도달 - 스크롤 중지")
                 let completion = completion
                 stop(clearCompletion: true)
                 completion?()

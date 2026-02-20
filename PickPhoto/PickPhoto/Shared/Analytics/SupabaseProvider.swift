@@ -70,7 +70,7 @@ final class SupabaseProvider {
 
         guard let jsonData = try? JSONSerialization.data(withJSONObject: body) else {
             #if DEBUG
-            Log.print("[Supabase] Error: JSON 직렬화 실패 (send \(eventName))")
+ Error: JSON 직렬화 실패 (send \(eventName))")
             #endif
             return
         }
@@ -103,7 +103,7 @@ final class SupabaseProvider {
 
         guard let jsonData = try? JSONSerialization.data(withJSONObject: bodyArray) else {
             #if DEBUG
-            Log.print("[Supabase] Error: JSON 직렬화 실패 (batch \(events.count)건)")
+ Error: JSON 직렬화 실패 (batch \(events.count)건)")
             #endif
             completion?()
             return
@@ -166,12 +166,12 @@ final class SupabaseProvider {
     private static func logResponse(eventName: String, count: Int, response: URLResponse?, error: Error?) {
         if let httpResponse = response as? HTTPURLResponse {
             if (200...299).contains(httpResponse.statusCode) {
-                Log.print("[Supabase] OK \(eventName) \(count) events (HTTP \(httpResponse.statusCode))")
+     OK \(eventName) \(count) events (HTTP \(httpResponse.statusCode))")
             } else {
-                Log.print("[Supabase] Error \(eventName): HTTP \(httpResponse.statusCode)")
+     Error \(eventName): HTTP \(httpResponse.statusCode)")
             }
         } else if let error = error {
-            Log.print("[Supabase] Error \(eventName): \(error.localizedDescription)")
+ Error \(eventName): \(error.localizedDescription)")
         }
     }
     #endif

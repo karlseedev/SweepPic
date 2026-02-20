@@ -347,7 +347,6 @@ final class SystemUIInspector3 {
         ])
 
         self.debugButton = button
-        Log.print("[SystemUIInspector3] 디버그 버튼 표시됨")
     }
 
     func hideDebugButton() {
@@ -373,7 +372,6 @@ final class SystemUIInspector3 {
 
     private func performJSONDump() {
         guard let window = getKeyWindow() else {
-            Log.print("[SystemUIInspector3] Key Window를 찾을 수 없습니다.")
             return
         }
 

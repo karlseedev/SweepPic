@@ -57,7 +57,6 @@ final class SystemUIInspector {
         ])
 
         self.debugButton = button
-        Log.print("[SystemUIInspector] 디버그 버튼 표시됨 - 각 화면에서 탭하여 인스펙션")
     }
 
     /// 디버그 버튼 숨기기
