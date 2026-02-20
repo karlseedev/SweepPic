@@ -122,12 +122,12 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         // ButtonInspector.shared.showDebugButton()     // Button Dump - 현재 미사용
 
         // 효과 비교 쇼케이스: 주석 해제하면 앱 실행 1초 후 자동 표시
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
-            let showcase = EffectShowcaseViewController()
-            let nav = UINavigationController(rootViewController: showcase)
-            nav.modalPresentationStyle = .fullScreen
-            tabBarController.present(nav, animated: true)
-        }
+        // DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+        //     let showcase = EffectShowcaseViewController()
+        //     let nav = UINavigationController(rootViewController: showcase)
+        //     nav.modalPresentationStyle = .fullScreen
+        //     tabBarController.present(nav, animated: true)
+        // }
         #endif
     }
 

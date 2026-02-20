@@ -194,74 +194,41 @@ Console.app에서도 subsystem/category 기반 필터링 가능.
 ---
 ---
 
-# 구현 계획 (2차 검토 완료)
+# 구현 계획 (삭제 후 수정본)
 
-## 검토에서 발견된 핵심 리스크
+> false 카테고리 로그 삭제 완료 후 재작성 (2026-02-20)
+> 선행 작업: `260217Log-refac-del.md` (완료)
+> 원본: 756호출/80파일 → 삭제 후: **259호출/29파일** (66% 감소)
 
-### 리스크 0: `public` 키워드 누락 + `import OSLog` 필요 (심각도: 치명적)
+## 현황 요약
 
-**문제 A**: Logger extension의 static property에 `public`이 없으면 AppCore 외부(PickPhoto)에서 사용 불가.
-Swift의 extension 멤버는 기본 `internal`이므로 **반드시 `public` 명시 필요**.
-
-**문제 B**: PickPhoto 파일에서 `import AppCore`만으로는 `Logger` 타입이 보이지 않음.
-Swift는 transitive import를 re-export하지 않으므로, 각 파일에 **`import OSLog` 추가 필수**.
-
-**대응**:
-- `Logger+App.swift`의 모든 static let에 `public` 추가
-- PickPhoto의 모든 마이그레이션 대상 파일(~71개)에 `import OSLog` 추가
-- Phase 0 검증에서 모듈 간 가시성도 함께 테스트
-
-### 리스크 1: OSLogMessage 문자열 보간 ≠ Swift String 보간 (심각도: 높음)
-
-`Logger`의 보간은 `OSLogMessage` 기반이라 일반 Swift String 보간과 다르다.
-`String(format:)` 보간이 **94곳 (24파일)**에 존재하며, OSLogMessage에서 컴파일 에러 가능성이 있다.
-
-**대응 전략**: Phase 0에서 검증용 테스트 파일을 만들어 실제 컴파일 여부를 먼저 확인한다.
-- 컴파일되면 → 그대로 사용
-- 컴파일 안 되면 → 변수로 사전 추출 (`let formatted = String(format: "%.1f", value)` 후 `Logger.x.debug("\(formatted)")`)
-
-```swift
-// 검증할 패턴들:
-logger.debug("v: \(String(format: "%.1f", 3.14))")   // String(format:)
-logger.debug("v: \(isOn ? "ON" : "OFF")")              // 삼항 연산자
-logger.debug("v: \(opt.map(String.init) ?? "nil")")     // .map + ??
-logger.debug("v: \(arr.joined(separator: ", "))")       // .joined()
-logger.debug("v: \(self.someProperty)")                 // self. 필요?
-logger.debug("frame: \(view.frame)")                    // CGRect
-logger.debug("size: \(image.size)")                     // CGSize
-logger.debug("origin: \(view.frame.origin)")            // CGPoint
-```
-
-### 리스크 2: 메시지 크기 제한 1024바이트 (심각도: 중간)
-
-Unified Logging은 단일 메시지 ~1024바이트 제한이 있다.
-`Thread.callStackSymbols` (VideoPageViewController.swift:312) 등 긴 메시지는 잘릴 수 있다.
-
-**대응**: 이미 `#if DEBUG` 블록 안에 있으므로, 해당 부분만 `print()`를 유지하거나 메시지를 분할한다.
-
-### 리스크 3: `self.` 명시 요구 (심각도: 낮음)
-
-Logger 보간은 `@autoclosure @escaping`이므로 클래스 메서드 내에서 인스턴스 프로퍼티 접근 시 `self.` 명시가 필요할 수 있다. 컴파일러가 알려주므로 기계적 수정 가능.
+| 항목 | 삭제 전 | 삭제 후 |
+|------|---------|---------|
+| 총 호출 | ~756 | **259** |
+| 파일 수 | 80 | **29** |
+| String(format:) | 94곳 | **41곳** |
+| Log.categories[] 직접 접근 | 6곳 | **0** (전부 삭제됨) |
+| FileLogger.logThumbEnabled | 7곳 | **0** (전부 삭제됨) |
+| callStack 등 긴 메시지 | 있음 | **0** (전부 삭제됨) |
 
 ---
 
-## Phase 0: 사전 커밋 + 패턴 검증
+## 리스크 (삭제 후 재평가)
 
-1. 현재 변경사항 커밋 후 롤백 포인트 생성
-2. **검증용 테스트 파일** 생성 → 다음 패턴들을 실제 컴파일하여 확인:
-   - `String(format:)` 보간 (리스크 1)
-   - 삼항 연산자, `.map()??`, `.joined()` 보간 (리스크 1)
-   - `self.` 필요 여부 (리스크 3)
-   - **PickPhoto에서 `import OSLog` + `import AppCore`로 `Logger.viewer` 접근 가능한지** (리스크 0)
-   - **`public static let`이 모듈 외부에서 보이는지** (리스크 0)
-3. 결과에 따라 Phase 1 이후 변환 전략 확정
-4. 검증 후 테스트 파일 삭제
+| # | 리스크 | 심각도 | 상태 |
+|---|--------|--------|------|
+| 0 | `public` + `import OSLog` 누락 시 컴파일 실패 | 치명적 | **대응 완료** — 코드에 반영됨 |
+| 1 | OSLogMessage 보간 (`String(format:)`, CGRect) | 높음 | **41곳으로 감소** (94→41). Phase 0에서 검증 |
+| 2 | 메시지 크기 1024바이트 | - | **해소** — callStack 코드 삭제됨 |
+| 3 | `self.` 명시 | 낮음 | 유지 — 컴파일러가 알려줌, 기계적 수정 |
+| 4 | `Log.categories[]` 직접 접근 | - | **해소** — 6곳 전부 삭제됨 |
+| 5 | `FileLogger.logThumbEnabled` 패턴 | - | **해소** — 7곳 전부 삭제됨 |
 
 ---
 
-## Phase 1: Logger extension 생성 + AppCore 마이그레이션
+## Phase 0: Logger+App.swift 생성 + 검증
 
-### 1-1. `Sources/AppCore/Services/Logger+App.swift` 신규 생성
+### 0-1. `Sources/AppCore/Services/Logger+App.swift` 신규 생성
 
 ```swift
 import OSLog
@@ -269,262 +236,236 @@ import OSLog
 extension Logger {
     private static let subsystem = Bundle.main.bundleIdentifier ?? "com.pickphoto.appcore"
 
-    // 뷰어/미디어
+    // Feature
     public static let viewer       = Logger(subsystem: subsystem, category: "Viewer")
-
-    // 그리드
-    public static let grid         = Logger(subsystem: subsystem, category: "Grid")
-    public static let selection    = Logger(subsystem: subsystem, category: "Selection")
-
-    // 분석
-    public static let similarPhoto = Logger(subsystem: subsystem, category: "SimilarPhoto")
-    public static let faceDetect   = Logger(subsystem: subsystem, category: "FaceDetect")
-    public static let cleanup      = Logger(subsystem: subsystem, category: "Cleanup")
-
-    // 인프라
-    public static let pipeline     = Logger(subsystem: subsystem, category: "Pipeline")
-    public static let transition   = Logger(subsystem: subsystem, category: "Transition")
-    public static let navigation   = Logger(subsystem: subsystem, category: "Navigation")
     public static let albums       = Logger(subsystem: subsystem, category: "Albums")
-    public static let performance  = Logger(subsystem: subsystem, category: "Performance")
+    public static let similarPhoto = Logger(subsystem: subsystem, category: "SimilarPhoto")
+    public static let cleanup      = Logger(subsystem: subsystem, category: "Cleanup")
+    public static let transition   = Logger(subsystem: subsystem, category: "Transition")
 
-    // 앱 레벨
-    public static let app          = Logger(subsystem: subsystem, category: "App")
-    public static let store        = Logger(subsystem: subsystem, category: "Store")
+    // Infrastructure
+    public static let pipeline     = Logger(subsystem: subsystem, category: "Pipeline")
+    public static let performance  = Logger(subsystem: subsystem, category: "Performance")
     public static let analytics    = Logger(subsystem: subsystem, category: "Analytics")
     public static let coachMark    = Logger(subsystem: subsystem, category: "CoachMark")
-    public static let permission   = Logger(subsystem: subsystem, category: "Permission")
 
-    // 디버그 ("debug"는 인스턴스 메서드 충돌 → "appDebug")
+    // App
+    public static let app          = Logger(subsystem: subsystem, category: "App")
     public static let appDebug     = Logger(subsystem: subsystem, category: "Debug")
 }
 ```
 
-### 1-2. AppCore 9개 파일 변환 (62호출)
+**11개 카테고리** (삭제 전 17개에서 미사용 6개 제거: grid, selection, faceDetect, navigation, store, permission)
 
-| 파일 | 호출 수 | Logger | 에러 레벨 | String(format:) |
-|------|---------|--------|----------|----------------|
-| `Stores/TrashStore.swift` | 15 | `.store` | 4곳 | 1곳 |
-| `Services/ThumbnailCache.swift` | 11 | `.pipeline` | 2곳 | 2곳 |
-| `Services/ImagePipeline.swift` | 10 | `.pipeline` | 1곳 | 3곳 |
-| `Services/AlbumService.swift` | 9 | `.albums` | - | - |
-| `Services/AppStateStore.swift` | 6 | `.store` | - | - |
-| `Services/VideoPipeline.swift` | 6 | `.pipeline` | 1곳 | - |
-| `Services/PhotoLibraryService.swift` | 2 | `.app` | - | - |
-| `Services/MemoryThumbnailCache.swift` | 2 | `.pipeline` | - | - |
-| `Services/FileLogger.swift` | 1 | 주석만 | - | - |
+### 0-2. 검증용 테스트
 
-**String(format:) 처리** (Phase 0 검증 결과에 따라):
+OSLogMessage 보간 패턴 컴파일 확인:
 ```swift
-// 방법 A: 직접 사용 (컴파일되는 경우)
-Logger.pipeline.debug("elapsed: \(String(format: "%.1f", elapsed))ms")
-
-// 방법 B: 변수 추출 (컴파일 안 되는 경우)
-let elapsedStr = String(format: "%.1f", elapsed)
-Logger.pipeline.debug("elapsed: \(elapsedStr)ms")
+logger.debug("v: \(String(format: "%.1f", 3.14))")   // String(format:)
+logger.debug("v: \(isOn ? "ON" : "OFF")")              // 삼항 연산자
+logger.debug("frame: \(view.frame)")                    // CGRect (1곳 존재)
+logger.debug("size: \(image.size)")                     // CGSize
 ```
 
-**검증**: `swift build`
-**커밋**: `refactor(Phase1): Logger extension 생성 + AppCore 마이그레이션`
++ PickPhoto에서 `import OSLog` + `import AppCore`로 `Logger.viewer` 접근 가능한지 확인.
+검증 후 테스트 파일 삭제.
+
+**커밋**: `refactor: Logger+App.swift 생성`
 
 ---
 
-## Phase 2: App + Grid + Albums + Permissions (20파일, 171호출)
+## Phase 1: App + Grid (29호출, 5파일)
 
-| 그룹 | 파일 수 | 호출 수 | Logger | String(format:) |
-|------|---------|---------|--------|----------------|
-| App | 2 | 21 | `.app` | - |
-| Grid | 13 | 88 | `.grid` / `.selection` | 19곳 |
-| Albums | 4 | 53 | `.albums` / `.selection` | 3곳 |
-| Permissions | 1 | 9 | `.permission` | - |
+| 파일 | 호출 수 | Logger | String(format:) |
+|------|---------|--------|----------------|
+| `Features/Grid/GridScroll.swift` | 14 | `.performance` / `.pipeline` | **15곳** |
+| `App/SceneDelegate.swift` | 13 | `.app` | - |
+| `App/AppDelegate.swift` | 2 | `.app` | - |
 
-**에러 레벨 분류:**
-- `GridViewController`: "Failed to permanently delete" → `.error`
-- `AlbumGridViewController`: "Failed to permanently delete" → `.error`
-- `TrashAlbumViewController`: "Failed to permanently delete" → `.error`
-- `AlbumsViewController`: "Failed to fetch photos" → `.error`
-- `TrashSelectMode`: "Failed to delete" → `.error`
-- `PermissionViewController`: "Failed to create settings URL" → `.error`
+GridScroll 카테고리 매핑:
+- `[InitialDisplay]`, `[Scroll]`, `[Hitch]`, `[Timing]` → `Logger.performance`
+- `[Preload]` → `Logger.pipeline`
 
-**주의**: `GridScroll.swift`에 String(format:) 9곳 집중
-
-**검증**: Xcode 빌드 (시뮬레이터)
-**커밋**: `refactor(Phase2): App/Grid/Albums/Permissions Logger 마이그레이션`
-
----
-
-## Phase 3: Viewer (8파일, 90호출) — 가장 주의 필요
-
-### 3-1. 일반 변환 (84호출)
-
-| 파일 | Log.print | Log.debug | Logger | String(format:) |
-|------|-----------|-----------|--------|----------------|
-| `VideoPageViewController.swift` | 0 | 27 | `.viewer` | 1곳 |
-| `PhotoPageViewController.swift` | 0 | 24 | `.viewer` | 12곳 |
-| `ViewerViewController.swift` | 8 | 5 | `.viewer` / `.performance` | 5곳 |
-| `VideoControlsOverlay.swift` | 0 | 10 | `.viewer` | - |
-| `ViewerViewController+CoachMarkC.swift` | 8 | 0 | `.coachMark` | - |
-| `ViewerViewController+SimilarPhoto.swift` | 7 | 0 | `.similarPhoto` | 3곳 |
-| `ViewerCoordinator.swift` | 1 | 0 | `.viewer` | 1곳 |
-
-### 3-2. `Log.categories[]` 직접 접근 6곳 처리
-
-**PhotoPageViewController.swift:127-128** — 디버그 UI 토글
-```swift
-// AS-IS
-private var debugOverlayEnabled: Bool {
-    Log.categories["Overlay"] == true
-}
-// TO-BE
-#if DEBUG
-private var debugOverlayEnabled: Bool {
-    ProcessInfo.processInfo.arguments.contains("-debugOverlay")
-}
-#else
-private let debugOverlayEnabled = false
-#endif
-```
-
-**VideoPageViewController.swift:310-315** — 비싼 callStack 연산
-```swift
-// AS-IS
-if Log.categories["Video"] == true {
-    let callStack = Thread.callStackSymbols.prefix(6).joined(separator: "\n")
-    Log.debug("Video", "Call stack:\n\(callStack)")
-}
-// TO-BE: callStack은 길이가 수KB → Logger의 1024바이트 제한 초과
-// print()를 유지하거나 메시지를 분할
-#if DEBUG
-print("[Viewer] Requesting video - index: \(index)")
-print("[Viewer] Call stack:\n\(Thread.callStackSymbols.prefix(6).joined(separator: "\n"))")
-#endif
-```
-
-**ViewerViewController.swift:1290** — 디버그 전용 함수 전체
-```swift
-// 함수 본문 전체를 #if DEBUG로 감싸기
-@objc private func handlePageScrollPan(_ gesture: UIPanGestureRecognizer) {
-    #if DEBUG
-    guard let sv = pageScrollView else { return }
-    guard isTransitioning else { return }
-    // ... Logger.viewer.debug(...)
-    #endif
-}
-```
-
-**ViewerViewController.swift:1324-1339, 1361-1375** — debugSnapshot 호출 포함
-```swift
-// debugSnapshot()은 비싼 연산 → #if DEBUG로 감싸기
-#if DEBUG
-Logger.viewer.debug("willTransition - tid=\(self.transitionId)...")
-current.debugSnapshot(tag: "current@will", transitionId: transitionId)
-#endif
-```
-
-**검증**: Xcode 빌드 + 시뮬레이터에서 뷰어 스와이프/비디오 재생 확인
-**커밋**: `refactor(Phase3): Viewer Logger 마이그레이션 + categories[] 대체`
-
----
-
-## Phase 4: SimilarPhoto + AutoCleanup (13파일, 127호출)
-
-| 그룹 | 파일 수 | 호출 수 | Logger | String(format:) |
-|------|---------|---------|--------|----------------|
-| SimilarPhoto/Analysis | 8 | 72 | `.similarPhoto` / `.faceDetect` | 24곳 |
-| SimilarPhoto/UI | 3 | 25 | `.similarPhoto` | 1곳 |
-| AutoCleanup | 2 | 32 | `.cleanup` | 2곳 |
-
-**주의**: `SimilarityAnalysisQueue.swift`에 String(format:) 13곳, `YuNetDebugTest.swift`에 10곳 집중
+**에러 레벨**: AppDelegate "Memory warning" → `.notice`
 
 **검증**: Xcode 빌드
-**커밋**: `refactor(Phase4): SimilarPhoto/AutoCleanup Logger 마이그레이션`
+**커밋**: `refactor(Phase1): App/Grid Logger 마이그레이션`
 
 ---
 
-## Phase 5: Shared + Debug (29파일, 271호출)
+## Phase 2: Albums + SimilarPhoto + CoachMark (27호출, 6파일)
 
-| 그룹 | 파일 수 | 호출 수 | Logger | String(format:) |
-|------|---------|---------|--------|----------------|
-| Shared/Transitions | 3 | 16 | `.transition` | - |
-| Shared/Navigation | 1 | 14 | `.navigation` | - |
-| Shared/Components | 8 | 41 | `.navigation` / `.coachMark` | - |
-| Shared/Analytics | 5 | 16 | `.analytics` | - |
-| Debug | 13 | 169 | `.appDebug` / `.performance` | 18곳 |
+| 파일 | 호출 수 | Logger | String(format:) |
+|------|---------|--------|----------------|
+| `Features/Albums/AlbumsViewController.swift` | 10 | `.albums` | - |
+| `Features/Grid/GridViewController+SimilarPhoto.swift` | 8 | `.similarPhoto` | - |
+| `Features/SimilarPhoto/Analysis/SimilarityAnalysisQueue.swift` | 6 | `.similarPhoto` | - |
+| `Features/Grid/GridDataSourceDriver.swift` | 1 | `.performance` | 1곳 |
+| `Features/Grid/GridViewController+CoachMarkC.swift` | 1 | `.coachMark` | - |
+| `Features/Grid/GridViewController.swift` | 1 | - | 주석 삭제만 |
 
-**주의**: `PreScanBenchmark.swift` 6곳, `CompareAnalysisTester.swift` 5곳, `ModeComparisonTester.swift` 3곳에 String(format:) 집중
+**에러 레벨**:
+- AlbumsViewController: "Failed to fetch photos" → `.error`
+- SimilarityAnalysisQueue: "error:" → `.error`
 
 **검증**: Xcode 빌드
-**커밋**: `refactor(Phase5): Shared/Debug Logger 마이그레이션`
+**커밋**: `refactor(Phase2): Albums/SimilarPhoto/CoachMark Logger 마이그레이션`
 
 ---
 
-## Phase 6: 정리 및 마무리
+## Phase 3: Viewer + Shared (42호출, 13파일)
+
+### Viewer (19호출)
+
+| 파일 | 호출 수 | Logger | String(format:) |
+|------|---------|--------|----------------|
+| `Features/Viewer/ViewerViewController.swift` | 8 | `.viewer` | 3곳 |
+| `Features/Viewer/ViewerViewController+CoachMarkC.swift` | 8 | `.coachMark` | 1곳 (CGRect) |
+| `Features/Viewer/ViewerViewController+SimilarPhoto.swift` | 3 | `.viewer` | 3곳 |
+
+### Shared (23호출)
+
+| 파일 | 호출 수 | Logger | String(format:) |
+|------|---------|--------|----------------|
+| `Shared/Analytics/AnalyticsService+DeleteRestore.swift` | 7 | `.analytics` | - |
+| `Shared/Analytics/AnalyticsService+Session.swift` | 4 | `.analytics` | - |
+| `Shared/Analytics/AnalyticsService+Lifecycle.swift` | 3 | `.analytics` | - |
+| `Shared/Transitions/ZoomDismissalInteractionController.swift` | 3 | `.transition` | - |
+| `Shared/Transitions/ZoomTransitionController.swift` | 3 | `.transition` | - |
+| `Shared/Components/CoachMarkOverlayView.swift` | 2 | `.coachMark` | - |
+| `Shared/Analytics/AnalyticsService.swift` | 1 | `.analytics` | - |
+| `Shared/Analytics/AnalyticsService+Viewing.swift` | 1 | `.analytics` | - |
+| `Features/Grid/PhotoCell.swift` | 1 | - | 주석 삭제만 |
+
+**검증**: Xcode 빌드 + 시뮬레이터 동작 확인
+**커밋**: `refactor(Phase3): Viewer/Shared Logger 마이그레이션`
+
+---
+
+## Phase 4: Debug (161호출, 8파일)
+
+| 파일 | 호출 수 | Logger | String(format:) |
+|------|---------|--------|----------------|
+| `Debug/PreScanBenchmark.swift` | 43 | `.cleanup` | 9곳 |
+| `Debug/CompareAnalysisTester.swift` | 35 | `.cleanup` | 5곳 |
+| `Debug/ModeComparisonTester.swift` | 33 | `.cleanup` | 3곳 |
+| `Debug/CleanupDebug.swift` | 16 | `.cleanup` | 2곳 |
+| `Debug/ButtonInspector.swift` | 11 | `.appDebug` | - |
+| `Debug/AestheticsOnlyTester.swift` | 9 | `.cleanup` | 1곳 |
+| `Debug/LiquidGlassOptimizer.swift` | 7 | `.performance` | - |
+| `Debug/RenderABTest.swift` | 7 | `.performance` | - |
+
+**CleanupDebug 특별 처리**: `Log.debug(category, "msg")` 형태 (동적 카테고리).
+→ `Logger.cleanup.debug("[\(category)] msg")` 로 변환 (카테고리를 메시지에 포함).
+
+**에러 레벨**: ButtonInspector "저장 실패" → `.error`
+
+**검증**: Xcode 빌드
+**커밋**: `refactor(Phase4): Debug Logger 마이그레이션`
+
+---
+
+## Phase 5: Log.swift 삭제 + 정리
 
 1. **`Log.swift` 삭제** (사용자 확인 후)
-2. **잔존 참조 확인**: `grep -r "Log\.print\|Log\.debug\|Log\.categories" Sources/ PickPhoto/`
+2. **잔존 참조 확인**: `grep -r "Log\.print\|Log\.debug" Sources/ PickPhoto/`
 3. **CLAUDE.md 로그 섹션 업데이트**: Logger 사용법으로 재작성
-4. **docs/260217Log-refac.md 상태 업데이트**: 완료로 변경
-5. **최종 빌드**: `swift build` + Xcode 빌드
+4. **최종 빌드**: `swift build` + Xcode 빌드
 
 **검증**:
-- Console.app에서 subsystem 필터로 로그 확인
-- `log stream --predicate 'subsystem == "com.karl.PickPhoto"' --level debug`
+- Console.app에서 subsystem 필터: `log stream --predicate 'subsystem == "com.karl.PickPhoto"' --level debug`
 
-**커밋**: `refactor(Phase6): Log.swift 삭제 + 문서 업데이트 — Logger 마이그레이션 완료`
+**커밋**: `refactor(Phase5): Log.swift 삭제 — Logger 마이그레이션 완료`
 
 ---
 
-## 로그 레벨 분류 기준 (전체 적용)
+## 로그 레벨 분류 기준
 
 | 키워드/패턴 | 레벨 | 예시 |
 |------------|------|------|
-| Failed, Error, 실패 | `.error` | "Failed to save state" |
-| Warning, Memory warning | `.notice` | "Memory warning received" |
-| 초기화 완료, 상태 변경 | `.info` | "PhotoLibrary authorized" |
+| Failed, Error, 실패 | `.error` | "Failed to fetch photos" |
+| Memory warning | `.notice` | "Memory warning received" |
 | 나머지 전부 | `.debug` | "scale: 2.0", "index: 5" |
 
 ---
 
-## String(format:) 발생 현황 (총 94곳, 24파일)
+## String(format:) 발생 현황 (총 41곳, 8파일)
 
 | Phase | 파일 수 | String(format:) 수 | 주요 파일 |
 |-------|---------|-------------------|----------|
-| 1 (AppCore) | 3 | 6 | ImagePipeline(3), ThumbnailCache(2), TrashStore(1) |
-| 2 (Grid/Albums) | 5 | 22 | GridScroll(9), GridViewController(7), TrashAlbumVC(3) |
-| 3 (Viewer) | 5 | 22 | PhotoPageVC(12), ViewerVC(5), ViewerVC+Similar(3) |
-| 4 (Similar/Cleanup) | 4 | 27 | SimilarityAnalysisQueue(13), YuNetDebugTest(10) |
-| 5 (Debug) | 5 | 18 | PreScanBenchmark(6), CompareAnalysis(5) |
-| **합계** | **24** | **94** | |
+| 1 (App+Grid) | 1 | 15 | GridScroll(15) |
+| 2 (Albums/Similar) | 1 | 1 | GridDataSourceDriver(1) |
+| 3 (Viewer/Shared) | 2 | 7 | ViewerVC(3), ViewerVC+Similar(3), ViewerVC+CoachMarkC(1 CGRect) |
+| 4 (Debug) | 5 | 20 | PreScanBM(9), Compare(5), ModeComp(3), CleanupDebug(2), Aesthetics(1) |
+| **합계** | **8** | **41** | |
 
-Phase 0에서 패턴 검증 후 일괄 적용할 변환 전략을 확정한다.
+Phase 0에서 패턴 검증 후 일괄 적용.
+
+---
+
+## 카테고리 매핑 (삭제 후)
+
+| 현재 true 카테고리 | Logger | 주요 파일 |
+|-------------------|--------|----------|
+| AppDelegate, SceneDelegate | `.app` | SceneDelegate, AppDelegate |
+| Viewer:Hitch, Viewer:Swipe, Viewer:Scroll, ViewerPerf | `.viewer` | ViewerVC, ViewerVC+SimilarPhoto |
+| CoachMarkC1, CoachMarkC2, CoachMarkManager | `.coachMark` | ViewerVC+CoachMarkC, GridVC+CoachMarkC, CoachMarkOverlayView |
+| AlbumsViewController | `.albums` | AlbumsViewController |
+| SimilarPhoto | `.similarPhoto` | SimilarityAnalysisQueue, GridVC+SimilarPhoto |
+| ZoomTransition | `.transition` | ZoomTransitionController, ZoomDismissalInteractionController |
+| Analytics | `.analytics` | AnalyticsService (+extensions) |
+| Hitch, Scroll, InitialDisplay, Timing, Performance, LiquidGlass, ABTest | `.performance` | GridScroll, LiquidGlassOptimizer, RenderABTest |
+| Preload | `.pipeline` | GridScroll |
+| QualityAnalyzer, CleanupService, PreScanBM, CompareAnalysis, ModeComparison, TextDetect, AestheticsOnly 등 | `.cleanup` | CleanupDebug, PreScanBM, CompareAnalysisTester, ModeComparisonTester, AestheticsOnlyTester |
+| ButtonInspector, Debug | `.appDebug` | ButtonInspector |
 
 ---
 
 ## 주의사항
 
-1. **`public` 필수**: Logger extension의 모든 static let에 `public` 키워드 필수 (없으면 AppCore 외부에서 접근 불가)
-2. **`import OSLog` 필수**: PickPhoto의 모든 마이그레이션 대상 파일(~71개)에 `import OSLog` 추가 필요 (Swift는 transitive import를 re-export하지 않음)
-3. **OSLogMessage 보간 제약**: Phase 0에서 반드시 검증. `String(format:)`, 삼항 연산자, `.map()??`, `.joined()` 패턴 확인
-4. **메시지 크기 제한**: Logger는 ~1024바이트 제한. callStack 등 긴 메시지는 `#if DEBUG print()` 유지
-5. **`self.` 명시**: Logger 보간이 `@escaping`이므로 클래스 메서드에서 인스턴스 프로퍼티 접근 시 `self.` 필요할 수 있음 (컴파일러가 알려줌, 기계적 수정)
-6. **FileLogger.logThumbEnabled 패턴**: 7곳(GridScroll 5, PhotoCell 2, ImagePipeline 1)에서 `FileLogger.logThumbEnabled` 분기 안에 `Log.print()`를 사용 → Logger로 동일하게 변환, `FileLogger.logThumbEnabled` 분기는 그대로 유지
-7. **debugSnapshot()**: PhotoPageViewController.swift:228에 `#if DEBUG` 없이 존재. 내부에서 `Log.debug()` 사용 → Logger로 변환. 호출부는 이미 계획대로 `#if DEBUG`로 감싸기
-8. **이미 #if DEBUG 안의 Log.print()**: ImagePipeline.swift 3곳에서 존재. Logger.x.debug()로 변환하면 이중 가드가 되지만 기능적 문제 없음. 정리 원하면 `#if DEBUG` 제거 가능 (Logger.debug가 릴리즈에서 자동 제거하므로)
-9. **Privacy**: 초기 마이그레이션에서는 미지정 (`.debug` 레벨은 릴리즈에서 제거). 추후 `.info` 이상 검토
-10. **Git 규칙**: 각 Phase 전후 커밋 (50줄 이상 수정)
-11. **파일 삭제**: Log.swift 삭제는 Phase 6에서 사용자 확인 후 진행
+1. **`public` 필수**: Logger extension의 모든 static let에 `public` 키워드 필수
+2. **`import OSLog` 필수**: 모든 마이그레이션 대상 파일(~29개)에 `import OSLog` 추가 필요
+3. **OSLogMessage 보간**: Phase 0에서 검증. `String(format:)` 41곳 + CGRect 1곳 확인
+4. **`self.` 명시**: 컴파일러가 알려줌, 기계적 수정
+5. **Privacy**: `.debug` 레벨은 릴리즈에서 제거되므로 초기 마이그레이션에서는 미지정
+6. **Git 규칙**: 각 Phase 전후 커밋 (50줄 이상 수정)
+7. **파일 삭제**: Log.swift 삭제는 Phase 5에서 사용자 확인 후 진행
 
 ---
 
-## 수정해야 할 주요 파일 목록
+## 수정 대상 파일 목록
 
-| 파일 | 경로 |
-|------|------|
-| Log.swift (삭제 대상) | `Sources/AppCore/Services/Log.swift` |
-| Logger+App.swift (신규) | `Sources/AppCore/Services/Logger+App.swift` |
-| ViewerViewController.swift | `PickPhoto/PickPhoto/Features/Viewer/ViewerViewController.swift` |
-| PhotoPageViewController.swift | `PickPhoto/PickPhoto/Features/Viewer/PhotoPageViewController.swift` |
-| VideoPageViewController.swift | `PickPhoto/PickPhoto/Features/Viewer/VideoPageViewController.swift` |
-| GridScroll.swift | `PickPhoto/PickPhoto/Features/Grid/GridScroll.swift` |
-| SimilarityAnalysisQueue.swift | `PickPhoto/PickPhoto/Features/SimilarPhoto/Analysis/SimilarityAnalysisQueue.swift` |
-| CLAUDE.md | `/Users/karl/Project/Photos/iOS/CLAUDE.md` |
+| # | 파일 | Phase | 호출 수 |
+|---|------|-------|---------|
+| - | `Sources/AppCore/Services/Logger+App.swift` (신규) | 0 | - |
+| 1 | `Features/Grid/GridScroll.swift` | 1 | 14 |
+| 2 | `App/SceneDelegate.swift` | 1 | 13 |
+| 3 | `App/AppDelegate.swift` | 1 | 2 |
+| 4 | `Features/Albums/AlbumsViewController.swift` | 2 | 10 |
+| 5 | `Features/Grid/GridViewController+SimilarPhoto.swift` | 2 | 8 |
+| 6 | `Features/SimilarPhoto/Analysis/SimilarityAnalysisQueue.swift` | 2 | 6 |
+| 7 | `Features/Grid/GridDataSourceDriver.swift` | 2 | 1 |
+| 8 | `Features/Grid/GridViewController+CoachMarkC.swift` | 2 | 1 |
+| 9 | `Features/Grid/GridViewController.swift` | 2 | 주석 |
+| 10 | `Features/Viewer/ViewerViewController.swift` | 3 | 8 |
+| 11 | `Features/Viewer/ViewerViewController+CoachMarkC.swift` | 3 | 8 |
+| 12 | `Shared/Analytics/AnalyticsService+DeleteRestore.swift` | 3 | 7 |
+| 13 | `Shared/Analytics/AnalyticsService+Session.swift` | 3 | 4 |
+| 14 | `Features/Viewer/ViewerViewController+SimilarPhoto.swift` | 3 | 3 |
+| 15 | `Shared/Analytics/AnalyticsService+Lifecycle.swift` | 3 | 3 |
+| 16 | `Shared/Transitions/ZoomDismissalInteractionController.swift` | 3 | 3 |
+| 17 | `Shared/Transitions/ZoomTransitionController.swift` | 3 | 3 |
+| 18 | `Shared/Components/CoachMarkOverlayView.swift` | 3 | 2 |
+| 19 | `Shared/Analytics/AnalyticsService.swift` | 3 | 1 |
+| 20 | `Shared/Analytics/AnalyticsService+Viewing.swift` | 3 | 1 |
+| 21 | `Features/Grid/PhotoCell.swift` | 3 | 주석 |
+| 22 | `Debug/PreScanBenchmark.swift` | 4 | 43 |
+| 23 | `Debug/CompareAnalysisTester.swift` | 4 | 35 |
+| 24 | `Debug/ModeComparisonTester.swift` | 4 | 33 |
+| 25 | `Debug/CleanupDebug.swift` | 4 | 16 |
+| 26 | `Debug/ButtonInspector.swift` | 4 | 11 |
+| 27 | `Debug/AestheticsOnlyTester.swift` | 4 | 9 |
+| 28 | `Debug/LiquidGlassOptimizer.swift` | 4 | 7 |
+| 29 | `Debug/RenderABTest.swift` | 4 | 7 |
+| - | `Sources/AppCore/Services/Log.swift` (삭제) | 5 | - |
+| - | `CLAUDE.md` (로그 섹션 업데이트) | 5 | - |

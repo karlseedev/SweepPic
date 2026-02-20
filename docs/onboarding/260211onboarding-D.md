@@ -14,25 +14,19 @@
 
 ```
 앱 실행 → 즉시 사전 스캔 시작 (백그라운드)
-  │         └── 최근 사진부터 순차 스캔 (3장 확보 또는 D 트리거까지 계속)
+  │         └── 최근 사진부터 순차 스캔 (3장 확보까지 계속)
   │
-  ├── 사용자 스크롤 → A 코치마크 트리거 (기존)
-  ├── A 표시 중 (~5초+) → 스캔 진행 중 (시간 확보)
+  ├── 사용자 스크롤 → A 코치마크 (기존)
+  ├── 사용자 첫 삭제 → E-1 시스템 피드백 (기존)
   │
-  ├── A dismiss
-  │     ├── 3초 타이머 시작 + 휴지통 감시 시작
-  │     │
-  │     ├── 휴지통 2장 도달 → 즉시 D 트리거
-  │     │   또는
-  │     ├── 3초 경과 → D 트리거
-  │     │
-  │     └── 둘 중 빠른 쪽 (스캔 미완료면 스캔 완료 대기)
+  ├── A 완료 + E-1 완료 + 그리드 3초 체류
+  │     └── 스캔 미완료면 스캔 완료 대기
   │
   └── D 표시
         ├── 정리 버튼 하이라이트 (evenOdd 구멍)
         ├── "보관함에서 저품질 사진이 발견됐어요" + 최하위 3장 썸네일
         ├── [확인] → 탭 모션 on 정리 버튼 → dismiss
-        └── showCleanupMethodSheet() 직접 호출 (휴지통 체크 우회)
+        └── showCleanupMethodSheet() 직접 호출 (삭제대기함 체크 우회)
 ```
 
 ---
@@ -50,10 +44,10 @@
 
 | 파일 | 수정 내용 |
 |------|-----------|
-| `CoachMarkOverlayView.swift` | `.autoCleanup` case 추가, `showAutoCleanup()` 정적 메서드 (썸네일 그리드 레이아웃), `confirmTapped()` D 분기, `updateDimPath()` 조건 추가, `onDismiss` 콜백 프로퍼티 추가 |
+| `CoachMarkOverlayView.swift` | `.autoCleanup` case 추가, `showAutoCleanup()` 정적 메서드 (썸네일 그리드 레이아웃), `confirmTapped()` D 분기, `updateDimPath()` 조건 추가 |
 | `FloatingTitleBar.swift` | `secondRightButtonFrameInWindow()` 접근자 메서드 추가 |
-| `GridViewController.swift` | 앱 시작 직후 사전 스캔 시작 호출 추가 |
-| `GridViewController+CoachMark.swift` | A의 show 시점에 `onDismiss` 콜백 설정 (D 트리거 연결) |
+| `GridViewController.swift` | `viewDidAppear`에 D 타이머 시작, `viewWillDisappear`에 D 타이머 취소, 사전 스캔 시작 호출 추가 |
+| `GridViewController+Cleanup.swift` | `showCleanupMethodSheet()` 접근 수준 `private` → `internal` 변경, `cleanupButtonTapped()`에 D 미완료 시 가로채기 추가 |
 
 ---
 
@@ -141,87 +135,85 @@ func startCoachMarkDPreScanIfNeeded() {
 - D가 이미 표시된 적 있으면 스캔 안 함
 - 스캔은 백그라운드에서 진행, D 트리거 시점까지 최대한 많은 사진 처리
 
-### A dismiss → D 트리거 연결
+### 트리거 1 (자동): 그리드 3초 체류
 
-A의 `show()` 호출 시 `onDismiss` 콜백 설정:
-
-```swift
-// GridViewController+CoachMark.swift — showGridSwipeDeleteCoachMark() 수정
-CoachMarkOverlayView.show(type: .gridSwipeDelete, ...)
-
-// A dismiss 시 D 트리거 체인 시작
-CoachMarkManager.shared.currentOverlay?.onDismiss = { [weak self] in
-    self?.startCoachMarkDTrigger()
-}
-```
-
-### D 트리거 로직
+viewDidAppear에서 조건 체크 + 3초 타이머. 다른 화면에 갔다 오면 타이머 리셋.
 
 ```swift
-func startCoachMarkDTrigger() {
+// viewDidAppear에서 호출
+func startCoachMarkDTimerIfNeeded() {
     guard !CoachMarkType.autoCleanup.hasBeenShown else { return }
+    guard CoachMarkType.gridSwipeDelete.hasBeenShown else { return }  // A 완료 후만
+    guard CoachMarkType.firstDelete.hasBeenShown else { return }      // E-1 완료 후만
 
-    // 사전 스캔은 앱 시작 시 이미 진행 중
-
-    // A dismiss 시점의 휴지통 수 기록
-    let initialTrashCount = TrashStore.shared.trashedCount
-
-    // 3초 타이머
-    var triggered = false
-    DispatchQueue.main.asyncAfter(deadline: .now() + 3.0) { [weak self] in
-        guard !triggered else { return }
-        triggered = true
-        self?.showCoachMarkDWhenReady()
+    coachMarkDTimer?.invalidate()
+    coachMarkDTimer = Timer.scheduledTimer(withTimeInterval: 3.0, repeats: false) { [weak self] _ in
+        // 트리거 1은 스캔 결과 1장 이상일 때만 (0건이면 안 뜸)
+        let count = CoachMarkDPreScanner.shared.result?.lowQualityAssets.count ?? 0
+        guard count > 0 else { return }
+        self?.showCoachMarkD(highlightButton: true)
     }
+}
 
-    // 0.5초 간격 휴지통 감시 (2장 추가 시 즉시 트리거)
-    // Timer 기반, triggered=true 시 invalidate
-    Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) { [weak self] timer in
-        guard !triggered else { timer.invalidate(); return }
-        let current = TrashStore.shared.trashedCount
-        if current >= initialTrashCount + 2 {
-            triggered = true
-            timer.invalidate()
-            self?.showCoachMarkDWhenReady()
-        }
-    }
+// viewWillDisappear에서 호출
+func cancelCoachMarkDTimer() {
+    coachMarkDTimer?.invalidate()
+    coachMarkDTimer = nil
 }
 ```
 
-### 스캔 완료 대기 + 표시
+### 트리거 2 (수동): 정리 버튼 탭
+
+D 미완료 상태에서 정리 버튼 탭 시, 정리 플로우 대신 D를 먼저 표시.
 
 ```swift
-func showCoachMarkDWhenReady() {
-    if CoachMarkDPreScanner.shared.isComplete {
-        showCoachMarkD()
-    } else {
-        // 스캔 완료 대기
-        CoachMarkDPreScanner.shared.onComplete = { [weak self] in
-            self?.showCoachMarkD()
-        }
+@objc func cleanupButtonTapped() {
+    // D 미완료 + 스캔 결과 1장 이상 → D 먼저 표시 → [확인] → 정리 플로우 이어서 진행
+    let scanCount = CoachMarkDPreScanner.shared.result?.lowQualityAssets.count ?? 0
+    if !CoachMarkType.autoCleanup.hasBeenShown && scanCount > 0 {
+        showCoachMarkD(highlightButton: false)
+        return
     }
-}
 
-func showCoachMarkD() {
+    // D 완료 → 기존 정리 플로우
+    cleanupTracker = CleanupFlowTracker()
+    if !CleanupService.shared.isTrashEmpty() { ... }
+    showCleanupMethodSheet()
+}
+```
+
+### D 표시 (트리거 1, 2 공용)
+
+```swift
+/// - Parameter highlightButton: true면 정리 버튼에 구멍 하이라이트 (트리거 1), false면 구멍 없음 (트리거 2)
+func showCoachMarkD(highlightButton: Bool) {
     // 재검증 가드
     guard !CoachMarkType.autoCleanup.hasBeenShown else { return }
-    guard !CoachMarkManager.shared.isShowing else { return }
+    guard !CoachMarkManager.shared.isShowing else {
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
+            self?.showCoachMarkD(highlightButton: highlightButton)
+        }
+        return
+    }
     guard !UIAccessibility.isVoiceOverRunning else { return }
     guard view.window != nil else { return }
     guard navigationController?.topViewController === self else { return }
     guard presentedViewController == nil else { return }
     guard !isSelectMode else { return }
     guard !isScrolling else {
-        // 스크롤 중이면 스크롤 정지 후 재시도
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
-            self?.showCoachMarkD()
+            self?.showCoachMarkD(highlightButton: highlightButton)
         }
         return
     }
 
     guard let window = view.window else { return }
-    guard let cleanupFrame = getCleanupButtonFrame(in: window) else { return }
 
+    // 트리거 1: 정리 버튼 하이라이트 (사용자가 버튼 위치를 모름)
+    // 트리거 2: 하이라이트 없음 (사용자가 이미 버튼을 눌렀으므로)
+    let cleanupFrame: CGRect? = highlightButton ? getCleanupButtonFrame(in: window) : nil
+
+    // 스캔 결과: 있으면 썸네일, 없으면 텍스트 폴백 (대기 안 함)
     let scanResult = CoachMarkDPreScanner.shared.result
 
     CoachMarkOverlayView.showAutoCleanup(
@@ -229,12 +221,22 @@ func showCoachMarkD() {
         scanResult: scanResult,
         in: window,
         onConfirm: { [weak self] in
-            // 휴지통 체크 우회하여 정리 플로우 직접 진입
+            // 삭제대기함 체크 우회하여 정리 플로우 직접 진입
             self?.showCleanupMethodSheet()
         }
     )
 }
 ```
+
+### 시나리오 검증
+
+| 시나리오 | 흐름 | D 표시 | 버튼 하이라이트 |
+|---------|------|--------|---------------|
+| 이상적 흐름 | A→E-1→그리드 3초 (스캔 3장) | 썸네일 3장 | ✅ |
+| 즉시 버튼 탭 (스캔 초기) | 정리 버튼 탭 (스캔 0장) | **D 안 끼움** | — |
+| 중간에 버튼 탭 (스캔 2장) | 정리 버튼 탭 (스캔 2장) | 썸네일 2장 | ❌ |
+| 깨끗한 앨범 (자동) | A→E-1→그리드 3초 (스캔 0장) | **D 안 뜸** | — |
+| 깨끗한 앨범 (수동) | 정리 버튼 탭 (스캔 0장) | **D 안 끼움** | — |
 
 ---
 
@@ -272,6 +274,8 @@ func secondRightButtonFrameInWindow(_ window: UIWindow) -> CGRect? {
 
 ## 4. 레이아웃 (showAutoCleanup)
 
+### 트리거 1 (자동): 버튼 하이라이트 + 썸네일
+
 ```
 ┌──────────────────────────────────────┐
 │  사진보관함         ┌정리┐ [선택] ...  │ ← 정리 버튼 evenOdd 구멍 (pill shape)
@@ -281,7 +285,7 @@ func secondRightButtonFrameInWindow(_ window: UIWindow) -> CGRect? {
 │  보관함에서 저품질 사진이 발견됐어요   │ ← 타이틀 (17pt medium, white)
 │                                      │
 │       ┌─────┐  ┌─────┐  ┌─────┐     │
-│       │     │  │     │  │     │     │ ← 점수 최하위 3장 썸네일
+│       │     │  │     │  │     │     │ ← 최하위 3장 썸네일
 │       │     │  │     │  │     │     │   (ImagePipeline 로딩)
 │       └─────┘  └─────┘  └─────┘     │   cornerRadius 8, 균등 간격
 │                                      │
@@ -294,7 +298,39 @@ func secondRightButtonFrameInWindow(_ window: UIWindow) -> CGRect? {
 └──────────────────────────────────────┘
 ```
 
-### 구멍 모양
+### 트리거 2 (수동): 하이라이트 없음 + 썸네일
+
+```
+┌──────────────────────────────────────┐
+│  ██████████████████████████████████  │ ← 구멍 없음 (전체 딤)
+│  ██████████████████████████████████  │
+│                                      │
+│  보관함에서 저품질 사진이 발견됐어요   │ ← 타이틀
+│                                      │
+│       ┌─────┐  ┌─────┐  ┌─────┐     │
+│       │     │  │     │  │     │     │ ← 썸네일
+│       │     │  │     │  │     │     │
+│       └─────┘  └─────┘  └─────┘     │
+│                                      │
+│    흔들리거나 초점이 맞지 않은        │
+│    사진들을 AI가 자동으로 찾아주는    │ ← 설명
+│    정리 기능입니다                    │
+│                                      │
+│              [ 확인 ]                │
+│                                      │
+└──────────────────────────────────────┘
+```
+
+### 문구 정리
+
+| 조건 | 타이틀 | 설명 |
+|------|--------|------|
+| 트리거 1 (썸네일 있음) | "보관함에서 저품질 사진이 발견됐어요" | "흔들리거나 초점이 맞지 않은 사진들을 AI가 자동으로 찾아주는 정리 기능을 사용해보세요" |
+| 트리거 1 + 0건 | **D 안 뜸** | — |
+| 트리거 2 + 썸네일 있음 | "보관함에서 저품질 사진이 발견됐어요" | "흔들리거나 초점이 맞지 않은 사진들을 AI가 자동으로 찾아주는 정리 기능입니다" |
+| 트리거 2 + 0건 | **D 안 끼움** — 정상 정리 플로우 진행 | — |
+
+### 구멍 모양 (트리거 1만 해당)
 
 - iOS 16~25 (GlassTextButton): pill shape → `cornerRadius = 버튼높이/2` (22pt)
 - iOS 26+ (UIBarButtonItem): 시스템 버튼 모양에 맞게 `cornerRadius = 8`
@@ -305,24 +341,13 @@ func secondRightButtonFrameInWindow(_ window: UIWindow) -> CGRect? {
 - 정사각형, cornerRadius 8
 - 중앙 정렬, 수평 균등 간격 8pt
 - 발견 3장 미만: 발견된 만큼만 표시 (중앙 정렬)
-- 0건 (폴백): 썸네일 없이 텍스트만
-
-### 0건 폴백 레이아웃
-
-```
-│  보관함의 사진 속에서                 │
-│  저품질 사진을 자동으로 찾아주는      │ ← 타이틀+설명 통합
-│  정리 기능을 사용해보세요             │
-│                                      │
-│              [ 확인 ]                │
-```
 
 ### 썸네일 로딩
 
 ```swift
-// 스캔 결과의 worstAssets에서 썸네일 로딩
+// 스캔 결과의 lowQualityAssets에서 썸네일 로딩
 let size = CGSize(width: thumbSize * scale, height: thumbSize * scale)
-for (i, asset) in scanResult.worstAssets.enumerated() {
+for (i, asset) in scanResult.lowQualityAssets.enumerated() {
     ImagePipeline.shared.requestImage(for: asset, targetSize: size, quality: .fast) {
         image, _ in
         thumbnailViews[i].image = image
@@ -346,47 +371,34 @@ for (i, asset) in scanResult.worstAssets.enumerated() {
         // D: 재진입 방지 → 탭 모션 → onConfirm
         confirmButton.isEnabled = false
         startD_ConfirmSequence()
+    // E-1/E-2/E-3 case는 260211onboarding-E.md 참조
     }
 }
 ```
 
 ### startD_ConfirmSequence
 
-C의 `startC_ConfirmSequence()` 패턴 재사용:
+트리거에 따라 동작이 다름:
 
+**트리거 1 (자동 — 사용자가 버튼 위치를 모름):**
 ```
 1. 텍스트 + 썸네일 + 확인 버튼 페이드아웃 (0.2초)
-2. performCTapMotion(at: 정리 버튼 중앙) — C의 기존 메서드 재사용
+2. 정리 버튼 위치에 탭 모션 (C의 performCTapMotion 재사용)
 3. dismiss() — markAsShown() 포함
-4. onConfirm?() — showCleanupMethodSheet() 호출
+4. onConfirm?() — showCleanupMethodSheet() 호출 (정리 플로우 자동 진입)
 ```
 
-C와의 차이: D는 화면 전환이 없으므로 `isWaitingForC2` 같은 복잡한 상태 관리 불필요. dismiss 후 바로 onConfirm.
-
----
-
-## 6. onDismiss 콜백 (CoachMarkOverlayView.swift)
-
-A dismiss 시 D 트리거를 연결하기 위해 추가:
-
-```swift
-// 프로퍼티 추가
-var onDismiss: (() -> Void)?
-
-// dismiss() 메서드의 completion 블록에서 호출
-UIView.animate(withDuration: 0.2, animations: {
-    self.alpha = 0
-}) { _ in
-    self.snapshotView?.removeFromSuperview()
-    self.snapshotView = nil
-    self.removeFromSuperview()
-    self.onDismiss?()  // ← 추가
-}
+**트리거 2 (수동 — 사용자가 이미 버튼을 탭함):**
+```
+1. 텍스트 + 썸네일 + 확인 버튼 페이드아웃 (0.2초)
+2. 탭 모션 없음
+3. dismiss() — markAsShown() 포함
+4. onConfirm?() — showCleanupMethodSheet() 호출 (가로챈 정리 플로우 이어서 진행)
 ```
 
 ---
 
-## 7. CoachMarkType 확장
+## 6. CoachMarkType 확장
 
 ```swift
 enum CoachMarkType: String {
@@ -399,7 +411,7 @@ enum CoachMarkType: String {
 
 ---
 
-## 8. updateDimPath 분기
+## 7. updateDimPath 분기
 
 ```swift
 // .autoCleanup 추가
@@ -419,28 +431,33 @@ if coachMarkType == .gridSwipeDelete || coachMarkType == .similarPhoto || coachM
 
 | 대상 | 방지 방법 |
 |------|-----------|
-| A → D 순서 | A의 `onDismiss`에서 D 트리거 시작. A 미완료 시 D 발동 안 함 |
+| E → D 순서 | `CoachMarkType.firstDelete.hasBeenShown` 가드. E-1 미완료 시 D 발동 안 함 |
+| A → D 순서 | `CoachMarkType.gridSwipeDelete.hasBeenShown` 가드. A 미완료 시 D 발동 안 함 |
+| B 끼어들기 | viewDidAppear 기반 3초 타이머. 뷰어 가면 타이머 취소, 돌아오면 새 3초 시작 |
 | D 표시 중 다른 코치마크 | `isShowing` 가드. D 표시 중 B/C 차단 |
+| 다른 코치마크 표시 중 D | `isShowing` 가드 + 0.5초 재시도. 끝나면 자연스럽게 D 표시 |
 | 스크롤 중 D 표시 | `!isScrolling` 가드. 스크롤 중이면 0.5초 후 재시도 |
 | Select 모드 | `!isSelectMode` 가드 |
-| viewWillDisappear | 기존 `dismissCurrent()`가 D도 처리 |
-| 휴지통 체크 | D의 onConfirm에서 `showCleanupMethodSheet()` 직접 호출 (우회) |
+| viewWillDisappear | 타이머 취소 + 기존 `dismissCurrent()`가 D도 처리 |
+| 삭제대기함 체크 | D의 onConfirm에서 `showCleanupMethodSheet()` 직접 호출 (우회) |
 
 ---
 
 ## 검증 체크리스트
 
-1. 그리드 진입 → 스크롤 → A 표시 → A dismiss → 3초 후 D 표시
-2. A dismiss 후 사진 2장 스와이프 삭제 → 3초 전에 D 즉시 표시
-3. D에서 정리 버튼이 pill shape 구멍으로 하이라이트되는지
-4. 최하위 3장 썸네일이 표시되는지 (blur/dark 사진)
-5. 0건 시 텍스트 폴백으로 전환되는지
-6. [확인] → 탭 모션 → dismiss → 정리 방법 선택 시트 표시
-7. 휴지통에 사진이 있어도 정리 시트가 정상 표시되는지 (우회 확인)
-8. iOS 16~25 / iOS 26+ 각각 정리 버튼 위치 확인
-9. 표시 중 모든 터치 차단 ([확인] 외)
-10. VoiceOver 활성 시 D 안 뜨는지
-11. D 표시 중 화면 이탈 → dismiss
-12. 앱 재실행 시 D 안 나타남 (UserDefaults)
-13. 스크롤 중 D 트리거 시 스크롤 멈출 때까지 대기하는지
-14. A가 아직 안 뜬 상태(사진 0장 등) → D 트리거 안 됨
+1. E-1 완료 + A 완료 + 그리드 3초 체류 → D 표시
+2. E-1 미완료 → 그리드에서 아무리 오래 있어도 D 안 뜸
+3. A 미완료 → D 안 뜸
+4. 그리드 → 뷰어 → 그리드 복귀 → 3초 후 D (타이머 리셋 확인)
+5. D에서 정리 버튼이 pill shape 구멍으로 하이라이트되는지
+6. 최하위 3장 썸네일이 표시되는지 (blur/dark 사진)
+7. 0건 시 텍스트 폴백으로 전환되는지
+8. [확인] → 탭 모션 → dismiss → 정리 방법 선택 시트 표시
+9. 삭제대기함에 사진이 있어도 정리 시트가 정상 표시되는지 (우회 확인)
+10. iOS 16~25 / iOS 26+ 각각 정리 버튼 위치 확인
+11. 표시 중 모든 터치 차단 ([확인] 외)
+12. VoiceOver 활성 시 D 안 뜨는지
+13. D 표시 중 화면 이탈 → dismiss
+14. 앱 재실행 시 D 안 나타남 (UserDefaults)
+15. 스크롤 중 D 트리거 시 스크롤 멈출 때까지 대기하는지
+16. B 표시 중 3초 경과 → B 끝난 후 D 표시 (isShowing 재시도)
