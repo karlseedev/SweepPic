@@ -300,11 +300,10 @@ extension GridViewController {
             for (assetID, cell) in cellsToUpdate {
                 let state = await SimilarityCache.shared.getState(for: assetID)
 
-                // 그룹에 속한 경우: 멤버 수 조회 (actor 메서드이므로 MainActor.run 밖에서)
-                if case .analyzed(true, let groupID?) = state {
-                    let members = await SimilarityCache.shared.getGroupMembers(groupID: groupID)
+                // 그룹에 속한 경우: 뱃지 표시
+                if case .analyzed(true, _) = state {
                     await MainActor.run {
-                        self.showBadge(on: cell, count: members.count)
+                        self.showBadge(on: cell)
                     }
                 } else {
                     await MainActor.run {
@@ -315,17 +314,16 @@ extension GridViewController {
         }
     }
 
-    /// 셀에 Glass+Gradient 뱃지 표시
-    /// - Parameters:
-    ///   - cell: 뱃지를 표시할 PhotoCell
-    ///   - count: 그룹 멤버 수
-    private func showBadge(on cell: PhotoCell, count: Int) {
+    /// 셀에 코너 삼각형 뱃지 표시
+    /// - 흰색 테두리 + 우상단 삼각형 (등호 아이콘)
+    /// - Parameter cell: 뱃지를 표시할 PhotoCell
+    private func showBadge(on cell: PhotoCell) {
         // 스크롤 중이면 뱃지 표시하지 않음 (방어 코드)
         guard !isScrolling else { return }
 
         // 기존 뱃지 찾기 (subviews에서)
         if let existing = cell.contentView.subviews.first(where: { $0 is SimilarGroupBadgeView }) as? SimilarGroupBadgeView {
-            existing.show(count: count)
+            existing.show()
             // 코치마크 C-1 트리거 시도 (기존 뱃지에서도 재트리거 필요 — 뷰어에서 복귀 시)
             triggerCoachMarkCIfNeeded(for: cell)
             return
@@ -340,19 +338,12 @@ extension GridViewController {
             badge = SimilarGroupBadgeView()
         }
 
-        // 우측 상단 위치 설정
-        let margin = SimilarGroupBadgeView.BadgeConstants.margin
-        let badgeW = SimilarGroupBadgeView.BadgeConstants.width
-        let badgeH = SimilarGroupBadgeView.BadgeConstants.height
-        badge.frame = CGRect(
-            x: cell.contentView.bounds.width - badgeW - margin,
-            y: margin,
-            width: badgeW,
-            height: badgeH
-        )
+        // 셀 전체를 덮도록 설정 (테두리 + 삼각형 함께 표현)
+        badge.frame = cell.contentView.bounds
+        badge.autoresizingMask = [.flexibleWidth, .flexibleHeight]
 
         cell.contentView.addSubview(badge)
-        badge.show(count: count)
+        badge.show()
 
         // 코치마크 C-1 트리거 시도 (첫 뱃지에서만 동작)
         triggerCoachMarkCIfNeeded(for: cell)
@@ -416,11 +407,10 @@ extension GridViewController {
         Task {
             let state = await SimilarityCache.shared.getState(for: assetID)
 
-            // 그룹에 속한 경우: 멤버 수 조회 (actor 메서드이므로 MainActor.run 밖에서)
-            if case .analyzed(true, let groupID?) = state {
-                let members = await SimilarityCache.shared.getGroupMembers(groupID: groupID)
+            // 그룹에 속한 경우: 뱃지 표시
+            if case .analyzed(true, _) = state {
                 await MainActor.run {
-                    self.showBadge(on: cell, count: members.count)
+                    self.showBadge(on: cell)
                 }
             } else {
                 await MainActor.run {
