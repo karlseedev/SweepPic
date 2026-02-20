@@ -563,6 +563,18 @@ extension LiquidGlassTabBar {
         guard tabButtons.count > 2 else { return }
         tabButtons[2].updateBadge(count: count)
     }
+
+    /// 특정 탭 버튼의 frame 반환 (지정된 좌표 공간 기준)
+    /// E-1+E-2 시퀀스에서 삭제대기함 탭을 가리키는 손가락 모션 위치로 사용
+    /// - Parameters:
+    ///   - index: 탭 인덱스 (0: 보관함, 1: 앨범, 2: 삭제대기함)
+    ///   - coordinateSpace: 변환할 좌표 공간 (보통 window)
+    /// - Returns: 해당 좌표 공간에서의 frame (유효하지 않으면 nil)
+    func tabButtonFrame(at index: Int, in coordinateSpace: UICoordinateSpace) -> CGRect? {
+        guard index >= 0, index < tabButtons.count else { return nil }
+        let button = tabButtons[index]
+        return button.convert(button.bounds, to: coordinateSpace)
+    }
 }
 
 // MARK: - Public Methods (Height Calculation)

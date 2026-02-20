@@ -911,6 +911,10 @@ extension BaseGridViewController {
                 AnalyticsService.shared.countGridSwipeDelete(source: analyticsSource)
                 self.trashStore.moveToTrash(assetID) { [weak self] result in
                     self?.handleSwipeResult(result, cell: cell)
+                    // E-1+E-2: 첫 삭제 시 삭제 시스템 안내 시퀀스 트리거
+                    if case .success = result {
+                        self?.showDeleteSystemGuideIfNeeded()
+                    }
                 }
             } else {
                 AnalyticsService.shared.countGridSwipeRestore(source: analyticsSource)
@@ -1036,5 +1040,21 @@ extension BaseGridViewController: UIGestureRecognizerDelegate {
             return true
         }
         return false
+    }
+}
+
+// MARK: - E-1+E-2: Delete System Guide Trigger
+
+extension BaseGridViewController {
+
+    /// 첫 삭제 시 삭제 시스템 안내 시퀀스 표시 (E-1+E-2)
+    /// moveToTrash 성공 후 호출
+    func showDeleteSystemGuideIfNeeded() {
+        guard !CoachMarkType.firstDeleteGuide.hasBeenShown else { return }
+        guard !CoachMarkManager.shared.isShowing else { return }
+        guard !UIAccessibility.isVoiceOverRunning else { return }
+        guard let window = view.window else { return }
+
+        CoachMarkOverlayView.showDeleteSystemGuide(in: window)
     }
 }

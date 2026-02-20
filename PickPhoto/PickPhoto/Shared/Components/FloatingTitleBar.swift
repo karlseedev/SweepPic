@@ -539,6 +539,15 @@ final class FloatingTitleBar: UIView {
         secondRightButtonAction = secondAction
     }
 
+    /// 두 번째 오른쪽 버튼(비우기)의 window 좌표 frame 반환
+    /// E-1+E-2 시퀀스 Step 3에서 하이라이트 구멍 위치로 사용
+    /// 버튼이 숨겨져 있거나 window가 없으면 nil 반환
+    func secondRightButtonFrameInWindow() -> CGRect? {
+        guard !secondRightButton.isHidden,
+              let window = secondRightButton.window else { return nil }
+        return secondRightButton.convert(secondRightButton.bounds, to: window)
+    }
+
     /// 두 번째 오른쪽 버튼 숨기기 (일반 모드 복원 시)
     func hideSecondRightButton() {
         secondRightButton.isHidden = true

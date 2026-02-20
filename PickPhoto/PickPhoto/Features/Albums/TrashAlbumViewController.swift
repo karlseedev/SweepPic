@@ -550,11 +550,23 @@ final class TrashAlbumViewController: BaseGridViewController {
         Task {
             do {
                 try await trashStore.emptyTrash()
+                // E-3: 첫 비우기 완료 안내 트리거
+                showFirstEmptyFeedbackIfNeeded()
             } catch {
-                // 취소 또는 오류 시 조용히 무시 (사진이 그대로 남아있음)
+                // 취소 또는 오류 시 조용히 무시 (사진이 그대로 남아있음, E-3 안 뜸)
             }
             // 성공/실패 무관하게 UI 갱신 (onStateChange 콜백으로 처리됨)
         }
+    }
+
+    /// 첫 비우기 완료 시 E-3 안내 표시
+    private func showFirstEmptyFeedbackIfNeeded() {
+        guard !CoachMarkType.firstEmpty.hasBeenShown else { return }
+        guard !CoachMarkManager.shared.isShowing else { return }
+        guard !UIAccessibility.isVoiceOverRunning else { return }
+        guard let window = view.window else { return }
+
+        CoachMarkOverlayView.showFirstEmptyFeedback(in: window)
     }
 
     // MARK: - Cell Selection (Override)

@@ -221,6 +221,16 @@ final class FloatingOverlayContainer: UIView {
 
     // MARK: - Public Methods
 
+    /// 특정 탭 버튼의 frame 반환 (지정된 좌표 공간 기준)
+    /// LiquidGlassTabBar.tabButtonFrame 위임
+    /// - Parameters:
+    ///   - index: 탭 인덱스 (0: 보관함, 1: 앨범, 2: 삭제대기함)
+    ///   - coordinateSpace: 변환할 좌표 공간
+    /// - Returns: 해당 좌표 공간에서의 frame (유효하지 않으면 nil)
+    func tabButtonFrame(at index: Int, in coordinateSpace: UICoordinateSpace) -> CGRect? {
+        return tabBar.tabButtonFrame(at: index, in: coordinateSpace)
+    }
+
     /// Select 모드 진입
     /// GridViewController에서 호출
     func enterSelectMode() {

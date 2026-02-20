@@ -29,6 +29,8 @@ enum CoachMarkType: String {
     case gridSwipeDelete = "coachMark_gridSwipe"       // A: 그리드 스와이프 삭제
     case viewerSwipeDelete = "coachMark_viewerSwipe"   // B: 뷰어 스와이프 삭제
     case similarPhoto = "coachMark_similarPhoto"       // C: 유사사진·얼굴 비교 (C-1 + C-2 통합 플래그)
+    case firstDeleteGuide = "coachMark_firstDeleteGuide"  // E-1+E-2: 삭제 시스템 안내 (통합 시퀀스)
+    case firstEmpty = "coachMark_firstEmpty"               // E-3: 첫 비우기 완료 안내
 
     /// UserDefaults 키
     var shownKey: String { rawValue }
@@ -246,7 +248,7 @@ final class CoachMarkOverlayView: UIView {
     // MARK: - Layout
 
     /// 딤 레이어 경로 업데이트
-    /// A/C: evenOdd로 하이라이트 구멍 / B: 구멍 없음 (전체 딤)
+    /// A/C: evenOdd로 하이라이트 구멍 / B/E: 구멍 없음 또는 동적 구멍
     func updateDimPath() {
         let fullPath = UIBezierPath(rect: bounds)
         // A, C: 하이라이트 영역은 투명 (셀/버튼 크기 + 약간의 여유)
@@ -256,7 +258,14 @@ final class CoachMarkOverlayView: UIView {
             let holePath = UIBezierPath(roundedRect: holeRect, cornerRadius: 8)
             fullPath.append(holePath)
         }
-        // B: 구멍 없음 (dim 전체 영역)
+        // E-1+E-2: Step 3에서 비우기 버튼 하이라이트 (highlightFrame이 .zero가 아닐 때만)
+        if coachMarkType == .firstDeleteGuide && highlightFrame != .zero {
+            let margin: CGFloat = 6
+            let holeRect = highlightFrame.insetBy(dx: -margin, dy: -margin)
+            let holePath = UIBezierPath(roundedRect: holeRect, cornerRadius: 10)
+            fullPath.append(holePath)
+        }
+        // B, E-3: 구멍 없음 (dim 전체 영역)
         dimLayer.path = fullPath.cgPath
     }
 
@@ -453,7 +462,7 @@ final class CoachMarkOverlayView: UIView {
     // MARK: - Dismiss
 
     /// 코치마크 dismiss
-    /// - A/B: markAsShown 자동 호출
+    /// - A/B/E: markAsShown 자동 호출
     /// - C: markAsShown 호출하지 않음 (present 성공 후 별도 호출)
     func dismiss() {
         guard superview != nil else { return }
@@ -469,6 +478,9 @@ final class CoachMarkOverlayView: UIView {
 
         // C 상태 리셋
         CoachMarkManager.shared.resetC2State()
+
+        // E-1+E-2: 시퀀스 전용 리소스 정리
+        cleanupSystemFeedbackIfNeeded()
 
         UIView.animate(withDuration: 0.2, animations: {
             self.alpha = 0
@@ -506,6 +518,17 @@ final class CoachMarkOverlayView: UIView {
             confirmButton.isEnabled = false
             // C 전용 시퀀스 (CoachMarkOverlayView+CoachMarkC.swift)
             startC_ConfirmSequence()
+        case .firstDeleteGuide:
+            // E-1+E-2: Step 1 [확인] → 탭 전환 + 순차 텍스트, Step 3 [확인] → dismiss
+            if systemFeedbackCurrentStep == 1 {
+                confirmButton.isEnabled = false
+                transitionToStep2()
+            } else {
+                dismiss()
+            }
+        case .firstEmpty:
+            // E-3: 즉시 dismiss
+            dismiss()
         }
     }
 

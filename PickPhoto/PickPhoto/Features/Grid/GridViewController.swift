@@ -926,6 +926,9 @@ extension GridViewController: ViewerViewControllerDelegate {
 
         // [SimilarPhoto] 그룹 무효화 처리 (T022)
         handleSimilarPhotoAssetDeleted(assetID: assetID)
+
+        // E-1+E-2: 첫 삭제 시 삭제 시스템 안내 시퀀스 트리거
+        showDeleteSystemGuideIfNeeded()
     }
 
     /// 사진 복구 요청 (삭제대기함에서 복원)
