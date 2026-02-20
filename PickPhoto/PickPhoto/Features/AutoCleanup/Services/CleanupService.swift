@@ -5,7 +5,7 @@
 //  Created by Claude on 2026-01-23.
 //
 //  정리 서비스 구현
-//  - 저품질 사진 탐색 및 휴지통 이동
+//  - 저품질 사진 탐색 및 삭제대기함 이동
 //  - 비동기 스캔 및 취소 지원
 //  - 배치 처리 (100장 단위)
 //  - 동시성 제어 (4개)
@@ -40,7 +40,7 @@ final class CleanupService: CleanupServiceProtocol {
     /// 품질 분석기
     private let qualityAnalyzer: QualityAnalyzer
 
-    /// 휴지통 저장소
+    /// 삭제대기함 저장소
     private let trashStore: TrashStoreProtocol
 
     // MARK: - State
@@ -82,7 +82,7 @@ final class CleanupService: CleanupServiceProtocol {
     /// - Parameters:
     ///   - sessionStore: 세션 저장소
     ///   - qualityAnalyzer: 품질 분석기
-    ///   - trashStore: 휴지통 저장소
+    ///   - trashStore: 삭제대기함 저장소
     init(
         sessionStore: CleanupSessionStoreProtocol = CleanupSessionStore.shared,
         qualityAnalyzer: QualityAnalyzer = .shared,
@@ -93,9 +93,9 @@ final class CleanupService: CleanupServiceProtocol {
         self.trashStore = trashStore
     }
 
-    // MARK: - 휴지통 상태 확인
+    // MARK: - 삭제대기함 상태 확인
 
-    /// 휴지통이 비어있는지 확인
+    /// 삭제대기함이 비어있는지 확인
     func isTrashEmpty() -> Bool {
         return trashStore.trashedCount == 0
     }
@@ -104,7 +104,7 @@ final class CleanupService: CleanupServiceProtocol {
 
     /// 정리 시작
     ///
-    /// - Important: 취소 시 아무것도 휴지통으로 이동하지 않음
+    /// - Important: 취소 시 아무것도 삭제대기함으로 이동하지 않음
     func startCleanup(
         method: CleanupMethod,
         mode: JudgmentMode,
@@ -153,7 +153,7 @@ final class CleanupService: CleanupServiceProtocol {
             isCancelled = true
         }
 
-        // 임시 데이터 정리 (취소 시 휴지통으로 이동하지 않음)
+        // 임시 데이터 정리 (취소 시 삭제대기함으로 이동하지 않음)
         foundAssetIDs = []
 
         // 세션 상태 업데이트
@@ -199,7 +199,7 @@ final class CleanupService: CleanupServiceProtocol {
             throw CleanupError.alreadyRunning
         }
 
-        // 휴지통 비어있는지 확인
+        // 삭제대기함 비어있는지 확인
         if !isTrashEmpty() {
             throw CleanupError.trashNotEmpty
         }
@@ -375,7 +375,7 @@ final class CleanupService: CleanupServiceProtocol {
                 totalCount: totalCount,
                 currentIndex: batchEndIndex
             ) {
-                // 정상 종료: 휴지통으로 이동
+                // 정상 종료: 삭제대기함으로 이동
                 moveToTrash(assetIDs: foundAssetIDs)
 
                 let result: CleanupResult
@@ -517,14 +517,14 @@ final class CleanupService: CleanupServiceProtocol {
         return nil
     }
 
-    /// 휴지통으로 이동
+    /// 삭제대기함으로 이동
     ///
     /// TrashStore 연동 방식 (T074 문서화):
     /// - 사용 API: `TrashStore.moveToTrash(assetIDs:)` (동기, 배열 기반)
     /// - 저장 위치: Documents/TrashState.json (파일 기반, 앱 재시작 후 유지)
     /// - 실패 처리: 부분 실패 시 건너뛰기 (롤백 없음, CHK040 결정사항)
     /// - 복구 방법: `TrashStore.restore(assetIDs:)` 호출로 복구 가능
-    ///   - 휴지통 UI에서 개별 또는 일괄 복구
+    ///   - 삭제대기함 UI에서 개별 또는 일괄 복구
     ///   - 복구 시 trashedAssetIDs에서 제거, GridViewController 자동 갱신
     /// - 완전 삭제: `TrashStore.permanentlyDelete(assetIDs:)` 또는 `emptyTrash()`
     ///   - 시스템 PHPhotoLibrary.performChanges 팝업 표시 후 삭제

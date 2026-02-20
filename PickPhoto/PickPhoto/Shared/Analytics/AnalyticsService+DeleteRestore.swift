@@ -1,5 +1,5 @@
 // AnalyticsService+DeleteRestore.swift
-// 이벤트 4-1(보관함/앨범 삭제·복구) + 이벤트 4-2(휴지통) 세션 누적 카운터
+// 이벤트 4-1(보관함/앨범 삭제·복구) + 이벤트 4-2(삭제대기함) 세션 누적 카운터
 //
 // - DeleteSource(library/album): 진입 경로 동시 추적
 // - 참조: docs/db/260212db-Archi.md 섹션 4.5, 5.4
@@ -55,7 +55,7 @@ extension AnalyticsService {
         }
     }
 
-    /// 뷰어 휴지통 버튼 카운터 증가
+    /// 뷰어 삭제대기함 버튼 카운터 증가
     /// - Parameter source: 진입 경로 (library/album). nil이면 source 추적 생략
     func countViewerTrashButton(source: DeleteSource?) {
         guard !shouldSkip() else { return }
@@ -87,9 +87,9 @@ extension AnalyticsService {
         }
     }
 
-    // MARK: - 이벤트 4-2: 휴지통 뷰어
+    // MARK: - 이벤트 4-2: 삭제대기함 뷰어
 
-    /// 휴지통 완전삭제 카운터 증가
+    /// 삭제대기함 완전삭제 카운터 증가
     func countTrashPermanentDelete() {
         guard !shouldSkip() else { return }
         queue.async(flags: .barrier) {
@@ -98,7 +98,7 @@ extension AnalyticsService {
         }
     }
 
-    /// 휴지통 복구 카운터 증가
+    /// 삭제대기함 복구 카운터 증가
     func countTrashRestore() {
         guard !shouldSkip() else { return }
         queue.async(flags: .barrier) {

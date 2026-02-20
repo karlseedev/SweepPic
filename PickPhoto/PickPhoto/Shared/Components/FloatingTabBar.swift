@@ -20,13 +20,13 @@ protocol FloatingTabBarDelegate: AnyObject {
     /// Select 모드에서 Delete 버튼 탭
     func floatingTabBarDidTapDelete(_ tabBar: FloatingTabBar)
 
-    /// 휴지통 비우기(삭제하기) 버튼 탭
+    /// 삭제대기함 비우기(삭제하기) 버튼 탭
     func floatingTabBarDidTapEmptyTrash(_ tabBar: FloatingTabBar)
 
-    /// 휴지통 Select 모드에서 Restore 버튼 탭
+    /// 삭제대기함 Select 모드에서 Restore 버튼 탭
     func floatingTabBarDidTapRestore(_ tabBar: FloatingTabBar)
 
-    /// 휴지통 Select 모드에서 Delete 버튼 탭 (영구 삭제)
+    /// 삭제대기함 Select 모드에서 Delete 버튼 탭 (영구 삭제)
     func floatingTabBarDidTapTrashDelete(_ tabBar: FloatingTabBar)
 }
 
@@ -145,7 +145,7 @@ final class FloatingTabBar: UIView {
     /// Trash 탭 버튼
     private lazy var trashButton: UIButton = {
         let button = createTabButton(
-            title: "휴지통",
+            title: "삭제대기함",
             image: UIImage(systemName: "trash"),
             selectedImage: UIImage(systemName: "trash.fill"),
             tag: 2
@@ -188,7 +188,7 @@ final class FloatingTabBar: UIView {
         return view
     }()
 
-    /// 삭제하기 버튼 (휴지통 비우기)
+    /// 삭제하기 버튼 (삭제대기함 비우기)
     private lazy var emptyTrashButton: UIButton = {
         var config = UIButton.Configuration.plain()
         config.image = UIImage(systemName: "trash.slash.fill")

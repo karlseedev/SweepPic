@@ -15,7 +15,7 @@
 //  - 헤더: "인물 N (M장)" 형식
 //  - 순환 버튼으로 다음 인물 전환 (선택 상태 유지)
 //  - 사진 탭으로 선택/해제 토글, 체크마크 표시
-//  - Delete 탭 시 휴지통 이동 + 뷰어 복귀
+//  - Delete 탭 시 삭제대기함 이동 + 뷰어 복귀
 //
 //  UI 구성:
 //  - iOS 16~25: 커스텀 FloatingTitleBar (캡슐 스타일)
@@ -101,7 +101,7 @@ final class FaceComparisonViewController: UIViewController {
     /// 이미지 로더
     private let imageManager = PHCachingImageManager()
 
-    /// 휴지통 스토어
+    /// 삭제대기함 스토어
     private let trashStore: TrashStoreProtocol
 
     /// 유사 사진 캐시

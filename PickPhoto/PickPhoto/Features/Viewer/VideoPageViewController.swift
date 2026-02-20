@@ -22,7 +22,7 @@ final class VideoPageViewController: UIViewController {
     /// 더블탭 줌 스케일
     private static let doubleTapZoomScale: CGFloat = 2.5
 
-    /// 휴지통 사진용 마룬 배경색 (#621C1C)
+    /// 삭제대기함 사진용 마룬 배경색 (#621C1C)
     private static let maroonBackgroundColor = UIColor(red: 0.384, green: 0.110, blue: 0.110, alpha: 1)
 
     // MARK: - Properties
@@ -110,10 +110,10 @@ final class VideoPageViewController: UIViewController {
         return gesture
     }()
 
-    // MARK: - Trashed Background (휴지통 사진 표시)
+    // MARK: - Trashed Background (삭제대기함 사진 표시)
 
-    /// 휴지통 배경 표시 여부 (보관함/앨범 뷰어에서만 true)
-    /// - 휴지통 사진은 상하단 레터박스 영역이 마룬색으로 표시됨
+    /// 삭제대기함 배경 표시 여부 (보관함/앨범 뷰어에서만 true)
+    /// - 삭제대기함 사진은 상하단 레터박스 영역이 마룬색으로 표시됨
     private var showTrashedBackground: Bool = false
 
     // MARK: - Initialization
@@ -122,7 +122,7 @@ final class VideoPageViewController: UIViewController {
     /// - Parameters:
     ///   - asset: 표시할 PHAsset
     ///   - index: 인덱스
-    ///   - showTrashedBackground: 휴지통 배경 표시 여부 (기본값 false)
+    ///   - showTrashedBackground: 삭제대기함 배경 표시 여부 (기본값 false)
     init(asset: PHAsset, index: Int, showTrashedBackground: Bool = false) {
         self.asset = asset
         self.index = index
@@ -193,7 +193,7 @@ final class VideoPageViewController: UIViewController {
 
     /// UI 설정
     private func setupUI() {
-        // 휴지통 사진이면 마룬 배경, 아니면 검은색 배경
+        // 삭제대기함 사진이면 마룬 배경, 아니면 검은색 배경
         view.backgroundColor = showTrashedBackground ? Self.maroonBackgroundColor : .black
 
         // ScrollView 추가
@@ -223,8 +223,8 @@ final class VideoPageViewController: UIViewController {
 
     // MARK: - Public API (Trashed State)
 
-    /// 휴지통 상태 업데이트 (복구 시 배경색 즉시 변경)
-    /// - Parameter isTrashed: 휴지통 상태 여부
+    /// 삭제대기함 상태 업데이트 (복구 시 배경색 즉시 변경)
+    /// - Parameter isTrashed: 삭제대기함 상태 여부
     func updateTrashedState(isTrashed: Bool) {
         showTrashedBackground = isTrashed
 

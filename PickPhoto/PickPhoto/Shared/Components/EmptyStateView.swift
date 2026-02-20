@@ -6,7 +6,7 @@
 // 사용 사례:
 // - T070: 사진 0장 빈 상태 ("사진이 없습니다")
 // - T071: 앨범 내 사진 0장 빈 상태
-// - T059: 휴지통 비었을 때 ("휴지통이 비어 있습니다")
+// - T059: 삭제대기함 비었을 때 ("삭제대기함이 비어 있습니다")
 
 import UIKit
 
@@ -186,11 +186,11 @@ extension EmptyStateView {
         )
     }
 
-    /// "휴지통이 비어 있습니다" 프리셋 (T059)
+    /// "삭제대기함이 비어 있습니다" 프리셋 (T059)
     static func emptyTrash() -> EmptyStateView {
         EmptyStateView(
             icon: "trash",
-            title: "휴지통이 비어 있습니다",
+            title: "삭제대기함이 비어 있습니다",
             subtitle: nil
         )
     }

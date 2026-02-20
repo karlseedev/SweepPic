@@ -53,9 +53,9 @@ protocol GridDataSourceDriverProtocol: AnyObject {
         completion: ((IndexPath?) -> Void)?
     )
 
-    /// 휴지통 상태 변경 적용
+    /// 삭제대기함 상태 변경 적용
     /// - Parameters:
-    ///   - trashedAssetIDs: 휴지통에 있는 에셋 ID 집합
+    ///   - trashedAssetIDs: 삭제대기함에 있는 에셋 ID 집합
     ///   - collectionView: 업데이트할 컬렉션뷰
     func applyTrashStateChange(
         trashedAssetIDs: Set<String>,
@@ -289,20 +289,20 @@ final class GridDataSourceDriver: NSObject, GridDataSourceDriverProtocol {
 
     }
 
-    /// 휴지통 상태 변경 적용
+    /// 삭제대기함 상태 변경 적용
     /// 딤드 표시 업데이트를 위해 해당 셀만 리로드
     func applyTrashStateChange(
         trashedAssetIDs: Set<String>,
         to collectionView: UICollectionView
     ) {
-        // 현재 보이는 셀 중 휴지통 상태가 변경된 셀만 리로드
+        // 현재 보이는 셀 중 삭제대기함 상태가 변경된 셀만 리로드
         let visibleIndexPaths = collectionView.indexPathsForVisibleItems
 
         var indexPathsToReload: [IndexPath] = []
 
         for indexPath in visibleIndexPaths {
             if assetID(at: indexPath) != nil {
-                // 휴지통 상태가 변경된 셀 확인
+                // 삭제대기함 상태가 변경된 셀 확인
                 // (실제로는 이전 상태와 비교해야 하지만, MVP에서는 모든 보이는 셀 리로드)
                 indexPathsToReload.append(indexPath)
             }

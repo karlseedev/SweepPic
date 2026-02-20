@@ -268,7 +268,7 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         Log.print("[SceneDelegate] Scene will enter foreground")
     }
 
-    /// T060: 휴지통에서 외부 삭제된 사진 정리
+    /// T060: 삭제대기함에서 외부 삭제된 사진 정리
     /// PhotoKit에서 더 이상 존재하지 않는 사진을 TrashState에서 제거
     private func cleanupInvalidTrashedAssets() {
         let trashedIDs = TrashStore.shared.trashedAssetIDs

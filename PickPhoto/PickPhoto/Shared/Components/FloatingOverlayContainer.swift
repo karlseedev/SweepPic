@@ -25,13 +25,13 @@ protocol FloatingOverlayContainerDelegate: AnyObject {
     /// Select 모드에서 Delete 버튼 탭
     func floatingOverlayDidTapDelete(_ container: FloatingOverlayContainer)
 
-    /// 휴지통 비우기(삭제하기) 버튼 탭
+    /// 삭제대기함 비우기(삭제하기) 버튼 탭
     func floatingOverlayDidTapEmptyTrash(_ container: FloatingOverlayContainer)
 
-    /// 휴지통 Select 모드에서 Restore 버튼 탭
+    /// 삭제대기함 Select 모드에서 Restore 버튼 탭
     func floatingOverlayDidTapRestore(_ container: FloatingOverlayContainer)
 
-    /// 휴지통 Select 모드에서 Delete 버튼 탭 (영구 삭제)
+    /// 삭제대기함 Select 모드에서 Delete 버튼 탭 (영구 삭제)
     func floatingOverlayDidTapTrashDelete(_ container: FloatingOverlayContainer)
 }
 
@@ -251,8 +251,8 @@ final class FloatingOverlayContainer: UIView {
         tabBar.updateSelectionCount(count)
     }
 
-    /// 휴지통 탭 배지 업데이트
-    /// - Parameter count: 휴지통에 있는 사진 수 (0이면 배지 숨김)
+    /// 삭제대기함 탭 배지 업데이트
+    /// - Parameter count: 삭제대기함에 있는 사진 수 (0이면 배지 숨김)
     func updateTrashBadge(_ count: Int) {
         tabBar.updateTrashBadge(count)
     }

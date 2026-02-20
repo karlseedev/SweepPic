@@ -26,7 +26,7 @@ extension TrashAlbumViewController {
     /// Trash는 선택 모드 지원
     override var supportsSelectMode: Bool { true }
 
-    /// 휴지통에서는 모든 에셋 선택 가능 (휴지통 에셋이므로)
+    /// 삭제대기함에서는 모든 에셋 선택 가능 (삭제대기함 에셋이므로)
     override func canSelectAssetInSelectMode(_ assetID: String) -> Bool {
         return true
     }
@@ -149,7 +149,7 @@ extension TrashAlbumViewController {
             return
         }
 
-        // [Analytics] 이벤트 4-2: 휴지통 복구 (선택 모드)
+        // [Analytics] 이벤트 4-2: 삭제대기함 복구 (선택 모드)
         AnalyticsService.shared.countTrashRestore()
 
         trashStore.restore(assetIDs: Array(selectedAssetIDs))
@@ -165,7 +165,7 @@ extension TrashAlbumViewController {
             return
         }
 
-        // [Analytics] 이벤트 4-2: 휴지통 완전삭제 (선택 모드)
+        // [Analytics] 이벤트 4-2: 삭제대기함 완전삭제 (선택 모드)
         AnalyticsService.shared.countTrashPermanentDelete()
 
         Task {
@@ -201,7 +201,7 @@ extension TrashAlbumViewController: LiquidGlassTabBarDelegate {
         // Trash에서는 trashDeleteSelectedTapped 사용
     }
 
-    /// 휴지통 비우기 버튼 (Select 모드 아닐 때)
+    /// 삭제대기함 비우기 버튼 (Select 모드 아닐 때)
     func liquidGlassTabBarDidTapEmptyTrash(_ tabBar: LiquidGlassTabBar) {
         emptyTrashButtonTapped()
     }

@@ -45,9 +45,9 @@ protocol ViewerCoordinatorProtocol: AnyObject {
     /// - Returns: 다음 표시할 인덱스
     func nextIndexAfterDelete(currentIndex: Int) -> Int
 
-    /// 특정 사진이 휴지통에 있는지 확인
+    /// 특정 사진이 삭제대기함에 있는지 확인
     /// - Parameter index: 인덱스
-    /// - Returns: 휴지통에 있으면 true
+    /// - Returns: 삭제대기함에 있으면 true
     func isTrashed(at index: Int) -> Bool
 
     /// 삭제/복구 후 필터링 인덱스 갱신
@@ -61,7 +61,7 @@ protocol ViewerCoordinatorProtocol: AnyObject {
     /// 삭제/복구 이벤트의 소스 (analytics용)
     /// - library: 보관함에서 열린 뷰어
     /// - album: 앨범에서 열린 뷰어
-    /// - nil: 소스 불필요 (휴지통/미리보기)
+    /// - nil: 소스 불필요 (삭제대기함/미리보기)
     var deleteSource: DeleteSource? { get }
 }
 
@@ -69,7 +69,7 @@ protocol ViewerCoordinatorProtocol: AnyObject {
 
 /// 뷰어 코디네이터 구현체
 /// PHFetchResult 기반으로 데이터 제공 및 네비게이션 로직 관리
-/// 뷰어 모드에 따라 일반 사진만 또는 휴지통 사진만 필터링하여 표시
+/// 뷰어 모드에 따라 일반 사진만 또는 삭제대기함 사진만 필터링하여 표시
 final class ViewerCoordinator: ViewerCoordinatorProtocol {
 
     // MARK: - Properties
@@ -80,10 +80,10 @@ final class ViewerCoordinator: ViewerCoordinatorProtocol {
     /// 사진 fetch 결과 (프로토콜 요구사항, 유사 사진 분석용으로 외부 접근 허용)
     var fetchResult: PHFetchResult<PHAsset>? { _fetchResult }
 
-    /// 휴지통 스토어
+    /// 삭제대기함 스토어
     private let trashStore: TrashStoreProtocol
 
-    /// 뷰어 모드 (일반/휴지통)
+    /// 뷰어 모드 (일반/삭제대기함)
     private let viewerMode: ViewerMode
 
     /// 삭제/복구 이벤트 소스 (analytics용)
@@ -125,7 +125,7 @@ final class ViewerCoordinator: ViewerCoordinatorProtocol {
     /// 초기화
     /// - Parameters:
     ///   - fetchResult: 사진 fetch 결과
-    ///   - trashStore: 휴지통 스토어 (기본값: 공유 인스턴스)
+    ///   - trashStore: 삭제대기함 스토어 (기본값: 공유 인스턴스)
     ///   - viewerMode: 뷰어 모드 (기본값: .normal)
     init(
         fetchResult: PHFetchResult<PHAsset>,
@@ -202,7 +202,7 @@ final class ViewerCoordinator: ViewerCoordinatorProtocol {
         return min(currentIndex, newTotal - 1)
     }
 
-    /// 특정 사진이 휴지통에 있는지 확인
+    /// 특정 사진이 삭제대기함에 있는지 확인
     func isTrashed(at index: Int) -> Bool {
         guard let assetID = assetID(at: index) else { return false }
         return trashStore.isTrashed(assetID)
@@ -249,7 +249,7 @@ final class ViewerCoordinator: ViewerCoordinatorProtocol {
         let trashedIDs = trashStore.trashedAssetIDs
         let totalOriginal = _fetchResult.count
 
-        // [최적화] .normal 모드에서는 휴지통 사진도 표시 (그리드와 일관성)
+        // [최적화] .normal 모드에서는 삭제대기함 사진도 표시 (그리드와 일관성)
         // O(n) 스캔 스킵 - identity 매핑으로 모든 사진 포함
         if viewerMode == .normal {
             indexMapping = .identity(totalOriginal: totalOriginal)
@@ -259,7 +259,7 @@ final class ViewerCoordinator: ViewerCoordinatorProtocol {
 
         // 이하 .trash 모드 전용 로직
 
-        // 휴지통 비어있으면 빠른 경로
+        // 삭제대기함 비어있으면 빠른 경로
         if trashedIDs.isEmpty {
             indexMapping = .trash(originalIndices: [])
             logRebuildComplete(startTime, totalOriginal, trashedIDs.count)
@@ -276,7 +276,7 @@ final class ViewerCoordinator: ViewerCoordinatorProtocol {
             }
         }
 
-        // 전부 휴지통이면 identity, 일부만이면 trash 인덱스
+        // 전부 삭제대기함이면 identity, 일부만이면 trash 인덱스
         if matchedIndices.count == totalOriginal {
             indexMapping = .identity(totalOriginal: totalOriginal)
         } else {

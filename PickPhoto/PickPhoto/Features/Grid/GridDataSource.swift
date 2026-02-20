@@ -134,11 +134,11 @@ final class AlbumDataSource: GridDataSource {
 
 // MARK: - TrashDataSource
 
-/// PHFetchResult 기반 휴지통 데이터 소스
+/// PHFetchResult 기반 삭제대기함 데이터 소스
 /// TrashAlbumViewController에서 사용
 /// 그리드와 뷰어가 동일한 fetchResult를 공유하여 인덱스 일관성 보장
 final class TrashDataSource: GridDataSource {
-    /// 휴지통 fetchResult (그리드와 뷰어 공유)
+    /// 삭제대기함 fetchResult (그리드와 뷰어 공유)
     /// setFetchResult()를 통해 외부에서 갱신
     private(set) var fetchResult: PHFetchResult<PHAsset>?
 

@@ -538,13 +538,13 @@ final class SimilarityAnalysisQueue {
 
     /// 범위 내 사진을 가져옵니다.
     ///
-    /// 휴지통에 있는 사진은 분석 대상에서 제외합니다. (FR-033, FR-037)
+    /// 삭제대기함에 있는 사진은 분석 대상에서 제외합니다. (FR-033, FR-037)
     /// 삭제된 사진이 그룹에 포함되면 3장 미만 무효화 로직이 제대로 동작하지 않기 때문입니다.
     ///
     /// - Parameters:
     ///   - range: 인덱스 범위
     ///   - fetchResult: 사진 fetch 결과
-    /// - Returns: PHAsset 배열 (휴지통 사진 제외)
+    /// - Returns: PHAsset 배열 (삭제대기함 사진 제외)
     private func fetchPhotos(in range: ClosedRange<Int>, fetchResult: PHFetchResult<PHAsset>) -> [PHAsset] {
         let trashedIDs = TrashStore.shared.trashedAssetIDs
         var photos: [PHAsset] = []
@@ -552,7 +552,7 @@ final class SimilarityAnalysisQueue {
 
         for i in clampedRange {
             let asset = fetchResult.object(at: i)
-            // 휴지통에 있는 사진은 분석 대상에서 제외
+            // 삭제대기함에 있는 사진은 분석 대상에서 제외
             if !trashedIDs.contains(asset.localIdentifier) {
                 photos.append(asset)
             }

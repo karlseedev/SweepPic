@@ -7,7 +7,7 @@
 //  CleanupService Unit 테스트
 //  - fromLatest 탐색 로직
 //  - 종료 조건 (50장 찾음, 1000장 검색)
-//  - 휴지통 비어있는지 확인
+//  - 삭제대기함 비어있는지 확인
 //  - 취소 처리
 //
 
@@ -38,7 +38,7 @@ final class CleanupServiceTests: XCTestCase {
     func testIsTrashEmpty_WhenTrashIsEmpty_ReturnsTrue() {
         // Note: 실제 TrashStore 상태에 의존
         // Mock 없이 통합 테스트로 실행됨
-        // 실기기에서 휴지통을 비운 후 테스트 필요
+        // 실기기에서 삭제대기함을 비운 후 테스트 필요
         let result = sut.isTrashEmpty()
         // XCTAssertTrue(result) - 상태에 따라 달라짐
         XCTAssertNotNil(result)
@@ -53,10 +53,10 @@ final class CleanupServiceTests: XCTestCase {
     // MARK: - validatePreConditions Tests
 
     func testStartCleanup_WhenTrashNotEmpty_ThrowsError() async {
-        // Note: 휴지통에 사진이 있는 상태에서 테스트 필요
-        // 실기기에서 휴지통에 사진을 추가한 후 테스트
+        // Note: 삭제대기함에 사진이 있는 상태에서 테스트 필요
+        // 실기기에서 삭제대기함에 사진을 추가한 후 테스트
 
-        // 휴지통이 비어있지 않은 상태에서 정리 시작 시도
+        // 삭제대기함이 비어있지 않은 상태에서 정리 시작 시도
         if !sut.isTrashEmpty() {
             do {
                 _ = try await sut.startCleanup(
@@ -96,7 +96,7 @@ final class CleanupServiceTests: XCTestCase {
 
     func testStartCleanup_FromLatest_Integration() async throws {
         // 통합 테스트: 실기기에서 실행 필요
-        // 1. 휴지통 비우기
+        // 1. 삭제대기함 비우기
         // 2. 사진 라이브러리 권한 확인
         // 3. 정리 시작
         // 4. 진행 상황 확인

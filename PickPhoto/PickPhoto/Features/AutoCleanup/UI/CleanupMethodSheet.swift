@@ -60,7 +60,7 @@ final class CleanupMethodSheet {
             message: """
                 흔들리거나 초점이 맞지 않은 사진들을
                 자동으로 찾아 정리합니다.
-                정리된 사진은 휴지통에서 복구할 수 있어요.
+                정리된 사진은 삭제대기함에서 복구할 수 있어요.
                 """,
             preferredStyle: .alert
         )

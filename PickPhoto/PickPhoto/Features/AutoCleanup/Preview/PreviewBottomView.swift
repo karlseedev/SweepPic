@@ -5,7 +5,7 @@
 //  Created by Claude on 2026-02-12.
 //
 //  하단 고정 버튼 영역 (GlassTextButton 스타일)
-//  - primaryButton: "탐색된 N장 휴지통으로 이동" (Glass, 전체 너비)
+//  - primaryButton: "탐색된 N장 삭제대기함으로 이동" (Glass, 전체 너비)
 //  - collapseButton: "31~40점 사진\nN장 제외하기" (Glass pill, 2줄, 가로 배치)
 //  - expandButton: "31~40점 사진\nN장 더 보기 →" (Glass pill, 2줄, 가로 배치)
 //
@@ -180,14 +180,14 @@ final class PreviewBottomView: UIView {
         deepCount: Int,
         canExpand: Bool
     ) {
-        // 메인 버튼: "N점 이하 사진 N장 휴지통 이동" (상단 타이틀 점수와 동일)
+        // 메인 버튼: "N점 이하 사진 N장 삭제대기함 이동" (상단 타이틀 점수와 동일)
         let maxScore: Int
         switch currentStage {
         case .light:    maxScore = 30
         case .standard: maxScore = 40
         case .deep:     maxScore = 50
         }
-        primaryButton.setButtonTitle("\(maxScore)점 이하 사진 \(totalCount)장 휴지통 이동")
+        primaryButton.setButtonTitle("\(maxScore)점 이하 사진 \(totalCount)장 삭제대기함 이동")
 
         // 보조 버튼 visibility 결정
         let showCollapse = currentStage > .light

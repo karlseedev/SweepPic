@@ -17,7 +17,7 @@ import Photos
 /// 정리 서비스 프로토콜
 ///
 /// 저품질 사진 자동 정리 기능의 메인 인터페이스입니다.
-/// 사진을 스캔하여 저품질 사진을 찾고 휴지통으로 이동합니다.
+/// 사진을 스캔하여 저품질 사진을 찾고 삭제대기함으로 이동합니다.
 protocol CleanupServiceProtocol: AnyObject {
 
     // MARK: - 상태 조회
@@ -31,10 +31,10 @@ protocol CleanupServiceProtocol: AnyObject {
     /// 정리 진행 중 여부
     var isRunning: Bool { get }
 
-    // MARK: - 휴지통 상태 확인
+    // MARK: - 삭제대기함 상태 확인
 
-    /// 휴지통이 비어있는지 확인
-    /// - Returns: 휴지통이 비어있으면 true
+    /// 삭제대기함이 비어있는지 확인
+    /// - Returns: 삭제대기함이 비어있으면 true
     func isTrashEmpty() -> Bool
 
     // MARK: - 정리 실행
@@ -48,7 +48,7 @@ protocol CleanupServiceProtocol: AnyObject {
     /// - Returns: 정리 결과
     /// - Throws: CleanupError
     ///
-    /// - Note: 호출 전 isTrashEmpty()로 휴지통 비어있는지 확인 필요
+    /// - Note: 호출 전 isTrashEmpty()로 삭제대기함 비어있는지 확인 필요
     func startCleanup(
         method: CleanupMethod,
         mode: JudgmentMode,
@@ -58,7 +58,7 @@ protocol CleanupServiceProtocol: AnyObject {
     /// 정리 취소
     ///
     /// 진행 중인 정리를 취소합니다.
-    /// - Important: 취소 시 아무것도 휴지통으로 이동하지 않음
+    /// - Important: 취소 시 아무것도 삭제대기함으로 이동하지 않음
     func cancelCleanup()
 
     /// 정리 일시정지 (백그라운드 전환 시)

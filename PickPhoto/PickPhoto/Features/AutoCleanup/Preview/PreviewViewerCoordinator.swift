@@ -74,7 +74,7 @@ final class PreviewViewerCoordinator: ViewerCoordinatorProtocol {
         return min(currentIndex, assets.count - 2)
     }
 
-    /// 휴지통 여부 (미리보기에서는 항상 false)
+    /// 삭제대기함 여부 (미리보기에서는 항상 false)
     func isTrashed(at index: Int) -> Bool { false }
 
     /// 필터링 인덱스 갱신 (미리보기에서는 no-op)

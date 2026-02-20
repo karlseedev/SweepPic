@@ -33,7 +33,7 @@ final class AlbumGridViewController: BaseGridViewController {
     /// 초기 스크롤 완료 여부 (맨 아래로 스크롤)
     private var didInitialScroll: Bool = false
 
-    /// PRD7: 이전 휴지통 상태 (changedIDs 계산용)
+    /// PRD7: 이전 삭제대기함 상태 (changedIDs 계산용)
     /// Note: swipeDeleteState는 BaseGridViewController에서 상속
     private var lastTrashedIDs: Set<String> = []
 
@@ -170,7 +170,7 @@ final class AlbumGridViewController: BaseGridViewController {
         updateSwipeDeleteGestureEnabled()
     }
 
-    /// 휴지통 상태 변경 처리
+    /// 삭제대기함 상태 변경 처리
     /// PRD7: reloadItems 대신 변경된 셀만 직접 업데이트 (깜빡임 방지)
     private func handleTrashStateChange(_ trashedAssetIDs: Set<String>) {
         // 변경된 ID 계산 (이전 상태와의 차이)
@@ -310,7 +310,7 @@ final class AlbumGridViewController: BaseGridViewController {
     /// 뷰어 열기 (BaseGridViewController에서 호출)
     override func openViewer(for asset: PHAsset, at assetIndex: Int) {
         // [수정] 앨범에서도 항상 .normal 모드로 뷰어 열기
-        // 보관함과 동일하게 휴지통 사진도 마룬 테두리와 함께 표시되고, 복구 버튼이 표시됨
+        // 보관함과 동일하게 삭제대기함 사진도 마룬 테두리와 함께 표시되고, 복구 버튼이 표시됨
         let mode: ViewerMode = .normal
 
         // 뷰어 코디네이터 생성

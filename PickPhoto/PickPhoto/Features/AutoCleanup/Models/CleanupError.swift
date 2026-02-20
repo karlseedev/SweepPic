@@ -19,9 +19,9 @@ enum CleanupError: Error, Equatable {
     /// - 정리가 이미 실행 중일 때 다시 시작하려는 경우
     case alreadyRunning
 
-    /// 휴지통이 비어있지 않음
+    /// 삭제대기함이 비어있지 않음
     /// - 정리 시작 전제조건 미충족
-    /// - 사용자에게 "휴지통을 먼저 비워주세요" 메시지 표시
+    /// - 사용자에게 "삭제대기함을 먼저 비워주세요" 메시지 표시
     case trashNotEmpty
 
     /// 사진 라이브러리 접근 권한 없음
@@ -42,7 +42,7 @@ enum CleanupError: Error, Equatable {
     /// - 전체 정리 중단
     case metalInitFailed
 
-    /// 휴지통 이동 실패
+    /// 삭제대기함 이동 실패
     /// - TrashStore.moveToTrash 실패
     /// - 부분 성공 가능 (일부 사진만 이동)
     case trashMoveFailed(String)
@@ -68,7 +68,7 @@ extension CleanupError: LocalizedError {
         case .metalInitFailed:
             return "이미지 분석을 초기화할 수 없습니다"
         case .trashMoveFailed(let message):
-            return "휴지통 이동 중 오류가 발생했습니다: \(message)"
+            return "삭제대기함 이동 중 오류가 발생했습니다: \(message)"
         }
     }
 
@@ -78,7 +78,7 @@ extension CleanupError: LocalizedError {
         case .alreadyRunning:
             return "현재 정리가 완료될 때까지 기다려주세요"
         case .trashNotEmpty:
-            return "휴지통을 비운 후 다시 시도해주세요"
+            return "삭제대기함을 비운 후 다시 시도해주세요"
         case .noPhotoAccess:
             return "설정에서 사진 접근 권한을 허용해주세요"
         case .noPreviousSession:
@@ -96,7 +96,7 @@ extension CleanupError: LocalizedError {
 extension CleanupError {
 
     /// 사용자 액션이 필요한 에러인지
-    /// - true: 사용자가 조치를 취해야 함 (예: 휴지통 비우기)
+    /// - true: 사용자가 조치를 취해야 함 (예: 삭제대기함 비우기)
     /// - false: 시스템 에러 (예: Metal 실패)
     var requiresUserAction: Bool {
         switch self {

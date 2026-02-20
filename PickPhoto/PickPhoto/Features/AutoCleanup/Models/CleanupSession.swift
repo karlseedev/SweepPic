@@ -74,7 +74,7 @@ struct CleanupSession: Equatable, Sendable {
     /// - 최대 50장
     var foundCount: Int
 
-    /// 휴지통으로 이동한 사진 ID 목록
+    /// 삭제대기함으로 이동한 사진 ID 목록
     /// - PHAsset.localIdentifier 배열
     var trashedAssetIDs: [String]
 
@@ -224,7 +224,7 @@ extension CleanupSession {
         self.updatedAt = Date()
     }
 
-    /// 휴지통 이동 기록
+    /// 삭제대기함 이동 기록
     /// - Parameter assetID: 이동한 사진 ID
     mutating func recordTrashed(assetID: String) {
         trashedAssetIDs.append(assetID)
@@ -232,7 +232,7 @@ extension CleanupSession {
         updatedAt = Date()
     }
 
-    /// 여러 사진 휴지통 이동 기록
+    /// 여러 사진 삭제대기함 이동 기록
     /// - Parameter assetIDs: 이동한 사진 ID 배열
     mutating func recordTrashed(assetIDs: [String]) {
         trashedAssetIDs.append(contentsOf: assetIDs)

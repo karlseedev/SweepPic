@@ -7,7 +7,7 @@
 //  GridViewController 정리 기능 확장
 //  - 정리 버튼 추가 (네비게이션 바)
 //  - 정리 플로우 관리
-//  - 휴지통 비어있는지 확인
+//  - 삭제대기함 비어있는지 확인
 //
 
 import UIKit
@@ -138,7 +138,7 @@ extension GridViewController {
         // [Analytics] 정리 흐름 추적 시작
         cleanupTracker = CleanupFlowTracker()
 
-        // 1. 휴지통 비어있는지 확인
+        // 1. 삭제대기함 비어있는지 확인
         if !CleanupService.shared.isTrashEmpty() {
             cleanupTracker?.trashWarningShown = true
             showTrashNotEmptyAlert()
@@ -151,23 +151,23 @@ extension GridViewController {
 
     // MARK: - Alerts (직접 UIAlertController 사용)
 
-    /// 휴지통 비어있지 않음 알림 표시
+    /// 삭제대기함 비어있지 않음 알림 표시
     private func showTrashNotEmptyAlert() {
         let alert = UIAlertController(
             title: "저품질 사진 자동 정리",
-            message: "저품질 사진 정리 기능을 사용하려면\n휴지통을 먼저 비워주세요",
+            message: "저품질 사진 정리 기능을 사용하려면\n삭제대기함을 먼저 비워주세요",
             preferredStyle: .alert
         )
 
-        alert.addAction(UIAlertAction(title: "휴지통 보기", style: .default) { [weak self] _ in
-            // [Analytics] 휴지통 경고에서 이탈 (휴지통 보기)
+        alert.addAction(UIAlertAction(title: "삭제대기함 보기", style: .default) { [weak self] _ in
+            // [Analytics] 삭제대기함 경고에서 이탈 (삭제대기함 보기)
             self?.cleanupTracker?.reachedStage = .trashWarningExit
             self?.sendCleanupTrackerAndClear()
             self?.navigateToTrash()
         })
 
         alert.addAction(UIAlertAction(title: "취소", style: .cancel) { [weak self] _ in
-            // [Analytics] 휴지통 경고에서 이탈 (취소)
+            // [Analytics] 삭제대기함 경고에서 이탈 (취소)
             self?.cleanupTracker?.reachedStage = .trashWarningExit
             self?.sendCleanupTrackerAndClear()
         })
@@ -195,7 +195,7 @@ extension GridViewController {
         present(alert, animated: true)
     }
 
-    /// 휴지통 화면으로 이동
+    /// 삭제대기함 화면으로 이동
     private func navigateToTrash() {
         guard let tabBarController = tabBarController as? TabBarController else {
             return
@@ -429,7 +429,7 @@ extension GridViewController {
 extension GridViewController: PreviewGridViewControllerDelegate {
 
     func previewGridVC(_ vc: PreviewGridViewController, didConfirmCleanup assetIDs: [String]) {
-        // 휴지통으로 이동
+        // 삭제대기함으로 이동
         trashStore.moveToTrash(assetIDs: assetIDs)
     }
 }

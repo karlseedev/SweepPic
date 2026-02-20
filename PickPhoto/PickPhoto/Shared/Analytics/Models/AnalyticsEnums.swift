@@ -13,7 +13,7 @@ import Foundation
 enum ScreenSource: String {
     case library = "library"   // 보관함 (메인 그리드)
     case album   = "album"     // 앨범 상세
-    case trash   = "trash"     // 휴지통
+    case trash   = "trash"     // 삭제대기함
 }
 
 // MARK: - DeleteSource (이벤트 4-1: 삭제·복구)
@@ -24,7 +24,7 @@ enum ScreenSource: String {
 enum DeleteSource: String {
     case library = "library"   // 보관함 경유
     case album   = "album"     // 앨범 경유
-    // 휴지통은 이벤트 4-2로 별도 추적 → .trash 불필요
+    // 삭제대기함은 이벤트 4-2로 별도 추적 → .trash 불필요
 }
 
 // MARK: - PermissionResultType (이벤트 2: 권한)

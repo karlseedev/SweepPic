@@ -1,5 +1,5 @@
 // TrashStore.swift
-// 앱 내 휴지통 상태 관리 스토어
+// 앱 내 삭제대기함 상태 관리 스토어
 //
 // T013: TrashStoreProtocol 및 TrashStore 생성
 // - trashedAssetIDs
@@ -42,58 +42,58 @@ public enum TrashStoreError: Error, LocalizedError {
 // MARK: - TrashStore Notification
 
 extension Notification.Name {
-    /// 휴지통 상태 변경 알림
+    /// 삭제대기함 상태 변경 알림
     /// userInfo에 "trashedCount" (Int) 포함
     public static let trashStoreDidChange = Notification.Name("trashStoreDidChange")
 }
 
 // MARK: - TrashStoreProtocol (T013)
 
-/// 휴지통 스토어 프로토콜
-/// 앱 내 휴지통 상태 관리를 추상화
+/// 삭제대기함 스토어 프로토콜
+/// 앱 내 삭제대기함 상태 관리를 추상화
 public protocol TrashStoreProtocol: AnyObject {
 
-    /// 휴지통에 있는 사진 ID 집합
+    /// 삭제대기함에 있는 사진 ID 집합
     var trashedAssetIDs: Set<String> { get }
 
-    /// 휴지통에 있는 사진 수
+    /// 삭제대기함에 있는 사진 수
     var trashedCount: Int { get }
 
-    /// 특정 사진이 휴지통에 있는지 확인
+    /// 특정 사진이 삭제대기함에 있는지 확인
     /// - Parameter assetID: 확인할 사진 ID
-    /// - Returns: 휴지통에 있으면 true
+    /// - Returns: 삭제대기함에 있으면 true
     func isTrashed(_ assetID: String) -> Bool
 
-    /// 사진을 휴지통으로 이동
+    /// 사진을 삭제대기함으로 이동
     /// - Parameter assetIDs: 이동할 사진 ID 배열
     func moveToTrash(assetIDs: [String])
 
-    /// 사진을 휴지통에서 복구
+    /// 사진을 삭제대기함에서 복구
     /// - Parameter assetIDs: 복구할 사진 ID 배열
     func restore(assetIDs: [String])
 
     // MARK: - PRD7: Completion Handler API
 
-    /// 사진을 휴지통으로 이동 (completion handler 버전)
+    /// 사진을 삭제대기함으로 이동 (completion handler 버전)
     /// 제스처 기반 삭제에서 실패 시 롤백을 위해 사용
     /// - Parameters:
     ///   - assetID: 이동할 사진 ID
     ///   - completion: 완료 콜백 (메인 스레드에서 호출)
     func moveToTrash(_ assetID: String, completion: @escaping (Result<Void, TrashStoreError>) -> Void)
 
-    /// 사진을 휴지통에서 복구 (completion handler 버전)
+    /// 사진을 삭제대기함에서 복구 (completion handler 버전)
     /// 제스처 기반 복원에서 실패 시 롤백을 위해 사용
     /// - Parameters:
     ///   - assetID: 복구할 사진 ID
     ///   - completion: 완료 콜백 (메인 스레드에서 호출)
     func restore(_ assetID: String, completion: @escaping (Result<Void, TrashStoreError>) -> Void)
 
-    /// 사진을 완전히 삭제 (iOS 휴지통으로 이동)
+    /// 사진을 완전히 삭제 (iOS 삭제대기함으로 이동)
     /// - Parameter assetIDs: 삭제할 사진 ID 배열
     /// - Throws: PhotoKit 삭제 실패 시 에러
     func permanentlyDelete(assetIDs: [String]) async throws
 
-    /// 휴지통 비우기 (모든 사진을 iOS 휴지통으로 이동)
+    /// 삭제대기함 비우기 (모든 사진을 iOS 삭제대기함으로 이동)
     /// - Throws: PhotoKit 삭제 실패 시 에러
     func emptyTrash() async throws
 
@@ -104,7 +104,7 @@ public protocol TrashStoreProtocol: AnyObject {
 
 // MARK: - TrashStore (T013)
 
-/// 파일 기반 휴지통 스토어 구현체
+/// 파일 기반 삭제대기함 스토어 구현체
 /// Documents 디렉토리에 TrashState.json으로 저장
 public final class TrashStore: TrashStoreProtocol {
 
@@ -115,7 +115,7 @@ public final class TrashStore: TrashStoreProtocol {
 
     // MARK: - Private Properties
 
-    /// 현재 휴지통 상태
+    /// 현재 삭제대기함 상태
     private var state: TrashState
 
     /// 상태 변경 핸들러
@@ -140,22 +140,22 @@ public final class TrashStore: TrashStoreProtocol {
 
     // MARK: - TrashStoreProtocol
 
-    /// 휴지통에 있는 사진 ID 집합
+    /// 삭제대기함에 있는 사진 ID 집합
     public var trashedAssetIDs: Set<String> {
         state.trashedAssetIDs
     }
 
-    /// 휴지통에 있는 사진 수
+    /// 삭제대기함에 있는 사진 수
     public var trashedCount: Int {
         state.trashedCount
     }
 
-    /// 특정 사진이 휴지통에 있는지 확인
+    /// 특정 사진이 삭제대기함에 있는지 확인
     public func isTrashed(_ assetID: String) -> Bool {
         state.isTrashed(assetID)
     }
 
-    /// 사진을 휴지통으로 이동
+    /// 사진을 삭제대기함으로 이동
     /// FR-022: 상태 변경 행동마다 즉시 저장
     public func moveToTrash(assetIDs: [String]) {
         guard !assetIDs.isEmpty else { return }
@@ -171,7 +171,7 @@ public final class TrashStore: TrashStoreProtocol {
         notifyChange()
     }
 
-    /// 사진을 휴지통에서 복구
+    /// 사진을 삭제대기함에서 복구
     /// FR-022: 상태 변경 행동마다 즉시 저장
     public func restore(assetIDs: [String]) {
         guard !assetIDs.isEmpty else { return }
@@ -189,7 +189,7 @@ public final class TrashStore: TrashStoreProtocol {
 
     // MARK: - PRD7: Completion Handler API
 
-    /// 사진을 휴지통으로 이동 (completion handler 버전)
+    /// 사진을 삭제대기함으로 이동 (completion handler 버전)
     /// 제스처 기반 삭제에서 실패 시 롤백을 위해 사용
     /// - Parameters:
     ///   - assetID: 이동할 사진 ID
@@ -209,7 +209,7 @@ public final class TrashStore: TrashStoreProtocol {
             case .failure(let error):
                 // 롤백: 상태 복원
                 self?.state.restore(assetID)
-                // [Analytics] 휴지통 이동 실패
+                // [Analytics] 삭제대기함 이동 실패
                 Analytics.reporter?.reportError(key: "cleanup.trashMove")
                 DispatchQueue.main.async {
                     completion(.failure(error))
@@ -218,7 +218,7 @@ public final class TrashStore: TrashStoreProtocol {
         }
     }
 
-    /// 사진을 휴지통에서 복구 (completion handler 버전)
+    /// 사진을 삭제대기함에서 복구 (completion handler 버전)
     /// 제스처 기반 복원에서 실패 시 롤백을 위해 사용
     /// - Parameters:
     ///   - assetID: 복구할 사진 ID
@@ -247,7 +247,7 @@ public final class TrashStore: TrashStoreProtocol {
         }
     }
 
-    /// 사진을 완전히 삭제 (iOS 휴지통으로 이동)
+    /// 사진을 완전히 삭제 (iOS 삭제대기함으로 이동)
     /// iOS 시스템 팝업이 표시됨
     public func permanentlyDelete(assetIDs: [String]) async throws {
         guard !assetIDs.isEmpty else { return }
@@ -289,7 +289,7 @@ public final class TrashStore: TrashStoreProtocol {
         notifyChange()
     }
 
-    /// 휴지통 비우기
+    /// 삭제대기함 비우기
     /// iOS 시스템 팝업이 표시됨
     public func emptyTrash() async throws {
         let assetIDs = Array(state.trashedAssetIDs)

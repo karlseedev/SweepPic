@@ -119,7 +119,7 @@ final class GridViewController: BaseGridViewController {
     // - isSelectMode, selectionManager, dragSelectGesture, dragSelect* 등
     // - selectionCountBarItem, autoScrollTimer, autoScrollSpeed, autoScrollEdgeHeight
 
-    /// PRD7: 이전 휴지통 상태 (changedIDs 계산용)
+    /// PRD7: 이전 삭제대기함 상태 (changedIDs 계산용)
     private var lastTrashedIDs: Set<String> = []
 
     // MARK: - R2 로그 측정용 (extension에서 접근 필요)
@@ -194,7 +194,7 @@ final class GridViewController: BaseGridViewController {
     /// - Parameters:
     ///   - dataSourceDriver: 데이터소스 드라이버
     ///   - imagePipeline: 이미지 파이프라인
-    ///   - trashStore: 휴지통 스토어
+    ///   - trashStore: 삭제대기함 스토어
     init(
         dataSourceDriver: GridDataSourceDriver = GridDataSourceDriver(),
         imagePipeline: ImagePipelineProtocol = ImagePipeline.shared,
@@ -554,7 +554,7 @@ final class GridViewController: BaseGridViewController {
         }
     }
 
-    /// 휴지통 상태 변경 처리
+    /// 삭제대기함 상태 변경 처리
     /// PRD7: reloadItems 대신 변경된 셀만 직접 업데이트 (깜빡임 방지)
     private func handleTrashStateChange(_ trashedAssetIDs: Set<String>) {
         // 변경된 ID 계산 (이전 상태와의 차이)
@@ -773,7 +773,7 @@ extension GridViewController {
         guard let fetchResult = dataSourceDriver.fetchResult else { return }
 
         // [수정] 보관함에서는 항상 .normal 모드로 뷰어 열기
-        // 휴지통 사진도 마룬 테두리와 함께 표시되고, 복구 버튼이 표시됨
+        // 삭제대기함 사진도 마룬 테두리와 함께 표시되고, 복구 버튼이 표시됨
         let mode: ViewerMode = .normal
 
         // 뷰어 코디네이터 생성 (모드에 따라 필터링됨)
@@ -912,7 +912,7 @@ extension GridViewController {
 
 extension GridViewController: ViewerViewControllerDelegate {
 
-    /// 사진 삭제 요청 (앱 내 휴지통으로 이동)
+    /// 사진 삭제 요청 (앱 내 삭제대기함으로 이동)
     /// T036: TrashStore 즉시 저장 연동
     func viewerDidRequestDelete(assetID: String) {
         // TrashStore에 이동 (즉시 저장됨)
@@ -928,7 +928,7 @@ extension GridViewController: ViewerViewControllerDelegate {
         handleSimilarPhotoAssetDeleted(assetID: assetID)
     }
 
-    /// 사진 복구 요청 (휴지통에서 복원)
+    /// 사진 복구 요청 (삭제대기함에서 복원)
     func viewerDidRequestRestore(assetID: String) {
         // TrashStore에서 복구 (즉시 저장됨)
         trashStore.restore(assetIDs: [assetID])
@@ -940,7 +940,7 @@ extension GridViewController: ViewerViewControllerDelegate {
         }
     }
 
-    /// 사진 완전삭제 요청 (iOS 휴지통으로 이동)
+    /// 사진 완전삭제 요청 (iOS 삭제대기함으로 이동)
     /// 비동기 작업 - 삭제 완료 후 뷰어에 알림
     func viewerDidRequestPermanentDelete(assetID: String) {
         // TrashStore에서 완전삭제 (iOS 시스템 팝업 표시)

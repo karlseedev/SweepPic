@@ -20,7 +20,7 @@ import Foundation
 enum CleanupResultType: Equatable {
 
     /// 정상 완료
-    /// - N장의 저품질 사진을 휴지통으로 이동
+    /// - N장의 저품질 사진을 삭제대기함으로 이동
     /// - associated value: 이동한 사진 수
     case completed(count: Int)
 
@@ -29,7 +29,7 @@ enum CleanupResultType: Equatable {
     case noneFound
 
     /// 사용자 취소
-    /// - 아무것도 휴지통으로 이동하지 않음
+    /// - 아무것도 삭제대기함으로 이동하지 않음
     /// - 취소 시점까지 찾은 사진도 이동하지 않음
     case cancelled
 
@@ -98,7 +98,7 @@ struct CleanupResult: Equatable {
     /// 찾은 저품질 사진 수
     let foundCount: Int
 
-    /// 휴지통으로 이동한 사진 ID 목록
+    /// 삭제대기함으로 이동한 사진 ID 목록
     let trashedAssetIDs: [String]
 
     /// 총 소요 시간 (초)
@@ -170,7 +170,7 @@ struct CleanupResult: Equatable {
 
 extension CleanupResult {
 
-    /// 휴지통 보기 버튼 표시 여부
+    /// 삭제대기함 보기 버튼 표시 여부
     /// - 1장 이상 이동했을 때만 표시
     var shouldShowTrashButton: Bool {
         return trashedAssetIDs.count > 0

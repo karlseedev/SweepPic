@@ -38,7 +38,7 @@ final class CleanupServiceIntegrationTests: XCTestCase {
     /// 전체 정리 플로우 테스트
     /// - 실기기에서 실행 필요
     /// - 사진 라이브러리 권한 필요
-    /// - 휴지통 비어있어야 함
+    /// - 삭제대기함 비어있어야 함
     func testFullCleanupFlow_FromLatest() async throws {
         // 1. 전제조건 확인
         let status = PHPhotoLibrary.authorizationStatus(for: .readWrite)
@@ -123,9 +123,9 @@ final class CleanupServiceIntegrationTests: XCTestCase {
         }
     }
 
-    /// 휴지통 비어있지 않을 때 에러 테스트
+    /// 삭제대기함 비어있지 않을 때 에러 테스트
     func testCleanupWithNonEmptyTrash_ThrowsError() async throws {
-        // 전제조건: 휴지통이 비어있지 않아야 함
+        // 전제조건: 삭제대기함이 비어있지 않아야 함
         guard !sut.isTrashEmpty() else {
             throw XCTSkip("Trash must NOT be empty for this test - add a photo to trash first")
         }

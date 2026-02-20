@@ -22,12 +22,12 @@ import Foundation
 enum QualityVerdict: Equatable {
 
     /// 저품질
-    /// - 휴지통 이동 대상
+    /// - 삭제대기함 이동 대상
     /// - Strong 신호 감지 또는 Weak 합산 >= 3
     case lowQuality
 
     /// 정상
-    /// - 휴지통 이동하지 않음
+    /// - 삭제대기함 이동하지 않음
     /// - 저품질 신호 없음 또는 Safe Guard 적용
     case acceptable
 

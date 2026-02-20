@@ -13,7 +13,7 @@
 // T034: 원형 플로팅 삭제 버튼 생성
 // - 하단에 항상 표시
 //
-// T035: 휴지통 사진 뷰어 모드 구현
+// T035: 삭제대기함 사진 뷰어 모드 구현
 // - 삭제 버튼 대신 "복구/완전삭제" 옵션 표시
 
 import UIKit
@@ -27,7 +27,7 @@ enum ViewerMode {
     /// 일반 모드: 삭제 버튼 표시
     case normal
 
-    /// 휴지통 모드: 복구/완전삭제 버튼 표시
+    /// 삭제대기함 모드: 복구/완전삭제 버튼 표시
     case trash
 
     /// 정리 미리보기 모드: 제외 버튼 표시 (스와이프 삭제 없음)
@@ -37,15 +37,15 @@ enum ViewerMode {
 /// 뷰어 델리게이트
 /// 삭제/복구/완전삭제/제외 액션을 처리
 protocol ViewerViewControllerDelegate: AnyObject {
-    /// 사진 삭제 요청 (앱 내 휴지통으로 이동)
+    /// 사진 삭제 요청 (앱 내 삭제대기함으로 이동)
     /// - Parameter assetID: 삭제할 사진 ID
     func viewerDidRequestDelete(assetID: String)
 
-    /// 사진 복구 요청 (휴지통에서 복원)
+    /// 사진 복구 요청 (삭제대기함에서 복원)
     /// - Parameter assetID: 복구할 사진 ID
     func viewerDidRequestRestore(assetID: String)
 
-    /// 사진 완전삭제 요청 (iOS 휴지통으로 이동)
+    /// 사진 완전삭제 요청 (iOS 삭제대기함으로 이동)
     /// - Parameter assetID: 완전삭제할 사진 ID
     func viewerDidRequestPermanentDelete(assetID: String)
 
@@ -85,7 +85,7 @@ final class ViewerViewController: UIViewController {
     /// 델리게이트
     weak var delegate: ViewerViewControllerDelegate?
 
-    /// 현재 모드 (일반/휴지통)
+    /// 현재 모드 (일반/삭제대기함)
     /// Extension에서 접근 가능하도록 internal 접근 레벨
     let viewerMode: ViewerMode
 
@@ -173,7 +173,7 @@ final class ViewerViewController: UIViewController {
         return button
     }()
 
-    /// 복구 버튼 (휴지통 모드 - Liquid Glass 텍스트 버튼)
+    /// 복구 버튼 (삭제대기함 모드 - Liquid Glass 텍스트 버튼)
     /// iOS 26 스펙: 텍스트 "복구", tintColor #30D158 (녹색)
     private lazy var restoreButton: GlassTextButton = {
         let button = GlassTextButton(title: "복구", style: .plain, tintColor: .systemGreen)
@@ -182,7 +182,7 @@ final class ViewerViewController: UIViewController {
         return button
     }()
 
-    /// 완전삭제 버튼 (휴지통 모드 - Liquid Glass 텍스트 버튼)
+    /// 완전삭제 버튼 (삭제대기함 모드 - Liquid Glass 텍스트 버튼)
     /// iOS 26 스펙: 텍스트 "삭제", tintColor #FF4245 (빨간색)
     private lazy var permanentDeleteButton: GlassTextButton = {
         let button = GlassTextButton(title: "삭제", style: .plain, tintColor: .systemRed)
@@ -341,7 +341,7 @@ final class ViewerViewController: UIViewController {
             setupSystemUIIfNeeded()
         }
 
-        // 초기 버튼 상태 설정 (현재 사진의 휴지통 상태에 따라)
+        // 초기 버튼 상태 설정 (현재 사진의 삭제대기함 상태에 따라)
         // iOS 26에서는 setupSystemUIIfNeeded() 이후에 호출해야 함
         updateToolbarForCurrentPhoto()
     }
@@ -610,7 +610,7 @@ final class ViewerViewController: UIViewController {
                 deleteButton.centerYAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor, constant: -Self.buttonCenterFromBottom)
             ])
 
-            // 복구 버튼 (중앙 - 삭제 버튼과 같은 위치, 휴지통 사진일 때 표시)
+            // 복구 버튼 (중앙 - 삭제 버튼과 같은 위치, 삭제대기함 사진일 때 표시)
             view.addSubview(restoreButton)
             NSLayoutConstraint.activate([
                 restoreButton.centerXAnchor.constraint(equalTo: view.centerXAnchor),
@@ -663,7 +663,7 @@ final class ViewerViewController: UIViewController {
         if let handler = swipeDeleteHandler {
             // transform 대상을 pageViewController.view로 지정 (사진만 이동, UI 버튼 제자리)
             handler.transformTarget = pageViewController.view
-            // 이미 휴지통인 사진이면 삭제 불가 → 바운스백
+            // 이미 삭제대기함인 사진이면 삭제 불가 → 바운스백
             handler.canDelete = { [weak self] in
                 guard let self else { return false }
                 return !self.coordinator.isTrashed(at: self.currentIndex)
@@ -717,7 +717,7 @@ final class ViewerViewController: UIViewController {
         // 다음 사진으로 이동 (이전 사진 우선 규칙)
         moveToNextAfterDelete()
 
-        // 이동 후 버튼 상태 업데이트 (다음 사진이 휴지통일 수 있음)
+        // 이동 후 버튼 상태 업데이트 (다음 사진이 삭제대기함일 수 있음)
         updateToolbarForCurrentPhoto()
     }
 
@@ -747,7 +747,7 @@ final class ViewerViewController: UIViewController {
         }
     }
 
-    /// 완전삭제 버튼 탭 (휴지통 모드)
+    /// 완전삭제 버튼 탭 (삭제대기함 모드)
     /// 주의: permanentDelete는 비동기 작업이므로 moveToNextAfterDelete()를 여기서 호출하지 않음
     /// 삭제 완료 후 delegate에서 handleDeleteComplete()를 호출해야 함
     @objc private func permanentDeleteButtonTapped() {
@@ -813,7 +813,7 @@ final class ViewerViewController: UIViewController {
         // 다음 사진으로 이동
         moveToNextAfterDelete()
 
-        // 이동 후 버튼 상태 업데이트 (다음 사진이 휴지통일 수 있음)
+        // 이동 후 버튼 상태 업데이트 (다음 사진이 삭제대기함일 수 있음)
         updateToolbarForCurrentPhoto()
     }
 
@@ -1075,7 +1075,7 @@ final class ViewerViewController: UIViewController {
         toolbarItems = [flexSpace, deleteItem, flexSpace]
     }
 
-    /// iOS 26+ 휴지통 모드 툴바 (복구 + 완전삭제)
+    /// iOS 26+ 삭제대기함 모드 툴바 (복구 + 완전삭제)
     @available(iOS 26.0, *)
     private func setupTrashModeToolbar() {
         let flexSpace = UIBarButtonItem(systemItem: .flexibleSpace)
@@ -1119,7 +1119,7 @@ final class ViewerViewController: UIViewController {
         toolbarItems = [flexSpace, excludeItem, flexSpace]
     }
 
-    /// iOS 26+ 툴바 동적 교체 (현재 사진의 휴지통 상태에 따라)
+    /// iOS 26+ 툴바 동적 교체 (현재 사진의 삭제대기함 상태에 따라)
     @available(iOS 26.0, *)
     private func updateToolbarItemsForCurrentPhoto() {
         // .normal 모드에서만 동적 교체 필요
@@ -1132,7 +1132,7 @@ final class ViewerViewController: UIViewController {
         let flexSpace = UIBarButtonItem(systemItem: .flexibleSpace)
 
         if isTrashed {
-            // 휴지통 사진: 복구 버튼만 (중앙 배치)
+            // 삭제대기함 사진: 복구 버튼만 (중앙 배치)
             let restoreItem = UIBarButtonItem(
                 title: "복구",
                 primaryAction: UIAction { [weak self] _ in
@@ -1149,7 +1149,7 @@ final class ViewerViewController: UIViewController {
 
     // MARK: - Toolbar State Management
 
-    /// 현재 사진의 휴지통 상태에 따라 버튼/툴바 업데이트
+    /// 현재 사진의 삭제대기함 상태에 따라 버튼/툴바 업데이트
     /// - 호출 시점: viewWillAppear, 스와이프 탐색 후, 삭제/복구 후
     private func updateToolbarForCurrentPhoto() {
         // .normal 모드에서만 동적 교체 필요
@@ -1169,8 +1169,8 @@ final class ViewerViewController: UIViewController {
         }
     }
 
-    /// 현재 페이지의 휴지통 테두리 즉시 업데이트
-    /// - Parameter isTrashed: 휴지통 상태 여부
+    /// 현재 페이지의 삭제대기함 테두리 즉시 업데이트
+    /// - Parameter isTrashed: 삭제대기함 상태 여부
     private func updateCurrentPageTrashedState(isTrashed: Bool) {
         guard let currentVC = pageViewController.viewControllers?.first else { return }
 
@@ -1207,7 +1207,7 @@ final class ViewerViewController: UIViewController {
     private func createPageViewController(at index: Int) -> UIViewController? {
         guard let asset = coordinator.asset(at: index) else { return nil }
 
-        // 보관함(.normal)에서만 배경색 변경, 휴지통 탭에서는 검은색 유지
+        // 보관함(.normal)에서만 배경색 변경, 삭제대기함 탭에서는 검은색 유지
         let showTrashedBackground = (viewerMode == .normal) && coordinator.isTrashed(at: index)
 
         switch asset.mediaType {
@@ -1365,7 +1365,7 @@ extension ViewerViewController: UIPageViewControllerDelegate {
         // T026: 유사 사진 오버레이 업데이트 (스와이프로 다른 사진 이동 시)
         updateSimilarPhotoOverlay()
 
-        // 스와이프 탐색 후 버튼 상태 업데이트 (다음 사진이 휴지통일 수 있음)
+        // 스와이프 탐색 후 버튼 상태 업데이트 (다음 사진이 삭제대기함일 수 있음)
         updateToolbarForCurrentPhoto()
 
         // 코치마크 B: 동영상 → 이미지 스와이프 시 트리거

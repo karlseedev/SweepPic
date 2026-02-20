@@ -40,7 +40,7 @@ protocol AnalyticsServiceProtocol: AnyObject {
     func countViewerTrashButton(source: DeleteSource?)
     func countViewerRestoreButton(source: DeleteSource?)
 
-    // 이벤트 4-2: 휴지통 뷰어
+    // 이벤트 4-2: 삭제대기함 뷰어
     func countTrashPermanentDelete()
     func countTrashRestore()
 

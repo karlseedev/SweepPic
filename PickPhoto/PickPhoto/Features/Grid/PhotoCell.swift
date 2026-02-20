@@ -6,7 +6,7 @@
 // - 딤드 오버레이 50% opacity (FR-008)
 // - 재사용 로직: 이전 요청 취소 + 토큰 검증
 //
-// T027: 휴지통 사진 딤드 표시 구현
+// T027: 삭제대기함 사진 딤드 표시 구현
 // - isTrashed 체크 → 50% 검정 오버레이
 
 import UIKit
@@ -187,7 +187,7 @@ final class PhotoCell: UICollectionViewCell {
         return iv
     }()
 
-    /// 딤드 오버레이 뷰 (휴지통 사진용) - 마룬 50%
+    /// 딤드 오버레이 뷰 (삭제대기함 사진용) - 마룬 50%
     private let dimmedOverlayView: UIView = {
         let view = UIView()
         // Maroon (#800000)
@@ -243,7 +243,7 @@ final class PhotoCell: UICollectionViewCell {
     /// 그라데이션 레이어 (비디오 배지용)
     private var gradientLayer: CAGradientLayer?
 
-    /// 휴지통 아이콘 (우측 상단, 휴지통 상태일 때 표시)
+    /// 삭제대기함 아이콘 (우측 상단, 삭제대기함 상태일 때 표시)
     private let trashIconView: UIImageView = {
         let iv = UIImageView()
         iv.contentMode = .scaleAspectFit
@@ -287,7 +287,7 @@ final class PhotoCell: UICollectionViewCell {
     /// 현재 로드된 썸네일 크기 (핀치줌 후 고해상도 재요청 판단용)
     private var currentTargetSize: CGSize = .zero
 
-    /// 휴지통 상태
+    /// 삭제대기함 상태
     private(set) var isTrashed: Bool = false
 
     /// 선택 상태 (T039에서 사용)
@@ -445,7 +445,7 @@ final class PhotoCell: UICollectionViewCell {
             selectionCheckmarkView.heightAnchor.constraint(equalToConstant: 24)
         ])
 
-        // 휴지통 아이콘 (우측 상단)
+        // 삭제대기함 아이콘 (우측 상단)
         contentView.addSubview(trashIconView)
         NSLayoutConstraint.activate([
             trashIconView.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -4),
@@ -486,7 +486,7 @@ final class PhotoCell: UICollectionViewCell {
     /// - targetSize는 point 단위 (내부에서 픽셀로 변환)
     /// - Parameters:
     ///   - asset: 표시할 PHAsset
-    ///   - isTrashed: 휴지통 상태
+    ///   - isTrashed: 삭제대기함 상태
     ///   - targetSize: 썸네일 목표 크기 (point 단위)
     ///   - isFullSizeRequest: 100% 크기 요청 여부 (디스크 캐시 저장 조건)
     func configure(
@@ -671,7 +671,7 @@ final class PhotoCell: UICollectionViewCell {
     /// - Note: 새 코드는 PHAsset 기반 configure(asset:...) 사용 권장
     /// - Parameters:
     ///   - assetID: 표시할 에셋 ID
-    ///   - isTrashed: 휴지통 상태
+    ///   - isTrashed: 삭제대기함 상태
     ///   - mediaType: 미디어 타입
     ///   - duration: 비디오 duration (초, 비디오인 경우만)
     ///   - targetSize: 썸네일 목표 크기
@@ -731,8 +731,8 @@ final class PhotoCell: UICollectionViewCell {
         }
     }
 
-    /// 휴지통 상태 업데이트
-    /// - Parameter isTrashed: 새 휴지통 상태
+    /// 삭제대기함 상태 업데이트
+    /// - Parameter isTrashed: 새 삭제대기함 상태
     func updateTrashState(_ isTrashed: Bool) {
         self.isTrashed = isTrashed
         updateDimmedOverlay()
@@ -826,7 +826,7 @@ extension PhotoCell {
         accessibilityLabel = "사진 \(index + 1) / \(total)"
 
         if isTrashed {
-            accessibilityLabel? += ", 휴지통에 있음"
+            accessibilityLabel? += ", 삭제대기함에 있음"
         }
 
         accessibilityTraits = [.image]
@@ -845,7 +845,7 @@ extension PhotoCell {
     /// - Parameters:
     ///   - progress: 스와이프 진행도 (0.0 ~ 1.0)
     ///   - direction: 스와이프 방향
-    ///   - isTrashed: 현재 휴지통 상태 (삭제/복원 방향 결정)
+    ///   - isTrashed: 현재 삭제대기함 상태 (삭제/복원 방향 결정)
     func setDimmedProgress(_ progress: CGFloat, direction: SwipeDirection, isTrashed: Bool) {
         currentSwipeProgress = max(0, min(1, progress))
         currentSwipeDirection = direction
@@ -865,7 +865,7 @@ extension PhotoCell {
 
     /// 딤드 애니메이션 확정 (스와이프 성공)
     /// - Parameters:
-    ///   - toTrashed: 최종 휴지통 상태
+    ///   - toTrashed: 최종 삭제대기함 상태
     ///   - completion: 완료 콜백
     func confirmDimmedAnimation(toTrashed: Bool, completion: @escaping () -> Void) {
         // 나머지 영역 빠르게 채움/걷힘
@@ -938,7 +938,7 @@ extension PhotoCell {
 
     /// 투 핑거 탭용 페이드 애니메이션
     /// - Parameters:
-    ///   - toTrashed: 최종 휴지통 상태
+    ///   - toTrashed: 최종 삭제대기함 상태
     ///   - completion: 완료 콜백
     func fadeDimmed(toTrashed: Bool, completion: (() -> Void)? = nil) {
         dimmedOverlayView.isHidden = false
@@ -973,7 +973,7 @@ extension PhotoCell {
     /// - Parameters:
     ///   - progress: 진행도 (0.0 ~ 1.0)
     ///   - direction: 스와이프 방향
-    ///   - isTrashed: 현재 휴지통 상태
+    ///   - isTrashed: 현재 삭제대기함 상태
     private func updateDimmedMask(progress: CGFloat, direction: SwipeDirection, isTrashed: Bool) {
         guard let mask = dimmedMaskLayer else { return }
 

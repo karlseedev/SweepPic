@@ -44,7 +44,7 @@ enum AnalyticsError {
         case startFail  = "cleanup.startFail"
         /// 정리 중 이미지 로드 실패
         case imageLoad  = "cleanup.imageLoad"
-        /// 휴지통 이동 실패
+        /// 삭제대기함 이동 실패
         case trashMove  = "cleanup.trashMove"
     }
 
@@ -66,7 +66,7 @@ enum AnalyticsError {
         case diskSpace      = "storage.diskSpace"
         /// 썸네일 캐시 쓰기 실패
         case thumbnailCache = "storage.thumbnailCache"
-        /// 휴지통 데이터 저장 실패
+        /// 삭제대기함 데이터 저장 실패
         case trashData      = "storage.trashData"
     }
 }

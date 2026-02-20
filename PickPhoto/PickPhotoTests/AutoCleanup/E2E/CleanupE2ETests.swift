@@ -9,7 +9,7 @@
 //  - 시나리오 2: 연도별 정리 → 완료
 //  - 시나리오 3: 이어서 정리 → 완료
 //  - 시나리오 4: 정리 중 취소
-//  - 시나리오 5: 휴지통 비어있지 않음 에러
+//  - 시나리오 5: 삭제대기함 비어있지 않음 에러
 //  - 시나리오 6: 상수/임계값 일관성 검증
 //
 //  Note: 실기기 + 사진 라이브러리 필요 (시뮬레이터에서는 XCTSkip)
@@ -137,8 +137,8 @@ final class CleanupE2ETests: XCTestCase {
             return
         }
 
-        // 휴지통 비어있어야 다음 정리 가능 - 비우기 시뮬레이션
-        // 실제로는 사용자가 휴지통을 비우는 단계가 필요
+        // 삭제대기함 비어있어야 다음 정리 가능 - 비우기 시뮬레이션
+        // 실제로는 사용자가 삭제대기함을 비우는 단계가 필요
         // 여기서는 TrashStore 상태만 확인
         guard sut.isTrashEmpty() else {
             throw XCTSkip("Trash must be empty for continue test")
@@ -198,18 +198,18 @@ final class CleanupE2ETests: XCTestCase {
         """)
     }
 
-    // MARK: - Scenario 5: 휴지통 비어있지 않음
+    // MARK: - Scenario 5: 삭제대기함 비어있지 않음
 
-    /// 휴지통이 비어있지 않을 때 에러 검증
+    /// 삭제대기함이 비어있지 않을 때 에러 검증
     func testScenario5_TrashNotEmpty_ThrowsError() async throws {
         let status = PHPhotoLibrary.authorizationStatus(for: .readWrite)
         guard status == .authorized || status == .limited else {
             throw XCTSkip("Photo library access required")
         }
 
-        // 휴지통이 비어있지 않은 경우에만 테스트
+        // 삭제대기함이 비어있지 않은 경우에만 테스트
         guard !sut.isTrashEmpty() else {
-            // 휴지통이 비어있으면 이 시나리오 테스트 불가
+            // 삭제대기함이 비어있으면 이 시나리오 테스트 불가
             print("=== E2E: trashNotEmpty skipped (trash is empty) ===")
             return
         }
@@ -374,7 +374,7 @@ final class CleanupE2ETests: XCTestCase {
 
     // MARK: - Helpers
 
-    /// 전제조건 확인 (권한 + 빈 휴지통)
+    /// 전제조건 확인 (권한 + 빈 삭제대기함)
     private func skipIfNotReady() throws {
         let status = PHPhotoLibrary.authorizationStatus(for: .readWrite)
         guard status == .authorized || status == .limited else {

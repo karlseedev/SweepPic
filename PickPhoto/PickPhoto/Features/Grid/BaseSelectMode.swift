@@ -63,7 +63,7 @@ extension BaseGridViewController {
     }
 
     /// Select 모드에서 선택 가능한 에셋인지 판단
-    /// 기본값: 휴지통 에셋은 선택 불가 (Grid/Album 공통)
+    /// 기본값: 삭제대기함 에셋은 선택 불가 (Grid/Album 공통)
     @objc func canSelectAssetInSelectMode(_ assetID: String) -> Bool {
         return !trashStore.isTrashed(assetID)
     }
@@ -141,7 +141,7 @@ extension BaseGridViewController {
         let assetIndex = indexPath.item - padding
         guard let assetID = gridDataSource.assetID(at: assetIndex) else { return false }
 
-        // Grid/Album은 휴지통 에셋 선택 금지, Trash는 오버라이드로 허용
+        // Grid/Album은 삭제대기함 에셋 선택 금지, Trash는 오버라이드로 허용
         guard canSelectAssetInSelectMode(assetID) else {
             return false
         }
@@ -316,7 +316,7 @@ extension BaseGridViewController {
 
         let assetID = asset.localIdentifier
 
-        // 선택 불가 에셋 체크 (Grid/Album: 휴지통 에셋 차단, Trash: 모두 허용)
+        // 선택 불가 에셋 체크 (Grid/Album: 삭제대기함 에셋 차단, Trash: 모두 허용)
         guard canSelectAssetInSelectMode(assetID) else { return }
 
         // 드래그 선택 상태 초기화

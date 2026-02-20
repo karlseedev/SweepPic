@@ -5,7 +5,7 @@
 //  Description: Grid/Album 공용 선택 모드
 //               - supportsSelectMode 오버라이드
 //               - 툴바 설정 (iOS 26+): [선택개수] [Delete]
-//               - 삭제 액션: 휴지통으로 이동
+//               - 삭제 액션: 삭제대기함으로 이동
 //
 //  공통 로직 (Base):
 //  - enterSelectMode(), exitSelectMode()
@@ -65,7 +65,7 @@ extension GridViewController {
         toolbarItems?.last?.isEnabled = count > 0
     }
 
-    /// 선택된 사진 삭제 (휴지통으로 이동)
+    /// 선택된 사진 삭제 (삭제대기함으로 이동)
     @objc func gridDeleteSelectedTapped() {
         let selectedAssetIDs = selectionManager.selectedAssetIDs
         guard !selectedAssetIDs.isEmpty else {
@@ -127,7 +127,7 @@ extension GridViewController {
         let assetIndexPath = IndexPath(item: indexPath.item - padding, section: indexPath.section)
         guard let assetID = dataSourceDriver.assetID(at: assetIndexPath) else { return false }
 
-        // 딤드 사진(휴지통)은 선택 불가
+        // 딤드 사진(삭제대기함)은 선택 불가
         guard !trashStore.isTrashed(assetID) else {
             return false
         }
@@ -188,7 +188,7 @@ extension AlbumGridViewController {
         toolbarItems?.last?.isEnabled = count > 0
     }
 
-    /// 선택된 사진 삭제 (휴지통으로 이동)
+    /// 선택된 사진 삭제 (삭제대기함으로 이동)
     @objc func albumDeleteSelectedTapped() {
         let selectedAssetIDs = selectionManager.selectedAssetIDs
         guard !selectedAssetIDs.isEmpty else {

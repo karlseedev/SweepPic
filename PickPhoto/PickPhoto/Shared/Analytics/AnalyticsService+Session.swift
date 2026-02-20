@@ -19,7 +19,7 @@ struct SessionCounters {
         var total: Int = 0          // 전체 열람 수
         var fromLibrary: Int = 0    // 보관함에서 열람
         var fromAlbum: Int = 0      // 앨범에서 열람
-        var fromTrash: Int = 0      // 휴지통에서 열람
+        var fromTrash: Int = 0      // 삭제대기함에서 열람
 
         var isZero: Bool { total == 0 }
     }
@@ -29,7 +29,7 @@ struct SessionCounters {
         var gridSwipeDelete: Int = 0     // 그리드 스와이프 삭제
         var gridSwipeRestore: Int = 0    // 그리드 스와이프 복구
         var viewerSwipeDelete: Int = 0   // 뷰어 스와이프 삭제
-        var viewerTrashButton: Int = 0   // 뷰어 휴지통 버튼
+        var viewerTrashButton: Int = 0   // 뷰어 삭제대기함 버튼
         var viewerRestoreButton: Int = 0 // 뷰어 복구 버튼
         var fromLibrary: Int = 0         // 보관함 경유 합계
         var fromAlbum: Int = 0           // 앨범 경유 합계
@@ -41,7 +41,7 @@ struct SessionCounters {
         }
     }
 
-    // ── 이벤트 4-2: 휴지통 뷰어 행동 ──
+    // ── 이벤트 4-2: 삭제대기함 뷰어 행동 ──
     struct TrashViewer {
         var permanentDelete: Int = 0   // 완전삭제
         var restore: Int = 0           // 보관함 복귀
@@ -143,7 +143,7 @@ extension AnalyticsService {
             ]))
         }
 
-        // ── 이벤트 4-2: 휴지통 뷰어 행동 ──
+        // ── 이벤트 4-2: 삭제대기함 뷰어 행동 ──
         if !c.trashViewer.isZero {
             events.append(("session.trashViewer", [
                 "permanentDelete": String(c.trashViewer.permanentDelete),

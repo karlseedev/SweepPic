@@ -52,7 +52,7 @@ enum SessionStatus: String, Codable, CaseIterable {
 
     /// 취소됨
     /// - 사용자가 취소 버튼 탭
-    /// - 아무것도 휴지통으로 이동하지 않음
+    /// - 아무것도 삭제대기함으로 이동하지 않음
     case cancelled
 }
 

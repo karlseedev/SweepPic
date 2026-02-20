@@ -51,7 +51,7 @@ struct CompareAnalysisResult {
     let path1OnlyCount: Int
     /// 경로2만 (🟡)
     let path2OnlyCount: Int
-    /// 총 휴지통 이동 수
+    /// 총 삭제대기함 이동 수
     var totalTrashed: Int {
         bothCount + path1OnlyCount + path2OnlyCount
     }
@@ -148,7 +148,7 @@ final class CompareAnalysisTester {
     /// 이미지 로더
     private let imageLoader = CleanupImageLoader.shared
 
-    /// 휴지통 스토어
+    /// 삭제대기함 스토어
     private let trashStore: TrashStoreProtocol = TrashStore.shared
 
     /// 카테고리 스토어
@@ -180,7 +180,7 @@ final class CompareAnalysisTester {
         return UserDefaults.standard.integer(forKey: totalScannedKey)
     }
 
-    /// 누적 휴지통 수
+    /// 누적 삭제대기함 수
     var totalTrashedCount: Int {
         return UserDefaults.standard.integer(forKey: totalTrashedKey)
     }
@@ -338,10 +338,10 @@ final class CompareAnalysisTester {
                     category = .path2Only
                     path2OnlyCount += 1
                 } else {
-                    category = nil  // 둘 다 정상 → 휴지통 안 감
+                    category = nil  // 둘 다 정상 → 삭제대기함 안 감
                 }
 
-                // 6. 휴지통 이동 + 카테고리 저장
+                // 6. 삭제대기함 이동 + 카테고리 저장
                 if let cat = category {
                     let assetID = asset.localIdentifier
                     trashedAssetIDs.append(assetID)
@@ -367,9 +367,9 @@ final class CompareAnalysisTester {
             saveSession(lastDate: lastDate, scanned: totalScanned, trashed: trashedAssetIDs.count)
         }
 
-        // 휴지통 이동
+        // 삭제대기함 이동
         if !trashedAssetIDs.isEmpty {
-            Log.print("[CompareAnalysis] \(trashedAssetIDs.count)장 휴지통 이동")
+            Log.print("[CompareAnalysis] \(trashedAssetIDs.count)장 삭제대기함 이동")
             trashStore.moveToTrash(assetIDs: trashedAssetIDs)
         }
 

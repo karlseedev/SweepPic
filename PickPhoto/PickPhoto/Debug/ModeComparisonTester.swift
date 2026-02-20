@@ -53,9 +53,9 @@ struct ModeComparisonResult {
     let standardUpCount: Int
     /// 강화만 (🟡)
     let deepOnlyCount: Int
-    /// 휴지통 이동된 assetID 목록
+    /// 삭제대기함 이동된 assetID 목록
     let trashedAssetIDs: [String]
-    /// 총 휴지통 이동 수
+    /// 총 삭제대기함 이동 수
     var totalTrashed: Int {
         allModesCount + standardUpCount + deepOnlyCount
     }
@@ -159,7 +159,7 @@ final class ModeComparisonTester {
     /// 이미지 로더
     private let imageLoader = CleanupImageLoader.shared
 
-    /// 휴지통 스토어
+    /// 삭제대기함 스토어
     private let trashStore: TrashStoreProtocol = TrashStore.shared
 
     /// 카테고리 스토어
@@ -191,7 +191,7 @@ final class ModeComparisonTester {
         return UserDefaults.standard.integer(forKey: totalScannedKey)
     }
 
-    /// 누적 휴지통 수
+    /// 누적 삭제대기함 수
     var totalTrashedCount: Int {
         return UserDefaults.standard.integer(forKey: totalTrashedKey)
     }
@@ -380,10 +380,10 @@ final class ModeComparisonTester {
                     category = .deepOnly      // 🟡 강화만
                     deepOnlyCount += 1
                 } else {
-                    category = nil            // 3모드 모두 정상 → 휴지통 안 감
+                    category = nil            // 3모드 모두 정상 → 삭제대기함 안 감
                 }
 
-                // 8. 휴지통 이동 + 카테고리 저장
+                // 8. 삭제대기함 이동 + 카테고리 저장
                 if let cat = category {
                     let assetID = asset.localIdentifier
                     trashedAssetIDs.append(assetID)
@@ -409,9 +409,9 @@ final class ModeComparisonTester {
             saveSession(lastDate: lastDate, scanned: totalScanned, trashed: trashedAssetIDs.count)
         }
 
-        // 휴지통 이동
+        // 삭제대기함 이동
         if !trashedAssetIDs.isEmpty {
-            Log.print("[ModeComparison] \(trashedAssetIDs.count)장 휴지통 이동")
+            Log.print("[ModeComparison] \(trashedAssetIDs.count)장 삭제대기함 이동")
             trashStore.moveToTrash(assetIDs: trashedAssetIDs)
         }
 

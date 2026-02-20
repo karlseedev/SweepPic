@@ -81,7 +81,7 @@ final class FloatingTitleBar: UIView {
         }
     }
 
-    /// Select 버튼 활성화 여부 (빈 앨범/휴지통에서 비활성화)
+    /// Select 버튼 활성화 여부 (빈 앨범/삭제대기함에서 비활성화)
     var isSelectButtonEnabled: Bool = true {
         didSet {
             selectButton.isEnabled = isSelectButtonEnabled
@@ -205,7 +205,7 @@ final class FloatingTitleBar: UIView {
     }()
 
     /// 두 번째 오른쪽 버튼 (Select 버튼 왼쪽에 배치)
-    /// 휴지통 탭에서 [Select] [비우기] 동시 표시용
+    /// 삭제대기함 탭에서 [Select] [비우기] 동시 표시용
     /// iOS 26 스펙: 높이 38pt, fontSize 17pt
     private lazy var secondRightButton: GlassTextButton = {
         let button = GlassTextButton(title: "", style: .plain, tintColor: .white)
@@ -503,7 +503,7 @@ final class FloatingTitleBar: UIView {
         secondRightButtonAction?()
     }
 
-    /// 두 개의 오른쪽 버튼 설정 (휴지통 탭: Select + 비우기)
+    /// 두 개의 오른쪽 버튼 설정 (삭제대기함 탭: Select + 비우기)
     /// - Parameters:
     ///   - firstTitle: 첫 번째 버튼 타이틀 (Select 위치)
     ///   - firstColor: 첫 번째 버튼 배경색
@@ -545,7 +545,7 @@ final class FloatingTitleBar: UIView {
         secondRightButtonAction = nil
     }
 
-    /// 두 버튼 활성화/비활성화 설정 (휴지통 빈 상태 등)
+    /// 두 버튼 활성화/비활성화 설정 (삭제대기함 빈 상태 등)
     /// - Parameters:
     ///   - firstEnabled: 첫 번째 버튼 (Select) 활성화 여부
     ///   - secondEnabled: 두 번째 버튼 (비우기) 활성화 여부

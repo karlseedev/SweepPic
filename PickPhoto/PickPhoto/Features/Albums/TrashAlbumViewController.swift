@@ -1,16 +1,16 @@
 // TrashAlbumViewController.swift
-// 휴지통 앨범 뷰컨트롤러
+// 삭제대기함 앨범 뷰컨트롤러
 //
-// T055: 휴지통 전용 그리드 뷰
+// T055: 삭제대기함 전용 그리드 뷰
 // - TrashStore.trashedAssetIDs 기반 사진 필터링
-// - 딤드 없이 정상 표시 (휴지통 내에서는 모두 동일)
+// - 딤드 없이 정상 표시 (삭제대기함 내에서는 모두 동일)
 // - 셀 탭 → ViewerViewController (mode: .trash)
 //
 // T058: "비우기" 버튼 구현
 // - 일괄 삭제 iOS 시스템 팝업
 //
 // T059: 빈 상태 표시
-// - "휴지통이 비어 있습니다"
+// - "삭제대기함이 비어 있습니다"
 //
 // Phase 5: BaseGridViewController 상속으로 리팩토링
 // - 공통 코드 제거: 상수, 레이아웃, 핀치 줌, 프리패치
@@ -20,14 +20,14 @@ import UIKit
 import Photos
 import AppCore
 
-/// 휴지통 앨범 뷰컨트롤러
+/// 삭제대기함 앨범 뷰컨트롤러
 /// TrashStore의 삭제 예정 사진을 그리드로 표시
 /// TabBarController의 FloatingOverlay를 공유하여 상태만 변경
 final class TrashAlbumViewController: BaseGridViewController {
 
     // MARK: - Data Source
 
-    /// 휴지통 데이터 소스
+    /// 삭제대기함 데이터 소스
     private let _trashDataSource = TrashDataSource()
 
     /// GridDataSource 프로토콜 구현
@@ -37,14 +37,14 @@ final class TrashAlbumViewController: BaseGridViewController {
 
     // MARK: - Properties
 
-    /// 휴지통 사진 ID Set
+    /// 삭제대기함 사진 ID Set
     private var trashedAssetIDSet: Set<String> = []
 
     /// iOS 26+ 비우기 버튼 참조 (데이터 로드 후 상태 업데이트용)
     /// Note: TrashSelectMode에서 접근해야 하므로 internal
     var emptyTrashBarButtonItem: UIBarButtonItem?
 
-    /// iOS 26+ Select 버튼 참조 (빈 휴지통일 때 비활성화용)
+    /// iOS 26+ Select 버튼 참조 (빈 삭제대기함일 때 비활성화용)
     private var selectBarButtonItem: UIBarButtonItem?
 
     /// 초기 스크롤 완료 여부 (맨 아래로 스크롤)
@@ -66,7 +66,7 @@ final class TrashAlbumViewController: BaseGridViewController {
     /// fetch는 즉시 실행하되, reloadData만 지연 (줌 트랜지션 인덱스 보존)
     private enum PendingFetchState {
         case none                              // 대기 중 없음
-        case empty                             // 빈 결과 대기 (휴지통 비어있음)
+        case empty                             // 빈 결과 대기 (삭제대기함 비어있음)
         case fetched(PHFetchResult<PHAsset>)   // fetch 완료, 적용 대기
         case fetching                          // fetch 진행 중 (뷰어 닫힐 때 fallback 필요)
     }
@@ -97,7 +97,7 @@ final class TrashAlbumViewController: BaseGridViewController {
 
     /// 빈 상태 설정
     override var emptyStateConfig: (icon: String, title: String, subtitle: String?) {
-        ("trash", "휴지통이 비어 있습니다", nil)
+        ("trash", "삭제대기함이 비어 있습니다", nil)
     }
 
     /// 네비게이션 타이틀
@@ -237,10 +237,10 @@ final class TrashAlbumViewController: BaseGridViewController {
         navigationItem.rightBarButtonItems = [selectButton, emptyButton]
     }
 
-    /// FloatingOverlay 상태를 휴지통 탭용으로 설정
-    /// - 타이틀: "휴지통"
+    /// FloatingOverlay 상태를 삭제대기함 탭용으로 설정
+    /// - 타이틀: "삭제대기함"
     /// - 뒤로가기 버튼: 숨김 (별도 탭이므로)
-    /// - 오른쪽 버튼: [Select] [비우기] (휴지통이 비어있지 않을 때만 표시)
+    /// - 오른쪽 버튼: [Select] [비우기] (삭제대기함이 비어있지 않을 때만 표시)
     /// Note: TrashSelectMode.swift의 exitSelectModeFloatingUI()에서 호출하므로 internal
     func configureFloatingOverlayForTrash() {
         guard let tabBarController = tabBarController as? TabBarController,
@@ -268,14 +268,14 @@ final class TrashAlbumViewController: BaseGridViewController {
                 self?.emptyTrashButtonTapped()
             }
         )
-        // 빈 휴지통: 버튼 비활성화 (숨김 X)
+        // 빈 삭제대기함: 버튼 비활성화 (숨김 X)
         overlay.titleBar.setTwoRightButtonsEnabled(firstEnabled: !isEmpty, secondEnabled: !isEmpty)
 
     }
 
     // MARK: - Data Loading
 
-    /// 휴지통 사진 로드 (백그라운드에서 fetch/정렬)
+    /// 삭제대기함 사진 로드 (백그라운드에서 fetch/정렬)
     /// TrashStore.trashedAssetIDs 기반으로 PHAsset 조회
     /// 뷰어 열린 상태면 갱신 지연 (dismiss 애니메이션 인덱스 일관성 보장)
     private func loadTrashedAssets() {
@@ -370,16 +370,16 @@ final class TrashAlbumViewController: BaseGridViewController {
     }
 
     /// FloatingUI 버튼 상태 업데이트 (Select/비우기 활성화/비활성화)
-    /// 주의: 현재 탭이 휴지통 탭일 때만 버튼 변경 (공유 UI이므로 다른 탭일 때 변경하면 안 됨)
+    /// 주의: 현재 탭이 삭제대기함 탭일 때만 버튼 변경 (공유 UI이므로 다른 탭일 때 변경하면 안 됨)
     private func updateFloatingButtonsState() {
         guard let tabBarController = tabBarController as? TabBarController,
-              tabBarController.selectedIndex == 2,  // 휴지통 탭 인덱스일 때만 변경
+              tabBarController.selectedIndex == 2,  // 삭제대기함 탭 인덱스일 때만 변경
               let overlay = tabBarController.floatingOverlay else {
             return
         }
 
         let isEmpty = _trashDataSource.isEmpty
-        // 빈 휴지통: 버튼 비활성화 (숨김 X)
+        // 빈 삭제대기함: 버튼 비활성화 (숨김 X)
         overlay.titleBar.setTwoRightButtonsEnabled(firstEnabled: !isEmpty, secondEnabled: !isEmpty)
     }
 
@@ -514,7 +514,7 @@ final class TrashAlbumViewController: BaseGridViewController {
 
     // MARK: - Subtitle (사진 개수 표시)
 
-    /// 휴지통 사진 개수 서브타이틀 업데이트
+    /// 삭제대기함 사진 개수 서브타이틀 업데이트
     private func updateTrashItemCountSubtitle() {
         let count = _trashDataSource.assetCount
         let formatter = NumberFormatter()
@@ -535,16 +535,16 @@ final class TrashAlbumViewController: BaseGridViewController {
         }
     }
 
-    /// 휴지통 비우기 (외부에서 호출 가능)
+    /// 삭제대기함 비우기 (외부에서 호출 가능)
     /// FloatingTabBar의 삭제하기 버튼에서 호출
     func emptyTrash() {
         guard !_trashDataSource.isEmpty else { return }
         performEmptyTrash()
     }
 
-    /// 휴지통 비우기 실행
+    /// 삭제대기함 비우기 실행
     private func performEmptyTrash() {
-        // [Analytics] 이벤트 4-2: 휴지통 비우기 (완전삭제)
+        // [Analytics] 이벤트 4-2: 삭제대기함 비우기 (완전삭제)
         AnalyticsService.shared.countTrashPermanentDelete()
 
         Task {
@@ -559,7 +559,7 @@ final class TrashAlbumViewController: BaseGridViewController {
 
     // MARK: - Cell Selection (Override)
 
-    /// 뷰어 열기 (휴지통 모드)
+    /// 뷰어 열기 (삭제대기함 모드)
     /// 그리드와 동일한 fetchResult를 공유하여 인덱스 일관성 보장
     override func openViewer(for asset: PHAsset, at assetIndex: Int) {
         // 기존 fetchResult 사용 (새로 생성하지 않음 - 인덱스 일관성 보장)
@@ -576,7 +576,7 @@ final class TrashAlbumViewController: BaseGridViewController {
             viewerMode: .trash
         )
 
-        // 뷰어 뷰컨트롤러 생성 (휴지통 모드)
+        // 뷰어 뷰컨트롤러 생성 (삭제대기함 모드)
         // assetIndex는 이미 fetchResult 기준이므로 그대로 사용
         let viewerVC = ViewerViewController(
             coordinator: coordinator,
@@ -604,10 +604,10 @@ final class TrashAlbumViewController: BaseGridViewController {
 
     // MARK: - Cell Configuration (Override)
 
-    /// 셀 추가 설정 (휴지통 내에서는 딤드 표시 안 함)
+    /// 셀 추가 설정 (삭제대기함 내에서는 딤드 표시 안 함)
     /// Base에서 이미 configure() 호출되었으므로, isTrashed 상태만 변경
     override func configureCell(_ cell: PhotoCell, at indexPath: IndexPath, asset: PHAsset) {
-        // 휴지통 내에서는 모두 삭제 대상이므로 딤드 표시 안 함
+        // 삭제대기함 내에서는 모두 삭제 대상이므로 딤드 표시 안 함
         // Base에서 isTrashed=true로 설정되었을 수 있으므로 false로 덮어씀
         cell.updateTrashState(false)
     }
@@ -642,15 +642,15 @@ final class TrashAlbumViewController: BaseGridViewController {
 
 extension TrashAlbumViewController: ViewerViewControllerDelegate {
 
-    /// 삭제 요청 (휴지통에서는 사용 안 함)
+    /// 삭제 요청 (삭제대기함에서는 사용 안 함)
     func viewerDidRequestDelete(assetID: String) {
-        // 휴지통에서는 삭제 버튼 대신 복구/완전삭제 버튼 사용
+        // 삭제대기함에서는 삭제 버튼 대신 복구/완전삭제 버튼 사용
         // 이 메서드는 호출되지 않음
     }
 
     /// 복구 요청 (T056)
     func viewerDidRequestRestore(assetID: String) {
-        // [Analytics] 이벤트 4-2: 휴지통 복구
+        // [Analytics] 이벤트 4-2: 삭제대기함 복구
         AnalyticsService.shared.countTrashRestore()
 
         trashStore.restore(assetIDs: [assetID])
@@ -660,7 +660,7 @@ extension TrashAlbumViewController: ViewerViewControllerDelegate {
     /// 완전 삭제 요청 (T057)
     /// 비동기 작업 - 삭제 완료 후 뷰어에 알림
     func viewerDidRequestPermanentDelete(assetID: String) {
-        // [Analytics] 이벤트 4-2: 휴지통 완전삭제
+        // [Analytics] 이벤트 4-2: 삭제대기함 완전삭제
         AnalyticsService.shared.countTrashPermanentDelete()
 
         Task {

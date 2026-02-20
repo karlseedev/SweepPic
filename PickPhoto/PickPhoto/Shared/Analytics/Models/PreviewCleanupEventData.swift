@@ -23,7 +23,7 @@ enum PreviewReachedStage: String {
 
 /// 미리보기 최종 행동
 enum PreviewFinalAction: String {
-    /// 휴지통 이동
+    /// 삭제대기함 이동
     case moveToTrash = "moveToTrash"
     /// 닫기
     case close       = "close"
@@ -62,8 +62,8 @@ struct PreviewCleanupEventData {
     let excludeCount: Int
     /// 뷰어 열람 횟수
     let viewerOpenCount: Int
-    /// 최종 행동 (휴지통 이동 or 닫기)
+    /// 최종 행동 (삭제대기함 이동 or 닫기)
     let finalAction: PreviewFinalAction
-    /// 실제 휴지통 이동 수 (닫기면 0)
+    /// 실제 삭제대기함 이동 수 (닫기면 0)
     let movedCount: Int
 }

@@ -45,10 +45,10 @@ enum PreviewStage: Int, Comparable, CaseIterable {
 /// 분석 결과 1건 — 미리보기용
 ///
 /// CleanupPreviewService가 분석한 개별 사진 결과.
-/// 휴지통 이동 없이 결과만 보관하여 미리보기 그리드에 표시.
+/// 삭제대기함 이동 없이 결과만 보관하여 미리보기 그리드에 표시.
 struct PreviewCandidate {
 
-    /// PHAsset ID (휴지통 이동 시 사용)
+    /// PHAsset ID (삭제대기함 이동 시 사용)
     let assetID: String
 
     /// PHAsset 참조 (PhotoCell 표시용)

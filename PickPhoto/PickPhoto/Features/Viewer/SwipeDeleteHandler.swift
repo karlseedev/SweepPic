@@ -121,7 +121,7 @@ final class SwipeDeleteHandler: NSObject {
             let fastSwipe = velocity.y < Self.minimumVelocity
 
             if (reachedThreshold || fastSwipe) && offsetY < 0 {
-                // 삭제 가능 여부 확인 (이미 휴지통인 사진이면 바운스백)
+                // 삭제 가능 여부 확인 (이미 삭제대기함인 사진이면 바운스백)
                 if canDelete?() == false {
                     bounceBack()
                     return

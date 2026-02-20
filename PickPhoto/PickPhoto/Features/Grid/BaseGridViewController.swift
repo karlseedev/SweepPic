@@ -39,7 +39,7 @@ struct SwipeDeleteState {
     weak var targetCell: PhotoCell?
     /// 현재 대상 IndexPath
     var targetIndexPath: IndexPath?
-    /// 대상의 현재 휴지통 상태
+    /// 대상의 현재 삭제대기함 상태
     var targetIsTrashed: Bool = false
     /// 각도 판정 통과 여부 (10pt 이동 후 결정)
     var angleCheckPassed: Bool = false
@@ -112,7 +112,7 @@ class BaseGridViewController: UIViewController {
     /// 이미지 파이프라인
     let imagePipeline: ImagePipelineProtocol
 
-    /// 휴지통 스토어
+    /// 삭제대기함 스토어
     let trashStore: TrashStoreProtocol
 
     /// 현재 열 수

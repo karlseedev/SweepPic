@@ -489,7 +489,7 @@ public final class AlbumService: AlbumServiceProtocol {
         case .depthEffect:
             return .smartAlbumDepthEffect
         case .recentlyDeleted:
-            // 시스템 휴지통 - 앱에서는 별도 접근 제한 가능
+            // 시스템 삭제대기함 - 앱에서는 별도 접근 제한 가능
             return nil
         }
     }

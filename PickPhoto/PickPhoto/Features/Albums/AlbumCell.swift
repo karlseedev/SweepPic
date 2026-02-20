@@ -271,7 +271,7 @@ final class AlbumCell: UICollectionViewCell {
         }
     }
 
-    /// 휴지통 앨범 설정
+    /// 삭제대기함 앨범 설정
     func configure(trashAlbum: TrashAlbum, targetSize: CGSize) {
         titleLabel.text = trashAlbum.title
         countLabel.text = "\(trashAlbum.assetCount)"

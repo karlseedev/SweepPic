@@ -107,8 +107,8 @@ final class CleanupServiceByYearIntegrationTests: XCTestCase {
             return
         }
 
-        // 2차 정리 (이어서) - 휴지통을 비워야 가능
-        // Note: 실제 테스트에서는 중간에 휴지통 비우기 필요
+        // 2차 정리 (이어서) - 삭제대기함을 비워야 가능
+        // Note: 실제 테스트에서는 중간에 삭제대기함 비우기 필요
         // 여기서는 세션 데이터 검증만 수행
         XCTAssertNotNil(continueFrom)
         XCTAssertEqual(savedSession?.targetYear, currentYear)

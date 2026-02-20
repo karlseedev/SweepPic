@@ -182,8 +182,8 @@ enum CleanupConstants {
 
     // MARK: - UI 메시지
 
-    /// 휴지통 비어있지 않음 메시지
-    static let trashNotEmptyMessage = "휴지통을 먼저 비워주세요"
+    /// 삭제대기함 비어있지 않음 메시지
+    static let trashNotEmptyMessage = "삭제대기함을 먼저 비워주세요"
 
     /// 결과 메시지 생성
     ///

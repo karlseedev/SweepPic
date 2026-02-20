@@ -3,7 +3,7 @@
 //
 // T046: Album 구조체 (사용자 앨범)
 // T047: SmartAlbum 구조체 (스마트 앨범)
-// T054: TrashAlbum 구조체 (휴지통 가상 앨범) - Phase 7에서 구현
+// T054: TrashAlbum 구조체 (삭제대기함 가상 앨범) - Phase 7에서 구현
 
 import Foundation
 
@@ -85,7 +85,7 @@ public enum SmartAlbumType: String, CaseIterable, Hashable {
     /// 인물 사진 (Portrait)
     case depthEffect = "depth_effect"
 
-    /// 최근 삭제됨 (시스템 휴지통)
+    /// 최근 삭제됨 (시스템 삭제대기함)
     case recentlyDeleted = "recently_deleted"
 
     /// 표시 제목 (한글)
@@ -163,8 +163,8 @@ public struct SmartAlbum: Identifiable, Hashable {
 
 // MARK: - TrashAlbum (T054 - Phase 7)
 
-/// 휴지통 가상 앨범
-/// 앱 내 TrashStore에서 관리하는 휴지통 사진 표시용
+/// 삭제대기함 가상 앨범
+/// 앱 내 TrashStore에서 관리하는 삭제대기함 사진 표시용
 /// Phase 7에서 구현 예정
 public struct TrashAlbum: Identifiable, Hashable {
 
@@ -172,9 +172,9 @@ public struct TrashAlbum: Identifiable, Hashable {
     public let id: String = "app_trash_album"
 
     /// 앨범 제목
-    public let title: String = "휴지통"
+    public let title: String = "삭제대기함"
 
-    /// 휴지통 내 에셋 개수
+    /// 삭제대기함 내 에셋 개수
     public let assetCount: Int
 
     /// 키 에셋 ID (대표 썸네일용)

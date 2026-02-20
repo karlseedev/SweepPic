@@ -12,7 +12,7 @@
 //
 //  사용법:
 //  - 정리 버튼 → "[DEBUG] AestheticsScore 단독" 선택
-//  - 4000장 검색 후 저품질 사진 휴지통 이동
+//  - 4000장 검색 후 저품질 사진 삭제대기함 이동
 //
 //  임계값:
 //  - AestheticsScore < 0.2 → 저품질
@@ -70,7 +70,7 @@ final class AestheticsOnlyTester {
     /// 이미지 로더
     private let imageLoader = CleanupImageLoader.shared
 
-    /// 휴지통 스토어
+    /// 삭제대기함 스토어
     private let trashStore: TrashStoreProtocol = TrashStore.shared
 
     // MARK: - State
@@ -119,7 +119,7 @@ final class AestheticsOnlyTester {
 
     /// 테스트 실행
     ///
-    /// AestheticsScore만으로 저품질 사진을 판정하고 휴지통으로 이동합니다.
+    /// AestheticsScore만으로 저품질 사진을 판정하고 삭제대기함으로 이동합니다.
     ///
     /// - Parameters:
     ///   - continueFrom: 이어서 테스트할 날짜 (nil이면 최신부터)
@@ -230,9 +230,9 @@ final class AestheticsOnlyTester {
         // 세션 저장
         saveSession()
 
-        // 저품질 사진 휴지통 이동
+        // 저품질 사진 삭제대기함 이동
         if !lowQualityAssetIDs.isEmpty {
-            Log.print("[AestheticsOnly] \(lowQualityAssetIDs.count)장 휴지통 이동")
+            Log.print("[AestheticsOnly] \(lowQualityAssetIDs.count)장 삭제대기함 이동")
             trashStore.moveToTrash(assetIDs: lowQualityAssetIDs)
         }
 

@@ -8,7 +8,7 @@
 //  - BaseGridViewController 상속 안 함 (PhotoCell + BannerCell 혼합 + 배열 기반)
 //  - CompositionalLayout: 사진 섹션(3열) + 배너 섹션(전체 너비)
 //  - 단계적 확장: "기준 낮춰서 더 보기" → 새 섹션 삽입 + 자동 스크롤
-//  - 하단 고정 버튼: "탐색된 N장 휴지통으로 이동" / "N점 사진 N장 제외하기" / "N점 사진 N장 더 보기"
+//  - 하단 고정 버튼: "탐색된 N장 삭제대기함으로 이동" / "N점 사진 N장 제외하기" / "N점 사진 N장 더 보기"
 //
 
 import UIKit
@@ -20,7 +20,7 @@ import BlurUIKit
 
 /// 미리보기 그리드 delegate
 protocol PreviewGridViewControllerDelegate: AnyObject {
-    /// 정리 확인 — assetIDs를 휴지통으로 이동
+    /// 정리 확인 — assetIDs를 삭제대기함으로 이동
     func previewGridVC(_ vc: PreviewGridViewController, didConfirmCleanup assetIDs: [String])
 }
 
@@ -569,7 +569,7 @@ final class PreviewGridViewController: UIViewController {
         }
 
         let alert = UIAlertController(
-            title: "품질지수 \(maxScore)점 이하 사진 \(assetIDs.count)장을\n휴지통으로 이동할까요?",
+            title: "품질지수 \(maxScore)점 이하 사진 \(assetIDs.count)장을\n삭제대기함으로 이동할까요?",
             message: nil,
             preferredStyle: .alert
         )
@@ -577,7 +577,7 @@ final class PreviewGridViewController: UIViewController {
         alert.addAction(UIAlertAction(title: "취소", style: .cancel))
         alert.addAction(UIAlertAction(title: "이동하기", style: .destructive) { [weak self] _ in
             guard let self = self else { return }
-            // [Analytics] 이벤트 7-2: 휴지통 이동
+            // [Analytics] 이벤트 7-2: 삭제대기함 이동
             self.sendPreviewAnalyticsEvent(finalAction: .moveToTrash, movedCount: assetIDs.count)
             self.delegate?.previewGridVC(self, didConfirmCleanup: assetIDs)
             self.navigationController?.popViewController(animated: true)
@@ -590,8 +590,8 @@ final class PreviewGridViewController: UIViewController {
 
     /// 미리보기 정리 분석 이벤트 전송
     /// - Parameters:
-    ///   - finalAction: 최종 행동 (휴지통 이동 or 닫기)
-    ///   - movedCount: 휴지통 이동 수
+    ///   - finalAction: 최종 행동 (삭제대기함 이동 or 닫기)
+    ///   - movedCount: 삭제대기함 이동 수
     func sendPreviewAnalyticsEvent(finalAction: PreviewFinalAction, movedCount: Int) {
         guard !analyticsEventSent else { return }
         analyticsEventSent = true

@@ -13,7 +13,7 @@ import Foundation
 enum CleanupReachedStage: String {
     /// 정리 버튼만 탭
     case buttonTapped     = "buttonTapped"
-    /// 휴지통 경고에서 이탈
+    /// 삭제대기함 경고에서 이탈
     case trashWarningExit = "trashWarningExit"
     /// 방식 선택까지 도달
     case methodSelected   = "methodSelected"
@@ -55,7 +55,7 @@ enum AnalyticsCleanupResult: String {
 enum CleanupResultAction: String {
     /// 확인 버튼
     case confirm   = "confirm"
-    /// 휴지통 보기 버튼
+    /// 삭제대기함 보기 버튼
     case viewTrash = "viewTrash"
 }
 
@@ -67,7 +67,7 @@ enum CleanupResultAction: String {
 struct CleanupEventData {
     /// 도달 단계
     let reachedStage: CleanupReachedStage
-    /// 휴지통 경고 표시 여부
+    /// 삭제대기함 경고 표시 여부
     let trashWarningShown: Bool
     /// 선택 방식 (방식 선택 전 이탈이면 nil)
     let method: CleanupMethodType?

@@ -5,7 +5,7 @@
 //  Created by Claude on 2026-02-13.
 //
 //  TrashStore Integration 테스트
-//  - 자동 정리 → 휴지통 이동 → 복구 플로우 검증
+//  - 자동 정리 → 삭제대기함 이동 → 복구 플로우 검증
 //  - TrashStore API와 CleanupService 연동 확인
 //  - 실기기 테스트 필수
 //
@@ -116,17 +116,17 @@ final class TrashStoreIntegrationTests: XCTestCase {
         let foundAssetIDs = (1...10).map { "auto_cleanup_found_\($0)_\(UUID().uuidString)" }
         let initialCount = trashStore.trashedCount
 
-        // Step 1: 자동 정리 → 휴지통 이동 (CleanupService.moveToTrash 시뮬레이션)
+        // Step 1: 자동 정리 → 삭제대기함 이동 (CleanupService.moveToTrash 시뮬레이션)
         trashStore.moveToTrash(assetIDs: foundAssetIDs)
         XCTAssertEqual(trashStore.trashedCount, initialCount + foundAssetIDs.count)
 
-        // Step 2: 모든 사진이 휴지통에 있는지 확인
+        // Step 2: 모든 사진이 삭제대기함에 있는지 확인
         for id in foundAssetIDs {
             XCTAssertTrue(trashStore.isTrashed(id),
                           "All auto-cleanup photos should be in trash")
         }
 
-        // Step 3: 일부 복구 (사용자가 휴지통에서 선택 복구)
+        // Step 3: 일부 복구 (사용자가 삭제대기함에서 선택 복구)
         let restoreIDs = Array(foundAssetIDs.prefix(3))
         trashStore.restore(assetIDs: restoreIDs)
 
@@ -135,7 +135,7 @@ final class TrashStoreIntegrationTests: XCTestCase {
                            "Restored photos should not be in trash")
         }
 
-        // Step 4: 나머지는 여전히 휴지통에 있는지 확인
+        // Step 4: 나머지는 여전히 삭제대기함에 있는지 확인
         let remainingIDs = Array(foundAssetIDs.suffix(from: 3))
         for id in remainingIDs {
             XCTAssertTrue(trashStore.isTrashed(id),
@@ -148,7 +148,7 @@ final class TrashStoreIntegrationTests: XCTestCase {
 
     /// trashedCount == 0 일 때 CleanupService 시작 가능 확인
     func testCleanupService_CanStart_WhenTrashEmpty() {
-        // Given: 휴지통이 비어있는지 확인
+        // Given: 삭제대기함이 비어있는지 확인
         let cleanupService = CleanupService.shared
 
         if trashStore.trashedCount == 0 {

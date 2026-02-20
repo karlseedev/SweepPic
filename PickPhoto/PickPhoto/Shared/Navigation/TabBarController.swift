@@ -69,7 +69,7 @@ class TabBarController: UITabBarController {
         // 탭 변경 감지
         delegate = self
 
-        // 휴지통 배지 관찰 시작
+        // 삭제대기함 배지 관찰 시작
         setupTrashBadgeObserver()
 
     }
@@ -119,8 +119,8 @@ class TabBarController: UITabBarController {
         albumsNavController.delegate = self  // BarsVisibilityPolicy 적용을 위한 delegate
         self.albumsNav = albumsNavController
 
-        // Trash 탭 (휴지통)
-        // ⚠️ 휴지통 명칭 변경 시 동시 수정 필요:
+        // Trash 탭 (삭제대기함)
+        // ⚠️ 삭제대기함 명칭 변경 시 동시 수정 필요:
         // - TabBarController.swift: tabBarItem.title (여기)
         // - TrashAlbumViewController.swift: title, setTitle()
         let trashVC = TrashAlbumViewController()
@@ -220,7 +220,7 @@ class TabBarController: UITabBarController {
 
     // MARK: - Trash Badge
 
-    /// 휴지통 배지 관찰 설정
+    /// 삭제대기함 배지 관찰 설정
     /// TrashStore 상태 변경 시 배지 숫자를 즉시 갱신
     /// NotificationCenter 기반 (onStateChange와 독립적으로 동작)
     private func setupTrashBadgeObserver() {
@@ -243,7 +243,7 @@ class TabBarController: UITabBarController {
         updateTrashBadge(count: count)
     }
 
-    /// 휴지통 배지 숫자 업데이트
+    /// 삭제대기함 배지 숫자 업데이트
     /// iOS 16~25: floatingOverlay를 통해 LiquidGlassTabBar에 전달
     /// iOS 26+: 시스템 tabBarItem.badgeValue 사용
     private func updateTrashBadge(count: Int) {
@@ -349,7 +349,7 @@ extension TabBarController: FloatingOverlayContainerDelegate {
     }
 
     func floatingOverlayDidTapEmptyTrash(_ container: FloatingOverlayContainer) {
-        // TrashAlbumViewController에 휴지통 비우기 알림
+        // TrashAlbumViewController에 삭제대기함 비우기 알림
         if let trashVC = trashNav?.viewControllers.first as? TrashAlbumViewController {
             trashVC.emptyTrash()
         }

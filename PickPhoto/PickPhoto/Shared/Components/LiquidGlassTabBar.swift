@@ -21,13 +21,13 @@ protocol LiquidGlassTabBarDelegate: AnyObject {
     /// Select 모드에서 Delete 버튼 탭
     func liquidGlassTabBarDidTapDelete(_ tabBar: LiquidGlassTabBar)
 
-    /// 휴지통 비우기 버튼 탭
+    /// 삭제대기함 비우기 버튼 탭
     func liquidGlassTabBarDidTapEmptyTrash(_ tabBar: LiquidGlassTabBar)
 
-    /// 휴지통 Select 모드에서 Restore 버튼 탭
+    /// 삭제대기함 Select 모드에서 Restore 버튼 탭
     func liquidGlassTabBarDidTapRestore(_ tabBar: LiquidGlassTabBar)
 
-    /// 휴지통 Select 모드에서 Delete 버튼 탭 (영구 삭제)
+    /// 삭제대기함 Select 모드에서 Delete 버튼 탭 (영구 삭제)
     func liquidGlassTabBarDidTapTrashDelete(_ tabBar: LiquidGlassTabBar)
 }
 
@@ -556,10 +556,10 @@ extension LiquidGlassTabBar {
 
 extension LiquidGlassTabBar {
 
-    /// 휴지통 탭 배지 업데이트
-    /// - Parameter count: 휴지통에 있는 사진 수 (0이면 배지 숨김)
+    /// 삭제대기함 탭 배지 업데이트
+    /// - Parameter count: 삭제대기함에 있는 사진 수 (0이면 배지 숨김)
     func updateTrashBadge(_ count: Int) {
-        // 휴지통 버튼은 index 2
+        // 삭제대기함 버튼은 index 2
         guard tabButtons.count > 2 else { return }
         tabButtons[2].updateBadge(count: count)
     }

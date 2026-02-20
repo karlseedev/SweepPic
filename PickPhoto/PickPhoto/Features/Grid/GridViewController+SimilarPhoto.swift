@@ -473,7 +473,7 @@ extension GridViewController {
         // 선택 모드 시 비활성화
         guard !isSelectMode else { return false }
 
-        // 휴지통 화면 시 비활성화 (휴지통은 별도 탭이므로 GridViewController에서는 해당 없음)
+        // 삭제대기함 화면 시 비활성화 (삭제대기함은 별도 탭이므로 GridViewController에서는 해당 없음)
 
         return true
     }

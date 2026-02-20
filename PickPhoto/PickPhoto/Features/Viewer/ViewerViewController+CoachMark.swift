@@ -26,7 +26,7 @@ extension ViewerViewController {
         // 다른 코치마크 표시 중이면 스킵 (A/B 동시 표시 방지)
         guard !CoachMarkManager.shared.isShowing else { return }
 
-        // 일반 모드에서만 표시 (휴지통/정리 모드 제외)
+        // 일반 모드에서만 표시 (삭제대기함/정리 모드 제외)
         guard viewerMode == .normal else { return }
 
         // 동영상이면 스킵 (이미지일 때만 코치마크 표시)
