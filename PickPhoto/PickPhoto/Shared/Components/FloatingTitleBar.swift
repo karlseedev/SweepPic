@@ -267,8 +267,6 @@ final class FloatingTitleBar: UIView {
         contentContainer.addSubview(menuButton)
 
         setupConstraints()
-
- Initialized with title: \(title)")
     }
 
     private func setupConstraints() {
@@ -382,12 +380,10 @@ final class FloatingTitleBar: UIView {
     // MARK: - Actions
 
     @objc private func backButtonTapped() {
- Back button tapped")
         executeBackAction()
     }
 
     @objc private func selectButtonTapped() {
- Select button tapped")
         delegate?.floatingTitleBarDidTapSelect(self)
     }
 
@@ -487,17 +483,14 @@ final class FloatingTitleBar: UIView {
     /// - Parameter cancelAction: Cancel 버튼 탭 시 실행할 클로저
     func enterSelectMode(cancelAction: @escaping () -> Void) {
         setRightButton(title: "취소", backgroundColor: .systemBlue, action: cancelAction)
- Entered select mode - showing Cancel button")
     }
 
     /// Select 모드 종료 - Select 버튼으로 복원
     func exitSelectMode() {
         resetToSelectButton()
- Exited select mode - showing Select button")
     }
 
     @objc private func rightButtonTapped() {
- Right button tapped")
         rightButtonAction?()
     }
 
@@ -507,7 +500,6 @@ final class FloatingTitleBar: UIView {
     private var secondRightButtonAction: (() -> Void)?
 
     @objc private func secondRightButtonTapped() {
- Second right button tapped")
         secondRightButtonAction?()
     }
 
@@ -545,8 +537,6 @@ final class FloatingTitleBar: UIView {
 
         secondRightButton.isHidden = false
         secondRightButtonAction = secondAction
-
- Two right buttons set: [\(firstTitle)] [\(secondTitle)]")
     }
 
     /// 두 번째 오른쪽 버튼 숨기기 (일반 모드 복원 시)
@@ -576,8 +566,6 @@ final class FloatingTitleBar: UIView {
 
         // Select 버튼 복원
         resetToSelectButton()
-
- Reset to default - showing Select button only")
     }
 
     // MARK: - Menu Button
@@ -591,8 +579,6 @@ final class FloatingTitleBar: UIView {
         // Select 버튼 trailing을 메뉴 버튼 왼쪽으로 전환
         selectButtonTrailingToContainer?.isActive = false
         selectButtonTrailingToMenu?.isActive = true
-
- Menu button shown")
     }
 
     /// 메뉴 버튼 숨기기

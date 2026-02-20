@@ -69,19 +69,13 @@ final class SupabaseProvider {
         let body: [String: Any] = makeBody(eventName: eventName, params: params, photoBucket: photoBucket)
 
         guard let jsonData = try? JSONSerialization.data(withJSONObject: body) else {
-            #if DEBUG
- Error: JSON 직렬화 실패 (send \(eventName))")
-            #endif
             return
         }
 
         var request = makeRequest()
         request.httpBody = jsonData
 
-        URLSession.shared.dataTask(with: request) { _, response, error in
-            #if DEBUG
-            Self.logResponse(eventName: eventName, count: 1, response: response, error: error)
-            #endif
+        URLSession.shared.dataTask(with: request) { _, _, _ in
         }.resume()
     }
 
@@ -102,9 +96,6 @@ final class SupabaseProvider {
         }
 
         guard let jsonData = try? JSONSerialization.data(withJSONObject: bodyArray) else {
-            #if DEBUG
- Error: JSON 직렬화 실패 (batch \(events.count)건)")
-            #endif
             completion?()
             return
         }
@@ -112,10 +103,7 @@ final class SupabaseProvider {
         var request = makeRequest()
         request.httpBody = jsonData
 
-        URLSession.shared.dataTask(with: request) { _, response, error in
-            #if DEBUG
-            Self.logResponse(eventName: "batch", count: events.count, response: response, error: error)
-            #endif
+        URLSession.shared.dataTask(with: request) { _, _, _ in
             completion?()
         }.resume()
     }
@@ -161,18 +149,4 @@ final class SupabaseProvider {
         return String(cString: machine)
     }
 
-    /// 디버그 응답 로깅
-    #if DEBUG
-    private static func logResponse(eventName: String, count: Int, response: URLResponse?, error: Error?) {
-        if let httpResponse = response as? HTTPURLResponse {
-            if (200...299).contains(httpResponse.statusCode) {
-     OK \(eventName) \(count) events (HTTP \(httpResponse.statusCode))")
-            } else {
-     Error \(eventName): HTTP \(httpResponse.statusCode)")
-            }
-        } else if let error = error {
- Error \(eventName): \(error.localizedDescription)")
-        }
-    }
-    #endif
 }

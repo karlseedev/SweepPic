@@ -127,7 +127,6 @@ final class SystemUIInspector2 {
         ])
 
         self.debugButton = button
- 디버그 버튼 표시됨 - _ivarDescription 완전 덤프")
     }
 
     /// 디버그 버튼 숨기기
@@ -161,7 +160,6 @@ final class SystemUIInspector2 {
     /// 전체 덤프 실행 (파일 2개 저장)
     private func performFullDump() {
         guard let window = getKeyWindow() else {
-     Key Window를 찾을 수 없습니다.")
             return
         }
 
@@ -408,7 +406,6 @@ final class SystemUIInspector2 {
         let fileName = "ui_dump_\(timestamp)_\(inspectionCount)_\(suffix).txt"
 
         guard let documentsPath = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first else {
-     Documents 폴더를 찾을 수 없습니다.")
             return fileName
         }
 
@@ -416,9 +413,7 @@ final class SystemUIInspector2 {
 
         do {
             try content.write(to: filePath, atomically: true, encoding: .utf8)
-     저장 완료: \(filePath.path)")
         } catch {
-     저장 실패: \(error)")
         }
 
         return fileName
