@@ -73,11 +73,21 @@ final class CoachMarkManager {
     /// C-1 → C-2 안전 타임아웃 WorkItem (C-2 전환 성공 시 cancel)
     var safetyTimeoutWork: DispatchWorkItem?
 
+    // MARK: - E 전용 상태
+
+    /// E-1+E-2 시퀀스 진행 중 (true 동안 dismissCurrent() 차단)
+    /// Step 1 [확인] → 탭 전환 → Step 2/3 표시 동안 뷰 전환으로 인한 dismiss 방지
+    var isDeleteGuideSequenceActive: Bool = false
+
     /// 현재 코치마크 dismiss
-    /// ⚠️ C-1 → C-2 전환 중에는 dismiss 차단 (오버레이 보호)
+    /// ⚠️ C-1 → C-2 전환 중 또는 E-1+E-2 시퀀스 진행 중에는 dismiss 차단 (오버레이 보호)
     func dismissCurrent() {
         if isWaitingForC2 {
             Log.print("[CoachMarkManager] dismissCurrent BLOCKED — isWaitingForC2=true, overlay=\(currentOverlay != nil)")
+            return
+        }
+        if isDeleteGuideSequenceActive {
+            Log.print("[CoachMarkManager] dismissCurrent BLOCKED — isDeleteGuideSequenceActive=true")
             return
         }
         Log.print("[CoachMarkManager] dismissCurrent — overlay=\(currentOverlay != nil)")

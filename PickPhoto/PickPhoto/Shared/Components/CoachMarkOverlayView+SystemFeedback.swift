@@ -248,6 +248,9 @@ extension CoachMarkOverlayView {
     func transitionToStep2() {
         guard let tabBar = findTabBarController() else { return }
 
+        // 시퀀스 보호 플래그 ON (탭 전환 중 viewWillDisappear에서 dismissCurrent 차단)
+        CoachMarkManager.shared.isDeleteGuideSequenceActive = true
+
         // Step 1 콘텐츠 숨김 (페이드아웃)
         hideStep1Content()
 
@@ -472,6 +475,9 @@ extension CoachMarkOverlayView {
     /// E 전용 리소스 정리 (dismiss 시 호출)
     func cleanupSystemFeedbackIfNeeded() {
         guard coachMarkType == .firstDeleteGuide || coachMarkType == .firstEmpty else { return }
+
+        // 시퀀스 보호 플래그 OFF
+        CoachMarkManager.shared.isDeleteGuideSequenceActive = false
 
         // 모든 E 전용 뷰 제거
         step1Container?.removeFromSuperview()
