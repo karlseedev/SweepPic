@@ -190,7 +190,7 @@ final class CoachMarkOverlayView: UIView {
     /// 안내 텍스트 라벨 (C 확장에서 텍스트 교체/페이드 사용)
     let messageLabel: UILabel = {
         let label = UILabel()
-        label.text = "사진을 밀어서 바로 휴지통으로 보내세요\n다시 밀면 복원돼요"
+        label.text = "사진을 밀어서 바로 정리하세요\n다시 밀면 복원돼요\n정리한 사진은 삭제대기함으로 이동돼요"
         label.textColor = .white
         label.font = .systemFont(ofSize: 17, weight: .medium)
         label.textAlignment = .center
@@ -320,12 +320,12 @@ final class CoachMarkOverlayView: UIView {
         )
         overlay.addSubview(overlay.arrowView)
 
-        // 텍스트 라벨
+        // 텍스트 라벨 (3줄: 정리 + 복원 + 삭제대기함)
         overlay.messageLabel.frame = CGRect(
             x: 20,
             y: highlightFrame.maxY + 24,
             width: overlay.bounds.width - 40,
-            height: 60
+            height: 80
         )
         overlay.addSubview(overlay.messageLabel)
 
@@ -410,14 +410,14 @@ final class CoachMarkOverlayView: UIView {
         )
         overlay.addSubview(overlay.arrowView)
 
-        // 안내 텍스트 (화면 높이의 2/3 지점)
-        overlay.messageLabel.text = "이미지를 위로 밀면 바로 휴지통으로 이동돼요\n잘못 삭제된 사진은 휴지통에서 복구할 수 있어요"
+        // 안내 텍스트 (화면 높이의 2/3 지점, 2줄)
+        overlay.messageLabel.text = "위로 밀면 바로\n삭제대기함으로 이동해요"
         let textY = window.bounds.height * 2 / 3
         overlay.messageLabel.frame = CGRect(
             x: 20,
             y: textY,
             width: window.bounds.width - 40,
-            height: 60
+            height: 50
         )
         overlay.addSubview(overlay.messageLabel)
 
