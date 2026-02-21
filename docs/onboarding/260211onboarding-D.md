@@ -33,18 +33,21 @@
 
 ## 파일 구조
 
-### 신규 생성 (2개)
+### 신규 생성 (3개)
 
 | 파일 | 역할 |
 |------|------|
 | `Features/AutoCleanup/CoachMarkDPreScanner.swift` | 사전 스캔 (T2 파이프라인, 3장 확보까지 계속) |
-| `Features/Grid/GridViewController+CoachMarkD.swift` | D 트리거 로직 + 레이아웃 |
+| `Features/Grid/GridViewController+CoachMarkD.swift` | D 트리거 로직 (타이머, 버튼 가로채기, 가드) |
+| `Shared/Components/CoachMarkOverlayView+CoachMarkD.swift` | D 오버레이 레이아웃 (썸네일 그리드, confirmTapped D 분기, 탭 모션) |
+
+> 기존 `CoachMarkOverlayView.swift`가 909줄로 1,000줄 제한에 근접하므로, C/E와 동일하게 별도 extension 파일로 분리한다.
 
 ### 수정 (4개)
 
 | 파일 | 수정 내용 |
 |------|-----------|
-| `CoachMarkOverlayView.swift` | `.autoCleanup` case 추가, `showAutoCleanup()` 정적 메서드 (썸네일 그리드 레이아웃), `confirmTapped()` D 분기, `updateDimPath()` 조건 추가 |
+| `CoachMarkOverlayView.swift` | `.autoCleanup` case 추가, `updateDimPath()` D 조건 추가 |
 | `FloatingTitleBar.swift` | `secondRightButtonFrameInWindow()` 접근자 메서드 추가 |
 | `GridViewController.swift` | `viewDidAppear`에 D 타이머 시작, `viewWillDisappear`에 D 타이머 취소, 사전 스캔 시작 호출 추가 |
 | `GridViewController+Cleanup.swift` | `showCleanupMethodSheet()` 접근 수준 `private` → `internal` 변경, `cleanupButtonTapped()`에 D 미완료 시 가로채기 추가 |

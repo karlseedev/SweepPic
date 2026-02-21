@@ -28,6 +28,7 @@ private var step3LabelKey: UInt8 = 0
 private var fingerAnimationViewKey: UInt8 = 0
 private var cardViewKey: UInt8 = 0
 private var step2BottomConstraintKey: UInt8 = 0
+private var focusBorderLayerKey: UInt8 = 0
 
 // MARK: - E: System Feedback (Delete Guide + First Empty)
 
@@ -74,6 +75,12 @@ extension CoachMarkOverlayView {
         set { objc_setAssociatedObject(self, &cardViewKey, newValue, .OBJC_ASSOCIATION_RETAIN_NONATOMIC) }
     }
 
+    /// 포커스 원 테두리 레이어 (흰색 원형 스트로크)
+    private var focusBorderLayer: CAShapeLayer? {
+        get { objc_getAssociatedObject(self, &focusBorderLayerKey) as? CAShapeLayer }
+        set { objc_setAssociatedObject(self, &focusBorderLayerKey, newValue, .OBJC_ASSOCIATION_RETAIN_NONATOMIC) }
+    }
+
     /// Step 2 카드 하단 제약 (Step 3 확장 시 비활성화용)
     private var step2BottomConstraint: NSLayoutConstraint? {
         get { objc_getAssociatedObject(self, &step2BottomConstraintKey) as? NSLayoutConstraint }
@@ -84,6 +91,7 @@ extension CoachMarkOverlayView {
 
     /// E-1+E-2 통합: 삭제 시스템 안내 시퀀스 시작
     /// 단일 오버레이가 시작부터 끝까지 유지되며 모든 입력을 차단
+    /// 시퀀스: 딤 페이드인 → 포커스 원 축소 애니메이션 → 카드 팝업 페이드인
     /// - Parameter window: 표시할 윈도우
     static func showDeleteSystemGuide(in window: UIWindow) {
         // VoiceOver 가드 (접근성 대응 미구현 상태에서는 표시하지 않음)
@@ -98,18 +106,55 @@ extension CoachMarkOverlayView {
         window.addSubview(overlay)
         CoachMarkManager.shared.currentOverlay = overlay
 
-        // 삭제대기함 탭 하이라이트 (딤 구멍)
-        if let tabFrame = overlay.getTrashTabFrame() {
-            overlay.highlightFrame = tabFrame
+        // 삭제대기함 탭 frame (포커스 애니메이션 목표값)
+        let tabFrame = overlay.getTrashTabFrame()
+
+        // 초기 상태: 딤 배경에 큰 원형 구멍 (→ 축소하며 삭제대기함으로 포커스)
+        if let tabFrame = tabFrame {
+            let margin: CGFloat = 6
+            let holeRect = tabFrame.insetBy(dx: -margin, dy: -margin)
+            // 화면 밖에서 시작하는 큰 원 (dimLayer path 직접 설정)
+            let startDiameter = max(overlay.bounds.width, overlay.bounds.height) * 3.0
+            let startCircleRect = CGRect(
+                x: holeRect.midX - startDiameter / 2,
+                y: holeRect.midY - startDiameter / 2,
+                width: startDiameter,
+                height: startDiameter
+            )
+            let startPath = UIBezierPath(rect: overlay.bounds)
+            startPath.append(UIBezierPath(ovalIn: startCircleRect))
+            overlay.dimLayer.path = startPath.cgPath
+        } else {
+            // 탭 frame 없으면 구멍 없이 딤 전체
+            overlay.highlightFrame = .zero
+            overlay.updateDimPath()
         }
-        overlay.updateDimPath()
 
-        // Step 1 콘텐츠 구성 (텍스트 + [확인], 손가락 없음)
+        // Step 1 카드 (숨긴 상태로 미리 생성, 포커스 애니메이션 후 표시)
         overlay.buildStep1Content()
+        overlay.step1Container?.alpha = 0
 
-        // 페이드인
+        // 1단계: 딤 배경 페이드인
         UIView.animate(withDuration: 0.3) {
             overlay.alpha = 1
+        } completion: { _ in
+            guard !overlay.shouldStopAnimation else { return }
+
+            // 2단계: 포커스 원 축소 애니메이션
+            if let tabFrame = tabFrame {
+                overlay.animateFocusCircle(to: tabFrame) {
+                    guard !overlay.shouldStopAnimation else { return }
+                    // 3단계: 카드 팝업 페이드인
+                    UIView.animate(withDuration: 0.25) {
+                        overlay.step1Container?.alpha = 1
+                    }
+                }
+            } else {
+                // tabFrame 없으면 바로 카드 표시
+                UIView.animate(withDuration: 0.25) {
+                    overlay.step1Container?.alpha = 1
+                }
+            }
         }
     }
 
@@ -564,6 +609,90 @@ extension CoachMarkOverlayView {
         feedbackCardView?.removeFromSuperview()
         feedbackCardView = nil
         step2BottomConstraint = nil
+        focusBorderLayer?.removeFromSuperlayer()
+        focusBorderLayer = nil
+    }
+
+    // MARK: - Focus Circle Animation
+
+    /// 포커스 원 축소 애니메이션: 큰 원 → 삭제대기함 탭 크기
+    /// CABasicAnimation으로 dimLayer.path를 보간하여 부드러운 축소 효과
+    /// - Parameters:
+    ///   - tabFrame: 삭제대기함 탭의 window 좌표 frame (최종 포커스 위치)
+    ///   - completion: 애니메이션 완료 후 콜백
+    private func animateFocusCircle(to tabFrame: CGRect, completion: @escaping () -> Void) {
+        let margin: CGFloat = 6
+        let holeRect = tabFrame.insetBy(dx: -margin, dy: -margin)
+
+        // 최종 원 (삭제대기함 탭의 60% 크기로 타이트하게 포커스)
+        let finalDiameter = max(holeRect.width, holeRect.height) * 0.6
+        let finalCircleRect = CGRect(
+            x: holeRect.midX - finalDiameter / 2,
+            y: holeRect.midY - finalDiameter / 2,
+            width: finalDiameter,
+            height: finalDiameter
+        )
+
+        // 시작 원 (화면 밖에서부터 축소되도록 충분히 큰 크기)
+        let startDiameter = max(bounds.width, bounds.height) * 3.0
+        let startCircleRect = CGRect(
+            x: holeRect.midX - startDiameter / 2,
+            y: holeRect.midY - startDiameter / 2,
+            width: startDiameter,
+            height: startDiameter
+        )
+
+        // 시작 경로 (큰 구멍 = 딤 거의 없음)
+        let startPath = UIBezierPath(rect: bounds)
+        startPath.append(UIBezierPath(ovalIn: startCircleRect))
+
+        // 최종 경로 (작은 구멍 = 삭제대기함만 투명)
+        let endPath = UIBezierPath(rect: bounds)
+        endPath.append(UIBezierPath(ovalIn: finalCircleRect))
+
+        // 테두리 레이어 (흰색 원형 스트로크, dimLayer 위에 배치)
+        let borderLayer = CAShapeLayer()
+        borderLayer.fillColor = UIColor.clear.cgColor
+        borderLayer.strokeColor = UIColor.white.cgColor
+        borderLayer.lineWidth = 2
+        borderLayer.path = UIBezierPath(ovalIn: startCircleRect).cgPath
+        layer.addSublayer(borderLayer)
+        focusBorderLayer = borderLayer
+
+        // CABasicAnimation으로 path 보간 애니메이션 (딤 + 테두리 동기화)
+        CATransaction.begin()
+        CATransaction.setCompletionBlock { [weak self] in
+            guard let self else { return }
+            // 최종 상태 확정
+            self.highlightFrame = tabFrame
+            self.dimLayer.path = endPath.cgPath
+            self.dimLayer.removeAnimation(forKey: "focusCircle")
+            borderLayer.path = UIBezierPath(ovalIn: finalCircleRect).cgPath
+            borderLayer.removeAnimation(forKey: "focusBorder")
+            completion()
+        }
+
+        // 딤 구멍 축소 애니메이션
+        let dimAnimation = CABasicAnimation(keyPath: "path")
+        dimAnimation.fromValue = startPath.cgPath
+        dimAnimation.toValue = endPath.cgPath
+        dimAnimation.duration = 0.9
+        dimAnimation.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
+        dimAnimation.fillMode = .forwards
+        dimAnimation.isRemovedOnCompletion = false
+        dimLayer.add(dimAnimation, forKey: "focusCircle")
+
+        // 테두리 원 축소 애니메이션 (딤과 동일 타이밍)
+        let borderAnimation = CABasicAnimation(keyPath: "path")
+        borderAnimation.fromValue = UIBezierPath(ovalIn: startCircleRect).cgPath
+        borderAnimation.toValue = UIBezierPath(ovalIn: finalCircleRect).cgPath
+        borderAnimation.duration = 0.9
+        borderAnimation.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
+        borderAnimation.fillMode = .forwards
+        borderAnimation.isRemovedOnCompletion = false
+        borderLayer.add(borderAnimation, forKey: "focusBorder")
+
+        CATransaction.commit()
     }
 
     // MARK: - Helpers

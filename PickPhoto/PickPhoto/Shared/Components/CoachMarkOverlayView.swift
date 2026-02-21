@@ -270,12 +270,14 @@ final class CoachMarkOverlayView: UIView {
             let holePath = UIBezierPath(roundedRect: holeRect, cornerRadius: radius)
             fullPath.append(holePath)
         }
-        // E-1+E-2: Step 3에서 비우기 버튼 하이라이트 (highlightFrame이 .zero가 아닐 때만)
+        // E-1+E-2: 하이라이트 (highlightFrame이 .zero가 아닐 때만)
+        // Step 1: 삭제대기함 탭 포커스 (60% 크기), Step 3: 비우기 버튼 (원래 크기)
         if coachMarkType == .firstDeleteGuide && highlightFrame != .zero {
             let margin: CGFloat = 6
             let holeRect = highlightFrame.insetBy(dx: -margin, dy: -margin)
-            // 탭 버튼은 원형 하이라이트로 표시
-            let diameter = max(holeRect.width, holeRect.height)
+            // Step 1 탭 포커스는 60% 크기, Step 3 비우기 버튼은 원래 크기
+            let scale: CGFloat = (systemFeedbackCurrentStep == 1) ? 0.6 : 1.0
+            let diameter = max(holeRect.width, holeRect.height) * scale
             let circleRect = CGRect(
                 x: holeRect.midX - diameter / 2,
                 y: holeRect.midY - diameter / 2,
