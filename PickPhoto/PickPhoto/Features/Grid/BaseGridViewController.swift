@@ -46,8 +46,8 @@ struct SwipeDeleteState {
 
     // MARK: - PRD7 상수
 
-    /// 스와이프 각도 임계값 (수평선 ±15°)
-    static let angleThreshold: CGFloat = 15.0 * .pi / 180.0
+    /// 스와이프 각도 임계값 (수평선 ±25°)
+    static let angleThreshold: CGFloat = 25.0 * .pi / 180.0
     /// 최소 이동 거리 (각도 판정 전)
     static let minimumTranslation: CGFloat = 10.0
     /// 확정 비율 (셀 너비의 50%)
@@ -1017,10 +1017,10 @@ extension BaseGridViewController: UIGestureRecognizerDelegate {
             // 패딩 셀이면 무시
             guard indexPath.item >= paddingCellCount else { return false }
 
-            // velocity 기반 힌트 (30° 이내)
+            // velocity 기반 힌트 (35° 이내)
             let velocity = pan.velocity(in: collectionView)
             let angle = atan2(abs(velocity.y), abs(velocity.x))
-            return angle < (30.0 * .pi / 180.0)
+            return angle < (35.0 * .pi / 180.0)
         }
         return true
     }
@@ -1050,7 +1050,8 @@ extension BaseGridViewController {
     /// 첫 삭제 시 삭제 시스템 안내 시퀀스 표시 (E-1+E-2)
     /// moveToTrash 성공 후 호출
     func showDeleteSystemGuideIfNeeded() {
-        guard !CoachMarkType.firstDeleteGuide.hasBeenShown else { return }
+        // TODO: 테스트 완료 후 원복 — hasBeenShown 가드 임시 비활성화
+        // guard !CoachMarkType.firstDeleteGuide.hasBeenShown else { return }
         guard !CoachMarkManager.shared.isShowing else { return }
         guard !UIAccessibility.isVoiceOverRunning else { return }
         guard let window = view.window else { return }

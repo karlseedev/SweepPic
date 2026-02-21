@@ -77,8 +77,12 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
             showMainInterface()
 
         case .notDetermined:
-            // 권한 요청 전 → PermissionViewController 표시
-            showPermissionViewController()
+            // 권한 요청 전 → 바로 시스템 권한 팝업 요청
+            // (팝업이 뜨기 전까지 빈 화면 표시)
+            let placeholder = UIViewController()
+            placeholder.view.backgroundColor = .systemBackground
+            window?.rootViewController = placeholder
+            requestPhotoPermission()
 
         case .denied, .restricted, .limited:
             // 권한 거부/제한됨 → PermissionViewController 표시 (설정 안내)
@@ -87,6 +91,33 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         }
 
         Log.print("[SceneDelegate] configureRootViewController: \(permissionState)")
+    }
+
+    /// 최초 실행 시 시스템 권한 팝업 직접 요청
+    /// .notDetermined 상태에서만 호출됨
+    private func requestPhotoPermission() {
+        Task {
+            let status = await PermissionStore.shared.requestAuthorization()
+
+            // [Analytics] 최초 권한 요청 결과 추적
+            let result: PermissionResultType = {
+                switch status {
+                case .authorized: return .fullAccess
+                case .limited:    return .limitedAccess
+                case .denied, .restricted, .notDetermined: return .denied
+                }
+            }()
+            AnalyticsService.shared.trackPermissionResult(result: result, timing: .firstRequest)
+
+            await MainActor.run {
+                if status == .authorized {
+                    showMainInterface()
+                } else {
+                    // 거부/제한 → 설정 안내 화면 표시
+                    showPermissionViewController()
+                }
+            }
+        }
     }
 
     /// 메인 인터페이스 표시 (TabBarController)
@@ -206,6 +237,13 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
     func sceneDidBecomeActive(_ scene: UIScene) {
         // 앱이 활성 상태가 될 때 처리
         Log.print("[SceneDelegate] Scene became active")
+
+        // 시스템 권한 팝업 dismiss 후 권한 상태 확인 → 메인 화면 전환
+        // (시스템 팝업은 앱을 inactive → active로 전환시킴)
+        let currentStatus = PermissionStore.shared.currentStatus
+        if currentStatus == .authorized, !(window?.rootViewController is TabBarController) {
+            showMainInterface()
+        }
 
         // v6: 백그라운드에서 캐시 트림 (용량 관리)
         DispatchQueue.global(qos: .utility).async {

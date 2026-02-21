@@ -1,14 +1,13 @@
 // PermissionViewController.swift
-// 사진 라이브러리 권한 요청 화면
+// 사진 라이브러리 권한 설정 안내 화면
 //
 // T061: PermissionViewController 생성
-// T062: "사진 접근 허용" 버튼 구현 (시스템 권한 다이얼로그 트리거)
 // T063: 거부 상태 UI 구현 ("설정에서 권한을 허용해주세요" + "설정 열기" 버튼)
 //
 // 역할:
-// - 권한 미승인 시 권한 요청 UI 표시
-// - 권한 거부 시 설정 앱으로 이동 안내
-// - 권한 승인 후 자동으로 메인 화면으로 전환
+// - 권한 거부/제한 시 설정 앱으로 이동 안내
+// - 설정에서 전체 접근 허용 후 자동으로 메인 화면 전환
+// - 최초 권한 요청(.notDetermined)은 SceneDelegate에서 직접 시스템 팝업으로 처리
 
 import UIKit
 import AppCore
@@ -37,8 +36,8 @@ final class PermissionViewController: UIViewController {
     /// 권한 스토어
     private let permissionStore: PermissionStoreProtocol
 
-    /// 현재 표시 중인 상태
-    private var currentState: PermissionState = .notDetermined
+    /// 현재 표시 중인 상태 (거부/제한 상태에서만 사용)
+    private var currentState: PermissionState = .denied
 
     // MARK: - UI Components
 
@@ -142,8 +141,9 @@ final class PermissionViewController: UIViewController {
         if currentStatus != currentState {
             updateUI(for: currentStatus)
 
-            // 권한이 승인되었으면 델리게이트에 알림
-            if currentStatus.canAccessPhotos {
+            // FR-033: 전체 접근 권한(.authorized)만 메인 화면 전환
+            // .limited는 Denied와 동일하게 처리하므로 delegate 호출하지 않음
+            if currentStatus == .authorized {
                 delegate?.permissionViewControllerDidGrantAccess(self)
             }
         }
@@ -197,35 +197,19 @@ final class PermissionViewController: UIViewController {
         currentState = state
 
         switch state {
-        case .notDetermined:
-            // T062: 권한 요청 전 - "사진 접근 허용" 버튼 표시
-            showRequestUI()
-
         case .denied, .restricted, .limited:
             // T063: 거부/제한 상태 - "설정 열기" 버튼 표시
             // FR-033: Limited도 Denied와 동일하게 처리
             showDeniedUI(isRestricted: state == .restricted, isLimited: state == .limited)
 
         case .authorized:
-            // 전체 접근 권한 있음 - 이 화면이 표시되면 안 됨
-            // 델리게이트가 화면 전환 처리
+            // 전체 접근 권한 있음 - 델리게이트가 메인 화면 전환 처리
             delegate?.permissionViewControllerDidGrantAccess(self)
+
+        case .notDetermined:
+            // 이 VC에서는 발생하지 않음 (SceneDelegate에서 시스템 팝업으로 처리)
+            break
         }
-    }
-
-    /// T062: 권한 요청 UI 표시
-    private func showRequestUI() {
-        // 아이콘 변경
-        let config = UIImage.SymbolConfiguration(pointSize: 80, weight: .light)
-        iconImageView.image = UIImage(systemName: "photo.on.rectangle.angled", withConfiguration: config)
-        iconImageView.tintColor = .systemBlue
-
-        titleLabel.text = "앱을 이용하려면\n전체 사진 접근 권한이\n필요합니다"
-        descriptionLabel.text = "PickPhoto는 사진을 탐색하고 정리하기 위해\n모든 사진 라이브러리에 접근해야 합니다."
-        actionButton.setTitle("사진 접근 허용", for: .normal)
-        actionButton.backgroundColor = .systemBlue
-        secondaryLabel.isHidden = true
-
     }
 
     /// T063: 거부/제한 상태 UI 표시
@@ -260,53 +244,9 @@ final class PermissionViewController: UIViewController {
 
     // MARK: - Actions
 
-    /// 액션 버튼 탭 처리
+    /// 액션 버튼 탭 처리 - "설정 열기" 버튼
     @objc private func actionButtonTapped() {
-        switch currentState {
-        case .notDetermined:
-            // T062: 시스템 권한 다이얼로그 트리거
-            requestPhotoAccess()
-
-        case .denied, .restricted, .limited:
-            // T063: 설정 앱 열기 (FR-033: Limited도 동일하게 처리)
-            openSettings()
-
-        case .authorized:
-            // 이 상태에서는 호출되지 않아야 함
-            delegate?.permissionViewControllerDidGrantAccess(self)
-        }
-    }
-
-    /// T062: 사진 접근 권한 요청
-    private func requestPhotoAccess() {
-
-        // 버튼 비활성화 (중복 요청 방지)
-        actionButton.isEnabled = false
-        actionButton.setTitle("요청 중...", for: .normal)
-
-        Task {
-            let status = await permissionStore.requestAuthorization()
-
-            await MainActor.run {
-                actionButton.isEnabled = true
-                updateUI(for: status)
-
-                // [Analytics] 이벤트 2: 최초 권한 요청 결과 추적
-                let result: PermissionResultType = {
-                    switch status {
-                    case .authorized: return .fullAccess
-                    case .limited:    return .limitedAccess
-                    case .denied, .restricted, .notDetermined: return .denied
-                    }
-                }()
-                AnalyticsService.shared.trackPermissionResult(result: result, timing: .firstRequest)
-
-                // 권한 승인 시 델리게이트에 알림
-                if status.canAccessPhotos {
-                    delegate?.permissionViewControllerDidGrantAccess(self)
-                }
-            }
-        }
+        openSettings()
     }
 
     /// T063: 설정 앱 열기
