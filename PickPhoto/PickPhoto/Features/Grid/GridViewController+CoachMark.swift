@@ -96,6 +96,8 @@ extension GridViewController {
         // 스크롤 정지 후 잠시 안정화 → 셀 위치 정확히 잡은 뒤 표시
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) { [weak self] in
             self?.showGridSwipeDeleteCoachMark()
+            // 코치마크 표시 후 스크롤 복원 (오버레이 hitTest가 터치 차단)
+            self?.restoreScrollAfterCoachMark()
         }
     }
 

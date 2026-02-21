@@ -263,16 +263,26 @@ final class CoachMarkOverlayView: UIView {
         let fullPath = UIBezierPath(rect: bounds)
         // A, C: 하이라이트 영역은 투명 (셀/버튼 크기 + 약간의 여유)
         if coachMarkType == .gridSwipeDelete || coachMarkType == .similarPhoto {
-            let margin: CGFloat = 8
+            // A: 셀 크기 그대로, 각진 모서리 / C: 여유+둥근 모서리
+            let margin: CGFloat = (coachMarkType == .gridSwipeDelete) ? 0 : 8
             let holeRect = highlightFrame.insetBy(dx: -margin, dy: -margin)
-            let holePath = UIBezierPath(roundedRect: holeRect, cornerRadius: 8)
+            let radius: CGFloat = (coachMarkType == .gridSwipeDelete) ? 0 : 8
+            let holePath = UIBezierPath(roundedRect: holeRect, cornerRadius: radius)
             fullPath.append(holePath)
         }
         // E-1+E-2: Step 3에서 비우기 버튼 하이라이트 (highlightFrame이 .zero가 아닐 때만)
         if coachMarkType == .firstDeleteGuide && highlightFrame != .zero {
             let margin: CGFloat = 6
             let holeRect = highlightFrame.insetBy(dx: -margin, dy: -margin)
-            let holePath = UIBezierPath(roundedRect: holeRect, cornerRadius: 10)
+            // 탭 버튼은 원형 하이라이트로 표시
+            let diameter = max(holeRect.width, holeRect.height)
+            let circleRect = CGRect(
+                x: holeRect.midX - diameter / 2,
+                y: holeRect.midY - diameter / 2,
+                width: diameter,
+                height: diameter
+            )
+            let holePath = UIBezierPath(ovalIn: circleRect)
             fullPath.append(holePath)
         }
         // B, E-3: 구멍 없음 (dim 전체 영역)
@@ -529,10 +539,10 @@ final class CoachMarkOverlayView: UIView {
             // C 전용 시퀀스 (CoachMarkOverlayView+CoachMarkC.swift)
             startC_ConfirmSequence()
         case .firstDeleteGuide:
-            // E-1+E-2: Step 1 [확인] → 탭 전환 + 순차 텍스트, Step 3 [확인] → dismiss
+            // E-1+E-2: Step 1 [확인] → 손가락 탭 모션 → 탭 전환 + 순차 텍스트, Step 3 [확인] → dismiss
             if systemFeedbackCurrentStep == 1 {
                 confirmButton.isEnabled = false
-                transitionToStep2()
+                performTabTapMotionThenTransition()
             } else {
                 dismiss()
             }

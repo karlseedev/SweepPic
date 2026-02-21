@@ -63,9 +63,20 @@ extension GridViewController {
 extension GridViewController {
 
     /// 코치마크 표시를 위한 스크롤 즉시 정지
+    /// - pan 제스처 강제 취소 + 감속 정지 + isScrollEnabled 비활성화
     /// - 스크롤 상태 플래그, 타이머, LiquidGlass 최적화를 정리
+    /// - ⚠️ 호출 후 반드시 restoreScrollAfterCoachMark()로 복원 필요
     func stopScrollForCoachMark() {
+        // 1. pan 제스처 강제 취소 (진행 중인 드래그 즉시 끊음)
+        collectionView.panGestureRecognizer.isEnabled = false
+        collectionView.panGestureRecognizer.isEnabled = true
+
+        // 2. 감속(deceleration) 정지
         collectionView.setContentOffset(collectionView.contentOffset, animated: false)
+
+        // 3. 새 스크롤 입력 차단 (코치마크 표시 후 복원)
+        collectionView.isScrollEnabled = false
+
         scrollEndTimer?.invalidate()
         scrollEndTimer = nil
         isScrolling = false
@@ -73,6 +84,11 @@ extension GridViewController {
         // LiquidGlass 최적화 해제
         LiquidGlassOptimizer.restore(in: view.window)
         LiquidGlassOptimizer.enterIdle(in: view.window)
+    }
+
+    /// 코치마크 표시 후 스크롤 복원
+    func restoreScrollAfterCoachMark() {
+        collectionView.isScrollEnabled = true
     }
 
     /// 스크롤 시작

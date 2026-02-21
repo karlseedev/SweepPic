@@ -245,6 +245,9 @@ final class GridViewController: BaseGridViewController {
     // MARK: - Lifecycle
 
     override func viewDidLoad() {
+        // ⚠️ TODO: 테스트용 — 코치마크 A 플래그 리셋
+        UserDefaults.standard.removeObject(forKey: CoachMarkType.gridSwipeDelete.shownKey)
+
         // [Timing] 로딩 시작 시간 기록 (super.viewDidLoad 전에)
         loadStartTime = CACurrentMediaTime()
         // BaseGridViewController.viewDidLoad()에서 setupUI, setupGestures, additionalSetup 호출

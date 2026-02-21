@@ -27,6 +27,7 @@ private var step2LabelKey: UInt8 = 0
 private var step3LabelKey: UInt8 = 0
 private var fingerAnimationViewKey: UInt8 = 0
 private var cardViewKey: UInt8 = 0
+private var step2BottomConstraintKey: UInt8 = 0
 
 // MARK: - E: System Feedback (Delete Guide + First Empty)
 
@@ -67,10 +68,16 @@ extension CoachMarkOverlayView {
         set { objc_setAssociatedObject(self, &fingerAnimationViewKey, newValue, .OBJC_ASSOCIATION_RETAIN_NONATOMIC) }
     }
 
-    /// E-3 카드 뷰 참조
+    /// E-3 카드 뷰 참조 (E-1+E-2 Step 2+3 카드로도 재사용)
     private var feedbackCardView: UIView? {
         get { objc_getAssociatedObject(self, &cardViewKey) as? UIView }
         set { objc_setAssociatedObject(self, &cardViewKey, newValue, .OBJC_ASSOCIATION_RETAIN_NONATOMIC) }
+    }
+
+    /// Step 2 카드 하단 제약 (Step 3 확장 시 비활성화용)
+    private var step2BottomConstraint: NSLayoutConstraint? {
+        get { objc_getAssociatedObject(self, &step2BottomConstraintKey) as? NSLayoutConstraint }
+        set { objc_setAssociatedObject(self, &step2BottomConstraintKey, newValue, .OBJC_ASSOCIATION_RETAIN_NONATOMIC) }
     }
 
     // MARK: - E-1+E-2: Show (Delete System Guide Sequence)
@@ -87,12 +94,17 @@ extension CoachMarkOverlayView {
         overlay.systemFeedbackCurrentStep = 1
         overlay.alpha = 0
 
-        // 딤 배경 (Step 1: 구멍 없음)
-        overlay.updateDimPath()
+        // window에 먼저 추가 (getTrashTabFrame에서 self.window 필요)
         window.addSubview(overlay)
         CoachMarkManager.shared.currentOverlay = overlay
 
-        // Step 1 콘텐츠 구성
+        // 삭제대기함 탭 하이라이트 (딤 구멍)
+        if let tabFrame = overlay.getTrashTabFrame() {
+            overlay.highlightFrame = tabFrame
+        }
+        overlay.updateDimPath()
+
+        // Step 1 콘텐츠 구성 (텍스트 + [확인], 손가락 없음)
         overlay.buildStep1Content()
 
         // 페이드인
@@ -129,12 +141,17 @@ extension CoachMarkOverlayView {
 
     // MARK: - Step 1: Build Content
 
-    /// Step 1 콘텐츠 구성: 텍스트 + [확인] + 탭바 손가락 모션
+    /// Step 1 콘텐츠 구성: 카드 팝업 (텍스트 + [확인]) + 탭 하이라이트
+    /// 손가락 모션은 [확인] 탭 후 시작 (performTabTapMotionThenTransition)
     private func buildStep1Content() {
-        let container = UIView()
-        container.translatesAutoresizingMaskIntoConstraints = false
-        addSubview(container)
-        step1Container = container
+        // 카드 컨테이너 (E-3과 동일 스타일)
+        let card = UIView()
+        card.backgroundColor = UIColor(white: 0.15, alpha: 1.0)
+        card.layer.cornerRadius = 20
+        card.clipsToBounds = true
+        card.translatesAutoresizingMaskIntoConstraints = false
+        addSubview(card)
+        step1Container = card
 
         // 안내 텍스트
         let label = UILabel()
@@ -144,7 +161,7 @@ extension CoachMarkOverlayView {
         label.textAlignment = .center
         label.numberOfLines = 0
         label.translatesAutoresizingMaskIntoConstraints = false
-        container.addSubview(label)
+        card.addSubview(label)
 
         // [확인] 버튼 — 기존 confirmButton 재사용
         confirmButton.setTitleColor(.black, for: .normal)
@@ -152,38 +169,60 @@ extension CoachMarkOverlayView {
         confirmButton.isEnabled = true
         confirmButton.alpha = 1
         confirmButton.translatesAutoresizingMaskIntoConstraints = false
-        container.addSubview(confirmButton)
+        card.addSubview(confirmButton)
 
-        // 레이아웃 (화면 중앙)
+        // 카드 레이아웃 (화면 중앙, E-3과 동일)
         NSLayoutConstraint.activate([
-            container.centerXAnchor.constraint(equalTo: centerXAnchor),
-            container.centerYAnchor.constraint(equalTo: centerYAnchor, constant: -40),
-            container.leadingAnchor.constraint(greaterThanOrEqualTo: leadingAnchor, constant: 24),
-            container.trailingAnchor.constraint(lessThanOrEqualTo: trailingAnchor, constant: -24),
+            card.centerXAnchor.constraint(equalTo: centerXAnchor),
+            card.centerYAnchor.constraint(equalTo: centerYAnchor, constant: -40),
+            card.leadingAnchor.constraint(greaterThanOrEqualTo: leadingAnchor, constant: 24),
+            card.trailingAnchor.constraint(lessThanOrEqualTo: trailingAnchor, constant: -24),
+            card.widthAnchor.constraint(equalTo: widthAnchor, constant: -48),
 
-            label.topAnchor.constraint(equalTo: container.topAnchor),
-            label.leadingAnchor.constraint(equalTo: container.leadingAnchor),
-            label.trailingAnchor.constraint(equalTo: container.trailingAnchor),
+            // 내부 패딩
+            label.topAnchor.constraint(equalTo: card.topAnchor, constant: 24),
+            label.leadingAnchor.constraint(equalTo: card.leadingAnchor, constant: 20),
+            label.trailingAnchor.constraint(equalTo: card.trailingAnchor, constant: -20),
 
-            confirmButton.topAnchor.constraint(equalTo: label.bottomAnchor, constant: 24),
-            confirmButton.centerXAnchor.constraint(equalTo: container.centerXAnchor),
+            confirmButton.topAnchor.constraint(equalTo: label.bottomAnchor, constant: 20),
+            confirmButton.centerXAnchor.constraint(equalTo: card.centerXAnchor),
             confirmButton.widthAnchor.constraint(equalToConstant: 120),
             confirmButton.heightAnchor.constraint(equalToConstant: 44),
-            confirmButton.bottomAnchor.constraint(equalTo: container.bottomAnchor),
+            confirmButton.bottomAnchor.constraint(equalTo: card.bottomAnchor, constant: -24),
         ])
-
-        // 탭바 손가락 모션 시작
-        startTabFingerAnimation()
     }
 
-    // MARK: - Step 1: Tab Finger Animation
+    // MARK: - Step 1: Tab Tap Motion ([확인] 후)
 
-    /// 삭제대기함 탭을 가리키는 손가락 모션 애니메이션
-    private func startTabFingerAnimation() {
-        // 탭 위치 구하기 (실패 시 모션 생략)
-        guard let tabFrame = getTrashTabFrame() else { return }
+    /// [확인] 탭 후: 텍스트 페이드아웃 → 손가락 등장 → 탭 탭 모션 → 탭 전환
+    func performTabTapMotionThenTransition() {
+        // 시퀀스 보호 플래그 ON
+        CoachMarkManager.shared.isDeleteGuideSequenceActive = true
 
-        // 손가락 아이콘 생성 (기존 fingerView와 별도)
+        // 텍스트/버튼 페이드아웃
+        UIView.animate(withDuration: 0.2, animations: { [weak self] in
+            self?.step1Container?.alpha = 0
+        }) { [weak self] _ in
+            guard let self, !self.shouldStopAnimation else { return }
+            self.step1Container?.removeFromSuperview()
+            self.step1Container = nil
+
+            // 손가락 탭 모션 시작
+            guard let tabFrame = self.getTrashTabFrame() else {
+                // 탭 frame 없으면 모션 생략, 바로 전환
+                self.transitionToStep2()
+                return
+            }
+            self.performFingerTapOnTab(tabFrame: tabFrame) { [weak self] in
+                self?.transitionToStep2()
+            }
+        }
+    }
+
+    /// 탭 버튼 위에서 손가락 탭 모션 (C의 performCTapMotion과 유사)
+    /// 등장 → 누르기 → 떼기 → 완료
+    private func performFingerTapOnTab(tabFrame: CGRect, completion: @escaping () -> Void) {
+        // 손가락 아이콘 생성
         let config = UIImage.SymbolConfiguration(pointSize: 44, weight: .regular)
         let image = UIImage(systemName: "hand.point.up.fill", withConfiguration: config)
         let finger = UIImageView(image: image)
@@ -196,47 +235,60 @@ extension CoachMarkOverlayView {
         addSubview(finger)
         tabFingerView = finger
 
-        // 손가락 위치: 탭 버튼 바로 위, 가리키는 느낌
+        // 손가락 위치: 탭 중앙 위
         let fingerWidth = finger.bounds.width
         let fingerHeight = finger.bounds.height
-        let targetCenter = CGPoint(
+        let initialCenter = CGPoint(
             x: tabFrame.midX + fingerWidth * 0.08,
-            y: tabFrame.minY - 4 + fingerHeight * 0.4
+            y: tabFrame.midY + fingerHeight * 0.4
         )
-        finger.center = targetCenter
+        finger.center = initialCenter
         finger.alpha = 0
+        finger.transform = .identity
 
-        // 반복 모션: 위아래로 살짝 흔들림 (탭을 가리키는 느낌)
-        UIView.animate(withDuration: 0.3) {
+        // Phase 1: 등장 (0.2초)
+        UIView.animate(withDuration: 0.2, delay: 0, options: .curveEaseOut, animations: {
             finger.alpha = 1
-        }
+        }) { [weak self] _ in
+            guard let self, !self.shouldStopAnimation else { completion(); return }
 
-        // 반복 바운스 애니메이션
-        startFingerBounce(finger: finger, at: targetCenter)
-    }
-
-    /// 손가락 위아래 바운스 반복 (최대 5회)
-    private func startFingerBounce(finger: UIImageView, at center: CGPoint, count: Int = 0) {
-        guard !shouldStopAnimation, count < 5 else { return }
-
-        UIView.animate(
-            withDuration: 0.5,
-            delay: count == 0 ? 0.3 : 0,
-            options: [.curveEaseInOut],
-            animations: {
-                finger.center.y = center.y - 8
-            }
-        ) { [weak self] _ in
-            guard let self, !self.shouldStopAnimation else { return }
+            // Phase 2: 누르기 (0.12초, spring)
             UIView.animate(
-                withDuration: 0.5,
-                delay: 0,
-                options: [.curveEaseInOut],
+                withDuration: 0.12,
+                delay: 0.1,  // 잠시 대기 후 누르기
+                usingSpringWithDamping: 0.6,
+                initialSpringVelocity: 0,
+                options: [],
                 animations: {
-                    finger.center.y = center.y
+                    finger.transform = CGAffineTransform(scaleX: 0.93, y: 0.93)
+                    finger.center.y = initialCenter.y + 2.5
+                    finger.layer.shadowRadius = 2
+                    finger.layer.shadowOffset = CGSize(width: 0, height: 1)
+                    finger.layer.shadowOpacity = 0.15
                 }
             ) { [weak self] _ in
-                self?.startFingerBounce(finger: finger, at: center, count: count + 1)
+                guard let self, !self.shouldStopAnimation else { completion(); return }
+
+                // Phase 3: 떼기 + 페이드아웃 (0.2초)
+                UIView.animate(
+                    withDuration: 0.2,
+                    delay: 0.05,
+                    usingSpringWithDamping: 0.7,
+                    initialSpringVelocity: 2.0,
+                    options: [],
+                    animations: {
+                        finger.transform = .identity
+                        finger.center = initialCenter
+                        finger.alpha = 0
+                        finger.layer.shadowRadius = 6
+                        finger.layer.shadowOffset = CGSize(width: 0, height: 2)
+                        finger.layer.shadowOpacity = 0.3
+                    }
+                ) { [weak self] _ in
+                    self?.tabFingerView?.removeFromSuperview()
+                    self?.tabFingerView = nil
+                    completion()
+                }
             }
         }
     }
@@ -248,11 +300,9 @@ extension CoachMarkOverlayView {
     func transitionToStep2() {
         guard let tabBar = findTabBarController() else { return }
 
-        // 시퀀스 보호 플래그 ON (탭 전환 중 viewWillDisappear에서 dismissCurrent 차단)
-        CoachMarkManager.shared.isDeleteGuideSequenceActive = true
-
-        // Step 1 콘텐츠 숨김 (페이드아웃)
-        hideStep1Content()
+        // highlightFrame 리셋 (Step 1의 탭 하이라이트 제거)
+        highlightFrame = .zero
+        updateDimPath()
 
         // 탭 전환 + 후속 스텝 스케줄링을 하나의 블록으로 묶음
         let switchTabAndSchedule = { [weak self] in
@@ -266,8 +316,8 @@ extension CoachMarkOverlayView {
                 self?.showStep2Content()
             }
 
-            // 탭 전환 완료 후 1.3초 뒤 Step 3: 비우기 하이라이트 + 텍스트 + [확인]
-            DispatchQueue.main.asyncAfter(deadline: .now() + 1.3) {
+            // 탭 전환 완료 후 2.3초 뒤 Step 3: 비우기 하이라이트 + 텍스트 + [확인]
+            DispatchQueue.main.asyncAfter(deadline: .now() + 2.3) {
                 self?.showStep3Content()
             }
         }
@@ -295,55 +345,79 @@ extension CoachMarkOverlayView {
 
     // MARK: - Step 2: Show Content
 
-    /// Step 2 텍스트 표시: "보관함에서 삭제하면 여기에 임시 보관돼요."
+    /// Step 2: 카드 팝업으로 텍스트 표시 "보관함에서 삭제하면 여기에 임시 보관돼요."
+    /// Step 3에서 카드를 확장하여 추가 텍스트 + [확인] 삽입
     private func showStep2Content() {
         guard !shouldStopAnimation else { return }
 
+        // 카드 생성 (E-3과 동일 스타일)
+        let card = UIView()
+        card.backgroundColor = UIColor(white: 0.15, alpha: 1.0)
+        card.layer.cornerRadius = 20
+        card.clipsToBounds = true
+        card.alpha = 0
+        card.translatesAutoresizingMaskIntoConstraints = false
+        addSubview(card)
+        feedbackCardView = card
+
+        // Step 2 텍스트
         let label = UILabel()
         label.text = "보관함에서 삭제하면 여기에 임시 보관돼요."
         label.textColor = .white
         label.font = .systemFont(ofSize: 17, weight: .medium)
         label.textAlignment = .center
         label.numberOfLines = 0
-        label.alpha = 0
         label.translatesAutoresizingMaskIntoConstraints = false
-        addSubview(label)
+        card.addSubview(label)
         step2Label = label
 
-        // 화면 중앙 배치
+        // 카드 하단 제약 (Step 3에서 비활성화 후 확장)
+        let bottomConstraint = label.bottomAnchor.constraint(equalTo: card.bottomAnchor, constant: -24)
+        step2BottomConstraint = bottomConstraint
+
+        // 카드 레이아웃 (화면 중앙)
         NSLayoutConstraint.activate([
-            label.centerXAnchor.constraint(equalTo: centerXAnchor),
-            label.centerYAnchor.constraint(equalTo: centerYAnchor, constant: -60),
-            label.leadingAnchor.constraint(greaterThanOrEqualTo: leadingAnchor, constant: 24),
-            label.trailingAnchor.constraint(lessThanOrEqualTo: trailingAnchor, constant: -24),
+            card.centerXAnchor.constraint(equalTo: centerXAnchor),
+            card.centerYAnchor.constraint(equalTo: centerYAnchor),
+            card.leadingAnchor.constraint(greaterThanOrEqualTo: leadingAnchor, constant: 24),
+            card.trailingAnchor.constraint(lessThanOrEqualTo: trailingAnchor, constant: -24),
+            card.widthAnchor.constraint(equalTo: widthAnchor, constant: -48),
+
+            // 내부 패딩
+            label.topAnchor.constraint(equalTo: card.topAnchor, constant: 24),
+            label.leadingAnchor.constraint(equalTo: card.leadingAnchor, constant: 20),
+            label.trailingAnchor.constraint(equalTo: card.trailingAnchor, constant: -20),
+            bottomConstraint,
         ])
 
         // 페이드인
         UIView.animate(withDuration: 0.25) {
-            label.alpha = 1
+            card.alpha = 1
         }
     }
 
     // MARK: - Step 3: Show Content
 
-    /// Step 3: 비우기 버튼 하이라이트 + 두 번째 텍스트 + [확인]
+    /// Step 3: 기존 Step 2 카드를 확장하여 비우기 안내 텍스트 + [확인] 추가
+    /// 비우기 버튼 하이라이트도 함께 표시
     private func showStep3Content() {
         guard !shouldStopAnimation else { return }
+        guard let card = feedbackCardView else { return }
 
         systemFeedbackCurrentStep = 3
 
-        // 비우기 버튼 frame 획득 시도
-        let emptyButtonFrame = getEmptyButtonFrame()
-
-        // 비우기 버튼 하이라이트 (frame 획득 성공 시)
-        if let frame = emptyButtonFrame {
+        // 비우기 버튼 frame 획득 및 하이라이트
+        if let frame = getEmptyButtonFrame() {
             highlightFrame = frame
-            // 애니메이션으로 딤 구멍 전환
             CATransaction.begin()
             CATransaction.setAnimationDuration(0.3)
             updateDimPath()
             CATransaction.commit()
         }
+
+        // Step 2 카드 하단 제약 해제 (카드 확장 준비)
+        step2BottomConstraint?.isActive = false
+        step2BottomConstraint = nil
 
         // Step 3 텍스트: "[비우기]를 누르면 사진이 최종 삭제돼요."
         let label = UILabel()
@@ -353,7 +427,7 @@ extension CoachMarkOverlayView {
         label.numberOfLines = 0
         label.alpha = 0
         label.translatesAutoresizingMaskIntoConstraints = false
-        addSubview(label)
+        card.addSubview(label)
         step3Label = label
 
         // "[비우기]" 부분을 볼드 + 빨간색으로 강조
@@ -374,35 +448,33 @@ extension CoachMarkOverlayView {
         }
         label.attributedText = attributed
 
-        // [확인] 버튼 재표시
+        // [확인] 버튼 — 카드 안에 재배치
         confirmButton.isEnabled = true
         confirmButton.alpha = 0
         confirmButton.translatesAutoresizingMaskIntoConstraints = false
-
-        // confirmButton이 다른 뷰의 subview면 이동
-        if confirmButton.superview != self {
+        if confirmButton.superview != card {
             confirmButton.removeFromSuperview()
         }
-        addSubview(confirmButton)
+        card.addSubview(confirmButton)
 
-        // Step 2 텍스트 아래에 배치
-        let step2Bottom = step2Label ?? self
+        // Step 2 라벨 아래에 배치, 카드 하단 제약 연결
         NSLayoutConstraint.activate([
-            label.topAnchor.constraint(equalTo: step2Label?.bottomAnchor ?? centerYAnchor, constant: 16),
-            label.centerXAnchor.constraint(equalTo: centerXAnchor),
-            label.leadingAnchor.constraint(greaterThanOrEqualTo: leadingAnchor, constant: 24),
-            label.trailingAnchor.constraint(lessThanOrEqualTo: trailingAnchor, constant: -24),
+            label.topAnchor.constraint(equalTo: step2Label?.bottomAnchor ?? card.topAnchor, constant: 16),
+            label.leadingAnchor.constraint(equalTo: card.leadingAnchor, constant: 20),
+            label.trailingAnchor.constraint(equalTo: card.trailingAnchor, constant: -20),
 
-            confirmButton.topAnchor.constraint(equalTo: label.bottomAnchor, constant: 24),
-            confirmButton.centerXAnchor.constraint(equalTo: centerXAnchor),
+            confirmButton.topAnchor.constraint(equalTo: label.bottomAnchor, constant: 20),
+            confirmButton.centerXAnchor.constraint(equalTo: card.centerXAnchor),
             confirmButton.widthAnchor.constraint(equalToConstant: 120),
             confirmButton.heightAnchor.constraint(equalToConstant: 44),
+            confirmButton.bottomAnchor.constraint(equalTo: card.bottomAnchor, constant: -24),
         ])
 
-        // 페이드인
+        // 카드 확장 + 새 콘텐츠 페이드인 애니메이션
         UIView.animate(withDuration: 0.3) {
             label.alpha = 1
             self.confirmButton.alpha = 1
+            self.layoutIfNeeded()  // 카드 크기 확장 애니메이션
         }
     }
 
@@ -411,7 +483,7 @@ extension CoachMarkOverlayView {
     /// E-3 중앙 카드 구성: ✓ 삭제 완료 + 본문 + [확인]
     private func buildFirstEmptyCard() {
         let card = UIView()
-        card.backgroundColor = UIColor.black.withAlphaComponent(0.85)
+        card.backgroundColor = UIColor(white: 0.15, alpha: 1.0)
         card.layer.cornerRadius = 20
         card.clipsToBounds = true
         card.translatesAutoresizingMaskIntoConstraints = false
@@ -491,6 +563,7 @@ extension CoachMarkOverlayView {
         tabFingerView = nil
         feedbackCardView?.removeFromSuperview()
         feedbackCardView = nil
+        step2BottomConstraint = nil
     }
 
     // MARK: - Helpers
