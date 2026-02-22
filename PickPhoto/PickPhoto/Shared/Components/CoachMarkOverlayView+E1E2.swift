@@ -671,6 +671,8 @@ extension CoachMarkOverlayView {
         // iOS 26+: 시스템 UITabBar
         if #available(iOS 26.0, *) {
             let systemTabBar = tabBar.tabBar
+
+            // 1차: subview 클래스명으로 탭 버튼 탐색
             let tabControls = systemTabBar.subviews
                 .filter { String(describing: type(of: $0)).contains("Button") }
                 .sorted { $0.frame.minX < $1.frame.minX }
@@ -679,6 +681,19 @@ extension CoachMarkOverlayView {
                 let trashControl = tabControls[2]
                 return trashControl.convert(trashControl.bounds, to: window)
             }
+
+            // 2차 폴백: 탭바 영역을 탭 수로 균등 분할 (내부 구조 변경 대응)
+            let tabBarFrame = systemTabBar.convert(systemTabBar.bounds, to: window)
+            guard tabBarFrame.height > 0 else { return nil }
+            let tabCount = max(CGFloat(tabBar.viewControllers?.count ?? 3), 1)
+            let tabWidth = tabBarFrame.width / tabCount
+            let trashIndex: CGFloat = 2  // 삭제대기함 = index 2
+            return CGRect(
+                x: tabBarFrame.minX + tabWidth * trashIndex,
+                y: tabBarFrame.minY,
+                width: tabWidth,
+                height: tabBarFrame.height
+            )
         }
 
         return nil
