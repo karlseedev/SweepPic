@@ -202,7 +202,8 @@ final class CoachMarkOverlayView: UIView {
     /// 안내 텍스트 라벨 (C 확장에서 텍스트 교체/페이드 사용)
     let messageLabel: UILabel = {
         let label = UILabel()
-        label.text = "사진을 밀어서 바로 정리하세요\n다시 밀면 복원돼요\n정리한 사진은 삭제대기함으로 이동돼요"
+        // 1~2줄과 3줄 사이 빈 줄(\n\n)로 시각적 구분
+        label.text = "사진을 밀어서 바로 정리하세요\n다시 밀면 복원돼요\n\n정리한 사진은 삭제대기함으로 이동돼요"
         label.textColor = .white
         label.font = .systemFont(ofSize: 17, weight: .medium)
         label.textAlignment = .center

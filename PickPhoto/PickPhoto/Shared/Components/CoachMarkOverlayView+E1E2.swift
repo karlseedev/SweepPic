@@ -111,31 +111,24 @@ extension CoachMarkOverlayView {
         let overlay = CoachMarkOverlayView(frame: window.bounds)
         overlay.coachMarkType = .firstDeleteGuide
         overlay.systemFeedbackCurrentStep = 1
-        overlay.alpha = 0
 
-        // 딤 배경 (구멍 없음 — 포커스 원은 [확인] 후 시작)
-        overlay.updateDimPath()
+        // Step 1에서는 딤 없이 투명 오버레이 (터치 차단만)
+        // 딤은 [확인] 후 포커스 원 애니메이션 시작 시 나타남
+        overlay.dimLayer.fillColor = UIColor.clear.cgColor
 
-        // window에 추가
+        // window에 추가 (즉시, 터치 차단 시작)
         window.addSubview(overlay)
         CoachMarkManager.shared.currentOverlay = overlay
 
-        // 1단계: 딤 배경 페이드인
-        UIView.animate(withDuration: 0.3) {
-            overlay.alpha = 1
-        } completion: { _ in
-            guard !overlay.shouldStopAnimation else { return }
-
-            if let iconFrame = iconFrame {
-                // 아이콘 이동 + 카드 시간차 등장
-                overlay.animateIconAndCard(from: iconFrame)
-            } else {
-                // 뷰어 삭제: 아이콘 포함 카드 바로 표시
-                overlay.buildStep1Content()
-                overlay.step1Container?.alpha = 0
-                UIView.animate(withDuration: 0.25) {
-                    overlay.step1Container?.alpha = 1
-                }
+        if let iconFrame = iconFrame {
+            // 아이콘 이동 + 카드 시간차 등장
+            overlay.animateIconAndCard(from: iconFrame)
+        } else {
+            // 뷰어 삭제: 아이콘 포함 카드 바로 표시
+            overlay.buildStep1Content()
+            overlay.step1Container?.alpha = 0
+            UIView.animate(withDuration: 0.25) {
+                overlay.step1Container?.alpha = 1
             }
         }
     }
@@ -151,18 +144,19 @@ extension CoachMarkOverlayView {
         step1Container?.alpha = 0
         layoutIfNeeded()  // 카드 frame 확정 (아이콘 최종 위치 계산용)
 
-        // 2. 카드 내부 아이콘의 최종 위치 (overlay 좌표)
+        // 2. 카드 내부 아이콘의 최종 위치 (overlay 좌표) — 카드 아이콘은 spacer 역할만
         guard let cardIcon = trashIconImageView,
               let card = step1Container else { return }
         let iconFinalCenter = card.convert(cardIcon.center, to: self)
-        cardIcon.alpha = 0  // 카드 내부 아이콘은 숨김 (날아오는 아이콘이 대신함)
+        cardIcon.alpha = 0  // 카드 내부 아이콘 숨김 (spacer 역할만, 날아온 아이콘이 그대로 유지)
 
-        // 3. 날아오는 아이콘 생성 (셀 위치에서 시작)
+        // 3. 날아오는 아이콘 생성 (셀 위치에서 시작, 이 아이콘이 최종까지 유지됨)
         let flyingConfig = UIImage.SymbolConfiguration(pointSize: 25, weight: .regular)
         let flyingIcon = UIImageView(image: UIImage(systemName: "xmark.bin", withConfiguration: flyingConfig))
         flyingIcon.tintColor = .white
         flyingIcon.frame = startFrame
         addSubview(flyingIcon)
+        trashIconImageView = flyingIcon  // 날아온 아이콘을 메인 참조로 교체
 
         // 4. 아이콘 이동 애니메이션 (0.6s spring, 25pt → 48pt)
         let finalSize: CGFloat = 48
@@ -176,11 +170,8 @@ extension CoachMarkOverlayView {
             let scale = finalSize / 25.0
             flyingIcon.transform = CGAffineTransform(scaleX: scale, y: scale)
             flyingIcon.center = iconFinalCenter
-        } completion: { _ in
-            // 날아온 아이콘 → 카드 내부 아이콘으로 교체 (동일 위치, 매끄러운 전환)
-            cardIcon.alpha = 1
-            flyingIcon.removeFromSuperview()
         }
+        // 교체 없음 — 날아온 아이콘이 그대로 카드 위에 유지
 
         // 5. 카드 시간차 페이드인 (아이콘 이동 0.25s 후 시작)
         UIView.animate(withDuration: 0.3, delay: 0.25, options: .curveEaseOut) { [weak self] in
@@ -259,16 +250,22 @@ extension CoachMarkOverlayView {
         // 시퀀스 보호 플래그 ON
         CoachMarkManager.shared.isDeleteGuideSequenceActive = true
 
-        // 1. 카드 페이드아웃 (아이콘은 카드 안에 포함, 함께 사라짐)
+        // 1. 카드 + 아이콘 페이드아웃 + 딤 배경 페이드인 (동시)
+        let dimColor = UIColor.black.withAlphaComponent(0.7).cgColor
         UIView.animate(withDuration: 0.2, animations: { [weak self] in
             self?.step1Container?.alpha = 0
+            self?.trashIconImageView?.alpha = 0
         }) { [weak self] _ in
             guard let self, !self.shouldStopAnimation else { return }
             self.step1Container?.removeFromSuperview()
             self.step1Container = nil
-            self.trashIconImageView = nil  // 카드와 함께 제거됨
+            self.trashIconImageView?.removeFromSuperview()
+            self.trashIconImageView = nil
 
-            // 2. 포커스 원 축소 애니메이션
+            // 2. 딤 배경 복원 (포커스 원 애니메이션 전 배경 딤)
+            self.dimLayer.fillColor = dimColor
+
+            // 3. 포커스 원 축소 애니메이션
             guard let tabFrame = self.getTrashTabFrame() else {
                 // 탭 frame 없으면 바로 전환
                 self.transitionToStep2()
@@ -276,9 +273,9 @@ extension CoachMarkOverlayView {
             }
             self.animateFocusCircle(to: tabFrame) { [weak self] in
                 guard let self, !self.shouldStopAnimation else { return }
-                // 3. 포커스 완료 → 손가락 탭 모션
+                // 4. 포커스 완료 → 손가락 탭 모션
                 self.performFingerTapOnTab(tabFrame: tabFrame) { [weak self] in
-                    // 4. 탭 모션 완료 → 탭 전환 + Step 2/3
+                    // 5. 탭 모션 완료 → 탭 전환 + Step 2/3
                     self?.transitionToStep2()
                 }
             }
