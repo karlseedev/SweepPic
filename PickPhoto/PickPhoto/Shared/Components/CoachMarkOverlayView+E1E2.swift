@@ -111,24 +111,32 @@ extension CoachMarkOverlayView {
         let overlay = CoachMarkOverlayView(frame: window.bounds)
         overlay.coachMarkType = .firstDeleteGuide
         overlay.systemFeedbackCurrentStep = 1
+        overlay.alpha = 0
 
-        // Step 1에서는 딤 없이 투명 오버레이 (터치 차단만)
-        // 딤은 [확인] 후 포커스 원 애니메이션 시작 시 나타남
-        overlay.dimLayer.fillColor = UIColor.clear.cgColor
+        // Step 1: 살짝 딤 (포커스 원 시작 시 0.7로 전환)
+        overlay.dimLayer.fillColor = UIColor.black.withAlphaComponent(0.3).cgColor
+        overlay.updateDimPath()
 
-        // window에 추가 (즉시, 터치 차단 시작)
+        // window에 추가
         window.addSubview(overlay)
         CoachMarkManager.shared.currentOverlay = overlay
 
-        if let iconFrame = iconFrame {
-            // 아이콘 이동 + 카드 시간차 등장
-            overlay.animateIconAndCard(from: iconFrame)
-        } else {
-            // 뷰어 삭제: 아이콘 포함 카드 바로 표시
-            overlay.buildStep1Content()
-            overlay.step1Container?.alpha = 0
-            UIView.animate(withDuration: 0.25) {
-                overlay.step1Container?.alpha = 1
+        // 딤 페이드인 + 콘텐츠 시작
+        UIView.animate(withDuration: 0.3) {
+            overlay.alpha = 1
+        } completion: { _ in
+            guard !overlay.shouldStopAnimation else { return }
+
+            if let iconFrame = iconFrame {
+                // 아이콘 이동 + 카드 시간차 등장
+                overlay.animateIconAndCard(from: iconFrame)
+            } else {
+                // 뷰어 삭제: 아이콘 포함 카드 바로 표시
+                overlay.buildStep1Content()
+                overlay.step1Container?.alpha = 0
+                UIView.animate(withDuration: 0.25) {
+                    overlay.step1Container?.alpha = 1
+                }
             }
         }
     }
@@ -158,10 +166,10 @@ extension CoachMarkOverlayView {
         addSubview(flyingIcon)
         trashIconImageView = flyingIcon  // 날아온 아이콘을 메인 참조로 교체
 
-        // 4. 아이콘 이동 애니메이션 (0.6s spring, 25pt → 48pt)
+        // 4. 아이콘 이동 애니메이션 (0.9s spring, 25pt → 48pt)
         let finalSize: CGFloat = 48
         UIView.animate(
-            withDuration: 0.6,
+            withDuration: 0.9,
             delay: 0,
             usingSpringWithDamping: 0.8,
             initialSpringVelocity: 0.5,
@@ -173,8 +181,8 @@ extension CoachMarkOverlayView {
         }
         // 교체 없음 — 날아온 아이콘이 그대로 카드 위에 유지
 
-        // 5. 카드 시간차 페이드인 (아이콘 이동 0.25s 후 시작)
-        UIView.animate(withDuration: 0.3, delay: 0.25, options: .curveEaseOut) { [weak self] in
+        // 5. 카드 시간차 페이드인 (아이콘 이동 0.35s 후 시작)
+        UIView.animate(withDuration: 0.3, delay: 0.35, options: .curveEaseOut) { [weak self] in
             self?.step1Container?.alpha = 1
         }
     }

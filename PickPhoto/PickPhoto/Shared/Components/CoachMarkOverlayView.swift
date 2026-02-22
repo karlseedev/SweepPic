@@ -202,11 +202,18 @@ final class CoachMarkOverlayView: UIView {
     /// 안내 텍스트 라벨 (C 확장에서 텍스트 교체/페이드 사용)
     let messageLabel: UILabel = {
         let label = UILabel()
-        // 1~2줄과 3줄 사이 빈 줄(\n\n)로 시각적 구분
-        label.text = "사진을 밀어서 바로 정리하세요\n다시 밀면 복원돼요\n\n정리한 사진은 삭제대기함으로 이동돼요"
-        label.textColor = .white
-        label.font = .systemFont(ofSize: 17, weight: .medium)
-        label.textAlignment = .center
+        let style = NSMutableParagraphStyle()
+        style.alignment = .center
+        style.paragraphSpacing = 8  // 2줄↔3줄 사이 추가 간격
+        // \u{2028} = 같은 단락 내 줄바꿈, \n = 단락 구분 (paragraphSpacing 적용)
+        label.attributedText = NSAttributedString(
+            string: "사진을 밀어서 바로 정리하세요\u{2028}다시 밀면 복원돼요\n정리한 사진은 삭제대기함으로 이동됩니다",
+            attributes: [
+                .font: UIFont.systemFont(ofSize: 17, weight: .medium),
+                .foregroundColor: UIColor.white,
+                .paragraphStyle: style
+            ]
+        )
         label.numberOfLines = 0
         return label
     }()
