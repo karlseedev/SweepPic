@@ -254,6 +254,15 @@ final class PhotoCell: UICollectionViewCell {
         return iv
     }()
 
+    // MARK: - E-1 아이콘 애니메이션용
+
+    /// 삭제대기함 아이콘의 window 좌표 frame (E-1 아이콘 이동 애니메이션용)
+    /// trashIconView가 숨겨져 있거나 window가 없으면 nil 반환
+    func trashIconFrameInWindow() -> CGRect? {
+        guard !trashIconView.isHidden, let window = window else { return nil }
+        return trashIconView.convert(trashIconView.bounds, to: window)
+    }
+
     /// T073: iCloud 전용 사진 아이콘 (우측 상단 구름 아이콘)
     private let iCloudIconView: UIImageView = {
         let iv = UIImageView()

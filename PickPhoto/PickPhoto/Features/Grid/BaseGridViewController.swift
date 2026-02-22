@@ -913,7 +913,7 @@ extension BaseGridViewController {
                     self?.handleSwipeResult(result, cell: cell)
                     // E-1+E-2: 첫 삭제 시 삭제 시스템 안내 시퀀스 트리거
                     if case .success = result {
-                        self?.showDeleteSystemGuideIfNeeded()
+                        self?.showDeleteSystemGuideIfNeeded(cell: cell)
                     }
                 }
             } else {
@@ -1049,13 +1049,16 @@ extension BaseGridViewController {
 
     /// 첫 삭제 시 삭제 시스템 안내 시퀀스 표시 (E-1+E-2)
     /// moveToTrash 성공 후 호출
-    func showDeleteSystemGuideIfNeeded() {
+    /// - Parameter cell: 삭제된 셀 (trashIcon 아이콘 위치 획득용, nil이면 아이콘 애니메이션 생략)
+    func showDeleteSystemGuideIfNeeded(cell: PhotoCell? = nil) {
         // TODO: 테스트 완료 후 원복 — hasBeenShown 가드 임시 비활성화
         // guard !CoachMarkType.firstDeleteGuide.hasBeenShown else { return }
         guard !CoachMarkManager.shared.isShowing else { return }
         guard !UIAccessibility.isVoiceOverRunning else { return }
         guard let window = view.window else { return }
 
-        CoachMarkOverlayView.showDeleteSystemGuide(in: window)
+        // 셀의 trashIcon frame (window 좌표, nil이면 아이콘 애니메이션 생략)
+        let iconFrame = cell?.trashIconFrameInWindow()
+        CoachMarkOverlayView.showDeleteSystemGuide(in: window, iconFrame: iconFrame)
     }
 }

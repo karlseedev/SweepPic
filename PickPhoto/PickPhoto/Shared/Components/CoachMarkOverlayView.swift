@@ -501,8 +501,9 @@ final class CoachMarkOverlayView: UIView {
         // C 상태 리셋
         CoachMarkManager.shared.resetC2State()
 
-        // E-1+E-2: 시퀀스 전용 리소스 정리
-        cleanupSystemFeedbackIfNeeded()
+        // E-1+E-2, E-3: 시퀀스 전용 리소스 정리
+        cleanupDeleteGuide()
+        cleanupFirstEmpty()
 
         UIView.animate(withDuration: 0.2, animations: {
             self.alpha = 0

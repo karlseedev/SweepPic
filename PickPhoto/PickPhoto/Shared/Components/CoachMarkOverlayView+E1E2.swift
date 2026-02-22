@@ -1,28 +1,32 @@
 //
-//  CoachMarkOverlayView+SystemFeedback.swift
+//  CoachMarkOverlayView+E1E2.swift
 //  PickPhoto
 //
-//  Created by Claude Code on 2026-02-20.
+//  Created by Claude Code on 2026-02-22.
 //
-//  삭제 시스템 안내 (E-1, E-2, E-3) 구현
-//  - E-1+E-2: 첫 삭제 후 삭제대기함 안내 (연속 시퀀스, 단일 오버레이)
-//  - E-3: 첫 비우기 완료 안내 (단독 카드)
+//  E-1+E-2: 삭제 시스템 안내 시퀀스
+//  - E-1 (Step 1): 첫 삭제 후 아이콘 이동 + 카드 팝업 + 포커스 원 + 탭 전환
+//  - E-2 (Step 2+3): 삭제대기함 탭 전환 후 카드 확장 + 비우기 하이라이트
 //
-//  시퀀스 구조:
-//    Step 1: "방금 삭제한 사진은 삭제대기함으로 이동됐어요" + 탭바 손가락 모션 + [확인]
-//    Step 2: 탭 전환 후 "보관함에서 삭제하면 여기에 임시 보관돼요."
-//    Step 3: 비우기 버튼 하이라이트 + "[비우기]를 누르면 사진이 최종 삭제돼요." + [확인]
+//  시퀀스 흐름:
+//    1. 딤 배경 페이드인 (구멍 없음)
+//    2. 셀의 trashIcon 위치에 xmark.bin 아이콘 생성 (25×25)
+//    3. 아이콘이 커지면서 화면 중앙으로 이동 (~0.6s, spring)
+//    4. 아이콘 아래에 카드 팝업: "방금 삭제된 사진은..." + [확인]
+//    5. [확인] → 카드+아이콘 페이드아웃 → 포커스 원 축소 → 손가락 탭 → 탭 전환
+//    6. Step 2: "보관함에서 삭제하면 여기에 임시 보관돼요."
+//    7. Step 3: 비우기 버튼 하이라이트 + "[비우기]를 누르면 사진이 최종 삭제돼요." + [확인]
 //
-//  E-3:
-//    "✓ 삭제 완료" + "애플 사진앱의 '최근 삭제된 항목'에서 30일 후 완전히 삭제됩니다." + [확인]
+//  E-1+E-2는 하나의 연속 시퀀스로, 단일 오버레이가 시작부터 끝까지 유지됨
 
 import UIKit
 import ObjectiveC
 
-// MARK: - Associated Object Keys (E 전용 저장 프로퍼티)
+// MARK: - Associated Object Keys (E-1+E-2 전용)
 
 private var currentStepKey: UInt8 = 0
 private var step1ContainerKey: UInt8 = 0
+private var trashIconImageViewKey: UInt8 = 0
 private var step2LabelKey: UInt8 = 0
 private var step3LabelKey: UInt8 = 0
 private var fingerAnimationViewKey: UInt8 = 0
@@ -30,14 +34,14 @@ private var cardViewKey: UInt8 = 0
 private var step2BottomConstraintKey: UInt8 = 0
 private var focusBorderLayerKey: UInt8 = 0
 
-// MARK: - E: System Feedback (Delete Guide + First Empty)
+// MARK: - E-1+E-2: Delete System Guide Sequence
 
 extension CoachMarkOverlayView {
 
     // MARK: - Stored Properties (Associated Objects)
 
     /// 현재 시퀀스 단계 (E-1+E-2 전용)
-    /// Step 1: E-1 (삭제 안내 + 탭 가리키기)
+    /// Step 1: E-1 (아이콘 이동 + 카드 + 포커스 원 + 탭 전환)
     /// Step 2: 탭 전환 후 첫 번째 텍스트
     /// Step 3: 비우기 하이라이트 + 두 번째 텍스트 + [확인]
     var systemFeedbackCurrentStep: Int {
@@ -45,10 +49,16 @@ extension CoachMarkOverlayView {
         set { objc_setAssociatedObject(self, &currentStepKey, newValue, .OBJC_ASSOCIATION_RETAIN_NONATOMIC) }
     }
 
-    /// Step 1 컨테이너 (텍스트 + 확인 버튼 + 손가락 모션)
+    /// Step 1 컨테이너 (아이콘 + 카드를 묶는 뷰)
     private var step1Container: UIView? {
         get { objc_getAssociatedObject(self, &step1ContainerKey) as? UIView }
         set { objc_setAssociatedObject(self, &step1ContainerKey, newValue, .OBJC_ASSOCIATION_RETAIN_NONATOMIC) }
+    }
+
+    /// 중앙 이동 아이콘 (xmark.bin, Step 1 전용)
+    private var trashIconImageView: UIImageView? {
+        get { objc_getAssociatedObject(self, &trashIconImageViewKey) as? UIImageView }
+        set { objc_setAssociatedObject(self, &trashIconImageViewKey, newValue, .OBJC_ASSOCIATION_RETAIN_NONATOMIC) }
     }
 
     /// Step 2 텍스트 라벨
@@ -69,7 +79,7 @@ extension CoachMarkOverlayView {
         set { objc_setAssociatedObject(self, &fingerAnimationViewKey, newValue, .OBJC_ASSOCIATION_RETAIN_NONATOMIC) }
     }
 
-    /// E-3 카드 뷰 참조 (E-1+E-2 Step 2+3 카드로도 재사용)
+    /// Step 2+3 카드 뷰
     private var feedbackCardView: UIView? {
         get { objc_getAssociatedObject(self, &cardViewKey) as? UIView }
         set { objc_setAssociatedObject(self, &cardViewKey, newValue, .OBJC_ASSOCIATION_RETAIN_NONATOMIC) }
@@ -87,13 +97,14 @@ extension CoachMarkOverlayView {
         set { objc_setAssociatedObject(self, &step2BottomConstraintKey, newValue, .OBJC_ASSOCIATION_RETAIN_NONATOMIC) }
     }
 
-    // MARK: - E-1+E-2: Show (Delete System Guide Sequence)
+    // MARK: - E-1+E-2: Show (진입점)
 
     /// E-1+E-2 통합: 삭제 시스템 안내 시퀀스 시작
     /// 단일 오버레이가 시작부터 끝까지 유지되며 모든 입력을 차단
-    /// 시퀀스: 딤 페이드인 → 포커스 원 축소 애니메이션 → 카드 팝업 페이드인
-    /// - Parameter window: 표시할 윈도우
-    static func showDeleteSystemGuide(in window: UIWindow) {
+    /// - Parameters:
+    ///   - window: 표시할 윈도우
+    ///   - iconFrame: 삭제된 셀의 trashIcon window 좌표 (nil이면 아이콘 애니메이션 생략)
+    static func showDeleteSystemGuide(in window: UIWindow, iconFrame: CGRect?) {
         // VoiceOver 가드 (접근성 대응 미구현 상태에서는 표시하지 않음)
         guard !UIAccessibility.isVoiceOverRunning else { return }
 
@@ -102,37 +113,12 @@ extension CoachMarkOverlayView {
         overlay.systemFeedbackCurrentStep = 1
         overlay.alpha = 0
 
-        // window에 먼저 추가 (getTrashTabFrame에서 self.window 필요)
+        // 딤 배경 (구멍 없음 — 포커스 원은 [확인] 후 시작)
+        overlay.updateDimPath()
+
+        // window에 추가
         window.addSubview(overlay)
         CoachMarkManager.shared.currentOverlay = overlay
-
-        // 삭제대기함 탭 frame (포커스 애니메이션 목표값)
-        let tabFrame = overlay.getTrashTabFrame()
-
-        // 초기 상태: 딤 배경에 큰 원형 구멍 (→ 축소하며 삭제대기함으로 포커스)
-        if let tabFrame = tabFrame {
-            let margin: CGFloat = 6
-            let holeRect = tabFrame.insetBy(dx: -margin, dy: -margin)
-            // 화면 밖에서 시작하는 큰 원 (dimLayer path 직접 설정)
-            let startDiameter = max(overlay.bounds.width, overlay.bounds.height) * 3.0
-            let startCircleRect = CGRect(
-                x: holeRect.midX - startDiameter / 2,
-                y: holeRect.midY - startDiameter / 2,
-                width: startDiameter,
-                height: startDiameter
-            )
-            let startPath = UIBezierPath(rect: overlay.bounds)
-            startPath.append(UIBezierPath(ovalIn: startCircleRect))
-            overlay.dimLayer.path = startPath.cgPath
-        } else {
-            // 탭 frame 없으면 구멍 없이 딤 전체
-            overlay.highlightFrame = .zero
-            overlay.updateDimPath()
-        }
-
-        // Step 1 카드 (숨긴 상태로 미리 생성, 포커스 애니메이션 후 표시)
-        overlay.buildStep1Content()
-        overlay.step1Container?.alpha = 0
 
         // 1단계: 딤 배경 페이드인
         UIView.animate(withDuration: 0.3) {
@@ -140,17 +126,12 @@ extension CoachMarkOverlayView {
         } completion: { _ in
             guard !overlay.shouldStopAnimation else { return }
 
-            // 2단계: 포커스 원 축소 애니메이션
-            if let tabFrame = tabFrame {
-                overlay.animateFocusCircle(to: tabFrame) {
-                    guard !overlay.shouldStopAnimation else { return }
-                    // 3단계: 카드 팝업 페이드인
-                    UIView.animate(withDuration: 0.25) {
-                        overlay.step1Container?.alpha = 1
-                    }
-                }
+            if let iconFrame = iconFrame {
+                // 아이콘 이동 애니메이션 → 카드 팝업
+                overlay.animateIconToCenter(from: iconFrame)
             } else {
-                // tabFrame 없으면 바로 카드 표시
+                // 뷰어 삭제: 아이콘 없이 바로 카드 표시
+                overlay.buildStep1Content(showIcon: false)
                 UIView.animate(withDuration: 0.25) {
                     overlay.step1Container?.alpha = 1
                 }
@@ -158,38 +139,57 @@ extension CoachMarkOverlayView {
         }
     }
 
-    // MARK: - E-3: Show (First Empty Feedback)
+    // MARK: - Step 1: Icon Animation (아이콘 이동)
 
-    /// E-3: 첫 비우기 완료 안내 (단독 카드 팝업)
-    /// - Parameter window: 표시할 윈도우
-    static func showFirstEmptyFeedback(in window: UIWindow) {
-        // VoiceOver 가드
-        guard !UIAccessibility.isVoiceOverRunning else { return }
+    /// 셀의 trashIcon 위치에서 화면 중앙으로 아이콘 이동 애니메이션
+    /// 완료 후 카드 팝업 표시
+    /// - Parameter startFrame: trashIcon의 window 좌표 frame (25×25)
+    private func animateIconToCenter(from startFrame: CGRect) {
+        // xmark.bin 아이콘 생성 (셀 아이콘과 동일한 SF Symbol)
+        let config = UIImage.SymbolConfiguration(pointSize: 25, weight: .regular)
+        let icon = UIImageView(image: UIImage(systemName: "xmark.bin", withConfiguration: config))
+        icon.tintColor = .white
+        icon.frame = startFrame
+        addSubview(icon)
+        trashIconImageView = icon
 
-        let overlay = CoachMarkOverlayView(frame: window.bounds)
-        overlay.coachMarkType = .firstEmpty
-        overlay.alpha = 0
+        // 최종 위치: 화면 centerX, 상단에서 약간 아래 (카드 위쪽)
+        let finalSize: CGFloat = 48
+        let finalCenterX = bounds.midX
+        let finalCenterY = bounds.midY - 100  // 카드 위쪽에 위치
 
-        // 딤 배경 (구멍 없음)
-        overlay.updateDimPath()
-        window.addSubview(overlay)
-        CoachMarkManager.shared.currentOverlay = overlay
+        // 아이콘 커지면서 중앙으로 이동 (~0.6s, spring)
+        UIView.animate(
+            withDuration: 0.6,
+            delay: 0,
+            usingSpringWithDamping: 0.8,
+            initialSpringVelocity: 0.5,
+            options: []
+        ) {
+            // 크기 변경 (25 → 48)
+            let scale = finalSize / 25.0
+            icon.transform = CGAffineTransform(scaleX: scale, y: scale)
+            icon.center = CGPoint(x: finalCenterX, y: finalCenterY)
+        } completion: { [weak self] _ in
+            guard let self, !self.shouldStopAnimation else { return }
 
-        // 중앙 카드 구성
-        overlay.buildFirstEmptyCard()
+            // 아이콘 이동 완료 → 카드 팝업
+            self.buildStep1Content(showIcon: true)
+            self.step1Container?.alpha = 0
 
-        // 페이드인
-        UIView.animate(withDuration: 0.3) {
-            overlay.alpha = 1
+            UIView.animate(withDuration: 0.25) {
+                self.step1Container?.alpha = 1
+            }
         }
     }
 
-    // MARK: - Step 1: Build Content
+    // MARK: - Step 1: Build Content (카드 팝업)
 
-    /// Step 1 콘텐츠 구성: 카드 팝업 (텍스트 + [확인]) + 탭 하이라이트
-    /// 손가락 모션은 [확인] 탭 후 시작 (performTabTapMotionThenTransition)
-    private func buildStep1Content() {
-        // 카드 컨테이너 (E-3과 동일 스타일)
+    /// Step 1 콘텐츠 구성: 카드 팝업 (텍스트 + [확인])
+    /// 아이콘이 있으면 아이콘 아래에 배치, 없으면 화면 중앙
+    /// - Parameter showIcon: 아이콘이 이미 표시되어 있는지 여부
+    private func buildStep1Content(showIcon: Bool) {
+        // 카드 컨테이너
         let card = UIView()
         card.backgroundColor = UIColor(white: 0.15, alpha: 1.0)
         card.layer.cornerRadius = 20
@@ -200,7 +200,7 @@ extension CoachMarkOverlayView {
 
         // 안내 텍스트
         let label = UILabel()
-        label.text = "방금 삭제한 사진은 삭제대기함으로 이동됐어요.\n아래 탭을 눌러 삭제대기함으로 가볼까요?"
+        label.text = "방금 삭제된 사진은\n삭제대기함으로 이동됐어요\n삭제대기함으로 가볼게요"
         label.textColor = .white
         label.font = .systemFont(ofSize: 17, weight: .medium)
         label.textAlignment = .center
@@ -216,15 +216,25 @@ extension CoachMarkOverlayView {
         confirmButton.translatesAutoresizingMaskIntoConstraints = false
         card.addSubview(confirmButton)
 
-        // 카드 레이아웃 (화면 중앙, E-3과 동일)
-        NSLayoutConstraint.activate([
-            card.centerXAnchor.constraint(equalTo: centerXAnchor),
-            card.centerYAnchor.constraint(equalTo: centerYAnchor, constant: -40),
-            card.leadingAnchor.constraint(greaterThanOrEqualTo: leadingAnchor, constant: 24),
-            card.trailingAnchor.constraint(lessThanOrEqualTo: trailingAnchor, constant: -24),
-            card.widthAnchor.constraint(equalTo: widthAnchor, constant: -48),
+        // 카드 레이아웃
+        if showIcon, let iconView = trashIconImageView {
+            // 아이콘이 있으면 아이콘 바로 아래에 카드 배치
+            NSLayoutConstraint.activate([
+                card.centerXAnchor.constraint(equalTo: centerXAnchor),
+                card.topAnchor.constraint(equalTo: iconView.bottomAnchor, constant: 20),
+                card.widthAnchor.constraint(equalTo: widthAnchor, constant: -48),
+            ])
+        } else {
+            // 아이콘 없으면 화면 중앙
+            NSLayoutConstraint.activate([
+                card.centerXAnchor.constraint(equalTo: centerXAnchor),
+                card.centerYAnchor.constraint(equalTo: centerYAnchor, constant: -40),
+                card.widthAnchor.constraint(equalTo: widthAnchor, constant: -48),
+            ])
+        }
 
-            // 내부 패딩
+        // 내부 패딩 + 버튼 레이아웃
+        NSLayoutConstraint.activate([
             label.topAnchor.constraint(equalTo: card.topAnchor, constant: 24),
             label.leadingAnchor.constraint(equalTo: card.leadingAnchor, constant: 20),
             label.trailingAnchor.constraint(equalTo: card.trailingAnchor, constant: -20),
@@ -237,35 +247,126 @@ extension CoachMarkOverlayView {
         ])
     }
 
-    // MARK: - Step 1: Tab Tap Motion ([확인] 후)
+    // MARK: - Step 1: [확인] 후 시퀀스
 
-    /// [확인] 탭 후: 텍스트 페이드아웃 → 손가락 등장 → 탭 탭 모션 → 탭 전환
+    /// [확인] 탭 후: 카드+아이콘 페이드아웃 → 포커스 원 축소 → 손가락 모션 → 탭 전환
     func performTabTapMotionThenTransition() {
         // 시퀀스 보호 플래그 ON
         CoachMarkManager.shared.isDeleteGuideSequenceActive = true
 
-        // 텍스트/버튼 페이드아웃
+        // 1. 카드 + 아이콘 페이드아웃 (0.2s)
         UIView.animate(withDuration: 0.2, animations: { [weak self] in
             self?.step1Container?.alpha = 0
+            self?.trashIconImageView?.alpha = 0
         }) { [weak self] _ in
             guard let self, !self.shouldStopAnimation else { return }
             self.step1Container?.removeFromSuperview()
             self.step1Container = nil
+            self.trashIconImageView?.removeFromSuperview()
+            self.trashIconImageView = nil
 
-            // 손가락 탭 모션 시작
+            // 2. 포커스 원 축소 애니메이션
             guard let tabFrame = self.getTrashTabFrame() else {
-                // 탭 frame 없으면 모션 생략, 바로 전환
+                // 탭 frame 없으면 바로 전환
                 self.transitionToStep2()
                 return
             }
-            self.performFingerTapOnTab(tabFrame: tabFrame) { [weak self] in
-                self?.transitionToStep2()
+            self.animateFocusCircle(to: tabFrame) { [weak self] in
+                guard let self, !self.shouldStopAnimation else { return }
+                // 3. 포커스 완료 → 손가락 탭 모션
+                self.performFingerTapOnTab(tabFrame: tabFrame) { [weak self] in
+                    // 4. 탭 모션 완료 → 탭 전환 + Step 2/3
+                    self?.transitionToStep2()
+                }
             }
         }
     }
 
-    /// 탭 버튼 위에서 손가락 탭 모션 (C의 performCTapMotion과 유사)
-    /// 등장 → 누르기 → 떼기 → 완료
+    // MARK: - Focus Circle Animation (포커스 원 축소)
+
+    /// 포커스 원 축소 애니메이션: 화면 밖 큰 원 → 삭제대기함 탭 크기 (60%)
+    /// CABasicAnimation으로 dimLayer.path를 보간하여 부드러운 축소 효과
+    /// - Parameters:
+    ///   - tabFrame: 삭제대기함 탭의 window 좌표 frame
+    ///   - completion: 애니메이션 완료 후 콜백
+    private func animateFocusCircle(to tabFrame: CGRect, completion: @escaping () -> Void) {
+        let margin: CGFloat = 6
+        let holeRect = tabFrame.insetBy(dx: -margin, dy: -margin)
+
+        // 최종 원 (삭제대기함 탭의 60% 크기)
+        let finalDiameter = max(holeRect.width, holeRect.height) * 0.6
+        let finalCircleRect = CGRect(
+            x: holeRect.midX - finalDiameter / 2,
+            y: holeRect.midY - finalDiameter / 2,
+            width: finalDiameter,
+            height: finalDiameter
+        )
+
+        // 시작 원 (화면 밖에서부터 축소되도록 3배 크기)
+        let startDiameter = max(bounds.width, bounds.height) * 3.0
+        let startCircleRect = CGRect(
+            x: holeRect.midX - startDiameter / 2,
+            y: holeRect.midY - startDiameter / 2,
+            width: startDiameter,
+            height: startDiameter
+        )
+
+        // 시작 경로 (큰 구멍 = 딤 거의 없음)
+        let startPath = UIBezierPath(rect: bounds)
+        startPath.append(UIBezierPath(ovalIn: startCircleRect))
+
+        // 최종 경로 (작은 구멍 = 삭제대기함만 투명)
+        let endPath = UIBezierPath(rect: bounds)
+        endPath.append(UIBezierPath(ovalIn: finalCircleRect))
+
+        // 테두리 레이어 (흰색 원형 스트로크, dimLayer 위에 배치)
+        let borderLayer = CAShapeLayer()
+        borderLayer.fillColor = UIColor.clear.cgColor
+        borderLayer.strokeColor = UIColor.white.cgColor
+        borderLayer.lineWidth = 2
+        borderLayer.path = UIBezierPath(ovalIn: startCircleRect).cgPath
+        layer.addSublayer(borderLayer)
+        focusBorderLayer = borderLayer
+
+        // CABasicAnimation으로 path 보간 (딤 + 테두리 동기화)
+        CATransaction.begin()
+        CATransaction.setCompletionBlock { [weak self] in
+            guard let self else { return }
+            // 최종 상태 확정
+            self.highlightFrame = tabFrame
+            self.dimLayer.path = endPath.cgPath
+            self.dimLayer.removeAnimation(forKey: "focusCircle")
+            borderLayer.path = UIBezierPath(ovalIn: finalCircleRect).cgPath
+            borderLayer.removeAnimation(forKey: "focusBorder")
+            completion()
+        }
+
+        // 딤 구멍 축소 애니메이션 (0.9s)
+        let dimAnimation = CABasicAnimation(keyPath: "path")
+        dimAnimation.fromValue = startPath.cgPath
+        dimAnimation.toValue = endPath.cgPath
+        dimAnimation.duration = 0.9
+        dimAnimation.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
+        dimAnimation.fillMode = .forwards
+        dimAnimation.isRemovedOnCompletion = false
+        dimLayer.add(dimAnimation, forKey: "focusCircle")
+
+        // 테두리 원 축소 애니메이션 (딤과 동일 타이밍)
+        let borderAnimation = CABasicAnimation(keyPath: "path")
+        borderAnimation.fromValue = UIBezierPath(ovalIn: startCircleRect).cgPath
+        borderAnimation.toValue = UIBezierPath(ovalIn: finalCircleRect).cgPath
+        borderAnimation.duration = 0.9
+        borderAnimation.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
+        borderAnimation.fillMode = .forwards
+        borderAnimation.isRemovedOnCompletion = false
+        borderLayer.add(borderAnimation, forKey: "focusBorder")
+
+        CATransaction.commit()
+    }
+
+    // MARK: - Finger Tap Motion (손가락 탭 모션)
+
+    /// 탭 버튼 위에서 손가락 탭 모션 (등장 → 누르기 → 떼기 → 완료)
     private func performFingerTapOnTab(tabFrame: CGRect, completion: @escaping () -> Void) {
         // 손가락 아이콘 생성
         let config = UIImage.SymbolConfiguration(pointSize: 44, weight: .regular)
@@ -300,7 +401,7 @@ extension CoachMarkOverlayView {
             // Phase 2: 누르기 (0.12초, spring)
             UIView.animate(
                 withDuration: 0.12,
-                delay: 0.1,  // 잠시 대기 후 누르기
+                delay: 0.1,
                 usingSpringWithDamping: 0.6,
                 initialSpringVelocity: 0,
                 options: [],
@@ -338,7 +439,7 @@ extension CoachMarkOverlayView {
         }
     }
 
-    // MARK: - Step Transition
+    // MARK: - Step Transition (탭 전환 + Step 2/3)
 
     /// Step 1 → Step 2,3: 탭 전환 + 순차 텍스트 표시
     /// 오버레이를 dismiss하지 않고 내용만 전환
@@ -349,7 +450,7 @@ extension CoachMarkOverlayView {
         highlightFrame = .zero
         updateDimPath()
 
-        // 탭 전환 + 후속 스텝 스케줄링을 하나의 블록으로 묶음
+        // 탭 전환 + 후속 스텝 스케줄링
         let switchTabAndSchedule = { [weak self] in
             // 탭 전환 (삭제대기함 = index 2)
             tabBar.selectedIndex = 2
@@ -375,19 +476,6 @@ extension CoachMarkOverlayView {
         }
     }
 
-    /// Step 1 콘텐츠 페이드아웃 + 손가락 모션 중단
-    private func hideStep1Content() {
-        UIView.animate(withDuration: 0.25) { [weak self] in
-            self?.step1Container?.alpha = 0
-            self?.tabFingerView?.alpha = 0
-        } completion: { [weak self] _ in
-            self?.step1Container?.removeFromSuperview()
-            self?.step1Container = nil
-            self?.tabFingerView?.removeFromSuperview()
-            self?.tabFingerView = nil
-        }
-    }
-
     // MARK: - Step 2: Show Content
 
     /// Step 2: 카드 팝업으로 텍스트 표시 "보관함에서 삭제하면 여기에 임시 보관돼요."
@@ -395,7 +483,7 @@ extension CoachMarkOverlayView {
     private func showStep2Content() {
         guard !shouldStopAnimation else { return }
 
-        // 카드 생성 (E-3과 동일 스타일)
+        // 카드 생성
         let card = UIView()
         card.backgroundColor = UIColor(white: 0.15, alpha: 1.0)
         card.layer.cornerRadius = 20
@@ -519,86 +607,24 @@ extension CoachMarkOverlayView {
         UIView.animate(withDuration: 0.3) {
             label.alpha = 1
             self.confirmButton.alpha = 1
-            self.layoutIfNeeded()  // 카드 크기 확장 애니메이션
+            self.layoutIfNeeded()
         }
     }
 
-    // MARK: - E-3: Build Card
+    // MARK: - Cleanup (E-1+E-2 전용)
 
-    /// E-3 중앙 카드 구성: ✓ 삭제 완료 + 본문 + [확인]
-    private func buildFirstEmptyCard() {
-        let card = UIView()
-        card.backgroundColor = UIColor(white: 0.15, alpha: 1.0)
-        card.layer.cornerRadius = 20
-        card.clipsToBounds = true
-        card.translatesAutoresizingMaskIntoConstraints = false
-        addSubview(card)
-        feedbackCardView = card
-
-        // 아이콘 + 타이틀
-        let titleLabel = UILabel()
-        titleLabel.text = "✓ 삭제 완료"
-        titleLabel.textColor = .white
-        titleLabel.font = .systemFont(ofSize: 17, weight: .semibold)
-        titleLabel.textAlignment = .center
-        titleLabel.translatesAutoresizingMaskIntoConstraints = false
-        card.addSubview(titleLabel)
-
-        // 본문
-        let bodyLabel = UILabel()
-        bodyLabel.text = "애플 사진앱의 '최근 삭제된 항목'에서\n30일 후 완전히 삭제됩니다."
-        bodyLabel.textColor = UIColor.white.withAlphaComponent(0.9)
-        bodyLabel.font = .systemFont(ofSize: 15, weight: .regular)
-        bodyLabel.textAlignment = .center
-        bodyLabel.numberOfLines = 0
-        bodyLabel.translatesAutoresizingMaskIntoConstraints = false
-        card.addSubview(bodyLabel)
-
-        // [확인] 버튼 — 기존 confirmButton 재사용
-        confirmButton.setTitleColor(.black, for: .normal)
-        confirmButton.backgroundColor = .white
-        confirmButton.isEnabled = true
-        confirmButton.alpha = 1
-        confirmButton.translatesAutoresizingMaskIntoConstraints = false
-        card.addSubview(confirmButton)
-
-        // 카드 레이아웃 (화면 중앙, 좌우 24pt 마진)
-        NSLayoutConstraint.activate([
-            card.centerXAnchor.constraint(equalTo: centerXAnchor),
-            card.centerYAnchor.constraint(equalTo: centerYAnchor),
-            card.leadingAnchor.constraint(greaterThanOrEqualTo: leadingAnchor, constant: 24),
-            card.trailingAnchor.constraint(lessThanOrEqualTo: trailingAnchor, constant: -24),
-            card.widthAnchor.constraint(equalTo: widthAnchor, constant: -48),
-
-            // 내부 패딩
-            titleLabel.topAnchor.constraint(equalTo: card.topAnchor, constant: 24),
-            titleLabel.leadingAnchor.constraint(equalTo: card.leadingAnchor, constant: 20),
-            titleLabel.trailingAnchor.constraint(equalTo: card.trailingAnchor, constant: -20),
-
-            bodyLabel.topAnchor.constraint(equalTo: titleLabel.bottomAnchor, constant: 12),
-            bodyLabel.leadingAnchor.constraint(equalTo: card.leadingAnchor, constant: 20),
-            bodyLabel.trailingAnchor.constraint(equalTo: card.trailingAnchor, constant: -20),
-
-            confirmButton.topAnchor.constraint(equalTo: bodyLabel.bottomAnchor, constant: 20),
-            confirmButton.centerXAnchor.constraint(equalTo: card.centerXAnchor),
-            confirmButton.widthAnchor.constraint(equalToConstant: 120),
-            confirmButton.heightAnchor.constraint(equalToConstant: 44),
-            confirmButton.bottomAnchor.constraint(equalTo: card.bottomAnchor, constant: -24),
-        ])
-    }
-
-    // MARK: - Cleanup
-
-    /// E 전용 리소스 정리 (dismiss 시 호출)
-    func cleanupSystemFeedbackIfNeeded() {
-        guard coachMarkType == .firstDeleteGuide || coachMarkType == .firstEmpty else { return }
+    /// E-1+E-2 전용 리소스 정리 (dismiss 시 호출)
+    func cleanupDeleteGuide() {
+        guard coachMarkType == .firstDeleteGuide else { return }
 
         // 시퀀스 보호 플래그 OFF
         CoachMarkManager.shared.isDeleteGuideSequenceActive = false
 
-        // 모든 E 전용 뷰 제거
+        // 모든 E-1+E-2 전용 뷰 제거
         step1Container?.removeFromSuperview()
         step1Container = nil
+        trashIconImageView?.removeFromSuperview()
+        trashIconImageView = nil
         step2Label?.removeFromSuperview()
         step2Label = nil
         step3Label?.removeFromSuperview()
@@ -611,88 +637,6 @@ extension CoachMarkOverlayView {
         step2BottomConstraint = nil
         focusBorderLayer?.removeFromSuperlayer()
         focusBorderLayer = nil
-    }
-
-    // MARK: - Focus Circle Animation
-
-    /// 포커스 원 축소 애니메이션: 큰 원 → 삭제대기함 탭 크기
-    /// CABasicAnimation으로 dimLayer.path를 보간하여 부드러운 축소 효과
-    /// - Parameters:
-    ///   - tabFrame: 삭제대기함 탭의 window 좌표 frame (최종 포커스 위치)
-    ///   - completion: 애니메이션 완료 후 콜백
-    private func animateFocusCircle(to tabFrame: CGRect, completion: @escaping () -> Void) {
-        let margin: CGFloat = 6
-        let holeRect = tabFrame.insetBy(dx: -margin, dy: -margin)
-
-        // 최종 원 (삭제대기함 탭의 60% 크기로 타이트하게 포커스)
-        let finalDiameter = max(holeRect.width, holeRect.height) * 0.6
-        let finalCircleRect = CGRect(
-            x: holeRect.midX - finalDiameter / 2,
-            y: holeRect.midY - finalDiameter / 2,
-            width: finalDiameter,
-            height: finalDiameter
-        )
-
-        // 시작 원 (화면 밖에서부터 축소되도록 충분히 큰 크기)
-        let startDiameter = max(bounds.width, bounds.height) * 3.0
-        let startCircleRect = CGRect(
-            x: holeRect.midX - startDiameter / 2,
-            y: holeRect.midY - startDiameter / 2,
-            width: startDiameter,
-            height: startDiameter
-        )
-
-        // 시작 경로 (큰 구멍 = 딤 거의 없음)
-        let startPath = UIBezierPath(rect: bounds)
-        startPath.append(UIBezierPath(ovalIn: startCircleRect))
-
-        // 최종 경로 (작은 구멍 = 삭제대기함만 투명)
-        let endPath = UIBezierPath(rect: bounds)
-        endPath.append(UIBezierPath(ovalIn: finalCircleRect))
-
-        // 테두리 레이어 (흰색 원형 스트로크, dimLayer 위에 배치)
-        let borderLayer = CAShapeLayer()
-        borderLayer.fillColor = UIColor.clear.cgColor
-        borderLayer.strokeColor = UIColor.white.cgColor
-        borderLayer.lineWidth = 2
-        borderLayer.path = UIBezierPath(ovalIn: startCircleRect).cgPath
-        layer.addSublayer(borderLayer)
-        focusBorderLayer = borderLayer
-
-        // CABasicAnimation으로 path 보간 애니메이션 (딤 + 테두리 동기화)
-        CATransaction.begin()
-        CATransaction.setCompletionBlock { [weak self] in
-            guard let self else { return }
-            // 최종 상태 확정
-            self.highlightFrame = tabFrame
-            self.dimLayer.path = endPath.cgPath
-            self.dimLayer.removeAnimation(forKey: "focusCircle")
-            borderLayer.path = UIBezierPath(ovalIn: finalCircleRect).cgPath
-            borderLayer.removeAnimation(forKey: "focusBorder")
-            completion()
-        }
-
-        // 딤 구멍 축소 애니메이션
-        let dimAnimation = CABasicAnimation(keyPath: "path")
-        dimAnimation.fromValue = startPath.cgPath
-        dimAnimation.toValue = endPath.cgPath
-        dimAnimation.duration = 0.9
-        dimAnimation.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
-        dimAnimation.fillMode = .forwards
-        dimAnimation.isRemovedOnCompletion = false
-        dimLayer.add(dimAnimation, forKey: "focusCircle")
-
-        // 테두리 원 축소 애니메이션 (딤과 동일 타이밍)
-        let borderAnimation = CABasicAnimation(keyPath: "path")
-        borderAnimation.fromValue = UIBezierPath(ovalIn: startCircleRect).cgPath
-        borderAnimation.toValue = UIBezierPath(ovalIn: finalCircleRect).cgPath
-        borderAnimation.duration = 0.9
-        borderAnimation.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
-        borderAnimation.fillMode = .forwards
-        borderAnimation.isRemovedOnCompletion = false
-        borderLayer.add(borderAnimation, forKey: "focusBorder")
-
-        CATransaction.commit()
     }
 
     // MARK: - Helpers
@@ -719,7 +663,6 @@ extension CoachMarkOverlayView {
         // iOS 26+: 시스템 UITabBar
         if #available(iOS 26.0, *) {
             let systemTabBar = tabBar.tabBar
-            // UITabBar의 subviews에서 탭 컨트롤 탐색
             let tabControls = systemTabBar.subviews
                 .filter { String(describing: type(of: $0)).contains("Button") }
                 .sorted { $0.frame.minX < $1.frame.minX }
