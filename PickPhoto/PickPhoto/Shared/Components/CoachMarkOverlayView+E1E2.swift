@@ -127,11 +127,12 @@ extension CoachMarkOverlayView {
             guard !overlay.shouldStopAnimation else { return }
 
             if let iconFrame = iconFrame {
-                // 아이콘 이동 애니메이션 → 카드 팝업
-                overlay.animateIconToCenter(from: iconFrame)
+                // 아이콘 이동 + 카드 시간차 등장
+                overlay.animateIconAndCard(from: iconFrame)
             } else {
-                // 뷰어 삭제: 아이콘 없이 바로 카드 표시
-                overlay.buildStep1Content(showIcon: false)
+                // 뷰어 삭제: 아이콘 포함 카드 바로 표시
+                overlay.buildStep1Content()
+                overlay.step1Container?.alpha = 0
                 UIView.animate(withDuration: 0.25) {
                     overlay.step1Container?.alpha = 1
                 }
@@ -139,26 +140,32 @@ extension CoachMarkOverlayView {
         }
     }
 
-    // MARK: - Step 1: Icon Animation (아이콘 이동)
+    // MARK: - Step 1: Icon + Card Staggered Animation
 
-    /// 셀의 trashIcon 위치에서 화면 중앙으로 아이콘 이동 애니메이션
-    /// 완료 후 카드 팝업 표시
+    /// 아이콘 이동과 카드 등장을 시간차로 실행
+    /// 아이콘이 이동하는 중간에 카드가 페이드인되어 자연스럽게 합류
     /// - Parameter startFrame: trashIcon의 window 좌표 frame (25×25)
-    private func animateIconToCenter(from startFrame: CGRect) {
-        // xmark.bin 아이콘 생성 (셀 아이콘과 동일한 SF Symbol)
-        let config = UIImage.SymbolConfiguration(pointSize: 25, weight: .regular)
-        let icon = UIImageView(image: UIImage(systemName: "xmark.bin", withConfiguration: config))
-        icon.tintColor = .white
-        icon.frame = startFrame
-        addSubview(icon)
-        trashIconImageView = icon
+    private func animateIconAndCard(from startFrame: CGRect) {
+        // 1. 카드 먼저 생성 (숨긴 상태, 아이콘 공간 포함)
+        buildStep1Content()
+        step1Container?.alpha = 0
+        layoutIfNeeded()  // 카드 frame 확정 (아이콘 최종 위치 계산용)
 
-        // 최종 위치: 화면 centerX, 상단에서 약간 아래 (카드 위쪽)
+        // 2. 카드 내부 아이콘의 최종 위치 (overlay 좌표)
+        guard let cardIcon = trashIconImageView,
+              let card = step1Container else { return }
+        let iconFinalCenter = card.convert(cardIcon.center, to: self)
+        cardIcon.alpha = 0  // 카드 내부 아이콘은 숨김 (날아오는 아이콘이 대신함)
+
+        // 3. 날아오는 아이콘 생성 (셀 위치에서 시작)
+        let flyingConfig = UIImage.SymbolConfiguration(pointSize: 25, weight: .regular)
+        let flyingIcon = UIImageView(image: UIImage(systemName: "xmark.bin", withConfiguration: flyingConfig))
+        flyingIcon.tintColor = .white
+        flyingIcon.frame = startFrame
+        addSubview(flyingIcon)
+
+        // 4. 아이콘 이동 애니메이션 (0.6s spring, 25pt → 48pt)
         let finalSize: CGFloat = 48
-        let finalCenterX = bounds.midX
-        let finalCenterY = bounds.midY - 100  // 카드 위쪽에 위치
-
-        // 아이콘 커지면서 중앙으로 이동 (~0.6s, spring)
         UIView.animate(
             withDuration: 0.6,
             delay: 0,
@@ -166,29 +173,26 @@ extension CoachMarkOverlayView {
             initialSpringVelocity: 0.5,
             options: []
         ) {
-            // 크기 변경 (25 → 48)
             let scale = finalSize / 25.0
-            icon.transform = CGAffineTransform(scaleX: scale, y: scale)
-            icon.center = CGPoint(x: finalCenterX, y: finalCenterY)
-        } completion: { [weak self] _ in
-            guard let self, !self.shouldStopAnimation else { return }
+            flyingIcon.transform = CGAffineTransform(scaleX: scale, y: scale)
+            flyingIcon.center = iconFinalCenter
+        } completion: { _ in
+            // 날아온 아이콘 → 카드 내부 아이콘으로 교체 (동일 위치, 매끄러운 전환)
+            cardIcon.alpha = 1
+            flyingIcon.removeFromSuperview()
+        }
 
-            // 아이콘 이동 완료 → 카드 팝업
-            self.buildStep1Content(showIcon: true)
-            self.step1Container?.alpha = 0
-
-            UIView.animate(withDuration: 0.25) {
-                self.step1Container?.alpha = 1
-            }
+        // 5. 카드 시간차 페이드인 (아이콘 이동 0.25s 후 시작)
+        UIView.animate(withDuration: 0.3, delay: 0.25, options: .curveEaseOut) { [weak self] in
+            self?.step1Container?.alpha = 1
         }
     }
 
     // MARK: - Step 1: Build Content (카드 팝업)
 
-    /// Step 1 콘텐츠 구성: 카드 팝업 (텍스트 + [확인])
-    /// 아이콘이 있으면 아이콘 아래에 배치, 없으면 화면 중앙
-    /// - Parameter showIcon: 아이콘이 이미 표시되어 있는지 여부
-    private func buildStep1Content(showIcon: Bool) {
+    /// Step 1 카드 구성: 아이콘(상단) + 텍스트(아이콘 아래, 설명 스타일) + [확인]
+    /// 아이콘이 카드 내부에 포함되어 아이콘-설명 레이아웃을 형성
+    private func buildStep1Content() {
         // 카드 컨테이너
         let card = UIView()
         card.backgroundColor = UIColor(white: 0.15, alpha: 1.0)
@@ -198,7 +202,15 @@ extension CoachMarkOverlayView {
         addSubview(card)
         step1Container = card
 
-        // 안내 텍스트
+        // 아이콘 (카드 상단 중앙, 48pt)
+        let iconConfig = UIImage.SymbolConfiguration(pointSize: 48, weight: .regular)
+        let iconView = UIImageView(image: UIImage(systemName: "xmark.bin", withConfiguration: iconConfig))
+        iconView.tintColor = .white
+        iconView.translatesAutoresizingMaskIntoConstraints = false
+        card.addSubview(iconView)
+        trashIconImageView = iconView
+
+        // 안내 텍스트 (아이콘 바로 아래, 설명 스타일)
         let label = UILabel()
         label.text = "방금 삭제된 사진은\n삭제대기함으로 이동됐어요\n삭제대기함으로 가볼게요"
         label.textColor = .white
@@ -208,7 +220,7 @@ extension CoachMarkOverlayView {
         label.translatesAutoresizingMaskIntoConstraints = false
         card.addSubview(label)
 
-        // [확인] 버튼 — 기존 confirmButton 재사용
+        // [확인] 버튼
         confirmButton.setTitleColor(.black, for: .normal)
         confirmButton.backgroundColor = .white
         confirmButton.isEnabled = true
@@ -216,29 +228,22 @@ extension CoachMarkOverlayView {
         confirmButton.translatesAutoresizingMaskIntoConstraints = false
         card.addSubview(confirmButton)
 
-        // 카드 레이아웃
-        if showIcon, let iconView = trashIconImageView {
-            // 아이콘이 있으면 아이콘 바로 아래에 카드 배치
-            NSLayoutConstraint.activate([
-                card.centerXAnchor.constraint(equalTo: centerXAnchor),
-                card.topAnchor.constraint(equalTo: iconView.bottomAnchor, constant: 20),
-                card.widthAnchor.constraint(equalTo: widthAnchor, constant: -48),
-            ])
-        } else {
-            // 아이콘 없으면 화면 중앙
-            NSLayoutConstraint.activate([
-                card.centerXAnchor.constraint(equalTo: centerXAnchor),
-                card.centerYAnchor.constraint(equalTo: centerYAnchor, constant: -40),
-                card.widthAnchor.constraint(equalTo: widthAnchor, constant: -48),
-            ])
-        }
-
-        // 내부 패딩 + 버튼 레이아웃
+        // 카드 레이아웃 (화면 중앙, 약간 위)
         NSLayoutConstraint.activate([
-            label.topAnchor.constraint(equalTo: card.topAnchor, constant: 24),
+            card.centerXAnchor.constraint(equalTo: centerXAnchor),
+            card.centerYAnchor.constraint(equalTo: centerYAnchor, constant: -40),
+            card.widthAnchor.constraint(equalTo: widthAnchor, constant: -48),
+
+            // 아이콘 (상단 중앙)
+            iconView.topAnchor.constraint(equalTo: card.topAnchor, constant: 24),
+            iconView.centerXAnchor.constraint(equalTo: card.centerXAnchor),
+
+            // 텍스트 (아이콘 바로 아래)
+            label.topAnchor.constraint(equalTo: iconView.bottomAnchor, constant: 16),
             label.leadingAnchor.constraint(equalTo: card.leadingAnchor, constant: 20),
             label.trailingAnchor.constraint(equalTo: card.trailingAnchor, constant: -20),
 
+            // 버튼
             confirmButton.topAnchor.constraint(equalTo: label.bottomAnchor, constant: 20),
             confirmButton.centerXAnchor.constraint(equalTo: card.centerXAnchor),
             confirmButton.widthAnchor.constraint(equalToConstant: 120),
@@ -254,16 +259,14 @@ extension CoachMarkOverlayView {
         // 시퀀스 보호 플래그 ON
         CoachMarkManager.shared.isDeleteGuideSequenceActive = true
 
-        // 1. 카드 + 아이콘 페이드아웃 (0.2s)
+        // 1. 카드 페이드아웃 (아이콘은 카드 안에 포함, 함께 사라짐)
         UIView.animate(withDuration: 0.2, animations: { [weak self] in
             self?.step1Container?.alpha = 0
-            self?.trashIconImageView?.alpha = 0
         }) { [weak self] _ in
             guard let self, !self.shouldStopAnimation else { return }
             self.step1Container?.removeFromSuperview()
             self.step1Container = nil
-            self.trashIconImageView?.removeFromSuperview()
-            self.trashIconImageView = nil
+            self.trashIconImageView = nil  // 카드와 함께 제거됨
 
             // 2. 포커스 원 축소 애니메이션
             guard let tabFrame = self.getTrashTabFrame() else {
