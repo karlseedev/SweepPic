@@ -656,54 +656,12 @@ extension CoachMarkOverlayView {
     }
 
     /// 삭제대기함 탭 frame 획득 (window 좌표)
-    /// iOS 16~25: LiquidGlassTabBar의 탭 버튼
-    /// iOS 26+: 시스템 UITabBar의 탭 영역
+    /// TabBarController에 위임하여 iOS 버전별 처리
     /// 실패 시 nil → 손가락 모션 생략
     private func getTrashTabFrame() -> CGRect? {
         guard let tabBar = findTabBarController() else { return nil }
         guard let window = self.window else { return nil }
-
-        // iOS 16~25: FloatingOverlay의 LiquidGlassTabBar
-        if let overlay = tabBar.floatingOverlay {
-            return overlay.tabButtonFrame(at: 2, in: window)
-        }
-
-        // iOS 26+: 시스템 UITabBar (Liquid Glass pill 디자인)
-        if #available(iOS 26.0, *) {
-            let systemTabBar = tabBar.tabBar
-            let tabCount = max(CGFloat(tabBar.viewControllers?.count ?? 3), 1)
-            let trashIndex: CGFloat = 2  // 삭제대기함 = index 2
-
-            // iOS 26 Liquid Glass: 탭바 내부에 중앙 정렬된 플래터(pill) 뷰 존재
-            // _UITabBarPlatterView (탭바보다 좁은 실제 탭 컨테이너)
-            if let platterView = systemTabBar.subviews.first(where: { view in
-                view.bounds.width > 100 && view.bounds.width < systemTabBar.bounds.width
-            }) {
-                let platterFrame = platterView.convert(platterView.bounds, to: window)
-                let tabWidth = platterFrame.width / tabCount
-                return CGRect(
-                    x: platterFrame.minX + tabWidth * trashIndex,
-                    y: platterFrame.minY,
-                    width: tabWidth,
-                    height: platterFrame.height
-                )
-            }
-
-            // 폴백: 탭바 전체 영역 균등 분할 (safe area 제외)
-            let tabBarFrame = systemTabBar.convert(systemTabBar.bounds, to: window)
-            guard tabBarFrame.height > 0 else { return nil }
-            let safeAreaBottom = window.safeAreaInsets.bottom
-            let actualHeight = tabBarFrame.height - safeAreaBottom
-            let tabWidth = tabBarFrame.width / tabCount
-            return CGRect(
-                x: tabBarFrame.minX + tabWidth * trashIndex,
-                y: tabBarFrame.minY,
-                width: tabWidth,
-                height: actualHeight
-            )
-        }
-
-        return nil
+        return tabBar.frameForTab(at: 2, in: window)
     }
 
     /// 비우기 버튼 frame 획득 (window 좌표)

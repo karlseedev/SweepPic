@@ -300,6 +300,71 @@ class TabBarController: UITabBarController {
     func getOverlayHeights() -> (top: CGFloat, bottom: CGFloat)? {
         return floatingOverlay?.getOverlayHeights()
     }
+
+    /// 특정 탭의 window 좌표 frame 반환
+    /// - iOS 16~25: FloatingOverlay의 LiquidGlassTabBar 탭 버튼
+    /// - iOS 26+: 시스템 UITabBar의 탭 버튼 (구조적 탐색)
+    /// - Parameters:
+    ///   - index: 탭 인덱스 (0: 보관함, 1: 앨범, 2: 삭제대기함)
+    ///   - window: 좌표 변환 대상 윈도우
+    /// - Returns: 탭 버튼의 window 좌표 frame, 실패 시 nil
+    func frameForTab(at index: Int, in window: UIWindow) -> CGRect? {
+        guard let vcCount = viewControllers?.count, index < vcCount else { return nil }
+
+        // iOS 16~25: FloatingOverlay 탭 버튼
+        if let overlay = floatingOverlay {
+            return overlay.tabButtonFrame(at: index, in: window)
+        }
+
+        // iOS 26+: 시스템 UITabBar (Liquid Glass pill 디자인)
+        guard #available(iOS 26.0, *) else { return nil }
+
+        let systemTabBar = tabBar
+
+        // 플래터(pill) 뷰 찾기: 탭바보다 좁은 중앙 컨테이너
+        guard let platterView = systemTabBar.subviews.first(where: { view in
+            view.bounds.width > 100 && view.bounds.width < systemTabBar.bounds.width
+        }) else { return nil }
+
+        // 플래터 내부에서 탭 버튼 뷰 재귀 탐색
+        // 클래스명이 아닌 구조적 특성으로 탐색:
+        // - 자식 수가 탭 수(vcCount)와 일치
+        // - 모두 비슷한 높이 (±5pt)
+        // - 수평으로 정렬 (minX 기준 정렬 가능)
+        if let tabButtons = findTabButtonViews(in: platterView, expectedCount: vcCount),
+           index < tabButtons.count {
+            return tabButtons[index].convert(tabButtons[index].bounds, to: window)
+        }
+
+        return nil
+    }
+
+    /// 플래터 내부에서 탭 버튼 뷰를 구조적 특성으로 재귀 탐색
+    /// - Parameters:
+    ///   - view: 탐색 시작 뷰
+    ///   - expectedCount: 예상 탭 수 (viewControllers.count)
+    /// - Returns: X좌표 기준 정렬된 탭 버튼 뷰 배열, 실패 시 nil
+    private func findTabButtonViews(in view: UIView, expectedCount: Int) -> [UIView]? {
+        // 이 뷰의 자식 중 expectedCount와 일치하는 유사 크기 뷰 그룹 찾기
+        let candidates = view.subviews
+            .filter { $0.bounds.width > 30 && $0.bounds.height > 30 }
+            .sorted { $0.frame.minX < $1.frame.minX }
+
+        if candidates.count == expectedCount {
+            // 모두 비슷한 높이인지 확인 (탭 버튼 특성)
+            let heights = candidates.map { $0.bounds.height }
+            let allSimilarHeight = heights.allSatisfy { abs($0 - heights[0]) < 5 }
+            if allSimilarHeight { return candidates }
+        }
+
+        // 자식 뷰에서 재귀 탐색
+        for child in view.subviews {
+            if let found = findTabButtonViews(in: child, expectedCount: expectedCount) {
+                return found
+            }
+        }
+        return nil
+    }
 }
 
 // MARK: - UITabBarControllerDelegate
