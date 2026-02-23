@@ -672,9 +672,17 @@ extension CoachMarkOverlayView {
         if #available(iOS 26.0, *) {
             let systemTabBar = tabBar.tabBar
 
-            // 1차: subview 클래스명으로 탭 버튼 탐색
+            // 1차: subview 클래스명으로 탭 아이템 뷰 탐색
+            // iOS 버전에 따라 UITabBarButton, _UITabBarItemView 등 다양한 이름 가능
+            let excludedPatterns = ["Background", "Shadow", "Separator", "Effect", "Backdrop"]
             let tabControls = systemTabBar.subviews
-                .filter { String(describing: type(of: $0)).contains("Button") }
+                .filter { view in
+                    let name = String(describing: type(of: view))
+                    // 배경/구분선 등 비-아이템 뷰 제외, 최소 크기 필터
+                    return !excludedPatterns.contains(where: { name.contains($0) })
+                        && view.bounds.width > 20
+                        && view.bounds.height > 20
+                }
                 .sorted { $0.frame.minX < $1.frame.minX }
 
             if tabControls.count > 2 {
@@ -685,6 +693,9 @@ extension CoachMarkOverlayView {
             // 2차 폴백: 탭바 영역을 탭 수로 균등 분할 (내부 구조 변경 대응)
             let tabBarFrame = systemTabBar.convert(systemTabBar.bounds, to: window)
             guard tabBarFrame.height > 0 else { return nil }
+            // safe area bottom 제외 (홈 인디케이터 영역은 탭 아이콘이 없음)
+            let safeAreaBottom = window.safeAreaInsets.bottom
+            let actualHeight = tabBarFrame.height - safeAreaBottom
             let tabCount = max(CGFloat(tabBar.viewControllers?.count ?? 3), 1)
             let tabWidth = tabBarFrame.width / tabCount
             let trashIndex: CGFloat = 2  // 삭제대기함 = index 2
@@ -692,7 +703,7 @@ extension CoachMarkOverlayView {
                 x: tabBarFrame.minX + tabWidth * trashIndex,
                 y: tabBarFrame.minY,
                 width: tabWidth,
-                height: tabBarFrame.height
+                height: actualHeight
             )
         }
 
