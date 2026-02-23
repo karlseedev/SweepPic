@@ -650,7 +650,7 @@ extension CoachMarkOverlayView {
         card.addSubview(label)
         step3Label = label
 
-        // "[비우기]" 부분을 볼드 + 빨간색으로 강조
+        // Step 3 텍스트 (강조 없이 흰색 통일)
         let text = "[비우기]를 누르면 사진이 최종 삭제돼요"
         let attributed = NSMutableAttributedString(
             string: text,
@@ -663,7 +663,7 @@ extension CoachMarkOverlayView {
             let nsRange = NSRange(range, in: text)
             attributed.addAttributes([
                 .font: UIFont.systemFont(ofSize: 17, weight: .bold),
-                .foregroundColor: UIColor.systemRed,
+                .foregroundColor: UIColor.white,
             ], range: nsRange)
         }
         label.attributedText = attributed
