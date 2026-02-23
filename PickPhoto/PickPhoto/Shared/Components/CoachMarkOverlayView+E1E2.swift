@@ -232,7 +232,7 @@ extension CoachMarkOverlayView {
             let nsRange = NSRange(range, in: e1Text)
             e1Attributed.addAttributes([
                 .font: UIFont.systemFont(ofSize: 17, weight: .bold),
-                .foregroundColor: UIColor.systemYellow,
+                .foregroundColor: UIColor(red: 1.0, green: 0.918, blue: 0.0, alpha: 1.0), // #FFEA00
             ], range: nsRange)
         }
         label.attributedText = e1Attributed
@@ -546,7 +546,7 @@ extension CoachMarkOverlayView {
             let nsRange = NSRange(range, in: step2Text)
             step2Attributed.addAttributes([
                 .font: UIFont.systemFont(ofSize: 17, weight: .bold),
-                .foregroundColor: UIColor.systemYellow,
+                .foregroundColor: UIColor(red: 1.0, green: 0.918, blue: 0.0, alpha: 1.0), // #FFEA00
             ], range: nsRange)
         }
         label.attributedText = step2Attributed
