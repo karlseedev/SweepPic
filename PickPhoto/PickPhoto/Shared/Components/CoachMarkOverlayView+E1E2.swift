@@ -213,11 +213,20 @@ extension CoachMarkOverlayView {
         trashIconImageView = iconView
 
         // 안내 텍스트 (아이콘 바로 아래, 설명 스타일)
+        // \u{2028} = 같은 단락 내 줄바꿈, \n = 단락 구분 (paragraphSpacing 적용)
         let label = UILabel()
-        label.text = "방금 삭제된 사진은\n삭제대기함으로 이동됐어요\n삭제대기함으로 가볼게요"
-        label.textColor = .white
-        label.font = .systemFont(ofSize: 17, weight: .regular)
-        label.textAlignment = .center
+        let paragraphStyle = NSMutableParagraphStyle()
+        paragraphStyle.alignment = .center
+        paragraphStyle.paragraphSpacing = 8  // 1문단↔2문단 사이 추가 간격
+        let e1Text = "방금 삭제된 사진은\u{2028}삭제대기함으로 이동됐어요\n삭제대기함으로 가볼게요"
+        label.attributedText = NSAttributedString(
+            string: e1Text,
+            attributes: [
+                .font: UIFont.systemFont(ofSize: 17, weight: .regular),
+                .foregroundColor: UIColor.white,
+                .paragraphStyle: paragraphStyle,
+            ]
+        )
         label.numberOfLines = 0
         label.translatesAutoresizingMaskIntoConstraints = false
         card.addSubview(label)
