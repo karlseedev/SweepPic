@@ -134,15 +134,6 @@ final class CoachMarkOverlayView: UIView {
 
     // MARK: B (뷰어) 전용 상수
 
-    /// B: 사진 위 딤 알파 (텍스트 가독성 + 사진 인식 균형)
-    private static let viewerPhotoDimAlpha: CGFloat = 0.50
-
-    /// B: 드래그 시 스냅샷 이동 비율 (화면 높이 × 0.5)
-    private static let viewerSnapshotMoveRatio: CGFloat = 0.5
-
-    /// B: Release 후 스냅샷 최종 이동 비율 (화면 높이 × 0.9, alpha 0으로 사라짐)
-    private static let viewerSnapshotFinalMoveRatio: CGFloat = 0.9
-
     /// B: 손가락 이동 거리 (pt)
     private static let viewerFingerMoveDistance: CGFloat = 300
 
@@ -217,7 +208,7 @@ final class CoachMarkOverlayView: UIView {
         )
         // 키워드 볼드 + 노란색 강조
         let boldFont = UIFont.systemFont(ofSize: 17, weight: .bold)
-        let yellow = UIColor.yellow
+        let yellow = UIColor(red: 1.0, green: 0.918, blue: 0.0, alpha: 1.0) // #FFEA00
         for keyword in ["정리", "복원", "삭제대기함"] {
             let range = (fullText as NSString).range(of: keyword)
             attr.addAttributes([.font: boldFont, .foregroundColor: yellow], range: range)
@@ -242,7 +233,7 @@ final class CoachMarkOverlayView: UIView {
     /// A 전용: 스냅샷 위 타이틀 라벨 (pill 테두리)
     let titleLabel: UILabel = {
         let label = UILabel()
-        label.text = "새로운 정리 방법"
+        label.text = "새로운 삭제 방법"
         label.textColor = .white
         label.font = .systemFont(ofSize: 24, weight: .light)
         label.textAlignment = .center
@@ -432,8 +423,8 @@ final class CoachMarkOverlayView: UIView {
     // MARK: - Show B (Viewer Swipe Delete)
 
     /// 코치마크 B: 뷰어 스와이프 삭제 표시
-    /// - 즉시: 오버레이 생성 + 윈도우에 추가 (터치 차단 시작)
-    /// - 0.5초 후: 페이드인 + 애니메이션 시작
+    /// - 딤 없이 투명 배경, 스냅샷+손가락 애니메이션 유지
+    /// - 텍스트+확인 버튼은 E 스타일 blur 카드 팝업 (중앙 아래 배치)
     /// - Parameters:
     ///   - photoSnapshot: 사진 이미지뷰 스냅샷 (검은 여백 제외)
     ///   - photoFrame: 사진 영역 프레임 (윈도우 좌표)
@@ -449,8 +440,9 @@ final class CoachMarkOverlayView: UIView {
         // 즉시 터치 차단 (0.01 = hitTest 통과 최소값, 시각적으로 투명)
         overlay.alpha = 0.01
 
-        // 솔리드 검정 배경 (원본 뷰어 이미지 완전 차단)
-        overlay.backgroundColor = .black
+        // 딤 없음 (투명 배경)
+        overlay.dimLayer.fillColor = UIColor.clear.cgColor
+        overlay.updateDimPath()
 
         // 윈도우에 추가 (터치 차단 즉시 시작)
         window.addSubview(overlay)
@@ -461,14 +453,7 @@ final class CoachMarkOverlayView: UIView {
         overlay.addSubview(photoSnapshot)
         overlay.snapshotView = photoSnapshot
 
-        // 딤 뷰 (스냅샷 위에 배치, 텍스트 가독성 확보)
-        // sublayer가 아닌 subview로 스냅샷 위에 올라감
-        let dimView = UIView(frame: window.bounds)
-        dimView.backgroundColor = UIColor.black.withAlphaComponent(viewerPhotoDimAlpha)
-        dimView.isUserInteractionEnabled = false
-        overlay.addSubview(dimView)
-
-        // 손가락 아이콘 배치 (화면 중앙 약간 아래, 딤 뷰 위에 배치)
+        // 손가락 아이콘 배치 (화면 중앙 약간 아래)
         overlay.fingerView.sizeToFit()
         overlay.fingerView.center = CGPoint(
             x: window.bounds.midX,
@@ -487,28 +472,8 @@ final class CoachMarkOverlayView: UIView {
         )
         overlay.addSubview(overlay.arrowView)
 
-        // 안내 텍스트 (화면 높이의 2/3 지점, 2줄)
-        overlay.messageLabel.text = "위로 밀면 바로\n삭제대기함으로 이동해요"
-        let textY = window.bounds.height * 2 / 3
-        overlay.messageLabel.frame = CGRect(
-            x: 20,
-            y: textY,
-            width: window.bounds.width - 40,
-            height: 50
-        )
-        overlay.addSubview(overlay.messageLabel)
-
-        // 확인 버튼 (흰색 라운드, iOS 버전 공통)
-        overlay.confirmButton.setTitleColor(.black, for: .normal)
-        overlay.confirmButton.backgroundColor = .white
-        let buttonWidth: CGFloat = 120
-        overlay.confirmButton.frame = CGRect(
-            x: (window.bounds.width - buttonWidth) / 2,
-            y: overlay.messageLabel.frame.maxY + 16,
-            width: buttonWidth,
-            height: buttonHeight
-        )
-        overlay.addSubview(overlay.confirmButton)
+        // E 스타일 카드 팝업 (blur 배경 + 텍스트 + 확인 버튼)
+        overlay.buildViewerSwipeCard(in: window)
 
         // 0.5초 후 페이드인 + 애니메이션 시작
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak overlay] in
@@ -525,6 +490,79 @@ final class CoachMarkOverlayView: UIView {
                 }
             }
         }
+    }
+
+    // MARK: - B: Build Card (E 스타일 팝업)
+
+    /// B 카드 구성: 안내 텍스트 + [확인] (E 스타일 blur 카드, 중앙 아래 배치)
+    private func buildViewerSwipeCard(in window: UIWindow) {
+        // 카드 컨테이너 (시스템 팝업 스타일 blur 배경)
+        let card = UIView()
+        card.layer.cornerRadius = 20
+        card.clipsToBounds = true
+        card.translatesAutoresizingMaskIntoConstraints = false
+        let blur = UIVisualEffectView(effect: UIBlurEffect(style: .systemMaterialDark))
+        blur.frame = card.bounds
+        blur.autoresizingMask = [.flexibleWidth, .flexibleHeight]
+        card.addSubview(blur)
+        addSubview(card)
+
+        // 안내 텍스트 ("삭제대기함" 볼드+노란색 강조)
+        let label = UILabel()
+        label.numberOfLines = 0
+        label.translatesAutoresizingMaskIntoConstraints = false
+        let text = "위로 밀면 바로\n삭제대기함으로 이동해요"
+        let attributed = NSMutableAttributedString(
+            string: text,
+            attributes: [
+                .font: UIFont.systemFont(ofSize: 17, weight: .regular),
+                .foregroundColor: UIColor.white,
+                .paragraphStyle: {
+                    let style = NSMutableParagraphStyle()
+                    style.alignment = .center
+                    return style
+                }(),
+            ]
+        )
+        // "삭제대기함" 볼드 + 노란색 강조
+        if let range = text.range(of: "삭제대기함") {
+            let nsRange = NSRange(range, in: text)
+            attributed.addAttributes([
+                .font: UIFont.systemFont(ofSize: 17, weight: .bold),
+                .foregroundColor: UIColor(red: 1.0, green: 0.918, blue: 0.0, alpha: 1.0),
+            ], range: nsRange)
+        }
+        label.attributedText = attributed
+        card.addSubview(label)
+
+        // [확인] 버튼
+        confirmButton.setTitleColor(.black, for: .normal)
+        confirmButton.backgroundColor = .white
+        confirmButton.isEnabled = true
+        confirmButton.alpha = 1
+        confirmButton.translatesAutoresizingMaskIntoConstraints = false
+        card.addSubview(confirmButton)
+
+        // 카드 레이아웃 (중앙보다 아래)
+        NSLayoutConstraint.activate([
+            card.centerXAnchor.constraint(equalTo: centerXAnchor),
+            card.centerYAnchor.constraint(equalTo: centerYAnchor, constant: 80),
+            card.leadingAnchor.constraint(greaterThanOrEqualTo: leadingAnchor, constant: 24),
+            card.trailingAnchor.constraint(lessThanOrEqualTo: trailingAnchor, constant: -24),
+            card.widthAnchor.constraint(equalTo: widthAnchor, constant: -48),
+
+            // 내부 패딩
+            label.topAnchor.constraint(equalTo: card.topAnchor, constant: 24),
+            label.leadingAnchor.constraint(equalTo: card.leadingAnchor, constant: 20),
+            label.trailingAnchor.constraint(equalTo: card.trailingAnchor, constant: -20),
+
+            // 버튼
+            confirmButton.topAnchor.constraint(equalTo: label.bottomAnchor, constant: 20),
+            confirmButton.centerXAnchor.constraint(equalTo: card.centerXAnchor),
+            confirmButton.widthAnchor.constraint(equalToConstant: 120),
+            confirmButton.heightAnchor.constraint(equalToConstant: Self.buttonHeight),
+            confirmButton.bottomAnchor.constraint(equalTo: card.bottomAnchor, constant: -24),
+        ])
     }
 
     // MARK: - Dismiss
