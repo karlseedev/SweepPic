@@ -548,21 +548,23 @@ extension CoachMarkOverlayView {
 
     // MARK: - Step 3: Show Content
 
-    /// Step 3: 비우기 버튼 깜빡 → 카드 확장하여 비우기 안내 텍스트 + [확인] 추가
+    /// Step 3: 텍스트 먼저 표시 → 직후 비우기 버튼 깜빡
     private func showStep3Content() {
         guard !shouldStopAnimation else { return }
         guard let card = feedbackCardView else { return }
 
         systemFeedbackCurrentStep = 3
 
-        // 비우기 버튼 위치에 깜빡 효과 → 완료 후 텍스트 표시
-        if let buttonFrame = getEmptyButtonFrame() {
-            blinkEmptyButton(at: buttonFrame) { [weak self] in
-                self?.showStep3Text(in: card)
+        // 텍스트 + [확인] 먼저 표시
+        showStep3Text(in: card)
+
+        // 텍스트 페이드인(0.3s) 직후 비우기 버튼 깜빡
+        let buttonFrame = getEmptyButtonFrame()
+        if let buttonFrame {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) { [weak self] in
+                guard let self, !self.shouldStopAnimation else { return }
+                self.blinkEmptyButton(at: buttonFrame) { }
             }
-        } else {
-            // 비우기 버튼 찾지 못하면 바로 텍스트 표시
-            showStep3Text(in: card)
         }
     }
 
