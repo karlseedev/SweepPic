@@ -548,22 +548,57 @@ extension CoachMarkOverlayView {
 
     // MARK: - Step 3: Show Content
 
-    /// Step 3: 기존 Step 2 카드를 확장하여 비우기 안내 텍스트 + [확인] 추가
-    /// 비우기 버튼 하이라이트도 함께 표시
+    /// Step 3: 비우기 버튼 깜빡 → 카드 확장하여 비우기 안내 텍스트 + [확인] 추가
     private func showStep3Content() {
         guard !shouldStopAnimation else { return }
         guard let card = feedbackCardView else { return }
 
         systemFeedbackCurrentStep = 3
 
-        // 비우기 버튼 frame 획득 및 하이라이트
-        if let frame = getEmptyButtonFrame() {
-            highlightFrame = frame
-            CATransaction.begin()
-            CATransaction.setAnimationDuration(0.3)
-            updateDimPath()
-            CATransaction.commit()
+        // 비우기 버튼 위치에 깜빡 효과 → 완료 후 텍스트 표시
+        if let buttonFrame = getEmptyButtonFrame() {
+            blinkEmptyButton(at: buttonFrame) { [weak self] in
+                self?.showStep3Text(in: card)
+            }
+        } else {
+            // 비우기 버튼 찾지 못하면 바로 텍스트 표시
+            showStep3Text(in: card)
         }
+    }
+
+    /// 비우기 버튼 위에 가짜 버튼을 깜빡 (흰색 배경 + 빨간 텍스트)
+    /// 블랙 배경의 삭제대기함에서 버튼 위치를 시각적으로 안내
+    private func blinkEmptyButton(at frame: CGRect, completion: @escaping () -> Void) {
+        // 가짜 비우기 버튼 (실제 버튼 위에 오버레이)
+        let fakeButton = UILabel()
+        fakeButton.text = "비우기"
+        fakeButton.textColor = .systemRed
+        fakeButton.font = .systemFont(ofSize: 17, weight: .semibold)
+        fakeButton.textAlignment = .center
+        fakeButton.backgroundColor = .white
+        fakeButton.layer.cornerRadius = frame.height / 2
+        fakeButton.clipsToBounds = true
+        fakeButton.frame = frame
+        fakeButton.alpha = 0
+        addSubview(fakeButton)
+
+        // 깜빡: 페이드인(0.25s) → 유지(0.5s) → 페이드아웃(0.25s)
+        UIView.animate(withDuration: 0.25, delay: 0, options: .curveEaseIn) {
+            fakeButton.alpha = 1
+        } completion: { [weak self] _ in
+            guard self != nil else { return }
+            UIView.animate(withDuration: 0.25, delay: 0.5, options: .curveEaseOut) {
+                fakeButton.alpha = 0
+            } completion: { _ in
+                fakeButton.removeFromSuperview()
+                completion()
+            }
+        }
+    }
+
+    /// Step 3 텍스트 + [확인] 버튼을 카드에 추가 (깜빡 완료 후 호출)
+    private func showStep3Text(in card: UIView) {
+        guard !shouldStopAnimation else { return }
 
         // Step 2 카드 하단 제약 해제 (카드 확장 준비)
         step2BottomConstraint?.isActive = false
