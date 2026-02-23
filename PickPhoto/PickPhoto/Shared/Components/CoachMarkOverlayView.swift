@@ -239,6 +239,16 @@ final class CoachMarkOverlayView: UIView {
         return button
     }()
 
+    /// A 전용: 스냅샷 위 타이틀 라벨
+    let titleLabel: UILabel = {
+        let label = UILabel()
+        label.text = "새로운 정리 방법"
+        label.textColor = .white
+        label.font = .systemFont(ofSize: 20, weight: .bold)
+        label.textAlignment = .center
+        return label
+    }()
+
     /// Reduce Motion 시 방향 화살표
     private let arrowView: UIImageView = {
         let config = UIImage.SymbolConfiguration(pointSize: 24, weight: .bold)
@@ -367,6 +377,14 @@ final class CoachMarkOverlayView: UIView {
             y: highlightFrame.midY
         )
         overlay.addSubview(overlay.arrowView)
+
+        // 타이틀 라벨 (스냅샷 위)
+        overlay.titleLabel.sizeToFit()
+        overlay.titleLabel.center = CGPoint(
+            x: overlay.bounds.midX,
+            y: highlightFrame.minY - 20
+        )
+        overlay.addSubview(overlay.titleLabel)
 
         // 텍스트 라벨 (3줄: 정리 + 복원 + 삭제대기함)
         overlay.messageLabel.frame = CGRect(

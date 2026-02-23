@@ -15,7 +15,7 @@
 //    4. 아이콘 아래에 카드 팝업: "방금 삭제된 사진은..." + [확인]
 //    5. [확인] → 카드+아이콘 페이드아웃 → 포커스 원 축소 → 손가락 탭 → 탭 전환
 //    6. Step 2: "보관함에서 삭제하면 여기에 임시 보관돼요."
-//    7. Step 3: 비우기 버튼 하이라이트 + "[비우기]를 누르면 사진이 최종 삭제돼요." + [확인]
+//    7. Step 3: 비우기 버튼 깜빡 + "[비우기]를 누르면 사진이 최종 삭제돼요" + [확인]
 //
 //  E-1+E-2는 하나의 연속 시퀀스로, 단일 오버레이가 시작부터 끝까지 유지됨
 
@@ -512,7 +512,7 @@ extension CoachMarkOverlayView {
 
         // Step 2 텍스트
         let label = UILabel()
-        label.text = "보관함에서 삭제하면 여기에 임시 보관돼요."
+        label.text = "보관함에서 삭제된 사진은\n삭제대기함에 임시 보관돼요"
         label.textColor = .white
         label.font = .systemFont(ofSize: 17, weight: .medium)
         label.textAlignment = .center
@@ -606,7 +606,7 @@ extension CoachMarkOverlayView {
         step2BottomConstraint?.isActive = false
         step2BottomConstraint = nil
 
-        // Step 3 텍스트: "[비우기]를 누르면 사진이 최종 삭제돼요."
+        // Step 3 텍스트: "[비우기]를 누르면 사진이 최종 삭제돼요"
         let label = UILabel()
         label.textColor = .white
         label.font = .systemFont(ofSize: 17, weight: .medium)
@@ -618,7 +618,7 @@ extension CoachMarkOverlayView {
         step3Label = label
 
         // "[비우기]" 부분을 볼드 + 빨간색으로 강조
-        let text = "[비우기]를 누르면 사진이 최종 삭제돼요."
+        let text = "[비우기]를 누르면 사진이 최종 삭제돼요"
         let attributed = NSMutableAttributedString(
             string: text,
             attributes: [
