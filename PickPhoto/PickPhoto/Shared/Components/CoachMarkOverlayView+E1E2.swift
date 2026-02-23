@@ -218,8 +218,8 @@ extension CoachMarkOverlayView {
         let paragraphStyle = NSMutableParagraphStyle()
         paragraphStyle.alignment = .center
         paragraphStyle.paragraphSpacing = 8  // 1문단↔2문단 사이 추가 간격
-        let e1Text = "방금 삭제된 사진은\u{2028}삭제대기함으로 이동됐어요\n삭제대기함으로 가볼게요"
-        label.attributedText = NSAttributedString(
+        let e1Text = "방금 삭제된 사진은\u{2028}삭제대기함으로 이동됐어요\n삭제대기함에서 확인해봐요"
+        let e1Attributed = NSMutableAttributedString(
             string: e1Text,
             attributes: [
                 .font: UIFont.systemFont(ofSize: 17, weight: .regular),
@@ -227,6 +227,15 @@ extension CoachMarkOverlayView {
                 .paragraphStyle: paragraphStyle,
             ]
         )
+        // "삭제대기함으로 이동" 볼드 + 노란색 강조
+        if let range = e1Text.range(of: "삭제대기함으로 이동") {
+            let nsRange = NSRange(range, in: e1Text)
+            e1Attributed.addAttributes([
+                .font: UIFont.systemFont(ofSize: 17, weight: .bold),
+                .foregroundColor: UIColor.systemYellow,
+            ], range: nsRange)
+        }
+        label.attributedText = e1Attributed
         label.numberOfLines = 0
         label.translatesAutoresizingMaskIntoConstraints = false
         card.addSubview(label)
