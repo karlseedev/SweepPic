@@ -216,7 +216,7 @@ extension CoachMarkOverlayView {
         let label = UILabel()
         label.text = "방금 삭제된 사진은\n삭제대기함으로 이동됐어요\n삭제대기함으로 가볼게요"
         label.textColor = .white
-        label.font = .systemFont(ofSize: 17, weight: .medium)
+        label.font = .systemFont(ofSize: 17, weight: .regular)
         label.textAlignment = .center
         label.numberOfLines = 0
         label.translatesAutoresizingMaskIntoConstraints = false
@@ -510,14 +510,29 @@ extension CoachMarkOverlayView {
         addSubview(card)
         feedbackCardView = card
 
-        // Step 2 텍스트
+        // Step 2 텍스트 ("삭제대기함에 임시 보관" 볼드+노란색 강조)
         let label = UILabel()
-        label.text = "보관함에서 삭제된 사진은\n삭제대기함에 임시 보관돼요"
-        label.textColor = .white
-        label.font = .systemFont(ofSize: 17, weight: .medium)
         label.textAlignment = .center
         label.numberOfLines = 0
         label.translatesAutoresizingMaskIntoConstraints = false
+
+        let step2Text = "보관함에서 삭제된 사진은\n삭제대기함에 임시 보관돼요"
+        let step2Attributed = NSMutableAttributedString(
+            string: step2Text,
+            attributes: [
+                .font: UIFont.systemFont(ofSize: 17, weight: .regular),
+                .foregroundColor: UIColor.white,
+            ]
+        )
+        if let range = step2Text.range(of: "삭제대기함에 임시 보관") {
+            let nsRange = NSRange(range, in: step2Text)
+            step2Attributed.addAttributes([
+                .font: UIFont.systemFont(ofSize: 17, weight: .bold),
+                .foregroundColor: UIColor.systemYellow,
+            ], range: nsRange)
+        }
+        label.attributedText = step2Attributed
+
         card.addSubview(label)
         step2Label = label
 
@@ -609,7 +624,7 @@ extension CoachMarkOverlayView {
         // Step 3 텍스트: "[비우기]를 누르면 사진이 최종 삭제돼요"
         let label = UILabel()
         label.textColor = .white
-        label.font = .systemFont(ofSize: 17, weight: .medium)
+        label.font = .systemFont(ofSize: 17, weight: .regular)
         label.textAlignment = .center
         label.numberOfLines = 0
         label.alpha = 0
@@ -622,7 +637,7 @@ extension CoachMarkOverlayView {
         let attributed = NSMutableAttributedString(
             string: text,
             attributes: [
-                .font: UIFont.systemFont(ofSize: 17, weight: .medium),
+                .font: UIFont.systemFont(ofSize: 17, weight: .regular),
                 .foregroundColor: UIColor.white,
             ]
         )

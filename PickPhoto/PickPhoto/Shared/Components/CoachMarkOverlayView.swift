@@ -239,13 +239,16 @@ final class CoachMarkOverlayView: UIView {
         return button
     }()
 
-    /// A 전용: 스냅샷 위 타이틀 라벨
+    /// A 전용: 스냅샷 위 타이틀 라벨 (pill 테두리)
     let titleLabel: UILabel = {
         let label = UILabel()
         label.text = "새로운 정리 방법"
         label.textColor = .white
-        label.font = .systemFont(ofSize: 20, weight: .bold)
+        label.font = .systemFont(ofSize: 24, weight: .bold)
         label.textAlignment = .center
+        // pill shape 흰색 테두리
+        label.layer.borderColor = UIColor.white.cgColor
+        label.layer.borderWidth = 1.5
         return label
     }()
 
@@ -378,12 +381,20 @@ final class CoachMarkOverlayView: UIView {
         )
         overlay.addSubview(overlay.arrowView)
 
-        // 타이틀 라벨 (스냅샷 위)
+        // 타이틀 라벨 (스냅샷 위, pill 테두리)
         overlay.titleLabel.sizeToFit()
-        overlay.titleLabel.center = CGPoint(
-            x: overlay.bounds.midX,
-            y: highlightFrame.minY - 20
+        let titlePadding = UIEdgeInsets(top: 8, left: 20, bottom: 8, right: 20)
+        let titleSize = overlay.titleLabel.bounds.size
+        let titleWidth = titleSize.width + titlePadding.left + titlePadding.right
+        let titleHeight = titleSize.height + titlePadding.top + titlePadding.bottom
+        overlay.titleLabel.frame = CGRect(
+            x: (overlay.bounds.width - titleWidth) / 2,
+            y: highlightFrame.minY - 40 - titleHeight,
+            width: titleWidth,
+            height: titleHeight
         )
+        overlay.titleLabel.layer.cornerRadius = titleHeight / 2
+        overlay.titleLabel.clipsToBounds = true
         overlay.addSubview(overlay.titleLabel)
 
         // 텍스트 라벨 (3줄: 정리 + 복원 + 삭제대기함)

@@ -74,7 +74,7 @@ extension CoachMarkOverlayView {
         let titleLabel = UILabel()
         titleLabel.text = "✓ 삭제 완료"
         titleLabel.textColor = .white
-        titleLabel.font = .systemFont(ofSize: 17, weight: .semibold)
+        titleLabel.font = .systemFont(ofSize: 17, weight: .regular)
         titleLabel.textAlignment = .center
         titleLabel.translatesAutoresizingMaskIntoConstraints = false
         card.addSubview(titleLabel)
