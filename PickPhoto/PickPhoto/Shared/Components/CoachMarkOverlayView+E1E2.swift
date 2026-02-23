@@ -192,12 +192,15 @@ extension CoachMarkOverlayView {
     /// Step 1 카드 구성: 아이콘(상단) + 텍스트(아이콘 아래, 설명 스타일) + [확인]
     /// 아이콘이 카드 내부에 포함되어 아이콘-설명 레이아웃을 형성
     private func buildStep1Content() {
-        // 카드 컨테이너
+        // 카드 컨테이너 (시스템 팝업 스타일 blur 배경)
         let card = UIView()
-        card.backgroundColor = UIColor(white: 0.15, alpha: 1.0)
         card.layer.cornerRadius = 20
         card.clipsToBounds = true
         card.translatesAutoresizingMaskIntoConstraints = false
+        let blur = UIVisualEffectView(effect: UIBlurEffect(style: .systemMaterialDark))
+        blur.frame = card.bounds
+        blur.autoresizingMask = [.flexibleWidth, .flexibleHeight]
+        card.addSubview(blur)
         addSubview(card)
         step1Container = card
 
@@ -491,13 +494,16 @@ extension CoachMarkOverlayView {
     private func showStep2Content() {
         guard !shouldStopAnimation else { return }
 
-        // 카드 생성
+        // 카드 생성 (시스템 팝업 스타일 blur 배경)
         let card = UIView()
-        card.backgroundColor = UIColor(white: 0.15, alpha: 1.0)
         card.layer.cornerRadius = 20
         card.clipsToBounds = true
         card.alpha = 0
         card.translatesAutoresizingMaskIntoConstraints = false
+        let blur = UIVisualEffectView(effect: UIBlurEffect(style: .systemMaterialDark))
+        blur.frame = card.bounds
+        blur.autoresizingMask = [.flexibleWidth, .flexibleHeight]
+        card.addSubview(blur)
         addSubview(card)
         feedbackCardView = card
 

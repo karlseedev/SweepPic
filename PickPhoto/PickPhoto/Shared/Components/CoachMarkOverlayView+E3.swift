@@ -59,10 +59,14 @@ extension CoachMarkOverlayView {
     /// E-3 중앙 카드 구성: ✓ 삭제 완료 + 본문 + [확인]
     private func buildFirstEmptyCard() {
         let card = UIView()
-        card.backgroundColor = UIColor(white: 0.15, alpha: 1.0)
         card.layer.cornerRadius = 20
         card.clipsToBounds = true
         card.translatesAutoresizingMaskIntoConstraints = false
+        // 시스템 팝업 스타일 blur 배경
+        let blur = UIVisualEffectView(effect: UIBlurEffect(style: .systemMaterialDark))
+        blur.frame = card.bounds
+        blur.autoresizingMask = [.flexibleWidth, .flexibleHeight]
+        card.addSubview(blur)
         addSubview(card)
         e3CardView = card
 

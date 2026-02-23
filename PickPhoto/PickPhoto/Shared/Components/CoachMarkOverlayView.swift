@@ -112,7 +112,7 @@ final class CoachMarkOverlayView: UIView {
     // MARK: - Constants
 
     /// 딤 배경 알파
-    private static let dimAlpha: CGFloat = 0.7
+    private static let dimAlpha: CGFloat = 0.8
 
     /// 손가락 아이콘 크기
     private static let fingerSize: CGFloat = 48
@@ -206,14 +206,23 @@ final class CoachMarkOverlayView: UIView {
         style.alignment = .center
         style.paragraphSpacing = 8  // 2줄↔3줄 사이 추가 간격
         // \u{2028} = 같은 단락 내 줄바꿈, \n = 단락 구분 (paragraphSpacing 적용)
-        label.attributedText = NSAttributedString(
-            string: "사진을 밀어서 바로 정리하세요\u{2028}다시 밀면 복원돼요\n정리한 사진은 삭제대기함으로 이동됩니다",
+        let fullText = "사진을 밀어서 바로 정리하세요\u{2028}다시 밀면 복원돼요\n정리한 사진은 삭제대기함으로 이동됩니다"
+        let attr = NSMutableAttributedString(
+            string: fullText,
             attributes: [
                 .font: UIFont.systemFont(ofSize: 17, weight: .medium),
                 .foregroundColor: UIColor.white,
                 .paragraphStyle: style
             ]
         )
+        // 키워드 볼드 + 노란색 강조
+        let boldFont = UIFont.systemFont(ofSize: 17, weight: .bold)
+        let yellow = UIColor.yellow
+        for keyword in ["정리", "복원", "삭제대기함"] {
+            let range = (fullText as NSString).range(of: keyword)
+            attr.addAttributes([.font: boldFont, .foregroundColor: yellow], range: range)
+        }
+        label.attributedText = attr
         label.numberOfLines = 0
         return label
     }()
