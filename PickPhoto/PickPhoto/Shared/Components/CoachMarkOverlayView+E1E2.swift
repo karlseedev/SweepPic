@@ -668,37 +668,33 @@ extension CoachMarkOverlayView {
             return overlay.tabButtonFrame(at: 2, in: window)
         }
 
-        // iOS 26+: 시스템 UITabBar
+        // iOS 26+: 시스템 UITabBar (Liquid Glass pill 디자인)
         if #available(iOS 26.0, *) {
             let systemTabBar = tabBar.tabBar
+            let tabCount = max(CGFloat(tabBar.viewControllers?.count ?? 3), 1)
+            let trashIndex: CGFloat = 2  // 삭제대기함 = index 2
 
-            // 1차: subview 클래스명으로 탭 아이템 뷰 탐색
-            // iOS 버전에 따라 UITabBarButton, _UITabBarItemView 등 다양한 이름 가능
-            let excludedPatterns = ["Background", "Shadow", "Separator", "Effect", "Backdrop"]
-            let tabControls = systemTabBar.subviews
-                .filter { view in
-                    let name = String(describing: type(of: view))
-                    // 배경/구분선 등 비-아이템 뷰 제외, 최소 크기 필터
-                    return !excludedPatterns.contains(where: { name.contains($0) })
-                        && view.bounds.width > 20
-                        && view.bounds.height > 20
-                }
-                .sorted { $0.frame.minX < $1.frame.minX }
-
-            if tabControls.count > 2 {
-                let trashControl = tabControls[2]
-                return trashControl.convert(trashControl.bounds, to: window)
+            // iOS 26 Liquid Glass: 탭바 내부에 중앙 정렬된 플래터(pill) 뷰 존재
+            // _UITabBarPlatterView (탭바보다 좁은 실제 탭 컨테이너)
+            if let platterView = systemTabBar.subviews.first(where: { view in
+                view.bounds.width > 100 && view.bounds.width < systemTabBar.bounds.width
+            }) {
+                let platterFrame = platterView.convert(platterView.bounds, to: window)
+                let tabWidth = platterFrame.width / tabCount
+                return CGRect(
+                    x: platterFrame.minX + tabWidth * trashIndex,
+                    y: platterFrame.minY,
+                    width: tabWidth,
+                    height: platterFrame.height
+                )
             }
 
-            // 2차 폴백: 탭바 영역을 탭 수로 균등 분할 (내부 구조 변경 대응)
+            // 폴백: 탭바 전체 영역 균등 분할 (safe area 제외)
             let tabBarFrame = systemTabBar.convert(systemTabBar.bounds, to: window)
             guard tabBarFrame.height > 0 else { return nil }
-            // safe area bottom 제외 (홈 인디케이터 영역은 탭 아이콘이 없음)
             let safeAreaBottom = window.safeAreaInsets.bottom
             let actualHeight = tabBarFrame.height - safeAreaBottom
-            let tabCount = max(CGFloat(tabBar.viewControllers?.count ?? 3), 1)
             let tabWidth = tabBarFrame.width / tabCount
-            let trashIndex: CGFloat = 2  // 삭제대기함 = index 2
             return CGRect(
                 x: tabBarFrame.minX + tabWidth * trashIndex,
                 y: tabBarFrame.minY,

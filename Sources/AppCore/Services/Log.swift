@@ -115,8 +115,8 @@ public enum Log {
 
         // [Category] 형식에서 카테고리 추출
         if let category = extractCategory(from: message) {
-            // 카테고리가 등록되어 있고 true인 경우에만 출력
-            guard categories[category] == true else { return }
+            // false로 명시된 카테고리만 차단, 미등록은 허용
+            guard categories[category] != false else { return }
         } else {
             // 카테고리가 없는 로그는 무시
             return
@@ -140,7 +140,7 @@ public enum Log {
     /// ```
     public static func debug(_ category: String, _ message: String) {
         guard isEnabled else { return }
-        guard categories[category] == true else { return }
+        guard categories[category] != false else { return }
         Swift.print("[\(category)] \(message)")
     }
 
