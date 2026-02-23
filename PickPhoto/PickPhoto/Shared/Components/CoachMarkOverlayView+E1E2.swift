@@ -457,8 +457,11 @@ extension CoachMarkOverlayView {
     func transitionToStep2() {
         guard let tabBar = findTabBarController() else { return }
 
-        // highlightFrame 리셋 (Step 1의 탭 하이라이트 제거)
+        // 포커스 원 + 딤 제거 (E-2는 딤 없이 시작)
         highlightFrame = .zero
+        focusBorderLayer?.removeFromSuperlayer()
+        focusBorderLayer = nil
+        dimLayer.fillColor = UIColor.clear.cgColor
         updateDimPath()
 
         // 탭 전환 + 후속 스텝 스케줄링
