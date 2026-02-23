@@ -244,7 +244,7 @@ final class CoachMarkOverlayView: UIView {
         let label = UILabel()
         label.text = "새로운 정리 방법"
         label.textColor = .white
-        label.font = .systemFont(ofSize: 24, weight: .regular)
+        label.font = .systemFont(ofSize: 24, weight: .light)
         label.textAlignment = .center
         // pill shape 흰색 테두리
         label.layer.borderColor = UIColor.white.cgColor

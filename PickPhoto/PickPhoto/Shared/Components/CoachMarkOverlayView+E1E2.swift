@@ -218,7 +218,7 @@ extension CoachMarkOverlayView {
         let paragraphStyle = NSMutableParagraphStyle()
         paragraphStyle.alignment = .center
         paragraphStyle.paragraphSpacing = 8  // 1문단↔2문단 사이 추가 간격
-        let e1Text = "방금 삭제된 사진은\u{2028}삭제대기함으로 이동됐어요\n삭제대기함에서 확인해봐요"
+        let e1Text = "방금 삭제된 사진은\u{2028}삭제대기함으로 이동됐어요\n삭제대기함에서 확인해볼까요?"
         let e1Attributed = NSMutableAttributedString(
             string: e1Text,
             attributes: [
