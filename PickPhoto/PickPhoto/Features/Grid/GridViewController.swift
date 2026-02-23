@@ -355,6 +355,9 @@ final class GridViewController: BaseGridViewController {
     override func viewWillDisappear(_ animated: Bool) {
         super.viewWillDisappear(animated)
 
+        // D 타이머 취소 (화면 이탈 시)
+        cancelCoachMarkDTimer()
+
         // 코치마크가 표시 중이면 dismiss (화면 이탈 시)
         CoachMarkManager.shared.dismissCurrent()
     }
@@ -373,6 +376,12 @@ final class GridViewController: BaseGridViewController {
 
         // C-1 트리거 락 리셋 (뷰어에서 돌아올 때 재트리거 허용)
         hasTriggeredC1 = false
+
+        // D: 사전 스캔 시작 (앱 시작 직후 가능한 빨리)
+        startCoachMarkDPreScanIfNeeded()
+
+        // D: 그리드 3초 체류 타이머 시작
+        startCoachMarkDTimerIfNeeded()
 
         // [A) preheat OFF 테스트] 초기 프리히트 비활성화
         // v6: visible indexPaths가 확실히 채워진 시점에 초기 프리히트

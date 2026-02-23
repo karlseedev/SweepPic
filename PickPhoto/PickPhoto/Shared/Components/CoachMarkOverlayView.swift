@@ -29,6 +29,7 @@ enum CoachMarkType: String {
     case gridSwipeDelete = "coachMark_gridSwipe"       // A: 그리드 스와이프 삭제
     case viewerSwipeDelete = "coachMark_viewerSwipe"   // B: 뷰어 스와이프 삭제
     case similarPhoto = "coachMark_similarPhoto"       // C: 유사사진·얼굴 비교 (C-1 + C-2 통합 플래그)
+    case autoCleanup = "coachMark_autoCleanup"              // D: 저품질 자동 정리 안내
     case firstDeleteGuide = "coachMark_firstDeleteGuide"  // E-1+E-2: 삭제 시스템 안내 (통합 시퀀스)
     case firstEmpty = "coachMark_firstEmpty"               // E-3: 첫 비우기 완료 안내
 
@@ -298,6 +299,16 @@ final class CoachMarkOverlayView: UIView {
         if coachMarkType == .gridSwipeDelete || coachMarkType == .similarPhoto {
             // A, C: 셀 크기 그대로, 각진 모서리 (margin 0, radius 0)
             let holePath = UIBezierPath(rect: highlightFrame)
+            fullPath.append(holePath)
+        }
+        // D: 정리 버튼 하이라이트 (pill shape, margin 8pt)
+        // highlightFrame이 .zero가 아닐 때만 (트리거 1: 자동, 트리거 2는 구멍 없음)
+        if coachMarkType == .autoCleanup && highlightFrame != .zero {
+            let margin: CGFloat = 8
+            let holeRect = highlightFrame.insetBy(dx: -margin, dy: -margin)
+            // pill shape: cornerRadius = 높이의 절반
+            let radius: CGFloat = holeRect.height / 2
+            let holePath = UIBezierPath(roundedRect: holeRect, cornerRadius: radius)
             fullPath.append(holePath)
         }
         // E-1+E-2: 하이라이트 (highlightFrame이 .zero가 아닐 때만)
@@ -604,7 +615,8 @@ final class CoachMarkOverlayView: UIView {
         // C 상태 리셋
         CoachMarkManager.shared.resetC2State()
 
-        // E-1+E-2, E-3: 시퀀스 전용 리소스 정리
+        // D, E-1+E-2, E-3: 시퀀스 전용 리소스 정리
+        cleanupAutoCleanup()
         cleanupDeleteGuide()
         cleanupFirstEmpty()
 
@@ -646,6 +658,10 @@ final class CoachMarkOverlayView: UIView {
             confirmButton.isEnabled = false
             // C 전용 시퀀스 (CoachMarkOverlayView+CoachMarkC.swift)
             startC_ConfirmSequence()
+        case .autoCleanup:
+            // D: 재진입 방지 → 탭 모션 (트리거 1) 또는 즉시 dismiss (트리거 2) → onConfirm
+            confirmButton.isEnabled = false
+            startD_ConfirmSequence()
         case .firstDeleteGuide:
             // E-1+E-2: Step 1 [확인] → 손가락 탭 모션 → 탭 전환 + 순차 텍스트, Step 3 [확인] → dismiss
             if systemFeedbackCurrentStep == 1 {

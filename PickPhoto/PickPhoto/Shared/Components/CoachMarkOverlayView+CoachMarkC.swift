@@ -182,21 +182,29 @@ extension CoachMarkOverlayView {
         borderRing.alpha = 0
         addSubview(borderRing)
 
-        // 1단계: 오버레이 alpha 복원 (딤 배경만 보이도록)
-        // 구멍 없이 전체 딤으로 시작
-        let fullPath = UIBezierPath(rect: bounds)
-        dimLayer.path = fullPath.cgPath
+        // 1단계: 큰 구멍(시작 상태)을 미리 설정한 뒤 alpha 복원 + 포커스 축소 동시 시작
+        // 큰 구멍부터 시작하므로 딤이 갑자기 나타났다 사라지는 깜빡임 방지
+        let startDiameter = max(bounds.width, bounds.height) * 3.0
+        let startCircleRect = CGRect(
+            x: newHighlightFrame.midX - startDiameter / 2,
+            y: newHighlightFrame.midY - startDiameter / 2,
+            width: startDiameter,
+            height: startDiameter
+        )
+        let startPath = UIBezierPath(rect: bounds)
+        startPath.append(UIBezierPath(ovalIn: startCircleRect))
+        dimLayer.path = startPath.cgPath
 
+        // alpha 복원 + 포커스 원 축소를 동시에 시작
         UIView.animate(withDuration: 0.3) {
             self.alpha = 1.0
-        } completion: { [weak self] _ in
+        }
+        animateC2FocusCircle(to: newHighlightFrame) { [weak self] in
             guard let self, !self.shouldStopAnimation else { return }
 
-            // 2단계: 포커스 원 축소 애니메이션 (E-1과 동일한 방식)
-            self.animateC2FocusCircle(to: newHighlightFrame) {
-                guard !self.shouldStopAnimation else { return }
-
-                // 3단계: 포커스 완료 → 텍스트 + 버튼 + 테두리 링 페이드인
+            // 2단계: 포커스 완료 → 0.5초 대기 → 텍스트 + 버튼 + 테두리 링 페이드인
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
+                guard let self, !self.shouldStopAnimation else { return }
                 UIView.animate(withDuration: 0.3) {
                     self.messageLabel.alpha = 1
                     self.confirmButton.alpha = 1
