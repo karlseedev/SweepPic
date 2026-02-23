@@ -74,7 +74,7 @@ extension CoachMarkOverlayView {
         let titleLabel = UILabel()
         titleLabel.text = "✓ 삭제 완료"
         titleLabel.textColor = .white
-        titleLabel.font = .systemFont(ofSize: 17, weight: .regular)
+        titleLabel.font = .systemFont(ofSize: 22, weight: .regular)
         titleLabel.textAlignment = .center
         titleLabel.translatesAutoresizingMaskIntoConstraints = false
         card.addSubview(titleLabel)
@@ -83,7 +83,7 @@ extension CoachMarkOverlayView {
         let bodyLabel = UILabel()
         bodyLabel.text = "애플 사진앱의 '최근 삭제된 항목'에서\n30일 후 완전히 삭제됩니다."
         bodyLabel.textColor = UIColor.white.withAlphaComponent(0.9)
-        bodyLabel.font = .systemFont(ofSize: 15, weight: .regular)
+        bodyLabel.font = CoachMarkOverlayView.bodyFont
         bodyLabel.textAlignment = .center
         bodyLabel.numberOfLines = 0
         bodyLabel.translatesAutoresizingMaskIntoConstraints = false

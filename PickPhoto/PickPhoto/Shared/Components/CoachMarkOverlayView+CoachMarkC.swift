@@ -52,13 +52,32 @@ extension CoachMarkOverlayView {
         // dim 배경 + evenOdd 구멍 (rounded rect, margin 8pt, cornerRadius 8)
         overlay.updateDimPath()
 
-        // 안내 텍스트 (하이라이트 셀 아래)
-        overlay.messageLabel.text = "유사사진 정리기능이 표시된 사진이에요\n각 사진의 얼굴을 비교해서 정리할 수 있어요"
+        // 안내 텍스트 (하이라이트 셀 아래, 행간 1.2배)
+        let c1Text = "하얀색 테두리가 표시된 사진은\n여러 사진의 얼굴을 비교해서 삭제하는\n유사사진 정리가 가능한 사진이에요"
+        let c1Style = NSMutableParagraphStyle()
+        c1Style.alignment = .center
+        c1Style.lineSpacing = CoachMarkOverlayView.bodyFont.pointSize * 0.2
+        let c1Attr = NSMutableAttributedString(
+            string: c1Text,
+            attributes: [
+                .font: CoachMarkOverlayView.bodyFont,
+                .foregroundColor: UIColor.white,
+                .paragraphStyle: c1Style
+            ]
+        )
+        if let range = c1Text.range(of: "얼굴을 비교해서 삭제") {
+            let nsRange = NSRange(range, in: c1Text)
+            c1Attr.addAttributes([
+                .font: CoachMarkOverlayView.bodyBoldFont,
+                .foregroundColor: CoachMarkOverlayView.highlightYellow
+            ], range: nsRange)
+        }
+        overlay.messageLabel.attributedText = c1Attr
         overlay.messageLabel.frame = CGRect(
             x: 20,
             y: highlightFrame.maxY + 24,
             width: window.bounds.width - 40,
-            height: 60
+            height: 80
         )
         overlay.addSubview(overlay.messageLabel)
 
@@ -105,17 +124,28 @@ extension CoachMarkOverlayView {
         // C-1에서 alpha 0.01로 투명화된 상태 → dim + 구멍 + UI와 함께 복원
         // 먼저 dim path와 레이아웃을 준비한 후 alpha를 페이드인
 
-        // 하이라이트 영역 업데이트 (+ 버튼, 원형 구멍 2배)
+        // 하이라이트 영역 업데이트
         highlightFrame = newHighlightFrame
-        updateDimPathCircle(for: newHighlightFrame, scale: 1.2)
 
         // C-2 onConfirm 설정
         onConfirm = c2OnConfirm
 
-        // 안내 텍스트 교체 (원형 구멍 아래 기준으로 배치)
+        // 안내 텍스트 준비 (초기 비표시, 포커스 완료 후 페이드인)
         let circleDiameter = max(newHighlightFrame.width, newHighlightFrame.height) * 1.2
         let circleBottom = newHighlightFrame.midY + circleDiameter / 2
-        messageLabel.text = "+버튼을 눌러 얼굴비교화면으로 이동하세요\n인물이 여러 명이면 좌우로 넘겨볼 수 있어요"
+        // 행간 1.2배
+        let c2Text = "+버튼을 눌러 얼굴비교화면으로 이동하세요\n인물이 여러 명이면 좌우로 넘겨볼 수 있어요"
+        let c2Style = NSMutableParagraphStyle()
+        c2Style.alignment = .center
+        c2Style.lineSpacing = CoachMarkOverlayView.bodyFont.pointSize * 0.2
+        messageLabel.attributedText = NSAttributedString(
+            string: c2Text,
+            attributes: [
+                .font: CoachMarkOverlayView.bodyFont,
+                .foregroundColor: UIColor.white,
+                .paragraphStyle: c2Style
+            ]
+        )
         messageLabel.alpha = 0
         messageLabel.frame = CGRect(
             x: 20,
@@ -124,7 +154,7 @@ extension CoachMarkOverlayView {
             height: 60
         )
 
-        // 확인 버튼 리셋 (재진입 방지 해제)
+        // 확인 버튼 준비 (초기 비표시)
         confirmButton.isEnabled = true
         confirmButton.alpha = 0
         let buttonWidth: CGFloat = 120
@@ -135,28 +165,44 @@ extension CoachMarkOverlayView {
             height: 44
         )
 
-        // + 버튼 강조용 흰색 테두리 링 (FaceButton 바깥에 밀착)
-        let diameter: CGFloat = 39  // FaceButton(34pt) + 테두리(2.5pt×2)
+        // + 버튼 강조용 흰색 테두리 링 (초기 비표시, 포커스 완료 후 표시)
+        let ringDiameter: CGFloat = 39  // FaceButton(34pt) + 테두리(2.5pt×2)
         let borderRing = UIView()
         borderRing.frame = CGRect(
-            x: newHighlightFrame.midX - diameter / 2,
-            y: newHighlightFrame.midY - diameter / 2,
-            width: diameter,
-            height: diameter
+            x: newHighlightFrame.midX - ringDiameter / 2,
+            y: newHighlightFrame.midY - ringDiameter / 2,
+            width: ringDiameter,
+            height: ringDiameter
         )
         borderRing.backgroundColor = .clear
-        borderRing.layer.cornerRadius = diameter / 2
+        borderRing.layer.cornerRadius = ringDiameter / 2
         borderRing.layer.borderColor = UIColor.white.cgColor
         borderRing.layer.borderWidth = 2.5
         borderRing.tag = Self.borderRingTag
+        borderRing.alpha = 0
         addSubview(borderRing)
 
-        // 오버레이 alpha 복원 + 새 카피/버튼 페이드인 (0.3초)
-        // C-1에서 alpha=0.01이었으므로 dim 배경과 함께 자연스럽게 복원
+        // 1단계: 오버레이 alpha 복원 (딤 배경만 보이도록)
+        // 구멍 없이 전체 딤으로 시작
+        let fullPath = UIBezierPath(rect: bounds)
+        dimLayer.path = fullPath.cgPath
+
         UIView.animate(withDuration: 0.3) {
             self.alpha = 1.0
-            self.messageLabel.alpha = 1
-            self.confirmButton.alpha = 1
+        } completion: { [weak self] _ in
+            guard let self, !self.shouldStopAnimation else { return }
+
+            // 2단계: 포커스 원 축소 애니메이션 (E-1과 동일한 방식)
+            self.animateC2FocusCircle(to: newHighlightFrame) {
+                guard !self.shouldStopAnimation else { return }
+
+                // 3단계: 포커스 완료 → 텍스트 + 버튼 + 테두리 링 페이드인
+                UIView.animate(withDuration: 0.3) {
+                    self.messageLabel.alpha = 1
+                    self.confirmButton.alpha = 1
+                    borderRing.alpha = 1
+                }
+            }
         }
     }
 
@@ -296,6 +342,62 @@ extension CoachMarkOverlayView {
     }
 
     // MARK: - Dim Hole Control
+
+    /// C-2 포커스 원 축소 애니메이션 (E-1 animateFocusCircle과 동일 패턴)
+    /// 화면 전체 크기의 큰 원에서 + 버튼 주변 작은 원으로 축소
+    /// - Parameters:
+    ///   - targetFrame: + 버튼 프레임 (윈도우 좌표)
+    ///   - completion: 애니메이션 완료 후 콜백
+    private func animateC2FocusCircle(to targetFrame: CGRect, completion: @escaping () -> Void) {
+        let scale: CGFloat = 1.2
+        // 최종 원 (+ 버튼 기준 1.2배)
+        let finalDiameter = max(targetFrame.width, targetFrame.height) * scale
+        let finalCircleRect = CGRect(
+            x: targetFrame.midX - finalDiameter / 2,
+            y: targetFrame.midY - finalDiameter / 2,
+            width: finalDiameter,
+            height: finalDiameter
+        )
+
+        // 시작 원 (화면 밖에서부터 축소되도록 3배 크기)
+        let startDiameter = max(bounds.width, bounds.height) * 3.0
+        let startCircleRect = CGRect(
+            x: targetFrame.midX - startDiameter / 2,
+            y: targetFrame.midY - startDiameter / 2,
+            width: startDiameter,
+            height: startDiameter
+        )
+
+        // 시작 경로 (큰 구멍 = 딤 거의 없음)
+        let startPath = UIBezierPath(rect: bounds)
+        startPath.append(UIBezierPath(ovalIn: startCircleRect))
+
+        // 최종 경로 (작은 구멍 = + 버튼만 투명)
+        let endPath = UIBezierPath(rect: bounds)
+        endPath.append(UIBezierPath(ovalIn: finalCircleRect))
+
+        // CABasicAnimation으로 path 보간
+        CATransaction.begin()
+        CATransaction.setCompletionBlock { [weak self] in
+            guard let self else { return }
+            self.highlightFrame = targetFrame
+            self.dimLayer.path = endPath.cgPath
+            self.dimLayer.removeAnimation(forKey: "c2FocusCircle")
+            completion()
+        }
+
+        dimLayer.path = startPath.cgPath
+        let dimAnim = CABasicAnimation(keyPath: "path")
+        dimAnim.fromValue = startPath.cgPath
+        dimAnim.toValue = endPath.cgPath
+        dimAnim.duration = 0.9
+        dimAnim.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
+        dimAnim.fillMode = .forwards
+        dimAnim.isRemovedOnCompletion = false
+        dimLayer.add(dimAnim, forKey: "c2FocusCircle")
+
+        CATransaction.commit()
+    }
 
     /// C-2용 원형 dim 구멍 — 버튼 중심 기준 원형 투명 영역
     /// - Parameters:

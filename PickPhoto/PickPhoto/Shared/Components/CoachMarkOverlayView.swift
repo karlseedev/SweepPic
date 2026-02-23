@@ -132,6 +132,17 @@ final class CoachMarkOverlayView: UIView {
     /// 확인 버튼 좌우 패딩
     private static let buttonHorizontalPadding: CGFloat = 32
 
+    // MARK: 공용 폰트 상수 (A/B/C/D/E 전체 공용)
+
+    /// 본문 기본 폰트 (18pt regular)
+    static let bodyFont = UIFont.systemFont(ofSize: 18, weight: .regular)
+
+    /// 본문 강조 폰트 (18pt bold, 키워드 하이라이트용)
+    static let bodyBoldFont = UIFont.systemFont(ofSize: 18, weight: .bold)
+
+    /// 강조 노란색 (#FFEA00, 키워드 하이라이트용)
+    static let highlightYellow = UIColor(red: 1.0, green: 0.918, blue: 0.0, alpha: 1.0)
+
     // MARK: B (뷰어) 전용 상수
 
     /// B: 손가락 이동 거리 (pt)
@@ -204,17 +215,15 @@ final class CoachMarkOverlayView: UIView {
         let attr = NSMutableAttributedString(
             string: fullText,
             attributes: [
-                .font: UIFont.systemFont(ofSize: 17, weight: .medium),
+                .font: CoachMarkOverlayView.bodyFont,
                 .foregroundColor: UIColor.white,
                 .paragraphStyle: style
             ]
         )
         // 키워드 볼드 + 노란색 강조
-        let boldFont = UIFont.systemFont(ofSize: 17, weight: .bold)
-        let yellow = UIColor(red: 1.0, green: 0.918, blue: 0.0, alpha: 1.0) // #FFEA00
         for keyword in ["정리", "복원", "삭제대기함"] {
             let range = (fullText as NSString).range(of: keyword)
-            attr.addAttributes([.font: boldFont, .foregroundColor: yellow], range: range)
+            attr.addAttributes([.font: CoachMarkOverlayView.bodyBoldFont, .foregroundColor: CoachMarkOverlayView.highlightYellow], range: range)
         }
         label.attributedText = attr
         label.numberOfLines = 0
@@ -525,7 +534,7 @@ final class CoachMarkOverlayView: UIView {
         let attributed = NSMutableAttributedString(
             string: text,
             attributes: [
-                .font: UIFont.systemFont(ofSize: 17, weight: .regular),
+                .font: Self.bodyFont,
                 .foregroundColor: UIColor.white,
                 .paragraphStyle: {
                     let style = NSMutableParagraphStyle()
@@ -538,8 +547,8 @@ final class CoachMarkOverlayView: UIView {
         if let range = text.range(of: "삭제대기함") {
             let nsRange = NSRange(range, in: text)
             attributed.addAttributes([
-                .font: UIFont.systemFont(ofSize: 17, weight: .bold),
-                .foregroundColor: UIColor(red: 1.0, green: 0.918, blue: 0.0, alpha: 1.0),
+                .font: Self.bodyBoldFont,
+                .foregroundColor: Self.highlightYellow,
             ], range: nsRange)
         }
         label.attributedText = attributed

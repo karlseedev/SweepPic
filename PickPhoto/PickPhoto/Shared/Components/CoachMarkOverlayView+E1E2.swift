@@ -222,7 +222,7 @@ extension CoachMarkOverlayView {
         let e1Attributed = NSMutableAttributedString(
             string: e1Text,
             attributes: [
-                .font: UIFont.systemFont(ofSize: 17, weight: .regular),
+                .font: CoachMarkOverlayView.bodyFont,
                 .foregroundColor: UIColor.white,
                 .paragraphStyle: paragraphStyle,
             ]
@@ -231,8 +231,8 @@ extension CoachMarkOverlayView {
         if let range = e1Text.range(of: "삭제대기함으로 이동") {
             let nsRange = NSRange(range, in: e1Text)
             e1Attributed.addAttributes([
-                .font: UIFont.systemFont(ofSize: 17, weight: .bold),
-                .foregroundColor: UIColor(red: 1.0, green: 0.918, blue: 0.0, alpha: 1.0), // #FFEA00
+                .font: CoachMarkOverlayView.bodyBoldFont,
+                .foregroundColor: CoachMarkOverlayView.highlightYellow,
             ], range: nsRange)
         }
         label.attributedText = e1Attributed
@@ -538,15 +538,15 @@ extension CoachMarkOverlayView {
         let step2Attributed = NSMutableAttributedString(
             string: step2Text,
             attributes: [
-                .font: UIFont.systemFont(ofSize: 17, weight: .regular),
+                .font: CoachMarkOverlayView.bodyFont,
                 .foregroundColor: UIColor.white,
             ]
         )
         if let range = step2Text.range(of: "삭제대기함에 임시 보관") {
             let nsRange = NSRange(range, in: step2Text)
             step2Attributed.addAttributes([
-                .font: UIFont.systemFont(ofSize: 17, weight: .bold),
-                .foregroundColor: UIColor(red: 1.0, green: 0.918, blue: 0.0, alpha: 1.0), // #FFEA00
+                .font: CoachMarkOverlayView.bodyBoldFont,
+                .foregroundColor: CoachMarkOverlayView.highlightYellow,
             ], range: nsRange)
         }
         label.attributedText = step2Attributed
@@ -608,7 +608,7 @@ extension CoachMarkOverlayView {
         let fakeButton = UILabel()
         fakeButton.text = "비우기"
         fakeButton.textColor = .systemRed
-        fakeButton.font = .systemFont(ofSize: 17, weight: .semibold)
+        fakeButton.font = .systemFont(ofSize: CoachMarkOverlayView.bodyFont.pointSize, weight: .semibold)
         fakeButton.textAlignment = .center
         fakeButton.backgroundColor = .white
         fakeButton.layer.cornerRadius = frame.height / 2
@@ -642,7 +642,7 @@ extension CoachMarkOverlayView {
         // Step 3 텍스트: "[비우기]를 누르면 사진이 최종 삭제돼요"
         let label = UILabel()
         label.textColor = .white
-        label.font = .systemFont(ofSize: 17, weight: .regular)
+        label.font = CoachMarkOverlayView.bodyFont
         label.textAlignment = .center
         label.numberOfLines = 0
         label.alpha = 0
@@ -655,14 +655,14 @@ extension CoachMarkOverlayView {
         let attributed = NSMutableAttributedString(
             string: text,
             attributes: [
-                .font: UIFont.systemFont(ofSize: 17, weight: .regular),
+                .font: CoachMarkOverlayView.bodyFont,
                 .foregroundColor: UIColor.white,
             ]
         )
         if let range = text.range(of: "[비우기]") {
             let nsRange = NSRange(range, in: text)
             attributed.addAttributes([
-                .font: UIFont.systemFont(ofSize: 17, weight: .bold),
+                .font: CoachMarkOverlayView.bodyBoldFont,
                 .foregroundColor: UIColor.white,
             ], range: nsRange)
         }

@@ -321,9 +321,6 @@ final class ViewerViewController: UIViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
 
-        // ⚠️ TODO: 테스트용 — 코치마크 B 플래그 리셋
-        UserDefaults.standard.removeObject(forKey: CoachMarkType.viewerSwipeDelete.shownKey)
-
         setupUI()
         setupGestures()
         setupSwipeDeleteHandler()

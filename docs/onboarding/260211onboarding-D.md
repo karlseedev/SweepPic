@@ -285,7 +285,7 @@ func secondRightButtonFrameInWindow(_ window: UIWindow) -> CGRect? {
 │  ██████████████████ └──┘ ████████████│
 │  ██████████████████████████████████  │
 │                                      │
-│  보관함에서 저품질 사진이 발견됐어요   │ ← 타이틀 (17pt medium, white)
+│  보관함에서 저품질 사진이 발견됐어요   │ ← 타이틀 (CoachMarkOverlayView.bodyFont, white)
 │                                      │
 │       ┌─────┐  ┌─────┐  ┌─────┐     │
 │       │     │  │     │  │     │     │ ← 최하위 3장 썸네일
@@ -293,7 +293,7 @@ func secondRightButtonFrameInWindow(_ window: UIWindow) -> CGRect? {
 │       └─────┘  └─────┘  └─────┘     │   cornerRadius 8, 균등 간격
 │                                      │
 │    흔들리거나 초점이 맞지 않은        │
-│    사진들을 AI가 자동으로 찾아주는    │ ← 설명 (15pt regular, white 70%)
+│    사진들을 AI가 자동으로 찾아주는    │ ← 설명 (CoachMarkOverlayView.bodyFont, white 70%)
 │    정리 기능을 사용해보세요           │
 │                                      │
 │              [ 확인 ]                │ ← 흰색 pill 버튼 (120x44)
