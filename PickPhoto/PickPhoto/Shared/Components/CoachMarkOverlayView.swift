@@ -151,6 +151,9 @@ final class CoachMarkOverlayView: UIView {
     /// 하이라이트 영역 (윈도우 좌표)
     var highlightFrame: CGRect = .zero
 
+    /// dismiss 완료 시 호출되는 콜백 (외부 리소스 정리용)
+    var onDismiss: (() -> Void)?
+
     /// C 전용: [확인] + 탭 모션 후 실행할 콜백
     var onConfirm: (() -> Void)?
 
@@ -284,11 +287,8 @@ final class CoachMarkOverlayView: UIView {
         let fullPath = UIBezierPath(rect: bounds)
         // A, C: 하이라이트 영역은 투명 (셀/버튼 크기 + 약간의 여유)
         if coachMarkType == .gridSwipeDelete || coachMarkType == .similarPhoto {
-            // A: 셀 크기 그대로, 각진 모서리 / C: 여유+둥근 모서리
-            let margin: CGFloat = (coachMarkType == .gridSwipeDelete) ? 0 : 8
-            let holeRect = highlightFrame.insetBy(dx: -margin, dy: -margin)
-            let radius: CGFloat = (coachMarkType == .gridSwipeDelete) ? 0 : 8
-            let holePath = UIBezierPath(roundedRect: holeRect, cornerRadius: radius)
+            // A, C: 셀 크기 그대로, 각진 모서리 (margin 0, radius 0)
+            let holePath = UIBezierPath(rect: highlightFrame)
             fullPath.append(holePath)
         }
         // E-1+E-2: 하이라이트 (highlightFrame이 .zero가 아닐 때만)
@@ -423,29 +423,31 @@ final class CoachMarkOverlayView: UIView {
     // MARK: - Show B (Viewer Swipe Delete)
 
     /// 코치마크 B: 뷰어 스와이프 삭제 표시
-    /// - 딤 없이 투명 배경, 스냅샷+손가락 애니메이션 유지
+    /// - 검정 배경 + 살짝 딤, 스냅샷+손가락 애니메이션 유지
     /// - 텍스트+확인 버튼은 E 스타일 blur 카드 팝업 (중앙 아래 배치)
+    /// - containerView에 추가하여 뷰어의 상하단 버튼이 위에 보이도록 함
     /// - Parameters:
     ///   - photoSnapshot: 사진 이미지뷰 스냅샷 (검은 여백 제외)
-    ///   - photoFrame: 사진 영역 프레임 (윈도우 좌표)
-    ///   - window: 표시할 윈도우
+    ///   - photoFrame: 사진 영역 프레임 (containerView 좌표)
+    ///   - containerView: 오버레이를 추가할 뷰 (뷰어의 view)
     static func showViewerSwipeDelete(
         photoSnapshot: UIView,
         photoFrame: CGRect,
-        in window: UIWindow
+        in containerView: UIView
     ) {
-        let overlay = CoachMarkOverlayView(frame: window.bounds)
+        let overlay = CoachMarkOverlayView(frame: containerView.bounds)
         overlay.coachMarkType = .viewerSwipeDelete
 
         // 즉시 터치 차단 (0.01 = hitTest 통과 최소값, 시각적으로 투명)
         overlay.alpha = 0.01
 
-        // 딤 없음 (투명 배경)
+        // 솔리드 검정 배경 (스냅샷 이동 시 원본 이미지 차단)
+        overlay.backgroundColor = .black
+        // B는 dimLayer 사용 안 함 (sublayer는 subview 아래 렌더링되어 보이지 않음)
         overlay.dimLayer.fillColor = UIColor.clear.cgColor
-        overlay.updateDimPath()
 
-        // 윈도우에 추가 (터치 차단 즉시 시작)
-        window.addSubview(overlay)
+        // containerView에 추가 (뷰어 버튼들 아래)
+        containerView.addSubview(overlay)
         CoachMarkManager.shared.currentOverlay = overlay
 
         // 스냅샷 배치 (사진 영역만, 검은 여백 제외)
@@ -453,11 +455,19 @@ final class CoachMarkOverlayView: UIView {
         overlay.addSubview(photoSnapshot)
         overlay.snapshotView = photoSnapshot
 
+        // 딤 오버레이 (스냅샷 위에 반투명 검정, E-1과 동일한 0.3)
+        let dimOverlay = UIView(frame: overlay.bounds)
+        dimOverlay.backgroundColor = UIColor.black.withAlphaComponent(0.3)
+        dimOverlay.autoresizingMask = [.flexibleWidth, .flexibleHeight]
+        dimOverlay.isUserInteractionEnabled = false
+        overlay.addSubview(dimOverlay)
+
         // 손가락 아이콘 배치 (화면 중앙 약간 아래)
+        let bounds = containerView.bounds
         overlay.fingerView.sizeToFit()
         overlay.fingerView.center = CGPoint(
-            x: window.bounds.midX,
-            y: window.bounds.midY + 50
+            x: bounds.midX,
+            y: bounds.midY + 50
         )
         overlay.fingerView.alpha = 0
         overlay.fingerView.transform = CGAffineTransform(scaleX: 1.1, y: 1.1)
@@ -467,13 +477,13 @@ final class CoachMarkOverlayView: UIView {
         let upConfig = UIImage.SymbolConfiguration(pointSize: 24, weight: .bold)
         overlay.arrowView.image = UIImage(systemName: "arrow.up", withConfiguration: upConfig)
         overlay.arrowView.center = CGPoint(
-            x: window.bounds.midX,
-            y: window.bounds.midY + 80
+            x: bounds.midX,
+            y: bounds.midY + 80
         )
         overlay.addSubview(overlay.arrowView)
 
         // E 스타일 카드 팝업 (blur 배경 + 텍스트 + 확인 버튼)
-        overlay.buildViewerSwipeCard(in: window)
+        overlay.buildViewerSwipeCard()
 
         // 0.5초 후 페이드인 + 애니메이션 시작
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak overlay] in
@@ -495,7 +505,7 @@ final class CoachMarkOverlayView: UIView {
     // MARK: - B: Build Card (E 스타일 팝업)
 
     /// B 카드 구성: 안내 텍스트 + [확인] (E 스타일 blur 카드, 중앙 아래 배치)
-    private func buildViewerSwipeCard(in window: UIWindow) {
+    private func buildViewerSwipeCard() {
         // 카드 컨테이너 (시스템 팝업 스타일 blur 배경)
         let card = UIView()
         card.layer.cornerRadius = 20
@@ -511,7 +521,7 @@ final class CoachMarkOverlayView: UIView {
         let label = UILabel()
         label.numberOfLines = 0
         label.translatesAutoresizingMaskIntoConstraints = false
-        let text = "위로 밀면 바로\n삭제대기함으로 이동해요"
+        let text = "사진을 위로 밀면 바로\n삭제대기함으로 이동해요"
         let attributed = NSMutableAttributedString(
             string: text,
             attributes: [
@@ -546,7 +556,7 @@ final class CoachMarkOverlayView: UIView {
         // 카드 레이아웃 (중앙보다 아래)
         NSLayoutConstraint.activate([
             card.centerXAnchor.constraint(equalTo: centerXAnchor),
-            card.centerYAnchor.constraint(equalTo: centerYAnchor, constant: 80),
+            card.centerYAnchor.constraint(equalTo: centerYAnchor, constant: 160),
             card.leadingAnchor.constraint(greaterThanOrEqualTo: leadingAnchor, constant: 24),
             card.trailingAnchor.constraint(lessThanOrEqualTo: trailingAnchor, constant: -24),
             card.widthAnchor.constraint(equalTo: widthAnchor, constant: -48),
@@ -592,6 +602,8 @@ final class CoachMarkOverlayView: UIView {
         UIView.animate(withDuration: 0.2, animations: {
             self.alpha = 0
         }) { _ in
+            self.onDismiss?()
+            self.onDismiss = nil
             // B: 풀스크린 스냅샷 메모리 즉시 해제
             self.snapshotView?.removeFromSuperview()
             self.snapshotView = nil

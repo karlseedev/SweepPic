@@ -4,6 +4,7 @@
 //
 //  코치마크 B: 뷰어 스와이프 삭제 안내
 //  - viewDidAppear + 페이지 스와이프 완료 시 조건 확인 후 오버레이 배치
+//  - 오버레이를 뷰어의 view에 추가하여 뒤로가기/삭제 버튼이 위에 보이도록 함
 //  - 동영상은 스킵, 이미지일 때만 표시
 //  - 0.5초 후 페이드인 + 애니메이션 시작
 //  - 1회만 표시 (UserDefaults)
@@ -44,14 +45,18 @@ extension ViewerViewController {
         // 사진 스냅샷 캡처 (이미지뷰만, 검은 여백 제외)
         guard let result = capturePhotoSnapshot() else { return }
 
-        // 윈도우 참조
-        guard let window = view.window else { return }
+        // 스냅샷 frame을 view 좌표로 변환 (window 좌표 → view 좌표)
+        let frameInView = view.convert(result.frame, from: view.window)
 
-        // 즉시 오버레이 배치 (터치 차단 시작, 0.5초 후 페이드인)
+        // 오버레이를 뷰어의 view에 추가 (window 대신)
+        // → 뒤로가기/삭제 버튼이 오버레이 위에 자연스럽게 보임
         CoachMarkOverlayView.showViewerSwipeDelete(
             photoSnapshot: result.snapshot,
-            photoFrame: result.frame,
-            in: window
+            photoFrame: frameInView,
+            in: view
         )
+
+        // 뒤로가기/삭제 버튼을 오버레이 위에 보이게 (터치는 차단)
+        showControlButtonsAboveCoachMark()
     }
 }

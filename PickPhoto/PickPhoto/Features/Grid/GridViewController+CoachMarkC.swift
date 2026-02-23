@@ -55,10 +55,10 @@ extension GridViewController {
     /// - Parameter cell: 뱃지가 표시된 PhotoCell
     func triggerCoachMarkCIfNeeded(for cell: PhotoCell) {
         // 이미 표시된 적 있으면 스킵
-        guard !CoachMarkType.similarPhoto.hasBeenShown else { return }
+        // guard !CoachMarkType.similarPhoto.hasBeenShown else { return } // 테스트: 항상 트리거
 
         // B(뷰어 스와이프) 완료 후에만 C 표시 (기본 기능 B → 고급 기능 C 순서)
-        guard CoachMarkType.viewerSwipeDelete.hasBeenShown else { return }
+        // guard CoachMarkType.viewerSwipeDelete.hasBeenShown else { return } // 테스트: B 없이도 트리거
 
         // 현재 다른 코치마크 표시 중이면 스킵
         guard !CoachMarkManager.shared.isShowing else { return }

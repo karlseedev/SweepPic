@@ -288,6 +288,9 @@ final class ViewerViewController: UIViewController {
     /// 눈 버튼 토글 시 숨김/표시
     var similarPhotoTitleLabel: UILabel?
 
+    /// iOS 16~25 커스텀 뒤로가기 버튼 참조 (코치마크 z-order용)
+    private weak var backButtonView: UIView?
+
     // MARK: - Initialization
 
     /// 초기화
@@ -557,7 +560,7 @@ final class ViewerViewController: UIViewController {
         ))
         attr.append(NSAttributedString(
             string: "가능",
-            attributes: [.font: UIFont.systemFont(ofSize: 17, weight: .heavy), .foregroundColor: UIColor.yellow]
+            attributes: [.font: UIFont.systemFont(ofSize: 17, weight: .heavy), .foregroundColor: UIColor(red: 1.0, green: 234.0/255.0, blue: 0, alpha: 1.0)]
         ))
         titleLabel.attributedText = attr
         titleLabel.textAlignment = .center
@@ -595,6 +598,7 @@ final class ViewerViewController: UIViewController {
         backButton.addTarget(self, action: #selector(backButtonTapped), for: .touchUpInside)
 
         view.addSubview(backButton)
+        backButtonView = backButton
         NSLayoutConstraint.activate([
             backButton.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 7),
             backButton.leadingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.leadingAnchor, constant: 16)
@@ -694,6 +698,34 @@ final class ViewerViewController: UIViewController {
         // Phase 2: LOD1 원본 이미지 요청 스케줄링
         // (setViewControllers는 delegate를 호출하지 않으므로 수동 호출)
         scheduleLOD1Request()
+    }
+
+    // MARK: - Coach Mark Helpers
+
+    /// 코치마크 B 표시 후 뒤로가기/삭제 버튼을 오버레이 위에 보이게 하되 터치 차단
+    /// bringToFront + isUserInteractionEnabled = false → 보이지만 터치 불가
+    /// iOS 26+: 시스템 네비바/툴바는 view 밖이므로 자연스럽게 보임
+    func showControlButtonsAboveCoachMark() {
+        // 오버레이 위로 올리기
+        if let back = backButtonView {
+            view.bringSubviewToFront(back)
+            back.isUserInteractionEnabled = false
+        }
+        if deleteButton.superview == view {
+            view.bringSubviewToFront(deleteButton)
+            deleteButton.isUserInteractionEnabled = false
+        }
+        if restoreButton.superview == view {
+            view.bringSubviewToFront(restoreButton)
+            restoreButton.isUserInteractionEnabled = false
+        }
+
+        // 코치마크 dismiss 시 터치 복원
+        CoachMarkManager.shared.currentOverlay?.onDismiss = { [weak self] in
+            self?.backButtonView?.isUserInteractionEnabled = true
+            self?.deleteButton.isUserInteractionEnabled = true
+            self?.restoreButton.isUserInteractionEnabled = true
+        }
     }
 
     // MARK: - Actions
