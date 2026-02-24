@@ -48,6 +48,10 @@ final class CoachMarkDPreScanner {
     /// 스캔 완료 콜백 (메인 스레드에서 호출)
     var onComplete: (() -> Void)?
 
+    /// 일시정지 여부 (스크롤 중 메인 스레드에서 설정, 백그라운드에서 읽음)
+    /// Bool 단일 읽기/쓰기는 실질적으로 atomic
+    private(set) var isPaused: Bool = false
+
     // MARK: - Constants
 
     /// 확보 목표 수
@@ -63,6 +67,20 @@ final class CoachMarkDPreScanner {
     // MARK: - Init
 
     private init() {}
+
+    // MARK: - Pause / Resume
+
+    /// 스크롤 시작 시 호출 — 스캔 루프 일시정지
+    func pause() {
+        isPaused = true
+        Log.print("[CoachMarkD] PreScanner paused")
+    }
+
+    /// 스크롤 종료 시 호출 — 스캔 루프 재개
+    func resume() {
+        isPaused = false
+        Log.print("[CoachMarkD] PreScanner resumed")
+    }
 
     // MARK: - Scan
 
@@ -97,6 +115,11 @@ final class CoachMarkDPreScanner {
             // 3장 확보 시 종료
             guard lowQualityAssets.count < Self.targetCount else { break }
 
+            // [Pause 대기] 스크롤 중이면 100ms 간격으로 polling 대기
+            while isPaused {
+                try? await Task.sleep(nanoseconds: 100_000_000) // 100ms
+            }
+
             let asset = fetchResult.object(at: i)
 
             // Stage 1: 메타데이터 필터 (비디오/스크린샷/즐겨찾기 등 스킵)
@@ -112,6 +135,9 @@ final class CoachMarkDPreScanner {
                 lowQualityAssets.append(asset)
                 Log.print("[CoachMarkD] 저품질 발견 #\(lowQualityAssets.count) (스캔 \(totalScanned)장째)")
             }
+
+            // [Throttle] 분석 사이 300ms 대기 — CPU 경합 방지
+            try? await Task.sleep(nanoseconds: 300_000_000) // 300ms
         }
 
         // 결과 저장 및 콜백 (메인 스레드)

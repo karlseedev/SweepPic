@@ -84,6 +84,10 @@ extension GridViewController {
         // LiquidGlass 최적화 해제
         LiquidGlassOptimizer.restore(in: view.window)
         LiquidGlassOptimizer.enterIdle(in: view.window)
+
+        // [PreScanner] 스크롤 강제 정지 후 스캔 재개
+        // ⚠️ 이 메서드는 scrollDidEnd()를 거치지 않으므로 여기서 직접 resume
+        CoachMarkDPreScanner.shared.resume()
     }
 
     /// 코치마크 표시 후 스크롤 복원
@@ -118,6 +122,9 @@ extension GridViewController {
 
         // 코치마크가 표시 중이면 dismiss (스크롤 시 하이라이트 위치 어긋남 방지)
         CoachMarkManager.shared.dismissCurrent()
+
+        // [PreScanner] 스크롤 중 스캔 일시정지 (CPU 경합 방지)
+        CoachMarkDPreScanner.shared.pause()
     }
 
     /// 스크롤 종료
@@ -163,6 +170,9 @@ extension GridViewController {
             // [LiquidGlass 최적화] 스크롤 종료 시 최적화 해제
             LiquidGlassOptimizer.restore(in: self.view.window)
             LiquidGlassOptimizer.enterIdle(in: self.view.window)
+
+            // [PreScanner] 스크롤 종료 시 스캔 재개
+            CoachMarkDPreScanner.shared.resume()
 
         }
     }
