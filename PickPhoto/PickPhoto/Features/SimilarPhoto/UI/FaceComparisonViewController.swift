@@ -246,6 +246,15 @@ final class FaceComparisonViewController: UIViewController {
         }
     }
 
+    override func viewWillDisappear(_ animated: Bool) {
+        super.viewWillDisappear(animated)
+        // C-3 오버레이가 window에 직접 추가되므로, VC dismiss 시 정리 필요
+        if isBeingDismissed || isMovingFromParent {
+            CoachMarkManager.shared.isC3TransitionActive = false
+            CoachMarkManager.shared.dismissCurrent()
+        }
+    }
+
     override func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
 
@@ -442,6 +451,8 @@ final class FaceComparisonViewController: UIViewController {
         let initialPage = PersonPageViewController(personIndex: currentPersonIndex, dataSource: self)
         pageViewController.setViewControllers([initialPage], direction: .forward, animated: false)
 
+        // C-3 온보딩 트리거
+        showFaceComparisonGuideIfNeeded()
     }
 
     // MARK: - UI Updates
@@ -475,6 +486,41 @@ final class FaceComparisonViewController: UIViewController {
             selectionCountLabel.text = "항목 선택"
             deleteButton.isEnabled = false
             deleteButton.alpha = 0.5
+        }
+    }
+
+    // MARK: - Coach Mark C-3
+
+    /// C-3 온보딩 표시 (첫 진입 시 1회만)
+    private func showFaceComparisonGuideIfNeeded() {
+        guard !CoachMarkType.faceComparisonGuide.hasBeenShown else { return }
+        guard !CoachMarkManager.shared.isShowing else { return }
+        guard !UIAccessibility.isVoiceOverRunning else { return }
+
+        // 셀 렌더 후 frame을 가져와야 하므로 다음 레이아웃 사이클 대기
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { [weak self] in
+            guard let self, let window = self.view.window else { return }
+            guard let currentPage = self.pageViewController.viewControllers?.first
+                    as? PersonPageViewController else { return }
+            guard let firstCell = currentPage.firstCell() else { return }
+
+            let cellFrame = firstCell.convert(firstCell.bounds, to: window)
+            guard let picLabelFrame = firstCell.debugLabelFrameInWindow() else { return }
+            guard let assetID = currentPage.firstAssetID() else { return }
+
+            CoachMarkOverlayView.showFaceComparisonGuide(
+                in: window,
+                cellFrame: cellFrame,
+                picLabelFrame: picLabelFrame,
+                onSelect: { [weak self] in
+                    self?.toggleSelection(for: assetID)
+                    firstCell.setSelected(true)
+                },
+                onDeselect: { [weak self] in
+                    self?.toggleSelection(for: assetID)
+                    firstCell.setSelected(false)
+                }
+            )
         }
     }
 

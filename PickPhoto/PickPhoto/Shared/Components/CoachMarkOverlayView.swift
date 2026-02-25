@@ -32,6 +32,7 @@ enum CoachMarkType: String {
     case autoCleanup = "coachMark_autoCleanup"              // D: 저품질 자동 정리 안내
     case firstDeleteGuide = "coachMark_firstDeleteGuide"  // E-1+E-2: 삭제 시스템 안내 (통합 시퀀스)
     case firstEmpty = "coachMark_firstEmpty"               // E-3: 첫 비우기 완료 안내
+    case faceComparisonGuide = "coachMark_faceComparisonGuide"  // C-3: 얼굴 비교 화면 선택 안내
 
     /// UserDefaults 키
     var shownKey: String { rawValue }
@@ -88,8 +89,11 @@ final class CoachMarkManager {
     /// Step 1 [확인] → 탭 전환 → Step 2/3 표시 동안 뷰 전환으로 인한 dismiss 방지
     var isDeleteGuideSequenceActive: Bool = false
 
+    /// C-3 Step 1→2 전환 중 (true 동안 dismissCurrent() 차단)
+    var isC3TransitionActive: Bool = false
+
     /// 현재 코치마크 dismiss
-    /// ⚠️ C-1 → C-2 전환 중 또는 E-1+E-2 시퀀스 진행 중에는 dismiss 차단 (오버레이 보호)
+    /// ⚠️ C-1 → C-2 전환 중, E-1+E-2 시퀀스 진행 중, C-3 전환 중에는 dismiss 차단 (오버레이 보호)
     func dismissCurrent() {
         if isWaitingForC2 {
             Log.print("[CoachMarkManager] dismissCurrent BLOCKED — isWaitingForC2=true, overlay=\(currentOverlay != nil)")
@@ -97,6 +101,10 @@ final class CoachMarkManager {
         }
         if isDeleteGuideSequenceActive {
             Log.print("[CoachMarkManager] dismissCurrent BLOCKED — isDeleteGuideSequenceActive=true")
+            return
+        }
+        if isC3TransitionActive {
+            Log.print("[CoachMarkManager] dismissCurrent BLOCKED — isC3TransitionActive=true")
             return
         }
         Log.print("[CoachMarkManager] dismissCurrent — overlay=\(currentOverlay != nil)")
@@ -304,7 +312,7 @@ final class CoachMarkOverlayView: UIView {
     func updateDimPath() {
         let fullPath = UIBezierPath(rect: bounds)
         // A, C: 하이라이트 영역은 투명 (셀/버튼 크기 + 약간의 여유)
-        if coachMarkType == .gridSwipeDelete || coachMarkType == .similarPhoto {
+        if coachMarkType == .gridSwipeDelete || coachMarkType == .similarPhoto || coachMarkType == .faceComparisonGuide {
             // A, C: 셀 크기 그대로, 각진 모서리 (margin 0, radius 0)
             let holePath = UIBezierPath(rect: highlightFrame)
             fullPath.append(holePath)
@@ -616,6 +624,7 @@ final class CoachMarkOverlayView: UIView {
         snapshotView?.layer.removeAllAnimations()  // B: 진행 중 스냅샷 애니메이션 중단
 
         // C 타입은 markAsShown을 별도 관리 (present 성공 후 호출)
+        // C-3은 dismiss 시 자동 markAsShown (화면 전환 없음)
         if coachMarkType != .similarPhoto {
             coachMarkType.markAsShown()
         }
@@ -623,10 +632,11 @@ final class CoachMarkOverlayView: UIView {
         // C 상태 리셋
         CoachMarkManager.shared.resetC2State()
 
-        // D, E-1+E-2, E-3: 시퀀스 전용 리소스 정리
+        // D, E-1+E-2, E-3, C-3: 시퀀스 전용 리소스 정리
         cleanupAutoCleanup()
         cleanupDeleteGuide()
         cleanupFirstEmpty()
+        cleanupFaceComparisonGuide()
 
         UIView.animate(withDuration: 0.2, animations: {
             self.alpha = 0
@@ -681,6 +691,10 @@ final class CoachMarkOverlayView: UIView {
         case .firstEmpty:
             // E-3: 즉시 dismiss
             dismiss()
+        case .faceComparisonGuide:
+            // C-3: 재진입 방지 → Step 1/2 시퀀스 관리
+            confirmButton.isEnabled = false
+            startC3ConfirmSequence()
         }
     }
 

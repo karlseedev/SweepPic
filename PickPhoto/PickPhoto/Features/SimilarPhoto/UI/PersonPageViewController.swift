@@ -316,3 +316,20 @@ extension PersonPageViewController {
         }
     }
 }
+
+// MARK: - C-3 Coach Mark Support
+
+extension PersonPageViewController {
+
+    /// 첫 번째 셀 반환 (C-3 온보딩용)
+    func firstCell() -> FaceComparisonCell? {
+        return collectionView.cellForItem(at: IndexPath(item: 0, section: 0)) as? FaceComparisonCell
+    }
+
+    /// 첫 번째 사진의 assetID (C-3 선택 토글용)
+    func firstAssetID() -> String? {
+        guard let dataSource else { return nil }
+        let photos = dataSource.photosForPerson(personIndex)
+        return photos.first
+    }
+}

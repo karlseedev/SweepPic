@@ -194,6 +194,14 @@ final class FaceComparisonCell: UICollectionViewCell {
         checkmarkView.isHidden = !selected
     }
 
+    // MARK: - Frame Access
+
+    /// Pic 라벨의 window 좌표 frame (C-3 포커스 애니메이션용)
+    func debugLabelFrameInWindow() -> CGRect? {
+        guard !debugLabel.isHidden, let window = window else { return nil }
+        return debugLabel.convert(debugLabel.bounds, to: window)
+    }
+
     // MARK: - Reuse
 
     override func prepareForReuse() {

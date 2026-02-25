@@ -14,6 +14,7 @@
 
 import UIKit
 import ObjectiveC
+import AppCore
 
 // MARK: - Associated Keys
 
