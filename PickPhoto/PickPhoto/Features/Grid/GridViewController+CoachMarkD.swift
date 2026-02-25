@@ -220,9 +220,9 @@ extension GridViewController {
 
     // MARK: - Cleanup Button Frame
 
-    /// 정리 버튼의 윈도우 좌표 프레임 반환
+    /// 정리 버튼의 윈도우 좌표 프레임 반환 (재생 기능에서도 호출)
     /// iOS 버전에 따라 FloatingTitleBar 또는 시스템 네비바에서 프레임 획득
-    private func getCleanupButtonFrame(in window: UIWindow) -> CGRect? {
+    func getCleanupButtonFrame(in window: UIWindow) -> CGRect? {
         if #available(iOS 26.0, *) {
             // iOS 26+: rightBarButtonItems = [menuItem, selectItem, cleanupItem]
             guard let items = navigationItem.rightBarButtonItems,

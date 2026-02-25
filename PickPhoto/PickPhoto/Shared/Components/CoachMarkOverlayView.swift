@@ -47,13 +47,11 @@ enum CoachMarkType: String {
         UserDefaults.standard.set(true, forKey: shownKey)
     }
 
-    /// 디버그용: 특정 코치마크 표시 기록 리셋
-    #if DEBUG
+    /// 코치마크 표시 기록 리셋 (재생 기능에서 사용)
     func resetShown() {
         UserDefaults.standard.removeObject(forKey: shownKey)
-        Log.print("[CoachMark] DEBUG reset: \(rawValue)")
+        Log.print("[CoachMark] reset: \(rawValue)")
     }
-    #endif
 }
 
 // MARK: - CoachMarkManager
@@ -456,6 +454,242 @@ final class CoachMarkOverlayView: UIView {
         }
     }
 
+    // MARK: - Show A Variant (Replay: 1회 스와이프 → 자동 완료)
+
+    /// E-1+E-2 재생용 A 변형 오버레이
+    /// 기존 A와 동일한 셀 하이라이트 + 스와이프 모션이지만:
+    /// - 스와이프 1회만 (복원 없음)
+    /// - 확인 버튼 없음
+    /// - 다른 텍스트
+    /// - 모션 완료 시 자동 dismiss + onComplete 콜백
+    /// - Parameters:
+    ///   - highlightFrame: 셀 프레임 (윈도우 좌표)
+    ///   - snapshot: 셀 스냅샷
+    ///   - window: 표시할 윈도우
+    ///   - onComplete: 모션 완료 + dismiss 후 콜백 (삭제 실행용)
+    static func showReplaySwipeVariant(
+        highlightFrame: CGRect,
+        snapshot: UIView,
+        in window: UIWindow,
+        onComplete: @escaping () -> Void
+    ) {
+        let overlay = CoachMarkOverlayView(frame: window.bounds)
+        overlay.coachMarkType = .gridSwipeDelete
+        overlay.highlightFrame = highlightFrame
+        overlay.swipeDistance = highlightFrame.width * swipeRatio
+        overlay.alpha = 0
+
+        // 윈도우에 추가
+        window.addSubview(overlay)
+
+        // 매니저에 등록
+        CoachMarkManager.shared.currentOverlay = overlay
+
+        // 딤 배경 구멍 업데이트
+        overlay.updateDimPath()
+
+        // 스냅샷 배치
+        snapshot.frame = highlightFrame
+        snapshot.clipsToBounds = true
+        overlay.addSubview(snapshot)
+        overlay.snapshotView = snapshot
+
+        // Maroon 딤드 (초기 width 0)
+        overlay.maroonView.frame = CGRect(
+            x: 0, y: 0,
+            width: 0,
+            height: highlightFrame.height
+        )
+        snapshot.addSubview(overlay.maroonView)
+
+        // 손가락 아이콘
+        overlay.fingerView.sizeToFit()
+        overlay.fingerView.center = CGPoint(
+            x: highlightFrame.minX,
+            y: highlightFrame.midY
+        )
+        overlay.fingerView.alpha = 0
+        overlay.fingerView.transform = CGAffineTransform(scaleX: 1.1, y: 1.1)
+        overlay.addSubview(overlay.fingerView)
+
+        // 페이드인 → 1회 스와이프 → 팝업 카드 표시 → 확인 탭 시 dismiss
+        UIView.animate(withDuration: 0.3) {
+            overlay.alpha = 1
+        } completion: { _ in
+            if UIAccessibility.isReduceMotionEnabled {
+                // Reduce Motion: 바로 팝업 카드 표시
+                overlay.buildReplayVariantCard(onComplete: onComplete)
+            } else {
+                overlay.performSingleDeleteSwipe(onComplete: onComplete)
+            }
+        }
+    }
+
+    /// A 변형: 1회 삭제 스와이프만 수행 (복원 없음)
+    /// 모션 완료 후 자동 dismiss + onComplete 콜백
+    private func performSingleDeleteSwipe(onComplete: @escaping () -> Void) {
+        guard !shouldStopAnimation else { return }
+
+        // 1) Touch Down
+        UIView.animate(
+            withDuration: 0.3,
+            delay: 0,
+            options: .curveEaseOut,
+            animations: {
+                self.fingerView.alpha = 1.0
+                self.fingerView.transform = .identity
+                self.fingerView.layer.shadowOpacity = 0.3
+                self.fingerView.layer.shadowRadius = 8
+            }
+        ) { [weak self] _ in
+            guard let self, !self.shouldStopAnimation else { return }
+
+            // 2) Press
+            UIView.animate(
+                withDuration: 0.2,
+                delay: 0,
+                usingSpringWithDamping: 0.7,
+                initialSpringVelocity: 0,
+                options: [],
+                animations: {
+                    self.fingerView.transform = CGAffineTransform(scaleX: 0.95, y: 0.95)
+                    self.fingerView.layer.shadowRadius = 4
+                    self.fingerView.layer.shadowOpacity = 0.2
+                }
+            ) { [weak self] _ in
+                guard let self, !self.shouldStopAnimation else { return }
+
+                // 3) Drag → 오른쪽 (1회만)
+                let timing = UICubicTimingParameters(
+                    controlPoint1: CGPoint(x: 0.4, y: 0.0),
+                    controlPoint2: CGPoint(x: 0.2, y: 1.0)
+                )
+                let animator = UIViewPropertyAnimator(duration: 0.3, timingParameters: timing)
+                animator.addAnimations {
+                    self.fingerView.center.x += self.swipeDistance
+                    self.fingerView.transform = CGAffineTransform(scaleX: 0.95, y: 0.95)
+                        .rotated(by: .pi / 24)
+                    self.maroonView.frame.size.width = self.swipeDistance
+                }
+                animator.addCompletion { [weak self] _ in
+                    guard let self, !self.shouldStopAnimation else { return }
+
+                    // 4) Release
+                    UIView.animate(
+                        withDuration: 0.2,
+                        delay: 0,
+                        options: .curveEaseIn,
+                        animations: {
+                            self.fingerView.alpha = 0
+                            self.fingerView.transform = CGAffineTransform(scaleX: 1.05, y: 1.05)
+                            self.fingerView.center.y -= 10
+                        }
+                    ) { [weak self] _ in
+                        // 1회 완료 → 0.3초 텀 → 팝업 카드 표시
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                            self?.buildReplayVariantCard(onComplete: onComplete)
+                        }
+                    }
+                }
+                animator.startAnimation()
+            }
+        }
+    }
+
+    /// A 변형: 스와이프 완료 후 안내 팝업 카드 표시
+    /// blur 배경 카드 + 텍스트 + [확인] 버튼, 확인 탭 시 dismiss → onComplete
+    private func buildReplayVariantCard(onComplete: @escaping () -> Void) {
+        // 카드 컨테이너 (blur 배경)
+        let card = UIView()
+        card.layer.cornerRadius = 20
+        card.clipsToBounds = true
+        card.translatesAutoresizingMaskIntoConstraints = false
+        card.alpha = 0
+
+        let blur = UIVisualEffectView(effect: UIBlurEffect(style: .systemMaterialDark))
+        blur.frame = card.bounds
+        blur.autoresizingMask = [.flexibleWidth, .flexibleHeight]
+        card.addSubview(blur)
+        addSubview(card)
+
+        // 안내 텍스트 ("삭제대기함" 볼드+노란색 강조)
+        let label = UILabel()
+        label.numberOfLines = 0
+        label.translatesAutoresizingMaskIntoConstraints = false
+        let text = "설명을 위해 사진을 임시로 삭제합니다\n(삭제대기함에서 복구 가능)"
+        let attributed = NSMutableAttributedString(
+            string: text,
+            attributes: [
+                .font: Self.bodyFont,
+                .foregroundColor: UIColor.white,
+                .paragraphStyle: {
+                    let style = NSMutableParagraphStyle()
+                    style.alignment = .center
+                    return style
+                }(),
+            ]
+        )
+        // "임시로 삭제" 볼드 + 노란색 강조
+        if let range = text.range(of: "임시로 삭제") {
+            let nsRange = NSRange(range, in: text)
+            attributed.addAttributes([
+                .font: Self.bodyBoldFont,
+                .foregroundColor: Self.highlightYellow,
+            ], range: nsRange)
+        }
+        label.attributedText = attributed
+        card.addSubview(label)
+
+        // [확인] 버튼
+        confirmButton.setTitleColor(.black, for: .normal)
+        confirmButton.backgroundColor = .white
+        confirmButton.isEnabled = true
+        confirmButton.alpha = 1
+        confirmButton.translatesAutoresizingMaskIntoConstraints = false
+        card.addSubview(confirmButton)
+
+        // 확인 탭 → dismiss → onComplete (삭제 + E 시퀀스)
+        onConfirm = { [weak self] in
+            self?.dismissReplayVariant(onComplete: onComplete)
+        }
+
+        // 레이아웃 (하이라이트 셀 아래)
+        NSLayoutConstraint.activate([
+            card.centerXAnchor.constraint(equalTo: centerXAnchor),
+            card.topAnchor.constraint(equalTo: topAnchor, constant: highlightFrame.maxY + 24),
+            card.leadingAnchor.constraint(greaterThanOrEqualTo: leadingAnchor, constant: 24),
+            card.trailingAnchor.constraint(lessThanOrEqualTo: trailingAnchor, constant: -24),
+            card.widthAnchor.constraint(equalTo: widthAnchor, constant: -48),
+
+            label.topAnchor.constraint(equalTo: card.topAnchor, constant: 24),
+            label.leadingAnchor.constraint(equalTo: card.leadingAnchor, constant: 20),
+            label.trailingAnchor.constraint(equalTo: card.trailingAnchor, constant: -20),
+
+            confirmButton.topAnchor.constraint(equalTo: label.bottomAnchor, constant: 20),
+            confirmButton.centerXAnchor.constraint(equalTo: card.centerXAnchor),
+            confirmButton.widthAnchor.constraint(equalToConstant: 120),
+            confirmButton.heightAnchor.constraint(equalToConstant: Self.buttonHeight),
+            confirmButton.bottomAnchor.constraint(equalTo: card.bottomAnchor, constant: -24),
+        ])
+
+        // 카드 페이드인
+        UIView.animate(withDuration: 0.25) {
+            card.alpha = 1
+        }
+    }
+
+    /// A 변형 dismiss + onComplete 콜백
+    private func dismissReplayVariant(onComplete: @escaping () -> Void) {
+        shouldStopAnimation = true
+        UIView.animate(withDuration: 0.25, animations: {
+            self.alpha = 0
+        }) { _ in
+            CoachMarkManager.shared.currentOverlay = nil
+            self.removeFromSuperview()
+            onComplete()
+        }
+    }
+
     // MARK: - Show B (Viewer Swipe Delete)
 
     /// 코치마크 B: 뷰어 스와이프 삭제 표시
@@ -668,8 +902,15 @@ final class CoachMarkOverlayView: UIView {
 
     @objc func confirmTapped() {
         switch coachMarkType {
-        case .gridSwipeDelete, .viewerSwipeDelete:
-            // A/B: 즉시 dismiss + markAsShown
+        case .gridSwipeDelete:
+            // A: onConfirm이 있으면 재생 변형 (팝업 카드) → onConfirm 호출
+            if let action = onConfirm {
+                action()
+            } else {
+                dismiss()
+            }
+        case .viewerSwipeDelete:
+            // B: 즉시 dismiss + markAsShown
             dismiss()
         case .similarPhoto:
             // C: 재진입 방지 (0.8초+ 비동기 시퀀스 — 연타 시 이중 push/present 위험)

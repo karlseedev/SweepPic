@@ -167,11 +167,11 @@ extension GridViewController {
 
     // MARK: - Show
 
-    /// C-1 코치마크 표시
+    /// C-1 코치마크 표시 (재생 기능에서도 직접 호출)
     /// - Parameters:
     ///   - cell: 뱃지가 표시된 셀
     ///   - assetID: 해당 셀의 assetID (PHChange 안전성용)
-    private func showSimilarBadgeCoachMark(cell: PhotoCell, assetID: String) {
+    func showSimilarBadgeCoachMark(cell: PhotoCell, assetID: String) {
         // 윈도우 + 셀 프레임 → 윈도우 좌표 변환
         guard let window = view.window,
               let cellFrame = cell.superview?.convert(cell.frame, to: window) else {

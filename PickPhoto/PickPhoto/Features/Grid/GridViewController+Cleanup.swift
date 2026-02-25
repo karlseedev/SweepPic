@@ -61,7 +61,7 @@ extension GridViewController {
                 UIAction(title: "구독", image: UIImage(systemName: "creditcard")) { _ in },
                 UIAction(title: "기타", image: UIImage(systemName: "ellipsis")) { _ in },
                 UIAction(title: "고객센터", image: UIImage(systemName: "questionmark.circle")) { _ in },
-                Self.makeCoachMarkReplayMenu(),
+                self.makeCoachMarkReplayMenu(),
             ])
         )
 
@@ -100,7 +100,7 @@ extension GridViewController {
             UIAction(title: "구독", image: UIImage(systemName: "creditcard")) { _ in },
             UIAction(title: "기타", image: UIImage(systemName: "ellipsis")) { _ in },
             UIAction(title: "고객센터", image: UIImage(systemName: "questionmark.circle")) { _ in },
-            Self.makeCoachMarkReplayMenu(),
+            self.makeCoachMarkReplayMenu(),
         ]))
 
         // 버튼 활성화 상태 초기화
@@ -432,17 +432,30 @@ extension GridViewController {
 extension GridViewController {
 
     /// "설명 다시 보기" 서브메뉴 생성
-    static func makeCoachMarkReplayMenu() -> UIMenu {
+    /// 각 항목 탭 시 CoachMarkReplay 확장의 재생 함수를 호출
+    func makeCoachMarkReplayMenu() -> UIMenu {
         UIMenu(
             title: "설명 다시 보기",
             image: UIImage(systemName: "arrow.counterclockwise"),
             children: [
-                UIAction(title: "그리드 스와이프 삭제") { _ in },
-                UIAction(title: "뷰어 스와이프 삭제") { _ in },
-                UIAction(title: "유사 사진·얼굴 비교") { _ in },
-                UIAction(title: "저품질 자동 정리") { _ in },
-                UIAction(title: "삭제 시스템 안내") { _ in },
-                UIAction(title: "비우기 완료 안내") { _ in },
+                UIAction(title: "그리드 스와이프 삭제") { [weak self] _ in
+                    self?.replayCoachMarkA()
+                },
+                UIAction(title: "뷰어 스와이프 삭제") { [weak self] _ in
+                    self?.replayCoachMarkB()
+                },
+                UIAction(title: "유사 사진 얼굴 비교") { [weak self] _ in
+                    self?.replayCoachMarkC()
+                },
+                UIAction(title: "저품질 사진 정리") { [weak self] _ in
+                    self?.replayCoachMarkD()
+                },
+                UIAction(title: "삭제 시스템 안내") { [weak self] _ in
+                    self?.replayCoachMarkE1E2()
+                },
+                UIAction(title: "비우기 완료 안내") { [weak self] _ in
+                    self?.replayCoachMarkE3()
+                },
             ]
         )
     }

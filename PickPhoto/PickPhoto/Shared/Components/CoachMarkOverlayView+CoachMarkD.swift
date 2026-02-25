@@ -138,7 +138,7 @@ extension CoachMarkOverlayView {
 
         // --- 타이틀 ---
         let titleLabel = UILabel()
-        titleLabel.text = "저품질 사진 발견"
+        titleLabel.text = "저품질 사진 자동 정리"
         titleLabel.textColor = .white
         titleLabel.font = .systemFont(ofSize: 24, weight: .light)
         titleLabel.textAlignment = .center

@@ -574,6 +574,19 @@ actor SimilarityCache: SimilarityCacheProtocol {
         accessOrder.removeAll()
     }
 
+    // MARK: - Replay Support
+
+    /// 분석 완료된 그룹 멤버 1개 반환 (코치마크 재생용)
+    /// 딕셔너리 순회이므로 순서 비결정적 — 아무 그룹 멤버 1개를 반환
+    func findAnyGroupMember() -> (assetID: String, groupID: String)? {
+        for (assetID, state) in states {
+            if case .analyzed(true, let groupID?) = state {
+                return (assetID, groupID)
+            }
+        }
+        return nil
+    }
+
     // MARK: - Debug
 
     /// 현재 캐시 상태를 반환합니다.

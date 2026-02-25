@@ -8,14 +8,14 @@
 
 ## 목록 항목 (6개)
 
-| # | 표시 텍스트 | 코치마크 |
-|---|-----------|---------|
-| 1 | 그리드 스와이프 삭제 | A |
-| 2 | 뷰어 스와이프 삭제 | B |
-| 3 | 유사 사진 얼굴 비교 | C (C-1→C-2→C-3 전체 시퀀스) |
-| 4 | 저품질 사진 정리 | D |
-| 5 | 삭제 시스템 안내 | E-1+E-2 |
-| 6 | 비우기 완료 안내 | E-3 |
+| # | 표시 텍스트 | 코치마크 | 비고 |
+|---|-----------|---------|------|
+| 1 | 그리드 스와이프 삭제 | A | |
+| 2 | 뷰어 스와이프 삭제 | B | |
+| 3 | 유사 사진 얼굴 비교 | C (C-1→C-2→C-3 전체 시퀀스) | |
+| 4 | 저품질 사진 정리 | D | 타이틀: "저품질 사진 자동 정리" (온보딩/다시보기 공통) |
+| 5 | 삭제 시스템 안내 | E-1+E-2 | A 변형: blur 카드 팝업 + [확인] 버튼, 강조 "임시로 삭제" |
+| 6 | 비우기 완료 안내 | E-3 | |
 
 ---
 
@@ -129,18 +129,19 @@
      ※ 삭제 후에는 셀이 사라져 프레임/ID 획득 불가
 3. A 변형 오버레이 표시:
    - 딤 + 셀 하이라이트 + 스와이프 모션 (삭제 1회만, 복원 없음)
-   - 텍스트: "설명을 위해 사진을 임시로 삭제합니다
-            (삭제대기함에서 복구 가능)"
-   - [확인] 버튼 없음
-4. 모션 완료 → A 변형 오버레이 dismiss (isShowing=false 보장)
+   - 스와이프 완료 후 blur 카드 팝업 표시:
+     텍스트: "설명을 위해 사진을 임시로 삭제합니다\n(삭제대기함에서 복구 가능)"
+     강조: "임시로 삭제" (볼드+노란색)
+   - [확인] 버튼 있음
+4. [확인] 탭 → A 변형 오버레이 dismiss (isShowing=false 보장)
 5. → 해당 사진을 실제로 삭제대기함으로 이동
 6. → E-1+E-2 시퀀스 시작 (showDeleteSystemGuide 직접 호출)
    ※ showDeleteSystemGuideIfNeeded의 isShowing 가드 우회를 위해
      A 변형 dismiss 완료 후 호출해야 함
 
 [동작]
-  A 변형: 셀 하이라이트 + 스와이프 1회 + 안내 텍스트 (확인 없음)
-  → 자동 삭제
+  A 변형: 셀 하이라이트 + 스와이프 1회 → blur 카드 팝업 + [확인]
+  → [확인] 탭 → 삭제
   → E-1: 카드 "삭제대기함으로 이동됐어요" + [확인]
   → 포커스 원 → 손가락 탭 → 삭제대기함 탭 전환
   → E-2: Step 2/3 순차 → [확인] → dismiss
@@ -170,7 +171,8 @@
 | 파일 | 변경 내용 |
 |------|----------|
 | `CoachMarkOverlayView.swift:51-56` | `resetShown()` `#if DEBUG` 제거 |
-| `CoachMarkOverlayView.swift` | A 변형 show 메서드 추가 (1회 스와이프 + 확인 없음 + 자동 완료) |
+| `CoachMarkOverlayView.swift` | A 변형 show 메서드 추가 (1회 스와이프 + blur 카드 팝업 + [확인] 버튼) |
+| `CoachMarkOverlayView+CoachMarkD.swift` | D 카드 타이틀 "저품질 사진 발견" → "저품질 사진 자동 정리" |
 | `GridViewController+Cleanup.swift:58,96` | UIMenu에 "설명 다시 보기" 항목 추가 |
 | `GridViewController+CoachMark.swift:113` | `showGridSwipeDeleteCoachMark()` `private` → `func` |
 | `GridViewController+CoachMark.swift:149` | `findCenterCell()` `private` → `func` |

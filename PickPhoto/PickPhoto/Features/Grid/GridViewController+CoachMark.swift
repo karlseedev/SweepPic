@@ -109,8 +109,8 @@ extension GridViewController {
 
     // MARK: - Show
 
-    /// 코치마크 A 즉시 표시
-    private func showGridSwipeDeleteCoachMark() {
+    /// 코치마크 A 즉시 표시 (재생 기능에서도 호출)
+    func showGridSwipeDeleteCoachMark() {
         guard !CoachMarkType.gridSwipeDelete.hasBeenShown else {
             Log.print("[CoachMarkA] 표시 스킵: 이미 표시됨")
             return
@@ -144,9 +144,9 @@ extension GridViewController {
         )
     }
 
-    /// 화면 중앙에 가장 가까운 셀 찾기
+    /// 화면 중앙에 가장 가까운 셀 찾기 (재생 기능에서도 호출)
     /// - Returns: (셀, indexPath) 또는 nil
-    private func findCenterCell() -> (PhotoCell, IndexPath)? {
+    func findCenterCell() -> (PhotoCell, IndexPath)? {
         let centerPoint = CGPoint(
             x: collectionView.bounds.midX,
             y: collectionView.bounds.midY

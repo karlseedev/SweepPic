@@ -316,8 +316,8 @@ extension GridViewController {
 
     /// 셀에 코너 삼각형 뱃지 표시
     /// - 흰색 테두리 + 우상단 삼각형 (등호 아이콘)
-    /// - Parameter cell: 뱃지를 표시할 PhotoCell
-    private func showBadge(on cell: PhotoCell) {
+    /// - Parameter cell: 뱃지를 표시할 PhotoCell (재생 기능에서도 호출)
+    func showBadge(on cell: PhotoCell) {
         // 스크롤 중이면 뱃지 표시하지 않음 (방어 코드)
         guard !isScrolling else { return }
 
