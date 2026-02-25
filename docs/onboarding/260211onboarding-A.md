@@ -223,3 +223,193 @@ extension GridViewController {
 9. 빈 그리드(사진 0장) → 코치마크 안 뜨는지
 10. 코치마크 표시 중 화면 이탈(뷰어 진입 등) → dismiss
 11. UserDefaults에서 `coachMark_gridSwipe` 키 삭제 후 다시 표시되는지
+
+---
+
+# 온보딩 A-1: 스와이프 삭제 실습 유도
+
+## Context
+
+A 온보딩은 스와이프 삭제 데모를 보여주고 [확인]으로 종료된다.
+그러나 사용자가 데모만 보고 실제로 스와이프하지 않으면 E-1이 영영 트리거되지 않고,
+결과적으로 유사사진 기능(C 온보딩)도 잠긴 채로 남는다.
+
+**목표**: A [확인] 후 사용자가 직접 스와이프 삭제를 해야만 넘어가도록 유도.
+
+---
+
+## 전체 플로우
+
+```
+[A 표시] 기존 스와이프 데모 + "사진을 밀어서 바로 정리하세요..." + [확인]
+    │
+    ├── [확인] 탭
+    │
+[A-1 전환]
+    ├── 기존 요소 페이드아웃 (텍스트, 버튼, 손가락, maroon, 타이틀, 화살표)
+    ├── 스냅샷 제거 (실제 셀이 dim 구멍으로 보이도록)
+    ├── 새 텍스트 페이드인: "셀을 가로로 스와이프해서 삭제해 보세요"
+    ├── hitTest 수정: 하이라이트 영역 터치 통과 (스와이프 가능)
+    │
+    ├── 사용자가 직접 스와이프 삭제 성공
+    │     ├── A-1 overlay 즉시 제거
+    │     ├── markAsShown (gridSwipeDelete)
+    │     └── E-1 자동 트리거
+    │
+[A-1 완료]
+```
+
+---
+
+## 핵심 설계
+
+### 1. confirmTapped() 분기 변경
+**파일**: `CoachMarkOverlayView.swift:671-673`
+
+기존:
+```swift
+case .gridSwipeDelete, .viewerSwipeDelete:
+    dismiss()
+```
+
+변경:
+```swift
+case .gridSwipeDelete:
+    confirmButton.isEnabled = false
+    startA1SwipeSequence()  // A-1 전환
+case .viewerSwipeDelete:
+    dismiss()
+```
+
+### 2. A-1 전환: `startA1SwipeSequence()`
+**파일**: `CoachMarkOverlayView+CoachMarkA1.swift` (신규)
+
+1. `CoachMarkManager.shared.isA1Active = true` 플래그 설정
+2. 기존 A 요소 페이드아웃 (0.2s):
+   - messageLabel, confirmButton, fingerView, titleLabel, arrowView → alpha 0
+3. 스냅샷 제거: `snapshotView?.removeFromSuperview()`, `snapshotView = nil`
+   - 실제 셀이 dim 구멍을 통해 보이게 됨
+4. 새 텍스트 표시 (0.2s 페이드인):
+   - "셀을 가로로 스와이프해서\n삭제해 보세요"
+   - "가로로 스와이프" 키워드 bold+yellow 강조
+   - paragraphSpacing 12 (1줄↔2줄 간격)
+   - 하이라이트 셀 아래 배치
+5. A-1 터치 통과 플래그 설정 (`isA1SwipeMode = true`)
+
+### 3. hitTest 수정
+**파일**: `CoachMarkOverlayView.swift:657-665`
+
+```swift
+override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+    // A-1: 하이라이트 영역은 터치 통과 (스와이프 허용)
+    if isA1SwipeMode && highlightFrame.contains(point) {
+        return nil  // 터치가 아래 그리드 셀로 전달
+    }
+    // 확인 버튼 (A-1에서는 숨겨져 있으므로 여기 안 옴)
+    let buttonPoint = confirmButton.convert(point, from: self)
+    if confirmButton.bounds.contains(buttonPoint) && confirmButton.alpha > 0 {
+        return confirmButton
+    }
+    return self  // 나머지 터치 차단
+}
+```
+
+### 4. 스와이프 완료 감지 + A-1 dismiss
+**파일**: `BaseGridViewController.swift:910-918`
+
+기존:
+```swift
+if case .success = result {
+    self?.showDeleteSystemGuideIfNeeded(cell: cell)
+}
+```
+
+변경:
+```swift
+if case .success = result {
+    if CoachMarkManager.shared.isA1Active {
+        // A-1 완료: overlay 즉시 제거 → E-1 트리거
+        CoachMarkManager.shared.isA1Active = false
+        let overlay = CoachMarkManager.shared.currentOverlay
+        CoachMarkManager.shared.currentOverlay = nil  // isShowing = false (E-1 가드 통과)
+        overlay?.dismiss()  // 시각적 페이드아웃 (백그라운드)
+        // dismiss가 markAsShown 호출 → gridSwipeDelete 완료 마킹
+        self?.showDeleteSystemGuideIfNeeded(cell: cell)
+    } else {
+        self?.showDeleteSystemGuideIfNeeded(cell: cell)
+    }
+}
+```
+
+`currentOverlay = nil`을 먼저 설정하여 E-1의 `!isShowing` 가드가 즉시 통과하도록 함.
+A-1 overlay는 백그라운드에서 페이드아웃 (0.2s).
+
+### 5. CoachMarkManager 확장
+**파일**: `CoachMarkOverlayView.swift` (CoachMarkManager 내)
+
+```swift
+/// A-1 스와이프 실습 모드 활성 중
+var isA1Active: Bool = false
+```
+
+`dismissCurrent()`에 가드 추가:
+```swift
+guard !isA1Active else { return }  // A-1 진행 중 dismiss 차단
+```
+
+### 6. Reduce Motion 대응
+
+```swift
+if UIAccessibility.isReduceMotionEnabled {
+    // 탭 모션/스와이프 모션 생략 → 즉시 셀 선택하여 자동 삭제
+    // A-1 텍스트도 생략, 바로 swipe 실행
+}
+```
+
+### 7. dismiss 시 markAsShown 조건
+**파일**: `CoachMarkOverlayView.swift:628-630`
+
+현재: `if coachMarkType != .similarPhoto { markAsShown() }`
+
+A의 markAsShown이 A-1 완료 시점(dismiss)에서만 호출되도록:
+- A → [확인] → startA1SwipeSequence() (dismiss 안 함 → markAsShown 안 됨)
+- A-1 → 스와이프 성공 → dismiss() → markAsShown() ✅
+- 기존 로직 변경 불필요 (dismiss가 호출될 때만 markAsShown 실행)
+
+### 8. A-1 중 스크롤 방지
+hitTest가 하이라이트 영역 외 모든 터치를 차단하므로 스크롤 불가.
+하이라이트 영역 내에서는 수평 스와이프만 가능 (삭제 제스처).
+
+### 9. cleanup
+**파일**: `CoachMarkOverlayView+CoachMarkA1.swift`
+
+```swift
+func cleanupA1() {
+    isA1SwipeMode = false
+    CoachMarkManager.shared.isA1Active = false
+}
+```
+
+dismiss()에서 호출 추가.
+
+---
+
+## 수정 대상 파일 요약
+
+| 파일 | 작업 |
+|-----|------|
+| `CoachMarkOverlayView+CoachMarkA1.swift` **(신규)** | A-1 전환 로직 (요소 교체, 텍스트, cleanup) |
+| `CoachMarkOverlayView.swift` | confirmTapped() 분기 변경, hitTest A-1 분기 추가, CoachMarkManager.isA1Active, dismissCurrent() 가드, dismiss() cleanup |
+| `BaseGridViewController.swift` | confirmSwipeDelete()에 A-1 완료 감지 + dismiss + E-1 트리거 |
+
+---
+
+## 검증
+
+1. **A [확인] → A-1 전환**: 텍스트 변경, 스냅샷 제거, 실제 셀 보임
+2. **A-1에서 스와이프 삭제 성공**: overlay 사라짐 → E-1 트리거
+3. **A-1에서 스와이프 취소 (중간에 놓음)**: A-1 유지, 재시도 가능
+4. **A-1에서 하이라이트 밖 터치**: 차단됨 (스크롤/탭 불가)
+5. **Reduce Motion ON**: 스와이프 모션 생략, 자동 실행
+6. **앱 kill 후 재실행**: A부터 다시 (markAsShown 미호출 상태)
+7. **빌드 성공** 확인

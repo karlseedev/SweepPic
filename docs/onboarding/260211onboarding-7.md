@@ -19,11 +19,20 @@
 
 ---
 
-## 공통 규칙: 플래그 리셋 안전성
+## 공통 규칙
+
+### 플래그 리셋 안전성
 
 재생 시 `resetShown()`으로 플래그를 리셋하지만, 재생이 실패하면
 `hasBeenShown=false` 상태가 남아 자연 온보딩이 재발동될 수 있음.
 → **재생 실패 시 반드시 `markAsShown()`을 재호출하여 플래그 복원**
+
+### 재생 전 상태 정리
+
+모든 재생 항목 공통으로, 플래그 리셋 전에 잔여 상태를 정리:
+- `CoachMarkManager.shared.resetC2State()` — C-2 대기 상태 해제
+- `CoachMarkManager.shared.isDeleteGuideSequenceActive = false` — E 시퀀스 상태 해제
+- 현재 표시 중인 코치마크가 있으면 dismiss
 
 ---
 
@@ -48,7 +57,8 @@
 
 ```
 [재생 흐름]
-1. 플래그 리셋
+1. 공통 상태 정리 + 플래그 리셋
+   ※ 특히 resetC2State() 필수 — isWaitingForC2=true 잔존 시 B 가드 실패
 2. 보이는 셀 중 중앙에서 가까운 순서로 이미지(비디오 제외) 셀 탐색
 3. 해당 셀의 indexPath로 뷰어 push
 4. viewDidAppear에서 자동 트리거 (플래그 리셋 상태이므로 가드 통과)
@@ -65,16 +75,21 @@
 
 ```
 [재생 흐름]
-1. 플래그 리셋 + hasTriggeredC1 = false
+1. 공통 상태 정리 + 플래그 리셋 + hasTriggeredC1 = false
 2. SimilarityCache에서 분석 완료된 그룹 멤버 탐색
 3-a. 캐시에 그룹 있음:
    → assetID → indexPath → 셀로 스크롤
-   → 뱃지 표시 → C-1 자동 트리거
+   → 스크롤 완료 대기 (0.4초)
+   → showBadge(on: cell) 명시 호출하여 뱃지 표시 보장
+   → showSimilarBadgeCoachMark(cell:assetID:) 직접 호출
+     ※ triggerCoachMarkCIfNeeded 경유하지 않음
+       (선행 조건 가드 A완료/E-1완료/B완료 우회)
    → C-1→C-2→C-3 전체 시퀀스 이어짐
 3-b. 캐시에 없음:
    → 로딩 UI 표시: 화면 중앙 인디케이터 + "기능이 실행되는\n사진을 찾고 있어요"
    → 보관함 최신 사진부터 유사 그룹 자동 탐색
-   → 그룹 발견 시 → 로딩 dismiss → 해당 셀로 스크롤 → C-1 트리거
+   → 그룹 발견 시 → 로딩 dismiss → 해당 셀로 스크롤
+     → showBadge + showSimilarBadgeCoachMark 직접 호출
    → 끝까지 못 찾으면 → "유사 사진을 찾지 못했습니다" 토스트
 
 [동작] (그룹 발견 시)
@@ -108,8 +123,10 @@
 
 ```
 [재생 흐름]
-1. 플래그 리셋
+1. 공통 상태 정리 + 플래그 리셋
 2. findCenterCell() → 중앙 셀 (A와 동일)
+   → assetID + trashIconFrameInWindow 사전 캡처
+     ※ 삭제 후에는 셀이 사라져 프레임/ID 획득 불가
 3. A 변형 오버레이 표시:
    - 딤 + 셀 하이라이트 + 스와이프 모션 (삭제 1회만, 복원 없음)
    - 텍스트: "설명을 위해 사진을 임시로 삭제합니다
@@ -153,6 +170,7 @@
 | 파일 | 변경 내용 |
 |------|----------|
 | `CoachMarkOverlayView.swift:51-56` | `resetShown()` `#if DEBUG` 제거 |
+| `CoachMarkOverlayView.swift` | A 변형 show 메서드 추가 (1회 스와이프 + 확인 없음 + 자동 완료) |
 | `GridViewController+Cleanup.swift:58,96` | UIMenu에 "설명 다시 보기" 항목 추가 |
 | `GridViewController+CoachMark.swift:113` | `showGridSwipeDeleteCoachMark()` `private` → `func` |
 | `GridViewController+CoachMark.swift:149` | `findCenterCell()` `private` → `func` |
