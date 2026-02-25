@@ -650,3 +650,390 @@ GPT Codex 교차 검토 피드백 6건 반영:
 | 5 | C-1→C-2 전환 중 뷰어 이미지 스와이프 가능 | `triggerCoachMarkC2IfNeeded()` 진입 즉시 `view.isUserInteractionEnabled = false`, C-2 overlay 준비 시 복원 |
 | 6 | C-2 + 버튼이 Glass 반투명이라 잘 안 보임 | + 버튼 바깥에 흰색 테두리 링(39pt, borderWidth 2.5pt) 추가 — [확인] 시 함께 페이드아웃 |
 | 7 | 테스트용 hasBeenShown 가드 해제 코드 잔존 | `guard !CoachMarkType.similarPhoto.hasBeenShown` 복원 |
+
+---
+
+# 코치마크 C-3 — 얼굴 비교 화면 선택 안내
+
+## 목표
+
+유사사진 비교 화면(FaceComparisonViewController) 진입 시, 사진이 선택 가능하다는 것과 Pic 번호의 의미를 안내한다.
+딤 배경 위 텍스트 + 확인 버튼 패턴 (C-1/C-2와 동일 스타일).
+
+---
+
+## Context
+
+유사사진 비교 화면에서 셀 탭=선택이라는 것이 직관적으로 전달되지 않음.
+체크박스 상시 표시 등 UI 방식을 검토했으나, 이미지 위 작은 아이콘은 시각적 노이즈에 묻혀 효과 미흡.
+온보딩으로 한 번만 안내하는 것이 가장 깔끔.
+
+---
+
+## C-3 시퀀스
+
+```
+[C-3 시작] FaceComparisonViewController 데이터 로딩 완료 후 (0.3초 대기)
+
+Step 1 — 선택 안내:
+  ├── 딤 배경 페이드인 (0.3s) + 첫 번째 셀 하이라이트 (정사각형 구멍)
+  ├── 손가락 탭 애니메이션 on 첫 번째 셀 (~0.52s)
+  ├── 셀 실제 선택 (toggleSelection + cell.setSelected)
+  ├── 0.3s 대기
+  ├── 텍스트 + [확인] 페이드인
+  │     "마음에 안드는 얼굴을 선택하고 삭제해 보세요
+  │      다른 인물의 얼굴도 같이 확인해서 지울 수 있어요"
+  ├── [확인] ← 유일한 터치 허용
+  │
+Step 1→2 전환:
+  ├── 텍스트+버튼 페이드아웃 + overlay alpha → 0.01 (0.2s)
+  ├── 셀 선택 해제
+  ├── dimLayer를 Pic 라벨 중심 큰 원(3×화면)으로 즉시 교체
+  │     ⚠️ rect→circle 직접 보간 불가 (제어점 수 불일치)
+  │        → C-2의 transitionToC2 패턴: 투명화 → 큰 원 설정 → 복원+축소
+  ├── overlay alpha 복원 (0.3s) + 포커스 원 축소 (0.7s) 동시 진행
+  │
+Step 2 — Pic 번호 안내:
+  ├── 포커스 완료 → 0.5s 대기
+  ├── 텍스트 + [확인] 페이드인
+  │     "현재 유사사진 정리그룹의 사진 구별 번호예요
+  │      얼굴 검출 여부에 따라 번호 유무가 달라질 수 있어요"
+  ├── [확인] → dismiss + markAsShown
+  │
+[C-3 완료]
+```
+
+---
+
+## 검토에서 발견한 이슈 및 해결
+
+| # | 이슈 | 심각도 | 해결 |
+|---|------|--------|------|
+| 1 | `performCTapMotion`, `showCTapPressFeedback`, `animateC2FocusCircle` 모두 `private` → 새 파일에서 호출 불가 | 치명적 | C-3 파일에 자체 구현 (D의 `performDTapMotion` 별도 구현 선례) |
+| 2 | rect→circle CABasicAnimation 경로 보간 부자연스러움 (UIBezierPath 제어점 수 불일치) | 치명적 | C-2의 transitionToC2 패턴 적용: overlay alpha→0.01 → 큰 원 교체 → 복원+축소 동시 |
+| 3 | Reduce Motion 대응 누락 | 중요 | 탭 모션/포커스 애니메이션 생략 분기 추가 |
+| 4 | FaceComparison dismiss 시 overlay 잔존 (window에 직접 추가) | 중요 | `viewWillDisappear`에서 `isBeingDismissed` 체크 → `dismissCurrent()` |
+| 5 | Pic 라벨(~28×22pt) 포커스 원 크기 부족 | 경미 | 2× → 3.5× 스케일 (약 98pt 원) |
+| 6 | Step 1→2 전환 중 dismiss 보호 없음 | 경미 | `CoachMarkManager.isC3TransitionActive` 플래그 추가 |
+
+---
+
+## 파일 구조
+
+### 신규 (1개)
+
+| 파일 | 내용 |
+|------|------|
+| `CoachMarkOverlayView+CoachMarkC3.swift` | C-3 전체 (진입점, 탭 모션, 포커스 애니메이션, 스텝 관리, cleanup) |
+
+### 수정 (4개)
+
+| 파일 | 수정 내용 |
+|------|-----------|
+| `CoachMarkOverlayView.swift` | `.faceComparisonGuide` case 추가 + `confirmTapped()` C-3 분기 + `updateDimPath()` 분기 + `dismiss()` cleanup 추가 + `CoachMarkManager.isC3TransitionActive` |
+| `FaceComparisonViews.swift` | `debugLabelFrameInWindow()` public 메서드 추가 |
+| `PersonPageViewController.swift` | `firstCell()`, `firstAssetID()` public 메서드 추가 |
+| `FaceComparisonViewController.swift` | `showFaceComparisonGuideIfNeeded()` + `viewWillDisappear()` 추가 |
+
+---
+
+## 트리거 설계
+
+### C-3 트리거 (얼굴 비교 화면)
+
+```
+FaceComparisonViewController.setupInitialPageIfReady()
+  └── showFaceComparisonGuideIfNeeded()
+        └── guard !CoachMarkType.faceComparisonGuide.hasBeenShown
+        └── guard !CoachMarkManager.shared.isShowing
+        └── guard !UIAccessibility.isVoiceOverRunning
+        └── DispatchQueue.main.asyncAfter(0.3초) — 셀 렌더 대기
+              └── currentPage의 firstCell() → cellFrame (window 좌표)
+              └── firstCell.debugLabelFrameInWindow() → picLabelFrame
+              └── firstAssetID() → assetID
+              └── CoachMarkOverlayView.showFaceComparisonGuide(
+                      in: window,
+                      cellFrame: cellFrame,
+                      picLabelFrame: picLabelFrame,
+                      onSelect: { toggleSelection + setSelected(true) },
+                      onDeselect: { toggleSelection + setSelected(false) }
+                  )
+```
+
+### confirmTapped() C-3 분기
+
+```swift
+case .faceComparisonGuide:
+    confirmButton.isEnabled = false
+    startC3ConfirmSequence()
+    // Step 1: 탭 모션 → 선택 해제 → 포커스 전환 → Step 2 표시
+    // Step 2: dismiss + markAsShown (자동)
+```
+
+---
+
+## 레이아웃
+
+### C-3 Step 1 (셀 선택 안내)
+
+```
+┌──────────────────────────────┐
+│  Dim 배경 (black 80%)        │
+│                              │
+│  ┌──────────┐  ┌──────────┐  │
+│  │Pic 1     │  │Pic 2     │  │
+│  │  [얼굴]  │  │  [얼굴]  │  │ ← 첫 번째 셀에 evenOdd 정사각형 구멍
+│  │    ✓     │  │          │  │    + 선택 상태 (파란 오버레이 + 체크마크)
+│  └──────────┘  └──────────┘  │
+│                              │
+│  "마음에 안드는 얼굴을 선택하고 │
+│   삭제해 보세요                │
+│   다른 인물의 얼굴도 같이      │
+│   확인해서 지울 수 있어요"     │
+│         [확인]               │
+└──────────────────────────────┘
+```
+
+### C-3 Step 2 (Pic 번호 안내)
+
+```
+┌──────────────────────────────┐
+│  Dim 배경 (black 80%)        │
+│                              │
+│  ╭─────╮                     │
+│  │Pic 1│ ← 원형 구멍 (3.5×)  │ ← Pic 라벨 중심 원형 포커스
+│  ╰─────╯                     │
+│                              │
+│  "현재 유사사진 정리그룹의     │
+│   사진 구별 번호예요           │
+│   얼굴 검출 여부에 따라       │
+│   번호 유무가 달라질 수 있어요" │
+│         [확인]               │
+└──────────────────────────────┘
+```
+
+---
+
+## CoachMarkType 확장
+
+```swift
+enum CoachMarkType: String {
+    case gridSwipeDelete = "coachMark_gridSwipe"               // A
+    case viewerSwipeDelete = "coachMark_viewerSwipe"           // B
+    case similarPhoto = "coachMark_similarPhoto"               // C (C-1 + C-2)
+    case autoCleanup = "coachMark_autoCleanup"                 // D
+    case firstDeleteGuide = "coachMark_firstDeleteGuide"       // E-1+E-2
+    case firstEmpty = "coachMark_firstEmpty"                   // E-3
+    case faceComparisonGuide = "coachMark_faceComparisonGuide" // C-3 ← 신규
+}
+```
+
+C-1/C-2(`similarPhoto`)와 별도 플래그. 이유:
+- C-3은 다른 화면(FaceComparisonVC)에서 독립 트리거
+- C-1/C-2 없이 직접 얼굴 비교 화면에 진입할 수도 있음
+
+---
+
+## 상수 값
+
+| 항목 | 값 | 비고 |
+|------|-----|------|
+| 딤 배경 알파 | 0.80 | CoachMarkOverlayView.dimAlpha |
+| Step 1 하이라이트 구멍 | 정사각형, margin 0 | C-1과 동일 (UIBezierPath(rect:)) |
+| Step 2 포커스 원 | Pic 라벨 × 3.5배 원형 | 작은 타겟(~28×22pt)이므로 여유 |
+| 포커스 축소 시간 | 0.7s | C-2의 0.9s보다 짧음 (거리가 짧으므로) |
+| Step 2 텍스트 대기 | 0.5s | 포커스 완료 후 |
+| 손가락 아이콘 | `hand.point.up.fill`, 48pt, white | C-1/C-2와 동일 |
+| 확인 버튼 | 흰색 배경 + 검정 텍스트, 120×44pt | 공통 |
+| 셀 렌더 대기 | 0.3s | setupInitialPageIfReady 후 |
+
+### Reduce Motion 대응
+
+```swift
+if UIAccessibility.isReduceMotionEnabled {
+    // 탭 모션 생략 → 즉시 셀 선택 + 텍스트 표시
+    // 포커스 애니메이션 생략 → 즉시 Pic 라벨 구멍 + 텍스트 표시
+} else {
+    performC3TapMotion { ... }
+    animateC3FocusCircle { ... }
+}
+```
+
+---
+
+## FaceComparison dismiss 시 cleanup
+
+```swift
+// FaceComparisonViewController
+override func viewWillDisappear(_ animated: Bool) {
+    super.viewWillDisappear(animated)
+    if isBeingDismissed || isMovingFromParent {
+        CoachMarkManager.shared.isC3TransitionActive = false
+        CoachMarkManager.shared.dismissCurrent()
+    }
+}
+```
+
+Cancel/Delete 모두 커버.
+
+---
+
+## CoachMarkManager 확장
+
+```swift
+// 기존에 추가
+var isC3TransitionActive: Bool = false
+
+func dismissCurrent() {
+    guard !isWaitingForC2 else { return }
+    guard !isDeleteGuideSequenceActive else { return }
+    guard !isC3TransitionActive else { return }  // ← 추가
+    currentOverlay?.dismiss()
+}
+```
+
+---
+
+## 검증 방법
+
+1. 얼굴 비교 화면 첫 진입 → 딤 + 셀 하이라이트 → 손가락 탭 → 셀 선택됨 → 텍스트 표시 → [확인]
+2. Step 2 전환 → 선택 해제 → overlay 투명화 → 포커스 원이 Pic 라벨로 축소 → 텍스트 표시 → [확인] → dismiss
+3. 두 번째 진입 → C-3 표시 안 됨 (hasBeenShown 가드)
+4. Reduce Motion ON → 탭 모션/포커스 애니메이션 생략, 즉시 표시
+5. C-3 진행 중 Cancel 탭 → overlay 정상 dismiss (viewWillDisappear)
+6. C-3 진행 중 Delete 탭 → overlay 정상 dismiss
+7. VoiceOver 활성 시 C-3 안 뜨는지
+8. 빌드 성공 확인
+9. 테스트 중 hasBeenShown 가드 주석 처리하여 반복 테스트
+
+---
+
+# C-1/C-2 구현 완료 기록
+
+## 구현 파일 목록
+
+### 신규 파일 (3개)
+
+| 파일 | 줄 수 | 내용 |
+|------|-------|------|
+| `Shared/Components/CoachMarkOverlayView+CoachMarkC.swift` | 521 | C-1/C-2 오버레이 표시, 탭 모션, 포커스 애니메이션, 눌림 피드백, dimHole 관리 |
+| `Features/Grid/GridViewController+CoachMarkC.swift` | 264 | C-1 트리거 로직 (zone 검증, 뱃지 감지, 스크롤 정렬, 안전 타임아웃) |
+| `Features/Viewer/ViewerViewController+CoachMarkC.swift` | 177 | C-2 트리거 (+ 버튼 폴링 대기, 오버레이 전환, 얼굴 비교 자동 진입) |
+
+### 수정 파일 (5개)
+
+| 파일 | 수정 내용 |
+|------|-----------|
+| `Shared/Components/CoachMarkOverlayView.swift` | `CoachMarkType.similarPhoto` case 추가, `CoachMarkManager`에 `isWaitingForC2`/`c2OnConfirm`/`safetyTimeoutWork`/`resetC2State()` 추가, `confirmTapped()`에 C 분기, `updateDimPath()`에 C 분기, `dimLayer` internal 접근, 버튼 흰색 통일, 딤 70% |
+| `Features/Grid/GridViewController+SimilarPhoto.swift` | `showBadge(on:count:)` 끝에 `triggerCoachMarkCIfNeeded(for:)` 호출 추가 (신규 뱃지 + 기존 뱃지 양쪽) |
+| `Features/Grid/GridViewController.swift` | `viewDidAppear`에서 `hasTriggeredC1 = false` 리셋 |
+| `Features/Viewer/ViewerViewController.swift` | `viewDidAppear`에서 `triggerCoachMarkC2IfNeeded()` 호출 추가 |
+| `Features/SimilarPhoto/UI/FaceButtonOverlay.swift` | `firstButtonFrameInWindow()`, `firstVisibleFace` 접근자 추가 |
+
+---
+
+## 주요 구현 메서드
+
+### CoachMarkOverlayView+CoachMarkC.swift
+
+| 메서드 | 스코프 | 역할 |
+|--------|--------|------|
+| `showSimilarBadge(highlightFrame:in:onConfirm:)` | static | C-1 오버레이 생성 + window에 추가 + 페이드인 |
+| `transitionToC2(newHighlightFrame:c2OnConfirm:)` | internal | C-1→C-2 전환: alpha 0.01 → 큰 원 설정 → alpha 복원 + 포커스 축소 동시 |
+| `startC_ConfirmSequence()` | internal | [확인] 탭 후 시퀀스: 텍스트 페이드아웃 → 탭 모션 → onConfirm 콜백 |
+| `performCTapMotion(at:completion:)` | private | 손가락 1회 탭 모션 (등장 0.15s → 누르기 0.12s → 유지 0.05s → 떼기 0.2s) |
+| `showCTapPressFeedback()` | private | 탭 중 눌림 피드백 (스냅샷 scale 0.93 축소 + 흰색 플래시) |
+| `animateC2FocusCircle(to:completion:)` | private | + 버튼 포커스 원 축소 (0.9s, CABasicAnimation, easeInEaseOut) |
+| `updateDimPathCircle(for:scale:)` | private | 원형 dim 구멍 설정 (scale 1.2 기준) |
+| `fillDimHole()` | private | evenOdd 구멍 즉시 제거 (CATransaction.setDisableActions) |
+
+### GridViewController+CoachMarkC.swift
+
+| 메서드 | 스코프 | 역할 |
+|--------|--------|------|
+| `hasTriggeredC1` (var) | internal | associated object 기반 중복 트리거 방지 플래그 |
+| `triggerCoachMarkCIfNeeded(for:)` | internal | showBadge에서 호출. 8개 가드 통과 후 스크롤 + 0.4s 후 재검증 → C-1 표시 |
+| `showSimilarBadgeCoachMark(cell:assetID:)` | private | window 좌표 변환 + showSimilarBadge 호출 |
+| `retriggerForVisibleBadges()` | private | 재검증 실패 시 visible 뱃지 중 zone 안 첫 셀로 재트리거 |
+| `navigateToViewerForCoachMark(at:)` | private | didSelectItemAt 직접 호출로 뷰어 자동 진입 |
+
+### ViewerViewController+CoachMarkC.swift
+
+| 메서드 | 스코프 | 역할 |
+|--------|--------|------|
+| `triggerCoachMarkC2IfNeeded()` | internal | viewDidAppear에서 호출. isWaitingForC2 감지 → 뷰어 터치 차단 → 폴링 시작 |
+| `waitForFaceButtons(timeout:completion:)` | private | + 버튼 표시 대기 (0.3s 간격 폴링, 최대 5s) |
+| `triggerFaceComparisonForCoachMark()` | private | firstVisibleFace로 delegate 호출 → 얼굴 비교 화면 present → 1s 후 markAsShown |
+
+---
+
+## C-1 트리거 가드 조건 (8개)
+
+1. `!CoachMarkManager.shared.isShowing` — 다른 코치마크 진행 중이면 스킵
+2. `!hasTriggeredC1` — 이미 C-1 트리거됨 (중복 방지)
+3. `!isSelectMode` — 선택 모드이면 스킵 (didSelectItemAt 가드 통과 보장)
+4. `!UIAccessibility.isVoiceOverRunning` — VoiceOver 활성 시 스킵
+5. `view.window != nil` — 화면 비활성 시 스킵
+6. `topViewController === self && presentedViewController == nil` — 그리드가 최상위 화면
+7. `hasFinishedInitialDisplay` — 초기 로딩 완료 후에만
+8. 셀 프레임 zone 검증: 상하 12.5% 마진 제외한 중앙 75% 영역에 완전히 포함
+
+---
+
+## 핵심 구현 기법
+
+### 터치 차단 연속성
+- C-1 → C-2 전환 중 오버레이를 removeFromSuperview 하지 않고 재활용
+- `alpha = 0.01` 트릭: 시각적 투명 + UIKit hitTest 유지 = 터치 차단 끊김 없음
+- `isWaitingForC2` 가드: GridVC.viewWillDisappear → dismissCurrent() 호출을 차단
+
+### 투명 blocker
+- 뱃지 감지 즉시 `UIView(frame: window.bounds)` blocker 추가
+- scrollToItem + 0.4s 딜레이 중 사용자 터치 차단
+- 코치마크 오버레이 표시 시 제거 (역할 이관)
+
+### alpha 0.01 전환 패턴 (transitionToC2)
+1. 오버레이 `alpha → 0.01` (투명화, 터치 차단 유지)
+2. dimLayer를 큰 원(3× 화면) 경로로 즉시 교체
+3. `alpha → 1.0` 복원 + 원 축소 동시 애니메이션 (원→원 = 부드러운 보간)
+
+### fillDimHole
+- `CATransaction.setDisableActions(true)` + `dimLayer.path = fullPath.cgPath`
+- CA 암묵적 애니메이션(0.25s) 차단하여 즉시 전환
+- iOS 26 push 전환 시 구멍 노출 방지
+
+### 안전 타임아웃
+- C-1 확인 탭 시점부터 10s DispatchWorkItem 생성
+- C-2 전환 성공 시 cancel
+- 발동 시: resetC2State() + dismiss + hasTriggeredC1 리셋
+
+---
+
+## 최종 상수 값
+
+| 항목 | 값 |
+|------|-----|
+| 딤 배경 알파 | 0.70 |
+| C-1 구멍 형태 | 정사각형 (margin 0, radius 0) |
+| C-2 구멍 형태 | 원형 (scale 1.2) |
+| C-2 포커스 축소 시간 | 0.9s (CABasicAnimation, easeInEaseOut) |
+| 포커스 완료→텍스트 대기 | 0.5s |
+| C-2 테두리 링 지름 | 39pt (FaceButton 34pt + borderWidth 2.5pt × 2) |
+| 탭 모션 총 시간 | ~0.65s |
+| 탭 누르기 | scale 0.93 + Y +2.5pt + 그림자 축소 (spring damping 0.6) |
+| 탭 떼기 | spring damping 0.7, velocity 2.0 |
+| 눌림 피드백 | 스냅샷 scale 0.93 축소 + 흰색 플래시 0.25s |
+| C-1 스크롤→표시 딜레이 | 0.4s |
+| + 버튼 폴링 간격/최대 | 0.3s / 5.0s |
+| 안전 타임아웃 | 10.0s (확인 탭 시점 기준) |
+| present 성공 확인 | 1.0s 후 presentedViewController 체크 |
+| C-1 zone | 상 12.5% / 하 87.5% (중앙 75%) |
+| C-1 텍스트 | "유사사진 정리기능이 표시된 사진이에요\n각 사진의 얼굴을 비교해서 정리할 수 있어요" |
+| C-2 텍스트 | "+버튼을 눌러 얼굴비교화면으로 이동하세요\n인물이 여러 명이면 좌우로 넘겨볼 수 있어요" |
+| 확인 버튼 | 흰색 배경 + 검정 텍스트, 120×44pt, cornerRadius 22 |
+
+---
+
+## 구현 완료일
+
+2026-02-17
