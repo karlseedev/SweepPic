@@ -1,38 +1,18 @@
 # Analytics 문서 재편 계획
 
-## 결론: 문서 재편은 Supabase 구현 완료 후 진행
+## 상태: Supabase 구현 완료 → 문서 재편 진행 가능
 
-### 현재 상태 점검 (2026-02-17)
+### 구현 완료 확인 (2026-02-25)
 
-Supabase 구현에 필요한 모든 정보가 이미 갖춰져 있는지 확인:
-
-| 구현 단계 | 필요한 정보 | 있는 곳 | 상태 |
-|---|---|---|---|
-| Supabase 테이블/RLS/RPC | SQL 전문 | hybrid.md Phase 1 | ✅ |
-| SupabaseProvider 설계 | 배치 POST, 메타데이터 | hybrid.md Phase 2 | ✅ |
-| AnalyticsService 수정 | 11곳 교체, sendEvent/Batch | hybrid.md Phase 3 | ✅ |
-| 어떤 이벤트 보낼지 | 제외 3종 명시 | hybrid.md Phase 3-3 | ✅ |
-| Credentials 전달 | xcconfig → Info.plist | hybrid.md Phase 3-4 | ✅ |
-| 쿼리 스크립트 | sb-query.sh, sb-report.sh | hybrid.md Phase 4 | ✅ |
-| 검증 체크리스트 | 7개 항목 | hybrid.md Phase 5 | ✅ |
-| 기존 이벤트 정의 참조 | 이벤트 상세 스펙 | 기존 Spec.md | ✅ |
-| 기존 코드 구조 참조 | 파일 위치, 호출 지점 | 기존 Archi/Impl | ✅ |
-
-**hybrid.md(2차 검토 완료) + 기존 6개 문서로 구현 가능. 문서 재편은 선행 조건이 아님.**
-
-### 왜 지금 재편하지 않는가
-
-- hybrid.md만으로 Supabase 구현 완비
-- 지금 재편하면 Supabase 미구현 상태에서 "계획" 내용을 섞어 써야 함
-- 구현 중 설계가 바뀌면 신규 문서도 다시 수정해야 함
-- **구현 완료 후 모든 내용이 확정된 상태에서 한 번에 재편하는 게 효율적**
-
-### 올바른 순서
-
-```
-1. hybrid.md로 Supabase 구현 (기존 6개 문서 참조하면서)
-2. 구현 완료 후, TD + Supabase 모두 확정된 상태에서 문서 재편
-```
+| 구현 단계 | 상태 |
+|---|---|
+| Supabase 프로젝트 생성 + 테이블/RLS/RPC | ✅ 완료 |
+| SupabaseProvider.swift 구현 | ✅ 완료 (166줄) |
+| AnalyticsService 수정 (sendEvent/sendEventBatch) | ✅ 완료 |
+| 4개 Extension TelemetryDeck.signal → sendEvent 교체 | ✅ 완료 |
+| SceneDelegate beginBackgroundTask 래핑 | ✅ 완료 |
+| 쿼리 스크립트 (sb-query.sh, sb-report.sh) | ✅ 완료 |
+| 실데이터 검증 (HTTP 201, Dashboard 확인) | ✅ 완료 |
 
 ### DBplan1.md 처리
 
@@ -40,7 +20,7 @@ DBplan1은 기획 문서로서 이미 역할 완료:
 - §3(솔루션), §4(이벤트), §7(비용) → Spec.md에서 정제됨
 - §5(아키텍처) → Archi.md에서 재설계됨
 - §6(삽입 지점), §10(로드맵) → Impl.md에서 대체됨
-- §1(전략 프레임워크), §8(프라이버시), §9(데이터 활용) → 미흡수이나, 앱 전략/운용 가이드 성격으로 Analytics 기술 문서에 포함할 필요 없음. archive에서 필요 시 참조
+- §1(전략 프레임워크), §2(경쟁사 분석), §8(프라이버시), §9(데이터 활용), 참고자료 → 미흡수이나, 앱 전략/운용 가이드 성격으로 Analytics 기술 문서에 포함할 필요 없음. archive에서 필요 시 참조
 
 → DBplan1은 문서 재편 시 **통째로 archive**. 신규 문서에서 참조하지 않음.
 
@@ -52,7 +32,7 @@ DBplan1은 기획 문서로서 이미 역할 완료:
 
 ## 목표
 
-기존 7개 문서를 **영구 참조 문서 3개**로 재편한다.
+기존 소스 문서 7개 + 이 계획서 1개 = **총 8개를 영구 참조 문서 3개로 재편**한다.
 TD(TelemetryDeck) + Supabase 하이브리드 체계를 하나의 통합된 문서 세트로 정리한다.
 
 > **전제 조건**: Supabase 구현 완료 후 진행
@@ -78,9 +58,9 @@ Impl은 신규 작성하지 않는다. 기존 Impl.md(TD 구현 완료)와 hybri
 
 | 파일명 | 역할 |
 |--------|------|
-| `docs/db/260217db-Spec.md` | 이벤트 정의, 솔루션, 비용, 프라이버시 |
-| `docs/db/260217db-Archi.md` | SDK 구조, 세션 관리, Provider 계층, Supabase 인프라 |
-| `docs/db/260217db-API.md` | TD 쿼리 + Supabase 쿼리 스크립트, 실측 메모 |
+| `docs/db/260225db-Spec.md` | 이벤트 정의, 솔루션, 비용, 프라이버시 |
+| `docs/db/260225db-Archi.md` | SDK 구조, 세션 관리, Provider 계층, Supabase 인프라 |
+| `docs/db/260225db-API.md` | TD 쿼리 + Supabase 쿼리 스크립트, 실측 메모 |
 
 ### 기존 문서 → archive (8개)
 
@@ -110,7 +90,7 @@ Impl은 신규 작성하지 않는다. 기존 Impl.md(TD 구현 완료)와 hybri
 
 2. 비용
    - TD: 세션 요약 기준 MAU 80건, 무료 한도
-   - Supabase: 제외 이벤트 3종, 월 240K rows, 90일 보존
+   - Supabase: 제외 이벤트 2종, 월 270K rows, 90일 보존 (pg_cron은 DAU 1,000+ 이후 설정)
    - (← Spec §2 + hybrid 볼륨 추정 통합)
 
 3. 이벤트 정의
@@ -143,8 +123,9 @@ Impl은 신규 작성하지 않는다. 기존 Impl.md(TD 구현 완료)와 hybri
 
 3. 세션 관리
    - SessionCounters, 스레드 안전성 (barrier sync)
-   - 플러시: 배치 전송, beginBackgroundTask
-   - (← Archi §4 수정 + hybrid 백그라운드 안전성)
+   - 플러시: 배치 전송, beginBackgroundTask + endTask() 헬퍼 (스레드 안전)
+   - onFlushComplete 콜백 패턴, shouldSkip 조기 리턴 시 완료 처리
+   - (← Archi §4 수정 + hybrid 백그라운드 안전성 + 5차 검토 반영)
 
 4. 이벤트 수집기
    - 시그널 이름 총괄, Enum 13종
@@ -154,11 +135,14 @@ Impl은 신규 작성하지 않는다. 기존 Impl.md(TD 구현 완료)와 hybri
 
 5. Supabase 인프라
    - 테이블 스키마 (events)
-   - RLS 정책 (이벤트 화이트리스트)
+   - RLS 정책 (이벤트 화이트리스트 9종)
    - RPC 함수 3개 (SQL 포함)
-   - pg_cron 90일 자동 삭제
-   - Credentials 전달 (xcconfig → Info.plist)
-   - (← hybrid Phase 1 + Phase 3 credentials)
+   - pg_cron 90일 자동 삭제 (DAU 1,000+ 이후 설정)
+   - Credentials 전달 (xcconfig → Info.plist, URL 이스케이프 주의)
+   - Xcode Project Configurations 연결 절차
+   - Supabase 무료 티어 pause 주의사항
+   - Supabase UI 키 명칭: anon key = "Publishable Key", service_role = "Secret Key"
+   - (← hybrid Phase 1 + Phase 3 credentials + 구현 실측)
 
 6. 파일 구조
    - 기존 12개 + 신규 4개 (SupabaseProvider, xcconfig, sb-*.sh)
@@ -179,21 +163,22 @@ Impl은 신규 작성하지 않는다. 기존 Impl.md(TD 구현 완료)와 hybri
    2.1 파일 구조 (.env, td-auth, td-query, td-report)
    2.2 쿼리 템플릿 10개
    2.3 사용 예시
-   - (← API-impl 전체)
+   - (← API-impl §2~5, §7)
 
 3. Supabase Query
    3.1 PostgREST REST API + RPC 호출
    3.2 sb-query.sh / sb-report.sh
-   3.3 service_role key 보안 주의
-   3.4 사용 예시
-   - (← hybrid Phase 4)
+   3.3 .env에 Supabase 변수 3개 (sb-query는 service_role key 사용)
+   3.4 service_role key 보안 주의
+   3.5 사용 예시
+   - (← hybrid Phase 4 + 구현 실측)
 
 4. Claude 분석 워크플로우
    - TD 리포트 → Supabase 드릴다운 시나리오
    - (← Archi §7 Claude 워크플로우 + 신규)
 
 5. 주의사항
-   - TD API 유료 전환 예고, longSum 미검증, Supabase 7일 pause
+   - TD API 유료 전환 예고, longSum 미검증, Supabase 비활성 시 자동 pause
    - (← API-impl §8 + hybrid 주의사항)
 ```
 
@@ -201,62 +186,70 @@ Impl은 신규 작성하지 않는다. 기존 Impl.md(TD 구현 완료)와 hybri
 
 ## 기존 문서 섹션 매핑
 
-### DBplan1.md (763줄) → 통째로 archive
+### DBplan1.md (762줄) → 통째로 archive
 
 이미 Spec/Archi/Impl에서 정제·대체 완료. 신규 문서에서 참조하지 않음.
-미흡수 섹션(§1 전략, §8 프라이버시 전략, §9 데이터 활용)은 Analytics 기술 문서 범위 밖.
+미흡수 섹션(§1 전략, §2 경쟁사 분석, §8 프라이버시 전략, §9 데이터 활용, 참고자료)은 Analytics 기술 문서 범위 밖.
 
-### Spec.md (507줄)
-
-| 섹션 | 줄 | → | 처리 |
-|------|:---:|---|------|
-| 1. 솔루션 선정 | 54 | **Spec §1** | 수정 (Supabase 확정) |
-| 2. 비용 시뮬레이션 | 50 | **Spec §2** | 수정 (Supabase 비용 추가) |
-| 3. 이벤트 총괄표 | 15 | **Spec §3.1** | 그대로 |
-| 4. 세션 정의 | 8 | **Spec §3.2** | 그대로 |
-| 5. 사진 규모 구간 | 20 | **Spec §3.3** | 그대로 |
-| 6. 이벤트 상세 | 251 | **Spec §3.4** | 그대로 (SSOT) |
-| 7. 공통 자동 수집 | 12 | **Spec §4** | 그대로 |
-| 8. 수집 안 함 | 10 | **Spec §4** | 그대로 |
-| 9. 변경 이력 | 37 | **Spec §5** | 그대로 |
-
-### Archi.md (1,475줄)
+### Spec.md (506줄)
 
 | 섹션 | 줄 | → | 처리 |
 |------|:---:|---|------|
-| 1. 설계 계획 | 15 | archive | 완료 |
-| 2. TD SDK API | 122 | **Archi §1** | 그대로 |
-| 3. 래퍼 계층 설계 | 108 | **Archi §2** | 수정 (Supabase provider) |
-| 4. 세션 관리 설계 | 336 | **Archi §3** | 수정 (배치, backgroundTask) |
-| 5. 이벤트 수집기 | 448 | **Archi §4** | 수정 (sendEvent/Batch) |
-| 6. 파일 구조 | 207 | **Archi §6** | 수정 (신규 파일 추가) |
-| 7. 데이터 접근 경로 | 199 | **API §1** | 수정 (Supabase REST 추가) |
+| 1. 솔루션 선정 | ~58 | **Spec §1** | 수정 (Supabase 확정) |
+| 2. 비용 시뮬레이션 | ~53 | **Spec §2** | 수정 (Supabase 비용 추가) |
+| 3. 이벤트 총괄표 | ~18 | **Spec §3.1** | 그대로 |
+| 4. 세션 정의 | ~11 | **Spec §3.2** | 그대로 |
+| 5. 사진 규모 구간 | ~23 | **Spec §3.3** | 그대로 |
+| 6. 이벤트 상세 | ~255 | **Spec §3.4** | 그대로 (SSOT) |
+| 7. 공통 자동 수집 | ~15 | **Spec §4** | 그대로 |
+| 8. 수집 안 함 | ~13 | **Spec §4** | 그대로 |
+| 9. 변경 이력 | ~37 | **Spec §5** | 그대로 |
 
-### Impl.md (745줄)
-
-| 전체 | 745 | archive | TD 구현 완료, 그대로 이동 |
-
-### API-Query.md (150줄)
-
-| 전체 | 150 | **API §1** | 그대로 (TD 실측 메모) |
-
-### API-impl.md (423줄)
-
-| §2~5 (파일 구조, credentials, 스크립트) | 350 | **API §2** | 그대로 (TD 스크립트) |
-| §7 (사용 시나리오) | 26 | **API §2** | 그대로 |
-| §8 (주의사항) | 22 | **API §5** | 그대로 |
-| §1, §6 (목표, 구현 순서) | 25 | archive | 구현 완료, 불필요 |
-
-### hybrid.md (287줄)
+### Archi.md (1,474줄)
 
 | 섹션 | 줄 | → | 처리 |
 |------|:---:|---|------|
-| Phase 1 (Supabase 셋업) | 104 | **Archi §5** | 설계 부분만 |
-| Phase 2 (SupabaseProvider) | 24 | **Archi §2** | 설계 부분만 |
-| Phase 3 (AnalyticsService) | 48 | **Archi §4** | 설계 부분만 |
-| Phase 4 (쿼리 스크립트) | 29 | **API §3** | 그대로 |
-| Phase 5 (검증) | 8 | — | hybrid에 잔류 (Impl용) |
-| 검토 기록 | 21 | archive | 흡수 완료 후 불필요 |
+| 1. 설계 계획 | ~18 | archive | 완료 |
+| 2. TD SDK API | ~125 | **Archi §1** | 그대로 |
+| 3. 래퍼 계층 설계 | ~111 | **Archi §2** | 수정 (Supabase provider) |
+| 4. 세션 관리 설계 | ~339 | **Archi §3** | 수정 (배치, backgroundTask) |
+| 5. 이벤트 수집기 | ~451 | **Archi §4** | 수정 (sendEvent/Batch) |
+| 6. 파일 구조 | ~210 | **Archi §6** | 수정 (신규 파일 추가) |
+| 7. 데이터 접근 경로 | ~199 | **API §1/§4/§5** | 분해: TD Query→§1, Claude 워크플로우→§4, 주의사항→§5 |
+
+### Impl.md (744줄)
+
+| 전체 | 744 | archive | TD 구현 완료, 그대로 이동 |
+
+### API-Query.md (149줄)
+
+| 전체 | 149 | **API §1** | 그대로 (TD 실측 메모) |
+
+### API-impl.md (422줄)
+
+| §2~5 (파일 구조, credentials, 스크립트) | ~350 | **API §2** | 그대로 (TD 스크립트) |
+| §7 (사용 시나리오) | ~29 | **API §2** | 그대로 |
+| §8 (주의사항) | ~24 | **API §5** | 그대로 |
+| §1, §6 (목표, 구현 순서) | ~25 | archive | 구현 완료, 불필요 |
+
+### hybrid.md (703줄, 구현 중 대폭 확장됨)
+
+| 섹션 | → | 처리 |
+|------|---|------|
+| Context (하이브리드 원칙) | **Spec §1** | 솔루션 선정에 흡수 |
+| 구현 전 체크리스트 | archive | 구현 완료, Archi §5에 절차 반영 |
+| Phase 1 (Supabase 셋업 SQL) | **Archi §5** | 스키마/RLS/RPC SQL만 |
+| Phase 2 (SupabaseProvider 클래스 설계) | **Archi §2** | 시그니처/구조만, 구체 코드는 archive에서 참조 |
+| Phase 3 (AnalyticsService 수정 설계) | **Archi §4** | 시그니처/흐름만, 구체 코드는 archive에서 참조 |
+| Phase 3-3 (제외 이벤트 목록) | **Spec §3.5** | Supabase 전송 여부 표에 흡수 |
+| Phase 3-4 (Credentials 전달) | **Archi §5** | xcconfig/URL 이스케이프 포함 |
+| Phase 3-5 (photo_bucket 처리) | **Archi §4** | 기존 bucketString 설명에 흡수 |
+| Phase 3 볼륨 추정 | **Spec §2** | 비용 섹션에 흡수 |
+| Phase 3 (구체 코드: flushCounters before/after 등) | archive | Impl 성격 — archive의 hybrid.md에서 필요시 참조 |
+| Phase 4 (쿼리 스크립트) | **API §3** | 그대로 |
+| Phase 5 (검증) | archive | 구현 완료 |
+| 파일 변경 요약 | **Archi §6** | 파일 구조에 흡수 |
+| 검토 기록 (5차, 32항목) | archive | 흡수 완료 후 불필요 |
 
 ---
 
@@ -285,8 +278,7 @@ Impl은 신규 작성하지 않는다. 기존 Impl.md(TD 구현 완료)와 hybri
 
 ### Step 4: 정리
 
-- 기존 8개 → `docs/db/archive/` 이동
-- 이 문서(docu-write.md)도 archive 이동
+- 기존 8개(소스 7개 + 이 계획서) → `docs/db/archive/` 이동
 
 ---
 
