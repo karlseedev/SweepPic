@@ -198,14 +198,15 @@ Console.app에서도 subsystem/category 기반 필터링 가능.
 
 > false 카테고리 로그 삭제 완료 후 재작성 (2026-02-20)
 > 선행 작업: `260217Log-refac-del.md` (완료)
-> 원본: 756호출/80파일 → 삭제 후: **259호출/29파일** (66% 감소)
+> 원본: 756호출/80파일 → 삭제 후: **289호출/32파일** (62% 감소)
+> 최종 검토: 2026-02-25
 
 ## 현황 요약
 
 | 항목 | 삭제 전 | 삭제 후 |
 |------|---------|---------|
-| 총 호출 | ~756 | **259** |
-| 파일 수 | 80 | **29** |
+| 총 호출 | ~756 | **289** |
+| 파일 수 | 80 | **32** |
 | String(format:) | 94곳 | **41곳** |
 | Log.categories[] 직접 접근 | 6곳 | **0** (전부 삭제됨) |
 | FileLogger.logThumbEnabled | 7곳 | **0** (전부 삭제됨) |
@@ -274,7 +275,7 @@ logger.debug("size: \(image.size)")                     // CGSize
 
 ---
 
-## Phase 1: App + Grid (29호출, 5파일)
+## Phase 1: App + Grid (29호출, 3파일)
 
 | 파일 | 호출 수 | Logger | String(format:) |
 |------|---------|--------|----------------|
@@ -293,13 +294,16 @@ GridScroll 카테고리 매핑:
 
 ---
 
-## Phase 2: Albums + SimilarPhoto + CoachMark (27호출, 6파일)
+## Phase 2: Albums + SimilarPhoto + CoachMark (55호출, 9파일)
 
 | 파일 | 호출 수 | Logger | String(format:) |
 |------|---------|--------|----------------|
+| `Features/Grid/GridViewController+CoachMarkD.swift` | 16 | `.coachMark` | - |
 | `Features/Albums/AlbumsViewController.swift` | 10 | `.albums` | - |
+| `Features/AutoCleanup/CoachMarkDPreScanner.swift` | 8 | `.coachMark` | - |
 | `Features/Grid/GridViewController+SimilarPhoto.swift` | 8 | `.similarPhoto` | - |
 | `Features/SimilarPhoto/Analysis/SimilarityAnalysisQueue.swift` | 6 | `.similarPhoto` | - |
+| `Features/Grid/GridViewController+CoachMark.swift` | 4 | `.coachMark` | - |
 | `Features/Grid/GridDataSourceDriver.swift` | 1 | `.performance` | 1곳 |
 | `Features/Grid/GridViewController+CoachMarkC.swift` | 1 | `.coachMark` | - |
 | `Features/Grid/GridViewController.swift` | 1 | - | 주석 삭제만 |
@@ -313,7 +317,7 @@ GridScroll 카테고리 매핑:
 
 ---
 
-## Phase 3: Viewer + Shared (42호출, 13파일)
+## Phase 3: Viewer + Shared (44호출, 13파일)
 
 ### Viewer (19호출)
 
@@ -323,16 +327,16 @@ GridScroll 카테고리 매핑:
 | `Features/Viewer/ViewerViewController+CoachMarkC.swift` | 8 | `.coachMark` | 1곳 (CGRect) |
 | `Features/Viewer/ViewerViewController+SimilarPhoto.swift` | 3 | `.viewer` | 3곳 |
 
-### Shared (23호출)
+### Shared (25호출)
 
 | 파일 | 호출 수 | Logger | String(format:) |
 |------|---------|--------|----------------|
 | `Shared/Analytics/AnalyticsService+DeleteRestore.swift` | 7 | `.analytics` | - |
 | `Shared/Analytics/AnalyticsService+Session.swift` | 4 | `.analytics` | - |
+| `Shared/Components/CoachMarkOverlayView.swift` | 4 | `.coachMark` | - |
 | `Shared/Analytics/AnalyticsService+Lifecycle.swift` | 3 | `.analytics` | - |
 | `Shared/Transitions/ZoomDismissalInteractionController.swift` | 3 | `.transition` | - |
 | `Shared/Transitions/ZoomTransitionController.swift` | 3 | `.transition` | - |
-| `Shared/Components/CoachMarkOverlayView.swift` | 2 | `.coachMark` | - |
 | `Shared/Analytics/AnalyticsService.swift` | 1 | `.analytics` | - |
 | `Shared/Analytics/AnalyticsService+Viewing.swift` | 1 | `.analytics` | - |
 | `Features/Grid/PhotoCell.swift` | 1 | - | 주석 삭제만 |
@@ -409,7 +413,7 @@ Phase 0에서 패턴 검증 후 일괄 적용.
 |-------------------|--------|----------|
 | AppDelegate, SceneDelegate | `.app` | SceneDelegate, AppDelegate |
 | Viewer:Hitch, Viewer:Swipe, Viewer:Scroll, ViewerPerf | `.viewer` | ViewerVC, ViewerVC+SimilarPhoto |
-| CoachMarkC1, CoachMarkC2, CoachMarkManager | `.coachMark` | ViewerVC+CoachMarkC, GridVC+CoachMarkC, CoachMarkOverlayView |
+| CoachMarkA, CoachMarkC1, CoachMarkC2, CoachMarkD, CoachMark, CoachMarkManager | `.coachMark` | GridVC+CoachMarkD, CoachMarkDPreScanner, GridVC+CoachMark, ViewerVC+CoachMarkC, GridVC+CoachMarkC, CoachMarkOverlayView |
 | AlbumsViewController | `.albums` | AlbumsViewController |
 | SimilarPhoto | `.similarPhoto` | SimilarityAnalysisQueue, GridVC+SimilarPhoto |
 | ZoomTransition | `.transition` | ZoomTransitionController, ZoomDismissalInteractionController |
@@ -424,7 +428,7 @@ Phase 0에서 패턴 검증 후 일괄 적용.
 ## 주의사항
 
 1. **`public` 필수**: Logger extension의 모든 static let에 `public` 키워드 필수
-2. **`import OSLog` 필수**: 모든 마이그레이션 대상 파일(~29개)에 `import OSLog` 추가 필요
+2. **`import OSLog` 필수**: 모든 마이그레이션 대상 파일(~32개)에 `import OSLog` 추가 필요
 3. **OSLogMessage 보간**: Phase 0에서 검증. `String(format:)` 41곳 + CGRect 1곳 확인
 4. **`self.` 명시**: 컴파일러가 알려줌, 기계적 수정
 5. **Privacy**: `.debug` 레벨은 릴리즈에서 제거되므로 초기 마이그레이션에서는 미지정
@@ -441,31 +445,34 @@ Phase 0에서 패턴 검증 후 일괄 적용.
 | 1 | `Features/Grid/GridScroll.swift` | 1 | 14 |
 | 2 | `App/SceneDelegate.swift` | 1 | 13 |
 | 3 | `App/AppDelegate.swift` | 1 | 2 |
-| 4 | `Features/Albums/AlbumsViewController.swift` | 2 | 10 |
-| 5 | `Features/Grid/GridViewController+SimilarPhoto.swift` | 2 | 8 |
-| 6 | `Features/SimilarPhoto/Analysis/SimilarityAnalysisQueue.swift` | 2 | 6 |
-| 7 | `Features/Grid/GridDataSourceDriver.swift` | 2 | 1 |
-| 8 | `Features/Grid/GridViewController+CoachMarkC.swift` | 2 | 1 |
-| 9 | `Features/Grid/GridViewController.swift` | 2 | 주석 |
-| 10 | `Features/Viewer/ViewerViewController.swift` | 3 | 8 |
-| 11 | `Features/Viewer/ViewerViewController+CoachMarkC.swift` | 3 | 8 |
-| 12 | `Shared/Analytics/AnalyticsService+DeleteRestore.swift` | 3 | 7 |
-| 13 | `Shared/Analytics/AnalyticsService+Session.swift` | 3 | 4 |
-| 14 | `Features/Viewer/ViewerViewController+SimilarPhoto.swift` | 3 | 3 |
-| 15 | `Shared/Analytics/AnalyticsService+Lifecycle.swift` | 3 | 3 |
-| 16 | `Shared/Transitions/ZoomDismissalInteractionController.swift` | 3 | 3 |
-| 17 | `Shared/Transitions/ZoomTransitionController.swift` | 3 | 3 |
-| 18 | `Shared/Components/CoachMarkOverlayView.swift` | 3 | 2 |
-| 19 | `Shared/Analytics/AnalyticsService.swift` | 3 | 1 |
-| 20 | `Shared/Analytics/AnalyticsService+Viewing.swift` | 3 | 1 |
-| 21 | `Features/Grid/PhotoCell.swift` | 3 | 주석 |
-| 22 | `Debug/PreScanBenchmark.swift` | 4 | 43 |
-| 23 | `Debug/CompareAnalysisTester.swift` | 4 | 35 |
-| 24 | `Debug/ModeComparisonTester.swift` | 4 | 33 |
-| 25 | `Debug/CleanupDebug.swift` | 4 | 16 |
-| 26 | `Debug/ButtonInspector.swift` | 4 | 11 |
-| 27 | `Debug/AestheticsOnlyTester.swift` | 4 | 9 |
-| 28 | `Debug/LiquidGlassOptimizer.swift` | 4 | 7 |
-| 29 | `Debug/RenderABTest.swift` | 4 | 7 |
+| 4 | `Features/Grid/GridViewController+CoachMarkD.swift` | 2 | 16 |
+| 5 | `Features/Albums/AlbumsViewController.swift` | 2 | 10 |
+| 6 | `Features/AutoCleanup/CoachMarkDPreScanner.swift` | 2 | 8 |
+| 7 | `Features/Grid/GridViewController+SimilarPhoto.swift` | 2 | 8 |
+| 8 | `Features/SimilarPhoto/Analysis/SimilarityAnalysisQueue.swift` | 2 | 6 |
+| 9 | `Features/Grid/GridViewController+CoachMark.swift` | 2 | 4 |
+| 10 | `Features/Grid/GridDataSourceDriver.swift` | 2 | 1 |
+| 11 | `Features/Grid/GridViewController+CoachMarkC.swift` | 2 | 1 |
+| 12 | `Features/Grid/GridViewController.swift` | 2 | 주석 |
+| 13 | `Features/Viewer/ViewerViewController.swift` | 3 | 8 |
+| 14 | `Features/Viewer/ViewerViewController+CoachMarkC.swift` | 3 | 8 |
+| 15 | `Shared/Analytics/AnalyticsService+DeleteRestore.swift` | 3 | 7 |
+| 16 | `Shared/Analytics/AnalyticsService+Session.swift` | 3 | 4 |
+| 17 | `Shared/Components/CoachMarkOverlayView.swift` | 3 | 4 |
+| 18 | `Features/Viewer/ViewerViewController+SimilarPhoto.swift` | 3 | 3 |
+| 19 | `Shared/Analytics/AnalyticsService+Lifecycle.swift` | 3 | 3 |
+| 20 | `Shared/Transitions/ZoomDismissalInteractionController.swift` | 3 | 3 |
+| 21 | `Shared/Transitions/ZoomTransitionController.swift` | 3 | 3 |
+| 22 | `Shared/Analytics/AnalyticsService.swift` | 3 | 1 |
+| 23 | `Shared/Analytics/AnalyticsService+Viewing.swift` | 3 | 1 |
+| 24 | `Features/Grid/PhotoCell.swift` | 3 | 주석 |
+| 25 | `Debug/PreScanBenchmark.swift` | 4 | 43 |
+| 26 | `Debug/CompareAnalysisTester.swift` | 4 | 35 |
+| 27 | `Debug/ModeComparisonTester.swift` | 4 | 33 |
+| 28 | `Debug/CleanupDebug.swift` | 4 | 16 |
+| 29 | `Debug/ButtonInspector.swift` | 4 | 11 |
+| 30 | `Debug/AestheticsOnlyTester.swift` | 4 | 9 |
+| 31 | `Debug/LiquidGlassOptimizer.swift` | 4 | 7 |
+| 32 | `Debug/RenderABTest.swift` | 4 | 7 |
 | - | `Sources/AppCore/Services/Log.swift` (삭제) | 5 | - |
 | - | `CLAUDE.md` (로그 섹션 업데이트) | 5 | - |

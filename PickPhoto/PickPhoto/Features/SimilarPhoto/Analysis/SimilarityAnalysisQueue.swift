@@ -394,7 +394,6 @@ final class SimilarityAnalysisQueue {
             let totalTime = CFAbsoluteTimeGetCurrent() - totalStartTime
             let endMemory = getMemoryUsageMB()
             let memoryDelta = endMemory - startMemory
-            let thermalState = ProcessInfo.processInfo.thermalState
 
             // ms 단위로 변환
             let fpTimeMs = fpTime * 1000
@@ -412,21 +411,21 @@ final class SimilarityAnalysisQueue {
                 performanceStats.faceCountSum += totalFaceCount
             }
 
-            // 개별 측정 결과 출력
-            print("""
-            ========== PERFORMANCE METRICS (Vision) [#\(performanceStats.measurementCount)] ==========
-            Photos: \(photos.count), Faces: \(totalFaceCount), Groups: \(validGroupIDs.count)
-            --------------------------------------------------
-            FP Generation Time: \(String(format: "%.2f", fpTimeMs))ms (\(String(format: "%.1f", fpTimeMs / Double(photos.count)))ms/photo)
-            Face Detect+Match Time: \(String(format: "%.2f", faceTimeMs))ms (\(String(format: "%.1f", faceTimeMs / Double(max(1, totalFaceCount))))ms/face)
-            Total Time: \(String(format: "%.2f", totalTimeMs))ms
-            --------------------------------------------------
-            Memory Start: \(String(format: "%.1f", startMemory))MB
-            Memory End: \(String(format: "%.1f", endMemory))MB
-            Memory Delta: \(String(format: "%+.1f", memoryDelta))MB
-            Thermal State: \(thermalStateString(thermalState))
-            ==================================================
-            """)
+            // 개별 측정 결과 출력 (비활성화)
+//            print("""
+//            ========== PERFORMANCE METRICS (Vision) [#\(performanceStats.measurementCount)] ==========
+//            Photos: \(photos.count), Faces: \(totalFaceCount), Groups: \(validGroupIDs.count)
+//            --------------------------------------------------
+//            FP Generation Time: \(String(format: "%.2f", fpTimeMs))ms (\(String(format: "%.1f", fpTimeMs / Double(photos.count)))ms/photo)
+//            Face Detect+Match Time: \(String(format: "%.2f", faceTimeMs))ms (\(String(format: "%.1f", faceTimeMs / Double(max(1, totalFaceCount))))ms/face)
+//            Total Time: \(String(format: "%.2f", totalTimeMs))ms
+//            --------------------------------------------------
+//            Memory Start: \(String(format: "%.1f", startMemory))MB
+//            Memory End: \(String(format: "%.1f", endMemory))MB
+//            Memory Delta: \(String(format: "%+.1f", memoryDelta))MB
+//            Thermal State: \(thermalStateString(thermalState))
+//            ==================================================
+//            """)
 
             // 3회 이상 측정되면 통계 리포트 출력 (비활성화)
             // if performanceStats.measurementCount >= 3 {

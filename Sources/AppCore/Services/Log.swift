@@ -40,13 +40,13 @@ public enum Log {
         // Navigation / UI
         // =============================================
         "AlbumsViewController": true,    // 앨범 탭 깜빡임 디버깅
-        "ZoomTransition": true,          // 커스텀 줌 트랜지션
+        "ZoomTransition": false,         // 커스텀 줌 트랜지션
         "Zoom Timing": true,             // 그리드→뷰어 줌 전환 단계별 타이밍
 
         // =============================================
         // SimilarPhoto 분석
         // =============================================
-        "SimilarPhoto": true,            // Task 취소 테스트 중
+        "SimilarPhoto": false,           // Task 취소 테스트 중
 
         // =============================================
         // AutoCleanup 기능
@@ -68,7 +68,7 @@ public enum Log {
         "Hitch": true,               // 스크롤 히치 측정 (HitchMonitor)
         "Scroll": true,              // 스크롤 시작/종료 로그
         "Performance": true,         // 성능 모니터 (PerformanceMonitor)
-        "LiquidGlass": true,         // LiquidGlass 최적화 로그
+        "LiquidGlass": false,        // LiquidGlass 최적화 로그
         "ABTest": true,              // Render A/B 테스트
 
         // =============================================
