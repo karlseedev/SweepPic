@@ -135,12 +135,15 @@ extension CoachMarkOverlayView {
         }
 
         messageLabel.attributedText = attr
+        messageLabel.numberOfLines = 0
         messageLabel.alpha = 0
+        let labelWidth = bounds.width - 40
+        let labelSize = messageLabel.sizeThatFits(CGSize(width: labelWidth, height: .greatestFiniteMagnitude))
         messageLabel.frame = CGRect(
             x: 20,
             y: highlightFrame.maxY + 24,
-            width: bounds.width - 40,
-            height: 80
+            width: labelWidth,
+            height: ceil(labelSize.height)
         )
         addSubview(messageLabel)
 
@@ -208,7 +211,7 @@ extension CoachMarkOverlayView {
 
                 // 4. alpha 복원 + 포커스 원 축소 (Reduce Motion 분기)
                 if UIAccessibility.isReduceMotionEnabled {
-                    self.updateC3DimPathCircle(for: picFrame, scale: 3.5)
+                    self.updateC3DimPathCircle(for: picFrame, scale: 1.2)
                     self.alpha = 1.0
                     self.c3Step = 2
                     CoachMarkManager.shared.isC3TransitionActive = false
@@ -243,14 +246,15 @@ extension CoachMarkOverlayView {
     /// Step 2 안내 텍스트 + 확인 버튼 표시 (포커스 원 아래에 배치)
     private func showC3Step2Content(picFrame: CGRect) {
         // 포커스 원 하단 계산
-        let focusDiameter = max(picFrame.width, picFrame.height) * 3.5
+        let focusDiameter = max(picFrame.width, picFrame.height) * 1.2
         let circleBottom = picFrame.midY + focusDiameter / 2
 
-        // 안내 텍스트
-        let mainText = "현재 유사사진 정리그룹의 사진 구별 번호예요\u{2028}얼굴 검출 여부에 따라 번호 유무가 달라질 수 있어요"
+        // 안내 텍스트 (\n = 단락 구분 → paragraphSpacing 적용, \u{2028} = 같은 단락 내 줄바꿈)
+        let mainText = "현재 유사사진 정리그룹의 사진 구별 번호예요\n얼굴 검출 여부에 따라\u{2028}인물별로 번호가 다르게 보일 수 있어요"
         let style = NSMutableParagraphStyle()
         style.alignment = .center
         style.lineSpacing = CoachMarkOverlayView.bodyFont.pointSize * 0.2
+        style.paragraphSpacing = 12
         let attr = NSMutableAttributedString(
             string: mainText,
             attributes: [
@@ -269,12 +273,16 @@ extension CoachMarkOverlayView {
         }
 
         messageLabel.attributedText = attr
+        messageLabel.numberOfLines = 0
         messageLabel.alpha = 0
+        // 텍스트 높이 자동 계산 (3줄 + paragraphSpacing)
+        let labelWidth = bounds.width - 40
+        let labelSize = messageLabel.sizeThatFits(CGSize(width: labelWidth, height: .greatestFiniteMagnitude))
         messageLabel.frame = CGRect(
             x: 20,
             y: circleBottom + 24,
-            width: bounds.width - 40,
-            height: 80
+            width: labelWidth,
+            height: ceil(labelSize.height)
         )
 
         // 확인 버튼
@@ -438,13 +446,13 @@ extension CoachMarkOverlayView {
 
     /// Pic 라벨 중심으로 포커스 원 축소 애니메이션
     /// 시작: 3× 화면 크기 원 (큰 구멍 = 딤 거의 없음)
-    /// 끝: Pic 라벨 × 3.5배 원 (작은 구멍 = Pic 라벨만 투명)
+    /// 끝: Pic 라벨 × 1.2배 원 (작은 구멍 = Pic 라벨만 투명)
     /// - Parameters:
     ///   - targetFrame: Pic 라벨 프레임 (window 좌표)
     ///   - completion: 완료 콜백
     private func animateC3FocusCircle(to targetFrame: CGRect, completion: @escaping () -> Void) {
-        let scale: CGFloat = 3.5
-        // 최종 원 (Pic 라벨 × 3.5배)
+        let scale: CGFloat = 1.2
+        // 최종 원 (Pic 라벨 × 1.2배)
         let finalDiameter = max(targetFrame.width, targetFrame.height) * scale
         let finalCircleRect = CGRect(
             x: targetFrame.midX - finalDiameter / 2,

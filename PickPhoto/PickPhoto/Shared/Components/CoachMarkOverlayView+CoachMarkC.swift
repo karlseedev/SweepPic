@@ -151,6 +151,22 @@ extension CoachMarkOverlayView {
         let noticeStyle = NSMutableParagraphStyle()
         noticeStyle.alignment = .center
         noticeStyle.lineSpacing = UIFont.systemFont(ofSize: 16).pointSize * 0.2
+        // "+버튼" 키워드 강조
+        if let range = mainText.range(of: "+버튼") {
+            let nsRange = NSRange(range, in: mainText)
+            c2Attr.addAttributes([
+                .font: CoachMarkOverlayView.bodyBoldFont,
+                .foregroundColor: CoachMarkOverlayView.highlightYellow
+            ], range: nsRange)
+        }
+        // "얼굴비교화면" 키워드 강조
+        if let range = mainText.range(of: "얼굴비교화면") {
+            let nsRange = NSRange(range, in: mainText)
+            c2Attr.addAttributes([
+                .font: CoachMarkOverlayView.bodyBoldFont,
+                .foregroundColor: CoachMarkOverlayView.highlightYellow
+            ], range: nsRange)
+        }
         c2Attr.append(NSAttributedString(
             string: noticeText,
             attributes: [
@@ -160,24 +176,49 @@ extension CoachMarkOverlayView {
             ]
         ))
         messageLabel.attributedText = c2Attr
+        messageLabel.numberOfLines = 0
         messageLabel.alpha = 0
-        messageLabel.frame = CGRect(
-            x: 20,
-            y: circleBottom + 24,
-            width: bounds.width - 40,
-            height: 140
-        )
 
-        // 확인 버튼 준비 (초기 비표시)
-        confirmButton.isEnabled = true
-        confirmButton.alpha = 0
-        let buttonWidth: CGFloat = 120
-        confirmButton.frame = CGRect(
-            x: (bounds.width - buttonWidth) / 2,
-            y: messageLabel.frame.maxY + 16,
-            width: buttonWidth,
-            height: 44
-        )
+        // 텍스트+버튼 배치: 아래 공간이 부족하면 포커스 원 위에 배치
+        let labelWidth = bounds.width - 40
+        let labelSize = messageLabel.sizeThatFits(CGSize(width: labelWidth, height: .greatestFiniteMagnitude))
+        let textHeight = ceil(labelSize.height)
+        let circleTop = newHighlightFrame.midY - circleDiameter / 2
+        let gap: CGFloat = 24
+        let buttonGap: CGFloat = 16
+        let buttonHeight: CGFloat = 44
+        let safeBottom = window?.safeAreaInsets.bottom ?? 34
+        let neededBelow = gap + textHeight + buttonGap + buttonHeight + safeBottom
+
+        let placeAbove = (circleBottom + neededBelow > bounds.height)
+
+        if placeAbove {
+            // 포커스 원 위에 배치: 버튼 → 텍스트 (아래에서 위로)
+            let buttonY = circleTop - gap - buttonHeight
+            let textY = buttonY - buttonGap - textHeight
+            messageLabel.frame = CGRect(x: 20, y: textY, width: labelWidth, height: textHeight)
+            confirmButton.isEnabled = true
+            confirmButton.alpha = 0
+            let buttonWidth: CGFloat = 120
+            confirmButton.frame = CGRect(
+                x: (bounds.width - buttonWidth) / 2,
+                y: buttonY,
+                width: buttonWidth,
+                height: buttonHeight
+            )
+        } else {
+            // 포커스 원 아래에 배치 (기본)
+            messageLabel.frame = CGRect(x: 20, y: circleBottom + gap, width: labelWidth, height: textHeight)
+            confirmButton.isEnabled = true
+            confirmButton.alpha = 0
+            let buttonWidth: CGFloat = 120
+            confirmButton.frame = CGRect(
+                x: (bounds.width - buttonWidth) / 2,
+                y: messageLabel.frame.maxY + buttonGap,
+                width: buttonWidth,
+                height: buttonHeight
+            )
+        }
 
         // + 버튼 강조용 흰색 테두리 링 (초기 비표시, 포커스 완료 후 표시)
         let ringDiameter: CGFloat = 39  // FaceButton(34pt) + 테두리(2.5pt×2)

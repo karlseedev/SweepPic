@@ -153,6 +153,7 @@ extension ViewerViewController {
     /// 얼굴 비교 화면 자동 진입 (C-2 완료 후)
     /// 첫 번째 + 버튼의 face 정보로 delegate 메서드를 직접 호출하여
     /// showFaceComparisonViewController를 트리거
+    /// present 성공 후 C-3 자동 재생 + markAsShown
     private func triggerFaceComparisonForCoachMark() {
         guard let overlay = faceButtonOverlay,
               let firstFace = overlay.firstVisibleFace else {
@@ -160,16 +161,23 @@ extension ViewerViewController {
             return
         }
 
+        // 터치 차단: C-2 dismiss ~ C-3 표시 사이 뷰어 조작 방지
+        view.isUserInteractionEnabled = false
+
         // delegate 메서드 직접 호출 → 비동기로 ComparisonGroup 로드 후 present
         faceButtonOverlay(overlay, didTapFaceAtPersonIndex: firstFace.personIndex, face: firstFace)
 
-        // present 성공 확인 후 markAsShown
+        // present 성공 확인 후 C-3 자동 트리거
         // faceButtonOverlay delegate → async Task → showFaceComparisonViewController → present
         // 캐시 hit 기준 ~500ms 이내 present 완료
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { [weak self] in
-            if self?.presentedViewController != nil {
-                // present 성공 → 코치마크 C 완료 마킹
+            guard let self else { return }
+            self.view.isUserInteractionEnabled = true
+
+            if let faceCompVC = self.presentedViewController as? FaceComparisonViewController {
+                // present 성공 → C 완료 마킹 + C-3 자동 재생
                 CoachMarkType.similarPhoto.markAsShown()
+                faceCompVC.showFaceComparisonGuide()
             }
             // present 실패 시 markAsShown 미호출 → 다음 기회에 재시도
         }

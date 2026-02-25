@@ -195,7 +195,6 @@ final class FaceComparisonViewController: UIViewController {
     private lazy var deleteButton: GlassTextButton = {
         let button = GlassTextButton(title: "삭제", style: .plain, tintColor: .systemRed)
         button.addTarget(self, action: #selector(deleteButtonTapped), for: .touchUpInside)
-        button.isEnabled = false
         button.translatesAutoresizingMaskIntoConstraints = false
         return button
     }()
@@ -351,7 +350,6 @@ final class FaceComparisonViewController: UIViewController {
         view.addSubview(bottomBarContainer)
         bottomBarContainer.addSubview(bottomProgressiveBlurView)
         bottomBarContainer.layer.addSublayer(bottomGradientLayer)
-        bottomBarContainer.addSubview(cancelButton)
         bottomBarContainer.addSubview(selectionCountLabel)
         bottomBarContainer.addSubview(deleteButton)
 
@@ -368,9 +366,6 @@ final class FaceComparisonViewController: UIViewController {
             bottomProgressiveBlurView.leadingAnchor.constraint(equalTo: bottomBarContainer.leadingAnchor),
             bottomProgressiveBlurView.trailingAnchor.constraint(equalTo: bottomBarContainer.trailingAnchor),
             bottomProgressiveBlurView.bottomAnchor.constraint(equalTo: bottomBarContainer.bottomAnchor),
-
-            cancelButton.leadingAnchor.constraint(equalTo: bottomBarContainer.leadingAnchor, constant: 16),
-            cancelButton.topAnchor.constraint(equalTo: bottomBarContainer.layoutMarginsGuide.topAnchor, constant: 8),
 
             selectionCountLabel.centerXAnchor.constraint(equalTo: bottomBarContainer.centerXAnchor),
             selectionCountLabel.topAnchor.constraint(equalTo: bottomBarContainer.layoutMarginsGuide.topAnchor, constant: 16),
@@ -451,8 +446,6 @@ final class FaceComparisonViewController: UIViewController {
         let initialPage = PersonPageViewController(personIndex: currentPersonIndex, dataSource: self)
         pageViewController.setViewControllers([initialPage], direction: .forward, animated: false)
 
-        // C-3 온보딩 트리거
-        showFaceComparisonGuideIfNeeded()
     }
 
     // MARK: - UI Updates
@@ -480,21 +473,16 @@ final class FaceComparisonViewController: UIViewController {
 
         if count > 0 {
             selectionCountLabel.text = "\(count)개 선택됨"
-            deleteButton.isEnabled = true
-            deleteButton.alpha = 1.0
         } else {
             selectionCountLabel.text = "항목 선택"
-            deleteButton.isEnabled = false
-            deleteButton.alpha = 0.5
         }
     }
 
     // MARK: - Coach Mark C-3
 
-    /// C-3 온보딩 표시 (첫 진입 시 1회만)
-    private func showFaceComparisonGuideIfNeeded() {
-        guard !CoachMarkType.faceComparisonGuide.hasBeenShown else { return }
-        guard !CoachMarkManager.shared.isShowing else { return }
+    /// C-3 온보딩 표시 (C-2 완료 후 자동 호출)
+    /// C-2 → face comparison present 후 ViewerVC+CoachMarkC에서 호출
+    func showFaceComparisonGuide() {
         guard !UIAccessibility.isVoiceOverRunning else { return }
 
         // 셀 렌더 후 frame을 가져와야 하므로 다음 레이아웃 사이클 대기
@@ -558,7 +546,12 @@ final class FaceComparisonViewController: UIViewController {
 
     /// Delete 버튼 탭
     @objc private func deleteButtonTapped() {
-        guard !selectedAssetIDs.isEmpty else { return }
+        guard !selectedAssetIDs.isEmpty else {
+            let alert = UIAlertController(title: nil, message: "사진을 먼저 선택하세요", preferredStyle: .alert)
+            alert.addAction(UIAlertAction(title: "확인", style: .default))
+            present(alert, animated: true)
+            return
+        }
 
         let deletedIDs = Array(selectedAssetIDs)
 
