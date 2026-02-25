@@ -75,7 +75,12 @@ final class SupabaseProvider {
         var request = makeRequest()
         request.httpBody = jsonData
 
-        URLSession.shared.dataTask(with: request) { _, _, _ in
+        URLSession.shared.dataTask(with: request) { _, response, error in
+            if let httpResponse = response as? HTTPURLResponse {
+                Log.print("[Supabase] send \(eventName) → HTTP \(httpResponse.statusCode)")
+            } else if let error = error {
+                Log.print("[Supabase] send \(eventName) error: \(error.localizedDescription)")
+            }
         }.resume()
     }
 
@@ -103,7 +108,12 @@ final class SupabaseProvider {
         var request = makeRequest()
         request.httpBody = jsonData
 
-        URLSession.shared.dataTask(with: request) { _, _, _ in
+        URLSession.shared.dataTask(with: request) { _, response, error in
+            if let httpResponse = response as? HTTPURLResponse {
+                Log.print("[Supabase] batch \(events.count) events → HTTP \(httpResponse.statusCode)")
+            } else if let error = error {
+                Log.print("[Supabase] batch error: \(error.localizedDescription)")
+            }
             completion?()
         }.resume()
     }

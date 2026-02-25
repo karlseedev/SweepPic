@@ -244,6 +244,8 @@ final class AnalyticsService: AnalyticsServiceProtocol {
     /// - TD: 이벤트 개별 signal (기존 동작 유지)
     /// - Supabase: 제외 필터링 후 남은 이벤트를 1회 배치 POST
     func sendEventBatch(_ events: [(name: String, parameters: [String: String])]) {
+        Log.print("[Supabase] sendEventBatch 진입 — \(events.count)건, provider: \(supabaseProvider != nil ? "있음" : "nil")")
+
         // 1) TD 개별 전송
         for event in events {
             TelemetryDeck.signal(event.name, parameters: event.parameters)
@@ -258,6 +260,7 @@ final class AnalyticsService: AnalyticsServiceProtocol {
                 params: $0.parameters,
                 photoBucket: bucket
             )}
+        Log.print("[Supabase] 배치 대상: \(payloads.count)건 (제외 후)")
 
         // supabaseProvider가 nil(xcconfig 미설정)이면 즉시 완료 콜백
         if let provider = supabaseProvider, !payloads.isEmpty {
