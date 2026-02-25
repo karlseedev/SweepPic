@@ -57,6 +57,12 @@ extension GridViewController {
         // 이미 표시된 적 있으면 스킵
         // guard !CoachMarkType.similarPhoto.hasBeenShown else { return } // 테스트: 항상 트리거
 
+        // A(그리드 스와이프) 완료 후에만 C 표시
+        // guard CoachMarkType.gridSwipeDelete.hasBeenShown else { return } // 테스트: A 없이도 트리거
+
+        // E-1(첫 삭제 안내) 완료 후에만 C 표시
+        // guard CoachMarkType.firstDeleteGuide.hasBeenShown else { return } // 테스트: E-1 없이도 트리거
+
         // B(뷰어 스와이프) 완료 후에만 C 표시 (기본 기능 B → 고급 기능 C 순서)
         // guard CoachMarkType.viewerSwipeDelete.hasBeenShown else { return } // 테스트: B 없이도 트리거
 

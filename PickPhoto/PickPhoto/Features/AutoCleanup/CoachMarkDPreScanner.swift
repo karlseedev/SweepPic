@@ -68,16 +68,31 @@ final class CoachMarkDPreScanner {
 
     private init() {}
 
+    // MARK: - Debug Reset
+
+    /// 디버그용: 스캔 결과 초기화 (D 코치마크 재테스트용)
+    #if DEBUG
+    func debugReset() {
+        result = nil
+        isScanning = false
+        isPaused = false
+        CoachMarkType.autoCleanup.resetShown()
+        Log.print("[CoachMarkD] PreScanner DEBUG reset")
+    }
+    #endif
+
     // MARK: - Pause / Resume
 
     /// 스크롤 시작 시 호출 — 스캔 루프 일시정지
     func pause() {
+        guard isScanning else { return }
         isPaused = true
         Log.print("[CoachMarkD] PreScanner paused")
     }
 
     /// 스크롤 종료 시 호출 — 스캔 루프 재개
     func resume() {
+        guard isScanning else { return }
         isPaused = false
         Log.print("[CoachMarkD] PreScanner resumed")
     }
@@ -129,6 +144,11 @@ final class CoachMarkDPreScanner {
 
             totalScanned += 1
 
+            // 100장 단위 진행 로그
+            if totalScanned % 100 == 0 {
+                Log.print("[CoachMarkD] 스캔 진행: \(totalScanned)장 완료 (\(lowQualityAssets.count)장 발견)")
+            }
+
             // Stage 2: 이미지 로딩 + 노출 분석 + SKIP + 블러 분석
             let isLowQuality = await analyzeAsset(asset)
             if isLowQuality {
@@ -136,8 +156,6 @@ final class CoachMarkDPreScanner {
                 Log.print("[CoachMarkD] 저품질 발견 #\(lowQualityAssets.count) (스캔 \(totalScanned)장째)")
             }
 
-            // [Throttle] 분석 사이 300ms 대기 — CPU 경합 방지
-            try? await Task.sleep(nanoseconds: 300_000_000) // 300ms
         }
 
         // 결과 저장 및 콜백 (메인 스레드)

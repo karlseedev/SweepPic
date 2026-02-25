@@ -5,10 +5,9 @@
 //  Created by Claude Code on 2026-02-23.
 //
 //  코치마크 D: 저품질 자동 정리 안내
-//  - 트리거 1 (자동): A 완료 + E-1 완료 + 그리드 3초 체류 → 정리 버튼 하이라이트 + 썸네일
-//  - 트리거 2 (수동): D 미완료 + 정리 버튼 탭 → 하이라이트 없음 + 썸네일
-//  - 레이아웃: 딤 배경 + (선택적)버튼 구멍 + 타이틀 + 썸네일 3장 + 설명 + [확인]
-//  - [확인] → 탭 모션 (트리거 1) 또는 즉시 dismiss (트리거 2) → 정리 시트
+//  - 트리거: A 완료 + E-1 완료 + 그리드 3초 체류 + 스캔 1장 이상
+//  - 레이아웃: 포커싱 모션 → 딤 배경 + 버튼 구멍 + 타이틀 + 썸네일 3장 + 설명 + [확인]
+//  - [확인] → 탭 모션 → dismiss → 정리 시트
 //
 
 import UIKit
@@ -20,7 +19,6 @@ import AppCore
 
 private var dCardViewKey: UInt8 = 0
 private var dThumbnailViewsKey: UInt8 = 0
-private var dHasHighlightKey: UInt8 = 0
 
 // MARK: - Coach Mark D: Auto Cleanup Guide
 
@@ -40,18 +38,12 @@ extension CoachMarkOverlayView {
         set { objc_setAssociatedObject(self, &dThumbnailViewsKey, newValue, .OBJC_ASSOCIATION_RETAIN_NONATOMIC) }
     }
 
-    /// D: 정리 버튼 하이라이트 여부 (트리거 1: true, 트리거 2: false)
-    /// 탭 모션 여부 결정에 사용
-    private var dHasHighlight: Bool {
-        get { objc_getAssociatedObject(self, &dHasHighlightKey) as? Bool ?? false }
-        set { objc_setAssociatedObject(self, &dHasHighlightKey, newValue, .OBJC_ASSOCIATION_RETAIN_NONATOMIC) }
-    }
-
     // MARK: - Show
 
     /// D: 저품질 자동 정리 안내 표시
+    /// 포커싱 모션 → 정리 버튼 하이라이트 → 카드 페이드인
     /// - Parameters:
-    ///   - highlightFrame: 정리 버튼 프레임 (트리거 1: 버튼 위치, 트리거 2: nil → 전체 딤)
+    ///   - highlightFrame: 정리 버튼 프레임 (nil이면 하이라이트 없이 전체 딤)
     ///   - scanResult: 사전 스캔 결과 (nil이면 텍스트 폴백)
     ///   - window: 표시할 윈도우
     ///   - onConfirm: [확인] + dismiss 후 실행할 콜백 (showCleanupMethodSheet)
@@ -67,32 +59,70 @@ extension CoachMarkOverlayView {
         let overlay = CoachMarkOverlayView(frame: window.bounds)
         overlay.coachMarkType = .autoCleanup
         overlay.highlightFrame = highlightFrame ?? .zero
-        overlay.dHasHighlight = (highlightFrame != nil)
         overlay.onConfirm = onConfirm
         overlay.alpha = 0
 
-        // 딤 배경 (버튼 구멍 포함 또는 전체 딤)
-        overlay.updateDimPath()
+        if let frame = highlightFrame {
+            // 큰 pill(딤 없음)에서 시작 → 버튼 모양으로 축소 애니메이션
+            let margin: CGFloat = 8
+            let holeRect = frame.insetBy(dx: -margin, dy: -margin)
+            // pill shape 비율 유지하며 화면 밖까지 확대
+            let scaleFactor = max(overlay.bounds.width, overlay.bounds.height) * 3.0
+                / max(holeRect.width, holeRect.height)
+            let startWidth = holeRect.width * scaleFactor
+            let startHeight = holeRect.height * scaleFactor
+            let startRect = CGRect(
+                x: holeRect.midX - startWidth / 2,
+                y: holeRect.midY - startHeight / 2,
+                width: startWidth,
+                height: startHeight
+            )
+            let startPath = UIBezierPath(rect: overlay.bounds)
+            startPath.append(UIBezierPath(roundedRect: startRect, cornerRadius: startRect.height / 2))
+            overlay.dimLayer.path = startPath.cgPath
+        } else {
+            // 버튼 프레임 획득 실패 시 전체 딤
+            overlay.updateDimPath()
+        }
+
         window.addSubview(overlay)
         CoachMarkManager.shared.currentOverlay = overlay
 
         // 카드 구성 (썸네일 + 텍스트 + 확인 버튼)
         let assets = scanResult?.lowQualityAssets ?? []
-        overlay.buildAutoCleanupCard(assets: assets, hasHighlight: highlightFrame != nil)
+        overlay.buildAutoCleanupCard(assets: assets)
 
-        // 페이드인
-        UIView.animate(withDuration: 0.3) {
-            overlay.alpha = 1
+        if let frame = highlightFrame {
+            // 카드 비표시 → 포커싱 모션 → 카드 페이드인
+            overlay.dCardView?.alpha = 0
+
+            // 오버레이 페이드인 + 포커싱 동시 시작
+            UIView.animate(withDuration: 0.3) {
+                overlay.alpha = 1
+            }
+            overlay.animateDFocus(to: frame) {
+                guard !overlay.shouldStopAnimation else { return }
+                // 포커싱 완료 → 0.5초 대기 → 카드 페이드인
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                    guard !overlay.shouldStopAnimation else { return }
+                    UIView.animate(withDuration: 0.3) {
+                        overlay.dCardView?.alpha = 1
+                    }
+                }
+            }
+        } else {
+            // 버튼 프레임 없으면 즉시 페이드인
+            UIView.animate(withDuration: 0.3) {
+                overlay.alpha = 1
+            }
         }
     }
 
     // MARK: - Build Card
 
     /// D 카드 구성: 타이틀 + 썸네일 그리드 + 설명 + [확인]
-    /// - Parameters:
-    ///   - assets: 저품질 asset 배열 (최대 3개)
-    ///   - hasHighlight: 정리 버튼 하이라이트 여부 (트리거에 따라 문구 변경)
-    private func buildAutoCleanupCard(assets: [PHAsset], hasHighlight: Bool) {
+    /// - Parameter assets: 저품질 asset 배열 (최대 3개)
+    private func buildAutoCleanupCard(assets: [PHAsset]) {
         let card = UIView()
         card.layer.cornerRadius = 20
         card.clipsToBounds = true
@@ -108,9 +138,9 @@ extension CoachMarkOverlayView {
 
         // --- 타이틀 ---
         let titleLabel = UILabel()
-        titleLabel.text = "보관함에서 저품질 사진이 발견됐어요"
+        titleLabel.text = "저품질 사진 발견"
         titleLabel.textColor = .white
-        titleLabel.font = Self.bodyFont
+        titleLabel.font = .systemFont(ofSize: 24, weight: .light)
         titleLabel.textAlignment = .center
         titleLabel.numberOfLines = 0
         titleLabel.translatesAutoresizingMaskIntoConstraints = false
@@ -177,16 +207,29 @@ extension CoachMarkOverlayView {
             }
         }
 
-        // --- 설명 ---
+        // --- 설명 (AttributedString: "저품질 사진을 AI가 자동" 볼드+노란색) ---
         let descLabel = UILabel()
-        // 트리거 1: "~사용해보세요" / 트리거 2: "~기능입니다"
-        let descText = hasHighlight
-            ? "흔들리거나 초점이 맞지 않은\n사진들을 AI가 자동으로 찾아주는\n정리 기능을 사용해보세요"
-            : "흔들리거나 초점이 맞지 않은\n사진들을 AI가 자동으로 찾아주는\n정리 기능입니다"
-        descLabel.text = descText
-        descLabel.textColor = UIColor.white.withAlphaComponent(0.7)
-        descLabel.font = Self.bodyFont
-        descLabel.textAlignment = .center
+        let descText = "흔들리거나 초점이 맞지 않은\n저품질 사진을 AI가 자동으로 찾아주는\n정리 기능을 사용해보세요"
+        let descStyle = NSMutableParagraphStyle()
+        descStyle.alignment = .center
+        descStyle.lineSpacing = Self.bodyFont.pointSize * 0.2
+        let descAttr = NSMutableAttributedString(
+            string: descText,
+            attributes: [
+                .font: Self.bodyFont,
+                .foregroundColor: UIColor.white,
+                .paragraphStyle: descStyle
+            ]
+        )
+        // "저품질 사진을 AI가 자동" 볼드 + 노란색 강조
+        let highlightRange = (descText as NSString).range(of: "저품질 사진을 AI가 자동")
+        if highlightRange.location != NSNotFound {
+            descAttr.addAttributes([
+                .font: Self.bodyBoldFont,
+                .foregroundColor: Self.highlightYellow,
+            ], range: highlightRange)
+        }
+        descLabel.attributedText = descAttr
         descLabel.numberOfLines = 0
         descLabel.translatesAutoresizingMaskIntoConstraints = false
         card.addSubview(descLabel)
@@ -250,11 +293,63 @@ extension CoachMarkOverlayView {
         ])
     }
 
+    // MARK: - Focus Animation
+
+    /// D 포커스 축소 애니메이션 (C-2 animateC2FocusCircle과 동일 패턴)
+    /// 화면 전체를 덮는 큰 pill에서 정리 버튼 모양의 작은 pill로 축소
+    /// pill shape (roundedRect) 사용 → 버튼 형태 유지하며 축소
+    /// - Parameters:
+    ///   - targetFrame: 정리 버튼 프레임 (윈도우 좌표)
+    ///   - completion: 애니메이션 완료 후 콜백
+    private func animateDFocus(to targetFrame: CGRect, completion: @escaping () -> Void) {
+        // 최종 pill (버튼 + margin 8pt, cornerRadius = 높이/2)
+        let margin: CGFloat = 8
+        let holeRect = targetFrame.insetBy(dx: -margin, dy: -margin)
+        let finalRadius = holeRect.height / 2
+
+        let endPath = UIBezierPath(rect: bounds)
+        endPath.append(UIBezierPath(roundedRect: holeRect, cornerRadius: finalRadius))
+
+        // 시작 pill (버튼 비율 유지하며 화면 밖까지 확대)
+        let scaleFactor = max(bounds.width, bounds.height) * 3.0
+            / max(holeRect.width, holeRect.height)
+        let startWidth = holeRect.width * scaleFactor
+        let startHeight = holeRect.height * scaleFactor
+        let startRect = CGRect(
+            x: holeRect.midX - startWidth / 2,
+            y: holeRect.midY - startHeight / 2,
+            width: startWidth,
+            height: startHeight
+        )
+        let startPath = UIBezierPath(rect: bounds)
+        startPath.append(UIBezierPath(roundedRect: startRect, cornerRadius: startRect.height / 2))
+
+        // CABasicAnimation으로 path 보간 (roundedRect 동일 구조 → 부드러운 보간)
+        CATransaction.begin()
+        CATransaction.setCompletionBlock { [weak self] in
+            guard let self else { return }
+            self.dimLayer.path = endPath.cgPath
+            self.dimLayer.removeAnimation(forKey: "dFocus")
+            completion()
+        }
+
+        dimLayer.path = startPath.cgPath
+        let dimAnim = CABasicAnimation(keyPath: "path")
+        dimAnim.fromValue = startPath.cgPath
+        dimAnim.toValue = endPath.cgPath
+        dimAnim.duration = 0.9
+        dimAnim.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
+        dimAnim.fillMode = .forwards
+        dimAnim.isRemovedOnCompletion = false
+        dimLayer.add(dimAnim, forKey: "dFocus")
+
+        CATransaction.commit()
+    }
+
     // MARK: - Confirm Sequence
 
     /// D 전용: [확인] 탭 후 시퀀스
-    /// 트리거 1 (자동): 카드 페이드아웃 → 탭 모션 on 정리 버튼 → dismiss → onConfirm
-    /// 트리거 2 (수동): 카드 페이드아웃 → dismiss → onConfirm (탭 모션 없음)
+    /// 카드 페이드아웃 → 탭 모션 on 정리 버튼 → dismiss → onConfirm
     func startD_ConfirmSequence() {
         // 1. 카드 + 확인 버튼 페이드아웃 (0.2초)
         UIView.animate(withDuration: 0.2, animations: {
@@ -262,18 +357,19 @@ extension CoachMarkOverlayView {
         }) { [weak self] _ in
             guard let self, !self.shouldStopAnimation else { return }
 
-            if self.dHasHighlight && self.highlightFrame != .zero {
-                // 트리거 1: 정리 버튼 위치에 탭 모션
-                let targetCenter = CGPoint(
-                    x: self.highlightFrame.midX,
-                    y: self.highlightFrame.midY
-                )
-                self.performDTapMotion(at: targetCenter) { [weak self] in
-                    self?.finishDSequence()
-                }
-            } else {
-                // 트리거 2: 탭 모션 없이 바로 완료
+            guard self.highlightFrame != .zero else {
+                // 버튼 프레임 없으면 바로 완료
                 self.finishDSequence()
+                return
+            }
+
+            // 정리 버튼 위치에 탭 모션
+            let targetCenter = CGPoint(
+                x: self.highlightFrame.midX,
+                y: self.highlightFrame.midY
+            )
+            self.performDTapMotion(at: targetCenter) { [weak self] in
+                self?.finishDSequence()
             }
         }
     }

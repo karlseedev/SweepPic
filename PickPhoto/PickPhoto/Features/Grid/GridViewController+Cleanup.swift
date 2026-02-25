@@ -135,13 +135,6 @@ extension GridViewController {
 
     /// 정리 버튼 탭 핸들러
     @objc func cleanupButtonTapped() {
-        // D 미완료 + 스캔 결과 1장 이상 → D를 먼저 표시 (정리 플로우 가로채기)
-        let scanCount = CoachMarkDPreScanner.shared.result?.lowQualityAssets.count ?? 0
-        if !CoachMarkType.autoCleanup.hasBeenShown && scanCount > 0 {
-            showCoachMarkD(highlightButton: false)
-            return
-        }
-
         // [Analytics] 정리 흐름 추적 시작
         cleanupTracker = CleanupFlowTracker()
 

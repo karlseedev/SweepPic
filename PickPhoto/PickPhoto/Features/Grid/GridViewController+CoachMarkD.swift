@@ -6,15 +6,10 @@
 //
 //  코치마크 D: 저품질 자동 정리 안내 — 트리거 로직
 //
-//  트리거 1 (자동):
+//  트리거 (자동):
 //    A 완료 + E-1 완료 + 그리드 3초 체류 + 스캔 1장 이상
-//    → 정리 버튼 하이라이트 + 썸네일 + "사용해보세요"
+//    → 포커싱 모션 → 정리 버튼 하이라이트 + 썸네일 + 카드
 //    → [확인] → 탭 모션 → dismiss → 정리 시트
-//
-//  트리거 2 (수동):
-//    D 미완료 + 스캔 1장 이상 + 정리 버튼 탭
-//    → 하이라이트 없음 + 썸네일 + "기능입니다"
-//    → [확인] → dismiss → 정리 시트
 //
 
 import UIKit
@@ -51,27 +46,53 @@ extension GridViewController {
     /// viewDidAppear에서 호출. 다른 화면 갔다 오면 타이머 리셋.
     func startCoachMarkDTimerIfNeeded() {
         // D 이미 표시됨
-        guard !CoachMarkType.autoCleanup.hasBeenShown else { return }
+        guard !CoachMarkType.autoCleanup.hasBeenShown else {
+            Log.print("[CoachMarkD] 타이머 스킵: D 이미 표시됨")
+            return
+        }
         // A 미완료
-        guard CoachMarkType.gridSwipeDelete.hasBeenShown else { return }
+        guard CoachMarkType.gridSwipeDelete.hasBeenShown else {
+            Log.print("[CoachMarkD] 타이머 스킵: A 미완료")
+            return
+        }
         // E-1 미완료
-        guard CoachMarkType.firstDeleteGuide.hasBeenShown else { return }
+        guard CoachMarkType.firstDeleteGuide.hasBeenShown else {
+            Log.print("[CoachMarkD] 타이머 스킵: E-1 미완료")
+            return
+        }
 
         // 기존 타이머 무효화 (화면 복귀 시 리셋)
         coachMarkDTimer?.invalidate()
+
+        Log.print("[CoachMarkD] 타이머 시작 (3초)")
 
         // 3초 후 트리거
         coachMarkDTimer = Timer.scheduledTimer(withTimeInterval: 3.0, repeats: false) { [weak self] _ in
             guard let self else { return }
 
-            // 스캔 완료 + 1장 이상일 때만 표시
-            let count = CoachMarkDPreScanner.shared.result?.lowQualityAssets.count ?? 0
-            guard count > 0 else {
-                Log.print("[CoachMarkD] 타이머 만료, 스캔 결과 0건 — D 표시 안 함")
+            let scanner = CoachMarkDPreScanner.shared
+
+            // 스캔 완료 + 1장 이상 → 즉시 표시
+            if let result = scanner.result {
+                guard result.lowQualityAssets.count > 0 else {
+                    Log.print("[CoachMarkD] 타이머 만료, 스캔 결과 0건 — D 표시 안 함")
+                    return
+                }
+                self.showCoachMarkD()
                 return
             }
 
-            self.showCoachMarkD(highlightButton: true)
+            // 스캔 미완료 → 완료 콜백 등록하여 대기
+            Log.print("[CoachMarkD] 타이머 만료, 스캔 미완료 — 완료 대기")
+            scanner.onComplete = { [weak self] in
+                guard let self else { return }
+                let count = scanner.result?.lowQualityAssets.count ?? 0
+                guard count > 0 else {
+                    Log.print("[CoachMarkD] 스캔 완료, 결과 0건 — D 표시 안 함")
+                    return
+                }
+                self.showCoachMarkD()
+            }
         }
     }
 
@@ -81,46 +102,76 @@ extension GridViewController {
         coachMarkDTimer = nil
     }
 
-    // MARK: - Show (트리거 1, 2 공용)
+    // MARK: - Show
 
-    /// D 코치마크 표시
-    /// - Parameter highlightButton: true면 정리 버튼에 구멍 하이라이트 (트리거 1), false면 구멍 없음 (트리거 2)
-    func showCoachMarkD(highlightButton: Bool) {
+    /// D 코치마크 표시 (트리거 1: 자동, 정리 버튼 하이라이트)
+    /// 재시도 간격: 10회까지 0.5초, 이후 3초 (로그 스팸 + 부하 방지)
+    private static let retryFastInterval: TimeInterval = 0.5
+    private static let retrySlowInterval: TimeInterval = 3.0
+    private static let retrySlowThreshold = 10
+
+    func showCoachMarkD(retryCount: Int = 0) {
+        // 초기 호출만 로그 (재시도는 간격 변경 시점만 로그)
+        if retryCount == 0 {
+            Log.print("[CoachMarkD] showCoachMarkD 호출")
+        }
+
         // 재검증 가드
-        guard !CoachMarkType.autoCleanup.hasBeenShown else { return }
+        guard !CoachMarkType.autoCleanup.hasBeenShown else {
+            Log.print("[CoachMarkD] ❌ 가드: D 이미 표시됨")
+            return
+        }
 
-        // 다른 코치마크 표시 중이면 0.5초 후 재시도
+        // 다른 코치마크 표시 중이면 재시도
         guard !CoachMarkManager.shared.isShowing else {
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
-                self?.showCoachMarkD(highlightButton: highlightButton)
+            let interval = retryCount < Self.retrySlowThreshold
+                ? Self.retryFastInterval : Self.retrySlowInterval
+            if retryCount == Self.retrySlowThreshold {
+                Log.print("[CoachMarkD] ⏳ 재시도 \(retryCount)회 도달 — 간격 \(interval)초로 변경")
+            }
+            DispatchQueue.main.asyncAfter(deadline: .now() + interval) { [weak self] in
+                self?.showCoachMarkD(retryCount: retryCount + 1)
             }
             return
         }
 
-        guard !UIAccessibility.isVoiceOverRunning else { return }
-        guard view.window != nil else { return }
-        guard navigationController?.topViewController === self else { return }
-        guard presentedViewController == nil else { return }
-        guard !isSelectMode else { return }
+        guard !UIAccessibility.isVoiceOverRunning else {
+            Log.print("[CoachMarkD] ❌ 가드: VoiceOver 활성")
+            return
+        }
+        guard view.window != nil else {
+            Log.print("[CoachMarkD] ❌ 가드: view.window nil")
+            return
+        }
+        guard navigationController?.topViewController === self else {
+            Log.print("[CoachMarkD] ❌ 가드: topViewController 불일치")
+            return
+        }
+        guard presentedViewController == nil else {
+            Log.print("[CoachMarkD] ❌ 가드: presentedViewController 존재")
+            return
+        }
+        guard !isSelectMode else {
+            Log.print("[CoachMarkD] ❌ 가드: 선택 모드")
+            return
+        }
 
-        // 스크롤 중이면 정지 후 재시도
+        // 스크롤 중이면 재시도
         guard !isScrolling else {
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
-                self?.showCoachMarkD(highlightButton: highlightButton)
+            let interval = retryCount < Self.retrySlowThreshold
+                ? Self.retryFastInterval : Self.retrySlowInterval
+            DispatchQueue.main.asyncAfter(deadline: .now() + interval) { [weak self] in
+                self?.showCoachMarkD(retryCount: retryCount + 1)
             }
             return
         }
 
         guard let window = view.window else { return }
 
-        // 트리거 1: 정리 버튼 프레임 (하이라이트용)
-        // 트리거 2: nil (구멍 없이 전체 딤)
-        let cleanupFrame: CGRect? = highlightButton ? getCleanupButtonFrame(in: window) : nil
-
-        // 스캔 결과 (없으면 텍스트 폴백)
+        let cleanupFrame = getCleanupButtonFrame(in: window)
         let scanResult = CoachMarkDPreScanner.shared.result
 
-        Log.print("[CoachMarkD] 표시 — 트리거\(highlightButton ? "1(자동)" : "2(수동)"), 썸네일 \(scanResult?.lowQualityAssets.count ?? 0)장")
+        Log.print("[CoachMarkD] 표시 — 썸네일 \(scanResult?.lowQualityAssets.count ?? 0)장")
 
         CoachMarkOverlayView.showAutoCleanup(
             highlightFrame: cleanupFrame,

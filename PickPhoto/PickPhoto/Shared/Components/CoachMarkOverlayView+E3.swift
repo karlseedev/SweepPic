@@ -82,7 +82,7 @@ extension CoachMarkOverlayView {
         // 본문
         let bodyLabel = UILabel()
         bodyLabel.text = "애플 사진앱의 '최근 삭제된 항목'에서\n30일 후 완전히 삭제됩니다."
-        bodyLabel.textColor = UIColor.white.withAlphaComponent(0.9)
+        bodyLabel.textColor = .white
         bodyLabel.font = CoachMarkOverlayView.bodyFont
         bodyLabel.textAlignment = .center
         bodyLabel.numberOfLines = 0

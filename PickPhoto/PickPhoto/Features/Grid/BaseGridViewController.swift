@@ -1051,8 +1051,7 @@ extension BaseGridViewController {
     /// moveToTrash 성공 후 호출
     /// - Parameter cell: 삭제된 셀 (trashIcon 아이콘 위치 획득용, nil이면 아이콘 애니메이션 생략)
     func showDeleteSystemGuideIfNeeded(cell: PhotoCell? = nil) {
-        // TODO: 테스트 완료 후 원복 — hasBeenShown 가드 임시 비활성화
-        // guard !CoachMarkType.firstDeleteGuide.hasBeenShown else { return }
+        guard !CoachMarkType.firstDeleteGuide.hasBeenShown else { return }
         guard !CoachMarkManager.shared.isShowing else { return }
         guard !UIAccessibility.isVoiceOverRunning else { return }
         guard let window = view.window else { return }

@@ -45,6 +45,14 @@ enum CoachMarkType: String {
     func markAsShown() {
         UserDefaults.standard.set(true, forKey: shownKey)
     }
+
+    /// 디버그용: 특정 코치마크 표시 기록 리셋
+    #if DEBUG
+    func resetShown() {
+        UserDefaults.standard.removeObject(forKey: shownKey)
+        Log.print("[CoachMark] DEBUG reset: \(rawValue)")
+    }
+    #endif
 }
 
 // MARK: - CoachMarkManager

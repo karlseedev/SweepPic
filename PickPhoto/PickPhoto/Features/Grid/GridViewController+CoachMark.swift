@@ -70,7 +70,10 @@ extension GridViewController {
         guard !CoachMarkType.gridSwipeDelete.hasBeenShown else { return }
 
         // 현재 표시 중이거나 표시 대기 중이면 스킵
-        guard !CoachMarkManager.shared.isShowing else { return }
+        guard !CoachMarkManager.shared.isShowing else {
+            Log.print("[CoachMarkA] 스크롤 추적 스킵: 다른 코치마크 표시 중")
+            return
+        }
 
         // 사용자 스크롤만 추적 (프로그래밍 스크롤 제외)
         guard isScrolling else { return }
@@ -86,6 +89,8 @@ extension GridViewController {
         // 1화면 높이 이상 스크롤했으면 → 스크롤 정지 → 코치마크 표시
         let threshold = collectionView.bounds.height
         guard threshold > 0, coachMarkScrollAccumulated >= threshold else { return }
+
+        Log.print("[CoachMarkA] threshold 도달 — 누적 \(Int(coachMarkScrollAccumulated))pt / \(Int(threshold))pt")
 
         // 누적 거리 리셋 (재트리거 방지 + 다음 표시를 위한 초기화)
         coachMarkScrollAccumulated = 0
@@ -105,8 +110,14 @@ extension GridViewController {
 
     /// 코치마크 A 즉시 표시
     private func showGridSwipeDeleteCoachMark() {
-        guard !CoachMarkType.gridSwipeDelete.hasBeenShown else { return }
-        guard !CoachMarkManager.shared.isShowing else { return }
+        guard !CoachMarkType.gridSwipeDelete.hasBeenShown else {
+            Log.print("[CoachMarkA] 표시 스킵: 이미 표시됨")
+            return
+        }
+        guard !CoachMarkManager.shared.isShowing else {
+            Log.print("[CoachMarkA] 표시 스킵: 다른 코치마크 표시 중")
+            return
+        }
         guard !UIAccessibility.isVoiceOverRunning else { return }
         guard dataSourceDriver.count > 0 else { return }
 

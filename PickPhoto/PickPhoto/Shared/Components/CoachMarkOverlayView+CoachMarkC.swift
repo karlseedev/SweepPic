@@ -133,25 +133,39 @@ extension CoachMarkOverlayView {
         // 안내 텍스트 준비 (초기 비표시, 포커스 완료 후 페이드인)
         let circleDiameter = max(newHighlightFrame.width, newHighlightFrame.height) * 1.2
         let circleBottom = newHighlightFrame.midY + circleDiameter / 2
-        // 행간 1.2배
-        let c2Text = "+버튼을 눌러 얼굴비교화면으로 이동하세요\n인물이 여러 명이면 좌우로 넘겨볼 수 있어요"
+        // 메인 텍스트 + ※ 안내 (문단 분리, ※는 16pt)
+        let mainText = "+버튼을 눌러 얼굴비교화면으로 이동하세요\u{2028}인물이 여러 명이면 좌우로 넘겨볼 수 있어요"
+        let noticeText = "\n※ 얼굴은 각도, 해상도에 따라 검출되지 않거나\u{2028}다른 인물로 분류될 수 있습니다"
         let c2Style = NSMutableParagraphStyle()
         c2Style.alignment = .center
         c2Style.lineSpacing = CoachMarkOverlayView.bodyFont.pointSize * 0.2
-        messageLabel.attributedText = NSAttributedString(
-            string: c2Text,
+        c2Style.paragraphSpacing = 12
+        let c2Attr = NSMutableAttributedString(
+            string: mainText,
             attributes: [
                 .font: CoachMarkOverlayView.bodyFont,
                 .foregroundColor: UIColor.white,
                 .paragraphStyle: c2Style
             ]
         )
+        let noticeStyle = NSMutableParagraphStyle()
+        noticeStyle.alignment = .center
+        noticeStyle.lineSpacing = UIFont.systemFont(ofSize: 16).pointSize * 0.2
+        c2Attr.append(NSAttributedString(
+            string: noticeText,
+            attributes: [
+                .font: UIFont.systemFont(ofSize: 16, weight: .regular),
+                .foregroundColor: UIColor.white.withAlphaComponent(0.7),
+                .paragraphStyle: noticeStyle
+            ]
+        ))
+        messageLabel.attributedText = c2Attr
         messageLabel.alpha = 0
         messageLabel.frame = CGRect(
             x: 20,
             y: circleBottom + 24,
             width: bounds.width - 40,
-            height: 60
+            height: 140
         )
 
         // 확인 버튼 준비 (초기 비표시)
