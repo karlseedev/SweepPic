@@ -17,7 +17,7 @@ Phase 1은 코드 작업이 아님. Supabase 웹 콘솔에서 직접 수행 후,
   - [ ] 테이블 + 인덱스 생성 (CREATE TABLE events ...)
   - [ ] RLS 활성화 + INSERT 정책 (이벤트명 화이트리스트 9종)
   - [ ] RPC 함수 3개 (daily_summary, delete_restore_summary, purge_old_events)
-  - [ ] pg_cron 90일 자동 삭제 스케줄 (Dashboard > Integrations > Cron)
+  - [ ] pg_cron 90일 자동 삭제 스케줄 (초기 불필요 — DAU 1,000+ 이후 설정)
 - [ ] **3. Credentials 확보 → 로컬 파일에 기록**:
   - [ ] Project URL, anon key, service_role key → `scripts/analytics/.env`에 추가
   - [ ] Project URL, anon key → `PickPhoto/PickPhoto/Config/Supabase.xcconfig` 생성
@@ -121,7 +121,11 @@ END;
 $$;
 ```
 
-5. **90일 보존 자동화** (Supabase Dashboard > Integrations > Cron에서 설정, 내부적으로 pg_cron 사용):
+5. **90일 보존 자동화** (pg_cron — 나중에 설정):
+
+> **초기에는 불필요**: DAU 10명 기준 월 2,700행 → 300MB까지 수년 소요.
+> DAU 1,000명 이상으로 늘어난 뒤 설정해도 충분함.
+> 설정 방법: Database > Extensions > pg_cron 활성화 후 아래 SQL 실행.
 
 ```sql
 SELECT cron.schedule(

@@ -1037,3 +1037,104 @@ func dismissCurrent() {
 ## 구현 완료일
 
 2026-02-17
+
+---
+
+# 유사사진 기능 — A/B/E-1 온보딩 완료 전 비활성화
+
+## Context
+
+C 온보딩(유사사진 안내)은 A(그리드 스와이프) → E-1(첫 삭제 안내) → B(뷰어 스와이프) 순서를 모두 완료해야 트리거된다.
+그러나 유사사진 기능 자체(뱃지, +버튼, 얼굴 비교 화면)는 온보딩 상태와 무관하게 항상 노출되어,
+사용자가 A/B/E-1을 완료하기 전에 이미 기능을 발견하고 사용할 수 있다.
+→ C 온보딩이 나올 때쯤 이미 기능을 알고 있어 안내 의미가 없어짐.
+
+**목표**: A/B/E-1 온보딩 완료 전까지 유사사진 뱃지 및 기능 전체를 비활성화.
+
+---
+
+## 핵심 전략: `shouldEnableSimilarPhoto`에 선행조건 추가
+
+그리드와 뷰어 모두 `shouldEnableSimilarPhoto` 함수를 중앙 게이트로 사용 중.
+이 함수에 A/B/E-1 완료 조건을 추가하면 모든 하위 기능이 자동으로 게이트됨:
+
+**그리드** (`GridViewController+SimilarPhoto.swift:456`):
+- `configureSimilarPhotoBorder()` → 뱃지 표시
+- `triggerInitialAnalysis()` → 분석 시작
+- `handleSimilarPhotoScrollEnd()` → 스크롤 후 분석
+
+**뷰어** (`ViewerViewController+SimilarPhoto.swift:443`):
+- `showSimilarPhotoOverlay()` → +버튼 표시
+- → `checkAndShowFaceButtons()` → 분석 요청 + 버튼 생성
+
+---
+
+## 수정 내용
+
+### 1. 그리드 — `shouldEnableSimilarPhoto()` 수정
+**파일**: `Features/Grid/GridViewController+SimilarPhoto.swift:456`
+
+기존 조건(FeatureFlags, VoiceOver, 선택모드) 끝에 추가:
+```swift
+// 선행 온보딩(A, E-1, B) 미완료 시 비활성화
+// C 온보딩이 자연스럽게 유사사진 기능을 안내하도록 순서 보장
+guard CoachMarkType.gridSwipeDelete.hasBeenShown else { return false }
+guard CoachMarkType.firstDeleteGuide.hasBeenShown else { return false }
+guard CoachMarkType.viewerSwipeDelete.hasBeenShown else { return false }
+```
+
+### 2. 뷰어 — `shouldEnableSimilarPhoto` 수정
+**파일**: `Features/Viewer/ViewerViewController+SimilarPhoto.swift:443`
+
+동일한 조건 추가:
+```swift
+// 선행 온보딩(A, E-1, B) 미완료 시 비활성화
+guard CoachMarkType.gridSwipeDelete.hasBeenShown else { return false }
+guard CoachMarkType.firstDeleteGuide.hasBeenShown else { return false }
+guard CoachMarkType.viewerSwipeDelete.hasBeenShown else { return false }
+```
+
+---
+
+## 동작 흐름
+
+1. **신규 사용자**: A/B/E-1 미완료 → `shouldEnableSimilarPhoto = false` → 뱃지 미표시, +버튼 미표시, 분석 미실행
+2. **B 완료 후 그리드 복귀**: `shouldEnableSimilarPhoto = true` → 스크롤 시 분석 시작 → 뱃지 표시 → C-1 즉시 트리거
+3. **기존 사용자** (이미 A/B/E-1 완료): 변화 없음 — 기능 정상 동작
+
+---
+
+## 검토 결과
+
+### 확인된 안전성
+- `CoachMarkType`은 앱 타겟 내 `CoachMarkOverlayView.swift:28`에 정의 → 별도 import 불필요 ✅
+- `setupSimilarPhotoObserver()`는 옵저버 등록만 수행 (UI 노출 없음) → 게이트 불필요 ✅
+- `triggerInitialAnalysis()`, `handleSimilarPhotoScrollEnd()` 모두 `shouldEnableSimilarPhoto()` 경유 → 분석도 자동 차단 ✅
+
+### 검토한 잠재 누수 경로
+- `updateVisibleCellBorders()`: `shouldEnableSimilarPhoto()` 미체크, 호출자 3곳 (분석완료 알림, didBecomeActive, 삭제처리)
+  - **문제 없음**: 분석 자체가 게이트되므로 캐시 비어있음 → `showBadge` 호출 안 됨
+  - SimilarityCache는 in-memory 싱글톤 → 앱 재시작 시 초기화
+
+### B 완료 후 뱃지 표시 타이밍
+- B 완료 → 그리드 복귀 → `viewDidAppear`에는 유사사진 관련 트리거 없음
+- 사용자가 스크롤해야 `handleSimilarPhotoScrollEnd()` → 분석 시작 → 뱃지 표시 → C-1 트리거
+- 자연스러운 흐름 (사용자는 뱃지 존재를 모르므로 지연 인지 없음)
+
+---
+
+## 수정 대상 파일 요약
+
+| 파일 | 작업 |
+|-----|------|
+| `GridViewController+SimilarPhoto.swift` | `shouldEnableSimilarPhoto()` — 3줄 guard 추가 |
+| `ViewerViewController+SimilarPhoto.swift` | `shouldEnableSimilarPhoto` — 3줄 guard 추가 |
+
+---
+
+## 검증
+
+1. **A/B/E-1 미완료 상태**: 그리드에 뱃지 없음, 뷰어에 +버튼 없음
+2. **A/B/E-1 완료 후**: 그리드 스크롤 → 뱃지 표시 → C-1 트리거
+3. **뷰어에서 +버튼**: A/B/E-1 완료 후에만 표시
+4. **빌드 성공** 확인

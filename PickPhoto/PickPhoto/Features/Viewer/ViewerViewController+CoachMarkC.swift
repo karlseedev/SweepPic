@@ -174,7 +174,11 @@ extension ViewerViewController {
             guard let self else { return }
             self.view.isUserInteractionEnabled = true
 
-            if let faceCompVC = self.presentedViewController as? FaceComparisonViewController {
+            // iOS 26+: UINavigationController로 래핑되므로 rootViewController 확인 필요
+            let faceCompVC = (self.presentedViewController as? UINavigationController)?.viewControllers.first as? FaceComparisonViewController
+                ?? self.presentedViewController as? FaceComparisonViewController
+
+            if let faceCompVC {
                 // present 성공 → C 완료 마킹 + C-3 자동 재생
                 CoachMarkType.similarPhoto.markAsShown()
                 faceCompVC.showFaceComparisonGuide()
