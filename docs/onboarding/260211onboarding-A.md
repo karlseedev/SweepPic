@@ -309,8 +309,8 @@ extension GridViewController {
         guard !CoachMarkManager.shared.isShowing else { return }
         guard view.window != nil else { return }
 
-        // 화면 중앙 셀 찾기 (기존 findCenterCell() 활용)
-        guard let (cell, _) = findCenterCell() else { return }
+        // 화면 중앙에서 non-trashed 셀 찾기 (trashed 셀은 스와이프 시 복원이므로 혼란 방지)
+        guard let (cell, _) = findCenterCellForA1() else { return }
         guard let window = view.window,
               let cellFrame = cell.superview?.convert(cell.frame, to: window) else { return }
 
@@ -325,6 +325,31 @@ extension GridViewController {
     func cancelCoachMarkA1Timer() {
         coachMarkA1Timer?.invalidate()
         coachMarkA1Timer = nil
+    }
+
+    /// A-1용 셀 탐색 — non-trashed 셀 우선, 없으면 기존 findCenterCell() 폴백
+    /// (trashed 셀은 스와이프 시 '복원'이므로 "삭제해 보세요" 텍스트와 불일치)
+    private func findCenterCellForA1() -> (PhotoCell, IndexPath)? {
+        let centerPoint = CGPoint(x: collectionView.bounds.midX, y: collectionView.bounds.midY)
+        var bestCell: PhotoCell?
+        var bestIndexPath: IndexPath?
+        var bestDistance: CGFloat = .greatestFiniteMagnitude
+
+        for indexPath in collectionView.indexPathsForVisibleItems {
+            guard indexPath.item >= paddingCellCount else { continue }
+            guard let cell = collectionView.cellForItem(at: indexPath) as? PhotoCell else { continue }
+            guard !cell.isTrashed else { continue }  // non-trashed만
+
+            let distance = hypot(cell.center.x - centerPoint.x, cell.center.y - centerPoint.y)
+            if distance < bestDistance {
+                bestDistance = distance
+                bestCell = cell
+                bestIndexPath = indexPath
+            }
+        }
+
+        if let cell = bestCell, let ip = bestIndexPath { return (cell, ip) }
+        return findCenterCell()  // 모두 trashed면 기존 로직 폴백
     }
 }
 ```
@@ -351,21 +376,20 @@ if CoachMarkManager.shared.isA1Active {
 extension CoachMarkOverlayView {
     /// A-1 전용 표시 (스냅샷/손가락/확인버튼 없음)
     static func showA1(highlightFrame: CGRect, in window: UIWindow) {
-        let overlay = CoachMarkOverlayView()
-        overlay.coachMarkType = .gridSwipeDelete  // 기존 타입 재사용
+        let overlay = CoachMarkOverlayView(frame: window.bounds)  // frame 즉시 설정
+        overlay.coachMarkType = .gridSwipeDelete  // 기존 타입 재사용 (updateDimPath 호환)
         overlay.isA1SwipeMode = true
         overlay.highlightFrame = highlightFrame
-        overlay.frame = window.bounds
 
         // 딤 배경 + 하이라이트 구멍 (스냅샷 없이 실제 셀이 보임)
-        overlay.setupDimBackground(highlightFrame: highlightFrame)
+        overlay.updateDimPath()  // 기존 메서드 — evenOdd로 highlightFrame 구멍 생성
 
         // 텍스트: "셀을 가로로 스와이프해서\n삭제해 보세요"
         //   "가로로 스와이프" bold + yellow 강조
         overlay.setupA1Text(below: highlightFrame)
+        overlay.addSubview(overlay.messageLabel)  // subview 추가 필수
 
-        // 확인 버튼 숨김
-        overlay.confirmButton.isHidden = true
+        // 확인 버튼 미추가 (addSubview 안 함 → 표시 안 됨)
 
         // CoachMarkManager 등록
         CoachMarkManager.shared.currentOverlay = overlay
@@ -533,6 +557,25 @@ if UIAccessibility.isReduceMotionEnabled {
 10. **빌드 성공** 확인
 
 ---
+
+## 검토 결과 (2026-02-25)
+
+### 수정 반영
+1. **`setupDimBackground()` → `updateDimPath()`**: 존재하지 않는 메서드 참조 → 기존 메서드로 수정
+2. **생성자**: `CoachMarkOverlayView()` → `CoachMarkOverlayView(frame: window.bounds)` (기존 패턴 일치)
+3. **`addSubview(messageLabel)` 추가**: showA1()에서 누락된 subview 추가
+4. **non-trashed 셀 우선 선택**: `findCenterCellForA1()` 추가 — trashed 셀 스와이프 시 복원이 되어 "삭제해 보세요" 텍스트와 불일치하는 문제 방지
+
+### 안전성 확인
+| 항목 | 결과 |
+|------|------|
+| handleSwipeDeleteBegan → dismissCurrent() | isA1Active 가드가 차단 ✅ |
+| A-1 → E-1 트리거 체인 | currentOverlay = nil 먼저 → isShowing = false → E-1 가드 통과 ✅ |
+| hitTest 터치 통과 | nil 반환 → collectionView pan gesture 정상 발동 ✅ |
+| 0.2s fade-out 겹침 | A-1 페이드아웃 + E-1 페이드인 동시 진행, 시각적 문제 없음 ✅ |
+| markAsShown 무해 | gridSwipeDelete 이미 shown → no-op ✅ |
+| updateDimPath 호환 | .gridSwipeDelete 타입 → 정사각형 구멍 정상 생성 ✅ |
+| 앱 백그라운드 | sceneDidEnterBackground에서 dismissCurrent 미호출 → A-1 유지 (의도된 동작) ✅ |
 
 ---
 
