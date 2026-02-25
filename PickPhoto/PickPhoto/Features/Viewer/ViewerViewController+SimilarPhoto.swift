@@ -457,6 +457,12 @@ extension ViewerViewController {
         // 삭제대기함 사진 확인 (보관함/앨범에서 삭제대기함 사진을 .normal 모드로 열어도 비활성화)
         guard !coordinator.isTrashed(at: currentIndex) else { return false }
 
+        // 선행 온보딩(A, E-1, B) 미완료 시 비활성화
+        // C 온보딩이 자연스럽게 유사사진 기능을 안내하도록 순서 보장
+        guard CoachMarkType.gridSwipeDelete.hasBeenShown else { return false }
+        guard CoachMarkType.firstDeleteGuide.hasBeenShown else { return false }
+        guard CoachMarkType.viewerSwipeDelete.hasBeenShown else { return false }
+
         return true
     }
 

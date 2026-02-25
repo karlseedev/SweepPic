@@ -19,6 +19,14 @@
 
 ---
 
+## 공통 규칙: 플래그 리셋 안전성
+
+재생 시 `resetShown()`으로 플래그를 리셋하지만, 재생이 실패하면
+`hasBeenShown=false` 상태가 남아 자연 온보딩이 재발동될 수 있음.
+→ **재생 실패 시 반드시 `markAsShown()`을 재호출하여 플래그 복원**
+
+---
+
 ## 각 코치마크별 즉시 재생
 
 ### A: 그리드 스와이프 삭제
@@ -107,8 +115,11 @@
    - 텍스트: "설명을 위해 사진을 임시로 삭제합니다
             (삭제대기함에서 복구 가능)"
    - [확인] 버튼 없음
-4. 모션 완료 → 해당 사진을 실제로 삭제대기함으로 이동
-5. → E-1+E-2 시퀀스 자동 시작 (기존 showDeleteSystemGuide 흐름)
+4. 모션 완료 → A 변형 오버레이 dismiss (isShowing=false 보장)
+5. → 해당 사진을 실제로 삭제대기함으로 이동
+6. → E-1+E-2 시퀀스 시작 (showDeleteSystemGuide 직접 호출)
+   ※ showDeleteSystemGuideIfNeeded의 isShowing 가드 우회를 위해
+     A 변형 dismiss 완료 후 호출해야 함
 
 [동작]
   A 변형: 셀 하이라이트 + 스와이프 1회 + 안내 텍스트 (확인 없음)
@@ -144,12 +155,16 @@
 | `CoachMarkOverlayView.swift:51-56` | `resetShown()` `#if DEBUG` 제거 |
 | `GridViewController+Cleanup.swift:58,96` | UIMenu에 "설명 다시 보기" 항목 추가 |
 | `GridViewController+CoachMark.swift:113` | `showGridSwipeDeleteCoachMark()` `private` → `func` |
+| `GridViewController+CoachMark.swift:149` | `findCenterCell()` `private` → `func` |
 | `GridViewController+CoachMarkC.swift:174` | `showSimilarBadgeCoachMark(cell:assetID:)` `private` → `func` |
 | `GridViewController+CoachMarkD.swift:191` | `getCleanupButtonFrame(in:)` `private` → `func` |
 | `SimilarityCache.swift` | `findAnyGroupMember()` 메서드 추가 |
 | **신규** `GridViewController+CoachMarkReplay.swift` | 목록 표시 + A~E-3 즉시 재생 로직 |
 
 ### SimilarityCache 추가 메서드
+
+순서 비결정적 — 딕셔너리 순회이므로 아무 그룹 멤버 1개를 반환.
+캐시 hit 용도이므로 특정 사진이 선택될 필요 없음.
 
 ```swift
 func findAnyGroupMember() -> (assetID: String, groupID: String)? {

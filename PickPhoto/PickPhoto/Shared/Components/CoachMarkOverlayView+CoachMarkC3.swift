@@ -113,10 +113,12 @@ extension CoachMarkOverlayView {
     /// Step 1 안내 텍스트 + 확인 버튼 표시
     private func showC3Step1Content() {
         // 안내 텍스트 (하이라이트 셀 아래, 행간 1.2배)
-        let mainText = "마음에 안드는 얼굴을 선택하고 삭제해 보세요\u{2028}다른 인물의 얼굴도 같이 확인해서 지울 수 있어요"
+        // \n = 단락 구분 (paragraphSpacing 적용), \u{2028} = 같은 단락 내 줄바꿈
+        let mainText = "마음에 들지 않는 얼굴을 선택하세요\n옆으로 이동해서 다른 인물의 얼굴도\u{2028}확인하고 삭제할 수 있어요"
         let style = NSMutableParagraphStyle()
         style.alignment = .center
         style.lineSpacing = CoachMarkOverlayView.bodyFont.pointSize * 0.2
+        style.paragraphSpacing = 12
         let attr = NSMutableAttributedString(
             string: mainText,
             attributes: [
@@ -125,8 +127,8 @@ extension CoachMarkOverlayView {
                 .paragraphStyle: style
             ]
         )
-        // "선택하고 삭제" 키워드 강조
-        if let range = mainText.range(of: "선택하고 삭제") {
+        // "얼굴을 선택" 키워드 강조
+        if let range = mainText.range(of: "얼굴을 선택") {
             let nsRange = NSRange(range, in: mainText)
             attr.addAttributes([
                 .font: CoachMarkOverlayView.bodyBoldFont,

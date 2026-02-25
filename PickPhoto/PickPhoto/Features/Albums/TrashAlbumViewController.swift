@@ -97,7 +97,7 @@ final class TrashAlbumViewController: BaseGridViewController {
 
     /// 빈 상태 설정
     override var emptyStateConfig: (icon: String, title: String, subtitle: String?) {
-        ("trash", "삭제대기함이 비어 있습니다", nil)
+        ("xmark.bin", "삭제대기함이 비어 있습니다", nil)
     }
 
     /// 네비게이션 타이틀

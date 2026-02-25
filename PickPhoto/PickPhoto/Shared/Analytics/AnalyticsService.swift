@@ -209,12 +209,18 @@ final class AnalyticsService: AnalyticsServiceProtocol {
     /// - Info.plist에서 SUPABASE_URL, SUPABASE_ANON_KEY 읽기
     /// - 키가 없으면 (xcconfig 미설정) 비활성 → TD만 동작
     private func configureSupabase() {
-        guard let url = Bundle.main.infoDictionary?["SUPABASE_URL"] as? String,
-              let key = Bundle.main.infoDictionary?["SUPABASE_ANON_KEY"] as? String,
+        let rawURL = Bundle.main.infoDictionary?["SUPABASE_URL"]
+        let rawKey = Bundle.main.infoDictionary?["SUPABASE_ANON_KEY"]
+        Log.print("[Supabase] configureSupabase — URL: \(rawURL ?? "nil"), Key: \(rawKey == nil ? "nil" : "exists")")
+
+        guard let url = rawURL as? String,
+              let key = rawKey as? String,
               !url.isEmpty, !key.isEmpty else {
+            Log.print("[Supabase] credentials 없음 — 비활성")
             return
         }
         supabaseProvider = SupabaseProvider(baseURL: url, anonKey: key)
+        Log.print("[Supabase] 초기화 완료 (url: \(url.prefix(30))...)")
     }
 
     // MARK: - Dual Send Helpers

@@ -463,7 +463,11 @@ extension GridViewController {
         // 선택 모드 시 비활성화
         guard !isSelectMode else { return false }
 
-        // 삭제대기함 화면 시 비활성화 (삭제대기함은 별도 탭이므로 GridViewController에서는 해당 없음)
+        // 선행 온보딩(A, E-1, B) 미완료 시 비활성화
+        // C 온보딩이 자연스럽게 유사사진 기능을 안내하도록 순서 보장
+        guard CoachMarkType.gridSwipeDelete.hasBeenShown else { return false }
+        guard CoachMarkType.firstDeleteGuide.hasBeenShown else { return false }
+        guard CoachMarkType.viewerSwipeDelete.hasBeenShown else { return false }
 
         return true
     }
