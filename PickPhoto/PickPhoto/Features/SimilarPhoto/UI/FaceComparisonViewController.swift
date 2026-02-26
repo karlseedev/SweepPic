@@ -177,6 +177,7 @@ final class FaceComparisonViewController: UIViewController {
         let button = GlassTextButton(title: "취소", style: .plain, tintColor: .systemBlue)
         button.addTarget(self, action: #selector(cancelButtonTapped), for: .touchUpInside)
         button.translatesAutoresizingMaskIntoConstraints = false
+        button.accessibilityIdentifier = "comparison_cancel"
         return button
     }()
 
@@ -196,6 +197,7 @@ final class FaceComparisonViewController: UIViewController {
         let button = GlassTextButton(title: "삭제", style: .plain, tintColor: .systemRed)
         button.addTarget(self, action: #selector(deleteButtonTapped), for: .touchUpInside)
         button.translatesAutoresizingMaskIntoConstraints = false
+        button.accessibilityIdentifier = "comparison_delete"
         return button
     }()
 

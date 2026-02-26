@@ -171,6 +171,7 @@ final class ViewerViewController: UIViewController {
         let button = GlassIconButton(icon: "trash", size: .medium, tintColor: .systemRed, iconPointSize: 17.6)
         button.translatesAutoresizingMaskIntoConstraints = false
         button.addTarget(self, action: #selector(deleteButtonTapped), for: .touchUpInside)
+        button.accessibilityIdentifier = "viewer_delete"
         return button
     }()
 
@@ -180,6 +181,7 @@ final class ViewerViewController: UIViewController {
         let button = GlassTextButton(title: "복구", style: .plain, tintColor: .systemGreen)
         button.translatesAutoresizingMaskIntoConstraints = false
         button.addTarget(self, action: #selector(restoreButtonTapped), for: .touchUpInside)
+        button.accessibilityIdentifier = "viewer_restore"
         return button
     }()
 
@@ -189,6 +191,7 @@ final class ViewerViewController: UIViewController {
         let button = GlassTextButton(title: "삭제", style: .plain, tintColor: .systemRed)
         button.translatesAutoresizingMaskIntoConstraints = false
         button.addTarget(self, action: #selector(permanentDeleteButtonTapped), for: .touchUpInside)
+        button.accessibilityIdentifier = "viewer_permanent_delete"
         return button
     }()
 
@@ -594,6 +597,7 @@ final class ViewerViewController: UIViewController {
         let backButton = GlassIconButton(icon: "chevron.backward", size: .medium, tintColor: .white)
         backButton.translatesAutoresizingMaskIntoConstraints = false
         backButton.addTarget(self, action: #selector(backButtonTapped), for: .touchUpInside)
+        backButton.accessibilityIdentifier = "viewer_back"
 
         view.addSubview(backButton)
         backButtonView = backButton
