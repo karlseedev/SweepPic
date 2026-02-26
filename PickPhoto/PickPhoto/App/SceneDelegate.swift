@@ -162,6 +162,8 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
 
         // 코치마크 D 재테스트: 주석 해제하면 D 리셋 활성화
         // CoachMarkDPreScanner.shared.debugReset()
+
+        AnalyticsTestInjector.runIfNeeded()
         #endif
     }
 
