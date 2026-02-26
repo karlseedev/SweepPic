@@ -123,16 +123,36 @@ if #available(iOS 26.0, *) {
 
 ## 로그 관리 시스템
 
-앱 전체 로그는 `Sources/AppCore/Services/Log.swift`에서 중앙 관리됩니다.
+앱 전체 로그는 Apple `Logger` API (Unified Logging)를 사용합니다.
+Logger extension 정의: `Sources/AppCore/Services/Logger+App.swift`
 
 ```swift
-// 카테고리별 ON/OFF (Log.swift의 categories 딕셔너리 수정)
-Log.categories["Video"] = true      // 특정 카테고리만 켜기
-Log.categories["GridViewController"] = false
+import OSLog      // Logger 타입
+import AppCore    // Logger extension (.viewer, .app 등)
+
+// 사용 예시
+Logger.viewer.debug("scale: \(scale)")
+Logger.pipeline.error("thumbnail load failed: \(error)")
+Logger.app.notice("Memory warning received")
 ```
 
-- `Log.print("[Category] 메시지")` - 카테고리 자동 추출하여 필터링
-- `Log.debug("Category", "메시지")` - 카테고리 직접 지정
+**로그 레벨:**
+| 레벨 | 용도 | 릴리즈 |
+|------|------|--------|
+| `.debug` | 개발 중 상세 로그 | 자동 제거 |
+| `.info` | 참고 정보 | 스트리밍 시만 |
+| `.notice` | 핵심 이벤트 | 디스크 저장 |
+| `.error` | 런타임 에러 | 장기 보존 |
+
+**카테고리 (11개):**
+`viewer`, `albums`, `similarPhoto`, `cleanup`, `transition`, `pipeline`, `performance`, `analytics`, `coachMark`, `app`, `appDebug`
+
+**실기기 로그 확인:**
+```bash
+log stream --predicate 'subsystem == "com.karl.PickPhoto"' --level debug
+```
+
+> ⚠️ `Log.swift`는 레거시로 남아있으나 실제 사용처 없음. 새 코드에서는 `Logger` 사용
 
 ## 빌드 & 테스트 명령어
 
