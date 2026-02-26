@@ -24,6 +24,8 @@ import Photos
 /// ```swift
 /// await ExtendedFallbackTester.shared.runComparison(with: photos)
 /// ```
+#if DEBUG
+
 class ExtendedFallbackTester {
 
     // MARK: - Singleton
@@ -198,3 +200,5 @@ class ExtendedFallbackTester {
         print("╚══════════════════════════════════════════════════════════════════╝")
     }
 }
+
+#endif

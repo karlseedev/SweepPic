@@ -90,8 +90,10 @@ public final class FileLogger {
         let timestamp = String(format: "+%.1fms", elapsed)
         let line = "[\(timestamp)] \(message)\n"
 
-        // 콘솔에도 출력
+        // 콘솔에도 출력 (DEBUG 빌드만)
+        #if DEBUG
         print(message)
+        #endif
 
         // 파일에 저장
         queue.async { [weak self] in

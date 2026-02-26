@@ -21,6 +21,8 @@ import Photos
 import Vision
 import AppCore
 
+#if DEBUG
+
 // MARK: - FaceComparisonDebugHelper
 
 /// 얼굴 비교 화면 디버그 헬퍼
@@ -513,3 +515,5 @@ struct FaceDebugEntry: Codable {
     /// 값: 1 - cosineSimilarity (0에 가까울수록 동일인)
     let sfaceCost: Float?
 }
+
+#endif

@@ -11,6 +11,8 @@ import ObjectiveC
 /// - CALayer 속성 덤프 (backgroundColor, opacity, cornerRadius, border, shadow)
 /// - UIVisualEffectView effect 정보
 /// - Private API 접근 시도 (KVC)
+#if DEBUG
+
 final class SystemUIInspector {
 
     static let shared = SystemUIInspector()
@@ -1137,3 +1139,5 @@ extension SystemUIInspector {
         return results
     }
 }
+
+#endif

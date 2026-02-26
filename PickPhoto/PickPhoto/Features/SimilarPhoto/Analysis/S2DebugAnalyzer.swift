@@ -15,6 +15,8 @@ import AppCore
 import Photos
 import CoreGraphics
 
+#if DEBUG
+
 /// S2 원인 분석용 디버그 로그 출력 클래스
 final class S2DebugAnalyzer {
 
@@ -601,3 +603,5 @@ final class S2DebugAnalyzer {
         }
     }
 }
+
+#endif

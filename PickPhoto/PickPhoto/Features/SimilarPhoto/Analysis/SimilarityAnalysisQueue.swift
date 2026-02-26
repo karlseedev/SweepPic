@@ -117,6 +117,7 @@ final class SimilarityAnalysisQueue {
             let avgPhotos = Double(photoCountSum) / Double(measurementCount)
             let avgFaces = Double(faceCountSum) / Double(measurementCount)
 
+            #if DEBUG
             print("""
             ╔══════════════════════════════════════════════════════╗
             ║       PERFORMANCE STATISTICS (Vision) - \(measurementCount) runs       ║
@@ -139,6 +140,7 @@ final class SimilarityAnalysisQueue {
             ║    avg: \(String(format: "%+.1f", mem.avg))MB, min: \(String(format: "%+.1f", mem.min))MB, max: \(String(format: "%+.1f", mem.max))MB
             ╚══════════════════════════════════════════════════════╝
             """)
+            #endif
         }
     }
 

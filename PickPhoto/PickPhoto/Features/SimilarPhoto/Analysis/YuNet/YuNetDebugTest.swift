@@ -24,6 +24,8 @@ import AppCore
 /// 2. 얼굴 감지 테스트
 /// 3. 얼굴 정렬 테스트
 /// 4. 임베딩 추출 테스트
+#if DEBUG
+
 final class YuNetDebugTest {
 
     // MARK: - Singleton
@@ -1082,3 +1084,5 @@ final class YuNetDebugTest {
         }
     }
 }
+
+#endif
