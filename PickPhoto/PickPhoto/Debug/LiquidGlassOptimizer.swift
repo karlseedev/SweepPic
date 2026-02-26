@@ -17,6 +17,7 @@
 import UIKit
 import MetalKit
 import AppCore
+import OSLog
 // C-5: import LiquidGlassKit removed — LiquidGlassSettings no longer needed
 
 /// LiquidGlassKit 성능 최적화 모드
@@ -165,7 +166,7 @@ enum LiquidGlassOptimizer {
             overlay.blurView.removeFromSuperview()
         }
         preloadedOverlays.removeAll()
-        Log.print("[LiquidGlass] Blur cleanup 완료")
+        Logger.performance.debug("Blur cleanup 완료")
     }
 
     // MARK: - Test B: Pause Mode
@@ -175,7 +176,7 @@ enum LiquidGlassOptimizer {
         for mtkView in mtkViews {
             mtkView.isPaused = true
         }
-        Log.print("[LiquidGlass] MTKView paused: \(mtkViews.count)개")
+        Logger.performance.debug("MTKView paused: \(mtkViews.count)개")
     }
 
     private static func resumeAllMTKViews(in rootView: UIView) {
@@ -183,7 +184,7 @@ enum LiquidGlassOptimizer {
         for mtkView in mtkViews {
             mtkView.isPaused = false
         }
-        Log.print("[LiquidGlass] MTKView resumed: \(mtkViews.count)개")
+        Logger.performance.debug("MTKView resumed: \(mtkViews.count)개")
     }
 
     // MARK: - Test C: Blur Replacement Mode (Preloaded)
@@ -225,7 +226,7 @@ enum LiquidGlassOptimizer {
             }
         }
 
-        Log.print("[LiquidGlass] Blur show: \(count)개")
+        Logger.performance.debug("Blur show: \(count)개")
     }
 
     /// 사전 생성된 블러 오버레이 숨기기 (스크롤 종료)
@@ -263,7 +264,7 @@ enum LiquidGlassOptimizer {
             }
         }
 
-        Log.print("[LiquidGlass] Blur hide: \(count)개")
+        Logger.performance.debug("Blur hide: \(count)개")
     }
 
     // C-5: showBlurOverlaysForC5/hideBlurOverlaysForC5 removed — blur is always visible.
@@ -309,7 +310,7 @@ enum LiquidGlassOptimizer {
         }
 
         if !orphanedKeys.isEmpty {
-            Log.print("[LiquidGlass] Orphaned cleanup: \(orphanedKeys.count)개 제거 (남은: \(preloadedOverlays.count)개)")
+            Logger.performance.debug("Orphaned cleanup: \(orphanedKeys.count)개 제거 (남은: \(preloadedOverlays.count)개)")
         }
     }
 
@@ -429,7 +430,7 @@ enum LiquidGlassOptimizer {
         let all = findAllMTKViews(in: rootView)
         let active = all.filter { !$0.isPaused }.count
         let paused = all.count - active
-        Log.print("[LiquidGlass] Status(\(label)): active=\(active), paused=\(paused), total=\(all.count)")
+        Logger.performance.debug("Status(\(label)): active=\(active), paused=\(paused), total=\(all.count)")
     }
 
     // MARK: - Legacy API (호환성)

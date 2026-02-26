@@ -24,6 +24,7 @@
 import Foundation
 import Photos
 import AppCore
+import OSLog
 
 // MARK: - AestheticsOnlyResult
 
@@ -99,14 +100,14 @@ final class AestheticsOnlyTester {
     func clearSession() {
         lastAssetDate = nil
         UserDefaults.standard.removeObject(forKey: lastAssetDateKey)
-        Log.print("[AestheticsOnly] 세션 초기화됨")
+        Logger.cleanup.debug("세션 초기화됨")
     }
 
     /// 세션 저장
     private func saveSession() {
         if let date = lastAssetDate {
             UserDefaults.standard.set(date, forKey: lastAssetDateKey)
-            Log.print("[AestheticsOnly] 세션 저장: \(date)")
+            Logger.cleanup.debug("세션 저장: \(date)")
         }
     }
 
@@ -131,7 +132,7 @@ final class AestheticsOnlyTester {
     ) async -> AestheticsOnlyResult {
         // 이미 실행 중이면 빈 결과 반환
         guard !isRunning else {
-            Log.print("[AestheticsOnly] 이미 실행 중")
+            Logger.cleanup.debug("이미 실행 중")
             return AestheticsOnlyResult(totalScanned: 0, lowQualityCount: 0, lowQualityAssetIDs: [])
         }
 
@@ -145,9 +146,9 @@ final class AestheticsOnlyTester {
             clearSession()
         }
 
-        Log.print("[AestheticsOnly] 테스트 시작 - threshold=\(lowQualityThreshold), maxScan=\(maxScanCount)")
+        Logger.cleanup.debug("테스트 시작 - threshold=\(self.lowQualityThreshold), maxScan=\(self.maxScanCount)")
         if let date = startDate {
-            Log.print("[AestheticsOnly] 이어서 시작: \(date)")
+            Logger.cleanup.debug("이어서 시작: \(date)")
         }
 
         var totalScanned = 0
@@ -175,7 +176,7 @@ final class AestheticsOnlyTester {
         let fetchResult = PHAsset.fetchAssets(with: fetchOptions)
         let assetCount = min(fetchResult.count, maxScanCount)
 
-        Log.print("[AestheticsOnly] 총 \(fetchResult.count)장 중 \(assetCount)장 검색 예정")
+        Logger.cleanup.debug("총 \(fetchResult.count)장 중 \(assetCount)장 검색 예정")
 
         // 배치 처리 (20장씩)
         let batchSize = 20
@@ -209,7 +210,7 @@ final class AestheticsOnlyTester {
                 // AestheticsScore < threshold → 저품질
                 if metrics.overallScore < lowQualityThreshold {
                     lowQualityAssetIDs.append(asset.localIdentifier)
-                    Log.print("[AestheticsOnly] 저품질 발견: score=\(String(format: "%.3f", metrics.overallScore))")
+                    Logger.cleanup.debug("저품질 발견: score=\(String(format: "%.3f", metrics.overallScore))")
                 }
 
                 // 진행 콜백
@@ -232,7 +233,7 @@ final class AestheticsOnlyTester {
 
         // 저품질 사진 삭제대기함 이동
         if !lowQualityAssetIDs.isEmpty {
-            Log.print("[AestheticsOnly] \(lowQualityAssetIDs.count)장 삭제대기함 이동")
+            Logger.cleanup.debug("\(lowQualityAssetIDs.count)장 삭제대기함 이동")
             trashStore.moveToTrash(assetIDs: lowQualityAssetIDs)
         }
 
@@ -243,7 +244,7 @@ final class AestheticsOnlyTester {
             lowQualityAssetIDs: lowQualityAssetIDs
         )
 
-        Log.print("[AestheticsOnly] 테스트 완료: \(totalScanned)장 검색, \(lowQualityAssetIDs.count)장 저품질")
+        Logger.cleanup.debug("테스트 완료: \(totalScanned)장 검색, \(lowQualityAssetIDs.count)장 저품질")
 
         return result
     }

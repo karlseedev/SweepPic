@@ -1,6 +1,7 @@
 #if DEBUG
 import Foundation
 import AppCore
+import OSLog
 
 /// Analytics Test A용 테스트 이벤트/카운터 주입기
 /// - Launch argument `--analytics-test-inject`가 있을 때만 동작
@@ -17,7 +18,7 @@ final class AnalyticsTestInjector {
     static func runIfNeeded() {
         guard shouldRun else { return }
 
-        Log.print("[AnalyticsTest] 테스트 주입 모드 감지")
+        Logger.appDebug.debug("테스트 주입 모드 감지")
 
         // SDK 초기화 + UI 안정화 대기 후 실행
         DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
@@ -34,12 +35,12 @@ final class AnalyticsTestInjector {
         // 2) 세션 카운터 주입 (barrier write)
         service.queue.async(flags: .barrier) {
             injectSessionCounters(&service.counters)
-            Log.print("[AnalyticsTest] 세션 카운터 주입 완료")
+            Logger.appDebug.debug("세션 카운터 주입 완료")
 
             // 3) 메인 스레드에서 flush (barrier 외부)
             DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
                 service.handleSessionEnd()
-                Log.print("[AnalyticsTest] flush 실행 완료")
+                Logger.appDebug.debug("flush 실행 완료")
             }
         }
     }
@@ -75,7 +76,7 @@ final class AnalyticsTestInjector {
             movedCount: 11
         ))
 
-        Log.print("[AnalyticsTest] 즉시 전송 이벤트 4건 발사")
+        Logger.appDebug.debug("즉시 전송 이벤트 4건 발사")
     }
 
     private static func injectSessionCounters(_ counters: inout SessionCounters) {

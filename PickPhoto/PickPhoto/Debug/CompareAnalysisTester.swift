@@ -24,6 +24,7 @@ import Foundation
 import Photos
 import Vision
 import AppCore
+import OSLog
 
 // MARK: - CompareCategory
 
@@ -89,7 +90,7 @@ final class CompareCategoryStore {
     func save() {
         if let data = try? JSONEncoder().encode(categories) {
             UserDefaults.standard.set(data, forKey: storageKey)
-            Log.print("[CompareCategoryStore] 저장: \(categories.count)개")
+            Logger.cleanup.debug("CompareCategoryStore 저장: \(self.categories.count)개")
         }
     }
 
@@ -98,7 +99,7 @@ final class CompareCategoryStore {
         if let data = UserDefaults.standard.data(forKey: storageKey),
            let decoded = try? JSONDecoder().decode([String: CompareCategory].self, from: data) {
             categories = decoded
-            Log.print("[CompareCategoryStore] 로드: \(categories.count)개")
+            Logger.cleanup.debug("CompareCategoryStore 로드: \(self.categories.count)개")
         }
     }
 
@@ -106,7 +107,7 @@ final class CompareCategoryStore {
     func clear() {
         categories.removeAll()
         UserDefaults.standard.removeObject(forKey: storageKey)
-        Log.print("[CompareCategoryStore] 초기화됨")
+        Logger.cleanup.debug("CompareCategoryStore 초기화됨")
     }
 }
 
@@ -192,7 +193,7 @@ final class CompareAnalysisTester {
         UserDefaults.standard.set(lastDate, forKey: lastTestDateKey)
         UserDefaults.standard.set(totalScannedCount + scanned, forKey: totalScannedKey)
         UserDefaults.standard.set(totalTrashedCount + trashed, forKey: totalTrashedKey)
-        Log.print("[CompareAnalysis] 세션 저장: \(formatDate(lastDate)) 이전까지, 누적 검색 \(totalScannedCount + scanned)장")
+        Logger.cleanup.debug("세션 저장: \(self.formatDate(lastDate)) 이전까지, 누적 검색 \(self.totalScannedCount + scanned)장")
     }
 
     /// 세션 초기화
@@ -201,7 +202,7 @@ final class CompareAnalysisTester {
         UserDefaults.standard.removeObject(forKey: totalScannedKey)
         UserDefaults.standard.removeObject(forKey: totalTrashedKey)
         categoryStore.clear()
-        Log.print("[CompareAnalysis] 세션 초기화됨")
+        Logger.cleanup.debug("세션 초기화됨")
     }
 
     /// 날짜 포맷
@@ -226,7 +227,7 @@ final class CompareAnalysisTester {
         onProgress: ((Int, Int, Int, Int) -> Void)? = nil
     ) async -> CompareAnalysisResult {
         guard !isRunning else {
-            Log.print("[CompareAnalysis] 이미 실행 중")
+            Logger.cleanup.debug("이미 실행 중")
             return CompareAnalysisResult(totalScanned: 0, bothCount: 0, path1OnlyCount: 0, path2OnlyCount: 0)
         }
 
@@ -241,13 +242,13 @@ final class CompareAnalysisTester {
         let continueDate = continueFromLast ? lastTestDate : nil
 
         if let date = continueDate {
-            Log.print("[CompareAnalysis] 이어서 테스트 시작 (\(formatDate(date)) 이전부터)")
+            Logger.cleanup.debug("이어서 테스트 시작 (\(self.formatDate(date)) 이전부터)")
         } else {
-            Log.print("[CompareAnalysis] 테스트 시작 (처음부터)")
+            Logger.cleanup.debug("테스트 시작 (처음부터)")
         }
-        Log.print("[CompareAnalysis] - 경로1 동의 임계값: \(path1AgreeThreshold)")
-        Log.print("[CompareAnalysis] - 경로2 임계값: \(path2Threshold)")
-        Log.print("[CompareAnalysis] - 최대 검색 수: \(maxScanCount)")
+        Logger.cleanup.debug("- 경로1 동의 임계값: \(self.path1AgreeThreshold)")
+        Logger.cleanup.debug("- 경로2 임계값: \(self.path2Threshold)")
+        Logger.cleanup.debug("- 최대 검색 수: \(self.maxScanCount)")
 
         var totalScanned = 0
         var bothCount = 0
@@ -274,7 +275,7 @@ final class CompareAnalysisTester {
         let fetchResult = PHAsset.fetchAssets(with: fetchOptions)
         let assetCount = min(fetchResult.count, maxScanCount)
 
-        Log.print("[CompareAnalysis] 총 \(fetchResult.count)장 중 \(assetCount)장 검색 예정")
+        Logger.cleanup.debug("총 \(fetchResult.count)장 중 \(assetCount)장 검색 예정")
 
         // 배치 처리 (20장씩)
         let batchSize = 20
@@ -301,7 +302,7 @@ final class CompareAnalysisTester {
                 let aspectRatio = CGFloat(asset.pixelHeight) / CGFloat(asset.pixelWidth)
                 let isExtremeRatio = aspectRatio > extremeAspectRatioThreshold || aspectRatio < (1.0 / extremeAspectRatioThreshold)
                 if isExtremeRatio {
-                    Log.print("[CompareAnalysis] 극단적 비율 제외: \(asset.pixelWidth)×\(asset.pixelHeight) (ratio=\(String(format: "%.1f", aspectRatio)))")
+                    Logger.cleanup.debug("극단적 비율 제외: \(asset.pixelWidth)×\(asset.pixelHeight) (ratio=\(String(format: "%.1f", aspectRatio)))")
                     onProgress?(totalScanned, bothCount, path1OnlyCount, path2OnlyCount)
                     continue
                 }
@@ -348,7 +349,7 @@ final class CompareAnalysisTester {
                     categoryStore.setCategory(cat, for: assetID)
 
                     let scoreStr = aestheticsMetrics.map { String(format: "%.3f", $0.overallScore) } ?? "N/A"
-                    Log.print("[CompareAnalysis] \(cat.rawValue): score=\(scoreStr), \(assetID.prefix(8))...")
+                    Logger.cleanup.debug("\(cat.rawValue): score=\(scoreStr), \(assetID.prefix(8))...")
                 }
 
                 // 진행 콜백
@@ -369,7 +370,7 @@ final class CompareAnalysisTester {
 
         // 삭제대기함 이동
         if !trashedAssetIDs.isEmpty {
-            Log.print("[CompareAnalysis] \(trashedAssetIDs.count)장 삭제대기함 이동")
+            Logger.cleanup.debug("\(trashedAssetIDs.count)장 삭제대기함 이동")
             trashStore.moveToTrash(assetIDs: trashedAssetIDs)
         }
 
@@ -380,11 +381,11 @@ final class CompareAnalysisTester {
             path2OnlyCount: path2OnlyCount
         )
 
-        Log.print("[CompareAnalysis] 완료:")
-        Log.print("[CompareAnalysis] - 검색: \(totalScanned)장")
-        Log.print("[CompareAnalysis] - ⚪ 둘다(both): \(bothCount)장")
-        Log.print("[CompareAnalysis] - 🔵 경로1(path1): \(path1OnlyCount)장")
-        Log.print("[CompareAnalysis] - 🟡 경로2(path2): \(path2OnlyCount)장")
+        Logger.cleanup.debug("완료:")
+        Logger.cleanup.debug("- 검색: \(totalScanned)장")
+        Logger.cleanup.debug("- 둘다(both): \(bothCount)장")
+        Logger.cleanup.debug("- 경로1(path1): \(path1OnlyCount)장")
+        Logger.cleanup.debug("- 경로2(path2): \(path2OnlyCount)장")
 
         return result
     }
@@ -406,7 +407,7 @@ final class CompareAnalysisTester {
 
         // Strong 신호 확인 (동의 없이 통과)
         if oldResult.signals.hasStrongSignal {
-            Log.print("[CompareAnalysis] 경로1: Strong 신호로 확정")
+            Logger.cleanup.debug("경로1: Strong 신호로 확정")
             return true
         }
 
@@ -418,11 +419,11 @@ final class CompareAnalysisTester {
 
         if metrics.overallScore < path1AgreeThreshold {
             // AestheticsScore 동의 → 저품질
-            Log.print("[CompareAnalysis] 경로1: AestheticsScore 동의 (score=\(String(format: "%.3f", metrics.overallScore)))")
+            Logger.cleanup.debug("경로1: AestheticsScore 동의 (score=\(String(format: "%.3f", metrics.overallScore)))")
             return true
         } else {
             // AestheticsScore 동의 안 함 → 제외
-            Log.print("[CompareAnalysis] 경로1: AestheticsScore 동의 안 함 (score=\(String(format: "%.3f", metrics.overallScore))) → 제외")
+            Logger.cleanup.debug("경로1: AestheticsScore 동의 안 함 (score=\(String(format: "%.3f", metrics.overallScore))) → 제외")
             return false
         }
     }
@@ -449,12 +450,12 @@ final class CompareAnalysisTester {
         if let image = image {
             let isTextScreenshot = await detectTextScreenshot(image)
             if isTextScreenshot {
-                Log.print("[CompareAnalysis] 경로2: 텍스트 스크린샷으로 제외 (score=\(String(format: "%.3f", metrics.overallScore)))")
+                Logger.cleanup.debug("경로2: 텍스트 스크린샷으로 제외 (score=\(String(format: "%.3f", metrics.overallScore)))")
                 return false
             }
         }
 
-        Log.print("[CompareAnalysis] 경로2: AestheticsScore 기반 감지 (score=\(String(format: "%.3f", metrics.overallScore)))")
+        Logger.cleanup.debug("경로2: AestheticsScore 기반 감지 (score=\(String(format: "%.3f", metrics.overallScore)))")
         return true
     }
 
@@ -468,16 +469,16 @@ final class CompareAnalysisTester {
             var hasResumed = false
 
             let request = VNRecognizeTextRequest { request, error in
-                Log.print("[TextDetect] completion 진입, hasResumed=\(hasResumed), error=\(error != nil)")
+                Logger.cleanup.debug("completion 진입, hasResumed=\(hasResumed), error=\(error != nil)")
                 guard !hasResumed else {
-                    Log.print("[TextDetect] ⚠️ 중복 resume 방지됨 (completion)")
+                    Logger.cleanup.debug("중복 resume 방지됨 (completion)")
                     return
                 }
                 hasResumed = true
 
                 guard error == nil,
                       let observations = request.results as? [VNRecognizedTextObservation] else {
-                    Log.print("[TextDetect] completion에서 resume (에러/nil)")
+                    Logger.cleanup.debug("completion에서 resume (에러/nil)")
                     continuation.resume(returning: false)
                     return
                 }
@@ -486,10 +487,10 @@ final class CompareAnalysisTester {
                 let isTextScreenshot = textBlockCount >= CleanupConstants.textBlockCountThreshold
 
                 if isTextScreenshot {
-                    Log.print("[CompareAnalysis] 텍스트 감지: \(textBlockCount)개 블록 → 스크린샷")
+                    Logger.cleanup.debug("텍스트 감지: \(textBlockCount)개 블록 → 스크린샷")
                 }
 
-                Log.print("[TextDetect] completion에서 resume (성공)")
+                Logger.cleanup.debug("completion에서 resume (성공)")
                 continuation.resume(returning: isTextScreenshot)
             }
 
@@ -498,17 +499,17 @@ final class CompareAnalysisTester {
 
             let handler = VNImageRequestHandler(cgImage: image, options: [:])
             do {
-                Log.print("[TextDetect] perform 시작")
+                Logger.cleanup.debug("perform 시작")
                 try handler.perform([request])
-                Log.print("[TextDetect] perform 종료 (정상)")
+                Logger.cleanup.debug("perform 종료 (정상)")
             } catch {
-                Log.print("[TextDetect] perform 종료 (throw), hasResumed=\(hasResumed)")
+                Logger.cleanup.debug("perform 종료 (throw), hasResumed=\(hasResumed)")
                 guard !hasResumed else {
-                    Log.print("[TextDetect] ⚠️ 중복 resume 방지됨 (catch)")
+                    Logger.cleanup.debug("중복 resume 방지됨 (catch)")
                     return
                 }
                 hasResumed = true
-                Log.print("[TextDetect] catch에서 resume")
+                Logger.cleanup.debug("catch에서 resume")
                 continuation.resume(returning: false)
             }
         }

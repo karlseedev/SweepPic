@@ -18,6 +18,7 @@
 
 import UIKit
 import AppCore
+import OSLog
 
 /// Render hitch A/B 테스트 도구
 /// 각 테스트 케이스는 스크롤 시작 시 적용, 종료 시 복원
@@ -79,7 +80,7 @@ enum RenderABTest {
         guard activeTest != .baseline else { return }
         guard let window = window else { return }
 
-        Log.print("[ABTest] 적용: \(activeTest.rawValue)")
+        Logger.performance.debug("적용: \(activeTest.rawValue)")
 
         switch activeTest {
         case .baseline:
@@ -110,7 +111,7 @@ enum RenderABTest {
         guard activeTest != .baseline else { return }
         guard let window = window else { return }
 
-        Log.print("[ABTest] 복원: \(activeTest.rawValue)")
+        Logger.performance.debug("복원: \(activeTest.rawValue)")
 
         switch activeTest {
         case .baseline:
@@ -170,7 +171,7 @@ enum RenderABTest {
             iv.isOpaque = true
             iv.backgroundColor = .black  // 셀 배경 = 검정 (이미지가 채우므로 보이지 않음)
         }
-        Log.print("[ABTest] Cells isOpaque 적용: \(imageViews.count)개 imageView")
+        Logger.performance.debug("Cells isOpaque 적용: \(imageViews.count)개 imageView")
     }
 
     private static func restoreCellsOpaque(in window: UIView) {
@@ -201,7 +202,7 @@ enum RenderABTest {
             }
         }
         savedStates["shadowFixCount"] = fixedCount
-        Log.print("[ABTest] Shadow path 적용: \(fixedCount)개 레이어")
+        Logger.performance.debug("Shadow path 적용: \(fixedCount)개 레이어")
     }
 
     private static func restoreShadowPathFix(in window: UIView) {
@@ -232,7 +233,7 @@ enum RenderABTest {
         for view in hiddenViews {
             view.isHidden = true
         }
-        Log.print("[ABTest] Glass effect OFF: \(hiddenViews.count)개 뷰 숨김")
+        Logger.performance.debug("Glass effect OFF: \(hiddenViews.count)개 뷰 숨김")
     }
 
     private static func restoreGlassEffectOff(in window: UIView) {
@@ -256,7 +257,7 @@ enum RenderABTest {
         for view in blurViews {
             view.isHidden = true
         }
-        Log.print("[ABTest] VariableBlur OFF: \(blurViews.count)개 뷰 숨김")
+        Logger.performance.debug("VariableBlur OFF: \(blurViews.count)개 뷰 숨김")
     }
 
     private static func restoreVariableBlurOff(in window: UIView) {
@@ -280,7 +281,7 @@ enum RenderABTest {
             }
         }
         savedStates["shadowLayers"] = shadowLayers
-        Log.print("[ABTest] Floating shadow OFF: \(shadowLayers.count)개 레이어")
+        Logger.performance.debug("Floating shadow OFF: \(shadowLayers.count)개 레이어")
     }
 
     private static func restoreFloatingShadowOff(in window: UIView) {

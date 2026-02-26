@@ -18,6 +18,7 @@ import UIKit
 import Photos
 import Vision
 import AppCore
+import OSLog
 
 // MARK: - 결과 모델
 
@@ -58,31 +59,31 @@ final class PreScanBenchmark {
     /// 벤치마크 실행
     static func run(from viewController: UIViewController? = nil) {
         guard !isRunning else {
-            Log.print("[PreScanBM] 이미 실행 중")
+            Logger.cleanup.debug("이미 실행 중")
             return
         }
         isRunning = true
 
-        Log.print("[PreScanBM] ========================================")
-        Log.print("[PreScanBM] 로딩 방식 벤치마크 시작 (\(sampleCount)장)")
-        Log.print("[PreScanBM] Q1: highQualityFormat / Q2: fastFormat")
-        Log.print("[PreScanBM] 파이프라인: T2 (SKIP필터 포함, SafeGuard 제외)")
-        Log.print("[PreScanBM] ========================================")
+        Logger.cleanup.debug("========================================")
+        Logger.cleanup.debug("로딩 방식 벤치마크 시작 (\(sampleCount)장)")
+        Logger.cleanup.debug("Q1: highQualityFormat / Q2: fastFormat")
+        Logger.cleanup.debug("파이프라인: T2 (SKIP필터 포함, SafeGuard 제외)")
+        Logger.cleanup.debug("========================================")
 
         Task {
             // 1. 사진 fetch (공통)
             let assets = fetchRecentPhotos(count: sampleCount)
-            Log.print("[PreScanBM] 사진 fetch 완료: \(assets.count)장")
+            Logger.cleanup.debug("사진 fetch 완료: \(assets.count)장")
 
             guard !assets.isEmpty else {
-                Log.print("[PreScanBM] 사진이 없어서 종료")
+                Logger.cleanup.debug("사진이 없어서 종료")
                 isRunning = false
                 return
             }
 
             // 2. Q1 — highQualityFormat (현재 방식)
-            Log.print("[PreScanBM]")
-            Log.print("[PreScanBM] --- Q1: highQualityFormat (현재) ---")
+            Logger.cleanup.debug("")
+            Logger.cleanup.debug("--- Q1: highQualityFormat (현재) ---")
             let q1 = await runWithDeliveryMode(assets: assets, mode: .highQualityFormat, label: "Q1: highQuality")
             printResult(q1)
 
@@ -90,8 +91,8 @@ final class PreScanBenchmark {
             try? await Task.sleep(nanoseconds: UInt64(interTestDelay * 1_000_000_000))
 
             // 3. Q2 — fastFormat
-            Log.print("[PreScanBM]")
-            Log.print("[PreScanBM] --- Q2: fastFormat ---")
+            Logger.cleanup.debug("")
+            Logger.cleanup.debug("--- Q2: fastFormat ---")
             let q2 = await runWithDeliveryMode(assets: assets, mode: .fastFormat, label: "Q2: fastFormat")
             printResult(q2)
 
@@ -99,9 +100,9 @@ final class PreScanBenchmark {
             printComparison(q1: q1, q2: q2)
 
             isRunning = false
-            Log.print("[PreScanBM] ========================================")
-            Log.print("[PreScanBM] 벤치마크 완료")
-            Log.print("[PreScanBM] ========================================")
+            Logger.cleanup.debug("========================================")
+            Logger.cleanup.debug("벤치마크 완료")
+            Logger.cleanup.debug("========================================")
         }
     }
 
@@ -203,7 +204,7 @@ final class PreScanBenchmark {
 
             if (i + 1) % 100 == 0 {
                 let elapsed = CFAbsoluteTimeGetCurrent() - startTime
-                Log.print("[PreScanBM]   진행: \(i + 1)/\(assets.count) (\(String(format: "%.1f", elapsed))초)")
+                Logger.cleanup.debug("  진행: \(i + 1)/\(assets.count) (\(String(format: "%.1f", elapsed))초)")
             }
         }
 
@@ -318,19 +319,19 @@ final class PreScanBenchmark {
 
     /// 개별 테스트 결과 출력
     private static func printResult(_ result: DeliveryBenchmarkResult) {
-        Log.print("[PreScanBM] [\(result.label)]")
-        Log.print("[PreScanBM]   총 시간: \(String(format: "%.2f", result.totalTimeSeconds))초")
-        Log.print("[PreScanBM]   평균/장: \(String(format: "%.1f", result.avgTimeMs))ms")
-        Log.print("[PreScanBM]   분석 \(result.analyzedCount)장, 스킵 \(result.skippedCount)장, 로딩실패 \(result.loadFailedCount)장")
-        Log.print("[PreScanBM]   저품질: \(result.lowQualityCount)장")
+        Logger.cleanup.debug("[\(result.label)]")
+        Logger.cleanup.debug("  총 시간: \(String(format: "%.2f", result.totalTimeSeconds))초")
+        Logger.cleanup.debug("  평균/장: \(String(format: "%.1f", result.avgTimeMs))ms")
+        Logger.cleanup.debug("  분석 \(result.analyzedCount)장, 스킵 \(result.skippedCount)장, 로딩실패 \(result.loadFailedCount)장")
+        Logger.cleanup.debug("  저품질: \(result.lowQualityCount)장")
 
         // 저품질 상세 (최대 10개)
         if !result.lowQualityDetails.isEmpty {
             let showCount = min(10, result.lowQualityDetails.count)
-            Log.print("[PreScanBM]   저품질 상세 (상위 \(showCount)개):")
+            Logger.cleanup.debug("  저품질 상세 (상위 \(showCount)개):")
             for detail in result.lowQualityDetails.prefix(showCount) {
                 let shortID = String(detail.assetID.prefix(12))
-                Log.print("[PreScanBM]     \(shortID)... → [\(detail.signals)]")
+                Logger.cleanup.debug("    \(shortID)... → [\(detail.signals)]")
             }
         }
     }
@@ -340,67 +341,67 @@ final class PreScanBenchmark {
         q1: DeliveryBenchmarkResult,
         q2: DeliveryBenchmarkResult
     ) {
-        Log.print("[PreScanBM]")
-        Log.print("[PreScanBM] ============ 로딩 방식 비교 요약 ============")
+        Logger.cleanup.debug("")
+        Logger.cleanup.debug("============ 로딩 방식 비교 요약 ============")
 
         // 속도 비교
-        Log.print("[PreScanBM] 총 시간:")
-        Log.print("[PreScanBM]   Q1 (highQuality): \(String(format: "%.2f", q1.totalTimeSeconds))초 (avg \(String(format: "%.1f", q1.avgTimeMs))ms)")
-        Log.print("[PreScanBM]   Q2 (fastFormat):  \(String(format: "%.2f", q2.totalTimeSeconds))초 (avg \(String(format: "%.1f", q2.avgTimeMs))ms)")
+        Logger.cleanup.debug("총 시간:")
+        Logger.cleanup.debug("  Q1 (highQuality): \(String(format: "%.2f", q1.totalTimeSeconds))초 (avg \(String(format: "%.1f", q1.avgTimeMs))ms)")
+        Logger.cleanup.debug("  Q2 (fastFormat):  \(String(format: "%.2f", q2.totalTimeSeconds))초 (avg \(String(format: "%.1f", q2.avgTimeMs))ms)")
 
         if q1.totalTimeSeconds > 0 {
             let speedup = q1.totalTimeSeconds / q2.totalTimeSeconds
             let saved = q1.totalTimeSeconds - q2.totalTimeSeconds
-            Log.print("[PreScanBM]   속도향상: \(String(format: "%.2f", speedup))x (\(String(format: "%.1f", saved))초 절약)")
+            Logger.cleanup.debug("  속도향상: \(String(format: "%.2f", speedup))x (\(String(format: "%.1f", saved))초 절약)")
         }
 
         // 로딩 실패 비교
-        Log.print("[PreScanBM]")
-        Log.print("[PreScanBM] 로딩 실패: Q1=\(q1.loadFailedCount)장, Q2=\(q2.loadFailedCount)장")
+        Logger.cleanup.debug("")
+        Logger.cleanup.debug("로딩 실패: Q1=\(q1.loadFailedCount)장, Q2=\(q2.loadFailedCount)장")
 
         // 저품질 판정 비교
-        Log.print("[PreScanBM]")
-        Log.print("[PreScanBM] 저품질: Q1=\(q1.lowQualityCount)장, Q2=\(q2.lowQualityCount)장")
+        Logger.cleanup.debug("")
+        Logger.cleanup.debug("저품질: Q1=\(q1.lowQualityCount)장, Q2=\(q2.lowQualityCount)장")
 
         // 판정 일치 여부 (핵심)
         let q1IDs = Set(q1.lowQualityDetails.map { $0.assetID })
         let q2IDs = Set(q2.lowQualityDetails.map { $0.assetID })
 
         if q1IDs == q2IDs {
-            Log.print("[PreScanBM] 판정 일치: ✅ 동일한 사진 판정")
+            Logger.cleanup.debug("판정 일치: 동일한 사진 판정")
         } else {
             let onlyQ1 = q1IDs.subtracting(q2IDs)
             let onlyQ2 = q2IDs.subtracting(q1IDs)
             let common = q1IDs.intersection(q2IDs)
-            Log.print("[PreScanBM] 판정 차이:")
-            Log.print("[PreScanBM]   공통: \(common.count)장")
-            Log.print("[PreScanBM]   Q1에만: \(onlyQ1.count)장")
-            Log.print("[PreScanBM]   Q2에만: \(onlyQ2.count)장")
+            Logger.cleanup.debug("판정 차이:")
+            Logger.cleanup.debug("  공통: \(common.count)장")
+            Logger.cleanup.debug("  Q1에만: \(onlyQ1.count)장")
+            Logger.cleanup.debug("  Q2에만: \(onlyQ2.count)장")
 
             // Q1에만 있는 상세
             if !onlyQ1.isEmpty {
-                Log.print("[PreScanBM]   Q1에만 저품질 (highQuality에서만 감지):")
+                Logger.cleanup.debug("  Q1에만 저품질 (highQuality에서만 감지):")
                 for id in onlyQ1.prefix(5) {
                     let shortID = String(id.prefix(12))
                     if let detail = q1.lowQualityDetails.first(where: { $0.assetID == id }) {
-                        Log.print("[PreScanBM]     \(shortID)... → [\(detail.signals)]")
+                        Logger.cleanup.debug("    \(shortID)... → [\(detail.signals)]")
                     }
                 }
             }
 
             // Q2에만 있는 상세
             if !onlyQ2.isEmpty {
-                Log.print("[PreScanBM]   Q2에만 저품질 (fastFormat에서만 감지):")
+                Logger.cleanup.debug("  Q2에만 저품질 (fastFormat에서만 감지):")
                 for id in onlyQ2.prefix(5) {
                     let shortID = String(id.prefix(12))
                     if let detail = q2.lowQualityDetails.first(where: { $0.assetID == id }) {
-                        Log.print("[PreScanBM]     \(shortID)... → [\(detail.signals)]")
+                        Logger.cleanup.debug("    \(shortID)... → [\(detail.signals)]")
                     }
                 }
             }
         }
 
-        Log.print("[PreScanBM] ==========================================")
+        Logger.cleanup.debug("==========================================")
     }
 }
 

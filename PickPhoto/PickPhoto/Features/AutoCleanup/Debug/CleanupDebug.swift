@@ -13,6 +13,7 @@
 
 import Foundation
 import AppCore
+import OSLog
 
 // MARK: - CleanupDebug
 
@@ -36,11 +37,6 @@ import AppCore
 /// ```
 enum CleanupDebug {
 
-    // MARK: - Logging Category
-
-    /// 로그 카테고리
-    private static let category = "Cleanup"
-
     // MARK: - Analysis Logging
 
     #if DEBUG
@@ -55,11 +51,11 @@ enum CleanupDebug {
         let signalStr = result.signals.map { $0.kind.rawValue }.joined(separator: ", ")
         let timeStr = String(format: "%.1f", result.analysisTimeMs)
 
-        Log.debug(category, "[\(assetShort)] \(verdictStr) | signals: [\(signalStr)] | \(timeStr)ms")
+        Logger.cleanup.debug("[\(assetShort)] \(verdictStr) | signals: [\(signalStr)] | \(timeStr)ms")
 
         // Safe Guard 적용된 경우 추가 로깅
         if result.safeGuardApplied, let reason = result.safeGuardReason {
-            Log.debug(category, "[\(assetShort)] SafeGuard: \(reason.rawValue)")
+            Logger.cleanup.debug("[\(assetShort)] SafeGuard: \(reason.rawValue)")
         }
     }
 
@@ -84,7 +80,7 @@ enum CleanupDebug {
             ? results.filter { $0.verdict.isAnalyzed }.reduce(0) { $0 + $1.analysisTimeMs } / Double(analyzed)
             : 0
 
-        Log.debug(category, """
+        Logger.cleanup.debug("""
         Batch #\(batchIndex): \(total)장 | \
         저품질: \(lowQuality) | SKIP: \(skipped) | SafeGuard: \(safeGuarded) | \
         avg: \(String(format: "%.1f", avgTime))ms | \
@@ -99,11 +95,11 @@ enum CleanupDebug {
     ///   - mode: 판정 모드
     ///   - totalCount: 대상 사진 총 수
     static func logScanStart(method: CleanupMethod, mode: JudgmentMode, totalCount: Int) {
-        Log.debug(category, "=== Scan Start ===")
-        Log.debug(category, "Method: \(method.displayTitle)")
-        Log.debug(category, "Mode: \(mode)")
-        Log.debug(category, "Target: \(totalCount)장")
-        Log.debug(category, "Batch: \(CleanupConstants.batchSize), Concurrency: \(CleanupConstants.concurrentAnalysis)")
+        Logger.cleanup.debug("=== Scan Start ===")
+        Logger.cleanup.debug("Method: \(method.displayTitle)")
+        Logger.cleanup.debug("Mode: \(mode)")
+        Logger.cleanup.debug("Target: \(totalCount)장")
+        Logger.cleanup.debug("Batch: \(CleanupConstants.batchSize), Concurrency: \(CleanupConstants.concurrentAnalysis)")
 
         // 오버라이드 중인 임계값 출력
         logActiveOverrides()
@@ -124,10 +120,10 @@ enum CleanupDebug {
     ) {
         let rate = elapsed > 0 ? Double(scannedCount) / elapsed : 0
 
-        Log.debug(category, "=== Scan End ===")
-        Log.debug(category, "Scanned: \(scannedCount), Found: \(foundCount)")
-        Log.debug(category, "Time: \(String(format: "%.1f", elapsed))s (\(String(format: "%.0f", rate))장/초)")
-        Log.debug(category, "EndReason: \(endReason)")
+        Logger.cleanup.debug("=== Scan End ===")
+        Logger.cleanup.debug("Scanned: \(scannedCount), Found: \(foundCount)")
+        Logger.cleanup.debug("Time: \(String(format: "%.1f", elapsed))s (\(String(format: "%.0f", rate))장/초)")
+        Logger.cleanup.debug("EndReason: \(endReason.rawValue)")
     }
 
     // MARK: - Threshold Override
@@ -154,10 +150,10 @@ enum CleanupDebug {
     static func setOverride(_ key: ThresholdKey, value: Double?) {
         if let value = value {
             UserDefaults.standard.set(value, forKey: key.rawValue)
-            Log.debug(category, "Override SET: \(key.rawValue) = \(value)")
+            Logger.cleanup.debug("Override SET: \(key.rawValue) = \(value)")
         } else {
             UserDefaults.standard.removeObject(forKey: key.rawValue)
-            Log.debug(category, "Override REMOVED: \(key.rawValue)")
+            Logger.cleanup.debug("Override REMOVED: \(key.rawValue)")
         }
     }
 
@@ -195,7 +191,7 @@ enum CleanupDebug {
         for key in ThresholdKey.allCases {
             UserDefaults.standard.removeObject(forKey: key.rawValue)
         }
-        Log.debug(category, "All overrides cleared")
+        Logger.cleanup.debug("All overrides cleared")
     }
 
     /// 현재 활성 오버라이드 로깅
@@ -210,7 +206,7 @@ enum CleanupDebug {
         }
 
         if !overrides.isEmpty {
-            Log.debug(category, "Active overrides: \(overrides.joined(separator: ", "))")
+            Logger.cleanup.debug("Active overrides: \(overrides.joined(separator: ", "))")
         }
     }
 

@@ -26,6 +26,7 @@ import Foundation
 import Photos
 import Vision
 import AppCore
+import OSLog
 
 // MARK: - ModeCategory
 
@@ -93,7 +94,7 @@ final class ModeCategoryStore {
     func save() {
         if let data = try? JSONEncoder().encode(categories) {
             UserDefaults.standard.set(data, forKey: storageKey)
-            Log.print("[ModeComparison] 카테고리 저장: \(categories.count)개")
+            Logger.cleanup.debug("카테고리 저장: \(self.categories.count)개")
         }
     }
 
@@ -102,7 +103,7 @@ final class ModeCategoryStore {
         if let data = UserDefaults.standard.data(forKey: storageKey),
            let decoded = try? JSONDecoder().decode([String: ModeCategory].self, from: data) {
             categories = decoded
-            Log.print("[ModeComparison] 카테고리 로드: \(categories.count)개")
+            Logger.cleanup.debug("카테고리 로드: \(self.categories.count)개")
         }
     }
 
@@ -110,7 +111,7 @@ final class ModeCategoryStore {
     func clear() {
         categories.removeAll()
         UserDefaults.standard.removeObject(forKey: storageKey)
-        Log.print("[ModeComparison] 카테고리 초기화됨")
+        Logger.cleanup.debug("카테고리 초기화됨")
     }
 }
 
@@ -203,7 +204,7 @@ final class ModeComparisonTester {
         UserDefaults.standard.set(lastDate, forKey: lastTestDateKey)
         UserDefaults.standard.set(totalScannedCount + scanned, forKey: totalScannedKey)
         UserDefaults.standard.set(totalTrashedCount + trashed, forKey: totalTrashedKey)
-        Log.print("[ModeComparison] 세션 저장: \(formatDate(lastDate)) 이전까지, 누적 검색 \(totalScannedCount + scanned)장")
+        Logger.cleanup.debug("세션 저장: \(self.formatDate(lastDate)) 이전까지, 누적 검색 \(self.totalScannedCount + scanned)장")
     }
 
     /// 세션 초기화
@@ -212,7 +213,7 @@ final class ModeComparisonTester {
         UserDefaults.standard.removeObject(forKey: totalScannedKey)
         UserDefaults.standard.removeObject(forKey: totalTrashedKey)
         categoryStore.clear()
-        Log.print("[ModeComparison] 세션 초기화됨")
+        Logger.cleanup.debug("세션 초기화됨")
     }
 
     /// 날짜 포맷
@@ -237,7 +238,7 @@ final class ModeComparisonTester {
         onProgress: ((Int, Int, Int, Int) -> Void)? = nil
     ) async -> ModeComparisonResult {
         guard !isRunning else {
-            Log.print("[ModeComparison] 이미 실행 중")
+            Logger.cleanup.debug("이미 실행 중")
             return ModeComparisonResult(
                 totalScanned: 0, allModesCount: 0,
                 standardUpCount: 0, deepOnlyCount: 0,
@@ -256,13 +257,13 @@ final class ModeComparisonTester {
         let continueDate = continueFromLast ? lastTestDate : nil
 
         if let date = continueDate {
-            Log.print("[ModeComparison] 이어서 테스트 시작 (\(formatDate(date)) 이전부터)")
+            Logger.cleanup.debug("이어서 테스트 시작 (\(self.formatDate(date)) 이전부터)")
         } else {
-            Log.print("[ModeComparison] 테스트 시작 (처음부터)")
+            Logger.cleanup.debug("테스트 시작 (처음부터)")
         }
-        Log.print("[ModeComparison] - 경로1 동의 임계값: \(path1AgreeThreshold)")
-        Log.print("[ModeComparison] - 경로2 완화: \(path2LightThreshold), 기본: \(path2StandardThreshold), 강화: \(path2DeepThreshold)")
-        Log.print("[ModeComparison] - 최대 검색 수: \(maxScanCount)")
+        Logger.cleanup.debug("- 경로1 동의 임계값: \(self.path1AgreeThreshold)")
+        Logger.cleanup.debug("- 경로2 완화: \(self.path2LightThreshold), 기본: \(self.path2StandardThreshold), 강화: \(self.path2DeepThreshold)")
+        Logger.cleanup.debug("- 최대 검색 수: \(self.maxScanCount)")
 
         var totalScanned = 0
         var allModesCount = 0
@@ -289,7 +290,7 @@ final class ModeComparisonTester {
         let fetchResult = PHAsset.fetchAssets(with: fetchOptions)
         let assetCount = min(fetchResult.count, maxScanCount)
 
-        Log.print("[ModeComparison] 총 \(fetchResult.count)장 중 \(assetCount)장 검색 예정")
+        Logger.cleanup.debug("총 \(fetchResult.count)장 중 \(assetCount)장 검색 예정")
 
         // 배치 처리 (20장씩)
         let batchSize = 20
@@ -316,7 +317,7 @@ final class ModeComparisonTester {
                 let aspectRatio = CGFloat(asset.pixelHeight) / CGFloat(asset.pixelWidth)
                 let isExtremeRatio = aspectRatio > extremeAspectRatioThreshold || aspectRatio < (1.0 / extremeAspectRatioThreshold)
                 if isExtremeRatio {
-                    Log.print("[ModeComparison] 극단적 비율 제외: \(asset.pixelWidth)×\(asset.pixelHeight) (ratio=\(String(format: "%.1f", aspectRatio)))")
+                    Logger.cleanup.debug("극단적 비율 제외: \(asset.pixelWidth)×\(asset.pixelHeight) (ratio=\(String(format: "%.1f", aspectRatio)))")
                     onProgress?(totalScanned, allModesCount, standardUpCount, deepOnlyCount)
                     continue
                 }
@@ -390,7 +391,7 @@ final class ModeComparisonTester {
                     categoryStore.setCategory(cat, for: assetID)
 
                     let scoreStr = aestheticsMetrics.map { String(format: "%.3f", $0.overallScore) } ?? "N/A"
-                    Log.print("[ModeComparison] \(cat.rawValue): score=\(scoreStr), \(assetID.prefix(8))...")
+                    Logger.cleanup.debug("\(cat.rawValue): score=\(scoreStr), \(assetID.prefix(8))...")
                 }
 
                 // 진행 콜백
@@ -411,7 +412,7 @@ final class ModeComparisonTester {
 
         // 삭제대기함 이동
         if !trashedAssetIDs.isEmpty {
-            Log.print("[ModeComparison] \(trashedAssetIDs.count)장 삭제대기함 이동")
+            Logger.cleanup.debug("\(trashedAssetIDs.count)장 삭제대기함 이동")
             trashStore.moveToTrash(assetIDs: trashedAssetIDs)
         }
 
@@ -423,11 +424,11 @@ final class ModeComparisonTester {
             trashedAssetIDs: trashedAssetIDs
         )
 
-        Log.print("[ModeComparison] 완료:")
-        Log.print("[ModeComparison] - 검색: \(totalScanned)장")
-        Log.print("[ModeComparison] - ⚪ 전체(allModes): \(allModesCount)장")
-        Log.print("[ModeComparison] - 🔵 기본↑(standardUp): \(standardUpCount)장")
-        Log.print("[ModeComparison] - 🟡 강화만(deepOnly): \(deepOnlyCount)장")
+        Logger.cleanup.debug("완료:")
+        Logger.cleanup.debug("- 검색: \(totalScanned)장")
+        Logger.cleanup.debug("- 전체(allModes): \(allModesCount)장")
+        Logger.cleanup.debug("- 기본이상(standardUp): \(standardUpCount)장")
+        Logger.cleanup.debug("- 강화만(deepOnly): \(deepOnlyCount)장")
 
         return result
     }
@@ -449,7 +450,7 @@ final class ModeComparisonTester {
 
         // Strong 신호 확인 (동의 없이 통과)
         if oldResult.signals.hasStrongSignal {
-            Log.print("[ModeComparison] 경로1: Strong 신호로 확정")
+            Logger.cleanup.debug("경로1: Strong 신호로 확정")
             return true
         }
 
@@ -461,11 +462,11 @@ final class ModeComparisonTester {
 
         if metrics.overallScore < path1AgreeThreshold {
             // AestheticsScore 동의 → 저품질
-            Log.print("[ModeComparison] 경로1: AestheticsScore 동의 (score=\(String(format: "%.3f", metrics.overallScore)))")
+            Logger.cleanup.debug("경로1: AestheticsScore 동의 (score=\(String(format: "%.3f", metrics.overallScore)))")
             return true
         } else {
             // AestheticsScore 동의 안 함 → 제외
-            Log.print("[ModeComparison] 경로1: AestheticsScore 동의 안 함 (score=\(String(format: "%.3f", metrics.overallScore))) → 제외")
+            Logger.cleanup.debug("경로1: AestheticsScore 동의 안 함 (score=\(String(format: "%.3f", metrics.overallScore))) → 제외")
             return false
         }
     }
@@ -517,16 +518,16 @@ final class ModeComparisonTester {
             var hasResumed = false
 
             let request = VNRecognizeTextRequest { request, error in
-                Log.print("[TextDetect] completion 진입, hasResumed=\(hasResumed), error=\(error != nil)")
+                Logger.cleanup.debug("completion 진입, hasResumed=\(hasResumed), error=\(error != nil)")
                 guard !hasResumed else {
-                    Log.print("[TextDetect] ⚠️ 중복 resume 방지됨 (completion)")
+                    Logger.cleanup.debug("중복 resume 방지됨 (completion)")
                     return
                 }
                 hasResumed = true
 
                 guard error == nil,
                       let observations = request.results as? [VNRecognizedTextObservation] else {
-                    Log.print("[TextDetect] completion에서 resume (에러/nil)")
+                    Logger.cleanup.debug("completion에서 resume (에러/nil)")
                     continuation.resume(returning: false)
                     return
                 }
@@ -535,10 +536,10 @@ final class ModeComparisonTester {
                 let isTextScreenshot = textBlockCount >= CleanupConstants.textBlockCountThreshold
 
                 if isTextScreenshot {
-                    Log.print("[ModeComparison] 텍스트 감지: \(textBlockCount)개 블록 → 스크린샷")
+                    Logger.cleanup.debug("텍스트 감지: \(textBlockCount)개 블록 → 스크린샷")
                 }
 
-                Log.print("[TextDetect] completion에서 resume (성공)")
+                Logger.cleanup.debug("completion에서 resume (성공)")
                 continuation.resume(returning: isTextScreenshot)
             }
 
@@ -547,17 +548,17 @@ final class ModeComparisonTester {
 
             let handler = VNImageRequestHandler(cgImage: image, options: [:])
             do {
-                Log.print("[TextDetect] perform 시작")
+                Logger.cleanup.debug("perform 시작")
                 try handler.perform([request])
-                Log.print("[TextDetect] perform 종료 (정상)")
+                Logger.cleanup.debug("perform 종료 (정상)")
             } catch {
-                Log.print("[TextDetect] perform 종료 (throw), hasResumed=\(hasResumed)")
+                Logger.cleanup.debug("perform 종료 (throw), hasResumed=\(hasResumed)")
                 guard !hasResumed else {
-                    Log.print("[TextDetect] ⚠️ 중복 resume 방지됨 (catch)")
+                    Logger.cleanup.debug("중복 resume 방지됨 (catch)")
                     return
                 }
                 hasResumed = true
-                Log.print("[TextDetect] catch에서 resume")
+                Logger.cleanup.debug("catch에서 resume")
                 continuation.resume(returning: false)
             }
         }

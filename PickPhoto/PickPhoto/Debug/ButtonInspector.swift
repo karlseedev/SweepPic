@@ -7,6 +7,7 @@
 
 import UIKit
 import AppCore
+import OSLog
 
 /// 버튼 정보 구조체
 struct ButtonInfo: Codable {
@@ -85,7 +86,7 @@ final class ButtonInspector {
         ])
 
         self.debugButton = button
-        Log.print("[ButtonInspector] 디버그 버튼 표시됨")
+        Logger.appDebug.debug("디버그 버튼 표시됨")
     }
 
     func hideDebugButton() {
@@ -96,7 +97,7 @@ final class ButtonInspector {
     // MARK: - Button Action
 
     @objc private func debugButtonTapped() {
-        Log.print("[ButtonInspector] 버튼 탭됨")
+        Logger.appDebug.debug("버튼 탭됨")
         debugButton?.setTitle("덤프 중...", for: .normal)
         debugButton?.isEnabled = false
 
@@ -110,10 +111,10 @@ final class ButtonInspector {
     // MARK: - Dump
 
     private func performButtonDump() {
-        Log.print("[ButtonInspector] performButtonDump 시작")
+        Logger.appDebug.debug("performButtonDump 시작")
 
         guard let window = getKeyWindow() else {
-            Log.print("[ButtonInspector] Key Window를 찾을 수 없습니다.")
+            Logger.appDebug.debug("Key Window를 찾을 수 없습니다.")
             return
         }
 
@@ -122,7 +123,7 @@ final class ButtonInspector {
         // 전체 뷰 계층에서 버튼 찾기
         findButtons(in: window, path: "window", buttons: &buttons)
 
-        Log.print("[ButtonInspector] 발견된 버튼 수: \(buttons.count)")
+        Logger.appDebug.debug("발견된 버튼 수: \(buttons.count)")
 
         // 결과 저장
         let result = ButtonDumpResult(
@@ -280,10 +281,10 @@ final class ButtonInspector {
     // MARK: - Save
 
     private func saveResult(_ result: ButtonDumpResult) {
-        Log.print("[ButtonInspector] saveResult 시작")
+        Logger.appDebug.debug("saveResult 시작")
 
         guard let documentsPath = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first else {
-            Log.print("[ButtonInspector] Documents 경로를 찾을 수 없습니다")
+            Logger.appDebug.debug("Documents 경로를 찾을 수 없습니다")
             return
         }
 
@@ -296,20 +297,20 @@ final class ButtonInspector {
 
         let fileName = "\(timestamp)_buttons.json"
 
-        Log.print("[ButtonInspector] 파일명: \(fileName)")
+        Logger.appDebug.debug("파일명: \(fileName)")
 
         do {
             let data = try encoder.encode(result)
-            Log.print("[ButtonInspector] 인코딩 성공, 크기: \(data.count) bytes")
+            Logger.appDebug.debug("인코딩 성공, 크기: \(data.count) bytes")
 
             let fileURL = documentsPath.appendingPathComponent(fileName)
             try data.write(to: fileURL)
 
-            Log.print("[ButtonInspector] 파일 저장 완료: \(fileURL.path)")
+            Logger.appDebug.debug("파일 저장 완료: \(fileURL.path)")
 
             showAlert(fileName: fileName, buttonCount: result.buttons.count, path: documentsPath.path)
         } catch {
-            Log.print("[ButtonInspector] 저장 실패: \(error)")
+            Logger.appDebug.error("저장 실패: \(error)")
         }
     }
 
