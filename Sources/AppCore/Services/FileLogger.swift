@@ -67,7 +67,9 @@ public final class FileLogger {
     }
 
     deinit {
-        try? fileHandle?.close()
+        if #available(macOS 10.15, iOS 13.0, *) {
+            try? fileHandle?.close()
+        }
     }
 
     // MARK: - Public API
