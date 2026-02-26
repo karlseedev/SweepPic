@@ -9,13 +9,13 @@
 5. ✅ [코치마크 D — 저품질 자동 정리](#5-코치마크-d--저품질-자동-정리)
 6. ✅ [삭제 시스템 안내 (E-1, E-2, E-3)](#6-삭제-시스템-안내-e-1-e-2-e-3)
 7. ✅ [코치마크 다시 보기](#7-코치마크-다시-보기)
-8. [표시 순서와 충돌 방지](#8-표시-순서와-충돌-방지)
-9. [카피 정리](#9-카피-정리)
-10. [iOS 버전별 고려사항](#10-ios-버전별-고려사항)
-11. [트리거 가드 조건](#11-트리거-가드-조건)
-12. [재방문 & 스킵 정책](#12-재방문--스킵-정책)
-13. [구현 범위](#13-구현-범위)
-14. [전체 플로우](#14-전체-플로우)
+8. ✅ [표시 순서와 충돌 방지](#8-표시-순서와-충돌-방지)
+9. ✅ [카피 정리](#9-카피-정리)
+10. ✅ [iOS 버전별 고려사항](#10-ios-버전별-고려사항)
+11. ✅ [트리거 가드 조건](#11-트리거-가드-조건)
+12. ✅ [재방문 & 스킵 정책](#12-재방문--스킵-정책)
+13. ✅ [구현 범위](#13-구현-범위)
+14. ✅ [전체 플로우](#14-전체-플로우)
 
 ---
 
@@ -269,10 +269,32 @@ A+E-1 완료 후:
 | B | 코치마크 | 위로 밀면 바로 삭제대기함으로 | 뷰어에서 빠른 정리 | 삭제대기함에서 복구 |
 | C-1 | 코치마크 | 비슷한 사진 자동 발견 | 직접 찾을 필요 없음 | — |
 | C-2 | 코치마크 | 얼굴별 비교 | 탭 한 번으로 비교 | 좌우로 인물 전환 |
-| D | 코치마크 | 저품질 사진 발견 + 정리 기능 안내 | AI가 자동으로 찾아줌 | 실제 저품질 썸네일로 가치 체감 |
+| C-3 | 코치마크 | 얼굴 선택 + Pic 라벨 안내 | 마음에 들지 않는 얼굴 선택 | 옆으로 이동해 다른 인물도 확인 |
+| D | 코치마크 | 저품질 사진 자동 정리 | AI가 자동으로 찾아줌 | 실제 저품질 썸네일로 가치 체감 |
 | E-1 | 시스템 피드백 | 첫 삭제 안내 | 삭제 ≠ 즉시 제거 | 사진은 아직 **안전** |
 | E-2 | 시스템 피드백 | 삭제대기함 비우기 안내 | 비우기 = 진짜 삭제 | — |
 | E-3 | 시스템 피드백 | 비우기 완료 안내 | 최근 삭제됨으로 이동 | 30일간 보관 |
+
+### 구현 점검 결과
+
+#### ✅ 기획 의도 반영 확인
+
+| ID | 핵심 전달 | 안심 요소 | 반영도 |
+|----|----------|----------|--------|
+| A | "밀어서 바로 정리하세요" + "삭제대기함으로 이동됩니다" | "다시 밀면 복원돼요" | 완벽 |
+| B | "위로 밀면 바로 삭제대기함으로 이동해요" | 복구 문구 미포함 (아래 참고) | 핵심만 반영 |
+| C-1 | "유사사진 정리가 가능한 사진이에요" | — | 적절 |
+| C-2 | "+버튼을 눌러 얼굴비교화면으로" | "좌우로 넘겨볼 수 있어요" | 완벽 |
+| C-3 | "마음에 들지 않는 얼굴을 선택하세요" + "사진 구별 번호" | "옆으로 이동해서 다른 인물도" | 완벽 |
+| D | "AI가 자동으로 찾아주는 정리 기능" + 썸네일 3장 | 실제 썸네일로 시각화 | 완벽 |
+| E-1 | "삭제대기함으로 이동됐어요" | "안전" 직접 표현 없음 (의도됨) | 적절 |
+| E-2 | "삭제대기함에 임시 보관" + "[비우기]를 누르면 최종 삭제" | — | 완벽 |
+| E-3 | "✓ 삭제 완료" | "30일 후 완전히 삭제됩니다" | 완벽 |
+
+#### 📝 의도된 설계
+
+1. **B 안심 요소 미포함**: 카피에 "복구 가능" 문구 없음. B는 뷰어 맥락에서 간결한 행동 안내에 집중. 복구 개념은 A("다시 밀면 복원")와 E-1("삭제대기함으로 이동")에서 전달하므로 B에서 중복하지 않음.
+2. **E-1 안심 톤**: "안전"이라는 직접 표현 대신 "삭제대기함으로 이동됐어요"로 즉시 삭제가 아님을 암시. 이어지는 E-2에서 "임시 보관"을 명시하여 단계적으로 안심감 전달.
 
 ---
 
@@ -289,6 +311,18 @@ A+E-1 완료 후:
 
 - 구현 시 정리 버튼(D)만 `useFloatingUI` 분기로 동적 참조 필요
 - C-1, C-2, E-1~3는 iOS 버전 무관하게 동일 위치/형태
+
+### 구현 점검 결과: ✅ 전항목 준수
+
+| 항목 | iOS 분기 | 코드 위치 | 상태 |
+|------|---------|----------|------|
+| A (그리드 스와이프) | 없음 (불필요) | — | ✅ |
+| B (뷰어 스와이프) | 없음 (불필요) | — | ✅ |
+| C-1 (뱃지) | 없음 (불필요) | — | ✅ |
+| C-2 (+버튼) | 없음 (불필요) | — | ✅ |
+| D (정리 버튼) | `getCleanupButtonFrame()` | iOS 26+: `navigationItem.rightBarButtonItems[2]` / iOS 16~25: `FloatingTitleBar.secondRightButton` | ✅ |
+| E-1,E-2 | 카드 없음 / Step3 비우기 버튼만 분기 | `getEmptyButtonFrame()` — iOS 26+: `emptyTrashBarButtonItem` / iOS 16~25: `FloatingTitleBar.secondRightButton` | ✅ |
+| E-3 (비우기 완료) | 없음 (불필요) | — | ✅ |
 
 ---
 
@@ -312,6 +346,34 @@ A+E-1 완료 후:
 | E-2 | `trashedAssetIDs.count > 0` | E-2 | 삭제대기함에 아이템 존재 시 |
 | E-3 | 추가 가드 없음 | E-3 | 비우기 완료 직후 즉시 표시 (행동 피드백) |
 
+### 구현 점검 결과
+
+#### ✅ 공통 가드 (VoiceOver / isShowing / view.window)
+
+| 요소 | VoiceOver | isShowing | view.window | 상태 |
+|------|-----------|-----------|-------------|------|
+| A | ✅ | ✅ | ✅ | ✅ |
+| B | ✅ | ✅ | ✅ | ✅ |
+| C-1 | ✅ | ✅ | ✅ | ✅ |
+| C-2 | — | — | ✅ | ✅ (아래 참고) |
+| D | ✅ | ✅ | ✅ | ✅ |
+| E-1 | ✅ | ✅ | ✅ | ✅ |
+| E-3 | ✅ | ✅ | ✅ | ✅ |
+
+#### ✅ 화면별 추가 가드
+
+| 요소 | 문서 가드 | 코드 위치 | 보호 방식 |
+|------|----------|----------|----------|
+| A `!isScrolling` | `trackCoachMarkScroll()` → threshold 도달 시 `stopScrollForCoachMark()`로 강제 정지 후 표시 | 호출 흐름상 보호 |
+| C-1 `!isScrolling` | `showBadge(on:)` 진입 시 `guard !isScrolling` 가드 → 통과해야 `triggerCoachMarkCIfNeeded` 도달 | 호출자에서 보호 |
+| D `!isScrolling` | `showCoachMarkD()` 함수 내 명시적 `guard !isScrolling` | 명시적 가드 |
+| B `!isTransitioning` | `viewDidAppear`에서 호출 — 화면 전환 완료 후에만 불림 | 호출 시점상 보호 |
+| C-2 `!isTransitioning` | C-1에서 `isWaitingForC2=true` 설정 후 뷰어 진입 → `viewDidAppear`에서 호출 | 호출 시점상 보호 |
+
+#### 📝 의도된 설계
+
+1. **C-2에 VoiceOver/isShowing 명시적 가드 없음**: C-2는 C-1 시퀀스 내부에서만 도달 (`isWaitingForC2=true` 필수). C-1 진입 시점에 이미 VoiceOver와 isShowing을 검증 완료한 연속 흐름이므로, C-2에서 중복 체크하지 않음.
+
 ---
 
 ## 12. 재방문 & 스킵 정책
@@ -324,15 +386,69 @@ A+E-1 완료 후:
 | 자동 dismiss | 코치마크 A, B는 실제 제스처 수행 시에도 자동 dismiss |
 | 앱 업데이트 | 새 기능 추가 시 해당 플래그만 리셋 |
 
+### 구현 점검 결과
+
+| # | 규칙 | 상태 | 비고 |
+|---|------|------|------|
+| 1 | 코치마크 개별 플래그 | ✅ | CoachMarkType enum 7개 키, `hasBeenShown`/`markAsShown`/`resetShown` |
+| 2 | 시스템 피드백 개별 플래그 | ✅ | E-1(`firstDeleteGuide`), E-3(`firstEmpty`) 각각 독립 관리 |
+| 3 | [확인] 버튼만 닫힘 | ✅ | hitTest에서 배경 탭 흡수, 스와이프 제스처 없음 |
+| 4 | A, B 자동 dismiss | — | 설계상 해당 없음 (아래 참고) |
+| 5 | 앱 업데이트 플래그 리셋 | — | 현재 불필요 (아래 참고) |
+
+#### 📝 의도된 설계
+
+1. **4번 "자동 dismiss" 해당 없음**: A, B 코치마크 표시 중에는 오버레이가 전체 화면 터치를 흡수(`hitTest → return self`)하므로, 사용자가 실제 스와이프 제스처를 수행할 수 없음. [확인] 버튼만 누를 수 있는 구조이므로 "실제 제스처 수행 시 자동 dismiss" 시나리오 자체가 발생하지 않음.
+
+2. **5번 "앱 업데이트 리셋" 현재 불필요**: 새 코치마크 추가 시 UserDefaults에 해당 키가 없으므로 `hasBeenShown`이 자동으로 false — 기존 사용자도 새 코치마크를 자동으로 보게 됨. 리셋 메커니즘은 기존 코치마크 내용을 크게 변경하여 재표시할 때 필요하며, 현재 해당 사항 없음.
+
 ---
 
 ## 13. 구현 범위
 
-| 항목 | 내용 |
+*(기획 시점의 원안 → 구현 점검 결과로 갱신)*
+
+### 신규 생성 파일
+
+`CoachMarkOverlayView` 단일 클래스 + 기능별 extension 분할 + `CoachMarkManager` 싱글톤 매니저:
+
+| 파일 | 역할 |
 |------|------|
-| **신규 생성** | `CoachMarkOverlay` (싱글톤 + 내부 큐, A/B/C-1/C-2/D/E-1/E-2/E-3 공용) |
-| **기존 수정** | `GridViewController` (A, D 트리거), `ViewerViewController` (B 트리거), `GridViewController+SimilarPhoto` (C-1 트리거), `FaceButtonOverlay` (C-2 트리거), `TrashStore` (E-1 트리거), `TrashAlbumViewController` (E-2 트리거, E-3 트리거) |
-| **UserDefaults 키** | `coachMark_gridSwipe`, `coachMark_viewerSwipe`, `coachMark_similarBadge`, `coachMark_faceButton`, `coachMark_autoCleanup`, `coachMark_firstDelete`, `coachMark_trashEntry`, `coachMark_firstEmpty` |
+| `CoachMarkOverlayView.swift` | 메인 클래스, CoachMarkType enum, CoachMarkManager, A/B 공용 UI |
+| `CoachMarkOverlayView+CoachMarkA1.swift` | A-1: 스와이프 실습 유도 |
+| `CoachMarkOverlayView+CoachMarkC.swift` | C-1 뱃지 하이라이트, C-2 +버튼 하이라이트 |
+| `CoachMarkOverlayView+CoachMarkC3.swift` | C-3: 얼굴 비교 화면 (Step 1 셀 선택 + Step 2 Pic 라벨) |
+| `CoachMarkOverlayView+CoachMarkD.swift` | D: 저품질 자동 정리 카드 |
+| `CoachMarkOverlayView+E1E2.swift` | E-1+E-2: 삭제 시스템 안내 (3-Step 시퀀스) |
+| `CoachMarkOverlayView+E3.swift` | E-3: 비우기 완료 카드 |
+| `GridViewController+CoachMarkReplay.swift` | 코치마크 다시 보기 (온보딩 7번) |
+
+### 기존 수정 파일 (트리거 로직)
+
+| 파일 | 트리거 대상 |
+|------|-----------|
+| `GridViewController+CoachMark.swift` | A 트리거 (스크롤 추적 → threshold 도달) |
+| `GridViewController+CoachMarkA1.swift` | A-1 트리거 (A 완료 후 3초 타이머) |
+| `GridViewController+CoachMarkC.swift` | C-1 트리거 (뱃지 표시 → 0.4초 후 재검증) |
+| `GridViewController+CoachMarkD.swift` | D 트리거 (3초 타이머 + 재시도 최대 40회) |
+| `GridViewController+Cleanup.swift` | 전체메뉴 "설명 다시 보기" 서브메뉴 |
+| `ViewerViewController+CoachMark.swift` | B 트리거 (viewDidAppear) |
+| `ViewerViewController+CoachMarkC.swift` | C-2 트리거 (isWaitingForC2 + 버튼 폴링) |
+| `BaseGridViewController.swift` | E-1 트리거 (첫 스와이프 삭제 성공 후) |
+| `TrashAlbumViewController.swift` | E-3 트리거 (첫 비우기 완료 후) |
+| `GridViewController+SimilarPhoto.swift` | C-1 뱃지 표시 (`showBadge` → `triggerCoachMarkCIfNeeded`) |
+
+### UserDefaults 키
+
+| 키 | CoachMarkType | 대상 |
+|----|--------------|------|
+| `coachMark_gridSwipe` | `.gridSwipeDelete` | A |
+| `coachMark_viewerSwipe` | `.viewerSwipeDelete` | B |
+| `coachMark_similarPhoto` | `.similarPhoto` | C-1 + C-2 통합 |
+| `coachMark_faceComparisonGuide` | `.faceComparisonGuide` | C-3 |
+| `coachMark_autoCleanup` | `.autoCleanup` | D |
+| `coachMark_firstDeleteGuide` | `.firstDeleteGuide` | E-1 + E-2 통합 |
+| `coachMark_firstEmpty` | `.firstEmpty` | E-3 |
 
 ---
 
@@ -341,17 +457,19 @@ A+E-1 완료 후:
 ```
 앱 실행 → PermissionVC (기존 그대로) → 메인 그리드
                                          │
-                                    [A: 그리드 스와이프] (2초 후, 1회)
+                                    [A: 그리드 스와이프] (1화면 스크롤 후, 1회)
+                                         │
+                                    [A-1: 스와이프 실습] (A 완료 후 3초 내 미실행 시)
                                          │
                                     사진 탭 → 뷰어
                                          │
                                     [B: 뷰어 스와이프] (1회)
                                          │
-                                    첫 삭제 실행 (그리드 or 뷰어)
+                                    첫 그리드 스와이프 삭제 실행
                                          │
                                     [E-1: 첫 삭제 안내] (1회)
                                          │
-                                    [확인] → 삭제대기함 이동
+                                    [확인] → 삭제대기함 탭 전환
                                          │
                                     [E-2: 삭제대기함 안내] (1회)
                                          │
@@ -359,11 +477,15 @@ A+E-1 완료 후:
 
                                     그리드에서 뱃지 안정 노출
                                          │
-                                    [C-1: 유사 뱃지] (1회)
+                                    [C-1: 유사 뱃지] (A+B+E-1 완료 후, 1회)
                                          │
-                                    뷰어에서 + 버튼 노출
+                                    [확인] → 뷰어 자동 이동
                                          │
-                                    [C-2: 얼굴 비교] (1회)
+                                    [C-2: 얼굴 비교] (+버튼 폴링 후)
+                                         │
+                                    [확인] → 얼굴 비교 화면 자동 진입
+                                         │
+                                    [C-3: 셀 선택 + Pic 라벨] (Step 1→2)
 
 첫 비우기:
   비우기 완료 → [E-3: 비우기 완료 안내] (1회)
@@ -372,3 +494,15 @@ A+E-1 완료 후:
   그리드 3초 체류 → [D: 자동 정리] (스캔 결과 있을 때, 1회)
   또는 정리 버튼 탭 → [D: 자동 정리] (D 미완료 + 스캔 결과 있을 때)
 ```
+
+### 구현 점검 결과
+
+원안 대비 변경/추가된 사항:
+
+| 항목 | 원안 | 실제 구현 |
+|------|------|----------|
+| A 트리거 | "2초 후" | 1화면 높이 이상 스크롤 후 (threshold 기반) |
+| A-1 | 없음 | A 완료 후 3초 내 스와이프 미실행 시 실습 유도 |
+| E-1 트리거 | "첫 삭제 실행 (그리드 or 뷰어)" | 그리드 스와이프 삭제에서만 (8번 의도된 설계 참고) |
+| C-1→C-2→C-3 | C-2까지만 표시 | C-2 완료 → 얼굴 비교 화면 자동 진입 → C-3 (Step 1 셀 선택 + Step 2 Pic 라벨) |
+| B 선행조건 | A 후 순차 | A 선행조건 없음 (8번 의도된 설계 참고) |
