@@ -913,6 +913,14 @@ extension BaseGridViewController {
                     self?.handleSwipeResult(result, cell: cell)
                     // E-1+E-2: 첫 삭제 시 삭제 시스템 안내 시퀀스 트리거
                     if case .success = result {
+                        // A-1 활성 중이면 → overlay 즉시 제거 → E-1 가드 통과
+                        if CoachMarkManager.shared.isA1Active {
+                            CoachMarkManager.shared.isA1Active = false
+                            let overlay = CoachMarkManager.shared.currentOverlay
+                            CoachMarkManager.shared.currentOverlay = nil  // isShowing = false
+                            overlay?.dismiss()  // 시각적 페이드아웃 (백그라운드)
+                            Log.print("[CoachMarkA1] 스와이프 삭제 성공 → A-1 dismiss → E-1 트리거")
+                        }
                         self?.showDeleteSystemGuideIfNeeded(cell: cell)
                     }
                 }

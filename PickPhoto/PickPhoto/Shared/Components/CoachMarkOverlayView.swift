@@ -90,9 +90,18 @@ final class CoachMarkManager {
     /// C-3 Step 1→2 전환 중 (true 동안 dismissCurrent() 차단)
     var isC3TransitionActive: Bool = false
 
+    // MARK: - A-1 전용 상태
+
+    /// A-1 스와이프 실습 모드 활성 중 (true 동안 dismissCurrent() 차단)
+    var isA1Active: Bool = false
+
     /// 현재 코치마크 dismiss
-    /// ⚠️ C-1 → C-2 전환 중, E-1+E-2 시퀀스 진행 중, C-3 전환 중에는 dismiss 차단 (오버레이 보호)
+    /// ⚠️ C-1 → C-2 전환 중, E-1+E-2 시퀀스 진행 중, C-3 전환 중, A-1 진행 중에는 dismiss 차단 (오버레이 보호)
     func dismissCurrent() {
+        if isA1Active {
+            Log.print("[CoachMarkManager] dismissCurrent BLOCKED — isA1Active=true")
+            return
+        }
         if isWaitingForC2 {
             Log.print("[CoachMarkManager] dismissCurrent BLOCKED — isWaitingForC2=true, overlay=\(currentOverlay != nil)")
             return
@@ -176,6 +185,9 @@ final class CoachMarkOverlayView: UIView {
 
     /// 하이라이트 영역 (윈도우 좌표)
     var highlightFrame: CGRect = .zero
+
+    /// A-1 스와이프 실습 모드 (하이라이트 영역 터치 통과)
+    var isA1SwipeMode: Bool = false
 
     /// dismiss 완료 시 호출되는 콜백 (외부 리소스 정리용)
     var onDismiss: (() -> Void)?
@@ -866,6 +878,9 @@ final class CoachMarkOverlayView: UIView {
         // C 상태 리셋
         CoachMarkManager.shared.resetC2State()
 
+        // A-1: 스와이프 실습 모드 정리
+        cleanupA1()
+
         // D, E-1+E-2, E-3, C-3: 시퀀스 전용 리소스 정리
         cleanupAutoCleanup()
         cleanupDeleteGuide()
@@ -888,10 +903,15 @@ final class CoachMarkOverlayView: UIView {
 
     /// 확인 버튼만 터치 받고, 나머지는 모두 차단
     /// (스크롤, 스와이프, 탭 등 모든 상호작용 방지)
+    /// A-1: 하이라이트 영역은 터치 통과 (스와이프 허용)
     override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
-        // 확인 버튼 영역이면 버튼에 전달
+        // A-1: 하이라이트 영역은 터치 통과 → 아래 그리드 셀로 전달 (스와이프 가능)
+        if isA1SwipeMode && highlightFrame.contains(point) {
+            return nil
+        }
+        // 확인 버튼 영역이면 버튼에 전달 (A-1에서는 버튼 미표시 → 도달 안 함)
         let buttonPoint = confirmButton.convert(point, from: self)
-        if confirmButton.bounds.contains(buttonPoint) {
+        if confirmButton.bounds.contains(buttonPoint) && confirmButton.alpha > 0 {
             return confirmButton
         }
         // 나머지 터치는 오버레이가 흡수 (아래로 통과 안 함)

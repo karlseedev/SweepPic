@@ -142,6 +142,14 @@ extension GridViewController {
             snapshot: snapshot,
             in: window
         )
+
+        // A dismiss 후 A-1 타이머 시작 (viewDidAppear 없이도 트리거)
+        // 0.1초 지연: overlay removeFromSuperview 완료 대기 (weak ref → nil → isShowing = false)
+        CoachMarkManager.shared.currentOverlay?.onDismiss = { [weak self] in
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                self?.startCoachMarkA1TimerIfNeeded()
+            }
+        }
     }
 
     /// 화면 중앙에 가장 가까운 셀 찾기 (재생 기능에서도 호출)

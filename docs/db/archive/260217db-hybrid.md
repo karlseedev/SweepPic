@@ -1,5 +1,14 @@
 # 하이브리드 Analytics: Supabase 추가 구현 계획
 
+> **상태: ✅ 구현 완료** (2026-02-25)
+> - Phase 1 (Supabase 셋업): ✅ 완료 (주인님 수동)
+> - Phase 2 (SupabaseProvider): ✅ 완료 (166줄)
+> - Phase 3 (AnalyticsService 통합): ✅ 완료
+> - Phase 4 (쿼리 스크립트): ✅ 완료 (sb-query.sh, sb-report.sh)
+> - Phase 5 (검증): 시뮬레이터 실측 테스트 미완료
+>
+> 이 문서는 archive로 이동됨. 통합 문서: `260225db-Spec.md`, `260225db-Archi.md`, `260225db-API.md`
+
 ## Context
 
 현재 TelemetryDeck 기반 Analytics가 완전히 구현·운용 중. Claude Code에서 데이터를 조회할 때 TQL(비표준 쿼리 언어) + 3단계 비동기 API가 복잡하고 느림. Supabase를 보조 데이터 저장소로 추가하여, Claude가 표준 REST API로 즉시 조회·분석할 수 있게 한다.
@@ -12,18 +21,18 @@
 
 Phase 1은 코드 작업이 아님. Supabase 웹 콘솔에서 직접 수행 후, Phase 2부터 코드 구현 진행.
 
-- [ ] **1. supabase.com 프로젝트 생성** (리전: Northeast Asia)
-- [ ] **2. SQL Editor에서 실행** (아래 Phase 1 상세의 SQL 순서대로):
-  - [ ] 테이블 + 인덱스 생성 (CREATE TABLE events ...)
-  - [ ] RLS 활성화 + INSERT 정책 (이벤트명 화이트리스트 9종)
-  - [ ] RPC 함수 3개 (daily_summary, delete_restore_summary, purge_old_events)
+- [x] **1. supabase.com 프로젝트 생성** (리전: Northeast Asia) ✅
+- [x] **2. SQL Editor에서 실행** (아래 Phase 1 상세의 SQL 순서대로): ✅
+  - [x] 테이블 + 인덱스 생성 (CREATE TABLE events ...)
+  - [x] RLS 활성화 + INSERT 정책 (이벤트명 화이트리스트 9종)
+  - [x] RPC 함수 3개 (daily_summary, delete_restore_summary, purge_old_events)
   - [ ] pg_cron 90일 자동 삭제 스케줄 (초기 불필요 — DAU 1,000+ 이후 설정)
-- [ ] **3. Credentials 확보 → 로컬 파일에 기록**:
-  - [ ] Project URL, anon key, service_role key → `scripts/analytics/.env`에 추가
-  - [ ] Project URL, anon key → `PickPhoto/PickPhoto/Config/Supabase.xcconfig` 생성
-- [ ] **4. 검증**: Dashboard > Table Editor에서 events 테이블 + RLS 정책 확인
+- [x] **3. Credentials 확보 → 로컬 파일에 기록**: ✅
+  - [x] Project URL, anon key, service_role key → `scripts/analytics/.env`에 추가
+  - [x] Project URL, anon key → `PickPhoto/PickPhoto/Config/Supabase.xcconfig` 생성
+- [x] **4. 검증**: Dashboard > Table Editor에서 events 테이블 + RLS 정책 확인 ✅
 
-완료 후 Claude에게 "Phase 2 진행" 요청.
+~~완료 후 Claude에게 "Phase 2 진행" 요청.~~
 
 ---
 

@@ -352,6 +352,14 @@ final class GridViewController: BaseGridViewController {
     override func viewWillDisappear(_ animated: Bool) {
         super.viewWillDisappear(animated)
 
+        // A-1 타이머 취소 (화면 이탈 시)
+        cancelCoachMarkA1Timer()
+        // A-1이 활성 중이면 직접 해제 (dismissCurrent는 isA1Active 가드로 차단되므로)
+        if CoachMarkManager.shared.isA1Active {
+            CoachMarkManager.shared.isA1Active = false
+            CoachMarkManager.shared.currentOverlay?.dismiss()
+        }
+
         // D 타이머 취소 (화면 이탈 시)
         cancelCoachMarkDTimer()
 
@@ -379,6 +387,9 @@ final class GridViewController: BaseGridViewController {
 
         // D: 그리드 3초 체류 타이머 시작
         startCoachMarkDTimerIfNeeded()
+
+        // A-1: 스와이프 삭제 실습 유도 (A 완료 + E-1 미완료 시 5초 후 표시)
+        startCoachMarkA1TimerIfNeeded()
 
         // [A) preheat OFF 테스트] 초기 프리히트 비활성화
         // v6: visible indexPaths가 확실히 채워진 시점에 초기 프리히트
