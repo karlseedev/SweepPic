@@ -661,9 +661,6 @@ final class PhotoCell: UICollectionViewCell {
                     Self.savedCacheKeysLock.unlock()
 
                     if !alreadySaved {
-                        // #if DEBUG
-                        // Log.print("[DiskSave] \(assetID.prefix(8))... final saved")
-                        // #endif
                         ThumbnailCache.shared.save(
                             image: image,
                             assetID: assetID,

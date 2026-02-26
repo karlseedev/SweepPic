@@ -8,6 +8,7 @@
 
 import UIKit
 import AppCore
+import OSLog
 
 /// Supabase PostgREST에 이벤트를 전송하는 경량 HTTP 클라이언트
 /// - URLSession 기반 (외부 의존성 0)
@@ -77,9 +78,9 @@ final class SupabaseProvider {
 
         URLSession.shared.dataTask(with: request) { _, response, error in
             if let httpResponse = response as? HTTPURLResponse {
-                Log.print("[Supabase] send \(eventName) → HTTP \(httpResponse.statusCode)")
+                Logger.analytics.debug("Supabase send \(eventName) → HTTP \(httpResponse.statusCode)")
             } else if let error = error {
-                Log.print("[Supabase] send \(eventName) error: \(error.localizedDescription)")
+                Logger.analytics.error("Supabase send \(eventName) error: \(error.localizedDescription)")
             }
         }.resume()
     }
@@ -110,9 +111,9 @@ final class SupabaseProvider {
 
         URLSession.shared.dataTask(with: request) { _, response, error in
             if let httpResponse = response as? HTTPURLResponse {
-                Log.print("[Supabase] batch \(events.count) events → HTTP \(httpResponse.statusCode)")
+                Logger.analytics.debug("Supabase batch \(events.count) events → HTTP \(httpResponse.statusCode)")
             } else if let error = error {
-                Log.print("[Supabase] batch error: \(error.localizedDescription)")
+                Logger.analytics.error("Supabase batch error: \(error.localizedDescription)")
             }
             completion?()
         }.resume()

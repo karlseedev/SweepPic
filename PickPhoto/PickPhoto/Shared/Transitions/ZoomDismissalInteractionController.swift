@@ -14,6 +14,7 @@
 
 import UIKit
 import AppCore
+import OSLog
 
 /// Interactive Dismiss 컨트롤러
 /// 아래로 드래그 → 이미지 축소 + 배경 투명 → 셀 위치로 줌 아웃
@@ -131,7 +132,7 @@ final class ZoomDismissalInteractionController: NSObject, UIViewControllerIntera
         // 4. fromView(뷰어) 숨김
         fromView.alpha = 0
 
-        Log.debug("ZoomTransition", "Interactive dismiss started - index: \(currentIndex)")
+        Logger.transition.debug("Interactive dismiss started - index: \(currentIndex)")
     }
 
     // MARK: - Pan Gesture Handling
@@ -228,7 +229,7 @@ final class ZoomDismissalInteractionController: NSObject, UIViewControllerIntera
             context.finishInteractiveTransition()
             context.completeTransition(true)
             self.onTransitionFinished?(true)
-            Log.debug("ZoomTransition", "Interactive dismiss finished")
+            Logger.transition.debug("Interactive dismiss finished")
         }
     }
 
@@ -256,7 +257,7 @@ final class ZoomDismissalInteractionController: NSObject, UIViewControllerIntera
             context.cancelInteractiveTransition()
             context.completeTransition(false)
             self.onTransitionFinished?(false)
-            Log.debug("ZoomTransition", "Interactive dismiss cancelled")
+            Logger.transition.debug("Interactive dismiss cancelled")
         }
     }
 

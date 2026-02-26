@@ -14,6 +14,7 @@
 
 import UIKit
 import AppCore
+import OSLog
 
 // MARK: - Coach Mark C-2: Viewer Face Button
 
@@ -26,23 +27,23 @@ extension ViewerViewController {
     func triggerCoachMarkC2IfNeeded() {
         // C-1에서 설정한 대기 플래그 체크
         guard CoachMarkManager.shared.isWaitingForC2 else {
-            Log.print("[CoachMarkC2] SKIP — isWaitingForC2=false")
+            Logger.coachMark.debug("C2 SKIP — isWaitingForC2=false")
             return
         }
 
         // 화면 활성 상태 확인
         guard view.window != nil else {
-            Log.print("[CoachMarkC2] SKIP — view.window=nil")
+            Logger.coachMark.debug("C2 SKIP — view.window=nil")
             return
         }
 
         // 모달이 올라온 경우 스킵
         guard presentedViewController == nil else {
-            Log.print("[CoachMarkC2] SKIP — presentedVC exists")
+            Logger.coachMark.debug("C2 SKIP — presentedVC exists")
             return
         }
 
-        Log.print("[CoachMarkC2] START polling — overlay=\(CoachMarkManager.shared.currentOverlay != nil), faceOverlay=\(faceButtonOverlay != nil)")
+        Logger.coachMark.debug("C2 START polling — overlay=\(CoachMarkManager.shared.currentOverlay != nil), faceOverlay=\(self.faceButtonOverlay != nil)")
 
         // 즉시 터치 차단: C-2 준비까지 뷰어 조작(이미지 스와이프 등) 방지
         // C-1에서 overlay를 alpha=0.01로 투명화한 뒤 push/present 하면,
@@ -57,7 +58,7 @@ extension ViewerViewController {
 
             guard success else {
                 // 타임아웃 — 터치 복원 + C 전체 스킵
-                Log.print("[CoachMarkC2] TIMEOUT — faceButtons never appeared")
+                Logger.coachMark.error("C2 TIMEOUT — faceButtons never appeared")
                 self.view.isUserInteractionEnabled = true
                 CoachMarkManager.shared.resetC2State()
                 CoachMarkManager.shared.currentOverlay?.dismiss()
@@ -67,7 +68,7 @@ extension ViewerViewController {
 
             // + 버튼 프레임 가져오기
             guard let buttonFrame = self.faceButtonOverlay?.firstButtonFrameInWindow() else {
-                Log.print("[CoachMarkC2] FAIL — firstButtonFrameInWindow=nil")
+                Logger.coachMark.error("C2 FAIL — firstButtonFrameInWindow=nil")
                 self.view.isUserInteractionEnabled = true
                 CoachMarkManager.shared.resetC2State()
                 CoachMarkManager.shared.currentOverlay?.dismiss()
@@ -76,13 +77,13 @@ extension ViewerViewController {
 
             // 기존 C-1 오버레이를 C-2로 전환
             guard let overlay = CoachMarkManager.shared.currentOverlay else {
-                Log.print("[CoachMarkC2] FAIL — currentOverlay=nil (weak ref lost)")
+                Logger.coachMark.error("C2 FAIL — currentOverlay=nil (weak ref lost)")
                 self.view.isUserInteractionEnabled = true
                 CoachMarkManager.shared.resetC2State()
                 return
             }
 
-            Log.print("[CoachMarkC2] SUCCESS — transitioning to C-2, buttonFrame=\(buttonFrame)")
+            Logger.coachMark.debug("C2 SUCCESS — transitioning to C-2, buttonFrame=\(String(describing: buttonFrame))")
 
             // C-2 전환 성공 → 안전 타임아웃 취소 (C-2는 사용자 confirm까지 유지)
             CoachMarkManager.shared.safetyTimeoutWork?.cancel()

@@ -23,6 +23,7 @@
 
 import UIKit
 import AppCore
+import OSLog
 import Photos
 
 // MARK: - ViewerViewController+SimilarPhoto
@@ -565,7 +566,7 @@ extension ViewerViewController {
         if isCacheHit {
             Self.sharedViewerStats.cacheHitCount += 1
             Self.sharedViewerStats.buttonShowTimes.append(elapsedMs)
-            Log.print("[ViewerPerf] Cache HIT - Button shown in \(String(format: "%.2f", elapsedMs))ms")
+            Logger.viewer.debug("Perf Cache HIT - Button shown in \(String(format: "%.2f", elapsedMs))ms")
         }
 
         // 3회 이상 측정되면 통계 출력
@@ -629,7 +630,7 @@ extension ViewerViewController {
         let elapsedMs = (CFAbsoluteTimeGetCurrent() - buttonShowStartTime) * 1000
         Self.sharedViewerStats.cacheMissCount += 1
         Self.sharedViewerStats.analysisWaitTimes.append(elapsedMs)
-        Log.print("[ViewerPerf] Cache MISS - Analysis completed in \(String(format: "%.2f", elapsedMs))ms")
+        Logger.viewer.debug("Perf Cache MISS - Analysis completed in \(String(format: "%.2f", elapsedMs))ms")
 
         // +버튼 표시 시도 (isCacheHit: false → 성능 통계에 중복 기록 안 함)
         Task { @MainActor in
@@ -683,7 +684,7 @@ extension ViewerViewController: FaceButtonOverlayDelegate {
             // 성능 측정: 비교 그룹 생성 완료 시간 기록
             let elapsedMs = (CFAbsoluteTimeGetCurrent() - tapStartTime) * 1000
             Self.sharedViewerStats.comparisonGroupTimes.append(elapsedMs)
-            Log.print("[ViewerPerf] +Button → ComparisonGroup in \(String(format: "%.2f", elapsedMs))ms")
+            Logger.viewer.debug("Perf +Button → ComparisonGroup in \(String(format: "%.2f", elapsedMs))ms")
 
             // FaceComparisonViewController 표시 (Phase 5에서 구현)
             showFaceComparisonViewController(with: comparisonGroup)

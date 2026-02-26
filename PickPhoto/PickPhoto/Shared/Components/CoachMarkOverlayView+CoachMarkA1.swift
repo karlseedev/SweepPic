@@ -16,6 +16,7 @@
 
 import UIKit
 import AppCore
+import OSLog
 
 // MARK: - Coach Mark A-1: Swipe Practice Overlay
 
@@ -53,7 +54,7 @@ extension CoachMarkOverlayView {
             overlay.alpha = 1
         }
 
-        Log.print("[CoachMarkA1] 표시 완료 — highlightFrame=\(highlightFrame)")
+        Logger.coachMark.debug("A1 표시 완료 — highlightFrame=\(highlightFrame.debugDescription)")
     }
 
     // MARK: - Text Setup

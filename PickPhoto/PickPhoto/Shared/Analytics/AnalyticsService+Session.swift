@@ -7,6 +7,7 @@
 
 import Foundation
 import AppCore
+import OSLog
 
 // MARK: - SessionCounters
 
@@ -93,7 +94,7 @@ extension AnalyticsService {
     /// - barrier sync로 스냅샷 + 리셋 원자적 수행 후 플러시
     func handleSessionEnd() {
         guard !shouldSkip() else {
-            Log.print("[Analytics] handleSessionEnd 스킵 (shouldSkip=true)")
+            Logger.analytics.debug("handleSessionEnd 스킵 (shouldSkip=true)")
             // shouldSkip이어도 onFlushComplete 호출 필요 (SceneDelegate의 endBackgroundTask 해제)
             onFlushComplete?()
             onFlushComplete = nil
@@ -109,7 +110,7 @@ extension AnalyticsService {
             self.counters = SessionCounters()  // 리셋
             return current
         }
-        Log.print("[Analytics] 세션 종료 — 플러시 시작 (views=\(snapshot.photoViewing.total), deletes=\(snapshot.deleteRestore.gridSwipeDelete))")
+        Logger.analytics.debug("세션 종료 — 플러시 시작 (views=\(snapshot.photoViewing.total), deletes=\(snapshot.deleteRestore.gridSwipeDelete))")
         flushCounters(snapshot)
     }
 
@@ -131,7 +132,7 @@ extension AnalyticsService {
 
         // ── 이벤트 4-1: 보관함/앨범 삭제·복구 ──
         if !c.deleteRestore.isZero {
-            Log.print("[Analytics] flush deleteRestore → gridDel=\(c.deleteRestore.gridSwipeDelete) gridRes=\(c.deleteRestore.gridSwipeRestore) viewerDel=\(c.deleteRestore.viewerSwipeDelete) viewerTrash=\(c.deleteRestore.viewerTrashButton) viewerRes=\(c.deleteRestore.viewerRestoreButton)")
+            Logger.analytics.debug("flush deleteRestore → gridDel=\(c.deleteRestore.gridSwipeDelete) gridRes=\(c.deleteRestore.gridSwipeRestore) viewerDel=\(c.deleteRestore.viewerSwipeDelete) viewerTrash=\(c.deleteRestore.viewerTrashButton) viewerRes=\(c.deleteRestore.viewerRestoreButton)")
             events.append(("session.deleteRestore", [
                 "gridSwipeDelete":     String(c.deleteRestore.gridSwipeDelete),
                 "gridSwipeRestore":    String(c.deleteRestore.gridSwipeRestore),
@@ -184,6 +185,6 @@ extension AnalyticsService {
             return
         }
         sendEventBatch(events)
-        Log.print("[Analytics] 플러시 완료 — \(events.count)건 시그널 전송")
+        Logger.analytics.debug("플러시 완료 — \(events.count)건 시그널 전송")
     }
 }

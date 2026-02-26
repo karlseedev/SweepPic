@@ -19,6 +19,7 @@
 import UIKit
 import Photos
 import AppCore
+import OSLog
 import Vision
 
 /// 뷰어 모드
@@ -1356,9 +1357,9 @@ extension ViewerViewController: UIPageViewControllerDelegate {
         let swipeDuration = (CACurrentMediaTime() - swipeStartTime) * 1000
 
         // 성능 로그 출력
-        Log.print("[Viewer:Hitch] \(swipeType): \(hitchResult.formatted())")
-        Log.print("[Viewer:Hitch:Abs] totalHitchMs=\(String(format: "%.1f", hitchResult.totalHitchTimeMs)), duration=\(String(format: "%.3f", hitchResult.durationSeconds))s")
-        Log.print("[Viewer:Swipe] completed=\(completed), duration=\(String(format: "%.1f", swipeDuration))ms")
+        Logger.viewer.debug("Hitch \(swipeType): \(hitchResult.formatted())")
+        Logger.viewer.debug("Hitch:Abs totalHitchMs=\(String(format: "%.1f", hitchResult.totalHitchTimeMs)), duration=\(String(format: "%.3f", hitchResult.durationSeconds))s")
+        Logger.viewer.debug("Swipe completed=\(completed), duration=\(String(format: "%.1f", swipeDuration))ms")
         #endif
 
         guard completed else { return }
@@ -1561,12 +1562,12 @@ extension ViewerViewController: UIScrollViewDelegate {
     func setupPageScrollViewDelegate() {
         // UIPageViewController 내부의 UIScrollView 찾기
         guard let scrollView = pageViewController.view.subviews.first(where: { $0 is UIScrollView }) as? UIScrollView else {
-            Log.print("[Viewer:Scroll] UIScrollView를 찾을 수 없음")
+            Logger.viewer.error("Scroll UIScrollView를 찾을 수 없음")
             return
         }
 
         scrollView.delegate = self
-        Log.print("[Viewer:Scroll] UIScrollView delegate 설정 완료")
+        Logger.viewer.debug("Scroll UIScrollView delegate 설정 완료")
     }
 
     // MARK: - UIScrollViewDelegate
@@ -1580,7 +1581,7 @@ extension ViewerViewController: UIScrollViewDelegate {
         faceButtonOverlay?.hideButtonsImmediately()
         similarPhotoTitleLabel?.alpha = 0
 
-        Log.print("[Viewer:Scroll] willBeginDragging - optimize 시작")
+        Logger.viewer.debug("Scroll willBeginDragging - optimize 시작")
     }
 
     /// 감속 완료 - 최적화 해제 + 버튼 복원
@@ -1591,7 +1592,7 @@ extension ViewerViewController: UIScrollViewDelegate {
         // 스와이프 취소 시 +버튼 복원 (didFinishAnimating completed=false면 복원 안 됨)
         restoreFaceButtonsIfNeeded()
 
-        Log.print("[Viewer:Scroll] didEndDecelerating - restore 완료")
+        Logger.viewer.debug("Scroll didEndDecelerating - restore 완료")
     }
 
     /// 드래그 종료 (감속 없이 멈춤) - 최적화 해제 + 버튼 복원
@@ -1604,7 +1605,7 @@ extension ViewerViewController: UIScrollViewDelegate {
             // 스와이프 취소 시 +버튼 복원
             restoreFaceButtonsIfNeeded()
 
-            Log.print("[Viewer:Scroll] didEndDragging(willDecelerate=false) - restore 완료")
+            Logger.viewer.debug("Scroll didEndDragging(willDecelerate=false) - restore 완료")
         }
     }
 

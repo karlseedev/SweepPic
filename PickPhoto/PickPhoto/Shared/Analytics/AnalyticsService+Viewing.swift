@@ -5,6 +5,7 @@
 
 import Foundation
 import AppCore
+import OSLog
 
 extension AnalyticsService {
 
@@ -22,7 +23,7 @@ extension AnalyticsService {
             case .album:   self.counters.photoViewing.fromAlbum += 1
             case .trash:   self.counters.photoViewing.fromTrash += 1
             }
-            Log.print("[Analytics] photoViewed +1 (total=\(self.counters.photoViewing.total), source=\(source))")
+            Logger.analytics.debug("photoViewed +1 (total=\(self.counters.photoViewing.total), source=\(String(describing: source)))")
         }
     }
 }

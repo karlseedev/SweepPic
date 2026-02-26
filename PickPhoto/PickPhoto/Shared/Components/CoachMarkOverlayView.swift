@@ -21,6 +21,7 @@
 
 import UIKit
 import AppCore
+import OSLog
 
 // MARK: - CoachMarkType
 
@@ -50,7 +51,7 @@ enum CoachMarkType: String {
     /// 코치마크 표시 기록 리셋 (재생 기능에서 사용)
     func resetShown() {
         UserDefaults.standard.removeObject(forKey: shownKey)
-        Log.print("[CoachMark] reset: \(rawValue)")
+        Logger.coachMark.debug("reset: \(self.rawValue)")
     }
 }
 
@@ -99,22 +100,22 @@ final class CoachMarkManager {
     /// ⚠️ C-1 → C-2 전환 중, E-1+E-2 시퀀스 진행 중, C-3 전환 중, A-1 진행 중에는 dismiss 차단 (오버레이 보호)
     func dismissCurrent() {
         if isA1Active {
-            Log.print("[CoachMarkManager] dismissCurrent BLOCKED — isA1Active=true")
+            Logger.coachMark.debug("dismissCurrent BLOCKED — isA1Active=true")
             return
         }
         if isWaitingForC2 {
-            Log.print("[CoachMarkManager] dismissCurrent BLOCKED — isWaitingForC2=true, overlay=\(currentOverlay != nil)")
+            Logger.coachMark.debug("dismissCurrent BLOCKED — isWaitingForC2=true, overlay=\(self.currentOverlay != nil)")
             return
         }
         if isDeleteGuideSequenceActive {
-            Log.print("[CoachMarkManager] dismissCurrent BLOCKED — isDeleteGuideSequenceActive=true")
+            Logger.coachMark.debug("dismissCurrent BLOCKED — isDeleteGuideSequenceActive=true")
             return
         }
         if isC3TransitionActive {
-            Log.print("[CoachMarkManager] dismissCurrent BLOCKED — isC3TransitionActive=true")
+            Logger.coachMark.debug("dismissCurrent BLOCKED — isC3TransitionActive=true")
             return
         }
-        Log.print("[CoachMarkManager] dismissCurrent — overlay=\(currentOverlay != nil)")
+        Logger.coachMark.debug("dismissCurrent — overlay=\(self.currentOverlay != nil)")
         currentOverlay?.dismiss()
     }
 

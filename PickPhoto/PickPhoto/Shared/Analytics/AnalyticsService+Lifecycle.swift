@@ -5,6 +5,7 @@
 
 import Foundation
 import AppCore
+import OSLog
 
 extension AnalyticsService {
 
@@ -16,11 +17,11 @@ extension AnalyticsService {
     /// - 실행 횟수: SDK의 totalSessionsCount 자동 수집
     func trackAppLaunched() {
         guard !shouldSkip() else {
-            Log.print("[Analytics] trackAppLaunched 스킵 (shouldSkip=true)")
+            Logger.analytics.debug("trackAppLaunched 스킵 (shouldSkip=true)")
             return
         }
         sendEvent("app.launched")
-        Log.print("[Analytics] ✓ app.launched 전송")
+        Logger.analytics.debug("app.launched 전송")
     }
 
     // MARK: - 이벤트 2: 사진 접근 권한
@@ -34,6 +35,6 @@ extension AnalyticsService {
             "result": result.rawValue,
             "timing": timing.rawValue,
         ])
-        Log.print("[Analytics] ✓ permission.result 전송 (result=\(result.rawValue), timing=\(timing.rawValue))")
+        Logger.analytics.debug("permission.result 전송 (result=\(result.rawValue), timing=\(timing.rawValue))")
     }
 }

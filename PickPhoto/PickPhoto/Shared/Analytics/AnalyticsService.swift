@@ -12,6 +12,7 @@ import Foundation
 import Photos
 import TelemetryDeck
 import AppCore
+import OSLog
 
 // MARK: - AnalyticsServiceProtocol
 
@@ -157,7 +158,7 @@ final class AnalyticsService: AnalyticsServiceProtocol {
         TelemetryDeck.initialize(config: config)
         isConfigured = true
         configureSupabase()
-        Log.print("[Analytics] SDK 초기화 완료 (appID: \(appID.prefix(8))...)")
+        Logger.analytics.debug("SDK 초기화 완료 (appID: \(appID.prefix(8))...)")
     }
 
     // MARK: - Photo Library Bucket
@@ -211,16 +212,16 @@ final class AnalyticsService: AnalyticsServiceProtocol {
     private func configureSupabase() {
         let rawURL = Bundle.main.infoDictionary?["SUPABASE_URL"]
         let rawKey = Bundle.main.infoDictionary?["SUPABASE_ANON_KEY"]
-        Log.print("[Supabase] configureSupabase — URL: \(rawURL ?? "nil"), Key: \(rawKey == nil ? "nil" : "exists")")
+        Logger.analytics.debug("configureSupabase — URL: \(rawURL.debugDescription), Key: \(rawKey == nil ? "nil" : "exists")")
 
         guard let url = rawURL as? String,
               let key = rawKey as? String,
               !url.isEmpty, !key.isEmpty else {
-            Log.print("[Supabase] credentials 없음 — 비활성")
+            Logger.analytics.debug("Supabase credentials 없음 — 비활성")
             return
         }
         supabaseProvider = SupabaseProvider(baseURL: url, anonKey: key)
-        Log.print("[Supabase] 초기화 완료 (url: \(url.prefix(30))...)")
+        Logger.analytics.debug("Supabase 초기화 완료 (url: \(url.prefix(30))...)")
     }
 
     // MARK: - Dual Send Helpers
@@ -244,7 +245,7 @@ final class AnalyticsService: AnalyticsServiceProtocol {
     /// - TD: 이벤트 개별 signal (기존 동작 유지)
     /// - Supabase: 제외 필터링 후 남은 이벤트를 1회 배치 POST
     func sendEventBatch(_ events: [(name: String, parameters: [String: String])]) {
-        Log.print("[Supabase] sendEventBatch 진입 — \(events.count)건, provider: \(supabaseProvider != nil ? "있음" : "nil")")
+        Logger.analytics.debug("sendEventBatch 진입 — \(events.count)건, provider: \(self.supabaseProvider != nil ? "있음" : "nil")")
 
         // 1) TD 개별 전송
         for event in events {
@@ -260,7 +261,7 @@ final class AnalyticsService: AnalyticsServiceProtocol {
                 params: $0.parameters,
                 photoBucket: bucket
             )}
-        Log.print("[Supabase] 배치 대상: \(payloads.count)건 (제외 후)")
+        Logger.analytics.debug("배치 대상: \(payloads.count)건 (제외 후)")
 
         // supabaseProvider가 nil(xcconfig 미설정)이면 즉시 완료 콜백
         if let provider = supabaseProvider, !payloads.isEmpty {

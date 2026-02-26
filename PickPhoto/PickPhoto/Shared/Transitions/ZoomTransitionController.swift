@@ -9,6 +9,7 @@
 
 import UIKit
 import AppCore
+import OSLog
 
 /// 줌 트랜지션 컨트롤러 (Modal 방식)
 /// 그리드 ↔ 뷰어 간 커스텀 Modal 트랜지션 관리
@@ -32,7 +33,7 @@ final class ZoomTransitionController: NSObject, UIViewControllerTransitioningDel
 
     override init() {
         super.init()
-        Log.debug("ZoomTransition", "ZoomTransitionController initialized (Modal)")
+        Logger.transition.debug("ZoomTransitionController initialized (Modal)")
     }
 
     // MARK: - UIViewControllerTransitioningDelegate
@@ -46,7 +47,7 @@ final class ZoomTransitionController: NSObject, UIViewControllerTransitioningDel
         let animator = ZoomAnimator(isPresenting: true)
         animator.sourceProvider = sourceProvider
         animator.destinationProvider = destinationProvider
-        Log.debug("ZoomTransition", "Present: using ZoomAnimator")
+        Logger.transition.debug("Present: using ZoomAnimator")
         return animator
     }
 
@@ -58,7 +59,7 @@ final class ZoomTransitionController: NSObject, UIViewControllerTransitioningDel
         animator.sourceProvider = sourceProvider
         animator.destinationProvider = destinationProvider
         animator.isInteractiveDismiss = isInteractivelyDismissing
-        Log.debug("ZoomTransition", "Dismiss: using ZoomAnimator (interactive: \(isInteractivelyDismissing))")
+        Logger.transition.debug("Dismiss: using ZoomAnimator (interactive: \(self.isInteractivelyDismissing))")
         return animator
     }
 

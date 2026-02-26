@@ -6,6 +6,7 @@
 
 import Foundation
 import AppCore
+import OSLog
 
 extension AnalyticsService {
 
@@ -21,7 +22,7 @@ extension AnalyticsService {
             case .library: self.counters.deleteRestore.fromLibrary += 1
             case .album:   self.counters.deleteRestore.fromAlbum += 1
             }
-            Log.print("[Analytics] gridSwipeDelete +1 (total=\(self.counters.deleteRestore.gridSwipeDelete))")
+            Logger.analytics.debug("gridSwipeDelete +1 (total=\(self.counters.deleteRestore.gridSwipeDelete))")
         }
     }
 
@@ -35,7 +36,7 @@ extension AnalyticsService {
             case .library: self.counters.deleteRestore.fromLibrary += 1
             case .album:   self.counters.deleteRestore.fromAlbum += 1
             }
-            Log.print("[Analytics] gridSwipeRestore +1 (total=\(self.counters.deleteRestore.gridSwipeRestore))")
+            Logger.analytics.debug("gridSwipeRestore +1 (total=\(self.counters.deleteRestore.gridSwipeRestore))")
         }
     }
 
@@ -51,7 +52,7 @@ extension AnalyticsService {
                 case .album:   self.counters.deleteRestore.fromAlbum += 1
                 }
             }
-            Log.print("[Analytics] viewerSwipeDelete +1 (total=\(self.counters.deleteRestore.viewerSwipeDelete))")
+            Logger.analytics.debug("viewerSwipeDelete +1 (total=\(self.counters.deleteRestore.viewerSwipeDelete))")
         }
     }
 
@@ -67,7 +68,7 @@ extension AnalyticsService {
                 case .album:   self.counters.deleteRestore.fromAlbum += 1
                 }
             }
-            Log.print("[Analytics] viewerTrashButton +1 (total=\(self.counters.deleteRestore.viewerTrashButton))")
+            Logger.analytics.debug("viewerTrashButton +1 (total=\(self.counters.deleteRestore.viewerTrashButton))")
         }
     }
 
@@ -83,7 +84,7 @@ extension AnalyticsService {
                 case .album:   self.counters.deleteRestore.fromAlbum += 1
                 }
             }
-            Log.print("[Analytics] viewerRestoreButton +1 (total=\(self.counters.deleteRestore.viewerRestoreButton))")
+            Logger.analytics.debug("viewerRestoreButton +1 (total=\(self.counters.deleteRestore.viewerRestoreButton))")
         }
     }
 
@@ -94,7 +95,7 @@ extension AnalyticsService {
         guard !shouldSkip() else { return }
         queue.async(flags: .barrier) {
             self.counters.trashViewer.permanentDelete += 1
-            Log.print("[Analytics] trashPermanentDelete +1 (total=\(self.counters.trashViewer.permanentDelete))")
+            Logger.analytics.debug("trashPermanentDelete +1 (total=\(self.counters.trashViewer.permanentDelete))")
         }
     }
 
@@ -103,7 +104,7 @@ extension AnalyticsService {
         guard !shouldSkip() else { return }
         queue.async(flags: .barrier) {
             self.counters.trashViewer.restore += 1
-            Log.print("[Analytics] trashRestore +1 (total=\(self.counters.trashViewer.restore))")
+            Logger.analytics.debug("trashRestore +1 (total=\(self.counters.trashViewer.restore))")
         }
     }
 }
