@@ -15,6 +15,7 @@
 import UIKit
 import Photos
 import AppCore
+import OSLog
 
 /// PickPhoto 앱의 SceneDelegate
 /// Scene 기반 윈도우 관리 및 루트 뷰컨트롤러 설정
@@ -61,7 +62,7 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         // T066: 권한 상태 변경 콜백 등록
         setupPermissionObserver()
 
-        Log.print("[SceneDelegate] Scene connected, window configured")
+        Logger.app.debug("Scene connected, window configured")
     }
 
     // MARK: - T065: Permission Check
@@ -90,7 +91,7 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
             showPermissionViewController()
         }
 
-        Log.print("[SceneDelegate] configureRootViewController: \(permissionState)")
+        Logger.app.debug("configureRootViewController: \(permissionState.rawValue)")
     }
 
     /// 최초 실행 시 시스템 권한 팝업 직접 요청
@@ -145,7 +146,7 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         // 권한 뷰컨트롤러 해제
         permissionViewController = nil
 
-        Log.print("[SceneDelegate] Showing main interface (TabBarController)")
+        Logger.app.debug("Showing main interface (TabBarController)")
 
         // 실측용 Inspector 활성화 (iOS 26 버튼 크기/모양 수집)
         #if DEBUG
@@ -193,7 +194,7 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         // 탭바 컨트롤러 해제
         tabBarController = nil
 
-        Log.print("[SceneDelegate] Showing permission view controller")
+        Logger.app.debug("Showing permission view controller")
     }
 
     // MARK: - T066: Permission Change Observer
@@ -201,7 +202,7 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
     /// 권한 상태 변경 옵저버 설정
     private func setupPermissionObserver() {
         PermissionStore.shared.onStatusChange { [weak self] newStatus in
-            Log.print("[SceneDelegate] Permission status changed: \(newStatus)")
+            Logger.app.debug("Permission status changed: \(newStatus.rawValue)")
 
             // 메인 스레드에서 UI 업데이트
             DispatchQueue.main.async {
@@ -234,14 +235,14 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
     /// - Parameter scene: 연결 해제된 Scene
     func sceneDidDisconnect(_ scene: UIScene) {
         // Scene 연결 해제 시 정리 작업
-        Log.print("[SceneDelegate] Scene disconnected")
+        Logger.app.debug("Scene disconnected")
     }
 
     /// Scene이 활성화될 때 호출
     /// - Parameter scene: 활성화된 Scene
     func sceneDidBecomeActive(_ scene: UIScene) {
         // 앱이 활성 상태가 될 때 처리
-        Log.print("[SceneDelegate] Scene became active")
+        Logger.app.debug("Scene became active")
 
         // 시스템 권한 팝업 dismiss 후 권한 상태 확인 → 메인 화면 전환
         // (시스템 팝업은 앱을 inactive → active로 전환시킴)
@@ -260,12 +261,12 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
     /// - Parameter scene: 비활성화된 Scene
     func sceneWillResignActive(_ scene: UIScene) {
         // 앱이 비활성 상태가 될 때 처리
-        Log.print("[SceneDelegate] Scene will resign active")
+        Logger.app.debug("Scene will resign active")
 
         // T084: 자동 정리 진행 중이면 일시정지
         if CleanupService.shared.isRunning {
             CleanupService.shared.pauseCleanup()
-            Log.print("[SceneDelegate] Cleanup paused (background)")
+            Logger.app.debug("Cleanup paused (background)")
         }
     }
 
@@ -305,10 +306,10 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         // T085: 자동 정리가 일시정지 상태면 자동 재개
         if let session = CleanupService.shared.currentSession, session.status == .paused {
             CleanupService.shared.resumeCleanup()
-            Log.print("[SceneDelegate] Cleanup resumed (foreground)")
+            Logger.app.debug("Cleanup resumed (foreground)")
         }
 
-        Log.print("[SceneDelegate] Scene will enter foreground")
+        Logger.app.debug("Scene will enter foreground")
     }
 
     /// T060: 삭제대기함에서 외부 삭제된 사진 정리
@@ -366,7 +367,7 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
             CoachMarkManager.shared.currentOverlay?.dismiss()
         }
 
-        Log.print("[SceneDelegate] Scene did enter background")
+        Logger.app.debug("Scene did enter background")
     }
 
 }
@@ -377,7 +378,7 @@ extension SceneDelegate: PermissionViewControllerDelegate {
 
     /// 권한이 승인되어 사진 접근이 가능해졌을 때 호출
     func permissionViewControllerDidGrantAccess(_ controller: PermissionViewController) {
-        Log.print("[SceneDelegate] Permission granted, showing main interface")
+        Logger.app.debug("Permission granted, showing main interface")
         showMainInterface()
     }
 }

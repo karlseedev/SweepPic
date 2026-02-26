@@ -9,6 +9,7 @@
 import UIKit
 import Photos
 import AppCore
+import OSLog
 
 /// PickPhoto 앱의 AppDelegate
 /// UIKit 라이프사이클을 사용하여 앱 상태를 관리
@@ -27,7 +28,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?
     ) -> Bool {
         // AppCore 초기화 로그
-        Log.print("[AppDelegate] PickPhoto started with AppCore \(AppCore.version)")
+        Logger.app.debug("PickPhoto started with AppCore \(AppCore.version)")
 
 
         // [E) 환경 정보 로그] 전/후 비교용 메타 데이터
@@ -98,7 +99,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     /// 메모리 경고 시 호출
     /// - Parameter application: UIApplication 인스턴스
     func applicationDidReceiveMemoryWarning(_ application: UIApplication) {
-        Log.print("[AppDelegate] Memory warning received")
+        Logger.app.notice("Memory warning received")
         // T072: AppStateStore를 통한 메모리 경고 처리
         AppStateStore.shared.handleMemoryWarning()
     }
