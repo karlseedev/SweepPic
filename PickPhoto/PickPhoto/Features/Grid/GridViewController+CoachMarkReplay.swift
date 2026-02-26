@@ -13,6 +13,7 @@
 import UIKit
 import Photos
 import AppCore
+import OSLog
 
 // MARK: - Coach Mark Replay
 
@@ -37,7 +38,7 @@ extension GridViewController {
 
     /// A 코치마크 즉시 재생
     func replayCoachMarkA() {
-        Log.print("[CoachMarkReplay] A: 그리드 스와이프 삭제 재생 시작")
+        Logger.coachMark.debug("A: 그리드 스와이프 삭제 재생 시작")
 
         // 사진 0장 체크
         guard dataSourceDriver.count > 0 else {
@@ -55,7 +56,7 @@ extension GridViewController {
 
         // 표시 실패 시 플래그 복원
         if !CoachMarkManager.shared.isShowing {
-            Log.print("[CoachMarkReplay] A: 표시 실패 — 플래그 복원")
+            Logger.coachMark.error("A: 표시 실패 — 플래그 복원")
             CoachMarkType.gridSwipeDelete.markAsShown()
         }
     }
@@ -66,7 +67,7 @@ extension GridViewController {
     /// 화면 중앙에서 가까운 이미지(비디오 제외) 셀을 찾아 뷰어로 이동
     /// viewDidAppear에서 B 가드 통과 → 자동 표시
     func replayCoachMarkB() {
-        Log.print("[CoachMarkReplay] B: 뷰어 스와이프 삭제 재생 시작")
+        Logger.coachMark.debug("B: 뷰어 스와이프 삭제 재생 시작")
 
         guard dataSourceDriver.count > 0 else {
             if let window = view.window {
@@ -126,7 +127,7 @@ extension GridViewController {
 
     /// C 코치마크 즉시 재생 (C-1→C-2→C-3 시퀀스)
     func replayCoachMarkC() {
-        Log.print("[CoachMarkReplay] C: 유사 사진 얼굴 비교 재생 시작")
+        Logger.coachMark.debug("C: 유사 사진 얼굴 비교 재생 시작")
 
         cleanupBeforeReplay()
 
@@ -155,7 +156,7 @@ extension GridViewController {
     private func replayC_withMember(assetID: String) {
         // assetID → indexPath 해석
         guard let found = dataSourceDriver.indexPath(for: assetID) else {
-            Log.print("[CoachMarkReplay] C: assetID→indexPath 실패 — 플래그 복원")
+            Logger.coachMark.error("C: assetID→indexPath 실패 — 플래그 복원")
             CoachMarkType.similarPhoto.markAsShown()
             CoachMarkType.faceComparisonGuide.markAsShown()
             if let window = view.window {
@@ -175,7 +176,7 @@ extension GridViewController {
             guard let self else { return }
 
             guard let cell = self.collectionView.cellForItem(at: gridIndexPath) as? PhotoCell else {
-                Log.print("[CoachMarkReplay] C: 스크롤 후 셀 미발견 — 플래그 복원")
+                Logger.coachMark.error("C: 스크롤 후 셀 미발견 — 플래그 복원")
                 CoachMarkType.similarPhoto.markAsShown()
                 CoachMarkType.faceComparisonGuide.markAsShown()
                 return
@@ -276,7 +277,7 @@ extension GridViewController {
 
     /// D 코치마크 즉시 재생
     func replayCoachMarkD() {
-        Log.print("[CoachMarkReplay] D: 저품질 사진 정리 재생 시작")
+        Logger.coachMark.debug("D: 저품질 사진 정리 재생 시작")
 
         guard let window = view.window else { return }
 
@@ -298,7 +299,7 @@ extension GridViewController {
 
         // 표시 실패 시 플래그 복원
         if !CoachMarkManager.shared.isShowing {
-            Log.print("[CoachMarkReplay] D: 표시 실패 — 플래그 복원")
+            Logger.coachMark.error("D: 표시 실패 — 플래그 복원")
             CoachMarkType.autoCleanup.markAsShown()
         }
     }
@@ -308,7 +309,7 @@ extension GridViewController {
     /// E-1+E-2 코치마크 즉시 재생
     /// A 변형 (1회 스와이프) → 실제 삭제 → E 시퀀스
     func replayCoachMarkE1E2() {
-        Log.print("[CoachMarkReplay] E-1+E-2: 삭제 시스템 안내 재생 시작")
+        Logger.coachMark.debug("E-1+E-2: 삭제 시스템 안내 재생 시작")
 
         guard dataSourceDriver.count > 0 else {
             if let window = view.window {
@@ -355,7 +356,7 @@ extension GridViewController {
 
                 // 실제 삭제
                 self.trashStore.moveToTrash(assetIDs: [assetID])
-                Log.print("[CoachMarkReplay] E-1+E-2: 사진 삭제 완료 — E 시퀀스 시작")
+                Logger.coachMark.debug("E-1+E-2: 사진 삭제 완료 — E 시퀀스 시작")
 
                 // E-1+E-2 시퀀스 시작 (showDeleteSystemGuide 직접 호출)
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { [weak self] in
@@ -373,7 +374,7 @@ extension GridViewController {
 
     /// E-3 코치마크 즉시 재생
     func replayCoachMarkE3() {
-        Log.print("[CoachMarkReplay] E-3: 비우기 완료 안내 재생 시작")
+        Logger.coachMark.debug("E-3: 비우기 완료 안내 재생 시작")
 
         guard let window = view.window else { return }
 

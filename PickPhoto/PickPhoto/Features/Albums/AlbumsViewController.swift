@@ -8,6 +8,7 @@
 import UIKit
 import Photos
 import AppCore
+import OSLog
 
 /// 앨범 목록 뷰컨트롤러
 /// Albums 탭에서 앨범 목록을 표시
@@ -372,7 +373,7 @@ final class AlbumsViewController: UIViewController {
         hasLoadedOnce = true
         lastLoadTime = CFAbsoluteTimeGetCurrent()
 
-        Log.print("[AlbumsViewController] Lightweight: \(smartAlbums.count) smart, \(userAlbums.count) user albums")
+        Logger.albums.debug("Lightweight: \(self.smartAlbums.count) smart, \(self.userAlbums.count) user albums")
     }
 
     /// Phase 2: 비동기 전체 로드 (정확한 개수 + keyAsset + 썸네일)
@@ -416,14 +417,14 @@ final class AlbumsViewController: UIViewController {
             if sameStructure {
                 // 구조 동일: visible 셀의 count 라벨만 업데이트 (reloadData 없음)
                 self.updateVisibleCellCounts()
-                Log.print("[AlbumsViewController] Phase 2 sameStructure=TRUE → count만 업데이트 (reloadData 스킵)")
+                Logger.albums.debug("Phase 2 sameStructure=TRUE → count만 업데이트 (reloadData 스킵)")
             } else {
                 // 구조 변경: 전체 리로드 필요
                 self.collectionView.reloadData()
-                Log.print("[AlbumsViewController] Phase 2 sameStructure=FALSE → reloadData 실행")
+                Logger.albums.debug("Phase 2 sameStructure=FALSE → reloadData 실행")
             }
 
-            Log.print("[AlbumsViewController] Phase 2: \(smartAlbums.count) smart, \(userAlbums.count) user | old: \(oldSmartIDs.count) smart, \(oldUserIDs.count) user")
+            Logger.albums.debug("Phase 2: \(smartAlbums.count) smart, \(userAlbums.count) user | old: \(oldSmartIDs.count) smart, \(oldUserIDs.count) user")
 
             // ⚠️ 깜빡임 방지: completion 내 즉시 재호출 금지
             // needsReload은 다음 viewWillAppear 또는 photoLibraryDidChange(visible)에서 처리
@@ -562,7 +563,7 @@ extension AlbumsViewController: UICollectionViewDelegate {
     /// 스마트 앨범 그리드 열기 (T052)
     private func openAlbumGrid(smartAlbum: SmartAlbum) {
         guard let fetchResult = albumService.fetchPhotosInSmartAlbum(type: smartAlbum.type) else {
-            Log.print("[AlbumsViewController] Failed to fetch photos for smart album: \(smartAlbum.type)")
+            Logger.albums.error("Failed to fetch photos for smart album: \(String(describing: smartAlbum.type))")
             return
         }
 
@@ -576,13 +577,13 @@ extension AlbumsViewController: UICollectionViewDelegate {
 
         navigationController?.pushViewController(albumGridVC, animated: true)
 
-        Log.print("[AlbumsViewController] Opened smart album: \(smartAlbum.title)")
+        Logger.albums.debug("Opened smart album: \(smartAlbum.title)")
     }
 
     /// 사용자 앨범 그리드 열기 (T052)
     private func openAlbumGrid(album: Album) {
         guard let fetchResult = albumService.fetchPhotosInAlbum(albumID: album.id) else {
-            Log.print("[AlbumsViewController] Failed to fetch photos for album: \(album.title)")
+            Logger.albums.error("Failed to fetch photos for album: \(album.title)")
             return
         }
 
@@ -596,7 +597,7 @@ extension AlbumsViewController: UICollectionViewDelegate {
 
         navigationController?.pushViewController(albumGridVC, animated: true)
 
-        Log.print("[AlbumsViewController] Opened album: \(album.title)")
+        Logger.albums.debug("Opened album: \(album.title)")
     }
 
     // MARK: - iOS 18+ Zoom Transition Helper
@@ -695,11 +696,11 @@ extension AlbumsViewController: PHPhotoLibraryChangeObserver {
             if self.view.window != nil {
                 // 화면 보이는 중: 비동기 로드 (블로킹 없음)
                 self.loadData()
-                Log.print("[AlbumsViewController] PhotoLibrary changed, reloading data")
+                Logger.albums.debug("PhotoLibrary changed, reloading data")
             } else {
                 // 화면 안 보이는 중: 플래그만 설정 (viewWillAppear에서 처리)
                 self.needsReload = true
-                Log.print("[AlbumsViewController] PhotoLibrary changed, deferred reload")
+                Logger.albums.debug("PhotoLibrary changed, deferred reload")
             }
         }
     }

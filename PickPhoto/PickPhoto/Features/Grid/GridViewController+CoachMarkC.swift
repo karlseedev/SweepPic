@@ -16,6 +16,7 @@
 import UIKit
 import ObjectiveC
 import AppCore
+import OSLog
 
 // MARK: - Associated Keys
 
@@ -188,7 +189,7 @@ extension GridViewController {
 
                 // C-1 → C-2 전환 중 보호 활성화
                 CoachMarkManager.shared.isWaitingForC2 = true
-                Log.print("[CoachMarkC1] onConfirm — isWaitingForC2=true, overlay=\(CoachMarkManager.shared.currentOverlay != nil)")
+                Logger.coachMark.debug("C1 onConfirm — isWaitingForC2=true, overlay=\(CoachMarkManager.shared.currentOverlay != nil)")
 
                 // C-1 → C-2 안전 타임아웃 (확인 버튼 탭 시점부터 10초)
                 // 뷰어 전환(~0.5초) + 버튼 대기(최대 5초) + 여유를 포함한 안전장치

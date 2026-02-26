@@ -23,6 +23,7 @@ import Photos
 import Vision
 import UIKit
 import AppCore
+import OSLog
 
 // MARK: - Notification Extension
 
@@ -224,7 +225,7 @@ final class SimilarityAnalysisQueue {
             for (requestID, task) in currentTasks {
                 if activeRequests.contains(requestID) {
                     task.cancel()
-                    Log.print("[SimilarPhoto] Cancelled task: \(requestID)")
+                    Logger.similarPhoto.debug("Cancelled task: \(requestID)")
                 }
             }
         }
@@ -271,7 +272,7 @@ final class SimilarityAnalysisQueue {
 
         // 취소 체크: FP 생성 후 (캐시/알림 스킵)
         guard !Task.isCancelled else {
-            Log.print("[SimilarPhoto] Cancelled after FP generation - skipping cache/notification")
+            Logger.similarPhoto.debug("Cancelled after FP generation - skipping cache/notification")
             return []
         }
 
@@ -303,7 +304,7 @@ final class SimilarityAnalysisQueue {
         for groupAssetIDs in rawGroups {
             // 취소 체크: rawGroups 루프 (캐시/알림 스킵)
             guard !Task.isCancelled else {
-                Log.print("[SimilarPhoto] Cancelled during group processing - skipping cache/notification")
+                Logger.similarPhoto.debug("Cancelled during group processing - skipping cache/notification")
                 return []
             }
 
@@ -525,10 +526,10 @@ final class SimilarityAnalysisQueue {
             }
         } catch is CancellationError {
             // 취소 시 부분 결과 전부 버리고 빈 배열 반환 (캐시 오염 방지)
-            Log.print("[SimilarPhoto] generateFeaturePrints cancelled - returning empty")
+            Logger.similarPhoto.debug("generateFeaturePrints cancelled - returning empty")
             return []
         } catch {
-            Log.print("[SimilarPhoto] generateFeaturePrints error: \(error)")
+            Logger.similarPhoto.error("generateFeaturePrints error: \(error)")
             return []
         }
     }
@@ -630,7 +631,7 @@ final class SimilarityAnalysisQueue {
         for assetID in assetIDs {
             // 취소 체크: 사진 처리 루프
             guard !Task.isCancelled else {
-                Log.print("[SimilarPhoto] Cancelled during person assignment - skipping cache/notification")
+                Logger.similarPhoto.debug("Cancelled during person assignment - skipping cache/notification")
                 return result
             }
 

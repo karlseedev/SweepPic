@@ -15,6 +15,7 @@ import Photos
 import UIKit
 import Vision
 import AppCore
+import OSLog
 
 // MARK: - CoachMarkDPreScanner
 
@@ -77,7 +78,7 @@ final class CoachMarkDPreScanner {
         isScanning = false
         isPaused = false
         CoachMarkType.autoCleanup.resetShown()
-        Log.print("[CoachMarkD] PreScanner DEBUG reset")
+        Logger.coachMark.debug("PreScanner DEBUG reset")
     }
     #endif
 
@@ -87,14 +88,14 @@ final class CoachMarkDPreScanner {
     func pause() {
         guard isScanning else { return }
         isPaused = true
-        Log.print("[CoachMarkD] PreScanner paused")
+        Logger.coachMark.debug("PreScanner paused")
     }
 
     /// 스크롤 종료 시 호출 — 스캔 루프 재개
     func resume() {
         guard isScanning else { return }
         isPaused = false
-        Log.print("[CoachMarkD] PreScanner resumed")
+        Logger.coachMark.debug("PreScanner resumed")
     }
 
     // MARK: - Scan
@@ -105,7 +106,7 @@ final class CoachMarkDPreScanner {
         guard !isComplete, !isScanning else { return }
         isScanning = true
 
-        Log.print("[CoachMarkD] PreScanner 시작")
+        Logger.coachMark.debug("PreScanner 시작")
 
         Task.detached(priority: .utility) { [weak self] in
             await self?.performScan()
@@ -123,7 +124,7 @@ final class CoachMarkDPreScanner {
         var lowQualityAssets: [PHAsset] = []
         var totalScanned = 0
 
-        Log.print("[CoachMarkD] 전체 사진 \(fetchResult.count)장, 스캔 시작")
+        Logger.coachMark.debug("전체 사진 \(fetchResult.count)장, 스캔 시작")
 
         // 순차 처리 (PHImageManager가 병목이므로 병렬 효과 없음)
         for i in 0..<fetchResult.count {
@@ -146,14 +147,14 @@ final class CoachMarkDPreScanner {
 
             // 100장 단위 진행 로그
             if totalScanned % 100 == 0 {
-                Log.print("[CoachMarkD] 스캔 진행: \(totalScanned)장 완료 (\(lowQualityAssets.count)장 발견)")
+                Logger.coachMark.debug("스캔 진행: \(totalScanned)장 완료 (\(lowQualityAssets.count)장 발견)")
             }
 
             // Stage 2: 이미지 로딩 + 노출 분석 + SKIP + 블러 분석
             let isLowQuality = await analyzeAsset(asset)
             if isLowQuality {
                 lowQualityAssets.append(asset)
-                Log.print("[CoachMarkD] 저품질 발견 #\(lowQualityAssets.count) (스캔 \(totalScanned)장째)")
+                Logger.coachMark.debug("저품질 발견 #\(lowQualityAssets.count) (스캔 \(totalScanned)장째)")
             }
 
         }
@@ -168,7 +169,7 @@ final class CoachMarkDPreScanner {
             guard let self else { return }
             self.result = scanResult
             self.isScanning = false
-            Log.print("[CoachMarkD] PreScanner 완료: \(lowQualityAssets.count)장 발견 / \(totalScanned)장 스캔")
+            Logger.coachMark.debug("PreScanner 완료: \(lowQualityAssets.count)장 발견 / \(totalScanned)장 스캔")
             self.onComplete?()
             self.onComplete = nil
         }

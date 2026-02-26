@@ -15,6 +15,7 @@
 import UIKit
 import ObjectiveC
 import AppCore
+import OSLog
 
 // MARK: - Associated Keys
 
@@ -72,7 +73,7 @@ extension GridViewController {
 
         // 현재 표시 중이거나 표시 대기 중이면 스킵
         guard !CoachMarkManager.shared.isShowing else {
-            Log.print("[CoachMarkA] 스크롤 추적 스킵: 다른 코치마크 표시 중")
+            Logger.coachMark.debug("스크롤 추적 스킵: 다른 코치마크 표시 중")
             return
         }
 
@@ -91,7 +92,7 @@ extension GridViewController {
         let threshold = collectionView.bounds.height
         guard threshold > 0, coachMarkScrollAccumulated >= threshold else { return }
 
-        Log.print("[CoachMarkA] threshold 도달 — 누적 \(Int(coachMarkScrollAccumulated))pt / \(Int(threshold))pt")
+        Logger.coachMark.debug("threshold 도달 — 누적 \(Int(self.coachMarkScrollAccumulated))pt / \(Int(threshold))pt")
 
         // 누적 거리 리셋 (재트리거 방지 + 다음 표시를 위한 초기화)
         coachMarkScrollAccumulated = 0
@@ -112,11 +113,11 @@ extension GridViewController {
     /// 코치마크 A 즉시 표시 (재생 기능에서도 호출)
     func showGridSwipeDeleteCoachMark() {
         guard !CoachMarkType.gridSwipeDelete.hasBeenShown else {
-            Log.print("[CoachMarkA] 표시 스킵: 이미 표시됨")
+            Logger.coachMark.debug("표시 스킵: 이미 표시됨")
             return
         }
         guard !CoachMarkManager.shared.isShowing else {
-            Log.print("[CoachMarkA] 표시 스킵: 다른 코치마크 표시 중")
+            Logger.coachMark.debug("표시 스킵: 다른 코치마크 표시 중")
             return
         }
         guard !UIAccessibility.isVoiceOverRunning else { return }

@@ -9,6 +9,7 @@
 import UIKit
 import Photos
 import AppCore
+import OSLog
 
 // MARK: - GridDataSourceDriverProtocol
 
@@ -164,7 +165,7 @@ final class GridDataSourceDriver: NSObject, GridDataSourceDriverProtocol {
         // [Timing] A) fetch 완료
         let fetchEnd = CACurrentMediaTime()
         let fetchMs = (fetchEnd - fetchStart) * 1000
-        Log.print("[Timing] A) Fetch: \(String(format: "%.1f", fetchMs))ms (\(count) items)")
+        Logger.performance.debug("A) Fetch: \(String(format: "%.1f", fetchMs))ms (\(self.count) items)")
 
         invalidateCache()
         completion?()

@@ -15,6 +15,7 @@
 import UIKit
 import ObjectiveC
 import AppCore
+import OSLog
 
 // MARK: - Associated Object Keys (D 트리거 전용)
 
@@ -55,24 +56,24 @@ extension GridViewController {
     func startCoachMarkDTimerIfNeeded() {
         // D 이미 표시됨
         guard !CoachMarkType.autoCleanup.hasBeenShown else {
-            Log.print("[CoachMarkD] 타이머 스킵: D 이미 표시됨")
+            Logger.coachMark.debug("타이머 스킵: D 이미 표시됨")
             return
         }
         // A 미완료
         guard CoachMarkType.gridSwipeDelete.hasBeenShown else {
-            Log.print("[CoachMarkD] 타이머 스킵: A 미완료")
+            Logger.coachMark.debug("타이머 스킵: A 미완료")
             return
         }
         // E-1 미완료
         guard CoachMarkType.firstDeleteGuide.hasBeenShown else {
-            Log.print("[CoachMarkD] 타이머 스킵: E-1 미완료")
+            Logger.coachMark.debug("타이머 스킵: E-1 미완료")
             return
         }
 
         // 기존 타이머 무효화 (화면 복귀 시 리셋)
         coachMarkDTimer?.invalidate()
 
-        Log.print("[CoachMarkD] 타이머 시작 (3초)")
+        Logger.coachMark.debug("타이머 시작 (3초)")
 
         // 3초 후 트리거
         coachMarkDTimer = Timer.scheduledTimer(withTimeInterval: 3.0, repeats: false) { [weak self] _ in
@@ -83,7 +84,7 @@ extension GridViewController {
             // 스캔 완료 + 1장 이상 → 즉시 표시
             if let result = scanner.result {
                 guard result.lowQualityAssets.count > 0 else {
-                    Log.print("[CoachMarkD] 타이머 만료, 스캔 결과 0건 — D 표시 안 함")
+                    Logger.coachMark.debug("타이머 만료, 스캔 결과 0건 — D 표시 안 함")
                     return
                 }
                 self.showCoachMarkD()
@@ -91,12 +92,12 @@ extension GridViewController {
             }
 
             // 스캔 미완료 → 완료 콜백 등록하여 대기
-            Log.print("[CoachMarkD] 타이머 만료, 스캔 미완료 — 완료 대기")
+            Logger.coachMark.debug("타이머 만료, 스캔 미완료 — 완료 대기")
             scanner.onComplete = { [weak self] in
                 guard let self else { return }
                 let count = scanner.result?.lowQualityAssets.count ?? 0
                 guard count > 0 else {
-                    Log.print("[CoachMarkD] 스캔 완료, 결과 0건 — D 표시 안 함")
+                    Logger.coachMark.debug("스캔 완료, 결과 0건 — D 표시 안 함")
                     return
                 }
                 self.showCoachMarkD()
@@ -126,18 +127,18 @@ extension GridViewController {
     func showCoachMarkD(retryCount: Int = 0) {
         // 초기 호출만 로그 (재시도는 간격 변경 시점만 로그)
         if retryCount == 0 {
-            Log.print("[CoachMarkD] showCoachMarkD 호출")
+            Logger.coachMark.debug("showCoachMarkD 호출")
         }
 
         // 재검증 가드: 영구 중단 (상태가 바뀔 수 없으므로 재시도 불필요)
         guard !CoachMarkType.autoCleanup.hasBeenShown else {
-            Log.print("[CoachMarkD] ❌ 가드: D 이미 표시됨")
+            Logger.coachMark.debug("가드: D 이미 표시됨")
             return
         }
 
         // [A] 최대 재시도 초과 시 포기 (viewDidAppear에서 다시 트리거됨)
         guard retryCount < Self.retryMaxCount else {
-            Log.print("[CoachMarkD] ❌ 재시도 \(retryCount)회 초과 — 포기 (다음 viewDidAppear에서 재시도)")
+            Logger.coachMark.debug("재시도 \(retryCount)회 초과 — 포기 (다음 viewDidAppear에서 재시도)")
             return
         }
 
@@ -149,7 +150,7 @@ extension GridViewController {
 
         // VoiceOver: 재시도 불필요 (영구 상태)
         guard !UIAccessibility.isVoiceOverRunning else {
-            Log.print("[CoachMarkD] ❌ 가드: VoiceOver 활성")
+            Logger.coachMark.debug("가드: VoiceOver 활성")
             return
         }
 
@@ -184,7 +185,7 @@ extension GridViewController {
         let cleanupFrame = getCleanupButtonFrame(in: window)
         let scanResult = CoachMarkDPreScanner.shared.result
 
-        Log.print("[CoachMarkD] 표시 — 썸네일 \(scanResult?.lowQualityAssets.count ?? 0)장")
+        Logger.coachMark.debug("표시 — 썸네일 \(scanResult?.lowQualityAssets.count ?? 0)장")
 
         CoachMarkOverlayView.showAutoCleanup(
             highlightFrame: cleanupFrame,
@@ -208,7 +209,7 @@ extension GridViewController {
             ? Self.retryFastInterval : Self.retrySlowInterval
         // 간격 변경 시점에만 로그 (스팸 방지)
         if retryCount == Self.retrySlowThreshold {
-            Log.print("[CoachMarkD] ⏳ 재시도 \(retryCount)회 도달 — 간격 \(interval)초로 변경 (\(reason))")
+            Logger.coachMark.debug("재시도 \(retryCount)회 도달 — 간격 \(interval)초로 변경 (\(reason))")
         }
         // [B] DispatchWorkItem으로 스케줄하여 cancel 가능하게
         let workItem = DispatchWorkItem { [weak self] in

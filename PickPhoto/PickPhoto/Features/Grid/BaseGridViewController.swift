@@ -11,6 +11,7 @@
 import UIKit
 import Photos
 import AppCore
+import OSLog
 
 // MARK: - NavTitleContainerView
 
@@ -919,7 +920,7 @@ extension BaseGridViewController {
                             let overlay = CoachMarkManager.shared.currentOverlay
                             CoachMarkManager.shared.currentOverlay = nil  // isShowing = false
                             overlay?.dismiss()  // 시각적 페이드아웃 (백그라운드)
-                            Log.print("[CoachMarkA1] 스와이프 삭제 성공 → A-1 dismiss → E-1 트리거")
+                            Logger.coachMark.debug("스와이프 삭제 성공 → A-1 dismiss → E-1 트리거")
                         }
                         self?.showDeleteSystemGuideIfNeeded(cell: cell)
                     }

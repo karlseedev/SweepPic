@@ -724,9 +724,6 @@ extension GridViewController {
             // 스크롤 중 로그 비활성화 - hitch 방지
             // 원복: git checkout a5414d4 -- PickPhoto/PickPhoto/Features/Grid/GridViewController.swift
             // 매 10번째에 구간별 로그 출력 (임시 비활성화)
-            // if cellForItemAtCount % 10 == 0 {
-            //     Log.print("[Timing] cellForItemAt #\(cellForItemAtCount): ...")
-            // }
         }
 
         // Select 모드일 때 선택 상태 표시 (T039, T045)
