@@ -17,6 +17,8 @@ import AppCore
 
 /// 자동 스크롤 테스터 - CADisplayLink로 contentOffset 직접 제어
 /// 수동 극한 스크롤보다 더 정밀하고 재현 가능한 테스트 제공
+#if DEBUG
+
 final class AutoScrollTester {
 
     // MARK: - Types
@@ -500,3 +502,5 @@ extension UIScrollView {
         )
     }
 }
+
+#endif
