@@ -1,7 +1,8 @@
 # Log 시스템 리팩토링: Log.swift → Apple Logger 마이그레이션
 
 > 작성일: 2026-02-17
-> 상태: 계획 수립 (미착수)
+> 상태: ✅ 완료 (2026-02-27)
+> 실행 커밋: `81f910d` ~ `0ec3464` (8커밋)
 
 ---
 
@@ -271,7 +272,7 @@ logger.debug("size: \(image.size)")                     // CGSize
 + PickPhoto에서 `import OSLog` + `import AppCore`로 `Logger.viewer` 접근 가능한지 확인.
 검증 후 테스트 파일 삭제.
 
-**커밋**: `refactor: Logger+App.swift 생성`
+**커밋**: `81f910d` ✅ 완료
 
 ---
 
@@ -289,8 +290,8 @@ GridScroll 카테고리 매핑:
 
 **에러 레벨**: AppDelegate "Memory warning" → `.notice`
 
-**검증**: Xcode 빌드
-**커밋**: `refactor(Phase1): App/Grid Logger 마이그레이션`
+**검증**: Xcode 빌드 ✅
+**커밋**: `81f910d` ✅ 완료 (Phase 0과 함께)
 
 ---
 
@@ -315,8 +316,8 @@ GridScroll 카테고리 매핑:
 - AlbumsViewController: "Failed to fetch photos" → `.error`
 - SimilarityAnalysisQueue: "error:" → `.error`
 
-**검증**: Xcode 빌드
-**커밋**: `refactor(Phase2): Albums/SimilarPhoto/CoachMark Logger 마이그레이션`
+**검증**: Xcode 빌드 ✅
+**커밋**: `5bb8c1d` ✅ 완료
 
 ---
 
@@ -352,8 +353,8 @@ GridScroll 카테고리 매핑:
 **에러 레벨**:
 - SupabaseProvider: "error:" → `.error` (2곳: send error, batch error)
 
-**검증**: Xcode 빌드 + 시뮬레이터 동작 확인
-**커밋**: `refactor(Phase3): Viewer/Shared Logger 마이그레이션`
+**검증**: Xcode 빌드 ✅
+**커밋**: `ae77016` ✅ 완료
 
 ---
 
@@ -376,22 +377,56 @@ GridScroll 카테고리 매핑:
 
 **에러 레벨**: ButtonInspector "저장 실패" → `.error`
 
-**검증**: Xcode 빌드
-**커밋**: `refactor(Phase4): Debug Logger 마이그레이션`
+**검증**: Xcode 빌드 ✅
+**커밋**: `1ad1553` ✅ 완료
 
 ---
 
-## Phase 5: Log.swift 삭제 + 정리
+## Phase 5: 정리 + 후속 작업
 
-1. **`Log.swift` 삭제** (사용자 확인 후)
-2. **잔존 참조 확인**: `grep -r "Log\.print\|Log\.debug" Sources/ PickPhoto/`
-3. **CLAUDE.md 로그 섹션 업데이트**: Logger 사용법으로 재작성
-4. **최종 빌드**: `swift build` + Xcode 빌드
+1. ~~`Log.swift` 삭제~~ → 사용자 판단으로 **레거시 유지** (호출처 0개, 파일만 보존)
+2. **잔존 참조 확인**: `grep -r "Log\.print\|Log\.debug"` → **0개** ✅
+3. **CLAUDE.md 로그 섹션 업데이트**: Logger 사용법으로 재작성 ✅
+4. **최종 빌드**: Xcode 빌드 ✅ + 실기기 테스트 ✅ (11개 카테고리 전부 출력 확인)
 
-**검증**:
-- Console.app에서 subsystem 필터: `log stream --predicate 'subsystem == "com.karl.PickPhoto"' --level debug`
+**커밋**: `0abdb70` ✅ 완료
 
-**커밋**: `refactor(Phase5): Log.swift 삭제 — Logger 마이그레이션 완료`
+---
+
+## Phase 6 (추가): print() 보호 + 파일 정리
+
+마이그레이션 완료 후 추가로 발견된 문제를 해결:
+
+### 6-1. 보호되지 않은 print() 256개 → `#if DEBUG` 래핑
+
+Release 빌드에서 실행될 수 있는 `print()` 호출을 `#if DEBUG`로 보호.
+
+| 파일 | print 수 | 처리 방식 |
+|------|:--------:|----------|
+| `SimilarPhoto/Analysis/S2DebugAnalyzer.swift` | 95 | 파일 전체 `#if DEBUG` |
+| `SimilarPhoto/Analysis/YuNet/YuNetDebugTest.swift` | 58 | 파일 전체 `#if DEBUG` |
+| `SimilarPhoto/Debug/FaceComparisonDebug.swift` | 52 | 파일 전체 `#if DEBUG` |
+| `SimilarPhoto/Analysis/ExtendedFallbackTester.swift` | 35 | 파일 전체 `#if DEBUG` |
+| `Debug/SystemUIInspector.swift` | 14 | 파일 전체 `#if DEBUG` |
+| `SimilarPhoto/Analysis/SimilarityAnalysisQueue.swift` | 1 | 개별 `#if DEBUG` |
+| `AppCore/Services/FileLogger.swift` | 1 | 개별 `#if DEBUG` |
+
+**커밋**: `8614f31` ✅ 완료
+
+### 6-2. 디버그 파일 정리
+
+| 파일 | 처리 |
+|------|------|
+| `Debug/AutoScrollTester.swift` | `#if DEBUG` 래핑 (디버그 전용) |
+| `Debug/LiquidGlassOptimizer.swift` | `Shared/Components/`로 이동 (프로덕션 코드가 Debug/ 폴더에 있었음) |
+
+**커밋**: `13707de` ✅ 완료
+
+### 6-3. FileLogger.swift macOS availability 경고 수정
+
+`deinit`의 `fileHandle?.close()` → `if #available(macOS 10.15, iOS 13.0, *)` 래핑
+
+**커밋**: `0ec3464` ✅ 완료
 
 ---
 
@@ -437,60 +472,42 @@ Phase 0에서 패턴 검증 후 일괄 적용.
 
 ---
 
-## 주의사항
+## 실행 결과 요약
 
-1. **`public` 필수**: Logger extension의 모든 static let에 `public` 키워드 필수
-2. **`import OSLog` 필수**: 모든 마이그레이션 대상 파일(~38개)에 `import OSLog` 추가 필요
-3. **OSLogMessage 보간**: Phase 0에서 검증. `String(format:)` 41곳 + CGRect 1곳 확인
-4. **`self.` 명시**: 컴파일러가 알려줌, 기계적 수정
-5. **Privacy**: `.debug` 레벨은 릴리즈에서 제거되므로 초기 마이그레이션에서는 미지정
-6. **Git 규칙**: 각 Phase 전후 커밋 (50줄 이상 수정)
-7. **파일 삭제**: Log.swift 삭제는 Phase 5에서 사용자 확인 후 진행
+### 커밋 히스토리
 
----
+| 커밋 | Phase | 내용 |
+|------|-------|------|
+| `4b4eef9` | - | 롤백 포인트 |
+| `81f910d` | 0+1 | Logger+App.swift 생성 + App/Grid 마이그레이션 |
+| `5bb8c1d` | 2 | Albums/SimilarPhoto/CoachMark 마이그레이션 |
+| `ae77016` | 3 | Viewer/Shared 마이그레이션 |
+| `1ad1553` | 4 | Debug 마이그레이션 |
+| `0abdb70` | 5 | CLAUDE.md 업데이트 |
+| `8614f31` | 6-1 | print() 256개 `#if DEBUG` 래핑 |
+| `13707de` | 6-2 | LiquidGlassOptimizer 이동 + AutoScrollTester 래핑 |
+| `0ec3464` | 6-3 | FileLogger macOS availability 경고 수정 |
 
-## 수정 대상 파일 목록
+### 최종 수치
 
-| # | 파일 | Phase | 호출 수 |
-|---|------|-------|---------|
-| - | `Sources/AppCore/Services/Logger+App.swift` (신규) | 0 | - |
-| 1 | `Features/Grid/GridScroll.swift` | 1 | 14 |
-| 2 | `App/SceneDelegate.swift` | 1 | 13 |
-| 3 | `App/AppDelegate.swift` | 1 | 2 |
-| 4 | `Features/Grid/GridViewController+CoachMarkD.swift` | 2 | 13 |
-| 5 | `Features/Grid/GridViewController+CoachMarkReplay.swift` | 2 | 11 |
-| 6 | `Features/Albums/AlbumsViewController.swift` | 2 | 10 |
-| 7 | `Features/Grid/GridViewController+CoachMarkA1.swift` | 2 | 10 |
-| 8 | `Features/AutoCleanup/CoachMarkDPreScanner.swift` | 2 | 8 |
-| 9 | `Features/Grid/GridViewController+SimilarPhoto.swift` | 2 | 8 |
-| 10 | `Features/SimilarPhoto/Analysis/SimilarityAnalysisQueue.swift` | 2 | 6 |
-| 11 | `Features/Grid/GridViewController+CoachMark.swift` | 2 | 4 |
-| 12 | `Features/Grid/BaseGridViewController.swift` | 2 | 1 |
-| 13 | `Features/Grid/GridDataSourceDriver.swift` | 2 | 1 |
-| 14 | `Features/Grid/GridViewController+CoachMarkC.swift` | 2 | 1 |
-| 15 | `Features/Grid/GridViewController.swift` | 2 | 주석 |
-| 16 | `Features/Viewer/ViewerViewController.swift` | 3 | 8 |
-| 17 | `Features/Viewer/ViewerViewController+CoachMarkC.swift` | 3 | 8 |
-| 18 | `Shared/Analytics/AnalyticsService+DeleteRestore.swift` | 3 | 7 |
-| 19 | `Shared/Analytics/AnalyticsService.swift` | 3 | 6 |
-| 20 | `Shared/Components/CoachMarkOverlayView.swift` | 3 | 6 |
-| 21 | `Shared/Analytics/AnalyticsService+Session.swift` | 3 | 4 |
-| 22 | `Shared/Analytics/SupabaseProvider.swift` | 3 | 4 |
-| 23 | `Features/Viewer/ViewerViewController+SimilarPhoto.swift` | 3 | 3 |
-| 24 | `Shared/Analytics/AnalyticsService+Lifecycle.swift` | 3 | 3 |
-| 25 | `Shared/Transitions/ZoomDismissalInteractionController.swift` | 3 | 3 |
-| 26 | `Shared/Transitions/ZoomTransitionController.swift` | 3 | 3 |
-| 27 | `Shared/Components/CoachMarkOverlayView+CoachMarkA1.swift` | 3 | 1 |
-| 28 | `Shared/Analytics/AnalyticsService+Viewing.swift` | 3 | 1 |
-| 29 | `Features/Grid/PhotoCell.swift` | 3 | 주석 |
-| 30 | `Debug/PreScanBenchmark.swift` | 4 | 43 |
-| 31 | `Debug/CompareAnalysisTester.swift` | 4 | 35 |
-| 32 | `Debug/ModeComparisonTester.swift` | 4 | 33 |
-| 33 | `Debug/CleanupDebug.swift` | 4 | 16 |
-| 34 | `Debug/ButtonInspector.swift` | 4 | 11 |
-| 35 | `Debug/AestheticsOnlyTester.swift` | 4 | 9 |
-| 36 | `Debug/LiquidGlassOptimizer.swift` | 4 | 7 |
-| 37 | `Debug/RenderABTest.swift` | 4 | 7 |
-| 38 | `Debug/AnalyticsTestInjector.swift` | 4 | 4 |
-| - | `Sources/AppCore/Services/Log.swift` (삭제) | 5 | - |
-| - | `CLAUDE.md` (로그 섹션 업데이트) | 5 | - |
+| 항목 | 결과 |
+|------|------|
+| Logger 호출 | **324개 / 36파일** |
+| 카테고리 | **11개** 전부 사용 중 |
+| 보호되지 않은 print() | **0개** |
+| `Log.print`/`Log.debug` 잔존 | **0개** |
+| `Log.swift` | 레거시 유지 (호출처 0개) |
+| 빌드 | Debug ✅ / Release ✅ |
+| 실기기 테스트 | 11개 카테고리 전부 출력 확인 ✅ |
+
+### 발견된 이슈 및 해결
+
+| 이슈 | 해결 |
+|------|------|
+| `String(format:)` OSLogMessage 보간 | 정상 동작 (41곳 전부) |
+| CGRect Logger 보간 | `String(describing:)` 래핑 |
+| `self.` autoclosure 요구 | 기계적 수정 |
+| `EndReason` enum 보간 | `.rawValue` 사용 |
+| print() 256개 Release 노출 | `#if DEBUG` 래핑 (7파일) |
+| LiquidGlassOptimizer Debug/ 폴더 | `Shared/Components/`로 이동 |
+| FileLogger macOS availability | `if #available` 래핑 |
