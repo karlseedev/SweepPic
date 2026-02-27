@@ -163,12 +163,18 @@ final class ViewerViewController: UIViewController {
         return pvc
     }()
 
-    /// 삭제 버튼 (일반 모드 - Liquid Glass 아이콘 버튼)
-    /// iOS 26 스펙: 38×38, iconSize 28 (medium 44×44 사용)
-    private lazy var deleteButton: GlassIconButton = {
-        // iOS 26 시스템 .trash와 동일하게 outline 스타일 사용
-        // 아이콘을 기본 medium(22pt)의 80%인 17.6pt로 축소
-        let button = GlassIconButton(icon: "trash", size: .medium, tintColor: .systemRed, iconPointSize: 17.6)
+    /// 이전 사진 버튼 (일반 모드 - 좌측 하단)
+    private lazy var previousPhotoButton: GlassTextButton = {
+        let button = GlassTextButton(title: "이전 사진", style: .plain, tintColor: .white)
+        button.translatesAutoresizingMaskIntoConstraints = false
+        button.addTarget(self, action: #selector(previousPhotoButtonTapped), for: .touchUpInside)
+        button.accessibilityIdentifier = "viewer_previous_photo"
+        return button
+    }()
+
+    /// 삭제하기 버튼 (일반 모드 - 우측 하단)
+    private lazy var deleteButton: GlassTextButton = {
+        let button = GlassTextButton(title: "삭제하기", style: .plain, tintColor: .systemRed)
         button.translatesAutoresizingMaskIntoConstraints = false
         button.addTarget(self, action: #selector(deleteButtonTapped), for: .touchUpInside)
         button.accessibilityIdentifier = "viewer_delete"
@@ -178,7 +184,7 @@ final class ViewerViewController: UIViewController {
     /// 복구 버튼 (삭제대기함 모드 - Liquid Glass 텍스트 버튼)
     /// iOS 26 스펙: 텍스트 "복구", tintColor #30D158 (녹색)
     private lazy var restoreButton: GlassTextButton = {
-        let button = GlassTextButton(title: "복구", style: .plain, tintColor: .systemGreen)
+        let button = GlassTextButton(title: "복구하기", style: .plain, tintColor: .systemGreen)
         button.translatesAutoresizingMaskIntoConstraints = false
         button.addTarget(self, action: #selector(restoreButtonTapped), for: .touchUpInside)
         button.accessibilityIdentifier = "viewer_restore"
@@ -269,6 +275,9 @@ final class ViewerViewController: UIViewController {
 
     /// iOS 26+ 툴바 삭제 버튼 참조
     private var toolbarDeleteItem: UIBarButtonItem?
+
+    /// iOS 26+ 툴바 이전 사진 버튼 참조
+    private var toolbarPreviousItem: UIBarButtonItem?
 
     /// iOS 26+ 툴바 복구 버튼 참조
     private var toolbarRestoreItem: UIBarButtonItem?
@@ -608,26 +617,34 @@ final class ViewerViewController: UIViewController {
     }
 
     /// 액션 버튼 설정 (모드에 따라 다름)
-    /// 버튼 위치: FloatingTabBar의 Delete 버튼과 동일 (safeArea bottom에서 28pt 위에 center)
+    /// 버튼 위치: safeArea bottom에서 28pt 위
     private func setupActionButtons() {
         switch viewerMode {
         case .normal:
-            // 삭제 버튼 (중앙)
+            // 이전 사진 버튼 (좌측)
+            view.addSubview(previousPhotoButton)
+            NSLayoutConstraint.activate([
+                previousPhotoButton.leadingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.leadingAnchor, constant: 24),
+                previousPhotoButton.centerYAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor, constant: -Self.buttonCenterFromBottom)
+            ])
+
+            // 삭제하기 버튼 (우측)
             view.addSubview(deleteButton)
             NSLayoutConstraint.activate([
-                deleteButton.centerXAnchor.constraint(equalTo: view.centerXAnchor),
+                deleteButton.trailingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.trailingAnchor, constant: -24),
                 deleteButton.centerYAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor, constant: -Self.buttonCenterFromBottom)
             ])
 
-            // 복구 버튼 (중앙 - 삭제 버튼과 같은 위치, 삭제대기함 사진일 때 표시)
+            // 복구 버튼 (우측 - 삭제 버튼과 같은 위치, 삭제대기함 사진일 때 표시)
             view.addSubview(restoreButton)
             NSLayoutConstraint.activate([
-                restoreButton.centerXAnchor.constraint(equalTo: view.centerXAnchor),
+                restoreButton.trailingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.trailingAnchor, constant: -24),
                 restoreButton.centerYAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor, constant: -Self.buttonCenterFromBottom)
             ])
 
             // 초기 상태: 삭제 버튼만 표시, 복구 버튼은 숨김
             restoreButton.isHidden = true
+            updatePreviousNavigationState()
 
         case .trash:
             // 복구 버튼 (왼쪽 끝) - iOS 26 스펙: 양쪽 끝 배치
@@ -704,7 +721,7 @@ final class ViewerViewController: UIViewController {
 
     // MARK: - Coach Mark Helpers
 
-    /// 코치마크 B 표시 후 뒤로가기/삭제 버튼을 오버레이 위에 보이게 하되 터치 차단
+    /// 코치마크 B 표시 후 뒤로가기/하단 버튼을 오버레이 위에 보이게 하되 터치 차단
     /// bringToFront + isUserInteractionEnabled = false → 보이지만 터치 불가
     /// iOS 26+: 시스템 네비바/툴바는 view 밖이므로 자연스럽게 보임
     func showControlButtonsAboveCoachMark() {
@@ -712,6 +729,10 @@ final class ViewerViewController: UIViewController {
         if let back = backButtonView {
             view.bringSubviewToFront(back)
             back.isUserInteractionEnabled = false
+        }
+        if previousPhotoButton.superview == view {
+            view.bringSubviewToFront(previousPhotoButton)
+            previousPhotoButton.isUserInteractionEnabled = false
         }
         if deleteButton.superview == view {
             view.bringSubviewToFront(deleteButton)
@@ -725,6 +746,7 @@ final class ViewerViewController: UIViewController {
         // 코치마크 dismiss 시 터치 복원
         CoachMarkManager.shared.currentOverlay?.onDismiss = { [weak self] in
             self?.backButtonView?.isUserInteractionEnabled = true
+            self?.previousPhotoButton.isUserInteractionEnabled = true
             self?.deleteButton.isUserInteractionEnabled = true
             self?.restoreButton.isUserInteractionEnabled = true
         }
@@ -737,7 +759,13 @@ final class ViewerViewController: UIViewController {
         dismissWithFadeOut()
     }
 
+    /// 이전 사진 버튼 탭 (일반 모드)
+    @objc private func previousPhotoButtonTapped() {
+        moveToPreviousPhoto()
+    }
+
     /// 삭제 버튼 탭 (일반 모드)
+    /// 스와이프 삭제와 동일한 상단 이동 모션 적용 (빠른 버전)
     @objc private func deleteButtonTapped() {
         guard let assetID = coordinator.assetID(at: currentIndex) else { return }
 
@@ -748,14 +776,25 @@ final class ViewerViewController: UIViewController {
         // [Analytics] 이벤트 4-1: 뷰어 삭제 버튼
         AnalyticsService.shared.countViewerTrashButton(source: coordinator.deleteSource)
 
-        // 삭제 요청
-        delegate?.viewerDidRequestDelete(assetID: assetID)
+        // 상단 이동 애니메이션 (스와이프 삭제와 동일 모션, 빠른 속도)
+        let targetView = pageViewController.view
+        UIView.animate(withDuration: 0.1, animations: {
+            targetView?.transform = CGAffineTransform(translationX: 0, y: -100)
+            targetView?.alpha = 0.5
+        }, completion: { [weak self] _ in
+            // 뷰 복원
+            targetView?.transform = .identity
+            targetView?.alpha = 1.0
 
-        // 다음 사진으로 이동 (이전 사진 우선 규칙)
-        moveToNextAfterDelete()
+            // 삭제 요청
+            self?.delegate?.viewerDidRequestDelete(assetID: assetID)
 
-        // 이동 후 버튼 상태 업데이트 (다음 사진이 삭제대기함일 수 있음)
-        updateToolbarForCurrentPhoto()
+            // 다음 사진으로 이동 (이전 사진 우선 규칙)
+            self?.moveToNextAfterDelete()
+
+            // 이동 후 버튼 상태 업데이트 (다음 사진이 삭제대기함일 수 있음)
+            self?.updateToolbarForCurrentPhoto()
+        })
     }
 
     /// 복구 버튼 탭
@@ -888,19 +927,81 @@ final class ViewerViewController: UIViewController {
             dismissWithFadeOut()
             return
         }
-        pageViewController.setViewControllers(
-            [pageVC],
-            direction: direction,
-            animated: true,
-            completion: { [weak self] _ in
-                // 삭제 후 이동 시에도 유사 사진 오버레이 업데이트
-                // (setViewControllers는 pageViewController delegate를 호출하지 않으므로 수동 호출)
-                self?.updateSimilarPhotoOverlay()
+        performFastSlideTransition(to: pageVC, direction: direction) { [weak self] in
+            // 삭제 후 이동 시에도 유사 사진 오버레이 업데이트
+            // (setViewControllers는 pageViewController delegate를 호출하지 않으므로 수동 호출)
+            self?.updateSimilarPhotoOverlay()
 
-                // Phase 2: LOD1 원본 이미지 요청 스케줄링
-                self?.scheduleLOD1Request()
-            }
-        )
+            // Phase 2: LOD1 원본 이미지 요청 스케줄링
+            self?.scheduleLOD1Request()
+        }
+    }
+
+    /// 이전 사진으로 이동 (스냅샷 기반 빠른 슬라이드)
+    private func moveToPreviousPhoto() {
+        let previousIndex = currentIndex - 1
+        guard previousIndex >= 0 else { return }
+        guard let pageVC = createPageViewController(at: previousIndex) else { return }
+
+        currentIndex = previousIndex
+        performFastSlideTransition(to: pageVC, direction: .reverse) { [weak self] in
+            self?.updateSimilarPhotoOverlay()
+            self?.scheduleLOD1Request()
+            self?.updateToolbarForCurrentPhoto()
+        }
+    }
+
+    /// 스냅샷 기반 빠른 슬라이드 전환 (0.1초)
+    /// UIPageViewController의 기본 전환은 CATransaction으로 제어 불가하므로,
+    /// 스냅샷을 활용한 커스텀 슬라이드 애니메이션으로 대체
+    /// - Parameters:
+    ///   - viewController: 전환할 새 페이지 VC
+    ///   - direction: 슬라이드 방향 (.forward = 오른쪽→왼쪽, .reverse = 왼쪽→오른쪽)
+    ///   - completion: 전환 완료 후 콜백
+    private func performFastSlideTransition(
+        to viewController: UIViewController,
+        direction: UIPageViewController.NavigationDirection,
+        completion: (() -> Void)? = nil
+    ) {
+        let containerView = pageViewController.view!
+        let width = containerView.bounds.width
+
+        // 현재 화면 스냅샷 (기존 사진)
+        guard let snapshot = containerView.snapshotView(afterScreenUpdates: false) else {
+            // 스냅샷 실패 시 애니메이션 없이 즉시 전환
+            pageViewController.setViewControllers([viewController], direction: direction, animated: false)
+            completion?()
+            return
+        }
+        snapshot.frame = containerView.frame
+        containerView.superview?.addSubview(snapshot)
+
+        // 새 VC를 즉시 세팅 (애니메이션 없음)
+        pageViewController.setViewControllers([viewController], direction: direction, animated: false)
+
+        // 슬라이드 방향 계산 (reverse: 새 사진이 왼쪽에서, forward: 새 사진이 오른쪽에서)
+        let newStartX: CGFloat = (direction == .reverse) ? -width : width
+        let snapshotEndX: CGFloat = (direction == .reverse) ? width : -width
+
+        // 새 콘텐츠를 방향에 맞게 오프스크린에서 시작
+        containerView.transform = CGAffineTransform(translationX: newStartX, y: 0)
+
+        // 빠른 슬라이드 애니메이션 (0.2초)
+        UIView.animate(withDuration: 0.2, delay: 0, options: .curveEaseOut, animations: {
+            containerView.transform = .identity
+            snapshot.transform = CGAffineTransform(translationX: snapshotEndX, y: 0)
+        }, completion: { _ in
+            snapshot.removeFromSuperview()
+            completion?()
+        })
+    }
+
+    /// 첫 사진 여부에 따라 이전 사진 버튼 상태 업데이트
+    private func updatePreviousNavigationState() {
+        let canMovePrevious = currentIndex > 0
+        previousPhotoButton.isEnabled = canMovePrevious
+        previousPhotoButton.alpha = canMovePrevious ? 1.0 : 0.45
+        toolbarPreviousItem?.isEnabled = canMovePrevious
     }
 
     // MARK: - Dismiss Pan Gesture (T031)
@@ -1068,9 +1169,11 @@ final class ViewerViewController: UIViewController {
     /// 눈 아이콘 + 커스텀 타이틀 표시/숨김
     /// +버튼이 표시/숨겨질 때 호출되어 타이틀도 함께 연동
     func showNavBarEyeButton(_ show: Bool) {
-        // iOS 26: 네비바 눈 아이콘 (타이틀은 커스텀 라벨로 통일)
+        // iOS 26: 네비바 눈 아이콘 + titleView 자체를 nil/복원
+        // alpha만 0으로 하면 시스템 바 토글 애니메이션에서 titleView가 잠깐 보이는 문제 발생
         if #available(iOS 26.0, *) {
             navigationItem.rightBarButtonItem = show ? navBarEyeItem : nil
+            navigationItem.titleView = show ? similarPhotoTitleLabel : nil
         }
 
         // 커스텀 타이틀 라벨 (iOS 16~25 + iOS 26 공통)
@@ -1095,13 +1198,22 @@ final class ViewerViewController: UIViewController {
         }
     }
 
-    /// iOS 26+ 일반 모드 툴바 (삭제 버튼)
+    /// iOS 26+ 일반 모드 툴바 (이전 사진 + 삭제하기)
     @available(iOS 26.0, *)
     private func setupNormalModeToolbar() {
         let flexSpace = UIBarButtonItem(systemItem: .flexibleSpace)
 
+        let previousItem = UIBarButtonItem(
+            title: "이전 사진",
+            primaryAction: UIAction { [weak self] _ in
+                self?.previousPhotoButtonTapped()
+            }
+        )
+        // tintColor 미지정 → Liquid Glass가 배경에 따라 자동 색상 적응
+        toolbarPreviousItem = previousItem
+
         let deleteItem = UIBarButtonItem(
-            systemItem: .trash,
+            title: "삭제하기",
             primaryAction: UIAction { [weak self] _ in
                 self?.deleteButtonTapped()
             }
@@ -1109,7 +1221,8 @@ final class ViewerViewController: UIViewController {
         deleteItem.tintColor = .systemRed
         toolbarDeleteItem = deleteItem
 
-        toolbarItems = [flexSpace, deleteItem, flexSpace]
+        toolbarItems = [previousItem, flexSpace, deleteItem]
+        updatePreviousNavigationState()
     }
 
     /// iOS 26+ 삭제대기함 모드 툴바 (복구 + 완전삭제)
@@ -1119,7 +1232,7 @@ final class ViewerViewController: UIViewController {
 
         // 복구 버튼
         let restoreItem = UIBarButtonItem(
-            title: "복구",
+            title: "복구하기",
             primaryAction: UIAction { [weak self] _ in
                 self?.restoreButtonTapped()
             }
@@ -1163,24 +1276,24 @@ final class ViewerViewController: UIViewController {
         guard viewerMode == .normal else { return }
 
         // nil guard: setupSystemUIIfNeeded() 이전 호출 방지
-        guard toolbarDeleteItem != nil else { return }
+        guard let toolbarDeleteItem, let toolbarPreviousItem else { return }
 
         let isTrashed = coordinator.isTrashed(at: currentIndex)
         let flexSpace = UIBarButtonItem(systemItem: .flexibleSpace)
 
         if isTrashed {
-            // 삭제대기함 사진: 복구 버튼만 (중앙 배치)
+            // 삭제대기함 사진: 이전 사진 + 복구
             let restoreItem = UIBarButtonItem(
-                title: "복구",
+                title: "복구하기",
                 primaryAction: UIAction { [weak self] _ in
                     self?.restoreButtonTapped()
                 }
             )
             restoreItem.tintColor = .systemGreen
-            toolbarItems = [flexSpace, restoreItem, flexSpace]
+            toolbarItems = [toolbarPreviousItem, flexSpace, restoreItem]
         } else {
-            // 일반 사진: 삭제 버튼만 (중앙 배치)
-            toolbarItems = [flexSpace, toolbarDeleteItem!, flexSpace]
+            // 일반 사진: 이전 사진 + 삭제하기
+            toolbarItems = [toolbarPreviousItem, flexSpace, toolbarDeleteItem]
         }
     }
 
@@ -1204,6 +1317,8 @@ final class ViewerViewController: UIViewController {
         if #available(iOS 26.0, *) {
             updateToolbarItemsForCurrentPhoto()
         }
+
+        updatePreviousNavigationState()
     }
 
     /// 현재 페이지의 삭제대기함 테두리 즉시 업데이트

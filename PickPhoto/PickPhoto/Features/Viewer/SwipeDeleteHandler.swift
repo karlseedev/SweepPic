@@ -143,7 +143,7 @@ final class SwipeDeleteHandler: NSObject {
     /// 삭제 트리거
     private func triggerDelete(in view: UIView?) {
         // 삭제 애니메이션 (사진 콘텐츠만 이동)
-        UIView.animate(withDuration: 0.2, animations: {
+        UIView.animate(withDuration: 0.1, animations: {
             self.transformTarget?.transform = CGAffineTransform(translationX: 0, y: -100)
             self.transformTarget?.alpha = 0.5
         }, completion: { _ in
