@@ -141,19 +141,11 @@ final class SwipeDeleteHandler: NSObject {
     // MARK: - Private Methods
 
     /// 삭제 트리거
+    /// 애니메이션은 ViewerViewController에서 스냅샷 기반으로 처리
     private func triggerDelete(in view: UIView?) {
-        // 삭제 애니메이션 (사진 콘텐츠만 이동)
-        UIView.animate(withDuration: 0.1, animations: {
-            self.transformTarget?.transform = CGAffineTransform(translationX: 0, y: -100)
-            self.transformTarget?.alpha = 0.5
-        }, completion: { _ in
-            // 삭제 콜백 호출
-            self.onDelete()
-
-            // 뷰 복원
-            self.transformTarget?.transform = .identity
-            self.transformTarget?.alpha = 1.0
-        })
+        // transform 리셋 (handleSwipeDelete에서 스냅샷 기반 애니메이션 처리)
+        transformTarget?.transform = .identity
+        onDelete()
     }
 
     /// 뷰 원위치 복귀

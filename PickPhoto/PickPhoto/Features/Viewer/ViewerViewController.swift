@@ -765,7 +765,7 @@ final class ViewerViewController: UIViewController {
     }
 
     /// 삭제 버튼 탭 (일반 모드)
-    /// 스와이프 삭제와 동일한 상단 이동 모션 적용 (빠른 버전)
+    /// 현재 사진: 위로 올라가며 페이드아웃 + 다음 사진: 옆에서 슬라이드인 (동시 실행)
     @objc private func deleteButtonTapped() {
         guard let assetID = coordinator.assetID(at: currentIndex) else { return }
 
@@ -776,25 +776,7 @@ final class ViewerViewController: UIViewController {
         // [Analytics] 이벤트 4-1: 뷰어 삭제 버튼
         AnalyticsService.shared.countViewerTrashButton(source: coordinator.deleteSource)
 
-        // 상단 이동 애니메이션 (스와이프 삭제와 동일 모션, 빠른 속도)
-        let targetView = pageViewController.view
-        UIView.animate(withDuration: 0.1, animations: {
-            targetView?.transform = CGAffineTransform(translationX: 0, y: -100)
-            targetView?.alpha = 0.5
-        }, completion: { [weak self] _ in
-            // 뷰 복원
-            targetView?.transform = .identity
-            targetView?.alpha = 1.0
-
-            // 삭제 요청
-            self?.delegate?.viewerDidRequestDelete(assetID: assetID)
-
-            // 다음 사진으로 이동 (이전 사진 우선 규칙)
-            self?.moveToNextAfterDelete()
-
-            // 이동 후 버튼 상태 업데이트 (다음 사진이 삭제대기함일 수 있음)
-            self?.updateToolbarForCurrentPhoto()
-        })
+        performDeleteWithSlideAnimation(assetID: assetID)
     }
 
     /// 복구 버튼 탭
@@ -873,6 +855,7 @@ final class ViewerViewController: UIViewController {
     // MARK: - Swipe Delete
 
     /// 위 스와이프 삭제 처리 (T030)
+    /// 삭제 버튼과 동일한 모션 (위로 올라감 + 옆에서 슬라이드인)
     private func handleSwipeDelete() {
         guard let assetID = coordinator.assetID(at: currentIndex) else { return }
 
@@ -883,18 +866,80 @@ final class ViewerViewController: UIViewController {
         // [Analytics] 이벤트 4-1: 뷰어 스와이프 삭제
         AnalyticsService.shared.countViewerSwipeDelete(source: coordinator.deleteSource)
 
-        // 삭제 요청
-        delegate?.viewerDidRequestDelete(assetID: assetID)
-
-        // 다음 사진으로 이동
-        moveToNextAfterDelete()
-
-        // 이동 후 버튼 상태 업데이트 (다음 사진이 삭제대기함일 수 있음)
-        updateToolbarForCurrentPhoto()
+        performDeleteWithSlideAnimation(assetID: assetID)
     }
 
-    /// 삭제 후 다음 사진으로 이동
+    /// 삭제 후 다음 사진으로 즉시 전환 (애니메이션 없음)
+    /// - Returns: 이동 방향 (.reverse = 이전 사진, .forward = 다음 사진), dismiss 시 nil
+    @discardableResult
+    private func moveToNextAfterDeleteNoAnimation() -> UIPageViewController.NavigationDirection? {
+        let nextIndex = coordinator.nextIndexAfterDelete(currentIndex: currentIndex)
+        coordinator.refreshFilteredIndices()
+
+        let newTotalCount = coordinator.totalCount
+        if newTotalCount == 0 { dismissWithFadeOut(); return nil }
+        guard nextIndex >= 0 && nextIndex < newTotalCount else { dismissWithFadeOut(); return nil }
+
+        let direction: UIPageViewController.NavigationDirection = (nextIndex < currentIndex) ? .reverse : .forward
+        currentIndex = nextIndex
+        guard let pageVC = createPageViewController(at: currentIndex) else { dismissWithFadeOut(); return nil }
+
+        // 애니메이션 없이 즉시 세팅 (스냅샷 뒤에서 대기)
+        pageViewController.setViewControllers([pageVC], direction: .forward, animated: false)
+        updateSimilarPhotoOverlay()
+        scheduleLOD1Request()
+        return direction
+    }
+
+    /// 삭제 후 다음 사진으로 이동 (빠른 슬라이드)
     /// "이전 사진 우선" 규칙 적용 (FR-013)
+    /// 삭제 모션: 현재 사진 위로 올라감 + 다음 사진 옆에서 슬라이드인 (동시 실행)
+    /// deleteButtonTapped, handleSwipeDelete 공통
+    private func performDeleteWithSlideAnimation(assetID: String) {
+        let containerView = pageViewController.view!
+        let width = containerView.bounds.width
+
+        // 1. 현재 사진 스냅샷 (위로 날릴 대상)
+        guard let snapshot = containerView.snapshotView(afterScreenUpdates: false) else {
+            delegate?.viewerDidRequestDelete(assetID: assetID)
+            moveToNextAfterDelete()
+            updateToolbarForCurrentPhoto()
+            return
+        }
+        snapshot.frame = containerView.frame
+        containerView.superview?.addSubview(snapshot)
+
+        // 2. 삭제 요청 + 다음 사진을 즉시 세팅 (방향 정보 반환)
+        delegate?.viewerDidRequestDelete(assetID: assetID)
+        guard let direction = moveToNextAfterDeleteNoAnimation() else {
+            snapshot.removeFromSuperview()
+            return
+        }
+
+        // 3. 다음 사진을 슬라이드 시작 위치로 이동
+        let slideStartX: CGFloat = (direction == .reverse) ? -width : width
+        containerView.transform = CGAffineTransform(translationX: slideStartX, y: 0)
+
+        // 4. 동시 애니메이션 (0.2초)
+        let totalDuration: TimeInterval = 0.2
+        let fadeDelay = totalDuration * 0.3
+        let fadeDuration = totalDuration * 0.7
+
+        // 스냅샷: 위로 이동 + 다음 사진: 옆에서 슬라이드인
+        UIView.animate(withDuration: totalDuration, delay: 0, options: .curveEaseOut, animations: {
+            snapshot.transform = CGAffineTransform(translationX: 0, y: -500)
+            containerView.transform = .identity
+        }, completion: { [weak self] _ in
+            snapshot.removeFromSuperview()
+            self?.updateToolbarForCurrentPhoto()
+        })
+
+        // 스냅샷 페이드아웃 (30% 지점부터 시작)
+        UIView.animate(withDuration: fadeDuration, delay: fadeDelay, options: .curveEaseIn, animations: {
+            snapshot.alpha = 0
+        })
+    }
+
     private func moveToNextAfterDelete() {
         // 다음 인덱스를 먼저 계산 (갱신 전 totalCount 기준)
         let nextIndex = coordinator.nextIndexAfterDelete(currentIndex: currentIndex)
