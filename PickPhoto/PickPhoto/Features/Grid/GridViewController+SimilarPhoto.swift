@@ -343,7 +343,9 @@ extension GridViewController {
         badge.frame = cell.contentView.bounds
         badge.autoresizingMask = [.flexibleWidth, .flexibleHeight]
 
-        cell.contentView.addSubview(badge)
+        // imageView 바로 위, dimmedOverlayView 아래에 삽입
+        // → 빨간색 딤드가 뱃지를 자연히 덮음
+        cell.contentView.insertSubview(badge, at: 1)
         badge.show()
 
         // 코치마크 C-1 트리거 시도 (첫 뱃지에서만 동작)

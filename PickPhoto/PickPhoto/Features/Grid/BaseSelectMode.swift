@@ -339,6 +339,9 @@ extension BaseGridViewController {
             cell.isSelectedForDeletion = dragSelectIsSelecting
         }
 
+        // 자동 스크롤 콜백 설정 (드래그 선택용)
+        autoScrollGesture = dragSelectGesture
+        autoScrollHandler = { [weak self] loc in self?.handleDragSelectChanged(at: loc) }
     }
 
     /// 드래그 선택 변경 처리
@@ -416,6 +419,10 @@ extension BaseGridViewController {
     private func handleDragSelectEnded() {
         stopAutoScroll()
 
+        // 자동 스크롤 콜백 해제
+        autoScrollGesture = nil
+        autoScrollHandler = nil
+
         dragSelectStartIndex = nil
         dragSelectCurrentIndex = nil
         dragSelectAffectedIndices = []
@@ -423,7 +430,8 @@ extension BaseGridViewController {
     }
 
     /// 자동 스크롤 처리 - 가장자리 거리에 따라 속도 가변
-    private func handleAutoScroll(at locationInView: CGPoint) {
+    /// internal: 드래그 선택 + 멀티 스와이프 삭제 양쪽에서 호출
+    func handleAutoScroll(at locationInView: CGPoint) {
         let safeTop = view.safeAreaInsets.top
         let safeBottom = view.bounds.height - view.safeAreaInsets.bottom
 
@@ -507,10 +515,10 @@ extension BaseGridViewController {
 
             self.collectionView.setContentOffset(newOffset, animated: false)
 
-            // 드래그 선택 범위도 동시에 업데이트
-            if let gesture = self.dragSelectGesture {
+            // 자동 스크롤 콜백으로 범위 업데이트 (드래그 선택 or 멀티 스와이프)
+            if let gesture = self.autoScrollGesture {
                 let location = gesture.location(in: self.collectionView)
-                self.handleDragSelectChanged(at: location)
+                self.autoScrollHandler?(location)
             }
         }
     }

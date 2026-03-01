@@ -738,6 +738,15 @@ extension GridViewController {
         // [SimilarPhoto] 테두리 애니메이션 구성 (T020)
         configureSimilarPhotoBorder(for: cell, at: indexPath)
 
+        // ★ 다중 스와이프 중이면 딤드 상태 복원 (자동 스크롤로 재사용된 셀)
+        if swipeDeleteState.isMultiMode && swipeDeleteState.selectedItems.contains(indexPath.item) {
+            if swipeDeleteState.deleteAction {
+                cell.setFullDimmed(isTrashed: isTrashed)
+            } else {
+                cell.setRestoredPreview()
+            }
+        }
+
         return cell
     }
 }

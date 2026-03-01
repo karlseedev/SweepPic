@@ -965,6 +965,121 @@ extension PhotoCell {
         }
     }
 
+    // MARK: - 다중 스와이프 삭제용 딤드
+
+    /// 전체 딤드 즉시 적용 (마스크 없이, 다중 선택용)
+    /// - 기존 dimmedOverlayView를 마스크 없이 표시
+    /// - 기존 마스크가 있으면 제거
+    /// - Parameter isTrashed: 현재 삭제대기함 상태 (예약, 현재 미사용)
+    func setFullDimmed(isTrashed: Bool) {
+        // 마스크 완전 제거 (커튼 효과 → 전체 딤드 전환)
+        dimmedMaskLayer?.removeFromSuperlayer()
+        dimmedMaskLayer = nil
+        dimmedOverlayView.layer.mask = nil
+
+        // 전체 딤드 표시
+        dimmedOverlayView.isHidden = false
+        dimmedOverlayView.alpha = Self.dimmedOverlayAlpha
+    }
+
+    /// 딤드 즉시 해제 (다중 선택 범위 이탈 시)
+    /// 원래 상태(isTrashed 기반)로 즉시 복귀
+    func clearDimmed() {
+        // 마스크 완전 제거 (잔여 아티팩트 방지)
+        dimmedMaskLayer?.removeFromSuperlayer()
+        dimmedMaskLayer = nil
+        dimmedOverlayView.layer.mask = nil
+
+        // 원래 상태로 복귀
+        dimmedOverlayView.isHidden = !isTrashed
+        dimmedOverlayView.alpha = isTrashed ? Self.dimmedOverlayAlpha : 0
+        trashIconView.isHidden = !isTrashed
+    }
+
+    /// 복원 미리보기 (다중 스와이프 복원용)
+    /// isTrashed 상태와 무관하게 빨간 딤드를 제거하여 "복원될 모습" 표시
+    /// - Note: isTrashed 프로퍼티는 변경하지 않음 (취소 시 원래 상태로 복귀 가능)
+    /// - Note: isHidden = false 유지 — cancel 시 alpha 애니메이션으로 복귀하기 위함
+    func setRestoredPreview() {
+        dimmedMaskLayer?.removeFromSuperlayer()
+        dimmedMaskLayer = nil
+        dimmedOverlayView.layer.mask = nil
+
+        dimmedOverlayView.isHidden = false  // cancel 시 alpha 애니메이션 가능하게
+        dimmedOverlayView.alpha = 0
+        trashIconView.isHidden = true
+    }
+
+    // MARK: - 다중 모드 진입 전환 애니메이션
+
+    /// 커튼을 현재 위치에서 대상 상태(100%)까지 부드럽게 전환
+    /// 다중 모드 진입 시 앵커 셀의 커튼 점프를 방지
+    ///
+    /// - 삭제 모드 (isTrashed=false): 빨간색이 남은 영역을 부드럽게 채움
+    /// - 복원 모드 (isTrashed=true): 빨간색이 남은 영역에서 부드럽게 걷힘
+    ///
+    /// - Parameters:
+    ///   - direction: 스와이프 방향
+    ///   - isTrashed: 셀의 현재 삭제대기함 상태 (마스크 방향 결정)
+    func animateCurtainToTarget(direction: SwipeDirection, isTrashed: Bool) {
+        guard let mask = dimmedMaskLayer else {
+            // 마스크 없으면 즉시 적용
+            if !isTrashed {
+                setFullDimmed(isTrashed: isTrashed)
+            } else {
+                setRestoredPreview()
+            }
+            return
+        }
+
+        let bounds = dimmedOverlayView.bounds
+        let width = bounds.width
+        let height = bounds.height
+
+        // progress=1.0일 때의 타겟 rect 계산 (updateDimmedMask와 동일 로직)
+        let targetRect: CGRect
+        if isTrashed {
+            // 복원: 빨간색 완전히 밀어냄 (마스크 → 빈 영역)
+            switch direction {
+            case .right:
+                targetRect = CGRect(x: width, y: 0, width: 0, height: height)
+            case .left:
+                targetRect = CGRect(x: 0, y: 0, width: 0, height: height)
+            }
+        } else {
+            // 삭제: 빨간색 완전히 채움 (마스크 → 전체 bounds)
+            targetRect = bounds
+        }
+
+        let targetPath = UIBezierPath(rect: targetRect).cgPath
+
+        // 마스크 path 애니메이션 (0.12초)
+        let anim = CABasicAnimation(keyPath: "path")
+        anim.toValue = targetPath
+        anim.duration = 0.12
+        anim.timingFunction = CAMediaTimingFunction(name: .easeOut)
+
+        CATransaction.begin()
+        CATransaction.setCompletionBlock { [weak self] in
+            guard let self = self else { return }
+            // 애니메이션 완료 → 마스크 제거 + 최종 상태 설정
+            self.dimmedMaskLayer?.removeFromSuperlayer()
+            self.dimmedMaskLayer = nil
+            self.dimmedOverlayView.layer.mask = nil
+
+            if isTrashed {
+                // 복원 완료: 빨간색 제거
+                self.dimmedOverlayView.isHidden = false
+                self.dimmedOverlayView.alpha = 0
+                self.trashIconView.isHidden = true
+            }
+            // 삭제 완료: alpha/isHidden 이미 올바른 상태 (setDimmedProgress에서 설정됨)
+        }
+        mask.path = targetPath
+        mask.add(anim, forKey: "curtainTarget")
+        CATransaction.commit()
+    }
+
     // MARK: - Private Animation Helpers
 
     /// 딤드 마스크 레이어 초기화

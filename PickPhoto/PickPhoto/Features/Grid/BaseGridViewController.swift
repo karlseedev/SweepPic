@@ -45,6 +45,25 @@ struct SwipeDeleteState {
     /// 각도 판정 통과 여부 (10pt 이동 후 결정)
     var angleCheckPassed: Bool = false
 
+    // MARK: - 다중 셀 스와이프 프로퍼티
+
+    /// 다중 모드 진입 여부 (진입 후 복귀 없음)
+    var isMultiMode: Bool = false
+    /// 앵커 셀의 indexPath.item
+    var anchorItem: Int = 0
+    /// 앵커 셀 행 (item / columnCount)
+    var anchorRow: Int = 0
+    /// 앵커 셀 열 (item % columnCount)
+    var anchorCol: Int = 0
+    /// 현재 사각형 범위의 item 인덱스들
+    var selectedItems: Set<Int> = []
+    /// true=삭제, false=복원 (앵커 셀 기준)
+    var deleteAction: Bool = true
+    /// 커튼 효과 적용 중인 셀 (nil이면 없음 — 순수 상하 이동 시)
+    var curtainItem: Int?
+    /// 다중 모드 진입 시 스와이프 방향 (앵커 셀 복귀 시 커튼 방향 결정용)
+    var swipeDirection: PhotoCell.SwipeDirection = .right
+
     // MARK: - PRD7 상수
 
     /// 스와이프 각도 임계값 (수평선 ±25°)
@@ -62,6 +81,15 @@ struct SwipeDeleteState {
         targetIndexPath = nil
         targetIsTrashed = false
         angleCheckPassed = false
+        // 다중 모드 초기화
+        isMultiMode = false
+        anchorItem = 0
+        anchorRow = 0
+        anchorCol = 0
+        selectedItems = []
+        deleteAction = true
+        curtainItem = nil
+        swipeDirection = .right
     }
 }
 
@@ -185,6 +213,12 @@ class BaseGridViewController: UIViewController {
 
     /// 현재 자동 스크롤 속도 (가변, 음수=위로, 양수=아래로)
     var currentAutoScrollSpeed: CGFloat = 0
+
+    /// 자동 스크롤 구동 중인 제스처 (드래그 선택 or 스와이프 삭제)
+    weak var autoScrollGesture: UIPanGestureRecognizer?
+
+    /// 자동 스크롤 틱마다 호출할 핸들러 (범위 업데이트용)
+    var autoScrollHandler: ((CGPoint) -> Void)?
 
     // MARK: - Rotation Support
 
@@ -669,6 +703,15 @@ extension BaseGridViewController: UICollectionViewDataSource {
         // 서브클래스 추가 설정 (템플릿 메서드)
         configureCell(cell, at: indexPath, asset: asset)
 
+        // ★ 다중 스와이프 중이면 딤드 상태 복원 (자동 스크롤로 재사용된 셀)
+        if swipeDeleteState.isMultiMode && swipeDeleteState.selectedItems.contains(indexPath.item) {
+            if swipeDeleteState.deleteAction {
+                cell.setFullDimmed(isTrashed: isTrashed)
+            } else {
+                cell.setRestoredPreview()
+            }
+        }
+
         return cell
     }
 }
@@ -789,6 +832,12 @@ extension BaseGridViewController {
 
     /// 진행 중인 스와이프 취소 (백그라운드 진입 등)
     func cancelActiveSwipe() {
+        // ★ 다중 모드 취소 처리
+        if swipeDeleteState.isMultiMode {
+            cancelMultiSwipeDelete()
+            return
+        }
+
         guard let cell = swipeDeleteState.targetCell else { return }
         cell.cancelDimmedAnimation {
             cell.isAnimating = false
@@ -839,6 +888,15 @@ extension BaseGridViewController {
 
     /// 스와이프 진행 중
     private func handleSwipeDeleteChanged(_ gesture: UIPanGestureRecognizer) {
+        // ★ 다중 모드: targetCell 의존 없이 먼저 처리 (앵커 셀이 화면 밖일 수 있음)
+        if swipeDeleteState.isMultiMode {
+            let location = gesture.location(in: collectionView)
+            let locationInView = gesture.location(in: view)
+            handleMultiSwipeChanged(at: location)
+            handleAutoScroll(at: locationInView)
+            return
+        }
+
         guard let cell = swipeDeleteState.targetCell else { return }
 
         let translation = gesture.translation(in: collectionView)
@@ -860,7 +918,20 @@ extension BaseGridViewController {
             swipeDeleteState.angleCheckPassed = true
         }
 
-        // progress 계산 (0.0 ~ 1.0)
+        // ★ 다른 셀 도달 체크 → 다중 모드 진입
+        let location = gesture.location(in: collectionView)
+        let locationInView = gesture.location(in: view)
+
+        if let currentIP = collectionView.indexPathForItem(at: location),
+           currentIP != swipeDeleteState.targetIndexPath,
+           currentIP.item >= paddingCellCount {
+            enterMultiSwipeMode()
+            handleMultiSwipeChanged(at: location)
+            handleAutoScroll(at: locationInView)
+            return
+        }
+
+        // 같은 셀 내: 기존 커튼 딤드 로직 (변경 없음)
         let progress = min(1.0, absX / currentCellSize.width)
         let direction: PhotoCell.SwipeDirection = translation.x > 0 ? .right : .left
         cell.setDimmedProgress(progress, direction: direction, isTrashed: swipeDeleteState.targetIsTrashed)
@@ -868,6 +939,81 @@ extension BaseGridViewController {
 
     /// 스와이프 종료
     private func handleSwipeDeleteEnded(_ gesture: UIPanGestureRecognizer) {
+        // ★ 다중 모드: 커튼 셀 progress 기준 확정/취소
+        if swipeDeleteState.isMultiMode {
+            // 속도 확정 (단일 셀과 동일 기준)
+            let velocity = gesture.velocity(in: collectionView)
+            if abs(velocity.x) >= SwipeDeleteState.confirmVelocity {
+                confirmMultiSwipeDelete()
+                return
+            }
+
+            // 커튼 셀 없음 (순수 상하 이동) → 모든 셀 대상 상태이므로 확정
+            guard let curtainItem = swipeDeleteState.curtainItem else {
+                confirmMultiSwipeDelete()
+                return
+            }
+
+            // 커튼 셀 progress 계산
+            let ip = IndexPath(item: curtainItem, section: 0)
+            if let attrs = collectionView.layoutAttributesForItem(at: ip) {
+                let location = gesture.location(in: collectionView)
+                let cellFrame = attrs.frame
+
+                // 커튼 방향 결정: 앵커 셀이면 저장된 방향, 비-앵커면 열 비교
+                let direction: PhotoCell.SwipeDirection
+                if curtainItem == swipeDeleteState.anchorItem {
+                    direction = swipeDeleteState.swipeDirection
+                } else {
+                    let columnCount = currentGridColumnCount.rawValue
+                    let currentCol = curtainItem % columnCount
+                    direction = currentCol > swipeDeleteState.anchorCol ? .right : .left
+                }
+
+                let progress: CGFloat
+                switch direction {
+                case .right:
+                    // 왼쪽에서 채워짐
+                    progress = min(1.0, max(0, (location.x - cellFrame.minX) / cellFrame.width))
+                case .left:
+                    // 오른쪽에서 채워짐
+                    progress = min(1.0, max(0, (cellFrame.maxX - location.x) / cellFrame.width))
+                }
+
+                if progress >= SwipeDeleteState.confirmRatio {
+                    // 커튼 셀 포함 전체 확정
+                    confirmMultiSwipeDelete()
+                } else {
+                    // ★ 커튼 셀만 취소, 이미 지나간 셀들은 확정
+                    // 커튼 셀을 선택에서 제외
+                    swipeDeleteState.selectedItems.remove(curtainItem)
+                    swipeDeleteState.curtainItem = nil
+
+                    // 커튼 셀 취소 애니메이션 (원래 상태로 복귀)
+                    if let cell = collectionView.cellForItem(at: ip) as? PhotoCell {
+                        cell.cancelDimmedAnimation {
+                            cell.isAnimating = false
+                        }
+                    }
+
+                    // 나머지 셀들 확정 (이미 지나간 셀들)
+                    if swipeDeleteState.selectedItems.isEmpty {
+                        // 선택 셀이 없으면 정리만
+                        stopAutoScroll()
+                        autoScrollGesture = nil
+                        autoScrollHandler = nil
+                        swipeDeleteState.reset()
+                    } else {
+                        confirmMultiSwipeDelete()
+                    }
+                }
+            } else {
+                // 레이아웃 정보 없음 (화면 밖) → 확정
+                confirmMultiSwipeDelete()
+            }
+            return
+        }
+
         guard let cell = swipeDeleteState.targetCell,
               let indexPath = swipeDeleteState.targetIndexPath else {
             swipeDeleteState.reset()
@@ -889,6 +1035,12 @@ extension BaseGridViewController {
 
     /// 스와이프 취소
     private func handleSwipeDeleteCancelled() {
+        // ★ 다중 모드 취소 처리
+        if swipeDeleteState.isMultiMode {
+            cancelMultiSwipeDelete()
+            return
+        }
+
         guard let cell = swipeDeleteState.targetCell else {
             swipeDeleteState.reset()
             return
