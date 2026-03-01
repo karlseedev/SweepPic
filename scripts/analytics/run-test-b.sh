@@ -33,6 +33,8 @@ xcodebuild test \
   -scheme PickPhoto \
   -destination "platform=iOS,id=$DEVICE_ID" \
   -configuration Debug \
+  -allowProvisioningUpdates \
+  -skip-testing:PickPhotoTests \
   -only-testing:PickPhotoUITests/AnalyticsUITest/testAnalyticsCounters \
   2>&1 | tail -30
 

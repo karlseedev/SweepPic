@@ -30,6 +30,14 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         // AppCore 초기화 로그
         Logger.app.debug("PickPhoto started with AppCore \(AppCore.version)")
 
+        // XCUITest 환경: 모든 코치마크 완료 처리 (UserDefaults 재설치로 초기화된 경우 대비)
+        if CommandLine.arguments.contains("--skip-coachmarks") {
+            [CoachMarkType.gridSwipeDelete, .viewerSwipeDelete, .similarPhoto,
+             .autoCleanup, .firstDeleteGuide, .firstEmpty, .faceComparisonGuide
+            ].forEach { $0.markAsShown() }
+            Logger.app.debug("UITest: 모든 코치마크 완료 처리")
+        }
+
 
         // [E) 환경 정보 로그] 전/후 비교용 메타 데이터
         logEnvironmentInfo()

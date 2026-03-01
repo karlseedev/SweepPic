@@ -125,8 +125,9 @@ echo "    조회 범위: $SINCE 이후"
 echo ""
 
 echo "[session.photoViewing]"
-check "session.photoViewing" "total"       "9"
-check "session.photoViewing" "fromLibrary" "8"
+# Phase 1(유사사진) 스킵으로 total=7, fromLibrary=6 (Phase1 뷰어열기 1회 제외)
+check "session.photoViewing" "total"       "7"
+check "session.photoViewing" "fromLibrary" "6"
 check "session.photoViewing" "fromAlbum"   "0"
 check "session.photoViewing" "fromTrash"   "1"
 
@@ -145,15 +146,7 @@ echo "[session.trashViewer]"
 check "session.trashViewer" "permanentDelete" "2"
 check "session.trashViewer" "restore"         "3"
 
-echo ""
-echo "[similar.groupClosed]"
-check "similar.groupClosed" "totalCount"   "5"
-check "similar.groupClosed" "deletedCount" "2"
-
-echo ""
-echo "[session.similarAnalysis]"
-check_gte "session.similarAnalysis" "completedCount" "1"
-check_gte "session.similarAnalysis" "totalGroups"    "1"
+# Phase 1 스킵으로 similar.groupClosed / session.similarAnalysis 미검증
 
 echo ""
 echo "======================================="

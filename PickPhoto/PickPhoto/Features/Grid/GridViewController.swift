@@ -32,6 +32,7 @@ import UIKit
 import Photos
 import PhotosUI
 import AppCore
+import OSLog
 
 /// 사진 그리드 뷰컨트롤러
 /// All Photos 그리드를 표시하고 핀치 줌, 스크롤 최적화 등을 처리
@@ -771,7 +772,11 @@ extension GridViewController {
     override func collectionView(_ collectionView: UICollectionView, didSelectItemAt indexPath: IndexPath) {
         // T027-2: 빈 셀 탭 무시
         let padding = paddingCellCount
-        guard indexPath.item >= padding else { return }
+        Logger.app.debug("🟡 didSelectItemAt: item=\(indexPath.item), padding=\(padding)")
+        guard indexPath.item >= padding else {
+            Logger.app.debug("🔴 padding guard return")
+            return
+        }
 
         // Select 모드일 때는 선택 토글 (T039)
         if isSelectMode {
@@ -785,7 +790,10 @@ extension GridViewController {
         // 실제 에셋 인덱스 계산
         let assetIndexPath = IndexPath(item: indexPath.item - padding, section: indexPath.section)
 
-        guard let fetchResult = dataSourceDriver.fetchResult else { return }
+        guard let fetchResult = dataSourceDriver.fetchResult else {
+            Logger.app.debug("🔴 fetchResult nil return")
+            return
+        }
 
         // [수정] 보관함에서는 항상 .normal 모드로 뷰어 열기
         // 삭제대기함 사진도 마룬 테두리와 함께 표시되고, 복구 버튼이 표시됨
@@ -801,8 +809,10 @@ extension GridViewController {
 
         // 원본 인덱스를 필터링된 인덱스로 변환 (padding 제외한 실제 인덱스 사용)
         guard let filteredIndex = coordinator.filteredIndex(from: assetIndexPath.item) else {
+            Logger.app.debug("🔴 filteredIndex nil: assetItem=\(assetIndexPath.item)")
             return
         }
+        Logger.app.debug("🟢 뷰어 열기: filteredIndex=\(filteredIndex)")
 
         // 뷰어 뷰컨트롤러 생성
         let viewerVC = ViewerViewController(

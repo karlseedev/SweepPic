@@ -18,6 +18,13 @@
         "identifier" : "CBE1F9652F21E18200984B63",
         "name" : "PickPhotoTests"
       }
+    },
+    {
+      "target" : {
+        "containerPath" : "container:PickPhoto.xcodeproj",
+        "identifier" : "CBAB3B1B2EFAE2CB00548282",
+        "name" : "PickPhotoUITests"
+      }
     }
   ],
   "version" : 1

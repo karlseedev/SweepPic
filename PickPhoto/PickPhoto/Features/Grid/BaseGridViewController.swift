@@ -88,6 +88,7 @@ class BaseGridViewController: UIViewController {
         cv.dataSource = self
         cv.prefetchDataSource = self
         cv.alwaysBounceVertical = true
+        cv.accessibilityIdentifier = "photo_grid"
         // Edge-to-edge 설정 (플로팅 UI 사용 시 수동으로 contentInset 설정)
         cv.contentInsetAdjustmentBehavior = .never
         return cv
@@ -635,9 +636,10 @@ extension BaseGridViewController: UICollectionViewDataSource {
             for: indexPath
         ) as! PhotoCell
 
-        // 빈 셀 처리 (상단 패딩)
+        // 빈 셀 처리 (상단 패딩) — XCUITest에서 탭 대상 제외
         if indexPath.item < paddingCellCount {
             cell.configureAsEmpty()
+            cell.isAccessibilityElement = false
             return cell
         }
 
@@ -647,6 +649,9 @@ extension BaseGridViewController: UICollectionViewDataSource {
             cell.configureAsEmpty()
             return cell
         }
+
+        // XCUITest 탐색용 identifier (패딩 셀과 구분)
+        cell.accessibilityIdentifier = "photo_cell"
 
         // 기본 설정 (이미지 로딩)
         let assetID = asset.localIdentifier

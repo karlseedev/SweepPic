@@ -196,8 +196,8 @@ final class CleanupSessionStoreTests: XCTestCase {
 
     // MARK: - Convenience Methods Tests
 
-    func testPreviousSessionDescription() {
-        // Given
+    func testLastSessionDate() {
+        // Given — previousSessionDescription() 제거 후 lastSessionDate 프로퍼티로 대체
         var session = CleanupSession(method: .fromLatest)
         session.startScanning()
 
@@ -219,12 +219,12 @@ final class CleanupSessionStoreTests: XCTestCase {
         store.save(session)
 
         // When
-        let description = store.previousSessionDescription()
+        let sessionDate = store.lastSessionDate
 
         // Then
-        XCTAssertNotNil(description)
-        XCTAssertTrue(description!.contains("2024"))
-        XCTAssertTrue(description!.contains("5"))
+        XCTAssertNotNil(sessionDate)
+        XCTAssertEqual(calendar.component(.year, from: sessionDate!), 2024)
+        XCTAssertEqual(calendar.component(.month, from: sessionDate!), 5)
     }
 
     // MARK: - Persistence Tests

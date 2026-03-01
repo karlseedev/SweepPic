@@ -646,7 +646,9 @@ final class FaceButton: GlassCircleButton {
 
     private func setupAccessibility() {
         isAccessibilityElement = true
+        accessibilityTraits = .button  // XCUITest에서 app.buttons로 탐색 가능하도록
         accessibilityLabel = "인물 \(face.personIndex) 비교"
         accessibilityHint = "탭하여 이 인물의 사진들을 비교합니다"
+        accessibilityIdentifier = "face_comparison_button"
     }
 }
