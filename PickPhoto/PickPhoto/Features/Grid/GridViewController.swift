@@ -88,7 +88,7 @@ final class GridViewController: BaseGridViewController {
 
     // pendingScrollAssetID → BaseGridViewController로 이동됨
 
-    /// 현재 열린 뷰어 참조 (완전삭제 완료 후 알림용)
+    /// 현재 열린 뷰어 참조 (최종 삭제 완료 후 알림용)
     /// Push/Modal 방식에 무관하게 접근 가능하도록 weak 참조 저장
     private weak var activeViewerVC: ViewerViewController?
 
@@ -821,7 +821,7 @@ extension GridViewController {
             mode: mode
         )
         viewerVC.delegate = self
-        activeViewerVC = viewerVC  // weak 참조 저장 (완전삭제 완료 후 알림용)
+        activeViewerVC = viewerVC  // weak 참조 저장 (최종 삭제 완료 후 알림용)
         // [Timing] 탭 시점을 뷰어에 전달 (전체 구간 측정용)
         viewerVC.openStartTime = t0
 
@@ -967,10 +967,10 @@ extension GridViewController: ViewerViewControllerDelegate {
         }
     }
 
-    /// 사진 완전삭제 요청 (iOS 삭제대기함으로 이동)
+    /// 사진 최종 삭제 요청 (iOS 삭제대기함으로 이동)
     /// 비동기 작업 - 삭제 완료 후 뷰어에 알림
     func viewerDidRequestPermanentDelete(assetID: String) {
-        // TrashStore에서 완전삭제 (iOS 시스템 팝업 표시)
+        // TrashStore에서 최종 삭제 (iOS 시스템 팝업 표시)
         Task {
             do {
                 try await trashStore.permanentlyDelete(assetIDs: [assetID])

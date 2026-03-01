@@ -44,7 +44,7 @@ struct SessionCounters {
 
     // ── 이벤트 4-2: 삭제대기함 뷰어 행동 ──
     struct TrashViewer {
-        var permanentDelete: Int = 0   // 완전삭제
+        var permanentDelete: Int = 0   // 최종 삭제
         var restore: Int = 0           // 보관함 복귀
 
         var isZero: Bool { permanentDelete == 0 && restore == 0 }

@@ -90,7 +90,7 @@ extension AnalyticsService {
 
     // MARK: - 이벤트 4-2: 삭제대기함 뷰어
 
-    /// 삭제대기함 완전삭제 카운터 증가
+    /// 삭제대기함 최종 삭제 카운터 증가
     func countTrashPermanentDelete() {
         guard !shouldSkip() else { return }
         queue.async(flags: .barrier) {

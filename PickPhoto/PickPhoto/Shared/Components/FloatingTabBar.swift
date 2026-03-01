@@ -26,7 +26,7 @@ protocol FloatingTabBarDelegate: AnyObject {
     /// 삭제대기함 Select 모드에서 Restore 버튼 탭
     func floatingTabBarDidTapRestore(_ tabBar: FloatingTabBar)
 
-    /// 삭제대기함 Select 모드에서 Delete 버튼 탭 (영구 삭제)
+    /// 삭제대기함 Select 모드에서 Delete 버튼 탭 (최종 삭제)
     func floatingTabBarDidTapTrashDelete(_ tabBar: FloatingTabBar)
 }
 
@@ -259,7 +259,7 @@ final class FloatingTabBar: UIView {
         return label
     }()
 
-    /// Trash Delete 버튼 (Liquid Glass 스타일, 영구 삭제)
+    /// Trash Delete 버튼 (Liquid Glass 스타일, 최종 삭제)
     /// iOS 26 스펙: 높이 44pt, fontSize 17pt
     private lazy var trashDeleteButton: GlassTextButton = {
         let button = GlassTextButton(title: "삭제", style: .plain, tintColor: .systemRed)

@@ -526,7 +526,7 @@ final class CleanupService: CleanupServiceProtocol {
     /// - 복구 방법: `TrashStore.restore(assetIDs:)` 호출로 복구 가능
     ///   - 삭제대기함 UI에서 개별 또는 일괄 복구
     ///   - 복구 시 trashedAssetIDs에서 제거, GridViewController 자동 갱신
-    /// - 완전 삭제: `TrashStore.permanentlyDelete(assetIDs:)` 또는 `emptyTrash()`
+    /// - 최종 삭제: `TrashStore.permanentlyDelete(assetIDs:)` 또는 `emptyTrash()`
     ///   - 시스템 PHPhotoLibrary.performChanges 팝업 표시 후 삭제
     private func moveToTrash(assetIDs: [String]) {
         guard !assetIDs.isEmpty else { return }

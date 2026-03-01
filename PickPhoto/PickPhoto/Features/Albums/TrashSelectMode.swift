@@ -158,14 +158,14 @@ extension TrashAlbumViewController {
         exitSelectMode()
     }
 
-    /// 선택된 사진 영구 삭제 (Trash 전용)
+    /// 선택된 사진 최종 삭제 (Trash 전용)
     @objc func trashDeleteSelectedTapped() {
         let selectedAssetIDs = selectionManager.selectedAssetIDs
         guard !selectedAssetIDs.isEmpty else {
             return
         }
 
-        // [Analytics] 이벤트 4-2: 삭제대기함 완전삭제 (선택 모드)
+        // [Analytics] 이벤트 4-2: 삭제대기함 최종 삭제 (선택 모드)
         AnalyticsService.shared.countTrashPermanentDelete()
 
         Task {
@@ -211,7 +211,7 @@ extension TrashAlbumViewController: LiquidGlassTabBarDelegate {
         trashRestoreSelectedTapped()
     }
 
-    /// Trash Select 모드: Delete 버튼 (영구 삭제)
+    /// Trash Select 모드: Delete 버튼 (최종 삭제)
     func liquidGlassTabBarDidTapTrashDelete(_ tabBar: LiquidGlassTabBar) {
         trashDeleteSelectedTapped()
     }

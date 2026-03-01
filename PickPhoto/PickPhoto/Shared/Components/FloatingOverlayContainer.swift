@@ -31,7 +31,7 @@ protocol FloatingOverlayContainerDelegate: AnyObject {
     /// 삭제대기함 Select 모드에서 Restore 버튼 탭
     func floatingOverlayDidTapRestore(_ container: FloatingOverlayContainer)
 
-    /// 삭제대기함 Select 모드에서 Delete 버튼 탭 (영구 삭제)
+    /// 삭제대기함 Select 모드에서 Delete 버튼 탭 (최종 삭제)
     func floatingOverlayDidTapTrashDelete(_ container: FloatingOverlayContainer)
 }
 

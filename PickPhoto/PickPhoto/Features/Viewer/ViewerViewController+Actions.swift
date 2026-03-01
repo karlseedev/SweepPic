@@ -63,7 +63,7 @@ extension ViewerViewController {
         }
     }
 
-    /// 완전삭제 버튼 탭 (삭제대기함 모드)
+    /// 최종 삭제 버튼 탭 (삭제대기함 모드)
     /// 주의: permanentDelete는 비동기 작업이므로 moveToNextAfterDelete()를 여기서 호출하지 않음
     /// 삭제 완료 후 delegate에서 handleDeleteComplete()를 호출해야 함
     @objc func permanentDeleteButtonTapped() {
@@ -73,7 +73,7 @@ extension ViewerViewController {
         let generator = UIImpactFeedbackGenerator(style: .heavy)
         generator.impactOccurred()
 
-        // 완전삭제 요청 (비동기 - iOS 시스템 팝업 대기)
+        // 최종 삭제 요청 (비동기 - iOS 시스템 팝업 대기)
         // 삭제 완료 후 delegate에서 handleDeleteComplete() 호출 필요
         delegate?.viewerDidRequestPermanentDelete(assetID: assetID)
 

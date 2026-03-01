@@ -114,7 +114,7 @@ extension ViewerViewController {
         updatePreviousNavigationState()
     }
 
-    /// iOS 26+ 삭제대기함 모드 툴바 (복구 + 완전삭제)
+    /// iOS 26+ 삭제대기함 모드 툴바 (복구 + 최종 삭제)
     @available(iOS 26.0, *)
     func setupTrashModeToolbar() {
         let flexSpace = UIBarButtonItem(systemItem: .flexibleSpace)
@@ -129,9 +129,9 @@ extension ViewerViewController {
         restoreItem.tintColor = .systemGreen
         toolbarRestoreItem = restoreItem
 
-        // 완전삭제 버튼
+        // 최종 삭제 버튼
         let permanentDeleteItem = UIBarButtonItem(
-            title: "삭제",
+            title: "최종 삭제",
             primaryAction: UIAction { [weak self] _ in
                 self?.permanentDeleteButtonTapped()
             }

@@ -27,7 +27,7 @@ protocol LiquidGlassTabBarDelegate: AnyObject {
     /// 삭제대기함 Select 모드에서 Restore 버튼 탭
     func liquidGlassTabBarDidTapRestore(_ tabBar: LiquidGlassTabBar)
 
-    /// 삭제대기함 Select 모드에서 Delete 버튼 탭 (영구 삭제)
+    /// 삭제대기함 Select 모드에서 Delete 버튼 탭 (최종 삭제)
     func liquidGlassTabBarDidTapTrashDelete(_ tabBar: LiquidGlassTabBar)
 }
 

@@ -72,7 +72,7 @@ final class TrashAlbumViewController: BaseGridViewController {
     }
     private var pendingFetchState: PendingFetchState = .none
 
-    /// 현재 열린 뷰어 참조 (완전삭제 완료 후 알림용)
+    /// 현재 열린 뷰어 참조 (최종 삭제 완료 후 알림용)
     /// Push/Modal 방식에 무관하게 접근 가능하도록 weak 참조 저장
     private weak var activeViewerVC: ViewerViewController?
 
@@ -544,7 +544,7 @@ final class TrashAlbumViewController: BaseGridViewController {
 
     /// 삭제대기함 비우기 실행
     private func performEmptyTrash() {
-        // [Analytics] 이벤트 4-2: 삭제대기함 비우기 (완전삭제)
+        // [Analytics] 이벤트 4-2: 삭제대기함 비우기 (최종 삭제)
         AnalyticsService.shared.countTrashPermanentDelete()
 
         Task {
@@ -596,7 +596,7 @@ final class TrashAlbumViewController: BaseGridViewController {
             mode: .trash
         )
         viewerVC.delegate = self
-        activeViewerVC = viewerVC  // weak 참조 저장 (완전삭제 완료 후 알림용)
+        activeViewerVC = viewerVC  // weak 참조 저장 (최종 삭제 완료 후 알림용)
 
         // iOS 26+: Navigation Push 방식 (시스템 네비바/툴바 사용 가능)
         // iOS 16~25: Modal 방식 (커스텀 줌 트랜지션)
@@ -656,7 +656,7 @@ extension TrashAlbumViewController: ViewerViewControllerDelegate {
 
     /// 삭제 요청 (삭제대기함에서는 사용 안 함)
     func viewerDidRequestDelete(assetID: String) {
-        // 삭제대기함에서는 삭제 버튼 대신 복구/완전삭제 버튼 사용
+        // 삭제대기함에서는 삭제 버튼 대신 복구/최종 삭제 버튼 사용
         // 이 메서드는 호출되지 않음
     }
 
@@ -669,10 +669,10 @@ extension TrashAlbumViewController: ViewerViewControllerDelegate {
         // loadTrashedAssets()는 onStateChange 콜백으로 자동 호출됨
     }
 
-    /// 완전 삭제 요청 (T057)
+    /// 최종 삭제 요청 (T057)
     /// 비동기 작업 - 삭제 완료 후 뷰어에 알림
     func viewerDidRequestPermanentDelete(assetID: String) {
-        // [Analytics] 이벤트 4-2: 삭제대기함 완전삭제
+        // [Analytics] 이벤트 4-2: 삭제대기함 최종 삭제
         AnalyticsService.shared.countTrashPermanentDelete()
 
         Task {

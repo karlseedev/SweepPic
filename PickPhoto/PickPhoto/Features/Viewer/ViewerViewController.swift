@@ -14,7 +14,7 @@
 // - 하단에 항상 표시
 //
 // T035: 삭제대기함 사진 뷰어 모드 구현
-// - 삭제 버튼 대신 "복구/완전삭제" 옵션 표시
+// - 삭제 버튼 대신 "복구/최종 삭제" 옵션 표시
 
 import UIKit
 import Photos
@@ -28,7 +28,7 @@ enum ViewerMode {
     /// 일반 모드: 삭제 버튼 표시
     case normal
 
-    /// 삭제대기함 모드: 복구/완전삭제 버튼 표시
+    /// 삭제대기함 모드: 복구/최종 삭제 버튼 표시
     case trash
 
     /// 정리 미리보기 모드: 제외 버튼 표시 (스와이프 삭제 없음)
@@ -36,7 +36,7 @@ enum ViewerMode {
 }
 
 /// 뷰어 델리게이트
-/// 삭제/복구/완전삭제/제외 액션을 처리
+/// 삭제/복구/최종 삭제/제외 액션을 처리
 protocol ViewerViewControllerDelegate: AnyObject {
     /// 사진 삭제 요청 (앱 내 삭제대기함으로 이동)
     /// - Parameter assetID: 삭제할 사진 ID
@@ -46,8 +46,8 @@ protocol ViewerViewControllerDelegate: AnyObject {
     /// - Parameter assetID: 복구할 사진 ID
     func viewerDidRequestRestore(assetID: String)
 
-    /// 사진 완전삭제 요청 (iOS 삭제대기함으로 이동)
-    /// - Parameter assetID: 완전삭제할 사진 ID
+    /// 사진 최종 삭제 요청 (iOS 삭제대기함으로 이동)
+    /// - Parameter assetID: 최종 삭제할 사진 ID
     func viewerDidRequestPermanentDelete(assetID: String)
 
     /// 뷰어가 닫힐 때 호출
@@ -191,10 +191,10 @@ final class ViewerViewController: UIViewController {
         return button
     }()
 
-    /// 완전삭제 버튼 (삭제대기함 모드 - Liquid Glass 텍스트 버튼)
-    /// iOS 26 스펙: 텍스트 "삭제", tintColor #FF4245 (빨간색)
+    /// 최종 삭제 버튼 (삭제대기함 모드 - Liquid Glass 텍스트 버튼)
+    /// iOS 26 스펙: 텍스트 "최종 삭제", tintColor #FF4245 (빨간색)
     lazy var permanentDeleteButton: GlassTextButton = {
-        let button = GlassTextButton(title: "삭제", style: .plain, tintColor: .systemRed)
+        let button = GlassTextButton(title: "최종 삭제", style: .plain, tintColor: .systemRed)
         button.translatesAutoresizingMaskIntoConstraints = false
         button.addTarget(self, action: #selector(permanentDeleteButtonTapped), for: .touchUpInside)
         button.accessibilityIdentifier = "viewer_permanent_delete"
@@ -282,7 +282,7 @@ final class ViewerViewController: UIViewController {
     /// iOS 26+ 툴바 복구 버튼 참조
     var toolbarRestoreItem: UIBarButtonItem?
 
-    /// iOS 26+ 툴바 완전삭제 버튼 참조
+    /// iOS 26+ 툴바 최종 삭제 버튼 참조
     var toolbarPermanentDeleteItem: UIBarButtonItem?
 
     /// iOS 26+ 네비게이션 바 눈 아이콘 버튼 참조 (유사 사진 토글)

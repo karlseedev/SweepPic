@@ -191,7 +191,7 @@ extension ViewerViewController {
                 restoreButton.centerYAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor, constant: -Self.buttonCenterFromBottom)
             ])
 
-            // 완전삭제 버튼 (오른쪽 끝) - iOS 26 스펙: 양쪽 끝 배치
+            // 최종 삭제 버튼 (오른쪽 끝) - iOS 26 스펙: 양쪽 끝 배치
             view.addSubview(permanentDeleteButton)
             NSLayoutConstraint.activate([
                 permanentDeleteButton.trailingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.trailingAnchor, constant: -24),
