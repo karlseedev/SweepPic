@@ -79,7 +79,7 @@ final class ViewerViewController: UIViewController {
 
     /// 버튼 center에서 safeArea bottom까지의 거리
     /// FloatingTabBar의 capsuleHeight/2와 동일 (56/2 = 28)
-    private static let buttonCenterFromBottom: CGFloat = 28
+    static let buttonCenterFromBottom: CGFloat = 28
 
     // MARK: - Properties
 
@@ -95,7 +95,7 @@ final class ViewerViewController: UIViewController {
     let coordinator: ViewerCoordinatorProtocol
 
     /// 스와이프 삭제 핸들러
-    private var swipeDeleteHandler: SwipeDeleteHandler?
+    var swipeDeleteHandler: SwipeDeleteHandler?
 
     /// 현재 뷰어의 ScreenSource (analytics용)
     /// - .cleanup 모드는 카운트 제외 → nil 반환
@@ -114,7 +114,7 @@ final class ViewerViewController: UIViewController {
 
     /// 현재 표시 중인 인덱스
     /// iOS 18+ zoom transition의 sourceViewProvider에서 외부 접근 필요
-    private(set) var currentIndex: Int
+    var currentIndex: Int
 
     // MARK: - Debug: PageScroll 분석용
 
@@ -152,7 +152,7 @@ final class ViewerViewController: UIViewController {
     private static let lod1DebounceDelay: TimeInterval = 0.15
 
     /// 페이지 뷰 컨트롤러
-    private lazy var pageViewController: UIPageViewController = {
+    lazy var pageViewController: UIPageViewController = {
         let pvc = UIPageViewController(
             transitionStyle: .scroll,
             navigationOrientation: .horizontal,
@@ -164,7 +164,7 @@ final class ViewerViewController: UIViewController {
     }()
 
     /// 이전 사진 버튼 (일반 모드 - 좌측 하단)
-    private lazy var previousPhotoButton: GlassTextButton = {
+    lazy var previousPhotoButton: GlassTextButton = {
         let button = GlassTextButton(title: "이전 사진", style: .plain, tintColor: .white)
         button.translatesAutoresizingMaskIntoConstraints = false
         button.addTarget(self, action: #selector(previousPhotoButtonTapped), for: .touchUpInside)
@@ -173,7 +173,7 @@ final class ViewerViewController: UIViewController {
     }()
 
     /// 삭제하기 버튼 (일반 모드 - 우측 하단)
-    private lazy var deleteButton: GlassTextButton = {
+    lazy var deleteButton: GlassTextButton = {
         let button = GlassTextButton(title: "삭제하기", style: .plain, tintColor: .systemRed)
         button.translatesAutoresizingMaskIntoConstraints = false
         button.addTarget(self, action: #selector(deleteButtonTapped), for: .touchUpInside)
@@ -183,7 +183,7 @@ final class ViewerViewController: UIViewController {
 
     /// 복구 버튼 (삭제대기함 모드 - Liquid Glass 텍스트 버튼)
     /// iOS 26 스펙: 텍스트 "복구", tintColor #30D158 (녹색)
-    private lazy var restoreButton: GlassTextButton = {
+    lazy var restoreButton: GlassTextButton = {
         let button = GlassTextButton(title: "복구하기", style: .plain, tintColor: .systemGreen)
         button.translatesAutoresizingMaskIntoConstraints = false
         button.addTarget(self, action: #selector(restoreButtonTapped), for: .touchUpInside)
@@ -193,7 +193,7 @@ final class ViewerViewController: UIViewController {
 
     /// 완전삭제 버튼 (삭제대기함 모드 - Liquid Glass 텍스트 버튼)
     /// iOS 26 스펙: 텍스트 "삭제", tintColor #FF4245 (빨간색)
-    private lazy var permanentDeleteButton: GlassTextButton = {
+    lazy var permanentDeleteButton: GlassTextButton = {
         let button = GlassTextButton(title: "삭제", style: .plain, tintColor: .systemRed)
         button.translatesAutoresizingMaskIntoConstraints = false
         button.addTarget(self, action: #selector(permanentDeleteButtonTapped), for: .touchUpInside)
@@ -203,7 +203,7 @@ final class ViewerViewController: UIViewController {
 
     /// 제외 버튼 (정리 미리보기 모드 - Liquid Glass 텍스트 버튼)
     /// 정리 후보에서 개별 사진을 제외하는 버튼
-    private lazy var excludeButton: GlassTextButton = {
+    lazy var excludeButton: GlassTextButton = {
         let button = GlassTextButton(title: "제외", style: .plain, tintColor: .white)
         button.translatesAutoresizingMaskIntoConstraints = false
         button.addTarget(self, action: #selector(excludeButtonTapped), for: .touchUpInside)
@@ -211,7 +211,7 @@ final class ViewerViewController: UIViewController {
     }()
 
     /// 닫기 제스처를 위한 배경 뷰
-    private lazy var backgroundView: UIView = {
+    lazy var backgroundView: UIView = {
         let view = UIView()
         view.backgroundColor = .black
         view.translatesAutoresizingMaskIntoConstraints = false
@@ -219,14 +219,14 @@ final class ViewerViewController: UIViewController {
     }()
 
     /// 아래 스와이프 닫기 팬 제스처
-    private lazy var dismissPanGesture: UIPanGestureRecognizer = {
+    lazy var dismissPanGesture: UIPanGestureRecognizer = {
         let gesture = UIPanGestureRecognizer(target: self, action: #selector(handleDismissPan(_:)))
         gesture.delegate = self
         return gesture
     }()
 
     /// 닫기 애니메이션 중 여부
-    private var isDismissing = false
+    var isDismissing = false
 
     /// 뷰어 닫힘 확정 플래그 (viewWillDisappear에서 설정, viewDidDisappear에서 사용)
     /// Apple SDK 권장: isBeingDismissed/isMovingFromParent 판별은 viewWillDisappear에서 수행
@@ -235,10 +235,10 @@ final class ViewerViewController: UIViewController {
     /// Interactive dismiss 중 활성 IC 참조
     /// ⚠️ popViewController 후 navigationController가 nil이 되어
     ///   isPushed/tabBarController 경로로 IC에 접근 불가능하므로 직접 저장
-    private weak var activeInteractionController: ZoomDismissalInteractionController?
+    weak var activeInteractionController: ZoomDismissalInteractionController?
 
     /// Interactive dismiss 중 활성 TabBarController 참조 (cleanup용)
-    private weak var activeTabBarController: TabBarController?
+    weak var activeTabBarController: TabBarController?
 
     /// 최초 표시 페이드 인 적용 여부 (시스템 전환 대신 사용)
     private var didPerformInitialFadeIn: Bool = false
@@ -247,7 +247,7 @@ final class ViewerViewController: UIViewController {
     /// Navigation Push로 열렸는지 여부 (iOS 26+)
     /// Push: navigationController != nil, presentingViewController == nil
     /// Modal: presentingViewController != nil
-    private var isPushed: Bool {
+    var isPushed: Bool {
         return navigationController != nil && presentingViewController == nil
     }
 
@@ -263,7 +263,7 @@ final class ViewerViewController: UIViewController {
 
     /// iOS 26+ 시스템 UI 사용 여부
     /// Modal에서는 navigationController가 nil이므로 항상 커스텀 버튼 사용
-    private var useSystemUI: Bool {
+    var useSystemUI: Bool {
         if #available(iOS 26.0, *) {
             return navigationController != nil
         }
@@ -271,38 +271,38 @@ final class ViewerViewController: UIViewController {
     }
 
     /// iOS 26+ 시스템 UI 설정 완료 여부 (중복 설정 방지)
-    private var didSetupSystemUI: Bool = false
+    var didSetupSystemUI: Bool = false
 
     /// iOS 26+ 툴바 삭제 버튼 참조
-    private var toolbarDeleteItem: UIBarButtonItem?
+    var toolbarDeleteItem: UIBarButtonItem?
 
     /// iOS 26+ 툴바 이전 사진 버튼 참조
-    private var toolbarPreviousItem: UIBarButtonItem?
+    var toolbarPreviousItem: UIBarButtonItem?
 
     /// iOS 26+ 툴바 복구 버튼 참조
-    private var toolbarRestoreItem: UIBarButtonItem?
+    var toolbarRestoreItem: UIBarButtonItem?
 
     /// iOS 26+ 툴바 완전삭제 버튼 참조
-    private var toolbarPermanentDeleteItem: UIBarButtonItem?
+    var toolbarPermanentDeleteItem: UIBarButtonItem?
 
     /// iOS 26+ 네비게이션 바 눈 아이콘 버튼 참조 (유사 사진 토글)
-    private var navBarEyeItem: UIBarButtonItem?
+    var navBarEyeItem: UIBarButtonItem?
 
     // MARK: - 상단 그라데이션 + 타이틀 (유사사진 안내)
 
     /// 상단 그라데이션 딤드 뷰 (iOS 16~25 + iOS 26 Modal, .normal 모드 전용)
     /// 눈 버튼 토글과 무관하게 항상 표시
-    private var topGradientView: UIView?
+    var topGradientView: UIView?
 
     /// 상단 그라데이션 레이어 (layoutSubviews에서 frame 갱신 필요)
-    private var topGradientLayer: CAGradientLayer?
+    var topGradientLayer: CAGradientLayer?
 
     /// "유사사진정리 가능" 타이틀 라벨
     /// 눈 버튼 토글 시 숨김/표시
     var similarPhotoTitleLabel: UILabel?
 
     /// iOS 16~25 커스텀 뒤로가기 버튼 참조 (코치마크 z-order용)
-    private weak var backButtonView: UIView?
+    weak var backButtonView: UIView?
 
     // MARK: - Initialization
 
@@ -474,7 +474,7 @@ final class ViewerViewController: UIViewController {
     // MARK: - Setup
 
     /// UI 설정
-    private func setupUI() {
+    func setupUI() {
         // 배경
         view.addSubview(backgroundView)
         NSLayoutConstraint.activate([
@@ -520,7 +520,7 @@ final class ViewerViewController: UIViewController {
     /// 상단 그라데이션 딤드 + "유사사진정리 가능" 타이틀 설정
     /// .normal 모드 && !useSystemUI 조건에서만 호출
     /// z-order: pageVC 위, backButton/faceButtonOverlay 아래
-    private func setupTopGradientAndTitle() {
+    func setupTopGradientAndTitle() {
         // --- 그라데이션 딤드 뷰 ---
         let gradientContainer = UIView()
         gradientContainer.translatesAutoresizingMaskIntoConstraints = false
@@ -560,7 +560,7 @@ final class ViewerViewController: UIViewController {
     /// "유사사진정리 가능" 커스텀 타이틀 라벨 설정
     /// iOS 16~25: setupTopGradientAndTitle()에서 딤드와 함께 호출 → view.addSubview
     /// iOS 26: navigationItem.titleView에 설정 → 네비바 버튼과 자동 수평 정렬
-    private func setupSimilarPhotoTitleLabel() {
+    func setupSimilarPhotoTitleLabel() {
         let titleLabel = UILabel()
         // "유사사진정리"(레귤러/흰색) + " 가능"(볼드/밝은 노란색)
         let attr = NSMutableAttributedString()
@@ -601,7 +601,7 @@ final class ViewerViewController: UIViewController {
     /// iOS 16~25 전용 뒤로가기 버튼 설정
     /// Push 전환 방식이지만 네비바는 숨긴 상태로 유지하고 커스텀 버튼 사용
     /// iOS 26 스펙: 44×44, iconSize 22pt (GlassIconButton과 동일)
-    private func setupBackButton() {
+    func setupBackButton() {
         // GlassIconButton 사용 (iOS 26 NavBar 아이콘 버튼과 동일 스펙)
         let backButton = GlassIconButton(icon: "chevron.backward", size: .medium, tintColor: .white)
         backButton.translatesAutoresizingMaskIntoConstraints = false
@@ -618,7 +618,7 @@ final class ViewerViewController: UIViewController {
 
     /// 액션 버튼 설정 (모드에 따라 다름)
     /// 버튼 위치: safeArea bottom에서 28pt 위
-    private func setupActionButtons() {
+    func setupActionButtons() {
         switch viewerMode {
         case .normal:
             // 이전 사진 버튼 (좌측)
@@ -672,13 +672,13 @@ final class ViewerViewController: UIViewController {
     }
 
     /// 제스처 설정
-    private func setupGestures() {
+    func setupGestures() {
         // 아래 스와이프로 닫기
         view.addGestureRecognizer(dismissPanGesture)
     }
 
     /// 스와이프 삭제 핸들러 설정
-    private func setupSwipeDeleteHandler() {
+    func setupSwipeDeleteHandler() {
         // 일반 모드에서만 위 스와이프 삭제 가능
         guard viewerMode == .normal else { return }
 
@@ -699,7 +699,7 @@ final class ViewerViewController: UIViewController {
     }
 
     /// 초기 미디어 표시 (사진/동영상)
-    private func displayInitialPhoto() {
+    func displayInitialPhoto() {
         guard let pageVC = createPageViewController(at: currentIndex) else { return }
 
         pageViewController.setViewControllers(
@@ -755,18 +755,18 @@ final class ViewerViewController: UIViewController {
     // MARK: - Actions
 
     /// 뒤로가기 버튼 탭
-    @objc private func backButtonTapped() {
+    @objc func backButtonTapped() {
         dismissWithFadeOut()
     }
 
     /// 이전 사진 버튼 탭 (일반 모드)
-    @objc private func previousPhotoButtonTapped() {
+    @objc func previousPhotoButtonTapped() {
         moveToPreviousPhoto()
     }
 
     /// 삭제 버튼 탭 (일반 모드)
     /// 현재 사진: 위로 올라가며 페이드아웃 + 다음 사진: 옆에서 슬라이드인 (동시 실행)
-    @objc private func deleteButtonTapped() {
+    @objc func deleteButtonTapped() {
         guard let assetID = coordinator.assetID(at: currentIndex) else { return }
 
         // 햅틱 피드백
@@ -782,7 +782,7 @@ final class ViewerViewController: UIViewController {
     /// 복구 버튼 탭
     /// - .trash 모드: 다음 사진으로 이동 (목록에서 사라짐)
     /// - .normal 모드: 제자리 유지, 테두리 제거 + 버튼 교체
-    @objc private func restoreButtonTapped() {
+    @objc func restoreButtonTapped() {
         guard let assetID = coordinator.assetID(at: currentIndex) else { return }
 
         // 햅틱 피드백
@@ -808,7 +808,7 @@ final class ViewerViewController: UIViewController {
     /// 완전삭제 버튼 탭 (삭제대기함 모드)
     /// 주의: permanentDelete는 비동기 작업이므로 moveToNextAfterDelete()를 여기서 호출하지 않음
     /// 삭제 완료 후 delegate에서 handleDeleteComplete()를 호출해야 함
-    @objc private func permanentDeleteButtonTapped() {
+    @objc func permanentDeleteButtonTapped() {
         guard let assetID = coordinator.assetID(at: currentIndex) else { return }
 
         // 햅틱 피드백
@@ -833,7 +833,7 @@ final class ViewerViewController: UIViewController {
 
     /// 제외 버튼 탭 (정리 미리보기 모드)
     /// 실행 순서: removeAsset → moveToNextAfterDelete (인덱스 정합성 필수)
-    @objc private func excludeButtonTapped() {
+    @objc func excludeButtonTapped() {
         guard let assetID = coordinator.assetID(at: currentIndex) else { return }
 
         // 햅틱 피드백
@@ -856,7 +856,7 @@ final class ViewerViewController: UIViewController {
 
     /// 위 스와이프 삭제 처리 (T030)
     /// 삭제 버튼과 동일한 모션 (위로 올라감 + 옆에서 슬라이드인)
-    private func handleSwipeDelete() {
+    func handleSwipeDelete() {
         guard let assetID = coordinator.assetID(at: currentIndex) else { return }
 
         // 햅틱 피드백
@@ -872,7 +872,7 @@ final class ViewerViewController: UIViewController {
     /// 삭제 후 다음 사진으로 즉시 전환 (애니메이션 없음)
     /// - Returns: 이동 방향 (.reverse = 이전 사진, .forward = 다음 사진), dismiss 시 nil
     @discardableResult
-    private func moveToNextAfterDeleteNoAnimation() -> UIPageViewController.NavigationDirection? {
+    func moveToNextAfterDeleteNoAnimation() -> UIPageViewController.NavigationDirection? {
         let nextIndex = coordinator.nextIndexAfterDelete(currentIndex: currentIndex)
         coordinator.refreshFilteredIndices()
 
@@ -895,7 +895,7 @@ final class ViewerViewController: UIViewController {
     /// "이전 사진 우선" 규칙 적용 (FR-013)
     /// 삭제 모션: 현재 사진 위로 올라감 + 다음 사진 옆에서 슬라이드인 (동시 실행)
     /// deleteButtonTapped, handleSwipeDelete 공통
-    private func performDeleteWithSlideAnimation(assetID: String) {
+    func performDeleteWithSlideAnimation(assetID: String) {
         let containerView = pageViewController.view!
         let width = containerView.bounds.width
 
@@ -940,7 +940,7 @@ final class ViewerViewController: UIViewController {
         })
     }
 
-    private func moveToNextAfterDelete() {
+    func moveToNextAfterDelete() {
         // 다음 인덱스를 먼저 계산 (갱신 전 totalCount 기준)
         let nextIndex = coordinator.nextIndexAfterDelete(currentIndex: currentIndex)
 
@@ -983,7 +983,7 @@ final class ViewerViewController: UIViewController {
     }
 
     /// 이전 사진으로 이동 (스냅샷 기반 빠른 슬라이드)
-    private func moveToPreviousPhoto() {
+    func moveToPreviousPhoto() {
         let previousIndex = currentIndex - 1
         guard previousIndex >= 0 else { return }
         guard let pageVC = createPageViewController(at: previousIndex) else { return }
@@ -1003,7 +1003,7 @@ final class ViewerViewController: UIViewController {
     ///   - viewController: 전환할 새 페이지 VC
     ///   - direction: 슬라이드 방향 (.forward = 오른쪽→왼쪽, .reverse = 왼쪽→오른쪽)
     ///   - completion: 전환 완료 후 콜백
-    private func performFastSlideTransition(
+    func performFastSlideTransition(
         to viewController: UIViewController,
         direction: UIPageViewController.NavigationDirection,
         completion: (() -> Void)? = nil
@@ -1042,7 +1042,7 @@ final class ViewerViewController: UIViewController {
     }
 
     /// 첫 사진 여부에 따라 이전 사진 버튼 상태 업데이트
-    private func updatePreviousNavigationState() {
+    func updatePreviousNavigationState() {
         let canMovePrevious = currentIndex > 0
         previousPhotoButton.isEnabled = canMovePrevious
         previousPhotoButton.alpha = canMovePrevious ? 1.0 : 0.45
@@ -1054,7 +1054,7 @@ final class ViewerViewController: UIViewController {
     /// 아래 스와이프로 닫기 처리 (Interactive Dismiss)
     /// iOS 26+ (isPushed): Navigation Pop 경로
     /// iOS 16~25: Modal Dismiss 경로 (기존)
-    @objc private func handleDismissPan(_ gesture: UIPanGestureRecognizer) {
+    @objc func handleDismissPan(_ gesture: UIPanGestureRecognizer) {
         switch gesture.state {
         case .began:
             guard !isDismissing else { return }
@@ -1141,7 +1141,7 @@ final class ViewerViewController: UIViewController {
     }
 
     /// 애니메이션과 함께 닫기 (Modal dismiss 또는 Navigation pop)
-    private func dismissWithAnimation() {
+    func dismissWithAnimation() {
         guard !isDismissing else { return }
         isDismissing = true
 
@@ -1153,7 +1153,7 @@ final class ViewerViewController: UIViewController {
     }
 
     /// 페이드 아웃으로 닫기 (Modal dismiss 또는 Navigation pop)
-    private func dismissWithFadeOut() {
+    func dismissWithFadeOut() {
         guard !isDismissing else { return }
         isDismissing = true
 
@@ -1168,7 +1168,7 @@ final class ViewerViewController: UIViewController {
 
     /// iOS 26+ 시스템 UI 설정 (1회만 실행)
     @available(iOS 26.0, *)
-    private func setupSystemUIIfNeeded() {
+    func setupSystemUIIfNeeded() {
         guard !didSetupSystemUI else { return }
         guard navigationController != nil else { return }
 
@@ -1180,7 +1180,7 @@ final class ViewerViewController: UIViewController {
 
     /// iOS 26+ 시스템 네비게이션 바 설정
     @available(iOS 26.0, *)
-    private func setupSystemNavigationBar() {
+    func setupSystemNavigationBar() {
         // Push 방식이므로 leftBarButtonItem 설정 없이 시스템 백버튼 자동 사용
         // 투명 배경 (사진 위에 Liquid Glass 효과)
         navigationController?.navigationBar.isTranslucent = true
@@ -1199,13 +1199,13 @@ final class ViewerViewController: UIViewController {
 
     /// iOS 26+ 네비게이션 바 눈 아이콘 탭 핸들러
     /// 타이틀 토글은 toggleOverlay → 델리게이트 didToggleVisibility에서 처리
-    private func navBarEyeButtonTapped() {
+    func navBarEyeButtonTapped() {
         faceButtonOverlay?.toggleOverlay()
         updateNavBarEyeIcon()
     }
 
     /// iOS 26+ 네비게이션 바 눈 아이콘 업데이트
-    private func updateNavBarEyeIcon() {
+    func updateNavBarEyeIcon() {
         guard #available(iOS 26.0, *) else { return }
         let iconName = faceButtonOverlay?.isCurrentlyHidden == true ? "eye.slash.fill" : "eye.fill"
         navBarEyeItem?.image = UIImage(systemName: iconName)
@@ -1229,7 +1229,7 @@ final class ViewerViewController: UIViewController {
 
     /// iOS 26+ 시스템 툴바 설정
     @available(iOS 26.0, *)
-    private func setupSystemToolbar() {
+    func setupSystemToolbar() {
         navigationController?.setToolbarHidden(false, animated: false)
         navigationController?.toolbar.isTranslucent = true
 
@@ -1245,7 +1245,7 @@ final class ViewerViewController: UIViewController {
 
     /// iOS 26+ 일반 모드 툴바 (이전 사진 + 삭제하기)
     @available(iOS 26.0, *)
-    private func setupNormalModeToolbar() {
+    func setupNormalModeToolbar() {
         let flexSpace = UIBarButtonItem(systemItem: .flexibleSpace)
 
         let previousItem = UIBarButtonItem(
@@ -1272,7 +1272,7 @@ final class ViewerViewController: UIViewController {
 
     /// iOS 26+ 삭제대기함 모드 툴바 (복구 + 완전삭제)
     @available(iOS 26.0, *)
-    private func setupTrashModeToolbar() {
+    func setupTrashModeToolbar() {
         let flexSpace = UIBarButtonItem(systemItem: .flexibleSpace)
 
         // 복구 버튼
@@ -1300,7 +1300,7 @@ final class ViewerViewController: UIViewController {
 
     /// iOS 26+ 정리 미리보기 모드 툴바 (제외 버튼)
     @available(iOS 26.0, *)
-    private func setupCleanupModeToolbar() {
+    func setupCleanupModeToolbar() {
         let flexSpace = UIBarButtonItem(systemItem: .flexibleSpace)
 
         let excludeItem = UIBarButtonItem(
@@ -1316,7 +1316,7 @@ final class ViewerViewController: UIViewController {
 
     /// iOS 26+ 툴바 동적 교체 (현재 사진의 삭제대기함 상태에 따라)
     @available(iOS 26.0, *)
-    private func updateToolbarItemsForCurrentPhoto() {
+    func updateToolbarItemsForCurrentPhoto() {
         // .normal 모드에서만 동적 교체 필요
         guard viewerMode == .normal else { return }
 
@@ -1346,7 +1346,7 @@ final class ViewerViewController: UIViewController {
 
     /// 현재 사진의 삭제대기함 상태에 따라 버튼/툴바 업데이트
     /// - 호출 시점: viewWillAppear, 스와이프 탐색 후, 삭제/복구 후
-    private func updateToolbarForCurrentPhoto() {
+    func updateToolbarForCurrentPhoto() {
         // .normal 모드에서만 동적 교체 필요
         guard viewerMode == .normal else { return }
 
@@ -1368,7 +1368,7 @@ final class ViewerViewController: UIViewController {
 
     /// 현재 페이지의 삭제대기함 테두리 즉시 업데이트
     /// - Parameter isTrashed: 삭제대기함 상태 여부
-    private func updateCurrentPageTrashedState(isTrashed: Bool) {
+    func updateCurrentPageTrashedState(isTrashed: Bool) {
         guard let currentVC = pageViewController.viewControllers?.first else { return }
 
         if let photoVC = currentVC as? PhotoPageViewController {
@@ -1401,7 +1401,7 @@ final class ViewerViewController: UIViewController {
     /// 인덱스에 해당하는 페이지 뷰 컨트롤러 생성 (미디어 타입에 따라 분기)
     /// - Parameter index: 표시할 인덱스
     /// - Returns: PhotoPageViewController 또는 VideoPageViewController
-    private func createPageViewController(at index: Int) -> UIViewController? {
+    func createPageViewController(at index: Int) -> UIViewController? {
         guard let asset = coordinator.asset(at: index) else { return nil }
 
         // 보관함(.normal)에서만 배경색 변경, 삭제대기함 탭에서는 검은색 유지
@@ -1572,7 +1572,7 @@ extension ViewerViewController: UIPageViewControllerDelegate {
     /// LOD1 요청 스케줄링 (150ms 디바운스)
     /// - 빠른 스와이프 시 LOD1 요청 스킵
     /// - 정지 상태에서만 원본 이미지 로드
-    private func scheduleLOD1Request() {
+    func scheduleLOD1Request() {
         lod1DebounceTimer?.invalidate()
         lod1DebounceTimer = Timer.scheduledTimer(withTimeInterval: Self.lod1DebounceDelay, repeats: false) { [weak self] _ in
             guard let self = self else { return }
