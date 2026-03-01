@@ -54,11 +54,13 @@ struct PreviewCleanupEventData {
     let foundCount: Int
     /// 분석 소요 시간 (초)
     let durationSec: Double
-    /// 최종 도달 단계 (light/standard/deep)
+    /// 최대 도달 단계 (expand 시 갱신, collapse해도 유지)
     let maxStageReached: PreviewMaxStage
     /// "더 보기" 횟수
     let expandCount: Int
-    /// "제외하기" 횟수
+    /// "제외하기" (단계 축소) 횟수
+    let collapseCount: Int
+    /// 뷰어 제외 횟수
     let excludeCount: Int
     /// 뷰어 열람 횟수
     let viewerOpenCount: Int

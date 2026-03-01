@@ -52,6 +52,7 @@ extension AnalyticsService {
             "durationSec":     String(format: "%.1f", data.durationSec),
             "maxStageReached": data.maxStageReached.rawValue,
             "expandCount":     String(data.expandCount),
+            "collapseCount":   String(data.collapseCount),
             "excludeCount":    String(data.excludeCount),
             "viewerOpenCount": String(data.viewerOpenCount),
             "finalAction":     data.finalAction.rawValue,

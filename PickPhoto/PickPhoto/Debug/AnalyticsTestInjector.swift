@@ -70,6 +70,7 @@ final class AnalyticsTestInjector {
             durationSec: 28.7,
             maxStageReached: .standard,
             expandCount: 4,
+            collapseCount: 1,
             excludeCount: 2,
             viewerOpenCount: 3,
             finalAction: .moveToTrash,

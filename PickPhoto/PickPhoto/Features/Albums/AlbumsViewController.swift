@@ -43,6 +43,8 @@ final class AlbumsViewController: UIViewController {
         cv.alwaysBounceVertical = true
         // T027-1f: Edge-to-edge 설정
         cv.contentInsetAdjustmentBehavior = .never
+        // XCUITest에서 앨범 목록 그리드 접근용
+        cv.accessibilityIdentifier = "album_list"
         return cv
     }()
 

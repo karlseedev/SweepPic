@@ -371,9 +371,11 @@ extension GridViewController {
                             // [Analytics] 이벤트 7-1: 미리보기 흐름 완료 콜백
                             previewVC.onFlowComplete = { [weak self] movedCount in
                                 if movedCount > 0 {
-                                    self?.cleanupTracker?.reachedStage = .cleanupDone
+                                    // [Analytics] 사용자가 확인까지 완료 → resultAction 단계
+                                    self?.cleanupTracker?.reachedStage = .resultAction
                                     self?.cleanupTracker?.result = .completed
                                     self?.cleanupTracker?.foundCount = movedCount
+                                    self?.cleanupTracker?.resultAction = .confirm
                                 }
                                 self?.sendCleanupTrackerAndClear()
                             }

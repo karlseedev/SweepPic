@@ -65,6 +65,15 @@ final class PreviewGridViewController: UIViewController {
     /// 뷰어 열람 횟수
     private var analyticsViewerOpenCount: Int = 0
 
+    /// 뷰어에서 제외한 횟수 (excludedAssetIDs는 applyExclusions 후 초기화되므로 별도 카운터)
+    private var analyticsExcludeCount: Int = 0
+
+    /// "제외하기" (단계 축소) 탭 횟수
+    private var analyticsCollapseCount: Int = 0
+
+    /// 최대 도달 단계 (expand 시에만 갱신, collapse해도 유지)
+    private var analyticsMaxStage: PreviewStage = .light
+
     /// 최종 행동이 기록되었는지 (중복 전송 방지)
     private var analyticsEventSent: Bool = false
 
@@ -596,9 +605,9 @@ final class PreviewGridViewController: UIViewController {
         guard !analyticsEventSent else { return }
         analyticsEventSent = true
 
-        // currentStage → PreviewMaxStage 변환
+        // analyticsMaxStage → PreviewMaxStage 변환 (최대 도달 단계)
         let maxStage: PreviewMaxStage
-        switch currentStage {
+        switch analyticsMaxStage {
         case .light:    maxStage = .light
         case .standard: maxStage = .standard
         case .deep:     maxStage = .deep
@@ -610,7 +619,8 @@ final class PreviewGridViewController: UIViewController {
             durationSec: analysisDuration,
             maxStageReached: maxStage,
             expandCount: analyticsExpandCount,
-            excludeCount: excludedAssetIDs.count,
+            collapseCount: analyticsCollapseCount,
+            excludeCount: analyticsExcludeCount,
             viewerOpenCount: analyticsViewerOpenCount,
             finalAction: finalAction,
             movedCount: movedCount
@@ -743,6 +753,9 @@ extension PreviewGridViewController: PreviewBottomViewDelegate {
     }
 
     func previewBottomViewDidTapCollapse(_ view: PreviewBottomView) {
+        // [Analytics] 이벤트 7-2: "제외하기" (단계 축소) 카운트
+        analyticsCollapseCount += 1
+
         // 단계 축소 (expand의 역동작)
         // .standard → .light: 섹션 [0, 2, 3] 삭제 (light배너 + standard배너 + standard사진)
         // .deep → .standard: 섹션 [4, 5] 삭제 (deep배너 + deep사진)
@@ -775,8 +788,11 @@ extension PreviewGridViewController: PreviewBottomViewDelegate {
     func previewBottomViewDidTapExpand(_ view: PreviewBottomView) {
         guard let nextStage = currentStage.next else { return }
 
-        // [Analytics] 이벤트 7-2: "더 보기" 카운트
+        // [Analytics] 이벤트 7-2: "더 보기" 카운트 + 최대 도달 단계 갱신
         analyticsExpandCount += 1
+        if nextStage.rawValue > analyticsMaxStage.rawValue {
+            analyticsMaxStage = nextStage
+        }
 
         // 1. currentStage 변경 (numberOfSections 먼저 업데이트되도록)
         currentStage = nextStage
@@ -844,6 +860,8 @@ extension PreviewGridViewController: ViewerViewControllerDelegate {
     func viewerDidRequestExclude(assetID: String) {
         // 뷰어가 제외를 요청하면 ID 기록 (viewWillAppear에서 일괄 반영)
         excludedAssetIDs.insert(assetID)
+        // [Analytics] 제외 카운트 누적 (excludedAssetIDs는 applyExclusions에서 초기화되므로)
+        analyticsExcludeCount += 1
     }
 
     func viewerDidRequestDelete(assetID: String) {}

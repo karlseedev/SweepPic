@@ -334,7 +334,7 @@ final class AnalyticsUITest: XCTestCase {
         albumTab.tap()
 
         // 2. 앨범 목록 로드 대기 → 첫 번째 앨범 셀 탭
-        let albumList = app.collectionViews.firstMatch
+        let albumList = app.collectionViews["album_list"]
         XCTAssertTrue(albumList.waitForExistence(timeout: 5), "앨범 목록 로드 실패")
         Thread.sleep(forTimeInterval: 0.5)
 
@@ -349,9 +349,9 @@ final class AnalyticsUITest: XCTestCase {
         Thread.sleep(forTimeInterval: 0.5)
 
         // 4. 셀 탭 → 뷰어 열기 (countPhotoViewed from:.album → fromAlbum +1)
-        guard let photoCell = firstHittableCell(in: albumGrid) else {
-            XCTFail("앨범 그리드에서 hittable 셀 없음"); return
-        }
+        // 패딩 셀 건너뛰기: 3열 그리드에서 패딩은 최대 2개 → index 3부터 실제 사진 셀
+        let photoCell = albumGrid.cells.element(boundBy: 3)
+        XCTAssertTrue(photoCell.waitForExistence(timeout: 3), "앨범 그리드 사진 셀 없음")
         photoCell.tap()
         XCTAssertTrue(app.buttons["viewer_delete"].waitForExistence(timeout: 5), "앨범 뷰어 열림 실패")
 
@@ -367,9 +367,8 @@ final class AnalyticsUITest: XCTestCase {
         Thread.sleep(forTimeInterval: 0.3)
 
         // 7. 그리드 스와이프 삭제 1회 (countGridSwipeDelete source:.album → fromAlbum +1)
-        guard let swipeCell = firstHittableCell(in: albumGrid) else {
-            XCTFail("앨범 그리드에서 삭제용 셀 없음"); return
-        }
+        // 패딩 셀 건너뛰기
+        let swipeCell = albumGrid.cells.element(boundBy: 3)
         let start = swipeCell.coordinate(withNormalizedOffset: CGVector(dx: 0.8, dy: 0.5))
         let end   = swipeCell.coordinate(withNormalizedOffset: CGVector(dx: 0.1, dy: 0.5))
         start.press(forDuration: 0.05, thenDragTo: end, withVelocity: 1500, thenHoldForDuration: 0)
@@ -551,7 +550,7 @@ final class AnalyticsUITest: XCTestCase {
         albumTab.tap()
 
         // 2. 앨범 목록 로드 대기 → 첫 번째 앨범 셀 탭
-        let albumList = app.collectionViews.firstMatch
+        let albumList = app.collectionViews["album_list"]
         XCTAssertTrue(albumList.waitForExistence(timeout: 5), "앨범 목록 로드 실패")
         Thread.sleep(forTimeInterval: 0.5)
 
@@ -566,9 +565,9 @@ final class AnalyticsUITest: XCTestCase {
         Thread.sleep(forTimeInterval: 0.5)
 
         // 4. 셀 탭 → 뷰어 열기 (fromAlbum +1)
-        guard let photoCell = firstHittableCell(in: albumGrid) else {
-            XCTFail("앨범 그리드에서 hittable 셀 없음"); return
-        }
+        // 패딩 셀 건너뛰기: 3열 그리드에서 패딩은 최대 2개 → index 3부터 실제 사진 셀
+        let photoCell = albumGrid.cells.element(boundBy: 3)
+        XCTAssertTrue(photoCell.waitForExistence(timeout: 3), "앨범 그리드 사진 셀 없음")
         photoCell.tap()
         XCTAssertTrue(app.buttons["viewer_delete"].waitForExistence(timeout: 5), "앨범 뷰어 열림 실패")
 
@@ -584,9 +583,8 @@ final class AnalyticsUITest: XCTestCase {
         Thread.sleep(forTimeInterval: 0.3)
 
         // 7. 그리드 스와이프 삭제 1회 (deleteRestore.fromAlbum +1)
-        guard let swipeCell = firstHittableCell(in: albumGrid) else {
-            XCTFail("앨범 그리드에서 삭제용 셀 없음"); return
-        }
+        // 패딩 셀 건너뛰기
+        let swipeCell = albumGrid.cells.element(boundBy: 3)
         let start = swipeCell.coordinate(withNormalizedOffset: CGVector(dx: 0.8, dy: 0.5))
         let end   = swipeCell.coordinate(withNormalizedOffset: CGVector(dx: 0.1, dy: 0.5))
         start.press(forDuration: 0.05, thenDragTo: end, withVelocity: 1500, thenHoldForDuration: 0)
