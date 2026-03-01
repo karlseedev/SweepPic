@@ -157,7 +157,7 @@ extension GridViewController {
     private func showTrashNotEmptyAlert() {
         let alert = UIAlertController(
             title: "저품질 사진 자동 정리",
-            message: "저품질 사진 정리 기능을 사용하려면\n삭제대기함을 먼저 비워주세요",
+            message: "저품질 사진 정리 기능을 사용하려면\n삭제대기함을 먼저 비워주세요\n\n-구독 시 제한 해제-",
             preferredStyle: .alert
         )
 

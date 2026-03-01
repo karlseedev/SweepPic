@@ -9,7 +9,7 @@
 
 ```
 4. 품질 개선
-   1) 코드/설정: print문 정리, VoiceOver, Dynamic Type, Localization
+   1) 코드/설정: print문 정리, Dynamic Type, Localization
    2) 에셋: LaunchScreen 브랜딩
 ```
 
@@ -31,29 +31,9 @@
 - `Log.print()` (앱 내 로그 시스템)으로 전환
 - 또는 `#if DEBUG` 래핑으로 릴리즈에서 제외
 
-### VoiceOver 전체 UI 확대
-
-> 현재 상태: 일부 UI만 적용 (PhotoCell, FloatingTabBar 등)
-
-| 항목 | 요구사항 | 구분 |
-|------|---------|:----:|
-| VoiceOver 지원 | 모든 텍스트 VoiceOver로 읽기 가능, 중요 항목에 레이블 제공 | 강력 권장 |
-| **스와이프 대체 액션** | **`accessibilityCustomActions`로 삭제 대안 제공 — 핵심 제스처의 접근성 대안 필수** | **필수** |
-| 대체 텍스트 | 의미 있는 이미지/아이콘에 대체 텍스트 | 강력 권장 |
-| 터치 타겟 | 최소 44x44 포인트 | 권장 |
-
-> **중요**: PickPhoto는 스와이프 삭제가 핵심 인터랙션이므로, VoiceOver 사용자를 위한 대체 삭제 액션(`accessibilityCustomActions`)이 반드시 필요합니다. 이 없이는 핵심 기능을 사용할 수 없어 접근성 심사에서 문제가 될 수 있습니다.
->
-> 출처: MenuResearch §12-16 — VoiceOver 스와이프 대체 액션
-
-**조치:**
-- 모든 UI 컴포넌트에 `accessibilityLabel` 추가
-- 의미 있는 이미지에 `accessibilityHint` 추가
-- 터치 타겟 44x44pt 이상 확인
-- **스와이프 삭제에 대한 `accessibilityCustomActions` 구현**
-
 ### Dynamic Type
 
+> VoiceOver, 스와이프 대체 액션, Reduce Motion, EU EAA는 리젝 가능성이 있어 [Gate 3](260212AppStore-Gate3.md)으로 이동됨
 > 현재 상태: **미지원**
 
 | 항목 | 요구사항 | 구분 |
@@ -75,7 +55,7 @@
 
 ### iOS 26 Liquid Glass 대응 일정 (참고)
 
-> PickPhoto 커스텀 UI의 Liquid Glass 대응이 필요합니다
+> PIClear 커스텀 UI의 Liquid Glass 대응이 필요합니다
 
 | 시기 | 요구사항 |
 |------|---------|

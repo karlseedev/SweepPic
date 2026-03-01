@@ -11,9 +11,16 @@
 //   - 코치마크 완료 상태
 //   - USB 연결 + 개발자 모드 활성화
 //
-// 실행:
+// 실행 (개별 Phase):
+//   xcodebuild test ... -only-testing:PickPhotoUITests/AnalyticsUITest/testPhase1_similarPhoto
+//   xcodebuild test ... -only-testing:PickPhotoUITests/AnalyticsUITest/testPhase2_photoViewing
+//   xcodebuild test ... -only-testing:PickPhotoUITests/AnalyticsUITest/testPhase3_viewerDelete
+//   xcodebuild test ... -only-testing:PickPhotoUITests/AnalyticsUITest/testPhase4_gridSwipeDelete
+//   xcodebuild test ... -only-testing:PickPhotoUITests/AnalyticsUITest/testPhase5_trashViewer
+//   xcodebuild test ... -only-testing:PickPhotoUITests/AnalyticsUITest/testPhase6_albumViewing
+//
+// 실행 (전체):
 //   scripts/analytics/run-test-b.sh
-//   또는 Xcode에서 직접 실행
 
 import XCTest
 
@@ -84,6 +91,12 @@ final class AnalyticsUITest: XCTestCase {
         return nil
     }
 
+    /// 세션 종료: Home → background → flushCounters() → Supabase 전송 트리거
+    private func endSession() {
+        XCUIDevice.shared.press(.home)
+        Thread.sleep(forTimeInterval: 2)
+    }
+
     // MARK: - 진단 테스트
 
     /// 셀 탭 단독 진단: cells 개수, frame, 탭 후 뷰어 전환 여부만 확인
@@ -117,14 +130,12 @@ final class AnalyticsUITest: XCTestCase {
         cell.tap()
 
         // 5. 뷰어 확인 — viewer_back / viewer_delete 둘 다 체크
-        // waitForExistence가 조건 충족 시 즉시 반환 → sleep 불필요
         let backBtn = app.buttons["viewer_back"]
         let deleteBtn = app.buttons["viewer_delete"]
         let viewerOpened = deleteBtn.waitForExistence(timeout: 5)
         print("🔍 viewer_back exists = \(backBtn.exists)")
         print("🔍 viewer_delete exists = \(deleteBtn.exists)")
         print("🔍 app.buttons count = \(app.buttons.count)")
-        // 버튼 목록 전체 출력
         for i in 0..<min(app.buttons.count, 20) {
             let b = app.buttons.element(boundBy: i)
             print("   button[\(i)] id=\(b.identifier) label=\(b.label) exists=\(b.exists)")
@@ -132,52 +143,29 @@ final class AnalyticsUITest: XCTestCase {
         XCTAssertTrue(backBtn.exists || viewerOpened, "뷰어 미열림 (back:\(backBtn.exists) delete:\(deleteBtn.exists))")
     }
 
-    // MARK: - Main Test
-
-    func testAnalyticsCounters() throws {
-        // Phase 1: 유사 사진
-        phase1_similarPhoto()
-
-        // Phase 2: 사진 열람 (photoViewing 카운터)
-        phase2_photoViewing()
-
-        // Phase 3: 뷰어 삭제 (viewerTrashButton, viewerSwipeDelete)
-        phase3_viewerDelete()
-
-        // Phase 4: 그리드 스와이프 삭제 (gridSwipeDelete)
-        phase4_gridSwipeDelete()
-
-        // Phase 5: 삭제대기함 (trashViewer.permanentDelete, trashViewer.restore)
-        phase5_trashViewer()
-
-        // Phase 6: Home → background → flushCounters() → Supabase 배치 전송
-        XCUIDevice.shared.press(.home)
-        Thread.sleep(forTimeInterval: 2)
-    }
-
     // MARK: - Phase 1: 유사 사진 (similar.groupClosed)
 
     /// 기대값: similar.groupClosed(totalCount=5, deletedCount=2) — 즉시 전송
-    /// 사진 세팅: 인물 셀카 5장이 그리드 최하단(최신)에 위치
-    private func phase1_similarPhoto() {
+    /// 셀카 5장이 그리드 최하단(최신)에 위치
+    func testPhase1_similarPhoto() throws {
         let collection = app.collectionViews["photo_grid"]
 
-        // Step 1: 그리드 맨 아래로 스크롤 (최신 셀카가 하단에 위치)
+        // 그리드 맨 아래로 스크롤 (최신 셀카가 하단에 위치)
         for _ in 0..<10 {
             collection.swipeUp(velocity: .fast)
         }
         Thread.sleep(forTimeInterval: 0.5)
 
-        // Step 1-2: 하단의 마지막 hittable 셀 탭 → 뷰어 (셀카 사진)
+        // 하단의 마지막 hittable 셀 탭 → 뷰어 (셀카 사진)
         guard let cell1 = lastHittableCell(in: collection) else { XCTFail("hittable 셀 없음"); return }
         cell1.tap()
 
-        // Step 2: +버튼 대기 (Vision 분석 완료 후 표시) → 탭
+        // +버튼 대기 (Vision 분석 완료 후 표시) → 탭
         let faceButton = app.buttons["face_comparison_button"]
         XCTAssertTrue(faceButton.waitForExistence(timeout: 60), "+버튼 미표시 (Vision 분석 완료 대기)")
         faceButton.tap()
 
-        // Step 3: 비교 화면에서 셀 2개 선택
+        // 비교 화면에서 셀 2개 선택
         let comparisonGrid = app.collectionViews.firstMatch
         XCTAssertTrue(comparisonGrid.waitForExistence(timeout: 5), "비교 화면 로드 실패")
         Thread.sleep(forTimeInterval: 0.3)
@@ -186,58 +174,55 @@ final class AnalyticsUITest: XCTestCase {
         comparisonGrid.cells.element(boundBy: 1).tap()
         Thread.sleep(forTimeInterval: 0.2)
 
-        // Step 4: 삭제 버튼 탭
+        // 삭제 버튼 탭
         let deleteBtn = app.buttons["comparison_delete"]
         XCTAssertTrue(deleteBtn.waitForExistence(timeout: 3), "비교 화면 삭제 버튼 없음")
         deleteBtn.tap()
 
-        // Step 5: 그리드 복귀 확인
+        // 그리드 복귀 확인
         XCTAssertTrue(collection.waitForExistence(timeout: 5), "그리드 복귀 실패")
-        Thread.sleep(forTimeInterval: 0.3)
 
-        // Step 6: 그리드 맨 위로 스크롤 (Phase 2~5를 위해 상단으로 복귀)
-        for _ in 0..<10 {
-            collection.swipeDown(velocity: .fast)
-        }
-        Thread.sleep(forTimeInterval: 0.3)
+        // 세션 종료 → flush
+        endSession()
     }
 
     // MARK: - Phase 2: 사진 열람 (photoViewing)
 
-    /// 기대값: total +6 (뷰어 열기 1 + 스와이프 5), fromLibrary +6
-    private func phase2_photoViewing() {
+    /// 기대값: session.photoViewing — total=6, fromLibrary=6
+    func testPhase2_photoViewing() throws {
         let collection = app.collectionViews["photo_grid"]
 
-        // Step 6: 첫 번째 hittable 셀 탭 → 뷰어 열기
-        // viewer_delete: 일반 사진 뷰어에서 항상 표시 (진단 테스트에서 검증됨)
-        guard let cell2 = firstHittableCell(in: collection) else { XCTFail("hittable 셀 없음"); return }
-        cell2.tap()
+        // 첫 번째 hittable 셀 탭 → 뷰어 열기
+        guard let cell = firstHittableCell(in: collection) else { XCTFail("hittable 셀 없음"); return }
+        cell.tap()
         XCTAssertTrue(app.buttons["viewer_delete"].waitForExistence(timeout: 5), "뷰어 열림 실패")
 
-        // Step 7-11: 왼쪽 스와이프 5회 (페이지 전환 → countPhotoViewed 호출)
+        // 왼쪽 스와이프 5회 (페이지 전환 → countPhotoViewed 호출)
         for _ in 0..<5 {
             app.swipeLeft()
             Thread.sleep(forTimeInterval: 0.3)
         }
 
-        // Step 12: 뒤로 버튼 → 그리드 복귀
+        // 뒤로 버튼 → 그리드 복귀
         app.buttons["viewer_back"].tap()
         XCTAssertTrue(collection.waitForExistence(timeout: 5), "그리드 복귀 실패")
+
+        // 세션 종료 → flush
+        endSession()
     }
 
     // MARK: - Phase 3: 뷰어 삭제 (viewerTrashButton, viewerSwipeDelete)
 
-    /// 기대값: viewerTrashButton=3, viewerSwipeDelete=2, fromLibrary +5
-    private func phase3_viewerDelete() {
+    /// 기대값: session.deleteRestore — viewerTrashButton=3, viewerSwipeDelete=2, fromLibrary=5
+    func testPhase3_viewerDelete() throws {
         let collection = app.collectionViews["photo_grid"]
 
-        // Step 13: 첫 번째 hittable 셀 탭 → 뷰어
-        guard let cell3 = firstHittableCell(in: collection) else { XCTFail("hittable 셀 없음"); return }
-        cell3.tap()
+        // 첫 번째 hittable 셀 탭 → 뷰어
+        guard let cell = firstHittableCell(in: collection) else { XCTFail("hittable 셀 없음"); return }
+        cell.tap()
         XCTAssertTrue(app.buttons["viewer_delete"].waitForExistence(timeout: 5), "뷰어 열림 실패")
 
-        // Step 14-16: 삭제 버튼 3회
-        // viewer_delete가 없으면(isTrashed 사진) swipeLeft로 다음 사진으로 이동 후 재시도
+        // 삭제 버튼 3회
         let deleteButton = app.buttons["viewer_delete"]
         var deleted = 0
         var attempts = 0
@@ -254,24 +239,270 @@ final class AnalyticsUITest: XCTestCase {
         }
         XCTAssertEqual(deleted, 3, "삭제 버튼 탭 \(deleted)/3 회 완료")
 
-        // Step 17-18: 위로 스와이프 2회 (viewerSwipeDelete)
+        // 위로 스와이프 2회 (viewerSwipeDelete)
         for _ in 0..<2 {
             app.swipeUp(velocity: .fast)
             Thread.sleep(forTimeInterval: 0.5)
         }
 
-        // Step 19: 뒤로 버튼 → 그리드 복귀
+        // 뒤로 버튼 → 그리드 복귀
         app.buttons["viewer_back"].tap()
         XCTAssertTrue(collection.waitForExistence(timeout: 5), "그리드 복귀 실패")
+
+        // 세션 종료 → flush
+        endSession()
     }
 
     // MARK: - Phase 4: 그리드 스와이프 삭제 (gridSwipeDelete)
 
-    /// 기대값: gridSwipeDelete=4, fromLibrary +4
+    /// 기대값: session.deleteRestore — gridSwipeDelete=4, fromLibrary=4
+    func testPhase4_gridSwipeDelete() throws {
+        let collection = app.collectionViews["photo_grid"]
+
+        // 첫 번째 hittable 셀 수평 스와이프 4회
+        for i in 0..<4 {
+            guard let cell = firstHittableCell(in: collection) else {
+                XCTFail("셀 \(i) hittable 없음"); return
+            }
+            let start = cell.coordinate(withNormalizedOffset: CGVector(dx: 0.8, dy: 0.5))
+            let end   = cell.coordinate(withNormalizedOffset: CGVector(dx: 0.1, dy: 0.5))
+            start.press(forDuration: 0.05, thenDragTo: end, withVelocity: 1500, thenHoldForDuration: 0)
+            Thread.sleep(forTimeInterval: 0.5)
+        }
+
+        // 세션 종료 → flush
+        endSession()
+    }
+
+    // MARK: - Phase 5: 삭제대기함 (trashViewer)
+
+    /// 기대값: session.trashViewer — permanentDelete=2, restore=3
+    ///         session.deleteRestore — viewerRestoreButton=3
+    /// 사전 조건: 삭제대기함에 사진 5장 이상 필요 (Phase 3+4 실행 후)
+    func testPhase5_trashViewer() throws {
+        // 삭제대기함 탭바 탭
+        let trashTab = app.buttons["삭제대기함"]
+        XCTAssertTrue(trashTab.waitForExistence(timeout: 5), "삭제대기함 탭 찾기 실패")
+        trashTab.tap()
+
+        let collection = app.collectionViews["photo_grid"]
+        XCTAssertTrue(collection.waitForExistence(timeout: 5), "삭제대기함 그리드 로드 실패")
+
+        // 첫 번째 hittable 셀 탭 → 삭제대기함 뷰어 열기
+        guard let trashCell = firstHittableCell(in: collection) else { XCTFail("hittable 셀 없음"); return }
+        trashCell.tap()
+        XCTAssertTrue(app.buttons["viewer_permanent_delete"].waitForExistence(timeout: 5), "삭제대기함 뷰어 열림 실패")
+        let permanentDeleteBtn = app.buttons["viewer_permanent_delete"]
+
+        // 완전삭제 2회 (각 탭 후 iOS 시스템 다이얼로그 자동 허용)
+        for _ in 0..<2 {
+            XCTAssertTrue(permanentDeleteBtn.waitForExistence(timeout: 3), "완전삭제 버튼 없음")
+            permanentDeleteBtn.tap()
+            // 시스템 다이얼로그 처리 + 비동기 삭제 완료 대기
+            Thread.sleep(forTimeInterval: 1.5)
+        }
+
+        // 복구 3회
+        let restoreBtn = app.buttons["viewer_restore"]
+        for _ in 0..<3 {
+            XCTAssertTrue(restoreBtn.waitForExistence(timeout: 3), "복구 버튼 없음")
+            restoreBtn.tap()
+            Thread.sleep(forTimeInterval: 0.5)
+        }
+
+        // 뒤로 버튼 → 그리드 복귀
+        let backButton = app.buttons["viewer_back"]
+        if backButton.waitForExistence(timeout: 3) { backButton.tap() }
+
+        // 세션 종료 → flush
+        endSession()
+    }
+
+    // MARK: - Phase 6: 앨범 열람 (fromAlbum)
+
+    /// 기대값: session.photoViewing — total=3, fromAlbum=3
+    ///         session.deleteRestore — gridSwipeDelete=1, fromAlbum=1
+    ///
+    /// 앨범 탭 → 앨범 상세 그리드 → 뷰어 열기/스와이프 → 그리드 스와이프 삭제
+    /// AlbumGridViewController 경유 시 deleteSource=.album → fromAlbum 카운터 증가 확인
+    ///
+    /// 사전 조건: 앨범에 사진 4장 이상 필요 (스와이프 3회 + 삭제 1회)
+    func testPhase6_albumViewing() throws {
+        // 1. 앨범 탭 탭
+        let albumTab = app.buttons["앨범"]
+        XCTAssertTrue(albumTab.waitForExistence(timeout: 5), "앨범 탭 찾기 실패")
+        albumTab.tap()
+
+        // 2. 앨범 목록 로드 대기 → 첫 번째 앨범 셀 탭
+        let albumList = app.collectionViews.firstMatch
+        XCTAssertTrue(albumList.waitForExistence(timeout: 5), "앨범 목록 로드 실패")
+        Thread.sleep(forTimeInterval: 0.5)
+
+        guard let albumCell = firstHittableCell(in: albumList) else {
+            XCTFail("앨범 목록에서 hittable 셀 없음"); return
+        }
+        albumCell.tap()
+
+        // 3. 앨범 상세 그리드 로드 대기
+        let albumGrid = app.collectionViews["photo_grid"]
+        XCTAssertTrue(albumGrid.waitForExistence(timeout: 5), "앨범 상세 그리드 로드 실패")
+        Thread.sleep(forTimeInterval: 0.5)
+
+        // 4. 셀 탭 → 뷰어 열기 (countPhotoViewed from:.album → fromAlbum +1)
+        guard let photoCell = firstHittableCell(in: albumGrid) else {
+            XCTFail("앨범 그리드에서 hittable 셀 없음"); return
+        }
+        photoCell.tap()
+        XCTAssertTrue(app.buttons["viewer_delete"].waitForExistence(timeout: 5), "앨범 뷰어 열림 실패")
+
+        // 5. 왼쪽 스와이프 2회 (페이지 전환 → countPhotoViewed from:.album → fromAlbum +2)
+        for _ in 0..<2 {
+            app.swipeLeft()
+            Thread.sleep(forTimeInterval: 0.3)
+        }
+
+        // 6. 뒤로 버튼 → 앨범 그리드 복귀
+        app.buttons["viewer_back"].tap()
+        XCTAssertTrue(albumGrid.waitForExistence(timeout: 5), "앨범 그리드 복귀 실패")
+        Thread.sleep(forTimeInterval: 0.3)
+
+        // 7. 그리드 스와이프 삭제 1회 (countGridSwipeDelete source:.album → fromAlbum +1)
+        guard let swipeCell = firstHittableCell(in: albumGrid) else {
+            XCTFail("앨범 그리드에서 삭제용 셀 없음"); return
+        }
+        let start = swipeCell.coordinate(withNormalizedOffset: CGVector(dx: 0.8, dy: 0.5))
+        let end   = swipeCell.coordinate(withNormalizedOffset: CGVector(dx: 0.1, dy: 0.5))
+        start.press(forDuration: 0.05, thenDragTo: end, withVelocity: 1500, thenHoldForDuration: 0)
+        Thread.sleep(forTimeInterval: 0.5)
+
+        // 8. 보관함 탭으로 복귀 (다음 Phase 대비)
+        let photosTab = app.buttons["보관함"]
+        if photosTab.waitForExistence(timeout: 3) { photosTab.tap() }
+        Thread.sleep(forTimeInterval: 0.3)
+
+        // 세션 종료 → flush
+        endSession()
+    }
+
+    // MARK: - 전체 테스트 (All Phases)
+
+    /// 모든 Phase를 순서대로 실행 (단일 세션)
+    func testAllPhases() throws {
+        // Phase 1: 유사 사진
+        phase1_similarPhoto()
+
+        // Phase 2: 사진 열람
+        phase2_photoViewing()
+
+        // Phase 3: 뷰어 삭제
+        phase3_viewerDelete()
+
+        // Phase 4: 그리드 스와이프 삭제
+        phase4_gridSwipeDelete()
+
+        // Phase 5: 삭제대기함
+        phase5_trashViewer()
+
+        // Phase 6: 앨범 열람
+        phase6_albumViewing()
+
+        // 세션 종료 → flush
+        endSession()
+    }
+
+    // MARK: - Private Phase Implementations (전체 테스트용)
+
+    private func phase1_similarPhoto() {
+        let collection = app.collectionViews["photo_grid"]
+
+        // 그리드 맨 아래로 스크롤 (최신 셀카가 하단에 위치)
+        for _ in 0..<10 {
+            collection.swipeUp(velocity: .fast)
+        }
+        Thread.sleep(forTimeInterval: 0.5)
+
+        // 하단의 마지막 hittable 셀 탭 → 뷰어 (셀카 사진)
+        guard let cell1 = lastHittableCell(in: collection) else { XCTFail("hittable 셀 없음"); return }
+        cell1.tap()
+
+        // +버튼 대기 (Vision 분석 완료 후 표시) → 탭
+        let faceButton = app.buttons["face_comparison_button"]
+        XCTAssertTrue(faceButton.waitForExistence(timeout: 60), "+버튼 미표시 (Vision 분석 완료 대기)")
+        faceButton.tap()
+
+        // 비교 화면에서 셀 2개 선택
+        let comparisonGrid = app.collectionViews.firstMatch
+        XCTAssertTrue(comparisonGrid.waitForExistence(timeout: 5), "비교 화면 로드 실패")
+        Thread.sleep(forTimeInterval: 0.3)
+        comparisonGrid.cells.element(boundBy: 0).tap()
+        Thread.sleep(forTimeInterval: 0.2)
+        comparisonGrid.cells.element(boundBy: 1).tap()
+        Thread.sleep(forTimeInterval: 0.2)
+
+        // 삭제 버튼 탭
+        let deleteBtn = app.buttons["comparison_delete"]
+        XCTAssertTrue(deleteBtn.waitForExistence(timeout: 3), "비교 화면 삭제 버튼 없음")
+        deleteBtn.tap()
+
+        // 그리드 복귀 확인 + 맨 위로 스크롤 (Phase 2~5 준비)
+        XCTAssertTrue(collection.waitForExistence(timeout: 5), "그리드 복귀 실패")
+        for _ in 0..<10 {
+            collection.swipeDown(velocity: .fast)
+        }
+        Thread.sleep(forTimeInterval: 0.3)
+    }
+
+    private func phase2_photoViewing() {
+        let collection = app.collectionViews["photo_grid"]
+
+        guard let cell = firstHittableCell(in: collection) else { XCTFail("hittable 셀 없음"); return }
+        cell.tap()
+        XCTAssertTrue(app.buttons["viewer_delete"].waitForExistence(timeout: 5), "뷰어 열림 실패")
+
+        for _ in 0..<5 {
+            app.swipeLeft()
+            Thread.sleep(forTimeInterval: 0.3)
+        }
+
+        app.buttons["viewer_back"].tap()
+        XCTAssertTrue(collection.waitForExistence(timeout: 5), "그리드 복귀 실패")
+    }
+
+    private func phase3_viewerDelete() {
+        let collection = app.collectionViews["photo_grid"]
+
+        guard let cell = firstHittableCell(in: collection) else { XCTFail("hittable 셀 없음"); return }
+        cell.tap()
+        XCTAssertTrue(app.buttons["viewer_delete"].waitForExistence(timeout: 5), "뷰어 열림 실패")
+
+        let deleteButton = app.buttons["viewer_delete"]
+        var deleted = 0
+        var attempts = 0
+        while deleted < 3 && attempts < 8 {
+            attempts += 1
+            if deleteButton.waitForExistence(timeout: 1) {
+                deleteButton.tap()
+                deleted += 1
+                Thread.sleep(forTimeInterval: 0.5)
+            } else {
+                app.swipeLeft()
+                Thread.sleep(forTimeInterval: 0.3)
+            }
+        }
+        XCTAssertEqual(deleted, 3, "삭제 버튼 탭 \(deleted)/3 회 완료")
+
+        for _ in 0..<2 {
+            app.swipeUp(velocity: .fast)
+            Thread.sleep(forTimeInterval: 0.5)
+        }
+
+        app.buttons["viewer_back"].tap()
+        XCTAssertTrue(collection.waitForExistence(timeout: 5), "그리드 복귀 실패")
+    }
+
     private func phase4_gridSwipeDelete() {
         let collection = app.collectionViews["photo_grid"]
 
-        // Step 20-23: 첫 번째 hittable 셀 수평 스와이프 4회
         for i in 0..<4 {
             guard let cell = firstHittableCell(in: collection) else {
                 XCTFail("셀 \(i) hittable 없음"); return
@@ -283,13 +514,7 @@ final class AnalyticsUITest: XCTestCase {
         }
     }
 
-    // MARK: - Phase 5: 삭제대기함 (trashViewer)
-
-    /// 기대값: trashViewer.permanentDelete=2, trashViewer.restore=3
-    ///         deleteRestore.viewerRestoreButton=3
-    /// 삭제대기함 내 사진: P3(5장) + P4(4장) = 9장
     private func phase5_trashViewer() {
-        // Step 24: 삭제대기함 탭바 탭
         let trashTab = app.buttons["삭제대기함"]
         XCTAssertTrue(trashTab.waitForExistence(timeout: 5), "삭제대기함 탭 찾기 실패")
         trashTab.tap()
@@ -297,22 +522,17 @@ final class AnalyticsUITest: XCTestCase {
         let collection = app.collectionViews["photo_grid"]
         XCTAssertTrue(collection.waitForExistence(timeout: 5), "삭제대기함 그리드 로드 실패")
 
-        // Step 25: 첫 번째 hittable 셀 탭 → 삭제대기함 뷰어 열기
-        // viewer_permanent_delete: trash 뷰어에서 항상 표시
         guard let trashCell = firstHittableCell(in: collection) else { XCTFail("hittable 셀 없음"); return }
         trashCell.tap()
         XCTAssertTrue(app.buttons["viewer_permanent_delete"].waitForExistence(timeout: 5), "삭제대기함 뷰어 열림 실패")
         let permanentDeleteBtn = app.buttons["viewer_permanent_delete"]
 
-        // Step 26-27: 완전삭제 2회 (각 탭 후 iOS 시스템 다이얼로그 자동 허용)
         for _ in 0..<2 {
             XCTAssertTrue(permanentDeleteBtn.waitForExistence(timeout: 3), "완전삭제 버튼 없음")
             permanentDeleteBtn.tap()
-            // 시스템 다이얼로그 처리 + 비동기 삭제 완료 대기
             Thread.sleep(forTimeInterval: 1.5)
         }
 
-        // Step 28-30: 복구 3회
         let restoreBtn = app.buttons["viewer_restore"]
         for _ in 0..<3 {
             XCTAssertTrue(restoreBtn.waitForExistence(timeout: 3), "복구 버튼 없음")
@@ -320,8 +540,61 @@ final class AnalyticsUITest: XCTestCase {
             Thread.sleep(forTimeInterval: 0.5)
         }
 
-        // Step 31: 뒤로 버튼 → 그리드 복귀
         let backButton = app.buttons["viewer_back"]
         if backButton.waitForExistence(timeout: 3) { backButton.tap() }
+    }
+
+    private func phase6_albumViewing() {
+        // 1. 앨범 탭 탭
+        let albumTab = app.buttons["앨범"]
+        XCTAssertTrue(albumTab.waitForExistence(timeout: 5), "앨범 탭 찾기 실패")
+        albumTab.tap()
+
+        // 2. 앨범 목록 로드 대기 → 첫 번째 앨범 셀 탭
+        let albumList = app.collectionViews.firstMatch
+        XCTAssertTrue(albumList.waitForExistence(timeout: 5), "앨범 목록 로드 실패")
+        Thread.sleep(forTimeInterval: 0.5)
+
+        guard let albumCell = firstHittableCell(in: albumList) else {
+            XCTFail("앨범 목록에서 hittable 셀 없음"); return
+        }
+        albumCell.tap()
+
+        // 3. 앨범 상세 그리드 로드 대기
+        let albumGrid = app.collectionViews["photo_grid"]
+        XCTAssertTrue(albumGrid.waitForExistence(timeout: 5), "앨범 상세 그리드 로드 실패")
+        Thread.sleep(forTimeInterval: 0.5)
+
+        // 4. 셀 탭 → 뷰어 열기 (fromAlbum +1)
+        guard let photoCell = firstHittableCell(in: albumGrid) else {
+            XCTFail("앨범 그리드에서 hittable 셀 없음"); return
+        }
+        photoCell.tap()
+        XCTAssertTrue(app.buttons["viewer_delete"].waitForExistence(timeout: 5), "앨범 뷰어 열림 실패")
+
+        // 5. 왼쪽 스와이프 2회 (fromAlbum +2)
+        for _ in 0..<2 {
+            app.swipeLeft()
+            Thread.sleep(forTimeInterval: 0.3)
+        }
+
+        // 6. 뒤로 → 앨범 그리드 복귀
+        app.buttons["viewer_back"].tap()
+        XCTAssertTrue(albumGrid.waitForExistence(timeout: 5), "앨범 그리드 복귀 실패")
+        Thread.sleep(forTimeInterval: 0.3)
+
+        // 7. 그리드 스와이프 삭제 1회 (deleteRestore.fromAlbum +1)
+        guard let swipeCell = firstHittableCell(in: albumGrid) else {
+            XCTFail("앨범 그리드에서 삭제용 셀 없음"); return
+        }
+        let start = swipeCell.coordinate(withNormalizedOffset: CGVector(dx: 0.8, dy: 0.5))
+        let end   = swipeCell.coordinate(withNormalizedOffset: CGVector(dx: 0.1, dy: 0.5))
+        start.press(forDuration: 0.05, thenDragTo: end, withVelocity: 1500, thenHoldForDuration: 0)
+        Thread.sleep(forTimeInterval: 0.5)
+
+        // 8. 보관함 탭으로 복귀
+        let photosTab = app.buttons["보관함"]
+        if photosTab.waitForExistence(timeout: 3) { photosTab.tap() }
+        Thread.sleep(forTimeInterval: 0.3)
     }
 }

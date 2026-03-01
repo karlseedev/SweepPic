@@ -93,14 +93,9 @@
   - Part C §4 > 1-4. 개인정보보호법 (한국) — "민감정보 처리 동의" 필수
   - Part C §4 > 1-2. CCPA/CPRA — "민감 개인정보 사용 제한권"
 
-#### E8. 접근성 (VoiceOver, 스와이프 대안)
+#### E8. 접근성 (VoiceOver, 스와이프 대안) — **BM 스펙 범위 밖, 별도 문서에서 처리**
 
-- **추가 위치**: 신규 항목 (§14 하위 또는 별도 섹션)
-- **왜 필요한가**: 스와이프 삭제가 핵심인데 VoiceOver 사용자는 스와이프 불가 → 대안 필수. EU EAA(2025.6 시행)로 법적 의무화 추세
-- **필요 항목**: VoiceOver 지원, Dynamic Type, 색상 대비(WCAG 2.1 AA), 스와이프 대안, Reduce Motion 대응
-- **참조**: `260227research-gap.md`
-  - Part C §4 > 5. 접근성 > 5-1. 법적 요구사항 (ADA, EN 301 549, EAA)
-  - Part C §4 > 5-2. Apple 접근성 가이드라인 — "스와이프 제스처 대안" 필수
+> `docs/appstore/260212AppStore-Gate3.md` 에서 다룸
 
 #### E9. 환불 처리 프로세스
 

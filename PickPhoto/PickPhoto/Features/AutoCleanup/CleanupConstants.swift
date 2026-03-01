@@ -183,7 +183,7 @@ enum CleanupConstants {
     // MARK: - UI 메시지
 
     /// 삭제대기함 비어있지 않음 메시지
-    static let trashNotEmptyMessage = "삭제대기함을 먼저 비워주세요"
+    static let trashNotEmptyMessage = "저품질 사진 정리 기능을 사용하려면\n삭제대기함을 먼저 비워주세요\n\n-구독 시 제한 해제-"
 
     /// 결과 메시지 생성
     ///

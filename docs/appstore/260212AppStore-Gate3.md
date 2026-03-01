@@ -9,7 +9,7 @@
 
 ```
 3. 심사 차단
-   1) 코드/설정: #if DEBUG 래핑, Limited Access UI, Usage Description 한글
+   1) 코드/설정: #if DEBUG 래핑, Limited Access UI, Usage Description 한글, 접근성(VoiceOver/Reduce Motion)
    2) 포털 입력: Review Notes (접근 정당화 + 4.2 차별화)
    3) 검증: 크래시 테스트, 권한 테스트, 빈 상태 테스트
 ```
@@ -84,18 +84,45 @@ Apple은 "가능하면 PHPicker를 사용하라"고 명시. 전체 사진 접근
 
 > 출처: MenuResearch §6 — 권한 문구 예시
 
-**얼굴 데이터 사용 제한 (Guideline 5.1.2(vi)):**
+> 얼굴 데이터 사용 제한 (Guideline 5.1.2(vi)), 온디바이스 처리 전략, 고지 문구 예시 → [Gate 2 Privacy Policy 섹션](260212AppStore-Gate2.md#2-문서--외부-호스팅-웹-문서) 참조
 
-> Photo APIs, 카메라, ARKit 등으로 수집한 얼굴 매핑/데이터는 마케팅, 광고, 데이터마이닝에 사용 금지.
+### 접근성 — VoiceOver / Reduce Motion
 
-| 항목 | PickPhoto 해당 여부 |
-|------|:-----------------:|
-| Vision Framework 얼굴 인식 사용 | **O** |
-| 얼굴 데이터 외부 전송 | X (온디바이스 전용) |
-| 마케팅/광고 활용 | X |
-| 데이터마이닝 활용 | X |
+> **위험도: 높음** — 핵심 기능(스와이프 삭제)에 접근성 대안이 없으면 Guideline 2.1 (App Completeness) 위반 가능
+> EU EAA (2025.6 시행)로 법적 의무화 추세
 
-> PickPhoto는 얼굴 인식 결과를 뷰어에서 자동 줌에만 사용하고, 기기 밖으로 전송하지 않으므로 **준수 상태**. Privacy Policy + Review Notes에 명시 필요.
+**현재 상태:** VoiceOver 일부 UI만 적용 (PhotoCell, FloatingTabBar 등), Reduce Motion 미대응
+
+| 항목 | 요구사항 | 구분 |
+|------|---------|:----:|
+| VoiceOver 지원 | 모든 텍스트 VoiceOver로 읽기 가능, 중요 항목에 레이블 제공 | 강력 권장 |
+| **스와이프 대체 액션** | **`accessibilityCustomActions`로 삭제 대안 제공 — 핵심 제스처의 접근성 대안 필수** | **필수** |
+| 대체 텍스트 | 의미 있는 이미지/아이콘에 대체 텍스트 | 강력 권장 |
+| 터치 타겟 | 최소 44x44 포인트 | 권장 |
+| **Reduce Motion** | `isReduceMotionEnabled` 시 애니메이션 → crossfade 대체 | 강력 권장 |
+
+> **중요**: PIClear는 스와이프 삭제가 핵심 인터랙션이므로, VoiceOver 사용자를 위한 대체 삭제 액션(`accessibilityCustomActions`)이 반드시 필요합니다. 이 없이는 핵심 기능을 사용할 수 없어 접근성 심사에서 문제가 될 수 있습니다.
+
+**조치:**
+- 모든 UI 컴포넌트에 `accessibilityLabel` 추가
+- 의미 있는 이미지에 `accessibilityHint` 추가
+- 터치 타겟 44x44pt 이상 확인
+- **스와이프 삭제에 대한 `accessibilityCustomActions` 구현**
+- 뷰어 삭제 모션(위로 올라감 + 슬라이드인) → Reduce Motion 시 crossfade 대체
+- 그리드 ↔ 뷰어 줌 전환 → Reduce Motion 시 crossDissolve 대체
+- `UIAccessibility.reduceMotionStatusDidChangeNotification` 구독하여 런타임 전환 지원
+
+**EU European Accessibility Act (EAA):**
+
+| 항목 | 내용 |
+|------|------|
+| 시행일 | 2025.06.28 |
+| 적용 범위 | EU/EEA에서 다운로드 가능한 모든 앱 |
+| 핵심 요구 | WCAG 2.1 AA 수준 준수 (VoiceOver, Dynamic Type, 색상 대비, 키보드/스위치 대안, Reduce Motion) |
+| 위반 시 | 각국 시장 감시 기관이 제재 가능 (벌금, 앱 퇴출) |
+| PIClear 영향 | 한국만 배포 시 직접 적용 안 됨. 향후 글로벌 배포 시 필수 |
+
+> 현재 한국 배포 전용이므로 즉시 의무는 아니지만, Apple이 접근성을 점점 강화하는 추세이므로 선제 대응 권장.
 
 ---
 
@@ -105,11 +132,11 @@ Apple은 "가능하면 PHPicker를 사용하라"고 명시. 전체 사진 접근
 
 > **위험도: 높음** — 사진 접근 사유, Vision 설명 없이 제출하면 리젝 가능성 높음
 
-**PickPhoto Review Notes 템플릿:**
+**PIClear Review Notes 템플릿:**
 
 ```
 [App Overview]
-PickPhoto is a photo gallery app focused on fast photo organization.
+PIClear is a photo gallery app focused on fast photo organization.
 Users can quickly sort their photo library using swipe-to-delete and
 similar photo detection features.
 
@@ -158,7 +185,7 @@ similar photo detection features.
 | 테스트 조건 | 최소 사진 수(유사 사진 기능 50장+), 스와이프 방향 등 심사원이 기능을 빠르게 체험할 수 있게 안내 |
 | 차별화 기능 | 스와이프 삭제, 유사 사진 분석 등 네이티브 앱에 없는 기능 나열 |
 
-### PickPhoto 특화: AutoCleanup AI 의사결정 고지
+### PIClear 특화: AutoCleanup AI 의사결정 고지
 
 > 2025년 한국 개인정보보호법 개정에 따라 자동화된 의사결정에 대한 고지 의무 추가
 
@@ -177,7 +204,7 @@ AutoCleanup 기능이 AI 기반 자동 정리를 수행하는 경우:
 
 **차별화 근거:**
 
-| 차별화 기능 | 네이티브 사진 앱 | PickPhoto |
+| 차별화 기능 | 네이티브 사진 앱 | PIClear |
 |------------|:---------------:|:---------:|
 | 스와이프 삭제 | X | **O** — 위로 스와이프로 빠른 삭제 |
 | 휴지통 복구 기반 안전장치 | X (삭제 확인 다이얼로그) | **O** — 확인 없이 삭제 + 즉시 복구 가능 |
@@ -233,6 +260,8 @@ AutoCleanup 기능이 AI 기반 자동 정리를 수행하는 경우:
 - [ ] 사진 접근 거부/제한 시 정상 처리되는가?
 - [ ] 크래시 없이 모든 주요 흐름이 완료되는가?
 - [ ] Review Notes에 사진 접근 사유가 명시되어 있는가?
+- [ ] 스와이프 삭제에 VoiceOver 대체 액션(`accessibilityCustomActions`)이 구현되었는가?
+- [ ] Reduce Motion 활성화 시 애니메이션이 crossfade로 대체되는가?
 
 > Gate 1/2 항목(Privacy Manifest, 앱 아이콘, 스크린샷, 프라이버시 정책 URL, 연령 등급 등)은 해당 Gate 문서에서 확인
 

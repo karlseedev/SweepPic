@@ -118,7 +118,7 @@ Supabase     → 비즈니스 로직 데이터 (진단 로그, Remote Config, Fe
 - **업데이트 부담**: Firebase SDK 업데이트가 잦고, 때로 breaking change 발생
 
 ### 사진/유틸리티 앱 관점
-PickPhoto 같은 프라이버시 중시 사진 앱에서 Firebase를 쓰면 "사진 데이터를 Google에 보내는 것 아니냐"는 사용자 우려가 생길 수 있습니다. App Store 리뷰에서도 이런 점이 지적되는 경우가 있습니다.
+PIClear 같은 프라이버시 중시 사진 앱에서 Firebase를 쓰면 "사진 데이터를 Google에 보내는 것 아니냐"는 사용자 우려가 생길 수 있습니다. App Store 리뷰에서도 이런 점이 지적되는 경우가 있습니다.
 
 ---
 
@@ -333,7 +333,7 @@ if RemoteConfigManager.shared.isFeatureEnabled("similar_photo_v2") {
 
 ## 10. 런칭을 위한 최소 애널리틱스 설정 (MVP)
 
-### PickPhoto에 대한 구체적 추천
+### PIClear에 대한 구체적 추천
 
 #### Phase 1: 런칭 시 (비용 $0)
 
@@ -430,7 +430,7 @@ func application(_ application: UIApplication,
 | **초기 비용** | $0/월 | 두 서비스 모두 무료 플랜으로 충분 |
 | **Firebase** | 사용하지 않음 | SDK 오버헤드, 프라이버시 우려, 사진 앱 이미지와 불일치 |
 
-주인님의 PickPhoto 앱 특성(프라이버시 중시 사진 앱)을 고려하면, **TelemetryDeck + Supabase 하이브리드** 조합이 가장 합리적입니다. Firebase의 편의성은 매력적이지만, 사진 앱에서 "Google에 데이터를 보내지 않습니다"라고 말할 수 있는 것이 사용자 신뢰 측면에서 더 큰 가치가 있습니다.
+주인님의 PIClear 앱 특성(프라이버시 중시 사진 앱)을 고려하면, **TelemetryDeck + Supabase 하이브리드** 조합이 가장 합리적입니다. Firebase의 편의성은 매력적이지만, 사진 앱에서 "Google에 데이터를 보내지 않습니다"라고 말할 수 있는 것이 사용자 신뢰 측면에서 더 큰 가치가 있습니다.
 
 ---
 
@@ -687,7 +687,7 @@ if let renewalInfo = try await subscription.renewalInfo {
 | 앱 유형 | 권장 기간 | 근거 |
 |---------|----------|------|
 | **사진 편집 앱** | **3~7일** | 가치 체험이 즉각적 (편집 결과 바로 확인) |
-| **사진 정리 앱 (PickPhoto 같은)** | **7일** | 정리 습관 형성에 약간의 시간 필요 |
+| **사진 정리 앱 (PIClear 같은)** | **7일** | 정리 습관 형성에 약간의 시간 필요 |
 | **습관 형성 앱** | **14일** | 행동 패턴 고착에 2주 필요 |
 | **생산성 도구** | **14~30일** | 워크플로우 통합에 시간 필요 |
 
@@ -753,9 +753,9 @@ if let renewalInfo = try await subscription.renewalInfo {
 
 ---
 
-## PickPhoto에 대한 제안 요약
+## PIClear에 대한 제안 요약
 
-주인님의 PickPhoto 앱 특성(사진 정리, 스와이프 삭제)을 고려한 권장 전략:
+주인님의 PIClear 앱 특성(사진 정리, 스와이프 삭제)을 고려한 권장 전략:
 
 | 항목 | 권장 | 근거 |
 |------|------|------|
@@ -1037,7 +1037,7 @@ RevenueCat 및 업계 데이터 기반:
 - 무료 사용자 대상: "지금 평생 플랜 구매 시 연간 구독 대비 60% 절약"
 - 기존 구독자 대상: "구독료 이미 지불한 금액 차감" (loyalty 보상)
 
-### 가격 설계 예시 (PickPhoto 앱 기준 가상 시나리오)
+### 가격 설계 예시 (PIClear 앱 기준 가상 시나리오)
 
 | 플랜 | 정가 | 프로모션가 | 비고 |
 |------|------|-----------|------|
@@ -1053,9 +1053,9 @@ RevenueCat 및 업계 데이터 기반:
 
 ---
 
-## PickPhoto 앱에 대한 적용 제안
+## PIClear 앱에 대한 적용 제안
 
-주인님의 PickPhoto 앱은 **사진 정리 앱**으로, 아래 특성을 가집니다:
+주인님의 PIClear 앱은 **사진 정리 앱**으로, 아래 특성을 가집니다:
 - **로컬 처리 중심** (PhotoKit, Vision Framework) = 서버 비용 최소
 - **사진/비디오 카테고리** = RevenueCat 데이터상 평생 플랜 채택률이 가장 높은 카테고리
 - Darkroom, Pixelmator Photo와 유사한 포지션

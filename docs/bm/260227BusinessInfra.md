@@ -1,4 +1,4 @@
-# PickPhoto 비즈니스 인프라
+# PIClear 비즈니스 인프라
 
 > 작성일: 2026-02-27
 > 관련 문서: `260227bm-spec.md` (BM 명세), `260227bm-spec-edit.md` (수정 항목 원본)
@@ -292,6 +292,18 @@ ASC > Business > Tax Forms > W-8BEN 온라인 작성
 - [마이리얼트립 과태료 부과 - 한국경제](https://www.hankyung.com/article/202601064354g)
 - [Apple ASC Korea Compliance](https://developer.apple.com/help/app-store-connect/manage-compliance-information/manage-korea-compliance-information/)
 - [인터넷쇼핑몰 사업자 표시 의무 - 생활법령정보](https://easylaw.go.kr/CSP/CnpClsMain.laf?popMenu=ov&csmSeq=25&ccfNo=3&cciNo=1&cnpClsNo=1)
+
+---
+
+## E7. 얼굴 인식 별도 동의 메커니즘 — 스킵
+
+> 검토 결과: **불필요**
+
+- PIClear는 얼굴 **감지(detection)**만 수행, **식별(identification)** 안 함
+- 기기 내 처리, 서버 전송 없음, 감지 결과 미저장
+- GDPR: 식별 목적이 아니면 생체 데이터 규제 대상 아님 (Recital 51)
+- 한국 개인정보보호법: 민감정보(생체인식 특징정보) 해당 안 될 가능성 높음
+- **대응**: 개인정보 처리방침(E1)에 얼굴 감지 기능 존재 + 기기 내 처리 사실을 투명성 차원에서 명시 (반영 완료)
 
 ---
 
