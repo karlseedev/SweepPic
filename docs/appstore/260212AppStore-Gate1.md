@@ -57,6 +57,22 @@
 </dict>
 ```
 
+### PrivacyInfo.xcprivacy 작성 예시 (PickPhoto 기준)
+
+```xml
+<!-- PrivacyInfo.xcprivacy -->
+NSPrivacyAccessedAPITypes:
+  - UserDefaults (CA92.1) — analytics opt-out 상태 저장
+  - FileTimestamp (DDA9.1) — 사진 파일 타임스탬프 접근
+
+NSPrivacyCollectedDataTypes: (온디바이스 전용이므로 비어있을 수 있음)
+
+NSPrivacyTrackingDomains: []
+NSPrivacyTracking: false
+```
+
+> 출처: MenuResearch §6 — Privacy Manifest 구조 예시
+
 ### Required Reason API — PickPhoto 사용 현황
 
 | API 카테고리 | 사용 여부 | 위치 | 사유 코드 |

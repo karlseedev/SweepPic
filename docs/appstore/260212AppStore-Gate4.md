@@ -38,13 +38,19 @@
 | 항목 | 요구사항 | 구분 |
 |------|---------|:----:|
 | VoiceOver 지원 | 모든 텍스트 VoiceOver로 읽기 가능, 중요 항목에 레이블 제공 | 강력 권장 |
+| **스와이프 대체 액션** | **`accessibilityCustomActions`로 삭제 대안 제공 — 핵심 제스처의 접근성 대안 필수** | **필수** |
 | 대체 텍스트 | 의미 있는 이미지/아이콘에 대체 텍스트 | 강력 권장 |
 | 터치 타겟 | 최소 44x44 포인트 | 권장 |
+
+> **중요**: PickPhoto는 스와이프 삭제가 핵심 인터랙션이므로, VoiceOver 사용자를 위한 대체 삭제 액션(`accessibilityCustomActions`)이 반드시 필요합니다. 이 없이는 핵심 기능을 사용할 수 없어 접근성 심사에서 문제가 될 수 있습니다.
+>
+> 출처: MenuResearch §12-16 — VoiceOver 스와이프 대체 액션
 
 **조치:**
 - 모든 UI 컴포넌트에 `accessibilityLabel` 추가
 - 의미 있는 이미지에 `accessibilityHint` 추가
 - 터치 타겟 44x44pt 이상 확인
+- **스와이프 삭제에 대한 `accessibilityCustomActions` 구현**
 
 ### Dynamic Type
 
@@ -66,6 +72,19 @@
 **조치:**
 - 한/영 .strings 파일 분리
 - 하드코딩된 한글 문자열을 `NSLocalizedString` 으로 전환
+
+### iOS 26 Liquid Glass 대응 일정 (참고)
+
+> PickPhoto 커스텀 UI의 Liquid Glass 대응이 필요합니다
+
+| 시기 | 요구사항 |
+|------|---------|
+| **2026년 4월 28일** | App Store 제출 시 **Xcode 26 (iOS 26 SDK) 필수** |
+| 자동 적용 | UINavigationBar, UITabBar → Liquid Glass 자동 |
+| **수동 대응 필요** | FloatingTabBar (커스텀) → glassEffect 적용 |
+| 옵트아웃 | 현재 가능, Xcode 27 이후 제거 예정 |
+
+> 출처: MenuResearch §12-17,18 — iOS 26 Liquid Glass 대응
 
 ### 접근성 Nutrition Labels (참고)
 

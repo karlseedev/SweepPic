@@ -95,6 +95,15 @@
 - Vision Framework 얼굴 인식 결과도 기기 밖으로 전송하지 않음
 - Privacy Policy에 "얼굴 데이터는 온디바이스에서만 처리되며, 마케팅/광고/데이터마이닝에 사용하지 않음" 명시 필요 (Guideline 5.1.2(vi))
 
+**얼굴 인식 고지 문구 예시 (처리방침 포함):**
+
+```
+"얼굴 인식 기술은 사진 내 얼굴을 자동으로 감지하고 확대하는 데 사용됩니다.
+ 감지된 얼굴 데이터는 기기 내에서만 처리되며, 저장되거나 외부로 전송되지 않습니다."
+```
+
+> 출처: MenuResearch §8-5 — 얼굴 인식 고지 문구
+
 ### 지원 페이지 (Support URL)
 
 > 현재 상태: 없음 → 제출 불가
@@ -181,6 +190,18 @@
 | Photos/Videos 데이터 수집? | (위에서 No 선택 시 이 질문 표시 안됨) | - |
 | 추적(Tracking)? | **No** | ATT/IDFA 미사용, 광고 없음 |
 
+**App Privacy Nutrition Label 선언 항목 (PickPhoto 기준):**
+
+| 데이터 타입 | 수집 여부 | 추적 여부 | 비고 |
+|-----------|---------|---------|------|
+| Photos or Videos | NO (처리만) | NO | 외부 전송 없음 |
+| Precise Location (사진 GPS) | 조건부 | NO | PHAsset.location 사용 시 |
+| Usage Data | YES | NO | 분석용 |
+| Crash Data | YES | NO | 진단용 |
+| Face Data | NO (기기 내) | NO | 외부 전송 없음 |
+
+> 출처: MenuResearch §6 — App Privacy Nutrition Label
+
 **"Data Not Collected" 선택 조건 — 모두 충족:**
 
 | 조건 | PickPhoto 충족 |
@@ -241,6 +262,19 @@ App Store Connect > 앱 선택 > General > App Information >
 **추가 한국 규정:**
 - **공정위 다크패턴 규제** (2025년 강화): 기만적/조작적 UI 패턴 금지. 위반 시 500만원 과태료
 - 통신판매업 신고: 현재 PickPhoto는 무료 앱이므로 해당 없음. 향후 유료화 시 확인 필요
+- **자동화된 의사결정 고지** (2025년 개정): AutoCleanup AI 기능 등 자동화된 의사결정이 있을 경우 사용자에게 고지 필요
+- **생체정보 처리 명시** (제23조): 얼굴 인식 기기 내 처리 기술에 대한 명시 필요
+
+**GDPR 필수 항목 (EU 출시 시):**
+
+| 항목 | 필수 여부 |
+|------|----------|
+| 처리 목적 및 법적 근거 | 필수 |
+| 동의 기반 분석 데이터 수집 | 필수 |
+| 동의 철회(옵트아웃) | 필수 |
+| 데이터 접근/삭제 요청 수단 | 필수 |
+
+> 출처: MenuResearch §8-3 — GDPR 요구사항
 
 ### 수출 규정 응답 + ITSAppUsesNonExemptEncryption
 
@@ -274,6 +308,8 @@ App Store Connect > 앱 선택 > General > App Information >
 
 ## Gate 2 체크리스트
 
+### 제출 차단 체크
+
 - [ ] 스크린샷이 실제 앱 화면으로 준비되었는가? (iPhone 6.9" + iPad 13")
 - [ ] Privacy Policy 문서가 작성되어 공개 URL에 호스팅되었는가?
 - [ ] Privacy Policy URL이 접근 가능한가?
@@ -286,6 +322,16 @@ App Store Connect > 앱 선택 > General > App Information >
 - [ ] 가격 및 배포 (Availability, Price, Tax Category)가 설정되었는가?
 - [ ] ITSAppUsesNonExemptEncryption이 Info.plist에 추가되었는가?
 - [ ] 수출 규정 응답이 완료되었는가?
+
+### 한국법 필수 체크 (개인정보보호법)
+
+- [ ] 개인정보 처리방침 앱 내 공개 (제30조)
+- [ ] 분석 데이터 옵트아웃 토글 (제37조)
+- [ ] 제3자 제공 명시 — TelemetryDeck, Supabase (제30조)
+- [ ] 보호책임자 연락처 기재 (제30조)
+- [ ] 얼굴 인식 기기 내 처리 명시 (제23조)
+
+> 출처: MenuResearch §12 — 법적 필수 체크리스트
 
 ---
 
