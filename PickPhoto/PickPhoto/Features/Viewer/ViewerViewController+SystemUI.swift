@@ -148,7 +148,7 @@ extension ViewerViewController {
         let flexSpace = UIBarButtonItem(systemItem: .flexibleSpace)
 
         let excludeItem = UIBarButtonItem(
-            title: "제외",
+            title: "저품질 목록에서 제외",
             primaryAction: UIAction { [weak self] _ in
                 self?.excludeButtonTapped()
             }

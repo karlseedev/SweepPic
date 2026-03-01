@@ -204,7 +204,7 @@ final class ViewerViewController: UIViewController {
     /// 제외 버튼 (정리 미리보기 모드 - Liquid Glass 텍스트 버튼)
     /// 정리 후보에서 개별 사진을 제외하는 버튼
     lazy var excludeButton: GlassTextButton = {
-        let button = GlassTextButton(title: "제외", style: .plain, tintColor: .white)
+        let button = GlassTextButton(title: "저품질 목록에서 제외", style: .plain, tintColor: .white)
         button.translatesAutoresizingMaskIntoConstraints = false
         button.addTarget(self, action: #selector(excludeButtonTapped), for: .touchUpInside)
         return button

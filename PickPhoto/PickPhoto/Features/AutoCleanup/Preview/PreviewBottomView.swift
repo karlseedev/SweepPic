@@ -6,7 +6,7 @@
 //
 //  하단 고정 버튼 영역 (GlassTextButton 스타일)
 //  - primaryButton: "탐색된 N장 삭제대기함으로 이동" (Glass, 전체 너비)
-//  - collapseButton: "31~40점 사진\nN장 제외하기" (Glass pill, 2줄, 가로 배치)
+//  - collapseButton: "31~40점 사진\nN장 덜 보기" (Glass pill, 2줄, 가로 배치)
 //  - expandButton: "31~40점 사진\nN장 더 보기 →" (Glass pill, 2줄, 가로 배치)
 //
 
@@ -200,15 +200,15 @@ final class PreviewBottomView: UIView {
         let useTwoLines = showCollapse && showExpand
 
         // 축소 버튼 (2단계부터)
-        // standard: "31~40점 사진 N장 제외하기", deep: "41~50점 사진 N장 제외하기"
+        // standard: "31~40점 사진 N장 덜 보기", deep: "41~50점 사진 N장 덜 보기"
         if showCollapse {
             let separator = useTwoLines ? "\n" : " "
             let collapseTitle: String
             switch currentStage {
             case .standard:
-                collapseTitle = "31~40점 사진\(separator)\(standardCount)장 제외하기"
+                collapseTitle = "31~40점 사진\(separator)\(standardCount)장 덜 보기"
             case .deep:
-                collapseTitle = "41~50점 사진\(separator)\(deepCount)장 제외하기"
+                collapseTitle = "41~50점 사진\(separator)\(deepCount)장 덜 보기"
             default:
                 collapseTitle = ""
             }
