@@ -81,24 +81,37 @@ extension BaseGridViewController {
     ///   - columnCount: 현재 열 수
     ///   - paddingCount: 상단 패딩 셀 수
     ///   - totalItems: 컬렉션 뷰 전체 아이템 수 (paddingCellCount + assetCount)
-    /// - Returns: 사각형 범위에 포함되는 유효 item 인덱스 집합
+    /// - Returns: 범위에 포함되는 유효 item 인덱스 집합
+    ///
+    /// **같은 행**: 앵커 열 ~ 현재 열만 선택 (수평 범위)
+    /// **다른 행**: 범위 내 각 행의 모든 열 선택 (선택 모드 드래그와 동일)
     func calculateRectangleSelection(
         anchorRow: Int, anchorCol: Int,
         currentRow: Int, currentCol: Int,
         columnCount: Int, paddingCount: Int, totalItems: Int
     ) -> Set<Int> {
-        let minRow = min(anchorRow, currentRow)
-        let maxRow = max(anchorRow, currentRow)
-        let minCol = min(anchorCol, currentCol)
-        let maxCol = max(anchorCol, currentCol)
-
         var result: Set<Int> = []
-        for row in minRow...maxRow {
+
+        if anchorRow == currentRow {
+            // 같은 행: 열 범위만 선택
+            let minCol = min(anchorCol, currentCol)
+            let maxCol = max(anchorCol, currentCol)
             for col in minCol...maxCol {
-                let item = row * columnCount + col
-                // 패딩 셀 제외, 전체 범위 내만 포함
+                let item = anchorRow * columnCount + col
                 if item >= paddingCount && item < totalItems {
                     result.insert(item)
+                }
+            }
+        } else {
+            // 다른 행: 각 행의 모든 열 선택
+            let minRow = min(anchorRow, currentRow)
+            let maxRow = max(anchorRow, currentRow)
+            for row in minRow...maxRow {
+                for col in 0..<columnCount {
+                    let item = row * columnCount + col
+                    if item >= paddingCount && item < totalItems {
+                        result.insert(item)
+                    }
                 }
             }
         }
@@ -144,8 +157,9 @@ extension BaseGridViewController {
         let selectionChanged = newSelection != previousSelection
         let curtainCellChanged = currentItem != prevCurtainItem
 
-        // 좌우 변위 존재 여부 — 있으면 커튼 효과 후보
-        let hasHorizontalDisplacement = currentCol != swipeDeleteState.anchorCol
+        // 커튼 효과 조건: 같은 행 + 좌우 변위 — 다른 행이면 모든 셀 즉시 적용
+        let isSameRow = currentRow == swipeDeleteState.anchorRow
+        let hasHorizontalDisplacement = isSameRow && currentCol != swipeDeleteState.anchorCol
 
         // --- 1) 범위에서 빠진 셀 → 원래 상태로 복귀 ---
         if selectionChanged {
@@ -181,7 +195,7 @@ extension BaseGridViewController {
         }
 
         // --- 4) 현재 셀: 커튼 or 즉시 적용 ---
-        if currentItem == swipeDeleteState.anchorItem {
+        if currentItem == swipeDeleteState.anchorItem && isSameRow {
             // ★ 앵커 셀 복귀: 셀 프레임 기반 커튼 효과 (손가락 위치에 따라 취소 가능)
             //   다중 모드 진입 시 저장된 swipeDirection 사용
             let ip = IndexPath(item: currentItem, section: 0)
@@ -352,8 +366,9 @@ extension BaseGridViewController {
             }
         }
 
-        // 7. 확정 햅틱 피드백 (단일 셀 스와이프와 동일한 light 임팩트)
-        HapticFeedback.light()
+        // 7. 확정 햅틱 피드백 (셀 추가 시와 동일한 selectionChanged)
+        let selectionFeedback = UISelectionFeedbackGenerator()
+        selectionFeedback.selectionChanged()
 
         // 8. 상태 초기화
         swipeDeleteState.reset()
