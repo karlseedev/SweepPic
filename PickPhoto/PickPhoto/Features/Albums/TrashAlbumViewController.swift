@@ -362,17 +362,26 @@ final class TrashAlbumViewController: BaseGridViewController {
         // ★ 스와이프 복구: deleteItems 애니메이션 (reloadData 대신)
         if let paths = pendingDeleteIndexPaths {
             pendingDeleteIndexPaths = nil
-            // padding 변화 체크: 변하면 reloadData fallback
             let oldTotal = collectionView.numberOfItems(inSection: 0)
             let newTotal = _trashDataSource.assetCount + paddingCellCount
-            let expectedTotal = oldTotal - paths.count
-            if expectedTotal == newTotal {
-                collectionView.performBatchUpdates {
-                    self.collectionView.deleteItems(at: paths)
+
+            collectionView.performBatchUpdates {
+                // 1. 복구된 에셋 셀 삭제 (업데이트 전 indexPath 기준)
+                self.collectionView.deleteItems(at: paths)
+
+                // 2. padding 보정 (에셋 수 변화로 상단 빈 셀 수가 바뀔 수 있음)
+                let afterDeleteCount = oldTotal - paths.count
+                if afterDeleteCount > newTotal {
+                    // padding 감소 → 상단 padding 셀 추가 삭제
+                    let extraCount = afterDeleteCount - newTotal
+                    let extraPaths = (0..<extraCount).map { IndexPath(item: $0, section: 0) }
+                    self.collectionView.deleteItems(at: extraPaths)
+                } else if afterDeleteCount < newTotal {
+                    // padding 증가 → 상단에 padding 셀 삽입 (업데이트 후 기준)
+                    let insertCount = newTotal - afterDeleteCount
+                    let insertPaths = (0..<insertCount).map { IndexPath(item: $0, section: 0) }
+                    self.collectionView.insertItems(at: insertPaths)
                 }
-            } else {
-                // padding 변동 등 불일치 → 안전하게 reloadData
-                collectionView.reloadData()
             }
         } else {
             collectionView.reloadData()
