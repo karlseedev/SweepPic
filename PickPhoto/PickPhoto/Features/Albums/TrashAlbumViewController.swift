@@ -109,6 +109,18 @@ final class TrashAlbumViewController: BaseGridViewController {
         "삭제대기함"
     }
 
+    /// 스와이프 제스처 활성화 (녹색 커튼 복구)
+    override var supportsSwipeDelete: Bool { true }
+
+    /// 스와이프 동작: 복구 (녹색 커튼)
+    override var swipeActionIsRestore: Bool { true }
+
+    /// Select 모드 진입 시 스와이프 비활성화 (GridViewController와 동일 패턴)
+    override func updateSwipeDeleteGestureEnabled() {
+        let enabled = !isSelectMode && !UIAccessibility.isVoiceOverRunning
+        swipeDeleteState.swipeGesture?.isEnabled = enabled
+    }
+
     // MARK: - Initialization
 
     override init(

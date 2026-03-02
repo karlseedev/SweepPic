@@ -52,6 +52,10 @@ extension BaseGridViewController {
         //    단일 모드의 progress가 셀 경계에서 100%가 아닐 수 있으므로 애니메이션 사용
         if let anchorCell = collectionView.cellForItem(at: anchorIndexPath) as? PhotoCell,
            let gesture = swipeDeleteState.swipeGesture {
+            // ★ 복구 모드 색상 준비 (began에서 이미 설정되었을 수 있지만 안전하게)
+            if swipeActionIsRestore {
+                anchorCell.prepareSwipeOverlay(style: .restore)
+            }
             let translation = gesture.translation(in: collectionView)
             let direction: PhotoCell.SwipeDirection = translation.x > 0 ? .right : .left
             swipeDeleteState.swipeDirection = direction
@@ -176,6 +180,7 @@ extension BaseGridViewController {
         if curtainCellChanged, let prev = prevCurtainItem, newSelection.contains(prev) {
             let ip = IndexPath(item: prev, section: 0)
             if let cell = collectionView.cellForItem(at: ip) as? PhotoCell {
+                if swipeActionIsRestore { cell.prepareSwipeOverlay(style: .restore) }
                 applyTargetState(to: cell, deleteAction: deleteAction)
             }
         }
@@ -189,6 +194,7 @@ extension BaseGridViewController {
                 let ip = IndexPath(item: item, section: 0)
                 if let cell = collectionView.cellForItem(at: ip) as? PhotoCell,
                    !cell.isAnimating {
+                    if swipeActionIsRestore { cell.prepareSwipeOverlay(style: .restore) }
                     applyTargetState(to: cell, deleteAction: deleteAction)
                 }
             }
@@ -232,6 +238,7 @@ extension BaseGridViewController {
                                       (!deleteAction && cellIsTrashed)
 
                 if needsTransition {
+                    if swipeActionIsRestore { cell.prepareSwipeOverlay(style: .restore) }
                     let cellFrame = attrs.frame
 
                     // 커튼 방향: 앵커 → 현재 수평 방향
@@ -330,9 +337,15 @@ extension BaseGridViewController {
                   let assetID = gridDataSource.assetID(at: assetIndex) else { continue }
 
             // 이미 대상 상태인 에셋 스킵
-            let alreadyInTargetState = deleteAction
-                ? trashStore.isTrashed(assetID)
-                : !trashStore.isTrashed(assetID)
+            let alreadyInTargetState: Bool
+            if swipeActionIsRestore {
+                // 복구 모드: 대상 = "not trashed" → 이미 복구된 것만 스킵
+                alreadyInTargetState = !trashStore.isTrashed(assetID)
+            } else {
+                alreadyInTargetState = deleteAction
+                    ? trashStore.isTrashed(assetID)
+                    : !trashStore.isTrashed(assetID)
+            }
             if alreadyInTargetState { continue }
 
             assetIDsToProcess.append(assetID)
@@ -350,7 +363,9 @@ extension BaseGridViewController {
         }
 
         // 5. TrashStore 배치 호출 (fire-and-forget, 선택 모드와 동일 패턴)
-        if deleteAction {
+        if swipeActionIsRestore {
+            trashStore.restore(assetIDs: assetIDsToProcess)
+        } else if deleteAction {
             trashStore.moveToTrash(assetIDs: assetIDsToProcess)
         } else {
             trashStore.restore(assetIDs: assetIDsToProcess)
@@ -359,7 +374,9 @@ extension BaseGridViewController {
         // 6. Analytics: 개수만큼 카운트
         let analyticsSource: DeleteSource = self is AlbumGridViewController ? .album : .library
         for _ in assetIDsToProcess {
-            if deleteAction {
+            if swipeActionIsRestore {
+                AnalyticsService.shared.countTrashRestore()
+            } else if deleteAction {
                 AnalyticsService.shared.countGridSwipeDelete(source: analyticsSource)
             } else {
                 AnalyticsService.shared.countGridSwipeRestore(source: analyticsSource)

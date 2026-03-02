@@ -25,6 +25,12 @@ final class PhotoCell: UICollectionViewCell {
     /// 딤드 오버레이 투명도 (FR-008: 50% dark red opacity)
     private static let dimmedOverlayAlpha: CGFloat = 0.60
 
+    /// 스와이프 오버레이 기본 색상 (Maroon #800000)
+    private static let defaultOverlayColor = UIColor(red: 0.5, green: 0, blue: 0, alpha: 1)
+
+    /// 스와이프 오버레이 복구 색상 (다크 그린)
+    private static let restoreOverlayColor = UIColor(red: 0.0, green: 0.35, blue: 0.15, alpha: 1)
+
     // MARK: - Debug Timing (static)
 
     /// [DEBUG] requestImage 호출 횟수
@@ -308,6 +314,15 @@ final class PhotoCell: UICollectionViewCell {
 
     // MARK: - PRD7: Swipe Delete Animation Properties
 
+    /// 스와이프 오버레이 스타일 (삭제: 마룬, 복구: 녹색)
+    enum SwipeOverlayStyle {
+        case delete   // Maroon (기존)
+        case restore  // Green (삭제대기함 복구용)
+    }
+
+    /// 현재 스와이프 오버레이 스타일
+    var swipeOverlayStyle: SwipeOverlayStyle = .delete
+
     /// 스와이프 방향
     enum SwipeDirection {
         case left
@@ -327,6 +342,15 @@ final class PhotoCell: UICollectionViewCell {
 
     /// 현재 스와이프 방향
     private var currentSwipeDirection: SwipeDirection = .right
+
+    /// 스와이프 오버레이 색상 설정 (삭제: 마룬, 복구: 녹색)
+    /// 스와이프 시작 시 호출하여 오버레이 색상을 전환
+    func prepareSwipeOverlay(style: SwipeOverlayStyle) {
+        swipeOverlayStyle = style
+        dimmedOverlayView.backgroundColor = (style == .restore)
+            ? Self.restoreOverlayColor
+            : Self.defaultOverlayColor
+    }
 
     // MARK: - Initialization
 
@@ -373,6 +397,8 @@ final class PhotoCell: UICollectionViewCell {
         // UI 초기화
         dimmedOverlayView.isHidden = true
         dimmedOverlayView.alpha = 0
+        dimmedOverlayView.backgroundColor = Self.defaultOverlayColor  // 녹색 잔존 방지
+        swipeOverlayStyle = .delete
         trashIconView.isHidden = true
         selectionCheckmarkView.isHidden = true
         videoDurationLabel.isHidden = true
@@ -898,7 +924,12 @@ extension PhotoCell {
             self.isTrashed = toTrashed
             self.dimmedOverlayView.isHidden = !toTrashed
             self.dimmedOverlayView.alpha = toTrashed ? Self.dimmedOverlayAlpha : 0
-            self.trashIconView.isHidden = !toTrashed
+            // 복구 모드에서는 trashIcon 표시 안 함
+            self.trashIconView.isHidden = self.swipeOverlayStyle == .restore ? true : !toTrashed
+
+            // 오버레이 색상 리셋 (다음 스와이프를 위해)
+            self.dimmedOverlayView.backgroundColor = Self.defaultOverlayColor
+            self.swipeOverlayStyle = .delete
 
             completion()
         }
@@ -937,6 +968,10 @@ extension PhotoCell {
             self.dimmedOverlayView.isHidden = !self.isTrashed
             self.dimmedOverlayView.alpha = self.isTrashed ? Self.dimmedOverlayAlpha : 0
             self.trashIconView.isHidden = !self.isTrashed
+
+            // 오버레이 색상 리셋 (다음 스와이프를 위해)
+            self.dimmedOverlayView.backgroundColor = Self.defaultOverlayColor
+            self.swipeOverlayStyle = .delete
 
             completion()
         }

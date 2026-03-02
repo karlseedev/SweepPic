@@ -168,8 +168,12 @@ class BaseGridViewController: UIViewController {
     var swipeDeleteState = SwipeDeleteState()
 
     /// 스와이프 삭제 지원 여부 (서브클래스에서 오버라이드)
-    /// Grid, Album: true / Trash: false
+    /// Grid, Album: true / Trash: false (→ true)
     var supportsSwipeDelete: Bool { false }
+
+    /// 스와이프 동작이 복구(restore)인지 여부 (삭제대기함에서 true)
+    /// true이면 녹색 커튼 + restore() 호출, 코치마크 스킵
+    var swipeActionIsRestore: Bool { false }
 
     // MARK: - Select Mode Properties
 
@@ -712,6 +716,10 @@ extension BaseGridViewController: UICollectionViewDataSource {
 
         // ★ 다중 스와이프 중이면 딤드 상태 복원 (자동 스크롤로 재사용된 셀)
         if swipeDeleteState.isMultiMode && swipeDeleteState.selectedItems.contains(indexPath.item) {
+            // 복구 모드 색상 재적용 (재사용 셀은 prepareForReuse에서 마룬으로 리셋됨)
+            if swipeActionIsRestore {
+                cell.prepareSwipeOverlay(style: .restore)
+            }
             if swipeDeleteState.deleteAction {
                 cell.setFullDimmed(isTrashed: isTrashed)
             } else {
@@ -881,6 +889,10 @@ extension BaseGridViewController {
         swipeDeleteState.targetIndexPath = indexPath
         swipeDeleteState.targetIsTrashed = cell.isTrashed
         swipeDeleteState.angleCheckPassed = false
+        // 복구 모드: 녹색 오버레이 준비
+        if swipeActionIsRestore {
+            cell.prepareSwipeOverlay(style: .restore)
+        }
         cell.isAnimating = true
         HapticFeedback.prepare()
     }
@@ -1064,7 +1076,15 @@ extension BaseGridViewController {
 
         cell.confirmDimmedAnimation(toTrashed: toTrashed) { [weak self] in
             guard let self = self else { return }
-            if toTrashed {
+
+            if self.swipeActionIsRestore {
+                // ★ 삭제대기함: 항상 복구, 코치마크 스킵
+                AnalyticsService.shared.countTrashRestore()
+                self.trashStore.restore(assetID) { [weak self] result in
+                    self?.handleSwipeResult(result, cell: cell)
+                }
+            } else if toTrashed {
+                // 보관함/앨범: 삭제 + 코치마크 가이드
                 AnalyticsService.shared.countGridSwipeDelete(source: analyticsSource)
                 self.trashStore.moveToTrash(assetID) { [weak self] result in
                     self?.handleSwipeResult(result, cell: cell)
@@ -1082,6 +1102,7 @@ extension BaseGridViewController {
                     }
                 }
             } else {
+                // 보관함/앨범: 복구
                 AnalyticsService.shared.countGridSwipeRestore(source: analyticsSource)
                 self.trashStore.restore(assetID) { [weak self] result in
                     self?.handleSwipeResult(result, cell: cell)
