@@ -185,6 +185,12 @@ class BaseGridViewController: UIViewController {
     /// 드래그 선택용 팬 제스처
     var dragSelectGesture: UIPanGestureRecognizer?
 
+    /// 꾹 누르기 선택 모드 진입 제스처
+    var longPressSelectGesture: UILongPressGestureRecognizer?
+
+    /// 꾹 누르기로 시작된 드래그 선택 진행 중 여부
+    var isLongPressDragActive: Bool = false
+
     /// 드래그 선택 시작 인덱스
     var dragSelectStartIndex: Int?
 
@@ -212,8 +218,8 @@ class BaseGridViewController: UIViewController {
     /// 현재 자동 스크롤 속도 (가변, 음수=위로, 양수=아래로)
     var currentAutoScrollSpeed: CGFloat = 0
 
-    /// 자동 스크롤 구동 중인 제스처 (드래그 선택 or 스와이프 삭제)
-    weak var autoScrollGesture: UIPanGestureRecognizer?
+    /// 자동 스크롤 구동 중인 제스처 (드래그 선택 or 스와이프 삭제 or 꾹 누르기)
+    weak var autoScrollGesture: UIGestureRecognizer?
 
     /// 자동 스크롤 틱마다 호출할 핸들러 (범위 업데이트용)
     var autoScrollHandler: ((CGPoint) -> Void)?
@@ -433,6 +439,9 @@ class BaseGridViewController: UIViewController {
 
         // 드래그 선택 제스처 (Select Mode 지원 시)
         setupDragSelectGesture()
+
+        // 꾹 누르기 → 선택 모드 진입 + 드래그 연속 선택
+        setupLongPressSelectGesture()
 
         // 서브클래스 추가 제스처
         setupAdditionalGestures()

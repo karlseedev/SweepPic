@@ -118,6 +118,11 @@ extension BaseGridViewController {
         // 스와이프/투핑거탭 제스처 복원
         updateSwipeDeleteGestureEnabled()
 
+        // 꾹 누르기 드래그 정리 (백그라운드 진입 등으로 강제 종료된 경우)
+        if isLongPressDragActive {
+            isLongPressDragActive = false
+        }
+
         // 선택 초기화
         selectionManager.clearSelection()
 
@@ -262,6 +267,99 @@ extension BaseGridViewController {
         guard let tabBarController = tabBarController as? TabBarController,
               let overlay = tabBarController.floatingOverlay else { return }
         overlay.tabBar.updateSelectionCount(count)
+    }
+}
+
+// MARK: - Long Press → Select Mode
+
+extension BaseGridViewController {
+
+    /// 꾹 누르기 → 선택 모드 진입 제스처 설정 (setupGestures에서 호출)
+    func setupLongPressSelectGesture() {
+        guard supportsSelectMode else { return }
+
+        let longPress = UILongPressGestureRecognizer(
+            target: self,
+            action: #selector(handleLongPressSelect(_:))
+        )
+        longPress.minimumPressDuration = 0.5
+        collectionView.addGestureRecognizer(longPress)
+        longPressSelectGesture = longPress
+    }
+
+    /// 꾹 누르기 제스처 핸들러
+    /// .began: 선택 모드 진입 + 첫 셀 선택
+    /// .changed: 드래그 연속 선택 (기존 로직 재사용)
+    /// .ended/.cancelled: 드래그 종료 + 일반 드래그 선택 재활성화
+    @objc private func handleLongPressSelect(_ gesture: UILongPressGestureRecognizer) {
+        switch gesture.state {
+        case .began:
+            handleLongPressBegan(gesture)
+
+        case .changed:
+            // 꾹 누르기로 시작된 드래그가 아니면 무시
+            guard isLongPressDragActive else { return }
+            let location = gesture.location(in: collectionView)
+            let locationInView = gesture.location(in: view)
+            handleDragSelectChanged(at: location)
+            handleAutoScroll(at: locationInView)
+
+        case .ended, .cancelled:
+            guard isLongPressDragActive else { return }
+            isLongPressDragActive = false
+            handleDragSelectEnded()
+            // 이후 일반 드래그 선택 활성화
+            dragSelectGesture?.isEnabled = true
+
+        default:
+            break
+        }
+    }
+
+    /// 꾹 누르기 .began 처리
+    /// 선택 모드 진입 → 첫 셀 SelectionManager에 저장 → 드래그 상태 초기화 → 햅틱
+    private func handleLongPressBegan(_ gesture: UILongPressGestureRecognizer) {
+        // 이미 선택 모드면 무시 (빠른 탭은 0.5초 미만이라 여기 도달 안 함)
+        guard !isSelectMode else { return }
+
+        let location = gesture.location(in: collectionView)
+        guard let indexPath = collectionView.indexPathForItem(at: location),
+              indexPath.item >= paddingCellCount else { return }
+
+        let assetIndex = indexPath.item - paddingCellCount
+        guard let asset = gridDataSource.asset(at: assetIndex) else { return }
+        let assetID = asset.localIdentifier
+
+        // 삭제대기함 에셋은 선택 불가 (Grid/Album 공통)
+        guard canSelectAssetInSelectMode(assetID) else { return }
+
+        // 1. 선택 모드 진입
+        enterSelectMode()
+
+        // 2. dragSelectGesture 일시 비활성화 (long press 드래그와 충돌 방지)
+        dragSelectGesture?.isEnabled = false
+
+        // 3. 드래그 선택 상태 초기화
+        isLongPressDragActive = true
+        dragSelectStartIndex = indexPath.item
+        dragSelectCurrentIndex = indexPath.item
+        dragSelectAffectedIndices = [indexPath.item]
+        dragSelectIsSelecting = true  // 새 진입이므로 항상 "선택" 방향
+
+        // 4. 첫 셀 선택 (SelectionManager에 저장 → cellForItemAt 재호출 시에도 유지)
+        selectionManager.select(assetID)
+        if let cell = collectionView.cellForItem(at: indexPath) as? PhotoCell {
+            cell.isSelectedForDeletion = true
+        }
+
+        // 5. 자동 스크롤 콜백 설정 (autoScrollGesture 타입이 UIGestureRecognizer?로 변경됨)
+        autoScrollGesture = gesture
+        autoScrollHandler = { [weak self] loc in
+            self?.handleDragSelectChanged(at: loc)
+        }
+
+        // 6. 햅틱
+        HapticFeedback.light()
     }
 }
 
