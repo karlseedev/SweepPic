@@ -20,6 +20,8 @@
 | E5 | W-8BEN 세금 양식 | ✅ 확정 |
 | E6 | 한국 사업자정보 앱 내 표시 | ✅ 확정 |
 | E28 | DPIA 문서 작성 (얼굴 인식) | ⬜ 미작성 |
+| — | IAP 상품 리뷰 제출 | ✅ 확정 |
+| — | EU DSA Trader 상태 선언 | ✅ 확정 |
 
 ---
 
@@ -313,6 +315,44 @@ ASC > Business > Tax Forms > W-8BEN 온라인 작성
 > 근거: GDPR — 얼굴 인식은 "대규모 생체 데이터 처리"에 해당 가능
 
 TODO: 리서치 후 반영
+
+---
+
+## IAP 상품 리뷰 제출 ✅
+
+> 우선순위: 즉시 필요 (출시 전 필수)
+
+- App Store Connect에서 IAP 상품(월간/연간 구독) 등록 시, **앱 심사와 별도로 IAP 상품도 리뷰 제출 필요**
+- 첫 제출 시 **페이월 화면 스크린샷** 첨부 필수 (사용자가 구매 전 보는 화면)
+- IAP 상품이 "Ready to Submit" 상태여야 앱 제출 시 함께 심사됨
+- 가격 변경/설명 수정 시에도 재리뷰 필요
+
+---
+
+## EU DSA Trader 상태 선언 ✅
+
+> 우선순위: EU 스토어프론트 출시 시 필수
+> 근거: EU Digital Services Act (DSA) — 유료 앱 또는 IAP가 있는 앱은 Trader 등록 의무
+
+**무엇인가**: EU는 2024년부터 App Store에서 유료 콘텐츠를 판매하는 개발자를 "Trader"로 분류. Trader는 사업자 정보를 공개해야 하며, 미등록 시 EU App Store에서 앱이 **제거**됨.
+
+**등록 절차**:
+1. App Store Connect > 비즈니스 > EU DSA 준수 정보
+2. Trader 상태 선택 ("I am a trader")
+3. 사업자 정보 입력: 상호, 주소, 등록번호, 연락처
+4. 저장 → EU 앱 페이지에 사업자 정보 자동 노출
+
+**대상 판단**:
+
+| 조건 | Trader 여부 |
+|------|-----------|
+| 무료 앱 + 광고 없음 + IAP 없음 | 해당 없음 |
+| 무료 앱 + AdMob 광고 | 해당 가능성 있음 (수익 활동) |
+| **IAP 구독 있음 (PIClear 해당)** | **Trader 필수** |
+
+**PIClear 대응**: 한국에서 먼저 출시하더라도, 글로벌(EU 포함) 확장 시 반드시 Trader 등록 선행. 사업자등록(E4) 완료 후 동일 정보로 입력 가능.
+
+**참고**: https://developer.apple.com/help/app-store-connect/manage-compliance-information/manage-european-union-digital-services-act-trader-requirements/
 
 ---
 
