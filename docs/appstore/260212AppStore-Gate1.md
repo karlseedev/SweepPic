@@ -62,25 +62,33 @@
 ```xml
 <!-- PrivacyInfo.xcprivacy -->
 NSPrivacyAccessedAPITypes:
-  - UserDefaults (CA92.1) — analytics opt-out 상태 저장
-  - FileTimestamp (DDA9.1) — 사진 파일 타임스탬프 접근
+  - UserDefaults (CA92.1) — analytics opt-out, 코치마크, 정리 세션 등
+  - FileTimestamp (DDA9.1) — 썸네일 캐시 LRU (ThumbnailCache.swift)
+  - DiskSpace (E174.1) — 삭제대기함 저장 전 공간 확인 (TrashStore.swift)
 
-NSPrivacyCollectedDataTypes: (온디바이스 전용이므로 비어있을 수 있음)
+NSPrivacyCollectedDataTypes:
+  - ProductInteraction (앱 기능 목적, 비연결, 비추적)
+    → TelemetryDeck + Supabase로 세션 이벤트 전송 (열람·삭제·분석 카운터)
+  - DeviceID (분석 목적, 비연결, 비추적)
+    → TelemetryDeck SDK 자체 수집
+  - OtherDiagnosticData (앱 기능 목적, 비연결, 비추적)
+    → device_model(hw.machine), os_version, app_version을 Supabase로 전송
 
 NSPrivacyTrackingDomains: []
 NSPrivacyTracking: false
 ```
 
 > 출처: MenuResearch §6 — Privacy Manifest 구조 예시
+> 수집 데이터 근거: AnalyticsService.swift (TelemetryDeck), SupabaseProvider.swift (URLSession → PostgREST)
 
 ### Required Reason API — PIClear 사용 현황
 
 | API 카테고리 | 사용 여부 | 위치 | 사유 코드 |
 |-------------|:--------:|------|----------|
 | **파일 타임스탬프** | O | ThumbnailCache.swift (contentModificationDateKey, setAttributes) | `DDA9.1` (앱 컨테이너 내 접근) |
-| **UserDefaults** | O | Debug 폴더, CleanupConstants | `CA92.1` (앱 자체 접근) |
+| **UserDefaults** | O | AnalyticsService, CoachMark, CleanupDebug, CleanupPreviewService 등 11개 파일 | `CA92.1` (앱 자체 접근) |
 | 시스템 부팅 시간 | X | - | - |
-| 디스크 공간 | X | - | - |
+| **디스크 공간** | O | TrashStore.swift (`attributesOfFileSystem` + `.systemFreeSize`로 쓰기 가능 여부 확인) | `E174.1` (쓰기 전 공간 확인) |
 | 활성 키보드 | X | - | - |
 
 **Required Reason API 전체 5개 카테고리 (참고):**
@@ -102,9 +110,12 @@ NSPrivacyTracking: false
 
 | 라이브러리 | 유형 | Privacy Manifest | 비고 |
 |-----------|------|:----------------:|------|
-| AppCore | 로컬 패키지 | 없음 | CryptoKit(SHA256), 파일 타임스탬프 사용 |
+| AppCore | 로컬 패키지 | 없음 | CryptoKit(SHA256), 파일 타임스탬프, 디스크 공간 API 사용 |
 | BlurUIKit | 원격 (TimOliver/BlurUIKit >= 1.2.2) | **확인 필요** | - |
 | LiquidGlassKit | 로컬 패키지 | 없음 | Metal/MetalKit 사용 |
+| TelemetryDeck (SwiftSDK 2.11.0) | 원격 (TelemetryDeck/SwiftSDK) | **포함됨** | UserDefaults(CA92.1), ProductInteraction·DeviceID 수집 선언 |
+
+> **Supabase**: SDK 미사용 (URLSession 직접 호출). `SupabaseProvider.swift`에서 PostgREST 엔드포인트로 분석 이벤트 전송. SDK가 아니므로 Privacy Manifest 대상이 아니지만, 전송 데이터는 앱의 `NSPrivacyCollectedDataTypes`에 선언 필요.
 
 ---
 
@@ -129,8 +140,9 @@ NSPrivacyTracking: false
 ## Gate 1 체크리스트
 
 - [ ] PrivacyInfo.xcprivacy가 프로젝트에 포함되어 있는가?
-- [ ] Required Reason API 사유 코드가 올바르게 선언되어 있는가? (파일 타임스탬프 `DDA9.1`, UserDefaults `CA92.1`)
-- [ ] 서드파티 SDK(BlurUIKit, LiquidGlassKit)에 Privacy Manifest가 포함되어 있는가?
+- [ ] Required Reason API 사유 코드가 올바르게 선언되어 있는가? (파일 타임스탬프 `DDA9.1`, UserDefaults `CA92.1`, 디스크 공간 `E174.1`)
+- [ ] NSPrivacyCollectedDataTypes에 서버 전송 데이터가 선언되어 있는가? (ProductInteraction, DeviceID, OtherDiagnosticData)
+- [ ] 서드파티 SDK(BlurUIKit, LiquidGlassKit, TelemetryDeck)에 Privacy Manifest가 포함되어 있는가?
 - [ ] 앱 아이콘이 1024x1024 불투명 PNG인가? (알파 채널 없음)
 
 ---
