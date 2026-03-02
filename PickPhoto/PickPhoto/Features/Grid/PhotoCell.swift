@@ -942,29 +942,6 @@ extension PhotoCell {
         }
     }
 
-    /// 투 핑거 탭용 페이드 애니메이션
-    /// - Parameters:
-    ///   - toTrashed: 최종 삭제대기함 상태
-    ///   - completion: 완료 콜백
-    func fadeDimmed(toTrashed: Bool, completion: (() -> Void)? = nil) {
-        dimmedOverlayView.isHidden = false
-
-        UIView.animate(withDuration: 0.15) { [weak self] in
-            guard let self = self else { return }
-            self.dimmedOverlayView.alpha = toTrashed ? Self.dimmedOverlayAlpha : 0
-        } completion: { [weak self] _ in
-            guard let self = self else { return }
-
-            self.isTrashed = toTrashed
-            self.trashIconView.isHidden = !toTrashed
-            if !toTrashed {
-                self.dimmedOverlayView.isHidden = true
-            }
-
-            completion?()
-        }
-    }
-
     // MARK: - 다중 스와이프 삭제용 딤드
 
     /// 전체 딤드 즉시 적용 (마스크 없이, 다중 선택용)

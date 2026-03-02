@@ -103,6 +103,5 @@ extension GridViewController {
     override func updateSwipeDeleteGestureEnabled() {
         let enabled = !isSelectMode && !UIAccessibility.isVoiceOverRunning
         swipeDeleteState.swipeGesture?.isEnabled = enabled
-        swipeDeleteState.twoFingerTapGesture?.isEnabled = enabled
     }
 }

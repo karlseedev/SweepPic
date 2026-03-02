@@ -34,8 +34,6 @@ private class NavTitleContainerView: UIView {
 struct SwipeDeleteState {
     /// 스와이프 제스처
     var swipeGesture: UIPanGestureRecognizer?
-    /// 투 핑거 탭 제스처
-    var twoFingerTapGesture: UITapGestureRecognizer?
     /// 현재 대상 셀 (약한 참조)
     weak var targetCell: PhotoCell?
     /// 현재 대상 IndexPath
@@ -812,13 +810,6 @@ extension BaseGridViewController {
         collectionView.addGestureRecognizer(swipe)
         swipeDeleteState.swipeGesture = swipe
 
-        // 투 핑거 탭 제스처
-        let tap = UITapGestureRecognizer(target: self, action: #selector(handleTwoFingerTap(_:)))
-        tap.numberOfTouchesRequired = 2
-        tap.delegate = self
-        collectionView.addGestureRecognizer(tap)
-        swipeDeleteState.twoFingerTapGesture = tap
-
         updateSwipeDeleteGestureEnabled()
     }
 
@@ -827,7 +818,6 @@ extension BaseGridViewController {
     @objc func updateSwipeDeleteGestureEnabled() {
         let enabled = !UIAccessibility.isVoiceOverRunning
         swipeDeleteState.swipeGesture?.isEnabled = enabled
-        swipeDeleteState.twoFingerTapGesture?.isEnabled = enabled
     }
 
     /// 진행 중인 스와이프 취소 (백그라운드 진입 등)
@@ -1113,42 +1103,6 @@ extension BaseGridViewController {
         }
     }
 
-    // MARK: - Two Finger Tap (PRD7 FR-102)
-
-    @objc func handleTwoFingerTap(_ gesture: UITapGestureRecognizer) {
-        guard gesture.state == .ended else { return }
-
-        let location = gesture.location(in: collectionView)
-        guard let indexPath = collectionView.indexPathForItem(at: location),
-              indexPath.item >= paddingCellCount,
-              let cell = collectionView.cellForItem(at: indexPath) as? PhotoCell,
-              !cell.isAnimating else {
-            return
-        }
-
-        let actualIndex = indexPath.item - paddingCellCount
-        guard let assetID = gridDataSource.assetID(at: actualIndex) else { return }
-
-        let isTrashed = cell.isTrashed
-        let toTrashed = !isTrashed
-
-        cell.isAnimating = true
-        HapticFeedback.light()
-
-        cell.confirmDimmedAnimation(toTrashed: toTrashed) { [weak self] in
-            guard let self = self else { return }
-
-            if toTrashed {
-                self.trashStore.moveToTrash(assetID) { [weak self] result in
-                    self?.handleSwipeResult(result, cell: cell)
-                }
-            } else {
-                self.trashStore.restore(assetID) { [weak self] result in
-                    self?.handleSwipeResult(result, cell: cell)
-                }
-            }
-        }
-    }
 }
 
 // MARK: - UIGestureRecognizerDelegate

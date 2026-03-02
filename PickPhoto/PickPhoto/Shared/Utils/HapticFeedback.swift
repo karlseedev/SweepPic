@@ -2,7 +2,7 @@
 // 햅틱 피드백 유틸리티
 //
 // PRD7: 그리드 즉시 삭제/복원
-// - 스와이프/투 핑거 탭 확정 시 light 피드백
+// - 스와이프 삭제/복원 확정 시 light 피드백
 // - TrashStore 실패 시 error 피드백
 
 import UIKit
@@ -23,7 +23,6 @@ enum HapticFeedback {
 
     /// 가벼운 임팩트 피드백 (확정 시)
     /// - 스와이프 삭제/복원 확정
-    /// - 투 핑거 탭 삭제/복원
     static func light() {
         lightImpact.impactOccurred()
     }
