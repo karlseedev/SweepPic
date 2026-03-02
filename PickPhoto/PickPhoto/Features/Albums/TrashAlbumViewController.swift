@@ -47,6 +47,10 @@ final class TrashAlbumViewController: BaseGridViewController {
     /// iOS 26+ Select 버튼 참조 (빈 삭제대기함일 때 비활성화용)
     private var selectBarButtonItem: UIBarButtonItem?
 
+    /// 스와이프 복구 시 deleteItems 애니메이션용 indexPath
+    /// onDataLoaded()에서 소비하여 reloadData() 대신 deleteItems 수행
+    private var pendingDeleteIndexPaths: [IndexPath]?
+
     /// 초기 스크롤 완료 여부 (맨 아래로 스크롤)
     private var didInitialScroll: Bool = false
 
@@ -119,6 +123,11 @@ final class TrashAlbumViewController: BaseGridViewController {
     override func updateSwipeDeleteGestureEnabled() {
         let enabled = !isSelectMode && !UIAccessibility.isVoiceOverRunning
         swipeDeleteState.swipeGesture?.isEnabled = enabled
+    }
+
+    /// 스와이프 복구 확정 전: deleteItems 애니메이션용 indexPath 저장
+    override func prepareSwipeRestoreAnimation(at indexPaths: [IndexPath]) {
+        pendingDeleteIndexPaths = indexPaths
     }
 
     // MARK: - Initialization
@@ -349,7 +358,25 @@ final class TrashAlbumViewController: BaseGridViewController {
         // viewerWillClose에서 복구된 사진 셀을 isHidden=true로 설정한 경우,
         // reloadData 전에 복원해야 셀 재사용 시 isHidden 잔존 방지
         collectionView.visibleCells.forEach { $0.isHidden = false }
-        collectionView.reloadData()
+
+        // ★ 스와이프 복구: deleteItems 애니메이션 (reloadData 대신)
+        if let paths = pendingDeleteIndexPaths {
+            pendingDeleteIndexPaths = nil
+            // padding 변화 체크: 변하면 reloadData fallback
+            let oldTotal = collectionView.numberOfItems(inSection: 0)
+            let newTotal = _trashDataSource.assetCount + paddingCellCount
+            let expectedTotal = oldTotal - paths.count
+            if expectedTotal == newTotal {
+                collectionView.performBatchUpdates {
+                    self.collectionView.deleteItems(at: paths)
+                }
+            } else {
+                // padding 변동 등 불일치 → 안전하게 reloadData
+                collectionView.reloadData()
+            }
+        } else {
+            collectionView.reloadData()
+        }
 
         updateEmptyState()
 

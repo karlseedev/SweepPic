@@ -364,6 +364,9 @@ extension BaseGridViewController {
 
         // 5. TrashStore 배치 호출 (fire-and-forget, 선택 모드와 동일 패턴)
         if swipeActionIsRestore {
+            // ★ 삭제 애니메이션 준비 (deleteItems용 indexPath 전달)
+            let restoreIndexPaths = Array(selectedItems).sorted().map { IndexPath(item: $0, section: 0) }
+            prepareSwipeRestoreAnimation(at: restoreIndexPaths)
             trashStore.restore(assetIDs: assetIDsToProcess)
         } else if deleteAction {
             trashStore.moveToTrash(assetIDs: assetIDsToProcess)
