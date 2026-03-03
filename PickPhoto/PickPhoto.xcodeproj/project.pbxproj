@@ -11,6 +11,7 @@
 		CB9721BB2EF3D12300F85BF4 /* BlurUIKit in Frameworks */ = {isa = PBXBuildFile; productRef = CB9721BA2EF3D12300F85BF4 /* BlurUIKit */; };
 		CB9721C22EF4000000F85BF4 /* LiquidGlassKit in Frameworks */ = {isa = PBXBuildFile; productRef = CB9721C12EF4000000F85BF4 /* LiquidGlassKit */; };
 		CBA00001300000000000AA01 /* TelemetryDeck in Frameworks */ = {isa = PBXBuildFile; productRef = CBA00002300000000000AA01 /* TelemetryDeck */; };
+		CBE079642F57232300405DD5 /* GoogleMobileAds in Frameworks */ = {isa = PBXBuildFile; productRef = CBA10002300000000000CC01 /* GoogleMobileAds */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -73,6 +74,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				CBE079642F57232300405DD5 /* GoogleMobileAds in Frameworks */,
 				CB9721BB2EF3D12300F85BF4 /* BlurUIKit in Frameworks */,
 				CB9721C22EF4000000F85BF4 /* LiquidGlassKit in Frameworks */,
 				CB97217B2EF2D37900F85BF4 /* AppCore in Frameworks */,

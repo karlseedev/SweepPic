@@ -62,6 +62,10 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         // T066: 권한 상태 변경 콜백 등록
         setupPermissionObserver()
 
+        // [BM] T012a: 자정 리셋 알림 등록 (FR-005 이중 체크의 두 번째 메커니즘)
+        // 앱이 포그라운드에서 자정을 넘길 때 일일 한도 자동 리셋
+        setupMidnightResetObserver()
+
         Logger.app.debug("Scene connected, window configured")
     }
 
@@ -276,6 +280,10 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         // T015: 포그라운드 진입 시 AppStateStore 처리
         AppStateStore.shared.handleForegroundTransition()
 
+        // [BM] T012: 포그라운드 진입 시 일일 한도 리셋 체크 (FR-052)
+        // 서버 시간 확인 실패 시 로컬 시간 폴백
+        checkAndResetDailyLimit()
+
         // [Analytics] 사진 규모 구간 갱신 + 앱 실행 시그널 + 보류 큐 재전송
         AnalyticsService.shared.refreshPhotoLibraryBucket()
         AnalyticsService.shared.trackAppLaunched()
@@ -371,6 +379,80 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         Logger.app.debug("Scene did enter background")
     }
 
+}
+
+// MARK: - BM Daily Limit Reset
+
+extension SceneDelegate {
+
+    /// [BM] T012: 포그라운드 진입 시 일일 한도 리셋 체크
+    /// 서버 시간(Supabase HTTP Date)으로 확인, 실패 시 로컬 시간 폴백 (FR-052)
+    func checkAndResetDailyLimit() {
+        // Supabase HTTP Date 헤더로 서버 시간 확인 시도
+        fetchServerDate { serverDate in
+            UsageLimitStore.shared.resetIfNewDay(serverDate: serverDate)
+        }
+    }
+
+    /// Supabase 응답의 Date 헤더에서 서버 날짜 추출
+    /// - Parameter completion: 서버 날짜 문자열 (yyyy-MM-dd) 또는 nil (실패 시)
+    private func fetchServerDate(completion: @escaping (String?) -> Void) {
+        // Supabase URL을 Info.plist에서 읽기
+        guard let urlString = Bundle.main.object(forInfoDictionaryKey: "SUPABASE_URL") as? String,
+              !urlString.isEmpty,
+              !urlString.contains("$("),  // xcconfig 미설정 시 빈 값
+              let url = URL(string: urlString) else {
+            // Supabase 미설정 → 로컬 시간 폴백
+            completion(nil)
+            return
+        }
+
+        // HEAD 요청으로 Date 헤더만 확인 (최소 데이터)
+        var request = URLRequest(url: url)
+        request.httpMethod = "HEAD"
+        request.timeoutInterval = 5 // 5초 타임아웃
+
+        URLSession.shared.dataTask(with: request) { _, response, error in
+            guard error == nil,
+                  let httpResponse = response as? HTTPURLResponse,
+                  let dateString = httpResponse.value(forHTTPHeaderField: "Date") else {
+                // 네트워크 오류 → 로컬 시간 폴백
+                DispatchQueue.main.async { completion(nil) }
+                return
+            }
+
+            // HTTP Date 헤더 파싱 (RFC 7231: "Mon, 03 Mar 2026 12:00:00 GMT")
+            let formatter = DateFormatter()
+            formatter.dateFormat = "EEE, dd MMM yyyy HH:mm:ss zzz"
+            formatter.locale = Locale(identifier: "en_US_POSIX")
+            formatter.timeZone = TimeZone(abbreviation: "GMT")
+
+            if let date = formatter.date(from: dateString) {
+                // yyyy-MM-dd 형식으로 변환
+                let dayFormatter = DateFormatter()
+                dayFormatter.dateFormat = "yyyy-MM-dd"
+                dayFormatter.timeZone = TimeZone.current
+                let dayString = dayFormatter.string(from: date)
+
+                DispatchQueue.main.async { completion(dayString) }
+            } else {
+                DispatchQueue.main.async { completion(nil) }
+            }
+        }.resume()
+    }
+
+    /// [BM] T012a: 자정 리셋 알림 등록
+    /// NSCalendar.calendarDayChangedNotification으로 자정 감지
+    func setupMidnightResetObserver() {
+        NotificationCenter.default.addObserver(
+            forName: .NSCalendarDayChanged,
+            object: nil,
+            queue: .main
+        ) { _ in
+            Logger.app.debug("SceneDelegate: 자정 감지 — 일일 한도 리셋")
+            UsageLimitStore.shared.resetIfNewDay(serverDate: nil)
+        }
+    }
 }
 
 // MARK: - PermissionViewControllerDelegate

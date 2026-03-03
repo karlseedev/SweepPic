@@ -52,6 +52,9 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         AnalyticsService.shared.configure(appID: "B42FE72D-8A4F-4EA8-90C5-6E2EFA0E7ECC")
         Analytics.reporter = AnalyticsService.shared
 
+        // [BM] AdMob SDK 초기화 + 광고 사전 로드
+        AdManager.shared.configure()
+
         return true
     }
 
