@@ -167,3 +167,10 @@ xcodebuild -project PickPhoto/PickPhoto.xcodeproj -scheme PickPhoto -destination
 # Xcode에서 열기
 open PickPhoto/PickPhoto.xcodeproj
 ```
+
+## Active Technologies
+- Swift 5.9+ + UIKit, PhotoKit, StoreKit 2, Google Mobile Ads SDK 11.x (SPM), AppTrackingTransparency (003-bm-monetization)
+- Keychain (UsageLimit), Documents/JSON (DeletionStats), UserDefaults (GracePeriod, ATT, Review), 인메모리 (SubscriptionState, AdCounters) (003-bm-monetization)
+
+## Recent Changes
+- 003-bm-monetization: Added Swift 5.9+ + UIKit, PhotoKit, StoreKit 2, Google Mobile Ads SDK 11.x (SPM), AppTrackingTransparency
