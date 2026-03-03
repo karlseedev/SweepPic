@@ -142,6 +142,7 @@
 				CB9721BA2EF3D12300F85BF4 /* BlurUIKit */,
 				CB9721C12EF4000000F85BF4 /* LiquidGlassKit */,
 				CBA00002300000000000AA01 /* TelemetryDeck */,
+				CBA10002300000000000CC01 /* GoogleMobileAds */,
 			);
 			productName = PickPhoto;
 			productReference = CB9721512EF2D2AB00F85BF4 /* PickPhoto.app */;
@@ -230,6 +231,7 @@
 				CB9721B92EF3D12300F85BF4 /* XCRemoteSwiftPackageReference "BlurUIKit" */,
 				CB9721C02EF4000000F85BF4 /* XCLocalSwiftPackageReference "../LiquidGlassKit" */,
 				CBA00003300000000000AA01 /* XCRemoteSwiftPackageReference "SwiftSDK" */,
+				CBA10001300000000000CC01 /* XCRemoteSwiftPackageReference "swift-package-manager-google-mobile-ads" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = CB9721522EF2D2AB00F85BF4 /* Products */;
@@ -653,6 +655,14 @@
 				minimumVersion = 2.11.0;
 			};
 		};
+		CBA10001300000000000CC01 /* XCRemoteSwiftPackageReference "swift-package-manager-google-mobile-ads" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/googleads/swift-package-manager-google-mobile-ads";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 11.0.0;
+			};
+		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
@@ -674,6 +684,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = CBA00003300000000000AA01 /* XCRemoteSwiftPackageReference "SwiftSDK" */;
 			productName = TelemetryDeck;
+		};
+		CBA10002300000000000CC01 /* GoogleMobileAds */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = CBA10001300000000000CC01 /* XCRemoteSwiftPackageReference "swift-package-manager-google-mobile-ads" */;
+			productName = GoogleMobileAds;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

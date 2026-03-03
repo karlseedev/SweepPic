@@ -19,11 +19,11 @@
 
 **Purpose**: SPM 의존성, Info.plist, StoreKit 설정 등 프로젝트 기반 구성
 
-- [ ] T001 Google Mobile Ads SDK SPM 의존성 추가 — PickPhoto.xcodeproj > Package Dependencies에 `https://github.com/googleads/swift-package-manager-google-mobile-ads` (11.x Up to Next Major) 추가
-- [ ] T002 [P] Info.plist에 AdMob/ATT 항목 추가 — `PickPhoto/PickPhoto/Info.plist`에 GADApplicationIdentifier(테스트용 `ca-app-pub-3940256099942544~1458002511`), NSUserTrackingUsageDescription, SKAdNetworkItems 추가
-- [ ] T003 [P] StoreKit Configuration File 생성 — `PickPhoto/PickPhotoProducts.storekit` 파일 생성, 상품: `plus_monthly` ($2.99/월 Auto-Renewable), `plus_yearly` ($19.99/년 Auto-Renewable). Scheme > Run > Options에서 선택
-- [ ] T004 [P] FeatureFlags에 BM 플래그 추가 — `PickPhoto/PickPhoto/Shared/FeatureFlags.swift`에 `isGateEnabled`, `isAdEnabled`, `isSubscriptionEnabled` static computed property 추가 (기존 패턴: `isSimilarPhotoEnabled`)
-- [ ] T005 [P] Monetization 폴더 구조 생성 — `PickPhoto/PickPhoto/Features/Monetization/` 하위에 `Gate/`, `Ad/`, `Subscription/`, `Celebration/`, `Menu/` 빈 폴더 생성
+- [x] T001 Google Mobile Ads SDK SPM 의존성 추가 — PickPhoto.xcodeproj > Package Dependencies에 `https://github.com/googleads/swift-package-manager-google-mobile-ads` (11.x Up to Next Major) 추가
+- [x] T002 [P] Info.plist에 AdMob/ATT 항목 추가 — `PickPhoto/PickPhoto/Info.plist`에 GADApplicationIdentifier(테스트용 `ca-app-pub-3940256099942544~1458002511`), NSUserTrackingUsageDescription, SKAdNetworkItems 추가
+- [x] T003 [P] StoreKit Configuration File 생성 — `PickPhoto/PickPhotoProducts.storekit` 파일 생성, 상품: `plus_monthly` ($2.99/월 Auto-Renewable), `plus_yearly` ($19.99/년 Auto-Renewable). Scheme > Run > Options에서 선택
+- [x] T004 [P] FeatureFlags에 BM 플래그 추가 — `PickPhoto/PickPhoto/Shared/FeatureFlags.swift`에 `isGateEnabled`, `isAdEnabled`, `isSubscriptionEnabled` static computed property 추가 (기존 패턴: `isSimilarPhotoEnabled`)
+- [x] T005 [P] Monetization 폴더 구조 생성 — `PickPhoto/PickPhoto/Features/Monetization/` 하위에 `Gate/`, `Ad/`, `Subscription/`, `Celebration/`, `Menu/` 빈 폴더 생성
 
 **Checkpoint**: 프로젝트 빌드 성공, AdMob SDK import 가능, StoreKit sandbox 동작 확인
 
