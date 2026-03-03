@@ -149,6 +149,9 @@ final class TrashAlbumViewController: BaseGridViewController {
         super.viewDidLoad()
         setupObservers()
 
+        // [BM] 게이지 뷰 설정 (Phase 3 T016)
+        setupGaugeView()
+
         // 노출 게이팅: 프리로드 완료까지 숨김
         collectionView.alpha = 0
 
@@ -591,19 +594,23 @@ final class TrashAlbumViewController: BaseGridViewController {
     }
 
     /// 삭제대기함 비우기 실행
+    /// 게이트 평가 후 통과 시에만 실제 삭제 진행 (BM Phase 3 T017)
     private func performEmptyTrash() {
-        // [Analytics] 이벤트 4-2: 삭제대기함 비우기 (최종 삭제)
-        AnalyticsService.shared.countTrashPermanentDelete()
+        let count = _trashDataSource.assetCount
+        evaluateGateAndExecute(trashCount: count) { [weak self] in
+            // [Analytics] 이벤트 4-2: 삭제대기함 비우기 (최종 삭제)
+            AnalyticsService.shared.countTrashPermanentDelete()
 
-        Task {
-            do {
-                try await trashStore.emptyTrash()
-                // E-3: 첫 비우기 완료 안내 트리거
-                showFirstEmptyFeedbackIfNeeded()
-            } catch {
-                // 취소 또는 오류 시 조용히 무시 (사진이 그대로 남아있음, E-3 안 뜸)
+            Task {
+                do {
+                    try await self?.trashStore.emptyTrash()
+                    // E-3: 첫 비우기 완료 안내 트리거
+                    self?.showFirstEmptyFeedbackIfNeeded()
+                } catch {
+                    // 취소 또는 오류 시 조용히 무시 (사진이 그대로 남아있음, E-3 안 뜸)
+                }
+                // 성공/실패 무관하게 UI 갱신 (onStateChange 콜백으로 처리됨)
             }
-            // 성공/실패 무관하게 UI 갱신 (onStateChange 콜백으로 처리됨)
         }
     }
 

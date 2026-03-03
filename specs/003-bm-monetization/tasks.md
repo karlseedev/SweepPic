@@ -56,14 +56,14 @@
 
 ### Implementation
 
-- [ ] T013 [US1] TrashGateCoordinator 생성 — `PickPhoto/PickPhoto/Features/Monetization/Gate/TrashGateCoordinator.swift`. 싱글톤, TrashGateCoordinatorProtocol 준수. evaluateAndPresent(from:trashCount:onApproved:). 판단 흐름: Plus? → 바로실행 / Grace Period? → 바로실행 / ≤남은한도? → 바로실행+recordDelete / 초과? → 팝업 표시. 필요 광고 수 N = ceil((trashCount - remainingFreeDeletes) / 10). plan.md 게이트 판단 흐름 참조
-- [ ] T014 [US1] TrashGatePopupViewController 생성 — `PickPhoto/PickPhoto/Features/Monetization/Gate/TrashGatePopupViewController.swift`. 커스텀 중앙 팝업: modalPresentationStyle=.overFullScreen, crossDissolve. 반투명 배경 + 중앙 라운드 카드. 안내 텍스트("삭제대기함을 비우려면 / N장 · 한도 M장 남음") + 광고 버튼(Ready/Loading/Failed 3상태) + Plus 버튼 + 닫기 버튼. 광고 소진 시 "Plus만 가능" 분기. 오프라인 시 광고/구독 비활성 + "인터넷 연결 필요" (FR-055). plan.md 게이트 팝업 UI 레이아웃 참조
-- [ ] T015 [P] [US1] UsageGaugeView 생성 — `PickPhoto/PickPhoto/Features/Monetization/Gate/UsageGaugeView.swift`. 프로그레스 바 + "N/M장 남음" 텍스트. 탭 시 상세 팝업 (한도 상태 + 광고 잔여 + "광고 보기" 버튼). Plus/Grace Period 시 미표시. accessibilityLabel 설정 (FR-057)
-- [ ] T016 [US1] TrashAlbumViewController+Gate.swift Extension 생성 — `PickPhoto/PickPhoto/Features/Albums/TrashAlbumViewController+Gate.swift`. 게이지 뷰 setup/update, Grace Period 배너 placeholder (US3에서 구현), 게이트 호출 헬퍼. 기존 TrashAlbumVC 786줄 방지를 위한 Extension 분리
-- [ ] T017 [US1] 게이트 삽입 #1 — `PickPhoto/PickPhoto/Features/Albums/TrashAlbumViewController.swift:593` performEmptyTrash()를 TrashGateCoordinator.evaluateAndPresent()로 래핑. plan.md 게이트 삽입 패턴 참조
-- [ ] T018 [US1] 게이트 삽입 #2 — `PickPhoto/PickPhoto/Features/Albums/TrashSelectMode.swift:173` trashDeleteSelectedTapped()를 게이트 래핑
-- [ ] T019 [P] [US1] 게이트 삽입 #3 — `PickPhoto/PickPhoto/Features/Grid/GridViewController.swift:985` viewerDidRequestPermanentDelete()를 게이트 래핑 (방어적)
-- [ ] T020 [P] [US1] 게이트 삽입 #4 — `PickPhoto/PickPhoto/Features/Albums/AlbumGridViewController.swift:412` viewerDidRequestPermanentDelete()를 게이트 래핑 (방어적)
+- [x] T013 [US1] TrashGateCoordinator 생성 — `PickPhoto/PickPhoto/Features/Monetization/Gate/TrashGateCoordinator.swift`. 싱글톤, TrashGateCoordinatorProtocol 준수. evaluateAndPresent(from:trashCount:onApproved:). 판단 흐름: Plus? → 바로실행 / Grace Period? → 바로실행 / ≤남은한도? → 바로실행+recordDelete / 초과? → 팝업 표시. 필요 광고 수 N = ceil((trashCount - remainingFreeDeletes) / 10). plan.md 게이트 판단 흐름 참조
+- [x] T014 [US1] TrashGatePopupViewController 생성 — `PickPhoto/PickPhoto/Features/Monetization/Gate/TrashGatePopupViewController.swift`. 커스텀 중앙 팝업: modalPresentationStyle=.overFullScreen, crossDissolve. 반투명 배경 + 중앙 라운드 카드. 안내 텍스트("삭제대기함을 비우려면 / N장 · 한도 M장 남음") + 광고 버튼(Ready/Loading/Failed 3상태) + Plus 버튼 + 닫기 버튼. 광고 소진 시 "Plus만 가능" 분기. 오프라인 시 광고/구독 비활성 + "인터넷 연결 필요" (FR-055). plan.md 게이트 팝업 UI 레이아웃 참조
+- [x] T015 [P] [US1] UsageGaugeView 생성 — `PickPhoto/PickPhoto/Features/Monetization/Gate/UsageGaugeView.swift`. 프로그레스 바 + "N/M장 남음" 텍스트. 탭 시 상세 팝업 (한도 상태 + 광고 잔여 + "광고 보기" 버튼). Plus/Grace Period 시 미표시. accessibilityLabel 설정 (FR-057)
+- [x] T016 [US1] TrashAlbumViewController+Gate.swift Extension 생성 — `PickPhoto/PickPhoto/Features/Albums/TrashAlbumViewController+Gate.swift`. 게이지 뷰 setup/update, Grace Period 배너 placeholder (US3에서 구현), 게이트 호출 헬퍼. 기존 TrashAlbumVC 786줄 방지를 위한 Extension 분리
+- [x] T017 [US1] 게이트 삽입 #1 — `PickPhoto/PickPhoto/Features/Albums/TrashAlbumViewController.swift:593` performEmptyTrash()를 TrashGateCoordinator.evaluateAndPresent()로 래핑. plan.md 게이트 삽입 패턴 참조
+- [x] T018 [US1] 게이트 삽입 #2 — `PickPhoto/PickPhoto/Features/Albums/TrashSelectMode.swift:173` trashDeleteSelectedTapped()를 게이트 래핑
+- [x] T019 [P] [US1] 게이트 삽입 #3 — `PickPhoto/PickPhoto/Features/Grid/GridViewController.swift:985` viewerDidRequestPermanentDelete()를 게이트 래핑 (방어적)
+- [x] T020 [P] [US1] 게이트 삽입 #4 — `PickPhoto/PickPhoto/Features/Albums/AlbumGridViewController.swift:412` viewerDidRequestPermanentDelete()를 게이트 래핑 (방어적)
 
 **Checkpoint**: 5개 삽입 지점에서 한도 초과 시 게이트 팝업 표시. 10장 이하 → 게이트 없이 삭제. "닫기" → dismiss. 게이지 바 표시 + 탭 상세 팝업
 

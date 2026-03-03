@@ -159,24 +159,27 @@ extension TrashAlbumViewController {
     }
 
     /// 선택된 사진 최종 삭제 (Trash 전용)
+    /// 게이트 평가 후 통과 시에만 실제 삭제 진행 (BM Phase 3 T018)
     @objc func trashDeleteSelectedTapped() {
         let selectedAssetIDs = selectionManager.selectedAssetIDs
         guard !selectedAssetIDs.isEmpty else {
             return
         }
 
-        // [Analytics] 이벤트 4-2: 삭제대기함 최종 삭제 (선택 모드)
-        AnalyticsService.shared.countTrashPermanentDelete()
+        evaluateGateAndExecute(trashCount: selectedAssetIDs.count) { [weak self] in
+            // [Analytics] 이벤트 4-2: 삭제대기함 최종 삭제 (선택 모드)
+            AnalyticsService.shared.countTrashPermanentDelete()
 
-        Task {
-            do {
-                try await trashStore.permanentlyDelete(assetIDs: Array(selectedAssetIDs))
-                await MainActor.run {
-                    selectionManager.clearSelection()
-                    exitSelectMode()
+            Task {
+                do {
+                    try await self?.trashStore.permanentlyDelete(assetIDs: Array(selectedAssetIDs))
+                    await MainActor.run {
+                        self?.selectionManager.clearSelection()
+                        self?.exitSelectMode()
+                    }
+                } catch {
+                    // 취소 또는 오류 시 조용히 무시
                 }
-            } catch {
-                // 취소 또는 오류 시 조용히 무시
             }
         }
     }
