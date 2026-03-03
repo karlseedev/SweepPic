@@ -17,7 +17,7 @@ UsageLimit: Codable, Sendable
 ├── lastResetDate: String          // 마지막 리셋 날짜 (yyyy-MM-dd, 서버 시간 기준)
 ├── lastServerDate: String?        // 마지막 확인된 서버 날짜 (시계 조작 감지용)
 ├── lifetimeFreeGrantUsed: Bool    // 생애 최초 no-fill 무료 +10장 사용 여부
-└── installDate: Date              // 설치일 (Grace Period 기준)
+└── hasUsedGracePeriod: Bool      // Grace Period 사용 여부 (재설치 악용 방지, FR-051a)
 ```
 
 **상수**:
@@ -64,7 +64,7 @@ GracePeriodState
     (계산) currentDay: Int         // 0, 1, 2, 3+ (배너 단계 결정용)
 ```
 
-**참고**: 앱 삭제/재설치 시 installDate가 초기화되지만, UsageLimit의 installDate는 Keychain에 유지되므로 Grace Period 재악용 가능. 그러나 한도 자체는 Keychain으로 보호됨.
+**참고**: 앱 삭제/재설치 시 installDate(UserDefaults)가 초기화되지만, UsageLimit의 hasUsedGracePeriod(Keychain)가 유지되므로 같은 기기에서 Grace Period 재악용 방지됨 (FR-051a). 새 기기 설치 시에는 Keychain이 비어있으므로 Grace Period 정상 부여.
 
 ---
 

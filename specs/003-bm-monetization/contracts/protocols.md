@@ -48,7 +48,7 @@ protocol SubscriptionStoreProtocol: AnyObject {
     var isPlusUser: Bool { get }
     var state: SubscriptionState { get }
 
-    func purchase(_ product: Product) async throws -> Transaction
+    func purchase(_ product: Product) async throws -> Product.PurchaseResult
     func restorePurchases() async throws -> Bool
     func presentRedemptionSheet(from vc: UIViewController)
 
