@@ -928,8 +928,11 @@ extension PhotoCell {
             self.trashIconView.isHidden = self.swipeOverlayStyle == .restore ? true : !toTrashed
 
             // 오버레이 색상 리셋 (다음 스와이프를 위해)
-            self.dimmedOverlayView.backgroundColor = Self.defaultOverlayColor
-            self.swipeOverlayStyle = .delete
+            // 복구 모드에서는 셀이 곧 제거되므로 리셋 불필요 (마룬색 깜빡임 방지)
+            if self.swipeOverlayStyle != .restore {
+                self.dimmedOverlayView.backgroundColor = Self.defaultOverlayColor
+                self.swipeOverlayStyle = .delete
+            }
 
             completion()
         }
