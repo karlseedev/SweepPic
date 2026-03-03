@@ -182,7 +182,8 @@ NSPrivacyCollectedDataTypes:
 │  ┌─────────────────────────────────────┐    │
 │  │ SupabaseProvider (옵셔널)           │    │
 │  │ - URLSession 기반 HTTP POST         │    │
-│  │ - 배치 전송 (sendBatch)            │    │
+│  │ - 배치/단건 전송 + 오프라인 큐      │    │
+│  │ - 선별적 재시도 (4xx 드롭)          │    │
 │  │ - credentials 없으면 nil → 비활성   │    │
 │  └─────────────────────────────────────┘    │
 └─────────────────────────────────────────────┘
@@ -273,10 +274,11 @@ Body (단건): 같은 형태의 단일 객체 (배열 아님)
   400 Bad Request — JSON 형식 오류 또는 키 불일치
 ```
 
-**에러 처리:**
-- 네트워크 실패, 4xx, 5xx 모두 **무시** (TD가 주 데이터)
-- 상태코드 + 에러 로깅: `Log.print("[Supabase] send xxx → HTTP 201")`
-- 재시도 없음, 큐잉 없음
+**에러 처리 (선별적 재시도):**
+- 성공 (2xx): 정상 완료
+- 재시도 대상 (큐 저장): 네트워크 에러, 429 Rate Limit, 5xx 서버 오류
+- 드롭 (재시도 안함): 4xx 클라이언트 오류 (400 RLS 위반, 403 권한 등 — 재시도해도 영구 실패)
+- 큐 재전송: 포그라운드 진입 시 `flushPendingQueue()` 호출
 
 ### 2.6 설계 원칙
 
@@ -302,6 +304,7 @@ AppDelegate.didFinishLaunchingWithOptions
 SceneDelegate.sceneWillEnterForeground
   └→ AnalyticsService.shared.refreshPhotoLibraryBucket()
   └→ AnalyticsService.shared.trackAppLaunched()
+  └→ AnalyticsService.shared.flushPendingSupabaseEvents()  ← 오프라인 큐 재전송
 
 SceneDelegate.sceneDidEnterBackground
   └→ beginBackgroundTask (Supabase POST 완료 대기)
@@ -1060,7 +1063,7 @@ scripts/analytics/
 | 파일 | 내용 | 줄 수 |
 |------|------|-------|
 | `AnalyticsService.swift` | 싱글톤, configure, queue, sendEvent/sendEventBatch, supabaseProvider, onFlushComplete | ~170줄 |
-| `SupabaseProvider.swift` | URLSession HTTP POST, 배치/단건 전송, 디바이스 메타데이터 | ~166줄 |
+| `SupabaseProvider.swift` | URLSession HTTP POST, 배치/단건 전송, 오프라인 큐, 선별적 재시도 | ~305줄 |
 
 #### PickPhoto — Extension (7개)
 
