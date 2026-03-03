@@ -276,9 +276,10 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         // T015: 포그라운드 진입 시 AppStateStore 처리
         AppStateStore.shared.handleForegroundTransition()
 
-        // [Analytics] 사진 규모 구간 갱신 + 앱 실행 시그널
+        // [Analytics] 사진 규모 구간 갱신 + 앱 실행 시그널 + 보류 큐 재전송
         AnalyticsService.shared.refreshPhotoLibraryBucket()
         AnalyticsService.shared.trackAppLaunched()
+        AnalyticsService.shared.flushPendingSupabaseEvents()
 
         // [Analytics] 이벤트 2: 설정 앱에서 권한 변경 감지 (전후 비교)
         // ⚠️ handlePermissionChange에 넣지 않음 (requestAuthorization에서도 중복 발생하므로)

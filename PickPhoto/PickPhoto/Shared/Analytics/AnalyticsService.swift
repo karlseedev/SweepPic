@@ -113,13 +113,9 @@ final class AnalyticsService: AnalyticsServiceProtocol {
     /// Supabase 이벤트 전송 프로바이더 (credentials 없으면 nil → 비활성)
     private var supabaseProvider: SupabaseProvider?
 
-    /// Supabase에 보내지 않을 이벤트 목록 (비용 절감)
-    /// - permission.result: 극소량, TD에서 충분
-    /// - session.gridPerformance: 카운트만, 드릴다운 가치 낮음
-    private static let supabaseExcluded: Set<String> = [
-        "permission.result",
-        "session.gridPerformance",
-    ]
+    /// Supabase에 보내지 않을 이벤트 목록
+    /// - Supabase 메인 DB 승격으로 전 이벤트 수집 (빈 Set → 전부 통과)
+    private static let supabaseExcluded: Set<String> = []
 
     /// 백그라운드 플러시 완료 콜백 (SceneDelegate의 endBackgroundTask용)
     var onFlushComplete: (() -> Void)?
@@ -222,6 +218,14 @@ final class AnalyticsService: AnalyticsServiceProtocol {
         }
         supabaseProvider = SupabaseProvider(baseURL: url, anonKey: key)
         Logger.analytics.debug("Supabase 초기화 완료 (url: \(url.prefix(30))...)")
+    }
+
+    // MARK: - Supabase Offline Queue
+
+    /// Supabase 보류 큐 재전송 (포그라운드 진입 시 호출)
+    /// - supabaseProvider가 private이므로 이 래퍼 메서드가 외부 인터페이스
+    func flushPendingSupabaseEvents() {
+        supabaseProvider?.flushPendingQueue()
     }
 
     // MARK: - Dual Send Helpers
