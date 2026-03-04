@@ -119,6 +119,29 @@ final class TrashAlbumViewController: BaseGridViewController {
     /// 스와이프 동작: 복구 (녹색 커튼)
     override var swipeActionIsRestore: Bool { true }
 
+    /// contentInset 업데이트 — 게이지 바 높이만큼 추가 여백 적용
+    override func updateContentInset() {
+        // 게이지가 표시 중일 때만 추가 inset 적용
+        let hasGauge = view.viewWithTag(9901) != nil
+
+        if #available(iOS 26.0, *) {
+            // iOS 26+: base class 보정(12) 적용 후 게이지분 추가
+            super.updateContentInset()
+            if hasGauge {
+                collectionView.contentInset.top += 76
+            }
+        } else {
+            // iOS 16~25: 부모 클래스가 heights.top 기반 inset 설정 후 게이지분 추가
+            super.updateContentInset()
+            if hasGauge {
+                var current = collectionView.contentInset
+                current.top += 60
+                collectionView.contentInset = current
+                collectionView.scrollIndicatorInsets = current
+            }
+        }
+    }
+
     /// Select 모드 진입 시 스와이프 비활성화 (GridViewController와 동일 패턴)
     override func updateSwipeDeleteGestureEnabled() {
         let enabled = !isSelectMode && !UIAccessibility.isVoiceOverRunning

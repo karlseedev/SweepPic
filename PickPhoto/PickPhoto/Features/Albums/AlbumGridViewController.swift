@@ -67,6 +67,12 @@ final class AlbumGridViewController: BaseGridViewController {
         ]
     }
 
+    /// 앨범 상세는 iOS 26+ 상단 보정 불필요
+    override func updateContentInset() {
+        if #available(iOS 26.0, *) { return }
+        super.updateContentInset()
+    }
+
     // MARK: - Initialization
 
     init(

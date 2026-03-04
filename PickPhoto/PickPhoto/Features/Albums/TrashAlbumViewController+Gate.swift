@@ -44,7 +44,7 @@ extension TrashAlbumViewController {
         // - iOS 16~25: view.topAnchor + FloatingOverlay 타이틀바 높이
         if #available(iOS 26.0, *) {
             NSLayoutConstraint.activate([
-                gauge.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 8),
+                gauge.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 18),
                 gauge.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 16),
                 gauge.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -16)
             ])
@@ -52,7 +52,7 @@ extension TrashAlbumViewController {
             let topOffset: CGFloat
             if let tabBar = tabBarController as? TabBarController,
                let heights = tabBar.getOverlayHeights() {
-                topOffset = heights.top + 8
+                topOffset = heights.top
             } else {
                 topOffset = 8
             }

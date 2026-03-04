@@ -498,8 +498,9 @@ final class GridViewController: BaseGridViewController {
 
     /// contentInset 업데이트 (플로팅 UI 높이 반영, fallback 처리 포함)
     override func updateContentInset() {
-        // iOS 26+에서는 시스템 자동 조정 사용
+        // iOS 26+에서는 base class에서 보정 처리
         if #available(iOS 26.0, *) {
+            super.updateContentInset()
             return
         }
 

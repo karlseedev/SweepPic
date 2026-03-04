@@ -571,8 +571,9 @@ class BaseGridViewController: UIViewController {
     /// contentInset 업데이트 (플로팅 UI 높이 반영)
     /// 서브클래스에서 오버라이드 가능
     func updateContentInset() {
-        // iOS 26+에서는 시스템 자동 조정 사용
+        // iOS 26+에서는 시스템 자동 조정 + 서브타이틀 겹침 보정
         if #available(iOS 26.0, *) {
+            collectionView.contentInset.top = 16
             return
         }
 

@@ -88,11 +88,12 @@ final class TrashGateCoordinator: TrashGateCoordinatorProtocol {
             return
         }
 
-        // 3. 남은 기본 한도 내 → 바로 실행 + recordDelete
+        // 3. 남은 기본 한도 내 → 바로 실행
+        // ⚠️ recordDelete는 여기서 하지 않음 — iOS 시스템 팝업에서 취소 가능하므로
+        //    실제 삭제 성공 후 각 호출부에서 recordDelete 호출
         let remaining = UsageLimitStore.shared.remainingFreeDeletes
         if trashCount <= remaining {
             Logger.app.debug("TrashGateCoordinator: 한도 내 (\(trashCount)/\(remaining)) — 바로 실행")
-            UsageLimitStore.shared.recordDelete(count: trashCount)
             onApproved()
             return
         }
@@ -146,9 +147,8 @@ final class TrashGateCoordinator: TrashGateCoordinatorProtocol {
         watchedCount: Int = 0
     ) {
         // 모든 필요 광고를 시청했으면 삭제 실행
+        // ⚠️ recordDelete는 여기서 하지 않음 — 각 호출부에서 삭제 성공 후 기록
         if watchedCount >= adsNeeded {
-            // 리워드로 확장된 한도 내에서 삭제 기록
-            UsageLimitStore.shared.recordDelete(count: trashCount)
             onApproved()
             return
         }

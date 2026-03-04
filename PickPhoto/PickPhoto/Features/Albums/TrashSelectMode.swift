@@ -166,19 +166,22 @@ extension TrashAlbumViewController {
             return
         }
 
-        evaluateGateAndExecute(trashCount: selectedAssetIDs.count) { [weak self] in
+        let deleteCount = selectedAssetIDs.count
+        evaluateGateAndExecute(trashCount: deleteCount) { [weak self] in
             // [Analytics] 이벤트 4-2: 삭제대기함 최종 삭제 (선택 모드)
             AnalyticsService.shared.countTrashPermanentDelete()
 
             Task {
                 do {
                     try await self?.trashStore.permanentlyDelete(assetIDs: Array(selectedAssetIDs))
+                    // 삭제 성공 후에만 한도 차감
+                    UsageLimitStore.shared.recordDelete(count: deleteCount)
                     await MainActor.run {
                         self?.selectionManager.clearSelection()
                         self?.exitSelectMode()
                     }
                 } catch {
-                    // 취소 또는 오류 시 조용히 무시
+                    // 취소 또는 오류 시 조용히 무시 — 한도 미차감
                 }
             }
         }
