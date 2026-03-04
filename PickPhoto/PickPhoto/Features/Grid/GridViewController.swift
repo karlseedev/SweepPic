@@ -978,27 +978,17 @@ extension GridViewController: ViewerViewControllerDelegate {
 
     /// 사진 최종 삭제 요청 (iOS 삭제대기함으로 이동)
     /// 비동기 작업 - 삭제 완료 후 뷰어에 알림
-    /// 게이트 평가 후 통과 시에만 실제 삭제 진행 (BM Phase 3 T019, 방어적)
     func viewerDidRequestPermanentDelete(assetID: String) {
-        TrashGateCoordinator.shared.evaluateAndPresent(
-            from: self,
-            trashCount: 1,
-            onApproved: { [weak self] in
-                // TrashStore에서 최종 삭제 (iOS 시스템 팝업 표시)
-                Task {
-                    do {
-                        try await self?.trashStore.permanentlyDelete(assetIDs: [assetID])
-
-                        // 삭제 완료 후 뷰어에 알림 (메인 스레드에서)
-                        await MainActor.run {
-                            self?.activeViewerVC?.handleDeleteComplete()
-                        }
-                    } catch {
-                        // 삭제 실패 시 에러 무시 (사용자가 시스템 팝업에서 취소)
-                    }
+        Task {
+            do {
+                try await trashStore.permanentlyDelete(assetIDs: [assetID])
+                await MainActor.run {
+                    self.activeViewerVC?.handleDeleteComplete()
                 }
+            } catch {
+                // 삭제 실패 시 에러 무시
             }
-        )
+        }
     }
 
     /// 뷰어가 닫힐 때 호출

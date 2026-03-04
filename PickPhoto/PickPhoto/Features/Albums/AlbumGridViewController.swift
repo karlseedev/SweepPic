@@ -406,21 +406,15 @@ extension AlbumGridViewController: ViewerViewControllerDelegate {
 
     }
 
-    /// 게이트 평가 후 통과 시에만 실제 삭제 진행 (BM Phase 3 T020, 방어적)
+    /// 사진 최종 삭제 요청 (iOS 삭제대기함으로 이동)
     func viewerDidRequestPermanentDelete(assetID: String) {
-        TrashGateCoordinator.shared.evaluateAndPresent(
-            from: self,
-            trashCount: 1,
-            onApproved: { [weak self] in
-                Task {
-                    do {
-                        try await self?.trashStore.permanentlyDelete(assetIDs: [assetID])
-                    } catch {
-                        // 취소 또는 오류 시 조용히 무시
-                    }
-                }
+        Task {
+            do {
+                try await trashStore.permanentlyDelete(assetIDs: [assetID])
+            } catch {
+                // 취소 또는 오류 시 조용히 무시
             }
-        )
+        }
     }
 
     /// 뷰어가 닫힐 때 호출

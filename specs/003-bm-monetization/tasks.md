@@ -62,10 +62,10 @@
 - [x] T016 [US1] TrashAlbumViewController+Gate.swift Extension 생성 — `PickPhoto/PickPhoto/Features/Albums/TrashAlbumViewController+Gate.swift`. 게이지 뷰 setup/update, Grace Period 배너 placeholder (US3에서 구현), 게이트 호출 헬퍼. 기존 TrashAlbumVC 786줄 방지를 위한 Extension 분리
 - [x] T017 [US1] 게이트 삽입 #1 — `PickPhoto/PickPhoto/Features/Albums/TrashAlbumViewController.swift:593` performEmptyTrash()를 TrashGateCoordinator.evaluateAndPresent()로 래핑. plan.md 게이트 삽입 패턴 참조
 - [x] T018 [US1] 게이트 삽입 #2 — `PickPhoto/PickPhoto/Features/Albums/TrashSelectMode.swift:173` trashDeleteSelectedTapped()를 게이트 래핑
-- [x] T019 [P] [US1] 게이트 삽입 #3 — `PickPhoto/PickPhoto/Features/Grid/GridViewController.swift:985` viewerDidRequestPermanentDelete()를 게이트 래핑 (방어적)
-- [x] T020 [P] [US1] 게이트 삽입 #4 — `PickPhoto/PickPhoto/Features/Albums/AlbumGridViewController.swift:412` viewerDidRequestPermanentDelete()를 게이트 래핑 (방어적)
+- ~~T019~~ 삭제 — 삭제대기함에서만 발생하는 작업이므로 GridViewController 게이트 불필요
+- ~~T020~~ 삭제 — 삭제대기함에서만 발생하는 작업이므로 AlbumGridViewController 게이트 불필요
 
-**Checkpoint**: 5개 삽입 지점에서 한도 초과 시 게이트 팝업 표시. 10장 이하 → 게이트 없이 삭제. "닫기" → dismiss. 게이지 바 표시 + 탭 상세 팝업
+**Checkpoint**: 2개 삽입 지점(비우기, 선택삭제)에서 한도 초과 시 게이트 팝업 표시. 10장 이하 → 게이트 없이 삭제. "닫기" → dismiss. 게이지 바 표시 + 탭 상세 팝업
 
 ---
 
