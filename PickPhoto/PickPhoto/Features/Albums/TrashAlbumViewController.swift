@@ -604,12 +604,13 @@ final class TrashAlbumViewController: BaseGridViewController {
             Task {
                 do {
                     try await self?.trashStore.emptyTrash()
+                    // 삭제 성공 후에만 한도 차감 (iOS 팝업 취소 시 미차감)
+                    UsageLimitStore.shared.recordDelete(count: count)
                     // E-3: 첫 비우기 완료 안내 트리거
                     self?.showFirstEmptyFeedbackIfNeeded()
                 } catch {
-                    // 취소 또는 오류 시 조용히 무시 (사진이 그대로 남아있음, E-3 안 뜸)
+                    // 취소 또는 오류 시 조용히 무시 — 한도 미차감
                 }
-                // 성공/실패 무관하게 UI 갱신 (onStateChange 콜백으로 처리됨)
             }
         }
     }
@@ -726,22 +727,26 @@ extension TrashAlbumViewController: ViewerViewControllerDelegate {
 
     /// 최종 삭제 요청 (T057)
     /// 비동기 작업 - 삭제 완료 후 뷰어에 알림
+    /// 게이트 평가 후 통과 시에만 실제 삭제 진행 (BM Phase 3)
     func viewerDidRequestPermanentDelete(assetID: String) {
-        // [Analytics] 이벤트 4-2: 삭제대기함 최종 삭제
-        AnalyticsService.shared.countTrashPermanentDelete()
+        evaluateGateAndExecute(trashCount: 1) { [weak self] in
+            // [Analytics] 이벤트 4-2: 삭제대기함 최종 삭제
+            AnalyticsService.shared.countTrashPermanentDelete()
 
-        Task {
-            do {
-                try await trashStore.permanentlyDelete(assetIDs: [assetID])
-                // loadTrashedAssets()는 onStateChange 콜백으로 자동 호출됨
+            Task {
+                do {
+                    try await self?.trashStore.permanentlyDelete(assetIDs: [assetID])
+                    // 삭제 성공 후에만 한도 차감
+                    UsageLimitStore.shared.recordDelete(count: 1)
+                    // loadTrashedAssets()는 onStateChange 콜백으로 자동 호출됨
 
-                // 삭제 완료 후 뷰어에 알림 (메인 스레드에서)
-                // weak 참조로 접근 (Push/Modal 방식에 무관)
-                await MainActor.run {
-                    self.activeViewerVC?.handleDeleteComplete()
+                    // 삭제 완료 후 뷰어에 알림 (메인 스레드에서)
+                    await MainActor.run {
+                        self?.activeViewerVC?.handleDeleteComplete()
+                    }
+                } catch {
+                    // 취소 또는 오류 시 조용히 무시 — 한도 미차감
                 }
-            } catch {
-                // 취소 또는 오류 시 조용히 무시
             }
         }
     }
