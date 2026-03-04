@@ -95,8 +95,6 @@ PickPhoto/PickPhoto/Features/Monetization/    # 신규 폴더
 | `TrashAlbumViewController.swift` | performEmptyTrash() 게이트 래핑 + 게이지 뷰 추가 + 축하 화면 연결 | 1,2 |
 | `TrashAlbumViewController+Gate.swift` | 게이트 관련 Extension 분리 (786줄 방지) | 1 |
 | `TrashSelectMode.swift` | trashDeleteSelectedTapped() 게이트 래핑 | 1 |
-| `GridViewController.swift` | viewerDidRequestPermanentDelete() 게이트 래핑 (방어적) | 1 |
-| `AlbumGridViewController.swift` | viewerDidRequestPermanentDelete() 게이트 래핑 (방어적) | 1 |
 | `GridViewController+Cleanup.swift` | ellipsis 메뉴 재구성 (프리미엄 ▸ / 고객센터 ▸ 서브메뉴) | 2 |
 | `AppDelegate.swift` | AdManager.shared.configure() + SubscriptionStore.shared.configure() | 1,2 |
 | `SceneDelegate.swift` | 포그라운드 진입 시 한도 리셋 체크 + ATT 프롬프트 체크 | 1,2 |
@@ -115,8 +113,6 @@ PickPhoto/PickPhoto/Features/Monetization/    # 신규 폴더
 | 1 | TrashAlbumViewController.swift | `performEmptyTrash()` | 593 | 비우기 버튼 → emptyTrashButtonTapped() → performEmptyTrash() |
 | 2 | TrashAlbumViewController.swift | (체인) | — | FloatingTabBar → TabBarController → emptyTrash() → performEmptyTrash() ✅ 1번으로 커버 |
 | 3 | TrashSelectMode.swift | `trashDeleteSelectedTapped()` | 173 | 선택 모드 삭제 버튼 |
-| 4 | GridViewController.swift | `viewerDidRequestPermanentDelete()` | 985 | 뷰어에서 영구 삭제 (방어적) |
-| 5 | AlbumGridViewController.swift | `viewerDidRequestPermanentDelete()` | 412 | 앨범 뷰어에서 영구 삭제 (방어적) |
 
 ### 게이트 삽입 패턴
 
@@ -215,8 +211,6 @@ P1 기능: US-1(게이트), US-2(리워드), US-3(Grace Period)
 | `TrashAlbumViewController.swift` | performEmptyTrash() 게이트 래핑 |
 | `TrashAlbumViewController+Gate.swift` (신규 Extension) | 게이지 뷰 설정, Grace Period 배너, 게이트 관련 메서드 |
 | `TrashSelectMode.swift` | trashDeleteSelectedTapped() 게이트 래핑 |
-| `GridViewController.swift` | viewerDidRequestPermanentDelete() 게이트 래핑 (방어적) |
-| `AlbumGridViewController.swift` | viewerDidRequestPermanentDelete() 게이트 래핑 (방어적) |
 | `AppDelegate.swift` | AdManager.shared.configure() 호출 추가 |
 | `SceneDelegate.swift` | 포그라운드 진입 시 일일 한도 리셋 체크 |
 
@@ -391,7 +385,7 @@ P3 기능: US-9(리뷰), US-10(분석)
 
 ## 검증 방법
 
-1. **게이트 전수 테스트**: 5개 삽입 지점 각각에서 한도 초과 시 게이트 팝업 표시
+1. **게이트 전수 테스트**: 2개 삽입 지점(비우기, 선택삭제) 각각에서 한도 초과 시 게이트 팝업 표시
 2. **10장 이하 무료 비우기**: 10장 → 게이트 없이 iOS 시스템 팝업만 → 삭제 완료
 3. **11장 이상 게이트**: 18장 → 게이트 팝업 → "광고 1회 보고 18장 전체 삭제" → 삭제 완료
 4. **광고 불가 상태**: 30장, 리워드 0회 남음 → "Plus만 가능" 표시
