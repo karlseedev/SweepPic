@@ -128,7 +128,7 @@ final class TrashAlbumViewController: BaseGridViewController {
             // iOS 26+: base class 보정(12) 적용 후 게이지분 추가
             super.updateContentInset()
             if hasGauge {
-                collectionView.contentInset.top += 76
+                collectionView.contentInset.top += 60
             }
         } else {
             // iOS 16~25: 부모 클래스가 heights.top 기반 inset 설정 후 게이지분 추가

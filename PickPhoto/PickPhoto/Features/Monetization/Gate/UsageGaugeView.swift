@@ -119,11 +119,12 @@ final class UsageGaugeView: UIView {
 
         // 카드 내부 패딩
         let hPadding: CGFloat = 12
+        let vPaddingTop: CGFloat = 12
         let vPadding: CGFloat = 10
 
         // 프로그레스 트랙 레이아웃
         NSLayoutConstraint.activate([
-            trackView.topAnchor.constraint(equalTo: backgroundCard.topAnchor, constant: vPadding),
+            trackView.topAnchor.constraint(equalTo: backgroundCard.topAnchor, constant: vPaddingTop),
             trackView.leadingAnchor.constraint(equalTo: backgroundCard.leadingAnchor, constant: hPadding),
             trackView.trailingAnchor.constraint(equalTo: backgroundCard.trailingAnchor, constant: -hPadding),
             trackView.heightAnchor.constraint(equalToConstant: 8)
@@ -155,7 +156,7 @@ final class UsageGaugeView: UIView {
         ])
 
         // 전체 높이 = vPadding(10) + 트랙(8) + 간격(4) + 라벨(~15) + vPadding(10) ≈ 47
-        heightAnchor.constraint(equalToConstant: 47).isActive = true
+        heightAnchor.constraint(equalToConstant: 49).isActive = true
     }
 
     /// 탭 제스처 설정
@@ -179,14 +180,8 @@ final class UsageGaugeView: UIView {
         // 비율 계산 (0~1)
         let fraction = total > 0 ? CGFloat(remaining) / CGFloat(total) : 0
 
-        // 색상 결정: 많이 남음(파랑) → 적음(주황) → 거의 없음(빨강)
-        if fraction > 0.5 {
-            fillView.backgroundColor = .systemBlue
-        } else if fraction > 0.2 {
-            fillView.backgroundColor = .systemOrange
-        } else {
-            fillView.backgroundColor = .systemRed
-        }
+        // 게이지 색상: 파란색 고정
+        fillView.backgroundColor = .systemBlue
 
         // 라벨 업데이트
         countLabel.text = "\(remaining)/\(total)장 남음"

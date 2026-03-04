@@ -209,11 +209,13 @@ public final class UsageLimitStore: UsageLimitStoreProtocol {
     // MARK: - Debug
 
     #if DEBUG
-    /// 디버그용: 한도 강제 리셋
+    /// 디버그용: 날짜 변경을 시뮬레이션하여 실제 리셋 경로 검증
+    /// lastResetDate를 어제로 변경 → resetIfNewDay()가 새 날로 인식하여 리셋
     public func debugReset() {
-        usageLimit = UsageLimit()
+        usageLimit.lastResetDate = "1970-01-01"
         persistAndNotify()
-        Logger.app.debug("UsageLimitStore: DEBUG 리셋 완료")
+        resetIfNewDay(serverDate: nil)
+        Logger.app.debug("UsageLimitStore: DEBUG 날짜 리셋 시뮬레이션 완료")
     }
 
     /// 디버그용: 기본 한도 모두 소진 상태로 설정
