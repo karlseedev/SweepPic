@@ -2,8 +2,8 @@
 //  TrashGatePopupViewController.swift
 //  PickPhoto
 //
-//  게이트 팝업 UI — window에 직접 추가하는 블러 팝업
-//  FloatingTabBar와 동일하게 window.addSubview로 블러 투과 보장
+//  게이트 팝업 UI — present(.overFullScreen) + animator 블러
+//  UIViewPropertyAnimator로 블러 강도를 조절하여 뒤 콘텐츠 투과
 //
 //  버튼 구성:
 //  - 광고 버튼: "광고 N회 보고 X장 전체 삭제" (Ready/Loading/Failed 3상태)
@@ -28,11 +28,11 @@ enum AdButtonState {
     case failed     // 광고 실패 — 비활성 + 안내
 }
 
-// MARK: - TrashGatePopupView
+// MARK: - TrashGatePopupViewController
 
-/// 게이트 블러 팝업 — window에 직접 추가
-/// FloatingTabBar와 동일한 블러 스타일 (systemUltraThinMaterialDark)
-final class TrashGatePopupView: UIView {
+/// 게이트 블러 팝업 — present(.overFullScreen)
+/// UIViewPropertyAnimator로 블러 강도 조절 (뒤 콘텐츠 투과)
+final class TrashGatePopupViewController: UIViewController {
 
     // MARK: - Callbacks
 
@@ -63,10 +63,20 @@ final class TrashGatePopupView: UIView {
 
     // MARK: - UI Components
 
-    /// 전체 화면 터치 차단 + 딤 배경
+    /// 반투명 딤 배경
     private let dimView: UIView = {
         let view = UIView()
-        view.backgroundColor = UIColor.black.withAlphaComponent(0.3)
+        view.backgroundColor = .clear
+        view.translatesAutoresizingMaskIntoConstraints = false
+        return view
+    }()
+
+    /// 카드 뒤 어두운 배경 (카드 영역에만 딤)
+    private let cardDimView: UIView = {
+        let view = UIView()
+        view.backgroundColor = UIColor.black.withAlphaComponent(0.5)
+        view.layer.cornerRadius = 16
+        view.clipsToBounds = true
         view.translatesAutoresizingMaskIntoConstraints = false
         return view
     }()
@@ -180,14 +190,10 @@ final class TrashGatePopupView: UIView {
         self.remainingFreeDeletes = remainingFreeDeletes
         self.adsNeeded = adsNeeded
         self.remainingRewards = remainingRewards
-        super.init(frame: .zero)
+        super.init(nibName: nil, bundle: nil)
 
-        translatesAutoresizingMaskIntoConstraints = false
-        setupUI()
-        setupActions()
-        setupAccessibility()
-        configureContent()
-        startNetworkMonitoring()
+        modalPresentationStyle = .overFullScreen
+        modalTransitionStyle = .crossDissolve
     }
 
     @available(*, unavailable)
@@ -195,80 +201,65 @@ final class TrashGatePopupView: UIView {
         fatalError("init(coder:) has not been implemented")
     }
 
-    deinit {
-        networkMonitor.cancel()
+    // MARK: - Lifecycle
+
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        view.backgroundColor = .clear
+
+        setupUI()
+        setupBlurAnimator()
+        setupActions()
+        setupAccessibility()
+        configureContent()
+        startNetworkMonitoring()
     }
 
-    // MARK: - Show / Hide
-
-    /// window에 추가하고 페이드인 애니메이션으로 표시
-    func show(in window: UIWindow) {
-        // 전체 화면 채우기
-        window.addSubview(self)
-        NSLayoutConstraint.activate([
-            topAnchor.constraint(equalTo: window.topAnchor),
-            leadingAnchor.constraint(equalTo: window.leadingAnchor),
-            trailingAnchor.constraint(equalTo: window.trailingAnchor),
-            bottomAnchor.constraint(equalTo: window.bottomAnchor)
-        ])
-
-        // 블러 강도 animator 설정 — fractionComplete로 블러 정도 조절
-        // 0.0 = 블러 없음(투명), 1.0 = 완전 블러(불투명)
+    /// 블러 강도 animator 설정
+    /// fractionComplete로 블러 정도 조절 (0.0 = 투명, 1.0 = 완전 불투명)
+    private func setupBlurAnimator() {
         let animator = UIViewPropertyAnimator(duration: 1, curve: .linear) {
             self.cardView.effect = UIBlurEffect(style: LiquidGlassStyle.blurStyle)
         }
         animator.fractionComplete = 0.5  // 50% 블러 — 뒤가 비치면서 블러 효과
         animator.pausesOnCompletion = true
         blurAnimator = animator
-
-        // 페이드인 애니메이션
-        alpha = 0
-        UIView.animate(withDuration: 0.25) {
-            self.alpha = 1
-        }
     }
 
-    /// 페이드아웃 후 window에서 제거
-    func hide(completion: (() -> Void)? = nil) {
-        UIView.animate(withDuration: 0.2, animations: {
-            self.alpha = 0
-        }) { _ in
-            // animator 정리
-            self.blurAnimator?.stopAnimation(true)
-            self.blurAnimator?.finishAnimation(at: .current)
-            self.blurAnimator = nil
-            self.networkMonitor.cancel()
-            self.removeFromSuperview()
-            completion?()
-        }
+    deinit {
+        blurAnimator?.stopAnimation(true)
+        blurAnimator?.finishAnimation(at: .current)
+        networkMonitor.cancel()
     }
 
     // MARK: - UI Setup
 
     /// UI 레이아웃 구성 — 딤 + 블러 카드 + 흰색 알약 버튼
     private func setupUI() {
-        // 자신의 배경을 명시적으로 투명 설정
-        backgroundColor = .clear
-
-        // 딤 배경 (전체 화면 — 터치 차단 + 반투명)
-        addSubview(dimView)
+        // 딤 배경 (전체 화면)
+        view.addSubview(dimView)
         NSLayoutConstraint.activate([
-            dimView.topAnchor.constraint(equalTo: topAnchor),
-            dimView.leadingAnchor.constraint(equalTo: leadingAnchor),
-            dimView.trailingAnchor.constraint(equalTo: trailingAnchor),
-            dimView.bottomAnchor.constraint(equalTo: bottomAnchor)
+            dimView.topAnchor.constraint(equalTo: view.topAnchor),
+            dimView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+            dimView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+            dimView.bottomAnchor.constraint(equalTo: view.bottomAnchor)
         ])
 
-        // ⚡ 블러 테스트: dimView 없이 카드만 표시
-        dimView.isHidden = true
+        // 카드 영역 딤 (블러 뒤에 깔림)
+        view.addSubview(cardDimView)
 
-        // 블러 카드 — 화면 - 48pt 너비
-        addSubview(cardView)
+        // 블러 카드 — 화면 - 48pt 너비 (딤 위에)
+        view.addSubview(cardView)
         NSLayoutConstraint.activate([
-            cardView.centerXAnchor.constraint(equalTo: centerXAnchor),
-            cardView.centerYAnchor.constraint(equalTo: centerYAnchor),
-            cardView.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 24),
-            cardView.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -24)
+            cardDimView.centerXAnchor.constraint(equalTo: view.centerXAnchor),
+            cardDimView.centerYAnchor.constraint(equalTo: view.centerYAnchor),
+            cardDimView.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 24),
+            cardDimView.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -24),
+
+            cardView.topAnchor.constraint(equalTo: cardDimView.topAnchor),
+            cardView.leadingAnchor.constraint(equalTo: cardDimView.leadingAnchor),
+            cardView.trailingAnchor.constraint(equalTo: cardDimView.trailingAnchor),
+            cardView.bottomAnchor.constraint(equalTo: cardDimView.bottomAnchor)
         ])
 
         // 카드 내부 스택뷰 — contentView에 추가 (블러 위)
@@ -325,36 +316,23 @@ final class TrashGatePopupView: UIView {
 
     @objc private func adButtonTapped() {
         Logger.app.debug("TrashGatePopup: 광고 버튼 탭")
-        hide { [weak self] in
+        dismiss(animated: true) { [weak self] in
             self?.onAdWatch?()
         }
     }
 
     @objc private func plusButtonTapped() {
         Logger.app.debug("TrashGatePopup: Plus 버튼 탭")
-        hide { [weak self] in
+        dismiss(animated: true) { [weak self] in
             self?.onPlusUpgrade?()
         }
     }
 
     @objc private func closeButtonTapped() {
         Logger.app.debug("TrashGatePopup: 닫기 버튼 탭")
-        hide { [weak self] in
+        dismiss(animated: true) { [weak self] in
             self?.onDismiss?()
         }
-    }
-
-    // MARK: - Touch Handling
-
-    /// 카드 외부 터치 차단 (탭바 등 하위 뷰 터치 방지)
-    override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
-        // 카드 내부 터치 → 정상 전달
-        let cardPoint = cardView.convert(point, from: self)
-        if cardView.bounds.contains(cardPoint) {
-            return super.hitTest(point, with: event)
-        }
-        // 카드 외부 → dimView가 받아서 닫기 처리
-        return dimView
     }
 
     // MARK: - Content Configuration

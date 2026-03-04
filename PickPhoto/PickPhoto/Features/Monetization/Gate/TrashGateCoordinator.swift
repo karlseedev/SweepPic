@@ -105,14 +105,7 @@ final class TrashGateCoordinator: TrashGateCoordinatorProtocol {
         // 필요한 광고 수 계산
         let adsNeeded = UsageLimitStore.shared.adsNeeded(for: trashCount)
 
-        // window에 직접 추가 (FloatingTabBar와 동일 — 블러 투과 보장)
-        guard let window = viewController.view.window else {
-            Logger.app.error("TrashGateCoordinator: window 없음 — 게이트 표시 불가")
-            onApproved()
-            return
-        }
-
-        let popup = TrashGatePopupView(
+        let popup = TrashGatePopupViewController(
             trashCount: trashCount,
             remainingFreeDeletes: remaining,
             adsNeeded: adsNeeded,
@@ -135,8 +128,8 @@ final class TrashGateCoordinator: TrashGateCoordinatorProtocol {
             Logger.app.debug("TrashGateCoordinator: 게이트 팝업 닫기")
         }
 
-        // window에 직접 추가 — 블러가 뒤 콘텐츠를 투과
-        popup.show(in: window)
+        // present — modalPresentationStyle은 init에서 설정됨
+        viewController.present(popup, animated: true)
     }
 
     // MARK: - Ad Watch Flow
