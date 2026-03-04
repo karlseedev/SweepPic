@@ -57,6 +57,16 @@ final class UsageGaugeView: UIView {
         return view
     }()
 
+    /// 타이틀 라벨: "오늘 삭제한도"
+    private let titleLabel: UILabel = {
+        let label = UILabel()
+        label.text = "오늘 삭제한도"
+        label.font = .systemFont(ofSize: 12, weight: .bold)
+        label.textColor = .black
+        label.translatesAutoresizingMaskIntoConstraints = false
+        return label
+    }()
+
     /// 남은 장수 라벨: "N/M장 남음"
     private let countLabel: UILabel = {
         let label = UILabel()
@@ -96,6 +106,7 @@ final class UsageGaugeView: UIView {
         trackView.addSubview(fillView)
 
         // 라벨 (카드 내부)
+        backgroundCard.addSubview(titleLabel)
         backgroundCard.addSubview(countLabel)
 
         // 배경 카드: 전체 영역 채움
@@ -129,7 +140,14 @@ final class UsageGaugeView: UIView {
             widthConstraint
         ])
 
-        // 라벨 레이아웃
+        // 타이틀 라벨 (좌측 하단)
+        NSLayoutConstraint.activate([
+            titleLabel.topAnchor.constraint(equalTo: trackView.bottomAnchor, constant: 4),
+            titleLabel.leadingAnchor.constraint(equalTo: backgroundCard.leadingAnchor, constant: hPadding),
+            titleLabel.bottomAnchor.constraint(equalTo: backgroundCard.bottomAnchor, constant: -vPadding)
+        ])
+
+        // 카운트 라벨 (우측 하단)
         NSLayoutConstraint.activate([
             countLabel.topAnchor.constraint(equalTo: trackView.bottomAnchor, constant: 4),
             countLabel.trailingAnchor.constraint(equalTo: backgroundCard.trailingAnchor, constant: -hPadding),
