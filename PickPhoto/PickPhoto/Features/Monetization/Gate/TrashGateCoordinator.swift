@@ -105,7 +105,14 @@ final class TrashGateCoordinator: TrashGateCoordinatorProtocol {
         // 필요한 광고 수 계산
         let adsNeeded = UsageLimitStore.shared.adsNeeded(for: trashCount)
 
-        let popup = TrashGatePopupViewController(
+        // window에 직접 추가 (FloatingTabBar와 동일 — 블러 투과 보장)
+        guard let window = viewController.view.window else {
+            Logger.app.error("TrashGateCoordinator: window 없음 — 게이트 표시 불가")
+            onApproved()
+            return
+        }
+
+        let popup = TrashGatePopupView(
             trashCount: trashCount,
             remainingFreeDeletes: remaining,
             adsNeeded: adsNeeded,
@@ -121,7 +128,6 @@ final class TrashGateCoordinator: TrashGateCoordinatorProtocol {
         popup.onPlusUpgrade = { [weak viewController] in
             // Plus 업그레이드 → 페이월 표시 (Phase 6 T031에서 구현)
             Logger.app.debug("TrashGateCoordinator: Plus 업그레이드 선택")
-            // PaywallViewController를 present (Phase 6에서 구현)
             _ = viewController // 향후 사용
         }
 
@@ -129,10 +135,8 @@ final class TrashGateCoordinator: TrashGateCoordinatorProtocol {
             Logger.app.debug("TrashGateCoordinator: 게이트 팝업 닫기")
         }
 
-        // 팝업 표시
-        popup.modalPresentationStyle = .overFullScreen
-        popup.modalTransitionStyle = .crossDissolve
-        viewController.present(popup, animated: true)
+        // window에 직접 추가 — 블러가 뒤 콘텐츠를 투과
+        popup.show(in: window)
     }
 
     // MARK: - Ad Watch Flow
