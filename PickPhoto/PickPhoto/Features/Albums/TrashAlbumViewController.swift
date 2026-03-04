@@ -151,6 +151,9 @@ final class TrashAlbumViewController: BaseGridViewController {
 
         // [BM] 게이지 뷰 설정 (Phase 3 T016)
         setupGaugeView()
+        #if DEBUG
+        observeDebugGracePeriodToggle()
+        #endif
 
         // 노출 게이팅: 프리로드 완료까지 숨김
         collectionView.alpha = 0

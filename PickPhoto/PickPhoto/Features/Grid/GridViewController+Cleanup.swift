@@ -62,6 +62,7 @@ extension GridViewController {
                 UIAction(title: "기타", image: UIImage(systemName: "ellipsis")) { _ in },
                 UIAction(title: "고객센터", image: UIImage(systemName: "questionmark.circle")) { _ in },
                 self.makeCoachMarkReplayMenu(),
+                self.makeDebugGracePeriodMenu(),
             ])
         )
 
@@ -101,6 +102,7 @@ extension GridViewController {
             UIAction(title: "기타", image: UIImage(systemName: "ellipsis")) { _ in },
             UIAction(title: "고객센터", image: UIImage(systemName: "questionmark.circle")) { _ in },
             self.makeCoachMarkReplayMenu(),
+            self.makeDebugGracePeriodMenu(),
         ]))
 
         // 버튼 활성화 상태 초기화
@@ -460,6 +462,31 @@ extension GridViewController {
                 },
             ]
         )
+    }
+
+    /// (테스트) Grace Period 토글 메뉴
+    /// 클릭 시 Grace Period 활성/비활성 전환
+    func makeDebugGracePeriodMenu() -> UIAction {
+        let isActive = GracePeriodService.shared.isActive
+        let title = isActive ? "(테스트)3일 ✅" : "(테스트)3일"
+        return UIAction(
+            title: title,
+            image: UIImage(systemName: "clock.arrow.circlepath")
+        ) { [weak self] _ in
+            #if DEBUG
+            if GracePeriodService.shared.isActive {
+                // 활성 → 비활성 (3일 지난 상황)
+                GracePeriodService.shared.debugExpire()
+            } else {
+                // 비활성 → 활성 (앱 처음 깐 상황)
+                GracePeriodService.shared.debugReset()
+            }
+            // 삭제대기함 게이지 즉시 갱신 알림
+            NotificationCenter.default.post(name: .debugGracePeriodToggled, object: nil)
+            #endif
+            // 토글 후 메뉴 재구성
+            self?.setupCleanupButton()
+        }
     }
 }
 

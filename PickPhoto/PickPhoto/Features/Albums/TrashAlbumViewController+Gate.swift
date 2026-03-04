@@ -39,11 +39,29 @@ extension TrashAlbumViewController {
         gauge.tag = ViewTag.gaugeView
         view.addSubview(gauge)
 
-        NSLayoutConstraint.activate([
-            gauge.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 16),
-            gauge.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -16),
-            gauge.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor, constant: -60)
-        ])
+        // iOS 버전별 상단 위치 결정
+        // - iOS 26+: safeAreaLayoutGuide.topAnchor (시스템 네비게이션 바 아래)
+        // - iOS 16~25: view.topAnchor + FloatingOverlay 타이틀바 높이
+        if #available(iOS 26.0, *) {
+            NSLayoutConstraint.activate([
+                gauge.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 8),
+                gauge.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 16),
+                gauge.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -16)
+            ])
+        } else {
+            let topOffset: CGFloat
+            if let tabBar = tabBarController as? TabBarController,
+               let heights = tabBar.getOverlayHeights() {
+                topOffset = heights.top + 8
+            } else {
+                topOffset = 8
+            }
+            NSLayoutConstraint.activate([
+                gauge.topAnchor.constraint(equalTo: view.topAnchor, constant: topOffset),
+                gauge.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 16),
+                gauge.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -16)
+            ])
+        }
 
         // 탭 → 상세 팝업
         gauge.onTap = { [weak self] in
@@ -97,6 +115,26 @@ extension TrashAlbumViewController {
         )
     }
 
+    // MARK: - Debug Grace Period Toggle
+
+    #if DEBUG
+    /// 디버그: Grace Period 토글 알림 수신 등록 (viewDidLoad에서 호출)
+    func observeDebugGracePeriodToggle() {
+        NotificationCenter.default.addObserver(
+            self, selector: #selector(handleDebugGracePeriodToggle),
+            name: .debugGracePeriodToggled, object: nil
+        )
+    }
+
+    /// 디버그: Grace Period 토글 시 게이지 즉시 추가/제거
+    @objc private func handleDebugGracePeriodToggle() {
+        if let existing = view.viewWithTag(ViewTag.gaugeView) {
+            existing.removeFromSuperview()
+        }
+        setupGaugeView()
+    }
+    #endif
+
     // MARK: - View Tags
 
     /// 게이트 관련 뷰 태그 (충돌 방지)
@@ -105,3 +143,11 @@ extension TrashAlbumViewController {
         static let graceBanner = 9902
     }
 }
+
+// MARK: - Debug Notification Name
+
+#if DEBUG
+extension Notification.Name {
+    static let debugGracePeriodToggled = Notification.Name("debugGracePeriodToggled")
+}
+#endif
