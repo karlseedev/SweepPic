@@ -26,6 +26,19 @@ final class UsageGaugeView: UIView {
 
     // MARK: - UI Components
 
+    /// 흰색 둥근 배경 카드
+    private let backgroundCard: UIView = {
+        let view = UIView()
+        view.backgroundColor = .white
+        view.layer.cornerRadius = 12
+        view.layer.shadowColor = UIColor.black.cgColor
+        view.layer.shadowOpacity = 0.08
+        view.layer.shadowOffset = CGSize(width: 0, height: 1)
+        view.layer.shadowRadius = 3
+        view.translatesAutoresizingMaskIntoConstraints = false
+        return view
+    }()
+
     /// 프로그레스 바 배경
     private let trackView: UIView = {
         let view = UIView()
@@ -75,18 +88,33 @@ final class UsageGaugeView: UIView {
     private func setupUI() {
         translatesAutoresizingMaskIntoConstraints = false
 
-        // 프로그레스 트랙
-        addSubview(trackView)
+        // 배경 카드
+        addSubview(backgroundCard)
+
+        // 프로그레스 트랙 (카드 내부)
+        backgroundCard.addSubview(trackView)
         trackView.addSubview(fillView)
 
-        // 라벨
-        addSubview(countLabel)
+        // 라벨 (카드 내부)
+        backgroundCard.addSubview(countLabel)
+
+        // 배경 카드: 전체 영역 채움
+        NSLayoutConstraint.activate([
+            backgroundCard.topAnchor.constraint(equalTo: topAnchor),
+            backgroundCard.leadingAnchor.constraint(equalTo: leadingAnchor),
+            backgroundCard.trailingAnchor.constraint(equalTo: trailingAnchor),
+            backgroundCard.bottomAnchor.constraint(equalTo: bottomAnchor)
+        ])
+
+        // 카드 내부 패딩
+        let hPadding: CGFloat = 12
+        let vPadding: CGFloat = 10
 
         // 프로그레스 트랙 레이아웃
         NSLayoutConstraint.activate([
-            trackView.topAnchor.constraint(equalTo: topAnchor),
-            trackView.leadingAnchor.constraint(equalTo: leadingAnchor),
-            trackView.trailingAnchor.constraint(equalTo: trailingAnchor),
+            trackView.topAnchor.constraint(equalTo: backgroundCard.topAnchor, constant: vPadding),
+            trackView.leadingAnchor.constraint(equalTo: backgroundCard.leadingAnchor, constant: hPadding),
+            trackView.trailingAnchor.constraint(equalTo: backgroundCard.trailingAnchor, constant: -hPadding),
             trackView.heightAnchor.constraint(equalToConstant: 8)
         ])
 
@@ -104,12 +132,12 @@ final class UsageGaugeView: UIView {
         // 라벨 레이아웃
         NSLayoutConstraint.activate([
             countLabel.topAnchor.constraint(equalTo: trackView.bottomAnchor, constant: 4),
-            countLabel.trailingAnchor.constraint(equalTo: trailingAnchor),
-            countLabel.bottomAnchor.constraint(equalTo: bottomAnchor)
+            countLabel.trailingAnchor.constraint(equalTo: backgroundCard.trailingAnchor, constant: -hPadding),
+            countLabel.bottomAnchor.constraint(equalTo: backgroundCard.bottomAnchor, constant: -vPadding)
         ])
 
-        // 전체 높이 = 트랙 8 + 간격 4 + 라벨 높이
-        heightAnchor.constraint(equalToConstant: 28).isActive = true
+        // 전체 높이 = vPadding(10) + 트랙(8) + 간격(4) + 라벨(~15) + vPadding(10) ≈ 47
+        heightAnchor.constraint(equalToConstant: 47).isActive = true
     }
 
     /// 탭 제스처 설정
