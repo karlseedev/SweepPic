@@ -53,9 +53,9 @@ public struct UsageLimit: Codable, Sendable {
 
     // MARK: - Computed Properties
 
-    /// 남은 기본 무료 삭제 가능 장수
+    /// 남은 삭제 가능 장수 (기본 한도 + 리워드 보너스 - 이미 삭제한 수)
     public var remainingFreeDeletes: Int {
-        max(0, Self.dailyFreeLimit - dailyDeleteCount)
+        max(0, totalDailyCapacity - dailyDeleteCount)
     }
 
     /// 남은 리워드 광고 시청 가능 횟수
