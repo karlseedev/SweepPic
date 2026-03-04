@@ -29,7 +29,7 @@ final class UsageGaugeView: UIView {
     /// 흰색 둥근 배경 카드
     private let backgroundCard: UIView = {
         let view = UIView()
-        view.backgroundColor = UIColor.black.withAlphaComponent(0.95)
+        view.backgroundColor = .white
         view.layer.cornerRadius = 12
         view.layer.shadowColor = UIColor.black.cgColor
         view.layer.shadowOpacity = 0.08
@@ -42,7 +42,7 @@ final class UsageGaugeView: UIView {
     /// 프로그레스 바 배경
     private let trackView: UIView = {
         let view = UIView()
-        view.backgroundColor = .white
+        view.backgroundColor = .systemGray5
         view.layer.cornerRadius = 4
         view.translatesAutoresizingMaskIntoConstraints = false
         return view
@@ -61,7 +61,7 @@ final class UsageGaugeView: UIView {
     private let countLabel: UILabel = {
         let label = UILabel()
         label.font = .systemFont(ofSize: 12, weight: .medium)
-        label.textColor = UIColor.white.withAlphaComponent(0.7)
+        label.textColor = .darkGray
         label.translatesAutoresizingMaskIntoConstraints = false
         return label
     }()
