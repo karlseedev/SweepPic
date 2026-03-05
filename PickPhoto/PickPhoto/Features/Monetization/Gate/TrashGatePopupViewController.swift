@@ -5,10 +5,10 @@
 //  게이트 팝업 UI — present(.overFullScreen) + animator 블러
 //  UIViewPropertyAnimator로 블러 강도를 조절하여 뒤 콘텐츠 투과
 //
-//  버튼 구성:
-//  - 광고 버튼: "광고 N회 보고 X장 전체 삭제" (Ready/Loading/Failed 3상태)
-//  - Plus 버튼: "Plus로 무제한"
-//  - 닫기 버튼
+//  버튼 구성 (반투명 흰색 배경, 44pt 통일):
+//  - 광고 버튼: "광고 N회 보고 X장 전체 삭제" (Ready/Loading/Failed 3상태, 흰색 텍스트)
+//  - Plus 버튼: "Plus로 무제한" (흰색 텍스트)
+//  - 닫기 버튼 (회색 텍스트)
 //
 //  오프라인 시: 광고/구독 비활성 + "인터넷 연결 필요" (FR-055)
 //  리워드 소진 시: 골든 모먼트 (Plus 전환 유도, FR-014)
@@ -63,7 +63,7 @@ final class TrashGatePopupViewController: UIViewController {
 
     // MARK: - UI Components
 
-    /// 반투명 딤 배경
+    /// 딤 배경 (터치 차단용, 투명)
     private let dimView: UIView = {
         let view = UIView()
         view.backgroundColor = .clear
@@ -71,27 +71,8 @@ final class TrashGatePopupViewController: UIViewController {
         return view
     }()
 
-    /// 카드 뒤 어두운 배경 (카드 영역에만 딤)
-    private let cardDimView: UIView = {
-        let view = UIView()
-        view.backgroundColor = UIColor.black.withAlphaComponent(0.5)
-        view.layer.cornerRadius = 16
-        view.clipsToBounds = true
-        view.translatesAutoresizingMaskIntoConstraints = false
-        return view
-    }()
-
-    /// 반투명 블러 카드 — effect는 animator로 부분 적용
-    private let cardView: UIVisualEffectView = {
-        let view = UIVisualEffectView(effect: nil)  // 초기엔 effect 없음
-        view.layer.cornerRadius = 16
-        view.clipsToBounds = true
-        view.translatesAutoresizingMaskIntoConstraints = false
-        return view
-    }()
-
-    /// 블러 강도 제어용 animator (fractionComplete로 0~1 조절)
-    private var blurAnimator: UIViewPropertyAnimator?
+    /// 블러 팝업 카드 (재사용 컴포넌트)
+    private let cardView = BlurPopupCardView()
 
     /// 제목 라벨 — 흰색 텍스트
     private let titleLabel: UILabel = {
@@ -115,13 +96,14 @@ final class TrashGatePopupViewController: UIViewController {
         return label
     }()
 
-    /// 광고 버튼 — 흰색 알약형
+    /// 광고 버튼 — 반투명 흰색 배경 + 흰색 텍스트
     private let adButton: UIButton = {
         let button = UIButton(type: .system)
-        button.backgroundColor = .white
-        button.setTitleColor(.black, for: .normal)
+        button.backgroundColor = UIColor.white.withAlphaComponent(0.12)
+        button.setTitleColor(.white, for: .normal)
         button.titleLabel?.font = .systemFont(ofSize: 16, weight: .semibold)
-        button.layer.cornerRadius = 26  // 52pt / 2 = 알약형
+        button.layer.cornerRadius = 25
+        button.clipsToBounds = true
         button.translatesAutoresizingMaskIntoConstraints = false
         return button
     }()
@@ -129,32 +111,34 @@ final class TrashGatePopupViewController: UIViewController {
     /// 광고 버튼 내부 스피너 (Loading 상태용)
     private let adSpinner: UIActivityIndicatorView = {
         let spinner = UIActivityIndicatorView(style: .medium)
-        spinner.color = .darkGray
+        spinner.color = .white
         spinner.hidesWhenStopped = true
         spinner.translatesAutoresizingMaskIntoConstraints = false
         return spinner
     }()
 
-    /// Plus 버튼 — 흰색 알약형
+    /// Plus 버튼 — 반투명 흰색 배경 + 흰색 텍스트
     private let plusButton: UIButton = {
         let button = UIButton(type: .system)
-        button.backgroundColor = .white
-        button.setTitleColor(.black, for: .normal)
+        button.backgroundColor = UIColor.white.withAlphaComponent(0.12)
         button.setTitle("Plus로 무제한", for: .normal)
+        button.setTitleColor(.white, for: .normal)
         button.titleLabel?.font = .systemFont(ofSize: 16, weight: .semibold)
-        button.layer.cornerRadius = 26  // 52pt / 2 = 알약형
+        button.layer.cornerRadius = 25
+        button.clipsToBounds = true
         button.translatesAutoresizingMaskIntoConstraints = false
         return button
     }()
 
-    /// 닫기 버튼 — 흰색 알약형 (통일 스타일, 소형)
+    /// 닫기 버튼 — 반투명 흰색 배경 + 회색 텍스트
     private let closeButton: UIButton = {
         let button = UIButton(type: .system)
-        button.backgroundColor = .white
+        button.backgroundColor = UIColor.white.withAlphaComponent(0.12)
         button.setTitle("닫기", for: .normal)
-        button.setTitleColor(.black, for: .normal)
-        button.titleLabel?.font = .systemFont(ofSize: 15, weight: .medium)
-        button.layer.cornerRadius = 22  // 44pt / 2 = 알약형
+        button.setTitleColor(.secondaryLabel, for: .normal)
+        button.titleLabel?.font = .systemFont(ofSize: 16, weight: .regular)
+        button.layer.cornerRadius = 25
+        button.clipsToBounds = true
         button.translatesAutoresizingMaskIntoConstraints = false
         return button
     }()
@@ -205,7 +189,7 @@ final class TrashGatePopupViewController: UIViewController {
 
     override func viewDidLoad() {
         super.viewDidLoad()
-        view.backgroundColor = .clear
+        view.backgroundColor = UIColor.black.withAlphaComponent(0.5)
 
         setupUI()
         setupBlurAnimator()
@@ -215,26 +199,18 @@ final class TrashGatePopupViewController: UIViewController {
         startNetworkMonitoring()
     }
 
-    /// 블러 강도 animator 설정
-    /// fractionComplete로 블러 정도 조절 (0.0 = 투명, 1.0 = 완전 불투명)
+    /// 블러 효과 활성화
     private func setupBlurAnimator() {
-        let animator = UIViewPropertyAnimator(duration: 1, curve: .linear) {
-            self.cardView.effect = UIBlurEffect(style: LiquidGlassStyle.blurStyle)
-        }
-        animator.fractionComplete = 0.5  // 50% 블러 — 뒤가 비치면서 블러 효과
-        animator.pausesOnCompletion = true
-        blurAnimator = animator
+        cardView.activateBlur()
     }
 
     deinit {
-        blurAnimator?.stopAnimation(true)
-        blurAnimator?.finishAnimation(at: .current)
         networkMonitor.cancel()
     }
 
     // MARK: - UI Setup
 
-    /// UI 레이아웃 구성 — 딤 + 블러 카드 + 흰색 알약 버튼
+    /// UI 레이아웃 구성 — 딤 + 블러 카드 + Glass 버튼
     private func setupUI() {
         // 딤 배경 (전체 화면)
         view.addSubview(dimView)
@@ -245,21 +221,13 @@ final class TrashGatePopupViewController: UIViewController {
             dimView.bottomAnchor.constraint(equalTo: view.bottomAnchor)
         ])
 
-        // 카드 영역 딤 (블러 뒤에 깔림)
-        view.addSubview(cardDimView)
-
-        // 블러 카드 — 화면 - 48pt 너비 (딤 위에)
+        // 블러 카드 — 화면 - 48pt 너비
         view.addSubview(cardView)
         NSLayoutConstraint.activate([
-            cardDimView.centerXAnchor.constraint(equalTo: view.centerXAnchor),
-            cardDimView.centerYAnchor.constraint(equalTo: view.centerYAnchor),
-            cardDimView.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 24),
-            cardDimView.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -24),
-
-            cardView.topAnchor.constraint(equalTo: cardDimView.topAnchor),
-            cardView.leadingAnchor.constraint(equalTo: cardDimView.leadingAnchor),
-            cardView.trailingAnchor.constraint(equalTo: cardDimView.trailingAnchor),
-            cardView.bottomAnchor.constraint(equalTo: cardDimView.bottomAnchor)
+            cardView.centerXAnchor.constraint(equalTo: view.centerXAnchor),
+            cardView.centerYAnchor.constraint(equalTo: view.centerYAnchor),
+            cardView.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 24),
+            cardView.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -24)
         ])
 
         // 카드 내부 스택뷰 — contentView에 추가 (블러 위)
@@ -286,11 +254,11 @@ final class TrashGatePopupViewController: UIViewController {
             stackView.bottomAnchor.constraint(equalTo: cardView.contentView.bottomAnchor, constant: -32)
         ])
 
-        // 버튼 높이 — 액션 버튼 52pt, 닫기 44pt
+        // 버튼 높이 통일 44pt
         NSLayoutConstraint.activate([
-            adButton.heightAnchor.constraint(equalToConstant: 52),
-            plusButton.heightAnchor.constraint(equalToConstant: 52),
-            closeButton.heightAnchor.constraint(equalToConstant: 44)
+            adButton.heightAnchor.constraint(equalToConstant: 50),
+            plusButton.heightAnchor.constraint(equalToConstant: 50),
+            closeButton.heightAnchor.constraint(equalToConstant: 50)
         ])
 
         // 광고 버튼 내부 스피너
@@ -358,7 +326,6 @@ final class TrashGatePopupViewController: UIViewController {
     private func configureGoldenMoment() {
         adButton.isHidden = true
         goldenMomentLabel.isHidden = false
-        plusButton.titleLabel?.font = .systemFont(ofSize: 17, weight: .bold)
         Logger.app.debug("TrashGatePopup: 골든 모먼트 — 리워드 소진, Plus 전환 유도")
     }
 
@@ -369,20 +336,18 @@ final class TrashGatePopupViewController: UIViewController {
         switch state {
         case .ready:
             adButton.isEnabled = true
-            adButton.backgroundColor = .white
-            adButton.setTitleColor(.black, for: .normal)
+            adButton.backgroundColor = UIColor.white.withAlphaComponent(0.12)
             adSpinner.stopAnimating()
 
         case .loading:
             adButton.isEnabled = false
-            adButton.backgroundColor = UIColor.white.withAlphaComponent(0.4)
+            adButton.backgroundColor = UIColor.white.withAlphaComponent(0.12)
             adButton.setTitle("", for: .normal)
             adSpinner.startAnimating()
 
         case .failed:
             adButton.isEnabled = false
-            adButton.backgroundColor = UIColor.white.withAlphaComponent(0.2)
-            adButton.setTitleColor(UIColor.white.withAlphaComponent(0.5), for: .normal)
+            adButton.backgroundColor = UIColor.white.withAlphaComponent(0.12)
             adButton.setTitle("광고를 불러올 수 없습니다", for: .normal)
             adSpinner.stopAnimating()
         }
@@ -413,11 +378,9 @@ final class TrashGatePopupViewController: UIViewController {
         } else {
             offlineLabel.isHidden = false
             adButton.isEnabled = false
-            adButton.backgroundColor = UIColor.white.withAlphaComponent(0.2)
-            adButton.setTitleColor(UIColor.white.withAlphaComponent(0.5), for: .normal)
+            adButton.backgroundColor = UIColor.white.withAlphaComponent(0.12)
             plusButton.isEnabled = false
-            plusButton.backgroundColor = UIColor.white.withAlphaComponent(0.2)
-            plusButton.setTitleColor(UIColor.white.withAlphaComponent(0.5), for: .normal)
+            plusButton.backgroundColor = UIColor.white.withAlphaComponent(0.12)
         }
     }
 

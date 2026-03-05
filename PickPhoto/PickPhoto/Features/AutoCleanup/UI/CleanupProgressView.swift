@@ -30,15 +30,8 @@ final class CleanupProgressView: UIView {
 
     // MARK: - UI Components
 
-    /// 컨테이너 뷰 (블러 배경)
-    private lazy var containerView: UIVisualEffectView = {
-        let blur = UIBlurEffect(style: .systemMaterial)
-        let view = UIVisualEffectView(effect: blur)
-        view.translatesAutoresizingMaskIntoConstraints = false
-        view.layer.cornerRadius = 16
-        view.clipsToBounds = true
-        return view
-    }()
+    /// 컨테이너 뷰 (블러 팝업 카드)
+    private lazy var containerView = BlurPopupCardView()
 
     /// 제목 라벨
     private lazy var titleLabel: UILabel = {
@@ -143,7 +136,7 @@ final class CleanupProgressView: UIView {
     // MARK: - Setup
 
     private func setupUI() {
-        backgroundColor = UIColor.black.withAlphaComponent(0.4)
+        backgroundColor = UIColor.black.withAlphaComponent(0.5)
 
         addSubview(containerView)
         containerView.contentView.addSubview(stackView)
@@ -237,6 +230,7 @@ final class CleanupProgressView: UIView {
     /// 뷰 표시 (애니메이션)
     func show(in parentView: UIView) {
         alpha = 0
+        containerView.activateBlur()
         parentView.addSubview(self)
 
         translatesAutoresizingMaskIntoConstraints = false
@@ -258,6 +252,7 @@ final class CleanupProgressView: UIView {
         UIView.animate(withDuration: 0.25, animations: {
             self.alpha = 0
         }) { _ in
+            self.containerView.deactivateBlur()
             self.removeFromSuperview()
             completion?()
         }
