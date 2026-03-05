@@ -47,7 +47,7 @@ final class GracePeriodBannerView: UIView {
     private let titleLabel: UILabel = {
         let label = UILabel()
         label.font = .systemFont(ofSize: 14, weight: .semibold)
-        label.textColor = .label
+        label.textColor = .black
         label.translatesAutoresizingMaskIntoConstraints = false
         return label
     }()
@@ -75,14 +75,18 @@ final class GracePeriodBannerView: UIView {
         return button
     }()
 
-    /// 라벨 스택 (타이틀 + 링크)
-    private let labelStack: UIStackView = {
+    /// 전체 콘텐츠 스택 (타이틀 + 링크 + CTA)
+    /// UIStackView는 hidden된 arrangedSubview의 공간을 자동 제거
+    private let contentStack: UIStackView = {
         let stack = UIStackView()
         stack.axis = .vertical
-        stack.spacing = 2
+        stack.spacing = 4
         stack.translatesAutoresizingMaskIntoConstraints = false
         return stack
     }()
+
+    /// CTA 높이 제약 (hidden 시에도 intrinsic 유지를 위해 명시)
+    private var ctaHeightConstraint: NSLayoutConstraint?
 
     // MARK: - Init
 
@@ -112,29 +116,29 @@ final class GracePeriodBannerView: UIView {
             backgroundCard.bottomAnchor.constraint(equalTo: bottomAnchor)
         ])
 
-        // 라벨 스택 (타이틀 + 링크)
-        labelStack.addArrangedSubview(titleLabel)
-        labelStack.addArrangedSubview(linkLabel)
-        backgroundCard.addSubview(labelStack)
-        backgroundCard.addSubview(ctaButton)
+        // 콘텐츠 스택에 모든 요소 추가
+        // UIStackView는 hidden된 arrangedSubview의 공간을 자동 제거하므로
+        // Day 0~1에서 linkLabel/ctaButton이 hidden이면 자동으로 컴팩트해짐
+        contentStack.addArrangedSubview(titleLabel)
+        contentStack.addArrangedSubview(linkLabel)
+        contentStack.addArrangedSubview(ctaButton)
+
+        backgroundCard.addSubview(contentStack)
 
         let hPadding: CGFloat = 14
         let vPadding: CGFloat = 12
 
-        // 라벨 스택 레이아웃
-        NSLayoutConstraint.activate([
-            labelStack.topAnchor.constraint(equalTo: backgroundCard.topAnchor, constant: vPadding),
-            labelStack.leadingAnchor.constraint(equalTo: backgroundCard.leadingAnchor, constant: hPadding),
-            labelStack.trailingAnchor.constraint(equalTo: backgroundCard.trailingAnchor, constant: -hPadding)
-        ])
+        // CTA 높이 제약
+        let heightConstraint = ctaButton.heightAnchor.constraint(equalToConstant: 36)
+        ctaHeightConstraint = heightConstraint
 
-        // CTA 버튼 레이아웃 (Day 3에서만 표시)
+        // 콘텐츠 스택 레이아웃 → 카드 크기 결정
         NSLayoutConstraint.activate([
-            ctaButton.topAnchor.constraint(equalTo: labelStack.bottomAnchor, constant: 8),
-            ctaButton.leadingAnchor.constraint(equalTo: backgroundCard.leadingAnchor, constant: hPadding),
-            ctaButton.trailingAnchor.constraint(equalTo: backgroundCard.trailingAnchor, constant: -hPadding),
-            ctaButton.heightAnchor.constraint(equalToConstant: 36),
-            ctaButton.bottomAnchor.constraint(equalTo: backgroundCard.bottomAnchor, constant: -vPadding)
+            contentStack.topAnchor.constraint(equalTo: backgroundCard.topAnchor, constant: vPadding),
+            contentStack.leadingAnchor.constraint(equalTo: backgroundCard.leadingAnchor, constant: hPadding),
+            contentStack.trailingAnchor.constraint(equalTo: backgroundCard.trailingAnchor, constant: -hPadding),
+            contentStack.bottomAnchor.constraint(equalTo: backgroundCard.bottomAnchor, constant: -vPadding),
+            heightConstraint
         ])
 
         ctaButton.addTarget(self, action: #selector(ctaTapped), for: .touchUpInside)
@@ -160,7 +164,7 @@ final class GracePeriodBannerView: UIView {
         // 단계별 UI 분기 (FR-024)
         switch currentDay {
         case 0, 1:
-            // Day 0~1: 정보만 표시
+            // Day 0~1: 정보만 표시 (링크/CTA 숨김 → 스택이 자동 공간 제거)
             linkLabel.isHidden = true
             ctaButton.isHidden = true
 
