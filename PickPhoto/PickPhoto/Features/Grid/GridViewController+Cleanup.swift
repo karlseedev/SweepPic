@@ -495,10 +495,14 @@ extension GridViewController {
             title: "(테스트)광고",
             image: UIImage(systemName: "play.rectangle"),
             children: [
-                UIAction(title: "광고 강제 제거 (no-fill)") { _ in
+                UIAction(title: "no-fill ON (광고 로드 차단)") { _ in
                     #if DEBUG
                     AdManager.shared.debugClearRewardedAd()
-                    Logger.app.debug("GridVC+Cleanup: 디버그 광고 강제 제거")
+                    #endif
+                },
+                UIAction(title: "no-fill OFF (정상 복구)") { _ in
+                    #if DEBUG
+                    AdManager.shared.debugDisableNoFill()
                     #endif
                 },
                 UIAction(title: "기본한도 소진") { [weak self] _ in

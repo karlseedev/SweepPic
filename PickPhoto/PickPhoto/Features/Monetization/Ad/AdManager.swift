@@ -145,6 +145,12 @@ final class AdManager: NSObject, AdManagerProtocol {
 
     /// 리워드 광고 사전 로드 (중복 로드 방지 가드 포함)
     func preloadRewardedAd() {
+        #if DEBUG
+        if debugForceNoFill {
+            Logger.app.debug("AdManager: DEBUG no-fill 모드 — 로드 차단")
+            return
+        }
+        #endif
         guard shouldShowAds() else { return }
         guard !isLoadingRewarded else {
             Logger.app.debug("AdManager: 리워드 광고 이미 로드 중 — 스킵")
@@ -285,17 +291,30 @@ final class AdManager: NSObject, AdManagerProtocol {
     // MARK: - Debug
 
     #if DEBUG
-    /// 디버그용: 로드된 리워드 광고 강제 제거 (no-fill 시뮬레이션)
+    /// 디버그용: no-fill 시뮬레이션 플래그
+    /// true면 preloadRewardedAd가 항상 실패 (로드 차단)
+    var debugForceNoFill = false
+
+    /// 디버그용: 로드된 리워드 광고 강제 제거 + 로드 차단 (no-fill 시뮬레이션)
     func debugClearRewardedAd() {
         rewardedAd = nil
         isLoadingRewarded = false
-        Logger.app.debug("AdManager: DEBUG 리워드 광고 강제 제거")
+        debugForceNoFill = true
+        Logger.app.debug("AdManager: DEBUG no-fill 모드 ON (광고 제거 + 로드 차단)")
+    }
+
+    /// 디버그용: no-fill 모드 해제
+    func debugDisableNoFill() {
+        debugForceNoFill = false
+        preloadRewardedAd()
+        Logger.app.debug("AdManager: DEBUG no-fill 모드 OFF + 재로드")
     }
 
     /// 디버그용: 현재 광고 상태 문자열
     var debugStatusDescription: String {
         let rewarded = isRewardedAdReady ? "Ready" : (isLoadingRewarded ? "Loading" : "Empty")
-        return "리워드=\(rewarded)"
+        let noFill = debugForceNoFill ? " [NO-FILL]" : ""
+        return "리워드=\(rewarded)\(noFill)"
     }
     #endif
 
