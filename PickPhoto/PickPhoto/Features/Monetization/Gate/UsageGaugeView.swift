@@ -26,23 +26,13 @@ final class UsageGaugeView: UIView {
 
     // MARK: - UI Components
 
-    /// 흰색 둥근 배경 카드
-    private let backgroundCard: UIView = {
-        let view = UIView()
-        view.backgroundColor = .white
-        view.layer.cornerRadius = 12
-        view.layer.shadowColor = UIColor.black.cgColor
-        view.layer.shadowOpacity = 0.08
-        view.layer.shadowOffset = CGSize(width: 0, height: 1)
-        view.layer.shadowRadius = 3
-        view.translatesAutoresizingMaskIntoConstraints = false
-        return view
-    }()
+    /// 반투명 블러 배경 카드 (BlurPopupCardView)
+    private let blurCard = BlurPopupCardView(cornerRadius: 12, dimAlpha: 0.3)
 
     /// 프로그레스 바 배경
     private let trackView: UIView = {
         let view = UIView()
-        view.backgroundColor = .systemGray5
+        view.backgroundColor = UIColor.white.withAlphaComponent(0.2)
         view.layer.cornerRadius = 4
         view.translatesAutoresizingMaskIntoConstraints = false
         return view
@@ -62,7 +52,7 @@ final class UsageGaugeView: UIView {
         let label = UILabel()
         label.text = "오늘 삭제한도"
         label.font = .systemFont(ofSize: 12, weight: .bold)
-        label.textColor = .black
+        label.textColor = .white
         label.translatesAutoresizingMaskIntoConstraints = false
         return label
     }()
@@ -71,7 +61,7 @@ final class UsageGaugeView: UIView {
     private let countLabel: UILabel = {
         let label = UILabel()
         label.font = .systemFont(ofSize: 12, weight: .medium)
-        label.textColor = .darkGray
+        label.textColor = UIColor.white.withAlphaComponent(0.7)
         label.translatesAutoresizingMaskIntoConstraints = false
         return label
     }()
@@ -98,23 +88,23 @@ final class UsageGaugeView: UIView {
     private func setupUI() {
         translatesAutoresizingMaskIntoConstraints = false
 
-        // 배경 카드
-        addSubview(backgroundCard)
+        // 블러 배경 카드
+        addSubview(blurCard)
+        blurCard.activateBlur(fraction: 0.5)
 
-        // 프로그레스 트랙 (카드 내부)
-        backgroundCard.addSubview(trackView)
+        // 콘텐츠는 blurCard.contentView에 추가
+        let cardContent = blurCard.contentView
+        cardContent.addSubview(trackView)
         trackView.addSubview(fillView)
+        cardContent.addSubview(titleLabel)
+        cardContent.addSubview(countLabel)
 
-        // 라벨 (카드 내부)
-        backgroundCard.addSubview(titleLabel)
-        backgroundCard.addSubview(countLabel)
-
-        // 배경 카드: 전체 영역 채움
+        // 블러 카드: 전체 영역 채움
         NSLayoutConstraint.activate([
-            backgroundCard.topAnchor.constraint(equalTo: topAnchor),
-            backgroundCard.leadingAnchor.constraint(equalTo: leadingAnchor),
-            backgroundCard.trailingAnchor.constraint(equalTo: trailingAnchor),
-            backgroundCard.bottomAnchor.constraint(equalTo: bottomAnchor)
+            blurCard.topAnchor.constraint(equalTo: topAnchor),
+            blurCard.leadingAnchor.constraint(equalTo: leadingAnchor),
+            blurCard.trailingAnchor.constraint(equalTo: trailingAnchor),
+            blurCard.bottomAnchor.constraint(equalTo: bottomAnchor)
         ])
 
         // 카드 내부 패딩
@@ -124,9 +114,9 @@ final class UsageGaugeView: UIView {
 
         // 프로그레스 트랙 레이아웃
         NSLayoutConstraint.activate([
-            trackView.topAnchor.constraint(equalTo: backgroundCard.topAnchor, constant: vPaddingTop),
-            trackView.leadingAnchor.constraint(equalTo: backgroundCard.leadingAnchor, constant: hPadding),
-            trackView.trailingAnchor.constraint(equalTo: backgroundCard.trailingAnchor, constant: -hPadding),
+            trackView.topAnchor.constraint(equalTo: cardContent.topAnchor, constant: vPaddingTop),
+            trackView.leadingAnchor.constraint(equalTo: cardContent.leadingAnchor, constant: hPadding),
+            trackView.trailingAnchor.constraint(equalTo: cardContent.trailingAnchor, constant: -hPadding),
             trackView.heightAnchor.constraint(equalToConstant: 8)
         ])
 
@@ -144,15 +134,15 @@ final class UsageGaugeView: UIView {
         // 타이틀 라벨 (좌측 하단)
         NSLayoutConstraint.activate([
             titleLabel.topAnchor.constraint(equalTo: trackView.bottomAnchor, constant: 4),
-            titleLabel.leadingAnchor.constraint(equalTo: backgroundCard.leadingAnchor, constant: hPadding),
-            titleLabel.bottomAnchor.constraint(equalTo: backgroundCard.bottomAnchor, constant: -vPadding)
+            titleLabel.leadingAnchor.constraint(equalTo: cardContent.leadingAnchor, constant: hPadding),
+            titleLabel.bottomAnchor.constraint(equalTo: cardContent.bottomAnchor, constant: -vPadding)
         ])
 
         // 카운트 라벨 (우측 하단)
         NSLayoutConstraint.activate([
             countLabel.topAnchor.constraint(equalTo: trackView.bottomAnchor, constant: 4),
-            countLabel.trailingAnchor.constraint(equalTo: backgroundCard.trailingAnchor, constant: -hPadding),
-            countLabel.bottomAnchor.constraint(equalTo: backgroundCard.bottomAnchor, constant: -vPadding)
+            countLabel.trailingAnchor.constraint(equalTo: cardContent.trailingAnchor, constant: -hPadding),
+            countLabel.bottomAnchor.constraint(equalTo: cardContent.bottomAnchor, constant: -vPadding)
         ])
 
         // 전체 높이 = vPadding(10) + 트랙(8) + 간격(4) + 라벨(~15) + vPadding(10) ≈ 47

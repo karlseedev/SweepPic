@@ -30,24 +30,14 @@ final class GracePeriodBannerView: UIView {
 
     // MARK: - UI Components
 
-    /// 흰색 둥근 배경 카드 (UsageGaugeView와 동일 스타일)
-    private let backgroundCard: UIView = {
-        let view = UIView()
-        view.backgroundColor = .white
-        view.layer.cornerRadius = 12
-        view.layer.shadowColor = UIColor.black.cgColor
-        view.layer.shadowOpacity = 0.08
-        view.layer.shadowOffset = CGSize(width: 0, height: 1)
-        view.layer.shadowRadius = 3
-        view.translatesAutoresizingMaskIntoConstraints = false
-        return view
-    }()
+    /// 반투명 블러 배경 카드 (BlurPopupCardView)
+    private let blurCard = BlurPopupCardView(cornerRadius: 12, dimAlpha: 0.3)
 
     /// 메인 텍스트 라벨: "무료 체험 중 — N일 남음"
     private let titleLabel: UILabel = {
         let label = UILabel()
         label.font = .systemFont(ofSize: 14, weight: .semibold)
-        label.textColor = .black
+        label.textColor = .white
         label.translatesAutoresizingMaskIntoConstraints = false
         return label
     }()
@@ -106,24 +96,26 @@ final class GracePeriodBannerView: UIView {
     private func setupUI() {
         translatesAutoresizingMaskIntoConstraints = false
 
-        addSubview(backgroundCard)
+        // 블러 배경 카드
+        addSubview(blurCard)
+        blurCard.activateBlur(fraction: 0.5)
 
-        // 배경 카드: 전체 영역 채움
+        // 블러 카드: 전체 영역 채움
         NSLayoutConstraint.activate([
-            backgroundCard.topAnchor.constraint(equalTo: topAnchor),
-            backgroundCard.leadingAnchor.constraint(equalTo: leadingAnchor),
-            backgroundCard.trailingAnchor.constraint(equalTo: trailingAnchor),
-            backgroundCard.bottomAnchor.constraint(equalTo: bottomAnchor)
+            blurCard.topAnchor.constraint(equalTo: topAnchor),
+            blurCard.leadingAnchor.constraint(equalTo: leadingAnchor),
+            blurCard.trailingAnchor.constraint(equalTo: trailingAnchor),
+            blurCard.bottomAnchor.constraint(equalTo: bottomAnchor)
         ])
 
-        // 콘텐츠 스택에 모든 요소 추가
-        // UIStackView는 hidden된 arrangedSubview의 공간을 자동 제거하므로
-        // Day 0~1에서 linkLabel/ctaButton이 hidden이면 자동으로 컴팩트해짐
+        // 콘텐츠는 blurCard.contentView에 추가
+        let cardContent = blurCard.contentView
+
         contentStack.addArrangedSubview(titleLabel)
         contentStack.addArrangedSubview(linkLabel)
         contentStack.addArrangedSubview(ctaButton)
 
-        backgroundCard.addSubview(contentStack)
+        cardContent.addSubview(contentStack)
 
         let hPadding: CGFloat = 14
         let vPadding: CGFloat = 12
@@ -134,10 +126,10 @@ final class GracePeriodBannerView: UIView {
 
         // 콘텐츠 스택 레이아웃 → 카드 크기 결정
         NSLayoutConstraint.activate([
-            contentStack.topAnchor.constraint(equalTo: backgroundCard.topAnchor, constant: vPadding),
-            contentStack.leadingAnchor.constraint(equalTo: backgroundCard.leadingAnchor, constant: hPadding),
-            contentStack.trailingAnchor.constraint(equalTo: backgroundCard.trailingAnchor, constant: -hPadding),
-            contentStack.bottomAnchor.constraint(equalTo: backgroundCard.bottomAnchor, constant: -vPadding),
+            contentStack.topAnchor.constraint(equalTo: cardContent.topAnchor, constant: vPadding),
+            contentStack.leadingAnchor.constraint(equalTo: cardContent.leadingAnchor, constant: hPadding),
+            contentStack.trailingAnchor.constraint(equalTo: cardContent.trailingAnchor, constant: -hPadding),
+            contentStack.bottomAnchor.constraint(equalTo: cardContent.bottomAnchor, constant: -vPadding),
             heightConstraint
         ])
 
