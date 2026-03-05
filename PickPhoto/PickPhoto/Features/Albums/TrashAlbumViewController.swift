@@ -202,6 +202,9 @@ final class TrashAlbumViewController: BaseGridViewController {
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
 
+        // [BM] Grace Period 만료 시 배너 → 게이지 전환 체크 (Phase 5 T026)
+        checkGracePeriodTransition()
+
         // 현재 화면이 TrashStore 변경을 받도록 핸들러 재등록
         trashStore.onStateChange { [weak self] _ in
             self?.loadTrashedAssets()
