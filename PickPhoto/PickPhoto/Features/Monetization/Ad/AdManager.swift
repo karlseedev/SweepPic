@@ -282,6 +282,23 @@ final class AdManager: NSObject, AdManagerProtocol {
         }
     }
 
+    // MARK: - Debug
+
+    #if DEBUG
+    /// 디버그용: 로드된 리워드 광고 강제 제거 (no-fill 시뮬레이션)
+    func debugClearRewardedAd() {
+        rewardedAd = nil
+        isLoadingRewarded = false
+        Logger.app.debug("AdManager: DEBUG 리워드 광고 강제 제거")
+    }
+
+    /// 디버그용: 현재 광고 상태 문자열
+    var debugStatusDescription: String {
+        let rewarded = isRewardedAdReady ? "Ready" : (isLoadingRewarded ? "Loading" : "Empty")
+        return "리워드=\(rewarded)"
+    }
+    #endif
+
     // MARK: - Rewarded Ad Completion Helper
 
     /// 리워드 광고 결과 전달 + 클린업 (1회만 호출 보장)

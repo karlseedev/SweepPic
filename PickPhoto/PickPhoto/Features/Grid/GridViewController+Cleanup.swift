@@ -64,6 +64,7 @@ extension GridViewController {
                 self.makeCoachMarkReplayMenu(),
                 self.makeDebugUsageLimitResetMenu(),
                 self.makeDebugGracePeriodMenu(),
+                self.makeDebugAdTestMenu(),
             ])
         )
 
@@ -104,6 +105,7 @@ extension GridViewController {
             self.makeCoachMarkReplayMenu(),
             self.makeDebugUsageLimitResetMenu(),
             self.makeDebugGracePeriodMenu(),
+            self.makeDebugAdTestMenu(),
         ]))
 
         // 버튼 활성화 상태 초기화
@@ -484,6 +486,39 @@ extension GridViewController {
             // 메뉴 재구성 (현재 잔여량 반영)
             self?.setupCleanupButton()
         }
+    }
+
+    /// (테스트) 광고 상태 테스트 메뉴
+    /// 리워드 광고 강제 제거(no-fill 시뮬레이션) + 한도 소진 + 상태 확인
+    func makeDebugAdTestMenu() -> UIMenu {
+        return UIMenu(
+            title: "(테스트)광고",
+            image: UIImage(systemName: "play.rectangle"),
+            children: [
+                UIAction(title: "광고 강제 제거 (no-fill)") { _ in
+                    #if DEBUG
+                    AdManager.shared.debugClearRewardedAd()
+                    Logger.app.debug("GridVC+Cleanup: 디버그 광고 강제 제거")
+                    #endif
+                },
+                UIAction(title: "기본한도 소진") { [weak self] _ in
+                    #if DEBUG
+                    UsageLimitStore.shared.debugExhaustFreeLimit()
+                    Logger.app.debug("GridVC+Cleanup: 디버그 기본한도 소진")
+                    NotificationCenter.default.post(name: .debugGracePeriodToggled, object: nil)
+                    #endif
+                    self?.setupCleanupButton()
+                },
+                UIAction(title: "전체한도 소진 (골든모먼트)") { [weak self] _ in
+                    #if DEBUG
+                    UsageLimitStore.shared.debugExhaustAll()
+                    Logger.app.debug("GridVC+Cleanup: 디버그 전체한도 소진")
+                    NotificationCenter.default.post(name: .debugGracePeriodToggled, object: nil)
+                    #endif
+                    self?.setupCleanupButton()
+                },
+            ]
+        )
     }
 
     /// (테스트) Grace Period 토글 메뉴
