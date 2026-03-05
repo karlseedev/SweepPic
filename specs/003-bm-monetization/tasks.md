@@ -77,10 +77,10 @@
 
 ### Implementation
 
-- [ ] T021 [US2] RewardedAdPresenter 생성 — `PickPhoto/PickPhoto/Features/Monetization/Ad/RewardedAdPresenter.swift`. GADRewardedAd 래핑. showAd(from:completion:(Bool)->Void). 시청 완료=true, 취소/에러=false. 사전 로드 + 시청 완료 후 즉시 다음 로드 (FR-019). 지수 백오프 재시도 2→4→8초 (FR-020)
-- [ ] T022 [US2] TrashGatePopupVC에 광고 흐름 연동 — `TrashGatePopupViewController.swift` 수정. "광고 N회 보고 X장 삭제" 버튼 탭 → 팝업 dismiss → RewardedAdPresenter.showAd → 완료 시 삭제 콜백. 광고 버튼 3단계 상태 (Ready/Loading/Failed) (FR-018). 시스템 팝업 취소 시 리워드 미차감 (FR-013). no-fill: 스피너 10초 → 재시도/취소 팝업
-- [ ] T023 [US2] 생애 최초 no-fill 무료 +10장 처리 — `TrashGateCoordinator.swift` 또는 `RewardedAdPresenter.swift`에서 lifetimeFreeGrantUsed 체크. 최초 no-fill 시 usageLimitStore.recordLifetimeFreeGrant() 호출 (FR-021)
-- [ ] T024 [US2] 골든 모먼트 UI — `TrashGatePopupViewController.swift`에서 리워드 2회 소진 시 Plus 전환 유도 강조 UI (FR-014). 광고 옵션 비활성 + "오늘 광고 횟수를 모두 사용했습니다" 안내
+- [x] T021 [US2] RewardedAdPresenter 생성 — `PickPhoto/PickPhoto/Features/Monetization/Ad/RewardedAdPresenter.swift`. GADRewardedAd 래핑. showAd(from:completion:(Bool)->Void). 시청 완료=true, 취소/에러=false. 사전 로드 + 시청 완료 후 즉시 다음 로드 (FR-019). 지수 백오프 재시도 2→4→8초 (FR-020)
+- [x] T022 [US2] TrashGatePopupVC에 광고 흐름 연동 — `TrashGatePopupViewController.swift` 수정. "광고 N회 보고 X장 삭제" 버튼 탭 → 팝업 dismiss → RewardedAdPresenter.showAd → 완료 시 삭제 콜백. 광고 버튼 3단계 상태 (Ready/Loading/Failed) (FR-018). 시스템 팝업 취소 시 리워드 미차감 (FR-013). no-fill: 스피너 10초 → 재시도/취소 팝업
+- [x] T023 [US2] 생애 최초 no-fill 무료 +10장 처리 — `TrashGateCoordinator.swift` 또는 `RewardedAdPresenter.swift`에서 lifetimeFreeGrantUsed 체크. 최초 no-fill 시 usageLimitStore.recordLifetimeFreeGrant() 호출 (FR-021)
+- [x] T024 [US2] 골든 모먼트 UI — `TrashGatePopupViewController.swift`에서 리워드 2회 소진 시 Plus 전환 유도 강조 UI (FR-014). 광고 옵션 비활성 + "오늘 광고 횟수를 모두 사용했습니다" 안내
 
 **Checkpoint**: 테스트 광고 ID로 시청 → 한도 +10 → 삭제 실행. 시스템 팝업 취소 → 리워드 미차감. 2회 소진 → 골든 모먼트 표시
 

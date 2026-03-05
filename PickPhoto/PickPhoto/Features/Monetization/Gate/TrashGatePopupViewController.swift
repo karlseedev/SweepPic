@@ -312,11 +312,20 @@ final class TrashGatePopupViewController: UIViewController {
         let isRewardExhausted = remainingRewards <= 0
 
         if isRewardExhausted {
+            // 리워드 2회 소진 → 골든 모먼트 (FR-014, T024)
             configureGoldenMoment()
         } else if adsNeeded > 0 {
             let adText = "광고 \(adsNeeded)회 보고 \(trashCount)장 전체 삭제"
             adButton.setTitle(adText, for: .normal)
-            updateAdButtonState(.ready)
+            // AdManager 로드 상태에 따라 버튼 초기 상태 결정
+            if AdManager.shared.isRewardedAdReady {
+                updateAdButtonState(.ready)
+            } else {
+                // 광고 미로드 → Loading 상태 + 사전 로드 시작
+                updateAdButtonState(.loading)
+                AdManager.shared.preloadRewardedAd()
+                pollAdReadyState(adText: adText)
+            }
         } else {
             adButton.isHidden = true
         }
@@ -350,6 +359,43 @@ final class TrashGatePopupViewController: UIViewController {
             adButton.backgroundColor = UIColor.white.withAlphaComponent(0.12)
             adButton.setTitle("광고를 불러올 수 없습니다", for: .normal)
             adSpinner.stopAnimating()
+        }
+    }
+
+    // MARK: - Ad Ready Polling
+
+    /// 광고 로드 완료 폴링 (0.5초 간격, 최대 10초)
+    /// 팝업이 표시된 상태에서 광고가 로드될 때까지 대기
+    private var adPollCount = 0
+    private static let maxAdPollCount = 20 // 0.5초 × 20 = 10초
+
+    /// 광고 로드 완료 대기 폴링
+    private func pollAdReadyState(adText: String) {
+        adPollCount = 0
+        doPollAdReady(adText: adText)
+    }
+
+    /// 실제 폴링 실행 (재귀)
+    private func doPollAdReady(adText: String) {
+        guard adPollCount < Self.maxAdPollCount else {
+            // 10초 대기 초과 → Failed 상태
+            updateAdButtonState(.failed)
+            Logger.app.debug("TrashGatePopup: 광고 로드 대기 타임아웃 (10초)")
+            return
+        }
+
+        adPollCount += 1
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
+            guard let self = self else { return }
+            if AdManager.shared.isRewardedAdReady {
+                // 로드 완료 → Ready 상태
+                self.adButton.setTitle(adText, for: .normal)
+                self.updateAdButtonState(.ready)
+                Logger.app.debug("TrashGatePopup: 광고 로드 완료 — Ready 전환")
+            } else {
+                // 계속 대기
+                self.doPollAdReady(adText: adText)
+            }
         }
     }
 
