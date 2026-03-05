@@ -144,6 +144,10 @@ extension TrashAlbumViewController {
             // Phase 6 T031에서 PaywallViewController present
             _ = self
         }
+
+        // 배너 높이만큼 컬렉션뷰 상단 inset 갱신
+        view.layoutIfNeeded()
+        updateContentInset()
     }
 
     // MARK: - Day 4 Transition (T026)
@@ -200,6 +204,10 @@ extension TrashAlbumViewController {
                 // 첫 표시 시 1회 툴팁 (Edge Case: 카운터 게이지 첫 표시)
                 showGaugeFirstTooltipIfNeeded(for: gauge)
             }
+
+            // 배너 → 게이지 높이 변경에 따른 inset 갱신
+            view.layoutIfNeeded()
+            updateContentInset()
         }
     }
 
@@ -307,6 +315,9 @@ extension TrashAlbumViewController {
         view.viewWithTag(ViewTag.gaugeView)?.removeFromSuperview()
         view.viewWithTag(ViewTag.graceBanner)?.removeFromSuperview()
         setupGaugeView()
+        // 게이지/배너 높이 변경에 따른 컬렉션뷰 inset 즉시 갱신
+        view.layoutIfNeeded()
+        updateContentInset()
     }
     #endif
 
