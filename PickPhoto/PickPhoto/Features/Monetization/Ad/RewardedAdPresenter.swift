@@ -2,26 +2,24 @@
 //  RewardedAdPresenter.swift
 //  PickPhoto
 //
-//  GADRewardedAd 래핑 — 리워드 광고 표시 + 시청 완료/취소 처리
+//  리워드 광고 표시 오케스트레이터
+//  AdManager의 광고 로드 대기 + 타임아웃 + 결과 전달을 담당
 //
 //  역할:
-//  - AdManager의 리워드 광고를 활용하여 실제 표시
-//  - 시청 완료 시 true, 취소/에러 시 false 콜백
-//  - 광고 미로드 시 대기 로드 + 10초 타임아웃 (FR-020)
-//  - no-fill 시 지수 백오프 재시도 2→4→8초 (FR-020)
-//  - 시청 완료 후 즉시 다음 광고 사전 로드 (FR-019)
-//  - GADFullScreenContentDelegate로 dismiss 감지
+//  - AdManager에 로드된 광고가 있으면 즉시 표시
+//  - 없으면 로드 시작 + 10초 대기 → 타임아웃 시 .notLoaded
+//  - AdManager의 RewardedAdOutcome을 그대로 전달
+//  - 광고 로드/표시/dismiss는 AdManager + GADFullScreenContentDelegate가 전담
 //
 
 import UIKit
-import GoogleMobileAds
 import AppCore
 import OSLog
 
 // MARK: - RewardedAdPresenter
 
-/// 리워드 광고 표시 전담 프레젠터
-/// AdManager의 사전 로드된 광고를 사용하여 표시하고, 결과를 콜백으로 전달
+/// 리워드 광고 표시 오케스트레이터
+/// "로드 대기 + 타임아웃" 오케스트레이션만 담당, 실제 표시/delegate는 AdManager
 final class RewardedAdPresenter: NSObject {
 
     // MARK: - Singleton
@@ -30,10 +28,10 @@ final class RewardedAdPresenter: NSObject {
 
     // MARK: - Properties
 
-    /// 광고 표시 완료 콜백 (true: 시청 완료 → 보상 지급, false: 취소/에러)
-    private var completionHandler: ((Bool) -> Void)?
+    /// 광고 결과 콜백 (AdManager의 outcome 그대로 전달)
+    private var completionHandler: ((RewardedAdOutcome) -> Void)?
 
-    /// 광고가 표시 중인 VC
+    /// 광고가 표시될 VC (weak 참조)
     private weak var presentingVC: UIViewController?
 
     /// 광고 로드 대기 타이머 (10초 타임아웃)
@@ -41,9 +39,6 @@ final class RewardedAdPresenter: NSObject {
 
     /// 로드 대기 타임아웃 (초)
     private static let loadWaitTimeout: TimeInterval = 10.0
-
-    /// 리워드가 지급되었는지 (시청 완료 판단)
-    private var didEarnReward = false
 
     // MARK: - Init
 
@@ -56,15 +51,14 @@ final class RewardedAdPresenter: NSObject {
     /// 리워드 광고 표시
     /// - Parameters:
     ///   - vc: 광고를 표시할 ViewController
-    ///   - completion: 시청 완료(true) / 취소·에러(false) 콜백
+    ///   - completion: AdManager의 RewardedAdOutcome 전달
     ///
     /// 흐름:
     /// 1. AdManager에 로드된 광고가 있으면 즉시 표시
-    /// 2. 없으면 로드 시작 + 10초 대기 → 타임아웃 시 false
-    func showAd(from vc: UIViewController, completion: @escaping (Bool) -> Void) {
+    /// 2. 없으면 로드 시작 + 10초 폴링 대기 → 타임아웃 시 .notLoaded
+    func showAd(from vc: UIViewController, completion: @escaping (RewardedAdOutcome) -> Void) {
         self.completionHandler = completion
         self.presentingVC = vc
-        self.didEarnReward = false
 
         // 이미 로드된 광고가 있으면 즉시 표시
         if AdManager.shared.isRewardedAdReady {
@@ -80,35 +74,24 @@ final class RewardedAdPresenter: NSObject {
 
     // MARK: - Present
 
-    /// 실제 광고 표시 (AdManager에서 광고 가져와서 delegate 설정 후 present)
+    /// 실제 광고 표시 — AdManager에 위임, outcome을 그대로 전달
     private func presentAd(from vc: UIViewController) {
         cancelLoadWaitTimer()
 
-        // AdManager의 showRewardedAd를 사용하되, delegate 콜백을 여기서 처리
-        AdManager.shared.showRewardedAd(from: vc) { [weak self] success in
-            guard let self = self else { return }
-            if success {
-                // 시청 완료 — 보상 지급 마킹
-                self.didEarnReward = true
-                Logger.app.debug("RewardedAdPresenter: 리워드 획득")
-            }
-            // completion은 광고 dismiss 시점에서 호출
-            // AdManager.showRewardedAd의 completion이 즉시 호출되므로
-            // 여기서 바로 completion 처리
-            self.finishWithResult(success)
+        AdManager.shared.showRewardedAd(from: vc) { [weak self] outcome in
+            self?.finishWithOutcome(outcome)
         }
     }
 
     // MARK: - Load Wait Timer
 
-    /// 광고 로드 대기 타이머 시작 (10초)
+    /// 광고 로드 대기 타이머 시작 (10초) + 0.5초 간격 폴링
     private func startLoadWaitTimer() {
         cancelLoadWaitTimer()
 
         loadWaitTimer = Timer.scheduledTimer(withTimeInterval: Self.loadWaitTimeout, repeats: false) { [weak self] _ in
             guard let self = self else { return }
 
-            // 10초 후에도 미로드 → 실패 처리
             if AdManager.shared.isRewardedAdReady, let vc = self.presentingVC {
                 // 타이머 종료 직전에 로드 완료 → 표시
                 Logger.app.debug("RewardedAdPresenter: 대기 중 로드 완료 — 표시")
@@ -116,7 +99,7 @@ final class RewardedAdPresenter: NSObject {
             } else {
                 // 로드 실패 (no-fill 또는 네트워크 에러)
                 Logger.app.error("RewardedAdPresenter: 로드 대기 타임아웃 (\(Self.loadWaitTimeout)초)")
-                self.finishWithResult(false)
+                self.finishWithOutcome(.notLoaded)
             }
         }
 
@@ -124,17 +107,15 @@ final class RewardedAdPresenter: NSObject {
         pollForAdReady()
     }
 
-    /// 광고 로드 완료 폴링 (0.5초 간격으로 체크)
+    /// 광고 로드 완료 폴링 (0.5초 간격)
     private func pollForAdReady() {
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
             guard let self = self, self.loadWaitTimer != nil else { return }
 
             if AdManager.shared.isRewardedAdReady, let vc = self.presentingVC {
-                // 로드 완료 → 즉시 표시
                 Logger.app.debug("RewardedAdPresenter: 폴링으로 로드 완료 감지 — 표시")
                 self.presentAd(from: vc)
             } else {
-                // 계속 폴링
                 self.pollForAdReady()
             }
         }
@@ -149,15 +130,14 @@ final class RewardedAdPresenter: NSObject {
     // MARK: - Result Handling
 
     /// 최종 결과 처리 + 클린업
-    private func finishWithResult(_ success: Bool) {
+    private func finishWithOutcome(_ outcome: RewardedAdOutcome) {
         cancelLoadWaitTimer()
         let handler = completionHandler
         completionHandler = nil
         presentingVC = nil
-        didEarnReward = false
 
         DispatchQueue.main.async {
-            handler?(success)
+            handler?(outcome)
         }
     }
 }

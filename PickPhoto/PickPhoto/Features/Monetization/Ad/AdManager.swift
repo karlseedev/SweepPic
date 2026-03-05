@@ -16,6 +16,20 @@ import GoogleMobileAds
 import AppCore
 import OSLog
 
+// MARK: - RewardedAdOutcome
+
+/// 리워드 광고 결과 enum — no-fill/사용자 취소/보상 획득 구분
+enum RewardedAdOutcome {
+    /// 시청 완료 → 보상 지급
+    case earned
+    /// 사용자가 광고를 중간에 닫음 (보상 미지급)
+    case dismissedWithoutReward
+    /// 광고 표시 자체 실패 (present 에러)
+    case presentFailed(Error)
+    /// 광고 미로드 상태 (preload 실패 또는 미완료)
+    case notLoaded
+}
+
 // MARK: - AdManagerProtocol
 
 /// 광고 관리 프로토콜 (contracts/protocols.md)
@@ -26,7 +40,7 @@ protocol AdManagerProtocol: AnyObject {
     // 리워드
     var isRewardedAdReady: Bool { get }
     func preloadRewardedAd()
-    func showRewardedAd(from vc: UIViewController, completion: @escaping (Bool) -> Void)
+    func showRewardedAd(from vc: UIViewController, completion: @escaping (RewardedAdOutcome) -> Void)
 
     // 전면
     var isInterstitialReady: Bool { get }
@@ -71,6 +85,18 @@ final class AdManager: NSObject, AdManagerProtocol {
 
     /// 최대 재시도 횟수
     private static let maxRetryCount = 3
+
+    /// 리워드 광고 로드 중 여부 (중복 로드 방지)
+    private var isLoadingRewarded = false
+
+    /// 전면 광고 로드 중 여부
+    private var isLoadingInterstitial = false
+
+    /// 리워드 광고 시청 완료 콜백 (delegate에서 사용)
+    private var rewardedCompletion: ((RewardedAdOutcome) -> Void)?
+
+    /// 리워드 획득 여부 (reward handler → dismiss에서 판정)
+    private var didEarnReward = false
 
     // MARK: - Initialization
 
@@ -117,12 +143,19 @@ final class AdManager: NSObject, AdManagerProtocol {
         rewardedAd != nil
     }
 
-    /// 리워드 광고 사전 로드
+    /// 리워드 광고 사전 로드 (중복 로드 방지 가드 포함)
     func preloadRewardedAd() {
         guard shouldShowAds() else { return }
+        guard !isLoadingRewarded else {
+            Logger.app.debug("AdManager: 리워드 광고 이미 로드 중 — 스킵")
+            return
+        }
+        guard rewardedAd == nil else { return }
 
+        isLoadingRewarded = true
         GADRewardedAd.load(withAdUnitID: Self.rewardedAdUnitID, request: GADRequest()) { [weak self] ad, error in
             guard let self = self else { return }
+            self.isLoadingRewarded = false
 
             if let error = error {
                 Logger.app.error("AdManager: 리워드 광고 로드 실패 — \(error.localizedDescription)")
@@ -136,25 +169,31 @@ final class AdManager: NSObject, AdManagerProtocol {
         }
     }
 
-    /// 리워드 광고 표시
+    /// 리워드 광고 표시 (GADFullScreenContentDelegate 기반)
     /// - Parameters:
     ///   - vc: 표시할 ViewController
-    ///   - completion: 시청 완료(true) / 취소·에러(false)
-    func showRewardedAd(from vc: UIViewController, completion: @escaping (Bool) -> Void) {
+    ///   - completion: 광고 결과 (earned/dismissed/failed/notLoaded)
+    ///
+    /// 흐름:
+    /// 1. reward handler → didEarnReward = true (마킹만)
+    /// 2. adDidDismissFullScreenContent → earned or dismissedWithoutReward 판정 + completion 호출
+    /// 3. adDidFailToPresentFullScreenContentWithError → presentFailed + completion 호출
+    func showRewardedAd(from vc: UIViewController, completion: @escaping (RewardedAdOutcome) -> Void) {
         guard let ad = rewardedAd else {
             Logger.app.error("AdManager: 리워드 광고 미로드 상태")
-            completion(false)
+            completion(.notLoaded)
             return
         }
 
-        ad.present(fromRootViewController: vc) { [weak self] in
-            // 시청 완료 — 보상 지급
-            Logger.app.debug("AdManager: 리워드 광고 시청 완료")
-            completion(true)
+        // delegate/상태 설정
+        self.rewardedCompletion = completion
+        self.didEarnReward = false
+        ad.fullScreenContentDelegate = self
 
-            // 시청 완료 후 즉시 다음 광고 로드 (FR-019)
-            self?.rewardedAd = nil
-            self?.preloadRewardedAd()
+        // 광고 표시 — reward handler에서는 마킹만
+        ad.present(fromRootViewController: vc) { [weak self] in
+            self?.didEarnReward = true
+            Logger.app.debug("AdManager: 리워드 획득 마킹")
         }
     }
 
@@ -181,12 +220,16 @@ final class AdManager: NSObject, AdManagerProtocol {
         interstitialAd != nil
     }
 
-    /// 전면 광고 사전 로드
+    /// 전면 광고 사전 로드 (중복 로드 방지 가드 포함)
     func preloadInterstitialAd() {
         guard shouldShowAds() else { return }
+        guard !isLoadingInterstitial else { return }
+        guard interstitialAd == nil else { return }
 
+        isLoadingInterstitial = true
         GADInterstitialAd.load(withAdUnitID: Self.interstitialAdUnitID, request: GADRequest()) { [weak self] ad, error in
             guard let self = self else { return }
+            self.isLoadingInterstitial = false
 
             if let error = error {
                 Logger.app.error("AdManager: 전면 광고 로드 실패 — \(error.localizedDescription)")
@@ -237,5 +280,50 @@ final class AdManager: NSObject, AdManagerProtocol {
         DispatchQueue.main.asyncAfter(deadline: .now() + delay) { [weak self] in
             self?.preloadInterstitialAd()
         }
+    }
+
+    // MARK: - Rewarded Ad Completion Helper
+
+    /// 리워드 광고 결과 전달 + 클린업 (1회만 호출 보장)
+    private func fireRewardedCompletion(_ outcome: RewardedAdOutcome) {
+        let handler = rewardedCompletion
+        rewardedCompletion = nil
+        didEarnReward = false
+        handler?(outcome)
+    }
+}
+
+// MARK: - GADFullScreenContentDelegate
+
+extension AdManager: GADFullScreenContentDelegate {
+
+    /// 광고가 화면에서 dismiss됨 → 최종 outcome 판정
+    /// Google FAQ: reward handler가 dismiss보다 먼저 호출됨
+    func adDidDismissFullScreenContent(_ ad: GADFullScreenPresentingAd) {
+        Logger.app.debug("AdManager: 광고 dismiss — didEarnReward=\(self.didEarnReward)")
+
+        if didEarnReward {
+            fireRewardedCompletion(.earned)
+        } else {
+            fireRewardedCompletion(.dismissedWithoutReward)
+        }
+
+        // dismiss 후 광고 인스턴스 정리 + 다음 광고 사전 로드 (FR-019)
+        rewardedAd = nil
+        preloadRewardedAd()
+    }
+
+    /// 광고 표시 자체 실패 (present 에러)
+    func ad(_ ad: GADFullScreenPresentingAd, didFailToPresentFullScreenContentWithError error: Error) {
+        Logger.app.error("AdManager: 광고 표시 실패 — \(error.localizedDescription)")
+        fireRewardedCompletion(.presentFailed(error))
+
+        rewardedAd = nil
+        preloadRewardedAd()
+    }
+
+    /// 광고가 화면에 표시됨 (로깅용)
+    func adDidRecordImpression(_ ad: GADFullScreenPresentingAd) {
+        Logger.app.debug("AdManager: 광고 impression 기록")
     }
 }

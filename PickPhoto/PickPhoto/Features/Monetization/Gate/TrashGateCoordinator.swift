@@ -136,12 +136,11 @@ final class TrashGateCoordinator: TrashGateCoordinatorProtocol {
 
     /// 광고 시청 → 리워드 기록 → 삭제 실행 흐름
     /// 여러 번 광고를 봐야 하는 경우 재귀적으로 처리
-    /// - Parameters:
-    ///   - viewController: 광고를 표시할 VC
-    ///   - trashCount: 삭제 대상 수
-    ///   - adsNeeded: 필요한 광고 시청 횟수
-    ///   - onApproved: 모든 광고 시청 완료 후 삭제 콜백
-    ///   - watchedCount: 현재까지 시청한 횟수 (재귀 파라미터)
+    ///
+    /// RewardedAdOutcome 기반 분기:
+    /// - .earned → 리워드 기록 + 다음 광고 또는 삭제
+    /// - .dismissedWithoutReward → 사용자가 자발적 취소, 조용히 종료
+    /// - .notLoaded / .presentFailed → no-fill 처리 (생애 최초 무료 또는 재시도 팝업)
     private func handleAdWatchFlow(
         from viewController: UIViewController,
         trashCount: Int,
@@ -157,24 +156,33 @@ final class TrashGateCoordinator: TrashGateCoordinatorProtocol {
         }
 
         // RewardedAdPresenter를 통해 리워드 광고 표시
-        RewardedAdPresenter.shared.showAd(from: viewController) { [weak self] success in
-            if success {
-                // 시청 완료 → 리워드 기록
+        // ⚠️ viewController weak 캡쳐 — dismiss 중 해제 방어
+        RewardedAdPresenter.shared.showAd(from: viewController) { [weak self, weak viewController] outcome in
+            guard let self = self, let viewController = viewController else { return }
+
+            switch outcome {
+            case .earned:
+                // 시청 완료 → 리워드 기록 (FR-013: dismiss 후에만 기록)
                 UsageLimitStore.shared.recordReward()
                 Logger.app.debug("TrashGateCoordinator: 광고 시청 완료 (\(watchedCount + 1)/\(adsNeeded))")
 
                 // 다음 광고 필요 여부 확인
-                self?.handleAdWatchFlow(
+                self.handleAdWatchFlow(
                     from: viewController,
                     trashCount: trashCount,
                     adsNeeded: adsNeeded,
                     onApproved: onApproved,
                     watchedCount: watchedCount + 1
                 )
-            } else {
-                // 광고 시청 실패/취소 → 리워드 미차감 (FR-013)
-                Logger.app.debug("TrashGateCoordinator: 광고 시청 실패/취소 — 리워드 미차감")
-                self?.handleAdFailure(
+
+            case .dismissedWithoutReward:
+                // 사용자가 자발적으로 광고를 닫음 → 리워드 미차감, 조용히 종료
+                Logger.app.debug("TrashGateCoordinator: 사용자 광고 취소 — 흐름 종료")
+
+            case .notLoaded, .presentFailed:
+                // 광고 로드 실패 / 표시 실패 → no-fill 처리
+                Logger.app.debug("TrashGateCoordinator: 광고 로드/표시 실패 — no-fill 처리")
+                self.handleNoFill(
                     from: viewController,
                     trashCount: trashCount,
                     adsNeeded: adsNeeded,
@@ -185,12 +193,12 @@ final class TrashGateCoordinator: TrashGateCoordinatorProtocol {
         }
     }
 
-    // MARK: - Ad Failure Handling
+    // MARK: - No-Fill Handling
 
-    /// 광고 로드 실패/취소 시 처리
-    /// - no-fill 스피너 10초 → 재시도/취소 팝업
-    /// - 생애 최초 no-fill 시 무료 +10장 (FR-021, T023에서 연동)
-    private func handleAdFailure(
+    /// 광고 로드/표시 실패(no-fill) 처리
+    /// - 생애 최초 no-fill → 무료 +10장 (FR-021)
+    /// - 이후 → 재시도/취소 팝업
+    private func handleNoFill(
         from viewController: UIViewController,
         trashCount: Int,
         adsNeeded: Int,
@@ -222,8 +230,9 @@ final class TrashGateCoordinator: TrashGateCoordinatorProtocol {
         )
 
         // 재시도 — 같은 광고 다시 시도
-        alert.addAction(UIAlertAction(title: "다시 시도", style: .default) { [weak self] _ in
-            self?.handleAdWatchFlow(
+        alert.addAction(UIAlertAction(title: "다시 시도", style: .default) { [weak self, weak viewController] _ in
+            guard let self = self, let viewController = viewController else { return }
+            self.handleAdWatchFlow(
                 from: viewController,
                 trashCount: trashCount,
                 adsNeeded: adsNeeded,

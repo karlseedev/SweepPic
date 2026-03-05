@@ -91,8 +91,8 @@ extension TrashAlbumViewController {
         detail.onWatchAd = { [weak self] in
             guard let self = self else { return }
             // 광고 시청 → 리워드 기록 → 게이지 자동 갱신 (onUpdate 콜백)
-            AdManager.shared.showRewardedAd(from: self) { success in
-                if success {
+            AdManager.shared.showRewardedAd(from: self) { outcome in
+                if case .earned = outcome {
                     UsageLimitStore.shared.recordReward()
                     Logger.app.debug("TrashAlbumVC+Gate: 게이지 상세에서 광고 시청 완료")
                 }
