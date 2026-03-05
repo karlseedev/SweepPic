@@ -954,9 +954,13 @@ extension GridViewController: ViewerViewControllerDelegate {
         trashStore.moveToTrash(assetIDs: [assetID])
 
         // 그리드 셀 업데이트 (딤드 표시)
-        // padding 보정 적용 (Base의 collectionIndexPath 사용)
-        if let indexPath = collectionIndexPath(for: assetID) {
-            collectionView.reloadItems(at: [indexPath])
+        // iOS 26+: Navigation Push → viewWillAppear에서 handleTrashStateChange가 처리
+        // iOS 16~25: Modal dismiss 시 viewWillAppear 미호출 → 여기서 미리 업데이트 필요
+        // (iOS 26 reloadItems first-use 랙 회피: 260301Lag2-Del.md 참조)
+        if #unavailable(iOS 26.0) {
+            if let indexPath = collectionIndexPath(for: assetID) {
+                collectionView.reloadItems(at: [indexPath])
+            }
         }
 
         // [SimilarPhoto] 그룹 무효화 처리 (T022)
@@ -971,9 +975,12 @@ extension GridViewController: ViewerViewControllerDelegate {
         trashStore.restore(assetIDs: [assetID])
 
         // 그리드 셀 업데이트 (딤드 제거)
-        // padding 보정 적용 (Base의 collectionIndexPath 사용)
-        if let indexPath = collectionIndexPath(for: assetID) {
-            collectionView.reloadItems(at: [indexPath])
+        // iOS 26+: viewWillAppear → handleTrashStateChange에서 처리
+        // iOS 16~25: Modal dismiss 시 viewWillAppear 미호출 → 여기서 미리 업데이트
+        if #unavailable(iOS 26.0) {
+            if let indexPath = collectionIndexPath(for: assetID) {
+                collectionView.reloadItems(at: [indexPath])
+            }
         }
     }
 

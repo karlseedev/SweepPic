@@ -27,9 +27,15 @@ extension ViewerViewController {
     @objc func deleteButtonTapped() {
         guard let assetID = coordinator.assetID(at: currentIndex) else { return }
 
+        // [DeleteLag 측정] 햅틱 시간
+        let tH0 = CACurrentMediaTime()
+
         // 햅틱 피드백
         let generator = UIImpactFeedbackGenerator(style: .medium)
         generator.impactOccurred()
+
+        let tH1 = CACurrentMediaTime()
+        Logger.viewer.debug("[DeleteLag] buttonTap haptic=\(String(format: "%.1f", (tH1-tH0)*1000))ms")
 
         // [Analytics] 이벤트 4-1: 뷰어 삭제 버튼
         AnalyticsService.shared.countViewerTrashButton(source: coordinator.deleteSource)
@@ -117,9 +123,15 @@ extension ViewerViewController {
     func handleSwipeDelete() {
         guard let assetID = coordinator.assetID(at: currentIndex) else { return }
 
+        // [DeleteLag 측정] 햅틱 시간
+        let tH0 = CACurrentMediaTime()
+
         // 햅틱 피드백
         let generator = UINotificationFeedbackGenerator()
         generator.notificationOccurred(.success)
+
+        let tH1 = CACurrentMediaTime()
+        Logger.viewer.debug("[DeleteLag] swipeDel haptic=\(String(format: "%.1f", (tH1-tH0)*1000))ms")
 
         // [Analytics] 이벤트 4-1: 뷰어 스와이프 삭제
         AnalyticsService.shared.countViewerSwipeDelete(source: coordinator.deleteSource)
@@ -157,6 +169,9 @@ extension ViewerViewController {
         let containerView = pageViewController.view!
         let width = containerView.bounds.width
 
+        // [DeleteLag 측정] 구간별 타이밍
+        let t0 = CACurrentMediaTime()
+
         // 1. 현재 사진 스냅샷 (위로 날릴 대상)
         guard let snapshot = containerView.snapshotView(afterScreenUpdates: false) else {
             delegate?.viewerDidRequestDelete(assetID: assetID)
@@ -164,15 +179,27 @@ extension ViewerViewController {
             updateToolbarForCurrentPhoto()
             return
         }
+
+        let t1 = CACurrentMediaTime()
+
         snapshot.frame = containerView.frame
         containerView.superview?.addSubview(snapshot)
 
+        let t1b = CACurrentMediaTime()
+
         // 2. 삭제 요청 + 다음 사진을 즉시 세팅 (방향 정보 반환)
         delegate?.viewerDidRequestDelete(assetID: assetID)
+
+        let t2 = CACurrentMediaTime()
+
         guard let direction = moveToNextAfterDeleteNoAnimation() else {
             snapshot.removeFromSuperview()
             return
         }
+
+        let t3 = CACurrentMediaTime()
+        let ms = { (d: Double) in String(format: "%.1f", d * 1000) }
+        Logger.viewer.debug("[DeleteLag] snap=\(ms(t1-t0)) addSub=\(ms(t1b-t1)) delegate=\(ms(t2-t1b)) move=\(ms(t3-t2)) total=\(ms(t3-t0))ms")
 
         // 3. 다음 사진을 슬라이드 시작 위치로 이동
         let slideStartX: CGFloat = (direction == .reverse) ? -width : width
