@@ -31,7 +31,7 @@ final class GracePeriodBannerView: UIView {
     // MARK: - UI Components
 
     /// 반투명 블러 배경 카드 (BlurPopupCardView)
-    private let blurCard = BlurPopupCardView(cornerRadius: 12, dimAlpha: 0.3)
+    private let blurCard = BlurPopupCardView(cornerRadius: 12)
 
     /// 메인 텍스트 라벨: "무료 체험 중 — N일 남음"
     private let titleLabel: UILabel = {
@@ -98,7 +98,7 @@ final class GracePeriodBannerView: UIView {
 
         // 블러 배경 카드
         addSubview(blurCard)
-        blurCard.activateBlur(fraction: 0.5)
+        blurCard.activateBlur()
 
         // 블러 카드: 전체 영역 채움
         NSLayoutConstraint.activate([

@@ -27,7 +27,7 @@ final class UsageGaugeView: UIView {
     // MARK: - UI Components
 
     /// 반투명 블러 배경 카드 (BlurPopupCardView)
-    private let blurCard = BlurPopupCardView(cornerRadius: 12, dimAlpha: 0.3)
+    private let blurCard = BlurPopupCardView(cornerRadius: 12)
 
     /// 프로그레스 바 배경
     private let trackView: UIView = {
@@ -90,7 +90,7 @@ final class UsageGaugeView: UIView {
 
         // 블러 배경 카드
         addSubview(blurCard)
-        blurCard.activateBlur(fraction: 0.5)
+        blurCard.activateBlur()
 
         // 콘텐츠는 blurCard.contentView에 추가
         let cardContent = blurCard.contentView

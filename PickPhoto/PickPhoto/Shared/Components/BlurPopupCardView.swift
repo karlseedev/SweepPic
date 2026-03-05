@@ -69,7 +69,7 @@ final class BlurPopupCardView: UIView {
         translatesAutoresizingMaskIntoConstraints = false
 
         // 코너 및 딤 설정
-        dimLayer.backgroundColor = UIColor.black.withAlphaComponent(dimAlpha)
+        dimLayer.backgroundColor = UIColor(white: 0.07, alpha: dimAlpha)
         dimLayer.layer.cornerRadius = cornerRadius
         dimLayer.clipsToBounds = true
 
