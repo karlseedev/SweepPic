@@ -480,12 +480,15 @@ final class PaywallViewController: UIViewController {
                     let products = try? await Product.products(for: SubscriptionProductID.all)
                     await MainActor.run { [weak self] in
                         guard let self = self, !self.viewModel.isLoaded else { return }
+                        self.spinner.stopAnimating()
                         if let products = products, !products.isEmpty {
                             self.viewModel.setProducts(products)
+                            self.updatePriceUI()
+                            self.setButtonsEnabled(true)
+                        } else {
+                            // 상품 로드 완전 실패 — 에러 안내
+                            self.showProductLoadError()
                         }
-                        self.spinner.stopAnimating()
-                        self.updatePriceUI()
-                        self.setButtonsEnabled(true)
                     }
                 }
             }
@@ -544,6 +547,15 @@ final class PaywallViewController: UIViewController {
         restoreButton.isEnabled = enabled
         yearlyButton.alpha = enabled ? 1.0 : 0.5
         monthlyButton.alpha = enabled ? 1.0 : 0.5
+    }
+
+    /// 상품 로드 실패 시 에러 안내 (StoreKit Configuration 미설정 등)
+    private func showProductLoadError() {
+        yearlyButton.setTitle("상품 정보를 불러올 수 없습니다", for: .normal)
+        yearlyButton.isEnabled = false
+        yearlyButton.alpha = 0.5
+        monthlyButton.isHidden = true
+        Logger.app.error("PaywallVC: 상품 로드 실패 — StoreKit Configuration 확인 필요")
     }
 
     /// 알림 표시
