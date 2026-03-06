@@ -284,6 +284,11 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         // 서버 시간 확인 실패 시 로컬 시간 폴백
         checkAndResetDailyLimit()
 
+        // [BM] 포그라운드 진입 시 구독 상태 갱신 (환불/갱신 변경 감지)
+        Task {
+            await SubscriptionStore.shared.refreshSubscriptionStatus()
+        }
+
         // [Analytics] 사진 규모 구간 갱신 + 앱 실행 시그널 + 보류 큐 재전송
         AnalyticsService.shared.refreshPhotoLibraryBucket()
         AnalyticsService.shared.trackAppLaunched()

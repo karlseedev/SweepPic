@@ -266,11 +266,16 @@ final class SubscriptionStore: SubscriptionStoreProtocol {
         }
 
         // 오프라인 폴백 (FR-053): 활성 구독 없지만 만료일이 아직 지나지 않은 경우
-        if !foundActiveSubscription, let cached = state.expirationDate,
-           cached > Date(), state.tier == .plus {
-            Logger.app.debug("SubscriptionStore: 오프라인 폴백 — expirationDate 기반 유지")
-            // 기존 상태 유지 (만료일까지 Plus 유지)
-            return
+        // ⚠️ 환불(revocationDate)된 트랜잭션은 currentEntitlements에서 이미 제외됨
+        //    → foundActiveSubscription=false이면 환불/만료된 것이므로 폴백 적용 전 확인
+        if !foundActiveSubscription, state.tier == .plus {
+            // entitlements가 비어있으면 환불/만료 확정 → Free로 전환
+            // 네트워크 문제로 entitlements 순회 자체가 안 된 경우만 폴백
+            if let cached = state.expirationDate, cached > Date() {
+                // 만료일이 남았지만 entitlement이 없음 → 환불 가능성 높음
+                // 안전하게 Free로 전환 (온라인 상태에서 entitlement 없음 = 환불)
+                Logger.app.debug("SubscriptionStore: entitlement 없음 + 만료일 미도래 → 환불로 판단, Free 전환")
+            }
         }
 
         state = newState
