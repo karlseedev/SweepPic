@@ -290,6 +290,24 @@ extension TrashAlbumViewController {
         }
     }
 
+    // MARK: - Subscription State Observer
+
+    /// 구독 상태 변경 시 게이지/배너 갱신 (Plus 전환 시 게이지 제거)
+    /// setupGaugeView() 이후 호출
+    func observeSubscriptionStateForGauge() {
+        SubscriptionStore.shared.onStateChange { [weak self] _ in
+            DispatchQueue.main.async {
+                guard let self = self else { return }
+                // 기존 게이지/배너 모두 제거 후 재평가
+                self.view.viewWithTag(ViewTag.gaugeView)?.removeFromSuperview()
+                self.view.viewWithTag(ViewTag.graceBanner)?.removeFromSuperview()
+                self.setupGaugeView()
+                self.view.layoutIfNeeded()
+                self.updateContentInset()
+            }
+        }
+    }
+
     // MARK: - Gate Helper
 
     /// 게이트 평가 후 삭제 실행 헬퍼
