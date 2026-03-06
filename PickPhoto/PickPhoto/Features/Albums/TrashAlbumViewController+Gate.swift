@@ -23,8 +23,8 @@ extension TrashAlbumViewController {
     /// 게이지 뷰 설정 (viewDidLoad에서 호출)
     /// Plus/Grace Period 시 미표시
     func setupGaugeView() {
-        // Plus 구독자는 게이지 미표시 (Phase 6 T032에서 활성화)
-        // if SubscriptionStore.shared.isPlusUser { return }
+        // Plus 구독자는 게이지 미표시 (T032)
+        if SubscriptionStore.shared.isPlusUser { return }
 
         // Grace Period 중이면 게이지 대신 배너 표시 (US3 T025)
         if GracePeriodService.shared.isActive {

@@ -110,14 +110,14 @@
 
 ### Implementation
 
-- [ ] T028 [P] [US4] SubscriptionTier 모델 생성 — `Sources/AppCore/Models/SubscriptionTier.swift`. SubscriptionTier enum(.free/.plus) + SubscriptionState 구조체(tier, isActive, autoRenewEnabled, hasPaymentIssue, expirationDate, originalPurchaseDate). data-model.md 참조
-- [ ] T029 [US4] SubscriptionStore 생성 — `PickPhoto/PickPhoto/Features/Monetization/Subscription/SubscriptionStore.swift`. 싱글톤, SubscriptionStoreProtocol 준수. StoreKit 2: Product.products(for:), Product.purchase(), Transaction.currentEntitlements, Transaction.updates AsyncSequence. 앱 시작 시 구독 확인 (FR-028). 실시간 변경 감지 (FR-029). 환불 → Plus 즉시 해제 (FR-033). 오프라인: expirationDate 기반 (FR-053). 구독 완료 시 GracePeriodService.shared.endGracePeriod() 호출하여 Grace Period 즉시 종료 (Edge Case). T028 완료 후
-- [ ] T030 [US4] PaywallViewModel 생성 — `PickPhoto/PickPhoto/Features/Monetization/Subscription/PaywallViewModel.swift`. 가격 포맷팅 (NumberFormatter, locale 반영). 연간 메인 + 월간 보조 가격 표시. 취소선 정가 계산. 무료/Plus 비교표 데이터
-- [ ] T031 [US4] PaywallViewController 생성 — `PickPhoto/PickPhoto/Features/Monetization/Subscription/PaywallViewController.swift`. 가치 헤드라인 "쌓인 사진, 한 번에 비우세요" + 비교표 (FR-035). 연간 크게 / 월간 보조 (FR-036). 하단 법적 고지: 자동 갱신, 해지 방법, 약관/처리방침 링크 — 스크롤 없이 보이는 영역 (FR-037). 구매 버튼 → SubscriptionStore.purchase(). 복원 버튼 → restorePurchases(). 리딤 코드 버튼 → presentRedemptionSheet (FR-031). 결제 실패별 안내 (FR-038). Ask to Buy (FR-038)
-- [ ] T032 [US4] TrashGateCoordinator 구독 연동 — `TrashGateCoordinator.swift` 수정. SubscriptionStore.shared.isPlusUser 체크 추가 (이미 T013에서 구조 준비됨). Plus → 게이트 즉시 스킵
-- [ ] T033 [US4] AdManager 구독 연동 — `AdManager.swift` 수정. shouldShowAds()에 SubscriptionStore.isPlusUser 반영. Plus → 모든 광고 미표시 (FR-027)
-- [ ] T034 [US4] AppDelegate에 SubscriptionStore.configure() 추가 — `AppDelegate.swift` 수정. didFinishLaunching에 SubscriptionStore.shared.configure() 추가
-- [ ] T035 [US4] 갱신 실패 뱃지 표시 — SubscriptionStore.hasPaymentIssue 감지 시 ellipsis 메뉴 아이콘에 ⚠️ 뱃지 (FR-034). `GridViewController+Cleanup.swift` 또는 관련 메뉴 버튼 수정
+- [x] T028 [P] [US4] SubscriptionTier 모델 생성 — `Sources/AppCore/Models/SubscriptionTier.swift`. SubscriptionTier enum(.free/.plus) + SubscriptionState 구조체(tier, isActive, autoRenewEnabled, hasPaymentIssue, expirationDate, originalPurchaseDate). data-model.md 참조
+- [x] T029 [US4] SubscriptionStore 생성 — `PickPhoto/PickPhoto/Features/Monetization/Subscription/SubscriptionStore.swift`. 싱글톤, SubscriptionStoreProtocol 준수. StoreKit 2: Product.products(for:), Product.purchase(), Transaction.currentEntitlements, Transaction.updates AsyncSequence. 앱 시작 시 구독 확인 (FR-028). 실시간 변경 감지 (FR-029). 환불 → Plus 즉시 해제 (FR-033). 오프라인: expirationDate 기반 (FR-053). 구독 완료 시 GracePeriodService.shared.endGracePeriod() 호출하여 Grace Period 즉시 종료 (Edge Case). T028 완료 후
+- [x] T030 [US4] PaywallViewModel 생성 — `PickPhoto/PickPhoto/Features/Monetization/Subscription/PaywallViewModel.swift`. 가격 포맷팅 (NumberFormatter, locale 반영). 연간 메인 + 월간 보조 가격 표시. 취소선 정가 계산. 무료/Plus 비교표 데이터
+- [x] T031 [US4] PaywallViewController 생성 — `PickPhoto/PickPhoto/Features/Monetization/Subscription/PaywallViewController.swift`. 가치 헤드라인 "쌓인 사진, 한 번에 비우세요" + 비교표 (FR-035). 연간 크게 / 월간 보조 (FR-036). 하단 법적 고지: 자동 갱신, 해지 방법, 약관/처리방침 링크 — 스크롤 없이 보이는 영역 (FR-037). 구매 버튼 → SubscriptionStore.purchase(). 복원 버튼 → restorePurchases(). 리딤 코드 버튼 → presentRedemptionSheet (FR-031). 결제 실패별 안내 (FR-038). Ask to Buy (FR-038)
+- [x] T032 [US4] TrashGateCoordinator 구독 연동 — `TrashGateCoordinator.swift` 수정. SubscriptionStore.shared.isPlusUser 체크 추가 (이미 T013에서 구조 준비됨). Plus → 게이트 즉시 스킵
+- [x] T033 [US4] AdManager 구독 연동 — `AdManager.swift` 수정. shouldShowAds()에 SubscriptionStore.isPlusUser 반영. Plus → 모든 광고 미표시 (FR-027)
+- [x] T034 [US4] AppDelegate에 SubscriptionStore.configure() 추가 — `AppDelegate.swift` 수정. didFinishLaunching에 SubscriptionStore.shared.configure() 추가
+- [x] T035 [US4] 갱신 실패 뱃지 표시 — SubscriptionStore.hasPaymentIssue 감지 시 ellipsis 메뉴 아이콘에 ⚠️ 뱃지 (FR-034). `GridViewController+Cleanup.swift` 또는 관련 메뉴 버튼 수정
 
 **Checkpoint**: Sandbox 구독 구매 → Plus 활성화 → 게이트 스킵 + 광고 미표시. 복원 성공. 리딤 코드 입력. 환불 → Free 복귀
 

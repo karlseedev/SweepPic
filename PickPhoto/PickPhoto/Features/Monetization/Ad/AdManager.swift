@@ -131,8 +131,9 @@ final class AdManager: NSObject, AdManagerProtocol {
         // Grace Period 중이면 광고 미표시
         if GracePeriodService.shared.isActive { return false }
 
-        // Plus 구독자 체크는 SubscriptionStore 구현 후 연동 (Phase 6, T033)
-        // 현재는 항상 광고 가능으로 처리
+        // Plus 구독자이면 광고 미표시 (FR-027, T033)
+        if SubscriptionStore.shared.isPlusUser { return false }
+
         return true
     }
 

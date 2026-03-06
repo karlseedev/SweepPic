@@ -54,8 +54,10 @@ extension GridViewController {
             action: #selector(selectButtonTapped)
         )
         // 전체 메뉴 버튼 (최우측, 탭 시 풀다운 메뉴)
+        // 결제 문제 시 경고 아이콘 표시 (FR-034, T035)
+        let menuIcon = menuIconName()
         let menuItem = UIBarButtonItem(
-            image: UIImage(systemName: "ellipsis"),
+            image: UIImage(systemName: menuIcon),
             menu: UIMenu(children: [
                 UIAction(title: "자동정리", image: UIImage(systemName: "wand.and.stars")) { _ in },
                 UIAction(title: "사용자", image: UIImage(systemName: "person.circle")) { _ in },
@@ -110,6 +112,21 @@ extension GridViewController {
 
         // 버튼 활성화 상태 초기화
         updateCleanupButtonState()
+    }
+
+    /// 메뉴 아이콘 이름 — 결제 문제 시 경고 아이콘 (FR-034, T035)
+    private func menuIconName() -> String {
+        SubscriptionStore.shared.state.hasPaymentIssue ? "exclamationmark.circle.fill" : "ellipsis"
+    }
+
+    /// 구독 상태 변경 감지 등록 (결제 문제 뱃지 업데이트용)
+    /// viewDidLoad에서 호출
+    func observeSubscriptionStateForBadge() {
+        SubscriptionStore.shared.onStateChange { [weak self] _ in
+            DispatchQueue.main.async {
+                self?.setupCleanupButton()
+            }
+        }
     }
 
     /// 정리 버튼 활성화 상태 업데이트

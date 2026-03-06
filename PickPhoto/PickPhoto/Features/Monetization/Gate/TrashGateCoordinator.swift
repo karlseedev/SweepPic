@@ -75,11 +75,12 @@ final class TrashGateCoordinator: TrashGateCoordinatorProtocol {
             return
         }
 
-        // 1. Plus 구독자 체크 (Phase 6 T032에서 구독 연동 후 활성화)
-        // if SubscriptionStore.shared.isPlusUser {
-        //     onApproved()
-        //     return
-        // }
+        // 1. Plus 구독자 → 게이트 즉시 스킵 (T032)
+        if SubscriptionStore.shared.isPlusUser {
+            Logger.app.debug("TrashGateCoordinator: Plus 구독자 — 바로 실행")
+            onApproved()
+            return
+        }
 
         // 2. Grace Period 중 → 바로 실행 (게이트 없이)
         if GracePeriodService.shared.isActive {
@@ -119,9 +120,12 @@ final class TrashGateCoordinator: TrashGateCoordinatorProtocol {
         }
 
         popup.onPlusUpgrade = { [weak viewController] in
-            // Plus 업그레이드 → 페이월 표시 (Phase 6 T031에서 구현)
-            Logger.app.debug("TrashGateCoordinator: Plus 업그레이드 선택")
-            _ = viewController // 향후 사용
+            // Plus 업그레이드 → 페이월 표시 (T032)
+            Logger.app.debug("TrashGateCoordinator: Plus 업그레이드 선택 → 페이월")
+            guard let vc = viewController else { return }
+            let paywall = PaywallViewController()
+            paywall.modalPresentationStyle = .pageSheet
+            vc.present(paywall, animated: true)
         }
 
         popup.onDismiss = {
