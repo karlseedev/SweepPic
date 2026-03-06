@@ -101,15 +101,24 @@ final class SubscriptionStore: SubscriptionStoreProtocol {
 
     // MARK: - Products
 
+    /// 상품 로드 완료 알림 이름
+    static let productsDidLoadNotification = Notification.Name("SubscriptionStoreProductsDidLoad")
+
     /// StoreKit 2 상품 목록 로드
     private func loadProducts() async {
         do {
             products = try await Product.products(for: SubscriptionProductID.all)
             Logger.app.debug("SubscriptionStore: 상품 \(self.products.count)개 로드 완료")
+            await MainActor.run {
+                NotificationCenter.default.post(name: Self.productsDidLoadNotification, object: nil)
+            }
         } catch {
             Logger.app.error("SubscriptionStore: 상품 로드 실패 — \(error.localizedDescription)")
         }
     }
+
+    /// 상품 로드 완료 여부
+    var hasProducts: Bool { !products.isEmpty }
 
     /// 월간 상품 (편의 접근)
     var monthlyProduct: Product? {

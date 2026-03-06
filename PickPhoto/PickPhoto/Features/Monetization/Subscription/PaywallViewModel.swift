@@ -39,6 +39,12 @@ final class PaywallViewModel {
         monthlyProduct = SubscriptionStore.shared.monthlyProduct
     }
 
+    /// 직접 로드한 상품으로 설정 (SubscriptionStore 미로드 시 폴백)
+    func setProducts(_ products: [Product]) {
+        yearlyProduct = products.first { $0.id == SubscriptionProductID.plusYearly }
+        monthlyProduct = products.first { $0.id == SubscriptionProductID.plusMonthly }
+    }
+
     // MARK: - Price Formatting
 
     /// 연간 가격 표시 문자열 (예: "₩29,900/년")

@@ -464,20 +464,45 @@ final class PaywallViewController: UIViewController {
         if viewModel.isLoaded {
             updatePriceUI()
         } else {
-            // 상품 미로드 → 대기 후 재시도
+            // 상품 미로드 → 알림 대기 + 직접 로드 시도
             spinner.startAnimating()
-            Task {
-                // SubscriptionStore가 아직 상품을 로드 중일 수 있음
-                try? await Task.sleep(nanoseconds: 2_000_000_000) // 2초
-                await MainActor.run {
-                    viewModel.loadProducts()
-                    spinner.stopAnimating()
-                    updatePriceUI()
+            setButtonsEnabled(false)
+
+            // SubscriptionStore 상품 로드 완료 알림 구독
+            NotificationCenter.default.addObserver(
+                self, selector: #selector(handleProductsLoaded),
+                name: SubscriptionStore.productsDidLoadNotification, object: nil
+            )
+
+            // SubscriptionStore가 아직 상품을 로드하지 않았으면 직접 요청
+            if !SubscriptionStore.shared.hasProducts {
+                Task {
+                    let products = try? await Product.products(for: SubscriptionProductID.all)
+                    await MainActor.run { [weak self] in
+                        guard let self = self, !self.viewModel.isLoaded else { return }
+                        if let products = products, !products.isEmpty {
+                            self.viewModel.setProducts(products)
+                        }
+                        self.spinner.stopAnimating()
+                        self.updatePriceUI()
+                        self.setButtonsEnabled(true)
+                    }
                 }
             }
         }
 
         updateLegalText()
+    }
+
+    /// SubscriptionStore 상품 로드 완료 알림 핸들러
+    @objc private func handleProductsLoaded() {
+        NotificationCenter.default.removeObserver(
+            self, name: SubscriptionStore.productsDidLoadNotification, object: nil
+        )
+        viewModel.loadProducts()
+        spinner.stopAnimating()
+        updatePriceUI()
+        setButtonsEnabled(true)
     }
 
     /// 가격 UI 업데이트
