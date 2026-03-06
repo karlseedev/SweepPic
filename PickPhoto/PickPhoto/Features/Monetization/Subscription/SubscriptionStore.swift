@@ -323,6 +323,27 @@ final class SubscriptionStore: SubscriptionStoreProtocol {
         }
     }
 
+    // MARK: - Debug
+
+    #if DEBUG
+    /// 디버그용: 구독 상태를 Free로 강제 리셋
+    func debugResetToFree() {
+        state = .free
+        Logger.app.debug("SubscriptionStore: DEBUG Free 리셋")
+    }
+
+    /// 디버그용: 구독 상태를 Plus로 강제 설정
+    func debugSetPlus() {
+        state = SubscriptionState(
+            tier: .plus,
+            isActive: true,
+            autoRenewEnabled: true,
+            expirationDate: Date().addingTimeInterval(365 * 24 * 3600)
+        )
+        Logger.app.debug("SubscriptionStore: DEBUG Plus 설정")
+    }
+    #endif
+
     // MARK: - Deinit
 
     deinit {

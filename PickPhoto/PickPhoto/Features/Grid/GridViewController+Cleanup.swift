@@ -64,7 +64,7 @@ extension GridViewController {
                 UIAction(title: "구독", image: UIImage(systemName: "creditcard")) { _ in },
                 UIAction(title: "고객센터", image: UIImage(systemName: "questionmark.circle")) { _ in },
                 self.makeCoachMarkReplayMenu(),
-                self.makeDebugUsageLimitResetMenu(),
+                self.makeDebugResetMenu(),
                 self.makeDebugGracePeriodMenu(),
                 self.makeDebugAdTestMenu(),
             ])
@@ -105,7 +105,7 @@ extension GridViewController {
             UIAction(title: "구독", image: UIImage(systemName: "creditcard")) { _ in },
             UIAction(title: "고객센터", image: UIImage(systemName: "questionmark.circle")) { _ in },
             self.makeCoachMarkReplayMenu(),
-            self.makeDebugUsageLimitResetMenu(),
+            self.makeDebugResetMenu(),
             self.makeDebugGracePeriodMenu(),
             self.makeDebugAdTestMenu(),
         ]))
@@ -484,26 +484,43 @@ extension GridViewController {
         )
     }
 
-    /// (테스트) 일일 삭제 한도 리셋 메뉴
-    /// 클릭 시 오늘 사용량을 0으로 초기화
-    func makeDebugUsageLimitResetMenu() -> UIAction {
+    /// (테스트) 리셋 서브메뉴 — 한도 리셋 + 구독 리셋
+    func makeDebugResetMenu() -> UIMenu {
         let remaining = UsageLimitStore.shared.remainingFreeDeletes
         let total = UsageLimitStore.shared.totalDailyCapacity
-        let title = "(테스트)한도리셋 (\(remaining)/\(total))"
-        return UIAction(
-            title: title,
-            image: UIImage(systemName: "arrow.counterclockwise")
-        ) { [weak self] _ in
-            #if DEBUG
-            UsageLimitStore.shared.debugReset()
-            UserDefaults.standard.removeObject(forKey: "GaugeFirstTooltipShown")
-            Logger.app.debug("GridVC+Cleanup: 디버그 한도 리셋 + 툴팁 플래그 초기화")
-            // 삭제대기함 게이지 갱신
-            NotificationCenter.default.post(name: .debugGracePeriodToggled, object: nil)
-            #endif
-            // 메뉴 재구성 (현재 잔여량 반영)
-            self?.setupCleanupButton()
-        }
+        let isPlusUser = SubscriptionStore.shared.isPlusUser
+
+        return UIMenu(
+            title: "(테스트)리셋",
+            image: UIImage(systemName: "arrow.counterclockwise"),
+            children: [
+                UIAction(title: "한도 리셋 (\(remaining)/\(total))") { [weak self] _ in
+                    #if DEBUG
+                    UsageLimitStore.shared.debugReset()
+                    UserDefaults.standard.removeObject(forKey: "GaugeFirstTooltipShown")
+                    Logger.app.debug("GridVC+Cleanup: 디버그 한도 리셋 + 툴팁 플래그 초기화")
+                    NotificationCenter.default.post(name: .debugGracePeriodToggled, object: nil)
+                    #endif
+                    self?.setupCleanupButton()
+                },
+                UIAction(title: isPlusUser ? "구독 리셋 (현재 Plus)" : "구독 리셋 (현재 Free)") { [weak self] _ in
+                    #if DEBUG
+                    SubscriptionStore.shared.debugResetToFree()
+                    Logger.app.debug("GridVC+Cleanup: 디버그 구독 → Free 리셋")
+                    NotificationCenter.default.post(name: .debugGracePeriodToggled, object: nil)
+                    #endif
+                    self?.setupCleanupButton()
+                },
+                UIAction(title: "구독 강제 Plus") { [weak self] _ in
+                    #if DEBUG
+                    SubscriptionStore.shared.debugSetPlus()
+                    Logger.app.debug("GridVC+Cleanup: 디버그 구독 → Plus 설정")
+                    NotificationCenter.default.post(name: .debugGracePeriodToggled, object: nil)
+                    #endif
+                    self?.setupCleanupButton()
+                },
+            ]
+        )
     }
 
     /// (테스트) 광고 상태 테스트 메뉴
