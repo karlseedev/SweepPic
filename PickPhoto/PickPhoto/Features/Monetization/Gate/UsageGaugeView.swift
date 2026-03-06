@@ -12,6 +12,7 @@
 
 import UIKit
 import AppCore
+import LiquidGlassKit
 import OSLog
 
 // MARK: - UsageGaugeView
@@ -26,8 +27,17 @@ final class UsageGaugeView: UIView {
 
     // MARK: - UI Components
 
-    /// 반투명 블러 배경 카드 (BlurPopupCardView)
-    private let blurCard = BlurPopupCardView(cornerRadius: 12)
+    /// Glass 효과 배경 (iOS 18~25: LiquidGlassKit Metal, iOS 26+: 네이티브 UIGlassEffect)
+    private lazy var glassView: AnyVisualEffectView = {
+        let effect = LiquidGlassEffect(style: .regular, isNative: true)
+        effect.tintColor = UIColor(white: 0.5, alpha: 0.2)
+        let view = VisualEffectView(effect: effect)
+        view.translatesAutoresizingMaskIntoConstraints = false
+        view.layer.cornerRadius = 12
+        view.layer.cornerCurve = .continuous
+        view.clipsToBounds = true
+        return view
+    }()
 
     /// 프로그레스 바 배경
     private let trackView: UIView = {
@@ -41,7 +51,7 @@ final class UsageGaugeView: UIView {
     /// 프로그레스 바 채움
     private let fillView: UIView = {
         let view = UIView()
-        view.backgroundColor = .systemBlue
+        view.backgroundColor = .white
         view.layer.cornerRadius = 4
         view.translatesAutoresizingMaskIntoConstraints = false
         return view
@@ -50,8 +60,8 @@ final class UsageGaugeView: UIView {
     /// 타이틀 라벨: "오늘 삭제한도"
     private let titleLabel: UILabel = {
         let label = UILabel()
-        label.text = "오늘 삭제한도"
-        label.font = .systemFont(ofSize: 12, weight: .bold)
+        label.text = "무료 삭제 한도"
+        label.font = .systemFont(ofSize: 16, weight: .semibold)
         label.textColor = .white
         label.translatesAutoresizingMaskIntoConstraints = false
         return label
@@ -60,8 +70,8 @@ final class UsageGaugeView: UIView {
     /// 남은 장수 라벨: "N/M장 남음"
     private let countLabel: UILabel = {
         let label = UILabel()
-        label.font = .systemFont(ofSize: 12, weight: .medium)
-        label.textColor = UIColor.white.withAlphaComponent(0.7)
+        label.font = .systemFont(ofSize: 16, weight: .regular)
+        label.textColor = .white
         label.translatesAutoresizingMaskIntoConstraints = false
         return label
     }()
@@ -82,29 +92,57 @@ final class UsageGaugeView: UIView {
         fatalError("init(coder:) has not been implemented")
     }
 
+    // MARK: - Lifecycle
+
+    /// iOS 18~25: LiquidGlassOptimizer preload (Metal 렌더링 초기화)
+    override func didMoveToWindow() {
+        super.didMoveToWindow()
+        if #available(iOS 26.0, *) { return }
+        if window != nil {
+            DispatchQueue.main.async { [weak self] in
+                guard let self, self.window != nil else { return }
+                LiquidGlassOptimizer.preload(in: self)
+            }
+        }
+    }
+
     // MARK: - UI Setup
 
     /// 레이아웃 구성
     private func setupUI() {
         translatesAutoresizingMaskIntoConstraints = false
 
-        // 블러 배경 카드
-        addSubview(blurCard)
-        blurCard.activateBlur()
+        // 딤 배경 (Glass 뷰 아래)
+        let dimLayer = UIView()
+        dimLayer.backgroundColor = UIColor(white: 0.1, alpha: 0.5)
+        dimLayer.layer.cornerRadius = 12
+        dimLayer.layer.cornerCurve = .continuous
+        dimLayer.clipsToBounds = true
+        dimLayer.translatesAutoresizingMaskIntoConstraints = false
+        addSubview(dimLayer)
+        NSLayoutConstraint.activate([
+            dimLayer.topAnchor.constraint(equalTo: topAnchor),
+            dimLayer.leadingAnchor.constraint(equalTo: leadingAnchor),
+            dimLayer.trailingAnchor.constraint(equalTo: trailingAnchor),
+            dimLayer.bottomAnchor.constraint(equalTo: bottomAnchor)
+        ])
 
-        // 콘텐츠는 blurCard.contentView에 추가
-        let cardContent = blurCard.contentView
+        // Glass 효과 배경 (딤 위)
+        addSubview(glassView)
+
+        // 콘텐츠는 glassView.contentView에 추가
+        let cardContent = glassView.contentView
         cardContent.addSubview(trackView)
         trackView.addSubview(fillView)
         cardContent.addSubview(titleLabel)
         cardContent.addSubview(countLabel)
 
-        // 블러 카드: 전체 영역 채움
+        // Glass 뷰: 전체 영역 채움
         NSLayoutConstraint.activate([
-            blurCard.topAnchor.constraint(equalTo: topAnchor),
-            blurCard.leadingAnchor.constraint(equalTo: leadingAnchor),
-            blurCard.trailingAnchor.constraint(equalTo: trailingAnchor),
-            blurCard.bottomAnchor.constraint(equalTo: bottomAnchor)
+            glassView.topAnchor.constraint(equalTo: topAnchor),
+            glassView.leadingAnchor.constraint(equalTo: leadingAnchor),
+            glassView.trailingAnchor.constraint(equalTo: trailingAnchor),
+            glassView.bottomAnchor.constraint(equalTo: bottomAnchor)
         ])
 
         // 카드 내부 패딩
@@ -145,8 +183,8 @@ final class UsageGaugeView: UIView {
             countLabel.bottomAnchor.constraint(equalTo: cardContent.bottomAnchor, constant: -vPadding)
         ])
 
-        // 전체 높이 = vPadding(10) + 트랙(8) + 간격(4) + 라벨(~15) + vPadding(10) ≈ 47
-        heightAnchor.constraint(equalToConstant: 49).isActive = true
+        // 전체 높이 = vPaddingTop(12) + 트랙(8) + 간격(4) + 라벨(~19) + vPadding(10) ≈ 52
+        heightAnchor.constraint(equalToConstant: 52).isActive = true
     }
 
     /// 탭 제스처 설정
@@ -170,8 +208,8 @@ final class UsageGaugeView: UIView {
         // 비율 계산 (0~1)
         let fraction = total > 0 ? CGFloat(remaining) / CGFloat(total) : 0
 
-        // 게이지 색상: 파란색 고정
-        fillView.backgroundColor = .systemBlue
+        // 게이지 색상: 흰색
+        fillView.backgroundColor = .white
 
         // 라벨 업데이트
         countLabel.text = "\(remaining)/\(total)장 남음"
@@ -197,7 +235,7 @@ final class UsageGaugeView: UIView {
 // MARK: - UsageGaugeDetailPopup
 
 /// 게이지 탭 시 표시되는 상세 팝업
-/// 한도 상태 + 광고 잔여 + "광고 보기" 버튼
+/// 게이트 팝업과 동일한 디자인 포맷 (BlurPopupCardView + 반투명 버튼 + 흰색 텍스트)
 final class UsageGaugeDetailPopup: UIViewController {
 
     // MARK: - Callbacks
@@ -207,52 +245,61 @@ final class UsageGaugeDetailPopup: UIViewController {
 
     // MARK: - UI
 
-    /// 반투명 배경
+    /// 딤 배경 (터치 차단용, 투명)
     private let dimView: UIView = {
         let view = UIView()
-        view.backgroundColor = UIColor.black.withAlphaComponent(0.3)
+        view.backgroundColor = .clear
         view.translatesAutoresizingMaskIntoConstraints = false
         return view
     }()
 
-    /// 카드
-    private let cardView: UIView = {
-        let view = UIView()
-        view.backgroundColor = .secondarySystemBackground
-        view.layer.cornerRadius = 16
-        view.layer.masksToBounds = true
-        view.translatesAutoresizingMaskIntoConstraints = false
-        return view
+    /// 블러 팝업 카드 (게이트와 동일)
+    private let cardView = BlurPopupCardView()
+
+    /// 제목 라벨 — 흰색 텍스트
+    private let titleLabel: UILabel = {
+        let label = UILabel()
+        label.text = "오늘의 삭제 한도"
+        label.font = .systemFont(ofSize: 18, weight: .semibold)
+        label.textColor = .white
+        label.textAlignment = .center
+        label.translatesAutoresizingMaskIntoConstraints = false
+        return label
     }()
 
-    /// 한도 정보 라벨
+    /// 한도 정보 라벨 — 반투명 흰색
     private let statusLabel: UILabel = {
         let label = UILabel()
-        label.font = .systemFont(ofSize: 15, weight: .regular)
-        label.textColor = .label
+        label.font = .systemFont(ofSize: 14, weight: .regular)
+        label.textColor = UIColor.white.withAlphaComponent(0.7)
         label.numberOfLines = 0
         label.textAlignment = .center
         label.translatesAutoresizingMaskIntoConstraints = false
         return label
     }()
 
-    /// 광고 보기 버튼
+    /// 광고 보기 버튼 — 반투명 흰색 배경 + 흰색 텍스트
     private let watchAdButton: UIButton = {
         let button = UIButton(type: .system)
         button.setTitle("광고 보고 +10장 추가", for: .normal)
-        button.backgroundColor = .systemBlue
+        button.backgroundColor = UIColor.white.withAlphaComponent(0.12)
         button.setTitleColor(.white, for: .normal)
-        button.titleLabel?.font = .systemFont(ofSize: 15, weight: .semibold)
-        button.layer.cornerRadius = 10
+        button.titleLabel?.font = .systemFont(ofSize: 16, weight: .semibold)
+        button.layer.cornerRadius = 25
+        button.clipsToBounds = true
         button.translatesAutoresizingMaskIntoConstraints = false
         return button
     }()
 
-    /// 닫기 버튼
+    /// 닫기 버튼 — 반투명 흰색 배경 + 회색 텍스트
     private let closeButton: UIButton = {
         let button = UIButton(type: .system)
         button.setTitle("닫기", for: .normal)
+        button.backgroundColor = UIColor.white.withAlphaComponent(0.12)
         button.setTitleColor(.secondaryLabel, for: .normal)
+        button.titleLabel?.font = .systemFont(ofSize: 16, weight: .regular)
+        button.layer.cornerRadius = 25
+        button.clipsToBounds = true
         button.translatesAutoresizingMaskIntoConstraints = false
         return button
     }()
@@ -274,13 +321,16 @@ final class UsageGaugeDetailPopup: UIViewController {
 
     override func viewDidLoad() {
         super.viewDidLoad()
+        view.backgroundColor = UIColor.black.withAlphaComponent(0.5)
         setupUI()
+        cardView.activateBlur()
         configureContent()
     }
 
     // MARK: - Setup
 
     private func setupUI() {
+        // 딤 배경 (전체 화면)
         view.addSubview(dimView)
         NSLayoutConstraint.activate([
             dimView.topAnchor.constraint(equalTo: view.topAnchor),
@@ -289,27 +339,34 @@ final class UsageGaugeDetailPopup: UIViewController {
             dimView.bottomAnchor.constraint(equalTo: view.bottomAnchor)
         ])
 
+        // 블러 카드 — 게이트와 동일 레이아웃
         view.addSubview(cardView)
         NSLayoutConstraint.activate([
             cardView.centerXAnchor.constraint(equalTo: view.centerXAnchor),
             cardView.centerYAnchor.constraint(equalTo: view.centerYAnchor),
-            cardView.widthAnchor.constraint(lessThanOrEqualToConstant: 280),
-            cardView.leadingAnchor.constraint(greaterThanOrEqualTo: view.leadingAnchor, constant: 48)
+            cardView.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 24),
+            cardView.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -24)
         ])
 
-        let stack = UIStackView(arrangedSubviews: [statusLabel, watchAdButton, closeButton])
+        // 카드 내부 스택뷰 — contentView에 추가 (블러 위)
+        let stack = UIStackView(arrangedSubviews: [titleLabel, statusLabel, watchAdButton, closeButton])
         stack.axis = .vertical
-        stack.spacing = 12
+        stack.spacing = 16
         stack.alignment = .fill
         stack.translatesAutoresizingMaskIntoConstraints = false
 
-        cardView.addSubview(stack)
+        // 버튼 영역 전 여유 간격
+        stack.setCustomSpacing(28, after: statusLabel)
+        stack.setCustomSpacing(10, after: watchAdButton)
+
+        cardView.contentView.addSubview(stack)
         NSLayoutConstraint.activate([
-            stack.topAnchor.constraint(equalTo: cardView.topAnchor, constant: 24),
-            stack.leadingAnchor.constraint(equalTo: cardView.leadingAnchor, constant: 20),
-            stack.trailingAnchor.constraint(equalTo: cardView.trailingAnchor, constant: -20),
-            stack.bottomAnchor.constraint(equalTo: cardView.bottomAnchor, constant: -16),
-            watchAdButton.heightAnchor.constraint(equalToConstant: 44)
+            stack.topAnchor.constraint(equalTo: cardView.contentView.topAnchor, constant: 36),
+            stack.leadingAnchor.constraint(equalTo: cardView.contentView.leadingAnchor, constant: 28),
+            stack.trailingAnchor.constraint(equalTo: cardView.contentView.trailingAnchor, constant: -28),
+            stack.bottomAnchor.constraint(equalTo: cardView.contentView.bottomAnchor, constant: -32),
+            watchAdButton.heightAnchor.constraint(equalToConstant: 50),
+            closeButton.heightAnchor.constraint(equalToConstant: 50)
         ])
 
         // 액션
@@ -326,7 +383,7 @@ final class UsageGaugeDetailPopup: UIViewController {
         let total = UsageLimitStore.shared.totalDailyCapacity
         let rewardsLeft = UsageLimitStore.shared.remainingRewards
 
-        var text = "오늘 삭제 한도: \(remaining)/\(total)장"
+        var text = "\(remaining)/\(total)장 남음"
         if rewardsLeft > 0 {
             text += "\n광고 시청 가능: \(rewardsLeft)회 (회당 +10장)"
         } else {

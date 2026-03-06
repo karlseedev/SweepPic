@@ -84,8 +84,11 @@
 - KR: 주간 ₩4,400~₩14,000 / 연간 ₩33,000
 - KR 평점 4.6 / 리뷰 4,100개
 
+**저품질 감지**: 흐림 전용 카테고리 없음. Best Photo 선택 시 "초점(in focus)" 기준 포함하나, 흐린 사진을 유지하고 선명한 사진을 삭제 추천하는 역전 현상 보고 (InsanelyMac, JustUseApp)
+
 **약점/불만:**
 - Best Photo 선택 오류 빈번
+- **흐린 사진 유지 + 선명한 사진 삭제 추천** (역전 현상, 리뷰어 Pagerda)
 - 구독 사기/자동 과금 불만
 - 유사 사진 분류 부정확 (전혀 다른 사진을 같은 그룹)
 - Facebook/YouTube에서 고령 사용자 집중 타겟팅
@@ -248,6 +251,7 @@
 - 커스텀 ML 모델 (자체 제작), 완전 온디바이스
 - Gemini Photos 대비 분석 속도 2배 향상
 - 정확도 혼재: 중복/유사는 괜찮으나 "145GB에서 흐린/스크린샷만 찾고 유사사진 많이 놓침"
+- **흐림 오탐 패턴**: 포트레이트 모드(보케)→흐림, 하늘/구름→흐림, 안개/해무→흐림으로 오판 (MacStories, Setapp 리뷰)
 
 **정리 UX:**
 - 체크박스 (AI 자동 pre-select) + 스와이프 모드 (2025.12 v2.11.0 추가)
@@ -569,7 +573,7 @@
 | JustUseApp 안전점수 | 20.9/100, 부정경험 79.1% |
 
 - Fast/Deep Clean, 중복/유사 감지, 파일 압축, 이메일 정리(스팸 필터링), 캘린더 관리, 연락처 병합, 속도 테스트
-- 흐린 사진 감지/AI/스와이프 미확인
+- **저품질 감지**: 흐림/AI/스와이프 미확인
 - 트래커: AdMob, Facebook, Firebase 확인. 설치 앱 목록 수집, 삭제 후 데이터 보존
 - US: 주간 $5.99~$9.99 / 월간 $12.99 / 연간 $19.99~$34.99 / 평생 $23.99~$39.99
 - KR: 주간 ₩8,800~₩14,000 / 월간 ₩19,000 / 연간 ₩29,000~₩49,000 / 평생 ₩33,000~₩55,000
@@ -587,7 +591,8 @@
 | 최신 버전 | v8.6.21 (2025.03), **약 1년 미업데이트 (방치 의심)** |
 | JustUseApp 안전점수 | **0/100**, 부정경험 **100%** |
 
-- 흐린 사진 AI 감지, WhatsApp/Telegram 캐시 정리, 배터리 최적화, 속도 테스트, 연락처/캘린더
+- **저품질 감지**: 흐림 + 눈감음 + 나쁜 각도 감지 명시 (App Store 설명). 독립 정확도 테스트 없음, 사용자 오탐 불만 존재
+- WhatsApp/Telegram 캐시 정리, 배터리 최적화, 속도 테스트, 연락처/캘린더
 - US: 주간 $3.99~$4.99 / 월간 $10.99 / 연간 $19.99 / 평생 $49.99
 - 프라이버시 라벨 "Data Not Collected" 표시이나 실제 광범위 접근 권한 요청 (불일치 의심)
 - **치명적 불만**: 자녀 사진 전부 삭제 복구불가 사례, 연락처 오병합, 기능 미작동(8,117 스크린샷 중 0 감지), 3분 작동 후 크래시
@@ -703,3 +708,132 @@
 | 주간 구독 과금 | 합리적 가격 ($2.99/월, $19.99/년) |
 | 트래커 6개+ 내장 | 최소한의 분석 (광고 SDK만) |
 | 연락처/캘린더 삭제 버그 | 사진 정리에만 집중 (범위 제한으로 안전성 확보) |
+
+---
+
+## 저품질 사진 감지 정확도 현황
+
+> 조사일: 2026-03-05
+> 목적: 사업계획서 "창업 아이템 필요성" 근거 수집
+> 방법: InsanelyMac 독립 테스트, MacStories/Setapp/JustUseApp 리뷰, App Store 설명, Reddit/포럼 사용자 리포트 종합
+
+### 1. 저품질 감지 기능 보유 현황
+
+#### 기존 15개 앱
+
+| # | 앱 | 흐림 | 어두움 | 과노출 | 저해상도 | 눈감음 | 포켓샷 | 비고 |
+|---|---|:---:|:---:|:---:|:---:|:---:|:---:|---|
+| 1 | Cleaner Kit | O | X | X | X | X | X | "Blurred Images" 별도 카테고리 |
+| 2 | Cleanup | △ | X | X | X | X | X | 흐림 전용 카테고리 없음, Best Photo 초점 기준만 |
+| 3 | AI Cleaner | O | X | X | X | X | X | 98.7% 오탐률 (InsanelyMac) |
+| 4 | Cleaner Guru | X | X | X | X | X | X | 저품질 감지 미지원 |
+| 6 | Cleaner Neat | ? | X | X | X | X | X | 공식 미명시, 미확인 |
+| 7 | CleanMyPhone | O | X | X | X | X | X | Declutter 모듈 내 "흐림" 카테고리 |
+| 8 | Slidebox | X | X | X | X | X | X | AI/자동 감지 전무 (수동 전용) |
+| 9 | 클리너(CoinCup) | X | X | X | X | X | X | 저품질 감지 미지원 |
+| 10 | 사진청소기 | ? | X | X | O | O | X | 저해상도+눈감음 감지. 흐림 미명시 |
+| 11 | Boost Cleaner | X | X | X | X | X | X | 저품질 감지 미지원 |
+| 12 | 클린업(AppLavia) | X | X | X | X | X | X | 저품질 감지 미지원 |
+| 13 | Smart Cleaner(Skyrocket) | O | X | X | X | O | X | 흐림+눈감음+나쁜 각도 명시 |
+| 13 | Smart Cleaner(NAICOO) | ? | X | X | X | X | X | 미확인 |
+| 14 | Clever Cleaner | X | X | X | X | X | X | 유사/중복만, 저품질 별도 탭 없음 |
+| 15 | AI Cleaner Max | ? | X | X | ? | X | X | "저화질" 표방하나 구체적 감지 방식 미확인 |
+
+**요약**: 15개 앱 중 흐림 감지를 **명시적으로 제공**하는 앱 5개 (Cleaner Kit, AI Cleaner, CleanMyPhone, Smart Cleaner Skyrocket, Cleanup 간접). **어두움/과노출/포켓샷 감지**: 0개.
+
+#### 추가 발견 앱 (기존 15개 외)
+
+| 앱 | 개발사 | 흐림 | 어두움 | 과노출 | 비고 |
+|---|---|:---:|:---:|:---:|---|
+| **Hyper Cleaner** | Lempelto OOO | O | **O** | X | 어두움 감지를 명시한 희귀 앱 |
+| **Clean.AI** | (신규) | O | **O** | X | 신규, 충분한 리뷰 데이터 없음 |
+| **Blurry Photo Finder** | Inaware | O | X | X | 흐림 전용, 보수적 접근 (오탐 최소화) |
+| **Magic Cleaner** | Flavor Factory | O | X | X | 독립 테스트 없음 |
+| **Google Photos** | Google | O | **O** | **O** | 가장 포괄적. 단, 별도 클리너 앱 아님 |
+
+**어두움 감지**: Hyper Cleaner, Clean.AI, Google Photos 3개만. **과노출 감지**: Google Photos 1개만 (iOS 앱 중 0개).
+
+---
+
+### 2. 독립 정확도 테스트 결과
+
+#### InsanelyMac 테스트 (실제 iPhone, 실제 라이브러리)
+
+| 앱 | 테스트 항목 | 정확도 | 상세 |
+|---|---|---|---|
+| **AI Cleaner** | 흐림 감지 | **1.3%** (79장 중 1장만 실제 흐림) | 오탐률 98.7%. 사실상 사용 불가 |
+| **AI Cleaner** | 유사 사진 (비인물) | **10%** | 90% 무관한 사진을 같은 그룹 |
+| **AI Cleaner** | Best Photo | **10%** | 90% 확률로 잘못된 사진 선택 |
+| **Cleaner Kit** | Best Photo | **95%** | 조명/초점/구도 기준. 최상위 |
+| **Clever Cleaner** | 유사 그룹핑 | **95%** | 최상위. 흐림 감지는 미지원 |
+| **Cleanup** | 유사 그룹핑 | **낮음** (수치 미공개) | "완전히 다른 이미지를 같은 카테고리" |
+| **Cleanup** | Best Photo | **낮음** | "눈 감은/어색한 표정/나쁜 조명 사진을 best로 선택" |
+| **Cleaner Neat** | 유사 그룹핑 | **~60%** | 2~3그룹마다 1개 오류 |
+| **Cleaner Neat** | Best Photo | **~10%** | 테스트 앱 중 최악 |
+| **CleanMyPhone** | 전체 | **수치 미공개** | "일부 그룹 부정확" — 정량 평가 없음 |
+
+> InsanelyMac 테스트 한계: 앱마다 다른 기기/데이터셋 사용. 동일 테스트 세트로 비교한 것이 아님.
+
+#### 기타 독립 출처
+
+| 출처 | 앱/도구 | 결과 |
+|---|---|---|
+| **Topaz Labs 공식** | Topaz Photo AI (프로 데스크톱) | 블러 라벨링 정확도 55% → 69% (개선 후에도 낮음) |
+| **DPReview** | Aftershoot (프로 컬링) | 블러 감지 "hit-and-miss". 인물은 비교적 정확, 비인물에서 오류 증가 |
+| **MacStories** | CleanMyPhone | 포트레이트 모드/하늘/안개 오판. "알고리즘을 믿고 전부 삭제했다면 실제 사진을 잃었을 것" |
+| **Autonomous.ai** | AI Cleaner | 정확 중복 87%, 유사 매칭 73% (8,500장 테스트) |
+| **학술 연구** | SVM 블러 분류기 | 1,000장 테스트 93.8% 정확도 (통제 환경, 실사용 대비 과대) |
+
+---
+
+### 3. 오탐(False Positive) 패턴 분석
+
+| 오탐 유형 | 설명 | 해당 앱 | 출처 |
+|----------|------|--------|------|
+| **포트레이트 → 흐림** | 보케(배경 흐림) 효과를 저품질 흐림으로 오판 | CleanMyPhone | MacStories, Setapp |
+| **하늘/구름 → 흐림** | 하늘이 주를 이루는 사진을 흐림으로 분류 | CleanMyPhone | MacStories |
+| **안개/해무 → 흐림** | 안개 낀 풍경을 흐림으로 분류 | CleanMyPhone | Setapp 리뷰 |
+| **저조도 → 흐림** | 조명이 약간 부족한 사진을 전부 흐림으로 분류 | AI Cleaner | Macgasm 리뷰 |
+| **HDR → 블러** | HDR 사진을 삭제 대상으로 분류 | CleanMyPhone | Setapp 사용자 리뷰 |
+| **역전 (흐림 유지)** | 흐린 사진을 best로 선택, 선명한 사진을 삭제 추천 | Cleanup | JustUseApp, InsanelyMac |
+| **비관련 매칭** | 새와 고양이 사진을 "유사"로 그룹화 | Cleanup | JustUseApp (리뷰어 Valeord) |
+| **눈감음 선택** | 눈 감은 사진을 Best Photo로 선택 | Cleanup, Cleaner Neat | InsanelyMac |
+| **미탐 (False Negative)** | 24,000장 중 ~300장만 흐림 감지 — 수동 확인 시 더 많은 흐림 사진 발견. "일부만 식별" | CleanMyPhone | MacStories, Setapp |
+| **미탐 (유사)** | 유사/중복 사진 상당수를 감지하지 못함. "여러 유사 또는 중복 사진이 미감지" | Clever Cleaner | InsanelyMac, JustUseApp |
+
+---
+
+### 4. 업계 공통 결론
+
+**모든 독립 리뷰어의 공통 권고**: "자동 정리 결과를 그대로 믿고 삭제하면 안 된다. 수동 검토 필수."
+
+**Apple Community 포럼 (Level 10 사용자 MrHoffman)**: "I don't trust AI or some app to not trash my photos."
+
+**Canon PHIL 사례**: Canon이 자체 컴퓨터 비전 엔진(PHIL)으로 사진 품질 평가 앱(선명도+노이즈+감정+눈감김 4축 평가)을 출시했으나, 2023년 3월 App Store에서 철수. 대기업의 전용 기술로도 상용화에 실패한 사례. (출처: [DPReview](https://www.dpreview.com/news/0301330122/canon-photo-culling-is-a-new-ios-app-that-uses-artificial-intelligence-to-evaluate-your-photos))
+
+**정량 요약**:
+- 흐림 감지를 명시적으로 제공하는 iOS 앱: **5개** (기존 15개 중)
+- 그 중 독립 정확도 테스트가 존재하는 앱: **1개** (AI Cleaner — 98.7% 오탐)
+- 어두움/과노출/포켓샷 감지를 제공하는 iOS 전용 앱: **0개** (Google Photos 제외)
+- 프로 도구(Topaz, Aftershoot)조차 블러 감지 정확도: **55~69%**
+- **표준화된 업계 벤치마크**: 존재하지 않음
+
+---
+
+### 5. 출처 목록
+
+- [InsanelyMac - AI Cleaner Review](https://www.insanelymac.com/blog/ai-cleaner-clean-up-storage-review/)
+- [InsanelyMac - Cleaner Kit Review](https://www.insanelymac.com/blog/cleaner-kit-clean-up-storage-review/)
+- [InsanelyMac - Clever Cleaner Review](https://www.insanelymac.com/blog/clever-cleaner-review/)
+- [InsanelyMac - CleanMyPhone Review](https://www.insanelymac.com/blog/cleanmyphone-review/)
+- [InsanelyMac - Cleanup Review](https://www.insanelymac.com/blog/cleanup-phone-storage-cleaner-review/)
+- [InsanelyMac - Cleaner Neat Review](https://www.insanelymac.com/blog/phone-cleaner-ai-clean-storage-review/)
+- [MacStories - Gemini Photos Review](https://www.macstories.net/reviews/gemini-photos-declutters-your-photo-library/)
+- [Setapp - CleanMyPhone Customer Reviews](https://setapp.com/apps/cleanmyphone/customer-reviews)
+- [JustUseApp - Cleanup Reviews](https://justuseapp.com/en/app/1510944943/cleanup-phone-storage-cleaner/reviews)
+- [Autonomous.ai - AI Cleaner Review](https://www.autonomous.ai/ourblog/ai-cleaner-app-review)
+- [Topaz Labs - Photo AI v1.1.5](https://www.topazlabs.com/learn/topaz-photo-ai-v1-1-5)
+- [DPReview - Aftershoot Review](https://www.dpreview.com/articles/4050238990/aftershoot-pro-review-the-promise-of-an-ai-assistant-who-ll-take-away-all-the-gruntwork)
+- [Connor Tumbleson - Predatory iOS Cleanup Apps](https://connortumbleson.com/2025/01/13/predatory-ios-cleanup-applications/)
+- [Surfshark - Phone Cleaner Apps Research](https://surfshark.com/research/chart/phone-cleaner-apps)
+- [Apple Community - Cleaner App Discussion](https://discussions.apple.com/thread/255912258)

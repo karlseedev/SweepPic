@@ -126,11 +126,11 @@ final class TrashAlbumViewController: BaseGridViewController {
         let bannerView = view.viewWithTag(9902)
 
         // 게이지/배너 높이에 따른 추가 inset 계산
-        // 게이지: 고정 49pt + 11 여백 = 60
-        // 배너: Day별 가변 높이 + 11 여백 (systemLayoutSizeFitting으로 동적 계산)
+        // 게이지: 고정 52pt + 11 여백 = 63
+        // 배너: 가변 높이 + 11 여백 (systemLayoutSizeFitting으로 동적 계산)
         let extraInset: CGFloat
         if hasGauge {
-            extraInset = 60
+            extraInset = 63
         } else if let banner = bannerView {
             // 배너 레이아웃 강제 계산 후 실제 높이 사용
             banner.layoutIfNeeded()

@@ -76,6 +76,9 @@ extension TrashAlbumViewController {
         UsageLimitStore.shared.onUpdate = { [weak self] in
             self?.updateGaugeView()
         }
+
+        // 첫 표시 시 1회 툴팁
+        showGaugeFirstTooltipIfNeeded(for: gauge)
     }
 
     /// 게이지 뷰 업데이트
@@ -138,11 +141,11 @@ extension TrashAlbumViewController {
             ])
         }
 
-        // 배너 탭 → 페이월 (FR-025, 페이월은 US4에서 구현)
-        banner.onTapPaywall = { [weak self] in
-            Logger.app.debug("TrashAlbumVC+Gate: Grace Period 배너 탭 → 페이월 (US4에서 구현)")
-            // Phase 6 T031에서 PaywallViewController present
-            _ = self
+        // 배너 탭 → 체험 종료 후 안내 팝업
+        banner.onTap = { [weak self] in
+            guard let self else { return }
+            let popup = GracePeriodDetailPopup()
+            self.present(popup, animated: true)
         }
 
         // 배너 높이만큼 컬렉션뷰 상단 inset 갱신
@@ -230,56 +233,59 @@ extension TrashAlbumViewController {
         let tooltipTag = 9903
 
         let tooltip = UILabel()
-        tooltip.tag = tooltipTag
         tooltip.text = "오늘의 무료 삭제 한도예요.\n탭해서 자세히 볼 수 있어요"
-        tooltip.font = .systemFont(ofSize: 12, weight: .medium)
-        tooltip.textColor = .white
-        tooltip.backgroundColor = UIColor.darkGray
+        tooltip.font = .systemFont(ofSize: 16, weight: .semibold)
+        tooltip.textColor = .red
+        tooltip.backgroundColor = .clear
         tooltip.numberOfLines = 2
         tooltip.textAlignment = .center
-        tooltip.layer.cornerRadius = 8
-        tooltip.layer.masksToBounds = true
         tooltip.translatesAutoresizingMaskIntoConstraints = false
-        tooltip.alpha = 0
 
-        // 패딩을 위한 내부 inset 설정
-        tooltip.drawText(in: .zero) // label이라 직접 inset 불가 → 배경뷰로 감싸기
+        // 말풍선 뷰 (삼각형+사각형 하나의 path로 테두리)
+        let arrowHeight: CGFloat = 10
+        let cornerRadius: CGFloat = 10
+        let borderWidth: CGFloat = 1
 
-        let container = UIView()
-        container.tag = tooltipTag
-        container.backgroundColor = UIColor.darkGray
-        container.layer.cornerRadius = 8
-        container.layer.masksToBounds = true
-        container.translatesAutoresizingMaskIntoConstraints = false
-        container.alpha = 0
+        let bubbleView = TooltipBubbleView(
+            arrowHeight: arrowHeight,
+            cornerRadius: cornerRadius,
+            borderWidth: borderWidth,
+            fillColor: .white,
+            strokeColor: .black
+        )
+        bubbleView.tag = tooltipTag
+        bubbleView.translatesAutoresizingMaskIntoConstraints = false
+        bubbleView.alpha = 0
 
-        container.addSubview(tooltip)
-        view.addSubview(container)
+        bubbleView.addSubview(tooltip)
+        view.addSubview(bubbleView)
 
         guard let gauge = view.viewWithTag(ViewTag.gaugeView) else { return }
 
         NSLayoutConstraint.activate([
-            tooltip.topAnchor.constraint(equalTo: container.topAnchor, constant: 8),
-            tooltip.leadingAnchor.constraint(equalTo: container.leadingAnchor, constant: 12),
-            tooltip.trailingAnchor.constraint(equalTo: container.trailingAnchor, constant: -12),
-            tooltip.bottomAnchor.constraint(equalTo: container.bottomAnchor, constant: -8),
+            // 라벨 패딩 (arrowHeight 만큼 상단 여백 추가)
+            tooltip.topAnchor.constraint(equalTo: bubbleView.topAnchor, constant: arrowHeight + 14),
+            tooltip.leadingAnchor.constraint(equalTo: bubbleView.leadingAnchor, constant: 20),
+            tooltip.trailingAnchor.constraint(equalTo: bubbleView.trailingAnchor, constant: -20),
+            tooltip.bottomAnchor.constraint(equalTo: bubbleView.bottomAnchor, constant: -14),
 
-            container.topAnchor.constraint(equalTo: gauge.bottomAnchor, constant: 6),
-            container.centerXAnchor.constraint(equalTo: gauge.centerXAnchor),
-            container.widthAnchor.constraint(lessThanOrEqualTo: gauge.widthAnchor)
+            // 게이지 아래 위치
+            bubbleView.topAnchor.constraint(equalTo: gauge.bottomAnchor, constant: 4),
+            bubbleView.centerXAnchor.constraint(equalTo: gauge.centerXAnchor),
+            bubbleView.widthAnchor.constraint(lessThanOrEqualTo: gauge.widthAnchor)
         ])
 
         // 페이드 인
         UIView.animate(withDuration: 0.3) {
-            container.alpha = 1
+            bubbleView.alpha = 1
         }
 
         // 3초 후 페이드 아웃 + 제거
         DispatchQueue.main.asyncAfter(deadline: .now() + 3.0) {
             UIView.animate(withDuration: 0.3, animations: {
-                container.alpha = 0
+                bubbleView.alpha = 0
             }, completion: { _ in
-                container.removeFromSuperview()
+                bubbleView.removeFromSuperview()
             })
         }
     }
@@ -337,3 +343,101 @@ extension Notification.Name {
     static let debugGracePeriodToggled = Notification.Name("debugGracePeriodToggled")
 }
 #endif
+
+// MARK: - TooltipBubbleView
+
+/// 말풍선 모양 뷰 (위쪽 삼각형 + 둥근 사각형을 하나의 path로 그려 테두리 연결)
+private final class TooltipBubbleView: UIView {
+
+    private let arrowHeight: CGFloat
+    private let cornerRadius: CGFloat
+    private let borderWidth: CGFloat
+    private let fillColor: UIColor
+    private let strokeColor: UIColor
+
+    private let shapeLayer = CAShapeLayer()
+    private let borderLayer = CAShapeLayer()
+
+    init(arrowHeight: CGFloat, cornerRadius: CGFloat, borderWidth: CGFloat,
+         fillColor: UIColor, strokeColor: UIColor) {
+        self.arrowHeight = arrowHeight
+        self.cornerRadius = cornerRadius
+        self.borderWidth = borderWidth
+        self.fillColor = fillColor
+        self.strokeColor = strokeColor
+        super.init(frame: .zero)
+        backgroundColor = .clear
+        // 그림자
+        layer.shadowColor = UIColor.black.cgColor
+        layer.shadowOpacity = 0.5
+        layer.shadowOffset = CGSize(width: 0, height: 4)
+        layer.shadowRadius = 12
+        layer.addSublayer(shapeLayer)
+        layer.addSublayer(borderLayer)
+    }
+
+    @available(*, unavailable)
+    required init?(coder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+
+    override func layoutSubviews() {
+        super.layoutSubviews()
+        let path = makeBubblePath()
+        shapeLayer.path = path.cgPath
+        shapeLayer.fillColor = fillColor.cgColor
+
+        borderLayer.path = path.cgPath
+        borderLayer.fillColor = UIColor.clear.cgColor
+        borderLayer.strokeColor = UIColor.clear.cgColor
+        borderLayer.lineWidth = 0
+
+        // 그림자 path
+        layer.shadowPath = path.cgPath
+    }
+
+    /// 삼각형 + 둥근 사각형 합친 path
+    private func makeBubblePath() -> UIBezierPath {
+        let w = bounds.width
+        let h = bounds.height
+        let ah = arrowHeight
+        let aw: CGFloat = 16 // 화살표 너비
+        let r = cornerRadius
+
+        let path = UIBezierPath()
+
+        // 화살표 꼭짓점 (상단 중앙)
+        let arrowTip = CGPoint(x: w / 2, y: 0)
+        let arrowLeft = CGPoint(x: w / 2 - aw / 2, y: ah)
+        let arrowRight = CGPoint(x: w / 2 + aw / 2, y: ah)
+
+        // 시작: 화살표 꼭짓점
+        path.move(to: arrowTip)
+        // 화살표 오른쪽 → 사각형 상단 우측
+        path.addLine(to: arrowRight)
+        path.addLine(to: CGPoint(x: w - r, y: ah))
+        // 우상단 코너
+        path.addArc(withCenter: CGPoint(x: w - r, y: ah + r), radius: r,
+                     startAngle: -.pi / 2, endAngle: 0, clockwise: true)
+        // 우측 변
+        path.addLine(to: CGPoint(x: w, y: h - r))
+        // 우하단 코너
+        path.addArc(withCenter: CGPoint(x: w - r, y: h - r), radius: r,
+                     startAngle: 0, endAngle: .pi / 2, clockwise: true)
+        // 하단 변
+        path.addLine(to: CGPoint(x: r, y: h))
+        // 좌하단 코너
+        path.addArc(withCenter: CGPoint(x: r, y: h - r), radius: r,
+                     startAngle: .pi / 2, endAngle: .pi, clockwise: true)
+        // 좌측 변
+        path.addLine(to: CGPoint(x: 0, y: ah + r))
+        // 좌상단 코너
+        path.addArc(withCenter: CGPoint(x: r, y: ah + r), radius: r,
+                     startAngle: .pi, endAngle: -.pi / 2, clockwise: true)
+        // 사각형 상단 좌측 → 화살표 왼쪽
+        path.addLine(to: arrowLeft)
+        path.close()
+
+        return path
+    }
+}

@@ -479,7 +479,8 @@ extension GridViewController {
         ) { [weak self] _ in
             #if DEBUG
             UsageLimitStore.shared.debugReset()
-            Logger.app.debug("GridVC+Cleanup: 디버그 한도 리셋")
+            UserDefaults.standard.removeObject(forKey: "GaugeFirstTooltipShown")
+            Logger.app.debug("GridVC+Cleanup: 디버그 한도 리셋 + 툴팁 플래그 초기화")
             // 삭제대기함 게이지 갱신
             NotificationCenter.default.post(name: .debugGracePeriodToggled, object: nil)
             #endif
@@ -525,29 +526,44 @@ extension GridViewController {
         )
     }
 
-    /// (테스트) Grace Period 토글 메뉴
-    /// 클릭 시 Grace Period 활성/비활성 전환
-    func makeDebugGracePeriodMenu() -> UIAction {
+    /// (테스트) Grace Period 서브메뉴
+    /// Day 0~2 선택 + 만료 + OFF
+    func makeDebugGracePeriodMenu() -> UIMenu {
+        let currentDay = GracePeriodService.shared.currentDay
         let isActive = GracePeriodService.shared.isActive
-        let title = isActive ? "(테스트)3일 ✅" : "(테스트)3일"
-        return UIAction(
-            title: title,
-            image: UIImage(systemName: "clock.arrow.circlepath")
+
+        // Day 0, 1, 2 선택 액션
+        let dayActions = (0...2).map { day in
+            let remaining = 3 - day
+            let check = (isActive && currentDay == day) ? " ✅" : ""
+            return UIAction(
+                title: "Day \(day) (\(remaining)일 남음)\(check)"
+            ) { [weak self] _ in
+                #if DEBUG
+                GracePeriodService.shared.debugSetDay(day)
+                NotificationCenter.default.post(name: .debugGracePeriodToggled, object: nil)
+                #endif
+                self?.setupCleanupButton()
+            }
+        }
+
+        // 만료 (Day 4)
+        let expireCheck = (!isActive && currentDay >= 3) ? " ✅" : ""
+        let expireAction = UIAction(
+            title: "만료 (Day 4)\(expireCheck)"
         ) { [weak self] _ in
             #if DEBUG
-            if GracePeriodService.shared.isActive {
-                // 활성 → 비활성 (3일 지난 상황)
-                GracePeriodService.shared.debugExpire()
-            } else {
-                // 비활성 → 활성 (앱 처음 깐 상황)
-                GracePeriodService.shared.debugReset()
-            }
-            // 삭제대기함 게이지 즉시 갱신 알림
+            GracePeriodService.shared.debugExpire()
             NotificationCenter.default.post(name: .debugGracePeriodToggled, object: nil)
             #endif
-            // 토글 후 메뉴 재구성
             self?.setupCleanupButton()
         }
+
+        return UIMenu(
+            title: isActive ? "(테스트)체험기간 ✅" : "(테스트)체험기간",
+            image: UIImage(systemName: "clock.arrow.circlepath"),
+            children: dayActions + [expireAction]
+        )
     }
 }
 

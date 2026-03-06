@@ -134,6 +134,14 @@ public final class GracePeriodService: GracePeriodServiceProtocol {
         UserDefaults.standard.set(fourDaysAgo, forKey: Keys.installDate)
     }
 
+    /// 디버그용: Grace Period 특정 Day로 설정
+    /// - Parameter day: 경과 일수 (0=오늘 설치, 1=어제 설치, 2=2일 전 설치)
+    public func debugSetDay(_ day: Int) {
+        let pastDate = Calendar.current.date(byAdding: .day, value: -day, to: Date())
+        UserDefaults.standard.set(pastDate, forKey: Keys.installDate)
+        KeychainHelper.delete(key: "hasUsedGracePeriod")
+    }
+
     /// 디버그용: Grace Period 리셋 (installDate 삭제 + Keychain 플래그 해제)
     public func debugReset() {
         UserDefaults.standard.removeObject(forKey: Keys.installDate)

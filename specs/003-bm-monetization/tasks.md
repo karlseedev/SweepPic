@@ -94,11 +94,11 @@
 
 ### Implementation
 
-- [x] T025 [US3] Grace Period 배너 UI 구현 — `TrashAlbumViewController+Gate.swift`에 배너 뷰 추가. 게이지 위치에 "무료 체험 중 — N일 남음" 배너 표시. Day 0~1: 정보만 / Day 2: "Plus로 계속 무제한 사용 →" 텍스트 링크 / Day 3: [Plus로 무제한 계속하기] CTA 버튼 (FR-024). 배너 탭 → 페이월 (FR-025, 페이월은 US4에서 구현 — 탭 핸들러만 준비)
+- [x] T025 [US3] Grace Period 배너 UI 구현 — `TrashAlbumViewController+Gate.swift`에 배너 뷰 추가. 게이지 위치에 "무료 체험 중 — N일 남음" + "체험 종료 후 일일 무료 삭제 한도가 적용됩니다" 배너 표시. 모든 Day 동일 UI (CTA 없음). 배너 탭 → 페이월 (FR-025, 페이월은 US4에서 구현 — 탭 핸들러만 준비)
 - [x] T026 [US3] Day 4 전환 로직 — `TrashAlbumViewController+Gate.swift`에서 Grace Period 만료 시 배너 → 게이지 전환. 게이지 첫 표시 시 1회 툴팁 "오늘의 무료 삭제 한도예요. 탭해서 자세히 볼 수 있어요" (Edge Case: 카운터 게이지 첫 표시)
 - [x] T027 [US3] TrashGateCoordinator Grace Period 바이패스 확인 — T013에서 이미 Grace Period 체크 포함. 실제 통합 테스트: Grace Period 중 게이트/광고 미표시 확인. Grace Period 중 구독 시 즉시 종료 → Plus 전환 (Edge Case)
 
-**Checkpoint**: 설치 직후 무제한 삭제. 배너 Day 0→1→2→3 단계 전환. Day 4 게이지 + 툴팁
+**Checkpoint**: 설치 직후 무제한 삭제. 배너 모든 Day 동일 UI 확인. Day 4 게이지 + 툴팁
 
 ---
 
