@@ -189,7 +189,7 @@ final class TrashGatePopupViewController: UIViewController {
 
     override func viewDidLoad() {
         super.viewDidLoad()
-        view.backgroundColor = UIColor.black.withAlphaComponent(0.5)
+        view.backgroundColor = UIColor.black.withAlphaComponent(0.4)
 
         setupUI()
         setupBlurAnimator()

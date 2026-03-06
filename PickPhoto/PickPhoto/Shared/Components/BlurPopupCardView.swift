@@ -32,18 +32,24 @@ final class BlurPopupCardView: UIView {
 
     // MARK: - UI Components
 
-    /// 카드 뒤 어두운 배경 (카드 영역에만 딤)
+    /// 카드 뒤 어두운 배경 (iOS 18~25 전용)
+    /// iOS 18~25: Metal Glass가 하이라이트만 제공하므로 불투명에 가까운 딤 필요
+    /// iOS 26+: 사용 안 함 — dimLayer가 있으면 UIGlassEffect가 뒤 콘텐츠를 캡처 못함
     private let dimLayer: UIView = {
         let view = UIView()
-        view.backgroundColor = UIColor(white: 0, alpha: 0.8)
+        view.backgroundColor = UIColor(white: 0.1, alpha: 0.85)
         view.translatesAutoresizingMaskIntoConstraints = false
         return view
     }()
 
     /// Glass 효과 뷰 (iOS 18~25: LiquidGlassKit Metal, iOS 26+: 네이티브 UIGlassEffect)
+    /// iOS 18~25: tintColor .white → Metal이 하이라이트 반사광으로 처리
+    /// iOS 26+: tintColor nil → 네이티브 UIGlassEffect가 자체 반투명 Glass 제공 (.white 시 불투명 하얀 유리로 렌더링됨)
     private lazy var glassView: AnyVisualEffectView = {
         let effect = LiquidGlassEffect(style: .regular, isNative: true)
-        effect.tintColor = .white
+        if #unavailable(iOS 26.0) {
+            effect.tintColor = .white
+        }
         let view = VisualEffectView(effect: effect)
         view.translatesAutoresizingMaskIntoConstraints = false
         view.clipsToBounds = true
@@ -71,9 +77,12 @@ final class BlurPopupCardView: UIView {
         glassView.layer.cornerRadius = cornerRadius
         glassView.layer.cornerCurve = .continuous
 
-        // 그림자 (Glass 테두리 깊이감)
-        layer.masksToBounds = false
-        LiquidGlassStyle.applyShadow(to: layer, cornerRadius: cornerRadius)
+        // 그림자 — iOS 18~25만 (Metal Glass에 깊이감 부여)
+        // iOS 26+: 네이티브 UIGlassEffect가 자체 그림자 제공
+        if #unavailable(iOS 26.0) {
+            layer.masksToBounds = false
+            LiquidGlassStyle.applyShadow(to: layer, cornerRadius: cornerRadius)
+        }
 
         setupLayers()
     }
@@ -100,16 +109,24 @@ final class BlurPopupCardView: UIView {
     // MARK: - Setup
 
     /// dimLayer + glassView 레이아웃
+    /// iOS 26+: dimLayer 미추가 — UIGlassEffect가 뒤 콘텐츠를 직접 캡처하도록
     private func setupLayers() {
-        addSubview(dimLayer)
+        if #unavailable(iOS 26.0) {
+            addSubview(dimLayer)
+        }
         addSubview(glassView)
 
-        NSLayoutConstraint.activate([
-            dimLayer.topAnchor.constraint(equalTo: topAnchor),
-            dimLayer.leadingAnchor.constraint(equalTo: leadingAnchor),
-            dimLayer.trailingAnchor.constraint(equalTo: trailingAnchor),
-            dimLayer.bottomAnchor.constraint(equalTo: bottomAnchor),
+        // iOS 18~25: dimLayer 제약조건
+        if dimLayer.superview != nil {
+            NSLayoutConstraint.activate([
+                dimLayer.topAnchor.constraint(equalTo: topAnchor),
+                dimLayer.leadingAnchor.constraint(equalTo: leadingAnchor),
+                dimLayer.trailingAnchor.constraint(equalTo: trailingAnchor),
+                dimLayer.bottomAnchor.constraint(equalTo: bottomAnchor)
+            ])
+        }
 
+        NSLayoutConstraint.activate([
             glassView.topAnchor.constraint(equalTo: topAnchor),
             glassView.leadingAnchor.constraint(equalTo: leadingAnchor),
             glassView.trailingAnchor.constraint(equalTo: trailingAnchor),
