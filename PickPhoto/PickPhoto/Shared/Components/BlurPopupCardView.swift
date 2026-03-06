@@ -2,78 +2,78 @@
 //  BlurPopupCardView.swift
 //  PickPhoto
 //
-//  반투명 블러 팝업 카드 — 재사용 가능한 컴포넌트
-//  UIViewPropertyAnimator로 블러 강도를 조절하여 뒤 콘텐츠 투과
+//  반투명 Glass 팝업 카드 — 재사용 가능한 컴포넌트
+//  LiquidGlassEffect(iOS 18~25: Metal, iOS 26+: 네이티브)로 Glass 테두리 효과
+//  dimLayer로 카드 영역 어두운 배경
 //
 //  사용법:
 //    let card = BlurPopupCardView()
 //    parentView.addSubview(card)
 //    // 제약조건 설정 후
 //    card.contentView 안에 콘텐츠 추가
-//    card.activateBlur()  // 블러 시작
+//    card.activateBlur()  // Glass 효과 활성화
 //
-//  적용: TrashGatePopup, CleanupProgressView 등
+//  적용: TrashGatePopup, UsageGaugeDetailPopup, GracePeriodDetailPopup, CleanupProgressView 등
 //
 
 import UIKit
+import LiquidGlassKit
 
 // MARK: - BlurPopupCardView
 
-/// 반투명 블러 팝업 카드
-/// dimLayer(어두운 배경) + blurLayer(반투명 블러)를 결합
+/// Glass 효과 팝업 카드
+/// dimLayer(어두운 배경) + LiquidGlassEffect(Glass 테두리)를 결합
 final class BlurPopupCardView: UIView {
 
     // MARK: - Constants
 
     /// 기본 코너 반경
     static let defaultCornerRadius: CGFloat = 20
-    /// 기본 딤 알파
-    static let defaultDimAlpha: CGFloat = 0.5
-    /// 기본 블러 강도 (0.0 = 투명, 1.0 = 완전 불투명)
-    static let defaultBlurFraction: CGFloat = 0.5
 
     // MARK: - UI Components
 
     /// 카드 뒤 어두운 배경 (카드 영역에만 딤)
     private let dimLayer: UIView = {
         let view = UIView()
+        view.backgroundColor = UIColor(white: 0, alpha: 0.8)
         view.translatesAutoresizingMaskIntoConstraints = false
         return view
     }()
 
-    /// 반투명 블러 레이어 — effect는 animator로 부분 적용
-    private let blurView: UIVisualEffectView = {
-        let view = UIVisualEffectView(effect: nil)
+    /// Glass 효과 뷰 (iOS 18~25: LiquidGlassKit Metal, iOS 26+: 네이티브 UIGlassEffect)
+    private lazy var glassView: AnyVisualEffectView = {
+        let effect = LiquidGlassEffect(style: .regular, isNative: true)
+        effect.tintColor = .white
+        let view = VisualEffectView(effect: effect)
+        view.translatesAutoresizingMaskIntoConstraints = false
         view.clipsToBounds = true
-        view.translatesAutoresizingMaskIntoConstraints = false
         return view
     }()
 
-    /// 블러 강도 제어용 animator
-    private var blurAnimator: UIViewPropertyAnimator?
-
-    /// 블러 위에 콘텐츠를 추가할 뷰
+    /// Glass 위에 콘텐츠를 추가할 뷰
     var contentView: UIView {
-        blurView.contentView
+        glassView.contentView
     }
 
     // MARK: - Init
 
-    /// 블러 팝업 카드 생성
-    /// - Parameters:
-    ///   - cornerRadius: 코너 반경 (기본 20)
-    ///   - dimAlpha: 딤 배경 알파 (기본 0.5)
-    init(cornerRadius: CGFloat = BlurPopupCardView.defaultCornerRadius,
-         dimAlpha: CGFloat = BlurPopupCardView.defaultDimAlpha) {
+    /// Glass 팝업 카드 생성
+    /// - Parameter cornerRadius: 코너 반경 (기본 20)
+    init(cornerRadius: CGFloat = BlurPopupCardView.defaultCornerRadius) {
         super.init(frame: .zero)
         translatesAutoresizingMaskIntoConstraints = false
 
-        // 코너 및 딤 설정
-        dimLayer.backgroundColor = UIColor(white: 0.07, alpha: dimAlpha)
+        // 코너 설정
         dimLayer.layer.cornerRadius = cornerRadius
+        dimLayer.layer.cornerCurve = .continuous
         dimLayer.clipsToBounds = true
 
-        blurView.layer.cornerRadius = cornerRadius
+        glassView.layer.cornerRadius = cornerRadius
+        glassView.layer.cornerCurve = .continuous
+
+        // 그림자 (Glass 테두리 깊이감)
+        layer.masksToBounds = false
+        LiquidGlassStyle.applyShadow(to: layer, cornerRadius: cornerRadius)
 
         setupLayers()
     }
@@ -83,17 +83,26 @@ final class BlurPopupCardView: UIView {
         fatalError("init(coder:) has not been implemented")
     }
 
-    deinit {
-        blurAnimator?.stopAnimation(true)
-        blurAnimator?.finishAnimation(at: .current)
+    // MARK: - Lifecycle
+
+    /// iOS 18~25: LiquidGlassOptimizer preload (Metal 렌더링 초기화)
+    override func didMoveToWindow() {
+        super.didMoveToWindow()
+        if #available(iOS 26.0, *) { return }
+        if window != nil {
+            DispatchQueue.main.async { [weak self] in
+                guard let self, self.window != nil else { return }
+                LiquidGlassOptimizer.preload(in: self)
+            }
+        }
     }
 
     // MARK: - Setup
 
-    /// dimLayer + blurView 레이아웃
+    /// dimLayer + glassView 레이아웃
     private func setupLayers() {
         addSubview(dimLayer)
-        addSubview(blurView)
+        addSubview(glassView)
 
         NSLayoutConstraint.activate([
             dimLayer.topAnchor.constraint(equalTo: topAnchor),
@@ -101,31 +110,23 @@ final class BlurPopupCardView: UIView {
             dimLayer.trailingAnchor.constraint(equalTo: trailingAnchor),
             dimLayer.bottomAnchor.constraint(equalTo: bottomAnchor),
 
-            blurView.topAnchor.constraint(equalTo: topAnchor),
-            blurView.leadingAnchor.constraint(equalTo: leadingAnchor),
-            blurView.trailingAnchor.constraint(equalTo: trailingAnchor),
-            blurView.bottomAnchor.constraint(equalTo: bottomAnchor)
+            glassView.topAnchor.constraint(equalTo: topAnchor),
+            glassView.leadingAnchor.constraint(equalTo: leadingAnchor),
+            glassView.trailingAnchor.constraint(equalTo: trailingAnchor),
+            glassView.bottomAnchor.constraint(equalTo: bottomAnchor)
         ])
     }
 
     // MARK: - Blur Control
 
-    /// 블러 효과 활성화
-    /// - Parameter fraction: 블러 강도 (0.0~1.0, 기본 0.5)
-    func activateBlur(fraction: CGFloat = BlurPopupCardView.defaultBlurFraction) {
-        let animator = UIViewPropertyAnimator(duration: 1, curve: .linear) {
-            self.blurView.effect = UIBlurEffect(style: LiquidGlassStyle.blurStyle)
-        }
-        animator.fractionComplete = fraction
-        animator.pausesOnCompletion = true
-        blurAnimator = animator
+    /// Glass 효과 활성화 (호환성 유지용 — LiquidGlassEffect는 자동 활성화)
+    func activateBlur(fraction: CGFloat = 0.5) {
+        // LiquidGlassEffect는 addSubview 시점에 자동 렌더링
+        // 기존 호출부 호환성을 위해 메서드 유지
     }
 
-    /// 블러 효과 해제 (deinit에서도 자동 호출)
+    /// Glass 효과 해제 (호환성 유지용)
     func deactivateBlur() {
-        blurAnimator?.stopAnimation(true)
-        blurAnimator?.finishAnimation(at: .current)
-        blurAnimator = nil
-        blurView.effect = nil
+        // LiquidGlassEffect는 뷰 제거 시 자동 해제
     }
 }
