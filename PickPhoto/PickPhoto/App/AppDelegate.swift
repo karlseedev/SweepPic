@@ -55,8 +55,11 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         // [BM] StoreKit 2 구독 상태 확인 + 실시간 감지 시작
         SubscriptionStore.shared.configure()
 
-        // [BM] AdMob SDK 초기화 + 광고 사전 로드
+        // [BM] AdMob SDK 초기화 + 광고 사전 로드 (리워드/전면)
         AdManager.shared.configure()
+
+        // [BM] 전면 광고 사전 로드 (InterstitialAdPresenter 독립 관리)
+        InterstitialAdPresenter.shared.preload()
 
         return true
     }

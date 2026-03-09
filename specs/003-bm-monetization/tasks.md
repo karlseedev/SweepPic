@@ -131,10 +131,10 @@
 
 ### Implementation
 
-- [ ] T036 [P] [US5] InterstitialAdPresenter 생성 — `PickPhoto/PickPhoto/Features/Monetization/Ad/InterstitialAdPresenter.swift`. GADInterstitialAd 래핑. showAd(from:completion:). 사전 로드 + 표시 완료 후 즉시 다음 로드. 스킵 가능 (FR-016). 테스트 광고 ID (research.md §R2)
-- [ ] T037 [P] [US5] BannerAdViewController 생성 — `PickPhoto/PickPhoto/Features/Monetization/Ad/BannerAdViewController.swift`. GADBannerView 래핑. 사진 분석 대기 화면 하단에 삽입 가능한 컨테이너 뷰컨 (FR-017)
-- [ ] T038 [US5] 전면 광고 트리거 연동 — AdCounters(인메모리) 구현 + 유사사진 삭제 완료 / 자동정리 완료 짝수 회차에만 표시 (FR-015). 각 트리거별 독립 카운터. 관련 파일: `GridViewController+SimilarPhoto.swift`, `GridViewController+Cleanup.swift` 수정
-- [ ] T039 [US5] 배너 광고 삽입 — 사진 분석 대기 화면(유사사진 분석 중 표시 화면) 하단에 BannerAdViewController embed. Plus/Grace Period 시 미표시
+- [x] T036 [P] [US5] InterstitialAdPresenter 생성 — `PickPhoto/PickPhoto/Features/Monetization/Ad/InterstitialAdPresenter.swift`. GADInterstitialAd 래핑. showAd(from:completion:). 사전 로드 + 표시 완료 후 즉시 다음 로드. 스킵 가능 (FR-016). 테스트 광고 ID (research.md §R2)
+- [x] T037 [P] [US5] BannerAdViewController 생성 — `PickPhoto/PickPhoto/Features/Monetization/Ad/BannerAdViewController.swift`. GADBannerView 래핑. 사진 분석 대기 화면 하단에 삽입 가능한 컨테이너 뷰컨 (FR-017)
+- [x] T038 [US5] 전면 광고 트리거 연동 — AdCounters(인메모리) 구현 + 유사사진 삭제 완료 / 자동정리 완료 짝수 회차에만 표시 (FR-015). 각 트리거별 독립 카운터. 관련 파일: `GridViewController+SimilarPhoto.swift`, `GridViewController+Cleanup.swift` 수정
+- [x] T039 [US5] 배너 광고 삽입 — 사진 분석 대기 화면(유사사진 분석 중 표시 화면) 하단에 BannerAdViewController embed. Plus/Grace Period 시 미표시
 
 **Checkpoint**: 유사사진 2회차 → 전면 광고. 홀수 회차 → 미표시. 분석 대기 → 배너 표시. Plus → 모두 미표시
 

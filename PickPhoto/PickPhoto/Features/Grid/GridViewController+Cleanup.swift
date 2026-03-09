@@ -474,6 +474,14 @@ extension GridViewController {
                                     self?.cleanupTracker?.result = .completed
                                     self?.cleanupTracker?.foundCount = movedCount
                                     self?.cleanupTracker?.resultAction = .confirm
+
+                                    // [BM] 전면 광고 — 자동정리 완료 짝수 회차에만 표시 (FR-015)
+                                    if let vc = self,
+                                       AdCounters.shared.incrementAndShouldShowAd(for: .autoCleanupComplete) {
+                                        InterstitialAdPresenter.shared.showAd(from: vc) {
+                                            // 광고 닫힌 후 정상 진행
+                                        }
+                                    }
                                 }
                                 self?.sendCleanupTrackerAndClear()
                             }
