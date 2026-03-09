@@ -43,12 +43,12 @@ final class CelebrationViewController: UIViewController {
     /// 카드 컨테이너 (블러 팝업 카드)
     private lazy var cardView = BlurPopupCardView()
 
-    /// 이번 삭제 라벨 ("N장 삭제 완료!")
+    /// 이번 삭제 라벨 ("N장 삭제 완료!") — 제목 스타일 (게이트 팝업 기준)
     private lazy var sessionLabel: UILabel = {
         let label = UILabel()
         label.translatesAutoresizingMaskIntoConstraints = false
-        label.font = .systemFont(ofSize: 22, weight: .bold)
-        label.textColor = .label
+        label.font = .systemFont(ofSize: 18, weight: .semibold)
+        label.textColor = .white
         label.textAlignment = .center
         label.numberOfLines = 0
         return label
@@ -58,7 +58,7 @@ final class CelebrationViewController: UIViewController {
     private lazy var separatorView: UIView = {
         let view = UIView()
         view.translatesAutoresizingMaskIntoConstraints = false
-        view.backgroundColor = .separator
+        view.backgroundColor = UIColor.white.withAlphaComponent(0.15)
         return view
     }()
 
@@ -75,22 +75,22 @@ final class CelebrationViewController: UIViewController {
         return stack
     }()
 
-    /// "총 M장 삭제" 행
+    /// "PIClear에서 총 M장 삭제" 행 — 안내 스타일 (게이트 팝업 기준)
     private lazy var totalDeletedRow: UILabel = {
         let label = UILabel()
         label.translatesAutoresizingMaskIntoConstraints = false
-        label.font = .systemFont(ofSize: 15, weight: .regular)
-        label.textColor = .secondaryLabel
+        label.font = .systemFont(ofSize: 14, weight: .regular)
+        label.textColor = UIColor.white.withAlphaComponent(0.7)
         label.textAlignment = .center
         return label
     }()
 
-    /// "X.XGB 확보" 행
+    /// "X.XGB 확보" 행 — 안내 스타일 (게이트 팝업 기준)
     private lazy var totalFreedRow: UILabel = {
         let label = UILabel()
         label.translatesAutoresizingMaskIntoConstraints = false
-        label.font = .systemFont(ofSize: 15, weight: .regular)
-        label.textColor = .secondaryLabel
+        label.font = .systemFont(ofSize: 14, weight: .regular)
+        label.textColor = UIColor.white.withAlphaComponent(0.7)
         label.textAlignment = .center
         return label
     }()
@@ -207,7 +207,7 @@ final class CelebrationViewController: UIViewController {
         let totalFormatted = NumberFormatter.localizedString(
             from: NSNumber(value: result.totalDeletedCount), number: .decimal
         )
-        totalDeletedRow.text = "총 \(totalFormatted)장 삭제"
+        totalDeletedRow.text = "PIClear에서 총 \(totalFormatted)장 삭제"
 
         // 누적 확보 용량: "X.XGB 확보"
         let freedFormatted = FileSizeCalculator.formatBytes(result.totalFreedBytes)
