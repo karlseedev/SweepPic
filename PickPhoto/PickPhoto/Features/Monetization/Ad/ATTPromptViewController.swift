@@ -93,17 +93,29 @@ final class ATTPromptViewController: UIViewController {
         return label
     }()
 
-    /// "계속" 버튼 — Glass 스타일
-    private lazy var continueButton: GlassTextButton = {
-        let button = GlassTextButton(title: "계속", style: .filled, tintColor: .systemBlue)
+    /// "계속" 버튼 — 반투명 흰색 배경 (기존 팝업 스타일 통일)
+    private lazy var continueButton: UIButton = {
+        let button = UIButton(type: .system)
+        button.backgroundColor = UIColor.white.withAlphaComponent(0.12)
+        button.setTitle("계속", for: .normal)
+        button.setTitleColor(.white, for: .normal)
+        button.titleLabel?.font = .systemFont(ofSize: 16, weight: .semibold)
+        button.layer.cornerRadius = 25
+        button.clipsToBounds = true
         button.translatesAutoresizingMaskIntoConstraints = false
         button.addTarget(self, action: #selector(continueButtonTapped), for: .touchUpInside)
         return button
     }()
 
-    /// "건너뛰기" 버튼 — Glass 스타일 (plain)
-    private lazy var skipButton: GlassTextButton = {
-        let button = GlassTextButton(title: "건너뛰기", style: .plain, tintColor: .systemGray)
+    /// "건너뛰기" 버튼 — 반투명 흰색 배경 + 회색 텍스트
+    private lazy var skipButton: UIButton = {
+        let button = UIButton(type: .system)
+        button.backgroundColor = UIColor.white.withAlphaComponent(0.12)
+        button.setTitle("건너뛰기", for: .normal)
+        button.setTitleColor(.secondaryLabel, for: .normal)
+        button.titleLabel?.font = .systemFont(ofSize: 16, weight: .regular)
+        button.layer.cornerRadius = 25
+        button.clipsToBounds = true
         button.translatesAutoresizingMaskIntoConstraints = false
         button.addTarget(self, action: #selector(skipButtonTapped), for: .touchUpInside)
         return button
@@ -175,9 +187,11 @@ final class ATTPromptViewController: UIViewController {
             stackView.trailingAnchor.constraint(equalTo: cardView.contentView.trailingAnchor, constant: -24),
             stackView.bottomAnchor.constraint(equalTo: cardView.contentView.bottomAnchor, constant: -24),
 
-            // 버튼 너비 — 스택 전체 너비
+            // 버튼 크기 — 스택 전체 너비, 높이 50 (기존 팝업 통일)
             continueButton.widthAnchor.constraint(equalTo: stackView.widthAnchor),
-            skipButton.widthAnchor.constraint(equalTo: stackView.widthAnchor)
+            continueButton.heightAnchor.constraint(equalToConstant: 50),
+            skipButton.widthAnchor.constraint(equalTo: stackView.widthAnchor),
+            skipButton.heightAnchor.constraint(equalToConstant: 50)
         ])
 
         // 접근성 설정 (FR-057)

@@ -106,9 +106,15 @@ final class CelebrationViewController: UIViewController {
         return label
     }()
 
-    /// "확인" 버튼 — Glass 스타일
-    private lazy var confirmButton: GlassTextButton = {
-        let button = GlassTextButton(title: "확인", style: .filled, tintColor: .systemBlue)
+    /// "확인" 버튼 — 반투명 흰색 배경 (기존 팝업 스타일 통일)
+    private lazy var confirmButton: UIButton = {
+        let button = UIButton(type: .system)
+        button.backgroundColor = UIColor.white.withAlphaComponent(0.12)
+        button.setTitle("확인", for: .normal)
+        button.setTitleColor(.white, for: .normal)
+        button.titleLabel?.font = .systemFont(ofSize: 16, weight: .semibold)
+        button.layer.cornerRadius = 25
+        button.clipsToBounds = true
         button.translatesAutoresizingMaskIntoConstraints = false
         button.addTarget(self, action: #selector(confirmButtonTapped), for: .touchUpInside)
         return button
@@ -196,8 +202,9 @@ final class CelebrationViewController: UIViewController {
             separatorView.widthAnchor.constraint(equalTo: stackView.widthAnchor),
             separatorView.heightAnchor.constraint(equalToConstant: 0.5),
 
-            // 버튼 너비
-            confirmButton.widthAnchor.constraint(equalTo: stackView.widthAnchor)
+            // 버튼 크기 — 스택 전체 너비, 높이 50 (기존 팝업 통일)
+            confirmButton.widthAnchor.constraint(equalTo: stackView.widthAnchor),
+            confirmButton.heightAnchor.constraint(equalToConstant: 50)
         ])
 
         // 접근성 설정 (FR-057)
