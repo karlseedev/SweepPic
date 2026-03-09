@@ -54,14 +54,6 @@ final class CelebrationViewController: UIViewController {
         return label
     }()
 
-    /// 구분선
-    private lazy var separatorView: UIView = {
-        let view = UIView()
-        view.translatesAutoresizingMaskIntoConstraints = false
-        view.backgroundColor = UIColor.white.withAlphaComponent(0.15)
-        return view
-    }()
-
     /// 누적 통계 스택 (총 삭제 + 확보 용량)
     private lazy var statsStackView: UIStackView = {
         let stack = UIStackView(arrangedSubviews: [
@@ -113,7 +105,6 @@ final class CelebrationViewController: UIViewController {
     private lazy var stackView: UIStackView = {
         let stack = UIStackView(arrangedSubviews: [
             sessionLabel,
-            separatorView,
             statsStackView,
             confirmButton
         ])
@@ -170,7 +161,6 @@ final class CelebrationViewController: UIViewController {
 
         // 간격 조정
         stackView.setCustomSpacing(20, after: sessionLabel)
-        stackView.setCustomSpacing(20, after: separatorView)
         stackView.setCustomSpacing(24, after: statsStackView)
 
         NSLayoutConstraint.activate([
@@ -184,10 +174,6 @@ final class CelebrationViewController: UIViewController {
             stackView.leadingAnchor.constraint(equalTo: cardView.contentView.leadingAnchor, constant: 24),
             stackView.trailingAnchor.constraint(equalTo: cardView.contentView.trailingAnchor, constant: -24),
             stackView.bottomAnchor.constraint(equalTo: cardView.contentView.bottomAnchor, constant: -24),
-
-            // 구분선 너비
-            separatorView.widthAnchor.constraint(equalTo: stackView.widthAnchor),
-            separatorView.heightAnchor.constraint(equalToConstant: 0.5),
 
             // 버튼 크기 — 스택 전체 너비, 높이 50 (기존 팝업 통일)
             confirmButton.widthAnchor.constraint(equalTo: stackView.widthAnchor),
