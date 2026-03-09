@@ -267,7 +267,7 @@ final class UsageGaugeDetailPopup: UIViewController {
     private let titleLabel: UILabel = {
         let label = UILabel()
         label.text = "오늘의 삭제 한도"
-        label.font = .systemFont(ofSize: 18, weight: .semibold)
+        label.font = .systemFont(ofSize: 22, weight: .semibold)
         label.textColor = .white
         label.textAlignment = .center
         label.translatesAutoresizingMaskIntoConstraints = false
@@ -277,7 +277,7 @@ final class UsageGaugeDetailPopup: UIViewController {
     /// 한도 정보 라벨 — 반투명 흰색
     private let statusLabel: UILabel = {
         let label = UILabel()
-        label.font = .systemFont(ofSize: 14, weight: .regular)
+        label.font = .systemFont(ofSize: 16, weight: .regular)
         label.textColor = UIColor.white.withAlphaComponent(0.7)
         label.numberOfLines = 0
         label.textAlignment = .center
@@ -291,7 +291,7 @@ final class UsageGaugeDetailPopup: UIViewController {
         button.setTitle("광고 보고 +10장 추가", for: .normal)
         button.backgroundColor = UIColor.white.withAlphaComponent(0.12)
         button.setTitleColor(.white, for: .normal)
-        button.titleLabel?.font = .systemFont(ofSize: 16, weight: .semibold)
+        button.titleLabel?.font = .systemFont(ofSize: 17, weight: .semibold)
         button.layer.cornerRadius = 25
         button.clipsToBounds = true
         button.translatesAutoresizingMaskIntoConstraints = false
@@ -304,7 +304,7 @@ final class UsageGaugeDetailPopup: UIViewController {
         button.setTitle("닫기", for: .normal)
         button.backgroundColor = UIColor.white.withAlphaComponent(0.12)
         button.setTitleColor(.secondaryLabel, for: .normal)
-        button.titleLabel?.font = .systemFont(ofSize: 16, weight: .regular)
+        button.titleLabel?.font = .systemFont(ofSize: 17, weight: .regular)
         button.layer.cornerRadius = 25
         button.clipsToBounds = true
         button.translatesAutoresizingMaskIntoConstraints = false

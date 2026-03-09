@@ -78,7 +78,7 @@ final class TrashGatePopupViewController: UIViewController {
     private let titleLabel: UILabel = {
         let label = UILabel()
         label.text = "삭제대기함을 비우려면"
-        label.font = .systemFont(ofSize: 24, weight: .semibold)
+        label.font = .systemFont(ofSize: 22, weight: .semibold)
         label.textColor = .white
         label.textAlignment = .center
         label.translatesAutoresizingMaskIntoConstraints = false
@@ -88,7 +88,7 @@ final class TrashGatePopupViewController: UIViewController {
     /// 안내 라벨 (장수 + 한도 정보) — 반투명 흰색
     private let infoLabel: UILabel = {
         let label = UILabel()
-        label.font = .systemFont(ofSize: 18, weight: .regular)
+        label.font = .systemFont(ofSize: 16, weight: .regular)
         label.textColor = UIColor.white.withAlphaComponent(0.7)
         label.textAlignment = .center
         label.numberOfLines = 0

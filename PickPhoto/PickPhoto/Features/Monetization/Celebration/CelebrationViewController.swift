@@ -47,7 +47,7 @@ final class CelebrationViewController: UIViewController {
     private lazy var sessionLabel: UILabel = {
         let label = UILabel()
         label.translatesAutoresizingMaskIntoConstraints = false
-        label.font = .systemFont(ofSize: 24, weight: .semibold)
+        label.font = .systemFont(ofSize: 22, weight: .semibold)
         label.textColor = .white
         label.textAlignment = .center
         label.numberOfLines = 0
@@ -71,7 +71,7 @@ final class CelebrationViewController: UIViewController {
     private lazy var totalDeletedRow: UILabel = {
         let label = UILabel()
         label.translatesAutoresizingMaskIntoConstraints = false
-        label.font = .systemFont(ofSize: 18, weight: .regular)
+        label.font = .systemFont(ofSize: 16, weight: .regular)
         label.textColor = UIColor.white.withAlphaComponent(0.7)
         label.textAlignment = .center
         return label
@@ -81,7 +81,7 @@ final class CelebrationViewController: UIViewController {
     private lazy var totalFreedRow: UILabel = {
         let label = UILabel()
         label.translatesAutoresizingMaskIntoConstraints = false
-        label.font = .systemFont(ofSize: 18, weight: .regular)
+        label.font = .systemFont(ofSize: 16, weight: .regular)
         label.textColor = UIColor.white.withAlphaComponent(0.7)
         label.textAlignment = .center
         return label
@@ -187,7 +187,7 @@ final class CelebrationViewController: UIViewController {
     /// 데이터 표시
     private func configureData() {
         // 이번 삭제: "N장 삭제 완료!"
-        sessionLabel.text = "\(result.sessionDeletedCount)장 삭제 완료!"
+        sessionLabel.text = "\(result.sessionDeletedCount)장 삭제 완료"
 
         // 누적 삭제: "총 M장 삭제"
         let totalFormatted = NumberFormatter.localizedString(

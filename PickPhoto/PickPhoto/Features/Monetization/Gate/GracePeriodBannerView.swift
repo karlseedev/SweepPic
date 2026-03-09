@@ -199,7 +199,7 @@ final class GracePeriodDetailPopup: UIViewController {
     /// 제목 라벨: "무료 체험 중(N일 남음)"
     private let titleLabel: UILabel = {
         let label = UILabel()
-        label.font = .systemFont(ofSize: 19, weight: .semibold)
+        label.font = .systemFont(ofSize: 22, weight: .semibold)
         label.textColor = .white
         label.textAlignment = .center
         label.translatesAutoresizingMaskIntoConstraints = false
@@ -209,7 +209,7 @@ final class GracePeriodDetailPopup: UIViewController {
     /// 한도 안내 라벨: "무료 체험이 끝나면\n최대 30장의 무료 삭제 한도가 적용됩니다"
     private let statusLabel: UILabel = {
         let label = UILabel()
-        label.font = .systemFont(ofSize: 15, weight: .regular)
+        label.font = .systemFont(ofSize: 16, weight: .regular)
         label.textColor = UIColor.white.withAlphaComponent(0.7)
         label.numberOfLines = 0
         label.textAlignment = .center
@@ -221,7 +221,7 @@ final class GracePeriodDetailPopup: UIViewController {
     private let plusLabel: UILabel = {
         let label = UILabel()
         label.text = "Plus 구독으로 제한없이 정리가 가능해요"
-        label.font = .systemFont(ofSize: 15, weight: .regular)
+        label.font = .systemFont(ofSize: 16, weight: .regular)
         label.textColor = UIColor.white.withAlphaComponent(0.7)
         label.numberOfLines = 0
         label.textAlignment = .center
@@ -235,7 +235,7 @@ final class GracePeriodDetailPopup: UIViewController {
         button.setTitle("닫기", for: .normal)
         button.backgroundColor = UIColor.white.withAlphaComponent(0.12)
         button.setTitleColor(.secondaryLabel, for: .normal)
-        button.titleLabel?.font = .systemFont(ofSize: 16, weight: .regular)
+        button.titleLabel?.font = .systemFont(ofSize: 17, weight: .regular)
         button.layer.cornerRadius = 25
         button.clipsToBounds = true
         button.translatesAutoresizingMaskIntoConstraints = false

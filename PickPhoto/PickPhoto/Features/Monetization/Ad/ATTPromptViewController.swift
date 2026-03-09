@@ -59,7 +59,7 @@ final class ATTPromptViewController: UIViewController {
         let label = UILabel()
         label.translatesAutoresizingMaskIntoConstraints = false
         label.text = "광고 맞춤 설정"
-        label.font = .systemFont(ofSize: 24, weight: .bold)
+        label.font = .systemFont(ofSize: 22, weight: .bold)
         label.textColor = .label
         label.textAlignment = .center
         label.numberOfLines = 0
@@ -71,7 +71,7 @@ final class ATTPromptViewController: UIViewController {
         let label = UILabel()
         label.translatesAutoresizingMaskIntoConstraints = false
         label.text = "활동 추적을 허용하면\n관련없는 스팸성 광고를 줄여드립니다"
-        label.font = .systemFont(ofSize: 18, weight: .regular)
+        label.font = .systemFont(ofSize: 16, weight: .regular)
         label.textColor = .secondaryLabel
         label.textAlignment = .center
         label.numberOfLines = 0
@@ -86,7 +86,7 @@ final class ATTPromptViewController: UIViewController {
         let attributed = NSMutableAttributedString(
             string: fullText,
             attributes: [
-                .font: UIFont.systemFont(ofSize: 18, weight: .regular),
+                .font: UIFont.systemFont(ofSize: 16, weight: .regular),
                 .foregroundColor: UIColor.secondaryLabel,
                 .paragraphStyle: paragraphStyle
             ]
