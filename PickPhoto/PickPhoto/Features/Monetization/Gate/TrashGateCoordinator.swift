@@ -102,6 +102,8 @@ final class TrashGateCoordinator: TrashGateCoordinatorProtocol {
         // 4. 한도 초과 → 게이트 팝업 표시
         Logger.app.debug("TrashGateCoordinator: 한도 초과 (\(trashCount) > \(remaining)) — 게이트 팝업")
         isGateJustShown = true
+        // [BM] T055: 리뷰 금지 타이밍 플래그 설정 (FR-050)
+        ReviewService.shared.isGateJustShown = true
 
         // 필요한 광고 수 계산
         let adsNeeded = UsageLimitStore.shared.adsNeeded(for: trashCount)

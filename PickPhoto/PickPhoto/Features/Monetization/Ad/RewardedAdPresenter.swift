@@ -136,6 +136,11 @@ final class RewardedAdPresenter: NSObject {
         completionHandler = nil
         presentingVC = nil
 
+        // [BM] T055: 광고 시청 완료 시 리뷰 금지 타이밍 플래그 설정 (FR-050)
+        if case .earned = outcome {
+            ReviewService.shared.isAdJustShown = true
+        }
+
         DispatchQueue.main.async {
             handler?(outcome)
         }

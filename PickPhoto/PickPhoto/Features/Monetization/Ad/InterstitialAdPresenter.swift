@@ -152,6 +152,8 @@ extension InterstitialAdPresenter: GADFullScreenContentDelegate {
     func adDidDismissFullScreenContent(_ ad: GADFullScreenPresentingAd) {
         Logger.app.debug("InterstitialAdPresenter: 광고 dismiss")
         interstitialAd = nil
+        // [BM] T055: 전면 광고 시청 후 리뷰 금지 타이밍 플래그 설정 (FR-050)
+        ReviewService.shared.isAdJustShown = true
         fireCompletion()
 
         // 다음 표시를 위해 즉시 사전 로드 (FR-016)

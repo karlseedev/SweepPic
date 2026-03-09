@@ -680,6 +680,15 @@ final class TrashAlbumViewController: BaseGridViewController {
                         )
                     }
 
+                    // [BM] T055: 삭제 완료 후 리뷰 요청 평가 (FR-049)
+                    if let windowScene = self?.view.window?.windowScene {
+                        let prohibited = ReviewService.shared.isProhibitedTiming
+                        ReviewService.shared.evaluateAndRequestIfNeeded(
+                            from: windowScene,
+                            isProhibitedTiming: prohibited
+                        )
+                    }
+
                     // E-3: 첫 비우기 완료 안내 트리거
                     self?.showFirstEmptyFeedbackIfNeeded()
                 } catch {

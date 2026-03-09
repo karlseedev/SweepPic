@@ -201,8 +201,8 @@
 
 ### Implementation
 
-- [ ] T054 [US9] ReviewService 생성 — `Sources/AppCore/Services/ReviewService.swift`. ReviewServiceProtocol 준수. ReviewTracker(UserDefaults): sessionCount, totalTrashMoveCount, lastRequestDate, lastRequestedVersion. recordSession(), recordTrashMove(count:). evaluateAndRequestIfNeeded(from:isProhibitedTiming:) — 5개 조건 체크 (FR-049) + 금지 타이밍 (FR-050). SKStoreReviewController.requestReview(in:). data-model.md ReviewTracker 참조
-- [ ] T055 [US9] ReviewService 트리거 연동 — `SceneDelegate.swift`에 recordSession() 추가. 삭제대기함 이동 시 recordTrashMove(). 삭제 완료/자동정리 완료 등 트리거 이벤트에서 evaluateAndRequestIfNeeded() 호출. isProhibitedTiming: 광고 직후, 결제 직후, 에러 세션, 게이트 직후 플래그 관리
+- [x] T054 [US9] ReviewService 생성 — `Sources/AppCore/Services/ReviewService.swift`. ReviewServiceProtocol 준수. ReviewTracker(UserDefaults): sessionCount, totalTrashMoveCount, lastRequestDate, lastRequestedVersion. recordSession(), recordTrashMove(count:). evaluateAndRequestIfNeeded(from:isProhibitedTiming:) — 5개 조건 체크 (FR-049) + 금지 타이밍 (FR-050). SKStoreReviewController.requestReview(in:). data-model.md ReviewTracker 참조
+- [x] T055 [US9] ReviewService 트리거 연동 — `SceneDelegate.swift`에 recordSession() 추가. 삭제대기함 이동 시 recordTrashMove(). 삭제 완료/자동정리 완료 등 트리거 이벤트에서 evaluateAndRequestIfNeeded() 호출. isProhibitedTiming: 광고 직후, 결제 직후, 에러 세션, 게이트 직후 플래그 관리
 
 **Checkpoint**: 조건 충족 + 비금지 타이밍 → 리뷰 팝업. 금지 타이밍에서 미표시. 90일 쿨다운 동작
 

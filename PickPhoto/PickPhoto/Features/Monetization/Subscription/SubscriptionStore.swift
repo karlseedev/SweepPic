@@ -158,6 +158,9 @@ final class SubscriptionStore: SubscriptionStoreProtocol {
                 Logger.app.debug("SubscriptionStore: 구독 완료 → Grace Period 종료")
             }
 
+            // [BM] T055: 결제 완료 후 리뷰 금지 타이밍 플래그 설정 (FR-050)
+            ReviewService.shared.isPaymentJustCompleted = true
+
             Logger.app.debug("SubscriptionStore: 구매 성공 — \(product.id)")
             return result
 

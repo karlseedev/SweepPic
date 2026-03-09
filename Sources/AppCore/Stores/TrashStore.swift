@@ -169,6 +169,9 @@ public final class TrashStore: TrashStoreProtocol {
 
         // 변경 알림
         notifyChange()
+
+        // [BM] T055: 리뷰 요청 조건 추적 — 삭제대기함 이동 기록
+        ReviewService.shared.recordTrashMove(count: assetIDs.count)
     }
 
     /// 사진을 삭제대기함에서 복구
@@ -203,6 +206,8 @@ public final class TrashStore: TrashStoreProtocol {
             switch result {
             case .success:
                 self?.notifyChange()
+                // [BM] T055: 리뷰 요청 조건 추적 — 삭제대기함 이동 기록
+                ReviewService.shared.recordTrashMove(count: 1)
                 DispatchQueue.main.async {
                     completion(.success(()))
                 }

@@ -690,6 +690,15 @@ extension GridViewController: PreviewGridViewControllerDelegate {
     func previewGridVC(_ vc: PreviewGridViewController, didConfirmCleanup assetIDs: [String]) {
         // 삭제대기함으로 이동
         trashStore.moveToTrash(assetIDs: assetIDs)
+
+        // [BM] T055: 자동정리 완료 후 리뷰 요청 평가 (FR-049)
+        if let windowScene = view.window?.windowScene {
+            let prohibited = ReviewService.shared.isProhibitedTiming
+            ReviewService.shared.evaluateAndRequestIfNeeded(
+                from: windowScene,
+                isProhibitedTiming: prohibited
+            )
+        }
     }
 }
 

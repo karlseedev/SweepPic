@@ -260,6 +260,10 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
             ThumbnailCache.shared.trimIfNeeded()
         }
 
+        // [BM] T055: 세션 기록 + 금지 플래그 리셋 (FR-049)
+        ReviewService.shared.recordSession()
+        ReviewService.shared.resetProhibitedFlags()
+
         // [BM] T041: ATT 프리프롬프트 표시 (FR-041)
         // Grace Period 만료 + ATT .notDetermined + skipCount < 2 → ATTPromptVC present
         checkAndShowATTPrompt()
