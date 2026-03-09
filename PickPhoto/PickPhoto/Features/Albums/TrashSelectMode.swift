@@ -176,6 +176,8 @@ extension TrashAlbumViewController {
                     try await self?.trashStore.permanentlyDelete(assetIDs: Array(selectedAssetIDs))
                     // 삭제 성공 후에만 한도 차감
                     UsageLimitStore.shared.recordDelete(count: deleteCount)
+                    // [BM] T057: 삭제 완료 이벤트 (FR-056)
+                    AnalyticsService.shared.trackDeletionCompleted(count: deleteCount)
                     await MainActor.run {
                         self?.selectionManager.clearSelection()
                         self?.exitSelectMode()

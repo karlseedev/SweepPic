@@ -34,6 +34,9 @@ final class PaywallViewController: UIViewController {
     /// 구매 진행 중 플래그 (중복 탭 방지)
     private var isPurchasing = false
 
+    /// 페이월 진입 경로 (FR-056 분석용)
+    var analyticsSource: PaywallSource = .menu
+
     // MARK: - UI Components
 
     /// 스크롤뷰 (전체 콘텐츠)
@@ -190,6 +193,9 @@ final class PaywallViewController: UIViewController {
         setupActions()
         setupAccessibility()
         loadContent()
+
+        // [BM] T057: 페이월 노출 이벤트 (FR-056)
+        AnalyticsService.shared.trackPaywallShown(source: analyticsSource)
     }
 
     // MARK: - UI Setup

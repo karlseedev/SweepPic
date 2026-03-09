@@ -216,8 +216,8 @@
 
 ### Implementation
 
-- [ ] T056 [US10] MonetizationAnalytics 생성 — `PickPhoto/PickPhoto/Shared/Analytics/MonetizationAnalytics.swift`. 이벤트 정의: gateShown(trashCount:remainingLimit:), gateSelection(choice:), adWatched(type:), paywallShown(source:), subscriptionCompleted(tier:), deletionCompleted(count:), gracePeriodEnded, attResult(authorized:). 기존 AnalyticsService 패턴 활용 (FR-056)
-- [ ] T057 [US10] 이벤트 삽입 — 각 BM 컴포넌트에 MonetizationAnalytics 호출 추가. TrashGateCoordinator(게이트 노출/선택), RewardedAdPresenter/InterstitialAdPresenter(광고), SubscriptionStore(구독), PaywallViewController(페이월), ATTPromptViewController(ATT), SceneDelegate(Grace Period 종료 첫 세션)
+- [x] T056 [US10] MonetizationAnalytics 생성 — `PickPhoto/PickPhoto/Shared/Analytics/MonetizationAnalytics.swift`. 이벤트 정의: gateShown(trashCount:remainingLimit:), gateSelection(choice:), adWatched(type:), paywallShown(source:), subscriptionCompleted(tier:), deletionCompleted(count:), gracePeriodEnded, attResult(authorized:). 기존 AnalyticsService 패턴 활용 (FR-056)
+- [x] T057 [US10] 이벤트 삽입 — 각 BM 컴포넌트에 MonetizationAnalytics 호출 추가. TrashGateCoordinator(게이트 노출/선택), RewardedAdPresenter/InterstitialAdPresenter(광고), SubscriptionStore(구독), PaywallViewController(페이월), ATTPromptViewController(ATT), SceneDelegate(Grace Period 종료 첫 세션)
 
 **Checkpoint**: 각 이벤트 트리거 시 로그 출력 확인 (Logger로 검증)
 

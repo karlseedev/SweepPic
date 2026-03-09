@@ -67,6 +67,7 @@ final class PremiumMenuViewController {
         } else {
             // 무료 사용자 → 페이월 표시
             let paywallVC = PaywallViewController()
+            paywallVC.analyticsSource = .menu
             let nav = UINavigationController(rootViewController: paywallVC)
             nav.modalPresentationStyle = .pageSheet
             presenter.present(nav, animated: true)

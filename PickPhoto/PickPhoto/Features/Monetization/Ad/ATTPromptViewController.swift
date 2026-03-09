@@ -218,6 +218,9 @@ final class ATTPromptViewController: UIViewController {
             DispatchQueue.main.async {
                 Logger.app.debug("ATTPromptVC: ATT 결과 — \(status.rawValue)")
 
+                // [BM] T057: ATT 결과 이벤트 (FR-056)
+                AnalyticsService.shared.trackATTResult(authorized: status == .authorized)
+
                 // hasShownPrompt = true (시스템 팝업까지 표시 완료)
                 ATTStateManager.shared.markPromptShown()
 

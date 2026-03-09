@@ -671,6 +671,8 @@ final class TrashAlbumViewController: BaseGridViewController {
                     try await self?.trashStore.emptyTrash()
                     // 삭제 성공 후에만 한도 차감 (iOS 팝업 취소 시 미차감)
                     UsageLimitStore.shared.recordDelete(count: count)
+                    // [BM] T057: 삭제 완료 이벤트 (FR-056)
+                    AnalyticsService.shared.trackDeletionCompleted(count: count)
 
                     // [BM] 통계 저장 + 축하 화면 (FR-039, FR-040, T046)
                     await MainActor.run {

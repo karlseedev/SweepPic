@@ -102,6 +102,8 @@ final class TrashGateCoordinator: TrashGateCoordinatorProtocol {
         // 4. 한도 초과 → 게이트 팝업 표시
         Logger.app.debug("TrashGateCoordinator: 한도 초과 (\(trashCount) > \(remaining)) — 게이트 팝업")
         isGateJustShown = true
+        // [BM] T057: 게이트 노출 이벤트 (FR-056)
+        AnalyticsService.shared.trackGateShown(trashCount: trashCount, remainingLimit: remaining)
         // [BM] T055: 리뷰 금지 타이밍 플래그 설정 (FR-050)
         ReviewService.shared.isGateJustShown = true
 
@@ -117,20 +119,27 @@ final class TrashGateCoordinator: TrashGateCoordinatorProtocol {
 
         // 게이트 팝업 결과 핸들링
         popup.onAdWatch = { [weak self] in
+            // [BM] T057: 게이트 선택 — 광고 (FR-056)
+            AnalyticsService.shared.trackGateSelection(choice: .ad)
             // 광고 시청 → 리워드 기록 → 삭제 실행
             self?.handleAdWatchFlow(from: viewController, trashCount: trashCount, adsNeeded: adsNeeded, onApproved: onApproved)
         }
 
         popup.onPlusUpgrade = { [weak viewController] in
+            // [BM] T057: 게이트 선택 — Plus (FR-056)
+            AnalyticsService.shared.trackGateSelection(choice: .plus)
             // Plus 업그레이드 → 페이월 표시 (T032)
             Logger.app.debug("TrashGateCoordinator: Plus 업그레이드 선택 → 페이월")
             guard let vc = viewController else { return }
             let paywall = PaywallViewController()
+            paywall.analyticsSource = .gate
             paywall.modalPresentationStyle = .pageSheet
             vc.present(paywall, animated: true)
         }
 
         popup.onDismiss = {
+            // [BM] T057: 게이트 선택 — 닫기 (FR-056)
+            AnalyticsService.shared.trackGateSelection(choice: .dismiss)
             Logger.app.debug("TrashGateCoordinator: 게이트 팝업 닫기")
         }
 
