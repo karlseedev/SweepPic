@@ -54,21 +54,20 @@ extension GridViewController {
             action: #selector(selectButtonTapped)
         )
         // 전체 메뉴 버튼 (최우측, 탭 시 풀다운 메뉴)
-        // customView(UIButton)로 생성하여 뱃지 오버레이를 안정적으로 추가할 수 있도록 함
-        let menuButton = UIButton(type: .system)
-        menuButton.setImage(UIImage(systemName: "ellipsis"), for: .normal)
-        menuButton.showsMenuAsPrimaryAction = true
-        menuButton.menu = UIMenu(children: [
-            UIAction(title: "자동정리", image: UIImage(systemName: "wand.and.stars")) { _ in },
-            UIAction(title: "사용자", image: UIImage(systemName: "person.circle")) { _ in },
-            UIAction(title: "구독", image: UIImage(systemName: "creditcard")) { _ in },
-            UIAction(title: "고객센터", image: UIImage(systemName: "questionmark.circle")) { _ in },
-            self.makeCoachMarkReplayMenu(),
-            self.makeDebugResetMenu(),
-            self.makeDebugGracePeriodMenu(),
-            self.makeDebugAdTestMenu(),
-        ])
-        let menuItem = UIBarButtonItem(customView: menuButton)
+        // 표준 UIBarButtonItem 사용 — iOS 26 Liquid Glass 스타일 자동 적용
+        let menuItem = UIBarButtonItem(
+            image: UIImage(systemName: "ellipsis"),
+            menu: UIMenu(children: [
+                UIAction(title: "자동정리", image: UIImage(systemName: "wand.and.stars")) { _ in },
+                UIAction(title: "사용자", image: UIImage(systemName: "person.circle")) { _ in },
+                UIAction(title: "구독", image: UIImage(systemName: "creditcard")) { _ in },
+                UIAction(title: "고객센터", image: UIImage(systemName: "questionmark.circle")) { _ in },
+                self.makeCoachMarkReplayMenu(),
+                self.makeDebugResetMenu(),
+                self.makeDebugGracePeriodMenu(),
+                self.makeDebugAdTestMenu(),
+            ])
+        )
 
         // [정리] [선택] [메뉴] 순서 (배열 첫 번째가 최우측)
         navigationItem.rightBarButtonItems = [menuItem, selectItem, cleanupItem]
@@ -120,23 +119,28 @@ extension GridViewController {
         updatePaymentIssueBadge()
     }
 
-    // MARK: - Payment Issue Badge (빨간 점)
+    // MARK: - Payment Issue Badge (결제 문제 뱃지)
 
-    /// 뱃지 태그 (중복 방지용)
+    /// 뱃지 태그 (중복 방지용, FloatingUI 전용)
     private static let paymentBadgeTag = 9901
 
-    /// 결제 문제 시 메뉴 버튼에 빨간 점 뱃지 표시/제거 (FR-034, T035)
+    /// 결제 문제 시 메뉴 버튼에 뱃지 표시/제거 (FR-034, T035)
+    /// - iOS 26+: 공식 UIBarButtonItem.Badge API 사용
+    /// - iOS 16~25: FloatingUI menuButton에 커스텀 오버레이
     private func updatePaymentIssueBadge() {
         let hasIssue = SubscriptionStore.shared.state.hasPaymentIssue
 
         if #available(iOS 26.0, *) {
-            // iOS 26+: customView(UIButton)에 직접 뱃지 추가
-            guard let menuItem = navigationItem.rightBarButtonItems?.first,
-                  let menuView = menuItem.customView else { return }
+            // iOS 26+: 공식 Badge API — Liquid Glass 네비바와 자연스럽게 통합
+            guard let menuItem = navigationItem.rightBarButtonItems?.first else { return }
 
-            updateBadgeDot(on: menuView, show: hasIssue)
+            if hasIssue {
+                menuItem.badge = .indicator()
+            } else {
+                menuItem.badge = nil
+            }
         } else {
-            // FloatingUI: menuButton에 직접 추가
+            // FloatingUI: menuButton에 커스텀 ! 뱃지 오버레이
             guard let tabBarController = tabBarController as? TabBarController,
                   let overlay = tabBarController.floatingOverlay else { return }
 
@@ -144,7 +148,7 @@ extension GridViewController {
         }
     }
 
-    /// 뷰 위에 ! 뱃지 추가/제거
+    /// FloatingUI 전용: 뷰 위에 ! 뱃지 추가/제거
     private func updateBadgeDot(on targetView: UIView, show: Bool) {
         // 기존 뱃지 제거
         targetView.viewWithTag(Self.paymentBadgeTag)?.removeFromSuperview()
