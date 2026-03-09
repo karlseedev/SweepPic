@@ -124,6 +124,20 @@ final class FAQViewController: UIViewController, BarsVisibilityControlling {
         setupTableView()
     }
 
+    override func viewWillAppear(_ animated: Bool) {
+        super.viewWillAppear(animated)
+        // iOS 16~25: 시스템 네비바 표시 (뒤로가기 버튼)
+        navigationController?.setNavigationBarHidden(false, animated: animated)
+    }
+
+    override func viewWillDisappear(_ animated: Bool) {
+        super.viewWillDisappear(animated)
+        // iOS 16~25: 시스템 네비바 다시 숨김 (원래 상태 복원)
+        if #unavailable(iOS 26.0) {
+            navigationController?.setNavigationBarHidden(true, animated: animated)
+        }
+    }
+
     // MARK: - Setup
 
     private func setupTableView() {
