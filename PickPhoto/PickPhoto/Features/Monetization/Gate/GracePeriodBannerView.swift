@@ -91,6 +91,13 @@ final class GracePeriodBannerView: UIView {
     private func setupUI() {
         translatesAutoresizingMaskIntoConstraints = false
 
+        // 그림자 (Glass 깊이감)
+        layer.masksToBounds = false
+        layer.shadowColor = UIColor.black.cgColor
+        layer.shadowOpacity = 0.4
+        layer.shadowRadius = 3
+        layer.shadowOffset = CGSize(width: 0, height: 2)
+
         // 딤 배경 (Glass 뷰 아래)
         let dimLayer = UIView()
         dimLayer.backgroundColor = UIColor(white: 0.1, alpha: 0.5)

@@ -70,6 +70,11 @@ final class SubscriptionStore: SubscriptionStoreProtocol {
     /// 구독 설정 완료 여부
     private(set) var isConfigured = false
 
+    #if DEBUG
+    /// 디버그 오버라이드 활성 여부 — true이면 refreshSubscriptionStatus()가 상태를 덮어쓰지 않음
+    private var debugOverrideActive = false
+    #endif
+
     // MARK: - Configure
 
     /// 앱 시작 시 호출 — 상품 로드 + 구독 상태 확인 + 실시간 감지 시작
@@ -228,6 +233,14 @@ final class SubscriptionStore: SubscriptionStoreProtocol {
     /// 현재 구독 상태 갱신 (Transaction.currentEntitlements 순회)
     @MainActor
     func refreshSubscriptionStatus() async {
+        #if DEBUG
+        // 디버그 오버라이드 활성 시 StoreKit 조회로 상태를 덮어쓰지 않음
+        if debugOverrideActive {
+            Logger.app.debug("SubscriptionStore: 디버그 오버라이드 활성 → refresh 스킵")
+            return
+        }
+        #endif
+
         var foundActiveSubscription = false
         var newState = SubscriptionState.free
 
@@ -333,19 +346,34 @@ final class SubscriptionStore: SubscriptionStoreProtocol {
     #if DEBUG
     /// 디버그용: 구독 상태를 Free로 강제 리셋
     func debugResetToFree() {
+        debugOverrideActive = false
         state = .free
         Logger.app.debug("SubscriptionStore: DEBUG Free 리셋")
     }
 
     /// 디버그용: 구독 상태를 Plus로 강제 설정
     func debugSetPlus() {
+        debugOverrideActive = true
         state = SubscriptionState(
             tier: .plus,
             isActive: true,
             autoRenewEnabled: true,
             expirationDate: Date().addingTimeInterval(365 * 24 * 3600)
         )
-        Logger.app.debug("SubscriptionStore: DEBUG Plus 설정")
+        Logger.app.debug("SubscriptionStore: DEBUG Plus 설정 (오버라이드 ON)")
+    }
+
+    /// 디버그용: 결제 문제 시뮬레이션 (갱신 실패 뱃지 테스트)
+    func debugSetPaymentIssue() {
+        debugOverrideActive = true
+        state = SubscriptionState(
+            tier: .plus,
+            isActive: true,
+            autoRenewEnabled: false,
+            hasPaymentIssue: true,
+            expirationDate: Date().addingTimeInterval(365 * 24 * 3600)
+        )
+        Logger.app.debug("SubscriptionStore: DEBUG 결제 문제 시뮬레이션 (오버라이드 ON)")
     }
     #endif
 

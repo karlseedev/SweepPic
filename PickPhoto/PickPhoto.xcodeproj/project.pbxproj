@@ -34,6 +34,7 @@
 /* Begin PBXFileReference section */
 		CB9721512EF2D2AB00F85BF4 /* PickPhoto.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = PickPhoto.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		CBAB3B1A2EFAE2CB00548282 /* PickPhotoUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = PickPhotoUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		CBE07B402F5B258500405DD5 /* PickPhotoProducts.storekit */ = {isa = PBXFileReference; lastKnownFileType = text; path = PickPhotoProducts.storekit; sourceTree = "<group>"; };
 		CBE1F9662F21E18200984B63 /* PickPhotoTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = PickPhotoTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		CBE1F97C2F21E52800984B63 /* PickPhoto.xctestplan */ = {isa = PBXFileReference; lastKnownFileType = text; name = PickPhoto.xctestplan; path = PickPhotoTests/PickPhoto.xctestplan; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -102,6 +103,7 @@
 		CB9721482EF2D2AB00F85BF4 = {
 			isa = PBXGroup;
 			children = (
+				CBE07B402F5B258500405DD5 /* PickPhotoProducts.storekit */,
 				CBE1F97C2F21E52800984B63 /* PickPhoto.xctestplan */,
 				CB9721532EF2D2AB00F85BF4 /* PickPhoto */,
 				CBAB3B1B2EFAE2CB00548282 /* PickPhotoUITests */,

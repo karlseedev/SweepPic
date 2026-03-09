@@ -54,10 +54,8 @@ extension GridViewController {
             action: #selector(selectButtonTapped)
         )
         // 전체 메뉴 버튼 (최우측, 탭 시 풀다운 메뉴)
-        // 결제 문제 시 경고 아이콘 표시 (FR-034, T035)
-        let menuIcon = menuIconName()
         let menuItem = UIBarButtonItem(
-            image: UIImage(systemName: menuIcon),
+            image: UIImage(systemName: "ellipsis"),
             menu: UIMenu(children: [
                 UIAction(title: "자동정리", image: UIImage(systemName: "wand.and.stars")) { _ in },
                 UIAction(title: "사용자", image: UIImage(systemName: "person.circle")) { _ in },
@@ -75,6 +73,9 @@ extension GridViewController {
 
         // 버튼 활성화 상태 초기화
         updateCleanupButtonState()
+
+        // 결제 문제 뱃지 업데이트 (FR-034, T035)
+        updatePaymentIssueBadge()
     }
 
     /// iOS 16~25 FloatingUI에 정리 버튼 추가
@@ -112,11 +113,86 @@ extension GridViewController {
 
         // 버튼 활성화 상태 초기화
         updateCleanupButtonState()
+
+        // 결제 문제 뱃지 업데이트 (FR-034, T035)
+        updatePaymentIssueBadge()
     }
 
-    /// 메뉴 아이콘 이름 — 결제 문제 시 경고 아이콘 (FR-034, T035)
-    private func menuIconName() -> String {
-        SubscriptionStore.shared.state.hasPaymentIssue ? "exclamationmark.circle.fill" : "ellipsis"
+    // MARK: - Payment Issue Badge (빨간 점)
+
+    /// 뱃지 태그 (중복 방지용)
+    private static let paymentBadgeTag = 9901
+
+    /// 결제 문제 시 메뉴 버튼에 빨간 점 뱃지 표시/제거 (FR-034, T035)
+    private func updatePaymentIssueBadge() {
+        let hasIssue = SubscriptionStore.shared.state.hasPaymentIssue
+
+        if #available(iOS 26.0, *) {
+            // iOS 26+: UIBarButtonItem의 customView 또는 navigationBar에서 메뉴 버튼 찾기
+            guard let menuItem = navigationItem.rightBarButtonItems?.first,
+                  let menuView = menuItem.customView ?? findBarButtonView(for: menuItem) else { return }
+
+            updateBadgeDot(on: menuView, show: hasIssue)
+        } else {
+            // FloatingUI: menuButton에 직접 추가
+            guard let tabBarController = tabBarController as? TabBarController,
+                  let overlay = tabBarController.floatingOverlay else { return }
+
+            updateBadgeDot(on: overlay.titleBar.menuButtonView, show: hasIssue)
+        }
+    }
+
+    /// 뷰 위에 ! 뱃지 추가/제거
+    private func updateBadgeDot(on targetView: UIView, show: Bool) {
+        // 기존 뱃지 제거
+        targetView.viewWithTag(Self.paymentBadgeTag)?.removeFromSuperview()
+
+        guard show else { return }
+
+        // 빨간 원 + ! 텍스트 뱃지 생성 (16×16pt)
+        let badge = UIView()
+        badge.tag = Self.paymentBadgeTag
+        badge.backgroundColor = .systemRed
+        badge.layer.cornerRadius = 8
+        badge.translatesAutoresizingMaskIntoConstraints = false
+
+        let label = UILabel()
+        label.text = "!"
+        label.font = .systemFont(ofSize: 11, weight: .bold)
+        label.textColor = .white
+        label.textAlignment = .center
+        label.translatesAutoresizingMaskIntoConstraints = false
+        badge.addSubview(label)
+
+        targetView.addSubview(badge)
+        targetView.clipsToBounds = false
+
+        NSLayoutConstraint.activate([
+            badge.widthAnchor.constraint(equalToConstant: 16),
+            badge.heightAnchor.constraint(equalToConstant: 16),
+            badge.topAnchor.constraint(equalTo: targetView.topAnchor, constant: -4),
+            badge.trailingAnchor.constraint(equalTo: targetView.trailingAnchor, constant: 4),
+            label.centerXAnchor.constraint(equalTo: badge.centerXAnchor),
+            label.centerYAnchor.constraint(equalTo: badge.centerYAnchor),
+        ])
+    }
+
+    /// UIBarButtonItem의 실제 뷰 찾기 (iOS 26+ 네비바 내부)
+    private func findBarButtonView(for barButtonItem: UIBarButtonItem) -> UIView? {
+        guard let navBar = navigationController?.navigationBar else { return nil }
+        // UIBarButtonItem은 내부적으로 _UIButtonBarButton 등으로 렌더링됨
+        // navigationBar의 서브뷰 트리에서 해당 아이템의 뷰를 찾음
+        for subview in navBar.subviews {
+            for child in subview.subviews {
+                if child.subviews.contains(where: { ($0 as? UIButton)?.menu != nil }) {
+                    return child
+                }
+                if let button = child as? UIButton, button.menu != nil {
+                    return button
+                }
+            }
+        }
+        return nil
     }
 
     /// 구독 상태 변경 감지 등록 (결제 문제 뱃지 업데이트용)
@@ -124,7 +200,7 @@ extension GridViewController {
     func observeSubscriptionStateForBadge() {
         SubscriptionStore.shared.onStateChange { [weak self] _ in
             DispatchQueue.main.async {
-                self?.setupCleanupButton()
+                self?.updatePaymentIssueBadge()
             }
         }
     }
@@ -515,6 +591,14 @@ extension GridViewController {
                     #if DEBUG
                     SubscriptionStore.shared.debugSetPlus()
                     Logger.app.debug("GridVC+Cleanup: 디버그 구독 → Plus 설정")
+                    NotificationCenter.default.post(name: .debugGracePeriodToggled, object: nil)
+                    #endif
+                    self?.setupCleanupButton()
+                },
+                UIAction(title: "결제 문제 시뮬레이션 (뱃지 테스트)") { [weak self] _ in
+                    #if DEBUG
+                    SubscriptionStore.shared.debugSetPaymentIssue()
+                    Logger.app.debug("GridVC+Cleanup: 디버그 결제 문제 시뮬레이션")
                     NotificationCenter.default.post(name: .debugGracePeriodToggled, object: nil)
                     #endif
                     self?.setupCleanupButton()

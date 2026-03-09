@@ -276,6 +276,9 @@ final class GridViewController: BaseGridViewController {
 
         // 정리 버튼 설정 (auto-cleanup)
         setupCleanupButton()
+
+        // 구독 상태 변경 시 메뉴 뱃지 업데이트 (결제 문제 아이콘)
+        observeSubscriptionStateForBadge()
     }
 
     /// 추가 제스처 설정 (setupGestures에서 호출됨)
