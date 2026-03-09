@@ -122,9 +122,19 @@ final class FAQViewController: UIViewController, BarsVisibilityControlling {
         title = "자주 묻는 질문"
         view.backgroundColor = .systemGroupedBackground
         setupTableView()
-        // iOS 16~25: GlassIconButton 뒤로가기 버튼 직접 배치
+    }
+
+    override func viewWillAppear(_ animated: Bool) {
+        super.viewWillAppear(animated)
+        // iOS 16~25: 시스템 네비바 표시 (뒤로가기 버튼)
+        navigationController?.setNavigationBarHidden(false, animated: animated)
+    }
+
+    override func viewWillDisappear(_ animated: Bool) {
+        super.viewWillDisappear(animated)
+        // iOS 16~25: 시스템 네비바 다시 숨김
         if #unavailable(iOS 26.0) {
-            setupGlassBackButton()
+            navigationController?.setNavigationBarHidden(true, animated: animated)
         }
     }
 
@@ -138,33 +148,6 @@ final class FAQViewController: UIViewController, BarsVisibilityControlling {
             tableView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
             tableView.bottomAnchor.constraint(equalTo: view.bottomAnchor),
         ])
-    }
-
-    /// iOS 16~25: GlassIconButton 뒤로가기 + 타이틀 (FloatingTitleBar 동일 디자인)
-    private func setupGlassBackButton() {
-        let backButton = GlassIconButton(icon: "chevron.left", size: .medium, tintColor: .white)
-        backButton.translatesAutoresizingMaskIntoConstraints = false
-        backButton.addTarget(self, action: #selector(backButtonTapped), for: .touchUpInside)
-
-        let titleLabel = UILabel()
-        titleLabel.text = "자주 묻는 질문"
-        titleLabel.font = .systemFont(ofSize: 17, weight: .semibold)
-        titleLabel.textColor = .white
-        titleLabel.translatesAutoresizingMaskIntoConstraints = false
-
-        view.addSubview(backButton)
-        view.addSubview(titleLabel)
-
-        NSLayoutConstraint.activate([
-            backButton.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 8),
-            backButton.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 12),
-            titleLabel.centerYAnchor.constraint(equalTo: backButton.centerYAnchor),
-            titleLabel.centerXAnchor.constraint(equalTo: view.centerXAnchor),
-        ])
-    }
-
-    @objc private func backButtonTapped() {
-        navigationController?.popViewController(animated: true)
     }
 }
 
