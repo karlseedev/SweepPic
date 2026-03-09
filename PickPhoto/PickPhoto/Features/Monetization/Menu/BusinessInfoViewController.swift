@@ -54,21 +54,11 @@ final class BusinessInfoViewController: UIViewController, BarsVisibilityControll
         title = "사업자 정보"
         view.backgroundColor = .systemGroupedBackground
         setupTableView()
-        Logger.app.debug("BusinessInfoVC: 사업자 정보 화면 표시")
-    }
-
-    override func viewWillAppear(_ animated: Bool) {
-        super.viewWillAppear(animated)
-        // iOS 16~25: 시스템 네비바 표시 (뒤로가기 버튼)
-        navigationController?.setNavigationBarHidden(false, animated: animated)
-    }
-
-    override func viewWillDisappear(_ animated: Bool) {
-        super.viewWillDisappear(animated)
-        // iOS 16~25: 시스템 네비바 다시 숨김
+        // iOS 16~25: GlassIconButton 뒤로가기 버튼 직접 배치
         if #unavailable(iOS 26.0) {
-            navigationController?.setNavigationBarHidden(true, animated: animated)
+            setupGlassBackButton()
         }
+        Logger.app.debug("BusinessInfoVC: 사업자 정보 화면 표시")
     }
 
     // MARK: - Setup
@@ -81,6 +71,23 @@ final class BusinessInfoViewController: UIViewController, BarsVisibilityControll
             tableView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
             tableView.bottomAnchor.constraint(equalTo: view.bottomAnchor),
         ])
+    }
+
+    /// iOS 16~25: GlassIconButton 뒤로가기 버튼 (FloatingTitleBar 동일 디자인)
+    private func setupGlassBackButton() {
+        let backButton = GlassIconButton(icon: "chevron.left", size: .medium, tintColor: .white)
+        backButton.translatesAutoresizingMaskIntoConstraints = false
+        backButton.addTarget(self, action: #selector(backButtonTapped), for: .touchUpInside)
+        view.addSubview(backButton)
+
+        NSLayoutConstraint.activate([
+            backButton.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 8),
+            backButton.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 12),
+        ])
+    }
+
+    @objc private func backButtonTapped() {
+        navigationController?.popViewController(animated: true)
     }
 }
 
