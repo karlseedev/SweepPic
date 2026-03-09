@@ -54,19 +54,21 @@ extension GridViewController {
             action: #selector(selectButtonTapped)
         )
         // 전체 메뉴 버튼 (최우측, 탭 시 풀다운 메뉴)
-        let menuItem = UIBarButtonItem(
-            image: UIImage(systemName: "ellipsis"),
-            menu: UIMenu(children: [
-                UIAction(title: "자동정리", image: UIImage(systemName: "wand.and.stars")) { _ in },
-                UIAction(title: "사용자", image: UIImage(systemName: "person.circle")) { _ in },
-                UIAction(title: "구독", image: UIImage(systemName: "creditcard")) { _ in },
-                UIAction(title: "고객센터", image: UIImage(systemName: "questionmark.circle")) { _ in },
-                self.makeCoachMarkReplayMenu(),
-                self.makeDebugResetMenu(),
-                self.makeDebugGracePeriodMenu(),
-                self.makeDebugAdTestMenu(),
-            ])
-        )
+        // customView(UIButton)로 생성하여 뱃지 오버레이를 안정적으로 추가할 수 있도록 함
+        let menuButton = UIButton(type: .system)
+        menuButton.setImage(UIImage(systemName: "ellipsis"), for: .normal)
+        menuButton.showsMenuAsPrimaryAction = true
+        menuButton.menu = UIMenu(children: [
+            UIAction(title: "자동정리", image: UIImage(systemName: "wand.and.stars")) { _ in },
+            UIAction(title: "사용자", image: UIImage(systemName: "person.circle")) { _ in },
+            UIAction(title: "구독", image: UIImage(systemName: "creditcard")) { _ in },
+            UIAction(title: "고객센터", image: UIImage(systemName: "questionmark.circle")) { _ in },
+            self.makeCoachMarkReplayMenu(),
+            self.makeDebugResetMenu(),
+            self.makeDebugGracePeriodMenu(),
+            self.makeDebugAdTestMenu(),
+        ])
+        let menuItem = UIBarButtonItem(customView: menuButton)
 
         // [정리] [선택] [메뉴] 순서 (배열 첫 번째가 최우측)
         navigationItem.rightBarButtonItems = [menuItem, selectItem, cleanupItem]
@@ -128,9 +130,9 @@ extension GridViewController {
         let hasIssue = SubscriptionStore.shared.state.hasPaymentIssue
 
         if #available(iOS 26.0, *) {
-            // iOS 26+: UIBarButtonItem의 customView 또는 navigationBar에서 메뉴 버튼 찾기
+            // iOS 26+: customView(UIButton)에 직접 뱃지 추가
             guard let menuItem = navigationItem.rightBarButtonItems?.first,
-                  let menuView = menuItem.customView ?? findBarButtonView(for: menuItem) else { return }
+                  let menuView = menuItem.customView else { return }
 
             updateBadgeDot(on: menuView, show: hasIssue)
         } else {
@@ -175,24 +177,6 @@ extension GridViewController {
             label.centerXAnchor.constraint(equalTo: badge.centerXAnchor),
             label.centerYAnchor.constraint(equalTo: badge.centerYAnchor),
         ])
-    }
-
-    /// UIBarButtonItem의 실제 뷰 찾기 (iOS 26+ 네비바 내부)
-    private func findBarButtonView(for barButtonItem: UIBarButtonItem) -> UIView? {
-        guard let navBar = navigationController?.navigationBar else { return nil }
-        // UIBarButtonItem은 내부적으로 _UIButtonBarButton 등으로 렌더링됨
-        // navigationBar의 서브뷰 트리에서 해당 아이템의 뷰를 찾음
-        for subview in navBar.subviews {
-            for child in subview.subviews {
-                if child.subviews.contains(where: { ($0 as? UIButton)?.menu != nil }) {
-                    return child
-                }
-                if let button = child as? UIButton, button.menu != nil {
-                    return button
-                }
-            }
-        }
-        return nil
     }
 
     /// 구독 상태 변경 감지 등록 (결제 문제 뱃지 업데이트용)
