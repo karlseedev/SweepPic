@@ -641,17 +641,45 @@ final class TrashAlbumViewController: BaseGridViewController {
 
     /// 삭제대기함 비우기 실행
     /// 게이트 평가 후 통과 시에만 실제 삭제 진행 (BM Phase 3 T017)
+    /// 성공 시 축하 화면 표시 (BM Phase 9 T046)
     private func performEmptyTrash() {
         let count = _trashDataSource.assetCount
+        guard count > 0 else { return }
+
+        // [BM] 축하 화면용: 삭제 전 asset 수집 (삭제 후 PHAsset 접근 불가)
+        var assets: [PHAsset] = []
+        assets.reserveCapacity(count)
+        for i in 0..<count {
+            if let asset = _trashDataSource.asset(at: i) {
+                assets.append(asset)
+            }
+        }
+
         evaluateGateAndExecute(trashCount: count) { [weak self] in
             // [Analytics] 이벤트 4-2: 삭제대기함 비우기 (최종 삭제)
             AnalyticsService.shared.countTrashPermanentDelete()
 
             Task {
+                // [BM] 파일 크기 계산 (삭제 전, 비동기 → async 변환)
+                let freedBytes = await withCheckedContinuation { (continuation: CheckedContinuation<Int64, Never>) in
+                    FileSizeCalculator.shared.calculateTotalSize(for: assets) { bytes in
+                        continuation.resume(returning: bytes)
+                    }
+                }
+
                 do {
                     try await self?.trashStore.emptyTrash()
                     // 삭제 성공 후에만 한도 차감 (iOS 팝업 취소 시 미차감)
                     UsageLimitStore.shared.recordDelete(count: count)
+
+                    // [BM] 통계 저장 + 축하 화면 (FR-039, FR-040, T046)
+                    await MainActor.run {
+                        self?.showCelebrationAfterDeletion(
+                            deletedCount: count,
+                            freedBytes: freedBytes
+                        )
+                    }
+
                     // E-3: 첫 비우기 완료 안내 트리거
                     self?.showFirstEmptyFeedbackIfNeeded()
                 } catch {

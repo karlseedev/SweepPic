@@ -163,11 +163,11 @@
 
 ### Implementation
 
-- [ ] T042 [P] [US7] DeletionStats 모델 생성 — `Sources/AppCore/Models/DeletionStats.swift`. Codable/Sendable: totalDeletedCount(Int), totalFreedBytes(Int64), lastUpdated(Date). CelebrationResult 구조체도 동일 파일에 포함: sessionDeletedCount, sessionFreedBytes, totalDeletedCount, totalFreedBytes
-- [ ] T043 [US7] DeletionStatsStore 생성 — `Sources/AppCore/Stores/DeletionStatsStore.swift`. 싱글톤, DeletionStatsStoreProtocol 준수. Documents/DeletionStats.json 영구 저장 (TrashStore 패턴: JSONEncoder, iso8601, atomic write, serial queue). addStats(deletedCount:freedBytes:). 파일 손상 시 0 초기화 (FR-040a)
-- [ ] T044 [US7] 파일 크기 계산 유틸리티 — `Sources/AppCore/Services/FileSizeCalculator.swift`. PHAssetResource.assetResources(for:)로 각 asset의 fileSize 합산. 백그라운드 큐에서 실행 (research.md §R4). 실패 시 0 반환
-- [ ] T045 [US7] CelebrationViewController 생성 — `PickPhoto/PickPhoto/Features/Monetization/Celebration/CelebrationViewController.swift`. "N장 삭제 완료!" (이번) + "총 M장 삭제" (누적) + "X.XGB 확보" (누적). 용량 단위 자동 변환 (KB/MB/GB). "확인" → dismiss (FR-039)
-- [ ] T046 [US7] 축하 화면 체인 연결 — `TrashAlbumViewController.swift` 또는 `TrashAlbumViewController+Gate.swift` 수정. emptyTrash 성공 후 → FileSizeCalculator로 용량 계산 → DeletionStatsStore.addStats → CelebrationResult 생성 → CelebrationVC present. `TrashStore.swift`에 완료 콜백 추가 (FR-040, FR-040b)
+- [x] T042 [P] [US7] DeletionStats 모델 생성 — `Sources/AppCore/Models/DeletionStats.swift`. Codable/Sendable: totalDeletedCount(Int), totalFreedBytes(Int64), lastUpdated(Date). CelebrationResult 구조체도 동일 파일에 포함: sessionDeletedCount, sessionFreedBytes, totalDeletedCount, totalFreedBytes
+- [x] T043 [US7] DeletionStatsStore 생성 — `Sources/AppCore/Stores/DeletionStatsStore.swift`. 싱글톤, DeletionStatsStoreProtocol 준수. Documents/DeletionStats.json 영구 저장 (TrashStore 패턴: JSONEncoder, iso8601, atomic write, serial queue). addStats(deletedCount:freedBytes:). 파일 손상 시 0 초기화 (FR-040a)
+- [x] T044 [US7] 파일 크기 계산 유틸리티 — `Sources/AppCore/Services/FileSizeCalculator.swift`. PHAssetResource.assetResources(for:)로 각 asset의 fileSize 합산. 백그라운드 큐에서 실행 (research.md §R4). 실패 시 0 반환
+- [x] T045 [US7] CelebrationViewController 생성 — `PickPhoto/PickPhoto/Features/Monetization/Celebration/CelebrationViewController.swift`. "N장 삭제 완료!" (이번) + "총 M장 삭제" (누적) + "X.XGB 확보" (누적). 용량 단위 자동 변환 (KB/MB/GB). "확인" → dismiss (FR-039)
+- [x] T046 [US7] 축하 화면 체인 연결 — `TrashAlbumViewController.swift` 또는 `TrashAlbumViewController+Gate.swift` 수정. emptyTrash 성공 후 → FileSizeCalculator로 용량 계산 → DeletionStatsStore.addStats → CelebrationResult 생성 → CelebrationVC present. `TrashStore.swift`에 완료 콜백 추가 (FR-040, FR-040b)
 
 **Checkpoint**: 비우기 성공 → 축하 화면 표시. 이번/누적 통계 정확. 앱 재시작 후 누적 유지
 

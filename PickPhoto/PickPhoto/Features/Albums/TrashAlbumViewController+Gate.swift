@@ -322,6 +322,34 @@ extension TrashAlbumViewController {
         )
     }
 
+    // MARK: - Celebration (FR-039, T046)
+
+    /// 삭제 성공 후 통계 저장 + 축하 화면 표시
+    /// - Parameters:
+    ///   - deletedCount: 이번에 삭제한 장수
+    ///   - freedBytes: 이번에 확보한 용량 (bytes)
+    func showCelebrationAfterDeletion(deletedCount: Int, freedBytes: Int64) {
+        // 1. 통계 저장 (DeletionStatsStore)
+        let updatedStats = DeletionStatsStore.shared.addStats(
+            deletedCount: deletedCount,
+            freedBytes: freedBytes
+        )
+
+        // 2. CelebrationResult 생성
+        let result = CelebrationResult(
+            sessionDeletedCount: deletedCount,
+            sessionFreedBytes: freedBytes,
+            totalDeletedCount: updatedStats.totalDeletedCount,
+            totalFreedBytes: updatedStats.totalFreedBytes
+        )
+
+        // 3. 축하 화면 표시
+        let celebrationVC = CelebrationViewController(result: result)
+        present(celebrationVC, animated: true)
+
+        Logger.app.debug("TrashAlbumVC: 축하 화면 표시 — 이번 \(deletedCount)장, 누적 \(updatedStats.totalDeletedCount)장")
+    }
+
     // MARK: - Debug Grace Period Toggle
 
     #if DEBUG
