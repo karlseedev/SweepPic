@@ -202,7 +202,7 @@ final class CleanupProgressView: UIView {
         NSLayoutConstraint.activate([
             banner.leadingAnchor.constraint(equalTo: leadingAnchor),
             banner.trailingAnchor.constraint(equalTo: trailingAnchor),
-            banner.bottomAnchor.constraint(equalTo: safeAreaLayoutGuide.bottomAnchor),
+            banner.bottomAnchor.constraint(equalTo: safeAreaLayoutGuide.bottomAnchor, constant: -20),
             height
         ])
 
