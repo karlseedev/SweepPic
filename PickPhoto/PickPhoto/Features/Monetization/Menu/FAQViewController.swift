@@ -34,7 +34,10 @@ private struct FAQSection {
 // MARK: - FAQViewController
 
 /// FAQ 아코디언 리스트 화면
-final class FAQViewController: UIViewController {
+final class FAQViewController: UIViewController, BarsVisibilityControlling {
+
+    /// FloatingOverlay 숨김 (iOS 16~25)
+    var prefersFloatingOverlayHidden: Bool? { true }
 
     // MARK: - Data
 
@@ -123,23 +126,15 @@ final class FAQViewController: UIViewController {
 
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
-        // iOS 16~25: FloatingTitleBar 뒤로가기 버튼만 추가
-        if #unavailable(iOS 26.0) {
-            guard let tabBarController = tabBarController as? TabBarController,
-                  let overlay = tabBarController.floatingOverlay else { return }
-            overlay.titleBar.setShowsBackButton(true) { [weak self] in
-                self?.navigationController?.popViewController(animated: true)
-            }
-        }
+        // iOS 16~25: 시스템 네비바 표시 (뒤로가기 버튼)
+        navigationController?.setNavigationBarHidden(false, animated: animated)
     }
 
     override func viewWillDisappear(_ animated: Bool) {
         super.viewWillDisappear(animated)
-        // iOS 16~25: 뒤로가기 버튼 제거
+        // iOS 16~25: 시스템 네비바 다시 숨김
         if #unavailable(iOS 26.0) {
-            guard let tabBarController = tabBarController as? TabBarController,
-                  let overlay = tabBarController.floatingOverlay else { return }
-            overlay.titleBar.setShowsBackButton(false)
+            navigationController?.setNavigationBarHidden(true, animated: animated)
         }
     }
 
