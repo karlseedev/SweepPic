@@ -140,16 +140,26 @@ final class FAQViewController: UIViewController, BarsVisibilityControlling {
         ])
     }
 
-    /// iOS 16~25: GlassIconButton 뒤로가기 버튼 (FloatingTitleBar 동일 디자인)
+    /// iOS 16~25: GlassIconButton 뒤로가기 + 타이틀 (FloatingTitleBar 동일 디자인)
     private func setupGlassBackButton() {
         let backButton = GlassIconButton(icon: "chevron.left", size: .medium, tintColor: .white)
         backButton.translatesAutoresizingMaskIntoConstraints = false
         backButton.addTarget(self, action: #selector(backButtonTapped), for: .touchUpInside)
+
+        let titleLabel = UILabel()
+        titleLabel.text = "자주 묻는 질문"
+        titleLabel.font = .systemFont(ofSize: 17, weight: .semibold)
+        titleLabel.textColor = .white
+        titleLabel.translatesAutoresizingMaskIntoConstraints = false
+
         view.addSubview(backButton)
+        view.addSubview(titleLabel)
 
         NSLayoutConstraint.activate([
             backButton.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 8),
             backButton.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 12),
+            titleLabel.centerYAnchor.constraint(equalTo: backButton.centerYAnchor),
+            titleLabel.centerXAnchor.constraint(equalTo: view.centerXAnchor),
         ])
     }
 
