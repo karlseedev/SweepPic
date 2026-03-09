@@ -84,6 +84,10 @@
             argument = "--log-thumb"
             isEnabled = "YES">
          </CommandLineArgument>
+         <CommandLineArgument
+            argument = "--review-test"
+            isEnabled = "NO">
+         </CommandLineArgument>
       </CommandLineArguments>
       <StoreKitConfigurationFileReference
          identifier = "../../PickPhotoProducts.storekit">
