@@ -21,7 +21,10 @@ import OSLog
 
 /// 사업자 정보 화면
 /// push로 표시
-final class BusinessInfoViewController: UIViewController {
+final class BusinessInfoViewController: UIViewController, BarsVisibilityControlling {
+
+    /// FloatingOverlay 숨김 (iOS 16~25: 타이틀바/탭바 숨김)
+    var prefersFloatingOverlayHidden: Bool? { true }
 
     // MARK: - Data
 
@@ -56,44 +59,16 @@ final class BusinessInfoViewController: UIViewController {
 
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
-        // iOS 16~25: FloatingTitleBar에 뒤로가기 버튼 + 타이틀 설정
-        if #unavailable(iOS 26.0) {
-            configureFloatingOverlay()
-        }
+        // iOS 16~25: 시스템 네비바 표시 (뒤로가기 버튼)
+        navigationController?.setNavigationBarHidden(false, animated: animated)
     }
 
     override func viewWillDisappear(_ animated: Bool) {
         super.viewWillDisappear(animated)
-        // iOS 16~25: FloatingTitleBar 뒤로가기 버튼 숨김 (원래 상태 복원)
+        // iOS 16~25: 시스템 네비바 다시 숨김 (원래 상태 복원)
         if #unavailable(iOS 26.0) {
-            restoreFloatingOverlay()
+            navigationController?.setNavigationBarHidden(true, animated: animated)
         }
-    }
-
-    // MARK: - FloatingOverlay (iOS 16~25)
-
-    /// FloatingTitleBar에 뒤로가기 버튼 + 타이틀 설정
-    private func configureFloatingOverlay() {
-        guard let tabBarController = tabBarController as? TabBarController,
-              let overlay = tabBarController.floatingOverlay else { return }
-
-        overlay.titleBar.setTitle("사업자 정보")
-        overlay.titleBar.isTitleCenteredVertically = true
-        overlay.titleBar.setShowsBackButton(true) { [weak self] in
-            self?.navigationController?.popViewController(animated: true)
-        }
-        // 우측 버튼 숨김
-        overlay.titleBar.isSelectButtonHidden = true
-        overlay.titleBar.hideMenuButton()
-    }
-
-    /// FloatingTitleBar 원래 상태 복원
-    private func restoreFloatingOverlay() {
-        guard let tabBarController = tabBarController as? TabBarController,
-              let overlay = tabBarController.floatingOverlay else { return }
-
-        overlay.titleBar.setShowsBackButton(false)
-        overlay.titleBar.isTitleCenteredVertically = false
     }
 
     // MARK: - Setup
