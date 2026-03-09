@@ -177,8 +177,15 @@ final class CleanupProgressView: UIView {
     /// 배너 광고 설정 (Plus/Grace 시 미표시)
     /// rootViewController 필요 → show(in:) 시점에 호출
     private func setupBannerAd(rootViewController: UIViewController?) {
-        guard AdManager.shared.shouldShowAds() else { return }
-        guard let rootVC = rootViewController else { return }
+        Logger.app.debug("CleanupProgressView: setupBannerAd 호출 — shouldShowAds=\(AdManager.shared.shouldShowAds()), rootVC=\(String(describing: rootViewController)), SDK초기화=\(AdManager.shared.isConfigured)")
+        guard AdManager.shared.shouldShowAds() else {
+            Logger.app.debug("CleanupProgressView: shouldShowAds=false → 배너 미생성")
+            return
+        }
+        guard let rootVC = rootViewController else {
+            Logger.app.debug("CleanupProgressView: rootVC=nil → 배너 미생성")
+            return
+        }
 
         let banner = GADBannerView()
         banner.adUnitID = AdManager.bannerAdUnitID
@@ -201,12 +208,13 @@ final class CleanupProgressView: UIView {
 
         self.bannerView = banner
 
-        // Adaptive Banner 크기 계산 후 로드
-        let viewWidth = UIScreen.main.bounds.width
-        banner.adSize = GADCurrentOrientationAnchoredAdaptiveBannerAdSizeWithWidth(viewWidth)
+        // 표준 배너 크기 사용 (320×50) — 레이아웃 전이라 Adaptive 사이즈 계산 불가
+        banner.adSize = GADAdSizeBanner
+        bannerHeightConstraint?.constant = GADAdSizeBanner.size.height
+
         banner.load(GADRequest())
 
-        Logger.app.debug("CleanupProgressView: 배너 광고 로드 요청 (width=\(viewWidth), rootVC=\(String(describing: rootVC)))")
+        Logger.app.debug("CleanupProgressView: 배너 광고 로드 요청 (size=320×50, rootVC=\(String(describing: rootVC)))")
     }
 
     /// 배너 광고 제거
@@ -362,15 +370,9 @@ final class CleanupProgressView: UIView {
 
 extension CleanupProgressView: GADBannerViewDelegate {
 
-    /// 배너 광고 로드 성공 → 높이 확장 (애니메이션)
+    /// 배너 광고 로드 성공
     func bannerViewDidReceiveAd(_ bannerView: GADBannerView) {
-        let adHeight = bannerView.adSize.size.height
-        bannerHeightConstraint?.constant = adHeight
-
-        UIView.animate(withDuration: 0.25) {
-            self.layoutIfNeeded()
-        }
-        Logger.app.debug("CleanupProgressView: 배너 광고 로드 성공 (height=\(adHeight))")
+        Logger.app.debug("CleanupProgressView: 배너 광고 로드 성공")
     }
 
     /// 배너 광고 로드 실패 → 높이 0 유지 (숨김)
