@@ -43,17 +43,6 @@ final class CelebrationViewController: UIViewController {
     /// 카드 컨테이너 (블러 팝업 카드)
     private lazy var cardView = BlurPopupCardView()
 
-    /// 축하 아이콘 (체크마크)
-    private lazy var iconImageView: UIImageView = {
-        let config = UIImage.SymbolConfiguration(pointSize: 44, weight: .regular)
-        let image = UIImage(systemName: "checkmark.circle.fill", withConfiguration: config)
-        let iv = UIImageView(image: image)
-        iv.translatesAutoresizingMaskIntoConstraints = false
-        iv.tintColor = .systemGreen
-        iv.contentMode = .scaleAspectFit
-        return iv
-    }()
-
     /// 이번 삭제 라벨 ("N장 삭제 완료!")
     private lazy var sessionLabel: UILabel = {
         let label = UILabel()
@@ -123,7 +112,6 @@ final class CelebrationViewController: UIViewController {
     /// 메인 스택 뷰
     private lazy var stackView: UIStackView = {
         let stack = UIStackView(arrangedSubviews: [
-            iconImageView,
             sessionLabel,
             separatorView,
             statsStackView,
@@ -181,7 +169,6 @@ final class CelebrationViewController: UIViewController {
         cardView.contentView.addSubview(stackView)
 
         // 간격 조정
-        stackView.setCustomSpacing(12, after: iconImageView)
         stackView.setCustomSpacing(20, after: sessionLabel)
         stackView.setCustomSpacing(20, after: separatorView)
         stackView.setCustomSpacing(24, after: statsStackView)
@@ -208,7 +195,6 @@ final class CelebrationViewController: UIViewController {
         ])
 
         // 접근성 설정 (FR-057)
-        iconImageView.accessibilityLabel = "삭제 완료 아이콘"
         confirmButton.accessibilityLabel = "확인"
     }
 
