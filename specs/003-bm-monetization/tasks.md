@@ -181,13 +181,13 @@
 
 ### Implementation
 
-- [ ] T047 [P] [US8] PremiumMenuViewController 생성 — `PickPhoto/PickPhoto/Features/Monetization/Menu/PremiumMenuViewController.swift`. "구독 관리" (무료→페이월, Plus→시스템 구독관리), "구독 복원" (이미 Plus→토스트), "리딤 코드" (FR-043, FR-044). SubscriptionStore 연동
-- [ ] T048 [P] [US8] CustomerServiceViewController 생성 — `PickPhoto/PickPhoto/Features/Monetization/Menu/CustomerServiceViewController.swift`. "피드백 보내기", "자주 묻는 질문", "이용약관", "개인정보처리방침", "사업자 정보" 메뉴 리스트
-- [ ] T049 [P] [US8] FAQViewController 생성 — `PickPhoto/PickPhoto/Features/Monetization/Menu/FAQViewController.swift`. 인앱 정적 아코디언 리스트, 오프라인 지원 (FR-046)
-- [ ] T050 [P] [US8] BusinessInfoViewController 생성 — `PickPhoto/PickPhoto/Features/Monetization/Menu/BusinessInfoViewController.swift`. 상호/대표자/등록번호/연락처 정적 표시 (FR-048, 전자상거래법 제10조)
-- [ ] T051 [US8] 피드백 이메일 구현 — `CustomerServiceViewController.swift`에서 "피드백 보내기" 탭 → MFMailComposeViewController (받는 사람/제목/기기 정보 프리셋). 미지원 기기 → mailto: URL 폴백 (FR-045, Edge Case)
-- [ ] T052 [US8] 이용약관/개인정보처리방침 인앱 브라우저 — `CustomerServiceViewController.swift`에서 SFSafariViewController로 웹 링크 (FR-047)
-- [ ] T053 [US8] ellipsis 메뉴 재구성 — `PickPhoto/PickPhoto/Features/Grid/GridViewController+Cleanup.swift` 수정. 기존 6개 메뉴 항목을 "프리미엄 ▸" / "고객센터 ▸" 서브메뉴로 재구성 (FR-043). UIMenu 하위 UIMenu 사용
+- [x] T047 [P] [US8] PremiumMenuViewController 생성 — `PickPhoto/PickPhoto/Features/Monetization/Menu/PremiumMenuViewController.swift`. "구독 관리" (무료→페이월, Plus→시스템 구독관리), "구독 복원" (이미 Plus→토스트), "리딤 코드" (FR-043, FR-044). SubscriptionStore 연동
+- [x] T048 [P] [US8] CustomerServiceViewController 생성 — `PickPhoto/PickPhoto/Features/Monetization/Menu/CustomerServiceViewController.swift`. "피드백 보내기", "자주 묻는 질문", "이용약관", "개인정보처리방침", "사업자 정보" 메뉴 리스트
+- [x] T049 [P] [US8] FAQViewController 생성 — `PickPhoto/PickPhoto/Features/Monetization/Menu/FAQViewController.swift`. 인앱 정적 아코디언 리스트, 오프라인 지원 (FR-046)
+- [x] T050 [P] [US8] BusinessInfoViewController 생성 — `PickPhoto/PickPhoto/Features/Monetization/Menu/BusinessInfoViewController.swift`. 상호/대표자/등록번호/연락처 정적 표시 (FR-048, 전자상거래법 제10조)
+- [x] T051 [US8] 피드백 이메일 구현 — `CustomerServiceViewController.swift`에서 "피드백 보내기" 탭 → MFMailComposeViewController (받는 사람/제목/기기 정보 프리셋). 미지원 기기 → mailto: URL 폴백 (FR-045, Edge Case)
+- [x] T052 [US8] 이용약관/개인정보처리방침 인앱 브라우저 — `CustomerServiceViewController.swift`에서 SFSafariViewController로 웹 링크 (FR-047)
+- [x] T053 [US8] ellipsis 메뉴 재구성 — `PickPhoto/PickPhoto/Features/Grid/GridViewController+Cleanup.swift` 수정. 기존 6개 메뉴 항목을 "프리미엄 ▸" / "고객센터 ▸" 서브메뉴로 재구성 (FR-043). UIMenu 하위 UIMenu 사용
 
 **Checkpoint**: 전체 메뉴 → 프리미엄 ▸ (3항목) / 고객센터 ▸ (5항목) 각각 정상 동작
 
