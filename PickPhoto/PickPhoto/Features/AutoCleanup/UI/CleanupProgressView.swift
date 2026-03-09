@@ -14,6 +14,7 @@
 import UIKit
 import GoogleMobileAds
 import AppCore
+import OSLog
 
 // MARK: - CleanupProgressViewDelegate
 
@@ -204,6 +205,8 @@ final class CleanupProgressView: UIView {
         let viewWidth = UIScreen.main.bounds.width
         banner.adSize = GADCurrentOrientationAnchoredAdaptiveBannerAdSizeWithWidth(viewWidth)
         banner.load(GADRequest())
+
+        Logger.app.debug("CleanupProgressView: 배너 광고 로드 요청 (width=\(viewWidth), rootVC=\(String(describing: rootVC)))")
     }
 
     /// 배너 광고 제거
@@ -280,7 +283,10 @@ final class CleanupProgressView: UIView {
     }
 
     /// 뷰 표시 (애니메이션)
-    func show(in parentView: UIView) {
+    /// - Parameters:
+    ///   - parentView: 부모 뷰
+    ///   - viewController: 배너 광고의 rootViewController (GADBannerView에 필요)
+    func show(in parentView: UIView, viewController: UIViewController? = nil) {
         alpha = 0
         containerView.activateBlur()
         parentView.addSubview(self)
@@ -294,7 +300,7 @@ final class CleanupProgressView: UIView {
         ])
 
         // [BM] 배너 광고 표시 (분석 대기 중, FR-017)
-        setupBannerAd(rootViewController: parentView.findViewController())
+        setupBannerAd(rootViewController: viewController)
 
         UIView.animate(withDuration: 0.25) {
             self.alpha = 1
@@ -364,27 +370,12 @@ extension CleanupProgressView: GADBannerViewDelegate {
         UIView.animate(withDuration: 0.25) {
             self.layoutIfNeeded()
         }
+        Logger.app.debug("CleanupProgressView: 배너 광고 로드 성공 (height=\(adHeight))")
     }
 
     /// 배너 광고 로드 실패 → 높이 0 유지 (숨김)
     func bannerView(_ bannerView: GADBannerView, didFailToReceiveAdWithError error: Error) {
         bannerHeightConstraint?.constant = 0
-    }
-}
-
-// MARK: - UIView + FindViewController
-
-private extension UIView {
-
-    /// 뷰 계층에서 가장 가까운 UIViewController를 찾는 유틸리티
-    func findViewController() -> UIViewController? {
-        var responder: UIResponder? = self
-        while let next = responder?.next {
-            if let vc = next as? UIViewController {
-                return vc
-            }
-            responder = next
-        }
-        return nil
+        Logger.app.error("CleanupProgressView: 배너 광고 로드 실패 — \(error.localizedDescription)")
     }
 }

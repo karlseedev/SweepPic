@@ -420,7 +420,7 @@ extension GridViewController {
         let progressView = CleanupProgressView()
         progressView.delegate = self
         progressView.configure(method: method)
-        progressView.show(in: view)
+        progressView.show(in: view, viewController: self)
 
         // 2. 서비스 생성 및 보관 (취소 접근용)
         let service = CleanupPreviewService()
