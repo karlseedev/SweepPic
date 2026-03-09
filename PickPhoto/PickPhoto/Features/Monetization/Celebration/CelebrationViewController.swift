@@ -47,7 +47,7 @@ final class CelebrationViewController: UIViewController {
     private lazy var sessionLabel: UILabel = {
         let label = UILabel()
         label.translatesAutoresizingMaskIntoConstraints = false
-        label.font = .systemFont(ofSize: 18, weight: .semibold)
+        label.font = .systemFont(ofSize: 24, weight: .semibold)
         label.textColor = .white
         label.textAlignment = .center
         label.numberOfLines = 0
@@ -67,21 +67,21 @@ final class CelebrationViewController: UIViewController {
         return stack
     }()
 
-    /// "PIClear에서 총 M장 삭제" 행 — 안내 스타일 (게이트 팝업 기준)
+    /// "PIClear에서 총 M장 삭제" 행 — 안내 스타일
     private lazy var totalDeletedRow: UILabel = {
         let label = UILabel()
         label.translatesAutoresizingMaskIntoConstraints = false
-        label.font = .systemFont(ofSize: 14, weight: .regular)
+        label.font = .systemFont(ofSize: 18, weight: .regular)
         label.textColor = UIColor.white.withAlphaComponent(0.7)
         label.textAlignment = .center
         return label
     }()
 
-    /// "X.XGB 확보" 행 — 안내 스타일 (게이트 팝업 기준)
+    /// "X.XGB 확보" 행 — 안내 스타일
     private lazy var totalFreedRow: UILabel = {
         let label = UILabel()
         label.translatesAutoresizingMaskIntoConstraints = false
-        label.font = .systemFont(ofSize: 14, weight: .regular)
+        label.font = .systemFont(ofSize: 18, weight: .regular)
         label.textColor = UIColor.white.withAlphaComponent(0.7)
         label.textAlignment = .center
         return label
@@ -93,7 +93,7 @@ final class CelebrationViewController: UIViewController {
         button.backgroundColor = UIColor.white.withAlphaComponent(0.12)
         button.setTitle("확인", for: .normal)
         button.setTitleColor(.white, for: .normal)
-        button.titleLabel?.font = .systemFont(ofSize: 16, weight: .semibold)
+        button.titleLabel?.font = .systemFont(ofSize: 17, weight: .semibold)
         button.layer.cornerRadius = 25
         button.clipsToBounds = true
         button.translatesAutoresizingMaskIntoConstraints = false

@@ -78,7 +78,7 @@ final class TrashGatePopupViewController: UIViewController {
     private let titleLabel: UILabel = {
         let label = UILabel()
         label.text = "삭제대기함을 비우려면"
-        label.font = .systemFont(ofSize: 18, weight: .semibold)
+        label.font = .systemFont(ofSize: 24, weight: .semibold)
         label.textColor = .white
         label.textAlignment = .center
         label.translatesAutoresizingMaskIntoConstraints = false
@@ -88,7 +88,7 @@ final class TrashGatePopupViewController: UIViewController {
     /// 안내 라벨 (장수 + 한도 정보) — 반투명 흰색
     private let infoLabel: UILabel = {
         let label = UILabel()
-        label.font = .systemFont(ofSize: 14, weight: .regular)
+        label.font = .systemFont(ofSize: 18, weight: .regular)
         label.textColor = UIColor.white.withAlphaComponent(0.7)
         label.textAlignment = .center
         label.numberOfLines = 0
@@ -101,7 +101,7 @@ final class TrashGatePopupViewController: UIViewController {
         let button = UIButton(type: .system)
         button.backgroundColor = UIColor.white.withAlphaComponent(0.12)
         button.setTitleColor(.white, for: .normal)
-        button.titleLabel?.font = .systemFont(ofSize: 16, weight: .semibold)
+        button.titleLabel?.font = .systemFont(ofSize: 17, weight: .semibold)
         button.layer.cornerRadius = 25
         button.clipsToBounds = true
         button.translatesAutoresizingMaskIntoConstraints = false
@@ -123,7 +123,7 @@ final class TrashGatePopupViewController: UIViewController {
         button.backgroundColor = UIColor.white.withAlphaComponent(0.12)
         button.setTitle("Plus로 무제한", for: .normal)
         button.setTitleColor(.white, for: .normal)
-        button.titleLabel?.font = .systemFont(ofSize: 16, weight: .semibold)
+        button.titleLabel?.font = .systemFont(ofSize: 17, weight: .semibold)
         button.layer.cornerRadius = 25
         button.clipsToBounds = true
         button.translatesAutoresizingMaskIntoConstraints = false
@@ -136,7 +136,7 @@ final class TrashGatePopupViewController: UIViewController {
         button.backgroundColor = UIColor.white.withAlphaComponent(0.12)
         button.setTitle("닫기", for: .normal)
         button.setTitleColor(.secondaryLabel, for: .normal)
-        button.titleLabel?.font = .systemFont(ofSize: 16, weight: .regular)
+        button.titleLabel?.font = .systemFont(ofSize: 17, weight: .regular)
         button.layer.cornerRadius = 25
         button.clipsToBounds = true
         button.translatesAutoresizingMaskIntoConstraints = false
