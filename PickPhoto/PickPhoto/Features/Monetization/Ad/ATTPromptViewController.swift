@@ -46,7 +46,7 @@ final class ATTPromptViewController: UIViewController {
     /// 아이콘 이미지 (손 아이콘)
     private lazy var iconImageView: UIImageView = {
         let config = UIImage.SymbolConfiguration(pointSize: 44, weight: .regular)
-        let image = UIImage(systemName: "hand.raised.fill", withConfiguration: config)
+        let image = UIImage(systemName: "target", withConfiguration: config)
         let iv = UIImageView(image: image)
         iv.translatesAutoresizingMaskIntoConstraints = false
         iv.tintColor = .systemBlue
@@ -70,7 +70,7 @@ final class ATTPromptViewController: UIViewController {
     private lazy var descriptionLabel: UILabel = {
         let label = UILabel()
         label.translatesAutoresizingMaskIntoConstraints = false
-        label.text = "허용하시면 관련 없는 광고가 줄어듭니다.\n데이터는 외부에 판매하지 않습니다."
+        label.text = "활동 추적을 허용하면\n관련없는 스팸성 광고를 줄여드립니다"
         label.font = .systemFont(ofSize: 15, weight: .regular)
         label.textColor = .secondaryLabel
         label.textAlignment = .center
@@ -181,7 +181,7 @@ final class ATTPromptViewController: UIViewController {
         ])
 
         // 접근성 설정 (FR-057)
-        iconImageView.accessibilityLabel = "개인정보 보호 아이콘"
+        iconImageView.accessibilityLabel = "광고 맞춤 설정 아이콘"
         continueButton.accessibilityLabel = "계속하여 추적 허용 여부 선택"
         skipButton.accessibilityLabel = "건너뛰기"
     }
