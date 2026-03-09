@@ -464,9 +464,11 @@ extension GridViewController {
                                     self?.cleanupTracker?.resultAction = .confirm
 
                                     // [BM] 전면 광고 — 자동정리 완료 짝수 회차에만 표시 (FR-015)
-                                    if let vc = self,
-                                       AdCounters.shared.incrementAndShouldShowAd(for: .autoCleanupComplete) {
-                                        InterstitialAdPresenter.shared.showAd(from: vc) {
+                                    // onFlowComplete 시점에는 PreviewGridVC가 화면 최상단이므로
+                                    // navigationController의 visibleViewController에서 표시
+                                    if AdCounters.shared.incrementAndShouldShowAd(for: .autoCleanupComplete),
+                                       let presentingVC = self?.navigationController?.visibleViewController ?? self {
+                                        InterstitialAdPresenter.shared.showAd(from: presentingVC) {
                                             // 광고 닫힌 후 정상 진행
                                         }
                                     }

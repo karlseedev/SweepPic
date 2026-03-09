@@ -118,6 +118,9 @@ final class AdManager: NSObject, AdManagerProtocol {
             // 초기화 완료 후 광고 사전 로드
             self?.preloadRewardedAd()
             self?.preloadInterstitialAd()
+
+            // 전면 광고 사전 로드 (InterstitialAdPresenter 독립 관리)
+            InterstitialAdPresenter.shared.preload()
         }
     }
 
