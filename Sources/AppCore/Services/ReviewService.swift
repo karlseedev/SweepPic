@@ -14,10 +14,21 @@
 //  금지 타이밍 (FR-050):
 //  - 광고 직후, 결제 직후, 에러 세션, 게이트 직후
 //
+//  디버그 테스트:
+//  - Scheme > Run > Arguments에 `--review-test` 추가하면 조건 자동 충족
+//  - Console에서 `ReviewService` 필터로 전체 상태 확인 가능
+//
 
 import Foundation
 import StoreKit
 import OSLog
+
+// MARK: - Logger Extension
+
+private extension Logger {
+    /// ReviewService 전용 로거 (subsystem: com.karl.PickPhoto, category: review)
+    static let review = Logger(subsystem: "com.karl.PickPhoto", category: "review")
+}
 
 // MARK: - ReviewServiceProtocol
 
@@ -68,6 +79,9 @@ public final class ReviewService: ReviewServiceProtocol {
         static let lastRequestedVersion = "ReviewTracker.lastRequestedVersion"
     }
 
+    /// 디버그 Launch Argument
+    private static let testArgument = "--review-test"
+
     // MARK: - Properties (UserDefaults 기반)
 
     /// 누적 세션 수
@@ -97,6 +111,17 @@ public final class ReviewService: ReviewServiceProtocol {
     /// 현재 앱 버전
     private var currentAppVersion: String {
         Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "0"
+    }
+
+    // MARK: - Debug Test Mode
+
+    /// `--review-test` Launch Argument가 있으면 조건 자동 충족
+    private var isTestMode: Bool {
+        #if DEBUG
+        return ProcessInfo.processInfo.arguments.contains(Self.testArgument)
+        #else
+        return false
+        #endif
     }
 
     // MARK: - Prohibited Timing Flags (FR-050)
@@ -133,21 +158,39 @@ public final class ReviewService: ReviewServiceProtocol {
 
     // MARK: - Init
 
-    private init() {}
+    private init() {
+        #if DEBUG
+        if isTestMode {
+            Logger.review.notice("━━━ ReviewService 테스트 모드 활성화 (--review-test) ━━━")
+            debugFulfillConditions()
+            // Grace Period도 만료시켜야 설치 3일 조건 충족
+            GracePeriodService.shared.debugExpire()
+            logFullStatus(trigger: "INIT (테스트 모드)")
+        }
+        #endif
+    }
 
     // MARK: - ReviewServiceProtocol
 
     /// 세션 카운트 증가 (앱 활성화 시 호출)
     public func recordSession() {
         sessionCount += 1
-        Logger.app.debug("ReviewService: 세션 기록 — 총 \(self.sessionCount)회")
+        Logger.review.debug("""
+        ▶ recordSession() — 세션 #\(self.sessionCount) \
+        [\(self.sessionCount >= Threshold.minSessions ? "충족" : "미충족") \
+        \(self.sessionCount)/\(Threshold.minSessions)]
+        """)
     }
 
     /// 삭제대기함 이동 카운트 누적
     /// - Parameter count: 이번에 이동한 사진 수
     public func recordTrashMove(count: Int) {
         totalTrashMoveCount += count
-        Logger.app.debug("ReviewService: 삭제대기함 이동 기록 — +\(count)장, 총 \(self.totalTrashMoveCount)장")
+        Logger.review.debug("""
+        ▶ recordTrashMove(+\(count)) — 누적 \(self.totalTrashMoveCount)장 \
+        [\(self.totalTrashMoveCount >= Threshold.minTrashMoves ? "충족" : "미충족") \
+        \(self.totalTrashMoveCount)/\(Threshold.minTrashMoves)]
+        """)
     }
 
     /// 5개 조건 + 금지 타이밍 평가 후 리뷰 요청
@@ -155,73 +198,177 @@ public final class ReviewService: ReviewServiceProtocol {
     ///   - scene: 리뷰 팝업 표시 대상 windowScene
     ///   - isProhibitedTiming: 금지 타이밍 여부 (FR-050)
     public func evaluateAndRequestIfNeeded(from scene: UIWindowScene, isProhibitedTiming: Bool) {
+        Logger.review.notice("━━━ evaluateAndRequestIfNeeded 호출 ━━━")
+
+        // 전체 상태 로그 (항상)
+        logFullStatus(trigger: "evaluate")
+
         // FR-050: 금지 타이밍이면 미표시
         guard !isProhibitedTiming else {
-            Logger.app.debug("ReviewService: 금지 타이밍 — 리뷰 요청 건너뜀")
+            logProhibitedReason()
+            Logger.review.notice("⛔ 결과: 금지 타이밍으로 리뷰 요청 건너뜀")
             return
         }
 
-        // FR-049: 5개 조건 체크
-        guard canRequest else {
-            Logger.app.debug("ReviewService: 조건 미충족 — 리뷰 요청 건너뜀")
+        // FR-049: 5개 조건 체크 (개별 결과 로그)
+        let result = evaluateAllConditions()
+        guard result.allPassed else {
+            Logger.review.notice("⛔ 결과: 조건 미충족 (\(result.failedConditions.joined(separator: ", ")))")
             return
         }
 
         // 리뷰 요청
-        Logger.app.notice("ReviewService: 리뷰 요청 조건 충족 — SKStoreReviewController 호출")
+        Logger.review.notice("✅ 결과: 모든 조건 충족 — SKStoreReviewController.requestReview() 호출!")
         SKStoreReviewController.requestReview(in: scene)
 
         // 요청 기록 업데이트
         lastRequestDate = Date()
         lastRequestedVersion = currentAppVersion
+        Logger.review.notice("📝 요청 기록 저장 — 날짜: \(Date()), 버전: \(self.currentAppVersion)")
     }
 
-    // MARK: - Condition Evaluation
+    // MARK: - Condition Evaluation (상세 로그 포함)
 
-    /// 5개 조건 모두 충족 여부 (FR-049)
-    /// 1. 설치 후 3일 경과
-    /// 2. 3세션 이상
-    /// 3. 30장 이상 삭제대기함 이동
-    /// 4. 현재 버전에서 미요청
-    /// 5. 마지막 요청 후 90일 경과
-    private var canRequest: Bool {
-        // 조건 1: 설치 후 3일 경과 (GracePeriodService.currentDay ≥ 3)
-        let installDays = GracePeriodService.shared.currentDay
-        guard installDays >= Threshold.minInstallDays else {
-            Logger.app.debug("ReviewService: 조건1 미충족 — 설치 \(installDays)일 (최소 \(Threshold.minInstallDays)일)")
-            return false
+    /// 5개 조건 개별 평가 결과
+    private struct EvaluationResult {
+        var condition1_installDays: Bool = false
+        var condition2_sessions: Bool = false
+        var condition3_trashMoves: Bool = false
+        var condition4_versionNotRequested: Bool = false
+        var condition5_cooldown: Bool = false
+
+        var allPassed: Bool {
+            condition1_installDays && condition2_sessions && condition3_trashMoves
+            && condition4_versionNotRequested && condition5_cooldown
         }
+
+        var failedConditions: [String] {
+            var failed: [String] = []
+            if !condition1_installDays { failed.append("설치일수") }
+            if !condition2_sessions { failed.append("세션수") }
+            if !condition3_trashMoves { failed.append("삭제이동수") }
+            if !condition4_versionNotRequested { failed.append("버전중복") }
+            if !condition5_cooldown { failed.append("90일쿨다운") }
+            return failed
+        }
+    }
+
+    /// 5개 조건 모두 개별 평가 + 로그
+    private func evaluateAllConditions() -> EvaluationResult {
+        var result = EvaluationResult()
+
+        // 조건 1: 설치 후 3일 경과
+        let installDays = GracePeriodService.shared.currentDay
+        result.condition1_installDays = installDays >= Threshold.minInstallDays
+        Logger.review.debug("""
+        조건1 설치일수: \(installDays)일 / 최소 \(Threshold.minInstallDays)일 \
+        → \(result.condition1_installDays ? "✅" : "❌")
+        """)
 
         // 조건 2: 3세션 이상
-        guard sessionCount >= Threshold.minSessions else {
-            Logger.app.debug("ReviewService: 조건2 미충족 — \(self.sessionCount)세션 (최소 \(Threshold.minSessions))")
-            return false
-        }
+        result.condition2_sessions = sessionCount >= Threshold.minSessions
+        Logger.review.debug("""
+        조건2 세션수: \(self.sessionCount)회 / 최소 \(Threshold.minSessions)회 \
+        → \(result.condition2_sessions ? "✅" : "❌")
+        """)
 
         // 조건 3: 30장 이상 삭제대기함 이동
-        guard totalTrashMoveCount >= Threshold.minTrashMoves else {
-            Logger.app.debug("ReviewService: 조건3 미충족 — \(self.totalTrashMoveCount)장 (최소 \(Threshold.minTrashMoves)장)")
-            return false
-        }
+        result.condition3_trashMoves = totalTrashMoveCount >= Threshold.minTrashMoves
+        Logger.review.debug("""
+        조건3 삭제이동: \(self.totalTrashMoveCount)장 / 최소 \(Threshold.minTrashMoves)장 \
+        → \(result.condition3_trashMoves ? "✅" : "❌")
+        """)
 
         // 조건 4: 현재 버전에서 미요청
-        if lastRequestedVersion == currentAppVersion {
-            Logger.app.debug("ReviewService: 조건4 미충족 — 현재 버전(\(self.currentAppVersion))에서 이미 요청됨")
-            return false
-        }
+        result.condition4_versionNotRequested = lastRequestedVersion != currentAppVersion
+        Logger.review.debug("""
+        조건4 버전미요청: 현재=\(self.currentAppVersion), \
+        마지막요청=\(self.lastRequestedVersion ?? "없음") \
+        → \(result.condition4_versionNotRequested ? "✅" : "❌")
+        """)
 
         // 조건 5: 마지막 요청 후 90일 경과
         if let lastDate = lastRequestDate {
-            let daysSinceLastRequest = Calendar.current.dateComponents(
+            let daysSince = Calendar.current.dateComponents(
                 [.day], from: lastDate, to: Date()
             ).day ?? 0
-            guard daysSinceLastRequest >= Threshold.cooldownDays else {
-                Logger.app.debug("ReviewService: 조건5 미충족 — 마지막 요청 \(daysSinceLastRequest)일 전 (최소 \(Threshold.cooldownDays)일)")
-                return false
-            }
+            result.condition5_cooldown = daysSince >= Threshold.cooldownDays
+            Logger.review.debug("""
+            조건5 쿨다운: \(daysSince)일 경과 / 최소 \(Threshold.cooldownDays)일 \
+            → \(result.condition5_cooldown ? "✅" : "❌")
+            """)
+        } else {
+            // 요청 이력 없음 → 쿨다운 조건 자동 충족
+            result.condition5_cooldown = true
+            Logger.review.debug("조건5 쿨다운: 이전 요청 없음 → ✅")
         }
 
+        return result
+    }
+
+    /// canRequest 단순 판정 (evaluateAndRequestIfNeeded 외부에서 사용)
+    private var canRequest: Bool {
+        let installDays = GracePeriodService.shared.currentDay
+        guard installDays >= Threshold.minInstallDays else { return false }
+        guard sessionCount >= Threshold.minSessions else { return false }
+        guard totalTrashMoveCount >= Threshold.minTrashMoves else { return false }
+        if lastRequestedVersion == currentAppVersion { return false }
+        if let lastDate = lastRequestDate {
+            let daysSince = Calendar.current.dateComponents(
+                [.day], from: lastDate, to: Date()
+            ).day ?? 0
+            guard daysSince >= Threshold.cooldownDays else { return false }
+        }
         return true
+    }
+
+    // MARK: - 상세 로그 헬퍼
+
+    /// 전체 상태를 한 번에 출력
+    private func logFullStatus(trigger: String) {
+        let installDays = GracePeriodService.shared.currentDay
+        let daysSinceLast: String = {
+            guard let last = lastRequestDate else { return "없음" }
+            let days = Calendar.current.dateComponents([.day], from: last, to: Date()).day ?? 0
+            return "\(days)일 전"
+        }()
+
+        Logger.review.notice("""
+        ┌─ ReviewService 상태 [\(trigger)]
+        │ 세션수:     \(self.sessionCount)/\(Threshold.minSessions) \
+        \(self.sessionCount >= Threshold.minSessions ? "✅" : "❌")
+        │ 삭제이동:   \(self.totalTrashMoveCount)/\(Threshold.minTrashMoves) \
+        \(self.totalTrashMoveCount >= Threshold.minTrashMoves ? "✅" : "❌")
+        │ 설치일수:   \(installDays)/\(Threshold.minInstallDays) \
+        \(installDays >= Threshold.minInstallDays ? "✅" : "❌")
+        │ 앱버전:     \(self.currentAppVersion), 마지막요청: \(self.lastRequestedVersion ?? "없음") \
+        \(self.lastRequestedVersion != self.currentAppVersion ? "✅" : "❌")
+        │ 쿨다운:     마지막요청=\(daysSinceLast) \
+        \(self.canRequestCooldown ? "✅" : "❌")
+        │ 금지타이밍:  광고=\(self.isAdJustShown) 결제=\(self.isPaymentJustCompleted) \
+        에러=\(self.isErrorSession) 게이트=\(self.isGateJustShown)
+        │ 종합판정:   \(self.canRequest ? "요청 가능 ✅" : "요청 불가 ❌")
+        └───────────────────────────────
+        """)
+    }
+
+    /// 쿨다운 조건만 별도 판정 (logFullStatus용)
+    private var canRequestCooldown: Bool {
+        guard let lastDate = lastRequestDate else { return true }
+        let daysSince = Calendar.current.dateComponents(
+            [.day], from: lastDate, to: Date()
+        ).day ?? 0
+        return daysSince >= Threshold.cooldownDays
+    }
+
+    /// 금지 타이밍 사유 출력
+    private func logProhibitedReason() {
+        var reasons: [String] = []
+        if isAdJustShown { reasons.append("광고 직후") }
+        if isPaymentJustCompleted { reasons.append("결제 직후") }
+        if isErrorSession { reasons.append("에러 세션") }
+        if isGateJustShown { reasons.append("게이트 직후") }
+        Logger.review.notice("⚠️ 금지 타이밍 사유: \(reasons.joined(separator: ", "))")
     }
 
     // MARK: - Debug
@@ -233,6 +380,7 @@ public final class ReviewService: ReviewServiceProtocol {
         totalTrashMoveCount = Threshold.minTrashMoves
         lastRequestDate = nil
         lastRequestedVersion = nil
+        Logger.review.notice("🔧 debugFulfillConditions — 조건 강제 충족")
     }
 
     /// 디버그용: 리뷰 트래커 리셋
@@ -241,9 +389,10 @@ public final class ReviewService: ReviewServiceProtocol {
         totalTrashMoveCount = 0
         lastRequestDate = nil
         lastRequestedVersion = nil
+        Logger.review.notice("🔧 debugReset — 트래커 초기화")
     }
 
-    /// 디버그용: 현재 상태 요약
+    /// 디버그용: 현재 상태 요약 문자열
     public var debugSummary: String {
         """
         ReviewTracker:
@@ -253,6 +402,7 @@ public final class ReviewService: ReviewServiceProtocol {
           lastRequestDate: \(lastRequestDate?.description ?? "nil")
           lastRequestedVersion: \(lastRequestedVersion ?? "nil")
           currentVersion: \(currentAppVersion)
+          prohibited: ad=\(isAdJustShown) pay=\(isPaymentJustCompleted) err=\(isErrorSession) gate=\(isGateJustShown)
           canRequest: \(canRequest)
         """
     }
