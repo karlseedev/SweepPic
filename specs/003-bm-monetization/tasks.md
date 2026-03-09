@@ -148,8 +148,8 @@
 
 ### Implementation
 
-- [ ] T040 [US6] ATTPromptViewController 생성 — `PickPhoto/PickPhoto/Features/Monetization/Ad/ATTPromptViewController.swift`. 전체 화면 프리프롬프트. 문구: "허용하시면 관련 없는 광고가 줄어듭니다. 데이터는 외부에 판매하지 않습니다." (FR-042). "계속" → ATTrackingManager.requestTrackingAuthorization() 호출 → dismiss. "건너뛰기" → skipCount 증가 → dismiss
-- [ ] T041 [US6] ATTState 관리 + SceneDelegate 연동 — UserDefaults에 ATTState(skipCount, hasShownPrompt) 저장. `SceneDelegate.swift` sceneDidBecomeActive에서: Grace Period 만료 + ATT .notDetermined + skipCount < 2 → ATTPromptVC present (FR-041). data-model.md ATTState 참조
+- [x] T040 [US6] ATTPromptViewController 생성 — `PickPhoto/PickPhoto/Features/Monetization/Ad/ATTPromptViewController.swift`. 전체 화면 프리프롬프트. 문구: "허용하시면 관련 없는 광고가 줄어듭니다. 데이터는 외부에 판매하지 않습니다." (FR-042). "계속" → ATTrackingManager.requestTrackingAuthorization() 호출 → dismiss. "건너뛰기" → skipCount 증가 → dismiss
+- [x] T041 [US6] ATTState 관리 + SceneDelegate 연동 — UserDefaults에 ATTState(skipCount, hasShownPrompt) 저장. `SceneDelegate.swift` sceneDidBecomeActive에서: Grace Period 만료 + ATT .notDetermined + skipCount < 2 → ATTPromptVC present (FR-041). data-model.md ATTState 참조
 
 **Checkpoint**: Grace Period 만료 후 첫 실행 → 프리프롬프트. "계속" → 시스템 팝업. "건너뛰기" → 다음 실행 재표시 → 2차 건너뛰기 → 영구 미표시
 

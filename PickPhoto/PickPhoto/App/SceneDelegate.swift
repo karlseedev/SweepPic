@@ -259,6 +259,10 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         DispatchQueue.global(qos: .utility).async {
             ThumbnailCache.shared.trimIfNeeded()
         }
+
+        // [BM] T041: ATT 프리프롬프트 표시 (FR-041)
+        // Grace Period 만료 + ATT .notDetermined + skipCount < 2 → ATTPromptVC present
+        checkAndShowATTPrompt()
     }
 
     /// Scene이 비활성화될 때 호출
@@ -457,6 +461,36 @@ extension SceneDelegate {
             Logger.app.debug("SceneDelegate: 자정 감지 — 일일 한도 리셋")
             UsageLimitStore.shared.resetIfNewDay(serverDate: nil)
         }
+    }
+}
+
+// MARK: - ATT Prompt
+
+extension SceneDelegate {
+
+    /// [BM] T041: ATT 프리프롬프트 표시 체크 (FR-041)
+    /// Grace Period 만료 + ATT .notDetermined + skipCount < 2 → ATTPromptVC present
+    func checkAndShowATTPrompt() {
+        guard ATTStateManager.shared.shouldShowPrompt else { return }
+
+        // 현재 루트가 TabBarController일 때만 표시 (권한 화면에서는 미표시)
+        guard let rootVC = window?.rootViewController,
+              rootVC is TabBarController else {
+            Logger.app.debug("SceneDelegate: ATT 프롬프트 미표시 — 메인 화면 아님")
+            return
+        }
+
+        // 이미 다른 모달이 표시 중이면 미표시 (게이트 등과 충돌 방지)
+        guard rootVC.presentedViewController == nil else {
+            Logger.app.debug("SceneDelegate: ATT 프롬프트 미표시 — 다른 모달 표시 중")
+            return
+        }
+
+        Logger.app.debug("SceneDelegate: ATT 프리프롬프트 표시")
+        let attVC = ATTPromptViewController()
+        attVC.modalPresentationStyle = .overFullScreen
+        attVC.modalTransitionStyle = .crossDissolve
+        rootVC.present(attVC, animated: true)
     }
 }
 
