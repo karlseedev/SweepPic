@@ -21,7 +21,10 @@ import OSLog
 
 /// 사업자 정보 화면
 /// push로 표시
-final class BusinessInfoViewController: UIViewController {
+final class BusinessInfoViewController: UIViewController, BarsVisibilityControlling {
+
+    /// FloatingOverlay 숨김 (iOS 16~25: 타이틀바/탭바 숨김)
+    var prefersFloatingOverlayHidden: Bool? { true }
 
     // MARK: - Data
 

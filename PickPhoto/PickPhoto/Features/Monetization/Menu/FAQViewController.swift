@@ -34,7 +34,10 @@ private struct FAQSection {
 // MARK: - FAQViewController
 
 /// FAQ 아코디언 리스트 화면
-final class FAQViewController: UIViewController {
+final class FAQViewController: UIViewController, BarsVisibilityControlling {
+
+    /// FloatingOverlay 숨김 (iOS 16~25: 타이틀바/탭바 숨김)
+    var prefersFloatingOverlayHidden: Bool? { true }
 
     // MARK: - Data
 
