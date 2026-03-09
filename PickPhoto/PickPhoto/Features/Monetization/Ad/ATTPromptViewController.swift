@@ -49,7 +49,7 @@ final class ATTPromptViewController: UIViewController {
         let image = UIImage(systemName: "target", withConfiguration: config)
         let iv = UIImageView(image: image)
         iv.translatesAutoresizingMaskIntoConstraints = false
-        iv.tintColor = .systemBlue
+        iv.tintColor = .white
         iv.contentMode = .scaleAspectFit
         return iv
     }()
@@ -76,18 +76,25 @@ final class ATTPromptViewController: UIViewController {
         label.textAlignment = .center
         label.numberOfLines = 0
 
-        // 행간 설정
+        // 행간 + 키워드 노란색 강조 (#FFEA00, 온보딩 동일)
+        let highlightYellow = UIColor(red: 1.0, green: 0.918, blue: 0.0, alpha: 1.0)
         let paragraphStyle = NSMutableParagraphStyle()
         paragraphStyle.lineSpacing = 4
         paragraphStyle.alignment = .center
-        let attributed = NSAttributedString(
-            string: label.text ?? "",
+
+        let fullText = label.text ?? ""
+        let attributed = NSMutableAttributedString(
+            string: fullText,
             attributes: [
                 .font: UIFont.systemFont(ofSize: 15, weight: .regular),
                 .foregroundColor: UIColor.secondaryLabel,
                 .paragraphStyle: paragraphStyle
             ]
         )
+        // "활동 추적을 허용" 노란색 강조
+        if let range1 = fullText.range(of: "활동 추적을 허용") {
+            attributed.addAttribute(.foregroundColor, value: highlightYellow, range: NSRange(range1, in: fullText))
+        }
         label.attributedText = attributed
 
         return label
