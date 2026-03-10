@@ -1024,3 +1024,268 @@ Cleanup, Cleaner Guru, AI Cleaner, Cleaner Kit, Swipewipe, Phone Cleaner, Powerf
 - VSCO Galleries: https://9to5mac.com/2026/03/03/vsco-launches-standalone-galleries-app/
 - Swipe Photo Cleaner: https://apps.apple.com/us/app/swipe-photo-cleaner-wipe-ai/id6462894933
 - Apple Photos 삭제: https://support.apple.com/guide/iphone/delete-or-hide-photos-and-videos-iphb4defbde9/ios
+
+---
+
+## 15. 소비자 조사 — 사진 정리 페인포인트 및 행동 통계
+
+> 조사일: 2026-03-10
+> 목적: Customer 분석을 위한 소비자 페인포인트 데이터 수집 및 신뢰도 평가
+
+### 15-1. Mixbook / YouGov 조사 (2025) ★ 신뢰도: 상
+
+| 항목 | 내용 |
+|------|------|
+| 조사 기관 | Mixbook (포토북 서비스) 의뢰, YouGov Audience 실시 |
+| 시기 | 2025년 9월 |
+| 샘플 | 미국 성인 2,485명 (18세 이상), 오차범위 ±3% (95% 신뢰수준) |
+| 신뢰도 근거 | YouGov는 글로벌 인정 여론조사 기관, 충분한 샘플, 방법론 공개 |
+
+핵심 수치:
+- **55%** 가 스마트폰의 사진/영상 수에 압도감을 느낀 적 있음
+- **48%** 가 스마트폰에 1,000장 이상의 사진을 보유
+- 물리적 공간 정리(**42%**) 대비 디지털 공간 정리(**25%**)는 현저히 낮음
+
+출처: https://www.mixbook.com/inspiration/survey-overwhelmed-photo-clutter
+
+### 15-2. Western Digital / OnePoll 조사 (2020) ★ 신뢰도: 중
+
+| 항목 | 내용 |
+|------|------|
+| 조사 기관 | Western Digital 의뢰, OnePoll 실시 |
+| 시기 | 2020년 1월 (StudyFinds 게시일 기준. 2022년은 기사 수정일이며 조사 시점이 아님) |
+| 샘플 | 미국 성인 2,000명 |
+| 신뢰도 근거 | OnePoll은 AAPOR/MRS/ESOMAR 회원이나 PR/마케팅 목적 조사 기관. 학술 연구가 아님. WD 공식 보도자료 원문은 현재 접근 불가 |
+
+핵심 수치:
+- **52%** 가 기기에서 어떤 파일도 삭제한 적 없음
+- **60%** 가 정리를 고려했으나 실행에 옮기지 못함 (※ "시간 부족"이 60%가 아님. "시간 부족"은 별도 항목으로 25%)
+- **41%** 가 사진/동영상 삭제를 적극 회피
+- **24%** 가 축적된 데이터로 스트레스
+
+삭제하지 않는 이유 (복수 응답):
+- 향후 필요할 수 있어서: 39%
+- 추억이라 버릴 수 없어서: 35%
+- 지루하고 번거로워서: 32%
+- 죄책감: 26%
+- 시간 부족: 25%
+
+출처:
+- https://studyfinds.org/digital-hoarders-52-of-americans-have-never-deleted-anything-from-their-devices/
+- https://studyfinds.org/digital-hoarders-rarely-delete-photos-from-smartphone/
+
+인용 매체: StudyFinds, South Florida Reporter, Talk Tech Daily, 학술 논문에서 배경 통계로 간접 인용. NYT/WSJ 등 주류 언론 직접 인용은 미확인.
+
+### 15-3. Compare and Recycle / OnePoll 조사 (2025) ★ 신뢰도: 중
+
+| 항목 | 내용 |
+|------|------|
+| 조사 기관 | Compare and Recycle (UK) 의뢰, OnePoll 실시 |
+| 시기 | 2025년 3월 |
+| 샘플 | 영국 성인 2,000명 (18~65세+, 30개 도시) |
+| 신뢰도 근거 | OnePoll 기반으로 방법론은 표준적이나 마케팅 목적 내포. 영국 한정 |
+
+핵심 수치:
+- **69%** 가 스스로를 "디지털 저장벽(digital hoarder)"으로 인식
+- **사진 갤러리**가 폰에서 가장 어수선한 영역 1위 (**38%**)
+- 정리 빈도: 며칠 내 16%, 일주일 내 16%, 한 달 내 23%, 수개월 내 21%, 한 번도 안 함 4%
+- Gen Z **44%** 가 불필요한 파일 보관 인정
+- 25~34세 **33%** 가 디지털 콘텐츠에 감정적 애착
+
+출처: https://www.compareandrecycle.co.uk/blog/digital-declutter-statistics
+
+### 15-4. HighSpeedInternet.com / PollFish 조사 (2022) ★ 신뢰도: 중
+
+| 항목 | 내용 |
+|------|------|
+| 조사 기관 | HighSpeedInternet.com, PollFish 플랫폼 사용 |
+| 시기 | 2022년 10월 |
+| 샘플 | 미국 성인 1,000명 (18세 이상, 연령/성별 사후보정 가중치 적용) |
+| 신뢰도 근거 | 명확한 방법론 공개, 사후보정 가중치 적용. 다만 ISP 비교 사이트의 자체 조사 |
+
+핵심 수치:
+- **62%** 가 디지털 파일 수에 스트레스/불안을 느낌
+- **50% 이상**이 "나중에 필요할까봐" 파일 삭제를 회피
+
+출처: https://www.highspeedinternet.com/resources/cyber-hoarding-statistics
+
+### 15-5. Kaspersky Lab / Toluna 조사 (2017) ★ 신뢰도: 상
+
+| 항목 | 내용 |
+|------|------|
+| 조사 기관 | Kaspersky Lab 의뢰, Toluna 리서치 실시 |
+| 시기 | 2017년 1월 |
+| 샘플 | **16,250명**, 17개국, 16세 이상 |
+| 신뢰도 근거 | 대규모 글로벌 조사, 17개국, 전문 리서치 기관 실시. 다만 2017년으로 다소 오래됨 |
+
+핵심 수치:
+- 기기에 가장 많이 저장되는 데이터는 **일반 사진/영상(90%)**
+- **55%** 가 정기적으로 정리, **32%** 가 가끔, **13%** 가 아예 삭제 안 함
+- **56%** 가 스마트폰 데이터 분실 경험
+
+출처: https://www.kaspersky.com.au/blog/my-precious-data-report-one/14093/
+
+### 15-6. EverPresent 조사 (2016) ★ 신뢰도: 중
+
+| 항목 | 내용 |
+|------|------|
+| 조사 기관 | EverPresent (사진 정리 서비스 업체) |
+| 시기 | 2016년 |
+| 샘플 | 미국 400명 (부모, 가구소득 $60K+) |
+| 신뢰도 근거 | 샘플 규모 적고 특정 인구층 한정. 2016년으로 오래됨 |
+
+핵심 수치:
+- 사진 정리에 필요한 예상 시간: 평균 **45시간**, 13%는 **100시간 이상** 필요
+- **66%** (3명 중 2명)가 사진 관리를 즐기지 않음
+- **85% 이상**의 부부가 함께 사진 정리를 하지 않음
+
+출처: https://everpresent.com/study-digital-photo-organizing-in-american-families/
+
+### 15-7. 학술 연구 — Sedera et al. (2022) ★ 신뢰도: 상
+
+| 항목 | 내용 |
+|------|------|
+| 출처 | Information & Management 저널 (Elsevier), 피어리뷰 |
+| 시기 | 2022년 8월 |
+| 샘플 | 846명 (설문조사 + 다중그룹 분석) |
+
+핵심 발견:
+- 디지털 저장벽의 3가지 특성: **버리기 어려움(difficulty of discarding)**, **디지털 어지러움(digital clutter)**, **과도한 습득(excessive acquisition)**
+- 디지털 저장벽과 **불안(anxiety)**의 유의미한 연관성
+- 무료 클라우드 스토리지가 삭제 동기를 없애는 역할
+
+출처: https://www.sciencedirect.com/science/article/abs/pii/S0378720622001094
+
+### 15-8. 학술 연구 — Frontiers in Psychology (2025) ★ 신뢰도: 중상
+
+| 항목 | 내용 |
+|------|------|
+| 출처 | Frontiers in Psychology, 피어리뷰 |
+| 시기 | 2025년 |
+| 샘플 | 대학생 294명 (PLS-SEM 분석) |
+
+핵심 발견:
+- 디지털 사진 저장벽에 영향을 미치는 요인: **감정적 애착**, **FOMO(놓칠 것에 대한 두려움)**, 대인 영향, 생활 수요, 기술 발전
+- **감정적 애착**이 핵심 매개 변인
+- 시사점: 자동 삭제는 감정적 애착·FOMO와 정면 충돌 → 사용자가 직접 확인하고 승인하는 UI가 필수
+
+출처: https://www.frontiersin.org/journals/psychology/articles/10.3389/fpsyg.2025.1607274/full
+
+### 15-9. 사진 촬영량 글로벌 통계
+
+| 지표 | 수치 | 출처 |
+|------|------|------|
+| 2024년 전 세계 촬영량 | **1.94조 장** | Photutorial |
+| 2025년 전 세계 촬영량 | **2.1조 장** | PetaPixel |
+| 일일 촬영량 | **53억 장** (초당 61,400장) | Photutorial |
+| 스마트폰 촬영 비율 | **전체의 94%** (2024) | Photutorial |
+| 스마트폰 평균 보유 사진 수 | **2,100장** (iOS 2,400장 / Android 1,900장) | Compare and Recycle (2023) |
+| iCloud 저장 사진 | **1,250억 장 이상** | World Metrics |
+| 클라우드 가격 인상 추세 | Apple, Google, Snap 등 모두 인상 중 (2025~2026) | CNBC |
+
+출처:
+- https://photutorial.com/photos-statistics/
+- https://petapixel.com/2025/06/18/the-number-of-photos-taken-in-2025-is-expected-to-exceed-two-trillion/
+- https://www.cnbc.com/2026/02/28/cloud-storage-prices-apple-icloud-google-snap-shutterfly.html
+
+---
+
+## 16. 소비자 조사 — 사진 정리 방식 선호도
+
+> 조사일: 2026-03-10
+> 목적: 사용자가 선호하는 사진 정리 방식(자동 vs 수동, UI 형태 등)에 대한 데이터 수집
+
+### 16-1. Eindhoven 공대 — 스마트폰 사진 큐레이션 연구 (2018~2019) ★ 신뢰도: 상
+
+| 항목 | 내용 |
+|------|------|
+| 출처 | Eindhoven University of Technology |
+| 발표 | CHI / CHIIR 학회 (2018~2019) |
+| 샘플 | 10명 (질적 연구, 4개 앱 비교 평가) |
+| 신뢰도 근거 | 학술 피어리뷰 연구. 질적 연구로 깊이 있으나 소규모 |
+
+핵심 발견:
+- **"투표(rating)"가 "삭제"보다 쉽고 즐겁다** — 사용자는 좋다/나쁘다를 평가하는 것은 수월하지만, 삭제 결정은 심리적 부담이 큼
+- **외부 트리거 없이는 정리하지 않는다** — 가장 큰 트리거는 "저장 공간 부족". 자발적 정리는 극히 드묾
+- **스마트폰은 "덤프" 공간으로 인식** — 노트북에서는 폴더로 정리하지만 폰은 그냥 쌓아두는 곳
+- **기본 카메라롤 선호** — 별도 앱보다 기본 갤러리를 선호하지만, 사진이 뒤섞이는 것은 불만
+
+출처:
+- https://link.springer.com/chapter/10.1007/978-3-319-76270-8_28
+- https://dl.acm.org/doi/10.1145/3295750.3298947
+- https://research.tue.nl/en/publications/stimulating-photo-curation-on-smartphones
+
+### 16-2. CHI 2024 — Green Cloud: 스와이프 삭제 UI 연구 ★ 신뢰도: 상
+
+| 항목 | 내용 |
+|------|------|
+| 출처 | ACM CHI Conference on Human Factors in Computing Systems |
+| 시기 | 2024년 |
+| 신뢰도 근거 | ACM CHI는 HCI 분야 최고 학회 |
+
+핵심 발견:
+- **스와이프 투 딜리트(swipe-to-delete)가 전통적 UI 대비 더 효율적이고 만족도가 높음**
+- 사용자들이 직관적이고 engaging하다고 평가
+- 디지털 호딩 성향 사용자에게도 효과적
+
+출처: https://dl.acm.org/doi/10.1145/3613905.3647968
+
+### 16-3. Journal of Documentation — 사진 삭제의 감정 연구 (2025) ★ 신뢰도: 상
+
+| 항목 | 내용 |
+|------|------|
+| 출처 | Journal of Documentation (Emerald Publishing), 피어리뷰 |
+| 시기 | 2025년 |
+| 샘플 | 12명 (인터뷰 + 가이드 투어) |
+| 신뢰도 근거 | 피어리뷰 학술 저널. 질적 연구로 깊이 있으나 소규모 |
+
+핵심 발견:
+- 삭제 과정에서 **9가지 감정적 측면** 발견
+- **긍정적 감정(만족감, 안도감, 즐거움)이 부정적 감정보다 많음**
+- 사진을 직접 보면서 정리하는 행위 자체가 만족감을 줌
+- 물리적 정리정돈의 감정적 이점과 유사한 패턴
+- 시사점: 결과만 보고 승인하는 것보다, 직접 사진을 보면서 결정하는 과정이 더 큰 만족감
+
+출처: https://www.emerald.com/jd/article/81/7/443/1302896/Challenging-but-satisfying-an-exploration-of-the
+
+### 16-4. Gemini Photos 앱 사용자 리뷰 패턴 ★ 신뢰도: 중
+
+| 항목 | 내용 |
+|------|------|
+| 출처 | App Store 사용자 리뷰 종합 |
+| 신뢰도 근거 | 실제 사용자 리뷰이나 체계적 분석은 아님 |
+
+핵심 패턴:
+- **자동 그룹핑은 신뢰하지만 자동 삭제는 불신**
+- **"추천 + 확인" 모델 선호** — 앱이 삭제 후보를 제시하고 사용자가 최종 승인하는 방식이 가장 만족도 높음
+- **오분류 불만** — "같은 시간에 찍었다고 다른 피사체를 그룹핑", "시간대가 다르면 동일 피사체도 미감지"
+- **그럼에도 시간 절약 효과 인정** — "suggested keep/delete가 과정을 크게 가속화"
+
+출처: https://justuseapp.com/en/app/1277110040/gemini-photos-gallery-cleaner/reviews
+
+### 16-5. Swipewipe / Slidebox 리뷰에서 나타나는 공통 선호 패턴
+
+핵심 패턴:
+1. **스와이프 UI는 높은 만족도** — "재미있다", "중독적이다"라는 표현 반복
+2. **월별/날짜별 구분이 필수** — 전체를 한꺼번에 보는 것보다 시간 단위로 나눠서 부담 감소
+3. **최종 삭제 전 확인 목록 필수** — 스와이프로 마킹 후, 삭제 전에 목록을 한번 더 확인하는 단계 중요
+4. **구독 모델에 대한 강한 반감** — 일회성 구매를 선호하는 의견이 압도적
+5. **비디오 정리 기능 부재에 대한 불만** — 사진만 지원하는 앱에 대한 불만 다수
+
+출처:
+- https://www.insanelymac.com/blog/swipewipe-photo-cleaner-review/
+- https://slidebox.co/
+- https://apps.apple.com/us/app/slidebox-photo-cleaner-app/id984305203
+- https://www.makeuseof.com/swipewipe-declutter-photos-app/
+
+### 16-6. 종합 시사점
+
+| 인사이트 | 근거 |
+|---------|------|
+| 사용자는 자발적으로 정리하지 않음 (외부 트리거 필요) | Eindhoven 2019 |
+| "삭제"보다 "평가/투표"가 심리적 부담 적음 | Eindhoven 2019 |
+| 스와이프 삭제 UI가 전통 UI보다 만족도 높음 | CHI 2024 |
+| 자동 삭제는 불신, "추천+확인" 모델 선호 | Gemini 리뷰, Frontiers 2025 |
+| 사진을 직접 보면서 정리하는 것 자체가 만족감 | Emerald 2025 |
+| 월별/시간별 구분이 정리 부담을 줄임 | Swipewipe/Slidebox 리뷰 |
+| 최종 삭제 전 확인 단계가 신뢰를 높임 | Gemini, Swipewipe 패턴 |
