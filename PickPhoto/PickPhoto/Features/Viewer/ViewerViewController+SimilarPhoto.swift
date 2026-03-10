@@ -555,11 +555,13 @@ extension ViewerViewController {
         }
 
         // 사진 번호 계산: SimilarThumbnailGroup.memberAssetIDs 기반 1-based 인덱스
+        // trashed 멤버를 필터링하여 삭제 후에도 정확한 카운트 표시
         let state = await SimilarityCache.shared.getState(for: assetID)
         if case .analyzed(true, let groupID?) = state,
            let group = await SimilarityCache.shared.getGroup(groupID: groupID) {
-            if let memberIndex = group.memberAssetIDs.firstIndex(of: assetID) {
-                faceButtonOverlay?.showPhotoNumber(memberIndex + 1, total: group.memberCount)
+            let activeMembers = group.memberAssetIDs.filter { !TrashStore.shared.isTrashed($0) }
+            if let memberIndex = activeMembers.firstIndex(of: assetID) {
+                faceButtonOverlay?.showPhotoNumber(memberIndex + 1, total: activeMembers.count)
             }
         }
 

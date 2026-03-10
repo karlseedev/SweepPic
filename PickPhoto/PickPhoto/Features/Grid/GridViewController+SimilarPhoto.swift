@@ -301,8 +301,8 @@ extension GridViewController {
             for (assetID, cell) in cellsToUpdate {
                 let state = await SimilarityCache.shared.getState(for: assetID)
 
-                // 그룹에 속한 경우: 뱃지 표시
-                if case .analyzed(true, _) = state {
+                // 그룹에 속한 경우: 뱃지 표시 (trashed 사진은 제외)
+                if case .analyzed(true, _) = state, !self.trashStore.isTrashed(assetID) {
                     await MainActor.run {
                         self.showBadge(on: cell)
                     }
