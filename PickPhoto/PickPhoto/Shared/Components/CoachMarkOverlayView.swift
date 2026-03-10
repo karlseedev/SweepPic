@@ -96,6 +96,9 @@ final class CoachMarkManager {
     /// A-1 스와이프 실습 모드 활성 중 (true 동안 dismissCurrent() 차단)
     var isA1Active: Bool = false
 
+    /// A Step 1→2 전환 중 (true 동안 dismissCurrent() 차단)
+    var isA2TransitionActive: Bool = false
+
     /// 현재 코치마크 dismiss
     /// ⚠️ C-1 → C-2 전환 중, E-1+E-2 시퀀스 진행 중, C-3 전환 중, A-1 진행 중에는 dismiss 차단 (오버레이 보호)
     func dismissCurrent() {
@@ -113,6 +116,10 @@ final class CoachMarkManager {
         }
         if isC3TransitionActive {
             Logger.coachMark.debug("dismissCurrent BLOCKED — isC3TransitionActive=true")
+            return
+        }
+        if isA2TransitionActive {
+            Logger.coachMark.debug("dismissCurrent BLOCKED — isA2TransitionActive=true")
             return
         }
         Logger.coachMark.debug("dismissCurrent — overlay=\(self.currentOverlay != nil)")
@@ -142,11 +149,11 @@ final class CoachMarkOverlayView: UIView {
     /// 손가락 아이콘 크기
     private static let fingerSize: CGFloat = 48
 
-    /// Maroon 딤드 색상 (PhotoCell과 동일)
-    private static let maroonColor = UIColor(red: 0.5, green: 0, blue: 0, alpha: 1)
+    /// Maroon 딤드 색상 (PhotoCell과 동일, A2 extension에서 접근 필요)
+    static let maroonColor = UIColor(red: 0.5, green: 0, blue: 0, alpha: 1)
 
-    /// Maroon 딤드 알파 (PhotoCell.dimmedOverlayAlpha와 동일)
-    private static let maroonAlpha: CGFloat = 0.60
+    /// Maroon 딤드 알파 (PhotoCell.dimmedOverlayAlpha와 동일, A2 extension에서 접근 필요)
+    static let maroonAlpha: CGFloat = 0.60
 
     /// 스와이프 거리 비율 (셀 너비의 100%)
     private static let swipeRatio: CGFloat = 1.0
@@ -207,11 +214,11 @@ final class CoachMarkOverlayView: UIView {
     /// 딤 배경 레이어 (evenOdd로 하이라이트 구멍)
     let dimLayer = CAShapeLayer()
 
-    /// 셀 스냅샷 뷰
-    private var snapshotView: UIView?
+    /// 셀 스냅샷 뷰 (A2 extension에서 접근 필요)
+    var snapshotView: UIView?
 
-    /// Maroon 딤드 뷰 (스냅샷 위에 배치)
-    private let maroonView: UIView = {
+    /// Maroon 딤드 뷰 (스냅샷 위에 배치, A2 extension에서 접근 필요)
+    let maroonView: UIView = {
         let view = UIView()
         view.backgroundColor = maroonColor
         view.alpha = maroonAlpha
@@ -283,8 +290,8 @@ final class CoachMarkOverlayView: UIView {
         return label
     }()
 
-    /// Reduce Motion 시 방향 화살표
-    private let arrowView: UIImageView = {
+    /// Reduce Motion 시 방향 화살표 (A2 extension에서 접근 필요)
+    let arrowView: UIImageView = {
         let config = UIImage.SymbolConfiguration(pointSize: 24, weight: .bold)
         let image = UIImage(systemName: "arrow.right", withConfiguration: config)
         let iv = UIImageView(image: image)
@@ -882,6 +889,10 @@ final class CoachMarkOverlayView: UIView {
         // A-1: 스와이프 실습 모드 정리
         cleanupA1()
 
+        // A-2: 멀티스와이프 데모 정리
+        cleanupA2()
+        CoachMarkManager.shared.isA2TransitionActive = false
+
         // D, E-1+E-2, E-3, C-3: 시퀀스 전용 리소스 정리
         cleanupAutoCleanup()
         cleanupDeleteGuide()
@@ -927,7 +938,12 @@ final class CoachMarkOverlayView: UIView {
             // A: onConfirm이 있으면 재생 변형 (팝업 카드) → onConfirm 호출
             if let action = onConfirm {
                 action()
+            } else if aCurrentStep == 1 {
+                // Step 1 → Step 2 전환 (멀티스와이프 데모)
+                confirmButton.isEnabled = false
+                transitionToA2()
             } else {
+                // Step 2 "확인" 또는 레거시(aCurrentStep=0)
                 dismiss()
             }
         case .viewerSwipeDelete:
