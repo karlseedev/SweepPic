@@ -219,6 +219,38 @@ extension GridViewController {
         }
     }
 
+    // MARK: - Navigation/Tab Interaction Lock
+
+    /// 분석 진행 중 상단 버튼/하단 탭 터치 차단
+    ///
+    /// CleanupProgressView는 GridViewController.view에 추가되므로
+    /// 상위 계층(FloatingOverlay, NavigationBar, TabBar)의 터치를 차단할 수 없음.
+    /// 직접 비활성화하여 분석 진행 중 의도치 않은 조작을 방지합니다.
+    private func disableNavigationAndTabInteraction() {
+        if #available(iOS 26.0, *) {
+            // iOS 26+: 시스템 네비바 아이템 + 탭바 비활성화
+            navigationItem.rightBarButtonItems?.forEach { $0.isEnabled = false }
+            tabBarController?.tabBar.isUserInteractionEnabled = false
+        } else {
+            // iOS 16~25: FloatingOverlay 전체 터치 비활성화
+            (tabBarController as? TabBarController)?.floatingOverlay?.isUserInteractionEnabled = false
+        }
+    }
+
+    /// 분석 종료 후 상단 버튼/하단 탭 터치 복구
+    private func enableNavigationAndTabInteraction() {
+        if #available(iOS 26.0, *) {
+            // iOS 26+: 시스템 네비바 아이템 + 탭바 복구
+            navigationItem.rightBarButtonItems?.forEach { $0.isEnabled = true }
+            tabBarController?.tabBar.isUserInteractionEnabled = true
+        } else {
+            // iOS 16~25: FloatingOverlay 터치 복구
+            (tabBarController as? TabBarController)?.floatingOverlay?.isUserInteractionEnabled = true
+        }
+        // 정리/선택 버튼의 enabled 상태를 사진 유무 기준으로 재계산
+        updateCleanupButtonState()
+    }
+
     // MARK: - Cleanup Actions
 
     /// 정리 버튼 탭 핸들러
@@ -330,6 +362,9 @@ extension GridViewController: CleanupProgressViewDelegate {
         cleanupTracker?.result = .cancelled
         sendCleanupTrackerAndClear()
 
+        // 상단 버튼/하단 탭 터치 복구
+        enableNavigationAndTabInteraction()
+
         view.hide()
     }
 }
@@ -420,7 +455,12 @@ extension GridViewController {
         let progressView = CleanupProgressView()
         progressView.delegate = self
         progressView.configure(method: method)
-        progressView.show(in: view, viewController: self)
+        // tabBarController.view에 추가 → FloatingOverlay/NavBar/TabBar보다 z-order 위에 배치
+        let targetView: UIView = tabBarController?.view ?? view
+        progressView.show(in: targetView, viewController: self)
+
+        // 상단 버튼/하단 탭 터치 차단 (분석 진행 중 의도치 않은 조작 방지)
+        disableNavigationAndTabInteraction()
 
         // 2. 서비스 생성 및 보관 (취소 접근용)
         let service = CleanupPreviewService()
@@ -444,6 +484,8 @@ extension GridViewController {
 
                 await MainActor.run { [weak self] in
                     self?.previewService = nil
+                    // 상단 버튼/하단 탭 터치 복구
+                    self?.enableNavigationAndTabInteraction()
                     progressView.hide {
                         if result.totalCount > 0 {
                             // [Analytics] 발견 수 기록
@@ -489,6 +531,8 @@ extension GridViewController {
             } catch {
                 await MainActor.run { [weak self] in
                     self?.previewService = nil
+                    // 상단 버튼/하단 탭 터치 복구
+                    self?.enableNavigationAndTabInteraction()
                     progressView.hide {
                         // 취소(CancellationError)면 에러 표시 안 함
                         // (취소는 cleanupProgressViewDidTapCancel에서 이미 추적됨)
