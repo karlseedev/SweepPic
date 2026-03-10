@@ -98,6 +98,9 @@ extension TrashAlbumViewController {
             AdManager.shared.showRewardedAd(from: self) { outcome in
                 if case .earned = outcome {
                     UsageLimitStore.shared.recordReward()
+                    // [BM] T057: 리워드 광고 시청 완료 이벤트 (FR-056)
+                    AnalyticsService.shared.trackAdWatched(type: .rewarded)
+                    ReviewService.shared.isAdJustShown = true
                     Logger.app.debug("TrashAlbumVC+Gate: 게이지 상세에서 광고 시청 완료")
                 }
             }
