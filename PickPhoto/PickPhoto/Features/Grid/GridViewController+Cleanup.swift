@@ -41,7 +41,7 @@ extension GridViewController {
     @available(iOS 26.0, *)
     private func setupSystemCleanupButton() {
         let cleanupItem = UIBarButtonItem(
-            title: "정리",
+            image: UIImage(systemName: "wand.and.stars"),
             style: .plain,
             target: self,
             action: #selector(cleanupButtonTapped)
@@ -93,8 +93,7 @@ extension GridViewController {
             firstAction: { [weak self] in
                 self?.selectButtonTapped()
             },
-            secondTitle: "정리",
-            secondColor: UIColor(red: 0, green: 200/255, blue: 1.0, alpha: 1.0),  // #00C8FF
+            secondIcon: "wand.and.stars",
             secondAction: { [weak self] in
                 self?.cleanupButtonTapped()
             }
