@@ -149,6 +149,13 @@ final class PreviewGridViewController: UIViewController {
         setupUI()
         updateHeader()
         updateBottomView()
+
+        // [DEBUG] 롱프레스로 분석 상세 팝업 표시
+        #if DEBUG
+        let longPress = UILongPressGestureRecognizer(target: self, action: #selector(handleDebugLongPress(_:)))
+        longPress.minimumPressDuration = 0.5
+        collectionView.addGestureRecognizer(longPress)
+        #endif
     }
 
     override func viewWillAppear(_ animated: Bool) {
@@ -664,6 +671,12 @@ extension PreviewGridViewController: UICollectionViewDataSource {
                 isTrashed: false,
                 targetSize: thumbnailSize()
             )
+
+            // [DEBUG] 셀 위에 assetID 앞 6자 + 신호 요약 표시
+            #if DEBUG
+            configureDebugOverlay(on: cell, candidate: candidate)
+            #endif
+
             return cell
 
         case .banner(let scoreRange, let count):
@@ -869,3 +882,122 @@ extension PreviewGridViewController: ViewerViewControllerDelegate {
     func viewerDidRequestPermanentDelete(assetID: String) {}
     func viewerWillClose(currentAssetID: String?) {}
 }
+
+// MARK: - Debug Quality Overlay
+
+#if DEBUG
+extension PreviewGridViewController {
+
+    /// 디버그 오버레이 태그 (재사용 시 중복 방지)
+    private static let debugOverlayTag = 9999
+
+    /// 롱프레스 제스처 핸들러 — 해당 셀의 분석 상세 팝업 표시
+    @objc func handleDebugLongPress(_ gesture: UILongPressGestureRecognizer) {
+        guard gesture.state == .began else { return }
+        let point = gesture.location(in: collectionView)
+        guard let indexPath = collectionView.indexPathForItem(at: point),
+              case .photos(let candidates) = sectionType(for: indexPath.section),
+              indexPath.item < candidates.count else { return }
+
+        let candidate = candidates[indexPath.item]
+        showDebugAnalysisDetail(for: candidate)
+    }
+
+    /// 셀 위에 assetID + 신호 요약 오버레이 표시
+    func configureDebugOverlay(on cell: UICollectionViewCell, candidate: PreviewCandidate) {
+        // 기존 오버레이 제거 (셀 재사용 대응)
+        cell.contentView.viewWithTag(Self.debugOverlayTag)?.removeFromSuperview()
+
+        // assetID 앞 6자
+        let idPrefix = String(candidate.assetID.prefix(6))
+
+        // 신호 요약 (signals가 있으면 종류 나열, 없으면 score 표시)
+        var infoLines = [idPrefix]
+
+        if let result = candidate.qualityResult, !result.signals.isEmpty {
+            // 신호 종류 나열 (축약)
+            let signalNames = result.signals.map { shortName(for: $0.kind) }
+            infoLines.append(signalNames.joined(separator: " "))
+        }
+
+        if let score = candidate.score {
+            infoLines.append("S:\(String(format: "%.2f", score))")
+        }
+
+        // 라벨 생성
+        let label = UILabel()
+        label.tag = Self.debugOverlayTag
+        label.text = infoLines.joined(separator: "\n")
+        label.font = .systemFont(ofSize: 8, weight: .bold)
+        label.textColor = .white
+        label.numberOfLines = 0
+        label.backgroundColor = UIColor.black.withAlphaComponent(0.6)
+        label.textAlignment = .left
+        label.translatesAutoresizingMaskIntoConstraints = false
+
+        cell.contentView.addSubview(label)
+        NSLayoutConstraint.activate([
+            label.leadingAnchor.constraint(equalTo: cell.contentView.leadingAnchor, constant: 2),
+            label.bottomAnchor.constraint(equalTo: cell.contentView.bottomAnchor, constant: -2),
+            label.trailingAnchor.constraint(lessThanOrEqualTo: cell.contentView.trailingAnchor, constant: -2),
+        ])
+    }
+
+    /// 특정 사진의 분석 상세를 알림으로 표시
+    func showDebugAnalysisDetail(for candidate: PreviewCandidate) {
+        var message = "Asset ID:\n\(candidate.assetID)\n"
+        message += "\nStage: \(candidate.stage)"
+
+        if let score = candidate.score {
+            message += "\nAestheticsScore: \(String(format: "%.3f", score))"
+        }
+
+        if let result = candidate.qualityResult {
+            message += "\nVerdict: \(result.verdict)"
+            message += "\nMethod: \(result.analysisMethod.rawValue)"
+            message += "\nTime: \(String(format: "%.1f", result.analysisTimeMs))ms"
+
+            if result.safeGuardApplied, let reason = result.safeGuardReason {
+                message += "\nSafeGuard: \(reason.rawValue)"
+            }
+
+            if !result.signals.isEmpty {
+                message += "\n\n--- Signals ---"
+                for signal in result.signals {
+                    message += "\n[\(shortName(for: signal.kind))]"
+                    message += " val:\(String(format: "%.3f", signal.measuredValue))"
+                    message += " thr:\(String(format: "%.3f", signal.threshold))"
+                }
+            }
+        } else {
+            message += "\n(QualityResult 없음)"
+        }
+
+        let alert = UIAlertController(title: "분석 상세", message: message, preferredStyle: .alert)
+        alert.addAction(UIAlertAction(title: "닫기", style: .cancel))
+        // 클립보드 복사 버튼
+        alert.addAction(UIAlertAction(title: "복사", style: .default) { _ in
+            UIPasteboard.general.string = message
+        })
+        present(alert, animated: true)
+    }
+
+    /// SignalKind → 축약 이름 (셀 오버레이용)
+    private func shortName(for kind: SignalKind) -> String {
+        switch kind {
+        case .extremeDark:      return "ExDk"
+        case .extremeBright:    return "ExBr"
+        case .severeBlur:       return "SvBl"
+        case .tooShortVideo:    return "ShVd"
+        case .pocketShot:       return "Pckt"
+        case .extremeMonochrome: return "Mono"
+        case .lensBlocked:      return "Lens"
+        case .generalBlur:      return "Blur"
+        case .generalExposure:  return "Expo"
+        case .lowColorVariety:  return "LClr"
+        case .lowResolution:    return "LRes"
+        case .lowAesthetics:    return "LAes"
+        }
+    }
+}
+#endif

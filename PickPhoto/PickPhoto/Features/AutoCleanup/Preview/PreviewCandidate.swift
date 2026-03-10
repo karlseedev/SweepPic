@@ -59,4 +59,7 @@ struct PreviewCandidate {
 
     /// AestheticsScore (iOS 18+ 에서만, 없으면 nil)
     let score: Float?
+
+    /// 품질 분석 상세 결과 (디버그용 — signals, 측정값, 임계값 포함)
+    let qualityResult: QualityResult?
 }
