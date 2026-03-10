@@ -742,8 +742,18 @@ extension ViewerViewController: FaceComparisonDelegate {
 
         // FaceComparisonViewController 닫기 (modal)
         viewController.dismiss(animated: false) { [weak self] in
-            // ViewerViewController도 modal이므로 dismiss로 그리드 복귀
-            self?.dismiss(animated: true)
+            guard let self = self else { return }
+
+            // [BM] 전면 광고 — 유사사진 삭제 짝수 회차에만 표시 (FR-015)
+            if AdCounters.shared.incrementAndShouldShowAd(for: .similarPhotoDelete) {
+                InterstitialAdPresenter.shared.showAd(from: self) { [weak self] in
+                    // 광고 닫힌 후 그리드로 복귀
+                    self?.dismiss(animated: true)
+                }
+            } else {
+                // ViewerViewController도 modal이므로 dismiss로 그리드 복귀
+                self.dismiss(animated: true)
+            }
         }
     }
 

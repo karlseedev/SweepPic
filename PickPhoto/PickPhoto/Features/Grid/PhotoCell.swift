@@ -333,6 +333,10 @@ final class PhotoCell: UICollectionViewCell {
     /// 애니메이션 중인 셀에는 추가 제스처를 무시
     var isAnimating: Bool = false
 
+    /// 재사용 세대 카운터 (stale animation completion 방지)
+    /// prepareForReuse마다 +1되어 이전 세대의 animation completion을 무효화
+    private var reuseGeneration: UInt = 0
+
     /// 딤드 마스크 레이어 (커튼 효과용)
     /// 스와이프 진행도에 따라 빨간 딤드가 채워지거나 걷히는 효과
     private var dimmedMaskLayer: CAShapeLayer?
@@ -399,6 +403,14 @@ final class PhotoCell: UICollectionViewCell {
         dimmedOverlayView.alpha = 0
         dimmedOverlayView.backgroundColor = Self.defaultOverlayColor  // 녹색 잔존 방지
         swipeOverlayStyle = .delete
+
+        // 스와이프 애니메이션 상태 초기화 (stale completion handler 방지)
+        isAnimating = false
+        reuseGeneration += 1
+        dimmedMaskLayer?.removeFromSuperlayer()
+        dimmedMaskLayer = nil
+        dimmedOverlayView.layer.mask = nil
+
         trashIconView.isHidden = true
         selectionCheckmarkView.isHidden = true
         videoDurationLabel.isHidden = true
@@ -900,9 +912,13 @@ extension PhotoCell {
     ///   - toTrashed: 최종 삭제대기함 상태
     ///   - completion: 완료 콜백
     func confirmDimmedAnimation(toTrashed: Bool, completion: @escaping () -> Void) {
+        let gen = self.reuseGeneration
+
         // 나머지 영역 빠르게 채움/걷힘
         UIView.animate(withDuration: 0.15, delay: 0, options: .curveEaseOut) { [weak self] in
             guard let self = self else { return }
+            // 셀이 재사용되었으면 UI 변경 건너뜀
+            guard self.reuseGeneration == gen else { return }
 
             if toTrashed {
                 // 삭제 확정: 전체 딤드
@@ -915,6 +931,8 @@ extension PhotoCell {
             }
         } completion: { [weak self] _ in
             guard let self = self else { return }
+            // 셀이 재사용되었으면 completion만 호출하고 스킵
+            guard self.reuseGeneration == gen else { completion(); return }
 
             // 마스크 레이어 정리
             self.dimmedMaskLayer?.removeFromSuperlayer()
@@ -928,8 +946,11 @@ extension PhotoCell {
             self.trashIconView.isHidden = self.swipeOverlayStyle == .restore ? true : !toTrashed
 
             // 오버레이 색상 리셋 (다음 스와이프를 위해)
-            self.dimmedOverlayView.backgroundColor = Self.defaultOverlayColor
-            self.swipeOverlayStyle = .delete
+            // 복구 모드에서는 셀이 곧 제거되므로 리셋 불필요 (마룬색 깜빡임 방지)
+            if self.swipeOverlayStyle != .restore {
+                self.dimmedOverlayView.backgroundColor = Self.defaultOverlayColor
+                self.swipeOverlayStyle = .delete
+            }
 
             completion()
         }
@@ -938,6 +959,8 @@ extension PhotoCell {
     /// 딤드 애니메이션 취소 (스와이프 취소)
     /// - Parameter completion: 완료 콜백
     func cancelDimmedAnimation(completion: @escaping () -> Void) {
+        let gen = self.reuseGeneration
+
         // 원래 상태로 복귀 (spring animation)
         UIView.animate(
             withDuration: 0.2,
@@ -947,6 +970,8 @@ extension PhotoCell {
             options: []
         ) { [weak self] in
             guard let self = self else { return }
+            // 셀이 재사용되었으면 UI 변경 건너뜀
+            guard self.reuseGeneration == gen else { return }
 
             if self.isTrashed {
                 // 원래 삭제 상태: 전체 딤드로 복귀
@@ -959,6 +984,8 @@ extension PhotoCell {
             }
         } completion: { [weak self] _ in
             guard let self = self else { return }
+            // 셀이 재사용되었으면 completion만 호출하고 스킵
+            guard self.reuseGeneration == gen else { completion(); return }
 
             // 마스크 레이어 정리
             self.dimmedMaskLayer?.removeFromSuperlayer()
@@ -1008,6 +1035,12 @@ extension PhotoCell {
         trashIconView.isHidden = !isTrashed
     }
 
+    /// 현재 딤드 오버레이가 활성 상태인지 확인 (reconciliation용)
+    /// stale animation completion이 딤드를 덮어썼는지 판단
+    var isDimmedActive: Bool {
+        return !dimmedOverlayView.isHidden && dimmedOverlayView.alpha > 0.01
+    }
+
     /// 복원 미리보기 (다중 스와이프 복원용)
     /// isTrashed 상태와 무관하게 빨간 딤드를 제거하여 "복원될 모습" 표시
     /// - Note: isTrashed 프로퍼티는 변경하지 않음 (취소 시 원래 상태로 복귀 가능)
@@ -1044,6 +1077,7 @@ extension PhotoCell {
             return
         }
 
+        let gen = self.reuseGeneration
         let bounds = dimmedOverlayView.bounds
         let width = bounds.width
         let height = bounds.height
@@ -1074,6 +1108,9 @@ extension PhotoCell {
         CATransaction.begin()
         CATransaction.setCompletionBlock { [weak self] in
             guard let self = self else { return }
+            // 셀이 재사용되었으면 스킵
+            guard self.reuseGeneration == gen else { return }
+
             // 애니메이션 완료 → 마스크 제거 + 최종 상태 설정
             self.dimmedMaskLayer?.removeFromSuperlayer()
             self.dimmedMaskLayer = nil

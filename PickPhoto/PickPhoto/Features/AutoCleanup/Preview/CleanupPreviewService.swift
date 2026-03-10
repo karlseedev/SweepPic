@@ -296,7 +296,8 @@ final class CleanupPreviewService {
                         assetID: asset.localIdentifier,
                         asset: asset,
                         stage: .light,
-                        score: aestheticsScore
+                        score: aestheticsScore,
+                        qualityResult: oldResult
                     ))
 
                 } else if standard {
@@ -305,7 +306,8 @@ final class CleanupPreviewService {
                         assetID: asset.localIdentifier,
                         asset: asset,
                         stage: .standard,
-                        score: aestheticsScore
+                        score: aestheticsScore,
+                        qualityResult: oldResult
                     ))
                 } else if deep {
                     // 3단계(강화)에서 추가로 잡힘 → deep 추가분
@@ -313,7 +315,8 @@ final class CleanupPreviewService {
                         assetID: asset.localIdentifier,
                         asset: asset,
                         stage: .deep,
-                        score: aestheticsScore
+                        score: aestheticsScore,
+                        qualityResult: oldResult
                     ))
                 }
 

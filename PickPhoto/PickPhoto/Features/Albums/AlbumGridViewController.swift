@@ -67,6 +67,12 @@ final class AlbumGridViewController: BaseGridViewController {
         ]
     }
 
+    /// 앨범 상세는 iOS 26+ 상단 보정 불필요
+    override func updateContentInset() {
+        if #available(iOS 26.0, *) { return }
+        super.updateContentInset()
+    }
+
     // MARK: - Initialization
 
     init(
@@ -406,6 +412,7 @@ extension AlbumGridViewController: ViewerViewControllerDelegate {
 
     }
 
+    /// 사진 최종 삭제 요청 (iOS 삭제대기함으로 이동)
     func viewerDidRequestPermanentDelete(assetID: String) {
         Task {
             do {

@@ -258,10 +258,6 @@ final class QualityAnalyzer {
             method: analysisMethod
         )
 
-        #if DEBUG
-        CleanupDebug.logResult(result)
-        #endif
-
         return result
     }
 

@@ -83,6 +83,23 @@ enum FeatureFlags {
         }
     }
 
+    // MARK: - BM Monetization Feature Flags
+
+    /// 게이트 기능 활성화 여부
+    /// 한도 초과 시 게이트 팝업 표시를 제어
+    /// 긴급 비활성화 시 false로 변경 → 모든 삭제가 게이트 없이 진행
+    static var isGateEnabled: Bool = true
+
+    /// 광고 기능 활성화 여부
+    /// 리워드/전면/배너 광고 전체를 on/off
+    /// false 시 광고 미표시 + 리워드 비활성
+    static var isAdEnabled: Bool = true
+
+    /// 구독 기능 활성화 여부
+    /// 페이월/구독 관리 UI 표시를 제어
+    /// false 시 페이월 진입 불가 + Plus 전환 불가
+    static var isSubscriptionEnabled: Bool = true
+
     // MARK: - Debug Helpers
 
     #if DEBUG
@@ -95,6 +112,9 @@ enum FeatureFlags {
           - isSimilarPhotoEnabledRaw: \(isSimilarPhotoEnabledRaw)
           - isPhotoLibraryAccessGranted: \(isPhotoLibraryAccessGranted)
           - isVoiceOverRunning: \(UIAccessibility.isVoiceOverRunning)
+          - isGateEnabled: \(isGateEnabled)
+          - isAdEnabled: \(isAdEnabled)
+          - isSubscriptionEnabled: \(isSubscriptionEnabled)
         """)
     }
     #endif

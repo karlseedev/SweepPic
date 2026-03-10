@@ -11,6 +11,7 @@
 		CB9721BB2EF3D12300F85BF4 /* BlurUIKit in Frameworks */ = {isa = PBXBuildFile; productRef = CB9721BA2EF3D12300F85BF4 /* BlurUIKit */; };
 		CB9721C22EF4000000F85BF4 /* LiquidGlassKit in Frameworks */ = {isa = PBXBuildFile; productRef = CB9721C12EF4000000F85BF4 /* LiquidGlassKit */; };
 		CBA00001300000000000AA01 /* TelemetryDeck in Frameworks */ = {isa = PBXBuildFile; productRef = CBA00002300000000000AA01 /* TelemetryDeck */; };
+		CBE079642F57232300405DD5 /* GoogleMobileAds in Frameworks */ = {isa = PBXBuildFile; productRef = CBA10002300000000000CC01 /* GoogleMobileAds */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -33,6 +34,7 @@
 /* Begin PBXFileReference section */
 		CB9721512EF2D2AB00F85BF4 /* PickPhoto.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = PickPhoto.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		CBAB3B1A2EFAE2CB00548282 /* PickPhotoUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = PickPhotoUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		CBE07B402F5B258500405DD5 /* PickPhotoProducts.storekit */ = {isa = PBXFileReference; lastKnownFileType = text; path = PickPhotoProducts.storekit; sourceTree = "<group>"; };
 		CBE1F9662F21E18200984B63 /* PickPhotoTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = PickPhotoTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		CBE1F97C2F21E52800984B63 /* PickPhoto.xctestplan */ = {isa = PBXFileReference; lastKnownFileType = text; name = PickPhoto.xctestplan; path = PickPhotoTests/PickPhoto.xctestplan; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -73,6 +75,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				CBE079642F57232300405DD5 /* GoogleMobileAds in Frameworks */,
 				CB9721BB2EF3D12300F85BF4 /* BlurUIKit in Frameworks */,
 				CB9721C22EF4000000F85BF4 /* LiquidGlassKit in Frameworks */,
 				CB97217B2EF2D37900F85BF4 /* AppCore in Frameworks */,
@@ -100,6 +103,7 @@
 		CB9721482EF2D2AB00F85BF4 = {
 			isa = PBXGroup;
 			children = (
+				CBE07B402F5B258500405DD5 /* PickPhotoProducts.storekit */,
 				CBE1F97C2F21E52800984B63 /* PickPhoto.xctestplan */,
 				CB9721532EF2D2AB00F85BF4 /* PickPhoto */,
 				CBAB3B1B2EFAE2CB00548282 /* PickPhotoUITests */,
@@ -142,6 +146,7 @@
 				CB9721BA2EF3D12300F85BF4 /* BlurUIKit */,
 				CB9721C12EF4000000F85BF4 /* LiquidGlassKit */,
 				CBA00002300000000000AA01 /* TelemetryDeck */,
+				CBA10002300000000000CC01 /* GoogleMobileAds */,
 			);
 			productName = PickPhoto;
 			productReference = CB9721512EF2D2AB00F85BF4 /* PickPhoto.app */;
@@ -230,6 +235,7 @@
 				CB9721B92EF3D12300F85BF4 /* XCRemoteSwiftPackageReference "BlurUIKit" */,
 				CB9721C02EF4000000F85BF4 /* XCLocalSwiftPackageReference "../LiquidGlassKit" */,
 				CBA00003300000000000AA01 /* XCRemoteSwiftPackageReference "SwiftSDK" */,
+				CBA10001300000000000CC01 /* XCRemoteSwiftPackageReference "swift-package-manager-google-mobile-ads" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = CB9721522EF2D2AB00F85BF4 /* Products */;
@@ -653,6 +659,14 @@
 				minimumVersion = 2.11.0;
 			};
 		};
+		CBA10001300000000000CC01 /* XCRemoteSwiftPackageReference "swift-package-manager-google-mobile-ads" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/googleads/swift-package-manager-google-mobile-ads";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 11.0.0;
+			};
+		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
@@ -674,6 +688,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = CBA00003300000000000AA01 /* XCRemoteSwiftPackageReference "SwiftSDK" */;
 			productName = TelemetryDeck;
+		};
+		CBA10002300000000000CC01 /* GoogleMobileAds */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = CBA10001300000000000CC01 /* XCRemoteSwiftPackageReference "swift-package-manager-google-mobile-ads" */;
+			productName = GoogleMobileAds;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

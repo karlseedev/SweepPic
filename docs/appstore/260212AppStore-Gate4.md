@@ -21,15 +21,13 @@
 
 > 직접적 리젝 사유는 아니지만 코드 품질 및 정보 노출 우려
 
-| 파일 | 설명 |
-|------|------|
-| `FeatureFlags.swift` | print문 잔존 |
-| `CleanupSessionStore.swift` | print문 잔존 |
-| `ViewerViewController+SimilarPhoto.swift` | print문 잔존 |
+| 파일 | 상태 | 비고 |
+|------|:----:|------|
+| `FeatureFlags.swift` | **해결됨** ✅ | `#if DEBUG` 블록 내부 (88~100줄) → 릴리즈 미포함 |
+| `CleanupSessionStore.swift` | **해결됨** ✅ | bare print문 없음 |
+| `ViewerViewController+SimilarPhoto.swift` | **해결됨** ✅ | 주석 처리됨 (79줄) |
 
-**조치:**
-- `Log.print()` (앱 내 로그 시스템)으로 전환
-- 또는 `#if DEBUG` 래핑으로 릴리즈에서 제외
+> 잔여: `LiquidGlassKit/ZeroCopyBridge.swift`에 에러 로깅용 bare print 2건. 외부 패키지(fork)이므로 우선순위 낮음.
 
 ### Dynamic Type
 
@@ -61,7 +59,7 @@
 |------|---------|
 | **2026년 4월 28일** | App Store 제출 시 **Xcode 26 (iOS 26 SDK) 필수** |
 | 자동 적용 | UINavigationBar, UITabBar → Liquid Glass 자동 |
-| **수동 대응 필요** | FloatingTabBar (커스텀) → glassEffect 적용 |
+| ~~수동 대응 필요~~ | ~~FloatingTabBar → glassEffect 적용~~ → **불필요** (iOS 26+에서 FloatingTabBar 미사용, 시스템 UITabBar로 전환 — `TabBarController.swift:46`) |
 | 옵트아웃 | 현재 가능, Xcode 27 이후 제거 예정 |
 
 > 출처: MenuResearch §12-17,18 — iOS 26 Liquid Glass 대응

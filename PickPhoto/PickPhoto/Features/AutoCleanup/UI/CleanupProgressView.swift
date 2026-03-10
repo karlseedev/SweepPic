@@ -12,6 +12,9 @@
 //
 
 import UIKit
+import GoogleMobileAds
+import AppCore
+import OSLog
 
 // MARK: - CleanupProgressViewDelegate
 
@@ -30,15 +33,8 @@ final class CleanupProgressView: UIView {
 
     // MARK: - UI Components
 
-    /// 컨테이너 뷰 (블러 배경)
-    private lazy var containerView: UIVisualEffectView = {
-        let blur = UIBlurEffect(style: .systemMaterial)
-        let view = UIVisualEffectView(effect: blur)
-        view.translatesAutoresizingMaskIntoConstraints = false
-        view.layer.cornerRadius = 16
-        view.clipsToBounds = true
-        return view
-    }()
+    /// 컨테이너 뷰 (블러 팝업 카드)
+    private lazy var containerView = BlurPopupCardView()
 
     /// 제목 라벨
     private lazy var titleLabel: UILabel = {
@@ -120,6 +116,14 @@ final class CleanupProgressView: UIView {
         return stack
     }()
 
+    // MARK: - Banner Ad
+
+    /// 배너 광고 뷰 (분석 대기 화면 하단에 표시, FR-017)
+    private var bannerView: GADBannerView?
+
+    /// 배너 높이 제약조건 (로드 성공 시 확장)
+    private var bannerHeightConstraint: NSLayoutConstraint?
+
     // MARK: - Properties
 
     /// 델리게이트
@@ -143,7 +147,7 @@ final class CleanupProgressView: UIView {
     // MARK: - Setup
 
     private func setupUI() {
-        backgroundColor = UIColor.black.withAlphaComponent(0.4)
+        backgroundColor = UIColor.black.withAlphaComponent(0.5)
 
         addSubview(containerView)
         containerView.contentView.addSubview(stackView)
@@ -166,6 +170,57 @@ final class CleanupProgressView: UIView {
             // 진행바 너비
             progressBar.widthAnchor.constraint(equalTo: stackView.widthAnchor)
         ])
+    }
+
+    // MARK: - Banner Ad Setup
+
+    /// 배너 광고 설정 (Plus/Grace 시 미표시)
+    /// rootViewController 필요 → show(in:) 시점에 호출
+    private func setupBannerAd(rootViewController: UIViewController?) {
+        Logger.app.debug("CleanupProgressView: setupBannerAd 호출 — shouldShowAds=\(AdManager.shared.shouldShowAds()), rootVC=\(String(describing: rootViewController)), SDK초기화=\(AdManager.shared.isConfigured)")
+        guard AdManager.shared.shouldShowAds() else {
+            Logger.app.debug("CleanupProgressView: shouldShowAds=false → 배너 미생성")
+            return
+        }
+        guard let rootVC = rootViewController else {
+            Logger.app.debug("CleanupProgressView: rootVC=nil → 배너 미생성")
+            return
+        }
+
+        let banner = GADBannerView()
+        banner.adUnitID = AdManager.bannerAdUnitID
+        banner.rootViewController = rootVC
+        banner.delegate = self
+        banner.translatesAutoresizingMaskIntoConstraints = false
+
+        addSubview(banner)
+
+        // 초기 높이 0 (로드 성공 시 확장)
+        let height = banner.heightAnchor.constraint(equalToConstant: 0)
+        bannerHeightConstraint = height
+
+        NSLayoutConstraint.activate([
+            banner.centerXAnchor.constraint(equalTo: centerXAnchor),
+            banner.topAnchor.constraint(equalTo: containerView.bottomAnchor, constant: 20),
+            height
+        ])
+
+        self.bannerView = banner
+
+        // 표준 배너 크기 사용 (320×50) — 레이아웃 전이라 Adaptive 사이즈 계산 불가
+        banner.adSize = GADAdSizeBanner
+        bannerHeightConstraint?.constant = GADAdSizeBanner.size.height
+
+        banner.load(GADRequest())
+
+        Logger.app.debug("CleanupProgressView: 배너 광고 로드 요청 (size=320×50, rootVC=\(String(describing: rootVC)))")
+    }
+
+    /// 배너 광고 제거
+    private func removeBannerAd() {
+        bannerView?.removeFromSuperview()
+        bannerView = nil
+        bannerHeightConstraint = nil
     }
 
     // MARK: - Public Methods
@@ -235,8 +290,12 @@ final class CleanupProgressView: UIView {
     }
 
     /// 뷰 표시 (애니메이션)
-    func show(in parentView: UIView) {
+    /// - Parameters:
+    ///   - parentView: 부모 뷰
+    ///   - viewController: 배너 광고의 rootViewController (GADBannerView에 필요)
+    func show(in parentView: UIView, viewController: UIViewController? = nil) {
         alpha = 0
+        containerView.activateBlur()
         parentView.addSubview(self)
 
         translatesAutoresizingMaskIntoConstraints = false
@@ -247,6 +306,9 @@ final class CleanupProgressView: UIView {
             bottomAnchor.constraint(equalTo: parentView.bottomAnchor)
         ])
 
+        // [BM] 배너 광고 표시 (분석 대기 중, FR-017)
+        setupBannerAd(rootViewController: viewController)
+
         UIView.animate(withDuration: 0.25) {
             self.alpha = 1
         }
@@ -255,9 +317,13 @@ final class CleanupProgressView: UIView {
     /// 뷰 숨김 (애니메이션)
     /// - Parameter completion: 완료 콜백
     func hide(completion: (() -> Void)? = nil) {
+        // [BM] 배너 광고 제거
+        removeBannerAd()
+
         UIView.animate(withDuration: 0.25, animations: {
             self.alpha = 0
         }) { _ in
+            self.containerView.deactivateBlur()
             self.removeFromSuperview()
             completion?()
         }
@@ -296,5 +362,21 @@ final class CleanupProgressView: UIView {
 
     @objc private func cancelButtonTapped() {
         delegate?.cleanupProgressViewDidTapCancel(self)
+    }
+}
+
+// MARK: - GADBannerViewDelegate
+
+extension CleanupProgressView: GADBannerViewDelegate {
+
+    /// 배너 광고 로드 성공
+    func bannerViewDidReceiveAd(_ bannerView: GADBannerView) {
+        Logger.app.debug("CleanupProgressView: 배너 광고 로드 성공")
+    }
+
+    /// 배너 광고 로드 실패 → 높이 0 유지 (숨김)
+    func bannerView(_ bannerView: GADBannerView, didFailToReceiveAdWithError error: Error) {
+        bannerHeightConstraint?.constant = 0
+        Logger.app.error("CleanupProgressView: 배너 광고 로드 실패 — \(error.localizedDescription)")
     }
 }

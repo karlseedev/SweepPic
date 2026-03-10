@@ -279,6 +279,31 @@ extension BaseGridViewController {
         // --- 5) 선택 상태 업데이트 ---
         swipeDeleteState.selectedItems = newSelection
 
+        // --- 5-1) Reconciliation: stale animation이 딤드를 덮어쓴 셀 보정 ---
+        // 셀 재사용 시 중단된 애니메이션의 completion이 지연 실행되어
+        // cellForItemAt에서 적용한 딤드 상태를 파괴할 수 있음 → 강제 재적용
+        for cell in collectionView.visibleCells {
+            guard let photoCell = cell as? PhotoCell,
+                  let indexPath = collectionView.indexPath(for: cell),
+                  newSelection.contains(indexPath.item),
+                  indexPath.item != swipeDeleteState.curtainItem,
+                  !photoCell.isAnimating else { continue }
+
+            if deleteAction {
+                // 삭제 모드: 딤드가 안 칠해진 셀 보정
+                if !photoCell.isDimmedActive {
+                    if swipeActionIsRestore { photoCell.prepareSwipeOverlay(style: .restore) }
+                    applyTargetState(to: photoCell, deleteAction: deleteAction)
+                }
+            } else {
+                // 복원 모드: 딤드가 남아있는 셀 보정
+                if photoCell.isDimmedActive {
+                    if swipeActionIsRestore { photoCell.prepareSwipeOverlay(style: .restore) }
+                    applyTargetState(to: photoCell, deleteAction: deleteAction)
+                }
+            }
+        }
+
         // --- 6) 새 셀 추가 시 선택 햅틱 ---
         if selectionChanged {
             let added = newSelection.subtracting(previousSelection)
@@ -364,6 +389,9 @@ extension BaseGridViewController {
 
         // 5. TrashStore 배치 호출 (fire-and-forget, 선택 모드와 동일 패턴)
         if swipeActionIsRestore {
+            // ★ 삭제 애니메이션 준비 (deleteItems용 indexPath 전달)
+            let restoreIndexPaths = Array(selectedItems).sorted().map { IndexPath(item: $0, section: 0) }
+            prepareSwipeRestoreAnimation(at: restoreIndexPaths)
             trashStore.restore(assetIDs: assetIDsToProcess)
         } else if deleteAction {
             trashStore.moveToTrash(assetIDs: assetIDsToProcess)

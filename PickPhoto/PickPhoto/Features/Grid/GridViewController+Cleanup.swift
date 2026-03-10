@@ -12,6 +12,7 @@
 
 import UIKit
 import AppCore
+import OSLog
 
 // MARK: - Cleanup Support
 
@@ -40,7 +41,7 @@ extension GridViewController {
     @available(iOS 26.0, *)
     private func setupSystemCleanupButton() {
         let cleanupItem = UIBarButtonItem(
-            title: "정리",
+            image: UIImage(systemName: "wand.and.stars"),
             style: .plain,
             target: self,
             action: #selector(cleanupButtonTapped)
@@ -53,15 +54,18 @@ extension GridViewController {
             action: #selector(selectButtonTapped)
         )
         // 전체 메뉴 버튼 (최우측, 탭 시 풀다운 메뉴)
+        // 표준 UIBarButtonItem 사용 — iOS 26 Liquid Glass 스타일 자동 적용
+        // T053: "프리미엄 ▸" / "고객센터 ▸" 서브메뉴로 재구성 (FR-043)
         let menuItem = UIBarButtonItem(
             image: UIImage(systemName: "ellipsis"),
             menu: UIMenu(children: [
                 UIAction(title: "자동정리", image: UIImage(systemName: "wand.and.stars")) { _ in },
-                UIAction(title: "사용자", image: UIImage(systemName: "person.circle")) { _ in },
-                UIAction(title: "구독", image: UIImage(systemName: "creditcard")) { _ in },
-                UIAction(title: "기타", image: UIImage(systemName: "ellipsis")) { _ in },
-                UIAction(title: "고객센터", image: UIImage(systemName: "questionmark.circle")) { _ in },
+                PremiumMenuViewController.makeMenu(from: self),
+                CustomerServiceViewController.makeMenu(from: self),
                 self.makeCoachMarkReplayMenu(),
+                self.makeDebugResetMenu(),
+                self.makeDebugGracePeriodMenu(),
+                self.makeDebugAdTestMenu(),
             ])
         )
 
@@ -70,6 +74,9 @@ extension GridViewController {
 
         // 버튼 활성화 상태 초기화
         updateCleanupButtonState()
+
+        // 결제 문제 뱃지 업데이트 (FR-034, T035)
+        updatePaymentIssueBadge()
     }
 
     /// iOS 16~25 FloatingUI에 정리 버튼 추가
@@ -86,25 +93,103 @@ extension GridViewController {
             firstAction: { [weak self] in
                 self?.selectButtonTapped()
             },
-            secondTitle: "정리",
-            secondColor: UIColor(red: 0, green: 200/255, blue: 1.0, alpha: 1.0),  // #00C8FF
+            secondIcon: "wand.and.stars",
             secondAction: { [weak self] in
                 self?.cleanupButtonTapped()
             }
         )
 
         // 메뉴 버튼 (최우측, 풀다운 메뉴)
+        // T053: "프리미엄 ▸" / "고객센터 ▸" 서브메뉴로 재구성 (FR-043)
         overlay.titleBar.showMenuButton(menu: UIMenu(children: [
             UIAction(title: "자동정리", image: UIImage(systemName: "wand.and.stars")) { _ in },
-            UIAction(title: "사용자", image: UIImage(systemName: "person.circle")) { _ in },
-            UIAction(title: "구독", image: UIImage(systemName: "creditcard")) { _ in },
-            UIAction(title: "기타", image: UIImage(systemName: "ellipsis")) { _ in },
-            UIAction(title: "고객센터", image: UIImage(systemName: "questionmark.circle")) { _ in },
+            PremiumMenuViewController.makeMenu(from: self),
+            CustomerServiceViewController.makeMenu(from: self),
             self.makeCoachMarkReplayMenu(),
+            self.makeDebugResetMenu(),
+            self.makeDebugGracePeriodMenu(),
+            self.makeDebugAdTestMenu(),
         ]))
 
         // 버튼 활성화 상태 초기화
         updateCleanupButtonState()
+
+        // 결제 문제 뱃지 업데이트 (FR-034, T035)
+        updatePaymentIssueBadge()
+    }
+
+    // MARK: - Payment Issue Badge (결제 문제 뱃지)
+
+    /// 뱃지 태그 (중복 방지용, FloatingUI 전용)
+    private static let paymentBadgeTag = 9901
+
+    /// 결제 문제 시 메뉴 버튼에 뱃지 표시/제거 (FR-034, T035)
+    /// - iOS 26+: 공식 UIBarButtonItem.Badge API 사용
+    /// - iOS 16~25: FloatingUI menuButton에 커스텀 오버레이
+    private func updatePaymentIssueBadge() {
+        let hasIssue = SubscriptionStore.shared.state.hasPaymentIssue
+
+        if #available(iOS 26.0, *) {
+            // iOS 26+: 공식 Badge API — Liquid Glass 네비바와 자연스럽게 통합
+            guard let menuItem = navigationItem.rightBarButtonItems?.first else { return }
+
+            if hasIssue {
+                menuItem.badge = .indicator()
+            } else {
+                menuItem.badge = nil
+            }
+        } else {
+            // FloatingUI: menuButton에 커스텀 ! 뱃지 오버레이
+            guard let tabBarController = tabBarController as? TabBarController,
+                  let overlay = tabBarController.floatingOverlay else { return }
+
+            updateBadgeDot(on: overlay.titleBar.menuButtonView, show: hasIssue)
+        }
+    }
+
+    /// FloatingUI 전용: 뷰 위에 ! 뱃지 추가/제거
+    private func updateBadgeDot(on targetView: UIView, show: Bool) {
+        // 기존 뱃지 제거
+        targetView.viewWithTag(Self.paymentBadgeTag)?.removeFromSuperview()
+
+        guard show else { return }
+
+        // 빨간 원 + ! 텍스트 뱃지 생성 (16×16pt)
+        let badge = UIView()
+        badge.tag = Self.paymentBadgeTag
+        badge.backgroundColor = .systemRed
+        badge.layer.cornerRadius = 8
+        badge.translatesAutoresizingMaskIntoConstraints = false
+
+        let label = UILabel()
+        label.text = "!"
+        label.font = .systemFont(ofSize: 11, weight: .bold)
+        label.textColor = .white
+        label.textAlignment = .center
+        label.translatesAutoresizingMaskIntoConstraints = false
+        badge.addSubview(label)
+
+        targetView.addSubview(badge)
+        targetView.clipsToBounds = false
+
+        NSLayoutConstraint.activate([
+            badge.widthAnchor.constraint(equalToConstant: 16),
+            badge.heightAnchor.constraint(equalToConstant: 16),
+            badge.topAnchor.constraint(equalTo: targetView.topAnchor, constant: -4),
+            badge.trailingAnchor.constraint(equalTo: targetView.trailingAnchor, constant: 4),
+            label.centerXAnchor.constraint(equalTo: badge.centerXAnchor),
+            label.centerYAnchor.constraint(equalTo: badge.centerYAnchor),
+        ])
+    }
+
+    /// 구독 상태 변경 감지 등록 (결제 문제 뱃지 업데이트용)
+    /// viewDidLoad에서 호출
+    func observeSubscriptionStateForBadge() {
+        SubscriptionStore.shared.onStateChange { [weak self] _ in
+            DispatchQueue.main.async {
+                self?.updatePaymentIssueBadge()
+            }
+        }
     }
 
     /// 정리 버튼 활성화 상태 업데이트
@@ -131,6 +216,38 @@ extension GridViewController {
                 secondEnabled: hasPhotos
             )
         }
+    }
+
+    // MARK: - Navigation/Tab Interaction Lock
+
+    /// 분석 진행 중 상단 버튼/하단 탭 터치 차단
+    ///
+    /// CleanupProgressView는 GridViewController.view에 추가되므로
+    /// 상위 계층(FloatingOverlay, NavigationBar, TabBar)의 터치를 차단할 수 없음.
+    /// 직접 비활성화하여 분석 진행 중 의도치 않은 조작을 방지합니다.
+    private func disableNavigationAndTabInteraction() {
+        if #available(iOS 26.0, *) {
+            // iOS 26+: 시스템 네비바 아이템 + 탭바 비활성화
+            navigationItem.rightBarButtonItems?.forEach { $0.isEnabled = false }
+            tabBarController?.tabBar.isUserInteractionEnabled = false
+        } else {
+            // iOS 16~25: FloatingOverlay 전체 터치 비활성화
+            (tabBarController as? TabBarController)?.floatingOverlay?.isUserInteractionEnabled = false
+        }
+    }
+
+    /// 분석 종료 후 상단 버튼/하단 탭 터치 복구
+    private func enableNavigationAndTabInteraction() {
+        if #available(iOS 26.0, *) {
+            // iOS 26+: 시스템 네비바 아이템 + 탭바 복구
+            navigationItem.rightBarButtonItems?.forEach { $0.isEnabled = true }
+            tabBarController?.tabBar.isUserInteractionEnabled = true
+        } else {
+            // iOS 16~25: FloatingOverlay 터치 복구
+            (tabBarController as? TabBarController)?.floatingOverlay?.isUserInteractionEnabled = true
+        }
+        // 정리/선택 버튼의 enabled 상태를 사진 유무 기준으로 재계산
+        updateCleanupButtonState()
     }
 
     // MARK: - Cleanup Actions
@@ -244,6 +361,9 @@ extension GridViewController: CleanupProgressViewDelegate {
         cleanupTracker?.result = .cancelled
         sendCleanupTrackerAndClear()
 
+        // 상단 버튼/하단 탭 터치 복구
+        enableNavigationAndTabInteraction()
+
         view.hide()
     }
 }
@@ -334,7 +454,12 @@ extension GridViewController {
         let progressView = CleanupProgressView()
         progressView.delegate = self
         progressView.configure(method: method)
-        progressView.show(in: view)
+        // tabBarController.view에 추가 → FloatingOverlay/NavBar/TabBar보다 z-order 위에 배치
+        let targetView: UIView = tabBarController?.view ?? view
+        progressView.show(in: targetView, viewController: self)
+
+        // 상단 버튼/하단 탭 터치 차단 (분석 진행 중 의도치 않은 조작 방지)
+        disableNavigationAndTabInteraction()
 
         // 2. 서비스 생성 및 보관 (취소 접근용)
         let service = CleanupPreviewService()
@@ -358,6 +483,8 @@ extension GridViewController {
 
                 await MainActor.run { [weak self] in
                     self?.previewService = nil
+                    // 상단 버튼/하단 탭 터치 복구
+                    self?.enableNavigationAndTabInteraction()
                     progressView.hide {
                         if result.totalCount > 0 {
                             // [Analytics] 발견 수 기록
@@ -376,6 +503,16 @@ extension GridViewController {
                                     self?.cleanupTracker?.result = .completed
                                     self?.cleanupTracker?.foundCount = movedCount
                                     self?.cleanupTracker?.resultAction = .confirm
+
+                                    // [BM] 전면 광고 — 자동정리 완료 짝수 회차에만 표시 (FR-015)
+                                    // onFlowComplete 시점에는 PreviewGridVC가 화면 최상단이므로
+                                    // navigationController의 visibleViewController에서 표시
+                                    if AdCounters.shared.incrementAndShouldShowAd(for: .autoCleanupComplete),
+                                       let presentingVC = self?.navigationController?.visibleViewController ?? self {
+                                        InterstitialAdPresenter.shared.showAd(from: presentingVC) {
+                                            // 광고 닫힌 후 정상 진행
+                                        }
+                                    }
                                 }
                                 self?.sendCleanupTrackerAndClear()
                             }
@@ -393,6 +530,8 @@ extension GridViewController {
             } catch {
                 await MainActor.run { [weak self] in
                     self?.previewService = nil
+                    // 상단 버튼/하단 탭 터치 복구
+                    self?.enableNavigationAndTabInteraction()
                     progressView.hide {
                         // 취소(CancellationError)면 에러 표시 안 함
                         // (취소는 cleanupProgressViewDidTapCancel에서 이미 추적됨)
@@ -461,6 +600,130 @@ extension GridViewController {
             ]
         )
     }
+
+    /// (테스트) 리셋 서브메뉴 — 한도 리셋 + 구독 리셋
+    func makeDebugResetMenu() -> UIMenu {
+        let remaining = UsageLimitStore.shared.remainingFreeDeletes
+        let total = UsageLimitStore.shared.totalDailyCapacity
+        let isPlusUser = SubscriptionStore.shared.isPlusUser
+
+        return UIMenu(
+            title: "(테스트)리셋",
+            image: UIImage(systemName: "arrow.counterclockwise"),
+            children: [
+                UIAction(title: "한도 리셋 (\(remaining)/\(total))") { [weak self] _ in
+                    #if DEBUG
+                    UsageLimitStore.shared.debugReset()
+                    UserDefaults.standard.removeObject(forKey: "GaugeFirstTooltipShown")
+                    Logger.app.debug("GridVC+Cleanup: 디버그 한도 리셋 + 툴팁 플래그 초기화")
+                    NotificationCenter.default.post(name: .debugGracePeriodToggled, object: nil)
+                    #endif
+                    self?.setupCleanupButton()
+                },
+                UIAction(title: isPlusUser ? "구독 리셋 (현재 Plus)" : "구독 리셋 (현재 Free)") { [weak self] _ in
+                    #if DEBUG
+                    SubscriptionStore.shared.debugResetToFree()
+                    Logger.app.debug("GridVC+Cleanup: 디버그 구독 → Free 리셋")
+                    NotificationCenter.default.post(name: .debugGracePeriodToggled, object: nil)
+                    #endif
+                    self?.setupCleanupButton()
+                },
+                UIAction(title: "구독 강제 Plus") { [weak self] _ in
+                    #if DEBUG
+                    SubscriptionStore.shared.debugSetPlus()
+                    Logger.app.debug("GridVC+Cleanup: 디버그 구독 → Plus 설정")
+                    NotificationCenter.default.post(name: .debugGracePeriodToggled, object: nil)
+                    #endif
+                    self?.setupCleanupButton()
+                },
+                UIAction(title: "결제 문제 시뮬레이션 (뱃지 테스트)") { [weak self] _ in
+                    #if DEBUG
+                    SubscriptionStore.shared.debugSetPaymentIssue()
+                    Logger.app.debug("GridVC+Cleanup: 디버그 결제 문제 시뮬레이션")
+                    NotificationCenter.default.post(name: .debugGracePeriodToggled, object: nil)
+                    #endif
+                    self?.setupCleanupButton()
+                },
+            ]
+        )
+    }
+
+    /// (테스트) 광고 상태 테스트 메뉴
+    /// 리워드 광고 강제 제거(no-fill 시뮬레이션) + 한도 소진 + 상태 확인
+    func makeDebugAdTestMenu() -> UIMenu {
+        return UIMenu(
+            title: "(테스트)광고",
+            image: UIImage(systemName: "play.rectangle"),
+            children: [
+                UIAction(title: "no-fill ON (광고 로드 차단)") { _ in
+                    #if DEBUG
+                    AdManager.shared.debugClearRewardedAd()
+                    #endif
+                },
+                UIAction(title: "no-fill OFF (정상 복구)") { _ in
+                    #if DEBUG
+                    AdManager.shared.debugDisableNoFill()
+                    #endif
+                },
+                UIAction(title: "기본한도 소진") { [weak self] _ in
+                    #if DEBUG
+                    UsageLimitStore.shared.debugExhaustFreeLimit()
+                    Logger.app.debug("GridVC+Cleanup: 디버그 기본한도 소진")
+                    NotificationCenter.default.post(name: .debugGracePeriodToggled, object: nil)
+                    #endif
+                    self?.setupCleanupButton()
+                },
+                UIAction(title: "전체한도 소진 (골든모먼트)") { [weak self] _ in
+                    #if DEBUG
+                    UsageLimitStore.shared.debugExhaustAll()
+                    Logger.app.debug("GridVC+Cleanup: 디버그 전체한도 소진")
+                    NotificationCenter.default.post(name: .debugGracePeriodToggled, object: nil)
+                    #endif
+                    self?.setupCleanupButton()
+                },
+            ]
+        )
+    }
+
+    /// (테스트) Grace Period 서브메뉴
+    /// Day 0~2 선택 + 만료 + OFF
+    func makeDebugGracePeriodMenu() -> UIMenu {
+        let currentDay = GracePeriodService.shared.currentDay
+        let isActive = GracePeriodService.shared.isActive
+
+        // Day 0, 1, 2 선택 액션
+        let dayActions = (0...2).map { day in
+            let remaining = 3 - day
+            let check = (isActive && currentDay == day) ? " ✅" : ""
+            return UIAction(
+                title: "Day \(day) (\(remaining)일 남음)\(check)"
+            ) { [weak self] _ in
+                #if DEBUG
+                GracePeriodService.shared.debugSetDay(day)
+                NotificationCenter.default.post(name: .debugGracePeriodToggled, object: nil)
+                #endif
+                self?.setupCleanupButton()
+            }
+        }
+
+        // 만료 (Day 4)
+        let expireCheck = (!isActive && currentDay >= 3) ? " ✅" : ""
+        let expireAction = UIAction(
+            title: "만료 (Day 4)\(expireCheck)"
+        ) { [weak self] _ in
+            #if DEBUG
+            GracePeriodService.shared.debugExpire()
+            NotificationCenter.default.post(name: .debugGracePeriodToggled, object: nil)
+            #endif
+            self?.setupCleanupButton()
+        }
+
+        return UIMenu(
+            title: isActive ? "(테스트)체험기간 ✅" : "(테스트)체험기간",
+            image: UIImage(systemName: "clock.arrow.circlepath"),
+            children: dayActions + [expireAction]
+        )
+    }
 }
 
 // MARK: - PreviewGridViewControllerDelegate
@@ -470,6 +733,15 @@ extension GridViewController: PreviewGridViewControllerDelegate {
     func previewGridVC(_ vc: PreviewGridViewController, didConfirmCleanup assetIDs: [String]) {
         // 삭제대기함으로 이동
         trashStore.moveToTrash(assetIDs: assetIDs)
+
+        // [BM] T055: 자동정리 완료 후 리뷰 요청 평가 (FR-049)
+        if let windowScene = view.window?.windowScene {
+            let prohibited = ReviewService.shared.isProhibitedTiming
+            ReviewService.shared.evaluateAndRequestIfNeeded(
+                from: windowScene,
+                isProhibitedTiming: prohibited
+            )
+        }
     }
 }
 

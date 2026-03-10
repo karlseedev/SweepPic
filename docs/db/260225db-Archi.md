@@ -182,7 +182,8 @@ NSPrivacyCollectedDataTypes:
 │  ┌─────────────────────────────────────┐    │
 │  │ SupabaseProvider (옵셔널)           │    │
 │  │ - URLSession 기반 HTTP POST         │    │
-│  │ - 배치 전송 (sendBatch)            │    │
+│  │ - 배치/단건 전송 + 오프라인 큐      │    │
+│  │ - 선별적 재시도 (4xx 드롭)          │    │
 │  │ - credentials 없으면 nil → 비활성   │    │
 │  └─────────────────────────────────────┘    │
 └─────────────────────────────────────────────┘
@@ -201,7 +202,7 @@ TelemetryDeck + Supabase 이중 전송을 위한 내부 헬퍼:
 ```swift
 /// TD + Supabase 이중 전송 (즉시 전송형 이벤트용)
 /// - TelemetryDeck: 항상 전송 (SDK가 "PickPhoto." prefix 자동 추가)
-/// - Supabase: supabaseExcluded에 없을 때만 전송
+/// - Supabase: 전 이벤트 수집 (supabaseExcluded = 빈 Set)
 func sendEvent(_ name: String, parameters: [String: String] = [:]) {
     TelemetryDeck.signal(name, parameters: parameters)
     guard !Self.supabaseExcluded.contains(name) else { return }
@@ -224,9 +225,9 @@ func sendEventBatch(_ events: [(name: String, parameters: [String: String])]) {
 
 ```swift
 /// Supabase PostgREST에 이벤트를 전송하는 경량 HTTP 클라이언트
-/// - 외부 의존성 0 (supabase-swift SDK 미사용, URLSession만 사용)
-/// - 오프라인 큐 없음 (TD가 주 데이터, 유실 허용)
-/// - 재시도 없음
+/// - URLSession 기반 (외부 의존성 0)
+/// - 오프라인 큐: Application Support/analytics/supabase_pending.json (최대 200건)
+/// - 선별적 재시도: 네트워크 에러/429/5xx만 큐 저장, 4xx는 드롭
 final class SupabaseProvider {
     struct EventPayload {
         let eventName: String
@@ -236,8 +237,9 @@ final class SupabaseProvider {
 
     init?(baseURL: String, anonKey: String)  // URL이 잘못되면 nil
 
-    func send(eventName:params:photoBucket:)           // 단건 즉시 전송
-    func sendBatch(events:completion:)                  // 배치 전송 + completion
+    func send(eventName:params:photoBucket:)           // 단건 즉시 전송 (실패 시 큐 저장)
+    func sendBatch(events:completion:)                  // 배치 전송 + completion (실패 시 큐 저장)
+    func flushPendingQueue()                            // 보류 큐 재전송 (포그라운드 진입 시)
 }
 ```
 
@@ -249,7 +251,7 @@ Headers:
   Content-Type: application/json
   apikey: {anonKey}                    ← API 게이트웨이 통과용
   Authorization: Bearer {anonKey}      ← PostgREST RLS 평가용 (같은 키)
-  Prefer: return=minimal               ← 응답에 삽입된 행 미반환 (트래픽 절감)
+  Prefer: return=minimal, missing=default  ← 응답 미반환 + 누락 컬럼 DB 기본값 적용
 
 Body (배치): JSON 배열
 [
@@ -272,10 +274,11 @@ Body (단건): 같은 형태의 단일 객체 (배열 아님)
   400 Bad Request — JSON 형식 오류 또는 키 불일치
 ```
 
-**에러 처리:**
-- 네트워크 실패, 4xx, 5xx 모두 **무시** (TD가 주 데이터)
-- 상태코드 + 에러 로깅: `Log.print("[Supabase] send xxx → HTTP 201")`
-- 재시도 없음, 큐잉 없음
+**에러 처리 (선별적 재시도):**
+- 성공 (2xx): 정상 완료
+- 재시도 대상 (큐 저장): 네트워크 에러, 429 Rate Limit, 5xx 서버 오류
+- 드롭 (재시도 안함): 4xx 클라이언트 오류 (400 RLS 위반, 403 권한 등 — 재시도해도 영구 실패)
+- 큐 재전송: 포그라운드 진입 시 `flushPendingQueue()` 호출
 
 ### 2.6 설계 원칙
 
@@ -301,6 +304,7 @@ AppDelegate.didFinishLaunchingWithOptions
 SceneDelegate.sceneWillEnterForeground
   └→ AnalyticsService.shared.refreshPhotoLibraryBucket()
   └→ AnalyticsService.shared.trackAppLaunched()
+  └→ AnalyticsService.shared.flushPendingSupabaseEvents()  ← 오프라인 큐 재전송
 
 SceneDelegate.sceneDidEnterBackground
   └→ beginBackgroundTask (Supabase POST 완료 대기)
@@ -869,6 +873,7 @@ CREATE TABLE events (
     os_version TEXT,
     app_version TEXT,
     photo_bucket TEXT,
+    is_test BOOLEAN NOT NULL DEFAULT true,
     created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 CREATE INDEX idx_events_name ON events(event_name);
@@ -880,10 +885,12 @@ CREATE INDEX idx_events_name_created ON events(event_name, created_at);
 
 ```sql
 ALTER TABLE events ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "anon_insert" ON events;
 CREATE POLICY "anon_insert" ON events FOR INSERT TO anon
     WITH CHECK (
         event_name IN (
             'app.launched',
+            'permission.result',
             'session.photoViewing',
             'session.deleteRestore',
             'session.trashViewer',
@@ -891,12 +898,13 @@ CREATE POLICY "anon_insert" ON events FOR INSERT TO anon
             'session.errors',
             'similar.groupClosed',
             'cleanup.completed',
-            'cleanup.previewCompleted'
+            'cleanup.previewCompleted',
+            'session.gridPerformance'
         )
     );
 ```
 
-> INSERT만 허용, SELECT/UPDATE/DELETE 정책 없음. 이벤트명 화이트리스트(9종)로 무단 INSERT 방지.
+> INSERT만 허용, SELECT/UPDATE/DELETE 정책 없음. 이벤트명 화이트리스트(11종)로 무단 INSERT 방지.
 
 ### 5.3 RPC 함수
 
@@ -1055,7 +1063,7 @@ scripts/analytics/
 | 파일 | 내용 | 줄 수 |
 |------|------|-------|
 | `AnalyticsService.swift` | 싱글톤, configure, queue, sendEvent/sendEventBatch, supabaseProvider, onFlushComplete | ~170줄 |
-| `SupabaseProvider.swift` | URLSession HTTP POST, 배치/단건 전송, 디바이스 메타데이터 | ~166줄 |
+| `SupabaseProvider.swift` | URLSession HTTP POST, 배치/단건 전송, 오프라인 큐, 선별적 재시도 | ~305줄 |
 
 #### PickPhoto — Extension (7개)
 

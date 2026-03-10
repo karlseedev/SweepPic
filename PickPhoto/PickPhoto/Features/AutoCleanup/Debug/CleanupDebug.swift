@@ -41,24 +41,6 @@ enum CleanupDebug {
 
     #if DEBUG
 
-    /// 개별 분석 결과 로깅
-    ///
-    /// 각 사진의 분석 결과를 Log.swift 카테고리 시스템으로 출력합니다.
-    /// - Parameter result: 분석 결과
-    static func logResult(_ result: QualityResult) {
-        let assetShort = String(result.assetID.prefix(8))
-        let verdictStr = verdictDescription(result.verdict)
-        let signalStr = result.signals.map { $0.kind.rawValue }.joined(separator: ", ")
-        let timeStr = String(format: "%.1f", result.analysisTimeMs)
-
-        Logger.cleanup.debug("[\(assetShort)] \(verdictStr) | signals: [\(signalStr)] | \(timeStr)ms")
-
-        // Safe Guard 적용된 경우 추가 로깅
-        if result.safeGuardApplied, let reason = result.safeGuardReason {
-            Logger.cleanup.debug("[\(assetShort)] SafeGuard: \(reason.rawValue)")
-        }
-    }
-
     /// 배치 분석 통계 로깅
     ///
     /// 배치 단위로 분석 결과를 요약하여 출력합니다.

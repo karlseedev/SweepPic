@@ -276,6 +276,9 @@ final class GridViewController: BaseGridViewController {
 
         // 정리 버튼 설정 (auto-cleanup)
         setupCleanupButton()
+
+        // 구독 상태 변경 시 메뉴 뱃지 업데이트 (결제 문제 아이콘)
+        observeSubscriptionStateForBadge()
     }
 
     /// 추가 제스처 설정 (setupGestures에서 호출됨)
@@ -498,8 +501,9 @@ final class GridViewController: BaseGridViewController {
 
     /// contentInset 업데이트 (플로팅 UI 높이 반영, fallback 처리 포함)
     override func updateContentInset() {
-        // iOS 26+에서는 시스템 자동 조정 사용
+        // iOS 26+에서는 base class에서 보정 처리
         if #available(iOS 26.0, *) {
+            super.updateContentInset()
             return
         }
 
@@ -953,9 +957,13 @@ extension GridViewController: ViewerViewControllerDelegate {
         trashStore.moveToTrash(assetIDs: [assetID])
 
         // 그리드 셀 업데이트 (딤드 표시)
-        // padding 보정 적용 (Base의 collectionIndexPath 사용)
-        if let indexPath = collectionIndexPath(for: assetID) {
-            collectionView.reloadItems(at: [indexPath])
+        // iOS 26+: Navigation Push → viewWillAppear에서 handleTrashStateChange가 처리
+        // iOS 16~25: Modal dismiss 시 viewWillAppear 미호출 → 여기서 미리 업데이트 필요
+        // (iOS 26 reloadItems first-use 랙 회피: 260301Lag2-Del.md 참조)
+        if #unavailable(iOS 26.0) {
+            if let indexPath = collectionIndexPath(for: assetID) {
+                collectionView.reloadItems(at: [indexPath])
+            }
         }
 
         // [SimilarPhoto] 그룹 무효화 처리 (T022)
@@ -970,27 +978,26 @@ extension GridViewController: ViewerViewControllerDelegate {
         trashStore.restore(assetIDs: [assetID])
 
         // 그리드 셀 업데이트 (딤드 제거)
-        // padding 보정 적용 (Base의 collectionIndexPath 사용)
-        if let indexPath = collectionIndexPath(for: assetID) {
-            collectionView.reloadItems(at: [indexPath])
+        // iOS 26+: viewWillAppear → handleTrashStateChange에서 처리
+        // iOS 16~25: Modal dismiss 시 viewWillAppear 미호출 → 여기서 미리 업데이트
+        if #unavailable(iOS 26.0) {
+            if let indexPath = collectionIndexPath(for: assetID) {
+                collectionView.reloadItems(at: [indexPath])
+            }
         }
     }
 
     /// 사진 최종 삭제 요청 (iOS 삭제대기함으로 이동)
     /// 비동기 작업 - 삭제 완료 후 뷰어에 알림
     func viewerDidRequestPermanentDelete(assetID: String) {
-        // TrashStore에서 최종 삭제 (iOS 시스템 팝업 표시)
         Task {
             do {
                 try await trashStore.permanentlyDelete(assetIDs: [assetID])
-
-                // 삭제 완료 후 뷰어에 알림 (메인 스레드에서)
-                // weak 참조로 접근 (Push/Modal 방식에 무관)
                 await MainActor.run {
                     self.activeViewerVC?.handleDeleteComplete()
                 }
             } catch {
-                // 삭제 실패 시 에러 무시 (사용자가 시스템 팝업에서 취소)
+                // 삭제 실패 시 에러 무시
             }
         }
     }

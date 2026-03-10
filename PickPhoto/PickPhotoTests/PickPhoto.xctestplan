@@ -22,7 +22,7 @@
     {
       "target" : {
         "containerPath" : "container:PickPhoto.xcodeproj",
-        "identifier" : "CBAB3B1B2EFAE2CB00548282",
+        "identifier" : "CBAB3B192EFAE2CB00548282",
         "name" : "PickPhotoUITests"
       }
     }

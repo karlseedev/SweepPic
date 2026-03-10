@@ -122,9 +122,9 @@ check "session.errors"              "face.detection"      "2"
 check "session.errors"              "cleanup.trashMove"   "1"
 
 echo ""
-echo "[Supabase 제외 확인 (음성 테스트)]"
-check_absent "permission.result"
-check_absent "session.gridPerformance"
+echo "[추가 이벤트 확인 (전 이벤트 수집)]"
+check_exists "permission.result"
+check "session.gridPerformance" "grayShown" "42"
 
 echo ""
 echo "======================================="

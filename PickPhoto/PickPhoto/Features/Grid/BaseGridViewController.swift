@@ -571,8 +571,9 @@ class BaseGridViewController: UIViewController {
     /// contentInset 업데이트 (플로팅 UI 높이 반영)
     /// 서브클래스에서 오버라이드 가능
     func updateContentInset() {
-        // iOS 26+에서는 시스템 자동 조정 사용
+        // iOS 26+에서는 시스템 자동 조정 + 서브타이틀 겹침 보정
         if #available(iOS 26.0, *) {
+            collectionView.contentInset.top = 16
             return
         }
 
@@ -655,6 +656,10 @@ class BaseGridViewController: UIViewController {
     func viewerMode(for asset: PHAsset) -> ViewerMode {
         .normal
     }
+
+    /// 스와이프 복구 확정 전 호출 (삭제대기함에서 deleteItems 애니메이션 준비용)
+    /// - Parameter indexPaths: 복구될 셀의 indexPath 배열
+    func prepareSwipeRestoreAnimation(at indexPaths: [IndexPath]) {}
 
     /// 삭제 후 추가 처리
     func handleDeleteComplete(assetID: String) {}
@@ -1079,6 +1084,7 @@ extension BaseGridViewController {
 
             if self.swipeActionIsRestore {
                 // ★ 삭제대기함: 항상 복구, 코치마크 스킵
+                self.prepareSwipeRestoreAnimation(at: [indexPath])
                 AnalyticsService.shared.countTrashRestore()
                 self.trashStore.restore(assetID) { [weak self] result in
                     self?.handleSwipeResult(result, cell: cell)

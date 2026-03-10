@@ -47,6 +47,10 @@ final class TrashAlbumViewController: BaseGridViewController {
     /// iOS 26+ Select 버튼 참조 (빈 삭제대기함일 때 비활성화용)
     private var selectBarButtonItem: UIBarButtonItem?
 
+    /// 스와이프 복구 시 deleteItems 애니메이션용 indexPath
+    /// onDataLoaded()에서 소비하여 reloadData() 대신 deleteItems 수행
+    private var pendingDeleteIndexPaths: [IndexPath]?
+
     /// 초기 스크롤 완료 여부 (맨 아래로 스크롤)
     private var didInitialScroll: Bool = false
 
@@ -115,10 +119,54 @@ final class TrashAlbumViewController: BaseGridViewController {
     /// 스와이프 동작: 복구 (녹색 커튼)
     override var swipeActionIsRestore: Bool { true }
 
+    /// contentInset 업데이트 — 게이지/배너 높이만큼 추가 여백 적용
+    /// 게이지(tag 9901) 또는 Grace Period 배너(tag 9902) 높이를 동적 계산
+    override func updateContentInset() {
+        let hasGauge = view.viewWithTag(9901) != nil
+        let bannerView = view.viewWithTag(9902)
+
+        // 게이지/배너 높이에 따른 추가 inset 계산
+        // 게이지: 고정 52pt + 11 여백 = 63
+        // 배너: 가변 높이 + 11 여백 (systemLayoutSizeFitting으로 동적 계산)
+        let extraInset: CGFloat
+        if hasGauge {
+            extraInset = 63
+        } else if let banner = bannerView {
+            // 배너 레이아웃 강제 계산 후 실제 높이 사용
+            banner.layoutIfNeeded()
+            let bannerHeight = banner.bounds.height
+            extraInset = bannerHeight > 0 ? bannerHeight + 11 : 0
+        } else {
+            extraInset = 0
+        }
+
+        if #available(iOS 26.0, *) {
+            // iOS 26+: base class 보정(12) 적용 후 게이지/배너분 추가
+            super.updateContentInset()
+            if extraInset > 0 {
+                collectionView.contentInset.top += extraInset
+            }
+        } else {
+            // iOS 16~25: 부모 클래스가 heights.top 기반 inset 설정 후 추가
+            super.updateContentInset()
+            if extraInset > 0 {
+                var current = collectionView.contentInset
+                current.top += extraInset
+                collectionView.contentInset = current
+                collectionView.scrollIndicatorInsets = current
+            }
+        }
+    }
+
     /// Select 모드 진입 시 스와이프 비활성화 (GridViewController와 동일 패턴)
     override func updateSwipeDeleteGestureEnabled() {
         let enabled = !isSelectMode && !UIAccessibility.isVoiceOverRunning
         swipeDeleteState.swipeGesture?.isEnabled = enabled
+    }
+
+    /// 스와이프 복구 확정 전: deleteItems 애니메이션용 indexPath 저장
+    override func prepareSwipeRestoreAnimation(at indexPaths: [IndexPath]) {
+        pendingDeleteIndexPaths = indexPaths
     }
 
     // MARK: - Initialization
@@ -139,6 +187,13 @@ final class TrashAlbumViewController: BaseGridViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
         setupObservers()
+
+        // [BM] 게이지 뷰 설정 (Phase 3 T016)
+        setupGaugeView()
+        observeSubscriptionStateForGauge()
+        #if DEBUG
+        observeDebugGracePeriodToggle()
+        #endif
 
         // 노출 게이팅: 프리로드 완료까지 숨김
         collectionView.alpha = 0
@@ -163,6 +218,9 @@ final class TrashAlbumViewController: BaseGridViewController {
 
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
+
+        // [BM] Grace Period 만료 시 배너 → 게이지 전환 체크 (Phase 5 T026)
+        checkGracePeriodTransition()
 
         // 현재 화면이 TrashStore 변경을 받도록 핸들러 재등록
         trashStore.onStateChange { [weak self] _ in
@@ -349,7 +407,34 @@ final class TrashAlbumViewController: BaseGridViewController {
         // viewerWillClose에서 복구된 사진 셀을 isHidden=true로 설정한 경우,
         // reloadData 전에 복원해야 셀 재사용 시 isHidden 잔존 방지
         collectionView.visibleCells.forEach { $0.isHidden = false }
-        collectionView.reloadData()
+
+        // ★ 스와이프 복구: deleteItems 애니메이션 (reloadData 대신)
+        if let paths = pendingDeleteIndexPaths {
+            pendingDeleteIndexPaths = nil
+            let oldTotal = collectionView.numberOfItems(inSection: 0)
+            let newTotal = _trashDataSource.assetCount + paddingCellCount
+
+            collectionView.performBatchUpdates {
+                // 1. 복구된 에셋 셀 삭제 (업데이트 전 indexPath 기준)
+                self.collectionView.deleteItems(at: paths)
+
+                // 2. padding 보정 (에셋 수 변화로 상단 빈 셀 수가 바뀔 수 있음)
+                let afterDeleteCount = oldTotal - paths.count
+                if afterDeleteCount > newTotal {
+                    // padding 감소 → 상단 padding 셀 추가 삭제
+                    let extraCount = afterDeleteCount - newTotal
+                    let extraPaths = (0..<extraCount).map { IndexPath(item: $0, section: 0) }
+                    self.collectionView.deleteItems(at: extraPaths)
+                } else if afterDeleteCount < newTotal {
+                    // padding 증가 → 상단에 padding 셀 삽입 (업데이트 후 기준)
+                    let insertCount = newTotal - afterDeleteCount
+                    let insertPaths = (0..<insertCount).map { IndexPath(item: $0, section: 0) }
+                    self.collectionView.insertItems(at: insertPaths)
+                }
+            }
+        } else {
+            collectionView.reloadData()
+        }
 
         updateEmptyState()
 
@@ -555,19 +640,63 @@ final class TrashAlbumViewController: BaseGridViewController {
     }
 
     /// 삭제대기함 비우기 실행
+    /// 게이트 평가 후 통과 시에만 실제 삭제 진행 (BM Phase 3 T017)
+    /// 성공 시 축하 화면 표시 (BM Phase 9 T046)
     private func performEmptyTrash() {
-        // [Analytics] 이벤트 4-2: 삭제대기함 비우기 (최종 삭제)
-        AnalyticsService.shared.countTrashPermanentDelete()
+        let count = _trashDataSource.assetCount
+        guard count > 0 else { return }
 
-        Task {
-            do {
-                try await trashStore.emptyTrash()
-                // E-3: 첫 비우기 완료 안내 트리거
-                showFirstEmptyFeedbackIfNeeded()
-            } catch {
-                // 취소 또는 오류 시 조용히 무시 (사진이 그대로 남아있음, E-3 안 뜸)
+        // [BM] 축하 화면용: 삭제 전 asset 수집 (삭제 후 PHAsset 접근 불가)
+        var assets: [PHAsset] = []
+        assets.reserveCapacity(count)
+        for i in 0..<count {
+            if let asset = _trashDataSource.asset(at: i) {
+                assets.append(asset)
             }
-            // 성공/실패 무관하게 UI 갱신 (onStateChange 콜백으로 처리됨)
+        }
+
+        evaluateGateAndExecute(trashCount: count) { [weak self] in
+            // [Analytics] 이벤트 4-2: 삭제대기함 비우기 (최종 삭제)
+            AnalyticsService.shared.countTrashPermanentDelete()
+
+            Task {
+                // [BM] 파일 크기 계산 (삭제 전, 비동기 → async 변환)
+                let freedBytes = await withCheckedContinuation { (continuation: CheckedContinuation<Int64, Never>) in
+                    FileSizeCalculator.shared.calculateTotalSize(for: assets) { bytes in
+                        continuation.resume(returning: bytes)
+                    }
+                }
+
+                do {
+                    try await self?.trashStore.emptyTrash()
+                    // 삭제 성공 후에만 한도 차감 (iOS 팝업 취소 시 미차감)
+                    UsageLimitStore.shared.recordDelete(count: count)
+                    // [BM] T057: 삭제 완료 이벤트 (FR-056)
+                    AnalyticsService.shared.trackDeletionCompleted(count: count)
+
+                    // [BM] 통계 저장 + 축하 화면 (FR-039, FR-040, T046)
+                    await MainActor.run {
+                        self?.showCelebrationAfterDeletion(
+                            deletedCount: count,
+                            freedBytes: freedBytes
+                        )
+                    }
+
+                    // [BM] T055: 삭제 완료 후 리뷰 요청 평가 (FR-049)
+                    if let windowScene = self?.view.window?.windowScene {
+                        let prohibited = ReviewService.shared.isProhibitedTiming
+                        ReviewService.shared.evaluateAndRequestIfNeeded(
+                            from: windowScene,
+                            isProhibitedTiming: prohibited
+                        )
+                    }
+
+                    // E-3: 첫 비우기 완료 안내 트리거
+                    self?.showFirstEmptyFeedbackIfNeeded()
+                } catch {
+                    // 취소 또는 오류 시 조용히 무시 — 한도 미차감
+                }
+            }
         }
     }
 
@@ -683,22 +812,26 @@ extension TrashAlbumViewController: ViewerViewControllerDelegate {
 
     /// 최종 삭제 요청 (T057)
     /// 비동기 작업 - 삭제 완료 후 뷰어에 알림
+    /// 게이트 평가 후 통과 시에만 실제 삭제 진행 (BM Phase 3)
     func viewerDidRequestPermanentDelete(assetID: String) {
-        // [Analytics] 이벤트 4-2: 삭제대기함 최종 삭제
-        AnalyticsService.shared.countTrashPermanentDelete()
+        evaluateGateAndExecute(trashCount: 1) { [weak self] in
+            // [Analytics] 이벤트 4-2: 삭제대기함 최종 삭제
+            AnalyticsService.shared.countTrashPermanentDelete()
 
-        Task {
-            do {
-                try await trashStore.permanentlyDelete(assetIDs: [assetID])
-                // loadTrashedAssets()는 onStateChange 콜백으로 자동 호출됨
+            Task {
+                do {
+                    try await self?.trashStore.permanentlyDelete(assetIDs: [assetID])
+                    // 삭제 성공 후에만 한도 차감
+                    UsageLimitStore.shared.recordDelete(count: 1)
+                    // loadTrashedAssets()는 onStateChange 콜백으로 자동 호출됨
 
-                // 삭제 완료 후 뷰어에 알림 (메인 스레드에서)
-                // weak 참조로 접근 (Push/Modal 방식에 무관)
-                await MainActor.run {
-                    self.activeViewerVC?.handleDeleteComplete()
+                    // 삭제 완료 후 뷰어에 알림 (메인 스레드에서)
+                    await MainActor.run {
+                        self?.activeViewerVC?.handleDeleteComplete()
+                    }
+                } catch {
+                    // 취소 또는 오류 시 조용히 무시 — 한도 미차감
                 }
-            } catch {
-                // 취소 또는 오류 시 조용히 무시
             }
         }
     }

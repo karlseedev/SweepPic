@@ -204,7 +204,7 @@ final class FloatingTitleBar: UIView {
         return button
     }()
 
-    /// 두 번째 오른쪽 버튼 (Select 버튼 왼쪽에 배치)
+    /// 두 번째 오른쪽 버튼 - 텍스트 (Select 버튼 왼쪽에 배치)
     /// 삭제대기함 탭에서 [Select] [비우기] 동시 표시용
     /// iOS 26 스펙: 높이 38pt, fontSize 17pt
     private lazy var secondRightButton: GlassTextButton = {
@@ -214,6 +214,19 @@ final class FloatingTitleBar: UIView {
         button.isHidden = true // 기본 숨김
         return button
     }()
+
+    /// 두 번째 오른쪽 버튼 - 아이콘 (Select 버튼 왼쪽에 배치)
+    /// 정리 버튼 등 아이콘이 필요한 경우 사용
+    private lazy var secondRightIconButton: GlassIconButton = {
+        let button = GlassIconButton(icon: "wand.and.stars", size: .medium, tintColor: .systemBlue)
+        button.addTarget(self, action: #selector(secondRightButtonTapped), for: .touchUpInside)
+        button.translatesAutoresizingMaskIntoConstraints = false
+        button.isHidden = true // 기본 숨김
+        return button
+    }()
+
+    /// 메뉴 버튼 뷰 접근 (뱃지 오버레이용)
+    var menuButtonView: UIView { menuButton }
 
     /// 메뉴 버튼 (최우측, 햄버거 아이콘)
     /// 탭 시 UIMenu 풀다운 메뉴 표시
@@ -263,6 +276,7 @@ final class FloatingTitleBar: UIView {
         contentContainer.addSubview(titleLabel)
         contentContainer.addSubview(subtitleLabel)
         contentContainer.addSubview(secondRightButton)
+        contentContainer.addSubview(secondRightIconButton)
         contentContainer.addSubview(selectButton)
         contentContainer.addSubview(menuButton)
 
@@ -300,9 +314,13 @@ final class FloatingTitleBar: UIView {
             // Select 버튼: 세로 중앙 (trailing은 동적 전환)
             selectButton.centerYAnchor.constraint(equalTo: contentContainer.centerYAnchor),
 
-            // Second Right 버튼: Select 버튼 왼쪽, 세로 중앙
+            // Second Right 버튼 (텍스트): Select 버튼 왼쪽, 세로 중앙
             secondRightButton.trailingAnchor.constraint(equalTo: selectButton.leadingAnchor, constant: -8),
             secondRightButton.centerYAnchor.constraint(equalTo: contentContainer.centerYAnchor),
+
+            // Second Right 버튼 (아이콘): Select 버튼 왼쪽, 세로 중앙
+            secondRightIconButton.trailingAnchor.constraint(equalTo: selectButton.leadingAnchor, constant: -8),
+            secondRightIconButton.centerYAnchor.constraint(equalTo: contentContainer.centerYAnchor),
 
             // 메뉴 버튼: 최우측, 세로 중앙
             menuButton.trailingAnchor.constraint(equalTo: contentContainer.trailingAnchor),
@@ -355,7 +373,13 @@ final class FloatingTitleBar: UIView {
             return backButton
         }
 
-        // Second Right 버튼 영역 체크 (Select 버튼 왼쪽)
+        // Second Right 아이콘 버튼 영역 체크 (Select 버튼 왼쪽)
+        let secondRightIconPoint = convert(point, to: secondRightIconButton)
+        if secondRightIconButton.bounds.contains(secondRightIconPoint) && !secondRightIconButton.isHidden {
+            return secondRightIconButton
+        }
+
+        // Second Right 텍스트 버튼 영역 체크 (Select 버튼 왼쪽)
         let secondRightPoint = convert(point, to: secondRightButton)
         if secondRightButton.bounds.contains(secondRightPoint) && !secondRightButton.isHidden {
             return secondRightButton
@@ -483,6 +507,13 @@ final class FloatingTitleBar: UIView {
     /// - Parameter cancelAction: Cancel 버튼 탭 시 실행할 클로저
     func enterSelectMode(cancelAction: @escaping () -> Void) {
         setRightButton(title: "취소", backgroundColor: .systemBlue, action: cancelAction)
+        // 정리 버튼, 메뉴 버튼 숨기기 (iOS 26 시스템 UI와 동일하게)
+        secondRightButton.isHidden = true
+        secondRightIconButton.isHidden = true
+        menuButton.isHidden = true
+        // 메뉴 버튼 숨김 → 취소 버튼을 컨테이너 우측 끝으로 정렬
+        selectButtonTrailingToMenu?.isActive = false
+        selectButtonTrailingToContainer?.isActive = true
     }
 
     /// Select 모드 종료 - Select 버튼으로 복원
@@ -515,7 +546,8 @@ final class FloatingTitleBar: UIView {
         firstTitle: String,
         firstColor: UIColor = .systemBlue,
         firstAction: @escaping () -> Void,
-        secondTitle: String,
+        secondTitle: String? = nil,
+        secondIcon: String? = nil,
         secondColor: UIColor = .systemRed,
         secondAction: @escaping () -> Void
     ) {
@@ -531,18 +563,32 @@ final class FloatingTitleBar: UIView {
         selectButton.removeTarget(self, action: #selector(rightButtonTapped), for: .touchUpInside)
         selectButton.addTarget(self, action: #selector(rightButtonTapped), for: .touchUpInside)
 
-        // 두 번째 버튼 (왼쪽에 추가)
-        secondRightButton.setButtonTitle(secondTitle)
-        secondRightButton.setTextColor(secondColor)
-
-        secondRightButton.isHidden = false
+        // 두 번째 버튼 (왼쪽에 추가) — 아이콘 또는 텍스트
+        if let secondIcon {
+            // 아이콘 모드: GlassIconButton 사용
+            secondRightIconButton.setIcon(secondIcon)
+            secondRightIconButton.isHidden = false
+            secondRightButton.isHidden = true
+        } else if let secondTitle {
+            // 텍스트 모드: GlassTextButton 사용
+            secondRightButton.setButtonTitle(secondTitle)
+            secondRightButton.setTextColor(secondColor)
+            secondRightButton.isHidden = false
+            secondRightIconButton.isHidden = true
+        }
         secondRightButtonAction = secondAction
     }
 
-    /// 두 번째 오른쪽 버튼(비우기)의 window 좌표 frame 반환
+    /// 두 번째 오른쪽 버튼(비우기/정리)의 window 좌표 frame 반환
     /// E-1+E-2 시퀀스 Step 3에서 하이라이트 구멍 위치로 사용
     /// 버튼이 숨겨져 있거나 window가 없으면 nil 반환
     func secondRightButtonFrameInWindow() -> CGRect? {
+        // 아이콘 버튼이 보이면 아이콘 버튼 프레임 반환
+        if !secondRightIconButton.isHidden,
+           let window = secondRightIconButton.window {
+            return secondRightIconButton.convert(secondRightIconButton.bounds, to: window)
+        }
+        // 텍스트 버튼이 보이면 텍스트 버튼 프레임 반환
         guard !secondRightButton.isHidden,
               let window = secondRightButton.window else { return nil }
         return secondRightButton.convert(secondRightButton.bounds, to: window)
@@ -551,6 +597,7 @@ final class FloatingTitleBar: UIView {
     /// 두 번째 오른쪽 버튼 숨기기 (일반 모드 복원 시)
     func hideSecondRightButton() {
         secondRightButton.isHidden = true
+        secondRightIconButton.isHidden = true
         secondRightButtonAction = nil
     }
 
@@ -561,8 +608,11 @@ final class FloatingTitleBar: UIView {
     func setTwoRightButtonsEnabled(firstEnabled: Bool, secondEnabled: Bool) {
         selectButton.isEnabled = firstEnabled
         selectButton.alpha = firstEnabled ? 1.0 : 0.5
+        // 텍스트/아이콘 중 보이는 쪽에 적용
         secondRightButton.isEnabled = secondEnabled
         secondRightButton.alpha = secondEnabled ? 1.0 : 0.5
+        secondRightIconButton.isEnabled = secondEnabled
+        secondRightIconButton.alpha = secondEnabled ? 1.0 : 0.5
     }
 
     /// 모든 오른쪽 버튼을 Select 버튼만 있는 기본 상태로 복원

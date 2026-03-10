@@ -22,17 +22,18 @@
 
 > **위험도: 치명** — Guideline 2.5.1 (비공개 API 사용 금지) 위반 시 즉시 리젝
 
-**현재 문제:**
+**현재 상태:**
 
-| 파일 | 문제 | 위험도 |
-|------|------|:------:|
-| `SystemUIInspector.swift` | KVC로 시스템 UI 접근 (Private API). `#if DEBUG` 미래핑으로 릴리즈 빌드에 포함 | **치명** |
-| `AutoScrollTester.swift` | 디버그 전용 자동 스크롤 테스터. `#if DEBUG` 미래핑 | **치명** |
-| `LiquidGlassOptimizer.swift` | 디버그 전용 코드 포함. `#if DEBUG` 미래핑 | **치명** |
+| 파일 | 상태 | 비고 |
+|------|:----:|------|
+| `SystemUIInspector.swift` | **래핑 완료** ✅ | KVC/Private API 접근 — `#if DEBUG` (14줄~1143줄) |
+| `AutoScrollTester.swift` | **래핑 완료** ✅ | 디버그 전용 자동 스크롤 — `#if DEBUG` (20줄~506줄) |
+| ~~`LiquidGlassOptimizer.swift`~~ | **래핑 불필요** | 프로덕션 코드 (iOS 26+ 분기 포함). 래핑 시 릴리즈 빌드 파손 |
 
-**조치:**
-- 파일 전체를 `#if DEBUG` ... `#endif`로 래핑
-- 또는 빌드 타겟에서 릴리즈 빌드 시 해당 파일 제외
+> ⚠️ LiquidGlassOptimizer.swift는 문서 작성 당시 디버그 코드로 분류되었으나, 실제로는 스크롤 성능 최적화를 담당하는 프로덕션 코드입니다. `#if DEBUG`로 래핑하면 안 됩니다.
+
+**잔여 조치:**
+- Debug/ 폴더 내 신규 파일 추가 시 반드시 `#if DEBUG` 래핑 확인
 
 **관련 Guideline:**
 
@@ -160,9 +161,10 @@ similar photo detection features.
 - Compliant with Guideline 5.1.2(vi)
 
 [Privacy]
-- No user data is collected or transmitted
-- No analytics, tracking, or advertising SDKs
-- All photo processing happens on-device only
+- Photo/face data: 100% on-device, never transmitted
+- Anonymous usage analytics via TelemetryDeck (privacy-first,
+  no personal data linked)
+- No advertising or tracking SDKs (no ATT/IDFA)
 - Privacy Policy: [URL]
 
 [Testing Instructions]
