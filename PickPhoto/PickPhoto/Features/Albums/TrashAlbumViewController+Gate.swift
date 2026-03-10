@@ -102,6 +102,12 @@ extension TrashAlbumViewController {
                 }
             }
         }
+        detail.onPlusUpgrade = { [weak self] in
+            guard let self = self else { return }
+            let paywall = PaywallViewController()
+            paywall.analyticsSource = .gauge
+            self.present(paywall, animated: true)
+        }
         present(detail, animated: true)
     }
 

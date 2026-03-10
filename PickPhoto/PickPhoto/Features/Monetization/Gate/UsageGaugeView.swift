@@ -250,6 +250,9 @@ final class UsageGaugeDetailPopup: UIViewController {
     /// "광고 보기" 탭 시
     var onWatchAd: (() -> Void)?
 
+    /// "Plus로 무제한" 탭 시
+    var onPlusUpgrade: (() -> Void)?
+
     // MARK: - UI
 
     /// 딤 배경 (터치 차단용, 투명)
@@ -289,6 +292,19 @@ final class UsageGaugeDetailPopup: UIViewController {
     private let watchAdButton: UIButton = {
         let button = UIButton(type: .system)
         button.setTitle("광고 보고 +10장 추가", for: .normal)
+        button.backgroundColor = UIColor.white.withAlphaComponent(0.12)
+        button.setTitleColor(.white, for: .normal)
+        button.titleLabel?.font = .systemFont(ofSize: 17, weight: .semibold)
+        button.layer.cornerRadius = 25
+        button.clipsToBounds = true
+        button.translatesAutoresizingMaskIntoConstraints = false
+        return button
+    }()
+
+    /// Plus 구독 버튼 — 반투명 흰색 배경 + 흰색 텍스트
+    private let plusButton: UIButton = {
+        let button = UIButton(type: .system)
+        button.setTitle("Plus로 무제한", for: .normal)
         button.backgroundColor = UIColor.white.withAlphaComponent(0.12)
         button.setTitleColor(.white, for: .normal)
         button.titleLabel?.font = .systemFont(ofSize: 17, weight: .semibold)
@@ -356,7 +372,7 @@ final class UsageGaugeDetailPopup: UIViewController {
         ])
 
         // 카드 내부 스택뷰 — contentView에 추가 (블러 위)
-        let stack = UIStackView(arrangedSubviews: [titleLabel, statusLabel, watchAdButton, closeButton])
+        let stack = UIStackView(arrangedSubviews: [titleLabel, statusLabel, watchAdButton, plusButton, closeButton])
         stack.axis = .vertical
         stack.spacing = 16
         stack.alignment = .fill
@@ -365,6 +381,7 @@ final class UsageGaugeDetailPopup: UIViewController {
         // 버튼 영역 전 여유 간격
         stack.setCustomSpacing(28, after: statusLabel)
         stack.setCustomSpacing(10, after: watchAdButton)
+        stack.setCustomSpacing(10, after: plusButton)
 
         cardView.contentView.addSubview(stack)
         NSLayoutConstraint.activate([
@@ -373,11 +390,13 @@ final class UsageGaugeDetailPopup: UIViewController {
             stack.trailingAnchor.constraint(equalTo: cardView.contentView.trailingAnchor, constant: -28),
             stack.bottomAnchor.constraint(equalTo: cardView.contentView.bottomAnchor, constant: -32),
             watchAdButton.heightAnchor.constraint(equalToConstant: 50),
+            plusButton.heightAnchor.constraint(equalToConstant: 50),
             closeButton.heightAnchor.constraint(equalToConstant: 50)
         ])
 
         // 액션
         watchAdButton.addTarget(self, action: #selector(watchAdTapped), for: .touchUpInside)
+        plusButton.addTarget(self, action: #selector(plusTapped), for: .touchUpInside)
         closeButton.addTarget(self, action: #selector(closeTapped), for: .touchUpInside)
 
         let dimTap = UITapGestureRecognizer(target: self, action: #selector(closeTapped))
@@ -402,6 +421,7 @@ final class UsageGaugeDetailPopup: UIViewController {
         // 접근성 (FR-057)
         statusLabel.accessibilityLabel = text
         watchAdButton.accessibilityLabel = "광고를 보고 삭제 한도 10장 추가"
+        plusButton.accessibilityLabel = "Plus 구독으로 삭제 한도 무제한"
         closeButton.accessibilityLabel = "닫기"
         closeButton.accessibilityHint = "한도 상세 팝업을 닫습니다"
     }
@@ -409,6 +429,12 @@ final class UsageGaugeDetailPopup: UIViewController {
     @objc private func watchAdTapped() {
         dismiss(animated: true) { [weak self] in
             self?.onWatchAd?()
+        }
+    }
+
+    @objc private func plusTapped() {
+        dismiss(animated: true) { [weak self] in
+            self?.onPlusUpgrade?()
         }
     }
 
