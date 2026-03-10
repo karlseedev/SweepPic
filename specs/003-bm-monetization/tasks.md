@@ -227,11 +227,11 @@
 
 **Purpose**: 전체 기능 점검, 접근성, 엣지 케이스 마무리
 
-- [ ] T058 [P] 접근성 일괄 점검 — 모든 신규 BM UI에 accessibilityLabel 설정 확인 (FR-057). VoiceOver 활성화 시 게이트 팝업/게이지/배너/페이월 적절한 동작
-- [ ] T059 [P] 오프라인 시나리오 검증 — 오프라인 + 한도 내 삭제 정상 (FR-054). 오프라인 + 한도 초과 → 광고/구독 비활성 (FR-055). 오프라인 + 구독자 → expirationDate 기반 정상 동작 (FR-053)
-- [ ] T060 [P] 엣지 케이스 핸들링 확인 — Keychain 접근 실패 폴백 (FR-051c). DeletionStats 파일 손상 → 0 초기화 (FR-040a). 오프라인 시계 조작 → 온라인 복귀 시 재계산 (FR-052a). Grace Period 재설치 방지 (FR-051a)
-- [ ] T061 quickstart.md 검증 실행 — specs/003-bm-monetization/quickstart.md의 빠른 검증 시나리오 모두 수행
-- [ ] T062 코드 정리 — 모든 신규 파일 1,000줄 미만 확인. 미사용 import 제거. 주석 검토. FeatureFlags로 완전 비활성화 가능 확인
+- [x] T058 [P] 접근성 일괄 점검 — 모든 신규 BM UI에 accessibilityLabel 설정 확인 (FR-057). VoiceOver 활성화 시 게이트 팝업/게이지/배너/페이월 적절한 동작
+- [x] T059 [P] 오프라인 시나리오 검증 — 오프라인 + 한도 내 삭제 정상 (FR-054). 오프라인 + 한도 초과 → 광고/구독 비활성 (FR-055). 오프라인 + 구독자 → expirationDate 기반 정상 동작 (FR-053)
+- [x] T060 [P] 엣지 케이스 핸들링 확인 — Keychain 접근 실패 폴백 (FR-051c). DeletionStats 파일 손상 → 0 초기화 (FR-040a). 오프라인 시계 조작 → 온라인 복귀 시 재계산 (FR-052a). Grace Period 재설치 방지 (FR-051a)
+- [x] T061 quickstart.md 검증 실행 — specs/003-bm-monetization/quickstart.md의 빠른 검증 시나리오 모두 수행
+- [x] T062 코드 정리 — 모든 신규 파일 1,000줄 미만 확인. 미사용 import 제거. 주석 검토. FeatureFlags로 완전 비활성화 가능 확인
 
 ---
 

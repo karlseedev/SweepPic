@@ -323,10 +323,12 @@ final class GracePeriodDetailPopup: UIViewController {
         let maxDaily = UsageLimit.maxDailyTotal
         statusLabel.text = "무료 체험이 끝나면 일 최대 \(maxDaily)장의\n무료 삭제 한도가 적용됩니다"
 
-        // 접근성
+        // 접근성 (FR-057)
         titleLabel.accessibilityLabel = "무료 체험 중, \(remaining)일 남음"
         statusLabel.accessibilityLabel = statusLabel.text
         plusLabel.accessibilityLabel = plusLabel.text
+        closeButton.accessibilityLabel = "닫기"
+        closeButton.accessibilityHint = "체험 안내 팝업을 닫습니다"
     }
 
     @objc private func closeTapped() {

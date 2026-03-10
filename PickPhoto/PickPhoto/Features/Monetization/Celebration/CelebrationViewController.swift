@@ -182,6 +182,7 @@ final class CelebrationViewController: UIViewController {
 
         // 접근성 설정 (FR-057)
         confirmButton.accessibilityLabel = "확인"
+        confirmButton.accessibilityHint = "축하 화면을 닫습니다"
     }
 
     /// 데이터 표시
@@ -198,6 +199,11 @@ final class CelebrationViewController: UIViewController {
         // 누적 확보 용량: "X.XGB 확보"
         let freedFormatted = FileSizeCalculator.formatBytes(result.totalFreedBytes)
         totalFreedRow.text = "\(freedFormatted) 확보"
+
+        // 접근성: 통계 라벨에 명시적 설명 (FR-057)
+        sessionLabel.accessibilityLabel = "\(result.sessionDeletedCount)장 삭제 완료"
+        totalDeletedRow.accessibilityLabel = "PIClear에서 총 \(totalFormatted)장 삭제"
+        totalFreedRow.accessibilityLabel = "\(freedFormatted) 확보"
 
         Logger.app.debug("CelebrationVC: 이번 \(self.result.sessionDeletedCount)장, 누적 \(self.result.totalDeletedCount)장, 누적 \(self.result.totalFreedBytes)bytes")
     }

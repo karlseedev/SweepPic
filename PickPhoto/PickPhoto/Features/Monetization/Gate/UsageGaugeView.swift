@@ -399,9 +399,11 @@ final class UsageGaugeDetailPopup: UIViewController {
         }
         statusLabel.text = text
 
-        // 접근성
+        // 접근성 (FR-057)
         statusLabel.accessibilityLabel = text
         watchAdButton.accessibilityLabel = "광고를 보고 삭제 한도 10장 추가"
+        closeButton.accessibilityLabel = "닫기"
+        closeButton.accessibilityHint = "한도 상세 팝업을 닫습니다"
     }
 
     @objc private func watchAdTapped() {

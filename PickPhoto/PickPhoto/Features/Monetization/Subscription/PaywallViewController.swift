@@ -330,6 +330,12 @@ final class PaywallViewController: UIViewController {
         // 행 높이
         container.heightAnchor.constraint(equalToConstant: isHeader ? 30 : 36).isActive = true
 
+        // 접근성: 행 단위로 읽히도록 설정 (FR-057)
+        if !isHeader && !feature.isEmpty {
+            container.isAccessibilityElement = true
+            container.accessibilityLabel = "\(feature), 무료: \(freeValue), Plus: \(plusValue)"
+        }
+
         // 구분선 (헤더 아래)
         if isHeader {
             let separator = UIView()
