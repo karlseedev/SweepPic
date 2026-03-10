@@ -237,6 +237,9 @@ extension ViewerViewController {
     func showSimilarPhotoOverlay() {
         guard shouldEnableSimilarPhoto else { return }
 
+        // 지연 초기화: trashed 사진으로 진입 후 일반 사진으로 이동 시 overlay 생성
+        ensureSimilarPhotoSetup()
+
         // 이미 버튼이 표시되어 있으면 건너뜀 (modal dismiss 후 viewDidAppear 재호출 시 깜빡거림 방지)
         if faceButtonOverlay?.hasVisibleButtons == true {
             return
@@ -250,7 +253,16 @@ extension ViewerViewController {
     ///
     /// - Parameter resetZoom: true면 줌 상태 초기화 (스와이프 시), false면 줌 상태 유지 (얼굴 그리드 복귀 시)
     func updateSimilarPhotoOverlay(resetZoom: Bool = true) {
-        guard shouldEnableSimilarPhoto else { return }
+        guard shouldEnableSimilarPhoto else {
+            // 현재 사진이 trashed면 타이틀 + 눈 버튼(toggleButton 포함) 모두 숨김
+            similarPhotoTitleLabel?.alpha = 0
+            showNavBarEyeButton(false)
+            faceButtonOverlay?.resetState()
+            return
+        }
+
+        // 지연 초기화: trashed 사진으로 진입 후 일반 사진으로 이동 시 overlay 생성
+        ensureSimilarPhotoSetup()
 
         if resetZoom {
             // 스와이프: 오버레이 상태 완전 리셋
@@ -435,6 +447,29 @@ extension ViewerViewController {
             UIView.animate(withDuration: 0.2) {
                 self.similarPhotoTitleLabel?.alpha = 1
             }
+        }
+    }
+
+    // MARK: - Private Methods - Lazy Setup
+
+    /// 유사 사진 기능 지연 초기화
+    /// trashed 사진으로 뷰어 진입 시 setupSimilarPhotoFeature()에서 faceButtonOverlay가
+    /// 생성되지 않는 문제 해결. 이후 일반 사진으로 스와이프 시 여기서 overlay/observer를 생성한다.
+    private func ensureSimilarPhotoSetup() {
+        // 이미 overlay가 생성되어 있으면 무시
+        guard faceButtonOverlay == nil else { return }
+
+        // UI 컴포넌트 생성
+        setupFaceButtonOverlay()
+
+        // 분석 완료 알림 구독 (중복 등록 방지)
+        if analysisObserver == nil {
+            setupAnalysisObserver()
+        }
+
+        // 줌 알림 구독 (중복 등록 방지)
+        if zoomObserver == nil {
+            setupZoomObserver()
         }
     }
 
