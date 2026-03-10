@@ -423,14 +423,16 @@ final class TrashGatePopupViewController: UIViewController {
         if isOnline {
             offlineLabel.isHidden = true
             adButton.isEnabled = true
+            adButton.alpha = 1.0
             plusButton.isEnabled = true
+            plusButton.alpha = 1.0
             configureContent()
         } else {
             offlineLabel.isHidden = false
             adButton.isEnabled = false
-            adButton.backgroundColor = UIColor.white.withAlphaComponent(0.12)
+            adButton.alpha = 0.35
             plusButton.isEnabled = false
-            plusButton.backgroundColor = UIColor.white.withAlphaComponent(0.12)
+            plusButton.alpha = 0.35
         }
     }
 
