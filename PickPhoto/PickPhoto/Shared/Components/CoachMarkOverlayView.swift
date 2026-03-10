@@ -942,8 +942,8 @@ final class CoachMarkOverlayView: UIView {
                 // Step 1 → Step 2 전환 (멀티스와이프 데모)
                 confirmButton.isEnabled = false
                 transitionToA2()
-            } else {
-                // Step 2 "확인" 또는 레거시(aCurrentStep=0)
+            } else if aCurrentStep == 2 {
+                // Step 2 "확인" → dismiss
                 dismiss()
             }
         case .viewerSwipeDelete:

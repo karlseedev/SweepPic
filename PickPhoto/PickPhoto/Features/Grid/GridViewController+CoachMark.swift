@@ -68,7 +68,6 @@ extension GridViewController {
 
     /// scrollViewDidScroll에서 호출 — 누적 거리 실시간 추적, threshold 도달 시 스크롤 정지 후 표시
     func trackCoachMarkScroll(currentOffset: CGFloat) {
-        // 이미 표시된 적 있으면 스킵
         guard !CoachMarkType.gridSwipeDelete.hasBeenShown else { return }
 
         // 현재 표시 중이거나 표시 대기 중이면 스킵
@@ -126,22 +125,18 @@ extension GridViewController {
         // 화면이 활성 상태인지 확인
         guard view.window != nil else { return }
 
-        // Step 2 데이터 시도 → 실패 시 기존 findCenterCell() 폴백
-        let multiData = findCellForCoachMarkA()
-        let anchorCell: PhotoCell
+        // Step 1: 화면 중앙 셀을 하이라이트
+        guard let (cell, _) = findCenterCell() else { return }
 
-        if let data = multiData {
-            anchorCell = data.anchorCell
-        } else if let fallback = findCenterCell() {
-            anchorCell = fallback.0
-        } else { return }
+        // Step 2 데이터 수집 (화면 중앙 근처 9셀)
+        let multiData = findCellForCoachMarkA()
 
         // 셀 스냅샷 캡처
-        guard let snapshot = anchorCell.snapshotView(afterScreenUpdates: false) else { return }
+        guard let snapshot = cell.snapshotView(afterScreenUpdates: false) else { return }
 
         // 셀 프레임을 윈도우 좌표로 변환
         guard let window = view.window,
-              let cellFrame = anchorCell.superview?.convert(anchorCell.frame, to: window) else { return }
+              let cellFrame = cell.superview?.convert(cell.frame, to: window) else { return }
 
         // 코치마크 표시
         CoachMarkOverlayView.show(
@@ -152,15 +147,13 @@ extension GridViewController {
         )
 
         // Step 2 데이터 설정 (show() 후 overlay에 프로퍼티 주입 — 페이드인 중 적용)
-        if let data = multiData, let overlay = CoachMarkManager.shared.currentOverlay {
-            let multiSnapshots = captureMultiCellSnapshots(indexPaths: data.all9IndexPaths)
-            overlay.aCurrentStep = 1
-            overlay.aMultiCellFrames = data.row3Frames
-            overlay.aAll9CellFrames = data.all9Frames
-            overlay.aMultiSnapshots = multiSnapshots
-            overlay.confirmButton.setTitle("다음 →", for: .normal)
-            Logger.coachMark.debug("A Step 2 데이터 설정 완료 — 9셀 스냅샷 수집")
-        }
+        guard let overlay = CoachMarkManager.shared.currentOverlay else { return }
+        let multiSnapshots = captureMultiCellSnapshots(indexPaths: multiData.all9IndexPaths)
+        overlay.aCurrentStep = 1
+        overlay.aMultiCellFrames = multiData.row3Frames
+        overlay.aAll9CellFrames = multiData.all9Frames
+        overlay.aMultiSnapshots = multiSnapshots
+        Logger.coachMark.debug("A Step 2 데이터 설정 완료 — 9셀 스냅샷 수집")
 
         // A dismiss 후 A-1 타이머 시작 (viewDidAppear 없이도 트리거)
         // 0.1초 지연: overlay removeFromSuperview 완료 대기 (weak ref → nil → isShowing = false)
@@ -182,17 +175,14 @@ extension GridViewController {
         let all9IndexPaths: [IndexPath] // 전체 9셀 IndexPath
     }
 
-    /// 중앙 1행 아래 셀을 앵커로 선택하고, Step 2에 필요한 9셀 데이터를 사전 수집
-    /// - Returns: 멀티 데이터 또는 nil (불가능 시 Step 1만 표시)
-    private func findCellForCoachMarkA() -> CoachMarkAMultiData? {
+    /// 중앙 1행 아래 셀을 앵커로 선택하고, Step 2에 필요한 9셀 데이터를 수집
+    /// - Returns: 멀티 데이터 (화면 중앙 근처 9셀이므로 항상 성공)
+    private func findCellForCoachMarkA() -> CoachMarkAMultiData {
         let columns = currentGridColumnCount.rawValue
-        // 1열 모드에서는 멀티스와이프 불가
-        guard columns >= 3 else { return nil }
-
-        guard let window = view.window else { return nil }
+        let window = view.window!
 
         // 1. 화면 중앙에서 가장 가까운 셀 찾기
-        guard let (_, centerIndexPath) = findCenterCell() else { return nil }
+        let (_, centerIndexPath) = findCenterCell()!
 
         // 2. 중앙 셀의 행 계산 (padding 셀 포함)
         let centerRow = centerIndexPath.item / columns
@@ -200,13 +190,7 @@ extension GridViewController {
         // 3. 앵커를 1행 아래로 선택 (위로 2행 확장 공간 확보)
         let anchorRow = centerRow + 1
 
-        // 4. 앵커행 위로 2행 존재 가드
-        guard anchorRow >= 2 else { return nil }
-
-        // 5. 앵커행의 같은 열 셀 (왼쪽 끝 셀 기준)
-        let anchorRowFirstItem = anchorRow * columns
-
-        // 6. 9셀 IndexPath 수집 (Row 0 = anchorRow-2, Row 1 = anchorRow-1, Row 2 = anchorRow)
+        // 4. 9셀 IndexPath 수집 (Row 0 = anchorRow-2, Row 1 = anchorRow-1, Row 2 = anchorRow)
         var all9IndexPaths: [IndexPath] = []
         for rowOffset in stride(from: -2, through: 0, by: 1) {
             let rowFirstItem = (anchorRow + rowOffset) * columns
@@ -216,45 +200,20 @@ extension GridViewController {
             }
         }
 
-        // 7. 9셀 중 padding 셀 포함 여부 가드
-        for ip in all9IndexPaths {
-            if ip.item < paddingCellCount { return nil }
-        }
-
-        // 8. 총 아이템 수 초과 가드
-        let totalItems = paddingCellCount + dataSourceDriver.count
-        for ip in all9IndexPaths {
-            if ip.item >= totalItems { return nil }
-        }
-
-        // 9. 9셀 모두 화면 내 존재 가드 (스냅샷 캡처 필수)
-        for ip in all9IndexPaths {
-            guard collectionView.cellForItem(at: ip) != nil else { return nil }
-        }
-
-        // 10. 9셀 프레임 수집 (윈도우 좌표)
+        // 5. 9셀 프레임 수집 (윈도우 좌표)
         var all9Frames: [CGRect] = []
         for ip in all9IndexPaths {
-            guard let attrs = collectionView.layoutAttributesForItem(at: ip) else { return nil }
+            let attrs = collectionView.layoutAttributesForItem(at: ip)!
             let frameInWindow = collectionView.convert(attrs.frame, to: window)
             all9Frames.append(frameInWindow)
         }
 
-        // 11. 9셀 합산 rect가 safeArea 내인지 가드
-        let allUnion = all9Frames.reduce(CGRect.null) { $0.union($1) }
-        let safeArea = window.safeAreaLayoutGuide.layoutFrame
-        guard safeArea.contains(allUnion) else { return nil }
-
-        // 12. 하단 여유 공간 가드 (메시지 + 버튼 공간)
-        let bottomNeeded: CGFloat = 80 + 16 + 44 + window.safeAreaInsets.bottom
-        guard allUnion.maxY + bottomNeeded < window.bounds.height else { return nil }
-
-        // 13. 앵커행 3셀 프레임 (all9Frames의 마지막 3개 = Row 2)
+        // 6. 앵커행 3셀 프레임 (all9Frames의 마지막 3개 = Row 2)
         let row3Frames = Array(all9Frames[6...8])
 
-        // 14. 앵커 셀 찾기 (Row 2의 첫 번째 셀)
+        // 7. 앵커 셀 찾기 (Row 2의 첫 번째 셀)
         let anchorIP = all9IndexPaths[6]
-        guard let anchorCell = collectionView.cellForItem(at: anchorIP) as? PhotoCell else { return nil }
+        let anchorCell = collectionView.cellForItem(at: anchorIP) as! PhotoCell
 
         return CoachMarkAMultiData(
             anchorCell: anchorCell,

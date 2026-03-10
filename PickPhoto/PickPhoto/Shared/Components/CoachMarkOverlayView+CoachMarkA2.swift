@@ -117,6 +117,9 @@ extension CoachMarkOverlayView {
             .union(multiCellFrames[1])
             .union(multiCellFrames[2])
 
+        // 9셀 합산 rect
+        let all9UnionRect = all9Frames[0...8].reduce(CGRect.null) { $0.union($1) }
+
         // t=0.00~0.25: Step 1 요소 페이드아웃
         UIView.animate(withDuration: 0.25) { [weak self] in
             self?.snapshotView?.alpha = 0
@@ -124,26 +127,37 @@ extension CoachMarkOverlayView {
             self?.maroonView.alpha = 0
         }
 
-        // t=0.25: 타이틀 크로스페이드
+        // t=0.25: 타이틀 크로스페이드 + 위치를 9셀 영역 위로 이동
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) { [weak self] in
             guard let self, !self.shouldStopAnimation || CoachMarkManager.shared.isA2TransitionActive else { return }
             UIView.transition(with: self.titleLabel, duration: 0.3, options: .transitionCrossDissolve) {
                 self.titleLabel.text = "한번에 쓱"
+                // 텍스트 변경 후 프레임 재계산 (좌우 패딩 맞춤)
+                self.titleLabel.sizeToFit()
+                let padding = UIEdgeInsets(top: 8, left: 20, bottom: 8, right: 20)
+                let newWidth = self.titleLabel.bounds.width + padding.left + padding.right
+                let newHeight = self.titleLabel.bounds.height + padding.top + padding.bottom
+                self.titleLabel.frame = CGRect(
+                    x: (self.bounds.width - newWidth) / 2,
+                    y: all9UnionRect.minY - newHeight - 10,
+                    width: newWidth,
+                    height: newHeight
+                )
+                self.titleLabel.layer.cornerRadius = newHeight / 2
             }
         }
 
-        // t=0.25: 하이라이트 확장 (1셀 → 3셀)
+        // t=0.25: 하이라이트 확장 (1셀 → 9셀 전체)
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) { [weak self] in
             guard let self else { return }
-            self.animateHighlightExpansion(to: row3UnionRect, duration: 0.4)
+            self.animateHighlightExpansion(to: all9UnionRect, duration: 0.4)
         }
 
-        // t=0.30: 3셀 스냅샷(Row 2) 배치 + 페이드인
+        // t=0.30: 9셀 전체 스냅샷 배치 + 페이드인
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.30) { [weak self] in
             guard let self else { return }
-            // Row 2 = 인덱스 6,7,8
             var maroonViews: [UIView] = []
-            for i in 6...8 {
+            for i in 0...8 {
                 let snap = multiSnapshots[i]
                 snap.frame = all9Frames[i]
                 snap.alpha = 0
@@ -157,26 +171,24 @@ extension CoachMarkOverlayView {
                 snap.addSubview(mv)
                 maroonViews.append(mv)
             }
-            // Row 0, Row 1 maroon 뷰도 미리 생성 (나중에 사용)
-            for i in 0...5 {
-                let mv = UIView()
-                mv.backgroundColor = Self.maroonColor
-                mv.alpha = Self.maroonAlpha
-                mv.frame = CGRect(x: 0, y: 0, width: 0, height: all9Frames[i].height)
-                maroonViews.insert(mv, at: i)
-            }
             self.aMultiMaroonViews = maroonViews
 
-            // 페이드인
+            // 텍스트/버튼/손가락이 스냅샷에 가려지지 않도록 맨 앞으로
+            self.bringSubviewToFront(self.titleLabel)
+            self.bringSubviewToFront(self.messageLabel)
+            self.bringSubviewToFront(self.confirmButton)
+            self.bringSubviewToFront(self.fingerView)
+
+            // Row 2(6-8)만 페이드인, Row 0/1은 Phase B에서 페이드인
             UIView.animate(withDuration: 0.3) {
                 for i in 6...8 { multiSnapshots[i].alpha = 1 }
             }
         }
 
-        // t=0.55: 메시지 텍스트 교체
+        // t=0.55: 메시지 텍스트 교체 + 위치를 Row 2 아래로 이동
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.55) { [weak self] in
             guard let self else { return }
-            let fullText = "밀면서 옆이나 위로 쓸면\n여러 장을 한번에 정리해요"
+            let fullText = "밀면서 옆이나 위로 쓸면\u{2028}여러 장을 한번에 정리해요"
             let style = NSMutableParagraphStyle()
             style.alignment = .center
             style.paragraphSpacing = 8
@@ -196,6 +208,13 @@ extension CoachMarkOverlayView {
                     .foregroundColor: Self.highlightYellow
                 ], range: range)
             }
+            // 메시지를 3셀(Row 2) 아래로 재배치
+            self.messageLabel.frame = CGRect(
+                x: 20,
+                y: row3UnionRect.maxY,
+                width: self.bounds.width - 40,
+                height: 80
+            )
             self.messageLabel.alpha = 0
             self.messageLabel.attributedText = attr
             UIView.animate(withDuration: 0.25) {
@@ -203,10 +222,17 @@ extension CoachMarkOverlayView {
             }
         }
 
-        // t=0.65: 버튼 텍스트 변경
+        // t=0.65: 버튼 위치를 메시지 아래로 재배치 + 활성화
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.65) { [weak self] in
             guard let self else { return }
-            self.confirmButton.setTitle("확인", for: .normal)
+            // 버튼을 메시지 아래로 재배치
+            let buttonWidth: CGFloat = 120
+            self.confirmButton.frame = CGRect(
+                x: (self.bounds.width - buttonWidth) / 2,
+                y: self.messageLabel.frame.maxY - 5,
+                width: buttonWidth,
+                height: self.confirmButton.frame.height
+            )
             self.confirmButton.isEnabled = true
         }
 
@@ -237,26 +263,11 @@ extension CoachMarkOverlayView {
               let maroonViews = aMultiMaroonViews, maroonViews.count == 9
         else { return }
 
-        // 3셀 합산 rect (Phase A 기본 하이라이트)
-        let row2UnionRect = multiCellFrames[0]
-            .union(multiCellFrames[1])
-            .union(multiCellFrames[2])
+        // (하이라이트는 9셀 전체로 고정 — 확장/수축 없음)
 
-        // 6셀 합산 rect (Phase B 첫 확장)
-        let row1to2UnionRect = all9Frames[3]
-            .union(all9Frames[4])
-            .union(all9Frames[5])
-            .union(row2UnionRect)
+        // ===== Phase A: 가로 순차 채움 (finger + maroon 동기화) =====
 
-        // 9셀 합산 rect (Phase B 최종 확장)
-        let allUnionRect = all9Frames[0]
-            .union(all9Frames[1])
-            .union(all9Frames[2])
-            .union(row1to2UnionRect)
-
-        // ===== Phase A: 가로 순차 채움 =====
-
-        // 0.00s: fingerView 등장 (셀[6] 좌측)
+        // 0.00s: fingerView 등장 (셀[6] 좌측 — 스와이프 시작점)
         fingerView.center = CGPoint(
             x: all9Frames[6].minX,
             y: all9Frames[6].midY
@@ -275,113 +286,81 @@ extension CoachMarkOverlayView {
             }
         }
 
-        // 0.50s: 셀[6] maroon 채움 + 카운터 "1"
+        // 0.50s: 셀[6] maroon + finger 동시 이동 (Step 1과 동일 패턴)
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.50) { [weak self] in
             guard let self, !self.shouldStopAnimation else { return }
-            self.fillMaroon(at: 6, in: maroonViews, frames: all9Frames)
-            self.updateCounterBadge(count: 1, highlightRect: row2UnionRect)
-        }
-
-        // 0.75s: finger → 셀[7]
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.75) { [weak self] in
-            guard let self, !self.shouldStopAnimation else { return }
-            UIView.animate(withDuration: 0.2, delay: 0, options: .curveEaseInOut) {
-                self.fingerView.center = CGPoint(x: all9Frames[7].midX, y: all9Frames[7].midY)
+            UIView.animate(withDuration: 0.25) {
+                maroonViews[6].frame = CGRect(x: 0, y: 0, width: all9Frames[6].width, height: all9Frames[6].height)
+                self.fingerView.center = CGPoint(x: all9Frames[6].maxX, y: all9Frames[6].midY)
             }
         }
 
-        // 0.95s: 셀[7] maroon + 카운터 "2"
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.95) { [weak self] in
+        // 0.80s: 셀[7] maroon + finger 동시 이동
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.80) { [weak self] in
             guard let self, !self.shouldStopAnimation else { return }
-            self.fillMaroon(at: 7, in: maroonViews, frames: all9Frames)
-            self.updateCounterBadge(count: 2, highlightRect: row2UnionRect)
-        }
-
-        // 1.20s: finger → 셀[8]
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.20) { [weak self] in
-            guard let self, !self.shouldStopAnimation else { return }
-            UIView.animate(withDuration: 0.2, delay: 0, options: .curveEaseInOut) {
-                self.fingerView.center = CGPoint(x: all9Frames[8].midX, y: all9Frames[8].midY)
+            UIView.animate(withDuration: 0.25) {
+                maroonViews[7].frame = CGRect(x: 0, y: 0, width: all9Frames[7].width, height: all9Frames[7].height)
+                self.fingerView.center = CGPoint(x: all9Frames[7].maxX, y: all9Frames[7].midY)
             }
         }
 
-        // 1.40s: 셀[8] maroon + 카운터 "3"
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.40) { [weak self] in
+        // 1.10s: 셀[8] maroon + finger 동시 이동
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.10) { [weak self] in
             guard let self, !self.shouldStopAnimation else { return }
-            self.fillMaroon(at: 8, in: maroonViews, frames: all9Frames)
-            self.updateCounterBadge(count: 3, highlightRect: row2UnionRect)
+            UIView.animate(withDuration: 0.25) {
+                maroonViews[8].frame = CGRect(x: 0, y: 0, width: all9Frames[8].width, height: all9Frames[8].height)
+                self.fingerView.center = CGPoint(x: all9Frames[8].maxX, y: all9Frames[8].midY)
+            }
         }
 
-        // ===== Phase B: 세로 확장 =====
+        // ===== Phase B: 세로 확장 (Phase A 후 0.5s 멈춤 → Row 1, Row 0 연속) =====
 
-        // 1.65s: finger ↑ Row 1 + 하이라이트 확장 3→6 + Row 1 스냅샷 페이드인
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.65) { [weak self] in
+        // 1.85s: finger ↑ Row 1 (3열에서 위로) + 하이라이트 확장 3→6 + Row 1 통째로 빨간색
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.85) { [weak self] in
             guard let self, !self.shouldStopAnimation else { return }
 
-            // finger 위로 이동
+            // finger 3열 유지하며 위로 이동 (tip이 Row 1 상단과 일치)
+            let fingerHalfH = self.fingerView.bounds.height / 2
             UIView.animate(withDuration: 0.3, delay: 0, options: .curveEaseInOut) {
-                self.fingerView.center = CGPoint(x: all9Frames[4].midX, y: all9Frames[4].midY)
+                self.fingerView.center = CGPoint(
+                    x: all9Frames[5].maxX,
+                    y: all9Frames[3].minY + fingerHalfH
+                )
             }
 
-            // 하이라이트 확장: 3셀 → 6셀
-            self.animateHighlightExpansion(to: row1to2UnionRect, duration: 0.3)
-
-            // Row 1 스냅샷 페이드인
+            // Row 1 maroon 전체 크기 + 스냅샷 페이드인 → "행 통째로 빨간색" 효과
             for i in 3...5 {
-                multiSnapshots[i].frame = all9Frames[i]
-                multiSnapshots[i].alpha = 0
-                multiSnapshots[i].addSubview(maroonViews[i])
-                self.addSubview(multiSnapshots[i])
+                maroonViews[i].frame = CGRect(x: 0, y: 0, width: all9Frames[i].width, height: all9Frames[i].height)
             }
-            UIView.animate(withDuration: 0.2) {
+            UIView.animate(withDuration: 0.25) {
                 for i in 3...5 { multiSnapshots[i].alpha = 1 }
             }
         }
 
-        // 1.95s: Row 1 maroon 동시 채움 + 카운터 "6"
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.95) { [weak self] in
-            guard let self, !self.shouldStopAnimation else { return }
-            for i in 3...5 {
-                self.fillMaroon(at: i, in: maroonViews, frames: all9Frames)
-            }
-            self.updateCounterBadge(count: 6, highlightRect: row1to2UnionRect)
-        }
-
-        // 2.20s: finger ↑ Row 0 + 하이라이트 확장 6→9 + Row 0 스냅샷 페이드인
-        DispatchQueue.main.asyncAfter(deadline: .now() + 2.20) { [weak self] in
+        // 2.15s: finger ↑ Row 0 (Row 1 직후 바로 연속) + 하이라이트 확장 6→9 + Row 0 통째로 빨간색
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2.15) { [weak self] in
             guard let self, !self.shouldStopAnimation else { return }
 
-            // finger 위로 이동
+            // finger 3열 유지하며 위로 이동 (tip이 Row 0 상단과 일치)
+            let fingerHalfH = self.fingerView.bounds.height / 2
             UIView.animate(withDuration: 0.3, delay: 0, options: .curveEaseInOut) {
-                self.fingerView.center = CGPoint(x: all9Frames[1].midX, y: all9Frames[1].midY)
+                self.fingerView.center = CGPoint(
+                    x: all9Frames[2].maxX,
+                    y: all9Frames[0].minY + fingerHalfH
+                )
             }
 
-            // 하이라이트 확장: 6셀 → 9셀
-            self.animateHighlightExpansion(to: allUnionRect, duration: 0.3)
-
-            // Row 0 스냅샷 페이드인
+            // Row 0 maroon 전체 크기 + 스냅샷 페이드인 → "행 통째로 빨간색" 효과
             for i in 0...2 {
-                multiSnapshots[i].frame = all9Frames[i]
-                multiSnapshots[i].alpha = 0
-                multiSnapshots[i].addSubview(maroonViews[i])
-                self.addSubview(multiSnapshots[i])
+                maroonViews[i].frame = CGRect(x: 0, y: 0, width: all9Frames[i].width, height: all9Frames[i].height)
             }
-            UIView.animate(withDuration: 0.2) {
+            UIView.animate(withDuration: 0.25) {
                 for i in 0...2 { multiSnapshots[i].alpha = 1 }
             }
         }
 
-        // 2.50s: Row 0 maroon 동시 채움 + 카운터 "9"
-        DispatchQueue.main.asyncAfter(deadline: .now() + 2.50) { [weak self] in
-            guard let self, !self.shouldStopAnimation else { return }
-            for i in 0...2 {
-                self.fillMaroon(at: i, in: maroonViews, frames: all9Frames)
-            }
-            self.updateCounterBadge(count: 9, highlightRect: allUnionRect)
-        }
-
-        // 2.75s: 릴리즈 (finger 원래 크기 + 페이드아웃)
-        DispatchQueue.main.asyncAfter(deadline: .now() + 2.75) { [weak self] in
+        // 2.70s: 릴리즈 (finger 원래 크기 + 페이드아웃)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2.70) { [weak self] in
             guard let self, !self.shouldStopAnimation else { return }
             UIView.animate(withDuration: 0.2, delay: 0, options: .curveEaseIn) {
                 self.fingerView.alpha = 0
@@ -389,40 +368,25 @@ extension CoachMarkOverlayView {
             }
         }
 
-        // ===== 복원 (자동 걷힘 — finger 없음) =====
+        // ===== 복원 (즉시 초기화) =====
 
-        // 3.45s: 전체 maroon 동시 걷힘 + 하이라이트 수축 9→3 + 카운터 페이드아웃
-        DispatchQueue.main.asyncAfter(deadline: .now() + 3.45) { [weak self] in
+        // 3.40s: 전체 즉시 리셋 → 텀 → 루프 반복
+        DispatchQueue.main.asyncAfter(deadline: .now() + 3.40) { [weak self] in
             guard let self, !self.shouldStopAnimation else { return }
 
-            // 전체 maroon 동시 걷힘 (width → 0)
-            UIView.animate(withDuration: 0.3) {
-                for i in 0...8 {
-                    maroonViews[i].frame.size.width = 0
-                }
+            // 전체 maroon 즉시 리셋 (width → 0, 애니메이션 없음)
+            for i in 0...8 {
+                maroonViews[i].frame.size.width = 0
             }
 
-            // 하이라이트 수축: 9셀 → 3셀
-            self.animateHighlightExpansion(to: row2UnionRect, duration: 0.3)
-
-            // 카운터 페이드아웃
-            UIView.animate(withDuration: 0.15) {
-                self.aCounterBadge?.alpha = 0
+            // Row 0/Row 1 스냅샷 즉시 숨김 (다음 루프에서 다시 페이드인)
+            for i in 0...5 {
+                multiSnapshots[i].alpha = 0
             }
         }
 
-        // 3.75s: Row 0/Row 1 스냅샷 페이드아웃 (루프 반복 준비)
-        DispatchQueue.main.asyncAfter(deadline: .now() + 3.75) { [weak self] in
-            guard let self, !self.shouldStopAnimation else { return }
-            UIView.animate(withDuration: 0.2) {
-                for i in 0...5 {
-                    multiSnapshots[i].alpha = 0
-                }
-            }
-        }
-
-        // 4.65s: 루프 반복
-        DispatchQueue.main.asyncAfter(deadline: .now() + 4.65) { [weak self] in
+        // 4.10s: 루프 반복 (0.7s 텀)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 4.10) { [weak self] in
             guard let self, !self.shouldStopAnimation else { return }
             self.startMultiSwipeLoop()
         }
@@ -549,7 +513,6 @@ extension CoachMarkOverlayView {
 
     /// Reduce Motion 시 정적 멀티스와이프 가이드
     /// - 3셀(Row 2) maroon 55% 채움
-    /// - 카운터 "3" 표시
     /// - 손가락 셀[8] 우측 끝 정지
     /// - arrowView: arrow.right + arrow.up 표시
     private func showA2StaticGuide() {
@@ -571,9 +534,6 @@ extension CoachMarkOverlayView {
             )
         }
 
-        // 카운터 "3" (애니메이션 없음)
-        updateCounterBadge(count: 3, highlightRect: row2UnionRect)
-        aCounterBadge?.transform = .identity  // bounce 제거
 
         // 손가락 셀[8] 우측 끝 정지
         fingerView.center = CGPoint(
