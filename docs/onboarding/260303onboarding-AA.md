@@ -15,7 +15,7 @@
 | 파일 | 작업 | 분량 |
 |------|------|------|
 | `CoachMarkOverlayView+CoachMarkA2.swift` **(신규)** | Step 2 전환, 멀티 데모 루프, 카운터, cleanup | ~450줄 |
-| `GridViewController+CoachMark.swift` **(수정)** | 셀 탐색 (중앙+1행), 9셀 스냅샷 수집, show 후 프로퍼티 설정 | ~100줄 추가 |
+| `GridViewController+CoachMark.swift` **(수정)** | 셀 탐색 (중앙 1행 아래), 9셀 스냅샷 수집, show 후 프로퍼티 설정 | ~100줄 추가 |
 | `CoachMarkOverlayView.swift` **(수정)** | confirmTapped 분기, dismiss cleanup, private→internal 3개 뷰, A2 전환 플래그 | ~25줄 수정 |
 
 **show() 시그니처 변경 없음** — 호출 후 프로퍼티 설정 (onDismiss 패턴과 동일)
@@ -33,7 +33,8 @@
       — nil이면 Step 2 불가 → findCenterCell() 폴백
 
 로직:
-1. 화면 중앙 좌표에서 가장 가까운 셀 → 그 행 + 1행 셀 탐색
+1. 화면 중앙 좌표에서 가장 가까운 셀을 찾고, 그 셀의 1행 아래 동일 열 셀을 앵커로 선택
+   (위로 2행 확장 공간 확보 목적)
    - non-trashed 우선 (A-1 텍스트 "삭제해 보세요"와 일치)
 2. anchorRow 위로 2행 존재 가드: anchorRow >= 2 (item 기준 행)
    - paddingCellCount가 있으면 padding 행이 포함될 수 있음
@@ -183,6 +184,20 @@ CoachMarkManager.shared.isA2TransitionActive = false  // 안전 정리
 | `aMultiCellFrames` | `[CGRect]?` | nil | 같은 행 3셀 윈도우 프레임 |
 | `aAll9CellFrames` | `[CGRect]?` | nil | 전체 9셀 윈도우 프레임 |
 
+**CGRect 배열 저장 패턴** (C3의 단일 CGRect NSValue 래핑 패턴 확장):
+```swift
+var aMultiCellFrames: [CGRect]? {
+    get {
+        guard let values = objc_getAssociatedObject(self, &key) as? [NSValue] else { return nil }
+        return values.map { $0.cgRectValue }
+    }
+    set {
+        let values = newValue?.map { NSValue(cgRect: $0) }
+        objc_setAssociatedObject(self, &key, values, .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
+    }
+}
+```
+
 ### 3-2. transitionToA2() — Step 1 → Step 2 전환
 
 ```
@@ -198,6 +213,7 @@ t=0.25  타이틀 크로스페이드 (UIView.transition .crossDissolve, 0.3s)
   - "새로운 삭제 방법" → "한번에 쓱"
 
 t=0.25  하이라이트 구멍 확장 (CABasicAnimation 0.4s)
+  - row3UnionRect = aMultiCellFrames![0].union([1]).union([2])  // 앵커행 3셀 합산
   - animateHighlightExpansion(to: row3UnionRect)
   - 패턴: C-2 animateC2FocusCircle()의 rect 버전
   - from: 1셀 rect path → to: 3셀 rect path (포인트 수 동일, 자연스러운 보간)
@@ -257,19 +273,14 @@ t=0.80  멀티 데모 시작
 2.95s  텀 — 0.5s (9셀 빨간 상태 유지)
 ```
 
-**복원 (역방향)**
+**복원 (자동 걷힘 — finger 없음)**
 ```
-3.45s  finger 등장 (Row 0 근처) — 0.25s
-3.70s  셀[0,1,2] maroon 걷힘 (0.2s) + 카운터 "6"
-       하이라이트 수축: 9셀→6셀
-3.90s  셀[3,4,5] maroon 걷힘 (0.2s) + 카운터 "3"
-       하이라이트 수축: 6셀→3셀
-4.10s  셀[8] 걷힘 (0.15s) + 카운터 "2"
-4.25s  셀[7] 걷힘 (0.15s) + 카운터 "1"
-4.40s  셀[6] 걷힘 (0.15s) + 카운터 → 페이드아웃
-4.55s  릴리즈 — 0.2s
-4.75s  텀 — 0.7s
-5.45s  루프 반복
+3.45s  전체 maroon 동시 걷힘 (0.3s) + 카운터 → 페이드아웃
+       하이라이트 수축: 9셀→3셀 rect (animateHighlightExpansion)
+       카운터 위치: 3셀 rect 우상단으로 이동
+3.75s  Row 0/Row 1 스냅샷[0~5] alpha → 0 (0.2s)
+3.95s  텀 — 0.7s (3셀 스냅샷만 표시, maroon 없는 상태)
+4.65s  루프 반복 (Phase A부터)
 ```
 
 ### 3-4. animateHighlightExpansion()
@@ -315,6 +326,11 @@ func animateHighlightExpansion(to newFrame: CGRect, duration: TimeInterval = 0.3
 크기: 28×28pt (1자리) / 34×28pt (2자리)
 효과: scale 1.0→1.3→1.0 (0.2s spring, damping 0.6)
 0일 때: 페이드아웃 (0.15s)
+
+동적 위치 업데이트:
+  - 하이라이트 확장/수축 시 카운터 위치를 새 highlightFrame 기준으로 동기화
+  - animateHighlightExpansion 호출과 동시에 UIView.animate로 위치 이동:
+    badge.frame.origin = CGPoint(x: newFrame.maxX + 4, y: newFrame.minY - 4 - badgeHeight)
 ```
 
 ### 3-6. Reduce Motion 대응
@@ -363,7 +379,7 @@ func cleanupA2() {
 
 ## 검증 방법
 
-1. **Step 1 기본 동작**: ~1화면 스크롤 → 코치마크 표시, 시작 셀 중앙+1행
+1. **Step 1 기본 동작**: ~1화면 스크롤 → 코치마크 표시, 시작 셀 중앙 1행 아래
 2. **"다음 →" 전환**: 타이틀 크로스페이드 + 하이라이트 확장 + 3셀 스냅샷
 3. **Phase A**: 가로 1→2→3 순차 + 카운터 bounce
 4. **Phase B**: 세로 3→6→9 행단위 동시 + 하이라이트 확장 + 카운터 점프
