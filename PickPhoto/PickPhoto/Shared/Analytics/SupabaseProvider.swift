@@ -56,17 +56,25 @@ final class SupabaseProvider {
     /// 보류 큐 최대 크기 (오래된 항목부터 버림)
     private let maxPendingCount = 200
 
+    /// 구독 tier 제공 클로저 (lazy 평가 — makeBody 시점에 호출)
+    /// - "free" 또는 "plus" 반환
+    /// - nil이면 기본값 "free"
+    private let subscriptionTierProvider: (() -> String)?
+
     // MARK: - Init
 
     /// Info.plist에서 읽은 URL/Key로 초기화
     /// - Parameters:
     ///   - baseURL: Supabase 프로젝트 URL (예: "https://xxx.supabase.co")
     ///   - anonKey: Supabase anon key (JWT 기반 클라이언트용)
+    ///   - subscriptionTierProvider: 구독 tier 반환 클로저 (nil이면 "free")
     /// - Returns: URL이 잘못되면 nil 반환
-    init?(baseURL: String, anonKey: String) {
+    init?(baseURL: String, anonKey: String,
+          subscriptionTierProvider: (() -> String)? = nil) {
         guard let url = URL(string: baseURL + "/rest/v1/events") else { return nil }
         self.endpointURL = url
         self.anonKey = anonKey
+        self.subscriptionTierProvider = subscriptionTierProvider
         self.deviceModel = Self.resolveDeviceModel()
         self.osVersion = UIDevice.current.systemVersion
         self.appVersion = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "unknown"
@@ -282,6 +290,7 @@ final class SupabaseProvider {
             "os_version": osVersion,
             "app_version": appVersion,
             "photo_bucket": photoBucket,
+            "subscription_tier": subscriptionTierProvider?() ?? "free",
         ]
         #if DEBUG
         body["is_test"] = true

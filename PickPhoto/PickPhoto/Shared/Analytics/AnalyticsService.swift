@@ -216,7 +216,10 @@ final class AnalyticsService: AnalyticsServiceProtocol {
             Logger.analytics.debug("Supabase credentials 없음 — 비활성")
             return
         }
-        supabaseProvider = SupabaseProvider(baseURL: url, anonKey: key)
+        supabaseProvider = SupabaseProvider(
+            baseURL: url, anonKey: key,
+            subscriptionTierProvider: { SubscriptionStore.shared.isPlusUser ? "plus" : "free" }
+        )
         Logger.analytics.debug("Supabase 초기화 완료 (url: \(url.prefix(30))...)")
     }
 

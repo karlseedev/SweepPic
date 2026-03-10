@@ -31,6 +31,15 @@ enum PaywallSource: String {
     case gauge  = "gauge"   // 게이지 상세 팝업
 }
 
+/// 구독 해지 사유 (Exit Survey)
+enum CancelReason: String {
+    case price       = "price"        // 가격이 부담돼요
+    case enoughFree  = "enough_free"  // 삭제 한도가 충분해요
+    case done        = "done"         // 사진 정리를 다 했어요
+    case competitor  = "competitor"   // 다른 앱을 사용해요
+    case other       = "other"        // 기타
+}
+
 // MARK: - Monetization Events
 
 extension AnalyticsService {
@@ -118,5 +127,20 @@ extension AnalyticsService {
         sendEvent("bm.attResult", parameters: [
             "authorized": String(authorized),
         ])
+    }
+
+    // MARK: - Cancel Reason Events
+
+    /// 구독 해지 사유 (Exit Survey)
+    /// - Parameters:
+    ///   - reason: 해지 사유 (5개 선택지)
+    ///   - text: 기타 사유 자유 입력 (최대 200자)
+    func trackCancelReason(reason: CancelReason, text: String? = nil) {
+        guard !shouldSkip() else { return }
+        var params: [String: String] = ["reason": reason.rawValue]
+        if let text = text, !text.isEmpty {
+            params["text"] = String(text.prefix(200))
+        }
+        sendEvent("bm.cancelReason", parameters: params)
     }
 }
