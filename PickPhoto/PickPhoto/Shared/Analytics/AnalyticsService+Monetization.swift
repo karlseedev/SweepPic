@@ -70,11 +70,14 @@ extension AnalyticsService {
     // MARK: - Ad Events
 
     /// 광고 시청 완료
-    /// - Parameter type: 광고 유형 (rewarded/interstitial)
-    func trackAdWatched(type: AdType) {
+    /// - Parameters:
+    ///   - type: 광고 유형 (rewarded/interstitial)
+    ///   - source: 진입 경로 (gate/gauge/auto)
+    func trackAdWatched(type: AdType, source: String) {
         guard !shouldSkip() else { return }
         sendEvent("bm.adWatched", parameters: [
             "type": type.rawValue,
+            "source": source,
         ])
     }
 

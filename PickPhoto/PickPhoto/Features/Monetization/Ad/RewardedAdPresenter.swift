@@ -140,7 +140,7 @@ final class RewardedAdPresenter: NSObject {
         if case .earned = outcome {
             ReviewService.shared.isAdJustShown = true
             // [BM] T057: 리워드 광고 시청 완료 이벤트 (FR-056)
-            AnalyticsService.shared.trackAdWatched(type: .rewarded)
+            AnalyticsService.shared.trackAdWatched(type: .rewarded, source: "gate")
         }
 
         DispatchQueue.main.async {

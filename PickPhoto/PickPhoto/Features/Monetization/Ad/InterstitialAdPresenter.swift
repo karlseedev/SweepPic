@@ -155,7 +155,7 @@ extension InterstitialAdPresenter: GADFullScreenContentDelegate {
         // [BM] T055: 전면 광고 시청 후 리뷰 금지 타이밍 플래그 설정 (FR-050)
         ReviewService.shared.isAdJustShown = true
         // [BM] T057: 전면 광고 시청 완료 이벤트 (FR-056)
-        AnalyticsService.shared.trackAdWatched(type: .interstitial)
+        AnalyticsService.shared.trackAdWatched(type: .interstitial, source: "auto")
         fireCompletion()
 
         // 다음 표시를 위해 즉시 사전 로드 (FR-016)
