@@ -412,6 +412,10 @@ final class TrashGatePopupViewController: UIViewController {
             }
         }
         networkMonitor.start(queue: DispatchQueue.global(qos: .utility))
+
+        // 초기 네트워크 상태 즉시 반영 (race condition 방지)
+        isOnline = (networkMonitor.currentPath.status == .satisfied)
+        updateOfflineState()
     }
 
     /// 오프라인 상태 UI 업데이트 (FR-055)

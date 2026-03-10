@@ -537,6 +537,10 @@ final class PaywallViewController: UIViewController {
             freeTrialLabel.text = trialText
             freeTrialLabel.isHidden = false
         }
+
+        // 접근성: 가격 정보 반영 (FR-057)
+        yearlyButton.accessibilityLabel = "연간 구독, \(yearlyTitle)"
+        monthlyButton.accessibilityLabel = "월간 구독, \(viewModel.monthlyPriceText)"
     }
 
     /// 법적 고지 텍스트 업데이트 (FR-037)
