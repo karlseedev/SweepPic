@@ -435,8 +435,8 @@ final class PreviewGridViewController: UIViewController {
     /// 섹션 인덱스에 대한 섹션 타입
     ///
     /// light: 0=사진
-    /// standard/deep: 0=배너(30점이하), 1=light사진, 2=배너(31~40점), 3=standard사진,
-    ///                4=배너(41~50점), 5=deep사진
+    /// standard/deep: 0=배너(5등급), 1=light사진, 2=배너(4등급), 3=standard사진,
+    ///                4=배너(3등급), 5=deep사진
     private func sectionType(for sectionIndex: Int) -> SectionType {
         // light 단계: 배너 없이 사진만
         if currentStage == .light {
@@ -446,15 +446,15 @@ final class PreviewGridViewController: UIViewController {
         // standard/deep: 배너 포함 전체 매핑
         switch sectionIndex {
         case 0:
-            return .banner(scoreRange: "30점 이하", count: previewResult.lightCount)
+            return .banner(scoreRange: "5등급", count: previewResult.lightCount)
         case 1:
             return .photos(previewResult.lightCandidates)
         case 2:
-            return .banner(scoreRange: "31~40점", count: previewResult.standardCount)
+            return .banner(scoreRange: "4등급", count: previewResult.standardCount)
         case 3:
             return .photos(previewResult.standardCandidates)
         case 4:
-            return .banner(scoreRange: "41~50점", count: previewResult.deepCount)
+            return .banner(scoreRange: "3등급", count: previewResult.deepCount)
         case 5:
             return .photos(previewResult.deepCandidates)
         default:
@@ -485,21 +485,19 @@ final class PreviewGridViewController: UIViewController {
     // MARK: - Header & Bottom Update
 
     /// 헤더 제목 업데이트
-    /// - light: "품질지수 30점 이하 사진 N장"
-    /// - standard: "품질지수 40점 이하 사진 N장"
-    /// - deep: "품질지수 50점 이하 사진 N장"
+    /// - light: "품질 5등급 사진 N장"
+    /// - standard: "품질 4등급 이하 사진 N장"
+    /// - deep: "품질 3등급 이하 사진 N장"
     private func updateHeader() {
         let count = previewResult.count(upToStage: currentStage)
 
-        // 단계별 누적 기준 점수
-        let maxScore: Int
+        // 단계별 등급 (숫자가 높을수록 저품질: 5등급=최저, 3등급=보통이하)
+        let titleText: String
         switch currentStage {
-        case .light:    maxScore = 30
-        case .standard: maxScore = 40
-        case .deep:     maxScore = 50
+        case .light:    titleText = "품질 5등급 사진 \(count)장"
+        case .standard: titleText = "품질 4등급 이하 사진 \(count)장"
+        case .deep:     titleText = "품질 3등급 이하 사진 \(count)장"
         }
-
-        let titleText = "품질지수 \(maxScore)점 이하 사진 \(count)장"
 
         // iOS 26: 시스템 네비바 타이틀
         title = titleText
@@ -576,16 +574,16 @@ final class PreviewGridViewController: UIViewController {
 
     /// 정리 확인 Alert 표시
     private func showCleanupConfirmation(assetIDs: [String]) {
-        // 현재 단계에 따른 최대 점수
-        let maxScore: Int
+        // 현재 단계에 따른 등급 텍스트
+        let gradeText: String
         switch currentStage {
-        case .light:    maxScore = 30
-        case .standard: maxScore = 40
-        case .deep:     maxScore = 50
+        case .light:    gradeText = "품질 5등급"
+        case .standard: gradeText = "품질 4등급 이하"
+        case .deep:     gradeText = "품질 3등급 이하"
         }
 
         let alert = UIAlertController(
-            title: "품질지수 \(maxScore)점 이하 사진 \(assetIDs.count)장을\n삭제대기함으로 이동할까요?",
+            title: "\(gradeText) 사진 \(assetIDs.count)장을\n삭제대기함으로 이동할까요?",
             message: nil,
             preferredStyle: .alert
         )

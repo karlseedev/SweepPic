@@ -180,14 +180,14 @@ final class PreviewBottomView: UIView {
         deepCount: Int,
         canExpand: Bool
     ) {
-        // 메인 버튼: "N점 이하 사진 N장 삭제대기함 이동" (상단 타이틀 점수와 동일)
-        let maxScore: Int
+        // 메인 버튼: "N등급 이하 사진 N장 삭제대기함 이동" (상단 타이틀 등급과 동일)
+        let primaryTitle: String
         switch currentStage {
-        case .light:    maxScore = 30
-        case .standard: maxScore = 40
-        case .deep:     maxScore = 50
+        case .light:    primaryTitle = "5등급 사진 \(totalCount)장 삭제대기함 이동"
+        case .standard: primaryTitle = "4등급 이하 사진 \(totalCount)장 삭제대기함 이동"
+        case .deep:     primaryTitle = "3등급 이하 사진 \(totalCount)장 삭제대기함 이동"
         }
-        primaryButton.setButtonTitle("\(maxScore)점 이하 사진 \(totalCount)장 삭제대기함 이동")
+        primaryButton.setButtonTitle(primaryTitle)
 
         // 보조 버튼 visibility 결정
         let showCollapse = currentStage > .light
@@ -200,15 +200,15 @@ final class PreviewBottomView: UIView {
         let useTwoLines = showCollapse && showExpand
 
         // 축소 버튼 (2단계부터)
-        // standard: "31~40점 사진 N장 덜 보기", deep: "41~50점 사진 N장 덜 보기"
+        // standard: "4등급 사진 N장 덜 보기", deep: "3등급 사진 N장 덜 보기"
         if showCollapse {
             let separator = useTwoLines ? "\n" : " "
             let collapseTitle: String
             switch currentStage {
             case .standard:
-                collapseTitle = "31~40점 사진\(separator)\(standardCount)장 덜 보기"
+                collapseTitle = "4등급 사진\(separator)\(standardCount)장 덜 보기"
             case .deep:
-                collapseTitle = "41~50점 사진\(separator)\(deepCount)장 덜 보기"
+                collapseTitle = "3등급 사진\(separator)\(deepCount)장 덜 보기"
             default:
                 collapseTitle = ""
             }
@@ -216,15 +216,15 @@ final class PreviewBottomView: UIView {
         }
 
         // 확장 버튼
-        // light: "31~40점 사진 N장 더 보기", standard: "41~50점 사진 N장 더 보기"
+        // light: "4등급 사진 N장 더 보기", standard: "3등급 사진 N장 더 보기"
         if showExpand {
             let separator = useTwoLines ? "\n" : " "
             let expandTitle: String
             switch currentStage {
             case .light:
-                expandTitle = "31~40점 사진\(separator)\(standardCount)장 더 보기"
+                expandTitle = "4등급 사진\(separator)\(standardCount)장 더 보기"
             case .standard:
-                expandTitle = "41~50점 사진\(separator)\(deepCount)장 더 보기"
+                expandTitle = "3등급 사진\(separator)\(deepCount)장 더 보기"
             default:
                 expandTitle = ""
             }
