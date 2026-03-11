@@ -993,12 +993,10 @@ CREATE POLICY "anon_insert" ON events FOR INSERT TO anon
         )
     );
 
--- SELECT 정책 (Claude 분석용)
-CREATE POLICY "anon_select" ON events FOR SELECT TO anon
-    USING (true);
 ```
 
-> INSERT + SELECT 허용. 이벤트명 화이트리스트(20종)로 무단 INSERT 방지. SELECT는 anon 키로 Claude가 직접 분석 가능.
+> INSERT만 허용, SELECT/UPDATE/DELETE 정책 없음. 이벤트명 화이트리스트(20종)로 무단 INSERT 방지.
+> 조회는 service_role key(RLS 우회)로만 가능. anon key로는 INSERT만 허용.
 
 ### 5.3 RPC 함수
 
