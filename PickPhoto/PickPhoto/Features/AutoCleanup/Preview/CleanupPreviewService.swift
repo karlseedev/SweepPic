@@ -317,20 +317,21 @@ final class CleanupPreviewService {
                                 reason: metaResult.reason
                             )
                         } else if let image = loadedImage {
-                            // 얼굴 품질 체크 (Vision, ~10-30ms)
+                            // 얼굴 감지 체크 (Vision, ~10-30ms)
+                            // path2(AestheticsScore)에서는 얼굴이 감지되기만 하면 보호
+                            // (path1 블러 SafeGuard와 달리 품질 임계값 불필요)
                             let detail = try? await SafeGuardChecker.shared.checkFaceQuality(image)
                             let faceCount = detail?.faceCount ?? 0
                             let maxQuality = detail?.maxFaceQuality
-                            let applied = detail?.result.isApplied ?? false
-                            let reason = detail?.result.reason
+                            let hasFace = faceCount > 0
 
-                            path2SafeGuarded = applied
+                            path2SafeGuarded = hasFace
                             safeGuardDebug = SafeGuardDebugInfo(
                                 isPortrait: false,
                                 faceCount: faceCount,
                                 maxFaceQuality: maxQuality,
-                                applied: applied,
-                                reason: reason
+                                applied: hasFace,
+                                reason: hasFace ? .clearFace : nil
                             )
                         }
                     }
