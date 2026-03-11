@@ -32,6 +32,21 @@ struct SafeGuardResult: Equatable {
     }
 }
 
+/// Safe Guard 상세 결과 (디버그용)
+///
+/// 얼굴 감지 상세 정보를 포함하여 SafeGuard 판정 근거를 추적합니다.
+struct SafeGuardDetailResult: Equatable {
+
+    /// SafeGuard 결과
+    let result: SafeGuardResult
+
+    /// 감지된 얼굴 수
+    let faceCount: Int
+
+    /// 최대 얼굴 품질 (nil = 얼굴 없음 또는 미체크)
+    let maxFaceQuality: Float?
+}
+
 /// Safe Guard 체커
 ///
 /// 블러 신호가 감지된 경우, 의도적 배경 흐림 또는 선명한 얼굴이 있는지 확인합니다.
@@ -132,6 +147,48 @@ final class SafeGuardChecker {
 
         // 2. 이미지 기반 체크 (얼굴 품질)
         return try await checkFaceQuality(image)
+    }
+
+    /// Safe Guard 체크 (이미지 기반 - 얼굴 품질 상세)
+    ///
+    /// 기존 checkFaceQuality와 동일하지만 얼굴 수와 최대 품질 점수를 함께 반환합니다.
+    /// 디버그/로깅용으로 SafeGuard 판정 근거를 확인할 때 사용합니다.
+    ///
+    /// - Parameter image: 체크할 CGImage
+    /// - Returns: 상세 결과 (결과 + 얼굴 수 + 최대 품질)
+    /// - Throws: Vision API 실패 시 에러
+    func checkFaceQualityDetailed(_ image: CGImage) async throws -> SafeGuardDetailResult {
+        // VNDetectFaceCaptureQualityRequest 생성
+        let request = VNDetectFaceCaptureQualityRequest()
+
+        // 이미지 핸들러 생성
+        let handler = VNImageRequestHandler(cgImage: image, options: [:])
+
+        // 요청 수행
+        do {
+            try handler.perform([request])
+        } catch {
+            throw AnalysisError.visionFailed(error.localizedDescription)
+        }
+
+        // 결과 확인
+        guard let observations = request.results, !observations.isEmpty else {
+            // 얼굴이 감지되지 않음
+            return SafeGuardDetailResult(result: .notApplied, faceCount: 0, maxFaceQuality: nil)
+        }
+
+        // 가장 높은 얼굴 품질 확인
+        let faceCount = observations.count
+        let maxQuality = observations.compactMap { $0.faceCaptureQuality }.max()
+
+        let result: SafeGuardResult
+        if let quality = maxQuality, quality >= faceQualityThreshold {
+            result = .applied(.clearFace)
+        } else {
+            result = .notApplied
+        }
+
+        return SafeGuardDetailResult(result: result, faceCount: faceCount, maxFaceQuality: maxQuality)
     }
 
     /// 블러 신호에 Safe Guard 적용 필요 여부 확인

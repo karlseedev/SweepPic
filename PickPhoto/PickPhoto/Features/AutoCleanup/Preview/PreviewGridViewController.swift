@@ -957,7 +957,7 @@ extension PreviewGridViewController {
             message += "\nTime: \(String(format: "%.1f", result.analysisTimeMs))ms"
 
             if result.safeGuardApplied, let reason = result.safeGuardReason {
-                message += "\nSafeGuard: \(reason.rawValue)"
+                message += "\nSafeGuard(path1): \(reason.rawValue)"
             }
 
             if !result.signals.isEmpty {
@@ -970,6 +970,19 @@ extension PreviewGridViewController {
             }
         } else {
             message += "\n(QualityResult 없음)"
+        }
+
+        // SafeGuard 디버그 정보 (path2 SafeGuard 포함)
+        if let sg = candidate.safeGuardDebug {
+            message += "\n\n--- SafeGuard ---"
+            message += "\nPortrait: \(sg.isPortrait ? "YES" : "NO")"
+            message += "\nFaceCount: \(sg.faceCount)"
+            if let quality = sg.maxFaceQuality {
+                message += "\nFaceQuality: \(String(format: "%.3f", quality)) (threshold: 0.400)"
+            } else {
+                message += "\nFaceQuality: N/A"
+            }
+            message += "\nResult: \(sg.applied ? "APPLIED (\(sg.reason?.rawValue ?? ""))" : "NOT APPLIED")"
         }
 
         // 콘솔 로그로 상세 정보 출력

@@ -40,6 +40,30 @@ enum PreviewStage: Int, Comparable, CaseIterable {
     }
 }
 
+// MARK: - SafeGuardDebugInfo
+
+/// SafeGuard 디버그 정보
+///
+/// SafeGuard 판정 근거를 추적하기 위한 상세 정보.
+/// 포트레이트 여부, 얼굴 감지 결과, 적용 여부를 포함.
+struct SafeGuardDebugInfo {
+
+    /// 포트레이트 모드 여부 (depthEffect)
+    let isPortrait: Bool
+
+    /// 감지된 얼굴 수
+    let faceCount: Int
+
+    /// 최대 얼굴 품질 점수 (nil = 얼굴 없음 또는 미체크)
+    let maxFaceQuality: Float?
+
+    /// SafeGuard 적용 여부
+    let applied: Bool
+
+    /// SafeGuard 적용 사유 (applied == true인 경우)
+    let reason: SafeGuardReason?
+}
+
 // MARK: - PreviewCandidate
 
 /// 분석 결과 1건 — 미리보기용
@@ -62,4 +86,7 @@ struct PreviewCandidate {
 
     /// 품질 분석 상세 결과 (디버그용 — signals, 측정값, 임계값 포함)
     let qualityResult: QualityResult?
+
+    /// SafeGuard 디버그 정보 (디버그용 — 판정 근거 추적)
+    let safeGuardDebug: SafeGuardDebugInfo?
 }

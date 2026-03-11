@@ -242,10 +242,13 @@ final class CleanupPreviewService {
                 var aestheticsScore: Float? = nil
                 var isUtility = false
                 var isTextScreenshot = false
+                var loadedImage: CGImage? = nil
 
                 if #available(iOS 18.0, *) {
-                    // 이미지 로드
+                    // 이미지 로드 (SafeGuard에서도 재사용하기 위해 외부 변수에 캡처)
                     if let image = try? await CleanupImageLoader.shared.loadImage(for: asset) {
+                        loadedImage = image
+
                         // AestheticsScore 분석
                         if let metrics = try? await AestheticsAnalyzer.shared.analyze(image) {
                             aestheticsScore = metrics.overallScore
@@ -284,12 +287,72 @@ final class CleanupPreviewService {
                     threshold: path2DeepThreshold
                 )
 
-                // 5. 3모드 계산 (모두 OR)
+                // 5. 경로2 단독 검출 시 SafeGuard 체크
+                //    경로1이 이미 검출했으면 SafeGuard 불필요 (경로1 내부에서 이미 처리됨)
+                let anyPath2 = path2Light || path2Std || path2Deep
+                var safeGuardDebug: SafeGuardDebugInfo? = nil
+                var path2SafeGuarded = false
+
+                if !path1Result && anyPath2 {
+                    // QualityAnalyzer가 이미 SafeGuard를 적용한 경우 재사용 (중복 방지)
+                    if oldResult.safeGuardApplied {
+                        path2SafeGuarded = true
+                        safeGuardDebug = SafeGuardDebugInfo(
+                            isPortrait: oldResult.safeGuardReason == .depthEffect,
+                            faceCount: oldResult.safeGuardReason == .clearFace ? 1 : 0,
+                            maxFaceQuality: nil,
+                            applied: true,
+                            reason: oldResult.safeGuardReason
+                        )
+                    } else {
+                        // 메타데이터 체크 (포트레이트 모드, ~0ms)
+                        let metaResult = SafeGuardChecker.shared.checkMetadata(asset)
+                        if metaResult.isApplied {
+                            path2SafeGuarded = true
+                            safeGuardDebug = SafeGuardDebugInfo(
+                                isPortrait: true,
+                                faceCount: 0,
+                                maxFaceQuality: nil,
+                                applied: true,
+                                reason: metaResult.reason
+                            )
+                        } else if let image = loadedImage {
+                            // 얼굴 품질 상세 체크 (Vision, ~10-30ms)
+                            let detail = try? await SafeGuardChecker.shared.checkFaceQualityDetailed(image)
+                            let faceCount = detail?.faceCount ?? 0
+                            let maxQuality = detail?.maxFaceQuality
+                            let applied = detail?.result.isApplied ?? false
+                            let reason = detail?.result.reason
+
+                            path2SafeGuarded = applied
+                            safeGuardDebug = SafeGuardDebugInfo(
+                                isPortrait: false,
+                                faceCount: faceCount,
+                                maxFaceQuality: maxQuality,
+                                applied: applied,
+                                reason: reason
+                            )
+                        }
+                    }
+
+                    // SafeGuard 적용 시 해당 사진 제외
+                    if path2SafeGuarded {
+                        reportProgress(
+                            scanned: totalScanned,
+                            found: lightCandidates.count,
+                            date: asset.creationDate ?? Date(),
+                            handler: progressHandler
+                        )
+                        continue
+                    }
+                }
+
+                // 6. 3모드 계산 (모두 OR)
                 let light    = path1Result || path2Light
                 let standard = path1Result || path2Std
                 let deep     = path1Result || path2Deep
 
-                // 6. 단계별 분류 (추가분만 분리)
+                // 7. 단계별 분류 (추가분만 분리)
                 if light {
                     // 1단계(완화)에서 잡힘 → light
                     lightCandidates.append(PreviewCandidate(
@@ -297,7 +360,8 @@ final class CleanupPreviewService {
                         asset: asset,
                         stage: .light,
                         score: aestheticsScore,
-                        qualityResult: oldResult
+                        qualityResult: oldResult,
+                        safeGuardDebug: safeGuardDebug
                     ))
 
                 } else if standard {
@@ -307,7 +371,8 @@ final class CleanupPreviewService {
                         asset: asset,
                         stage: .standard,
                         score: aestheticsScore,
-                        qualityResult: oldResult
+                        qualityResult: oldResult,
+                        safeGuardDebug: safeGuardDebug
                     ))
                 } else if deep {
                     // 3단계(강화)에서 추가로 잡힘 → deep 추가분
@@ -316,7 +381,8 @@ final class CleanupPreviewService {
                         asset: asset,
                         stage: .deep,
                         score: aestheticsScore,
-                        qualityResult: oldResult
+                        qualityResult: oldResult,
+                        safeGuardDebug: safeGuardDebug
                     ))
                 }
 
