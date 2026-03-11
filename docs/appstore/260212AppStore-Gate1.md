@@ -139,11 +139,11 @@ NSPrivacyTracking: false
 
 ## Gate 1 체크리스트
 
-- [ ] PrivacyInfo.xcprivacy가 프로젝트에 포함되어 있는가?
-- [ ] Required Reason API 사유 코드가 올바르게 선언되어 있는가? (파일 타임스탬프 `DDA9.1`, UserDefaults `CA92.1`, 디스크 공간 `E174.1`)
-- [ ] NSPrivacyCollectedDataTypes에 서버 전송 데이터가 선언되어 있는가? (ProductInteraction, DeviceID, OtherDiagnosticData)
-- [ ] 서드파티 SDK(BlurUIKit, LiquidGlassKit, TelemetryDeck)에 Privacy Manifest가 포함되어 있는가?
-- [ ] 앱 아이콘이 1024x1024 불투명 PNG인가? (알파 채널 없음)
+- [x] PrivacyInfo.xcprivacy가 프로젝트에 포함되어 있는가? ✅ 생성 완료, 앱 번들 포함 확인
+- [x] Required Reason API 사유 코드가 올바르게 선언되어 있는가? (파일 타임스탬프 `DDA9.1`, UserDefaults `CA92.1`, 디스크 공간 `E174.1`) ✅
+- [x] NSPrivacyCollectedDataTypes에 서버 전송 데이터가 선언되어 있는가? (ProductInteraction, DeviceID, OtherDiagnosticData) ✅
+- [x] 서드파티 SDK(BlurUIKit, LiquidGlassKit, TelemetryDeck)에 Privacy Manifest가 포함되어 있는가? ✅ TelemetryDeck/GoogleMobileAds/UMP 포함 확인, BlurUIKit/LiquidGlassKit은 Required Reason API 미사용으로 불필요
+- [ ] 앱 아이콘이 1024x1024 불투명 PNG인가? (알파 채널 없음) ⚠️ 이미지 미준비
 
 ---
 
