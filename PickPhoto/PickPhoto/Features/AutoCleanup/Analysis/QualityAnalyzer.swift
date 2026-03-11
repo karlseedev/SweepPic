@@ -238,7 +238,7 @@ final class QualityAnalyzer {
             // 메타데이터로 Safe Guard 적용 안 되면 얼굴 품질 체크
             if !safeGuardResult.isApplied {
                 do {
-                    let detail = try await safeGuardChecker.checkFaceQuality(image)
+                    let detail = try await safeGuardChecker.checkFaceQuality(asset: asset)
                     safeGuardResult = detail.result
                     safeGuardFaceCount = detail.faceCount
                     safeGuardMaxFaceQuality = detail.maxFaceQuality

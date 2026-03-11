@@ -100,9 +100,34 @@ final class CleanupImageLoader {
     ///
     /// - Important: 짧은 변 360px 기준으로 리사이즈되며, 원본 비율이 유지됩니다.
     func loadImage(for asset: PHAsset) async throws -> CGImage {
+        return try await loadImage(for: asset, targetMinSize: minSize)
+    }
+
+    /// SafeGuard 얼굴 체크용 이미지 로딩
+    ///
+    /// - Parameter asset: 로딩할 PHAsset
+    /// - Returns: 얼굴 감지에 최적화된 해상도의 CGImage
+    /// - Throws: CleanupImageLoadError
+    ///
+    /// - Important: 짧은 변 720px 기준으로 리사이즈되며, 원본 비율이 유지됩니다.
+    ///   360px에서 놓칠 수 있는 작은 얼굴의 감지 정확도를 높입니다.
+    func loadImageForSafeGuard(for asset: PHAsset) async throws -> CGImage {
+        return try await loadImage(for: asset, targetMinSize: CleanupConstants.safeGuardImageMinSize)
+    }
+
+    // MARK: - Private Methods
+
+    /// 지정된 최소 크기로 이미지 로딩 (내부 공통 로직)
+    ///
+    /// - Parameters:
+    ///   - asset: 로딩할 PHAsset
+    ///   - targetMinSize: 짧은 변 기준 최소 크기 (픽셀)
+    /// - Returns: 리사이즈된 CGImage
+    /// - Throws: CleanupImageLoadError
+    private func loadImage(for asset: PHAsset, targetMinSize: CGFloat) async throws -> CGImage {
         return try await withCheckedThrowingContinuation { continuation in
             // 타겟 크기 계산 (짧은 변 기준)
-            let targetSize = calculateTargetSize(for: asset)
+            let targetSize = calculateTargetSize(for: asset, targetMinSize: targetMinSize)
 
             // 요청 ID 저장용
             var requestID: PHImageRequestID?
@@ -159,31 +184,31 @@ final class CleanupImageLoader {
         }
     }
 
-    // MARK: - Private Methods
-
     /// 타겟 크기 계산 (짧은 변 기준)
     ///
-    /// - Parameter asset: 대상 PHAsset
-    /// - Returns: 분석용 타겟 크기
+    /// - Parameters:
+    ///   - asset: 대상 PHAsset
+    ///   - targetMinSize: 짧은 변 기준 최소 크기
+    /// - Returns: 리사이즈 타겟 크기
     ///
     /// - Note: 긴 변이 아닌 짧은 변을 기준으로 스케일을 계산합니다.
-    ///   예시 (minSize = 360):
+    ///   예시 (targetMinSize = 360):
     ///   - 4000×3000 → 480×360 (짧은 변 360)
     ///   - 780×4228 → 360×1953 (짧은 변 360)
-    private func calculateTargetSize(for asset: PHAsset) -> CGSize {
+    private func calculateTargetSize(for asset: PHAsset, targetMinSize: CGFloat) -> CGSize {
         let pixelWidth = CGFloat(asset.pixelWidth)
         let pixelHeight = CGFloat(asset.pixelHeight)
 
         // 짧은 변 기준으로 스케일 계산
         let shorterSide = min(pixelWidth, pixelHeight)
 
-        // 이미 minSize 이하면 원본 크기 사용
-        if shorterSide <= minSize {
+        // 이미 targetMinSize 이하면 원본 크기 사용
+        if shorterSide <= targetMinSize {
             return CGSize(width: pixelWidth, height: pixelHeight)
         }
 
         // 스케일 계산
-        let scale = minSize / shorterSide
+        let scale = targetMinSize / shorterSide
 
         return CGSize(
             width: pixelWidth * scale,

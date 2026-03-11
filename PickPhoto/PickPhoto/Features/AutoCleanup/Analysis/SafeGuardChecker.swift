@@ -93,16 +93,20 @@ final class SafeGuardChecker {
         return .notApplied
     }
 
-    /// Safe Guard 체크 (이미지 기반 - 얼굴 품질)
+    /// Safe Guard 체크 (얼굴 품질 - 720px 이미지 자동 로드)
     ///
-    /// 얼굴 감지 후 품질을 평가하고, 상세 결과(얼굴 수, 최대 품질)를 함께 반환합니다.
+    /// 내부에서 720px 이미지를 로드한 후 얼굴 감지 및 품질을 평가합니다.
+    /// 360px 분석 이미지보다 높은 해상도로 작은 얼굴의 감지 정확도를 높입니다.
     ///
-    /// - Parameter image: 체크할 CGImage
+    /// - Parameter asset: 체크할 PHAsset
     /// - Returns: 상세 결과 (SafeGuard 결과 + 얼굴 수 + 최대 품질)
-    /// - Throws: Vision API 실패 시 에러
+    /// - Throws: 이미지 로드 실패 또는 Vision API 실패 시 에러
     ///
     /// - Note: 얼굴 품질 >= 0.4 이면 Safe Guard 적용
-    func checkFaceQuality(_ image: CGImage) async throws -> SafeGuardDetailResult {
+    func checkFaceQuality(asset: PHAsset) async throws -> SafeGuardDetailResult {
+        // 720px 이미지 로드 (SafeGuard 전용 해상도)
+        let image = try await CleanupImageLoader.shared.loadImageForSafeGuard(for: asset)
+
         // VNDetectFaceCaptureQualityRequest 생성
         let request = VNDetectFaceCaptureQualityRequest()
 
@@ -136,23 +140,21 @@ final class SafeGuardChecker {
         return SafeGuardDetailResult(result: result, faceCount: faceCount, maxFaceQuality: maxQuality)
     }
 
-    /// Safe Guard 종합 체크 (메타데이터 + 이미지)
+    /// Safe Guard 종합 체크 (메타데이터 + 얼굴)
     ///
-    /// - Parameters:
-    ///   - asset: 체크할 PHAsset
-    ///   - image: 체크할 CGImage
+    /// - Parameter asset: 체크할 PHAsset
     /// - Returns: 상세 결과 (메타데이터 통과 시 얼굴 품질 체크)
     ///
-    /// - Note: 메타데이터 체크 후 이미지 체크 수행 (순차적)
-    func check(asset: PHAsset, image: CGImage) async throws -> SafeGuardDetailResult {
+    /// - Note: 메타데이터 체크 후 얼굴 체크 수행 (순차적)
+    func check(asset: PHAsset) async throws -> SafeGuardDetailResult {
         // 1. 메타데이터 체크 (빠른 체크 먼저)
         let metadataResult = checkMetadata(asset)
         if metadataResult.isApplied {
             return SafeGuardDetailResult(result: metadataResult, faceCount: 0, maxFaceQuality: nil)
         }
 
-        // 2. 이미지 기반 체크 (얼굴 품질)
-        return try await checkFaceQuality(image)
+        // 2. 얼굴 품질 체크 (720px 이미지 자동 로드)
+        return try await checkFaceQuality(asset: asset)
     }
 
     /// 블러 신호에 Safe Guard 적용 필요 여부 확인

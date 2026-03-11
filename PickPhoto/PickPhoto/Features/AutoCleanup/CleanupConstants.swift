@@ -53,6 +53,13 @@ enum CleanupConstants {
     /// - 일반 사진은 기존과 유사한 크기 유지
     static let analysisImageMinSize: CGFloat = 360
 
+    /// SafeGuard 얼굴 체크용 이미지 최소 크기 (짧은 변 기준, 픽셀)
+    /// - 짧은 변 720px로 다운샘플
+    /// - 360px에서는 작은 얼굴(이미지의 10% 미만) 감지 실패 가능
+    /// - 720px이면 ~5% 크기 얼굴도 ~36px → Vision 감지 가능 범위
+    /// - SafeGuard 대상 사진에서만 로드하므로 전체 성능 영향 미미
+    static let safeGuardImageMinSize: CGFloat = 720
+
     /// 분석 타임아웃 (초)
     /// - 개별 사진 분석이 이 시간을 초과하면 SKIP 처리
     static let analysisTimeout: TimeInterval = 5.0

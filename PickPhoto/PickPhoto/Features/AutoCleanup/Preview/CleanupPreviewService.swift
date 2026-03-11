@@ -316,11 +316,11 @@ final class CleanupPreviewService {
                                 applied: true,
                                 reason: metaResult.reason
                             )
-                        } else if let image = loadedImage {
-                            // 얼굴 감지 체크 (Vision, ~10-30ms)
+                        } else {
+                            // 얼굴 감지 체크 (Vision, 720px 이미지 자동 로드)
                             // path2(AestheticsScore)에서는 얼굴이 감지되기만 하면 보호
                             // (path1 블러 SafeGuard와 달리 품질 임계값 불필요)
-                            let detail = try? await SafeGuardChecker.shared.checkFaceQuality(image)
+                            let detail = try? await SafeGuardChecker.shared.checkFaceQuality(asset: asset)
                             let faceCount = detail?.faceCount ?? 0
                             let maxQuality = detail?.maxFaceQuality
                             let hasFace = faceCount > 0
