@@ -95,69 +95,14 @@ final class SafeGuardChecker {
 
     /// Safe Guard 체크 (이미지 기반 - 얼굴 품질)
     ///
+    /// 얼굴 감지 후 품질을 평가하고, 상세 결과(얼굴 수, 최대 품질)를 함께 반환합니다.
+    ///
     /// - Parameter image: 체크할 CGImage
-    /// - Returns: Safe Guard 체크 결과 (얼굴 품질 기반)
+    /// - Returns: 상세 결과 (SafeGuard 결과 + 얼굴 수 + 최대 품질)
     /// - Throws: Vision API 실패 시 에러
     ///
     /// - Note: 얼굴 품질 >= 0.4 이면 Safe Guard 적용
-    func checkFaceQuality(_ image: CGImage) async throws -> SafeGuardResult {
-        // VNDetectFaceCaptureQualityRequest 생성
-        let request = VNDetectFaceCaptureQualityRequest()
-
-        // 이미지 핸들러 생성
-        let handler = VNImageRequestHandler(cgImage: image, options: [:])
-
-        // 요청 수행
-        do {
-            try handler.perform([request])
-        } catch {
-            throw AnalysisError.visionFailed(error.localizedDescription)
-        }
-
-        // 결과 확인
-        guard let observations = request.results, !observations.isEmpty else {
-            // 얼굴이 감지되지 않음
-            return .notApplied
-        }
-
-        // 가장 높은 얼굴 품질 확인
-        let maxQuality = observations.compactMap { $0.faceCaptureQuality }.max() ?? 0
-
-        if maxQuality >= faceQualityThreshold {
-            return .applied(.clearFace)
-        }
-
-        return .notApplied
-    }
-
-    /// Safe Guard 종합 체크 (메타데이터 + 이미지)
-    ///
-    /// - Parameters:
-    ///   - asset: 체크할 PHAsset
-    ///   - image: 체크할 CGImage
-    /// - Returns: Safe Guard 체크 결과
-    ///
-    /// - Note: 메타데이터 체크 후 이미지 체크 수행 (순차적)
-    func check(asset: PHAsset, image: CGImage) async throws -> SafeGuardResult {
-        // 1. 메타데이터 체크 (빠른 체크 먼저)
-        let metadataResult = checkMetadata(asset)
-        if metadataResult.isApplied {
-            return metadataResult
-        }
-
-        // 2. 이미지 기반 체크 (얼굴 품질)
-        return try await checkFaceQuality(image)
-    }
-
-    /// Safe Guard 체크 (이미지 기반 - 얼굴 품질 상세)
-    ///
-    /// 기존 checkFaceQuality와 동일하지만 얼굴 수와 최대 품질 점수를 함께 반환합니다.
-    /// 디버그/로깅용으로 SafeGuard 판정 근거를 확인할 때 사용합니다.
-    ///
-    /// - Parameter image: 체크할 CGImage
-    /// - Returns: 상세 결과 (결과 + 얼굴 수 + 최대 품질)
-    /// - Throws: Vision API 실패 시 에러
-    func checkFaceQualityDetailed(_ image: CGImage) async throws -> SafeGuardDetailResult {
+    func checkFaceQuality(_ image: CGImage) async throws -> SafeGuardDetailResult {
         // VNDetectFaceCaptureQualityRequest 생성
         let request = VNDetectFaceCaptureQualityRequest()
 
@@ -189,6 +134,25 @@ final class SafeGuardChecker {
         }
 
         return SafeGuardDetailResult(result: result, faceCount: faceCount, maxFaceQuality: maxQuality)
+    }
+
+    /// Safe Guard 종합 체크 (메타데이터 + 이미지)
+    ///
+    /// - Parameters:
+    ///   - asset: 체크할 PHAsset
+    ///   - image: 체크할 CGImage
+    /// - Returns: 상세 결과 (메타데이터 통과 시 얼굴 품질 체크)
+    ///
+    /// - Note: 메타데이터 체크 후 이미지 체크 수행 (순차적)
+    func check(asset: PHAsset, image: CGImage) async throws -> SafeGuardDetailResult {
+        // 1. 메타데이터 체크 (빠른 체크 먼저)
+        let metadataResult = checkMetadata(asset)
+        if metadataResult.isApplied {
+            return SafeGuardDetailResult(result: metadataResult, faceCount: 0, maxFaceQuality: nil)
+        }
+
+        // 2. 이미지 기반 체크 (얼굴 품질)
+        return try await checkFaceQuality(image)
     }
 
     /// 블러 신호에 Safe Guard 적용 필요 여부 확인

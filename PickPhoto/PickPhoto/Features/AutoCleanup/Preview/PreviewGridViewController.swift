@@ -956,10 +956,6 @@ extension PreviewGridViewController {
             message += "\nMethod: \(result.analysisMethod.rawValue)"
             message += "\nTime: \(String(format: "%.1f", result.analysisTimeMs))ms"
 
-            if result.safeGuardApplied, let reason = result.safeGuardReason {
-                message += "\nSafeGuard(path1): \(reason.rawValue)"
-            }
-
             if !result.signals.isEmpty {
                 message += "\n\n--- Signals ---"
                 for signal in result.signals {
@@ -968,13 +964,27 @@ extension PreviewGridViewController {
                     message += " thr:\(String(format: "%.3f", signal.threshold))"
                 }
             }
+
+            // SafeGuard 정보 (path1: QualityResult에서)
+            message += "\n\n--- SafeGuard(path1) ---"
+            if result.safeGuardApplied, let reason = result.safeGuardReason {
+                message += "\nResult: APPLIED (\(reason.rawValue))"
+            } else {
+                message += "\nResult: NOT APPLIED"
+            }
+            message += "\nFaceCount: \(result.safeGuardFaceCount)"
+            if let quality = result.safeGuardMaxFaceQuality {
+                message += "\nFaceQuality: \(String(format: "%.3f", quality)) (threshold: 0.400)"
+            } else {
+                message += "\nFaceQuality: N/A (미체크)"
+            }
         } else {
             message += "\n(QualityResult 없음)"
         }
 
-        // SafeGuard 디버그 정보 (path2 SafeGuard 포함)
+        // SafeGuard 디버그 정보 (path2: CleanupPreviewService에서)
         if let sg = candidate.safeGuardDebug {
-            message += "\n\n--- SafeGuard ---"
+            message += "\n\n--- SafeGuard(path2) ---"
             message += "\nPortrait: \(sg.isPortrait ? "YES" : "NO")"
             message += "\nFaceCount: \(sg.faceCount)"
             if let quality = sg.maxFaceQuality {

@@ -317,8 +317,8 @@ final class CleanupPreviewService {
                                 reason: metaResult.reason
                             )
                         } else if let image = loadedImage {
-                            // 얼굴 품질 상세 체크 (Vision, ~10-30ms)
-                            let detail = try? await SafeGuardChecker.shared.checkFaceQualityDetailed(image)
+                            // 얼굴 품질 체크 (Vision, ~10-30ms)
+                            let detail = try? await SafeGuardChecker.shared.checkFaceQuality(image)
                             let faceCount = detail?.faceCount ?? 0
                             let maxQuality = detail?.maxFaceQuality
                             let applied = detail?.result.isApplied ?? false

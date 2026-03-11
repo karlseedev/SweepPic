@@ -181,6 +181,12 @@ struct QualityResult: Equatable {
     /// - safeGuardApplied == true인 경우에만 값 존재
     let safeGuardReason: SafeGuardReason?
 
+    /// Safe Guard 체크 시 감지된 얼굴 수 (디버그용)
+    let safeGuardFaceCount: Int
+
+    /// Safe Guard 체크 시 최대 얼굴 품질 (디버그용, nil = 미체크 또는 얼굴 없음)
+    let safeGuardMaxFaceQuality: Float?
+
     /// 분석 소요 시간 (밀리초)
     let analysisTimeMs: Double
 
@@ -194,6 +200,8 @@ struct QualityResult: Equatable {
         assetID: String,
         creationDate: Date?,
         signals: [QualitySignal],
+        safeGuardFaceCount: Int = 0,
+        safeGuardMaxFaceQuality: Float? = nil,
         analysisTimeMs: Double,
         method: AnalysisMethod
     ) -> QualityResult {
@@ -204,6 +212,8 @@ struct QualityResult: Equatable {
             signals: signals,
             safeGuardApplied: false,
             safeGuardReason: nil,
+            safeGuardFaceCount: safeGuardFaceCount,
+            safeGuardMaxFaceQuality: safeGuardMaxFaceQuality,
             analysisTimeMs: analysisTimeMs,
             analysisMethod: method
         )
@@ -214,6 +224,8 @@ struct QualityResult: Equatable {
         assetID: String,
         creationDate: Date?,
         signals: [QualitySignal] = [],
+        safeGuardFaceCount: Int = 0,
+        safeGuardMaxFaceQuality: Float? = nil,
         analysisTimeMs: Double,
         method: AnalysisMethod
     ) -> QualityResult {
@@ -224,6 +236,8 @@ struct QualityResult: Equatable {
             signals: signals,
             safeGuardApplied: false,
             safeGuardReason: nil,
+            safeGuardFaceCount: safeGuardFaceCount,
+            safeGuardMaxFaceQuality: safeGuardMaxFaceQuality,
             analysisTimeMs: analysisTimeMs,
             analysisMethod: method
         )
@@ -235,6 +249,8 @@ struct QualityResult: Equatable {
         creationDate: Date?,
         signals: [QualitySignal],
         reason: SafeGuardReason,
+        safeGuardFaceCount: Int = 0,
+        safeGuardMaxFaceQuality: Float? = nil,
         analysisTimeMs: Double,
         method: AnalysisMethod
     ) -> QualityResult {
@@ -245,6 +261,8 @@ struct QualityResult: Equatable {
             signals: signals,
             safeGuardApplied: true,
             safeGuardReason: reason,
+            safeGuardFaceCount: safeGuardFaceCount,
+            safeGuardMaxFaceQuality: safeGuardMaxFaceQuality,
             analysisTimeMs: analysisTimeMs,
             analysisMethod: method
         )
@@ -263,6 +281,8 @@ struct QualityResult: Equatable {
             signals: [],
             safeGuardApplied: false,
             safeGuardReason: nil,
+            safeGuardFaceCount: 0,
+            safeGuardMaxFaceQuality: nil,
             analysisTimeMs: 0,
             analysisMethod: .metalPipeline  // 분석 안 함
         )

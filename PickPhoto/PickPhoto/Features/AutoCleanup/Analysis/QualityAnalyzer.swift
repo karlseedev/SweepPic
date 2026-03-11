@@ -228,6 +228,8 @@ final class QualityAnalyzer {
 
         // Stage 4: Safe Guard 체크 (블러 신호가 있을 때만)
         var safeGuardResult = SafeGuardResult.notApplied
+        var safeGuardFaceCount = 0
+        var safeGuardMaxFaceQuality: Float? = nil
 
         if safeGuardChecker.needsSafeGuardCheck(for: signals) {
             // 메타데이터 체크 (빠른 체크 먼저)
@@ -236,7 +238,10 @@ final class QualityAnalyzer {
             // 메타데이터로 Safe Guard 적용 안 되면 얼굴 품질 체크
             if !safeGuardResult.isApplied {
                 do {
-                    safeGuardResult = try await safeGuardChecker.checkFaceQuality(image)
+                    let detail = try await safeGuardChecker.checkFaceQuality(image)
+                    safeGuardResult = detail.result
+                    safeGuardFaceCount = detail.faceCount
+                    safeGuardMaxFaceQuality = detail.maxFaceQuality
                 } catch {
                     // Vision 에러는 무시하고 계속 진행
                     // [Analytics] SafeGuard 얼굴 감지 실패
@@ -254,6 +259,8 @@ final class QualityAnalyzer {
             creationDate: creationDate,
             signals: signals,
             safeGuardResult: safeGuardResult,
+            safeGuardFaceCount: safeGuardFaceCount,
+            safeGuardMaxFaceQuality: safeGuardMaxFaceQuality,
             analysisTimeMs: analysisTimeMs,
             method: analysisMethod
         )
@@ -555,6 +562,8 @@ final class QualityAnalyzer {
         creationDate: Date?,
         signals: [QualitySignal],
         safeGuardResult: SafeGuardResult,
+        safeGuardFaceCount: Int = 0,
+        safeGuardMaxFaceQuality: Float? = nil,
         analysisTimeMs: Double,
         method: AnalysisMethod
     ) -> QualityResult {
@@ -588,6 +597,8 @@ final class QualityAnalyzer {
                 assetID: assetID,
                 creationDate: creationDate,
                 signals: effectiveSignals,
+                safeGuardFaceCount: safeGuardFaceCount,
+                safeGuardMaxFaceQuality: safeGuardMaxFaceQuality,
                 analysisTimeMs: analysisTimeMs,
                 method: method
             )
@@ -599,6 +610,8 @@ final class QualityAnalyzer {
                 creationDate: creationDate,
                 signals: signals,  // 원본 신호 유지 (디버깅용)
                 reason: reason,
+                safeGuardFaceCount: safeGuardFaceCount,
+                safeGuardMaxFaceQuality: safeGuardMaxFaceQuality,
                 analysisTimeMs: analysisTimeMs,
                 method: method
             )
@@ -608,6 +621,8 @@ final class QualityAnalyzer {
             assetID: assetID,
             creationDate: creationDate,
             signals: effectiveSignals,
+            safeGuardFaceCount: safeGuardFaceCount,
+            safeGuardMaxFaceQuality: safeGuardMaxFaceQuality,
             analysisTimeMs: analysisTimeMs,
             method: method
         )
