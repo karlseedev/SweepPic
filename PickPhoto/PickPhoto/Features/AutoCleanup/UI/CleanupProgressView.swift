@@ -371,6 +371,8 @@ extension CleanupProgressView: GADBannerViewDelegate {
 
     /// 배너 광고 로드 성공
     func bannerViewDidReceiveAd(_ bannerView: GADBannerView) {
+        // [BM] 배너 광고 노출 이벤트 (FR-056, §11)
+        AnalyticsService.shared.trackAdWatched(type: .banner, source: "analysis")
         Logger.app.debug("CleanupProgressView: 배너 광고 로드 성공")
     }
 
