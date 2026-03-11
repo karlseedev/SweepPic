@@ -1096,8 +1096,8 @@ LANGUAGE sql STABLE AS $$
     ORDER BY day DESC;
 $$;
 
--- 90일 이전 데이터 삭제 (비용 관리)
-CREATE OR REPLACE FUNCTION purge_old_events(p_retention_days INT DEFAULT 90)
+-- 365일(1년) 이전 데이터 삭제 (개인정보처리방침 준수)
+CREATE OR REPLACE FUNCTION purge_old_events(p_retention_days INT DEFAULT 365)
 RETURNS BIGINT
 LANGUAGE plpgsql AS $$
 DECLARE
@@ -1111,10 +1111,10 @@ END;
 $$;
 ```
 
-### 5.4 pg_cron 90일 자동 삭제
+### 5.4 pg_cron 365일(1년) 자동 삭제
 
-> **초기에는 불필요**: DAU 10명 기준 월 2,700행 → 300MB까지 수년 소요.
-> DAU 1,000명 이상으로 늘어난 뒤 설정해도 충분함.
+> **설정 완료 (2026-03-11)**: 개인정보처리방침에 "1년 보관 후 자동 파기"로 명시.
+> 처리방침 준수를 위해 DAU와 무관하게 설정됨.
 
 설정 방법: Database > Extensions > pg_cron 활성화 후:
 
@@ -1122,7 +1122,7 @@ $$;
 SELECT cron.schedule(
     'purge-old-events',
     '0 3 * * 0',  -- 매주 일요일 03:00 UTC
-    $$SELECT purge_old_events(90)$$
+    $$SELECT purge_old_events(365)$$
 );
 ```
 
