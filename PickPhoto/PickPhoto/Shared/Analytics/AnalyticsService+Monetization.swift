@@ -21,6 +21,7 @@ enum GateChoice: String {
 enum AdType: String {
     case rewarded     = "rewarded"      // 리워드 광고
     case interstitial = "interstitial"  // 전면 광고
+    case banner       = "banner"        // 배너 광고
 }
 
 /// 페이월 진입 경로

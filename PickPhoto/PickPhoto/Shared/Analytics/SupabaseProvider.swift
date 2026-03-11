@@ -43,6 +43,11 @@ final class SupabaseProvider {
     /// 앱 버전 (예: "1.0.0")
     private let appVersion: String
 
+    /// IDFV (identifierForVendor) — 앱 시작 시 1회 캐싱
+    /// - 유저 단위 퍼널 분석용 (게이트→구독 전환율, DAU 등)
+    /// - nil 케이스: 기기 잠금 해제 전 백그라운드 실행 시 → "unknown"
+    private let deviceID: String
+
     // MARK: - Offline Queue Properties
 
     /// 파일 I/O 직렬화용 시리얼 큐 (race condition 방지)
@@ -78,6 +83,7 @@ final class SupabaseProvider {
         self.deviceModel = Self.resolveDeviceModel()
         self.osVersion = UIDevice.current.systemVersion
         self.appVersion = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "unknown"
+        self.deviceID = UIDevice.current.identifierForVendor?.uuidString ?? "unknown"
 
         // Application Support/analytics/ 디렉토리에 큐 파일 생성
         let appSupport = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
@@ -279,7 +285,8 @@ final class SupabaseProvider {
     }
 
     /// 이벤트 1건의 JSON body 딕셔너리 생성
-    /// - 7개 키: event_name, params, device_model, os_version, app_version, photo_bucket, is_test
+    /// - 9개 키: event_name, params, device_model, os_version, app_version, photo_bucket,
+    ///           subscription_tier, device_id, is_test
     /// - id(IDENTITY)와 created_at(DEFAULT now())은 전송하지 않음
     /// - is_test: 컴파일 타임 #if DEBUG로 결정 (Swift Bool → JSON true/false → Postgres BOOLEAN)
     private func makeBody(eventName: String, params: [String: String], photoBucket: String) -> [String: Any] {
@@ -291,6 +298,7 @@ final class SupabaseProvider {
             "app_version": appVersion,
             "photo_bucket": photoBucket,
             "subscription_tier": subscriptionTierProvider?() ?? "free",
+            "device_id": deviceID,
         ]
         #if DEBUG
         body["is_test"] = true

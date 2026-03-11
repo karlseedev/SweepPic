@@ -140,6 +140,9 @@ extension BannerAdViewController: GADBannerViewDelegate {
     func bannerViewDidReceiveAd(_ bannerView: GADBannerView) {
         isAdLoaded = true
 
+        // [BM] 배너 광고 노출 이벤트 (FR-056, §11)
+        AnalyticsService.shared.trackAdWatched(type: .banner, source: "analysis")
+
         // Adaptive Banner 높이로 확장
         let adHeight = bannerView.adSize.size.height
         heightConstraint?.constant = adHeight
