@@ -21,6 +21,7 @@ import OSLog
 
 /// 전면 광고 표시 오케스트레이터
 /// 로드 완료된 광고가 있으면 표시, 없으면 스킵하고 completion 호출
+@MainActor
 final class InterstitialAdPresenter: NSObject {
 
     // MARK: - Singleton

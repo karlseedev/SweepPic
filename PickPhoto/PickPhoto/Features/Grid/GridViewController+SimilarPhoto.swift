@@ -97,14 +97,13 @@ extension GridViewController {
             self?.handleAnalysisComplete(notification)
         }
 
-        // 앱 활성화 시 테두리 상태 갱신
-        // SimilarityCache가 Single Source of Truth이므로 UI만 갱신하면 됨
+        // 삭제/복구 시 테두리 상태 즉시 갱신
+        // TrashStore 변경 알림을 구독하여 뱃지 표시/숨김을 실시간 반영
         trashObserver = NotificationCenter.default.addObserver(
-            forName: UIApplication.didBecomeActiveNotification,
+            forName: .trashStoreDidChange,
             object: nil,
             queue: .main
         ) { [weak self] _ in
-            // 앱 활성화 시 테두리 상태 갱신
             self?.updateVisibleCellBorders()
         }
 

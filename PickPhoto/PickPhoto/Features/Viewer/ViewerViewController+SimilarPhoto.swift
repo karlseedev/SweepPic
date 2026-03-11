@@ -708,9 +708,13 @@ extension ViewerViewController: FaceButtonOverlayDelegate {
                 return
             }
 
-            // ComparisonGroup 생성
+            // trashed 멤버를 제외한 그룹으로 ComparisonGroup 생성
+            let filteredGroup = SimilarThumbnailGroup(
+                groupID: group.groupID,
+                memberAssetIDs: group.memberAssetIDs.filter { !TrashStore.shared.isTrashed($0) }
+            )
             let comparisonGroup = ComparisonGroup.create(
-                from: group,
+                from: filteredGroup,
                 currentAssetID: assetID,
                 personIndex: personIndex
             )

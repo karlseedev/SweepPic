@@ -125,7 +125,7 @@ CREATE POLICY "anon_insert" ON events FOR INSERT TO anon
 |---|----------------|--------|----------|----------|
 | 12 | `bm.gateShown` | `trashCount`, `remainingLimit` | 게이트 팝업 표시 시 | ✅ 구현됨 |
 | 13 | `bm.gateSelection` | `choice` (ad/plus/dismiss) | 게이트에서 버튼 탭 | ✅ 구현됨 |
-| 14 | `bm.adWatched` | `type` (rewarded/interstitial) | 광고 시청 완료 | ✅ 구현됨 |
+| 14 | `bm.adWatched` | `type` (rewarded/interstitial/banner), `source` (gate/gauge/auto/analysis) | 광고 시청/노출 완료 | ⚠️ banner 누락 |
 | 15 | `bm.paywallShown` | `source` (gate/menu/banner/gauge) | 페이월 화면 표시 | ✅ 구현됨 |
 | 16 | `bm.subscriptionCompleted` | `productID` | 구독 구매 완료 | ✅ 구현됨 |
 | 17 | `bm.deletionCompleted` | `count` | 삭제대기함 비우기 성공 | ✅ 구현됨 |
@@ -133,11 +133,11 @@ CREATE POLICY "anon_insert" ON events FOR INSERT TO anon
 | 19 | `bm.attResult` | `authorized` | ATT 프리프롬프트 결과 | ✅ 구현됨 |
 | 20 | `bm.cancelReason` | `reason`, `text?` | 해지 Exit Survey 제출 | ❌ 미구현 |
 
-### 2.4 기존 코드의 Enum 값 (변경 없음)
+### 2.4 기존 코드의 Enum 값
 
 ```swift
 enum GateChoice: String { case ad, plus, dismiss }
-enum AdType: String { case rewarded, interstitial }
+enum AdType: String { case rewarded, interstitial, banner }  // ← banner 추가 (Phase E)
 enum PaywallSource: String { case gate, menu, banner, gauge }
 ```
 
@@ -172,7 +172,9 @@ LANGUAGE sql STABLE AS $$
 $$;
 
 -- 유저 단위 게이트→구독 전환율 (device_id 기반)
-CREATE OR REPLACE FUNCTION gate_conversion_rate(p_days INT DEFAULT 30)
+-- ⚠️ gate_users와 sub_users 모두 같은 p_days 윈도우 내에서 카운트.
+--    윈도우 밖의 게이트 노출은 제외되므로 p_days를 충분히 크게 설정 권장 (90+).
+CREATE OR REPLACE FUNCTION gate_conversion_rate(p_days INT DEFAULT 90)
 RETURNS TABLE(gate_users BIGINT, subscribed_users BIGINT, conversion_pct NUMERIC)
 LANGUAGE sql STABLE AS $$
     WITH gate_users AS (
@@ -267,11 +269,41 @@ makeBody()에 추가:
 "device_id": deviceID,
 ```
 
-- makeBody()의 키가 8개 → 9개로 확장
+- makeBody()의 키가 8개 → 9개로 확장 (주석도 "9개 키"로 업데이트)
 - TelemetryDeck에는 전송하지 않음 (TD는 자체 device ID 관리)
 - IDFV는 앱 실행 중 변경되지 않으므로 init에서 1회만 조회
+- ⚠️ IDFV nil 고정: 기기 재부팅 직후 잠금 상태에서 앱 자동 실행 시 nil → "unknown"이 세션 전체 고정됨. 사진 앱 특성상 사용자가 직접 열어야 하므로 발생 확률 극저 → 허용
+- ⚠️ 오프라인 큐 전환기: 구버전 큐(device_id 키 없음)와 신버전 이벤트가 섞여 flush될 수 있음. `Prefer: missing=default` 헤더가 누락된 키에 DB 기본값(NULL)을 적용하므로 안전
 
-### 3.3 bm.cancelReason 이벤트 추가 (유일한 미구현)
+### 3.3 배너 광고 노출 이벤트 추가 (§11 누락 수정)
+
+**파일:** `AnalyticsService+Monetization.swift`
+
+AdType enum에 banner 추가:
+```swift
+enum AdType: String {
+    case rewarded     = "rewarded"
+    case interstitial = "interstitial"
+    case banner       = "banner"        // ← 추가
+}
+```
+
+**파일:** `BannerAdViewController.swift`
+
+bannerViewDidReceiveAd delegate에 analytics 호출 추가:
+```swift
+func bannerViewDidReceiveAd(_ bannerView: GADBannerView) {
+    isAdLoaded = true
+    // [BM] 배너 광고 노출 이벤트 (FR-056, §11)
+    AnalyticsService.shared.trackAdWatched(type: .banner, source: "analysis")
+    // ... 기존 높이 확장 코드 ...
+}
+```
+
+- RLS 변경 불필요 (기존 `bm.adWatched` 이벤트명 재사용)
+- `source: "analysis"` = 사진 분석 대기 화면
+
+### 3.4 bm.cancelReason 이벤트 추가 (유일한 미구현)
 
 **파일:** `AnalyticsService+Monetization.swift`에 메서드 추가
 
@@ -301,7 +333,7 @@ enum CancelReason: String {
 
 삽입 지점: Exit Survey UI (Phase 10 메뉴에서 향후 구현)
 
-### 3.4 기존 코드 확인 — 변경 불필요
+### 3.5 기존 코드 확인 — 변경 불필요
 
 | 파일 | 상태 | 비고 |
 |------|------|------|
@@ -374,7 +406,7 @@ enum CancelReason: String {
 5. 게이지 팝업 광고 analytics 누락 수정
 6. 빌드 + 실기기 검증 완료 (BM 9종 + subscription_tier 전송 확인)
 
-### Phase E: IDFV(device_id) 수집 추가
+### Phase E: IDFV(device_id) + 배너 analytics 추가
 **E-1: Supabase 서버**
 1. ALTER TABLE: device_id 컬럼 + 인덱스
 2. RPC 함수 2개 추가 (gate_conversion_rate, daily_active_users)
@@ -382,11 +414,14 @@ enum CancelReason: String {
 
 **E-2: 코드 구현**
 1. SupabaseProvider: init에서 IDFV 캐싱 + makeBody()에 device_id 추가 (~5줄)
-2. 빌드 확인
+2. AdType enum에 `.banner` case 추가 (~1줄)
+3. BannerAdViewController.bannerViewDidReceiveAd에 trackAdWatched 추가 (~1줄)
+4. 빌드 확인
 
 **E-3: 실기기 검증**
 1. Supabase에 device_id 정상 기록 확인
-2. 기존 이벤트 회귀 테스트
+2. 배너 광고 노출 시 bm.adWatched(type=banner) 도착 확인
+3. 기존 이벤트 회귀 테스트
 
 ### Phase C: 영구보존 문서 업데이트
 1. Archi.md, Spec.md, API.md 전면 업데이트 (subscription_tier + device_id 반영)
@@ -414,11 +449,13 @@ enum CancelReason: String {
 | `InterstitialAdPresenter.swift` | trackAdWatched source "auto" | ~1줄 |
 | Supabase Dashboard | SQL 5문 (ALTER + INDEX + POLICY + RPC×2) | — |
 
-### Phase E (IDFV 추가)
+### Phase E (IDFV + 배너 analytics)
 
 | 파일 | 변경 | 규모 |
 |------|------|------|
 | `SupabaseProvider.swift` | init에서 IDFV 캐싱 + makeBody()에 device_id | ~5줄 |
+| `AnalyticsService+Monetization.swift` | AdType enum에 `.banner` 추가 | ~1줄 |
+| `BannerAdViewController.swift` | bannerViewDidReceiveAd에 trackAdWatched 추가 | ~1줄 |
 | Supabase Dashboard | SQL 3문 (ALTER + INDEX + RPC×2) | — |
 
 ### Phase C (문서)
@@ -427,4 +464,4 @@ enum CancelReason: String {
 |------|------|------|
 | 영구보존 문서 3개 | 전면 업데이트 (subscription_tier + device_id + BM 9종) | ~250줄 |
 
-| **총 추가 코드 변경 (Phase E)** | | **~5줄** |
+| **총 추가 코드 변경 (Phase E)** | | **~7줄** |

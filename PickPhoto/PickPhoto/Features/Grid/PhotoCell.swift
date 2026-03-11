@@ -925,9 +925,13 @@ extension PhotoCell {
                 self.dimmedMaskLayer?.removeFromSuperlayer()
                 self.dimmedMaskLayer = nil
                 self.dimmedOverlayView.alpha = Self.dimmedOverlayAlpha
+                // 유사사진 뱃지 즉시 숨김 (삭제된 셀에 테두리 잔류 방지)
+                (self.contentView.subviews.first { $0 is SimilarGroupBadgeView } as? SimilarGroupBadgeView)?.stopAndHide()
             } else {
                 // 복원 확정: 딤드 제거
                 self.dimmedOverlayView.alpha = 0
+                // 유사사진 뱃지 복원 (삭제 시 숨겼던 뱃지 다시 표시)
+                (self.contentView.subviews.first { $0 is SimilarGroupBadgeView } as? SimilarGroupBadgeView)?.show()
             }
         } completion: { [weak self] _ in
             guard let self = self else { return }

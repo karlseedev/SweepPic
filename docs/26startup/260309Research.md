@@ -1027,6 +1027,138 @@ Cleanup, Cleaner Guru, AI Cleaner, Cleaner Kit, Swipewipe, Phone Cleaner, Powerf
 
 ---
 
+## 15. Mylio Photos 심층 분석 — 자동 정리 기능 및 무료/유료 구분
+
+> 조사일: 2026-03-10
+> 목적: Mylio Photos의 자동 정리 기능이 실제로 어떻게 접근 가능한지, iPhone에서 사용 가능한지, 무료/유료 구분 확인
+> 배경: 실제 설치 후 자동 정리 기능을 찾기 어려웠음
+
+### 가격 (2025~2026 최신)
+
+| 플랜 | 가격 | 핵심 |
+|------|------|------|
+| Mylio Photos (무료) | $0 | 단일 기기, 무제한 사진, SmartTags, QuickReview, DeClutter |
+| Mylio Photos+ (유료) | $12.99~20/월 ($120~240/년) | 멀티 디바이스 동기화, Vault 백업, **DeDupe**, SpaceSaver |
+
+> 가격이 여러 차례 인상됨: $99/년(2023) → $120/년(2024.08) → $240/년(2025~)
+
+### 정리 기능별 상세
+
+#### (1) Photo DeDupe (중복 제거)
+
+| 항목 | 내용 |
+|------|------|
+| 기능 | 라이브러리 전체 스캔, **정확히 동일한 파일**의 중복 탐지 (시각적 유사는 감지 못함, 동영상 미지원) |
+| 접근 경로 | 좌측 사이드바 > Tools 아이콘 > Photo DeDupe |
+| **iPhone** | **사용 불가** — 데스크톱/태블릿(iPad) 전용 |
+| iPad | Vault 연결 + Original 품질 파일 접근 필요 |
+| **유료/무료** | **Photos+ 유료 전용** |
+| Auto-Mark | 14가지 기준(편집 여부, 별점, Pick 플래그, 키워드 등)으로 최적 사진 자동 선별, 나머지 삭제/이동 대상 마킹 |
+
+#### (2) Photo DeClutter (유사 정리)
+
+| 항목 | 내용 |
+|------|------|
+| 기능 | 촬영 시간 근접성(기본 2초), 카메라 메타데이터, 가로/세로 방향 기준으로 **유사한 사진** 그룹화 (버스트 등) |
+| 접근 경로 | 좌측 사이드바 > Tools 아이콘 > Photo DeClutter |
+| **iPhone** | **사용 불가** — 데스크톱/태블릿 전용 |
+| iPad | Vault 연결 시 사용 가능 (단, Move Checked는 모바일 파일시스템 제한으로 비활성) |
+| **유료/무료** | **무료 가능성 높음** (공식 유료 목록에 미포함, 단 100% 확인은 안 됨) |
+| 커스터마이징 | Match Aspect(가로/세로 일치), Match Camera(동일 카메라), Within(시간 범위 조절) |
+
+#### (3) SmartTags + QuickFilters로 흐린 사진 찾기
+
+| 항목 | 내용 |
+|------|------|
+| SmartTags | AI 컴퓨터 비전으로 1,000+ 객체/특성 자동 인식. **"Blurry"(흐림)** 태그 포함. 모든 처리 온디바이스 |
+| 워크플로우 | 깔때기(funnel) 아이콘 > By SmartTags > Visual Properties > **"Blurry"** 선택 > AI Sensitivity 슬라이더 조절 |
+| 추가 필터 | Bokeh, Good Exposure, Over Exposed, Under Exposed |
+| **iPhone** | **사용 가능** |
+| **유료/무료** | **무료** |
+
+#### (4) Camera Cleanup (QuickCollections)
+
+| 항목 | 내용 |
+|------|------|
+| 기능 | 미리 정의된 QuickCollection 필터로 자동 정리 대상 탐색 |
+| 접근 경로 | 깔때기(funnel) 아이콘 > QuickCollection 아이콘 > "Camera Cleanup" 선택 |
+| **iPhone** | **사용 가능** (추정) |
+| **유료/무료** | **무료** |
+
+4가지 기본 Cleanup QuickCollections:
+
+| QuickCollection | 기능 |
+|---|---|
+| Camera Cleanup | 흐린 사진, 눈 감은 사진 감지 |
+| Need to Organize | 최근 90일간 별점/플래그 없는 사진 |
+| Review for Cleanup | 낮은 별점/Reject된 사진 모아보기 |
+| Screenshot Cleanup | 스크린샷 찾기 및 제거 |
+
+#### (5) QuickReview 모드
+
+| 항목 | 내용 |
+|------|------|
+| 기능 | 전체화면에서 사진을 빠르게 평가/선별하는 전용 모드 |
+| iOS 접근 | 폴더/앨범 열기 > 상단 More Menu (...) > "QuickReview" |
+| **iPhone** | **사용 가능** |
+| **유료/무료** | **무료** |
+
+모바일 스와이프 제스처:
+
+| 제스처 | 동작 |
+|---|---|
+| 오른쪽 스와이프 / 더블탭 | Pick 플래그 (즐겨찾기) |
+| 왼쪽 스와이프 | Reject 플래그 (삭제 후보) |
+| 위/아래 스와이프 | 별점 (1~5) |
+
+> Reject 후 직접 삭제가 아닌, Reject 플래그를 모아서 후속 일괄 삭제하는 2단계 방식
+
+### 디바이스별 기능 가용성 요약
+
+| 기능 | 데스크톱 | iPad | **iPhone** | 유료/무료 |
+|------|:---:|:---:|:---:|:---:|
+| Photo DeDupe (중복 제거) | O | O (Vault 필요) | **X** | **유료** |
+| Photo DeClutter (유사 정리) | O | O (Vault 필요) | **X** | 무료 (추정) |
+| Auto-Mark (DeDupe 내) | O | O | **X** | **유료** |
+| SmartTags / QuickFilters | O | O | **O** | 무료 |
+| Camera Cleanup | O | O | **O** (추정) | 무료 |
+| QuickReview | O | O | **O** | 무료 |
+
+### 사용자 불만 — UX 문제점
+
+1. **"UI 공포의 정크 서랍"** — 리뷰어 평가: "DOS 이후 최악의 사용자 경험". 랜덤 위치의 컨트롤, 암호 같은 UI 요소
+2. **텍스트 라벨 없는 아이콘** — Tools 아이콘, funnel 아이콘 등이 라벨 없이 존재하여 초보자가 기능을 발견하기 어려움
+3. **기능 발견성(Discoverability) 부족** — Mylio 공식 블로그 자체가 **"4 Cleanup Tools You Might Have Missed"** 라는 제목의 글을 올림 → 사용자가 정리 기능을 찾기 어렵다는 것을 공식 인정
+4. **iPhone에서 핵심 정리 도구 사용 불가** — DeDupe/DeClutter가 폰에서 접근 불가, 태블릿+Vault 연결 필요
+5. **가격 인상 불만** — $99 → $120 → $240으로 지속 인상. Trustpilot 등에서 부정적 리뷰 다수
+
+### PIClear 관점 시사점
+
+1. **Mylio의 핵심 정리 기능(DeDupe/DeClutter)은 iPhone에서 사용 불가** → PIClear이 iPhone 사진 정리에서 Mylio 대비 명확한 우위
+2. **DeDupe는 유료 전용** → PIClear이 무료로 유사/중복 정리를 제공하면 경쟁 우위
+3. **Mylio의 UX가 복잡하고 정리 기능 접근성이 낮음** → PIClear의 직관적 스와이프 기반 UX가 차별점
+4. **흐림 감지 접근 경로가 복잡** (funnel > SmartTags > Visual Properties > Blurry) → PIClear의 자동정리(QualityAnalyzer)가 더 직관적으로 제공 가능
+5. **기존 리서치의 Mylio 평가를 수정할 필요**: 종합 비교표에서 Mylio를 "블러 감지 O, 자동 정리 O"로 표기했으나, iPhone 기준으로는 **DeDupe X, DeClutter X, 블러 감지는 SmartTags 경유로 가능하나 접근성 낮음**
+
+### 출처
+
+- Mylio DeDupe Manual: https://manual.mylio.com/24.3/en/topic/find-duplicate-photos
+- Mylio DeClutter Manual: https://manual.mylio.com/24.3/en/topic/find-similar-photos
+- Mylio Auto-Mark Manual: https://manual.mylio.com/24.3/en/topic/using-auto-check
+- Mylio Camera Cleanup: https://manual.mylio.com/24.3/en/topic/using-the-camera-cleanup-quickcollections
+- Mylio SmartTags: https://manual.mylio.com/24.3/en/topic/using-smarttags
+- Mylio QuickFilters: https://manual.mylio.com/24.3/en/topic/comprehensive-guide-to-quickfilters
+- Mylio QuickReview: https://manual.mylio.com/24.3/en/topic/select-rate-quickreview
+- Mylio "4 Cleanup Tools You Might Have Missed": https://inspire.mylio.com/4-mylio-photos-cleanup-tools-you-might-have-missed/
+- Mylio Mobile App Guide: https://inspire.mylio.com/mastering-the-mylio-photos-mobile-app-a-guide-to-on-the-go-workflows/
+- Mylio Free 발표: https://news.mylio.com/announcing-free-mylio-photos-software-without-file-limits-and-improved-mylio-photos-subscription/
+- Mylio Pricing: https://mylio.com/pricing/
+- Mylio 가격 인상: https://inspire.mylio.com/important-announcement-mylio-photos-price-increase/
+- Mylio Review (Scan Your Entire Life): https://www.scanyourentirelife.com/mylio-photos-review/
+- Mylio Review (Shotkit): https://shotkit.com/mylio-photos-review/
+
+---
+
 ## 15. 소비자 조사 — 사진 정리 페인포인트 및 행동 통계
 
 > 조사일: 2026-03-10
@@ -1289,3 +1421,197 @@ Cleanup, Cleaner Guru, AI Cleaner, Cleaner Kit, Swipewipe, Phone Cleaner, Powerf
 | 사진을 직접 보면서 정리하는 것 자체가 만족감 | Emerald 2025 |
 | 월별/시간별 구분이 정리 부담을 줄임 | Swipewipe/Slidebox 리뷰 |
 | 최종 삭제 전 확인 단계가 신뢰를 높임 | Gemini, Swipewipe 패턴 |
+
+---
+
+## 17. 사진 앱 리텐션·삭제율 및 사용자 행동 데이터
+
+사진 정리 앱의 기존 솔루션이 사용자 니즈를 충분히 해소하지 못하고 있음을 뒷받침하는 데이터 모음.
+
+### 17-1. Photography 앱 카테고리 리텐션 — 전 카테고리 최하위 ★ 신뢰도: 상
+
+| 항목 | 내용 |
+|------|------|
+| 조사 기관 | Statista (AppsFlyer 데이터 기반) |
+| 시기 | 2024년 |
+
+| 카테고리 | Day 30 리텐션 |
+|---------|-------------|
+| Photography (사진) | **1.5%** (최하위) |
+| Utilities (유틸리티) | 2.4~3.4% |
+| Productivity (생산성) | 3.0~4.1% |
+| Fintech (금융) | 5~8% |
+| Shopping (쇼핑) | 5.6% |
+| News (뉴스) | 10~11% |
+| Comics (만화) | 13% |
+| **전체 평균** | **~5~6%** |
+
+핵심: Photography 카테고리의 Day 30 리텐션 1.5%는 전체 카테고리 중 최하위이며, 전체 평균(~5~6%) 대비 약 1/3~1/4 수준.
+
+※ 주의: Photography 카테고리에는 카메라 앱, 필터 앱 등도 포함되어 있어 "사진 정리 앱"만의 리텐션은 아님.
+
+출처:
+- https://www.statista.com/statistics/1497465/android-apps-retention-rate-by-category/
+- https://www.statista.com/statistics/1497442/ios-apps-retention-rate-by-category/
+- https://www.plotline.so/blog/retention-rates-mobile-apps-by-industry
+- https://uxcam.com/blog/mobile-app-retention-benchmarks/
+
+### 17-2. Photo & Video 앱 삭제율 — 전체 평균 대비 높음 ★ 신뢰도: 상
+
+| 항목 | 내용 |
+|------|------|
+| 조사 기관 | AppsFlyer / Statista |
+| 시기 | 2024년 8~9월 |
+
+| 지표 | Photo & Video 앱 | 전체 앱 평균 |
+|------|-----------------|------------|
+| 30일 삭제율 | **36~47%** | **28%** |
+
+2020~2022년 사이 Photography 리텐션 **31.8% 하락** 추세. iOS에서도 지속적 하락.
+
+출처:
+- https://www.appsflyer.com/resources/reports/app-uninstall-benchmarks-report/
+- https://www.appsflyer.com/blog/trends-insights/app-uninstall-trends/
+- https://www.statista.com/statistics/1278970/uninstall-rate-photo-apps-selected-countries/
+
+### 17-3. 디지털 정리 실행률 — 물리적 정리의 절반 ★ 신뢰도: 상
+
+| 항목 | 내용 |
+|------|------|
+| 조사 기관 | Mixbook (YouGov Audience 위탁) |
+| 시기 | 2025년 |
+| 샘플 | 미국 성인 2,485명 |
+
+| 지표 | 수치 |
+|------|------|
+| 물리적 공간 정기 정리 | **42%** |
+| 디지털 사진 정기 정리 | **25%** |
+
+→ 앱이 존재함에도 디지털 정리 실행률은 물리적 정리의 절반에 불과.
+
+출처:
+- https://www.mixbook.com/inspiration/survey-overwhelmed-photo-clutter
+
+### 17-4. 디지털 호딩 지속 현상 ★ 신뢰도: 중
+
+| 항목 | 내용 |
+|------|------|
+| 조사 기관 | Compare and Recycle (OnePoll 위탁) |
+| 시기 | 2025년 3월 |
+| 샘플 | 영국 성인 2,000명 |
+
+| 지표 | 수치 |
+|------|------|
+| 자신을 "디지털 호더"로 인식 | **69%** |
+| 폰에서 가장 어지러운 영역 = 사진 갤러리 | **38%** (1위) |
+| 최근 며칠 내 정리한 비율 | **16%** |
+
+출처:
+- https://www.compareandrecycle.co.uk/blog/digital-declutter-statistics
+
+### 17-5. 저장 사진의 22%가 쓸모없는 사진 ★ 신뢰도: 상
+
+| 항목 | 내용 |
+|------|------|
+| 조사 기관 | Avast |
+| 시기 | 2018.12 ~ 2019.06 |
+| 샘플 | 전 세계 600만 명 Android 사용자, 약 30억 장 분석 |
+
+| 지표 | 수치 |
+|------|------|
+| 저장 사진 중 저품질/중복 비율 | **22%** |
+| 평균 보유 사진 중 저품질(흐릿/암전) | 58장 (6%) |
+| 중복 사진 | 154장 (16%) |
+| 낭비 저장 용량 | 약 636MB |
+
+출처:
+- https://blog.avast.com/how-many-of-the-photos-that-we-store-are-bad
+- https://press.avast.com/snap-happy-smartphone-generation-loses-20-of-phone-memory-to-terrible-pictures
+
+### 17-6. 가족 사진 관리 실태 ★ 신뢰도: 중
+
+| 항목 | 내용 |
+|------|------|
+| 조사 기관 | EverPresent (Qualtrics 위탁) |
+| 시기 | 2016년 |
+| 샘플 | 미국 부모 400명 |
+
+| 지표 | 수치 |
+|------|------|
+| 가족 사진 관리를 즐기지 않음 | **66%** |
+| 밀린 정리에 필요한 예상 시간 | **45시간** |
+| 사진 정리 상황이 "오히려 악화" | **20%** |
+
+출처:
+- https://everpresent.com/truth-about-parents-and-digital-photos/
+- https://everpresent.com/study-digital-photo-organizing-in-american-families/
+
+### 17-7. 학술 연구 — 정보 관리 행동의 이상과 현실 격차 ★ 신뢰도: 상
+
+| 항목 | 내용 |
+|------|------|
+| 저자 | Bergman & Whittaker |
+| 저널 | Computers in Human Behavior (ScienceDirect) |
+| 시기 | 2020년 |
+| 샘플 | 465명 |
+
+핵심 발견:
+- 25개 정보 관리 습관 중 **22개에서 실제와 이상 사이에 유의미한 격차**
+- 대부분이 자신이 원하는 만큼 정리하지 못하고 있음을 인정
+- 1년 이상 된 사진 검색 시 **약 40%를 찾지 못함**
+
+출처:
+- https://www.sciencedirect.com/science/article/abs/pii/S0747563220300480
+- https://www.researchgate.net/publication/314801348_How_do_people_manage_their_digital_photographs
+
+### 17-8. 앱스토어 리뷰 불만 패턴 종합
+
+주요 사진 정리 앱 리뷰에서 반복되는 불만 유형:
+
+| 불만 유형 | 상세 |
+|----------|------|
+| AI/알고리즘 부정확 | "Best Photo" 선택이 엉터리, 흐릿한 사진을 남김. 50,000장 중 중복 20장만 탐지(Gemini) |
+| 약탈적 구독 | 삭제 단계에서 갑자기 페이월, 주당 $4.99→$9.99 인상, 사용자 모르게 과금 |
+| 대용량 라이브러리 성능 | 1,500장 밤새 스캔 미완료(CleanMyPhone), 8,000장 삭제 시 프리징(Gemini) |
+| UX 단절 | 앱 나갔다 들어오면 진행 상태 리셋(Slidebox), 한 번에 한 장만 표시 |
+| 자동 선택 공포 | 앱이 자동 선택한 사진 중 중요 사진 삭제 우려 → 삭제 버튼 못 누름 |
+| 신뢰도 | Cleanup 앱 신뢰도 점수 **31.2/100** (JustUseApp, 561,002개 리뷰 분석) |
+
+출처:
+- https://justuseapp.com/en/app/1510944943/cleanup-phone-storage-cleaner/reviews
+- https://justuseapp.com/en/app/1277110040/gemini-photos-gallery-cleaner/reviews
+- https://justuseapp.com/en/app/984305203/slidebox-photo-manager/reviews
+- https://connortumbleson.com/2025/01/13/predatory-ios-cleanup-applications/
+- https://www.insanelymac.com/blog/cleanmyphone-review/
+- https://www.cultofmac.com/reviews/cleanmyphone-app-review
+
+### 17-9. 사진 정리 앱 전용 리텐션 — 별도 데이터 부재
+
+**결론: "사진 정리 앱"만의 리텐션 벤치마크는 공개적으로 존재하지 않음.**
+
+모든 주요 분석 플랫폼(AppsFlyer, Statista, Adjust, Sensor Tower, Mixpanel)은 App Store의 **"Photo & Video"** 카테고리 전체 단위로만 리텐션을 집계. 개별 사진 정리 앱의 리텐션률은 비공개.
+
+Apple "Photo & Video" 카테고리 포함 앱 유형:
+- 카메라 앱 (ProCam, Halide 등)
+- 사진 편집 앱 (VSCO, Snapseed 등)
+- 필터 앱
+- 사진 정리/클리너 앱 (SwipeWipe, Slidebox, CleanMyPhone 등)
+- 비디오 편집 앱 (CapCut 등)
+- 사진 인쇄/공유 앱
+
+따라서 17-1의 Day 30 리텐션 1.5%는 위 모든 유형이 포함된 카테고리 평균.
+
+**개별 앱 참고 데이터 (리텐션은 아니지만):**
+
+| 앱 | 지표 | 출처 |
+|----|------|------|
+| SwipeWipe | 누적 500만+ DL, MAU 100만+, 월 매출 ~$1M (2024.06) | TechCrunch 2024.06 |
+| Slidebox | 평점 4.8 (12K+ 리뷰), 월 DL ~5만, 월 매출 ~$50K | Sensor Tower |
+| CleanMyPhone | 2024.03 Gemini Photos에서 리브랜딩, $25/년 | MacPaw 보도자료 |
+
+출처:
+- https://techcrunch.com/2024/06/25/gen-z-photos-app-swipewipe-sells-to-french-publisher-mwm-in-its-largest-acquisition-to-date/
+- https://app.sensortower.com/overview/1583884012?country=US
+- https://app.sensortower.com/overview/984305203
+- https://www.prnewswire.com/news-releases/macpaw-launches-cleanmyphone-an-app-for-iphone-and-ipad-offering-storage-cleaning-with-care-302078739.html
+- https://developer.apple.com/app-store/categories/
