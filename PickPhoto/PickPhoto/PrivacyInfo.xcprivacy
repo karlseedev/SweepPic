@@ -1,0 +1,93 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!-- 추적 여부: ATT/IDFA 미사용, 추적 안 함 -->
+	<key>NSPrivacyTracking</key>
+	<false/>
+
+	<!-- 추적 도메인: 없음 -->
+	<key>NSPrivacyTrackingDomains</key>
+	<array/>
+
+	<!-- Required Reason API 사용 선언 -->
+	<key>NSPrivacyAccessedAPITypes</key>
+	<array>
+		<!-- 1. 파일 타임스탬프 API — 썸네일 캐시 LRU 관리 -->
+		<!-- ThumbnailCache.swift: contentModificationDateKey, setAttributes(.modificationDate) -->
+		<dict>
+			<key>NSPrivacyAccessedAPIType</key>
+			<string>NSPrivacyAccessedAPICategoryFileTimestamp</string>
+			<key>NSPrivacyAccessedAPITypeReasons</key>
+			<array>
+				<string>DDA9.1</string>
+			</array>
+		</dict>
+		<!-- 2. UserDefaults API — 앱 자체 설정/상태 저장 -->
+		<!-- GracePeriodService, ReviewService, ATTStateManager, AnalyticsService, -->
+		<!-- CleanupPreviewService, CoachMarkOverlayView, SceneDelegate 등 10개 파일 -->
+		<dict>
+			<key>NSPrivacyAccessedAPIType</key>
+			<string>NSPrivacyAccessedAPICategoryUserDefaults</string>
+			<key>NSPrivacyAccessedAPITypeReasons</key>
+			<array>
+				<string>CA92.1</string>
+			</array>
+		</dict>
+		<!-- 3. 디스크 공간 API — 삭제대기함 저장 전 공간 확인 -->
+		<!-- TrashStore.swift: attributesOfFileSystem + .systemFreeSize -->
+		<dict>
+			<key>NSPrivacyAccessedAPIType</key>
+			<string>NSPrivacyAccessedAPICategoryDiskSpace</string>
+			<key>NSPrivacyAccessedAPITypeReasons</key>
+			<array>
+				<string>E174.1</string>
+			</array>
+		</dict>
+	</array>
+
+	<!-- 수집 데이터 타입 선언 -->
+	<key>NSPrivacyCollectedDataTypes</key>
+	<array>
+		<!-- 1. Product Interaction — TelemetryDeck + Supabase 세션 이벤트 -->
+		<dict>
+			<key>NSPrivacyCollectedDataType</key>
+			<string>NSPrivacyCollectedDataTypeProductInteraction</string>
+			<key>NSPrivacyCollectedDataTypeLinked</key>
+			<false/>
+			<key>NSPrivacyCollectedDataTypeTracking</key>
+			<false/>
+			<key>NSPrivacyCollectedDataTypePurposes</key>
+			<array>
+				<string>NSPrivacyCollectedDataTypePurposeAnalytics</string>
+			</array>
+		</dict>
+		<!-- 2. Device ID — TelemetryDeck SDK 자체 수집 (IDFV) -->
+		<dict>
+			<key>NSPrivacyCollectedDataType</key>
+			<string>NSPrivacyCollectedDataTypeDeviceID</string>
+			<key>NSPrivacyCollectedDataTypeLinked</key>
+			<false/>
+			<key>NSPrivacyCollectedDataTypeTracking</key>
+			<false/>
+			<key>NSPrivacyCollectedDataTypePurposes</key>
+			<array>
+				<string>NSPrivacyCollectedDataTypePurposeAnalytics</string>
+			</array>
+		</dict>
+		<!-- 3. Other Diagnostic Data — Supabase로 device_model, os_version, app_version 전송 -->
+		<dict>
+			<key>NSPrivacyCollectedDataType</key>
+			<string>NSPrivacyCollectedDataTypeOtherDiagnosticData</string>
+			<key>NSPrivacyCollectedDataTypeLinked</key>
+			<false/>
+			<key>NSPrivacyCollectedDataTypeTracking</key>
+			<false/>
+			<key>NSPrivacyCollectedDataTypePurposes</key>
+			<array>
+				<string>NSPrivacyCollectedDataTypePurposeAppFunctionality</string>
+			</array>
+		</dict>
+	</array>
+</dict>
+</plist>
