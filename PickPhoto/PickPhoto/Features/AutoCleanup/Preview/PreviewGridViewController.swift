@@ -15,6 +15,7 @@ import UIKit
 import Photos
 import AppCore
 import BlurUIKit
+import OSLog
 
 // MARK: - PreviewGridViewControllerDelegate
 
@@ -941,7 +942,7 @@ extension PreviewGridViewController {
         ])
     }
 
-    /// 특정 사진의 분석 상세를 알림으로 표시
+    /// 특정 사진의 분석 상세를 알림으로 표시 + 콘솔 로그 출력
     func showDebugAnalysisDetail(for candidate: PreviewCandidate) {
         var message = "Asset ID:\n\(candidate.assetID)\n"
         message += "\nStage: \(candidate.stage)"
@@ -970,6 +971,9 @@ extension PreviewGridViewController {
         } else {
             message += "\n(QualityResult 없음)"
         }
+
+        // 콘솔 로그로 상세 정보 출력
+        Logger.cleanup.notice("=== 디버그 분석 상세 ===\n\(message)")
 
         let alert = UIAlertController(title: "분석 상세", message: message, preferredStyle: .alert)
         alert.addAction(UIAlertAction(title: "닫기", style: .cancel))
