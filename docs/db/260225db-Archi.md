@@ -235,7 +235,15 @@ final class SupabaseProvider {
         let photoBucket: String
     }
 
-    init?(baseURL: String, anonKey: String)  // URL이 잘못되면 nil
+    /// 구독 tier 제공 클로저 (lazy 평가 — makeBody 시점에 호출)
+    private let subscriptionTierProvider: (() -> String)?
+
+    /// IDFV (identifierForVendor) — 앱 시작 시 1회 캐싱
+    /// - 유저 단위 퍼널 분석용 (게이트→구독 전환율, DAU 등)
+    private let deviceID: String
+
+    init?(baseURL: String, anonKey: String,
+          subscriptionTierProvider: (() -> String)? = nil)  // URL이 잘못되면 nil
 
     func send(eventName:params:photoBucket:)           // 단건 즉시 전송 (실패 시 큐 저장)
     func sendBatch(events:completion:)                  // 배치 전송 + completion (실패 시 큐 저장)
@@ -253,7 +261,7 @@ Headers:
   Authorization: Bearer {anonKey}      ← PostgREST RLS 평가용 (같은 키)
   Prefer: return=minimal, missing=default  ← 응답 미반환 + 누락 컬럼 DB 기본값 적용
 
-Body (배치): JSON 배열
+Body (배치): JSON 배열 (9개 키)
 [
   {
     "event_name": "session.photoViewing",
@@ -261,7 +269,10 @@ Body (배치): JSON 배열
     "device_model": "iPhone16,1",
     "os_version": "18.3",
     "app_version": "1.0.0",
-    "photo_bucket": "1K-5K"
+    "photo_bucket": "1K-5K",
+    "subscription_tier": "free",
+    "device_id": "C8735166-FF88-467C-9945-58428C2919DD",
+    "is_test": true
   },
   { ... }
 ]
@@ -629,6 +640,16 @@ sendEventBatch(events)
 | 7-1 | 기존 정리 | `cleanup.completed` | 즉시 (종료 시) | 8 |
 | 7-2 | 미리보기 정리 | `cleanup.previewCompleted` | 즉시 (종료 시) | 9 |
 | 8 | 그리드 성능 | `session.gridPerformance` | 세션 요약 | 1 |
+| **BM 수익화 이벤트** | | | | |
+| 12 | 게이트 노출 | `bm.gateShown` | 즉시 | 2 |
+| 13 | 게이트 선택 | `bm.gateSelection` | 즉시 | 1 |
+| 14 | 광고 시청 | `bm.adWatched` | 즉시 | 2 |
+| 15 | 페이월 노출 | `bm.paywallShown` | 즉시 | 1 |
+| 16 | 구독 완료 | `bm.subscriptionCompleted` | 즉시 | 1 |
+| 17 | 삭제 완료 | `bm.deletionCompleted` | 즉시 | 1 |
+| 18 | Grace Period 종료 | `bm.gracePeriodEnded` | 즉시 | 0 |
+| 19 | ATT 결과 | `bm.attResult` | 즉시 | 1 |
+| 20 | 해지 사유 | `bm.cancelReason` | 즉시 | 1~2 |
 
 > `defaultSignalPrefix`를 `"PickPhoto."`로 설정했으므로 실제 전송 이름은 `PickPhoto.app.launched` 등.
 
@@ -687,6 +708,31 @@ enum AnalyticsError {
     }
 }
 
+// ── BM 수익화 enum ──
+enum GateChoice: String {
+    case ad      = "ad"       // 광고 시청
+    case plus    = "plus"     // Plus 업그레이드
+    case dismiss = "dismiss"  // 닫기
+}
+enum AdType: String {
+    case rewarded     = "rewarded"      // 리워드 광고
+    case interstitial = "interstitial"  // 전면 광고
+    case banner       = "banner"        // 배너 광고
+}
+enum PaywallSource: String {
+    case gate   = "gate"    // 게이트 팝업에서 Plus 선택
+    case menu   = "menu"    // 프리미엄 메뉴에서 구독 관리
+    case banner = "banner"  // Grace Period 배너 탭
+    case gauge  = "gauge"   // 게이지 상세 팝업
+}
+enum CancelReason: String {
+    case price       = "price"        // 가격이 부담돼요
+    case enoughFree  = "enough_free"  // 삭제 한도가 충분해요
+    case done        = "done"         // 사진 정리를 다 했어요
+    case competitor  = "competitor"   // 다른 앱을 사용해요
+    case other       = "other"        // 기타
+}
+
 // ── 정리 관련 enum (이벤트 7-1) ──
 enum CleanupReachedStage: String {
     case buttonTapped, trashWarningExit, methodSelected, cleanupDone, resultAction
@@ -736,6 +782,35 @@ func trackSimilarGroupClosed(totalCount: Int, deletedCount: Int) {
         "deletedCount": String(deletedCount),
     ])
 }
+
+// ── BM 수익화 이벤트 (AnalyticsService+Monetization.swift) ──
+
+// 이벤트 12: 게이트 노출
+func trackGateShown(trashCount: Int, remainingLimit: Int)
+
+// 이벤트 13: 게이트 선택
+func trackGateSelection(choice: GateChoice)
+
+// 이벤트 14: 광고 시청 (리워드/전면/배너)
+func trackAdWatched(type: AdType, source: String)
+
+// 이벤트 15: 페이월 노출
+func trackPaywallShown(source: PaywallSource)
+
+// 이벤트 16: 구독 완료
+func trackSubscriptionCompleted(productID: String)
+
+// 이벤트 17: 삭제 완료
+func trackDeletionCompleted(count: Int)
+
+// 이벤트 18: Grace Period 종료
+func trackGracePeriodEnded()
+
+// 이벤트 19: ATT 결과
+func trackATTResult(authorized: Bool)
+
+// 이벤트 20: 해지 사유 (Exit Survey)
+func trackCancelReason(reason: CancelReason, text: String? = nil)
 ```
 
 ### 4.4 세션 요약형 이벤트 — 카운터 증가 메서드
@@ -873,12 +948,16 @@ CREATE TABLE events (
     os_version TEXT,
     app_version TEXT,
     photo_bucket TEXT,
+    subscription_tier TEXT,              -- "free" 또는 "plus" (BM 추가)
+    device_id TEXT,                      -- IDFV UUID (유저 단위 분석용)
     is_test BOOLEAN NOT NULL DEFAULT true,
     created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 CREATE INDEX idx_events_name ON events(event_name);
 CREATE INDEX idx_events_created ON events(created_at);
 CREATE INDEX idx_events_name_created ON events(event_name, created_at);
+CREATE INDEX idx_events_tier ON events(subscription_tier);
+CREATE INDEX idx_events_device_id ON events(device_id);
 ```
 
 ### 5.2 RLS 정책
@@ -889,6 +968,7 @@ DROP POLICY IF EXISTS "anon_insert" ON events;
 CREATE POLICY "anon_insert" ON events FOR INSERT TO anon
     WITH CHECK (
         event_name IN (
+            -- 기존 11종
             'app.launched',
             'permission.result',
             'session.photoViewing',
@@ -899,12 +979,26 @@ CREATE POLICY "anon_insert" ON events FOR INSERT TO anon
             'similar.groupClosed',
             'cleanup.completed',
             'cleanup.previewCompleted',
-            'session.gridPerformance'
+            'session.gridPerformance',
+            -- BM 9종
+            'bm.gateShown',
+            'bm.gateSelection',
+            'bm.adWatched',
+            'bm.paywallShown',
+            'bm.subscriptionCompleted',
+            'bm.deletionCompleted',
+            'bm.gracePeriodEnded',
+            'bm.attResult',
+            'bm.cancelReason'
         )
     );
+
+-- SELECT 정책 (Claude 분석용)
+CREATE POLICY "anon_select" ON events FOR SELECT TO anon
+    USING (true);
 ```
 
-> INSERT만 허용, SELECT/UPDATE/DELETE 정책 없음. 이벤트명 화이트리스트(11종)로 무단 INSERT 방지.
+> INSERT + SELECT 허용. 이벤트명 화이트리스트(20종)로 무단 INSERT 방지. SELECT는 anon 키로 Claude가 직접 분석 가능.
 
 ### 5.3 RPC 함수
 
@@ -934,6 +1028,74 @@ LANGUAGE sql STABLE AS $$
       AND kv.value ~ '^\d+$'
     GROUP BY day, param_key
     ORDER BY day DESC, param_key;
+$$;
+
+-- 게이트 퍼널 일별 요약 (BM)
+CREATE OR REPLACE FUNCTION gate_funnel_summary(p_days INT DEFAULT 30)
+RETURNS TABLE(day DATE, event_name TEXT, choice TEXT, cnt BIGINT)
+LANGUAGE sql STABLE AS $$
+    SELECT created_at::date AS day, event_name,
+           params->>'choice' AS choice, count(*) AS cnt
+    FROM events
+    WHERE event_name IN ('bm.gateShown', 'bm.gateSelection')
+      AND created_at >= now() - (p_days || ' days')::interval
+      AND is_test = false
+    GROUP BY day, event_name, choice
+    ORDER BY day DESC, event_name, cnt DESC;
+$$;
+
+-- tier별 이벤트 요약 (BM)
+CREATE OR REPLACE FUNCTION tier_summary(p_days INT DEFAULT 30)
+RETURNS TABLE(tier TEXT, event_name TEXT, cnt BIGINT)
+LANGUAGE sql STABLE AS $$
+    SELECT COALESCE(subscription_tier, 'unknown') AS tier,
+           event_name, count(*) AS cnt
+    FROM events
+    WHERE created_at >= now() - (p_days || ' days')::interval
+      AND is_test = false
+    GROUP BY tier, event_name
+    ORDER BY tier, cnt DESC;
+$$;
+
+-- 유저 단위 게이트→구독 전환율 (device_id 기반)
+CREATE OR REPLACE FUNCTION gate_conversion_rate(p_days INT DEFAULT 90)
+RETURNS TABLE(gate_users BIGINT, subscribed_users BIGINT, conversion_pct NUMERIC)
+LANGUAGE sql STABLE AS $$
+    WITH gate_users AS (
+        SELECT DISTINCT device_id FROM events
+        WHERE event_name = 'bm.gateShown'
+          AND device_id IS NOT NULL AND device_id != 'unknown'
+          AND created_at >= now() - (p_days || ' days')::interval
+          AND is_test = false
+    ),
+    sub_users AS (
+        SELECT DISTINCT device_id FROM events
+        WHERE event_name = 'bm.subscriptionCompleted'
+          AND device_id IS NOT NULL AND device_id != 'unknown'
+          AND created_at >= now() - (p_days || ' days')::interval
+          AND is_test = false
+    )
+    SELECT
+        (SELECT count(*) FROM gate_users) AS gate_users,
+        (SELECT count(*) FROM sub_users WHERE device_id IN (SELECT device_id FROM gate_users)) AS subscribed_users,
+        ROUND(
+            (SELECT count(*) FROM sub_users WHERE device_id IN (SELECT device_id FROM gate_users))::numeric
+            / NULLIF((SELECT count(*) FROM gate_users), 0) * 100, 1
+        ) AS conversion_pct;
+$$;
+
+-- DAU (일별 고유 device_id 수)
+CREATE OR REPLACE FUNCTION daily_active_users(p_days INT DEFAULT 30)
+RETURNS TABLE(day DATE, dau BIGINT)
+LANGUAGE sql STABLE AS $$
+    SELECT created_at::date AS day,
+           count(DISTINCT device_id) AS dau
+    FROM events
+    WHERE device_id IS NOT NULL AND device_id != 'unknown'
+      AND created_at >= now() - (p_days || ' days')::interval
+      AND is_test = false
+    GROUP BY day
+    ORDER BY day DESC;
 $$;
 
 -- 90일 이전 데이터 삭제 (비용 관리)
@@ -1030,6 +1192,7 @@ PickPhoto/PickPhoto/Shared/Analytics/
 ├── AnalyticsService+Similar.swift        ← countSimilarAnalysis, trackGroupClosed
 ├── AnalyticsService+Cleanup.swift        ← trackCleanupCompleted, trackPreviewCompleted
 ├── AnalyticsService+Errors.swift         ← countError 오버로드 5개 + AnalyticsReporting 브릿지
+├── AnalyticsService+Monetization.swift   ← BM 수익화 이벤트 9종 + enum 4개
 ├── Models/
 │   ├── AnalyticsEnums.swift              ← ScreenSource, PermissionResultType 등
 │   ├── AnalyticsError.swift              ← AnalyticsError 중첩 enum (13항목)
@@ -1076,6 +1239,7 @@ scripts/analytics/
 | `+Similar.swift` | 5-1, 5-2 (유사 분석, 그룹 행동) | ~40줄 |
 | `+Cleanup.swift` | 7-1, 7-2 (정리, 미리보기 정리) | ~60줄 |
 | `+Errors.swift` | 6 (오류) + AnalyticsReporting 브릿지 | ~50줄 |
+| `+Monetization.swift` | 12~20 (BM 수익화 9종) + enum 4개 | ~150줄 |
 
 #### PickPhoto — Models (4개)
 
@@ -1112,7 +1276,7 @@ scripts/analytics/
     │       ├── +Similar.swift                            │
     │       ├── +Cleanup.swift                            │
     │       ├── +Errors.swift ─── AnalyticsReporting 채택 │
-    │       └── +Business.swift (미래)                    │
+    │       └── +Monetization.swift ── BM 수익화 9종     │
     │                                                    │
     │  Models/                                           │
     │       ├── AnalyticsEnums.swift                      │
