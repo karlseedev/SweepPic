@@ -120,7 +120,10 @@ final class AdManager: NSObject, AdManagerProtocol {
             self?.preloadInterstitialAd()
 
             // 전면 광고 사전 로드 (InterstitialAdPresenter 독립 관리)
-            InterstitialAdPresenter.shared.preload()
+            // GAD 콜백은 Sendable 클로저 → MainActor 싱글톤 접근 시 메인 스레드 전환 필요
+            DispatchQueue.main.async {
+                InterstitialAdPresenter.shared.preload()
+            }
         }
     }
 

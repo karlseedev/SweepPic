@@ -66,19 +66,22 @@ final class InterstitialAdPresenter: NSObject {
             withAdUnitID: AdManager.interstitialAdUnitID,
             request: GADRequest()
         ) { [weak self] ad, error in
-            guard let self = self else { return }
-            self.isLoading = false
+            // GAD 콜백은 Sendable 클로저 → MainActor 프로퍼티 접근 시 메인 스레드 전환 필요
+            DispatchQueue.main.async {
+                guard let self = self else { return }
+                self.isLoading = false
 
-            if let error = error {
-                Logger.app.error("InterstitialAdPresenter: 로드 실패 — \(error.localizedDescription)")
-                self.retryLoad()
-                return
+                if let error = error {
+                    Logger.app.error("InterstitialAdPresenter: 로드 실패 — \(error.localizedDescription)")
+                    self.retryLoad()
+                    return
+                }
+
+                self.interstitialAd = ad
+                self.interstitialAd?.fullScreenContentDelegate = self
+                self.retryCount = 0
+                Logger.app.debug("InterstitialAdPresenter: 전면 광고 로드 완료")
             }
-
-            self.interstitialAd = ad
-            self.interstitialAd?.fullScreenContentDelegate = self
-            self.retryCount = 0
-            Logger.app.debug("InterstitialAdPresenter: 전면 광고 로드 완료")
         }
     }
 
