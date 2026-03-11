@@ -8,8 +8,10 @@
 	<string>$(SUPABASE_URL)</string>
 	<key>SUPABASE_ANON_KEY</key>
 	<string>$(SUPABASE_ANON_KEY)</string>
+	<key>CFBundleDisplayName</key>
+	<string>SweepPic</string>
 	<key>NSPhotoLibraryUsageDescription</key>
-	<string>PickPhoto needs access to your photo library to browse and manage your photos.</string>
+	<string>SweepPic needs access to your photo library to browse and manage your photos.</string>
 	<key>GADApplicationIdentifier</key>
 	<string>ca-app-pub-3940256099942544~1458002511</string>
 	<key>NSUserTrackingUsageDescription</key>

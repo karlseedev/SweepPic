@@ -142,7 +142,7 @@ final class AnalyticsService: AnalyticsServiceProtocol {
     func configure(appID: String) {
         // 옵트아웃 상태도 SDK에 전달
         let config = TelemetryDeck.Config(appID: appID)
-        config.defaultSignalPrefix = "PickPhoto."
+        config.defaultSignalPrefix = "SweepPic."
 
         // 사진 규모 구간을 defaultParameters로 자동 첨부
         config.defaultParameters = { [weak self] in

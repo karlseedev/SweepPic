@@ -234,7 +234,7 @@ final class PermissionViewController: UIViewController {
         } else {
             // 사용자가 거부함 또는 선택한 사진만 허용 (동일하게 처리)
             titleLabel.text = "앱을 이용하려면\n전체 사진 접근 권한이\n필요합니다"
-            descriptionLabel.text = "PickPhoto는 전체 사진 라이브러리에\n접근해야 정상적으로 동작합니다.\n설정에서 '전체 접근 허용'을 선택해 주세요."
+            descriptionLabel.text = "SweepPic은 전체 사진 라이브러리에\n접근해야 정상적으로 동작합니다.\n설정에서 '전체 접근 허용'을 선택해 주세요."
             actionButton.setTitle("설정 열기", for: .normal)
             actionButton.backgroundColor = .systemBlue
             secondaryLabel.isHidden = true
