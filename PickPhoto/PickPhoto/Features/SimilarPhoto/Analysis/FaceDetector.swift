@@ -10,7 +10,6 @@
 //  VNDetectFaceRectanglesRequest를 활용하여 이미지에서 얼굴을 감지합니다.
 //
 //  Filtering Rules:
-//  - 화면 너비 5% 미만 얼굴 제외
 //  - 크기순 상위 5개만 반환
 //
 //  Coordinate System:
@@ -59,7 +58,7 @@ enum FaceDetectionError: Error, LocalizedError {
 /// Vision Framework 기반 얼굴 감지기
 ///
 /// VNDetectFaceRectanglesRequest를 사용하여 이미지에서 얼굴을 감지합니다.
-/// 감지된 얼굴 중 화면 너비 5% 이상인 얼굴만 필터링하고,
+/// 긴 변 1600px 이미지를 사용하여 작은 얼굴의 감지 정확도를 높이고,
 /// 크기순 상위 5개만 반환합니다.
 final class FaceDetector {
 
@@ -75,9 +74,6 @@ final class FaceDetector {
 
     // MARK: - Configuration
 
-    /// 최소 얼굴 너비 비율 (화면 너비 대비)
-    private let minFaceWidthRatio: CGFloat
-
     /// 최대 얼굴 수
     private let maxFaces: Int
 
@@ -87,15 +83,12 @@ final class FaceDetector {
     ///
     /// - Parameters:
     ///   - imageLoader: 이미지 로더 (기본값: 공유 인스턴스)
-    ///   - minFaceWidthRatio: 최소 얼굴 너비 비율 (기본값: 5%)
     ///   - maxFaces: 최대 얼굴 수 (기본값: 5)
     init(
         imageLoader: SimilarityImageLoader = .shared,
-        minFaceWidthRatio: CGFloat = SimilarityConstants.minFaceWidthRatio,
         maxFaces: Int = SimilarityConstants.maxFacesPerPhoto
     ) {
         self.imageLoader = imageLoader
-        self.minFaceWidthRatio = minFaceWidthRatio
         self.maxFaces = maxFaces
     }
 
@@ -103,18 +96,19 @@ final class FaceDetector {
 
     /// 사진에서 얼굴을 감지합니다.
     ///
-    /// - Parameters:
-    ///   - photo: 감지할 PHAsset
-    ///   - viewerSize: 뷰어 화면 크기 (5% 필터용)
-    /// - Returns: 감지된 얼굴 배열 (5% 필터 + 크기순 상위 5개)
+    /// - Parameter photo: 감지할 PHAsset
+    /// - Returns: 감지된 얼굴 배열 (크기순 상위 5개)
     /// - Throws: FaceDetectionError
     ///
-    /// - Important: 반환되는 얼굴은 이미 5% 필터와 상위 5개 필터가 적용됩니다.
-    func detectFaces(in photo: PHAsset, viewerSize: CGSize) async throws -> [DetectedFace] {
-        // 1. 이미지 로딩
+    /// - Important: 긴 변 1600px 이미지를 사용하며, 크기순 상위 5개가 반환됩니다.
+    func detectFaces(in photo: PHAsset) async throws -> [DetectedFace] {
+        // 1. 이미지 로딩 (긴 변 1600px)
         let cgImage: CGImage
         do {
-            cgImage = try await imageLoader.loadImage(for: photo)
+            cgImage = try await imageLoader.loadImage(
+                for: photo,
+                maxSize: SimilarityConstants.faceDetectionImageMaxSize
+            )
         } catch {
             // [Analytics] 얼굴 감지용 이미지 로딩 실패
             AnalyticsService.shared.countError(.detection as AnalyticsError.Face)
@@ -124,19 +118,8 @@ final class FaceDetector {
         // 2. 얼굴 감지
         let allFaces = try await detectFaces(in: cgImage)
 
-        // 3. 5% 필터
-        let imageSize = CGSize(
-            width: CGFloat(cgImage.width),
-            height: CGFloat(cgImage.height)
-        )
-        let eligibleFaces = filterByMinSize(
-            faces: allFaces,
-            imageSize: imageSize,
-            viewerSize: viewerSize
-        )
-
-        // 4. 크기순 상위 5개
-        let topFaces = eligibleFaces
+        // 3. 크기순 상위 5개
+        let topFaces = allFaces
             .sorted { $0.area > $1.area }
             .prefix(maxFaces)
 
@@ -189,33 +172,6 @@ final class FaceDetector {
         }
     }
 
-    /// 최소 크기 조건으로 얼굴을 필터링합니다.
-    ///
-    /// - Parameters:
-    ///   - faces: 필터링할 얼굴 배열
-    ///   - imageSize: 원본 이미지 크기
-    ///   - viewerSize: 뷰어 화면 크기
-    /// - Returns: 조건을 만족하는 얼굴만 포함된 배열
-    private func filterByMinSize(
-        faces: [DetectedFace],
-        imageSize: CGSize,
-        viewerSize: CGSize
-    ) -> [DetectedFace] {
-        // aspectFit 스케일 계산
-        let scale = min(
-            viewerSize.width / imageSize.width,
-            viewerSize.height / imageSize.height
-        )
-
-        // 최소 얼굴 너비 (뷰어 기준)
-        let minFaceWidth = viewerSize.width * minFaceWidthRatio
-
-        return faces.filter { face in
-            // 정규화된 너비를 실제 뷰어 픽셀로 변환
-            let faceWidthInViewer = face.boundingBox.width * imageSize.width * scale
-            return faceWidthInViewer >= minFaceWidth
-        }
-    }
 }
 
 // MARK: - Array Extensions

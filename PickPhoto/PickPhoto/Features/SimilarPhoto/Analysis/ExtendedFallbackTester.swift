@@ -95,7 +95,7 @@ class ExtendedFallbackTester {
             let shortID = String(assetID.prefix(8))
 
             do {
-                let faces = try await visionDetector.detectFaces(in: photo, viewerSize: viewerSize)
+                let faces = try await visionDetector.detectFaces(in: photo)
                 rawFacesMap[assetID] = faces
                 print("║ Photo \(shortID): Vision detected \(faces.count) faces")
             } catch {

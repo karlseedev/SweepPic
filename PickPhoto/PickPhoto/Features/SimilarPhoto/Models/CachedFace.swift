@@ -133,18 +133,6 @@ struct CachedFace: Equatable, Hashable, Sendable {
         )
     }
 
-    // MARK: - Validation
-
-    /// 얼굴이 유효한지 검증합니다 (5% 필터).
-    ///
-    /// - Parameter viewerWidth: 뷰어 화면 너비
-    /// - Returns: 얼굴 너비가 화면 너비의 5% 이상이면 true
-    func isValid(for viewerWidth: CGFloat) -> Bool {
-        // 정규화된 너비를 실제 너비로 계산하여 비교
-        // boundingBox.width는 이미지 너비에 대한 비율이므로
-        // 뷰어 너비와 직접 비교 (aspectFit 적용 후)
-        return boundingBox.width >= SimilarityConstants.minFaceWidthRatio
-    }
 }
 
 // MARK: - CustomStringConvertible

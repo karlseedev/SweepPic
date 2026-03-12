@@ -112,12 +112,12 @@ final class SimilarityImageLoader {
 
     /// 분석용 이미지를 로딩합니다.
     ///
-    /// - Parameter asset: 로딩할 PHAsset
+    /// - Parameters:
+    ///   - asset: 로딩할 PHAsset
+    ///   - maxSize: 긴 변 기준 최대 크기 (nil이면 기본값 480px)
     /// - Returns: 분석용으로 리사이즈된 CGImage
     /// - Throws: SimilarityImageLoadError
-    ///
-    /// - Important: 긴 변 480px 이하로 리사이즈되며, 원본 비율이 유지됩니다.
-    func loadImage(for asset: PHAsset) async throws -> CGImage {
+    func loadImage(for asset: PHAsset, maxSize: CGFloat? = nil) async throws -> CGImage {
         let requestUUID = UUID()
         var hasResumed = false  // 중복 resume 방지
         var isTimeout = false   // timeout/cancelled 구분용
@@ -125,7 +125,7 @@ final class SimilarityImageLoader {
         return try await withTaskCancellationHandler {
             try await withCheckedThrowingContinuation { continuation in
                 // 타겟 크기 계산 (긴 변 기준)
-                let targetSize = self.calculateTargetSize(for: asset)
+                let targetSize = self.calculateTargetSize(for: asset, maxSize: maxSize ?? self.maxSize)
 
                 // 타임아웃 작업 - cancelImageRequest 후 콜백에서 처리
                 let timeoutItem = DispatchWorkItem { [weak self] in
@@ -263,7 +263,7 @@ final class SimilarityImageLoader {
     ///
     /// - Parameter asset: 대상 PHAsset
     /// - Returns: 분석용 타겟 크기
-    private func calculateTargetSize(for asset: PHAsset) -> CGSize {
+    private func calculateTargetSize(for asset: PHAsset, maxSize: CGFloat) -> CGSize {
         let pixelWidth = CGFloat(asset.pixelWidth)
         let pixelHeight = CGFloat(asset.pixelHeight)
 

@@ -297,7 +297,6 @@ final class SimilarityAnalysisQueue {
 
         // T014.5 & T014.6: 얼굴 감지 + 유효 슬롯 계산
         var validGroupIDs: [String] = []
-        let viewerSize = getExpectedViewerSize()
 
         // 성능 측정: 얼굴 감지 + 매칭 시간
         let faceStartTime = CFAbsoluteTimeGetCurrent()
@@ -318,7 +317,7 @@ final class SimilarityAnalysisQueue {
 
             for photo in groupPhotos {
                 do {
-                    let faces = try await faceDetector.detectFaces(in: photo, viewerSize: viewerSize)
+                    let faces = try await faceDetector.detectFaces(in: photo)
                     rawFacesMap[photo.localIdentifier] = faces
                 } catch {
                     // 얼굴 감지 실패 시 빈 배열
@@ -1142,17 +1141,6 @@ final class SimilarityAnalysisQueue {
     }
 
     // MARK: - Private Methods - UI
-
-    /// 예상 뷰어 크기를 반환합니다.
-    ///
-    /// - Returns: 뷰어 크기 (iPad 분할 모드 반영)
-    private func getExpectedViewerSize() -> CGSize {
-        if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
-           let window = windowScene.windows.first {
-            return window.bounds.size
-        }
-        return UIScreen.main.bounds.size
-    }
 
     /// 분석 완료 알림을 발송합니다.
     private func postAnalysisComplete(

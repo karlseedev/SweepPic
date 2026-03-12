@@ -67,7 +67,7 @@ enum FaceComparisonDebugHelper {
                 let cgImage = try await imageLoader.loadImage(for: photo)
 
                 // Vision 감지
-                let visionFaces = try await visionDetector.detectFaces(in: photo, viewerSize: viewerSize)
+                let visionFaces = try await visionDetector.detectFaces(in: photo)
 
                 // YuNet 감지
                 let yunetFaces = try yunetDetector.detect(in: cgImage)
@@ -165,7 +165,7 @@ enum FaceComparisonDebugHelper {
             let assetID = photo.localIdentifier
             let shortID = String(assetID.prefix(8))
             do {
-                let faces = try await visionDetector.detectFaces(in: photo, viewerSize: viewerSize)
+                let faces = try await visionDetector.detectFaces(in: photo)
                 rawFacesMap[assetID] = faces
                 print("║ Photo \(shortID): Vision detected \(faces.count) faces")
             } catch {
