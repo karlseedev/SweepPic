@@ -40,7 +40,9 @@ final class CleanupPreviewService {
     private let path2StandardThreshold: Float = 0.0
 
     /// 경로2 임계값 - 강화 (완화)
-    private let path2DeepThreshold: Float = 0.2
+    /// - 0.3: 정상 사진 최소값(0.230) 근처까지 포함하여 적극적으로 검출
+    /// - 3등급(가장 완화)이므로 일부 오탐 허용, 사용자가 미리보기에서 확인
+    private let path2DeepThreshold: Float = 0.3
 
     /// 최대 검색 수
     private let maxScanCount: Int = CleanupConstants.maxScanCount
@@ -348,8 +350,10 @@ final class CleanupPreviewService {
                     }
                 }
 
-                // 6. 3모드 계산 (모두 OR)
-                let light    = path1Result || path2Light
+                // 6. 3모드 계산
+                // Path1 Strong(극단 노출/심각 블러)만 5등급, Weak는 4등급부터
+                let path1Strong = path1Result && oldResult.signals.hasStrongSignal
+                let light    = path1Strong || path2Light
                 let standard = path1Result || path2Std
                 let deep     = path1Result || path2Deep
 
