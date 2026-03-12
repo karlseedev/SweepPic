@@ -1,8 +1,9 @@
 // ViewerViewController+FaceDebug.swift
 // 얼굴 감지 디버그 기능
 //
-// 현재 보고 있는 사진에 대해 다양한 해상도로 Vision 얼굴 감지를 수행하고
-// 결과를 비교하여 감지 실패 원인을 파악합니다.
+// 현재 보고 있는 사진에 대해 다양한 해상도로
+// Vision 얼굴 감지 + YuNet/SFace 인물 매칭을 수행하고
+// 결과를 비교하여 감지/매칭 실패 원인을 파악합니다.
 //
 // DEBUG 빌드에서만 활성화됩니다.
 
@@ -42,7 +43,7 @@ extension ViewerViewController {
 
     // MARK: - Debug Action
 
-    /// 디버그 버튼 탭: 현재 사진에 대해 다양한 해상도로 얼굴 감지 수행
+    /// 디버그 버튼 탭: 5가지 해상도로 Vision + SFace 분석
     @objc private func faceDebugButtonTapped() {
         guard let asset = coordinator.asset(at: currentIndex) else {
             Logger.similarPhoto.error("[FaceDebug] asset을 가져올 수 없음")
@@ -53,7 +54,6 @@ extension ViewerViewController {
         let originalSize = "\(asset.pixelWidth)×\(asset.pixelHeight)"
         Logger.similarPhoto.notice("[FaceDebug] ═══ 시작: \(shortID) 원본: \(originalSize) ═══")
 
-        // 알림으로 시작 표시
         showFaceDebugToast("분석 중...")
 
         Task {
@@ -63,104 +63,145 @@ extension ViewerViewController {
                 ("1080px", 1080),
                 ("1600px", 1600),
                 ("2200px", 2200),
-                ("원본", nil)  // nil = 원본 크기
+                ("원본", nil)
             ]
 
-            var results: [(String, Int, CGSize)] = []  // (label, faceCount, actualSize)
+            var summaryLines: [String] = []
 
             for (label, maxSize) in testSizes {
+                Logger.similarPhoto.notice("[FaceDebug] ── \(label) ──")
+
+                // 이미지 로드
+                let cgImage: CGImage
                 do {
-                    let (faceCount, actualSize, faces) = try await detectFacesAtSize(
-                        asset: asset,
-                        maxSize: maxSize
-                    )
-                    results.append((label, faceCount, actualSize))
+                    if let maxSize = maxSize {
+                        cgImage = try await SimilarityImageLoader.shared.loadImage(for: asset, maxSize: maxSize)
+                    } else {
+                        cgImage = try await loadOriginalImage(for: asset)
+                    }
+                } catch {
+                    Logger.similarPhoto.error("[FaceDebug] \(label): 이미지 로드 실패 - \(error.localizedDescription)")
+                    summaryLines.append("\(label): 로드 실패")
+                    continue
+                }
 
-                    // 각 해상도별 결과 로그
-                    Logger.similarPhoto.notice(
-                        "[FaceDebug] \(label): \(faceCount)개 감지 (실제 \(Int(actualSize.width))×\(Int(actualSize.height)))"
-                    )
+                let actualSize = CGSize(width: cgImage.width, height: cgImage.height)
+                let sizeStr = "\(cgImage.width)×\(cgImage.height)"
 
-                    // 감지된 얼굴 상세 로그
+                // === Vision 얼굴 감지 ===
+                let visionCount: Int
+                do {
+                    let request = VNDetectFaceRectanglesRequest()
+                    let handler = VNImageRequestHandler(cgImage: cgImage, options: [:])
+                    try handler.perform([request])
+                    let faces = request.results ?? []
+                    visionCount = faces.count
+
+                    Logger.similarPhoto.notice("[FaceDebug] \(label) Vision: \(visionCount)개 (\(sizeStr))")
                     for (i, face) in faces.enumerated() {
                         let box = face.boundingBox
-                        let widthPx = Int(box.width * actualSize.width)
-                        let heightPx = Int(box.height * actualSize.height)
+                        let wPx = Int(box.width * actualSize.width)
+                        let hPx = Int(box.height * actualSize.height)
                         Logger.similarPhoto.debug(
-                            "[FaceDebug]   face[\(i)]: \(widthPx)×\(heightPx)px (정규화: w=\(String(format: "%.3f", box.width)) h=\(String(format: "%.3f", box.height)))"
+                            "[FaceDebug]   vision[\(i)]: \(wPx)×\(hPx)px (w=\(String(format: "%.3f", box.width)) h=\(String(format: "%.3f", box.height)))"
                         )
                     }
                 } catch {
-                    results.append((label, -1, .zero))
-                    Logger.similarPhoto.error("[FaceDebug] \(label): 실패 - \(error.localizedDescription)")
+                    Logger.similarPhoto.error("[FaceDebug] \(label) Vision 실패: \(error.localizedDescription)")
+                    visionCount = -1
                 }
+
+                // === YuNet + SFace 분석 ===
+                let yunetCount: Int
+                let sfaceCount: Int
+
+                if let yunet = YuNetFaceDetector.shared,
+                   let sface = SFaceRecognizer.shared {
+                    do {
+                        let detections = try yunet.detect(in: cgImage)
+                        yunetCount = detections.count
+
+                        // 각 얼굴에 대해 SFace 임베딩 추출
+                        var embeddingCount = 0
+                        var norms: [Float] = []
+
+                        for (i, detection) in detections.enumerated() {
+                            // FaceAligner로 정렬
+                            guard let aligned = try? FaceAligner.shared.align(
+                                image: cgImage,
+                                landmarks: detection.landmarks
+                            ) else {
+                                Logger.similarPhoto.debug("[FaceDebug]   yunet[\(i)]: align 실패")
+                                continue
+                            }
+
+                            // SFace 임베딩 추출
+                            do {
+                                let embedding = try sface.extractEmbedding(from: aligned)
+                                let norm = sqrt(embedding.reduce(0) { $0 + $1 * $1 })
+                                norms.append(norm)
+                                embeddingCount += 1
+
+                                // 얼굴 크기 (픽셀)
+                                let box = detection.boundingBox
+                                Logger.similarPhoto.debug(
+                                    "[FaceDebug]   yunet[\(i)]: \(Int(box.width))×\(Int(box.height))px norm=\(String(format: "%.2f", norm))"
+                                )
+                            } catch {
+                                Logger.similarPhoto.debug("[FaceDebug]   yunet[\(i)]: embedding 실패")
+                            }
+                        }
+
+                        sfaceCount = embeddingCount
+                        let normStr = norms.map { String(format: "%.1f", $0) }.joined(separator: ", ")
+                        Logger.similarPhoto.notice(
+                            "[FaceDebug] \(label) YuNet: \(yunetCount)개, SFace: \(sfaceCount)개 norms=[\(normStr)]"
+                        )
+                    } catch {
+                        Logger.similarPhoto.error("[FaceDebug] \(label) YuNet 실패: \(error.localizedDescription)")
+                        yunetCount = -1
+                        sfaceCount = -1
+                    }
+                } else {
+                    Logger.similarPhoto.error("[FaceDebug] \(label) YuNet/SFace 모델 없음")
+                    yunetCount = -1
+                    sfaceCount = -1
+                }
+
+                // 요약 라인
+                let vStr = visionCount >= 0 ? "\(visionCount)" : "X"
+                let yStr = yunetCount >= 0 ? "\(yunetCount)" : "X"
+                let sStr = sfaceCount >= 0 ? "\(sfaceCount)" : "X"
+                summaryLines.append("\(label) (\(sizeStr)): V=\(vStr) Y=\(yStr) S=\(sStr)")
             }
 
             Logger.similarPhoto.notice("[FaceDebug] ═══ 완료 ═══")
 
             // UI 결과 표시
             await MainActor.run {
-                let summary = results.map { (label, count, size) in
-                    if count >= 0 {
-                        return "\(label): \(count)개 (\(Int(size.width))×\(Int(size.height)))"
-                    } else {
-                        return "\(label): 실패"
-                    }
-                }.joined(separator: "\n")
-
-                showFaceDebugAlert(title: "얼굴 감지 결과", message: summary)
+                let message = summaryLines.joined(separator: "\n")
+                showFaceDebugAlert(title: "V=Vision Y=YuNet S=SFace", message: message)
             }
         }
     }
 
-    // MARK: - Detection at Specific Size
-
-    /// 지정된 해상도로 얼굴 감지 수행
-    ///
-    /// - Parameters:
-    ///   - asset: 대상 PHAsset
-    ///   - maxSize: 긴 변 기준 최대 크기 (nil이면 원본)
-    /// - Returns: (감지 수, 실제 이미지 크기, 감지된 얼굴 배열)
-    private func detectFacesAtSize(
-        asset: PHAsset,
-        maxSize: CGFloat?
-    ) async throws -> (Int, CGSize, [VNFaceObservation]) {
-        // 이미지 로드
-        let cgImage: CGImage
-        if let maxSize = maxSize {
-            cgImage = try await SimilarityImageLoader.shared.loadImage(for: asset, maxSize: maxSize)
-        } else {
-            // 원본 크기: 별도 옵션으로 요청
-            cgImage = try await loadOriginalImage(for: asset)
-        }
-
-        let actualSize = CGSize(width: cgImage.width, height: cgImage.height)
-
-        // Vision 얼굴 감지
-        let request = VNDetectFaceRectanglesRequest()
-        let handler = VNImageRequestHandler(cgImage: cgImage, options: [:])
-        try handler.perform([request])
-
-        let faces = request.results ?? []
-        return (faces.count, actualSize, faces)
-    }
+    // MARK: - Original Image Loader
 
     /// 원본 크기 이미지 로드
     private func loadOriginalImage(for asset: PHAsset) async throws -> CGImage {
         return try await withCheckedThrowingContinuation { continuation in
             let options = PHImageRequestOptions()
             options.deliveryMode = .highQualityFormat
-            options.resizeMode = .none  // 리사이즈 없음 = 원본
+            options.resizeMode = .none
             options.isNetworkAccessAllowed = true
             options.isSynchronous = false
 
             PHImageManager.default().requestImage(
                 for: asset,
-                targetSize: PHImageManagerMaximumSize,  // 원본 크기
+                targetSize: PHImageManagerMaximumSize,
                 contentMode: .aspectFit,
                 options: options
             ) { image, info in
-                // degraded 스킵
                 if let isDegraded = info?[PHImageResultIsDegradedKey] as? Bool, isDegraded {
                     return
                 }
@@ -193,7 +234,7 @@ extension ViewerViewController {
         label.layer.cornerRadius = 8
         label.clipsToBounds = true
         label.translatesAutoresizingMaskIntoConstraints = false
-        label.tag = 9999  // 식별용
+        label.tag = 9999
 
         view.addSubview(label)
         NSLayoutConstraint.activate([
@@ -203,7 +244,6 @@ extension ViewerViewController {
             label.heightAnchor.constraint(equalToConstant: 36)
         ])
 
-        // 3초 후 제거
         DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
             label.removeFromSuperview()
         }
@@ -211,7 +251,6 @@ extension ViewerViewController {
 
     /// 결과 알림 표시
     private func showFaceDebugAlert(title: String, message: String) {
-        // 토스트 제거
         view.viewWithTag(9999)?.removeFromSuperview()
 
         let alert = UIAlertController(title: title, message: message, preferredStyle: .alert)

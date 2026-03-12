@@ -641,10 +641,13 @@ final class SimilarityAnalysisQueue {
                 continue
             }
 
-            // 이미지 로드
+            // 이미지 로드 (인물 매칭용 고해상도)
             var cgImage: CGImage? = nil
             if let photo = photoMap[assetID] {
-                cgImage = try? await imageLoader.loadImage(for: photo)
+                cgImage = try? await imageLoader.loadImage(
+                    for: photo,
+                    maxSize: SimilarityConstants.personMatchImageMaxSize
+                )
             }
 
             // === Step 1: YuNet으로 얼굴 감지 + SFace 임베딩 생성 ===

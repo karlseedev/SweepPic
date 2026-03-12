@@ -58,7 +58,7 @@ enum FaceDetectionError: Error, LocalizedError {
 /// Vision Framework 기반 얼굴 감지기
 ///
 /// VNDetectFaceRectanglesRequest를 사용하여 이미지에서 얼굴을 감지합니다.
-/// 긴 변 1600px 이미지를 사용하여 작은 얼굴의 감지 정확도를 높이고,
+/// 기본 분석용 이미지(긴 변 480px)를 사용하며,
 /// 크기순 상위 5개만 반환합니다.
 final class FaceDetector {
 
@@ -100,15 +100,12 @@ final class FaceDetector {
     /// - Returns: 감지된 얼굴 배열 (크기순 상위 5개)
     /// - Throws: FaceDetectionError
     ///
-    /// - Important: 긴 변 1600px 이미지를 사용하며, 크기순 상위 5개가 반환됩니다.
+    /// - Important: 기본 분석용 이미지(긴 변 480px)를 사용하며, 크기순 상위 5개가 반환됩니다.
     func detectFaces(in photo: PHAsset) async throws -> [DetectedFace] {
-        // 1. 이미지 로딩 (긴 변 1600px)
+        // 1. 이미지 로딩 (기본 480px)
         let cgImage: CGImage
         do {
-            cgImage = try await imageLoader.loadImage(
-                for: photo,
-                maxSize: SimilarityConstants.faceDetectionImageMaxSize
-            )
+            cgImage = try await imageLoader.loadImage(for: photo)
         } catch {
             // [Analytics] 얼굴 감지용 이미지 로딩 실패
             AnalyticsService.shared.countError(.detection as AnalyticsError.Face)

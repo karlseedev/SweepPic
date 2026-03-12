@@ -353,9 +353,16 @@ final class CleanupPreviewService {
                 // 6. 3모드 계산
                 // Path1 Strong(극단 노출/심각 블러)만 5등급, Weak는 4등급부터
                 let path1Strong = path1Result && oldResult.signals.hasStrongSignal
+
+                // Path1 Weak 합산 ≥ 2: acceptable이지만 신호가 있는 경계선 사진 (3등급용)
+                // oldResult.signals는 SafeGuard 적용 후 값이므로 별도 SafeGuard 불필요
+                let path1WeakLoose = !oldResult.verdict.isLowQuality
+                    && oldResult.signals.weakWeightSum >= 2
+                    && (aestheticsScore == nil || aestheticsScore! < path2DeepThreshold)
+
                 let light    = path1Strong || path2Light
                 let standard = path1Result || path2Std
-                let deep     = path1Result || path2Deep
+                let deep     = path1Result || path1WeakLoose || path2Deep
 
                 // 7. 단계별 분류 (추가분만 분리)
                 if light {

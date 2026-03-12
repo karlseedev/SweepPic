@@ -100,9 +100,10 @@ enum SimilarityConstants: Sendable {
 
     // MARK: - Face Detection
 
-    /// 얼굴 감지용 이미지 최대 크기 (긴 변 기준, 픽셀)
-    /// - 기본 분석용 480px보다 큰 해상도로 작은 얼굴 감지 정확도 향상
-    nonisolated static let faceDetectionImageMaxSize: CGFloat = 2200
+    /// 인물 매칭용 이미지 최대 크기 (긴 변 기준, 픽셀)
+    /// - YuNet 얼굴 감지 + SFace 임베딩 추출에 사용
+    /// - 480px에서는 작은 얼굴의 임베딩 품질이 낮아 인물 매칭 불안정
+    nonisolated static let personMatchImageMaxSize: CGFloat = 2200
 
     /// 사진당 최대 얼굴 수
     nonisolated static let maxFacesPerPhoto: Int = 5
