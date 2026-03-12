@@ -111,6 +111,9 @@ final class AdManager: NSObject, AdManagerProtocol {
     func configure() {
         guard !isConfigured else { return }
 
+        // 4+ 연령 등급 앱 → 전체이용가(G) 광고만 허용
+        GADMobileAds.sharedInstance().requestConfiguration.maxAdContentRating = .general
+
         GADMobileAds.sharedInstance().start { [weak self] status in
             Logger.app.debug("AdManager: SDK 초기화 완료 — \(status.adapterStatusesByClassName)")
             self?.isConfigured = true
