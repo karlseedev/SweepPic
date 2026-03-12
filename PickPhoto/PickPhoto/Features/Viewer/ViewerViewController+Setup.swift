@@ -51,6 +51,11 @@ extension ViewerViewController {
             setupBackButton()
         }
 
+        // 얼굴 감지 디버그 버튼 (DEBUG 빌드만)
+        #if DEBUG
+        setupFaceDebugButton()
+        #endif
+
     }
 
 
