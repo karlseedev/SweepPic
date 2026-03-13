@@ -17,7 +17,7 @@ import CoreGraphics
 
 /// YuNet 얼굴 감지 결과
 ///
-/// 320×320 모델 좌표 또는 원본 이미지 좌표로 표현됩니다.
+/// 960×960 모델 좌표 또는 원본 이미지 좌표로 표현됩니다.
 /// landmarks는 right_eye, left_eye, nose, right_mouth, left_mouth 순서입니다.
 struct YuNetDetection: Equatable {
     /// 얼굴 바운딩 박스 (x, y, width, height)
@@ -70,9 +70,12 @@ enum YuNetError: Error, LocalizedError {
 
 /// YuNet 설정값
 enum YuNetConfig {
-    /// 입력 이미지 크기 (고정)
-    static let inputWidth: Int = 320
-    static let inputHeight: Int = 320
+    /// 모델 리소스 이름
+    static let modelName: String = "YuNet960"
+
+    /// 입력 이미지 크기
+    static let inputWidth: Int = 960
+    static let inputHeight: Int = 960
 
     /// Feature map stride 값들
     static let strides: [Int] = [8, 16, 32]

@@ -67,14 +67,14 @@ final class YuNetFaceDetector {
     /// YuNet 감지기를 초기화합니다.
     ///
     /// - Parameters:
-    ///   - modelName: 모델 리소스 이름 (기본: "YuNet")
-    ///   - inputSize: 모델 입력 크기 (기본: YuNetConfig.inputWidth = 320)
+    ///   - modelName: 모델 리소스 이름 (기본: YuNetConfig.modelName = "YuNet960")
+    ///   - inputSize: 모델 입력 크기 (기본: YuNetConfig.inputWidth = 960)
     ///   - scoreThreshold: Score 임계값 (기본: 0.6)
     ///   - nmsThreshold: NMS IoU 임계값 (기본: 0.3)
     ///   - topK: 최대 반환 얼굴 수 (기본: SimilarityConstants.maxFacesPerPhoto)
     /// - Throws: YuNetError.modelLoadFailed
     init(
-        modelName: String = "YuNet",
+        modelName: String = YuNetConfig.modelName,
         inputSize: Int = YuNetConfig.inputWidth,
         scoreThreshold: Float = YuNetConfig.scoreThreshold,
         nmsThreshold: Float = YuNetConfig.nmsThreshold,
