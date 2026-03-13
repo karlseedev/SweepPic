@@ -42,7 +42,8 @@ extension GridViewController {
     /// 유사 사진 관련 상수
     private enum SimilarPhotoConstants {
         /// 스크롤 멈춤 후 분석 시작 전 디바운싱 시간 (초)
-        static let debounceInterval: TimeInterval = 0.3
+        /// 0.15초: 빠른 스크롤 중 미세 멈춤에 트리거되지 않으면서 체감 반응 개선
+        static let debounceInterval: TimeInterval = 0.15
     }
 
     // MARK: - Associated Properties

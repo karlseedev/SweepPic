@@ -292,6 +292,25 @@ final class SimilarityAnalysisQueue {
             return []
         }
 
+        // ── 테두리 조기 표시: FeaturePrint 그룹 분리 직후 즉시 테두리 표시 ──
+        // 얼굴 분석(YuNet + SFace) 완료 전에 그리드 테두리를 먼저 보여줌
+        // 얼굴 분석 후 그룹이 축소/거부되면 최종 알림에서 테두리가 자동 갱신됨
+        let allGroupedAssetIDs = Set(rawGroups.flatMap { $0 })
+        for assetID in allGroupedAssetIDs {
+            await cache.setState(.analyzed(inGroup: true, groupID: "preliminary"), for: assetID)
+        }
+        for assetID in assetIDs where !allGroupedAssetIDs.contains(assetID) {
+            await cache.setState(.analyzed(inGroup: false, groupID: nil), for: assetID)
+        }
+        // 즉시 알림 → 그리드 테두리 표시 (얼굴 분석은 백그라운드 계속 진행)
+        postAnalysisComplete(range: range, groupIDs: ["preliminary"], analyzedAssetIDs: assetIDs)
+
+        // 취소 체크: 조기 표시 후
+        guard !Task.isCancelled else {
+            Logger.similarPhoto.debug("Cancelled after preliminary borders - keeping preliminary state")
+            return []
+        }
+
         // T014.5 & T014.6: 얼굴 감지 + 유효 슬롯 계산
         var validGroupIDs: [String] = []
 
