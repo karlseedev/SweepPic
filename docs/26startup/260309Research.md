@@ -123,6 +123,26 @@ Cleanup, Cleaner Guru, AI Cleaner, Cleaner Kit, Swipewipe, Phone Cleaner, Powerf
 
 - Appfigures는 기사 제목을 "Apple's Next Sherlock?"이라 달며, Apple이 이 기능을 iOS에 내장할 가능성 경고
 
+### iOS 95% 매출 편중 — 구조적 배경
+
+**Android OEM 자체 클리너 탑재 현황:**
+
+| OEM | 내장 클리너 | 주요 기능 |
+|-----|-----------|----------|
+| Samsung | Device Care | 중복/대용량/미사용 파일 탐지, 캐시 정리, 원탭 최적화 |
+| Xiaomi | MIUI Cleaner | 중복/흐린/과노출 사진 탐지, 캐시 정리 |
+| Huawei | Optimizer | 원탭 폰 정리, 저장공간 관리 |
+| OPPO | Phone Manager (ColorOS) | Clean Up Storage 기능 내장 |
+| Google Pixel | Files by Google | 중복, 흐린 이미지, 스크린샷, 정크 자동 분류 |
+
+**iOS 내장 기능 한계:**
+
+- iOS 16+ 중복 앨범: 정확히 동일한 사본만 탐지 (유사 사진, 크롭, 필터 적용 불가)
+- iOS 18.1 Clean Up: 사진 편집 기능(객체 제거)이지 저장공간 정리가 아님
+- 유사사진/흐린사진/스크린샷 자동 분류 정리는 없음
+
+**출처**: Samsung 공식 지원(ANS10001953), Files by Google 공식 도움말, Apple 지원 문서(121429)
+
 ---
 
 ## 3. 개별 앱 매출/다운로드 추정 (Sensor Tower)
@@ -252,6 +272,15 @@ Cleanup, Cleaner Guru, AI Cleaner, Cleaner Kit, Swipewipe, Phone Cleaner, Powerf
 
 출처: https://sensortower.com/blog/2025-q2-unified-top-5-photo%20and%20video-revenue-us
 
+### 미국 매출 편중 교차검증
+
+- Appfigures 원문: "the top 10 earners run Apple Ads campaigns with thousands of keywords in the US, where the majority of revenue is coming from"
+- 미국이 전체 App Store 매출의 42% 차지 (TechCrunch/Appfigures 2025)
+- Sensor Tower: 브라질 Cleaner Guru 주간 매출 $4.7만 vs 전체 월 $500만 → 미국 외 시장 미미
+- Apple Search Ads 미국 고객 비율 43.94% (6sense)
+
+**출처**: TechCrunch 2025.05.08, Sensor Tower Q3 2024 Brazil iOS Utilities, 6sense Apple Search Ads Market Share
+
 ---
 
 ## 5. 구독 앱 벤치마크 — Photo & Video 카테고리 (RevenueCat)
@@ -274,6 +303,16 @@ Cleanup, Cleaner Guru, AI Cleaner, Cleaner Kit, Swipewipe, Phone Cleaner, Powerf
 | 월간 재활성화율 | **전 카테고리 1위** | - |
 
 > 핵심 인사이트: Photo & Video 앱은 초기 수익화 잠재력이 전 카테고리 중 가장 높지만, 장기 구독 유지율은 가장 낮음. Lifetime + 구독 하이브리드 모델 사용이 33%로 가장 높아 카테고리 특유의 수익화 전략 존재.
+
+### iOS vs Android 매출 비율 일반 데이터
+
+- 전체 앱 시장: iOS $117B vs Android $49B → iOS 약 70% (Business of Apps 2025)
+- 구독 앱: iOS가 글로벌 구독 매출의 77% 차지 (RevenueCat/Adapty)
+- 67% 이상의 앱이 매출의 80% 이상을 iOS에서 창출
+- iOS 사용자 월 앱 지출 $10.4 vs Android $1.4 (7.4배)
+- Utilities 카테고리 주간 구독 매출 비중 73.6%로 최고 (Adapty 2026)
+
+**출처**: Business of Apps 2026, Adapty State of In-App Subscriptions 2026, SQ Magazine App Store Statistics 2026
 
 ---
 
@@ -573,6 +612,19 @@ Cleanup, Cleaner Guru, AI Cleaner, Cleaner Kit, Swipewipe, Phone Cleaner, Powerf
 - 앱별 한국 매출/다운로드: Sensor Tower, 모바일인덱스, 와이즈앱 유료 구독 필요
 - 한국 사용자 사진 정리 페인포인트 설문: 공개 자료 없음
 - 한국 iCloud 유료 구독률: 비공개
+
+### 지역별 CPI 비교 (AppTweak 2025)
+
+| 지역 | CPT (Cost Per Tap) | CPA (Cost Per Acquisition) |
+|------|-------------------|---------------------------|
+| 북미 (미국) | 최고가, 시즌 피크 극심 | $2.90 평균 |
+| 라틴아메리카 | $0.40~$0.60 | $0.50~$0.80 |
+| 아시아-태평양 | 안정적, 비용 효율적 | ~$1.30 평균 |
+| 일본/한국/MENA | 미국 대비 3~5배 저렴한 CPI | 비슷하거나 더 나은 LTV |
+
+- 북미 RLTV $17.02 vs IN/SEA $10.59 → 북미가 60% 높음 (RevenueCat 2025)
+
+**출처**: AppTweak Apple Ads Benchmarks 2025, RevenueCat State of Subscription Apps 2025
 
 ---
 
