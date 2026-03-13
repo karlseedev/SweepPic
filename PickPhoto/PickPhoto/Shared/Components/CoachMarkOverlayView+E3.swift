@@ -6,7 +6,7 @@
 //
 //  E-3: 첫 비우기 완료 안내 (단독 카드 팝업)
 //  - 트리거: performEmptyTrash() 첫 성공 완료 직후
-//  - 레이아웃: 딤 배경 + 중앙 카드 ("✓ 삭제 완료" + 본문 + [확인])
+//  - 레이아웃: 딤 배경 + 중앙 카드 ("삭제 완료" + 본문 + [확인])
 //  - E-1+E-2와 독립 (절대 동시에 표시되지 않음)
 
 import UIKit
@@ -56,7 +56,7 @@ extension CoachMarkOverlayView {
 
     // MARK: - Build Card
 
-    /// E-3 중앙 카드 구성: ✓ 삭제 완료 + 본문 + [확인]
+    /// E-3 중앙 카드 구성: 삭제 완료 + 본문 + [확인]
     private func buildFirstEmptyCard() {
         let card = UIView()
         card.layer.cornerRadius = 20
@@ -72,9 +72,9 @@ extension CoachMarkOverlayView {
 
         // 아이콘 + 타이틀
         let titleLabel = UILabel()
-        titleLabel.text = "✓ 삭제 완료"
+        titleLabel.text = "삭제 완료"
         titleLabel.textColor = .white
-        titleLabel.font = .systemFont(ofSize: 22, weight: .regular)
+        titleLabel.font = .systemFont(ofSize: 22, weight: .bold)
         titleLabel.textAlignment = .center
         titleLabel.translatesAutoresizingMaskIntoConstraints = false
         card.addSubview(titleLabel)
