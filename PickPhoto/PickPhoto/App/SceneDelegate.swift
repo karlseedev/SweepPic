@@ -168,6 +168,9 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         // 코치마크 D 재테스트: 주석 해제하면 D 리셋 활성화
         // CoachMarkDPreScanner.shared.debugReset()
 
+        // 코치마크 A-1 재테스트: 주석 해제하면 E-1 리셋 → A-1 재트리거
+        // CoachMarkType.firstDeleteGuide.resetShown()
+
         AnalyticsTestInjector.runIfNeeded()
         #endif
     }
