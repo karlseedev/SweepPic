@@ -17,10 +17,10 @@ YEAR1_MONTHS = 9                    # 1년차 기간
 
 # CPI (설치당 비용)
 CPI_YEAR1 = 3100    # 1년차 CPI (원) — ASA국내30%+글로벌50%+릴스20%
-CPI_YEAR2 = 2900    # 2년차~ CPI (원) — ASA국내30%+글로벌70%
+CPI_YEAR2 = 2700    # 2년차~ CPI (원) — ASA최적화+크리에이티브A/B로 개선
 
 # 구독 전환율
-IOS_CONVERSION = 0.06       # iOS 전환율 (체험시작률 20% × Trial→Paid 26%)
+IOS_CONVERSION = 0.05       # iOS 전환율 (체험시작률 20% × Trial→Paid 26%)
 ANDROID_CONVERSION = 0.03   # Android 전환율
 
 # 구독 가격
@@ -37,7 +37,7 @@ AD_REV_PER_NONDAU_MONTH = 1500  # 비구독 DAU 1명당 월 광고수익 (원, A
 
 # Apple 수수료 & 재투자
 APPLE_COMMISSION = 0.15     # Apple Small Business Program 15%
-REINVEST_RATE = 0.70        # 실수령액 중 재투자 비율
+REINVEST_RATE = 0.80        # 실수령액 중 재투자 비율 (1인 개발, 인건비 별도)
 
 # 오가닉 성장 — ASO 오가닉 (월 설치 수)
 ASO_ORGANIC_START = 100     # 1년차 시작 (PreApps: 인디 앱 60~150건 중앙)
@@ -57,17 +57,17 @@ SEARCH_Y3_START = 700
 SEARCH_Y3_END = 975
 
 # 바이럴 K (Amplitude: 실무 기준 0.15~0.25 "좋음")
-VIRAL_K = {1: 0.15, 2: 0.20, 3: 0.25}
+VIRAL_K = {1: 0.15, 2: 0.25, 3: 0.30}
 
 # Android (25개월차~)
-ANDROID_START_MONTH = 25
+ANDROID_START_MONTH = 21
 ANDROID_INITIAL_RATIO = 0.30   # iOS 대비 시작 비율
 ANDROID_MONTHLY_INCREASE = 0.05
 ANDROID_MAX_RATIO = 0.60
 
 # DAU 계산용
 NON_SUB_MAU_RATIO = 0.02   # 전체 비구독 누적 설치 중 MAU 비율
-DAU_MAU_RATIO = 0.10        # DAU/MAU (유틸리티 앱 10~15%)
+DAU_MAU_RATIO = 0.12        # DAU/MAU (유틸리티 앱 10~15%, 주기적 사용 유도)
 
 
 # ============================================================

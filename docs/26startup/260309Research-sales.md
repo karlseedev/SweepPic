@@ -330,3 +330,31 @@
 - 손익분기점(BEP) 시기 명시하면 실행력 어필 효과
 
 > 출처: [imweb](https://imweb.me/blog?idx=215), [wishket](https://blog.wishket.com/reserve-startups-package-business-plan-list-guide/), [brunch](https://brunch.co.kr/@strategyhacker/152) 사업계획서 작성 가이드 종합
+
+---
+
+## 14. 글로벌 Photo & Video 앱 시장 규모 (TAM)
+
+### 시장 규모 추이
+| 연도 | 글로벌 매출 (USD) | 원화 환산 (₩1,450) | 출처 |
+|------|-----------------|-------------------|------|
+| 2023년 | $120억 | 약 17.4조 원 | Statista / OnlyAccounts.io |
+| **2025년** | **$147.4억** | **약 2.1조 원** | Statista Market Forecast |
+| 2027년 | $184.1억 | 약 26.7조 원 | Statista Market Forecast |
+| 2029년 | $202.5억 | 약 29.4조 원 | Statista Market Forecast |
+
+- CAGR: 약 8~9% (2022~2029)
+- 매출 구성 (2023년 기준): 인앱 구매 $60억, 광고 $30억, 유료 앱 $20억
+
+### 카테고리 성장률
+| 지표 | 수치 | 출처 |
+|------|------|------|
+| Photo & Video YoY 성장률 | Q1 2025 기준 +40% | Sensor Tower Q1 2025 Digital Market Index |
+| 미디어 편집 앱 매출 YoY | 2025년 +71% | Sensor Tower State of Mobile 2026 |
+| 글로벌 비게임 앱 IAP 매출 | $856억 (2025년, 처음으로 게임 초과) | Sensor Tower |
+
+### 적용
+- 사업계획서 TAM: 글로벌 Photo & Video 앱 시장 2025년 약 2.1조 원 (Statista 2025)
+- 기존 TAM(미국 App Store만 9,759억 원, Statista 2024)에서 글로벌 전체로 범위 확대
+
+> 출처: [Statista Photo & Video Worldwide Market Forecast](https://www.statista.com/outlook/amo/app/photo-video/worldwide), [Sensor Tower Q1 2025 Digital Market Index](https://sensortower.com/blog/q1-2025-digital-market-index), [Sensor Tower State of Mobile 2026](https://sensortower.com/blog/state-of-mobile-2026), [TechCrunch App Spending 2025](https://techcrunch.com/2026/01/14/app-downloads-declined-again-in-2025-but-consumer-spending-soared-to-nearly-156b/)
