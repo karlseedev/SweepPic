@@ -269,19 +269,18 @@ final class YuNetDecoder {
 // MARK: - Coordinate Transformation
 
 extension YuNetDecoder {
-    /// 320×320 좌표를 원본 이미지 좌표로 변환합니다.
+    /// 모델 좌표를 원본 이미지 좌표로 변환합니다 (stretch 방식, 레거시 호환용).
     ///
     /// - Parameters:
-    ///   - detection: 320×320 좌표 기준 감지 결과
-    ///   - scaleX: 원본 너비 / 320
-    ///   - scaleY: 원본 높이 / 320
+    ///   - detection: 모델 좌표 기준 감지 결과
+    ///   - scaleX: 원본 너비 / 모델 너비
+    ///   - scaleY: 원본 높이 / 모델 높이
     /// - Returns: 원본 이미지 좌표 기준 감지 결과
     static func transformToOriginalCoordinates(
         _ detection: YuNetDetection,
         scaleX: Float,
         scaleY: Float
     ) -> YuNetDetection {
-        // BBox 변환
         let originalBox = CGRect(
             x: detection.boundingBox.origin.x * CGFloat(scaleX),
             y: detection.boundingBox.origin.y * CGFloat(scaleY),
@@ -289,11 +288,50 @@ extension YuNetDecoder {
             height: detection.boundingBox.height * CGFloat(scaleY)
         )
 
-        // Landmarks 변환
         let originalLandmarks = detection.landmarks.map { point in
             CGPoint(
                 x: point.x * CGFloat(scaleX),
                 y: point.y * CGFloat(scaleY)
+            )
+        }
+
+        return YuNetDetection(
+            boundingBox: originalBox,
+            landmarks: originalLandmarks,
+            score: detection.score
+        )
+    }
+
+    /// 레터박스 좌표를 원본 이미지 좌표로 변환합니다.
+    ///
+    /// 모델 좌표에서 패딩 오프셋을 빼고, 스케일 역수를 곱하여 원본 좌표로 복원합니다.
+    /// 공식: original = (model - offset) / scale
+    ///
+    /// - Parameters:
+    ///   - detection: 모델 좌표 기준 감지 결과
+    ///   - letterboxInfo: 레터박스 변환 정보 (scale, offsetX, offsetY)
+    /// - Returns: 원본 이미지 좌표 기준 감지 결과
+    static func transformFromLetterbox(
+        _ detection: YuNetDetection,
+        letterboxInfo: LetterboxInfo
+    ) -> YuNetDetection {
+        let scale = CGFloat(letterboxInfo.scale)
+        let offX = CGFloat(letterboxInfo.offsetX)
+        let offY = CGFloat(letterboxInfo.offsetY)
+
+        // BBox: (model - offset) / scale → 원본 좌표
+        let originalBox = CGRect(
+            x: (detection.boundingBox.origin.x - offX) / scale,
+            y: (detection.boundingBox.origin.y - offY) / scale,
+            width: detection.boundingBox.width / scale,
+            height: detection.boundingBox.height / scale
+        )
+
+        // Landmarks: 동일 변환
+        let originalLandmarks = detection.landmarks.map { point in
+            CGPoint(
+                x: (point.x - offX) / scale,
+                y: (point.y - offY) / scale
             )
         }
 

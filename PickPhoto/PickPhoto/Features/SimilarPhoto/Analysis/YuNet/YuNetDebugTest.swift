@@ -135,7 +135,7 @@ final class YuNetDebugTest {
         let preprocessor = YuNetPreprocessor()
 
         do {
-            let input = try preprocessor.preprocess(image)
+            let (input, _) = try preprocessor.preprocess(image)
 
             // 모델 로드
             let config = MLModelConfiguration()

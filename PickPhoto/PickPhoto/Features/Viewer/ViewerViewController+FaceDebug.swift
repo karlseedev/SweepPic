@@ -49,7 +49,7 @@ extension ViewerViewController {
         sheet.addAction(UIAlertAction(title: "해상도별 분석 (기존)", style: .default) { [weak self] _ in
             self?.runResolutionDebug()
         })
-        sheet.addAction(UIAlertAction(title: "320 vs 960 비교", style: .default) { [weak self] _ in
+        sheet.addAction(UIAlertAction(title: "960s vs 1088lb 비교", style: .default) { [weak self] _ in
             self?.runYuNetCompare()
         })
         sheet.addAction(UIAlertAction(title: "취소", style: .cancel))
@@ -198,16 +198,16 @@ extension ViewerViewController {
         }
     }
 
-    // MARK: - YuNet 320 vs 960 비교
+    // MARK: - YuNet 960(stretch) vs 1088(letterbox) 비교
 
-    /// 320×320 vs 960×960 YuNet 모델 비교
+    /// 960×960(stretch) vs 1088×1088(letterbox) YuNet 모델 비교
     /// 같은 이미지(2200px)로 두 모델을 순차 실행하여 속도/감지수/norm 비교
     private func runYuNetCompare() {
         guard let asset = coordinator.asset(at: currentIndex) else { return }
 
         let shortID = String(asset.localIdentifier.prefix(8))
-        Logger.similarPhoto.notice("[FaceDebug] ═══ 320 vs 960 비교 시작: \(shortID) ═══")
-        showFaceDebugToast("320 vs 960 비교 중...")
+        Logger.similarPhoto.notice("[FaceDebug] ═══ 960 vs 1088 비교 시작: \(shortID) ═══")
+        showFaceDebugToast("960 vs 1088 비교 중...")
 
         Task {
             // 2200px 이미지 로드 (인물 매칭 파이프라인과 동일)
@@ -227,8 +227,8 @@ extension ViewerViewController {
 
             // 비교할 모델 설정: (라벨, 모델명, 입력크기)
             let models: [(label: String, modelName: String, inputSize: Int)] = [
-                ("320×320", "YuNet", 320),
-                ("960×960", "YuNet960", 960)
+                ("960 stretch", "YuNet960", 960),
+                ("1088 letterbox", "YuNet1088", 1088)
             ]
 
             var summaryLines: [String] = []
@@ -306,7 +306,7 @@ extension ViewerViewController {
 
             await MainActor.run {
                 let message = summaryLines.joined(separator: "\n\n")
-                showFaceDebugAlert(title: "320 vs 960 (\(sizeStr))", message: message)
+                showFaceDebugAlert(title: "960s vs 1088lb (\(sizeStr))", message: message)
             }
         }
     }

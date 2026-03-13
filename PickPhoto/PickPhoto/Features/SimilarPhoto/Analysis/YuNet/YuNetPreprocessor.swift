@@ -7,11 +7,12 @@
 //
 //  Description:
 //  YuNet 모델 입력을 위한 이미지 전처리를 담당합니다.
-//  RGB → BGR 변환, 320×320 리사이즈, NCHW 포맷 변환을 수행합니다.
+//  RGB → BGR 변환, 레터박스 리사이즈, NCHW 포맷 변환을 수행합니다.
 //
-//  Preprocessing Spec (확정):
+//  Preprocessing Spec:
 //  - Color: BGR (iOS RGB에서 R↔B 스왑 필요)
-//  - Size: 320×320 (고정)
+//  - Size: inputSize × inputSize (기본 1088)
+//  - Resize: 레터박스 (비율 유지 + 검정 패딩)
 //  - Range: 0-255 (정규화 없음)
 //  - Format: NCHW (batch, channel, height, width)
 //  - Mean: [0, 0, 0]
@@ -23,15 +24,32 @@ import CoreML
 import CoreGraphics
 import Accelerate
 
+/// 레터박스 변환 정보
+///
+/// 원본 → 모델 좌표, 모델 → 원본 좌표 변환에 필요한 정보를 담습니다.
+struct LetterboxInfo {
+    /// 레터박스 내 이미지의 실제 스케일 (원본 → 모델)
+    let scale: Float
+
+    /// 레터박스 내 이미지의 X 오프셋 (패딩 크기)
+    let offsetX: Float
+
+    /// 레터박스 내 이미지의 Y 오프셋 (패딩 크기)
+    let offsetY: Float
+
+    /// 원본 이미지 크기
+    let originalSize: CGSize
+}
+
 /// YuNet 전처리기
 ///
 /// CGImage를 YuNet 모델 입력 형식인 MLMultiArray로 변환합니다.
-/// BGR 순서, 320×320 크기, 0-255 범위, NCHW 포맷을 사용합니다.
+/// BGR 순서, 레터박스 리사이즈, 0-255 범위, NCHW 포맷을 사용합니다.
 final class YuNetPreprocessor {
 
     // MARK: - Constants
 
-    /// 입력 이미지 크기 (기본 320, 디버그 비교 시 960 등 가능)
+    /// 입력 이미지 크기
     private let inputWidth: Int
     private let inputHeight: Int
 
@@ -49,20 +67,20 @@ final class YuNetPreprocessor {
     /// CGImage를 YuNet 입력 형식으로 변환합니다.
     ///
     /// - Parameter image: 원본 CGImage (RGB)
-    /// - Returns: MLMultiArray (BGR, 320×320, NCHW, Float32)
+    /// - Returns: (MLMultiArray, LetterboxInfo) — 모델 입력과 좌표 변환 정보
     /// - Throws: YuNetError.preprocessingFailed
     ///
     /// 변환 과정:
-    /// 1. 320×320으로 리사이즈
+    /// 1. 레터박스 리사이즈 (비율 유지 + 검정 패딩)
     /// 2. RGB → BGR 변환
     /// 3. NCHW 포맷 MLMultiArray 생성
-    func preprocess(_ image: CGImage) throws -> MLMultiArray {
-        // 1. 320×320으로 리사이즈하고 픽셀 데이터 추출
-        guard let pixelData = resizeAndExtractPixels(image) else {
-            throw YuNetError.preprocessingFailed("이미지 리사이즈 실패")
-        }
+    func preprocess(_ image: CGImage) throws -> (MLMultiArray, LetterboxInfo) {
+        let originalSize = CGSize(width: image.width, height: image.height)
 
-        // 2. MLMultiArray 생성 (NCHW: [1, 3, 320, 320])
+        // 1. 레터박스 리사이즈하고 픽셀 데이터 추출
+        let (pixelData, letterboxInfo) = try resizeWithLetterbox(image, originalSize: originalSize)
+
+        // 2. MLMultiArray 생성 (NCHW: [1, 3, H, W])
         let input: MLMultiArray
         do {
             input = try MLMultiArray(
@@ -76,53 +94,91 @@ final class YuNetPreprocessor {
         // 3. RGB → BGR 변환하며 MLMultiArray에 복사
         fillMultiArrayBGR(input, from: pixelData)
 
-        return input
+        return (input, letterboxInfo)
     }
 
     /// 원본 이미지 크기 대비 스케일 비율을 계산합니다.
+    /// (레거시 호환용 — 새 코드에서는 LetterboxInfo 사용)
     ///
     /// - Parameter originalSize: 원본 이미지 크기
-    /// - Returns: (scaleX, scaleY) - 320×320 → 원본 좌표 변환용
+    /// - Returns: (scaleX, scaleY) — 레터박스 적용 시 동일한 scale 반환
     func calculateScale(from originalSize: CGSize) -> (x: Float, y: Float) {
-        let scaleX = Float(originalSize.width) / Float(inputWidth)
-        let scaleY = Float(originalSize.height) / Float(inputHeight)
-        return (scaleX, scaleY)
+        let scale = min(
+            Float(inputWidth) / Float(originalSize.width),
+            Float(inputHeight) / Float(originalSize.height)
+        )
+        // 레터박스에서는 x, y 스케일이 동일 (비율 유지)
+        return (1.0 / scale, 1.0 / scale)
     }
 
     // MARK: - Private Methods
 
-    /// 이미지를 320×320으로 리사이즈하고 픽셀 데이터를 추출합니다.
+    /// 이미지를 레터박스 방식으로 리사이즈하고 픽셀 데이터를 추출합니다.
     ///
-    /// - Parameter image: 원본 CGImage
-    /// - Returns: RGBA 픽셀 데이터 배열 (320×320×4 바이트)
-    private func resizeAndExtractPixels(_ image: CGImage) -> [UInt8]? {
-        let width = inputWidth
-        let height = inputHeight
+    /// 비율을 유지한 채 inputSize × inputSize 캔버스 중앙에 배치하고,
+    /// 나머지 영역은 검정(0)으로 채웁니다.
+    ///
+    /// - Parameters:
+    ///   - image: 원본 CGImage
+    ///   - originalSize: 원본 이미지 크기
+    /// - Returns: (RGBA 픽셀 데이터, LetterboxInfo)
+    private func resizeWithLetterbox(
+        _ image: CGImage,
+        originalSize: CGSize
+    ) throws -> ([UInt8], LetterboxInfo) {
+        let canvasWidth = inputWidth
+        let canvasHeight = inputHeight
         let bytesPerPixel = 4
-        let bytesPerRow = width * bytesPerPixel
+        let bytesPerRow = canvasWidth * bytesPerPixel
 
-        // RGBA 버퍼 생성
-        var pixelData = [UInt8](repeating: 0, count: width * height * bytesPerPixel)
+        // 비율 유지 스케일 계산 (작은 쪽에 맞춤)
+        let scale = min(
+            Float(canvasWidth) / Float(originalSize.width),
+            Float(canvasHeight) / Float(originalSize.height)
+        )
+
+        // 리사이즈된 이미지 크기
+        let resizedW = Int(Float(originalSize.width) * scale)
+        let resizedH = Int(Float(originalSize.height) * scale)
+
+        // 중앙 배치를 위한 오프셋
+        let offsetX = (canvasWidth - resizedW) / 2
+        let offsetY = (canvasHeight - resizedH) / 2
+
+        // 검정 배경 RGBA 버퍼 생성 (0으로 초기화 = 검정)
+        var pixelData = [UInt8](repeating: 0, count: canvasWidth * canvasHeight * bytesPerPixel)
 
         // Core Graphics 컨텍스트 생성
         guard let context = CGContext(
             data: &pixelData,
-            width: width,
-            height: height,
+            width: canvasWidth,
+            height: canvasHeight,
             bitsPerComponent: 8,
             bytesPerRow: bytesPerRow,
             space: CGColorSpaceCreateDeviceRGB(),
             bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
         ) else {
-            return nil
+            throw YuNetError.preprocessingFailed("레터박스 컨텍스트 생성 실패")
         }
 
-        // 이미지를 320×320으로 리사이즈하여 그리기
-        // 주의: 단순 리사이즈 (aspect ratio 무시)
+        // 이미지를 비율 유지하며 중앙에 그리기
+        // CGContext는 좌하단 원점이므로 Y 오프셋도 동일하게 적용
         context.interpolationQuality = .high
-        context.draw(image, in: CGRect(x: 0, y: 0, width: width, height: height))
+        context.draw(image, in: CGRect(
+            x: offsetX,
+            y: offsetY,
+            width: resizedW,
+            height: resizedH
+        ))
 
-        return pixelData
+        let letterboxInfo = LetterboxInfo(
+            scale: scale,
+            offsetX: Float(offsetX),
+            offsetY: Float(offsetY),
+            originalSize: originalSize
+        )
+
+        return (pixelData, letterboxInfo)
     }
 
     /// RGBA 픽셀 데이터를 BGR 순서로 MLMultiArray에 복사합니다.
@@ -167,19 +223,5 @@ final class YuNetPreprocessor {
                 pointer[2 * channelStride + spatialIndex] = r  // Channel 2 = Red
             }
         }
-    }
-}
-
-// MARK: - Accelerate Optimized Version (Alternative)
-
-extension YuNetPreprocessor {
-    /// vImage를 사용한 최적화된 리사이즈 (향후 성능 개선용)
-    ///
-    /// 현재는 CGContext 기반 구현 사용.
-    /// 대량 이미지 처리 시 vImage로 교체 고려.
-    @available(*, unavailable, message: "향후 성능 최적화 시 구현 예정")
-    private func resizeWithVImage(_ image: CGImage) -> [UInt8]? {
-        // TODO: vImageScale_ARGB8888 사용한 고성능 리사이즈
-        fatalError("Not implemented")
     }
 }

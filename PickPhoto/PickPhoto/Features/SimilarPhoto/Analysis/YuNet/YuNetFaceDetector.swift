@@ -116,14 +116,8 @@ final class YuNetFaceDetector {
     /// 반환되는 좌표는 원본 이미지 크기 기준입니다.
     /// 빈 배열 반환은 에러가 아니며, 얼굴이 없는 경우입니다.
     func detect(in image: CGImage) throws -> [YuNetDetection] {
-        // 원본 이미지 크기 저장 (좌표 변환용)
-        let originalSize = CGSize(
-            width: CGFloat(image.width),
-            height: CGFloat(image.height)
-        )
-
-        // 1. 전처리 (RGB → BGR, 320×320, NCHW)
-        let input = try preprocessor.preprocess(image)
+        // 1. 전처리 (RGB → BGR, 레터박스 리사이즈, NCHW)
+        let (input, letterboxInfo) = try preprocessor.preprocess(image)
 
         // 2. Core ML 추론
         let outputs = try runInference(input: input)
@@ -145,13 +139,12 @@ final class YuNetFaceDetector {
         // 5. Top-K
         let topKResult = Array(nmsResult.prefix(topK))
 
-        // 6. 좌표 변환 (320×320 → 원본)
-        let scale = preprocessor.calculateScale(from: originalSize)
+        // 6. 좌표 변환 (레터박스 → 원본)
+        // 모델 좌표에서 패딩 오프셋을 빼고, 스케일로 나눠서 원본 좌표로 복원
         let finalResult = topKResult.map { detection in
-            YuNetDecoder.transformToOriginalCoordinates(
+            YuNetDecoder.transformFromLetterbox(
                 detection,
-                scaleX: scale.x,
-                scaleY: scale.y
+                letterboxInfo: letterboxInfo
             )
         }
 
