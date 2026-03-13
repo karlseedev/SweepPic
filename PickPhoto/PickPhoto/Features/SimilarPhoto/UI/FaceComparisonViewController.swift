@@ -631,7 +631,8 @@ final class FaceComparisonViewController: UIViewController {
                 return
             }
 
-            await ExtendedFallbackTester.shared.runComparison(with: photos)
+            // Vision fallback 제거됨 — Extended 비교 테스트 비활성화
+            print("[Debug] ExtendedFallbackTester 비활성화됨 (Vision 제거)")
         }
     }
 }
