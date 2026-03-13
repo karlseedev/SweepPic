@@ -22,6 +22,7 @@
 | 10 | 경쟁앱 수익화 전략 비교 |
 | 11 | 데이터 요약 (양방향) |
 | 12 | 데이터 한계 및 주의사항 |
+| 13 | 사진 정리 앱 카테고리 적용 추정 |
 
 ---
 
@@ -345,150 +346,109 @@
 
 ---
 
-## 11. 종합 분석 및 SweepPic 권장안
+## 11. 데이터 요약 (양방향)
 
-### 데이터가 말하는 것
+### Apple Free Trial(Opt-out) 쪽 데이터
 
-**Grace Period(현재 방식)에 불리한 데이터:**
+| # | 데이터 | 출처 | 섹션 |
+|---|--------|------|:----:|
+| 1 | Day 0가 전환의 50%+ 차지, Grace Period는 Day 4+에야 게이트 도달 | RevenueCat 2025 | §8 |
+| 2 | 4일 이하 체험 전환율 26.8~31.2%, 5일+ 대비 약 30% 낮음 | RevenueCat 2025, Adapty | §3 |
+| 3 | Hard paywall 인스톨당 매출이 Freemium 대비 8배 | RevenueCat 2025/2026 | §1 |
+| 4 | 전체 구독 수익의 56.9%가 직접 결제에서 발생 | FunnelFox | §2 |
+| 5 | Photo & Video 카테고리에서 트라이얼 제공 앱 비율 73%→62% 하락 | RevenueCat 2026 | §5 |
+| 6 | Trial 경유 LTV가 직접 결제 대비 최대 64% 높음 | Adapty 2026 | §2 |
+| 7 | Opt-out Trial→Paid 전환율 39~50% vs Opt-in 12~25% | First Page Sage, Chargebee | §4 |
+| 8 | 무료 체험 제거 시 LTV $35~40→$60 (약 2배 상승) 사례 | RevenueCat Blog | §2 |
+| 9 | 페이월을 온보딩 시작점으로 이동 시 매출 5배 증가 사례 | Superwall | §8 |
+| 10 | 680,588명 실험에서 7일 체험이 3일 대비 채택률·지연전환 유의미 증가 | Frontiers in Psychology 2025 | §3 |
 
-1. **Day 0가 최고 전환 창** — Grace Period는 3일 후에야 게이트를 만남 (전환 기회 50%+ 놓침)
-2. **4일 이하 체험 전환율 30% 낮음** — 현재 3일은 최악의 기간
-3. **Photo & Video 카테고리에서 트라이얼 포기 추세** — 업계가 직접 결제로 이동 중
-4. **전체 구독 수익의 57%가 직접 결제** — 트라이얼 없는 모델이 수익의 주류
-5. **Hard paywall이 인스톨당 매출 8배** — Freemium과의 격차가 압도적
-6. **"Use & Forget" 리스크** — 3일 무료면 대청소 끝내고 이탈 가능
-7. **Opt-out 모델 전환율이 2~3배** — iOS에서 카드 장벽이 낮아 Opt-out 유리
+### Grace Period(Opt-in) 쪽 데이터
 
-**Grace Period에 유리한 데이터:**
-
-1. **Opt-in이 최종 유료 고객 27% 더 많음** — 퍼널 전체 기준 (단, 이건 웹 SaaS 데이터)
-2. **Opt-in 90일 잔존율 80% vs Opt-out 60%** — 자발적 전환 고객의 충성도
-3. **한국은 글로벌 No.1 환불 국가** — Opt-out 시 환불 폭증 리스크
-4. **APAC 사진 앱 환불률 14.1%** — 한국 시장 특수 리스크
-5. **"한 번 쓰고 말 앱에 구독은 말도 안 된다"** — 사용자 거부감
-6. **구독 피로 41%** — 추가 구독 저항
-7. **무명 앱의 진입장벽** — 아무도 모르는 앱에 첫 세션부터 결제 요구
-
-### SweepPic 특수 상황 고려
-
-| 요소 | 영향 |
-|------|------|
-| 신규 앱 (인지도 0) | Hard paywall 불리 |
-| 한국 우선 시장 | 환불 리스크, 구독 피로 |
-| 게이트가 "비우기" 1곳만 | Freemium 전환 동기 약함 |
-| "Use & Forget" 특성 | Grace Period 시 무료 대청소 → 이탈 |
-| 스와이프 삭제 = 즉각적 Aha Moment | 첫 세션에서 가치 증명 가능 |
-| 경쟁앱 대비 착한 가격 ($2.99/월) | 결제 저항 상대적 낮음 |
+| # | 데이터 | 출처 | 섹션 |
+|---|--------|------|:----:|
+| 1 | 퍼널 전체 기준 Opt-in이 1,000명당 유료 고객 15.5명 vs Opt-out 12.2명 (27% 더 많음) | First Page Sage, Chargebee, Recurly | §4 |
+| 2 | Opt-in 90일 잔존율 80% vs Opt-out 60% | First Page Sage | §4 |
+| 3 | 한국은 글로벌 No.1 환불 국가, APAC 사진 앱 환불률 14.1% | RevenueCat 2025 | §5,6 |
+| 4 | Hard paywall 환불률 5.8% vs Freemium 3.4% (1.7배) | RevenueCat 2025 | §1 |
+| 5 | 1년 후 리텐션은 Hard/Soft paywall 거의 동일 | RevenueCat 2025 | §1 |
+| 6 | 구독 피로 41%, 가구당 구독 수 4.1→2.8 (-32% YoY) | CivicScience, StudyFinds | §9 |
+| 7 | 무료 트라이얼 해지 실패 비율 64.8% — 강제 과금에 대한 사용자 불만 원인 | Self Financial | §9 |
+| 8 | "한 번 쓰고 말 앱에 구독은 말도 안 된다" — 사진 정리 앱 공통 리뷰 불만 | App Store 리뷰, Connor Tumbleson | §7 |
+| 9 | 한국 소비자 IAP(단독 구매) 선호, 구독 자체에 문화적 저항 | 오픈서베이 2025, Korea Herald | §6 |
+| 10 | 창의적 기능 위주 앱에서 긴 체험이 "신기함 감쇠"로 오히려 불리 | Frontiers in Psychology 2025 | §3 |
 
 ---
 
-### 권장안: Apple Free Trial 7일 + 소프트 페이월
+## 12. 데이터 한계 및 주의사항
 
-**근거 요약:**
-
-| # | 근거 | 데이터 |
-|---|------|--------|
-| 1 | 3일은 최악의 트라이얼 기간 | 4일 이하 전환율 30% 낮음 |
-| 2 | 7일이 최적의 균형점 | "4일 고원 효과" — 7일 이상이면 추가 효과 미미 |
-| 3 | Day 0 전환 창 활용 필수 | 트라이얼 시작의 82~89%가 Day 0 |
-| 4 | iOS에서 Opt-out 장벽이 낮음 | Apple ID에 카드 이미 등록 |
-| 5 | Trial 경유 LTV가 64% 높음 | 직접 결제 대비 장기 가치 우수 |
-| 6 | "Use & Forget" 방어 | 구독 커밋 = 자동과금 방어선 |
-| 7 | Photo & Video 업계 추세 | 트라이얼→직접 결제 이동 중 (73%→62%) |
-
-**구현 방식:**
-
-```
-설치 → 온보딩 (3~4 화면, 핵심 기능 시연)
-→ 소프트 페이월 (닫기 버튼 있음)
-  ├─ [7일 무료 체험 시작] → Apple Free Trial (7일 후 자동 과금)
-  ├─ [나중에] → 기본 기능 무료 사용 (비우기에만 일일 한도)
-  └─ 가격/취소방법/자동갱신 명확 표시 (한국 FTC 준수)
-```
-
-**현행 Grace Period 대비 변경점:**
-
-| 항목 | 현행 (Grace Period) | 권장안 (Apple Free Trial) |
-|------|---|---|
-| 첫 세션 | 바로 무제한 사용 | 온보딩 → 소프트 페이월 |
-| 무료 기간 | 3일 무조건 | 7일 (구독 시작 시) |
-| 결제 시점 | Day 4+ 게이트 도달 시 | Day 0 페이월 또는 이후 게이트 |
-| 미구독자 | Day 4부터 한도 적용 | 처음부터 한도 적용 |
-| 전환 기회 | Day 4+ (50%+ 놓침) | **Day 0** (최고 전환 창) |
-| "Use & Forget" 방어 | 없음 | 자동과금 방어선 |
-
-### 한국 시장 리스크 대응
-
-| 리스크 | 대응 |
-|--------|------|
-| 환불 폭증 (APAC 14.1%) | 트라이얼 종료 24시간 전 앱 내 알림 |
-| FTC 다크패턴 규제 | 자동갱신/해지방법 페이월에 명시 |
-| 구독 피로 | $2.99/월 착한 가격 + "나중에" 옵션 |
-| IAP 선호 문화 | 향후 라이프타임 옵션 검토 |
-
-### 반드시 A/B 테스트할 항목
-
-| 테스트 | 변수 A | 변수 B |
-|--------|--------|--------|
-| 페이월 타이밍 | 온보딩 직후 | 첫 스와이프 삭제 후 |
-| 트라이얼 기간 | 3일 | 7일 |
-| "나중에" 후 경험 | 완전 무료 (한도만) | 기능 제한 |
-| 가격 앵커 | 연간 먼저 | 주간 먼저 |
+| # | 한계 | 설명 |
+|---|------|------|
+| 1 | **웹 SaaS vs iOS 앱** | Opt-in/Opt-out 데이터(§4)의 대부분은 웹 SaaS 기반. iOS에서는 Apple ID에 결제수단이 이미 등록되어 있어 동일하게 적용되지 않을 수 있음 |
+| 2 | **생존자 편향** | RevenueCat/Adapty 데이터는 해당 SDK를 사용하는 앱만 집계. 소규모·초기 앱은 과소 대표될 수 있음 |
+| 3 | **카테고리 불일치** | "Photo & Video"는 사진 편집·필터 앱을 포함. 사진 "정리" 앱만의 데이터는 별도로 존재하지 않음 |
+| 4 | **상관≠인과** | Hard paywall 매출이 높은 것은 해당 모델이 우월해서가 아니라, 대형 마케팅 예산을 가진 앱이 Hard paywall을 채택하기 때문일 수 있음 |
+| 5 | **Grace Period 데이터 부재** | "앱 자체 Grace Period + 이후 구독 제안" 패턴에 대한 직접적인 벤치마크 데이터는 찾지 못함. 가장 가까운 비교는 Opt-in vs Opt-out |
+| 6 | **국가별 편차** | 대부분의 데이터가 미국/글로벌 기준. 한국 시장 단독 데이터는 DelightRoom, 오픈서베이 등 제한적 |
+| 7 | **시점 차이** | 출처별로 2024~2026 데이터가 혼재. 시장 트렌드가 빠르게 변하므로 오래된 수치는 주의 필요 |
 
 ---
 
-## 출처 목록
+## 13. 사진 정리 앱 카테고리 적용 추정 (2026-03-13)
 
-### RevenueCat
-- [State of Subscription Apps 2025](https://www.revenuecat.com/state-of-subscription-apps-2025/)
-- [State of Subscription Apps 2026](https://www.revenuecat.com/state-of-subscription-apps/)
-- [Hard Paywall vs Soft Paywall](https://www.revenuecat.com/blog/growth/hard-paywall-vs-soft-paywall/)
-- [Should Your App Stop Offering Free Trials?](https://www.revenuecat.com/blog/growth/should-your-app-stop-offering-free-trials/)
-- [Trial Conversion Rate Insights](https://www.revenuecat.com/blog/growth/app-trial-conversion-rate-insights/)
-- [South Korea Subscription Rules 2025](https://www.revenuecat.com/blog/growth/south-korea-subscription-rules-2025/)
+> 아래는 §1~12의 객관적 데이터를 사진 정리 앱 카테고리에 맞게 보정한 **추정치**입니다.
+> 실측 데이터가 아닌 추정이므로 §12의 한계가 그대로 적용됩니다.
 
-### Adapty
-- [State of In-App Subscriptions 2026](https://adapty.io/state-of-in-app-subscriptions/)
-- [In-App Subscription Benchmarks 2026](https://adapty.io/state-of-in-app-subscriptions-report/)
-- [Free Trial Conversion Rates](https://adapty.io/blog/trial-conversion-rates-for-in-app-subscriptions/)
-- [App Store Conversion Rate by Category](https://adapty.io/blog/app-store-conversion-rate/)
+### 보정 근거
 
-### 시장/가격 데이터
-- [Appfigures: Storage Cleaner Apps Market](https://appfigures.com/resources/insights/20250606)
-- [Business of Apps: App Subscription Trial Benchmarks 2026](https://www.businessofapps.com/data/app-subscription-trial-benchmarks/)
-- [Business of Apps: South Korea App Market](https://www.businessofapps.com/data/south-korea-app-market/)
-- [FunnelFox: Subscription Revenue Breakdown](https://blog.funnelfox.com/subscription-revenue-trials-vs-upfront-payment/)
+| 보정 요소 | 근거 | 적용 |
+|----------|------|------|
+| Trial→Paid 전환율 | §5 Photo & Video 실측 22.2~26.2% (전체 평균 38%의 약 58%) | Opt-out에 직접 적용 |
+| Opt-in 전환율 비율 | §4 Opt-in/Opt-out 비율 약 31~50% | Opt-out 수치에서 역산 |
+| 체험 시작률 | §4 SaaS 수치를 Photo & Video 58% 보정 + 한국 C티어(§6) 반영하여 하향 | 양쪽 모두 하향 |
+| 잔존율 | §4 Opt-out 60%, Opt-in 80% | 그대로 적용 (SaaS 데이터, 주의 필요) |
 
-### Opt-in vs Opt-out
-- [First Page Sage: SaaS Free Trial Conversion Rate Benchmarks](https://firstpagesage.com/seo-blog/saas-free-trial-conversion-rate-benchmarks/)
-- [Chargebee: Credit Card Trials vs No Credit Card Trials](https://www.chargebee.com/blog/credit-card-trials-credit-card-trials-go/)
-- [Recurly: Subscriber Acquisition Benchmarks](https://recurly.com/research/subscriber-acquisition-benchmarks/)
+### 모델별 퍼널 비교 (1,000 인스톨 기준)
 
-### 한국 시장
-- [DelightRoom: 국가별 구독 전환율 차이](https://medium.com/delightroom/%EA%B5%AD%EA%B0%80%EB%B3%84-%EA%B5%AC%EB%8F%85-%EC%A0%84%ED%99%98%EC%9C%A8-%EC%B0%A8%EC%9D%B4-5f0f300fdbfb)
-- [오픈서베이: 구독서비스 트렌드 리포트 2025](https://blog.opensurvey.co.kr/trendreport/subscription-service-2025/)
-- [Korea Herald: Subscription-based Apps](https://www.koreaherald.com/article/2719968)
+| 단계 | Apple Free Trial 7일 (Opt-out) | Opt-in 앱 자체 체험 | Grace Period 3일 |
+|------|:-:|:-:|:-:|
+| 체험 시작률 | ~10~15% | ~25~35% | 100% (자동) |
+| Trial→Paid | **22~26%** (§5 실측) | 7~13% (추정) | — (*) |
+| **유료 고객** | **~30명** | **~30명** | 추정 불가 |
+| 90일 잔존 | ~18명 (×60%) | ~24명 (×80%) | — |
+| 3개월 매출 ($2.99/월) | ~$162 | ~$215 | — |
 
-### Use & Forget / 이탈
-- [RevenueCat: Churn Reasons](https://www.revenuecat.com/blog/growth/subscription-app-churn-reasons-how-to-fix/)
-- [Connor Tumbleson: Predatory iOS Cleanup Apps](https://connortumbleson.com/2025/01/13/predatory-ios-cleanup-applications/)
-- [StudyFinds: Subscription Boom Bursting](https://studyfinds.org/subscription-boom-bursting-streaming-food-delivey-americans-purge/)
+(*) Grace Period는 "체험 시작" 전환 포인트가 없어 §4 데이터를 적용할 수 없음. 또한 3일은 §3에서 전환율이 가장 낮은 4일 이하 구간(26.8~31.2%)에 해당.
 
-### 페이월 / 온보딩
-- [Superwall: Best Practices](https://superwall.com/blog/superwall-best-practices-winning-paywall-strategies-and-experiments-to/)
-- [Nami ML: Personalized Paywall](https://www.nami.ml/blog/personalized-paywall-conversion-boost)
-- [DEV Community: Paywall Timing Paradox](https://dev.to/paywallpro/the-paywall-timing-paradox-why-showing-your-price-upfront-can-5x-your-conversions-4alc)
+### 분석
 
-### Apple 공식
-- [Apple: Auto-renewable Subscriptions](https://developer.apple.com/app-store/subscriptions/)
-- [Apple: Set Up Introductory Offers](https://developer.apple.com/help/app-store-connect/manage-subscriptions/set-up-introductory-offers-for-auto-renewable-subscriptions/)
+**유료 고객 수**: 사진 정리 앱 카테고리 보정 후, Apple Free Trial과 Opt-in의 유료 전환 수가 **거의 동일** (~30명/1,000 인스톨). 전환율에서는 Apple Free Trial이 2~3배 높지만, Opt-in의 체험 시작률이 2~3배 높아 상쇄됨.
 
-### 학술
-- [Frontiers in Psychology: Large-scale Randomized Field Experiment on Free Trial Duration (2025)](https://www.frontiersin.org/journals/psychology/articles/10.3389/fpsyg.2025.1568868/full)
+**90일 잔존에서 차이 발생**: Opt-in 잔존율 80% vs Opt-out 60%로, 90일 후 유지 고객은 Opt-in이 약 1.3배 많음(24명 vs 18명). 다만 이 잔존율은 SaaS 데이터이므로 iOS에서 동일할지 불확실.
 
-### 기타
-- [SubClub Podcast: 2026 State of Subscription Apps](https://subclub.com/episode/the-2026-state-of-subscription-apps-report)
-- [Phiture: How to Optimize Trial Length](https://phiture.com/mobilegrowthstack/the-subscription-stack-how-to-optimize-trial-length/)
-- [SaaStr: Top 10 Learnings from RevenueCat](https://www.saastr.com/the-top-10-learnings-from-revenuecats-state-of-subscription-apps-how-115000-mobile-apps-deliver-16b-in-revenue-whats-working-whats-quietly-killing-growth/)
-- [PPC.land: App Middle Class is Dying](https://ppc.land/the-app-middle-class-is-dying-and-revenuecats-data-shows-exactly-how-fast/)
-- [Codeway Case Study](https://thegrowthhackinglab.com/case-studies/codeway-150-million-revenue-16-apps/)
+**Apple Free Trial의 추가 이점**:
+- Day 0 전환 창 활용 가능 (§8: 전환의 50%가 Day 0)
+- 해지 잊은 사용자의 자동 과금 (§9: 64.8%) — 단, 한국에서는 환불로 이어질 리스크(§5: APAC 14.1%)
+- Apple 시스템 관리로 구현 단순
+- 경쟁앱 1위 Cleanup이 동일 모델 사용 중 (§10)
+
+**Opt-in의 추가 이점**:
+- 환불·부정 리뷰 리스크 낮음
+- 90일 잔존율 높음 (자발적 전환)
+
+**Grace Period 3일의 불리함**:
+- §3에서 4일 이하 체험은 전환율이 가장 낮은 구간
+- §8의 Day 0 전환 창을 놓침 (Day 4+에야 게이트 도달)
+- §4의 Opt-in/Opt-out 어느 쪽 데이터도 적용 불가 (전환 포인트 부재)
+- §7의 "Use & Forget" 리스크: 3일간 무료 대청소 후 이탈 가능
+
+### 결론
+
+유료 전환 수가 비슷한 상황에서, **Apple Free Trial 7일**이 다음 이유로 유리:
+
+1. **구현 단순성** — Apple 시스템이 체험 관리·과금·해지를 처리. Opt-in은 앱 자체로 체험 기간을 관리해야 함
+2. **Day 0 전환** — 가장 높은 전환 확률 구간을 활용 가능
+3. **업계 검증** — 경쟁앱 1위(Cleanup, 월 $4~4.75M)가 동일 모델
+4. **Grace Period 대비 명확한 개선** — 3일(최저 구간) → 7일(최적 구간), 전환 포인트 확보
+
+환불·리뷰 리스크(한국 APAC 14.1%)는 트라이얼 종료 전 앱 내 알림 + 해지 방법 명시로 대응하되, 출시 후 A/B 테스트로 실측 검증이 필요.

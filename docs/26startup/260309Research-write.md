@@ -233,7 +233,7 @@
 - 합격 후 멘토와 상의하여 비목 변경 가능 (사유서 작성)
 - 신청 시에는 심사위원 선호 방향으로 편성하여 합격 우선
 
-> 출처: K-Startup 비목별 집행 기준, 예비창업패키지 세부관리기준, 합격자 후기 종합
+> 출처: [K-Startup 비목별 집행 기준](https://www.k-startup.go.kr/edu/home/lecture/NLTYPE_021/CONT_0000002065/detail), [예비창업패키지 세부관리기준](https://www.kised.or.kr/prePubDetail/index.es?mid=a10103020000&prePubId=12), 합격자 후기 종합
 
 ---
 
@@ -278,7 +278,7 @@
 - 한국: ₩1,500~₩4,000
 - Utilities 카테고리와 유사한 단가 형성
 
-> 출처: Business of Apps CPI 2025, Mapendo CPI Report, AppTweak Apple Ads Benchmarks 2025, Mistplay UA Cost 2026
+> 출처: [Business of Apps CPI 2025](https://www.businessofapps.com/ads/cpi/research/cost-per-install/) [내용 미확인], [Mapendo CPI Report](https://mapendo.co/blog/cost-per-install-2025-the-ultimate-report-to-grow-your-app-worldwide), [AppTweak Apple Ads Benchmarks 2025](https://www.apptweak.com/en/aso-blog/apple-ads-benchmarks), [Mistplay UA Cost 2026](https://business.mistplay.com/resources/user-acquisition-cost)
 
 ---
 
@@ -335,7 +335,7 @@
 | 중급 (커스텀 디자인) | 50만~100만원 |
 | 고급 (풀 커스텀) | 100만원+ |
 
-> 출처: Airbridge 앱 마케팅 전략, Business of Apps App Marketing Cost, AppTweak ASO Strategy, 크몽 영상 견적
+> 출처: [Airbridge 앱 마케팅 전략](https://www.airbridge.io/ko/blog/6-marketing-efficiency), [Business of Apps App Marketing Cost](https://www.businessofapps.com/marketplace/app-marketing/research/app-marketing-cost/) [내용 미확인], [AppTweak ASO Strategy](https://www.apptweak.com/en/aso-blog/what-is-app-store-optimization-and-why-is-aso-important), [크몽 영상 견적](https://kmong.com/prices/%EC%98%81%EC%83%81%EA%B4%91%EA%B3%A0)
 
 ---
 
@@ -375,4 +375,4 @@
 | 균형 (유료+ASO) | 9,000~14,000 |
 | 낙관적 (ASO 극대화) | 14,000~20,000 |
 
-> 출처: imweb 예비창업패키지 합격 전략, brunch 사업계획서 작성 실수 5가지, K-Startup 비목별 집행 기준, 비긴메이트 심사위원 평가 포인트
+> 출처: [imweb 예비창업패키지 합격 전략](https://imweb.me/blog?idx=215), [brunch 사업계획서 작성 실수 5가지](https://brunch.co.kr/@a33f93b357b349e/102), [K-Startup 비목별 집행 기준](https://www.k-startup.go.kr/edu/home/lecture/NLTYPE_021/CONT_0000002065/detail), [비긴메이트 심사위원 평가 포인트](https://www.beginmate.com/magazine/175) [내용 미확인]

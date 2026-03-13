@@ -28,9 +28,19 @@ final class YuNetDecoder {
 
     // MARK: - Constants
 
-    private let inputWidth = YuNetConfig.inputWidth   // 320
-    private let inputHeight = YuNetConfig.inputHeight // 320
+    /// 입력 이미지 크기 (기본 320, 디버그 비교 시 960 등 가능)
+    private let inputWidth: Int
+    private let inputHeight: Int
     private let strides = YuNetConfig.strides         // [8, 16, 32]
+
+    // MARK: - Initialization
+
+    /// 디코더를 초기화합니다.
+    /// - Parameter inputSize: 입력 이미지 크기 (기본: YuNetConfig.inputWidth)
+    init(inputSize: Int = YuNetConfig.inputWidth) {
+        self.inputWidth = inputSize
+        self.inputHeight = inputSize
+    }
 
     // MARK: - Public Methods
 

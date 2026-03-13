@@ -43,8 +43,21 @@ extension ViewerViewController {
 
     // MARK: - Debug Action
 
-    /// 디버그 버튼 탭: 5가지 해상도로 Vision + SFace 분석
+    /// 디버그 버튼 탭: ActionSheet로 모드 선택
     @objc private func faceDebugButtonTapped() {
+        let sheet = UIAlertController(title: "FaceDebug", message: nil, preferredStyle: .actionSheet)
+        sheet.addAction(UIAlertAction(title: "해상도별 분석 (기존)", style: .default) { [weak self] _ in
+            self?.runResolutionDebug()
+        })
+        sheet.addAction(UIAlertAction(title: "320 vs 960 비교", style: .default) { [weak self] _ in
+            self?.runYuNetCompare()
+        })
+        sheet.addAction(UIAlertAction(title: "취소", style: .cancel))
+        present(sheet, animated: true)
+    }
+
+    /// 해상도별 분석 (기존 FD 기능)
+    private func runResolutionDebug() {
         guard let asset = coordinator.asset(at: currentIndex) else {
             Logger.similarPhoto.error("[FaceDebug] asset을 가져올 수 없음")
             return
@@ -181,6 +194,119 @@ extension ViewerViewController {
             await MainActor.run {
                 let message = summaryLines.joined(separator: "\n")
                 showFaceDebugAlert(title: "V=Vision Y=YuNet S=SFace", message: message)
+            }
+        }
+    }
+
+    // MARK: - YuNet 320 vs 960 비교
+
+    /// 320×320 vs 960×960 YuNet 모델 비교
+    /// 같은 이미지(2200px)로 두 모델을 순차 실행하여 속도/감지수/norm 비교
+    private func runYuNetCompare() {
+        guard let asset = coordinator.asset(at: currentIndex) else { return }
+
+        let shortID = String(asset.localIdentifier.prefix(8))
+        Logger.similarPhoto.notice("[FaceDebug] ═══ 320 vs 960 비교 시작: \(shortID) ═══")
+        showFaceDebugToast("320 vs 960 비교 중...")
+
+        Task {
+            // 2200px 이미지 로드 (인물 매칭 파이프라인과 동일)
+            let cgImage: CGImage
+            do {
+                cgImage = try await SimilarityImageLoader.shared.loadImage(
+                    for: asset,
+                    maxSize: SimilarityConstants.personMatchImageMaxSize
+                )
+            } catch {
+                Logger.similarPhoto.error("[FaceDebug] 이미지 로드 실패: \(error.localizedDescription)")
+                return
+            }
+
+            let sizeStr = "\(cgImage.width)×\(cgImage.height)"
+            Logger.similarPhoto.notice("[FaceDebug] 이미지: \(sizeStr)")
+
+            // 비교할 모델 설정: (라벨, 모델명, 입력크기)
+            let models: [(label: String, modelName: String, inputSize: Int)] = [
+                ("320×320", "YuNet", 320),
+                ("960×960", "YuNet960", 960)
+            ]
+
+            var summaryLines: [String] = []
+            let sface = SFaceRecognizer.shared
+
+            for (label, modelName, inputSize) in models {
+                Logger.similarPhoto.notice("[FaceDebug] ── \(label) ──")
+
+                // 모델 로드
+                let detector: YuNetFaceDetector
+                do {
+                    detector = try YuNetFaceDetector(
+                        modelName: modelName,
+                        inputSize: inputSize
+                    )
+                } catch {
+                    Logger.similarPhoto.error("[FaceDebug] \(label) 모델 로드 실패: \(error.localizedDescription)")
+                    summaryLines.append("\(label): 모델 로드 실패")
+                    continue
+                }
+
+                // 워밍업 1회
+                _ = try? detector.detect(in: cgImage)
+
+                // 본측정 3회 median
+                var times: [Double] = []
+                var lastDetections: [YuNetDetection] = []
+
+                for _ in 0..<3 {
+                    let start = CFAbsoluteTimeGetCurrent()
+                    let detections = try? detector.detect(in: cgImage)
+                    let elapsed = (CFAbsoluteTimeGetCurrent() - start) * 1000
+                    times.append(elapsed)
+                    if let d = detections { lastDetections = d }
+                }
+
+                // median 시간
+                times.sort()
+                let medianTime = times[1]
+
+                // SFace 임베딩 + norm
+                var norms: [Float] = []
+                if let sface = sface {
+                    for detection in lastDetections {
+                        guard let aligned = try? FaceAligner.shared.align(
+                            image: cgImage,
+                            landmarks: detection.landmarks
+                        ) else { continue }
+
+                        if let embedding = try? sface.extractEmbedding(from: aligned) {
+                            let norm = sqrt(embedding.reduce(0) { $0 + $1 * $1 })
+                            norms.append(norm)
+                        }
+                    }
+                }
+
+                let normStr = norms.map { String(format: "%.1f", $0) }.joined(separator: ", ")
+                let normAbove7 = norms.filter { $0 >= 7.0 }.count
+
+                let timeStr = String(format: "%.0f", medianTime)
+                Logger.similarPhoto.notice(
+                    "[FaceDebug] \(label): \(timeStr)ms, \(lastDetections.count)개, norms=[\(normStr)], ≥7.0: \(normAbove7)개"
+                )
+
+                summaryLines.append(
+                    "\(label)\n" +
+                    "  시간: \(String(format: "%.0f", medianTime))ms\n" +
+                    "  감지: \(lastDetections.count)개\n" +
+                    "  norms: [\(normStr)]\n" +
+                    "  norm≥7.0: \(normAbove7)개"
+                )
+            }
+
+            Logger.similarPhoto.notice("[FaceDebug] ═══ 비교 완료 ═══")
+
+            await MainActor.run {
+                let message = summaryLines.joined(separator: "\n\n")
+                showFaceDebugAlert(title: "320 vs 960 (\(sizeStr))", message: message)
             }
         }
     }

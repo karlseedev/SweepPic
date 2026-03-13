@@ -46,10 +46,10 @@ final class YuNetFaceDetector {
     private let model: MLModel
 
     /// 전처리기
-    private let preprocessor = YuNetPreprocessor()
+    private let preprocessor: YuNetPreprocessor
 
     /// 디코더
-    private let decoder = YuNetDecoder()
+    private let decoder: YuNetDecoder
 
     // MARK: - Configuration
 
@@ -67,11 +67,15 @@ final class YuNetFaceDetector {
     /// YuNet 감지기를 초기화합니다.
     ///
     /// - Parameters:
+    ///   - modelName: 모델 리소스 이름 (기본: "YuNet")
+    ///   - inputSize: 모델 입력 크기 (기본: YuNetConfig.inputWidth = 320)
     ///   - scoreThreshold: Score 임계값 (기본: 0.6)
     ///   - nmsThreshold: NMS IoU 임계값 (기본: 0.3)
     ///   - topK: 최대 반환 얼굴 수 (기본: SimilarityConstants.maxFacesPerPhoto)
     /// - Throws: YuNetError.modelLoadFailed
     init(
+        modelName: String = "YuNet",
+        inputSize: Int = YuNetConfig.inputWidth,
         scoreThreshold: Float = YuNetConfig.scoreThreshold,
         nmsThreshold: Float = YuNetConfig.nmsThreshold,
         topK: Int = YuNetConfig.topK
@@ -79,13 +83,23 @@ final class YuNetFaceDetector {
         self.scoreThreshold = scoreThreshold
         self.nmsThreshold = nmsThreshold
         self.topK = topK
+        self.preprocessor = YuNetPreprocessor(inputSize: inputSize)
+        self.decoder = YuNetDecoder(inputSize: inputSize)
 
-        // Core ML 모델 로드
+        // Core ML 모델 로드 (Bundle에서 modelName으로 검색)
         let config = MLModelConfiguration()
         config.computeUnits = .all  // CPU, GPU, ANE 모두 활용
 
         do {
-            self.model = try YuNet(configuration: config).model
+            guard let modelURL = Bundle.main.url(
+                forResource: modelName,
+                withExtension: "mlmodelc"
+            ) else {
+                throw YuNetError.modelLoadFailed("모델 '\(modelName).mlmodelc'을 찾을 수 없음")
+            }
+            self.model = try MLModel(contentsOf: modelURL, configuration: config)
+        } catch let error as YuNetError {
+            throw error
         } catch {
             throw YuNetError.modelLoadFailed(error.localizedDescription)
         }

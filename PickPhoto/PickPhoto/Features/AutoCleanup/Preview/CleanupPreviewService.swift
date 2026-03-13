@@ -19,6 +19,7 @@ import Foundation
 import Photos
 import Vision
 import AppCore
+import OSLog
 
 // MARK: - CleanupPreviewService
 
@@ -186,6 +187,11 @@ final class CleanupPreviewService {
         var deepCandidates: [PreviewCandidate] = []
         var totalScanned = 0
         var lastAssetDate: Date?
+
+        // 등급별 Path 카운터 (분포 로그용)
+        var lightPath1Count = 0, lightPath2Count = 0
+        var stdPath1Count = 0, stdPath2Count = 0
+        var deepPath1Count = 0, deepPath2Count = 0
 
         // 배치 처리
         let batchSize = CleanupConstants.batchSize
@@ -364,9 +370,8 @@ final class CleanupPreviewService {
                 let standard = path1Result || path2Std
                 let deep     = path1Result || path1WeakLoose || path2Deep
 
-                // 7. 단계별 분류 (추가분만 분리)
+                // 7. 단계별 분류 (추가분만 분리) + 등급별 Path 카운터
                 if light {
-                    // 1단계(완화)에서 잡힘 → light
                     lightCandidates.append(PreviewCandidate(
                         assetID: asset.localIdentifier,
                         asset: asset,
@@ -375,9 +380,10 @@ final class CleanupPreviewService {
                         qualityResult: oldResult,
                         safeGuardDebug: safeGuardDebug
                     ))
+                    if path1Strong { lightPath1Count += 1 }
+                    if path2Light { lightPath2Count += 1 }
 
                 } else if standard {
-                    // 2단계(기본)에서 추가로 잡힘 → standard 추가분
                     standardCandidates.append(PreviewCandidate(
                         assetID: asset.localIdentifier,
                         asset: asset,
@@ -386,8 +392,10 @@ final class CleanupPreviewService {
                         qualityResult: oldResult,
                         safeGuardDebug: safeGuardDebug
                     ))
+                    if path1Result { stdPath1Count += 1 }
+                    if path2Std { stdPath2Count += 1 }
+
                 } else if deep {
-                    // 3단계(강화)에서 추가로 잡힘 → deep 추가분
                     deepCandidates.append(PreviewCandidate(
                         assetID: asset.localIdentifier,
                         asset: asset,
@@ -396,6 +404,8 @@ final class CleanupPreviewService {
                         qualityResult: oldResult,
                         safeGuardDebug: safeGuardDebug
                     ))
+                    if path1WeakLoose { deepPath1Count += 1 }
+                    if path2Deep { deepPath2Count += 1 }
                 }
 
                 // 프로그레스 보고
@@ -441,6 +451,17 @@ final class CleanupPreviewService {
         } else {
             endReason = .endOfRange
         }
+
+        // 등급별 분포 로그
+        let lightDup = lightPath1Count + lightPath2Count - lightCandidates.count
+        let stdDup = stdPath1Count + stdPath2Count - standardCandidates.count
+        let deepDup = deepPath1Count + deepPath2Count - deepCandidates.count
+        Logger.cleanup.notice("""
+            [등급 분포] 총 스캔: \(totalScanned)장
+            5등급: \(lightCandidates.count)장 (Path1: \(lightPath1Count), Path2: \(lightPath2Count), 중복: \(lightDup))
+            4등급: \(standardCandidates.count)장 (Path1: \(stdPath1Count), Path2: \(stdPath2Count), 중복: \(stdDup))
+            3등급: \(deepCandidates.count)장 (Path1: \(deepPath1Count), Path2: \(deepPath2Count), 중복: \(deepDup))
+            """)
 
         // 스캔은 최신→오래된 순이지만, 그리드 표시는 오래된→최신 (다른 그리드와 통일)
         let result = PreviewResult(
