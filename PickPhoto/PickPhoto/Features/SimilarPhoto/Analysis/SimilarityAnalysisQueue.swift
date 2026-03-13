@@ -589,7 +589,8 @@ final class SimilarityAnalysisQueue {
         let boundingBox: CGRect
         let center: CGPoint       // 얼굴 중심 (슬롯 위치 갱신용)
         let embedding: [Float]    // Keep Best용 임베딩
-        let norm: Float           // 임베딩 품질
+        let norm: Float           // 얼굴 임베딩 품질
+        let slotNorm: Float       // 슬롯 임베딩 품질 (고품질 확장 판정용)
     }
 
     /// 그룹 단위로 일관된 인물 번호를 부여합니다.
@@ -627,6 +628,10 @@ final class SimilarityAnalysisQueue {
         let greyZonePosLimit = SimilarityConstants.greyZonePositionLimit
         let maxSlots = SimilarityConstants.maxPersonSlots
         let sqrt2: CGFloat = sqrt(2.0)
+
+        // 고품질 확장: 양쪽 norm 모두 높으면 거절 임계값 완화
+        let highQualityNormLimit: Float = 8.0       // 양쪽 norm ≥ 8.0이면 고품질 쌍
+        let extendedRejectThreshold: Float = 0.75   // 고품질 쌍의 완화된 거절 임계값
 
         // 각 사진 처리
         for assetID in assetIDs {
@@ -868,7 +873,8 @@ final class SimilarityAnalysisQueue {
                         boundingBox: data.boundingBox,
                         center: data.center,
                         embedding: faceEmbedding,
-                        norm: faceNorm
+                        norm: faceNorm,
+                        slotNorm: item.slot.norm
                     ))
                 }
             }
@@ -954,7 +960,30 @@ final class SimilarityAnalysisQueue {
                         Logger.similarPhoto.debug("[PersonMatch] \(shortID) HQ Grey거부: face[\(candidate.faceIdx)]↛slot\(candidate.slotID) cost=\(String(format: "%.3f", cost)) pos=\(String(format: "%.3f", posNorm))≥\(String(format: "%.2f", greyZonePosLimit)) norm=\(String(format: "%.1f", candidate.norm))")
                     }
                 } else {
-                    Logger.similarPhoto.debug("[PersonMatch] \(shortID) HQ 거절: face[\(candidate.faceIdx)]↛slot\(candidate.slotID) cost=\(String(format: "%.3f", cost))≥\(String(format: "%.3f", rejectThreshold)) norm=\(String(format: "%.1f", candidate.norm))")
+                    // 고품질 확장: 양쪽 norm ≥ 8.0이면 거절 임계값을 0.75로 완화
+                    // (고개 돌림 등 각도 차이로 cost가 높아도 같은 인물일 가능성)
+                    let bothHighQuality = candidate.norm >= highQualityNormLimit && candidate.slotNorm >= highQualityNormLimit
+                    if bothHighQuality && cost < extendedRejectThreshold {
+                        // 고품질 확장 Grey Zone: 위치 조건 확인
+                        if posNorm < greyZonePosLimit {
+                            usedFaces.insert(candidate.faceIdx)
+                            usedSlots.insert(candidate.slotID)
+                            cachedFaces.append(CachedFace(
+                                boundingBox: candidate.boundingBox,
+                                personIndex: candidate.slotID,
+                                isValidSlot: false,
+                                sfaceCost: cost
+                            ))
+
+                            Logger.similarPhoto.debug("[PersonMatch] \(shortID) HQ 확장Grey: face[\(candidate.faceIdx)]→slot\(candidate.slotID) cost=\(String(format: "%.3f", cost)) pos=\(String(format: "%.3f", posNorm)) norm=\(String(format: "%.1f", candidate.norm)) slotNorm=\(String(format: "%.1f", candidate.slotNorm))")
+
+                            updateSlotIfBetter(slotID: candidate.slotID, embedding: candidate.embedding, norm: candidate.norm, center: candidate.center, boundingBox: candidate.boundingBox)
+                        } else {
+                            Logger.similarPhoto.debug("[PersonMatch] \(shortID) HQ 확장Grey거부: face[\(candidate.faceIdx)]↛slot\(candidate.slotID) cost=\(String(format: "%.3f", cost)) pos=\(String(format: "%.3f", posNorm))≥\(String(format: "%.2f", greyZonePosLimit)) norm=\(String(format: "%.1f", candidate.norm)) slotNorm=\(String(format: "%.1f", candidate.slotNorm))")
+                        }
+                    } else {
+                        Logger.similarPhoto.debug("[PersonMatch] \(shortID) HQ 거절: face[\(candidate.faceIdx)]↛slot\(candidate.slotID) cost=\(String(format: "%.3f", cost))≥\(String(format: "%.3f", rejectThreshold)) norm=\(String(format: "%.1f", candidate.norm)) slotNorm=\(String(format: "%.1f", candidate.slotNorm))")
+                    }
                 }
             }
 
