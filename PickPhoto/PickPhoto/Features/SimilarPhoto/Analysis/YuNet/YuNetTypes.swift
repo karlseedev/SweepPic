@@ -71,11 +71,11 @@ enum YuNetError: Error, LocalizedError {
 /// YuNet 설정값
 enum YuNetConfig {
     /// 모델 리소스 이름
-    static let modelName: String = "YuNet1088"
+    static let modelName: String = "YuNet960"
 
     /// 입력 이미지 크기
-    static let inputWidth: Int = 1088
-    static let inputHeight: Int = 1088
+    static let inputWidth: Int = 960
+    static let inputHeight: Int = 960
 
     /// Feature map stride 값들
     static let strides: [Int] = [8, 16, 32]
