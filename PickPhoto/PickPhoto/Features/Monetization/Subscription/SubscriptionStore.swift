@@ -11,7 +11,7 @@
 //  - 구매 / 복원 / 리딤 코드 처리
 //  - 환불 → Plus 즉시 해제 (FR-033)
 //  - 오프라인: expirationDate 기반 (FR-053)
-//  - 구독 완료 시 GracePeriodService.endGracePeriod() 호출 (Edge Case)
+//  - 구독 완료 시 상태 즉시 갱신
 //
 
 import StoreKit

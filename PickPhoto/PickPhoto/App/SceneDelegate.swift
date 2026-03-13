@@ -268,7 +268,7 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         ReviewService.shared.resetProhibitedFlags()
 
         // [BM] T041: ATT 프리프롬프트 표시 (FR-041)
-        // Grace Period 만료 + ATT .notDetermined + skipCount < 2 → ATTPromptVC present
+        // ATT 프리프롬프트 표시 (설치 2시간 경과 + Plus 미구독 + ATT .notDetermined + skipCount < 2)
         checkAndShowATTPrompt()
     }
 
@@ -304,9 +304,6 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         AnalyticsService.shared.refreshPhotoLibraryBucket()
         AnalyticsService.shared.trackAppLaunched()
         AnalyticsService.shared.flushPendingSupabaseEvents()
-
-        // [BM] Grace Period → Apple Free Trial 전환으로 비활성화
-        // trackGracePeriodEndedOnce()
 
         // [Analytics] 이벤트 2: 설정 앱에서 권한 변경 감지 (전후 비교)
         // ⚠️ handlePermissionChange에 넣지 않음 (requestAuthorization에서도 중복 발생하므로)
@@ -474,28 +471,12 @@ extension SceneDelegate {
     }
 }
 
-// MARK: - Grace Period Analytics (비활성화 — Apple Free Trial 전환)
-
-// extension SceneDelegate {
-//     /// Grace Period 종료 후 첫 세션에 1회만 이벤트 전송
-//     /// UserDefaults 플래그로 중복 방지
-//     private static let gracePeriodEndedSentKey = "Analytics.gracePeriodEndedSent"
-//
-//     func trackGracePeriodEndedOnce() {
-//         guard !GracePeriodService.shared.isActive else { return }
-//         guard !UserDefaults.standard.bool(forKey: Self.gracePeriodEndedSentKey) else { return }
-//         UserDefaults.standard.set(true, forKey: Self.gracePeriodEndedSentKey)
-//         AnalyticsService.shared.trackGracePeriodEnded()
-//         Logger.app.debug("SceneDelegate: Grace Period 종료 이벤트 전송 (1회)")
-//     }
-// }
-
 // MARK: - ATT Prompt
 
 extension SceneDelegate {
 
     /// [BM] T041: ATT 프리프롬프트 표시 체크 (FR-041)
-    /// Grace Period 만료 + ATT .notDetermined + skipCount < 2 → ATTPromptVC present
+    /// 설치 2시간 경과 + Plus 미구독 + ATT .notDetermined + skipCount < 2 → ATTPromptVC present
     func checkAndShowATTPrompt() {
         guard ATTStateManager.shared.shouldShowPrompt else { return }
 

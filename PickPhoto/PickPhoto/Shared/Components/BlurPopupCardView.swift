@@ -13,7 +13,7 @@
 //    card.contentView 안에 콘텐츠 추가
 //    card.activateBlur()  // Glass 효과 활성화
 //
-//  적용: TrashGatePopup, UsageGaugeDetailPopup, GracePeriodDetailPopup, CleanupProgressView 등
+//  적용: TrashGatePopup, UsageGaugeDetailPopup, CleanupProgressView 등
 //
 
 import UIKit

@@ -8,7 +8,7 @@
 //  역할:
 //  - GADMobileAds SDK 초기화
 //  - 리워드/전면/배너 광고 사전 로드 관리
-//  - Plus/Grace Period 상태에 따른 광고 표시 여부 판단
+//  - Plus 상태에 따른 광고 표시 여부 판단
 //
 
 import UIKit

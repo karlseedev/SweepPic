@@ -87,8 +87,8 @@ extension GridViewController {
         coachMarkLastTrackedOffset = currentOffset
         coachMarkScrollAccumulated += delta
 
-        // 70pt 이상 스크롤했으면 → 스크롤 정지 → 코치마크 표시
-        let threshold: CGFloat = 70
+        // 120pt 이상 스크롤했으면 → 스크롤 정지 → 코치마크 표시
+        let threshold: CGFloat = 120
         guard coachMarkScrollAccumulated >= threshold else { return }
 
         Logger.coachMark.debug("threshold 도달 — 누적 \(Int(self.coachMarkScrollAccumulated))pt / \(Int(threshold))pt")

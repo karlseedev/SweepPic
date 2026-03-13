@@ -6,7 +6,7 @@
 //  삭제대기함 상단에 표시
 //
 //  탭 시 상세 팝업 (한도 상태 + 광고 잔여 + "광고 보기" 버튼)
-//  Plus/Grace Period 시 미표시
+//  Plus 시 미표시
 //  accessibilityLabel 설정 (FR-057)
 //
 

@@ -64,7 +64,6 @@ extension GridViewController {
                 CustomerServiceViewController.makeMenu(from: self),
                 self.makeCoachMarkReplayMenu(),
                 self.makeDebugResetMenu(),
-                self.makeDebugGracePeriodMenu(),
                 self.makeDebugAdTestMenu(),
             ])
         )
@@ -107,7 +106,6 @@ extension GridViewController {
             CustomerServiceViewController.makeMenu(from: self),
             self.makeCoachMarkReplayMenu(),
             self.makeDebugResetMenu(),
-            self.makeDebugGracePeriodMenu(),
             self.makeDebugAdTestMenu(),
         ]))
 
@@ -616,7 +614,7 @@ extension GridViewController {
                     UsageLimitStore.shared.debugReset()
                     UserDefaults.standard.removeObject(forKey: "GaugeFirstTooltipShown")
                     Logger.app.debug("GridVC+Cleanup: 디버그 한도 리셋 + 툴팁 플래그 초기화")
-                    NotificationCenter.default.post(name: .debugGracePeriodToggled, object: nil)
+                    NotificationCenter.default.post(name: .debugMonetizationStateChanged, object: nil)
                     #endif
                     self?.setupCleanupButton()
                 },
@@ -624,7 +622,7 @@ extension GridViewController {
                     #if DEBUG
                     SubscriptionStore.shared.debugResetToFree()
                     Logger.app.debug("GridVC+Cleanup: 디버그 구독 → Free 리셋")
-                    NotificationCenter.default.post(name: .debugGracePeriodToggled, object: nil)
+                    NotificationCenter.default.post(name: .debugMonetizationStateChanged, object: nil)
                     #endif
                     self?.setupCleanupButton()
                 },
@@ -632,7 +630,7 @@ extension GridViewController {
                     #if DEBUG
                     SubscriptionStore.shared.debugSetPlus()
                     Logger.app.debug("GridVC+Cleanup: 디버그 구독 → Plus 설정")
-                    NotificationCenter.default.post(name: .debugGracePeriodToggled, object: nil)
+                    NotificationCenter.default.post(name: .debugMonetizationStateChanged, object: nil)
                     #endif
                     self?.setupCleanupButton()
                 },
@@ -640,7 +638,7 @@ extension GridViewController {
                     #if DEBUG
                     SubscriptionStore.shared.debugSetPaymentIssue()
                     Logger.app.debug("GridVC+Cleanup: 디버그 결제 문제 시뮬레이션")
-                    NotificationCenter.default.post(name: .debugGracePeriodToggled, object: nil)
+                    NotificationCenter.default.post(name: .debugMonetizationStateChanged, object: nil)
                     #endif
                     self?.setupCleanupButton()
                 },
@@ -669,7 +667,7 @@ extension GridViewController {
                     #if DEBUG
                     UsageLimitStore.shared.debugExhaustFreeLimit()
                     Logger.app.debug("GridVC+Cleanup: 디버그 기본한도 소진")
-                    NotificationCenter.default.post(name: .debugGracePeriodToggled, object: nil)
+                    NotificationCenter.default.post(name: .debugMonetizationStateChanged, object: nil)
                     #endif
                     self?.setupCleanupButton()
                 },
@@ -677,7 +675,7 @@ extension GridViewController {
                     #if DEBUG
                     UsageLimitStore.shared.debugExhaustAll()
                     Logger.app.debug("GridVC+Cleanup: 디버그 전체한도 소진")
-                    NotificationCenter.default.post(name: .debugGracePeriodToggled, object: nil)
+                    NotificationCenter.default.post(name: .debugMonetizationStateChanged, object: nil)
                     #endif
                     self?.setupCleanupButton()
                 },
@@ -685,45 +683,6 @@ extension GridViewController {
         )
     }
 
-    /// (테스트) Grace Period 서브메뉴
-    /// Day 0~2 선택 + 만료 + OFF
-    func makeDebugGracePeriodMenu() -> UIMenu {
-        let currentDay = GracePeriodService.shared.currentDay
-        let isActive = GracePeriodService.shared.isActive
-
-        // Day 0, 1, 2 선택 액션
-        let dayActions = (0...2).map { day in
-            let remaining = 3 - day
-            let check = (isActive && currentDay == day) ? " ✅" : ""
-            return UIAction(
-                title: "Day \(day) (\(remaining)일 남음)\(check)"
-            ) { [weak self] _ in
-                #if DEBUG
-                GracePeriodService.shared.debugSetDay(day)
-                NotificationCenter.default.post(name: .debugGracePeriodToggled, object: nil)
-                #endif
-                self?.setupCleanupButton()
-            }
-        }
-
-        // 만료 (Day 4)
-        let expireCheck = (!isActive && currentDay >= 3) ? " ✅" : ""
-        let expireAction = UIAction(
-            title: "만료 (Day 4)\(expireCheck)"
-        ) { [weak self] _ in
-            #if DEBUG
-            GracePeriodService.shared.debugExpire()
-            NotificationCenter.default.post(name: .debugGracePeriodToggled, object: nil)
-            #endif
-            self?.setupCleanupButton()
-        }
-
-        return UIMenu(
-            title: isActive ? "(테스트)체험기간 ✅" : "(테스트)체험기간",
-            image: UIImage(systemName: "clock.arrow.circlepath"),
-            children: dayActions + [expireAction]
-        )
-    }
 }
 
 // MARK: - PreviewGridViewControllerDelegate

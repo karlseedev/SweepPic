@@ -2,7 +2,7 @@
 // BM 수익화 이벤트 (FR-056)
 //
 // - 게이트 노출/선택, 광고 시청, 페이월/구독, 삭제 완료,
-//   Grace Period 종료, ATT 결과 등 비즈니스 이벤트 추적
+//   ATT 결과 등 비즈니스 이벤트 추적
 // - 모든 이벤트는 즉시 전송형 (sendEvent)
 // - 참조: specs/003-bm-monetization/tasks.md T056
 
@@ -28,7 +28,7 @@ enum AdType: String {
 enum PaywallSource: String {
     case gate   = "gate"    // 게이트 팝업에서 Plus 선택
     case menu   = "menu"    // 프리미엄 메뉴에서 구독 관리
-    case banner = "banner"  // Grace Period 배너 탭
+    case banner = "banner"  // 배너 탭
     case gauge  = "gauge"   // 게이지 상세 팝업
     case firstPaywall = "first_paywall"  // 첫 페이월 (Apple Free Trial 전환)
 }
@@ -112,15 +112,6 @@ extension AnalyticsService {
         sendEvent("bm.deletionCompleted", parameters: [
             "count": String(count),
         ])
-    }
-
-    // MARK: - Grace Period Events
-
-    /// Grace Period 종료 (첫 세션)
-    /// Grace Period 만료 후 첫 포그라운드 진입 시 1회 전송
-    func trackGracePeriodEnded() {
-        guard !shouldSkip() else { return }
-        sendEvent("bm.gracePeriodEnded")
     }
 
     // MARK: - ATT Events

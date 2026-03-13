@@ -119,26 +119,14 @@ final class TrashAlbumViewController: BaseGridViewController {
     /// 스와이프 동작: 복구 (녹색 커튼)
     override var swipeActionIsRestore: Bool { true }
 
-    /// contentInset 업데이트 — 게이지/배너 높이만큼 추가 여백 적용
-    /// 게이지(tag 9901) 또는 Grace Period 배너(tag 9902) 높이를 동적 계산
+    /// contentInset 업데이트 — 게이지 높이만큼 추가 여백 적용
+    /// 게이지(tag 9901) 높이를 동적 계산
     override func updateContentInset() {
         let hasGauge = view.viewWithTag(9901) != nil
-        let bannerView = view.viewWithTag(9902)
 
-        // 게이지/배너 높이에 따른 추가 inset 계산
+        // 게이지 높이에 따른 추가 inset 계산
         // 게이지: 고정 52pt + 11 여백 = 63
-        // 배너: 가변 높이 + 11 여백 (systemLayoutSizeFitting으로 동적 계산)
-        let extraInset: CGFloat
-        if hasGauge {
-            extraInset = 63
-        } else if let banner = bannerView {
-            // 배너 레이아웃 강제 계산 후 실제 높이 사용
-            banner.layoutIfNeeded()
-            let bannerHeight = banner.bounds.height
-            extraInset = bannerHeight > 0 ? bannerHeight + 11 : 0
-        } else {
-            extraInset = 0
-        }
+        let extraInset: CGFloat = hasGauge ? 63 : 0
 
         if #available(iOS 26.0, *) {
             // iOS 26+: base class 보정(12) 적용 후 게이지/배너분 추가
@@ -192,7 +180,7 @@ final class TrashAlbumViewController: BaseGridViewController {
         setupGaugeView()
         observeSubscriptionStateForGauge()
         #if DEBUG
-        observeDebugGracePeriodToggle()
+        observeDebugMonetizationStateChange()
         #endif
 
         // 노출 게이팅: 프리로드 완료까지 숨김
@@ -218,8 +206,6 @@ final class TrashAlbumViewController: BaseGridViewController {
 
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
-
-        // [BM] Grace Period → Apple Free Trial 전환으로 checkGracePeriodTransition 호출 제거
 
         // 현재 화면이 TrashStore 변경을 받도록 핸들러 재등록
         trashStore.onStateChange { [weak self] _ in

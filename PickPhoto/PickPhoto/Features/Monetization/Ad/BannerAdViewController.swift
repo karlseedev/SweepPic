@@ -7,7 +7,7 @@
 //
 //  역할:
 //  - GADBannerView 래핑 (Adaptive Banner)
-//  - Plus/Grace Period 시 자동 미표시
+//  - Plus 시 자동 미표시
 //  - 부모 뷰에 embed하여 사용
 //  - 광고 로드 실패 시 높이 0으로 숨김 (FR-017)
 //
@@ -40,9 +40,9 @@ final class BannerAdViewController: UIViewController {
         super.viewDidLoad()
         view.backgroundColor = .clear
 
-        // Plus/Grace Period 시 배너 미표시
+        // Plus 구독자 시 배너 미표시
         guard AdManager.shared.shouldShowAds() else {
-            Logger.app.debug("BannerAdViewController: 광고 미표시 조건 (Plus/Grace)")
+            Logger.app.debug("BannerAdViewController: 광고 미표시 조건 (Plus)")
             return
         }
 

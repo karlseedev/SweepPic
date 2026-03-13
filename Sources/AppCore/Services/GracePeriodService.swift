@@ -40,7 +40,7 @@ public final class GracePeriodService: GracePeriodServiceProtocol {
 
     /// UserDefaults 키
     private enum Keys {
-        static let installDate = "GracePeriod.installDate"
+        static let installDate = "App.installDate"
     }
 
     // MARK: - Properties

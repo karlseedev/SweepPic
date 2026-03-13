@@ -4,7 +4,6 @@
 //
 //  삭제대기함 게이트 관련 Extension
 //  - UsageGaugeView 설정/업데이트
-//  - Grace Period 배너 placeholder (US3에서 구현)
 //  - 게이트 호출 헬퍼
 //
 //  기존 TrashAlbumVC 919줄 방지를 위한 Extension 분리
@@ -107,62 +106,6 @@ extension TrashAlbumViewController {
         present(detail, animated: true)
     }
 
-    // MARK: - Grace Period Banner (T025)
-
-    /// Grace Period 배너 설정 (게이지 대신 표시)
-    func setupGracePeriodBanner() {
-        // 기존 배너가 있으면 제거
-        if let existing = view.viewWithTag(ViewTag.graceBanner) {
-            existing.removeFromSuperview()
-        }
-
-        let banner = GracePeriodBannerView()
-        banner.tag = ViewTag.graceBanner
-        banner.configure()
-        view.addSubview(banner)
-
-        // iOS 버전별 상단 위치 결정 (게이지와 동일 위치)
-        if #available(iOS 26.0, *) {
-            NSLayoutConstraint.activate([
-                banner.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 18),
-                banner.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 16),
-                banner.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -16)
-            ])
-        } else {
-            let topOffset: CGFloat
-            if let tabBar = tabBarController as? TabBarController,
-               let heights = tabBar.getOverlayHeights() {
-                topOffset = heights.top
-            } else {
-                topOffset = 8
-            }
-            NSLayoutConstraint.activate([
-                banner.topAnchor.constraint(equalTo: view.topAnchor, constant: topOffset),
-                banner.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 16),
-                banner.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -16)
-            ])
-        }
-
-        // 배너 탭 → 체험 종료 후 안내 팝업
-        banner.onTap = { [weak self] in
-            guard let self else { return }
-            let popup = GracePeriodDetailPopup()
-            self.present(popup, animated: true)
-        }
-
-        // 배너 높이만큼 컬렉션뷰 상단 inset 갱신
-        view.layoutIfNeeded()
-        updateContentInset()
-    }
-
-    // MARK: - Day 4 Transition (T026)
-
-    /// Day 4 전환: Grace Period → Apple Free Trial 전환으로 비활성화
-    /// Grace Period 배너가 더 이상 표시되지 않으므로 전환 로직 불필요
-    func checkGracePeriodTransition() {
-        // [BM] Grace Period → Apple Free Trial 전환으로 비활성화
-        // 기존: 배너 → 게이지 전환 로직
-    }
 
     /// 게이지 첫 표시 시 1회 툴팁 표시
     /// "오늘의 무료 삭제 한도예요. 탭해서 자세히 볼 수 있어요"
@@ -242,15 +185,14 @@ extension TrashAlbumViewController {
 
     // MARK: - Subscription State Observer
 
-    /// 구독 상태 변경 시 게이지/배너 갱신 (Plus 전환 시 게이지 제거)
+    /// 구독 상태 변경 시 게이지 갱신 (Plus 전환 시 게이지 제거)
     /// setupGaugeView() 이후 호출
     func observeSubscriptionStateForGauge() {
         SubscriptionStore.shared.onStateChange { [weak self] _ in
             DispatchQueue.main.async {
                 guard let self = self else { return }
-                // 기존 게이지/배너 모두 제거 후 재평가
+                // 기존 게이지 제거 후 재평가
                 self.view.viewWithTag(ViewTag.gaugeView)?.removeFromSuperview()
-                self.view.viewWithTag(ViewTag.graceBanner)?.removeFromSuperview()
                 self.setupGaugeView()
                 self.view.layoutIfNeeded()
                 self.updateContentInset()
@@ -300,24 +242,21 @@ extension TrashAlbumViewController {
         Logger.app.debug("TrashAlbumVC: 축하 화면 표시 — 이번 \(deletedCount)장, 누적 \(updatedStats.totalDeletedCount)장")
     }
 
-    // MARK: - Debug Grace Period Toggle
+    // MARK: - Debug Monetization State Toggle
 
     #if DEBUG
-    /// 디버그: Grace Period 토글 알림 수신 등록 (viewDidLoad에서 호출)
-    func observeDebugGracePeriodToggle() {
+    /// 디버그: 수익화 상태 변경 알림 수신 등록 (viewDidLoad에서 호출)
+    func observeDebugMonetizationStateChange() {
         NotificationCenter.default.addObserver(
-            self, selector: #selector(handleDebugGracePeriodToggle),
-            name: .debugGracePeriodToggled, object: nil
+            self, selector: #selector(handleDebugMonetizationStateChange),
+            name: .debugMonetizationStateChanged, object: nil
         )
     }
 
-    /// 디버그: Grace Period 토글 시 게이지/배너 즉시 전환
-    @objc private func handleDebugGracePeriodToggle() {
-        // 기존 게이지/배너 모두 제거
+    /// 디버그: 수익화 상태 변경 시 게이지 즉시 갱신
+    @objc private func handleDebugMonetizationStateChange() {
         view.viewWithTag(ViewTag.gaugeView)?.removeFromSuperview()
-        view.viewWithTag(ViewTag.graceBanner)?.removeFromSuperview()
         setupGaugeView()
-        // 게이지/배너 높이 변경에 따른 컬렉션뷰 inset 즉시 갱신
         view.layoutIfNeeded()
         updateContentInset()
     }
@@ -328,7 +267,6 @@ extension TrashAlbumViewController {
     /// 게이트 관련 뷰 태그 (충돌 방지)
     private enum ViewTag {
         static let gaugeView = 9901
-        static let graceBanner = 9902
     }
 }
 
@@ -336,7 +274,8 @@ extension TrashAlbumViewController {
 
 #if DEBUG
 extension Notification.Name {
-    static let debugGracePeriodToggled = Notification.Name("debugGracePeriodToggled")
+    /// 디버그: 수익화 상태(구독/한도/광고) 변경 알림
+    static let debugMonetizationStateChanged = Notification.Name("debugMonetizationStateChanged")
 }
 #endif
 

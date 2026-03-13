@@ -11,8 +11,9 @@
 //  shouldShowPrompt 조건 (모두 충족 시):
 //  1. skipCount < 2
 //  2. !hasShownPrompt
-//  3. Grace Period 만료
-//  4. ATT == .notDetermined
+//  3. 설치 후 2시간 경과
+//  4. Plus 미구독
+//  5. ATT == .notDetermined
 //
 
 import Foundation
@@ -58,8 +59,9 @@ final class ATTStateManager {
     /// 모든 조건 충족 시 true:
     /// 1. skipCount < 2 (건너뛰기 2회 미만)
     /// 2. !hasShownPrompt (시스템 팝업 미표시)
-    /// 3. Grace Period 만료
-    /// 4. ATT == .notDetermined (아직 시스템 팝업 미노출)
+    /// 3. 설치 후 2시간 경과
+    /// 4. Plus 미구독
+    /// 5. ATT == .notDetermined (아직 시스템 팝업 미노출)
     var shouldShowPrompt: Bool {
         // 이미 시스템 팝업까지 표시 완료
         guard !hasShownPrompt else {
@@ -74,7 +76,7 @@ final class ATTStateManager {
         }
 
         // 설치 후 2시간 미경과 → ATT 미표시 (사용자가 앱에 익숙해진 후 표시)
-        if let installDate = UserDefaults.standard.object(forKey: "GracePeriod.installDate") as? Date,
+        if let installDate = UserDefaults.standard.object(forKey: "App.installDate") as? Date,
            Date().timeIntervalSince(installDate) < 7200 {  // 2시간 = 7200초
             Logger.app.debug("ATTStateManager: shouldShowPrompt=false — 설치 후 2시간 미경과")
             return false
