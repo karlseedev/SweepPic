@@ -33,16 +33,30 @@ final class PaywallViewModel {
 
     // MARK: - Load Products
 
-    /// SubscriptionStore에서 상품 로드
+    /// SubscriptionStore에서 상품 로드 + eligibility 체크
     func loadProducts() {
         yearlyProduct = SubscriptionStore.shared.yearlyProduct
         monthlyProduct = SubscriptionStore.shared.monthlyProduct
+        checkIntroOfferEligibility()
     }
 
     /// 직접 로드한 상품으로 설정 (SubscriptionStore 미로드 시 폴백)
     func setProducts(_ products: [Product]) {
         yearlyProduct = products.first { $0.id == SubscriptionProductID.plusYearly }
         monthlyProduct = products.first { $0.id == SubscriptionProductID.plusMonthly }
+        checkIntroOfferEligibility()
+    }
+
+    /// Intro Offer eligibility 비동기 체크
+    /// 재구독자 등 미자격자에게는 "무료 체험" 텍스트를 숨김
+    private func checkIntroOfferEligibility() {
+        guard let product = yearlyProduct ?? monthlyProduct else { return }
+        Task {
+            let eligible = await product.subscription?.isEligibleForIntroOffer ?? false
+            await MainActor.run {
+                self.isEligibleForIntroOffer = eligible
+            }
+        }
     }
 
     // MARK: - Price Formatting
@@ -95,12 +109,31 @@ final class PaywallViewModel {
         return "\(percent)%"
     }
 
-    /// 무료 체험 기간 텍스트 (연간 상품 introductory offer 기반)
+    /// Intro Offer eligibility (상품 로드 시 조회)
+    private(set) var isEligibleForIntroOffer: Bool = true
+
+    /// 연간 무료 체험 기간 텍스트 (introductory offer 기반)
+    /// eligibility 미자격 시 nil 반환 (재구독자 등)
     var freeTrialText: String? {
+        guard isEligibleForIntroOffer else { return nil }
         guard let yearly = yearlyProduct,
               let intro = yearly.subscription?.introductoryOffer,
               intro.paymentMode == .freeTrial else { return nil }
-        let period = intro.period
+        return formatTrialPeriod(intro.period)
+    }
+
+    /// 월간 무료 체험 기간 텍스트 (introductory offer 기반)
+    /// eligibility 미자격 시 nil 반환
+    var monthlyFreeTrialText: String? {
+        guard isEligibleForIntroOffer else { return nil }
+        guard let monthly = monthlyProduct,
+              let intro = monthly.subscription?.introductoryOffer,
+              intro.paymentMode == .freeTrial else { return nil }
+        return formatTrialPeriod(intro.period)
+    }
+
+    /// 체험 기간 → 텍스트 변환 헬퍼
+    private func formatTrialPeriod(_ period: Product.SubscriptionPeriod) -> String? {
         switch period.unit {
         case .day:
             return "\(period.value)일 무료 체험"

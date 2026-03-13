@@ -152,12 +152,6 @@ final class SubscriptionStore: SubscriptionStoreProtocol {
             // 구독 상태 갱신
             await refreshSubscriptionStatus()
 
-            // Grace Period 즉시 종료 (Edge Case)
-            if isPlusUser {
-                GracePeriodService.shared.endGracePeriod()
-                Logger.app.debug("SubscriptionStore: 구독 완료 → Grace Period 종료")
-            }
-
             // [BM] T055: 결제 완료 후 리뷰 금지 타이밍 플래그 설정 (FR-050)
             ReviewService.shared.isPaymentJustCompleted = true
             // [BM] T057: 구독 완료 이벤트 (FR-056)

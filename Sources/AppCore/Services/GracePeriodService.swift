@@ -64,6 +64,8 @@ public final class GracePeriodService: GracePeriodServiceProtocol {
     /// - Keychain에 hasUsedGracePeriod가 true면 false (재설치 악용 방지)
     /// - installDate로부터 3일 이내면 true
     public var isActive: Bool {
+        return false  // [BM] Grace Period → Apple Free Trial 전환으로 비활성화 (A/B 테스트 복원용 코드 유지)
+
         // 악용 방지: Keychain에서 이전 Grace Period 사용 여부 확인
         if KeychainHelper.getBool(key: "hasUsedGracePeriod") == true {
             return false

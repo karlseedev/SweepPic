@@ -30,6 +30,7 @@ enum PaywallSource: String {
     case menu   = "menu"    // 프리미엄 메뉴에서 구독 관리
     case banner = "banner"  // Grace Period 배너 탭
     case gauge  = "gauge"   // 게이지 상세 팝업
+    case firstPaywall = "first_paywall"  // 첫 페이월 (Apple Free Trial 전환)
 }
 
 /// 구독 해지 사유 (Exit Survey)

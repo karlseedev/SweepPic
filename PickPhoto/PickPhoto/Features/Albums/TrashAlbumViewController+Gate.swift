@@ -21,17 +21,10 @@ extension TrashAlbumViewController {
     // MARK: - Gauge Setup
 
     /// 게이지 뷰 설정 (viewDidLoad에서 호출)
-    /// Plus/Grace Period 시 미표시
+    /// Plus 시 미표시
     func setupGaugeView() {
         // Plus 구독자는 게이지 미표시 (T032)
         if SubscriptionStore.shared.isPlusUser { return }
-
-        // Grace Period 중이면 게이지 대신 배너 표시 (US3 T025)
-        if GracePeriodService.shared.isActive {
-            Logger.app.debug("TrashAlbumVC+Gate: Grace Period 중 — 배너 표시")
-            setupGracePeriodBanner()
-            return
-        }
 
         // 게이트 비활성 시 미표시
         guard FeatureFlags.isGateEnabled else { return }
@@ -164,63 +157,11 @@ extension TrashAlbumViewController {
 
     // MARK: - Day 4 Transition (T026)
 
-    /// Day 4 전환: Grace Period 만료 시 배너 → 게이지 전환 + 1회 툴팁
-    /// viewWillAppear 또는 foreground 진입 시 호출
+    /// Day 4 전환: Grace Period → Apple Free Trial 전환으로 비활성화
+    /// Grace Period 배너가 더 이상 표시되지 않으므로 전환 로직 불필요
     func checkGracePeriodTransition() {
-        let wasShowingBanner = view.viewWithTag(ViewTag.graceBanner) != nil
-        let isGraceActive = GracePeriodService.shared.isActive
-
-        // Grace Period 만료 + 배너가 있었으면 → 전환
-        if !isGraceActive && wasShowingBanner {
-            Logger.app.debug("TrashAlbumVC+Gate: Day 4 전환 — 배너 → 게이지")
-            // 배너 제거
-            view.viewWithTag(ViewTag.graceBanner)?.removeFromSuperview()
-
-            // 게이지 설정 (게이트 활성 시)
-            if FeatureFlags.isGateEnabled {
-                let gauge = UsageGaugeView()
-                gauge.tag = ViewTag.gaugeView
-                view.addSubview(gauge)
-
-                if #available(iOS 26.0, *) {
-                    NSLayoutConstraint.activate([
-                        gauge.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 18),
-                        gauge.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 16),
-                        gauge.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -16)
-                    ])
-                } else {
-                    let topOffset: CGFloat
-                    if let tabBar = tabBarController as? TabBarController,
-                       let heights = tabBar.getOverlayHeights() {
-                        topOffset = heights.top
-                    } else {
-                        topOffset = 8
-                    }
-                    NSLayoutConstraint.activate([
-                        gauge.topAnchor.constraint(equalTo: view.topAnchor, constant: topOffset),
-                        gauge.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 16),
-                        gauge.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -16)
-                    ])
-                }
-
-                gauge.onTap = { [weak self] in
-                    self?.showGaugeDetail()
-                }
-
-                updateGaugeView()
-
-                UsageLimitStore.shared.onUpdate = { [weak self] in
-                    self?.updateGaugeView()
-                }
-
-                // 첫 표시 시 1회 툴팁 (Edge Case: 카운터 게이지 첫 표시)
-                showGaugeFirstTooltipIfNeeded(for: gauge)
-            }
-
-            // 배너 → 게이지 높이 변경에 따른 inset 갱신
-            view.layoutIfNeeded()
-            updateContentInset()
-        }
+        // [BM] Grace Period → Apple Free Trial 전환으로 비활성화
+        // 기존: 배너 → 게이지 전환 로직
     }
 
     /// 게이지 첫 표시 시 1회 툴팁 표시

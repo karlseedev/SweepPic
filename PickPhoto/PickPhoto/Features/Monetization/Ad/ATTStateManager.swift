@@ -73,9 +73,16 @@ final class ATTStateManager {
             return false
         }
 
-        // Grace Period 아직 활성 → ATT 미표시 (FR-041: Grace 종료 후 첫 실행)
-        guard !GracePeriodService.shared.isActive else {
-            Logger.app.debug("ATTStateManager: shouldShowPrompt=false — Grace Period 활성 중")
+        // 설치 후 2시간 미경과 → ATT 미표시 (사용자가 앱에 익숙해진 후 표시)
+        if let installDate = UserDefaults.standard.object(forKey: "GracePeriod.installDate") as? Date,
+           Date().timeIntervalSince(installDate) < 7200 {  // 2시간 = 7200초
+            Logger.app.debug("ATTStateManager: shouldShowPrompt=false — 설치 후 2시간 미경과")
+            return false
+        }
+
+        // Plus 구독자 → ATT 미표시 (광고 불필요)
+        guard !SubscriptionStore.shared.isPlusUser else {
+            Logger.app.debug("ATTStateManager: shouldShowPrompt=false — Plus 구독자")
             return false
         }
 

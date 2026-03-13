@@ -37,6 +37,12 @@ final class PaywallViewController: UIViewController {
     /// 페이월 진입 경로 (FR-056 분석용)
     var analyticsSource: PaywallSource = .menu
 
+    /// 구독 성공 콜백 (첫 페이월에서 사용)
+    var onSubscribed: (() -> Void)?
+
+    /// 구독 없이 닫힘 콜백 (첫 페이월에서 사용)
+    var onDismissedWithoutSubscription: (() -> Void)?
+
     // MARK: - UI Components
 
     /// 스크롤뷰 (전체 콘텐츠)
@@ -122,6 +128,17 @@ final class PaywallViewController: UIViewController {
         return label
     }()
 
+    /// 월간 무료 체험 안내 라벨
+    private let monthlyFreeTrialLabel: UILabel = {
+        let label = UILabel()
+        label.font = .systemFont(ofSize: 13, weight: .medium)
+        label.textColor = .secondaryLabel
+        label.textAlignment = .center
+        label.isHidden = true
+        label.translatesAutoresizingMaskIntoConstraints = false
+        return label
+    }()
+
     /// 월간 구매 버튼 (보조)
     private let monthlyButton: UIButton = {
         let button = UIButton(type: .system)
@@ -194,6 +211,9 @@ final class PaywallViewController: UIViewController {
         setupAccessibility()
         loadContent()
 
+        // Swipe-to-Dismiss 대응: pageSheet 모달에서 스와이프로 닫을 때 콜백 호출
+        presentationController?.delegate = self
+
         // [BM] T057: 페이월 노출 이벤트 (FR-056)
         AnalyticsService.shared.trackPaywallShown(source: analyticsSource)
     }
@@ -238,7 +258,7 @@ final class PaywallViewController: UIViewController {
         contentStack.addArrangedSubview(comparisonContainer)
         setupComparisonTable()
 
-        // 무료 체험 라벨
+        // 무료 체험 라벨 (연간)
         contentStack.addArrangedSubview(freeTrialLabel)
 
         // 연간 버튼
@@ -249,6 +269,10 @@ final class PaywallViewController: UIViewController {
         contentStack.addArrangedSubview(monthlyButton)
         monthlyButton.heightAnchor.constraint(equalToConstant: 50).isActive = true
         contentStack.setCustomSpacing(8, after: yearlyButton)
+
+        // 월간 무료 체험 라벨
+        contentStack.addArrangedSubview(monthlyFreeTrialLabel)
+        contentStack.setCustomSpacing(4, after: monthlyButton)
 
         // 복원/리딤 스택
         restoreRedeemStack.addArrangedSubview(restoreButton)
@@ -363,7 +387,9 @@ final class PaywallViewController: UIViewController {
     }
 
     @objc private func closeTapped() {
-        dismiss(animated: true)
+        dismiss(animated: true) { [weak self] in
+            self?.onDismissedWithoutSubscription?()
+        }
     }
 
     @objc private func yearlyTapped() {
@@ -411,7 +437,9 @@ final class PaywallViewController: UIViewController {
                 spinner.stopAnimating()
                 if restored {
                     showAlert(title: "복원 완료", message: "Plus 구독이 복원되었습니다.") { [weak self] in
-                        self?.dismiss(animated: true)
+                        self?.dismiss(animated: true) {
+                            self?.onSubscribed?()
+                        }
                     }
                 } else {
                     showAlert(title: "복원 결과", message: "복원할 구독이 없습니다.")
@@ -435,7 +463,9 @@ final class PaywallViewController: UIViewController {
         switch result {
         case .success:
             Logger.app.debug("PaywallVC: 구매 성공")
-            dismiss(animated: true)
+            dismiss(animated: true) { [weak self] in
+                self?.onSubscribed?()
+            }
         case .userCancelled:
             Logger.app.debug("PaywallVC: 사용자 취소")
         case .pending:
@@ -532,10 +562,16 @@ final class PaywallViewController: UIViewController {
         // 월간 버튼 (보조)
         monthlyButton.setTitle(viewModel.monthlyPriceText, for: .normal)
 
-        // 무료 체험 라벨
+        // 연간 무료 체험 라벨
         if let trialText = viewModel.freeTrialText {
             freeTrialLabel.text = trialText
             freeTrialLabel.isHidden = false
+        }
+
+        // 월간 무료 체험 라벨
+        if let monthlyTrialText = viewModel.monthlyFreeTrialText {
+            monthlyFreeTrialLabel.text = monthlyTrialText
+            monthlyFreeTrialLabel.isHidden = false
         }
 
         // 접근성: 가격 정보 반영 (FR-057)
@@ -546,6 +582,7 @@ final class PaywallViewController: UIViewController {
     /// 법적 고지 텍스트 업데이트 (FR-037)
     private func updateLegalText() {
         legalLabel.text = """
+        무료 체험 기간이 끝나면 선택한 요금제로 자동 구독이 시작됩니다. \
         구독은 확인 시 Apple ID 계정으로 청구됩니다. \
         구독은 현재 기간 종료 최소 24시간 전에 해지하지 않으면 자동으로 갱신됩니다. \
         갱신 비용은 현재 기간 종료 24시간 이내에 청구됩니다. \
@@ -594,5 +631,16 @@ final class PaywallViewController: UIViewController {
         restoreButton.accessibilityHint = "이전에 구매한 구독을 복원합니다"
         redeemButton.accessibilityLabel = "리딤 코드 입력"
         redeemButton.accessibilityHint = "프로모션 코드를 입력합니다"
+    }
+}
+
+// MARK: - UIAdaptivePresentationControllerDelegate
+
+extension PaywallViewController: UIAdaptivePresentationControllerDelegate {
+
+    /// 스와이프로 모달이 닫힌 경우 (closeTapped 미호출)
+    /// 구독 없이 닫힌 것으로 처리
+    func presentationControllerDidDismiss(_ presentationController: UIPresentationController) {
+        onDismissedWithoutSubscription?()
     }
 }

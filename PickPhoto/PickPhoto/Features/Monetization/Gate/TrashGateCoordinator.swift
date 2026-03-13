@@ -50,6 +50,15 @@ final class TrashGateCoordinator: TrashGateCoordinatorProtocol {
     /// 게이트 팝업 표시 직후에는 리뷰 요청을 하지 않음
     var isGateJustShown = false
 
+    // MARK: - First Paywall (Apple Free Trial 전환)
+
+    /// 첫 페이월 표시 완료 여부 (UserDefaults 기반, 앱 삭제 시 리셋)
+    private static let firstPaywallKey = "TrashGate.hasSeenFirstPaywall"
+    private static var hasSeenFirstPaywall: Bool {
+        get { UserDefaults.standard.bool(forKey: firstPaywallKey) }
+        set { UserDefaults.standard.set(newValue, forKey: firstPaywallKey) }
+    }
+
     // MARK: - Gate Evaluation
 
     /// 게이트 평가 후 팝업 표시 또는 바로 실행
@@ -82,10 +91,19 @@ final class TrashGateCoordinator: TrashGateCoordinatorProtocol {
             return
         }
 
-        // 2. Grace Period 중 → 바로 실행 (게이트 없이)
-        if GracePeriodService.shared.isActive {
-            Logger.app.debug("TrashGateCoordinator: Grace Period 중 — 바로 실행")
-            onApproved()
+        // 2. [BM] 첫 페이월 표시 (1회만) — Apple Free Trial 전환
+        // 첫 삭제대기함 비우기 시도 시 페이월을 보여주어 7일 무료 체험 안내
+        if !Self.hasSeenFirstPaywall {
+            Self.hasSeenFirstPaywall = true
+            showFirstPaywall(from: viewController) { [weak self] subscribed in
+                if subscribed {
+                    // Plus 구독 완료 → 바로 삭제 실행
+                    onApproved()
+                } else {
+                    // 건너뛰기 → 게이트 평가 계속 (한도 체크 → 게이트 팝업)
+                    self?.continueGateEvaluation(from: viewController, trashCount: trashCount, onApproved: onApproved)
+                }
+            }
             return
         }
 
@@ -144,6 +162,87 @@ final class TrashGateCoordinator: TrashGateCoordinatorProtocol {
         }
 
         // present — modalPresentationStyle은 init에서 설정됨
+        viewController.present(popup, animated: true)
+    }
+
+    // MARK: - First Paywall
+
+    /// 첫 페이월 표시 (Apple Free Trial 7일 강조)
+    /// - Parameters:
+    ///   - viewController: 모달을 표시할 VC
+    ///   - completion: subscribed=true이면 구독 완료, false이면 건너뛰기
+    private func showFirstPaywall(
+        from viewController: UIViewController,
+        completion: @escaping (_ subscribed: Bool) -> Void
+    ) {
+        let paywall = PaywallViewController()
+        paywall.analyticsSource = .firstPaywall
+        paywall.modalPresentationStyle = .pageSheet
+
+        // 콜백 설정: 구독 완료 또는 닫기
+        paywall.onSubscribed = {
+            completion(true)
+        }
+        paywall.onDismissedWithoutSubscription = {
+            completion(false)
+        }
+
+        viewController.present(paywall, animated: true)
+        Logger.app.debug("TrashGateCoordinator: 첫 페이월 표시 (Apple Free Trial)")
+    }
+
+    // MARK: - Gate Evaluation (한도 체크 + 게이트 팝업)
+
+    /// 한도 체크 → 게이트 팝업 로직 (첫 페이월 건너뛰기 후 실행)
+    /// evaluateAndPresent의 기존 한도 체크 + 게이트 팝업 로직을 메서드로 추출
+    private func continueGateEvaluation(
+        from viewController: UIViewController,
+        trashCount: Int,
+        onApproved: @escaping () -> Void
+    ) {
+        // 남은 기본 한도 내 → 바로 실행
+        let remaining = UsageLimitStore.shared.remainingFreeDeletes
+        if trashCount <= remaining {
+            Logger.app.debug("TrashGateCoordinator: 한도 내 (\(trashCount)/\(remaining)) — 바로 실행")
+            onApproved()
+            return
+        }
+
+        // 한도 초과 → 게이트 팝업 표시
+        Logger.app.debug("TrashGateCoordinator: 한도 초과 (\(trashCount) > \(remaining)) — 게이트 팝업")
+        isGateJustShown = true
+        AnalyticsService.shared.trackGateShown(trashCount: trashCount, remainingLimit: remaining)
+        ReviewService.shared.isGateJustShown = true
+
+        let adsNeeded = UsageLimitStore.shared.adsNeeded(for: trashCount)
+
+        let popup = TrashGatePopupViewController(
+            trashCount: trashCount,
+            remainingFreeDeletes: remaining,
+            adsNeeded: adsNeeded,
+            remainingRewards: UsageLimitStore.shared.remainingRewards
+        )
+
+        popup.onAdWatch = { [weak self] in
+            AnalyticsService.shared.trackGateSelection(choice: .ad)
+            self?.handleAdWatchFlow(from: viewController, trashCount: trashCount, adsNeeded: adsNeeded, onApproved: onApproved)
+        }
+
+        popup.onPlusUpgrade = { [weak viewController] in
+            AnalyticsService.shared.trackGateSelection(choice: .plus)
+            Logger.app.debug("TrashGateCoordinator: Plus 업그레이드 선택 → 페이월")
+            guard let vc = viewController else { return }
+            let paywall = PaywallViewController()
+            paywall.analyticsSource = .gate
+            paywall.modalPresentationStyle = .pageSheet
+            vc.present(paywall, animated: true)
+        }
+
+        popup.onDismiss = {
+            AnalyticsService.shared.trackGateSelection(choice: .dismiss)
+            Logger.app.debug("TrashGateCoordinator: 게이트 팝업 닫기")
+        }
+
         viewController.present(popup, animated: true)
     }
 

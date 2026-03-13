@@ -132,13 +132,10 @@ final class AdManager: NSObject, AdManagerProtocol {
 
     // MARK: - Should Show Ads
 
-    /// Plus 구독자 또는 Grace Period 중이면 광고 미표시
+    /// Plus 구독자이면 광고 미표시
     func shouldShowAds() -> Bool {
         // FeatureFlags 체크
         guard FeatureFlags.isAdEnabled else { return false }
-
-        // Grace Period 중이면 광고 미표시
-        if GracePeriodService.shared.isActive { return false }
 
         // Plus 구독자이면 광고 미표시 (FR-027, T033)
         if SubscriptionStore.shared.isPlusUser { return false }
