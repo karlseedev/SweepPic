@@ -927,6 +927,8 @@ final class SimilarityAnalysisQueue {
                         sfaceCost: cost
                     ))
 
+                    Logger.similarPhoto.debug("[PersonMatch] HQ 확신 매칭: face[\(candidate.faceIdx)]→slot\(candidate.slotID) cost=\(String(format: "%.3f", cost)) norm=\(String(format: "%.1f", candidate.norm))")
+
                     // Keep Best + 위치 갱신
                     updateSlotIfBetter(slotID: candidate.slotID, embedding: candidate.embedding, norm: candidate.norm, center: candidate.center, boundingBox: candidate.boundingBox)
 
@@ -942,9 +944,15 @@ final class SimilarityAnalysisQueue {
                             sfaceCost: cost
                         ))
 
+                        Logger.similarPhoto.debug("[PersonMatch] HQ Grey매칭: face[\(candidate.faceIdx)]→slot\(candidate.slotID) cost=\(String(format: "%.3f", cost)) pos=\(String(format: "%.3f", posNorm)) norm=\(String(format: "%.1f", candidate.norm))")
+
                         // Keep Best + 위치 갱신
                         updateSlotIfBetter(slotID: candidate.slotID, embedding: candidate.embedding, norm: candidate.norm, center: candidate.center, boundingBox: candidate.boundingBox)
+                    } else {
+                        Logger.similarPhoto.debug("[PersonMatch] HQ Grey거부: face[\(candidate.faceIdx)]↛slot\(candidate.slotID) cost=\(String(format: "%.3f", cost)) pos=\(String(format: "%.3f", posNorm))≥\(String(format: "%.2f", greyZonePosLimit)) norm=\(String(format: "%.1f", candidate.norm))")
                     }
+                } else {
+                    Logger.similarPhoto.debug("[PersonMatch] HQ 거절: face[\(candidate.faceIdx)]↛slot\(candidate.slotID) cost=\(String(format: "%.3f", cost))≥\(String(format: "%.3f", rejectThreshold)) norm=\(String(format: "%.1f", candidate.norm))")
                 }
             }
 
@@ -1008,8 +1016,12 @@ final class SimilarityAnalysisQueue {
                         sfaceCost: cost
                     ))
 
+                    Logger.similarPhoto.debug("[PersonMatch] LQ 매칭: face[\(faceIdx)]→slot\(bestByPos.slotID) cost=\(String(format: "%.3f", cost)) pos=\(String(format: "%.3f", posNorm)) norm=\(String(format: "%.1f", bestByPos.norm))")
+
                     // 위치만 갱신 (저품질 임베딩으로 슬롯 임베딩 갱신 X, norm 0 전달)
                     updateSlotIfBetter(slotID: bestByPos.slotID, embedding: [], norm: 0, center: bestByPos.center, boundingBox: bestByPos.boundingBox)
+                } else {
+                    Logger.similarPhoto.debug("[PersonMatch] LQ 거부: face[\(faceIdx)]↛slot\(bestByPos.slotID) cost=\(String(format: "%.3f", cost)) pos=\(String(format: "%.3f", posNorm)) norm=\(String(format: "%.1f", bestByPos.norm)) (limit: pos≤\(String(format: "%.2f", lowQualityPosLimit)) cost<\(String(format: "%.2f", lowQualityCostLimit)))")
                 }
             }
 
@@ -1033,6 +1045,7 @@ final class SimilarityAnalysisQueue {
 
                 // 저품질 얼굴은 신규 슬롯 생성 금지
                 if norm < minEmbeddingNorm {
+                    Logger.similarPhoto.debug("[PersonMatch] 슬롯생성 거부: face[\(faceIdx)] norm=\(String(format: "%.1f", norm))<\(String(format: "%.1f", self.minEmbeddingNorm))")
                     continue
                 }
 
@@ -1097,6 +1110,19 @@ final class SimilarityAnalysisQueue {
                     // 위치만 갱신 (임베딩 없으므로 norm=0)
                     updateSlotIfBetter(slotID: match.id, embedding: [], norm: 0, center: data.center, boundingBox: data.boundingBox)
                 }
+            }
+
+            // === 사진별 매칭 요약 로그 ===
+            let shortID = String(assetID.prefix(8))
+            let totalFaces = faceData.count
+            let matchedCount = usedFaces.count
+            let unmatchedFaces = faceData.keys.sorted().filter { !usedFaces.contains($0) }
+            if !unmatchedFaces.isEmpty {
+                let unmatchedInfo = unmatchedFaces.map { idx -> String in
+                    let norm = faceNorms[idx] ?? 0
+                    return "face[\(idx)](norm=\(String(format: "%.1f", norm)))"
+                }.joined(separator: ", ")
+                Logger.similarPhoto.debug("[PersonMatch] \(shortID): \(totalFaces)개 감지, \(matchedCount)개 매칭, 미매칭: \(unmatchedInfo)")
             }
 
             result[assetID] = cachedFaces
