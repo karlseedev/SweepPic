@@ -52,6 +52,9 @@ extension ViewerViewController {
         sheet.addAction(UIAlertAction(title: "960s vs 1088lb 비교", style: .default) { [weak self] _ in
             self?.runYuNetCompare()
         })
+        sheet.addAction(UIAlertAction(title: "인물 매칭 디버그", style: .default) { [weak self] _ in
+            self?.runPersonMatchDebug()
+        })
         sheet.addAction(UIAlertAction(title: "취소", style: .cancel))
         present(sheet, animated: true)
     }
@@ -307,6 +310,109 @@ extension ViewerViewController {
             await MainActor.run {
                 let message = summaryLines.joined(separator: "\n\n")
                 showFaceDebugAlert(title: "960s vs 1088lb (\(sizeStr))", message: message)
+            }
+        }
+    }
+
+    // MARK: - 인물 매칭 디버그
+
+    /// 현재 사진의 인물 매칭 상태를 분석하여 표시
+    /// 캐시 무효화 → 재분석 → 결과를 얼럿으로 표시
+    private func runPersonMatchDebug() {
+        guard let asset = coordinator.asset(at: currentIndex) else { return }
+
+        let assetID = asset.localIdentifier
+        let shortID = String(assetID.prefix(8))
+        Logger.similarPhoto.notice("[PersonMatchDebug] ═══ 시작: \(shortID) ═══")
+        showFaceDebugToast("인물 매칭 분석 중...")
+
+        Task {
+            // 1. 캐시 무효화하여 재분석 강제
+            await SimilarityCache.shared.setState(.notAnalyzed, for: assetID)
+
+            // 2. 현재 사진 기준 ±7장 범위로 재분석 트리거
+            let ext = SimilarityConstants.analysisRangeExtension
+            let totalCount = coordinator.totalCount
+            let lower = max(0, currentIndex - ext)
+            let upper = min(totalCount - 1, currentIndex + ext)
+            let range = lower...upper
+
+            guard let fetchResult = coordinator.fetchResult else { return }
+
+            _ = await SimilarityAnalysisQueue.shared.formGroupsForRange(
+                range,
+                source: .viewer,
+                fetchResult: fetchResult
+            )
+
+            // 3. 재분석 완료 후 캐시에서 결과 읽기
+            let allFaces = await SimilarityCache.shared.getFaces(for: assetID)
+            let validFaces = allFaces.filter { $0.isValidSlot }
+
+            // 4. YuNet으로 현재 사진 독립 감지 (캐시와 비교용)
+            var yunetCount = 0
+            var norms: [Float] = []
+
+            if let cgImage = try? await SimilarityImageLoader.shared.loadImage(
+                for: asset,
+                maxSize: SimilarityConstants.personMatchImageMaxSize
+            ),
+               let yunet = YuNetFaceDetector.shared,
+               let sface = SFaceRecognizer.shared {
+                let detections = try? yunet.detect(in: cgImage)
+                yunetCount = detections?.count ?? 0
+
+                for detection in detections ?? [] {
+                    guard let aligned = try? FaceAligner.shared.align(
+                        image: cgImage,
+                        landmarks: detection.landmarks
+                    ) else {
+                        norms.append(0)
+                        continue
+                    }
+                    if let embedding = try? sface.extractEmbedding(from: aligned) {
+                        let norm = sqrt(embedding.reduce(0) { $0 + $1 * $1 })
+                        norms.append(norm)
+                    } else {
+                        norms.append(0)
+                    }
+                }
+            }
+
+            // 5. 결과 구성
+            let normStr = norms.map { String(format: "%.1f", $0) }.joined(separator: ", ")
+
+            var lines: [String] = []
+            lines.append("YuNet 감지: \(yunetCount)개")
+            lines.append("norms: [\(normStr)]")
+            lines.append("")
+            lines.append("캐시 매칭: \(allFaces.count)개")
+            lines.append("유효(+버튼): \(validFaces.count)개")
+
+            // 각 매칭된 얼굴 상세
+            if !allFaces.isEmpty {
+                lines.append("")
+                for face in allFaces.sorted(by: { $0.personIndex < $1.personIndex }) {
+                    let costStr = face.sfaceCost.map { String(format: "%.3f", $0) } ?? "-"
+                    let validStr = face.isValidSlot ? "✓" : "✗"
+                    lines.append("slot\(face.personIndex) cost=\(costStr) valid=\(validStr)")
+                }
+            }
+
+            // 미매칭 분석
+            let unmatchedCount = yunetCount - allFaces.count
+            if unmatchedCount > 0 {
+                lines.append("")
+                lines.append("미매칭: \(unmatchedCount)개 (콘솔 로그 확인)")
+            }
+
+            let logMsg = lines.joined(separator: " | ")
+            Logger.similarPhoto.notice("[PersonMatchDebug] \(shortID): \(logMsg)")
+            Logger.similarPhoto.notice("[PersonMatchDebug] ═══ 완료 ═══")
+
+            await MainActor.run {
+                let message = lines.joined(separator: "\n")
+                showFaceDebugAlert(title: "인물매칭 \(shortID)", message: message)
             }
         }
     }
