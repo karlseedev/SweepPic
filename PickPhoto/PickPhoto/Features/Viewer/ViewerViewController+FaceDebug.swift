@@ -49,7 +49,7 @@ extension ViewerViewController {
         sheet.addAction(UIAlertAction(title: "해상도별 분석 (기존)", style: .default) { [weak self] _ in
             self?.runResolutionDebug()
         })
-        sheet.addAction(UIAlertAction(title: "960s vs 1088lb 비교", style: .default) { [weak self] _ in
+        sheet.addAction(UIAlertAction(title: "640 vs 960 비교", style: .default) { [weak self] _ in
             self?.runYuNetCompare()
         })
         sheet.addAction(UIAlertAction(title: "인물 매칭 디버그", style: .default) { [weak self] _ in
@@ -209,8 +209,8 @@ extension ViewerViewController {
         guard let asset = coordinator.asset(at: currentIndex) else { return }
 
         let shortID = String(asset.localIdentifier.prefix(8))
-        Logger.similarPhoto.notice("[FaceDebug] ═══ 960 vs 1088 비교 시작: \(shortID) ═══")
-        showFaceDebugToast("960 vs 1088 비교 중...")
+        Logger.similarPhoto.notice("[FaceDebug] ═══ 640 vs 960 비교 시작: \(shortID) ═══")
+        showFaceDebugToast("640 vs 960 비교 중...")
 
         Task {
             // 2200px 이미지 로드 (인물 매칭 파이프라인과 동일)
@@ -230,8 +230,8 @@ extension ViewerViewController {
 
             // 비교할 모델 설정: (라벨, 모델명, 입력크기)
             let models: [(label: String, modelName: String, inputSize: Int)] = [
-                ("960 stretch", "YuNet960", 960),
-                ("1088 letterbox", "YuNet1088", 1088)
+                ("640 letterbox", "YuNet640", 640),
+                ("960 letterbox", "YuNet960", 960)
             ]
 
             var summaryLines: [String] = []
