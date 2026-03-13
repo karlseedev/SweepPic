@@ -941,10 +941,14 @@ extension BaseGridViewController {
         if let currentIP = collectionView.indexPathForItem(at: location),
            currentIP != swipeDeleteState.targetIndexPath,
            currentIP.item >= paddingCellCount {
-            enterMultiSwipeMode()
-            handleMultiSwipeChanged(at: location)
-            handleAutoScroll(at: locationInView)
-            return
+            // A-1 활성 중이면 다중 모드 차단 (단일 셀만 스와이프 허용)
+            if !CoachMarkManager.shared.isA1Active {
+                enterMultiSwipeMode()
+                handleMultiSwipeChanged(at: location)
+                handleAutoScroll(at: locationInView)
+                return
+            }
+            // A-1: 다중 모드 차단, 아래 단일 셀 딤드 로직 계속 실행
         }
 
         // 같은 셀 내: 기존 커튼 딤드 로직 (변경 없음)
