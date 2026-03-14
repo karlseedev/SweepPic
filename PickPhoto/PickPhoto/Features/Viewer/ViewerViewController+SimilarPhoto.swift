@@ -519,9 +519,15 @@ extension ViewerViewController {
             let state = await SimilarityCache.shared.getState(for: assetID)
 
             switch state {
-            case .analyzed(true, _):
-                // 캐시 hit (그룹에 속함) → 즉시 +버튼 표시
-                await showFaceButtons(for: assetID, isCacheHit: true)
+            case .analyzed(true, let groupID):
+                if groupID == "preliminary" {
+                    // 그룹 분리 완료, 얼굴 분석 진행 중 → 대기
+                    // (FeaturePrint 그룹은 확정이나 얼굴 데이터 아직 없음)
+                    currentAnalyzingAssetID = assetID
+                } else {
+                    // 캐시 hit (그룹에 속함) → 즉시 +버튼 표시
+                    await showFaceButtons(for: assetID, isCacheHit: true)
+                }
 
             case .analyzed(false, _):
                 // 분석 완료되었지만 그룹에 속하지 않음 → 버튼 미표시

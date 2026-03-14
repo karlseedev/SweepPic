@@ -87,30 +87,31 @@
 
 ## 3. 트라이얼 기간별 전환율
 
-### RevenueCat + Adapty 종합
+### RevenueCat 연도별 비교 (Trial→Paid 중앙값)
 
-| 트라이얼 기간 | Trial→Paid 전환율 | 비고 |
-|-------------|:----------------:|------|
-| **4일 이하** | **26.8~31.2%** | 가장 낮음 |
-| **5~9일** | **45%** | 앱의 52%가 채택 |
-| **10~16일** | **44%** | 5~9일과 유사 |
-| **17~32일** | **45.7%** | 가장 높음 |
+| 트라이얼 기간 | RevenueCat 2022 (10,000+앱) | RevenueCat 2026 (75,000+앱) |
+|-------------|:----------------:|:----------------:|
+| **4일 이하** | **30%** | **25.5%** |
+| **5~9일** | **45%** | **37.4%** |
+| **10~16일** | **44%** | — |
+| **17~32일** | **45%** | **42.5%** |
 
-> 출처: [RevenueCat 2025](https://www.revenuecat.com/state-of-subscription-apps-2025/), [Adapty: Trial Conversion Rates](https://adapty.io/blog/trial-conversion-rates-for-in-app-subscriptions/), [Business of Apps 2026](https://www.businessofapps.com/data/app-subscription-trial-benchmarks/)
+> ⚠️ 2022→2026 전체적으로 전환율 하락 추세이나, 4일 기준 약 1.5배 점프 패턴은 동일하게 유지
+> 출처: [RevenueCat 2022 Blog](https://www.revenuecat.com/blog/growth/app-trial-conversion-rate-insights/), [RevenueCat 2026 Report](https://www.revenuecat.com/state-of-subscription-apps/)
+
+### Adapty 2026 참고 데이터
+
+- 7일 트라이얼: 약 **40%** 전환율 (가장 인기 있는 offer type)
+- 5~9일 트라이얼이 전체의 **52%** 차지
+- 글로벌 평균: install→trial **10.9%**, trial→paid **25.6%**
+
+> 출처: [Adapty: Trial Conversion Rates](https://adapty.io/blog/trial-conversion-rates-for-in-app-subscriptions/), [Adapty 2026 Report](https://adapty.io/state-of-in-app-subscriptions/)
 
 ### "4일 고원 효과"
 
 4일 이후에는 7일, 14일, 30일, 60일+ 간 전환율에 큰 차이가 없음. 4일이 분기점.
 
 > 출처: [Recurly: Subscriber Acquisition Benchmarks](https://recurly.com/research/subscriber-acquisition-benchmarks/)
-
-### 학술 연구 (680,588명, 190개국, 2년간 대규모 무작위 실험)
-
-- 3일 vs 7일 비교
-- 긴 체험은 **체험 채택률(Stage 1)**과 **지연 전환(Stage 3)**을 유의미하게 증가
-- **창의적 기능 위주 앱**: "신기함 감쇠(novelty decay)"로 긴 체험이 오히려 불리
-
-> 출처: [Frontiers in Psychology: Large-scale Randomized Field Experiment on Free Trial Duration (2025)](https://www.frontiersin.org/journals/psychology/articles/10.3389/fpsyg.2025.1568868/full)
 
 ### 체험 기간별 취소 패턴
 
@@ -361,7 +362,6 @@
 | 7 | Opt-out Trial→Paid 전환율 39~50% vs Opt-in 12~25% | First Page Sage, Chargebee | §4 |
 | 8 | 무료 체험 제거 시 LTV $35~40→$60 (약 2배 상승) 사례 | RevenueCat Blog | §2 |
 | 9 | 페이월을 온보딩 시작점으로 이동 시 매출 5배 증가 사례 | Superwall | §8 |
-| 10 | 680,588명 실험에서 7일 체험이 3일 대비 채택률·지연전환 유의미 증가 | Frontiers in Psychology 2025 | §3 |
 
 ### Grace Period(Opt-in) 쪽 데이터
 
@@ -376,7 +376,6 @@
 | 7 | 무료 트라이얼 해지 실패 비율 64.8% — 강제 과금에 대한 사용자 불만 원인 | Self Financial | §9 |
 | 8 | "한 번 쓰고 말 앱에 구독은 말도 안 된다" — 사진 정리 앱 공통 리뷰 불만 | App Store 리뷰, Connor Tumbleson | §7 |
 | 9 | 한국 소비자 IAP(단독 구매) 선호, 구독 자체에 문화적 저항 | 오픈서베이 2025, Korea Herald | §6 |
-| 10 | 창의적 기능 위주 앱에서 긴 체험이 "신기함 감쇠"로 오히려 불리 | Frontiers in Psychology 2025 | §3 |
 
 ---
 

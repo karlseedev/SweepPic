@@ -9,6 +9,7 @@
 
 import UIKit
 import LiquidGlassKit
+import MetalKit
 
 /// 텍스트 전용 Liquid Glass 버튼
 /// - cancelButton, deleteButton 등 텍스트만 있는 버튼에 사용
@@ -197,6 +198,11 @@ class GlassTextButton: UIButton {
 
     override func layoutSubviews() {
         super.layoutSubviews()
+
+        // DEBUG: 비우기/선택 버튼 속성 비교
+        if buttonTitle == "비우기" || buttonTitle == "선택" {
+            print("🔍 [\(buttonTitle)] bounds=\(bounds), alpha=\(alpha), enabled=\(isEnabled), hidden=\(isHidden), glass.bounds=\(glassView.bounds), tint=\(textTintColor)")
+        }
 
         // pill shape: 높이의 절반 (단일/멀티라인 모두)
         let cornerRadius = bounds.height / 2
