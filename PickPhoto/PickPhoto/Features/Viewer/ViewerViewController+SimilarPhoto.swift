@@ -667,17 +667,24 @@ extension ViewerViewController {
             return
         }
 
-        currentAnalyzingAssetID = nil
-
-        // 성능 측정: 캐시 miss (분석 포함) 시간 기록
-        let elapsedMs = (CFAbsoluteTimeGetCurrent() - buttonShowStartTime) * 1000
-        Self.sharedViewerStats.cacheMissCount += 1
-        Self.sharedViewerStats.analysisWaitTimes.append(elapsedMs)
-        Logger.viewer.debug("Perf Cache MISS - Analysis completed in \(String(format: "%.2f", elapsedMs))ms")
-
-        // +버튼 표시 시도 (isCacheHit: false → 성능 통계에 중복 기록 안 함)
+        // +버튼 표시 시도 (상태 확인 후)
         Task { @MainActor in
-            await showFaceButtons(for: currentAssetID, isCacheHit: false)
+            // 상태 재확인: preliminary(예비 테두리)이면 아직 얼굴 분석 중 → 최종 결과 대기
+            // 예비 알림에서 currentAnalyzingAssetID를 해제하면 최종 알림이 무시되므로 유지
+            let state = await SimilarityCache.shared.getState(for: currentAssetID)
+            if case .analyzed(true, let groupID) = state, groupID == "preliminary" {
+                return  // 얼굴 분석 완료 대기
+            }
+
+            self.currentAnalyzingAssetID = nil
+
+            // 성능 측정: 캐시 miss (분석 포함) 시간 기록
+            let elapsedMs = (CFAbsoluteTimeGetCurrent() - self.buttonShowStartTime) * 1000
+            Self.sharedViewerStats.cacheMissCount += 1
+            Self.sharedViewerStats.analysisWaitTimes.append(elapsedMs)
+            Logger.viewer.debug("Perf Cache MISS - Analysis completed in \(String(format: "%.2f", elapsedMs))ms")
+
+            await self.showFaceButtons(for: currentAssetID, isCacheHit: false)
 
             // 3회 이상 측정되면 통계 출력
             let total = Self.sharedViewerStats.cacheHitCount + Self.sharedViewerStats.cacheMissCount

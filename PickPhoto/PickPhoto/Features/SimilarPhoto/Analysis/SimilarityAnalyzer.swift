@@ -136,6 +136,66 @@ final class SimilarityAnalyzer {
         }
     }
 
+    // MARK: - Feature Print + Face Check (Batch)
+
+    /// FeaturePrint 생성과 얼굴 유무 체크를 동시에 수행합니다 (배치 처리).
+    ///
+    /// 같은 VNImageRequestHandler에서 VNGenerateImageFeaturePrintRequest와
+    /// VNDetectFaceRectanglesRequest를 함께 실행하여 추가 비용을 최소화합니다.
+    /// 얼굴 유무 결과는 예비 테두리 표시 판단에만 사용됩니다 (정밀 감지는 YuNet 담당).
+    ///
+    /// - Parameter image: 분석할 CGImage (480px 기본 분석용)
+    /// - Returns: (featurePrint, hasFace) 튜플
+    /// - Throws: SimilarityAnalysisError
+    func generateFeaturePrintWithFaceCheck(for image: CGImage) throws -> (VNFeaturePrintObservation, Bool) {
+        // FeaturePrint 요청
+        let fpRequest = VNGenerateImageFeaturePrintRequest()
+        if #available(iOS 17.0, *) {
+            fpRequest.revision = VNGenerateImageFeaturePrintRequestRevision2
+        } else {
+            fpRequest.revision = VNGenerateImageFeaturePrintRequestRevision1
+        }
+
+        // 얼굴 감지 요청 (존재 여부만 확인, 정밀도 불필요)
+        let faceRequest = VNDetectFaceRectanglesRequest()
+
+        // 같은 핸들러에서 배치 실행 (이미지 전처리 1회만)
+        let handler = VNImageRequestHandler(cgImage: image, options: [:])
+        do {
+            try handler.perform([fpRequest, faceRequest])
+        } catch {
+            throw SimilarityAnalysisError.featurePrintGenerationFailed(error.localizedDescription)
+        }
+
+        // FeaturePrint 결과
+        guard let fpResult = fpRequest.results?.first else {
+            throw SimilarityAnalysisError.featurePrintGenerationFailed("결과 없음")
+        }
+
+        // 얼굴 유무 (1개 이상 감지되면 true)
+        let hasFace = !(faceRequest.results?.isEmpty ?? true)
+
+        return (fpResult, hasFace)
+    }
+
+    /// FeaturePrint + 얼굴 유무 체크 비동기 버전
+    ///
+    /// - Parameter image: 분석할 CGImage
+    /// - Returns: (featurePrint, hasFace) 튜플
+    /// - Throws: SimilarityAnalysisError
+    func generateFeaturePrintWithFaceCheck(for image: CGImage) async throws -> (VNFeaturePrintObservation, Bool) {
+        return try await withCheckedThrowingContinuation { continuation in
+            DispatchQueue.global(qos: .userInitiated).async {
+                do {
+                    let result = try self.generateFeaturePrintWithFaceCheck(for: image)
+                    continuation.resume(returning: result)
+                } catch {
+                    continuation.resume(throwing: error)
+                }
+            }
+        }
+    }
+
     // MARK: - Distance Calculation
 
     /// 두 Feature Print 간의 거리를 계산합니다.

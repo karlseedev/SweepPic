@@ -264,9 +264,9 @@ final class SimilarityAnalysisQueue {
         // 기존 그룹 정리 (재분석 시)
         await cache.prepareForReanalysis(assetIDs: Set(assetIDs))
 
-        // T014.2: Feature Print 병렬 생성
+        // T014.2: Feature Print 병렬 생성 + Vision 얼굴 유무 체크 (배치 처리)
         let fpStartTime = CFAbsoluteTimeGetCurrent()
-        let featurePrints = await generateFeaturePrints(for: photos)
+        let (featurePrints, hasFaces) = await generateFeaturePrints(for: photos)
         let fpTime = CFAbsoluteTimeGetCurrent() - fpStartTime
 
         // 취소 체크: FP 생성 후 (캐시/알림 스킵)
@@ -292,18 +292,32 @@ final class SimilarityAnalysisQueue {
             return []
         }
 
-        // ── 테두리 조기 표시: FeaturePrint 그룹 분리 직후 즉시 테두리 표시 ──
-        // 얼굴 분석(YuNet + SFace) 완료 전에 그리드 테두리를 먼저 보여줌
-        // 얼굴 분석 후 그룹이 축소/거부되면 최종 알림에서 테두리가 자동 갱신됨
-        let allGroupedAssetIDs = Set(rawGroups.flatMap { $0 })
-        for assetID in allGroupedAssetIDs {
+        // ── 테두리 조기 표시: 얼굴 있는 그룹만 예비 테두리 표시 ──
+        // Vision 얼굴 감지 결과(hasFaces)를 기반으로 얼굴 포함 그룹만 필터링
+        // 사물 그룹은 .analyzing 상태 유지 → YuNet 최종 분석에서 판단
+        // Vision이 못 잡은 작은 얼굴은 최종 분석 후 테두리 표시 (누락 없음, 지연만)
+        let facePresenceMap = Dictionary(uniqueKeysWithValues: zip(assetIDs, hasFaces))
+        let faceGroups = rawGroups.filter { groupIDs in
+            groupIDs.contains { facePresenceMap[$0] == true }
+        }
+        let preliminaryAssetIDs = Set(faceGroups.flatMap { $0 })
+
+        // 얼굴 그룹 멤버: 예비 테두리 표시
+        for assetID in preliminaryAssetIDs {
             await cache.setState(.analyzed(inGroup: true, groupID: "preliminary"), for: assetID)
         }
+        // 그룹에 속하지 않은 사진: 분석 완료 (그룹 없음)
+        let allGroupedAssetIDs = Set(rawGroups.flatMap { $0 })
         for assetID in assetIDs where !allGroupedAssetIDs.contains(assetID) {
             await cache.setState(.analyzed(inGroup: false, groupID: nil), for: assetID)
         }
-        // 즉시 알림 → 그리드 테두리 표시 (얼굴 분석은 백그라운드 계속 진행)
-        postAnalysisComplete(range: range, groupIDs: ["preliminary"], analyzedAssetIDs: assetIDs)
+        // 사물 그룹(얼굴 없음): .analyzing 상태 유지 → YuNet에서 최종 판단
+        // 알림 발송: 그리드가 비-그룹 사진 상태도 반영하도록
+        postAnalysisComplete(
+            range: range,
+            groupIDs: faceGroups.isEmpty ? [] : ["preliminary"],
+            analyzedAssetIDs: assetIDs
+        )
 
         // 취소 체크: 조기 표시 후
         guard !Task.isCancelled else {
@@ -474,11 +488,15 @@ final class SimilarityAnalysisQueue {
 
     // MARK: - Private Methods - Feature Print Generation
 
-    /// 사진들의 Feature Print를 병렬로 생성합니다.
+    /// 사진들의 Feature Print + 얼굴 유무를 병렬로 생성합니다.
+    ///
+    /// Vision의 VNGenerateImageFeaturePrintRequest와 VNDetectFaceRectanglesRequest를
+    /// 같은 VNImageRequestHandler에서 배치 실행하여 추가 비용을 최소화합니다.
+    /// 얼굴 유무(hasFaces)는 예비 테두리 표시 판단에만 사용됩니다.
     ///
     /// - Parameter photos: 분석할 PHAsset 배열
-    /// - Returns: Feature Print 배열 (실패 시 nil)
-    private func generateFeaturePrints(for photos: [PHAsset]) async -> [VNFeaturePrintObservation?] {
+    /// - Returns: (featurePrints: FP 배열, hasFaces: 얼굴 유무 배열)
+    private func generateFeaturePrints(for photos: [PHAsset]) async -> (featurePrints: [VNFeaturePrintObservation?], hasFaces: [Bool]) {
         let currentLimit = isThermalThrottled
             ? SimilarityConstants.maxConcurrentAnalysisThermal
             : SimilarityConstants.maxConcurrentAnalysis
@@ -488,7 +506,7 @@ final class SimilarityAnalysisQueue {
         // withThrowingTaskGroup 사용: child task에서 CancellationError throw 가능
         // 외부 시그니처는 non-throws 유지 (CancellationError를 내부에서 흡수)
         do {
-            return try await withThrowingTaskGroup(of: (Int, VNFeaturePrintObservation?).self) { group in
+            return try await withThrowingTaskGroup(of: (Int, VNFeaturePrintObservation?, Bool).self) { group in
                 for (index, photo) in photos.enumerated() {
                     group.addTask {
                         // child task 내부에서도 취소 체크
@@ -502,38 +520,41 @@ final class SimilarityAnalysisQueue {
 
                         do {
                             let image = try await self.imageLoader.loadImage(for: photo)
-                            let fp = try await self.analyzer.generateFeaturePrint(for: image)
-                            return (index, fp)
+                            // 배치 처리: FeaturePrint + 얼굴 유무를 같은 핸들러에서 실행
+                            let (fp, hasFace) = try await self.analyzer.generateFeaturePrintWithFaceCheck(for: image)
+                            return (index, fp, hasFace)
                         } catch is CancellationError {
                             throw CancellationError()  // 상위로 전파
                         } catch SimilarityImageLoadError.cancelled {
                             throw CancellationError()  // 취소를 CancellationError로 변환
                         } catch {
-                            // 다른 에러만 nil로 처리
-                            return (index, nil)
+                            // 다른 에러만 nil/false로 처리
+                            return (index, nil, false)
                         }
                     }
                 }
 
                 // 결과 수집
-                var results = [VNFeaturePrintObservation?](repeating: nil, count: photos.count)
-                for try await (index, fp) in group {
+                var fpResults = [VNFeaturePrintObservation?](repeating: nil, count: photos.count)
+                var faceResults = [Bool](repeating: false, count: photos.count)
+                for try await (index, fp, hasFace) in group {
                     // 취소 감지 시 나머지 작업 취소
                     if Task.isCancelled {
                         group.cancelAll()
                         break
                     }
-                    results[index] = fp
+                    fpResults[index] = fp
+                    faceResults[index] = hasFace
                 }
-                return results
+                return (fpResults, faceResults)
             }
         } catch is CancellationError {
             // 취소 시 부분 결과 전부 버리고 빈 배열 반환 (캐시 오염 방지)
             Logger.similarPhoto.debug("generateFeaturePrints cancelled - returning empty")
-            return []
+            return ([], [])
         } catch {
             Logger.similarPhoto.error("generateFeaturePrints error: \(error)")
-            return []
+            return ([], [])
         }
     }
 
