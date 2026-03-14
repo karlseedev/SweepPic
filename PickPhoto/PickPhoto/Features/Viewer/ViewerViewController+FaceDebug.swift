@@ -444,7 +444,7 @@ extension ViewerViewController {
                 }
 
                 guard let uiImage = image, let cgImage = uiImage.cgImage else {
-                    continuation.resume(throwing: FaceDetectionError.imageLoadFailed("원본 이미지 nil"))
+                    continuation.resume(throwing: NSError(domain: "FaceDebug", code: -1, userInfo: [NSLocalizedDescriptionKey: "원본 이미지 nil"]))
                     return
                 }
 
