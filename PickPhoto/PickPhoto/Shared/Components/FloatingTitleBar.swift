@@ -573,7 +573,11 @@ final class FloatingTitleBar: UIView {
             // 텍스트 모드: GlassTextButton 사용
             secondRightButton.setButtonTitle(secondTitle)
             secondRightButton.setTextColor(secondColor)
+            // title 변경 후 Auto Layout 강제 계산 → glassView가 올바른 크기로 레이아웃
+            secondRightButton.superview?.layoutIfNeeded()
             secondRightButton.isHidden = false
+            // idle에서 paused된 MTKView를 resume → 올바른 크기로 다시 렌더링
+            LiquidGlassOptimizer.resumeAllMTKViews(in: secondRightButton)
             secondRightIconButton.isHidden = true
         }
         secondRightButtonAction = secondAction
