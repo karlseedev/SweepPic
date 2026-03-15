@@ -835,6 +835,9 @@ extension GridViewController {
         )
         viewerVC.delegate = self
         activeViewerVC = viewerVC  // weak 참조 저장 (최종 삭제 완료 후 알림용)
+        // 그리드 셀 썸네일을 뷰어 초기 이미지로 전달 (전환 공백 방지)
+        let cell = collectionView.cellForItem(at: indexPath) as? PhotoCell
+        viewerVC.initialImage = cell?.thumbnailImageView.image
         // [Timing] 탭 시점을 뷰어에 전달 (전체 구간 측정용)
         viewerVC.openStartTime = t0
 

@@ -723,6 +723,10 @@ final class TrashAlbumViewController: BaseGridViewController {
         )
         viewerVC.delegate = self
         activeViewerVC = viewerVC  // weak 참조 저장 (최종 삭제 완료 후 알림용)
+        // 그리드 셀 썸네일을 뷰어 초기 이미지로 전달 (전환 공백 방지)
+        let cellIndexPath = IndexPath(item: assetIndex + paddingCellCount, section: 0)
+        let cell = collectionView.cellForItem(at: cellIndexPath) as? PhotoCell
+        viewerVC.initialImage = cell?.thumbnailImageView.image
 
         // iOS 26+: Navigation Push 방식 (시스템 네비바/툴바 사용 가능)
         // iOS 16~25: Modal 방식 (커스텀 줌 트랜지션)

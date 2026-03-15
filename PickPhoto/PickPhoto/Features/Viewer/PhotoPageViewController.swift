@@ -90,6 +90,9 @@ final class PhotoPageViewController: UIViewController {
         return gesture
     }()
 
+    /// 그리드 셀에서 전달받은 초기 이미지 (전환 공백 방지용 placeholder)
+    var initialImage: UIImage?
+
     /// 이미지 요청 토큰 (v6: Cancellable)
     private var requestCancellable: Cancellable?
 
@@ -157,6 +160,12 @@ final class PhotoPageViewController: UIViewController {
 
         // Phase 1: 즉시 레이아웃 + LOD0 요청
         applyInitialLayout()
+        // 그리드 셀 썸네일을 초기 placeholder로 표시 (전환 공백 방지)
+        if let initial = initialImage {
+            imageView.image = initial
+            Logger.viewer.debug("[LOD0] initialImage 세팅 \(initial.size.width)×\(initial.size.height)")
+            initialImage = nil  // 메모리 해제
+        }
         requestLOD0Image()
     }
 
@@ -380,7 +389,13 @@ final class PhotoPageViewController: UIViewController {
         ) { [weak self] image, isDegraded in
             guard let self = self, let image = image else { return }
 
-            Logger.viewer.debug("[LOD0] 콜백 isDegraded=\(isDegraded) imageSize=\(image.size.width)×\(image.size.height)")
+            let elapsed = (CFAbsoluteTimeGetCurrent() - self.imageRequestStartTime) * 1000
+            Logger.viewer.debug("[LOD0] 콜백 +\(String(format: "%.0f", elapsed))ms isDegraded=\(isDegraded) imageSize=\(image.size.width)×\(image.size.height)")
+            // 이미 initialImage가 세팅된 경우, degraded(90×120)로 덮어쓰지 않음
+            if isDegraded, self.imageView.image != nil {
+                Logger.viewer.debug("[LOD0] degraded skip — 기존 이미지 유지")
+                return
+            }
             // 이미지만 교체 (레이아웃 변경 없음!)
             self.imageView.image = image
             // imageSize는 applyInitialLayout에서 PHAsset 기반으로 이미 설정됨
@@ -466,7 +481,8 @@ final class PhotoPageViewController: UIViewController {
                 Logger.viewer.debug("[LOD1-full] 콜백 image=nil 또는 self=nil, isDegraded=\(isDegraded)")
                 return
             }
-            Logger.viewer.debug("[LOD1-full] 콜백 isDegraded=\(isDegraded) imageSize=\(image.size.width)×\(image.size.height)")
+            let elapsed = (CFAbsoluteTimeGetCurrent() - self.imageRequestStartTime) * 1000
+            Logger.viewer.debug("[LOD1-full] 콜백 +\(String(format: "%.0f", elapsed))ms isDegraded=\(isDegraded) imageSize=\(image.size.width)×\(image.size.height)")
             guard !isDegraded else { return }
 
             self.hasLoadedFullSize = true

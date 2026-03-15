@@ -288,6 +288,11 @@ final class ViewerViewController: UIViewController {
     /// iOS 26+ 네비게이션 바 눈 아이콘 버튼 참조 (유사 사진 토글)
     var navBarEyeItem: UIBarButtonItem?
 
+    // MARK: - 초기 이미지 (그리드→뷰어 전환 공백 방지)
+
+    /// 첫 페이지용 초기 이미지 (그리드 셀에서 전달, 1회용)
+    var initialImage: UIImage?
+
     // MARK: - 상단 그라데이션 + 타이틀 (유사사진 안내)
 
     /// 상단 그라데이션 딤드 뷰 (iOS 16~25 + iOS 26 Modal, .normal 모드 전용)

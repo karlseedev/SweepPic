@@ -244,6 +244,12 @@ extension ViewerViewController {
     func displayInitialPhoto() {
         guard let pageVC = createPageViewController(at: currentIndex) else { return }
 
+        // 첫 페이지에 그리드 셀 썸네일 전달 (전환 공백 방지)
+        if let photoVC = pageVC as? PhotoPageViewController {
+            photoVC.initialImage = initialImage
+            initialImage = nil  // 1회용 — 메모리 해제
+        }
+
         pageViewController.setViewControllers(
             [pageVC],
             direction: .forward,
