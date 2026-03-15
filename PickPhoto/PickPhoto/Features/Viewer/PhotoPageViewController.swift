@@ -7,6 +7,7 @@
 import UIKit
 import Photos
 import AppCore
+import OSLog
 
 // MARK: - Zoom & Scroll Notifications
 
@@ -370,6 +371,7 @@ final class PhotoPageViewController: UIViewController {
         hasLoadedFullSize = false
 
         requestCancellable?.cancel()
+        Logger.viewer.debug("[LOD0] 요청 시작 targetSize=\(targetSize.width)×\(targetSize.height)")
         requestCancellable = ImagePipeline.shared.requestImage(
             for: asset,
             targetSize: targetSize,
@@ -378,6 +380,7 @@ final class PhotoPageViewController: UIViewController {
         ) { [weak self] image, isDegraded in
             guard let self = self, let image = image else { return }
 
+            Logger.viewer.debug("[LOD0] 콜백 isDegraded=\(isDegraded) imageSize=\(image.size.width)×\(image.size.height)")
             // 이미지만 교체 (레이아웃 변경 없음!)
             self.imageView.image = image
             // imageSize는 applyInitialLayout에서 PHAsset 기반으로 이미 설정됨
@@ -391,7 +394,11 @@ final class PhotoPageViewController: UIViewController {
     /// LOD1 원본 이미지 요청 (외부 호출용)
     /// - ViewerViewController에서 didFinishAnimating + 150ms 후 호출
     func requestHighQualityImage() {
-        guard !hasLoadedFullSize else { return }
+        guard !hasLoadedFullSize else {
+            Logger.viewer.debug("[LOD1] skip — hasLoadedFullSize=true")
+            return
+        }
+        Logger.viewer.debug("[LOD1] requestHighQualityImage → requestFullSizeImage 호출")
         requestFullSizeImage()
     }
 
@@ -448,13 +455,19 @@ final class PhotoPageViewController: UIViewController {
     /// - Phase 1: 이미지만 교체, 레이아웃 변경 없음
     private func requestFullSizeImage() {
         fullSizeRequestCancellable?.cancel()
+        Logger.viewer.debug("[LOD1-full] 요청 시작 targetSize=MAX")
         fullSizeRequestCancellable = ImagePipeline.shared.requestImage(
             for: asset,
             targetSize: PHImageManagerMaximumSize,
             contentMode: .aspectFit,
             quality: .high  // 원본 고품질
         ) { [weak self] image, isDegraded in
-            guard let self = self, let image = image, !isDegraded else { return }
+            guard let self = self, let image = image else {
+                Logger.viewer.debug("[LOD1-full] 콜백 image=nil 또는 self=nil, isDegraded=\(isDegraded)")
+                return
+            }
+            Logger.viewer.debug("[LOD1-full] 콜백 isDegraded=\(isDegraded) imageSize=\(image.size.width)×\(image.size.height)")
+            guard !isDegraded else { return }
 
             self.hasLoadedFullSize = true
 

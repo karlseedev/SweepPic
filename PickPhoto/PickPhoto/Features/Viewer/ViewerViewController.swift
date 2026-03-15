@@ -736,6 +736,7 @@ extension ViewerViewController: UIPageViewControllerDelegate {
     /// - 정지 상태에서만 원본 이미지 로드
     func scheduleLOD1Request() {
         lod1DebounceTimer?.invalidate()
+        Logger.viewer.debug("[LOD1] scheduleLOD1Request — \(Self.lod1DebounceDelay)초 디바운스 시작")
         lod1DebounceTimer = Timer.scheduledTimer(withTimeInterval: Self.lod1DebounceDelay, repeats: false) { [weak self] _ in
             guard let self = self else { return }
 
