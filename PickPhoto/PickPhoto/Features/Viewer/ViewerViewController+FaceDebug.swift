@@ -52,6 +52,9 @@ extension ViewerViewController {
         sheet.addAction(UIAlertAction(title: "640 vs 960 비교", style: .default) { [weak self] _ in
             self?.runYuNetCompare()
         })
+        sheet.addAction(UIAlertAction(title: "SFace 해상도 A/B", style: .default) { [weak self] _ in
+            self?.runSFaceResolutionCompare()
+        })
         sheet.addAction(UIAlertAction(title: "인물 매칭 디버그", style: .default) { [weak self] _ in
             self?.runPersonMatchDebug()
         })
@@ -310,6 +313,118 @@ extension ViewerViewController {
             await MainActor.run {
                 let message = summaryLines.joined(separator: "\n\n")
                 showFaceDebugAlert(title: "960s vs 1088lb (\(sizeStr))", message: message)
+            }
+        }
+    }
+
+    // MARK: - SFace 해상도 A/B 테스트
+
+    /// SFace 크롭 소스 해상도별 norm 비교
+    /// YuNet 감지는 2200px로 1회만 수행, FaceAligner+SFace 크롭 소스만 변경하여 비교
+    /// 목적: 2200px가 꼭 필요한지, 낮은 해상도로도 norm이 유지되는지 확인
+    private func runSFaceResolutionCompare() {
+        guard let asset = coordinator.asset(at: currentIndex) else { return }
+
+        let shortID = String(asset.localIdentifier.prefix(8))
+        Logger.similarPhoto.notice("[SFaceAB] ═══ 시작: \(shortID) ═══")
+        showFaceDebugToast("SFace 해상도 A/B 중...")
+
+        Task {
+            guard let yunet = YuNetFaceDetector.shared,
+                  let sface = SFaceRecognizer.shared else {
+                Logger.similarPhoto.error("[SFaceAB] YuNet/SFace 모델 없음")
+                return
+            }
+
+            // 테스트할 해상도 (SFace 크롭 소스용)
+            let testSizes: [CGFloat] = [960, 1200, 1600, 2200]
+
+            // 각 해상도로 이미지 로드
+            var loadedImages: [(CGFloat, CGImage)] = []
+            for size in testSizes {
+                do {
+                    let img = try await SimilarityImageLoader.shared.loadImage(for: asset, maxSize: size)
+                    loadedImages.append((size, img))
+                } catch {
+                    Logger.similarPhoto.error("[SFaceAB] \(Int(size))px 로드 실패: \(error.localizedDescription)")
+                }
+            }
+
+            // YuNet 감지는 가장 큰 이미지(2200px)로 1회 — 좌표 기준
+            guard let (_, baseImage) = loadedImages.last else {
+                Logger.similarPhoto.error("[SFaceAB] 이미지 로드 실패")
+                return
+            }
+
+            let detections: [YuNetDetection]
+            do {
+                detections = try yunet.detect(in: baseImage)
+            } catch {
+                Logger.similarPhoto.error("[SFaceAB] YuNet 감지 실패: \(error.localizedDescription)")
+                return
+            }
+
+            guard !detections.isEmpty else {
+                await MainActor.run {
+                    showFaceDebugAlert(title: "SFace A/B", message: "얼굴 감지 0개")
+                }
+                return
+            }
+
+            Logger.similarPhoto.notice("[SFaceAB] YuNet 감지: \(detections.count)개")
+
+            // 각 해상도별로 동일 얼굴에 대해 FaceAligner+SFace 수행
+            // 핵심: 각 해상도의 이미지에서 YuNet을 다시 돌려서 해당 해상도의 landmark를 구함
+            var summaryLines: [String] = []
+
+            for (size, image) in loadedImages {
+                let sizeLabel = "\(Int(size))px"
+                let actualStr = "\(image.width)×\(image.height)"
+
+                // 해당 해상도에서 YuNet 재감지 (landmark가 해상도에 종속적이므로)
+                let resDetections: [YuNetDetection]
+                do {
+                    resDetections = try yunet.detect(in: image)
+                } catch {
+                    summaryLines.append("\(sizeLabel) (\(actualStr)): YuNet 실패")
+                    continue
+                }
+
+                var norms: [Float] = []
+                for detection in resDetections {
+                    guard let aligned = try? FaceAligner.shared.align(
+                        image: image,
+                        landmarks: detection.landmarks
+                    ) else {
+                        norms.append(0)
+                        continue
+                    }
+
+                    if let embedding = try? sface.extractEmbedding(from: aligned) {
+                        let norm = sqrt(embedding.reduce(0) { $0 + $1 * $1 })
+                        norms.append(norm)
+                    } else {
+                        norms.append(0)
+                    }
+                }
+
+                let normStr = norms.map { String(format: "%.1f", $0) }.joined(separator: ", ")
+                let above7 = norms.filter { $0 >= 7.0 }.count
+
+                Logger.similarPhoto.notice("[SFaceAB] \(sizeLabel) (\(actualStr)): norms=[\(normStr)] ≥7.0: \(above7)/\(norms.count)")
+
+                summaryLines.append(
+                    "\(sizeLabel) (\(actualStr))\n" +
+                    "  norms: [\(normStr)]\n" +
+                    "  ≥7.0: \(above7)/\(norms.count)"
+                )
+            }
+
+            Logger.similarPhoto.notice("[SFaceAB] ═══ 완료 ═══")
+
+            await MainActor.run {
+                let message = summaryLines.joined(separator: "\n\n")
+                showFaceDebugAlert(title: "SFace 해상도 A/B \(shortID)", message: message)
             }
         }
     }
