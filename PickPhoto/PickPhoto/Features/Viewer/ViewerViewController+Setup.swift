@@ -118,10 +118,10 @@ extension ViewerViewController {
         titleLabel.textAlignment = .center
 
         if useSystemUI {
-            // iOS 26: navigationItem.titleView → 네비바 내부에서 버튼과 자동 정렬
+            // iOS 26: showNavBarEyeButton(true) 시에만 navigationItem.titleView에 할당
+            // Setup 시점에 할당하면 push 전환 애니메이션이 alpha를 1로 만들어 잠깐 보이는 문제 발생
             titleLabel.sizeToFit()
             titleLabel.alpha = 0
-            navigationItem.titleView = titleLabel
         } else {
             // iOS 16~25: view에 직접 추가 + Auto Layout
             titleLabel.translatesAutoresizingMaskIntoConstraints = false
