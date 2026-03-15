@@ -252,6 +252,28 @@ extension GridViewController {
 
         guard lowerBound <= upperBound else { return nil }
 
+        // 디버그: 실제 범위 확인
+        let visibleCount = maxIndex - minIndex + 1
+        let analysisCount = upperBound - lowerBound + 1
+        Logger.similarPhoto.debug("AnalysisRange: visible=\(minIndex)~\(maxIndex) (\(visibleCount)장), analysis=\(lowerBound)~\(upperBound) (\(analysisCount)장, ±\(extension_count))")
+
+        // 디버그: 온전히 보이는 행 기준 범위 비교
+        let cellH = currentCellSize.height
+        if cellH > 0 {
+            let rowH = cellH + Self.cellSpacing
+            let safeTop = view.safeAreaInsets.top
+            let safeBottom = view.safeAreaInsets.bottom
+            // 화면에서 실제 콘텐츠가 보이는 영역
+            let visibleTop = collectionView.contentOffset.y + safeTop
+            let visibleBottom = collectionView.contentOffset.y + collectionView.bounds.height - safeBottom
+            // 온전히 보이는 첫 행 / 마지막 행
+            let firstFullRow = Int(ceil(visibleTop / rowH))
+            let lastFullRow = Int(floor(visibleBottom / rowH)) - 1
+            let fullRowCount = max(0, lastFullRow - firstFullRow + 1)
+            let fullCellCount = fullRowCount * 3
+            Logger.similarPhoto.debug("AnalysisRange(full): rows=\(firstFullRow)~\(lastFullRow) (\(fullRowCount)행, \(fullCellCount)장) vs visible \(visibleCount)장")
+        }
+
         return lowerBound...upperBound
     }
 
