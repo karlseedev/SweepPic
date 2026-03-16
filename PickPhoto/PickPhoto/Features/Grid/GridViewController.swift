@@ -96,6 +96,12 @@ final class GridViewController: BaseGridViewController {
     /// - true이면 applyPendingViewerReturn()에서 강제 스크롤 skip
     private var didUserScrollAfterReturn: Bool = false
 
+    /// Navigation pop 시 transitionCoordinator completion에서 처리 예정 플래그
+    /// - true이면 viewerDidClose()에서 applyPendingViewerReturn() 호출 skip
+    /// - coordinator completion에서 false로 리셋 + applyPendingViewerReturn() 실행
+    /// - Modal 경로(iOS 16~25)에서는 transitionCoordinator가 없어 항상 false → viewerDidClose에서 처리
+    private var hasTransitionCoordinatorForReturn = false
+
     // MARK: - Initial Display State (B+A 조합 v2)
 
     /// 초기 표시 완료 여부 (단일 상태 - finishInitialDisplay에서만 변경) (extension에서 접근 필요)
@@ -317,12 +323,16 @@ final class GridViewController: BaseGridViewController {
         }
 
         // iOS 18+ Zoom Transition 안정화: 전환 중이면 completion에서 처리
+        // Navigation pop(iOS 26): coordinator 존재 → viewerDidClose skip, completion에서 처리
+        // Modal dismiss(iOS 16~25): coordinator 없음 → viewerDidClose에서 처리
         if let coordinator = transitionCoordinator {
+            hasTransitionCoordinatorForReturn = true
             #if DEBUG
             let coordStart = CFAbsoluteTimeGetCurrent()
             Logger.performance.debug("[ScrollDiag] transitionCoordinator 등록 시점")
             #endif
             coordinator.animate(alongsideTransition: nil) { [weak self] _ in
+                self?.hasTransitionCoordinatorForReturn = false
                 #if DEBUG
                 let coordEnd = CFAbsoluteTimeGetCurrent()
                 Logger.performance.debug("[ScrollDiag] transitionCoordinator completion 실행: 등록 후 \(String(format: "%.0f", (coordEnd - coordStart) * 1000))ms")
@@ -392,11 +402,14 @@ final class GridViewController: BaseGridViewController {
         #endif
 
         // iOS 18+ Zoom Transition 안정화: fallback (transitionCoordinator 없을 때)
-        applyPendingViewerReturn()
+        // Navigation pop(iOS 26): coordinator completion에서 처리 → 여기서 skip
+        if !hasTransitionCoordinatorForReturn {
+            applyPendingViewerReturn()
+        }
 
         #if DEBUG
         let t1 = CFAbsoluteTimeGetCurrent()
-        Logger.performance.debug("[ScrollDiag] applyPendingViewerReturn: \(String(format: "%.1f", (t1 - vdaStart) * 1000))ms")
+        Logger.performance.debug("[ScrollDiag] applyPendingViewerReturn: \(String(format: "%.1f", (t1 - vdaStart) * 1000))ms (coordPending=\(self.hasTransitionCoordinatorForReturn))")
         #endif
 
         // [LiquidGlass 최적화] 블러 뷰 사전 생성 + idle pause
@@ -1065,8 +1078,16 @@ extension GridViewController: ViewerViewControllerDelegate {
     /// iOS 16~25 Modal (shouldRemovePresentersView=false) 경로에서
     /// viewWillAppear/viewDidAppear가 호출되지 않으므로 이 콜백으로 처리
     func viewerDidClose() {
+        // Navigation pop(iOS 26): transitionCoordinator completion에서 처리 예정 → skip
+        // Modal dismiss(iOS 16~25): viewWillAppear 미호출 → 여기서 처리
+        if hasTransitionCoordinatorForReturn {
+            #if DEBUG
+            Logger.performance.debug("[ScrollDiag] viewerDidClose: Navigation 경로 → coordinator completion에서 처리 (skip)")
+            #endif
+            return
+        }
         #if DEBUG
-        Logger.performance.debug("[ScrollDiag] viewerDidClose 호출")
+        Logger.performance.debug("[ScrollDiag] viewerDidClose: Modal 경로 → applyPendingViewerReturn 실행")
         let t = CFAbsoluteTimeGetCurrent()
         #endif
         applyPendingViewerReturn()
@@ -1093,15 +1114,36 @@ extension GridViewController: ViewerViewControllerDelegate {
             return
         }
 
+        #if DEBUG
+        let s0 = CFAbsoluteTimeGetCurrent()
+        #endif
+
         // iOS 사진 앱처럼: 마지막 보던 사진이 화면에 없으면 해당 위치로 스크롤
         // padding 보정 적용 (Base의 collectionIndexPath 사용)
         guard let indexPath = collectionIndexPath(for: assetID) else { return }
 
+        #if DEBUG
+        let s1 = CFAbsoluteTimeGetCurrent()
+        #endif
+
         // 현재 보이는 셀인지 확인
         let visibleIndexPaths = collectionView.indexPathsForVisibleItems
-        if !visibleIndexPaths.contains(indexPath) {
+        let isVisible = visibleIndexPaths.contains(indexPath)
+
+        #if DEBUG
+        let s2 = CFAbsoluteTimeGetCurrent()
+        Logger.performance.debug("[ScrollDiag] applyPending 내부: indexPath조회=\(String(format: "%.0f", (s1 - s0) * 1000))ms, visibleItems=\(String(format: "%.0f", (s2 - s1) * 1000))ms, isVisible=\(isVisible), visibleCount=\(visibleIndexPaths.count)")
+        #endif
+
+        if !isVisible {
             // 화면에 없으면 스크롤 (중앙에 위치하도록)
+            #if DEBUG
+            let scrollStart = CFAbsoluteTimeGetCurrent()
+            #endif
             collectionView.scrollToItem(at: indexPath, at: .centeredVertically, animated: false)
+            #if DEBUG
+            Logger.performance.debug("[ScrollDiag] scrollToItem: \(String(format: "%.0f", (CFAbsoluteTimeGetCurrent() - scrollStart) * 1000))ms → item=\(indexPath.item)")
+            #endif
         }
     }
 }
