@@ -603,19 +603,6 @@ final class SimilarityAnalysisQueue {
     /// norm < 7인 얼굴은 저품질로 판정하여 신규 슬롯 생성 금지
     private let minEmbeddingNorm: Float = 7.0
 
-    /// Phase 1 결과: 사진별 얼굴 감지 + 임베딩 (병렬 처리용)
-    private struct FaceComputeResult: Sendable {
-        let assetID: String
-        let faceEmbeddings: [Int: [Float]]
-        let faceData: [Int: FaceSpatialData]
-    }
-
-    /// 얼굴 위치 데이터 (Sendable 준수)
-    private struct FaceSpatialData: Sendable {
-        let center: CGPoint
-        let boundingBox: CGRect
-    }
-
     /// 매칭 후보 (전역 정렬용)
     private struct MatchCandidate {
         let faceIdx: Int
@@ -627,103 +614,6 @@ final class SimilarityAnalysisQueue {
         let embedding: [Float]    // Keep Best용 임베딩
         let norm: Float           // 얼굴 임베딩 품질
         let slotNorm: Float       // 슬롯 임베딩 품질 (고품질 확장 판정용)
-    }
-
-    /// Phase 1: 모든 사진의 얼굴 감지 + 임베딩을 병렬 처리
-    ///
-    /// iOS 17+에서 Core ML async prediction + TaskGroup으로 병렬 실행.
-    /// maxConcurrent=3으로 메모리/I/O 동시 부하를 제한합니다.
-    ///
-    /// - Parameters:
-    ///   - assetIDs: 처리할 사진 ID 배열
-    ///   - photoMap: assetID → PHAsset 매핑
-    /// - Returns: assetID → FaceComputeResult 딕셔너리
-    @available(iOS 17.0, *)
-    private func parallelDetectAndEmbed(
-        assetIDs: [String],
-        photoMap: [String: PHAsset]
-    ) async -> [String: FaceComputeResult] {
-
-        let maxConcurrent = 3  // 동시 처리 제한 (메모리 + I/O 관리)
-        let semaphore = AsyncSemaphore(value: maxConcurrent)
-
-        return await withTaskGroup(of: FaceComputeResult.self) { group in
-            for assetID in assetIDs {
-                group.addTask { [imageLoader] in
-                    return await semaphore.withPermit {
-
-                        // 취소 체크
-                        guard !Task.isCancelled else {
-                            return FaceComputeResult(assetID: assetID, faceEmbeddings: [:], faceData: [:])
-                        }
-
-                        // 이미지 로드
-                        guard let photo = photoMap[assetID],
-                              let cgImage = try? await imageLoader.loadImage(
-                                  for: photo,
-                                  maxSize: SimilarityConstants.personMatchImageMaxSize
-                              ),
-                              let yunet = YuNetFaceDetector.shared,
-                              let sface = SFaceRecognizer.shared else {
-                            return FaceComputeResult(assetID: assetID, faceEmbeddings: [:], faceData: [:])
-                        }
-
-                        // YuNet 비동기 감지
-                        guard let detections = try? await yunet.detectAsync(in: cgImage) else {
-                            return FaceComputeResult(assetID: assetID, faceEmbeddings: [:], faceData: [:])
-                        }
-
-                        // FaceAligner + SFace 비동기 임베딩
-                        var embeddings: [Int: [Float]] = [:]
-                        var spatialData: [Int: FaceSpatialData] = [:]
-                        let imgW = CGFloat(cgImage.width)
-                        let imgH = CGFloat(cgImage.height)
-
-                        for (faceIdx, det) in detections.enumerated() {
-                            // normalized 좌표로 변환 (Vision 좌표계: 원점이 왼쪽 아래)
-                            let box = CGRect(
-                                x: det.boundingBox.origin.x / imgW,
-                                y: 1.0 - (det.boundingBox.origin.y + det.boundingBox.size.height) / imgH,
-                                width: det.boundingBox.size.width / imgW,
-                                height: det.boundingBox.size.height / imgH
-                            )
-                            spatialData[faceIdx] = FaceSpatialData(
-                                center: CGPoint(x: box.midX, y: box.midY),
-                                boundingBox: box
-                            )
-
-                            // FaceAligner로 정렬
-                            guard let aligned = try? FaceAligner.shared.align(
-                                image: cgImage, landmarks: det.landmarks
-                            ) else { continue }
-
-                            // SFace 비동기 임베딩 추출
-                            if let emb = try? await sface.extractEmbeddingAsync(from: aligned) {
-                                embeddings[faceIdx] = emb
-                            } else {
-                                // SFace 실패 카운팅 (MainActor에서 실행)
-                                await MainActor.run {
-                                    AnalyticsService.shared.countError(.embedding as AnalyticsError.Face)
-                                }
-                            }
-                        }
-
-                        return FaceComputeResult(
-                            assetID: assetID,
-                            faceEmbeddings: embeddings,
-                            faceData: spatialData
-                        )
-                    } // withPermit 끝
-                }
-            }
-
-            // 결과 수집
-            var results: [String: FaceComputeResult] = [:]
-            for await result in group {
-                results[result.assetID] = result
-            }
-            return results
-        }
     }
 
     /// 그룹 단위로 일관된 인물 번호를 부여합니다.
@@ -766,34 +656,13 @@ final class SimilarityAnalysisQueue {
 
         // 성능 측정 변수
         let perfGroupStart = CFAbsoluteTimeGetCurrent()
-        var perfComputeTotal: Double = 0  // Phase 1: Load+YuNet+SFace 병렬 합산
+        var perfLoadTotal: Double = 0
+        var perfYunetTotal: Double = 0
+        var perfSfaceTotal: Double = 0
         var perfMatchTotal: Double = 0
         var perfFaceCount: Int = 0
 
-        // === Phase 1: 얼굴 감지 + 임베딩 (iOS 17+: 병렬, iOS 16: 루프 내 순차) ===
-        var precomputedFaces: [String: FaceComputeResult]? = nil
-
-        if #available(iOS 17.0, *) {
-            let computeStart = CFAbsoluteTimeGetCurrent()
-            precomputedFaces = await parallelDetectAndEmbed(
-                assetIDs: assetIDs,
-                photoMap: photoMap
-            )
-            perfComputeTotal = (CFAbsoluteTimeGetCurrent() - computeStart) * 1000
-
-            // 전체 얼굴 수 집계
-            for (_, result) in precomputedFaces ?? [:] {
-                perfFaceCount += result.faceEmbeddings.count
-            }
-        }
-
-        // 취소 체크: Phase 1 이후
-        guard !Task.isCancelled else {
-            Logger.similarPhoto.debug("Cancelled after Phase 1 compute")
-            return result
-        }
-
-        // === Phase 2: 순차 매칭 ===
+        // 각 사진 처리
         for assetID in assetIDs {
             // 취소 체크: 사진 처리 루프
             guard !Task.isCancelled else {
@@ -804,86 +673,76 @@ final class SimilarityAnalysisQueue {
             let shortID = String(assetID.prefix(8))
             _ = shortID  // 주석 처리된 디버그 로그에서 사용 — 로그 복원 시 제거
 
-            // Phase 1 결과 또는 순차 계산으로 faceEmbeddings/faceData 획득
-            let faceEmbeddings: [Int: [Float]]
-            let faceData: [Int: FaceSpatialData]
-
-            if let precomputed = precomputedFaces?[assetID] {
-                // iOS 17+: 미리 계산된 결과 사용
-                faceEmbeddings = precomputed.faceEmbeddings
-                faceData = precomputed.faceData
-
-                // 빈 결과면 얼굴 없는 것으로 처리
-                if faceEmbeddings.isEmpty && faceData.isEmpty {
-                    result[assetID] = []
-                    continue
-                }
-            } else {
-                // iOS 16: 기존 순차 처리
-                var cgImage: CGImage? = nil
-                if let photo = photoMap[assetID] {
-                    cgImage = try? await imageLoader.loadImage(
-                        for: photo,
-                        maxSize: SimilarityConstants.personMatchImageMaxSize
-                    )
-                }
-
-                var seqEmbeddings: [Int: [Float]] = [:]
-                var seqFaceData: [Int: FaceSpatialData] = [:]
-
-                if let image = cgImage,
-                   let yunet = YuNetFaceDetector.shared,
-                   let sface = SFaceRecognizer.shared {
-
-                    let yunetDetections: [YuNetDetection]
-                    do {
-                        yunetDetections = try yunet.detect(in: image)
-                    } catch {
-                        result[assetID] = []
-                        continue
-                    }
-
-                    let imageWidth = CGFloat(image.width)
-                    let imageHeight = CGFloat(image.height)
-
-                    for (faceIdx, detection) in yunetDetections.enumerated() {
-                        // normalized 좌표로 변환 (Vision 좌표계)
-                        let normalizedBox = CGRect(
-                            x: detection.boundingBox.origin.x / imageWidth,
-                            y: 1.0 - (detection.boundingBox.origin.y + detection.boundingBox.size.height) / imageHeight,
-                            width: detection.boundingBox.size.width / imageWidth,
-                            height: detection.boundingBox.size.height / imageHeight
-                        )
-                        seqFaceData[faceIdx] = FaceSpatialData(
-                            center: CGPoint(x: normalizedBox.midX, y: normalizedBox.midY),
-                            boundingBox: normalizedBox
-                        )
-
-                        // FaceAligner로 정렬
-                        guard let alignedFace = try? FaceAligner.shared.align(
-                            image: image,
-                            landmarks: detection.landmarks
-                        ) else { continue }
-
-                        // SFace로 임베딩 추출
-                        do {
-                            let embedding = try sface.extractEmbedding(from: alignedFace)
-                            seqEmbeddings[faceIdx] = embedding
-                        } catch {
-                            AnalyticsService.shared.countError(.embedding as AnalyticsError.Face)
-                            continue
-                        }
-                    }
-
-                    perfFaceCount += seqEmbeddings.count
-                } else {
-                    result[assetID] = []
-                    continue
-                }
-
-                faceEmbeddings = seqEmbeddings
-                faceData = seqFaceData
+            // 이미지 로드 (인물 매칭용 고해상도)
+            let perfLoadStart = CFAbsoluteTimeGetCurrent()
+            var cgImage: CGImage? = nil
+            if let photo = photoMap[assetID] {
+                cgImage = try? await imageLoader.loadImage(
+                    for: photo,
+                    maxSize: SimilarityConstants.personMatchImageMaxSize
+                )
             }
+            perfLoadTotal += (CFAbsoluteTimeGetCurrent() - perfLoadStart) * 1000
+
+            // === Step 1: YuNet으로 얼굴 감지 + SFace 임베딩 생성 ===
+            var faceEmbeddings: [Int: [Float]] = [:]
+            var faceData: [Int: (center: CGPoint, boundingBox: CGRect)] = [:]
+
+            guard let image = cgImage,
+                  let yunet = YuNetFaceDetector.shared,
+                  let sface = SFaceRecognizer.shared else {
+                // 모델 또는 이미지 로드 실패 시 빈 결과 (얼굴 없는 것으로 처리)
+                result[assetID] = []
+                continue
+            }
+
+            // YuNet으로 얼굴 감지 (landmark 포함)
+            let perfYunetStart = CFAbsoluteTimeGetCurrent()
+            let yunetDetections: [YuNetDetection]
+            do {
+                yunetDetections = try yunet.detect(in: image)
+            } catch {
+                result[assetID] = []
+                continue
+            }
+            perfYunetTotal += (CFAbsoluteTimeGetCurrent() - perfYunetStart) * 1000
+
+            let perfSfaceStart = CFAbsoluteTimeGetCurrent()
+            for (faceIdx, detection) in yunetDetections.enumerated() {
+                // normalized 좌표로 변환 (Vision 좌표계: 원점이 왼쪽 아래)
+                // YuNet은 일반 이미지 좌표계 (원점이 왼쪽 위)이므로 y좌표 뒤집기 필요
+                let imageWidth = CGFloat(image.width)
+                let imageHeight = CGFloat(image.height)
+                let normalizedBox = CGRect(
+                    x: detection.boundingBox.origin.x / imageWidth,
+                    y: 1.0 - (detection.boundingBox.origin.y + detection.boundingBox.size.height) / imageHeight,
+                    width: detection.boundingBox.size.width / imageWidth,
+                    height: detection.boundingBox.size.height / imageHeight
+                )
+                let center = CGPoint(x: normalizedBox.midX, y: normalizedBox.midY)
+                faceData[faceIdx] = (center: center, boundingBox: normalizedBox)
+
+                // FaceAligner로 정렬 (픽셀 좌표 landmark 사용)
+                guard let alignedFace = try? FaceAligner.shared.align(
+                    image: image,
+                    landmarks: detection.landmarks
+                ) else {
+                    continue
+                }
+
+                // SFace로 임베딩 추출
+                do {
+                    let embedding = try sface.extractEmbedding(from: alignedFace)
+                    faceEmbeddings[faceIdx] = embedding
+                } catch {
+                    // [Analytics] 얼굴 임베딩 추출 실패
+                    AnalyticsService.shared.countError(.embedding as AnalyticsError.Face)
+                    continue
+                }
+            }
+
+            perfSfaceTotal += (CFAbsoluteTimeGetCurrent() - perfSfaceStart) * 1000
+            perfFaceCount += faceEmbeddings.count
 
             let perfMatchStart = CFAbsoluteTimeGetCurrent()
 
@@ -934,11 +793,6 @@ final class SimilarityAnalysisQueue {
             }
 
             // === Step 3: 비용 산출 (코사인 유사도 → 거리 변환) ===
-            // SFace 인스턴스 (코사인 유사도 계산용)
-            guard let sface = SFaceRecognizer.shared else {
-                result[assetID] = []
-                continue
-            }
             var allCandidates: [MatchCandidate] = []
 
             // 각 얼굴의 norm 미리 계산 (결정성 보장: 키 정렬)
@@ -1277,13 +1131,7 @@ final class SimilarityAnalysisQueue {
         // 성능 측정 요약 로그 (얼굴이 있는 그룹만 유의미)
         let perfGroupTotal = (CFAbsoluteTimeGetCurrent() - perfGroupStart) * 1000
         if perfFaceCount > 0 {
-            if precomputedFaces != nil {
-                // iOS 17+: 병렬 처리 (Compute = Load+YuNet+SFace 병렬 합산)
-                Logger.similarPhoto.debug("[Perf] assignPerson(async): \(assetIDs.count)장, \(perfFaceCount)faces — Compute:\(String(format: "%.0f", perfComputeTotal))ms Match:\(String(format: "%.0f", perfMatchTotal))ms Total:\(String(format: "%.0f", perfGroupTotal))ms")
-            } else {
-                // iOS 16: 순차 처리 (개별 시간은 미측정, Total만 표시)
-                Logger.similarPhoto.debug("[Perf] assignPerson(seq): \(assetIDs.count)장, \(perfFaceCount)faces — Match:\(String(format: "%.0f", perfMatchTotal))ms Total:\(String(format: "%.0f", perfGroupTotal))ms")
-            }
+            Logger.similarPhoto.debug("[Perf] assignPerson: \(assetIDs.count)장, \(perfFaceCount)faces — Load:\(String(format: "%.0f", perfLoadTotal))ms YuNet:\(String(format: "%.0f", perfYunetTotal))ms SFace:\(String(format: "%.0f", perfSfaceTotal))ms Match:\(String(format: "%.0f", perfMatchTotal))ms Total:\(String(format: "%.0f", perfGroupTotal))ms")
         }
 
         return result

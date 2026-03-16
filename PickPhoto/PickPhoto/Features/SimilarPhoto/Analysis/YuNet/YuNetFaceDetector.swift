@@ -153,25 +153,10 @@ final class YuNetFaceDetector {
 
     /// 이미지에서 얼굴을 감지합니다 (비동기).
     ///
-    /// iOS 17+: Core ML 네이티브 async prediction (파이프라이닝 지원)
-    /// iOS 16: GCD 래퍼로 백그라운드 스레드에서 동기 추론
-    ///
     /// - Parameter image: 감지할 CGImage
     /// - Returns: 감지된 얼굴 배열 (원본 이미지 좌표)
     /// - Throws: YuNetError
     func detectAsync(in image: CGImage) async throws -> [YuNetDetection] {
-        // iOS 17+: Core ML 네이티브 async (파이프라이닝 지원)
-        if #available(iOS 17.0, *) {
-            let (input, letterboxInfo) = try preprocessor.preprocess(image)
-            let outputs = try await runInferenceAsync(input: input)
-            let detections = decoder.decode(outputs: outputs, scoreThreshold: scoreThreshold)
-            if detections.isEmpty { return [] }
-            let nmsResult = performNMS(detections: detections)
-            let topKResult = Array(nmsResult.prefix(topK))
-            return topKResult.map { YuNetDecoder.transformFromLetterbox($0, letterboxInfo: letterboxInfo) }
-        }
-
-        // iOS 16: 기존 GCD 래퍼 유지
         return try await withCheckedThrowingContinuation { continuation in
             DispatchQueue.global(qos: .userInitiated).async {
                 do {
@@ -201,23 +186,6 @@ final class YuNetFaceDetector {
             // 추론 실행
             let outputs = try model.prediction(from: inputFeature)
             return outputs
-        } catch {
-            throw YuNetError.inferenceFailed(error.localizedDescription)
-        }
-    }
-
-    /// Core ML 비동기 추론 (iOS 17+ 파이프라이닝 지원)
-    ///
-    /// - Parameter input: 전처리된 입력 MLMultiArray
-    /// - Returns: 모델 출력 (MLFeatureProvider)
-    /// - Throws: YuNetError.inferenceFailed
-    @available(iOS 17.0, *)
-    private func runInferenceAsync(input: MLMultiArray) async throws -> MLFeatureProvider {
-        do {
-            let inputFeature = try MLDictionaryFeatureProvider(dictionary: [
-                "input": MLFeatureValue(multiArray: input)
-            ])
-            return try await model.prediction(from: inputFeature, options: MLPredictionOptions())
         } catch {
             throw YuNetError.inferenceFailed(error.localizedDescription)
         }
