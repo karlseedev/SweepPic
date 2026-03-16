@@ -654,6 +654,14 @@ final class SimilarityAnalysisQueue {
         let highQualityNormLimit: Float = 8.0       // 양쪽 norm ≥ 8.0이면 고품질 쌍
         let extendedRejectThreshold: Float = 0.75   // 고품질 쌍의 완화된 거절 임계값
 
+        // 성능 측정 변수
+        let perfGroupStart = CFAbsoluteTimeGetCurrent()
+        var perfLoadTotal: Double = 0
+        var perfYunetTotal: Double = 0
+        var perfSfaceTotal: Double = 0
+        var perfMatchTotal: Double = 0
+        var perfFaceCount: Int = 0
+
         // 각 사진 처리
         for assetID in assetIDs {
             // 취소 체크: 사진 처리 루프
@@ -666,6 +674,7 @@ final class SimilarityAnalysisQueue {
             _ = shortID  // 주석 처리된 디버그 로그에서 사용 — 로그 복원 시 제거
 
             // 이미지 로드 (인물 매칭용 고해상도)
+            let perfLoadStart = CFAbsoluteTimeGetCurrent()
             var cgImage: CGImage? = nil
             if let photo = photoMap[assetID] {
                 cgImage = try? await imageLoader.loadImage(
@@ -673,6 +682,7 @@ final class SimilarityAnalysisQueue {
                     maxSize: SimilarityConstants.personMatchImageMaxSize
                 )
             }
+            perfLoadTotal += (CFAbsoluteTimeGetCurrent() - perfLoadStart) * 1000
 
             // === Step 1: YuNet으로 얼굴 감지 + SFace 임베딩 생성 ===
             var faceEmbeddings: [Int: [Float]] = [:]
@@ -687,6 +697,7 @@ final class SimilarityAnalysisQueue {
             }
 
             // YuNet으로 얼굴 감지 (landmark 포함)
+            let perfYunetStart = CFAbsoluteTimeGetCurrent()
             let yunetDetections: [YuNetDetection]
             do {
                 yunetDetections = try yunet.detect(in: image)
@@ -694,7 +705,9 @@ final class SimilarityAnalysisQueue {
                 result[assetID] = []
                 continue
             }
+            perfYunetTotal += (CFAbsoluteTimeGetCurrent() - perfYunetStart) * 1000
 
+            let perfSfaceStart = CFAbsoluteTimeGetCurrent()
             for (faceIdx, detection) in yunetDetections.enumerated() {
                 // normalized 좌표로 변환 (Vision 좌표계: 원점이 왼쪽 아래)
                 // YuNet은 일반 이미지 좌표계 (원점이 왼쪽 위)이므로 y좌표 뒤집기 필요
@@ -727,6 +740,11 @@ final class SimilarityAnalysisQueue {
                     continue
                 }
             }
+
+            perfSfaceTotal += (CFAbsoluteTimeGetCurrent() - perfSfaceStart) * 1000
+            perfFaceCount += faceEmbeddings.count
+
+            let perfMatchStart = CFAbsoluteTimeGetCurrent()
 
             // === Step 2: 부팅 (ActiveSlots 비어있을 때) ===
             // 부팅 시에는 저품질 포함 모든 얼굴로 슬롯 생성 (모든 인물이 슬롯 보유)
@@ -1105,7 +1123,15 @@ final class SimilarityAnalysisQueue {
             }
             _ = (totalFaces, matchedCount)  // 주석 처리된 디버그 로그에서 사용 — 로그 복원 시 제거
 
+            perfMatchTotal += (CFAbsoluteTimeGetCurrent() - perfMatchStart) * 1000
+
             result[assetID] = cachedFaces
+        }
+
+        // 성능 측정 요약 로그 (얼굴이 있는 그룹만 유의미)
+        let perfGroupTotal = (CFAbsoluteTimeGetCurrent() - perfGroupStart) * 1000
+        if perfFaceCount > 0 {
+            Logger.similarPhoto.debug("[Perf] assignPerson: \(assetIDs.count)장, \(perfFaceCount)faces — Load:\(String(format: "%.0f", perfLoadTotal))ms YuNet:\(String(format: "%.0f", perfYunetTotal))ms SFace:\(String(format: "%.0f", perfSfaceTotal))ms Match:\(String(format: "%.0f", perfMatchTotal))ms Total:\(String(format: "%.0f", perfGroupTotal))ms")
         }
 
         return result
