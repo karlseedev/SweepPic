@@ -48,6 +48,11 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         // 파이프라인 통계 리셋 (앱 시작 시)
         ImagePipeline.shared.resetStats()
 
+        #if DEBUG
+        // [진단] 메인 스레드 블로킹 감지 (33ms = 2프레임 이상 블로킹 시 로그)
+        startMainThreadHangDetector()
+        #endif
+
         // [Analytics] TelemetryDeck SDK 초기화 + AppCore 브릿지 주입
         AnalyticsService.shared.configure(appID: "B42FE72D-8A4F-4EA8-90C5-6E2EFA0E7ECC")
         Analytics.reporter = AnalyticsService.shared
@@ -107,6 +112,34 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     ) {
         // Scene 세션 정리 (필요시 구현)
     }
+
+    // MARK: - Main Thread Hang Detector (DEBUG)
+
+    #if DEBUG
+    /// 메인 스레드가 33ms 이상 블로킹되면 경고 로그를 출력합니다.
+    /// 백그라운드 스레드에서 주기적으로 메인 스레드 응답성을 체크합니다.
+    private func startMainThreadHangDetector() {
+        DispatchQueue.global(qos: .userInteractive).async {
+            while true {
+                let semaphore = DispatchSemaphore(value: 0)
+                DispatchQueue.main.async {
+                    semaphore.signal()
+                }
+                // 33ms (2프레임) 대기
+                let result = semaphore.wait(timeout: .now() + .milliseconds(33))
+                if result == .timedOut {
+                    // 블로킹 지속 시간 측정
+                    let hangStart = CFAbsoluteTimeGetCurrent()
+                    semaphore.wait() // 실제 응답까지 대기
+                    let hangDuration = (CFAbsoluteTimeGetCurrent() - hangStart) * 1000
+                    Logger.performance.error("[ScrollDiag] ⚠️ 메인 스레드 블로킹: \(String(format: "%.0f", hangDuration + 33))ms")
+                }
+                // 체크 간격: 50ms
+                usleep(50_000)
+            }
+        }
+    }
+    #endif
 
     // MARK: - Memory Warning
 

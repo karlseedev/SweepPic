@@ -318,8 +318,21 @@ final class GridViewController: BaseGridViewController {
 
         // iOS 18+ Zoom Transition 안정화: 전환 중이면 completion에서 처리
         if let coordinator = transitionCoordinator {
+            #if DEBUG
+            let coordStart = CFAbsoluteTimeGetCurrent()
+            Logger.performance.debug("[ScrollDiag] transitionCoordinator 등록 시점")
+            #endif
             coordinator.animate(alongsideTransition: nil) { [weak self] _ in
+                #if DEBUG
+                let coordEnd = CFAbsoluteTimeGetCurrent()
+                Logger.performance.debug("[ScrollDiag] transitionCoordinator completion 실행: 등록 후 \(String(format: "%.0f", (coordEnd - coordStart) * 1000))ms")
+                let applyStart = CFAbsoluteTimeGetCurrent()
+                #endif
                 self?.applyPendingViewerReturn()
+                #if DEBUG
+                let applyEnd = CFAbsoluteTimeGetCurrent()
+                Logger.performance.debug("[ScrollDiag] coordinator→applyPendingViewerReturn: \(String(format: "%.1f", (applyEnd - applyStart) * 1000))ms")
+                #endif
             }
             return
         }
@@ -374,12 +387,32 @@ final class GridViewController: BaseGridViewController {
     override func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
 
+        #if DEBUG
+        let vdaStart = CFAbsoluteTimeGetCurrent()
+        #endif
+
         // iOS 18+ Zoom Transition 안정화: fallback (transitionCoordinator 없을 때)
         applyPendingViewerReturn()
 
+        #if DEBUG
+        let t1 = CFAbsoluteTimeGetCurrent()
+        Logger.performance.debug("[ScrollDiag] applyPendingViewerReturn: \(String(format: "%.1f", (t1 - vdaStart) * 1000))ms")
+        #endif
+
         // [LiquidGlass 최적화] 블러 뷰 사전 생성 + idle pause
         LiquidGlassOptimizer.preload(in: view.window)
+
+        #if DEBUG
+        let t2 = CFAbsoluteTimeGetCurrent()
+        Logger.performance.debug("[ScrollDiag] LG.preload: \(String(format: "%.1f", (t2 - t1) * 1000))ms")
+        #endif
+
         LiquidGlassOptimizer.enterIdle(in: view.window)
+
+        #if DEBUG
+        let t3 = CFAbsoluteTimeGetCurrent()
+        Logger.performance.debug("[ScrollDiag] LG.enterIdle: \(String(format: "%.1f", (t3 - t2) * 1000))ms")
+        #endif
 
         AutoScrollTester.shared.startIfRequestedByLaunchArguments(scrollView: collectionView)
 
@@ -394,6 +427,17 @@ final class GridViewController: BaseGridViewController {
 
         // A-1: 스와이프 삭제 실습 유도 (A 완료 + E-1 미완료 시 5초 후 표시)
         startCoachMarkA1TimerIfNeeded()
+
+        #if DEBUG
+        let vdaEnd = CFAbsoluteTimeGetCurrent()
+        Logger.performance.debug("[ScrollDiag] viewDidAppear 총합: \(String(format: "%.1f", (vdaEnd - vdaStart) * 1000))ms | isScrollEnabled=\(self.collectionView.isScrollEnabled) | isUserInteractionEnabled=\(self.collectionView.isUserInteractionEnabled)")
+
+        // RunLoop 다음 사이클 추적 — viewDidAppear 이후 동기 작업 완료 시점
+        DispatchQueue.main.async {
+            let asyncTime = CFAbsoluteTimeGetCurrent()
+            Logger.performance.debug("[ScrollDiag] ✅ RunLoop 다음 사이클: viewDidAppear 후 \(String(format: "%.0f", (asyncTime - vdaEnd) * 1000))ms")
+        }
+        #endif
 
         // [A) preheat OFF 테스트] 초기 프리히트 비활성화
         // v6: visible indexPaths가 확실히 채워진 시점에 초기 프리히트
@@ -1021,7 +1065,14 @@ extension GridViewController: ViewerViewControllerDelegate {
     /// iOS 16~25 Modal (shouldRemovePresentersView=false) 경로에서
     /// viewWillAppear/viewDidAppear가 호출되지 않으므로 이 콜백으로 처리
     func viewerDidClose() {
+        #if DEBUG
+        Logger.performance.debug("[ScrollDiag] viewerDidClose 호출")
+        let t = CFAbsoluteTimeGetCurrent()
+        #endif
         applyPendingViewerReturn()
+        #if DEBUG
+        Logger.performance.debug("[ScrollDiag] viewerDidClose→applyPendingViewerReturn: \(String(format: "%.1f", (CFAbsoluteTimeGetCurrent() - t) * 1000))ms")
+        #endif
     }
 
     /// 뷰어 닫힘 후 대기 중인 작업 처리 (전환 완료 후 호출)
