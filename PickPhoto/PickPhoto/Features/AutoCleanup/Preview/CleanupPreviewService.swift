@@ -250,13 +250,10 @@ final class CleanupPreviewService {
                 var aestheticsScore: Float? = nil
                 var isUtility = false
                 var isTextScreenshot = false
-                var loadedImage: CGImage? = nil
 
                 if #available(iOS 18.0, *) {
-                    // 이미지 로드 (SafeGuard에서도 재사용하기 위해 외부 변수에 캡처)
+                    // 이미지 로드
                     if let image = try? await CleanupImageLoader.shared.loadImage(for: asset) {
-                        loadedImage = image
-
                         // AestheticsScore 분석
                         if let metrics = try? await AestheticsAnalyzer.shared.analyze(image) {
                             aestheticsScore = metrics.overallScore

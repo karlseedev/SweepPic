@@ -663,6 +663,7 @@ final class SimilarityAnalysisQueue {
             }
 
             let shortID = String(assetID.prefix(8))
+            _ = shortID  // 주석 처리된 디버그 로그에서 사용 — 로그 복원 시 제거
 
             // 이미지 로드 (인물 매칭용 고해상도)
             var cgImage: CGImage? = nil
@@ -1099,8 +1100,10 @@ final class SimilarityAnalysisQueue {
                     let norm = faceNorms[idx] ?? 0
                     return "face[\(idx)](norm=\(String(format: "%.1f", norm)))"
                 }.joined(separator: ", ")
+                _ = unmatchedInfo  // 주석 처리된 디버그 로그에서 사용 — 로그 복원 시 제거
                 // Logger.similarPhoto.debug("[PersonMatch] \(shortID): \(totalFaces)개 감지, \(matchedCount)개 매칭, 미매칭: \(unmatchedInfo)")
             }
+            _ = (totalFaces, matchedCount)  // 주석 처리된 디버그 로그에서 사용 — 로그 복원 시 제거
 
             result[assetID] = cachedFaces
         }
