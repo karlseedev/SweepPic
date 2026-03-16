@@ -429,9 +429,11 @@ extension AlbumGridViewController: ViewerViewControllerDelegate {
 
     /// 뷰어가 닫힐 때 호출
     /// iOS 18+ Zoom Transition 안정화: 전환 중 scrollToItem 금지
-    func viewerWillClose(currentAssetID: String?) {
+    func viewerWillClose(currentAssetID: String?, originalIndex: Int?) {
         // 스크롤 위치만 저장 (전환 완료 후 처리)
         pendingScrollAssetID = currentAssetID
+        // 원본 인덱스 힌트 저장 (buildCache O(n) 회피용)
+        pendingScrollOriginalIndex = originalIndex
         // 사용자 스크롤 플래그 초기화
         didUserScrollAfterReturn = false
     }
@@ -450,6 +452,8 @@ extension AlbumGridViewController: ViewerViewControllerDelegate {
     private func applyPendingViewerReturn() {
         guard let assetID = pendingScrollAssetID else { return }
         pendingScrollAssetID = nil
+        let hintIndex = pendingScrollOriginalIndex
+        pendingScrollOriginalIndex = nil
 
         // 안전 가드 1: 사용자가 복귀 후 스크롤했으면 skip
         if didUserScrollAfterReturn {
@@ -461,8 +465,17 @@ extension AlbumGridViewController: ViewerViewControllerDelegate {
             return
         }
 
-        // padding 보정 적용 (Base의 collectionIndexPath 사용)
-        guard let indexPath = collectionIndexPath(for: assetID) else { return }
+        // ★ O(1) 빠른 경로: 뷰어에서 전달받은 originalIndex로 직접 검증
+        let indexPath: IndexPath
+        if let hint = hintIndex,
+           let fetchResult = gridDataSource.fetchResultForViewer,
+           hint >= 0 && hint < fetchResult.count,
+           fetchResult.object(at: hint).localIdentifier == assetID {
+            indexPath = IndexPath(item: hint + paddingCellCount, section: 0)
+        } else {
+            // 힌트 불일치 → skip (라이브러리 변경 시 reloadData 이미 완료)
+            return
+        }
 
         let visibleIndexPaths = collectionView.indexPathsForVisibleItems
         if !visibleIndexPaths.contains(indexPath) {

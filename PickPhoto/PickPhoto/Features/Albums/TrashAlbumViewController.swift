@@ -829,11 +829,13 @@ extension TrashAlbumViewController: ViewerViewControllerDelegate {
     /// dismiss 애니메이션 전에 pre-fetch된 결과가 있으면 즉시 적용하여
     /// 그리드가 이미 정렬된 상태로 애니메이션 시작
     /// sourceViewProvider는 pendingScrollAssetID로 정확한 셀을 찾도록 보정
-    func viewerWillClose(currentAssetID: String?) {
+    func viewerWillClose(currentAssetID: String?, originalIndex: Int?) {
         // 뷰어 참조 정리
         activeViewerVC = nil
         // 스크롤 위치 저장 (sourceViewProvider 보정 + 전환 완료 후 스크롤용)
         pendingScrollAssetID = currentAssetID
+        // 원본 인덱스 힌트 저장 (buildCache O(n) 회피용)
+        pendingScrollOriginalIndex = originalIndex
         // 사용자 스크롤 플래그 초기화
         didUserScrollAfterReturn = false
 
@@ -912,6 +914,8 @@ extension TrashAlbumViewController: ViewerViewControllerDelegate {
             return
         }
         pendingScrollAssetID = nil
+        let hintIndex = pendingScrollOriginalIndex
+        pendingScrollOriginalIndex = nil
 
         // 안전 가드 1: 사용자가 복귀 후 스크롤했으면 skip
         if didUserScrollAfterReturn {
@@ -923,9 +927,19 @@ extension TrashAlbumViewController: ViewerViewControllerDelegate {
             return
         }
 
-        // padding 보정 적용하여 indexPath 계산
-        guard let assetIndex = _trashDataSource.assetIndex(for: assetID) else { return }
-        let indexPath = IndexPath(item: assetIndex + paddingCellCount, section: 0)
+        // ★ O(1) 빠른 경로: 뷰어에서 전달받은 originalIndex로 직접 검증
+        let indexPath: IndexPath
+        if let hint = hintIndex,
+           let fetchResult = _trashDataSource.fetchResult,
+           hint >= 0 && hint < fetchResult.count,
+           fetchResult.object(at: hint).localIdentifier == assetID {
+            indexPath = IndexPath(item: hint + paddingCellCount, section: 0)
+        } else if let assetIndex = _trashDataSource.assetIndex(for: assetID) {
+            // TrashDataSource는 이미 O(1) 캐시 사용 → fallback 안전
+            indexPath = IndexPath(item: assetIndex + paddingCellCount, section: 0)
+        } else {
+            return
+        }
 
         let visibleIndexPaths = collectionView.indexPathsForVisibleItems
         if !visibleIndexPaths.contains(indexPath) {

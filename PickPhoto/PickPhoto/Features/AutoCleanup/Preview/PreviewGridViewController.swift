@@ -879,7 +879,7 @@ extension PreviewGridViewController: ViewerViewControllerDelegate {
     func viewerDidRequestDelete(assetID: String) {}
     func viewerDidRequestRestore(assetID: String) {}
     func viewerDidRequestPermanentDelete(assetID: String) {}
-    func viewerWillClose(currentAssetID: String?) {}
+    func viewerWillClose(currentAssetID: String?, originalIndex: Int?) {}
 }
 
 // MARK: - Debug Quality Overlay

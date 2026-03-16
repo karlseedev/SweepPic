@@ -51,8 +51,10 @@ protocol ViewerViewControllerDelegate: AnyObject {
     func viewerDidRequestPermanentDelete(assetID: String)
 
     /// 뷰어가 닫힐 때 호출
-    /// - Parameter currentAssetID: 마지막으로 표시한 사진 ID
-    func viewerWillClose(currentAssetID: String?)
+    /// - Parameters:
+    ///   - currentAssetID: 마지막으로 표시한 사진 ID
+    ///   - originalIndex: PHFetchResult 기준 원본 인덱스 (O(n) buildCache 회피용)
+    func viewerWillClose(currentAssetID: String?, originalIndex: Int?)
 
     /// 정리 미리보기에서 사진 제외 요청
     /// - Parameter assetID: 제외할 사진 ID
@@ -442,9 +444,11 @@ final class ViewerViewController: UIViewController {
         // Modal에서는 수동으로 FloatingOverlay 복원
         findTabBarController()?.floatingOverlay?.isHidden = false
 
-        // 현재 표시 중인 사진 ID 전달
+        // 현재 표시 중인 사진 ID + 원본 인덱스 전달
+        // originalIndex: buildCache() O(n) 스캔을 회피하기 위한 힌트
         let currentAssetID = coordinator.assetID(at: currentIndex)
-        delegate?.viewerWillClose(currentAssetID: currentAssetID)
+        let originalIndex = coordinator.originalIndex(from: currentIndex)
+        delegate?.viewerWillClose(currentAssetID: currentAssetID, originalIndex: originalIndex)
     }
 
     override func viewDidDisappear(_ animated: Bool) {

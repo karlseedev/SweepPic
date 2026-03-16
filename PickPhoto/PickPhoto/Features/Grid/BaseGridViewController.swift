@@ -162,6 +162,10 @@ class BaseGridViewController: UIViewController {
     /// 뷰어 복귀 후 스크롤할 에셋 ID
     var pendingScrollAssetID: String?
 
+    /// 뷰어 복귀 후 스크롤할 원본 인덱스 (PHFetchResult 기준)
+    /// buildCache() O(n) 스캔을 회피하기 위한 힌트 — assetID 검증 후 사용
+    var pendingScrollOriginalIndex: Int?
+
     // MARK: - Swipe Delete Properties (PRD7)
 
     /// 스와이프 삭제 상태

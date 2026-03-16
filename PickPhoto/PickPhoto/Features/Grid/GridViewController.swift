@@ -1065,11 +1065,13 @@ extension GridViewController: ViewerViewControllerDelegate {
     /// 뷰어가 닫힐 때 호출
     /// iOS 18+ Zoom Transition 안정화: 전환 중 reloadData/scrollToItem 금지
     /// 실제 처리는 전환 완료 후 applyPendingViewerReturn()에서 수행
-    func viewerWillClose(currentAssetID: String?) {
+    func viewerWillClose(currentAssetID: String?, originalIndex: Int?) {
         // 뷰어 참조 정리
         activeViewerVC = nil
         // 스크롤 위치만 저장 (전환 완료 후 처리)
         pendingScrollAssetID = currentAssetID
+        // 원본 인덱스 힌트 저장 (buildCache O(n) 회피용)
+        pendingScrollOriginalIndex = originalIndex
         // 사용자 스크롤 플래그 초기화
         didUserScrollAfterReturn = false
     }
@@ -1103,6 +1105,8 @@ extension GridViewController: ViewerViewControllerDelegate {
     private func applyPendingViewerReturn() {
         guard let assetID = pendingScrollAssetID else { return }
         pendingScrollAssetID = nil
+        let hintIndex = pendingScrollOriginalIndex
+        pendingScrollOriginalIndex = nil
 
         // 안전 가드 1: 사용자가 복귀 후 스크롤했으면 skip
         if didUserScrollAfterReturn {
@@ -1118,9 +1122,26 @@ extension GridViewController: ViewerViewControllerDelegate {
         let s0 = CFAbsoluteTimeGetCurrent()
         #endif
 
-        // iOS 사진 앱처럼: 마지막 보던 사진이 화면에 없으면 해당 위치로 스크롤
-        // padding 보정 적용 (Base의 collectionIndexPath 사용)
-        guard let indexPath = collectionIndexPath(for: assetID) else { return }
+        // ★ O(1) 빠른 경로: 뷰어에서 전달받은 originalIndex로 직접 검증
+        // buildCache() O(n) 스캔(41,642개 PHAsset 순회 ~1400ms)을 회피
+        let indexPath: IndexPath
+        if let hint = hintIndex,
+           let fetchResult = gridDataSource.fetchResultForViewer,
+           hint >= 0 && hint < fetchResult.count,
+           fetchResult.object(at: hint).localIdentifier == assetID {
+            // ✅ 인덱스 일치 확인 → padding 보정하여 바로 사용
+            indexPath = IndexPath(item: hint + paddingCellCount, section: 0)
+            #if DEBUG
+            Logger.performance.debug("[ScrollDiag] applyPending: O(1) 빠른 경로 사용 (hint=\(hint))")
+            #endif
+        } else {
+            // ❌ 힌트 없음 또는 불일치 (라이브러리 변경됨) → skip
+            // 라이브러리 변경 시 applyChange()에서 이미 reloadData 완료 → 스크롤 불필요
+            #if DEBUG
+            Logger.performance.debug("[ScrollDiag] applyPending: 힌트 불일치 → skip (hint=\(String(describing: hintIndex)))")
+            #endif
+            return
+        }
 
         #if DEBUG
         let s1 = CFAbsoluteTimeGetCurrent()
