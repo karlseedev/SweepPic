@@ -244,6 +244,65 @@ final class SFaceRecognizer {
         return (bestIndex, bestScore)
     }
 
+    // MARK: - Public Methods - Async Embedding
+
+    /// 비동기 임베딩 추출 (iOS 17+ Core ML 파이프라이닝 지원)
+    ///
+    /// - Parameter alignedFace: FaceAligner로 정렬된 112×112 이미지
+    /// - Returns: 128차원 임베딩 벡터
+    /// - Throws: SFaceError
+    func extractEmbeddingAsync(from alignedFace: CGImage) async throws -> [Float] {
+        // 이미지 크기 검증
+        guard alignedFace.width == SFaceConfig.inputSize,
+              alignedFace.height == SFaceConfig.inputSize else {
+            throw SFaceError.invalidImage(
+                "112×112 이미지가 필요합니다 (현재: \(alignedFace.width)×\(alignedFace.height))"
+            )
+        }
+
+        let input = try preprocess(alignedFace)
+
+        // iOS 17+: Core ML 네이티브 async (파이프라이닝 지원)
+        if #available(iOS 17.0, *) {
+            return try await runInferenceAsync(input: input)
+        }
+
+        // iOS 16: 기존 동기 추론
+        return try runInference(input: input)
+    }
+
+    // MARK: - Private Methods - Async Inference
+
+    /// Core ML 비동기 추론 (iOS 17+ 파이프라이닝 지원)
+    ///
+    /// - Parameter input: 전처리된 입력 MLMultiArray
+    /// - Returns: 128차원 임베딩 벡터
+    /// - Throws: SFaceError.inferenceFailed
+    @available(iOS 17.0, *)
+    private func runInferenceAsync(input: MLMultiArray) async throws -> [Float] {
+        do {
+            let inputFeature = try MLDictionaryFeatureProvider(dictionary: [
+                "input_1": MLFeatureValue(multiArray: input)
+            ])
+            let output = try await model.prediction(from: inputFeature, options: MLPredictionOptions())
+
+            // 기존 runInference()의 후처리 로직 동일 적용
+            guard let embeddingArray = output.featureValue(for: "var_811")?.multiArrayValue else {
+                throw SFaceError.inferenceFailed("출력 임베딩을 찾을 수 없습니다")
+            }
+
+            var embedding = [Float](repeating: 0, count: SFaceConfig.embeddingDim)
+            for i in 0..<SFaceConfig.embeddingDim {
+                embedding[i] = embeddingArray[i].floatValue
+            }
+            return embedding
+        } catch let error as SFaceError {
+            throw error
+        } catch {
+            throw SFaceError.inferenceFailed(error.localizedDescription)
+        }
+    }
+
     // MARK: - Private Methods - Preprocessing
 
     /// 이미지를 SFace 입력 형식으로 전처리합니다.
