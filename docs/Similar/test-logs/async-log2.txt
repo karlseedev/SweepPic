@@ -1,0 +1,84 @@
+== Async 방식 로그 2 (2026-03-16) ==
+== 조건: async prediction, iPhone 11 (A13), 41642장 ==
+== 특이사항: 분석 진행 중 스크롤 시작 (첫 스크롤 +2598ms) ==
+
+PickPhoto started with AppCore 1.0.0
+시작: +40.2ms, cellSize=123x123pt
+A) Fetch: 137.6ms (41642 items)
+데이터 로드 완료: +179.3ms, 41642장
+
+[ScrollDiag] ⚠️ 메인 스레드 블로킹: 428ms
+E0) finishInitialDisplay 시작: +285.1ms (reason: timeout, preloaded: 2/12)
+=== 초기 로딩 완료: +391.9ms (E0→E1: 65.7ms, E1→E2: 41.1ms) ===
+최종 통계: cellForItemAt 35회, 총 62.9ms, 평균 1.80ms
+[ScrollDiag] ⚠️ 메인 스레드 블로킹: 89ms
+
+Triggering initial analysis
+AnalysisRange: visible=41627~41641 (15장), analysis=41620~41641 (22장, ±7)
+Starting analysis for range: 41620...41641
+
+Received analysis complete - groups: 0, assets: 22
+[ScrollDiag] ⚠️ 메인 스레드 블로킹: 397ms
+Invalid layer: Invalid input tensor channel 1 (x6)
+[ScrollDiag] ⚠️ 메인 스레드 블로킹: 522ms
+
+First scroll 시작: +2598.1ms (분석 진행 중!)
+Cancelled task: CC2EB7CE...
+[ScrollDiag] ⚠️ 메인 스레드 블로킹: 182ms
+[ScrollDiag] ⚠️ 메인 스레드 블로킹: 696ms
+Cancelled after Phase 1 compute
+L1 First: hitch: 110.0 ms/s [Critical], fps: 52.9 (avg 16.70ms), frames: 398, dropped: 49, longest: 48 (801.7ms)
+First scroll 완료: 7524.5ms 동안 스크롤
+
+== 뷰어 복귀 테스트 (8회) ==
+
+--- 복귀 1: 41384~41401 → 분석 취소됨 ---
+AnalysisRange: visible=41384~41401 (18장), analysis=41377~41408 (32장, ±7)
+Received analysis complete - groups: 1, assets: 32
+Cancelled after Phase 1 compute
+[ScrollDiag] coordinator→applyPendingViewerReturn: 0.2ms
+L2 Steady: hitch: 0.0 ms/s [Good], fps: 59.9 (avg 16.70ms), frames: 124, dropped: 0, longest: 0 (0.0ms)
+
+--- 복귀 2: 41297~41311 → 얼굴 없음 ---
+AnalysisRange: visible=41297~41311 (15장), analysis=41290~41318 (29장, ±7)
+Analysis complete, found 0 groups
+[ScrollDiag] coordinator→applyPendingViewerReturn: 0.1ms
+L2 Steady: hitch: 0.0 ms/s [Good], fps: 59.8 (avg 16.70ms), frames: 73, dropped: 0, longest: 0 (0.0ms)
+
+--- 복귀 3: 41231~41248 → 분석 취소됨 ---
+AnalysisRange: visible=41231~41248 (18장), analysis=41224~41255 (32장, ±7)
+Cancelled after Phase 1 compute
+[ScrollDiag] coordinator→applyPendingViewerReturn: 0.2ms
+L2 Steady: hitch: 0.0 ms/s [Good], fps: 59.8 (avg 16.70ms), frames: 93, dropped: 0, longest: 0 (0.0ms)
+
+--- 복귀 4: 41174~41188 → 분석 취소됨 ---
+AnalysisRange: visible=41174~41188 (15장), analysis=41167~41195 (29장, ±7) [1 group but cancelled]
+Cancelled after Phase 1 compute
+[ScrollDiag] coordinator→applyPendingViewerReturn: 0.1ms
+L2 Steady: hitch: 0.0 ms/s [Good], fps: 59.9 (avg 16.70ms), frames: 76, dropped: 0, longest: 0 (0.0ms)
+
+--- 복귀 5: 41123~41140 → 분석 취소됨 ---
+AnalysisRange: visible=41123~41140 (18장), analysis=41116~41147 (32장, ±7) [1 group]
+Perf Cache MISS - Analysis completed in 22.88ms
+Cancelled after Phase 1 compute
+[ScrollDiag] coordinator→applyPendingViewerReturn: 0.1ms
+L2 Steady: hitch: 0.0 ms/s [Good], fps: 59.2 (avg 16.70ms), frames: 95, dropped: 0, longest: 0 (0.0ms)
+
+--- 복귀 6: 41075~41092 → 분석 취소됨 ---
+AnalysisRange: visible=41075~41092 (18장), analysis=41068~41099 (32장, ±7) [1 group]
+Cancelled after Phase 1 compute
+[ScrollDiag] coordinator→applyPendingViewerReturn: 0.2ms
+L2 Steady: hitch: 0.0 ms/s [Good], fps: 59.4 (avg 16.70ms), frames: 120, dropped: 0, longest: 0 (0.0ms)
+
+--- 복귀 7: 40991~41008 → 얼굴 있음! 435ms 블로킹 ---
+AnalysisRange: visible=40991~41008 (18장), analysis=40984~41015 (32장, ±7) [1 group]
+Perf Cache MISS - Analysis completed in 159.36ms
+[ScrollDiag] ⚠️ 메인 스레드 블로킹: 221ms (LOD1-full 콜백 중)
+[ScrollDiag] ⚠️ 메인 스레드 블로킹: 435ms (assignPerson 추정)
+L2 Steady: hitch: 7.0 ms/s [Warning], fps: 54.4 (avg 16.70ms), frames: 153, dropped: 1, longest: 1 (16.7ms)
+
+--- 복귀 8: 40886~40903 → 분석 취소됨 ---
+AnalysisRange: visible=40886~40903 (18장), analysis=40879~40910 (32장, ±7) [1 group]
+Cancelled after Phase 1 compute
+[ScrollDiag] coordinator→applyPendingViewerReturn: 0.2ms
+L2 Steady: hitch: 0.0 ms/s [Good], fps: 59.9 (avg 16.70ms), frames: 73, dropped: 0, longest: 0 (0.0ms)

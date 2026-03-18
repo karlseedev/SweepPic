@@ -54,9 +54,28 @@ extension ViewerViewController {
         // 얼굴 감지 디버그 버튼 (DEBUG 빌드만)
         #if DEBUG
         setupFaceDebugButton()
+        setupAssetIDLabel()
         #endif
 
     }
+
+    #if DEBUG
+    /// 우측 하단 에셋 ID 라벨 설정
+    func setupAssetIDLabel() {
+        view.addSubview(assetIDLabel)
+        NSLayoutConstraint.activate([
+            assetIDLabel.trailingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.trailingAnchor, constant: -8),
+            assetIDLabel.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor, constant: -60)
+        ])
+        updateAssetIDLabel()
+    }
+
+    /// 에셋 ID 라벨 업데이트
+    func updateAssetIDLabel() {
+        let assetID = coordinator.assetID(at: currentIndex)
+        assetIDLabel.text = assetID
+    }
+    #endif
 
 
     /// 상단 그라데이션 딤드 + "유사사진정리 가능" 타이틀 설정

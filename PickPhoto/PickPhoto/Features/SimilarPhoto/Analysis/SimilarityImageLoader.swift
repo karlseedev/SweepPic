@@ -19,6 +19,14 @@ import Foundation
 import Photos
 import UIKit
 
+/// 이미지 로딩 결과 (진단 정보 포함)
+struct ImageLoadResult {
+    /// 로딩된 이미지
+    let cgImage: CGImage
+    /// degraded 콜백까지 걸린 시간 (ms). degraded 콜백이 없었으면 nil
+    let degradedMs: Double?
+}
+
 /// 유사도 분석을 위한 이미지 로딩 에러
 enum SimilarityImageLoadError: Error, LocalizedError {
     /// 이미지 로딩 실패
@@ -214,6 +222,101 @@ final class SimilarityImageLoader {
             }
             // 콜백 보장 가정: cancelImageRequest 후 PHImageManager가 콜백 호출
             // 타임아웃은 안전장치: 콜백 미보장 시 fallback으로 resume 처리
+        }
+    }
+
+    /// 진단 정보 포함 이미지 로딩 (degraded 콜백 시간 측정)
+    ///
+    /// - Parameters:
+    ///   - asset: 로딩할 PHAsset
+    ///   - maxSize: 긴 변 기준 최대 크기
+    /// - Returns: ImageLoadResult (이미지 + degraded 시간)
+    func loadImageWithDiag(for asset: PHAsset, maxSize: CGFloat? = nil) async throws -> ImageLoadResult {
+        let requestUUID = UUID()
+        var hasResumed = false
+        var isTimeout = false
+        // degraded 콜백 시간 측정용 (nonisolated(unsafe): 콜백 스레드에서 접근)
+        nonisolated(unsafe) var degradedTime: Double? = nil
+        let requestStart = CFAbsoluteTimeGetCurrent()
+
+        return try await withTaskCancellationHandler {
+            try await withCheckedThrowingContinuation { continuation in
+                let targetSize = self.calculateTargetSize(for: asset, maxSize: maxSize ?? self.maxSize)
+
+                let timeoutItem = DispatchWorkItem { [weak self] in
+                    guard let self = self else { return }
+                    self.lock.lock()
+                    isTimeout = true
+                    if let id = self.activeRequestIDs.removeValue(forKey: requestUUID) {
+                        self.imageManager.cancelImageRequest(id)
+                    }
+                    self.lock.unlock()
+                }
+                DispatchQueue.global().asyncAfter(deadline: .now() + self.timeout, execute: timeoutItem)
+
+                let requestID = self.imageManager.requestImage(
+                    for: asset,
+                    targetSize: targetSize,
+                    contentMode: .aspectFit,
+                    options: self.requestOptions
+                ) { [weak self] image, info in
+                    timeoutItem.cancel()
+                    guard let self = self else { return }
+
+                    // degraded 콜백: 시간 기록 후 스킵
+                    if let isDegraded = info?[PHImageResultIsDegradedKey] as? Bool, isDegraded {
+                        degradedTime = (CFAbsoluteTimeGetCurrent() - requestStart) * 1000
+                        return
+                    }
+
+                    self.lock.lock()
+                    self.activeRequestIDs.removeValue(forKey: requestUUID)
+                    let alreadyResumed = hasResumed
+                    hasResumed = true
+                    let wasTimeout = isTimeout
+                    self.lock.unlock()
+
+                    guard !alreadyResumed else { return }
+
+                    if let cancelled = info?[PHImageCancelledKey] as? Bool, cancelled {
+                        if wasTimeout {
+                            continuation.resume(throwing: SimilarityImageLoadError.timeout)
+                        } else {
+                            continuation.resume(throwing: SimilarityImageLoadError.cancelled)
+                        }
+                        return
+                    }
+
+                    if let error = info?[PHImageErrorKey] as? Error {
+                        continuation.resume(throwing: SimilarityImageLoadError.loadFailed(error.localizedDescription))
+                        return
+                    }
+
+                    guard let uiImage = image else {
+                        continuation.resume(throwing: SimilarityImageLoadError.loadFailed("이미지 nil"))
+                        return
+                    }
+
+                    guard let cgImage = uiImage.cgImage else {
+                        continuation.resume(throwing: SimilarityImageLoadError.invalidImage)
+                        return
+                    }
+
+                    continuation.resume(returning: ImageLoadResult(cgImage: cgImage, degradedMs: degradedTime))
+                }
+
+                self.lock.lock()
+                self.activeRequestIDs[requestUUID] = requestID
+                self.lock.unlock()
+            }
+        } onCancel: { [weak self] in
+            guard let self = self else { return }
+            self.lock.lock()
+            let requestID = self.activeRequestIDs.removeValue(forKey: requestUUID)
+            self.lock.unlock()
+            if let id = requestID {
+                self.imageManager.cancelImageRequest(id)
+            }
         }
     }
 

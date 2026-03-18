@@ -254,3 +254,334 @@
 - [전 심사위원 작성법](https://brunch.co.kr/@nexttrack/2)
 - [사업계획서 실수 5가지](https://brunch.co.kr/@a33f93b357b349e/102)
 - [예비창업패키지 합격 전략](https://imweb.me/blog?idx=215)
+
+---
+
+## 9. 목표 시장 진입 전략 리서치
+
+> 조사일: 2026-03-16
+> 목적: 사업계획서 "목표 시장 진입 전략" 섹션 근거 마련
+
+---
+
+### 9-1. 예비창업패키지 심사 포인트
+
+심사위원이 "목표 시장 진입 전략"에서 보는 핵심 평가 요소:
+
+1. **구체적인 액션 전략**: "인스타 운영, 블로그 마케팅" 같은 일반론은 감점. 타겟 고객에 맞는 구체적 실행 계획 필요
+2. **진입 단계 vs 성장 단계 구분**: (1) 첫 고객을 어떻게 확보할 것인가(진입), (2) 어떻게 확장할 것인가(성장)를 분리
+3. **경쟁사 분석 기반 차별성 입증**: 경쟁자가 어떻게 성장했는지 분석하고, 우리가 어떻게 다른지 명확히 제시
+4. **시점별 구체적 계획**: 월별/분기별 마일스톤
+
+**고득점 체크리스트:**
+
+| 항목 | 해야 할 것 | 하지 말 것 |
+|------|-----------|-----------|
+| 시장 규모 | 경쟁사 매출 역산으로 현실적 추정 | TAM만 크게 보여주고 끝내기 |
+| 타겟 고객 | 구체적 페르소나 + 정량 근거 | "모든 스마트폰 사용자" |
+| 진입 전략 | 이 타겟만을 위한 구체적 채널/액션 | "SNS 마케팅 예정" |
+| 성장 전략 | 거점 → 인접시장 확장 로드맵 | 처음부터 글로벌 선언 |
+| 시각화 | 도표, 차트, 타임라인 활용 | 글로만 장황하게 설명 |
+
+### 출처
+- [예비창업패키지 합격 전략 (imweb)](https://imweb.me/blog?idx=215)
+- [전 심사위원 작성법 (brunch)](https://brunch.co.kr/@nexttrack/2)
+- [예비창업패키지 사업계획서 목차별 가이드 (wishket)](https://blog.wishket.com/reserve-startups-package-business-plan-list-guide/)
+- [2026 예비창업패키지 완전정복 (brunch)](https://brunch.co.kr/@plusmach/55)
+
+---
+
+### 9-2. 거점시장(Beachhead Market) 전략 프레임워크
+
+MIT Bill Aulet 정의:
+> "거점시장이란, 일단 지배적 시장 점유율을 확보하면 다른 기회가 있는 인접 시장을 공략할 힘을 갖게 되는 곳"
+
+**거점시장의 3가지 조건 (MIT 기준):**
+1. 시장 내 고객이 유사한 제품을 구매함
+2. 고객의 구매 주기와 가치 기대 방식이 유사함
+3. 시장 내 고객 간 입소문(Word of Mouth)이 존재함
+
+**거점시장 선정 프로세스:**
+1. 가능한 시장 세그먼트 6~12개 나열
+2. 각 세그먼트를 평가 — 접근 가능한가? 경제적 여력? 경쟁 과도하지 않은가? 인접 시장 확장 가능한가?
+3. 하나의 거점시장 선택 → 모든 자원 집중
+4. 빠르게 10~20% 시장 점유율 달성
+5. 인접 시장으로 순차 확장
+
+**합격 사례 공통 패턴:** 작고 지배 가능한 시장 → 빠른 점유율 확보 → 인접 시장 확장
+- 토스: 간편 송금(좁은 거점) → 금융 플랫폼
+- Airbnb: 컨퍼런스 참석자 → 일반 여행객 → 글로벌 숙박
+
+### 출처
+- [MIT Sloan: The Beachhead Market](https://executive.mit.edu/launching-a-successful-start-up-3-the-beachhead-market-MC7FUMDZ6IU5AIPP4WGIPN2PZJI4.html)
+- [Beachhead Market Strategy: 4 Examples (MasterClass)](https://www.masterclass.com/articles/beachhead-market)
+- [Disciplined Entrepreneurship](https://www.d-eship.com/step2/)
+- [스타트업 거점시장 공략 (brunch)](https://brunch.co.kr/@jongkoo/65)
+
+---
+
+### 9-3. App Store 키워드 전략 (ASO)
+
+#### 키워드 경쟁도 비교
+
+| 키워드 | CPT (US) | CPI (US) | 경쟁 강도 | 비고 |
+|--------|---------|---------|----------|------|
+| "photo cleaner" | $2~$4+ | $3~$5+ | 극심 | 상위 앱이 수천 개 키워드 동시 입찰 |
+| "photo organizer" | $1.5~$2.5 | $2~$4 | 높음 | 갤러리/관리 앱과 경쟁 |
+| "photo gallery organizer" | $0.8~$1.5 | $1.5~$3 | 중간 | 롱테일, 경쟁 완화 |
+| "swipe delete photos" | 낮음 | $1~$2 | 낮음 | SweepPic 특화 키워드 |
+
+- Photo & Video 카테고리 평균 CPT: $1.69 (US), CPI: $3.13 (US)
+- Utilities(Cleaner/Optimizer) CPT: $0.60~$1.50, CPI: $0.90~$2.80
+
+#### 롱테일 키워드 전략
+
+MobileAction ASO 가이드:
+- 70~80% 롱테일 + 20~30% 단어형 키워드 비율 권장
+- 10개의 타겟팅된 다운로드가 100개의 무작위 다운로드보다 효과적
+- Apple이 스크린샷 내 텍스트도 인덱싱 시작 → 캡션 포함 스크린샷으로 검색 노출 22% 향상
+
+**SweepPic 롱테일 키워드 후보:**
+- "swipe to delete photos iPhone"
+- "photo gallery organizer swipe"
+- "clean up similar photos fast"
+- "free photo cleanup no subscription"
+- "organize photos by swipe"
+
+#### 신규 앱 ASO 성공 사례
+- Kleo (언어학습앱): ASO + 키워드 최적화 + 스크린샷 개편으로 1개월 만에 다운로드 127% 증가, 전환율 110% 향상
+- Superscale: 포괄적 ASO로 오가닉 다운로드 450% 증가
+- 평점 3.5 미만 앱은 검색 노출 크게 감소, 4.0 이상 유지 필수
+
+### 출처
+- [AppTweak Apple Ads Benchmarks 2025](https://www.apptweak.com/en/aso-blog/apple-ads-benchmarks)
+- [MobileAction - ASO Long-Tail Optimization](https://www.mobileaction.co/blog/aso-long-tail-optimization/)
+- [MobileAction - ASO Keyword Research 2026](https://www.mobileaction.co/blog/aso-keyword-research/)
+- [AppTweak - ASO Trends 2026](https://www.apptweak.com/en/aso-blog/aso-trends-to-watch-in-2026)
+
+---
+
+### 9-4. Apple Search Ads (ASA) 진입 전략
+
+#### 국가별 CPI (AppTweak 2025 벤치마크)
+
+| 국가 | CPI | US 대비 비율 |
+|------|-----|------------|
+| 미국 (US) | $4.06 | 100% |
+| 일본 (JP) | $2.57 | 63% |
+| 한국 (KR) | $1.84 | 45% |
+| 영국 (UK) | $2.60 | 64% |
+| 캐나다 | $2.24 | 55% |
+| 프랑스 | $1.78 | 44% |
+
+#### 카테고리별 CPI (US)
+
+| 카테고리 | CPI | CPT | TTR | 전환율 |
+|---------|-----|-----|-----|-------|
+| Photo & Video | $3.13 | $1.69 | 5~10% | 45~65% |
+| Utilities (Cleaner) | $0.90~$2.80 | $0.60~$1.50 | 5~9% | 50~70% |
+
+핵심: 한국은 미국 대비 CPI가 45% 수준. 일본/한국은 미국 대비 3~5배 나은 CPI에 비슷하거나 더 좋은 LTV.
+
+#### 소규모 예산 ASA 전략
+
+1. 한국 먼저 시작 (CPI $1.84) → 리뷰/평점 확보 → 미국 확장
+2. ASA Basic으로 시작 ($100~$500/월) → 전환 데이터 수집
+3. 롱테일 키워드에 ASA Advanced 집중 → "photo cleaner" 대신 "swipe photo cleanup" 등
+4. 경쟁사 키워드 입찰 (Competitor 캠페인) → Cleanup, SwipeWipe 검색 시 노출
+
+**Codeway(Cleanup 개발사) 참고:**
+- ASA 월 지출 800% 확대 (가장 예측 가능한 채널로 평가)
+- Meta(Facebook/Instagram)가 핵심 UA 채널: 32% 더 많은 구독, 19% 낮은 CPA
+
+### 출처
+- [AppTweak Apple Ads Benchmarks 2025](https://www.apptweak.com/en/aso-blog/apple-ads-benchmarks)
+- [Admiral Media - Apple Search Ads Benchmarks](https://admiral.media/apple-search-ads-benchmarks/)
+- [Business of Apps - Apple Search Ads Costs 2026](https://www.businessofapps.com/marketplace/apple-search-ads/research/apple-search-ads-costs/)
+- [SplitMetrics - Apple Ads Benchmarks 2025](https://splitmetrics.com/apple-ads-search-results-benchmarks-2025/)
+- [MobileAction - Codeway ASA 800%](https://www.mobileaction.co/success-story/codeway/)
+
+---
+
+### 9-5. 숏폼 영상(릴스/TikTok) 마케팅
+
+#### 앱 마케팅에서 릴스/틱톡 효과
+- 마이크로 인플루언서(15K 미만 팔로워) 평균 참여율: 17.96% (대형 인플루언서 대비 월등)
+- 2026년 트렌드: 넓은 바이럴보다 특정 커뮤니티 타겟 "마이크로 바이럴" 전략이 더 효과적
+
+#### SwipeWipe 바이럴 사례
+
+- 2021년 출시, TikTok에서 Gen Z 사이에 바이럴
+- MAU가 2개월 만에 15,000 → 300,000 (20배 성장)
+- 현재 월 100만+ MAU, 월 매출 ~$1M, 40만 다운로드
+- 2024년 6월 프랑스 MWM에 최대 규모 인수 (TechCrunch)
+- 성공 공식: 오가닉 TikTok 바이럴 → 유료 광고 캠페인 후속
+
+#### SweepPic용 숏폼 콘텐츠 전략
+
+| 콘텐츠 유형 | 플랫폼 적합도 | 바이럴 잠재력 |
+|------------|-------------|-------------|
+| "전/후" 저장공간 비교 (nGB 확보) | TikTok/릴스 | 매우 높음 |
+| "1분 안에 100장 정리" 타임랩스 | TikTok/릴스/Shorts | 높음 |
+| "스와이프로 사진 정리" 시연 | TikTok | 높음 (SwipeWipe 성공 공식) |
+| "iPhone 저장공간 부족 해결법" | 릴스/YouTube | 높음 |
+
+### 출처
+- [TechCrunch - SwipeWipe MWM Acquisition](https://techcrunch.com/2024/06/25/gen-z-photos-app-swipewipe-sells-to-french-publisher-mwm-in-its-largest-acquisition-to-date/)
+- [Marketing Dive - Instagram vs TikTok UA](https://www.marketingdive.com/news/instagram-beats-tiktok-video-based-user-acquisition-zoomd-survey/715598/)
+
+---
+
+### 9-6. 한국 시장 먼저 진입하는 이유
+
+#### 한국 앱 시장 규모 — 세계 4위
+
+| 항목 | 수치 | 출처 |
+|------|------|------|
+| 2023년 소비자 지출 | $7.86B (약 11.4조 원) | data.ai 2024 |
+| 세계 순위 | 4위 (중국 > 미국 > 일본 > 한국) | data.ai 2024 |
+| 전년 대비 성장률 | +25% | data.ai 2024 |
+| 2025년 시장 규모 전망 | $10B (약 14.5조 원) | Business of Apps |
+| 스마트폰 사용률 | 성인 99% | 통계 |
+| 사진 저장량 | 평균 1,400장+ (글로벌 952장의 1.5배, 세계 1위) | 기존 리서치 |
+
+#### 한국 vs 미국 CPI 비교
+
+| 시장 | CPI (사진 정리/유틸리티) | 비고 |
+|------|------------------------|------|
+| 한국 | $1.0~$2.8 (ASA 기준 $1.84) | 미국 대비 3~5배 저렴 |
+| 미국 | $2.37~$4.06 | CPI 최고가 시장 |
+| 일본 | ~$2.57 | 한국과 유사하거나 약간 높음 |
+
+핵심: 한국/일본은 미국 대비 CPI가 3~5배 저렴하면서 LTV(생애가치)는 비슷하거나 더 높음
+
+#### 한국에서 검증 후 글로벌 확장한 앱 사례
+
+| 앱 | 한국 출시 | 글로벌 성과 | 확장 경로 |
+|---|---------|-----------|---------|
+| SNOW (네이버) | 2015.09 | 글로벌 21.5억 다운로드 | 한국 → 일본 → 대만 → 동남아 → 글로벌 |
+| LINE (네이버) | 2011.08 | 1억 명 돌파 (1년 7개월) | 한국/일본 → 대만 → 태국 → 글로벌 |
+| 비트윈 (VCNC) | 2012 | 글로벌 3,500만 다운로드 | 한국 → 일본/싱가포르/대만/태국 |
+| 토스 | 2015 | MAU 2,480만, 유니콘 | 한국 검증 후 해외 확장 추진 중 |
+
+한국이 테스트 마켓으로 적합한 이유:
+- 규모가 작지만 문화적 영향력이 큼 (K-wave 효과)
+- 저비용 고효율 검증: 미국 대비 CPI 3~5배 저렴, 사용자 품질 유사
+- Shake Shack 사례: 아시아 첫 매장으로 서울 선택 (2016) — 저리스크 테스트 마켓
+
+### 출처
+- [South Korea App Market Statistics - Business of Apps](https://www.businessofapps.com/data/south-korea-app-market/)
+- [CPI 2025 Ultimate Report - Mapendo](https://mapendo.co/blog/cost-per-install-2025-the-ultimate-report-to-grow-your-app-worldwide)
+- [Why Korean Apps Winning Over Global Giants - App Growth Summit](https://appgrowthsummit.com/why-are-korean-apps-winning-over-global-giants/)
+- [Digital Marketing in Korea - iCrossBorder](https://www.icrossborderjapan.com/en/blog/asian-marketing/marketing-in-korea-shortcut-asia/)
+- [SNOW 일본 1위 석권 - 모비인사이드](https://brunch.co.kr/@mobiinside/264)
+
+---
+
+### 9-7. iOS 먼저 → Android 확장 전략
+
+#### iOS vs Android ARPU (2025~2026)
+
+| 지표 | iOS | Android | 배수 |
+|------|-----|---------|------|
+| 월간 앱 지출 | $10.40 | $1.40 | 7.4배 |
+| 앱당 평균 지출 | $1.64 | $0.43 | 3.8배 |
+| 구독 매출 비중 | 73% | 27% | 2.7배 |
+| 전체 소비자 지출 점유 | 68.6% | 31.4% | 2.2배 |
+
+출처: Adapty 2025, Sensor Tower 2026 Forecast, DemandSage 2026
+
+#### iOS 먼저 출시하는 근거
+1. MVP 31% 빠른 출시: iOS는 기기 파편화 적어 빌드/테스트/QA 빠름
+2. 매출 효율: App Store가 전체 모바일 앱 매출의 65~70% 차지
+3. 고가치 사용자: iOS 사용자가 구독, IAP, 프로 업그레이드 전환율 높음
+4. 전략적 순서: iOS에서 PMF 검증 → 투자 유치 → Android 확장이 효율적
+
+#### Storage Cleaner 카테고리 iOS/Android 매출 비율
+
+| 카테고리 | iOS 매출 비중 | Android 매출 비중 | 출처 |
+|---------|-------------|------------------|------|
+| Storage Cleaner 앱 | 95% 이상 | 5% 미만 | Appfigures 2025 |
+| Photo & Video (전체) | ~70% | ~30% | Sensor Tower |
+| 앱 전체 | ~68.6% | ~31.4% | 2025 글로벌 |
+
+Storage Cleaner가 iOS 편중인 이유:
+- Android OEM(삼성 Device Care, Xiaomi MIUI Cleaner, Files by Google 등)이 자체 클리너 기능 탑재
+- iOS는 기본 중복 앨범(iOS 16+)만 제공, 유사사진/흐린사진/자동 정리 기능 없음
+
+#### Android 확장 시 기대 효과
+
+| 시나리오 | 설치 증가 | 매출 증가 |
+|---------|---------|---------|
+| 보수적 (구독 중심) | +120~180% | +30~70% |
+| 기준 (구독+광고 혼합) | +180~260% | +50~110% |
+| 공격적 (광고/볼륨 중심) | +260~380% | +80~150% |
+
+출처: 260313Research-growth.md
+
+### 출처
+- [iPhone vs Android Statistics 2026 - DemandSage](https://www.demandsage.com/iphone-vs-android-users/)
+- [iPhone vs Android Revenue Statistics 2026 - Backlinko](https://backlinko.com/iphone-vs-android-statistics)
+- [Why Startups Prioritize iOS - CustomerThink](https://customerthink.com/why-startups-are-prioritizing-ios-before-android-a-business-perspective/)
+- [Appfigures - Storage Cleaner Apps](https://appfigures.com/resources/insights/20250606?f=1)
+- [Adapty - iOS vs Android Revenue 2025](https://adapty.io/)
+
+---
+
+### 9-8. 글로벌 확장 순서
+
+| 순서 | 시장 | 근거 |
+|------|------|------|
+| 1단계: 한국 | CPI 저렴($1.84), 사진 저장량 세계 1위, PMF 검증 최적 | 저비용으로 제품 검증 + 리텐션/전환율 데이터 확보 |
+| 2단계: 일본 | 앱 시장 세계 3위($16.5B), 한국과 문화적 유사성, CPI 합리적($2.57) | K-wave 영향권, iOS 점유율 높음(~65%), 높은 ARPU |
+| 3단계: 영어권 (미국/영국/호주) | 앱 시장 세계 1~2위, 최대 매출 풀 | CPI 높지만 LTV도 높음, 글로벌 스케일 |
+| 4단계: Android 확장 | 설치 볼륨 3.8배 확대 | iOS에서 검증된 모델을 Android에 이식 |
+
+#### 국가별 앱 시장 규모
+
+| 국가 | 전체 앱 소비자 지출 (2024~2025) | Photo & Video 성장률 | 비고 |
+|------|-------------------------------|---------------------|------|
+| 미국 | ~$45B+ (1위) | YoY +40% (Q1 2025) | 최대 시장, CPI 최고가 |
+| 일본 | ~$16.5B (3위) | AI 사진 편집 급성장 | iOS 점유율 65%+, ARPU 최상위 |
+| 한국 | ~$10B (4위) | 사진/비디오 성장 카테고리 | 사진 저장량 세계 1위, CPI 최저 |
+
+### 출처
+- [South Korea App Market Statistics - Business of Apps](https://www.businessofapps.com/data/south-korea-app-market/)
+- [Japan App Market Trends 2025 - Adjust](https://www.adjust.com/blog/japan-app-trends-2025/)
+- [Q1 2025 Digital Market Index - Sensor Tower](https://sensortower.com/blog/q1-2025-digital-market-index)
+
+---
+
+## 10. 그래프 삽입용 데이터
+
+> 조사일: 2026-03-17
+> 목적: 사업계획서 시각 자료(그래프) 삽입 근거
+
+### 10-1. 전 세계 사진 촬영량 추이 (Photutorial)
+
+| 연도 | 촬영량 (조 장) |
+|------|--------------|
+| 2020 | 1.12 |
+| 2021 | 1.20 |
+| 2022 | 1.37 |
+| 2023 | 1.56 |
+| 2024 | 1.81 |
+| 2025 | 2.10 |
+
+- 출처: Photutorial, "Photos Statistics" (2025) — https://photutorial.com/photos-statistics/
+- 6개년 연속 데이터 확보, 무료 출처
+- 메시지: 촬영량 급증 → 정리 수요 지속 확대
+
+### 10-2. Photo & Video 앱 시장 규모 추이 (Statista)
+
+| 연도 | 시장 규모 | 출처 |
+|------|----------|------|
+| 2019 | $7.5B | Statista |
+| 2021 | $9.5B | Statista |
+| 2022 | $10.5B | Statista |
+| 2023 | $12.0B | Statista |
+| 2025 | $14.7B | Statista |
+
+- 2020, 2024 데이터 누락 (동일 출처 연속 5개년 불가)
+- Statista 유료 구독 $1,399/월 필요
+- 다른 무료 출처에서 연속 데이터 미확보

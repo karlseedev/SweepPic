@@ -672,9 +672,10 @@ extension PreviewGridViewController: UICollectionViewDataSource {
             )
 
             // [DEBUG] 셀 위에 assetID 앞 6자 + 신호 요약 표시
-            #if DEBUG
-            configureDebugOverlay(on: cell, candidate: candidate)
-            #endif
+            // TODO: 스크린샷 촬영 후 복원할 것
+            // #if DEBUG
+            // configureDebugOverlay(on: cell, candidate: candidate)
+            // #endif
 
             return cell
 

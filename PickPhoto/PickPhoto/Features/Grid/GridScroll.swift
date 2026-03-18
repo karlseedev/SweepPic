@@ -153,7 +153,7 @@ extension GridViewController {
             // [preheat 최적화] 스크롤 정지 후 1회 preheat
             // - 스크롤 중에는 OFF (hitch 방지)
             // - 정지 후에만 visible + 1화면 범위 캐싱
-            self.preheatAfterScrollStop()
+            // self.preheatAfterScrollStop()  // preheat 비활성화 실험
 
             self.lastScrollEndTime = CACurrentMediaTime()
             let currentSeq = self.scrollSeq

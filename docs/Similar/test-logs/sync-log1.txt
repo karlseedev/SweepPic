@@ -1,0 +1,84 @@
+== Sync 방식 로그 1 (2026-03-16) ==
+== 조건: sync prediction (기존 방식), iPhone 11 (A13), 41642장 ==
+== 특이사항: 분석 진행 중 스크롤 시작 (첫 스크롤 +1103ms), 복귀 9에서 1889ms 블로킹 ==
+
+시작: +42.7ms, cellSize=123x123pt
+A) Fetch: 150.7ms (41642 items)
+데이터 로드 완료: +195.3ms, 41642장
+
+[ScrollDiag] ⚠️ 메인 스레드 블로킹: 583ms (앱 시작)
+=== 초기 로딩 완료: +476.1ms ===
+[ScrollDiag] ⚠️ 메인 스레드 블로킹: 91ms
+
+Triggering initial analysis
+AnalysisRange: visible=41627~41641 (15장), analysis=41620~41641 (22장, ±7)
+Starting analysis for range: 41620...41641
+
+First scroll 시작: +1103.8ms (분석 진행 중!)
+Cancelled after FP generation
+L1 First: hitch: 104.8 ms/s [Critical], fps: 52.6 (avg 16.70ms), frames: 59, dropped: 7, longest: 4 (66.8ms)
+First scroll 완료: 1122.7ms 동안 스크롤
+
+== 뷰어 복귀 테스트 (10회) ==
+
+--- 복귀 1: 41591~41605 → 분석 취소됨 (person assignment 중 취소) ---
+AnalysisRange: 41584~41612 (29장), 1 group, 275.16ms
+[ScrollDiag] coordinator→applyPendingViewerReturn: 0.1ms
+Cancelled during person assignment
+L2 Steady: hitch: 0.0 ms/s [Good], fps: 59.9 (avg 16.70ms), frames: 95
+
+--- 복귀 2: 41525~41539 → 분석 취소됨 (person assignment 중 취소) ---
+AnalysisRange: 41518~41546 (29장), 0 groups, 136.09ms
+[ScrollDiag] coordinator→applyPendingViewerReturn: 0.1ms
+Cancelled during person assignment
+L2 Steady: hitch: 0.0 ms/s [Good], fps: 59.3 (avg 16.70ms), frames: 108
+
+--- 복귀 3: 41423~41437 → 분석 취소됨 (person assignment 중 취소) ---
+AnalysisRange: 41416~41444 (29장), 1 group
+[ScrollDiag] coordinator→applyPendingViewerReturn: 0.3ms
+Cancelled during person assignment
+L2 Steady: hitch: 0.1 ms/s [Good], fps: 59.8 (avg 16.70ms), frames: 107
+
+--- 복귀 4: 41324~41341 → 얼굴 없음 ---
+AnalysisRange: 41317~41348 (32장), 0 groups, 10.18ms
+[ScrollDiag] coordinator→applyPendingViewerReturn: 0.1ms
+L2 Steady: hitch: 0.0 ms/s [Good], fps: 59.2 (avg 16.70ms), frames: 90
+
+--- 복귀 5: 41246~41263 → 분석 취소됨 (person assignment 중 취소) ---
+AnalysisRange: 41239~41270 (32장), 1 group, 29.46ms
+[ScrollDiag] coordinator→applyPendingViewerReturn: 0.2ms
+Cancelled during person assignment
+L2 Steady: hitch: 0.0 ms/s [Good], fps: 59.2 (avg 16.70ms), frames: 100
+
+--- 복귀 6: 41195~41212 → 분석 취소됨 (person assignment 중 취소) ---
+AnalysisRange: 41188~41219 (32장), 1 group, 5.53ms
+[ScrollDiag] coordinator→applyPendingViewerReturn: 0.1ms
+Cancelled during person assignment
+L2 Steady: hitch: 0.0 ms/s [Good], fps: 59.5 (avg 16.70ms), frames: 168
+
+--- 복귀 7: 41096~41110 → 분석 취소됨 (person assignment 중 취소) ---
+AnalysisRange: 41089~41117 (29장), 1 group
+[ScrollDiag] coordinator→applyPendingViewerReturn: 0.2ms
+Cancelled during person assignment
+L2 Steady: hitch: 0.0 ms/s [Good], fps: 59.4 (avg 16.70ms), frames: 148
+
+--- 복귀 8: 40988~41005 → 분석 완료 459ms ---
+AnalysisRange: 40981~41012 (32장), 1 group, 459.13ms
+[ScrollDiag] coordinator→applyPendingViewerReturn: 0.1ms
+Cancelled during person assignment (뷰어 진입으로 취소)
+L2 Steady: hitch: 0.0 ms/s [Good], fps: 59.7 (avg 16.70ms), frames: 314
+
+--- 복귀 9: 40697~40711 → 얼굴 있음! 1889ms + 555ms 블로킹!! ---
+AnalysisRange: 40690~40718 (29장), 1 group, 84.83ms
+Invalid layer (x6) — ANE 실패
+[ScrollDiag] ⚠️ 메인 스레드 블로킹: 1889ms ← 최악!
+[ScrollDiag] ⚠️ 메인 스레드 블로킹: 555ms
+[ScrollDiag] ⚠️ 메인 스레드 블로킹: 257ms
+[ScrollDiag] coordinator→applyPendingViewerReturn: 0.5ms
+L2 Steady: hitch: 4.1 ms/s [Good], fps: 59.7 (avg 16.70ms), frames: 185
+
+--- 복귀 10: 40622~40639 → 분석 취소, 하지만 339ms 블로킹 ---
+AnalysisRange: 40615~40646 (32장), 1 group
+Cancelled during person assignment
+[ScrollDiag] ⚠️ 메인 스레드 블로킹: 339ms
+(로그 끝)

@@ -661,6 +661,7 @@ final class SimilarityAnalysisQueue {
         var perfSfaceTotal: Double = 0
         var perfMatchTotal: Double = 0
         var perfFaceCount: Int = 0
+        var prevLoadEndTime: CFAbsoluteTime = perfGroupStart  // idle gap 측정용
 
         // 각 사진 처리
         for assetID in assetIDs {
@@ -671,18 +672,28 @@ final class SimilarityAnalysisQueue {
             }
 
             let shortID = String(assetID.prefix(8))
-            _ = shortID  // 주석 처리된 디버그 로그에서 사용 — 로그 복원 시 제거
 
-            // 이미지 로드 (인물 매칭용 고해상도)
+            // 사진 메타데이터 (로그용)
+            let photo = photoMap[assetID]
+            let photoMeta = photo.map { "\($0.pixelWidth)x\($0.pixelHeight)" } ?? "?"
+
+            // 이미지 로드 (인물 매칭용 고해상도) — 진단 정보 포함
             let perfLoadStart = CFAbsoluteTimeGetCurrent()
+            let perfGapMs = (perfLoadStart - prevLoadEndTime) * 1000  // 이전 Load 완료 후 경과 시간
             var cgImage: CGImage? = nil
-            if let photo = photoMap[assetID] {
-                cgImage = try? await imageLoader.loadImage(
+            var degradedMs: Double? = nil
+            if let photo = photo {
+                if let result = try? await imageLoader.loadImageWithDiag(
                     for: photo,
                     maxSize: SimilarityConstants.personMatchImageMaxSize
-                )
+                ) {
+                    cgImage = result.cgImage
+                    degradedMs = result.degradedMs
+                }
             }
-            perfLoadTotal += (CFAbsoluteTimeGetCurrent() - perfLoadStart) * 1000
+            let perfLoadMs = (CFAbsoluteTimeGetCurrent() - perfLoadStart) * 1000
+            perfLoadTotal += perfLoadMs
+            prevLoadEndTime = CFAbsoluteTimeGetCurrent()
 
             // === Step 1: YuNet으로 얼굴 감지 + SFace 임베딩 생성 ===
             var faceEmbeddings: [Int: [Float]] = [:]
@@ -705,7 +716,8 @@ final class SimilarityAnalysisQueue {
                 result[assetID] = []
                 continue
             }
-            perfYunetTotal += (CFAbsoluteTimeGetCurrent() - perfYunetStart) * 1000
+            let perfYunetMs = (CFAbsoluteTimeGetCurrent() - perfYunetStart) * 1000
+            perfYunetTotal += perfYunetMs
 
             let perfSfaceStart = CFAbsoluteTimeGetCurrent()
             for (faceIdx, detection) in yunetDetections.enumerated() {
@@ -741,8 +753,19 @@ final class SimilarityAnalysisQueue {
                 }
             }
 
-            perfSfaceTotal += (CFAbsoluteTimeGetCurrent() - perfSfaceStart) * 1000
+            let perfSfaceMs = (CFAbsoluteTimeGetCurrent() - perfSfaceStart) * 1000
+            perfSfaceTotal += perfSfaceMs
             perfFaceCount += faceEmbeddings.count
+
+            // per-photo 성능 로그 (프리로드 비교용, 진단 정보 포함)
+            let degStr = degradedMs.map { String(format: "deg:%.0fms", $0) } ?? "deg:none"
+            let perfLog = "photo \(shortID): Load:\(String(format: "%.0f", perfLoadMs))ms(\(degStr) gap:\(String(format: "%.0f", perfGapMs))ms) YuNet:\(String(format: "%.0f", perfYunetMs))ms SFace:\(String(format: "%.0f", perfSfaceMs))ms faces:\(yunetDetections.count) (\(photoMeta))"
+            Logger.similarPhoto.debug("[Perf] \(perfLog)")
+
+            // Load 500ms 이상: SLOW 태그로 중복 출력 (검색 편의)
+            if perfLoadMs >= 500 {
+                Logger.similarPhoto.warning("[SLOW] \(perfLog)")
+            }
 
             let perfMatchStart = CFAbsoluteTimeGetCurrent()
 

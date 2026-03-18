@@ -145,6 +145,20 @@ final class ViewerViewController: UIViewController {
     private var swipeCount: Int = 0
     #endif
 
+    // MARK: - Debug: 에셋 ID 라벨
+
+    #if DEBUG
+    /// 우측 하단 에셋 ID 표시 라벨 (Extension에서 접근 필요)
+    lazy var assetIDLabel: UILabel = {
+        let label = UILabel()
+        label.translatesAutoresizingMaskIntoConstraints = false
+        label.font = .monospacedSystemFont(ofSize: 10, weight: .regular)
+        label.textColor = UIColor.white.withAlphaComponent(0.6)
+        label.textAlignment = .right
+        return label
+    }()
+    #endif
+
     // MARK: - Phase 2: LOD1 디바운스
 
     /// LOD1 디바운스 타이머 (150ms)
@@ -707,6 +721,11 @@ extension ViewerViewController: UIPageViewControllerDelegate {
 
         // 인덱스 업데이트
         currentIndex = newIndex
+
+        // 에셋 ID 라벨 업데이트
+        #if DEBUG
+        updateAssetIDLabel()
+        #endif
 
         // [Analytics] 이벤트 3: 페이지 전환 시 사진 열람 카운트
         if let source = analyticsScreenSource {
