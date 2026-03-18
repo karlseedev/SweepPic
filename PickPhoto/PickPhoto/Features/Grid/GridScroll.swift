@@ -249,12 +249,13 @@ extension GridViewController {
         guard !isDecelerationPreheatScheduled else { return }
         isDecelerationPreheatScheduled = true
 
-        // [버그 수정] thumbnailSize(forScrolling: false)는 isScrolling 체크로 50% 반환
-        // 여기서는 강제로 100% 크기 계산 (스크롤 중에도 100% preheat 필요)
+        // preheat은 스크롤 중 요청 크기(50%)와 일치시켜야 PHCachingImageManager 캐시 히트 가능
+        // 100%로 캐싱하면 스크롤 중 50% 요청에 캐시 미스 발생 → 디코더 경쟁만 유발
         let scale = UIScreen.main.scale
+        let scrollScale = GridViewController.scrollingThumbnailScale
         let fullSize = CGSize(
-            width: currentCellSize.width * scale,
-            height: currentCellSize.height * scale
+            width: currentCellSize.width * scale * scrollScale,
+            height: currentCellSize.height * scale * scrollScale
         )
 
         // targetOffset 기준 visible 영역 계산
@@ -318,11 +319,12 @@ extension GridViewController {
         let assets = extendedIndexPaths.compactMap { dataSourceDriver.asset(at: $0) }
         guard !assets.isEmpty else { return }
 
-        // 정확한 pixelSize (pt × scale)
+        // 스크롤 중 요청 크기(50%)와 일치시켜 PHCachingImageManager 캐시 히트 보장
         let scale = UIScreen.main.scale
+        let scrollScale = GridViewController.scrollingThumbnailScale
         let targetSize = CGSize(
-            width: currentCellSize.width * scale,
-            height: currentCellSize.height * scale
+            width: currentCellSize.width * scale * scrollScale,
+            height: currentCellSize.height * scale * scrollScale
         )
 
         // 백그라운드에서 preheat (메인 스레드 부하 방지)
@@ -558,11 +560,12 @@ extension GridViewController {
         guard !hasPreheatedInitialScreen else { return }
         hasPreheatedInitialScreen = true
 
-        // 정확한 pixelSize (pt × scale)
+        // 스크롤 중 요청 크기(50%)와 일치시켜 PHCachingImageManager 캐시 히트 보장
         let scale = UIScreen.main.scale
+        let scrollScale = GridViewController.scrollingThumbnailScale
         let targetSize = CGSize(
-            width: currentCellSize.width * scale,
-            height: currentCellSize.height * scale
+            width: currentCellSize.width * scale * scrollScale,
+            height: currentCellSize.height * scale * scrollScale
         )
 
         // viewDidAppear 이후이므로 visible indexPaths 확실히 존재
