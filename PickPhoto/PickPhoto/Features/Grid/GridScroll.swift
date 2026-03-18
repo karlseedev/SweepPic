@@ -153,7 +153,7 @@ extension GridViewController {
             // [preheat 최적화] 스크롤 정지 후 1회 preheat
             // - 스크롤 중에는 OFF (hitch 방지)
             // - 정지 후에만 visible + 1화면 범위 캐싱
-            // self.preheatAfterScrollStop()  // preheat 비활성화 실험
+            self.preheatAfterScrollStop()
 
             self.lastScrollEndTime = CACurrentMediaTime()
             let currentSeq = self.scrollSeq
@@ -165,8 +165,12 @@ extension GridViewController {
             // - 다른 targetSize(50%→100%)로의 업그레이드는 명시적 재요청 필요
             self.upgradeVisibleCellsToHighQuality(scrollSeq: currentSeq, scrollEndTime: self.lastScrollEndTime)
 
-            // [SimilarPhoto] 스크롤 종료 시 분석 시작 (0.3초 디바운싱)
-            self.handleSimilarPhotoScrollEnd()
+            // [SimilarPhoto] upgrade 완료 대기 후 분석 시작 (PHImageManager 경합 해소)
+            // - upgrade(requestImage)가 디코더 큐를 점유한 상태에서 분석 시작하면
+            //   분석의 첫 이미지 로딩이 1~3초 지연 (SLOW)
+            // - upgrade 완료(inFlightCount==0) 감지 후 preheat 정리 + 분석 시작
+            // - 타임아웃 3초: upgrade가 지연되어도 분석이 무한 대기하지 않음
+            self.waitForUpgradeThenStartAnalysis()
 
             // [LiquidGlass 최적화] 스크롤 종료 시 최적화 해제
             LiquidGlassOptimizer.restore(in: self.view.window)
@@ -212,6 +216,26 @@ extension GridViewController {
             }
         }
 
+    }
+
+    // MARK: - Upgrade → Analysis 경합 해소
+
+    /// upgrade 완료 대기 후 preheat 정리 + 분석 시작
+    /// - ImagePipeline의 inFlightCount == 0을 감지하여 디코더 큐가 비었을 때 분석 시작
+    /// - 스크롤 재시작 시 handleSimilarPhotoScrollStart()에서 분석이 취소되므로 안전
+    private func waitForUpgradeThenStartAnalysis() {
+        ImagePipeline.shared.notifyWhenIdle(timeout: 3.0) { [weak self] in
+            guard let self = self else { return }
+
+            // 스크롤이 다시 시작됐으면 분석 불필요
+            guard !self.isScrolling else { return }
+
+            // preheat 잔여 요청 정리 (디코더 큐에서 제거)
+            ImagePipeline.shared.stopAllPreheating()
+
+            // 분석 시작 (디바운스 없이 즉시)
+            self.handleSimilarPhotoScrollEnd()
+        }
     }
 
     // MARK: - Phase 2: 감속 중 preheat

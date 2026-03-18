@@ -403,7 +403,16 @@ public final class ImagePipeline: ImagePipelineProtocol {
                     }
                 }
                 let currentCompleteCount = self.completeCount + self.degradedCount
+                // idle 콜백 체크: 모든 요청 완료 시
+                let shouldFireIdle = !isDegraded && self.inFlightCount <= 0 && !self.idleCallbacks.isEmpty
                 statsLock.unlock()
+
+                // idle 콜백은 lock 밖에서 실행 (데드락 방지)
+                if shouldFireIdle {
+                    DispatchQueue.main.async { [weak self] in
+                        self?.fireIdleCallbacksIfPending()
+                    }
+                }
 
                 // 썸네일 로딩 실패 감지 (최종 콜백에서 이미지 없음 + PHImageErrorKey 존재)
                 if image == nil && !isDegraded,
@@ -473,6 +482,51 @@ public final class ImagePipeline: ImagePipelineProtocol {
     /// 모든 프리히트 중지
     public func stopAllPreheating() {
         imageManager.stopCachingImagesForAllAssets()
+    }
+
+    // MARK: - Idle Notification (경합 해소)
+
+    /// idle 콜백 큐 (inFlightCount == 0일 때 호출)
+    private var idleCallbacks: [() -> Void] = []
+
+    /// 모든 requestImage 요청이 완료되면 콜백을 호출합니다.
+    /// - 이미 idle 상태(inFlightCount == 0)면 즉시 호출
+    /// - 아니면 마지막 요청 완료 시 호출
+    /// - 타임아웃: 지정 시간 후 강제 호출 (디코더 지연 대비)
+    /// - Parameter timeout: 타임아웃 (초). 기본 3초
+    /// - Parameter callback: idle 시 호출할 클로저 (메인 스레드)
+    public func notifyWhenIdle(timeout: TimeInterval = 3.0, callback: @escaping () -> Void) {
+        statsLock.lock()
+        let currentInFlight = inFlightCount
+        statsLock.unlock()
+
+        if currentInFlight <= 0 {
+            // 이미 idle → 즉시 호출
+            callback()
+            return
+        }
+
+        // 콜백 등록
+        statsLock.lock()
+        idleCallbacks.append(callback)
+        statsLock.unlock()
+
+        // 타임아웃 안전장치: 지정 시간 후에도 idle이 안 오면 강제 호출
+        DispatchQueue.main.asyncAfter(deadline: .now() + timeout) { [weak self] in
+            self?.fireIdleCallbacksIfPending()
+        }
+    }
+
+    /// idle 콜백을 실행합니다 (inFlightCount == 0 도달 또는 타임아웃 시)
+    private func fireIdleCallbacksIfPending() {
+        statsLock.lock()
+        let callbacks = idleCallbacks
+        idleCallbacks.removeAll()
+        statsLock.unlock()
+
+        for cb in callbacks {
+            cb()
+        }
     }
 
     /// 캐시 비우기
