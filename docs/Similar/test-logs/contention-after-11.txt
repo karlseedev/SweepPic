@@ -1,0 +1,30 @@
+iPhone 11 — 수정 후 (upgrade 완료 대기 + stopCaching)
+날짜: 2026-03-19
+
+시작: +84.7ms, cellSize=123x123pt
+A) Fetch: 134.6ms (41648 items)
+데이터 로드 완료: +222.2ms, 41648장
+
+[Perf] photo 8A82A6A4: Load:82ms(deg:none gap:0ms) YuNet:233ms SFace:0ms faces:0 (3024x4032)
+[Perf] photo 09A49686: Load:144ms(deg:none gap:1354ms) YuNet:228ms SFace:0ms faces:0 (3024x4032)
+[Perf] photo 270EE74C: Load:116ms(deg:none gap:228ms) YuNet:223ms SFace:0ms faces:0 (3024x4032)
+[Perf] photo A8464254: Load:80ms(deg:none gap:223ms) YuNet:272ms SFace:0ms faces:0 (3024x4032)
+[Perf] photo C0BC5DF8: Load:163ms(deg:none gap:272ms) YuNet:227ms SFace:0ms faces:0 (3024x4032)
+[Perf] photo 863C924D: Load:85ms(deg:none gap:0ms) YuNet:229ms SFace:27ms faces:1 (3024x4032)
+[Perf] photo 082BB2CE: Load:89ms(deg:none gap:256ms) YuNet:223ms SFace:0ms faces:0 (3024x4032)
+[Perf] photo C02C51E3: Load:83ms(deg:none gap:223ms) YuNet:233ms SFace:56ms faces:2 (3024x4032)
+[Perf] assignPerson: 3장, 3faces — Load:257ms YuNet:684ms SFace:83ms Match:1ms Total:1025ms
+
+--- 스크롤 후 분석 ---
+[Perf] photo 0A33F52A: Load:66ms(deg:none gap:0ms) YuNet:238ms SFace:62ms faces:2 (3024x4032)
+[Perf] photo A7FE4B99: Load:77ms(deg:none gap:300ms) YuNet:231ms SFace:61ms faces:2 (3024x4032)
+[Perf] photo F66C2EC9: Load:78ms(deg:none gap:292ms) YuNet:235ms SFace:61ms faces:2 (3024x4032)
+[Perf] assignPerson: 3장, 6faces — Load:221ms YuNet:705ms SFace:184ms Match:0ms Total:1110ms
+[Perf] photo 6E44C1B5: Load:75ms(deg:none gap:0ms) YuNet:230ms SFace:32ms faces:1 (3024x4032)
+[Perf] photo C38CDDA6: Load:75ms(deg:none gap:262ms) YuNet:228ms SFace:30ms faces:1 (3024x4032)
+[Perf] photo F9C4DD59: Load:75ms(deg:none gap:258ms) YuNet:237ms SFace:0ms faces:0 (3024x4032)
+[Perf] assignPerson: 3장, 2faces — Load:225ms YuNet:695ms SFace:61ms Match:0ms Total:982ms
+[Perf] photo AA6F67CD: Load:75ms(deg:none gap:0ms) YuNet:232ms SFace:60ms faces:2 (3024x4032)
+[Perf] photo 364BD1E5: Load:78ms(deg:none gap:292ms) YuNet:230ms SFace:30ms faces:1 (3024x4032)
+[Perf] photo 251AC319: Load:76ms(deg:none gap:260ms) YuNet:227ms SFace:30ms faces:1 (3024x4032)
+[Perf] assignPerson: 3장, 4faces — Load:229ms YuNet:689ms SFace:119ms Match:0ms Total:1038ms
