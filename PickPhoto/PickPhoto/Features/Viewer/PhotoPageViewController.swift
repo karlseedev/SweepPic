@@ -200,6 +200,8 @@ final class PhotoPageViewController: UIViewController {
 
     deinit {
         requestCancellable?.cancel()
+        // 뷰어 종료 시 분석 재개 (영구 pause 방지 안전장치)
+        SimilarityAnalysisQueue.shared.resumeImageLoading()
     }
 
     // MARK: - Debug: 상태 스냅샷
@@ -375,6 +377,9 @@ final class PhotoPageViewController: UIViewController {
 
         guard targetSize.width > 0, targetSize.height > 0 else { return }
 
+        // 분석용 이미지 로딩 일시정지 (LOD0과의 리소스 경쟁 방지)
+        SimilarityAnalysisQueue.shared.pauseImageLoading()
+
         // 시간 측정 시작
         imageRequestStartTime = CFAbsoluteTimeGetCurrent()
         hasLoadedFullSize = false
@@ -387,7 +392,11 @@ final class PhotoPageViewController: UIViewController {
             contentMode: .aspectFit,
             quality: .fast  // opportunistic → degraded 먼저 표시
         ) { [weak self] image, isDegraded in
-            guard let self = self, let image = image else { return }
+            guard let self = self, let image = image else {
+                // 이미지 로딩 실패 시에도 분석 재개 (영구 pause 방지)
+                SimilarityAnalysisQueue.shared.resumeImageLoading()
+                return
+            }
 
             let elapsed = (CFAbsoluteTimeGetCurrent() - self.imageRequestStartTime) * 1000
             Logger.viewer.debug("[LOD0] 콜백 +\(String(format: "%.0f", elapsed))ms isDegraded=\(isDegraded) imageSize=\(image.size.width)×\(image.size.height)")
@@ -395,6 +404,10 @@ final class PhotoPageViewController: UIViewController {
             if isDegraded, self.imageView.image != nil {
                 Logger.viewer.debug("[LOD0] degraded skip — 기존 이미지 유지")
                 return
+            }
+            // non-degraded 도착 → 분석용 이미지 로딩 재개
+            if !isDegraded {
+                SimilarityAnalysisQueue.shared.resumeImageLoading()
             }
             // 이미지만 교체 (레이아웃 변경 없음!)
             self.imageView.image = image

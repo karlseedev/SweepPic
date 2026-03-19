@@ -90,6 +90,17 @@ final class SimilarityImageLoader {
     private let lock = NSLock()
     nonisolated(unsafe) private var activeRequestIDs: [UUID: PHImageRequestID] = [:]
 
+    // MARK: - Pause/Resume (뷰어 LOD0 리소스 경쟁 방지)
+
+    /// 일시정지 상태 여부
+    private var isPaused = false
+
+    /// pause 중 대기하는 continuation 목록
+    private var waitingContinuations: [CheckedContinuation<Void, Never>] = []
+
+    /// pause/resume 상태 보호용 lock
+    private let pauseLock = NSLock()
+
     // MARK: - Initialization
 
     /// 이미지 로더를 초기화합니다.
@@ -116,6 +127,28 @@ final class SimilarityImageLoader {
         self.requestOptions = options
     }
 
+    // MARK: - Pause/Resume API
+
+    /// 분석용 이미지 로딩을 일시정지합니다.
+    /// 뷰어 LOD0 요청 시 호출하여 PHCachingImageManager 리소스 경쟁을 제거합니다.
+    func pause() {
+        pauseLock.lock()
+        isPaused = true
+        pauseLock.unlock()
+    }
+
+    /// 일시정지된 이미지 로딩을 재개합니다.
+    /// LOD0 non-degraded 도착 또는 뷰어 종료 시 호출합니다.
+    func resume() {
+        pauseLock.lock()
+        isPaused = false
+        let continuations = waitingContinuations
+        waitingContinuations.removeAll()
+        pauseLock.unlock()
+        // lock 해제 후 resume — deadlock 방지
+        for c in continuations { c.resume() }
+    }
+
     // MARK: - Public Methods
 
     /// 분석용 이미지를 로딩합니다.
@@ -126,6 +159,8 @@ final class SimilarityImageLoader {
     /// - Returns: 분석용으로 리사이즈된 CGImage
     /// - Throws: SimilarityImageLoadError
     func loadImage(for asset: PHAsset, maxSize: CGFloat? = nil) async throws -> CGImage {
+        // 뷰어 이미지 로딩 중이면 대기
+        await waitIfPaused()
         let requestUUID = UUID()
         var hasResumed = false  // 중복 resume 방지
         var isTimeout = false   // timeout/cancelled 구분용
@@ -232,6 +267,8 @@ final class SimilarityImageLoader {
     ///   - maxSize: 긴 변 기준 최대 크기
     /// - Returns: ImageLoadResult (이미지 + degraded 시간)
     func loadImageWithDiag(for asset: PHAsset, maxSize: CGFloat? = nil) async throws -> ImageLoadResult {
+        // 뷰어 이미지 로딩 중이면 대기
+        await waitIfPaused()
         let requestUUID = UUID()
         var hasResumed = false
         var isTimeout = false
@@ -361,6 +398,20 @@ final class SimilarityImageLoader {
     }
 
     // MARK: - Private Methods
+
+    /// pause 상태면 resume() 호출까지 대기
+    /// withCheckedContinuation의 body는 동기 실행이므로 lock→append→unlock 순서 보장
+    private func waitIfPaused() async {
+        pauseLock.lock()
+        guard isPaused else {
+            pauseLock.unlock()
+            return
+        }
+        await withCheckedContinuation { (c: CheckedContinuation<Void, Never>) in
+            waitingContinuations.append(c)
+            pauseLock.unlock()
+        }
+    }
 
     /// 타겟 크기를 계산합니다.
     ///
