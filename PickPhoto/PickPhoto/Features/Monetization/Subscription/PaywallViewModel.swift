@@ -136,13 +136,14 @@ final class PaywallViewModel {
     private func formatTrialPeriod(_ period: Product.SubscriptionPeriod) -> String? {
         switch period.unit {
         case .day:
-            return "\(period.value)일 무료 체험"
+            return "\(period.value)일 무료 체험(언제든 취소 가능)"
         case .week:
-            return "\(period.value)주 무료 체험"
+            let days = period.value * 7
+            return "\(days)일 무료 체험(언제든 취소 가능)"
         case .month:
-            return "\(period.value)개월 무료 체험"
+            return "\(period.value)개월 무료 체험(언제든 취소 가능)"
         case .year:
-            return "\(period.value)년 무료 체험"
+            return "\(period.value)년 무료 체험(언제든 취소 가능)"
         @unknown default:
             return nil
         }

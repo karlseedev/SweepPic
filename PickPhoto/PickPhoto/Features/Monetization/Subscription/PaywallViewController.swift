@@ -108,8 +108,8 @@ final class PaywallViewController: UIViewController {
     /// 연간 구매 버튼 (메인)
     private let yearlyButton: UIButton = {
         let button = UIButton(type: .system)
-        button.backgroundColor = .systemBlue
-        button.setTitleColor(.white, for: .normal)
+        button.backgroundColor = .white
+        button.setTitleColor(.black, for: .normal)
         button.titleLabel?.font = .systemFont(ofSize: 17, weight: .semibold)
         button.layer.cornerRadius = 25
         button.clipsToBounds = true
@@ -121,7 +121,7 @@ final class PaywallViewController: UIViewController {
     private let freeTrialLabel: UILabel = {
         let label = UILabel()
         label.font = .systemFont(ofSize: 13, weight: .medium)
-        label.textColor = .systemBlue
+        label.textColor = .white
         label.textAlignment = .center
         label.isHidden = true
         label.translatesAutoresizingMaskIntoConstraints = false
@@ -341,10 +341,13 @@ final class PaywallViewController: UIViewController {
         freeLabel.textColor = isHeader ? .secondaryLabel : .tertiaryLabel
         freeLabel.textAlignment = .center
 
+        // 온보딩 포인트컬러 (#FFEA00)
+        let highlightYellow = UIColor(red: 1.0, green: 0.918, blue: 0.0, alpha: 1.0)
+
         let plusLabel = UILabel()
         plusLabel.text = plusValue
         plusLabel.font = isHeader ? .systemFont(ofSize: 13, weight: .bold) : .systemFont(ofSize: 14, weight: .semibold)
-        plusLabel.textColor = isHeader ? .systemBlue : .systemBlue
+        plusLabel.textColor = highlightYellow
         plusLabel.textAlignment = .center
 
         container.addArrangedSubview(featureLabel)
