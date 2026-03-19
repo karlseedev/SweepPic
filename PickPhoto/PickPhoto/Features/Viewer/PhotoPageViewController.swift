@@ -368,6 +368,11 @@ final class PhotoPageViewController: UIViewController {
 
     }
 
+    // MARK: - 디버그: LOD0 스킵 플래그
+    // true로 설정하면 LOD0 이미지 교체를 스킵하고 LOD1만 사용
+    // initialImage → LOD1 직행 시 체감 차이를 확인하기 위한 플래그
+    private static let debugSkipLOD0 = false
+
     /// LOD0 즉시 요청 (.fast, opportunistic → degraded 먼저 표시)
     private func requestLOD0Image() {
         let screenSize = UIScreen.main.bounds.size
@@ -409,6 +414,13 @@ final class PhotoPageViewController: UIViewController {
             if !isDegraded {
                 SimilarityAnalysisQueue.shared.resumeImageLoading()
             }
+
+            // 디버그: LOD0 스킵 모드 — 이미지 교체 안 함, 로그만 출력
+            if Self.debugSkipLOD0 {
+                Logger.viewer.debug("[LOD0] ⚠️ debugSkipLOD0=true → 이미지 교체 스킵")
+                return
+            }
+
             // 이미지만 교체 (레이아웃 변경 없음!)
             self.imageView.image = image
             // imageSize는 applyInitialLayout에서 PHAsset 기반으로 이미 설정됨

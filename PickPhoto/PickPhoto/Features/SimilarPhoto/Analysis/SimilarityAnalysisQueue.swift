@@ -774,7 +774,7 @@ final class SimilarityAnalysisQueue {
             // per-photo 성능 로그 (프리로드 비교용, 진단 정보 포함)
             let degStr = degradedMs.map { String(format: "deg:%.0fms", $0) } ?? "deg:none"
             let perfLog = "photo \(shortID): Load:\(String(format: "%.0f", perfLoadMs))ms(\(degStr) gap:\(String(format: "%.0f", perfGapMs))ms) YuNet:\(String(format: "%.0f", perfYunetMs))ms SFace:\(String(format: "%.0f", perfSfaceMs))ms faces:\(yunetDetections.count) (\(photoMeta))"
-            Logger.similarPhoto.debug("[Perf] \(perfLog)")
+            // Logger.similarPhoto.debug("[Perf] \(perfLog)")  // 분석완료로 비활성화
 
             // Load 500ms 이상: SLOW 태그로 중복 출력 (검색 편의)
             if perfLoadMs >= 500 {

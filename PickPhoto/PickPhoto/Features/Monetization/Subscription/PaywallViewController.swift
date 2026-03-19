@@ -68,7 +68,7 @@ final class PaywallViewController: UIViewController {
         let button = UIButton(type: .system)
         let config = UIImage.SymbolConfiguration(pointSize: 16, weight: .semibold)
         button.setImage(UIImage(systemName: "xmark", withConfiguration: config), for: .normal)
-        button.tintColor = .secondaryLabel
+        button.tintColor = UIColor.white.withAlphaComponent(0.3)
         button.translatesAutoresizingMaskIntoConstraints = false
         return button
     }()
@@ -76,7 +76,7 @@ final class PaywallViewController: UIViewController {
     /// 가치 헤드라인 (FR-035)
     private let headlineLabel: UILabel = {
         let label = UILabel()
-        label.text = "쌓인 사진,\n한 번에 비우세요"
+        label.text = "무료 체험하고\n한 번에 비우세요"
         label.font = .systemFont(ofSize: 28, weight: .bold)
         label.textColor = .label
         label.numberOfLines = 0
@@ -105,47 +105,29 @@ final class PaywallViewController: UIViewController {
         return view
     }()
 
-    /// 연간 구매 버튼 (메인)
-    private let yearlyButton: UIButton = {
-        let button = UIButton(type: .system)
-        button.backgroundColor = .white
-        button.setTitleColor(.black, for: .normal)
-        button.titleLabel?.font = .systemFont(ofSize: 17, weight: .semibold)
-        button.layer.cornerRadius = 25
-        button.clipsToBounds = true
-        button.translatesAutoresizingMaskIntoConstraints = false
-        return button
-    }()
+    /// 월간/연간 커스텀 캡슐 탭
+    private let planTabView = PaywallPlanTabView()
 
-    /// 무료 체험 안내 라벨
+    /// 무료 체험 + 가격 안내 라벨
+    /// 예: "7일 무료 체험(언제든 취소 가능) ($19.99/연)"
     private let freeTrialLabel: UILabel = {
         let label = UILabel()
         label.font = .systemFont(ofSize: 13, weight: .medium)
         label.textColor = .white
         label.textAlignment = .center
+        label.numberOfLines = 0
         label.isHidden = true
         label.translatesAutoresizingMaskIntoConstraints = false
         return label
     }()
 
-    /// 월간 무료 체험 안내 라벨
-    private let monthlyFreeTrialLabel: UILabel = {
-        let label = UILabel()
-        label.font = .systemFont(ofSize: 13, weight: .medium)
-        label.textColor = .secondaryLabel
-        label.textAlignment = .center
-        label.isHidden = true
-        label.translatesAutoresizingMaskIntoConstraints = false
-        return label
-    }()
-
-    /// 월간 구매 버튼 (보조)
-    private let monthlyButton: UIButton = {
+    /// 구매 버튼 (무료 체험 시작하기)
+    private let purchaseButton: UIButton = {
         let button = UIButton(type: .system)
-        button.backgroundColor = UIColor.systemGray5
-        button.setTitleColor(.label, for: .normal)
-        button.titleLabel?.font = .systemFont(ofSize: 15, weight: .medium)
-        button.layer.cornerRadius = 25
+        button.backgroundColor = .white
+        button.setTitleColor(.black, for: .normal)
+        button.setTitle("무료 체험 시작하기", for: .normal)
+        button.titleLabel?.font = .systemFont(ofSize: 17, weight: .semibold)
         button.clipsToBounds = true
         button.translatesAutoresizingMaskIntoConstraints = false
         return button
@@ -181,14 +163,34 @@ final class PaywallViewController: UIViewController {
         return button
     }()
 
-    /// 법적 고지 라벨 (FR-037)
-    private let legalLabel: UILabel = {
+    /// "Apple로 보호됨 약관" 라벨 (FR-037)
+    /// "약관" 부분에 밑줄 + 탭 시 하단 시트로 법적 고지 표시
+    private let appleProtectedLabel: UILabel = {
         let label = UILabel()
-        label.font = .systemFont(ofSize: 11, weight: .regular)
-        label.textColor = .tertiaryLabel
         label.numberOfLines = 0
         label.textAlignment = .center
+        label.isUserInteractionEnabled = true
         label.translatesAutoresizingMaskIntoConstraints = false
+
+        // "Apple로 보호됨 " (일반) + "약관" (밑줄)
+        let text = NSMutableAttributedString()
+        text.append(NSAttributedString(
+            string: "Apple로 보호됨\n",
+            attributes: [
+                .font: UIFont.systemFont(ofSize: 14, weight: .regular),
+                .foregroundColor: UIColor.white
+            ]
+        ))
+        text.append(NSAttributedString(
+            string: "약관",
+            attributes: [
+                .font: UIFont.systemFont(ofSize: 14, weight: .regular),
+                .foregroundColor: UIColor.white.withAlphaComponent(0.6),
+                .underlineStyle: NSUnderlineStyle.single.rawValue
+            ]
+        ))
+        label.attributedText = text
+
         return label
     }()
 
@@ -201,6 +203,12 @@ final class PaywallViewController: UIViewController {
     }()
 
     // MARK: - Lifecycle
+
+    override func viewDidLayoutSubviews() {
+        super.viewDidLayoutSubviews()
+        // 구매 버튼 완전 캡슐형 (높이/2)
+        purchaseButton.layer.cornerRadius = purchaseButton.bounds.height / 2
+    }
 
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -216,6 +224,26 @@ final class PaywallViewController: UIViewController {
 
         // [BM] T057: 페이월 노출 이벤트 (FR-056)
         AnalyticsService.shared.trackPaywallShown(source: analyticsSource)
+
+        // 구매 버튼 미세 펄스 애니메이션 시작
+        startPurchaseButtonPulse()
+    }
+
+    // MARK: - Button Pulse Animation
+
+    /// 구매 버튼 스케일 펄스 (1.0 ↔ 1.06)
+    private func startPurchaseButtonPulse() {
+        // viewDidAppear 이후 레이아웃 확정 후 시작
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { [weak self] in
+            UIView.animate(
+                withDuration: 1.0,
+                delay: 0,
+                options: [.repeat, .autoreverse, .allowUserInteraction, .curveEaseInOut],
+                animations: {
+                    self?.purchaseButton.transform = CGAffineTransform(scaleX: 1.06, y: 1.06)
+                }
+            )
+        }
     }
 
     // MARK: - UI Setup
@@ -258,30 +286,36 @@ final class PaywallViewController: UIViewController {
         contentStack.addArrangedSubview(comparisonContainer)
         setupComparisonTable()
 
-        // 무료 체험 라벨 (연간)
+        // 월간/연간 탭 — 가로 50%, 높이 1.5배(48pt), 중앙 정렬
+        let segmentWrapper = UIView()
+        segmentWrapper.translatesAutoresizingMaskIntoConstraints = false
+        segmentWrapper.addSubview(planTabView)
+        NSLayoutConstraint.activate([
+            planTabView.centerXAnchor.constraint(equalTo: segmentWrapper.centerXAnchor),
+            planTabView.topAnchor.constraint(equalTo: segmentWrapper.topAnchor),
+            planTabView.bottomAnchor.constraint(equalTo: segmentWrapper.bottomAnchor),
+            planTabView.widthAnchor.constraint(equalTo: segmentWrapper.widthAnchor, multiplier: 0.5),
+            planTabView.heightAnchor.constraint(equalToConstant: 48)
+        ])
+        contentStack.addArrangedSubview(segmentWrapper)
+
+        // 무료 체험 + 가격 라벨 (탭 아래 18pt 간격 = 8 spacing + 10 추가)
         contentStack.addArrangedSubview(freeTrialLabel)
+        contentStack.setCustomSpacing(28, after: segmentWrapper)
 
-        // 연간 버튼
-        contentStack.addArrangedSubview(yearlyButton)
-        yearlyButton.heightAnchor.constraint(equalToConstant: 54).isActive = true
-
-        // 월간 버튼
-        contentStack.addArrangedSubview(monthlyButton)
-        monthlyButton.heightAnchor.constraint(equalToConstant: 50).isActive = true
-        contentStack.setCustomSpacing(8, after: yearlyButton)
-
-        // 월간 무료 체험 라벨
-        contentStack.addArrangedSubview(monthlyFreeTrialLabel)
-        contentStack.setCustomSpacing(4, after: monthlyButton)
+        // 구매 버튼
+        contentStack.addArrangedSubview(purchaseButton)
+        purchaseButton.heightAnchor.constraint(equalToConstant: 54).isActive = true
+        contentStack.setCustomSpacing(13, after: freeTrialLabel)
 
         // 복원/리딤 스택
         restoreRedeemStack.addArrangedSubview(restoreButton)
         restoreRedeemStack.addArrangedSubview(redeemButton)
         contentStack.addArrangedSubview(restoreRedeemStack)
-        contentStack.setCustomSpacing(12, after: monthlyButton)
+        contentStack.setCustomSpacing(17, after: purchaseButton)
 
-        // 법적 고지
-        contentStack.addArrangedSubview(legalLabel)
+        // Apple로 보호됨 + 약관 (탭 가능)
+        contentStack.addArrangedSubview(appleProtectedLabel)
         contentStack.setCustomSpacing(8, after: restoreRedeemStack)
 
         // 스피너 (중앙)
@@ -300,7 +334,7 @@ final class PaywallViewController: UIViewController {
         tableStack.translatesAutoresizingMaskIntoConstraints = false
 
         // 헤더 행
-        let headerRow = createComparisonRow(feature: "", freeValue: "무료", plusValue: "Plus", isHeader: true)
+        let headerRow = createComparisonRow(feature: "", freeValue: "일반", plusValue: "무료체험(Plus)", isHeader: true)
         tableStack.addArrangedSubview(headerRow)
 
         // 데이터 행
@@ -338,7 +372,7 @@ final class PaywallViewController: UIViewController {
         let freeLabel = UILabel()
         freeLabel.text = freeValue
         freeLabel.font = isHeader ? .systemFont(ofSize: 13, weight: .semibold) : .systemFont(ofSize: 14, weight: .regular)
-        freeLabel.textColor = isHeader ? .secondaryLabel : .tertiaryLabel
+        freeLabel.textColor = .white
         freeLabel.textAlignment = .center
 
         // 온보딩 포인트컬러 (#FFEA00)
@@ -346,7 +380,7 @@ final class PaywallViewController: UIViewController {
 
         let plusLabel = UILabel()
         plusLabel.text = plusValue
-        plusLabel.font = isHeader ? .systemFont(ofSize: 13, weight: .bold) : .systemFont(ofSize: 14, weight: .semibold)
+        plusLabel.font = isHeader ? .systemFont(ofSize: 16, weight: .bold) : .systemFont(ofSize: 17, weight: .semibold)
         plusLabel.textColor = highlightYellow
         plusLabel.textAlignment = .center
 
@@ -383,10 +417,14 @@ final class PaywallViewController: UIViewController {
 
     private func setupActions() {
         closeButton.addTarget(self, action: #selector(closeTapped), for: .touchUpInside)
-        yearlyButton.addTarget(self, action: #selector(yearlyTapped), for: .touchUpInside)
-        monthlyButton.addTarget(self, action: #selector(monthlyTapped), for: .touchUpInside)
+        purchaseButton.addTarget(self, action: #selector(purchaseTapped), for: .touchUpInside)
+        planTabView.addTarget(self, action: #selector(planTabViewChanged), for: .valueChanged)
         restoreButton.addTarget(self, action: #selector(restoreTapped), for: .touchUpInside)
         redeemButton.addTarget(self, action: #selector(redeemTapped), for: .touchUpInside)
+
+        // 약관 라벨 탭 제스처
+        let termsTap = UITapGestureRecognizer(target: self, action: #selector(termsTapped))
+        appleProtectedLabel.addGestureRecognizer(termsTap)
     }
 
     @objc private func closeTapped() {
@@ -395,31 +433,27 @@ final class PaywallViewController: UIViewController {
         }
     }
 
-    @objc private func yearlyTapped() {
-        guard !isPurchasing else { return }
-        isPurchasing = true
-        setButtonsEnabled(false)
-
-        Task {
-            do {
-                let result = try await viewModel.purchaseYearly()
-                handlePurchaseResult(result)
-            } catch {
-                handlePurchaseError(error)
-            }
-            isPurchasing = false
-            setButtonsEnabled(true)
-        }
+    /// 현재 선택된 플랜이 연간인지 여부
+    private var isYearlySelected: Bool {
+        planTabView.selectedSegmentIndex == 1
     }
 
-    @objc private func monthlyTapped() {
+    /// 탭 변경 시 무료 체험 라벨 업데이트
+    @objc private func planTabViewChanged() {
+        updateTrialLabel()
+    }
+
+    /// 구매 버튼 탭 — 선택된 플랜에 따라 구매 진행
+    @objc private func purchaseTapped() {
         guard !isPurchasing else { return }
         isPurchasing = true
         setButtonsEnabled(false)
 
         Task {
             do {
-                let result = try await viewModel.purchaseMonthly()
+                let result = isYearlySelected
+                    ? try await viewModel.purchaseYearly()
+                    : try await viewModel.purchaseMonthly()
                 handlePurchaseResult(result)
             } catch {
                 handlePurchaseError(error)
@@ -539,7 +573,6 @@ final class PaywallViewController: UIViewController {
             }
         }
 
-        updateLegalText()
     }
 
     /// SubscriptionStore 상품 로드 완료 알림 핸들러
@@ -555,36 +588,57 @@ final class PaywallViewController: UIViewController {
 
     /// 가격 UI 업데이트
     private func updatePriceUI() {
-        // 연간 버튼 (메인)
-        var yearlyTitle = viewModel.yearlyPriceText
-        if let savings = viewModel.yearlySavingsPercent {
-            yearlyTitle += "  \(savings) 할인"
-        }
-        yearlyButton.setTitle(yearlyTitle, for: .normal)
-
-        // 월간 버튼 (보조)
-        monthlyButton.setTitle(viewModel.monthlyPriceText, for: .normal)
-
-        // 연간 무료 체험 라벨
-        if let trialText = viewModel.freeTrialText {
-            freeTrialLabel.text = trialText
-            freeTrialLabel.isHidden = false
-        }
-
-        // 월간 무료 체험 라벨
-        if let monthlyTrialText = viewModel.monthlyFreeTrialText {
-            monthlyFreeTrialLabel.text = monthlyTrialText
-            monthlyFreeTrialLabel.isHidden = false
-        }
-
-        // 접근성: 가격 정보 반영 (FR-057)
-        yearlyButton.accessibilityLabel = "연간 구독, \(yearlyTitle)"
-        monthlyButton.accessibilityLabel = "월간 구독, \(viewModel.monthlyPriceText)"
+        // 무료 체험 + 가격 라벨 업데이트
+        updateTrialLabel()
     }
 
-    /// 법적 고지 텍스트 업데이트 (FR-037)
-    private func updateLegalText() {
-        legalLabel.text = """
+    /// 선택된 탭에 따라 무료 체험 + 가격 라벨 업데이트
+    /// "7일 무료체험" 노란색 / " - 언제든 취소 가능" 흰색 / "(가격)" 흰50%
+    private func updateTrialLabel() {
+        guard let info = viewModel.freeTrialAndPrice(isYearly: isYearlySelected) else {
+            freeTrialLabel.isHidden = true
+            return
+        }
+
+        // 온보딩 포인트컬러 (#FFEA00)
+        let highlightYellow = UIColor(red: 1.0, green: 0.918, blue: 0.0, alpha: 1.0)
+
+        let attributed = NSMutableAttributedString()
+
+        // "7일 무료체험": 17pt, semibold, 포인트 노란색
+        attributed.append(NSAttributedString(
+            string: info.trialDays,
+            attributes: [
+                .font: UIFont.systemFont(ofSize: 17, weight: .semibold),
+                .foregroundColor: highlightYellow
+            ]
+        ))
+
+        // " - 언제든 취소 가능": 17pt, semibold, 흰색
+        attributed.append(NSAttributedString(
+            string: info.cancelNote + " ",
+            attributes: [
+                .font: UIFont.systemFont(ofSize: 17, weight: .semibold),
+                .foregroundColor: UIColor.white
+            ]
+        ))
+
+        // "(가격)": 13pt, medium, 흰색 50%
+        attributed.append(NSAttributedString(
+            string: info.price,
+            attributes: [
+                .font: UIFont.systemFont(ofSize: 13, weight: .medium),
+                .foregroundColor: UIColor.white.withAlphaComponent(0.5)
+            ]
+        ))
+
+        freeTrialLabel.attributedText = attributed
+        freeTrialLabel.isHidden = false
+    }
+
+    /// 약관 탭 → 하단 시트로 법적 고지 표시 (FR-037)
+    @objc private func termsTapped() {
+        let legalText = """
         무료 체험 기간이 끝나면 선택한 요금제로 자동 구독이 시작됩니다. \
         구독은 확인 시 Apple ID 계정으로 청구됩니다. \
         구독은 현재 기간 종료 최소 24시간 전에 해지하지 않으면 자동으로 갱신됩니다. \
@@ -592,25 +646,82 @@ final class PaywallViewController: UIViewController {
         구독은 구매 후 설정 > Apple ID > 구독에서 관리하고 해지할 수 있습니다. \
         이용약관 및 개인정보처리방침이 적용됩니다.
         """
+
+        let sheet = UIViewController()
+        sheet.view.backgroundColor = .systemBackground
+
+        // 드래그 핸들 바
+        let handle = UIView()
+        handle.backgroundColor = .systemGray3
+        handle.layer.cornerRadius = 2.5
+        handle.translatesAutoresizingMaskIntoConstraints = false
+        sheet.view.addSubview(handle)
+
+        // 제목
+        let titleLabel = UILabel()
+        titleLabel.text = "이용 약관"
+        titleLabel.font = .systemFont(ofSize: 18, weight: .bold)
+        titleLabel.textColor = .label
+        titleLabel.translatesAutoresizingMaskIntoConstraints = false
+        sheet.view.addSubview(titleLabel)
+
+        // 본문
+        let bodyLabel = UILabel()
+        bodyLabel.text = legalText
+        bodyLabel.font = .systemFont(ofSize: 14, weight: .regular)
+        bodyLabel.textColor = .secondaryLabel
+        bodyLabel.numberOfLines = 0
+        bodyLabel.translatesAutoresizingMaskIntoConstraints = false
+        sheet.view.addSubview(bodyLabel)
+
+        NSLayoutConstraint.activate([
+            handle.topAnchor.constraint(equalTo: sheet.view.topAnchor, constant: 8),
+            handle.centerXAnchor.constraint(equalTo: sheet.view.centerXAnchor),
+            handle.widthAnchor.constraint(equalToConstant: 36),
+            handle.heightAnchor.constraint(equalToConstant: 5),
+
+            titleLabel.topAnchor.constraint(equalTo: handle.bottomAnchor, constant: 16),
+            titleLabel.leadingAnchor.constraint(equalTo: sheet.view.leadingAnchor, constant: 20),
+            titleLabel.trailingAnchor.constraint(equalTo: sheet.view.trailingAnchor, constant: -20),
+
+            bodyLabel.topAnchor.constraint(equalTo: titleLabel.bottomAnchor, constant: 12),
+            bodyLabel.leadingAnchor.constraint(equalTo: sheet.view.leadingAnchor, constant: 20),
+            bodyLabel.trailingAnchor.constraint(equalTo: sheet.view.trailingAnchor, constant: -20),
+        ])
+
+        // 콘텐츠 높이 계산 후 딱 맞는 커스텀 detent 적용
+        // viewDidLayoutSubviews 전이므로 수동 계산
+        let sheetWidth = view.bounds.width - 40  // 좌우 20pt 패딩
+        let bodySize = bodyLabel.sizeThatFits(CGSize(width: sheetWidth, height: .greatestFiniteMagnitude))
+        // 핸들(8+5) + 간격(16) + 제목(~22) + 간격(12) + 본문 + 하단 여백(24)
+        let totalHeight: CGFloat = 8 + 5 + 16 + 22 + 12 + bodySize.height + 24
+
+        if let sheetPresentation = sheet.sheetPresentationController {
+            let customDetent = UISheetPresentationController.Detent.custom { _ in
+                return totalHeight
+            }
+            sheetPresentation.detents = [customDetent]
+        }
+
+        present(sheet, animated: true)
     }
 
     // MARK: - Helpers
 
     /// 버튼 활성/비활성 토글
     private func setButtonsEnabled(_ enabled: Bool) {
-        yearlyButton.isEnabled = enabled
-        monthlyButton.isEnabled = enabled
+        purchaseButton.isEnabled = enabled
         restoreButton.isEnabled = enabled
-        yearlyButton.alpha = enabled ? 1.0 : 0.5
-        monthlyButton.alpha = enabled ? 1.0 : 0.5
+        planTabView.isEnabled = enabled
+        purchaseButton.alpha = enabled ? 1.0 : 0.5
     }
 
     /// 상품 로드 실패 시 에러 안내 (StoreKit Configuration 미설정 등)
     private func showProductLoadError() {
-        yearlyButton.setTitle("상품 정보를 불러올 수 없습니다", for: .normal)
-        yearlyButton.isEnabled = false
-        yearlyButton.alpha = 0.5
-        monthlyButton.isHidden = true
+        purchaseButton.setTitle("상품 정보를 불러올 수 없습니다", for: .normal)
+        purchaseButton.isEnabled = false
+        purchaseButton.alpha = 0.5
+        planTabView.isEnabled = false
         Logger.app.error("PaywallVC: 상품 로드 실패 — StoreKit Configuration 확인 필요")
     }
 
@@ -628,8 +739,8 @@ final class PaywallViewController: UIViewController {
     private func setupAccessibility() {
         closeButton.accessibilityLabel = "닫기"
         closeButton.accessibilityHint = "페이월 화면을 닫습니다"
-        yearlyButton.accessibilityLabel = "연간 구독 구매"
-        monthlyButton.accessibilityLabel = "월간 구독 구매"
+        planTabView.accessibilityLabel = "구독 플랜 선택"
+        purchaseButton.accessibilityLabel = "무료 체험 시작하기"
         restoreButton.accessibilityLabel = "구독 복원"
         restoreButton.accessibilityHint = "이전에 구매한 구독을 복원합니다"
         redeemButton.accessibilityLabel = "리딤 코드 입력"

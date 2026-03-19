@@ -112,38 +112,35 @@ final class PaywallViewModel {
     /// Intro Offer eligibility (상품 로드 시 조회)
     private(set) var isEligibleForIntroOffer: Bool = true
 
-    /// 연간 무료 체험 기간 텍스트 (introductory offer 기반)
-    /// eligibility 미자격 시 nil 반환 (재구독자 등)
-    var freeTrialText: String? {
+    /// 무료 체험 + 가격 정보 (3파트 분리 반환)
+    /// - Returns: (trialDays, cancelNote, priceText) 또는 nil
+    ///   trialDays: "7일 무료체험"
+    ///   cancelNote: " - 언제든 취소 가능"
+    ///   priceText: "($2.99/월)"
+    func freeTrialAndPrice(isYearly: Bool) -> (trialDays: String, cancelNote: String, price: String)? {
         guard isEligibleForIntroOffer else { return nil }
-        guard let yearly = yearlyProduct,
-              let intro = yearly.subscription?.introductoryOffer,
+        let product = isYearly ? yearlyProduct : monthlyProduct
+        guard let product = product,
+              let intro = product.subscription?.introductoryOffer,
               intro.paymentMode == .freeTrial else { return nil }
-        return formatTrialPeriod(intro.period)
+        guard let trialDays = formatTrialDays(intro.period) else { return nil }
+        // displayPrice는 StoreKit이 사용자 locale에 맞게 포맷 (예: $2.99, ₩3,900)
+        let priceSuffix = isYearly ? "\(product.displayPrice)/연" : "\(product.displayPrice)/월"
+        return (trialDays, " - 언제든 취소 가능", "(\(priceSuffix))")
     }
 
-    /// 월간 무료 체험 기간 텍스트 (introductory offer 기반)
-    /// eligibility 미자격 시 nil 반환
-    var monthlyFreeTrialText: String? {
-        guard isEligibleForIntroOffer else { return nil }
-        guard let monthly = monthlyProduct,
-              let intro = monthly.subscription?.introductoryOffer,
-              intro.paymentMode == .freeTrial else { return nil }
-        return formatTrialPeriod(intro.period)
-    }
-
-    /// 체험 기간 → 텍스트 변환 헬퍼
-    private func formatTrialPeriod(_ period: Product.SubscriptionPeriod) -> String? {
+    /// 체험 기간 → 일수 텍스트 변환 헬퍼
+    private func formatTrialDays(_ period: Product.SubscriptionPeriod) -> String? {
         switch period.unit {
         case .day:
-            return "\(period.value)일 무료 체험(언제든 취소 가능)"
+            return "\(period.value)일 무료체험"
         case .week:
             let days = period.value * 7
-            return "\(days)일 무료 체험(언제든 취소 가능)"
+            return "\(days)일 무료체험"
         case .month:
-            return "\(period.value)개월 무료 체험(언제든 취소 가능)"
+            return "\(period.value)개월 무료체험"
         case .year:
-            return "\(period.value)년 무료 체험(언제든 취소 가능)"
+            return "\(period.value)년 무료체험"
         @unknown default:
             return nil
         }
@@ -163,8 +160,8 @@ final class PaywallViewModel {
         [
             ComparisonRow(feature: "일일 삭제", freeValue: "10장", plusValue: "무제한"),
             ComparisonRow(feature: "광고", freeValue: "있음", plusValue: "없음"),
-            ComparisonRow(feature: "유사 사진 정리", freeValue: "제공", plusValue: "제공"),
-            ComparisonRow(feature: "얼굴 인식 확대", freeValue: "제공", plusValue: "제공"),
+            ComparisonRow(feature: "유사 사진 정리", freeValue: "광고포함", plusValue: "광고없음"),
+            ComparisonRow(feature: "얼굴 인식 확대", freeValue: "광고포함", plusValue: "광고없음"),
         ]
     }
 
