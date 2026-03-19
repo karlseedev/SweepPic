@@ -90,10 +90,11 @@ final class SimilarityImageLoader {
     private let lock = NSLock()
     nonisolated(unsafe) private var activeRequestIDs: [UUID: PHImageRequestID] = [:]
 
-    // MARK: - Pause/Resume (뷰어 LOD0 리소스 경쟁 방지)
+    // MARK: - Pause/Resume (PHImageManager 리소스 경쟁 방지)
 
-    /// 일시정지 상태 여부
-    private var isPaused = false
+    /// 일시정지 참조 카운트 (0이면 활성, 1이상이면 pause)
+    /// 뷰어 LOD0, 스크롤 등 여러 소스에서 독립적으로 pause/resume 가능
+    private var pauseCount = 0
 
     /// pause 중 대기하는 continuation 목록
     private var waitingContinuations: [CheckedContinuation<Void, Never>] = []
@@ -130,23 +131,29 @@ final class SimilarityImageLoader {
     // MARK: - Pause/Resume API
 
     /// 분석용 이미지 로딩을 일시정지합니다.
-    /// 뷰어 LOD0 요청 시 호출하여 PHCachingImageManager 리소스 경쟁을 제거합니다.
+    /// 뷰어 LOD0, 스크롤 등 여러 소스에서 호출 가능 (참조 카운팅)
     func pause() {
         pauseLock.lock()
-        isPaused = true
+        pauseCount += 1
         pauseLock.unlock()
     }
 
     /// 일시정지된 이미지 로딩을 재개합니다.
-    /// LOD0 non-degraded 도착 또는 뷰어 종료 시 호출합니다.
+    /// pause()와 쌍으로 호출해야 합니다 (참조 카운팅).
+    /// 모든 소스가 resume하면(pauseCount == 0) 대기 중인 로딩을 재개합니다.
     func resume() {
         pauseLock.lock()
-        isPaused = false
-        let continuations = waitingContinuations
-        waitingContinuations.removeAll()
-        pauseLock.unlock()
-        // lock 해제 후 resume — deadlock 방지
-        for c in continuations { c.resume() }
+        pauseCount -= 1
+        if pauseCount <= 0 {
+            pauseCount = 0  // 안전장치: 음수 방지
+            let continuations = waitingContinuations
+            waitingContinuations.removeAll()
+            pauseLock.unlock()
+            // lock 해제 후 resume — deadlock 방지
+            for c in continuations { c.resume() }
+        } else {
+            pauseLock.unlock()
+        }
     }
 
     // MARK: - Public Methods
@@ -403,7 +410,7 @@ final class SimilarityImageLoader {
     /// withCheckedContinuation의 body는 동기 실행이므로 lock→append→unlock 순서 보장
     private func waitIfPaused() async {
         pauseLock.lock()
-        guard isPaused else {
+        guard pauseCount > 0 else {
             pauseLock.unlock()
             return
         }

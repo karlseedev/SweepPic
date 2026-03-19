@@ -156,6 +156,11 @@ extension GridViewController {
         debounceWorkItem?.cancel()
         debounceWorkItem = nil
 
+        // 분석 이미지 로딩 일시정지 (PHImageManager 경합 방지)
+        // - 스크롤 중 썸네일 로딩과 분석 이미지 로딩이 photosd 디코더 큐에서 경합
+        // - pause로 새 분석 이미지 요청을 차단하여 스크롤 성능 보호
+        SimilarityAnalysisQueue.shared.pauseImageLoading()
+
         // 분석 취소 (grid 소스만)
         SimilarityAnalysisQueue.shared.cancel(source: .grid)
 

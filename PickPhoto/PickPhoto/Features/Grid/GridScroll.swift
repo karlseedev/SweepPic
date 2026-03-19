@@ -228,7 +228,14 @@ extension GridViewController {
             guard let self = self else { return }
 
             // 스크롤이 다시 시작됐으면 분석 불필요
-            guard !self.isScrolling else { return }
+            // resume은 호출해야 함 — pause/resume 카운트 균형 유지
+            guard !self.isScrolling else {
+                SimilarityAnalysisQueue.shared.resumeImageLoading()
+                return
+            }
+
+            // 분석 이미지 로딩 재개 (스크롤 시작 시 pause한 것 해제)
+            SimilarityAnalysisQueue.shared.resumeImageLoading()
 
             // preheat 잔여 요청 정리 (디코더 큐에서 제거)
             ImagePipeline.shared.stopAllPreheating()
