@@ -1,0 +1,44 @@
+iPhone 11 — 수정 전 (preheat ON, upgrade 대기 없음, gap 로그 포함)
+날짜: 2026-03-19
+
+시작: +133.1ms, cellSize=123x123pt
+A) Fetch: 66.7ms (41648 items)
+데이터 로드 완료: +203.7ms, 41648장
+
+--- 첫 분석 (스크롤 전) ---
+[Perf] photo 8A82A6A4: Load:73ms(deg:none gap:0ms) YuNet:236ms SFace:0ms faces:0 (3024x4032)
+[Perf] photo 09A49686: Load:82ms(deg:none gap:1427ms) YuNet:230ms SFace:0ms faces:0 (3024x4032)
+[Perf] photo 270EE74C: Load:115ms(deg:none gap:230ms) YuNet:229ms SFace:0ms faces:0 (3024x4032)
+[Perf] photo A8464254: Load:69ms(deg:none gap:229ms) YuNet:228ms SFace:0ms faces:0 (3024x4032)
+[Perf] photo C0BC5DF8: Load:71ms(deg:none gap:228ms) YuNet:226ms SFace:0ms faces:0 (3024x4032)
+[Perf] photo 863C924D: Load:136ms(deg:none gap:0ms) YuNet:228ms SFace:29ms faces:1 (3024x4032)
+[Perf] photo 082BB2CE: Load:164ms(deg:none gap:258ms) YuNet:255ms SFace:0ms faces:0 (3024x4032)
+[Perf] photo C02C51E3: Load:96ms(deg:none gap:256ms) YuNet:245ms SFace:58ms faces:2 (3024x4032)
+[Perf] assignPerson: 3장, 3faces — Load:396ms YuNet:728ms SFace:87ms Match:2ms Total:1213ms
+
+--- 스크롤 후 분석 ---
+[SLOW] photo 0A33F52A: Load:1713ms(deg:none gap:0ms) YuNet:230ms SFace:61ms faces:2 (3024x4032)
+[Perf] photo A7FE4B99: Load:79ms(deg:none gap:291ms) YuNet:225ms SFace:60ms faces:2 (3024x4032)
+[Perf] photo F66C2EC9: Load:78ms(deg:none gap:285ms) YuNet:230ms SFace:60ms faces:2 (3024x4032)
+[Perf] assignPerson: 3장, 6faces — Load:1870ms YuNet:685ms SFace:180ms Match:0ms Total:2737ms
+[Perf] photo 6E44C1B5: Load:77ms(deg:none gap:0ms) YuNet:225ms SFace:30ms faces:1 (3024x4032)
+[Perf] photo C38CDDA6: Load:81ms(deg:none gap:256ms) YuNet:226ms SFace:30ms faces:1 (3024x4032)
+[Perf] photo F9C4DD59: Load:79ms(deg:none gap:256ms) YuNet:228ms SFace:0ms faces:0 (3024x4032)
+[Perf] assignPerson: 3장, 2faces — Load:236ms YuNet:679ms SFace:60ms Match:0ms Total:976ms
+[SLOW] photo AA6F67CD: Load:1425ms(deg:none gap:0ms) YuNet:229ms SFace:60ms faces:2 (3024x4032)
+[Perf] photo 364BD1E5: Load:80ms(deg:none gap:290ms) YuNet:225ms SFace:30ms faces:1 (3024x4032)
+[Perf] photo 251AC319: Load:81ms(deg:none gap:255ms) YuNet:227ms SFace:30ms faces:1 (3024x4032)
+[Perf] assignPerson: 3장, 4faces — Load:1586ms YuNet:681ms SFace:121ms Match:0ms Total:2388ms
+[Perf] photo F06BD6D2: Load:80ms(deg:none gap:0ms) YuNet:230ms SFace:0ms faces:0 (3024x4032)
+[Perf] photo 3D42FA01: Load:81ms(deg:none gap:231ms) YuNet:225ms SFace:30ms faces:1 (3024x4032)
+[Perf] photo A07BA4D0: Load:80ms(deg:none gap:256ms) YuNet:226ms SFace:30ms faces:1 (3024x4032)
+[Perf] photo B58C55A8: Load:79ms(deg:none gap:256ms) YuNet:225ms SFace:30ms faces:1 (3024x4032)
+[Perf] photo 2B9A3177: Load:80ms(deg:none gap:256ms) YuNet:225ms SFace:30ms faces:1 (3024x4032)
+[Perf] assignPerson: 5장, 4faces — Load:399ms YuNet:1132ms SFace:120ms Match:0ms Total:1653ms
+[SLOW] photo 35B411AC: Load:1598ms(deg:none gap:0ms) YuNet:233ms SFace:0ms faces:0 (3024x4032)
+[Perf] photo C8BB4000: Load:73ms(deg:none gap:233ms) YuNet:226ms SFace:0ms faces:0 (3024x4032)
+[Perf] photo E1A67533: Load:82ms(deg:none gap:226ms) YuNet:226ms SFace:0ms faces:0 (3024x4032)
+[SLOW] photo 2051F3FE: Load:2727ms(deg:none gap:0ms) YuNet:251ms SFace:0ms faces:0 (3024x4032)
+[Perf] photo 5928B024: Load:82ms(deg:none gap:251ms) YuNet:245ms SFace:0ms faces:0 (3024x4032)
+[SLOW] photo 09183961: Load:1336ms(deg:none gap:0ms) YuNet:251ms SFace:31ms faces:1 (3024x4032)
+[SLOW] photo F743FE7E: Load:2097ms(deg:none gap:0ms) YuNet:260ms SFace:68ms faces:2 (3024x4032)
