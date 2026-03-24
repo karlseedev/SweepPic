@@ -35,7 +35,8 @@
 - 코드 단순화 (LOD0 요청/콜백/프로퍼티 제거)
 - 역전 문제(LOD0이 LOD1을 덮어쓰는 현상) 근본 해소
 - PHImageManager 요청 1개 감소 → 시스템 부하 감소
-- 흐름 단순화: `initialImage → (pause) → LOD1 → (resume)`
+- LOD1도 pause 보호 대상이 됨 (현재는 LOD0만 보호, LOD1은 무보호)
+- 흐름 단순화: `initialImage → (pause + 150ms 디바운스) → LOD1 → (resume)`
 
 ---
 
@@ -45,9 +46,10 @@
 
 | 파일 | 줄 | 내용 | 작업 |
 |------|-----|------|------|
-| PhotoPageViewController.swift | L375-432 | `debugSkipLOD0` 플래그 + `requestLOD0Image()` 메서드 전체 | 제거 |
+| PhotoPageViewController.swift | L371-432 | `debugSkipLOD0` 플래그 + `requestLOD0Image()` 메서드 전체 | 제거 |
 | PhotoPageViewController.swift | L169 | `viewDidLoad()`에서 `requestLOD0Image()` 호출 | 제거 |
 | PhotoPageViewController.swift | L183 | `viewDidLayoutSubviews()`에서 fallback 호출 | 제거 |
+| PhotoPageViewController.swift | L385-386, 402, 415 | LOD0 내부의 pause/resume 호출 3곳 | 제거 (Phase 3에서 이전) |
 
 ### Phase 2: 죽은 코드 및 LOD0 전용 프로퍼티 정리
 
@@ -59,41 +61,135 @@
 | PhotoPageViewController.swift | L202 | `deinit`의 `requestCancellable?.cancel()` | 제거 | requestCancellable 제거에 따름 |
 
 `imageRequestStartTime` (L105-106)은 LOD1 콜백(L509)에서도 사용 중이므로 **유지**.
-단, LOD0 제거 후 시간 측정 기준점이 사라지므로 **Phase 3에서 LOD1 요청 시 설정 추가**.
+단, LOD0 제거 후 시간 측정 기준점이 사라지므로 **Phase 3에서 `requestFullSizeImage()` 시작에 설정 추가**.
 
-### Phase 3: pause/resume 로직 이전 (선택 A 확정)
+### Phase 3: pause/resume을 ViewerViewController 레벨로 이전
 
-**방침**: 뷰어 진입 즉시 pause → LOD1 도착 시 resume (현재 LOD0과 동일한 보호 범위)
+#### 배경: viewDidLoad에서 pause할 수 없는 이유
+
+UIPageViewController는 인접 페이지를 미리 생성하므로, `PhotoPageViewController.viewDidLoad()`에서
+pause하면 인접 페이지(좌/우)도 pause를 호출합니다 (count: 3).
+그런데 LOD1은 현재 페이지에만 요청되므로 인접 페이지의 resume이 호출되지 않아 **분석이 영구 멈춥니다**.
+
+현재(LOD0)에서는 인접 페이지도 `requestLOD0Image()`를 호출하고 콜백에서 resume하므로 균형이 맞았습니다.
+
+#### 추가 발견: 현재도 LOD1은 보호되지 않음
+
+```
+현재 흐름:
+viewDidLoad → requestLOD0Image() → pause
+LOD0 non-degraded (+85ms) → resume       ← 여기서 분석 재개
+(150ms 디바운스)
+LOD1 요청 → LOD1 도착 (+196ms)           ← 이 구간은 분석과 경쟁 중!
+```
+
+새 방식은 LOD1 구간도 보호하므로 **현재보다 개선**됩니다.
+
+#### 방침: scheduleLOD1Request()에서 pause → LOD1 콜백에서 resume
+
+**pause 위치**: `ViewerViewController.scheduleLOD1Request()` (디바운스 시작 시)
+**resume 위치**: `PhotoPageViewController.requestFullSizeImage()` 콜백 + 안전장치
 
 구체적 변경:
 
-| 위치 | 현재 | 변경 후 |
-|------|------|---------|
-| `viewDidLoad()` | `requestLOD0Image()` 내부에서 pause | `viewDidLoad()`에서 직접 `pauseImageLoading()` 호출 |
-| `requestFullSizeImage()` 시작 | 없음 | `imageRequestStartTime = CFAbsoluteTimeGetCurrent()` 추가 |
-| `requestFullSizeImage()` 콜백 (성공) | 없음 | `resumeImageLoading()` 추가 |
-| `requestFullSizeImage()` 콜백 (실패) | 없음 | `resumeImageLoading()` 추가 (영구 pause 방지) |
-| `deinit` | `resumeImageLoading()` | **유지** (안전장치) |
-
-변경 후 흐름:
+**ViewerViewController.swift — `scheduleLOD1Request()`:**
+```swift
+func scheduleLOD1Request() {
+    lod1DebounceTimer?.invalidate()
+    // LOD1 디바운스 시작 시 분석 양보 (LOD1 로딩 완료까지 보호)
+    SimilarityAnalysisQueue.shared.pauseImageLoading()
+    lod1DebounceTimer = Timer.scheduledTimer(withTimeInterval: Self.lod1DebounceDelay, repeats: false) { [weak self] _ in
+        guard let self = self else { return }
+        if let photoVC = self.pageViewController.viewControllers?.first as? PhotoPageViewController {
+            photoVC.requestHighQualityImage()
+        } else {
+            // 동영상 페이지 등 사진이 아닌 경우 → 즉시 resume (영구 pause 방지)
+            SimilarityAnalysisQueue.shared.resumeImageLoading()
+        }
+    }
+}
 ```
-viewDidLoad()
-  ├─ applyInitialLayout()
-  ├─ initialImage 세팅 (placeholder)
-  ├─ pauseImageLoading()          ← 즉시 분석 양보
-  └─ (LOD0 호출 제거)
 
-ViewerViewController.scheduleLOD1Request()  (150ms 디바운스)
-  └─ requestHighQualityImage()
-       └─ requestFullSizeImage()
-            ├─ imageRequestStartTime 설정   ← 시간 측정 기준점
-            └─ 콜백: resumeImageLoading()   ← 분석 재개
+**ViewerViewController.swift — `willTransitionTo`:**
+```swift
+func pageViewController(_ pageViewController: UIPageViewController, willTransitionTo pendingViewControllers: [UIViewController]) {
+    lod1DebounceTimer?.invalidate()
+    lod1DebounceTimer = nil
+    // 이전 scheduleLOD1Request의 pause 해제 (타이머 취소로 resume 경로가 사라지므로)
+    SimilarityAnalysisQueue.shared.resumeImageLoading()
+    // ... 기존 코드
+}
 ```
+
+**PhotoPageViewController.swift — `requestFullSizeImage()`:**
+```swift
+private func requestFullSizeImage() {
+    fullSizeRequestCancellable?.cancel()
+    // LOD1 시간 측정 기준점
+    imageRequestStartTime = CFAbsoluteTimeGetCurrent()
+    Logger.viewer.debug("[LOD1-full] 요청 시작 targetSize=MAX")
+    fullSizeRequestCancellable = ImagePipeline.shared.requestImage(
+        for: asset,
+        targetSize: PHImageManagerMaximumSize,
+        contentMode: .aspectFit,
+        quality: .high
+    ) { [weak self] image, isDegraded in
+        guard let self = self, let image = image else {
+            // 실패 시에도 분석 재개 (영구 pause 방지)
+            SimilarityAnalysisQueue.shared.resumeImageLoading()
+            return
+        }
+        // ... 기존 로그/이미지 교체 코드 ...
+        guard !isDegraded else { return }
+        self.hasLoadedFullSize = true
+        self.imageView.image = image
+        // LOD1 완료 → 분석 재개
+        SimilarityAnalysisQueue.shared.resumeImageLoading()
+    }
+}
+```
+
+**PhotoPageViewController.swift — `deinit`:**
+```swift
+deinit {
+    // requestCancellable 제거됨 (Phase 2)
+    // 뷰어 종료 시 분석 재개 (영구 pause 방지 안전장치)
+    SimilarityAnalysisQueue.shared.resumeImageLoading()
+}
+```
+
+#### 엣지 케이스 검증
+
+| 시나리오 | pause | resume | 결과 |
+|---------|-------|--------|------|
+| 최초 진입 | scheduleLOD1Request → pause(1) | LOD1 콜백 → resume(0) | ✓ |
+| 스와이프 완료 | willTransitionTo → resume(0) → scheduleLOD1Request → pause(1) | LOD1 콜백 → resume(0) | ✓ |
+| 빠른 스와이프 | scheduleLOD1Request → pause(1) → willTransitionTo → resume(0) → scheduleLOD1Request → pause(1) | LOD1 콜백 → resume(0) | ✓ |
+| 스와이프 취소 | willTransitionTo → resume(0 clamp) | — | ✓ (안전장치) |
+| 동영상 페이지 | scheduleLOD1Request → pause(1) | 타이머 else절 → resume(0) | ✓ |
+| LOD1 실패 | scheduleLOD1Request → pause(1) | 콜백 guard → resume(0) | ✓ |
+| 뷰어 닫기 | — | deinit → resume(0 clamp) | ✓ (안전장치) |
+| 그리드 스크롤과 중복 | 그리드 pause(1) + scheduleLOD1Request pause(2) | LOD1 resume(1) → 스크롤 종료 resume(0) | ✓ (참조 카운팅) |
 
 ### Phase 4: LOD1 디바운스 유지 확인
 
 - 디바운스(150ms) **유지** — 전환 애니메이션 중 디코딩 부하 방지 + 빠른 스와이프 시 불필요한 요청 방지
 - 최초 진입 시 `ViewerViewController+Setup.swift:286`에서 `scheduleLOD1Request()` 호출 → LOD0 제거와 무관하게 정상 동작
+
+### Phase 5: 주석 및 로그 정리
+
+| 파일 | 내용 | 작업 |
+|------|------|------|
+| SimilarityAnalysisQueue.swift L169 | `// MARK: - Image Loading Pause/Resume (뷰어 LOD0 리소스 경쟁 방지)` | "LOD0" → "LOD1" 또는 "뷰어" |
+| SimilarityAnalysisQueue.swift L172 | `/// 뷰어 LOD0 요청 시 호출하여...` | "LOD0" → "LOD1" |
+| SimilarityAnalysisQueue.swift L178 | `/// LOD0 non-degraded 도착 또는 뷰어 종료 시 호출합니다.` | "LOD0 non-degraded" → "LOD1" |
+| SimilarityImageLoader.swift L96 | `/// 뷰어 LOD0, 스크롤 등 여러 소스에서...` | "LOD0" → "LOD1" |
+| SimilarityImageLoader.swift L134 | `/// 뷰어 LOD0, 스크롤 등 여러 소스에서 호출 가능` | "LOD0" → "LOD1" |
+| PhotoPageViewController.swift L161 | `// Phase 1: 즉시 레이아웃 + LOD0 요청` | 주석 수정 |
+| PhotoPageViewController.swift L166 | `[LOD0] initialImage 세팅` | 로그 태그 변경 |
+| PhotoPageViewController.swift L280 | `// MARK: - Phase 1: Early Layout & LOD0` | "& LOD0" 제거 |
+| 260316Preload.md L21 | "LOD0 도착 시 resume" | "LOD1 도착 시 resume" |
+| 260316Preload.md L113 | 검증 항목 4번 "뷰어 LOD0" | 삭제 |
 
 ---
 
@@ -101,17 +197,26 @@ ViewerViewController.scheduleLOD1Request()  (150ms 디바운스)
 
 ```
 1. initialImage (그리드 썸네일 370×492) — 즉시 표시
-2. pauseImageLoading() — 분석 양보
-3. (150ms 디바운스 대기)
-4. LOD1 full (3024×4032) — 최종 이미지 교체 + resumeImageLoading()
+
+2. ViewerViewController.scheduleLOD1Request()
+   ├─ pauseImageLoading()          ← 분석 양보
+   └─ 150ms 디바운스 타이머 시작
+
+3. (150ms 대기)
+
+4. requestHighQualityImage() → requestFullSizeImage()
+   ├─ imageRequestStartTime 설정   ← 시간 측정 기준점
+   └─ PHImageManagerMaximumSize 요청
+
+5. LOD1 full (3024×4032) — 최종 이미지 교체
+   └─ resumeImageLoading()         ← 분석 재개
 ```
 
 ---
 
 ## 관련 문서
 
-- `260316Preload.md`: 프리로드 문서의 "LOD0 도착 시 resume" → "LOD1 도착 시 resume"으로 업데이트 필요
-- 검증 항목 4번 "뷰어 LOD0가 빠르게 도착하는지" → 삭제
+- `260316Preload.md`: pause/resume 설명 업데이트 필요 (Phase 5에 포함)
 
 ---
 
@@ -119,9 +224,11 @@ ViewerViewController.scheduleLOD1Request()  (150ms 디바운스)
 
 - [ ] Phase 1: `requestLOD0Image()` 및 호출부 제거
 - [ ] Phase 2: 죽은 코드(`requestImageForCurrentBoundsIfNeeded`) 및 LOD0 전용 프로퍼티 제거
-- [ ] Phase 3: pause/resume을 viewDidLoad/LOD1 콜백으로 이전, `imageRequestStartTime` 설정 추가
+- [ ] Phase 3: pause/resume을 ViewerViewController(`scheduleLOD1Request`/`willTransitionTo`)로 이전
+- [ ] Phase 3: `requestFullSizeImage()`에 `imageRequestStartTime` 설정 + resume 추가
+- [ ] Phase 3: `scheduleLOD1Request()` 타이머 콜백에 동영상 페이지 else resume 추가
 - [ ] Phase 4: LOD1 디바운스 유지 확인
-- [ ] 로그 태그 정리: `[LOD0]` → 제거, initialImage 로그는 태그 변경
+- [ ] Phase 5: 주석/로그 태그 정리 (LOD0 → LOD1)
+- [ ] Phase 5: `260316Preload.md` 업데이트
 - [ ] 빌드 확인
 - [ ] 실기기 테스트 (뷰어 진입 → 이미지 표시 정상, 분석 pause/resume 정상)
-- [ ] `260316Preload.md` pause/resume 설명 업데이트
