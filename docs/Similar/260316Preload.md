@@ -18,7 +18,7 @@
 ## pause/resume과의 연동
 프리로드가 `loadImage(for:maxSize:)`을 호출하므로, ViewerLOD의 `waitIfPaused()`가 자동 적용됨.
 - 뷰어 진입 시 pause → 프리로드 중인 개별 요청이 시작 전 대기
-- LOD0 도착 시 resume → 프리로드 재개
+- LOD1 도착 시 resume → 프리로드 재개
 - 추가 코드 불필요 — pause/resume이 loadImage 레벨에서 동작하기 때문
 
 ## 변경 내용
@@ -110,4 +110,4 @@ let photoMap = Dictionary(uniqueKeysWithValues: photos.map { ($0.localIdentifier
 1. 로그로 프리로드 시간 확인: `Preloaded X/Y images in Zms`
 2. 뷰어 진입 시 프리로드가 자동 일시정지되는지 확인 (pause/resume 연동)
 3. +버튼 표시까지 체감 속도 개선 확인
-4. 스와이프 시 뷰어 LOD0가 여전히 빠르게 도착하는지 확인
+4. 스와이프 시 뷰어 LOD1이 정상적으로 도착하는지 확인

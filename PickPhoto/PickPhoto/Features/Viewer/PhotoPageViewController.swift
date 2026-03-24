@@ -93,8 +93,8 @@ final class PhotoPageViewController: UIViewController {
     /// 그리드 셀에서 전달받은 초기 이미지 (전환 공백 방지용 placeholder)
     var initialImage: UIImage?
 
-    /// 이미지 요청 토큰 (v6: Cancellable)
-    private var requestCancellable: Cancellable?
+    /// 화면 크기 이미지 요청 토큰 (프리페치용)
+    private var screenSizeRequestCancellable: Cancellable?
 
     /// 원본 이미지 요청 토큰
     private var fullSizeRequestCancellable: Cancellable?
@@ -107,9 +107,6 @@ final class PhotoPageViewController: UIViewController {
 
     /// 원본 이미지 크기 (aspect fit 계산용)
     private var imageSize: CGSize = .zero
-
-    /// 마지막 요청 targetSize (중복 요청 방지)
-    private var lastRequestedTargetSize: CGSize = .zero
 
     /// P0: 초기 레이아웃 적용 여부 (1회만 zoomScale = 1.0 수행)
     private var hasAppliedInitialLayout = false
@@ -158,15 +155,16 @@ final class PhotoPageViewController: UIViewController {
         super.viewDidLoad()
         setupUI()
 
-        // Phase 1: 즉시 레이아웃 + LOD0 요청
+        // Phase 1: 즉시 레이아웃
         applyInitialLayout()
         // 그리드 셀 썸네일을 초기 placeholder로 표시 (전환 공백 방지)
         if let initial = initialImage {
             imageView.image = initial
-            Logger.viewer.debug("[LOD0] initialImage 세팅 \(initial.size.width)×\(initial.size.height)")
+            Logger.viewer.debug("[초기] initialImage 세팅 \(initial.size.width)×\(initial.size.height)")
             initialImage = nil  // 메모리 해제
         }
-        requestLOD0Image()
+        // 화면 크기 이미지 프리페치 (스와이프 시 검은 화면 방지)
+        requestScreenSizeImage()
     }
 
     override func viewDidLayoutSubviews() {
@@ -180,7 +178,6 @@ final class PhotoPageViewController: UIViewController {
         // Phase 1: 초기 레이아웃이 아직 안 됐으면 적용 (fallback)
         if !hasAppliedInitialLayout {
             applyInitialLayout()
-            requestLOD0Image()
             return
         }
 
@@ -199,7 +196,9 @@ final class PhotoPageViewController: UIViewController {
     }
 
     deinit {
-        requestCancellable?.cancel()
+        // 파괴된 페이지의 불필요한 이미지 요청 cancel (PHImageManager 큐 정리)
+        screenSizeRequestCancellable?.cancel()
+        fullSizeRequestCancellable?.cancel()
         // 뷰어 종료 시 분석 재개 (영구 pause 방지 안전장치)
         SimilarityAnalysisQueue.shared.resumeImageLoading()
     }
@@ -277,7 +276,7 @@ final class PhotoPageViewController: UIViewController {
         }
     }
 
-    // MARK: - Phase 1: Early Layout & LOD0
+    // MARK: - Phase 1: Early Layout
 
     /// PHAsset 비율 기반 레이아웃 (1회만 실행)
     /// - willTransition 시점에 frame이 확정되어 있어야 검은 영역 방지
@@ -368,13 +367,11 @@ final class PhotoPageViewController: UIViewController {
 
     }
 
-    // MARK: - 디버그: LOD0 스킵 플래그
-    // true로 설정하면 LOD0 이미지 교체를 스킵하고 LOD1만 사용
-    // initialImage → LOD1 직행 시 체감 차이를 확인하기 위한 플래그
-    private static let debugSkipLOD0 = false
-
-    /// LOD0 즉시 요청 (.fast, opportunistic → degraded 먼저 표시)
-    private func requestLOD0Image() {
+    /// 화면 크기 이미지 요청 (프리페치용)
+    /// - viewDidLoad에서 호출하여 스와이프 시 검은 화면 방지
+    /// - 화면 크기(.high quality)로 요청하여 디코딩 부하 최소화
+    /// - 원본은 스와이프 완료 후 scheduleLOD1Request()에서 별도 요청
+    private func requestScreenSizeImage() {
         let screenSize = UIScreen.main.bounds.size
         let scale = UIScreen.main.scale
         let targetSize = CGSize(width: screenSize.width * scale,
@@ -382,52 +379,21 @@ final class PhotoPageViewController: UIViewController {
 
         guard targetSize.width > 0, targetSize.height > 0 else { return }
 
-        // 분석용 이미지 로딩 일시정지 (LOD0과의 리소스 경쟁 방지)
-        SimilarityAnalysisQueue.shared.pauseImageLoading()
-
-        // 시간 측정 시작
-        imageRequestStartTime = CFAbsoluteTimeGetCurrent()
-        hasLoadedFullSize = false
-
-        requestCancellable?.cancel()
-        Logger.viewer.debug("[LOD0] 요청 시작 targetSize=\(targetSize.width)×\(targetSize.height)")
-        requestCancellable = ImagePipeline.shared.requestImage(
+        Logger.viewer.debug("[프리페치] 요청 시작 targetSize=\(targetSize.width)×\(targetSize.height)")
+        screenSizeRequestCancellable?.cancel()
+        screenSizeRequestCancellable = ImagePipeline.shared.requestImage(
             for: asset,
             targetSize: targetSize,
             contentMode: .aspectFit,
-            quality: .fast  // opportunistic → degraded 먼저 표시
+            quality: .high  // degraded 콜백 없는 고품질
         ) { [weak self] image, isDegraded in
-            guard let self = self, let image = image else {
-                // 이미지 로딩 실패 시에도 분석 재개 (영구 pause 방지)
-                SimilarityAnalysisQueue.shared.resumeImageLoading()
-                return
-            }
+            guard let self = self, let image = image else { return }
+            guard !isDegraded else { return }
 
-            let elapsed = (CFAbsoluteTimeGetCurrent() - self.imageRequestStartTime) * 1000
-            Logger.viewer.debug("[LOD0] 콜백 +\(String(format: "%.0f", elapsed))ms isDegraded=\(isDegraded) imageSize=\(image.size.width)×\(image.size.height)")
-            // 이미 initialImage가 세팅된 경우, degraded(90×120)로 덮어쓰지 않음
-            if isDegraded, self.imageView.image != nil {
-                Logger.viewer.debug("[LOD0] degraded skip — 기존 이미지 유지")
-                return
-            }
-            // non-degraded 도착 → 분석용 이미지 로딩 재개
-            if !isDegraded {
-                SimilarityAnalysisQueue.shared.resumeImageLoading()
-            }
-
-            // 디버그: LOD0 스킵 모드 — 이미지 교체 안 함, 로그만 출력
-            if Self.debugSkipLOD0 {
-                Logger.viewer.debug("[LOD0] ⚠️ debugSkipLOD0=true → 이미지 교체 스킵")
-                return
-            }
-
-            // 이미지만 교체 (레이아웃 변경 없음!)
+            Logger.viewer.debug("[프리페치] 완료 imageSize=\(image.size.width)×\(image.size.height)")
+            // 이미지만 교체 (레이아웃 변경 없음)
+            // hasLoadedFullSize는 설정하지 않음 → 원본 요청은 별도로 진행
             self.imageView.image = image
-            // imageSize는 applyInitialLayout에서 PHAsset 기반으로 이미 설정됨
-            // → 여기서 덮어쓰지 않음 (maxZoomScale 보존)
-
-            // Phase 2: LOD1은 ViewerViewController에서 디바운스 후 호출
-            // (전환 중 디코딩 부하 방지)
         }
     }
 
@@ -436,65 +402,20 @@ final class PhotoPageViewController: UIViewController {
     func requestHighQualityImage() {
         guard !hasLoadedFullSize else {
             Logger.viewer.debug("[LOD1] skip — hasLoadedFullSize=true")
+            // 이미 로드 완료 → scheduleLOD1Request의 pause에 대응하는 resume
+            SimilarityAnalysisQueue.shared.resumeImageLoading()
             return
         }
         Logger.viewer.debug("[LOD1] requestHighQualityImage → requestFullSizeImage 호출")
         requestFullSizeImage()
     }
 
-    /// 이미지 요청
-    /// - 첫 모달 진입 시점에는 page 내부 VC의 bounds가 0인 경우가 있어, 0-size 요청이 들어가면
-    ///   PhotoKit이 사실상 원본급 이미지를 내려주며 디코딩 비용으로 UI가 잠깐 멈출 수 있음.
-    /// - bounds가 확정된 뒤 1회 요청하고, 사이즈가 바뀌면 재요청.
-    private func requestImageForCurrentBoundsIfNeeded() {
-        let scale = UIScreen.main.scale
-        let boundsSize = view.bounds.size
-        let containerSize = (boundsSize.width > 0 && boundsSize.height > 0) ? boundsSize : UIScreen.main.bounds.size
-
-        // 최적화: 화면 픽셀 크기면 1:1 매핑으로 충분 (×2 제거)
-        let targetSize = CGSize(
-            width: ceil(containerSize.width * scale),
-            height: ceil(containerSize.height * scale)
-        )
-
-        guard targetSize.width > 0, targetSize.height > 0 else { return }
-        guard targetSize != lastRequestedTargetSize else { return }
-        lastRequestedTargetSize = targetSize
-
-        // 시간 측정 시작
-        imageRequestStartTime = CFAbsoluteTimeGetCurrent()
-        hasLoadedFullSize = false
-
-        requestCancellable?.cancel()
-        requestCancellable = ImagePipeline.shared.requestImage(
-            for: asset,
-            targetSize: targetSize,
-            contentMode: .aspectFit,
-            quality: .high  // 뷰어용 고품질
-        ) { [weak self] image, isDegraded in
-            guard let self = self, let image = image else { return }
-
-            self.imageView.image = image
-            self.imageSize = image.size
-
-            // 줌 인터랙션 중에는 레이아웃 업데이트 보류
-            if self.isZoomInteractionActive {
-                self.needsLayoutUpdateAfterZoom = true
-            } else {
-                self.updateImageLayout()
-            }
-
-            // 원본 이미지 요청 (2차)
-            if !self.hasLoadedFullSize {
-                self.requestFullSizeImage()
-            }
-        }
-    }
-
     /// 원본 이미지 요청 (LOD1 - 줌용 고해상도)
     /// - Phase 1: 이미지만 교체, 레이아웃 변경 없음
     private func requestFullSizeImage() {
         fullSizeRequestCancellable?.cancel()
+        // LOD1 시간 측정 기준점
+        imageRequestStartTime = CFAbsoluteTimeGetCurrent()
         Logger.viewer.debug("[LOD1-full] 요청 시작 targetSize=MAX")
         fullSizeRequestCancellable = ImagePipeline.shared.requestImage(
             for: asset,
@@ -503,6 +424,8 @@ final class PhotoPageViewController: UIViewController {
             quality: .high  // 원본 고품질
         ) { [weak self] image, isDegraded in
             guard let self = self, let image = image else {
+                // 실패 시에도 분석 재개 (영구 pause 방지)
+                SimilarityAnalysisQueue.shared.resumeImageLoading()
                 Logger.viewer.debug("[LOD1-full] 콜백 image=nil 또는 self=nil, isDegraded=\(isDegraded)")
                 return
             }
@@ -516,6 +439,9 @@ final class PhotoPageViewController: UIViewController {
             self.imageView.image = image
             // imageSize는 applyInitialLayout에서 PHAsset 기반으로 설정됨
             // → 여기서 덮어쓰지 않음 (레이아웃 안정성 보장)
+
+            // LOD1 완료 → 분석 재개
+            SimilarityAnalysisQueue.shared.resumeImageLoading()
         }
     }
 

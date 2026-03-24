@@ -681,9 +681,11 @@ extension ViewerViewController: UIPageViewControllerDelegate {
         transitionId += 1
         isTransitioning = true
 
-        // Phase 2: LOD1 디바운스 타이머 취소 (빠른 스와이프 시 LOD1 스킵)
+        // LOD1 디바운스 타이머 취소 (빠른 스와이프 시 LOD1 스킵)
         lod1DebounceTimer?.invalidate()
         lod1DebounceTimer = nil
+        // 이전 scheduleLOD1Request의 pause 해제 (타이머 취소로 resume 경로가 사라지므로)
+        SimilarityAnalysisQueue.shared.resumeImageLoading()
 
         // [Debug] 성능 측정 시작 (optimize는 scrollViewWillBeginDragging에서 호출)
         #if DEBUG
@@ -764,6 +766,8 @@ extension ViewerViewController: UIPageViewControllerDelegate {
     /// - 정지 상태에서만 원본 이미지 로드
     func scheduleLOD1Request() {
         lod1DebounceTimer?.invalidate()
+        // LOD1 디바운스 시작 시 분석 양보 (LOD1 로딩 완료까지 보호)
+        SimilarityAnalysisQueue.shared.pauseImageLoading()
         Logger.viewer.debug("[LOD1] scheduleLOD1Request — \(Self.lod1DebounceDelay)초 디바운스 시작")
         lod1DebounceTimer = Timer.scheduledTimer(withTimeInterval: Self.lod1DebounceDelay, repeats: false) { [weak self] _ in
             guard let self = self else { return }
@@ -771,6 +775,9 @@ extension ViewerViewController: UIPageViewControllerDelegate {
             // 현재 페이지가 PhotoPageViewController면 LOD1 요청
             if let photoVC = self.pageViewController.viewControllers?.first as? PhotoPageViewController {
                 photoVC.requestHighQualityImage()
+            } else {
+                // 동영상 페이지 등 사진이 아닌 경우 → 즉시 resume (영구 pause 방지)
+                SimilarityAnalysisQueue.shared.resumeImageLoading()
             }
         }
     }

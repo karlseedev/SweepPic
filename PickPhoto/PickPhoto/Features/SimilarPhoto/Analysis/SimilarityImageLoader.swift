@@ -93,7 +93,7 @@ final class SimilarityImageLoader {
     // MARK: - Pause/Resume (PHImageManager 리소스 경쟁 방지)
 
     /// 일시정지 참조 카운트 (0이면 활성, 1이상이면 pause)
-    /// 뷰어 LOD0, 스크롤 등 여러 소스에서 독립적으로 pause/resume 가능
+    /// 뷰어 LOD1, 스크롤 등 여러 소스에서 독립적으로 pause/resume 가능
     private var pauseCount = 0
 
     /// pause 중 대기하는 continuation 목록
@@ -131,7 +131,7 @@ final class SimilarityImageLoader {
     // MARK: - Pause/Resume API
 
     /// 분석용 이미지 로딩을 일시정지합니다.
-    /// 뷰어 LOD0, 스크롤 등 여러 소스에서 호출 가능 (참조 카운팅)
+    /// 뷰어 LOD1, 스크롤 등 여러 소스에서 호출 가능 (참조 카운팅)
     func pause() {
         pauseLock.lock()
         pauseCount += 1

@@ -166,16 +166,16 @@ final class SimilarityAnalysisQueue {
         setupBackgroundObserver()
     }
 
-    // MARK: - Image Loading Pause/Resume (뷰어 LOD0 리소스 경쟁 방지)
+    // MARK: - Image Loading Pause/Resume (뷰어 LOD1 리소스 경쟁 방지)
 
     /// 분석용 이미지 로딩을 일시정지합니다.
-    /// 뷰어 LOD0 요청 시 호출하여 PHCachingImageManager 리소스 경쟁을 제거합니다.
+    /// 뷰어 LOD1 요청 시 호출하여 PHCachingImageManager 리소스 경쟁을 제거합니다.
     func pauseImageLoading() {
         imageLoader.pause()
     }
 
     /// 일시정지된 이미지 로딩을 재개합니다.
-    /// LOD0 non-degraded 도착 또는 뷰어 종료 시 호출합니다.
+    /// LOD1 도착 또는 뷰어 종료 시 호출합니다.
     func resumeImageLoading() {
         imageLoader.resume()
     }

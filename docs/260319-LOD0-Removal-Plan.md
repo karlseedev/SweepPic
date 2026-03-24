@@ -222,13 +222,43 @@ deinit {
 
 ## 체크리스트
 
-- [ ] Phase 1: `requestLOD0Image()` 및 호출부 제거
-- [ ] Phase 2: 죽은 코드(`requestImageForCurrentBoundsIfNeeded`) 및 LOD0 전용 프로퍼티 제거
-- [ ] Phase 3: pause/resume을 ViewerViewController(`scheduleLOD1Request`/`willTransitionTo`)로 이전
-- [ ] Phase 3: `requestFullSizeImage()`에 `imageRequestStartTime` 설정 + resume 추가
-- [ ] Phase 3: `scheduleLOD1Request()` 타이머 콜백에 동영상 페이지 else resume 추가
-- [ ] Phase 4: LOD1 디바운스 유지 확인
-- [ ] Phase 5: 주석/로그 태그 정리 (LOD0 → LOD1)
-- [ ] Phase 5: `260316Preload.md` 업데이트
-- [ ] 빌드 확인
-- [ ] 실기기 테스트 (뷰어 진입 → 이미지 표시 정상, 분석 pause/resume 정상)
+- [x] Phase 1: `requestLOD0Image()` 및 호출부 제거
+- [x] Phase 2: 죽은 코드(`requestImageForCurrentBoundsIfNeeded`) 및 LOD0 전용 프로퍼티 제거
+- [x] Phase 3: pause/resume을 ViewerViewController(`scheduleLOD1Request`/`willTransitionTo`)로 이전
+- [x] Phase 3: `requestFullSizeImage()`에 `imageRequestStartTime` 설정 + resume 추가
+- [x] Phase 3: `scheduleLOD1Request()` 타이머 콜백에 동영상 페이지 else resume 추가
+- [x] Phase 4: LOD1 디바운스 유지 확인
+- [x] Phase 5: 주석/로그 태그 정리 (LOD0 → LOD1)
+- [x] Phase 5: `260316Preload.md` 업데이트
+- [x] 빌드 확인
+- [x] 실기기 테스트 (뷰어 진입 → 이미지 표시 정상, 분석 pause/resume 정상)
+
+---
+
+## 구현 결과 (2026-03-24)
+
+### 계획 대비 추가 변경
+
+LOD0 제거 후 인접 페이지가 검은 화면으로 표시되는 문제가 발생하여,
+기존 LOD0의 "프리페치" 역할을 개선된 형태로 대체함:
+
+| 항목 | 기존 LOD0 | 새 requestScreenSizeImage |
+|------|----------|--------------------------|
+| quality | `.fast` (degraded 2단계 콜백) | `.high` (1단계 콜백) |
+| targetSize | 화면 크기 (1126×1500) | 화면 크기 (동일) |
+| pause/resume | LOD0 내부에서 직접 관리 | ViewerViewController 레벨에서 관리 |
+| 역전 문제 | LOD1보다 늦게 도착 시 덮어씀 | hasLoadedFullSize 플래그로 방지 |
+| cancellable | requestCancellable (공유) | screenSizeRequestCancellable (독립) |
+| deinit cancel | requestCancellable만 cancel | screen + fullSize 모두 cancel |
+
+### 최종 흐름
+
+```
+1. initialImage (그리드 썸네일 370×492) — 즉시 표시
+2. requestScreenSizeImage() — 화면 크기 이미지 프리페치 (.high, 1단계)
+3. ViewerViewController.scheduleLOD1Request()
+   ├─ pauseImageLoading()
+   └─ 150ms 디바운스 타이머 시작
+4. requestFullSizeImage() — 원본 (3024×4032)
+   └─ resumeImageLoading()
+```
