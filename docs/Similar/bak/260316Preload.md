@@ -1,5 +1,12 @@
 # 분석용 2200px 이미지 병렬 프리로드
 
+> **상태: 보류 (2026-03-25)**
+> - 병렬 프리로드 시 PHImageManager 요청이 한꺼번에 발사되어 그리드 스크롤 썸네일 로딩과 경합 악화
+> - 기존 pause/resume이 loadImage 단위로 동작하는데, 프리로드는 5개가 동시 진입하므로 pause 반응성 저하
+> - 메모리 스파이크 (19MB × 5장 = ~95MB)
+> - 순차 처리는 77% 시간 동안 PHImageManager를 자연스럽게 양보 — 현 구조가 UI 경합에 더 유리
+> - 절약 시간 ~300-400ms (전체의 15%)로 위 부작용 대비 이점 부족
+
 ## 선행 조건
 - `260315ViewerLOD.md`의 pause/resume 구현이 완료되어 있어야 함
 - SimilarityImageLoader.loadImage()에 `waitIfPaused()` 체크가 있는 상태

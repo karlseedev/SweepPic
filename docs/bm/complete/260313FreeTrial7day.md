@@ -2,7 +2,19 @@
 
 > 작성일: 2026-03-13
 > 근거: [260312research-sales.md](260312research-sales.md) §13 결론
-> 상태: 구현 예정
+> 상태: Phase 1~6 구현 완료 / Phase 7 미완료 (App Store Connect 등록 전)
+
+### 구현 현황 (2026-03-25 확인)
+
+| Phase | 내용 | 상태 |
+|-------|------|------|
+| 1 | GracePeriodService 킬스위치 | ✅ 완료 |
+| 2 | TrashGateCoordinator 첫 페이월 분기 | ✅ 완료 |
+| 3 | PaywallViewController 콜백 + swipe-to-dismiss | ✅ 완료 |
+| 4 | PaywallSource.firstPaywall 추가 | ✅ 완료 |
+| 5 | Grace Period 참조 정리 (6개 파일) | ✅ 완료 |
+| 6 | PaywallViewModel eligibility + 법적 고지 | ✅ 완료 |
+| 7 | App Store Connect Free Trial 설정 | ⬚ 미완료 (앱 등록 후 설정 필요) |
 
 ---
 
