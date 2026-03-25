@@ -1,6 +1,6 @@
 //
 //  BusinessInfoViewController.swift
-//  PickPhoto
+//  SweepPic
 //
 //  사업자 정보 화면 (FR-048, T050)
 //
@@ -33,7 +33,7 @@ final class BusinessInfoViewController: UIViewController, BarsVisibilityControll
         ("상호", "TODO: 상호명 입력"),
         ("대표자", "TODO: 대표자명 입력"),
         ("사업자등록번호", "TODO: 000-00-00000"),
-        ("연락처", "support@piclear.app"),
+        ("연락처", "support@sweeppic.app"),
     ]
 
     // MARK: - UI Components

@@ -81,7 +81,7 @@
 
 **구현 접근**:
 - `kSecClassGenericPassword` 사용
-- Service: `com.karl.PickPhoto.usageLimit`
+- Service: `com.karl.SweepPic.usageLimit`
 - Account: `dailyUsage`
 - JSON 인코딩된 UsageLimit 구조체를 Data로 저장
 - 읽기/쓰기 시 메인 스레드 블로킹 최소화 (Keychain 접근은 동기적이나 매우 빠름)

@@ -965,7 +965,7 @@ Cleanup, Cleaner Guru, AI Cleaner, Cleaner Kit, Swipewipe, Phone Cleaner, Powerf
 **발견 2: 얼굴 크롭 비교는 20개 앱 모두 미지원**
 - 뷰어 앱 20개 + 정리 전용 앱 3개 = **총 23개 앱에서 얼굴 크롭 비교 기능 없음**
 - 이전 리서치(섹션 13)에서 확인한 바와 동일: iOS 소비자 앱에서는 미확인
-- PIClear의 얼굴 크롭 비교 기능은 **모바일 앱 전체에서 유일한 차별점**
+- SweepPic의 얼굴 크롭 비교 기능은 **모바일 앱 전체에서 유일한 차별점**
 
 **발견 3: 그리드(썸네일) 뷰에서 스와이프 삭제를 지원하는 앱은 0개**
 - **20개 뷰어 앱 + Apple Photos 전부 조사한 결과, 그리드에서 개별 썸네일을 스와이프하여 삭제하는 앱은 단 하나도 없음**
@@ -977,12 +977,12 @@ Cleanup, Cleaner Guru, AI Cleaner, Cleaner Kit, Swipewipe, Phone Cleaner, Powerf
 **발견 4: 전체화면 스와이프 삭제는 소수 앱만 지원**
 - 뷰어 앱 중 전체화면 스와이프 삭제 지원: **Slidebox, Tidy Gallery, MyPics, HashPhotos, Mylio, Google Photos(별도 카드 UI)** (6개)
 - 정리 전용 앱 포함해도: Clever Cleaner, Swipe Photo Cleaner 추가
-- 대부분 **좌우 스와이프** 방식. PIClear의 **위로 스와이프**는 Slidebox, MyPics와 동일
+- 대부분 **좌우 스와이프** 방식. SweepPic의 **위로 스와이프**는 Slidebox, MyPics와 동일
 
 **발견 5: 블러/저품질 자동 감지는 희소 기능**
 - 뷰어 앱 중 지원: **Google Photos, Mylio** (2개, 10%)
 - 정리 전용 앱: CleanMyPhone, Clever Cleaner, Swipe Photo Cleaner
-- PIClear의 QualityAnalyzer(저품질 자동 정리)는 뷰어 앱 카테고리에서 강력한 차별점
+- SweepPic의 QualityAnalyzer(저품질 자동 정리)는 뷰어 앱 카테고리에서 강력한 차별점
 
 **발견 6: 가장 종합적인 경쟁자**
 1. **Google Photos**: 정리 기능이 가장 풍부한 뷰어 앱. 단, 클라우드 기반이며 프라이버시 우려
@@ -1184,12 +1184,12 @@ Cleanup, Cleaner Guru, AI Cleaner, Cleaner Kit, Swipewipe, Phone Cleaner, Powerf
 4. **iPhone에서 핵심 정리 도구 사용 불가** — DeDupe/DeClutter가 폰에서 접근 불가, 태블릿+Vault 연결 필요
 5. **가격 인상 불만** — $99 → $120 → $240으로 지속 인상. Trustpilot 등에서 부정적 리뷰 다수
 
-### PIClear 관점 시사점
+### SweepPic 관점 시사점
 
-1. **Mylio의 핵심 정리 기능(DeDupe/DeClutter)은 iPhone에서 사용 불가** → PIClear이 iPhone 사진 정리에서 Mylio 대비 명확한 우위
-2. **DeDupe는 유료 전용** → PIClear이 무료로 유사/중복 정리를 제공하면 경쟁 우위
-3. **Mylio의 UX가 복잡하고 정리 기능 접근성이 낮음** → PIClear의 직관적 스와이프 기반 UX가 차별점
-4. **흐림 감지 접근 경로가 복잡** (funnel > SmartTags > Visual Properties > Blurry) → PIClear의 자동정리(QualityAnalyzer)가 더 직관적으로 제공 가능
+1. **Mylio의 핵심 정리 기능(DeDupe/DeClutter)은 iPhone에서 사용 불가** → SweepPic이 iPhone 사진 정리에서 Mylio 대비 명확한 우위
+2. **DeDupe는 유료 전용** → SweepPic이 무료로 유사/중복 정리를 제공하면 경쟁 우위
+3. **Mylio의 UX가 복잡하고 정리 기능 접근성이 낮음** → SweepPic의 직관적 스와이프 기반 UX가 차별점
+4. **흐림 감지 접근 경로가 복잡** (funnel > SmartTags > Visual Properties > Blurry) → SweepPic의 자동정리(QualityAnalyzer)가 더 직관적으로 제공 가능
 5. **기존 리서치의 Mylio 평가를 수정할 필요**: 종합 비교표에서 Mylio를 "블러 감지 O, 자동 정리 O"로 표기했으나, iPhone 기준으로는 **DeDupe X, DeClutter X, 블러 감지는 SmartTags 경유로 가능하나 접근성 낮음**
 
 ### 출처

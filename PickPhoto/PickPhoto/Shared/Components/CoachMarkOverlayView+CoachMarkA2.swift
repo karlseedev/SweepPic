@@ -1,6 +1,6 @@
 //
 //  CoachMarkOverlayView+CoachMarkA2.swift
-//  PickPhoto
+//  SweepPic
 //
 //  Created by Claude Code on 2026-03-09.
 //

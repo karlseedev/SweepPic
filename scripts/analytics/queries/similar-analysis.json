@@ -5,7 +5,7 @@
   "filter": {
     "type": "selector",
     "dimension": "type",
-    "value": "PickPhoto.session.similarAnalysis"
+    "value": "SweepPic.session.similarAnalysis"
   },
   "aggregations": [
     { "type": "eventCount", "name": "sessions" },

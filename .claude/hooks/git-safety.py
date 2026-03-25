@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Safety Hook for PickPhoto iOS Project
+Safety Hook for SweepPic iOS Project
 
 CLAUDE.md 규칙 강제:
 - 파일 삭제 명령어는 사용자 확인 없이 실행 금지

@@ -57,7 +57,7 @@
 </dict>
 ```
 
-### PrivacyInfo.xcprivacy 작성 예시 (PIClear 기준)
+### PrivacyInfo.xcprivacy 작성 예시 (SweepPic 기준)
 
 ```xml
 <!-- PrivacyInfo.xcprivacy -->
@@ -81,7 +81,7 @@ NSPrivacyTracking: false
 > 출처: MenuResearch §6 — Privacy Manifest 구조 예시
 > 수집 데이터 근거: AnalyticsService.swift (TelemetryDeck), SupabaseProvider.swift (URLSession → PostgREST)
 
-### Required Reason API — PIClear 사용 현황
+### Required Reason API — SweepPic 사용 현황
 
 | API 카테고리 | 사용 여부 | 위치 | 사유 코드 |
 |-------------|:--------:|------|----------|
@@ -106,7 +106,7 @@ NSPrivacyTracking: false
 > 앱이 사용하는 모든 서드파티 SDK에 유효한 Privacy Manifest가 포함되어야 함
 > SDK 제작자가 미제공 시 앱 개발자가 직접 해당 SDK 번들 내에 PrivacyInfo.xcprivacy를 추가해야 함
 
-**PIClear 서드파티 라이브러리 현황:**
+**SweepPic 서드파티 라이브러리 현황:**
 
 | 라이브러리 | 유형 | Privacy Manifest | 비고 |
 |-----------|------|:----------------:|------|

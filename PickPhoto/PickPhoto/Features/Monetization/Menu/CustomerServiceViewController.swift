@@ -1,6 +1,6 @@
 //
 //  CustomerServiceViewController.swift
-//  PickPhoto
+//  SweepPic
 //
 //  고객센터 서브메뉴 빌더 + 액션 핸들러 (FR-043, T048)
 //
@@ -28,16 +28,16 @@ final class CustomerServiceViewController: NSObject {
     // MARK: - Constants
 
     /// 피드백 이메일 주소
-    private static let feedbackEmail = "support@piclear.app"
+    private static let feedbackEmail = "support@sweeppic.app"
 
     /// 피드백 이메일 제목
-    private static let feedbackSubject = "[PIClear] 피드백"
+    private static let feedbackSubject = "[SweepPic] 피드백"
 
     /// 이용약관 URL (출시 전 실제 URL로 교체)
-    private static let termsURL = URL(string: "https://piclear.app/terms")!
+    private static let termsURL = URL(string: "https://sweeppic.app/terms")!
 
     /// 개인정보처리방침 URL (출시 전 실제 URL로 교체)
-    private static let privacyURL = URL(string: "https://piclear.app/privacy")!
+    private static let privacyURL = URL(string: "https://sweeppic.app/privacy")!
 
     // MARK: - Shared Instance (MFMailComposeViewControllerDelegate 유지용)
 

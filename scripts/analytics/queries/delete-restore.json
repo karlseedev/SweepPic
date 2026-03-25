@@ -5,7 +5,7 @@
   "filter": {
     "type": "selector",
     "dimension": "type",
-    "value": "PickPhoto.session.deleteRestore"
+    "value": "SweepPic.session.deleteRestore"
   },
   "aggregations": [
     { "type": "eventCount", "name": "sessions" },

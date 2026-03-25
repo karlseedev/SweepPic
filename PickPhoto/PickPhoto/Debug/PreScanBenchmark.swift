@@ -1,6 +1,6 @@
 //
 //  PreScanBenchmark.swift
-//  PickPhoto
+//  SweepPic
 //
 //  코치마크 D 사전 스캔 벤치마크 — 이미지 로딩 방식 비교 (DEBUG 전용)
 //

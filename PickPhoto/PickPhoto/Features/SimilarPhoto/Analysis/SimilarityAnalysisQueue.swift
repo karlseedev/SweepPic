@@ -1,9 +1,9 @@
 //
 //  SimilarityAnalysisQueue.swift
-//  PickPhoto
+//  SweepPic
 //
 //  Created by Claude on 2026-01-05.
-//  Copyright © 2026 PickPhoto. All rights reserved.
+//  Copyright © 2026 SweepPic. All rights reserved.
 //
 //  Description:
 //  유사 사진 분석 작업을 관리하는 큐입니다.

@@ -1,6 +1,6 @@
 //
 //  ATTPromptViewController.swift
-//  PickPhoto
+//  SweepPic
 //
 //  ATT(App Tracking Transparency) 프리프롬프트 화면 (FR-041, FR-042)
 //

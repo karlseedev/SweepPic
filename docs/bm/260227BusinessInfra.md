@@ -1,4 +1,4 @@
-# PIClear 비즈니스 인프라
+# SweepPic 비즈니스 인프라
 
 > 작성일: 2026-02-27
 > 관련 문서: `260227bm-spec.md` (BM 명세), `260227bm-spec-edit.md` (수정 항목 원본)
@@ -28,7 +28,7 @@
 ## 웹 호스팅 구조 (E1 + E2 + E3 통합)
 
 ```
-karlseedev.github.io/pickphoto/
+karlseedev.github.io/sweeppic/
 ├── index.html    ← Support URL (E3)
 ├── privacy.html  ← Privacy Policy URL (E1)
 └── terms.html    ← Terms of Use (E2)
@@ -71,7 +71,7 @@ karlseedev.github.io/pickphoto/
 | TelemetryDeck | 익명 식별자, 앱 이벤트, 기기 메타데이터 (IP 미수집) | 아니오 | telemetrydeck.com/privacy |
 | Supabase | 익명 이벤트 로그 (이름·이메일·IDFA 미포함) | 아니오 | supabase.com/privacy |
 
-**호스팅**: GitHub Pages (`karlseedev.github.io/pickphoto/privacy`)
+**호스팅**: GitHub Pages (`karlseedev.github.io/sweeppic/privacy`)
 **참고**: TelemetryDeck은 공식 처리방침 스니펫을 제공함 (telemetrydeck.com/privacy-policy-snippet)
 
 ---
@@ -108,7 +108,7 @@ karlseedev.github.io/pickphoto/
 | 9 | 연락처 | 개발자 이메일 |
 
 **개인정보 처리방침과는 별도 문서** — 한국법상 포괄 동의 금지 원칙
-**호스팅**: GitHub Pages (`karlseedev.github.io/pickphoto/terms`)
+**호스팅**: GitHub Pages (`karlseedev.github.io/sweeppic/terms`)
 
 ---
 
@@ -305,7 +305,7 @@ ASC > Business > Tax Forms > W-8BEN 온라인 작성
 
 > 검토 결과: **불필요**
 
-- PIClear는 얼굴 **감지(detection)**만 수행, **식별(identification)** 안 함
+- SweepPic는 얼굴 **감지(detection)**만 수행, **식별(identification)** 안 함
 - 기기 내 처리, 서버 전송 없음, 감지 결과 미저장
 - GDPR: 식별 목적이 아니면 생체 데이터 규제 대상 아님 (Recital 51)
 - 한국 개인정보보호법: 민감정보(생체인식 특징정보) 해당 안 될 가능성 높음
@@ -352,9 +352,9 @@ TODO: 리서치 후 반영
 |------|-----------|
 | 무료 앱 + 광고 없음 + IAP 없음 | 해당 없음 |
 | 무료 앱 + AdMob 광고 | 해당 가능성 있음 (수익 활동) |
-| **IAP 구독 있음 (PIClear 해당)** | **Trader 필수** |
+| **IAP 구독 있음 (SweepPic 해당)** | **Trader 필수** |
 
-**PIClear 대응**: 한국에서 먼저 출시하더라도, 글로벌(EU 포함) 확장 시 반드시 Trader 등록 선행. 사업자등록(E4) 완료 후 동일 정보로 입력 가능.
+**SweepPic 대응**: 한국에서 먼저 출시하더라도, 글로벌(EU 포함) 확장 시 반드시 Trader 등록 선행. 사업자등록(E4) 완료 후 동일 정보로 입력 가능.
 
 **참고**: https://developer.apple.com/help/app-store-connect/manage-compliance-information/manage-european-union-digital-services-act-trader-requirements/
 

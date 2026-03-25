@@ -1,6 +1,6 @@
 //
 //  AdCounters.swift
-//  PickPhoto
+//  SweepPic
 //
 //  전면 광고 표시 빈도 카운터 (인메모리)
 //  각 트리거별 독립 카운터 관리

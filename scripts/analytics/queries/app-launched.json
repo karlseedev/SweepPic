@@ -5,7 +5,7 @@
   "filter": {
     "type": "selector",
     "dimension": "type",
-    "value": "PickPhoto.app.launched"
+    "value": "SweepPic.app.launched"
   },
   "aggregations": [
     { "type": "count", "name": "launchCount" }

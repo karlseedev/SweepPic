@@ -1,4 +1,4 @@
-# Feature Specification: PickPhoto MVP
+# Feature Specification: SweepPic MVP
 
 **Feature Branch**: `001-pickphoto-mvp`
 **Created**: 2025-12-16
@@ -39,7 +39,7 @@
 
 사용자가 그리드에서 사진을 탭하면 전체 화면 뷰어로 진입하여 사진을 자세히 보고, 좌우 스와이프로 이전/다음 사진을 탐색하고, 위 스와이프로 빠르게 삭제(앱 내 휴지통으로 이동)할 수 있다.
 
-**Why this priority**: 사진 정리 특화 기능의 핵심. 위 스와이프 삭제는 PickPhoto의 차별점.
+**Why this priority**: 사진 정리 특화 기능의 핵심. 위 스와이프 삭제는 SweepPic의 차별점.
 
 **Independent Test**: 그리드에서 사진 탭 → 뷰어 진입 → 좌우 스와이프 탐색 → 위 스와이프 삭제 → 이전 사진으로 자동 이동 확인.
 

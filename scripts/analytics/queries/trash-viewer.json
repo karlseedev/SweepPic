@@ -5,7 +5,7 @@
   "filter": {
     "type": "selector",
     "dimension": "type",
-    "value": "PickPhoto.session.trashViewer"
+    "value": "SweepPic.session.trashViewer"
   },
   "aggregations": [
     { "type": "eventCount", "name": "sessions" },

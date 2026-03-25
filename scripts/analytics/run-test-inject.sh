@@ -4,7 +4,7 @@
 set -euo pipefail
 cd "$(dirname "$0")/../.."  # 프로젝트 루트
 
-BUNDLE_ID="com.karl.PickPhoto"
+BUNDLE_ID="com.karl.SweepPic"
 SIMULATOR="iPhone 16"
 
 echo "=== Step 1: 빌드 + 설치 ==="
@@ -25,7 +25,7 @@ echo ""
 echo "=== Step 2: 시뮬레이터 준비 ==="
 xcrun simctl boot "$SIMULATOR" 2>/dev/null || true
 xcrun simctl bootstatus booted -b
-xcrun simctl install booted "$APP_PATH/PickPhoto.app"
+xcrun simctl install booted "$APP_PATH/SweepPic.app"
 xcrun simctl privacy booted grant photos "$BUNDLE_ID"
 
 echo ""

@@ -1,9 +1,9 @@
 //
 //  FaceComparisonViews.swift
-//  PickPhoto
+//  SweepPic
 //
 //  Created by Claude on 2026-01-19.
-//  Copyright © 2026 PickPhoto. All rights reserved.
+//  Copyright © 2026 SweepPic. All rights reserved.
 //
 //  Description:
 //  FaceComparisonViewController에서 사용하는 UI 컴포넌트들입니다.

@@ -1,9 +1,9 @@
 //
 //  PersonPageViewController.swift
-//  PickPhoto
+//  SweepPic
 //
 //  Created by Claude on 2026-01-19.
-//  Copyright © 2026 PickPhoto. All rights reserved.
+//  Copyright © 2026 SweepPic. All rights reserved.
 //
 //  Description:
 //  단일 인물(personIndex)의 얼굴 그리드를 표시하는 페이지 뷰 컨트롤러입니다.

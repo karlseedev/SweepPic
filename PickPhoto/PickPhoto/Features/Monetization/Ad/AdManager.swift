@@ -1,6 +1,6 @@
 //
 //  AdManager.swift
-//  PickPhoto
+//  SweepPic
 //
 //  AdMob 초기화 및 광고 사전 로드 관리 싱글톤
 //  AdManagerProtocol 준수 (contracts/protocols.md)

@@ -1,11 +1,11 @@
-# Data Model: PickPhoto MVP
+# Data Model: SweepPic MVP
 
 **Branch**: `001-pickphoto-mvp`
 **Created**: 2025-12-16
 
 ## Overview
 
-PickPhoto MVP의 데이터 모델은 PhotoKit API를 기반으로 하며, 앱 내 휴지통 상태를 로컬에 저장합니다.
+SweepPic MVP의 데이터 모델은 PhotoKit API를 기반으로 하며, 앱 내 휴지통 상태를 로컬에 저장합니다.
 
 ---
 

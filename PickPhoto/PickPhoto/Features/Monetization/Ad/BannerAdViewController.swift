@@ -1,6 +1,6 @@
 //
 //  BannerAdViewController.swift
-//  PickPhoto
+//  SweepPic
 //
 //  배너 광고 컨테이너 뷰컨트롤러
 //  사진 분석 대기 화면(CleanupProgressView) 하단에 삽입 가능

@@ -1,6 +1,6 @@
 //
 //  InterstitialAdPresenter.swift
-//  PickPhoto
+//  SweepPic
 //
 //  전면 광고 표시 오케스트레이터
 //  AdManager의 전면 광고 로드/표시를 래핑

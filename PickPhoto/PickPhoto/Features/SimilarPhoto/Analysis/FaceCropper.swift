@@ -1,9 +1,9 @@
 //
 //  FaceCropper.swift
-//  PickPhoto
+//  SweepPic
 //
 //  Created by Claude on 2026-01-05.
-//  Copyright © 2026 PickPhoto. All rights reserved.
+//  Copyright © 2026 SweepPic. All rights reserved.
 //
 //  Description:
 //  얼굴 영역을 크롭하는 유틸리티입니다.

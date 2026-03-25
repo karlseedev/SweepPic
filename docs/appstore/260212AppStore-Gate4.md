@@ -53,7 +53,7 @@
 
 ### iOS 26 Liquid Glass 대응 일정 (참고)
 
-> PIClear 커스텀 UI의 Liquid Glass 대응이 필요합니다
+> SweepPic 커스텀 UI의 Liquid Glass 대응이 필요합니다
 
 | 시기 | 요구사항 |
 |------|---------|

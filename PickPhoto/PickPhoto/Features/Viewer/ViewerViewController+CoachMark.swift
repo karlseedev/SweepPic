@@ -1,6 +1,6 @@
 //
 //  ViewerViewController+CoachMark.swift
-//  PickPhoto
+//  SweepPic
 //
 //  코치마크 B: 뷰어 스와이프 삭제 안내
 //  - viewDidAppear + 페이지 스와이프 완료 시 조건 확인 후 오버레이 배치

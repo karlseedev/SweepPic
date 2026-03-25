@@ -8,7 +8,7 @@
 import UIKit
 import AppCore
 
-/// PickPhoto 앱의 메인 TabBarController
+/// SweepPic 앱의 메인 TabBarController
 /// Photos 탭과 Albums 탭을 관리
 /// iOS 버전에 따라 커스텀 플로팅 UI 또는 시스템 기본 UI 사용
 class TabBarController: UITabBarController {

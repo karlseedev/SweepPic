@@ -162,7 +162,7 @@ SystemUIInspector3.shared.showDebugButton()
 4. Documents 폴더에서 JSON 확인
 
 ```bash
-open $(xcrun simctl get_app_container booted com.anthropic.PickPhoto data)/Documents/
+open $(xcrun simctl get_app_container booted com.anthropic.SweepPic data)/Documents/
 ```
 
 **출력 파일**:

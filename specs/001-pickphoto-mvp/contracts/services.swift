@@ -1,4 +1,4 @@
-// MARK: - PickPhoto MVP Service Contracts
+// MARK: - SweepPic MVP Service Contracts
 // Generated: 2025-12-16
 // Branch: 001-pickphoto-mvp
 

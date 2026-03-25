@@ -1,9 +1,9 @@
 //
 //  ViewerViewController+SimilarPhoto.swift
-//  PickPhoto
+//  SweepPic
 //
 //  Created by Claude on 2026-01-05.
-//  Copyright © 2026 PickPhoto. All rights reserved.
+//  Copyright © 2026 SweepPic. All rights reserved.
 //
 //  Description:
 //  ViewerViewController의 유사 사진 기능 Extension입니다.

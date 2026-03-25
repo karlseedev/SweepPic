@@ -1,6 +1,6 @@
 //
 //  GridScroll.swift
-//  PickPhoto
+//  SweepPic
 //
 //  Created by Claude on 2025-12-31.
 //  Description: GridViewController의 스크롤 최적화 및 초기 표시 기능 분리

@@ -1,9 +1,9 @@
 //
 //  YuNetPreprocessor.swift
-//  PickPhoto
+//  SweepPic
 //
 //  Created by Claude on 2026-01-15.
-//  Copyright © 2026 PickPhoto. All rights reserved.
+//  Copyright © 2026 SweepPic. All rights reserved.
 //
 //  Description:
 //  YuNet 모델 입력을 위한 이미지 전처리를 담당합니다.

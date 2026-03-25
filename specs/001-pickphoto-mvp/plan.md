@@ -1,4 +1,4 @@
-# Implementation Plan: PickPhoto MVP
+# Implementation Plan: SweepPic MVP
 
 **Branch**: `001-pickphoto-mvp` | **Date**: 2025-12-16 | **Spec**: [spec.md](./spec.md)
 **Input**: Feature specification from `specs/001-pickphoto-mvp/spec.md`
@@ -12,7 +12,7 @@
 
 ## Summary
 
-PickPhoto MVP는 iOS 기본 사진 앱 수준의 부드러운 브라우징 경험을 제공하면서, 위 스와이프 삭제와 앱 내 휴지통을 통한 빠른 사진 정리 기능을 제공하는 iOS 사진 갤러리 앱입니다.
+SweepPic MVP는 iOS 기본 사진 앱 수준의 부드러운 브라우징 경험을 제공하면서, 위 스와이프 삭제와 앱 내 휴지통을 통한 빠른 사진 정리 기능을 제공하는 iOS 사진 갤러리 앱입니다.
 
 **핵심 기술 결정 (Spike 완료)**:
 - UIKit `UICollectionView` + `performBatchUpdates` (50k 기준 일정한 비용 관측, p95 5ms)

@@ -1,6 +1,6 @@
 //
 //  UsageGaugeView.swift
-//  PickPhoto
+//  SweepPic
 //
 //  일일 삭제 한도 게이지 바 + "N/M장 남음" 텍스트
 //  삭제대기함 상단에 표시

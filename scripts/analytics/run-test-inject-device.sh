@@ -8,7 +8,7 @@
 set -euo pipefail
 cd "$(dirname "$0")/../.."  # 프로젝트 루트
 
-BUNDLE_ID="com.karl.PickPhoto"
+BUNDLE_ID="com.karl.SweepPic"
 DEVICE_NAME="${DEVICE_NAME:-iPhone 13Pro128}"
 DEVICE_ID="${DEVICE_ID:-}"
 

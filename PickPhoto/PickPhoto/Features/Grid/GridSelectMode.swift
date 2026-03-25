@@ -1,6 +1,6 @@
 //
 //  GridSelectMode.swift
-//  PickPhoto
+//  SweepPic
 //
 //  Description: Grid/Album 공용 선택 모드
 //               - supportsSelectMode 오버라이드

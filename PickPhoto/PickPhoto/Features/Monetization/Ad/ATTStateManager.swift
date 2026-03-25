@@ -1,6 +1,6 @@
 //
 //  ATTStateManager.swift
-//  PickPhoto
+//  SweepPic
 //
 //  ATT 프리프롬프트 상태 관리 (UserDefaults 저장)
 //

@@ -1,9 +1,9 @@
 //
 //  AsyncSemaphore.swift
-//  PickPhoto
+//  SweepPic
 //
 //  Created by Claude on 2026-01-05.
-//  Copyright © 2026 PickPhoto. All rights reserved.
+//  Copyright © 2026 SweepPic. All rights reserved.
 //
 //  Description:
 //  Swift Concurrency 환경에서 동시성을 제한하기 위한 세마포어입니다.

@@ -1,4 +1,4 @@
-# Requirements Quality Checklist: PickPhoto MVP
+# Requirements Quality Checklist: SweepPic MVP
 
 **Purpose**: spec.md 전체 요구사항의 완전성, 명확성, 일관성, 측정가능성 검증
 **Created**: 2025-12-17

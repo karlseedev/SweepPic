@@ -1,6 +1,6 @@
 //
 //  EffectShowcaseViewController.swift
-//  PickPhoto
+//  SweepPic
 //
 //  유사사진 코너 삼각형 뱃지 애니메이션 비교 쇼케이스
 //  - 3가지 애니메이션을 각 1줄(3셀)씩 비교 표시

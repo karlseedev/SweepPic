@@ -3,7 +3,7 @@
 
 import PackageDescription
 
-/// AppCore: PickPhoto MVP의 비즈니스 로직을 담당하는 Swift Package
+/// AppCore: SweepPic MVP의 비즈니스 로직을 담당하는 Swift Package
 /// - Models: PhotoAssetEntry, Album, TrashState 등 데이터 모델
 /// - Services: PhotoLibraryService, ImagePipeline 등 서비스 레이어
 /// - Stores: TrashStore, PermissionStore 등 상태 관리
@@ -14,7 +14,7 @@ let package = Package(
         .iOS(.v16)
     ],
     products: [
-        // AppCore 라이브러리 - PickPhoto 앱에서 import 가능
+        // AppCore 라이브러리 - SweepPic 앱에서 import 가능
         .library(
             name: "AppCore",
             targets: ["AppCore"]

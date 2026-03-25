@@ -1,9 +1,9 @@
 //
 //  YuNetFaceDetector.swift
-//  PickPhoto
+//  SweepPic
 //
 //  Created by Claude on 2026-01-15.
-//  Copyright © 2026 PickPhoto. All rights reserved.
+//  Copyright © 2026 SweepPic. All rights reserved.
 //
 //  Description:
 //  YuNet 기반 얼굴 감지 메인 클래스입니다.

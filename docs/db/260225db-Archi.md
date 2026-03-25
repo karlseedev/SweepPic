@@ -1,4 +1,4 @@
-# PickPhoto Analytics 아키텍처
+# SweepPic Analytics 아키텍처
 
 > **작성일:** 2026-02-25
 > **상태:** 설계 완료 + 구현 완료 (TD + Supabase 하이브리드)
@@ -84,7 +84,7 @@ TelemetryDeck.navigationPathChanged(from: "grid", to: "viewer")
 | `defaultParameters` | `@Sendable () -> [String: String]` | `{ [:] }` | 사진 규모 구간 자동 첨부 |
 | `sendNewSessionBeganSignal` | `Bool` | `true` | 기본 유지 |
 | `salt` | `String` (let, init시 설정) | `""` | 선택적 추가 |
-| `defaultSignalPrefix` | `String?` | `nil` | `"PickPhoto."` 사용 |
+| `defaultSignalPrefix` | `String?` | `nil` | `"SweepPic."` 사용 |
 | `analyticsDisabled` | `Bool` | `false` | 사용자 옵트아웃 시 활용 |
 | `testMode` | `Bool` | DEBUG면 `true` | 자동 처리됨 |
 | `metadataEnrichers` | `[SignalEnricher]` | `[]` | 커스텀 메타데이터 확장 가능 |
@@ -153,11 +153,11 @@ NSPrivacyCollectedDataTypes:
 
 ### 2.2 의존성 배치: 방안 C (프로토콜 분리) 확정
 
-| | 방안 A: AppCore에 추가 | 방안 B: PickPhoto에만 추가 | **방안 C: 프로토콜 분리** |
+| | 방안 A: AppCore에 추가 | 방안 B: SweepPic에만 추가 | **방안 C: 프로토콜 분리** |
 |--|----------------------|-------------------------|---------------------|
-| SDK 위치 | Package.swift → AppCore | Xcode → PickPhoto | Xcode → PickPhoto |
-| 프로토콜 위치 | AppCore | PickPhoto | **AppCore** (경량, SDK 없음) |
-| 구현체 위치 | AppCore | PickPhoto | **PickPhoto** |
+| SDK 위치 | Package.swift → AppCore | Xcode → SweepPic | Xcode → SweepPic |
+| 프로토콜 위치 | AppCore | SweepPic | **AppCore** (경량, SDK 없음) |
+| 구현체 위치 | AppCore | SweepPic | **SweepPic** |
 | AppCore 외부 의존성 | **추가됨** | 없음 | **없음** |
 | AppCore 내부 오류 추적 | 직접 호출 | 불가 | **가능** (프로토콜 경유) |
 
@@ -165,13 +165,13 @@ NSPrivacyCollectedDataTypes:
 
 ```
 ┌─────────────────────────────────────────────┐
-│  PickPhoto 코드 (VC, Feature 서비스)         │
+│  SweepPic 코드 (VC, Feature 서비스)          │
 │  AnalyticsService.shared.trackXxx()         │
 │  AnalyticsService.shared.countXxx()         │
 └────────────────┬────────────────────────────┘
                  │
 ┌────────────────▼────────────────────────────┐
-│  AnalyticsService (Singleton, PickPhoto)     │
+│  AnalyticsService (Singleton, SweepPic)      │
 │  - sendEvent() → TD signal + Supabase send  │
 │  - sendEventBatch() → TD signal + Sb batch  │
 │  - 세션 누적 카운터 관리                      │
@@ -191,7 +191,7 @@ NSPrivacyCollectedDataTypes:
 ┌────────▼────────────────────────────────────┐
 │  Analytics.reporter (AppCore, 옵셔널)        │
 │  - AppCore 내부 오류 추적용 경량 프로토콜     │
-│  - PickPhoto에서 앱 시작 시 주입             │
+│  - SweepPic에서 앱 시작 시 주입              │
 └─────────────────────────────────────────────┘
 ```
 
@@ -201,7 +201,7 @@ TelemetryDeck + Supabase 이중 전송을 위한 내부 헬퍼:
 
 ```swift
 /// TD + Supabase 이중 전송 (즉시 전송형 이벤트용)
-/// - TelemetryDeck: 항상 전송 (SDK가 "PickPhoto." prefix 자동 추가)
+/// - TelemetryDeck: 항상 전송 (SDK가 "SweepPic." prefix 자동 추가)
 /// - Supabase: 전 이벤트 수집 (supabaseExcluded = 빈 Set)
 func sendEvent(_ name: String, parameters: [String: String] = [:]) {
     TelemetryDeck.signal(name, parameters: parameters)
@@ -219,7 +219,7 @@ func sendEventBatch(_ events: [(name: String, parameters: [String: String])]) {
 }
 ```
 
-> **시그널 이름 규칙**: `sendEvent("app.launched")` → TD는 `"PickPhoto.app.launched"`로 전송, Supabase에는 `"app.launched"` 그대로 저장.
+> **시그널 이름 규칙**: `sendEvent("app.launched")` → TD는 `"SweepPic.app.launched"`로 전송, Supabase에는 `"app.launched"` 그대로 저장.
 
 ### 2.5 SupabaseProvider 클래스
 
@@ -431,7 +431,7 @@ final class AnalyticsService {
     /// 누적 카운터 보호용 concurrent queue
     /// - 읽기: queue.sync { ... }       (동시 허용)
     /// - 쓰기: queue.async(flags: .barrier) { ... } (독점)
-    let queue = DispatchQueue(label: "com.pickphoto.analytics", attributes: .concurrent)
+    let queue = DispatchQueue(label: "com.sweeppic.analytics", attributes: .concurrent)
     var counters = SessionCounters()
 }
 ```
@@ -651,7 +651,7 @@ sendEventBatch(events)
 | 19 | ATT 결과 | `bm.attResult` | 즉시 | 1 |
 | 20 | 해지 사유 | `bm.cancelReason` | 즉시 | 1~2 |
 
-> `defaultSignalPrefix`를 `"PickPhoto."`로 설정했으므로 실제 전송 이름은 `PickPhoto.app.launched` 등.
+> `defaultSignalPrefix`를 `"SweepPic."`로 설정했으므로 실제 전송 이름은 `SweepPic.app.launched` 등.
 
 ### 4.2 공통 Enum 정의
 
@@ -931,7 +931,7 @@ public enum Analytics {
 ```
 
 AppCore 내부 호출: `Analytics.reporter?.reportError(key: "photoLoad.gridThumbnail")`
-PickPhoto에서 브릿지: `extension AnalyticsService: AnalyticsReporting { ... }`
+SweepPic에서 브릿지: `extension AnalyticsService: AnalyticsReporting { ... }`
 
 ---
 
@@ -1219,14 +1219,14 @@ scripts/analytics/
 |------|------|-------|
 | `AnalyticsReporting.swift` | `AnalyticsReporting` 프로토콜 + `Analytics` enum | ~20줄 |
 
-#### PickPhoto — 서비스 (2개)
+#### SweepPic — 서비스 (2개)
 
 | 파일 | 내용 | 줄 수 |
 |------|------|-------|
 | `AnalyticsService.swift` | 싱글톤, configure, queue, sendEvent/sendEventBatch, supabaseProvider, onFlushComplete | ~170줄 |
 | `SupabaseProvider.swift` | URLSession HTTP POST, 배치/단건 전송, 오프라인 큐, 선별적 재시도 | ~305줄 |
 
-#### PickPhoto — Extension (7개)
+#### SweepPic — Extension (7개)
 
 | 파일 | 담당 이벤트 | 줄 수 |
 |------|-----------|-------|
@@ -1239,7 +1239,7 @@ scripts/analytics/
 | `+Errors.swift` | 6 (오류) + AnalyticsReporting 브릿지 | ~50줄 |
 | `+Monetization.swift` | 12~20 (BM 수익화 9종) + enum 4개 | ~150줄 |
 
-#### PickPhoto — Models (4개)
+#### SweepPic — Models (4개)
 
 | 파일 | 내용 | 줄 수 |
 |------|------|-------|
@@ -1262,7 +1262,7 @@ scripts/analytics/
                     └───────▲──────────┘
                             │ 주입
     ┌───────────────────────┼────────────────────────────┐
-    │                 PickPhoto                           │
+    │                 SweepPic                            │
     │                                                    │
     │  AnalyticsService.swift (본체)                      │
     │       │                                            │

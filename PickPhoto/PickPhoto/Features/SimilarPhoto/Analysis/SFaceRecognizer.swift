@@ -1,9 +1,9 @@
 //
 //  SFaceRecognizer.swift
-//  PickPhoto
+//  SweepPic
 //
 //  Created by Claude on 2026-01-15.
-//  Copyright © 2026 PickPhoto. All rights reserved.
+//  Copyright © 2026 SweepPic. All rights reserved.
 //
 //  Description:
 //  SFace 모델을 사용한 얼굴 임베딩 추출 및 유사도 계산을 담당합니다.

@@ -1,9 +1,9 @@
 //
 //  SimilarityAnalysisState.swift
-//  PickPhoto
+//  SweepPic
 //
 //  Created by Claude on 2026-01-05.
-//  Copyright © 2026 PickPhoto. All rights reserved.
+//  Copyright © 2026 SweepPic. All rights reserved.
 //
 //  Description:
 //  사진별 유사도 분석 상태를 추적하는 열거형입니다.

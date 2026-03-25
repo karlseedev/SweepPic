@@ -1,6 +1,6 @@
 //
 //  TrashSelectMode.swift
-//  PickPhoto
+//  SweepPic
 //
 //  Description: Trash 전용 선택 모드
 //               - supportsSelectMode = true

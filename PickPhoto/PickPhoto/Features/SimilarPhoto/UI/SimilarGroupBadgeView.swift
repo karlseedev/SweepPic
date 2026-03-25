@@ -1,6 +1,6 @@
 //
 //  SimilarGroupBadgeView.swift
-//  PickPhoto
+//  SweepPic
 //
 //  유사사진 그룹 표시용 코너 삼각형 뱃지
 //  - 셀 전체에 흰색 테두리 표시

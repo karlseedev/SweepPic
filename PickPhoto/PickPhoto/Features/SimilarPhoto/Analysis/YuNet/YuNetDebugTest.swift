@@ -1,9 +1,9 @@
 //
 //  YuNetDebugTest.swift
-//  PickPhoto
+//  SweepPic
 //
 //  Created by Claude on 2026-01-15.
-//  Copyright © 2026 PickPhoto. All rights reserved.
+//  Copyright © 2026 SweepPic. All rights reserved.
 //
 //  Description:
 //  YuNet + SFace 파이프라인 테스트용 디버그 함수입니다.

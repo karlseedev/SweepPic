@@ -1,6 +1,6 @@
 //
 //  BaseMultiSwipeDelete.swift
-//  PickPhoto
+//  SweepPic
 //
 //  Description: BaseGridViewController의 다중 셀 스와이프 삭제 확장
 //               - 단일 스와이프에서 손가락이 다른 셀에 도달하면 다중 모드 진입

@@ -8,7 +8,7 @@
   "filter": {
     "type": "selector",
     "dimension": "type",
-    "value": "PickPhoto.similar.groupClosed"
+    "value": "SweepPic.similar.groupClosed"
   },
   "aggregations": [
     { "type": "eventCount", "name": "count" }

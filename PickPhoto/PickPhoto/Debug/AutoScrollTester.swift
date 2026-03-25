@@ -1,6 +1,6 @@
 //
 //  AutoScrollTester.swift
-//  PickPhoto
+//  SweepPic
 //
 //  CADisplayLink 기반 극한 스크롤 테스터
 //  수동 극한 스크롤을 시뮬레이션하여 성능 측정에 사용

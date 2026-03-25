@@ -1,5 +1,5 @@
 // Logger+App.swift
-// Apple Logger extension for PickPhoto app
+// Apple Logger extension for SweepPic app
 //
 // Usage:
 //   import OSLog      // Required for Logger type
@@ -12,7 +12,7 @@ import OSLog
 
 extension Logger {
     /// App bundle identifier as subsystem (fallback for test environment)
-    private static let subsystem = Bundle.main.bundleIdentifier ?? "com.pickphoto.appcore"
+    private static let subsystem = Bundle.main.bundleIdentifier ?? "com.sweeppic.appcore"
 
     // =============================================
     // MARK: - Feature

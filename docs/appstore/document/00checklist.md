@@ -5,7 +5,7 @@
 ## Gate 1: 빌드 업로드 전
 
 - [ ] 앱 아이콘 (1024x1024)
-- [ ] 번들 ID 변경 (com.karl.PIClear → com.karl.SweepPic)
+- [ ] 번들 ID 변경 (com.karl.SweepPic)
 - [x] Info.plist 키 확인 (NSPhotoLibraryUsageDescription, GADApplicationIdentifier 등)
 - [x] ITSAppUsesNonExemptEncryption = false
 - [x] maxAdContentRating = .general (AdManager.swift)

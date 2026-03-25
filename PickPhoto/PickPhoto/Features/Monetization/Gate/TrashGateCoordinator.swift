@@ -1,6 +1,6 @@
 //
 //  TrashGateCoordinator.swift
-//  PickPhoto
+//  SweepPic
 //
 //  게이트 판단 중앙 제어 싱글톤
 //  모든 영구 삭제(emptyTrash, permanentlyDelete)가 이 코디네이터를 거침

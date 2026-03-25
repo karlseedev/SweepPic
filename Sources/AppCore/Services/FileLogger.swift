@@ -57,7 +57,7 @@ public final class FileLogger {
 
         // 헤더 작성
         let header = """
-        === PickPhoto Launch Log ===
+        === SweepPic Launch Log ===
         Date: \(formattedDate())
         Device: \(deviceInfo())
         ============================

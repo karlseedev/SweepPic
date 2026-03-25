@@ -1,9 +1,9 @@
 //
 //  SimilarPhotoGroup.swift
-//  PickPhoto
+//  SweepPic
 //
 //  Created by Claude on 2026-01-05.
-//  Copyright © 2026 PickPhoto. All rights reserved.
+//  Copyright © 2026 SweepPic. All rights reserved.
 //
 //  Description:
 //  유사 사진 그룹 관련 모델을 정의합니다.

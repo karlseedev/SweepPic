@@ -1,9 +1,9 @@
 //
 //  SimilarityAnalyzer.swift
-//  PickPhoto
+//  SweepPic
 //
 //  Created by Claude on 2026-01-05.
-//  Copyright © 2026 PickPhoto. All rights reserved.
+//  Copyright © 2026 SweepPic. All rights reserved.
 //
 //  Description:
 //  Vision Framework를 사용한 이미지 유사도 분석기입니다.

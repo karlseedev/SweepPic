@@ -17,7 +17,7 @@ import OSLog
 // MARK: - AnalyticsServiceProtocol
 
 /// 앱 전체에서 호출하는 분석 서비스 인터페이스
-/// - PickPhoto 모듈 내부 프로토콜 (internal)
+/// - SweepPic 모듈 내부 프로토콜 (internal)
 /// - ScreenSource, DeleteSource 등 내부 enum을 참조하므로 public 불필요
 protocol AnalyticsServiceProtocol: AnyObject {
 
@@ -234,7 +234,7 @@ final class AnalyticsService: AnalyticsServiceProtocol {
     // MARK: - Dual Send Helpers
 
     /// TD + Supabase 이중 전송 (즉시 전송형 이벤트용)
-    /// - TelemetryDeck: 항상 전송 (SDK가 "PickPhoto." prefix 자동 추가)
+    /// - TelemetryDeck: 항상 전송 (SDK가 "SweepPic." prefix 자동 추가)
     /// - Supabase: supabaseExcluded에 없을 때만 전송
     func sendEvent(_ name: String, parameters: [String: String] = [:]) {
         TelemetryDeck.signal(name, parameters: parameters)

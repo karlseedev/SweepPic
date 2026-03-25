@@ -1,9 +1,9 @@
 //
 //  FaceComparisonDebug.swift
-//  PickPhoto
+//  SweepPic
 //
 //  Created by Claude on 2026-01-19.
-//  Copyright © 2026 PickPhoto. All rights reserved.
+//  Copyright © 2026 SweepPic. All rights reserved.
 //
 //  Description:
 //  FaceComparisonViewController의 디버그 전용 코드입니다.

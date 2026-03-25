@@ -1,5 +1,5 @@
 #!/bin/bash
-# td-report.sh — PickPhoto 주간 리포트
+# td-report.sh — SweepPic 주간 리포트
 #
 # 사용법:
 #   ./td-report.sh              # 기본 7일
@@ -94,7 +94,7 @@ ERROR_ITEMS=(
 
 # 리포트 출력
 cat <<EOF
-# PickPhoto 리포트 ($START_DATE ~ $END_DATE)
+# SweepPic 리포트 ($START_DATE ~ $END_DATE)
 
 ## 핵심 지표
 | 지표 | 값 |

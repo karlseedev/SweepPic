@@ -1,6 +1,6 @@
 //
 //  GridGestures.swift
-//  PickPhoto
+//  SweepPic
 //
 //  Created by Claude on 2025-12-31.
 //  Description: GridViewController의 제스처 관련 기능 분리

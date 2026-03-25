@@ -1,6 +1,6 @@
 //
 //  CelebrationViewController.swift
-//  PickPhoto
+//  SweepPic
 //
 //  삭제 완료 축하 화면 (FR-039)
 //
@@ -67,7 +67,7 @@ final class CelebrationViewController: UIViewController {
         return stack
     }()
 
-    /// "PIClear에서 총 M장 삭제" 행 — 안내 스타일
+    /// "SweepPic에서 총 M장 삭제" 행 — 안내 스타일
     private lazy var totalDeletedRow: UILabel = {
         let label = UILabel()
         label.translatesAutoresizingMaskIntoConstraints = false
@@ -194,7 +194,7 @@ final class CelebrationViewController: UIViewController {
         let totalFormatted = NumberFormatter.localizedString(
             from: NSNumber(value: result.totalDeletedCount), number: .decimal
         )
-        totalDeletedRow.text = "PIClear에서 총 \(totalFormatted)장 삭제"
+        totalDeletedRow.text = "SweepPic에서 총 \(totalFormatted)장 삭제"
 
         // 누적 확보 용량: "X.XGB 확보"
         let freedFormatted = FileSizeCalculator.formatBytes(result.totalFreedBytes)
@@ -202,7 +202,7 @@ final class CelebrationViewController: UIViewController {
 
         // 접근성: 통계 라벨에 명시적 설명 (FR-057)
         sessionLabel.accessibilityLabel = "\(result.sessionDeletedCount)장 삭제 완료"
-        totalDeletedRow.accessibilityLabel = "PIClear에서 총 \(totalFormatted)장 삭제"
+        totalDeletedRow.accessibilityLabel = "SweepPic에서 총 \(totalFormatted)장 삭제"
         totalFreedRow.accessibilityLabel = "\(freedFormatted) 확보"
 
         Logger.app.debug("CelebrationVC: 이번 \(self.result.sessionDeletedCount)장, 누적 \(self.result.totalDeletedCount)장, 누적 \(self.result.totalFreedBytes)bytes")

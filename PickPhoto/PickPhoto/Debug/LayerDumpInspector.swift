@@ -1,6 +1,6 @@
 //
 //  LayerDumpInspector.swift
-//  PickPhoto
+//  SweepPic
 //
 //  Description: 스크롤 중 CA 합성에 참여하는 레이어를 덤프하고
 //               expensive 속성을 태깅하는 디버그 유틸리티.

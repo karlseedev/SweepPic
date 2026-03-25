@@ -11,7 +11,7 @@ import Photos
 import AppCore
 import OSLog
 
-/// PickPhoto 앱의 AppDelegate
+/// SweepPic 앱의 AppDelegate
 /// UIKit 라이프사이클을 사용하여 앱 상태를 관리
 @main
 class AppDelegate: UIResponder, UIApplicationDelegate {
@@ -28,7 +28,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?
     ) -> Bool {
         // AppCore 초기화 로그
-        Logger.app.debug("PickPhoto started with AppCore \(AppCore.version)")
+        Logger.app.debug("SweepPic started with AppCore \(AppCore.version)")
 
         // XCUITest 환경: 모든 코치마크 완료 처리 (UserDefaults 재설치로 초기화된 경우 대비)
         if CommandLine.arguments.contains("--skip-coachmarks") {

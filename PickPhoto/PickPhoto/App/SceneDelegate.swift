@@ -17,7 +17,7 @@ import Photos
 import AppCore
 import OSLog
 
-/// PickPhoto 앱의 SceneDelegate
+/// SweepPic 앱의 SceneDelegate
 /// Scene 기반 윈도우 관리 및 루트 뷰컨트롤러 설정
 class SceneDelegate: UIResponder, UIWindowSceneDelegate {
 

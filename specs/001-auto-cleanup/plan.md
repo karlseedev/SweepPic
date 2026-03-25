@@ -24,7 +24,7 @@
 **Storage**: 파일 기반 (Documents/CleanupSession.json, 기존 TrashState.json)
 **Testing**: XCTest (Unit + Integration)
 **Target Platform**: iOS 16.0+
-**Project Type**: Mobile (기존 PickPhoto 앱에 기능 추가)
+**Project Type**: Mobile (기존 SweepPic 앱에 기능 추가)
 **Performance Goals**: 1,000장 스캔 30초 이내, 분석당 10ms 이내
 **Constraints**: 원본 다운로드 금지, 백그라운드 30초 제약
 **Scale/Scope**: 10만장 이상 라이브러리 지원

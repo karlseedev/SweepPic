@@ -6,7 +6,7 @@
 //  kSecClassGenericPassword 기반으로 데이터를 안전하게 저장/조회/삭제
 //  앱 삭제/재설치에도 데이터가 유지됨 (악용 방지)
 //
-//  Service: com.karl.PickPhoto.usageLimit
+//  Service: com.karl.SweepPic.usageLimit
 //  AccessLevel: kSecAttrAccessibleAfterFirstUnlock (research.md §R3)
 //
 
@@ -22,7 +22,7 @@ public final class KeychainHelper {
     // MARK: - Constants
 
     /// Keychain 서비스 식별자
-    private static let service = "com.karl.PickPhoto.usageLimit"
+    private static let service = "com.karl.SweepPic.usageLimit"
 
     // MARK: - Data CRUD
 

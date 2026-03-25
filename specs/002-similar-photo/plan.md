@@ -85,7 +85,7 @@ PickPhoto/PickPhoto/
     └── TrashStore.swift                  # 기존 - 삭제 기능 통합
 ```
 
-**Structure Decision**: 기존 PickPhoto 앱 구조를 유지하면서 `Features/SimilarPhoto/` 모듈을 신규 추가합니다. Analysis, UI, Models 하위 디렉토리로 관심사 분리를 적용합니다.
+**Structure Decision**: 기존 SweepPic 앱 구조를 유지하면서 `Features/SimilarPhoto/` 모듈을 신규 추가합니다. Analysis, UI, Models 하위 디렉토리로 관심사 분리를 적용합니다.
 
 ## Complexity Tracking
 

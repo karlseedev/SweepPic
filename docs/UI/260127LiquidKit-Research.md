@@ -323,7 +323,7 @@ dependencies: [
 
 ---
 
-## 8. 우리 앱(PickPhoto)과의 매핑
+## 8. 우리 앱(SweepPic)과의 매핑
 
 ### 8.1. 컴포넌트 대응
 

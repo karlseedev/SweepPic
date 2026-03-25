@@ -1,4 +1,4 @@
-# PickPhoto 온보딩 기획안
+# SweepPic 온보딩 기획안
 
 ## 목차
 

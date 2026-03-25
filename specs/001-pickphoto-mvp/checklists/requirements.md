@@ -1,4 +1,4 @@
-# Specification Quality Checklist: PickPhoto MVP
+# Specification Quality Checklist: SweepPic MVP
 
 **Purpose**: Validate specification completeness and quality before proceeding to planning
 **Created**: 2025-12-16

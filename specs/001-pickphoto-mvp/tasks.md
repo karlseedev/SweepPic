@@ -1,4 +1,4 @@
-# Tasks: PickPhoto MVP
+# Tasks: SweepPic MVP
 
 **입력**: `/specs/001-pickphoto-mvp/` 설계 문서
 **필수 조건**: plan.md (필수), spec.md (유저 스토리 필수), research.md, data-model.md, quickstart.md

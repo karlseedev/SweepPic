@@ -1,6 +1,6 @@
 //
 //  CoachMarkDPreScanner.swift
-//  PickPhoto
+//  SweepPic
 //
 //  Created by Claude Code on 2026-02-23.
 //

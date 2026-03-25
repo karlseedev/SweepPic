@@ -1,4 +1,4 @@
-# SweepPic(PickPhoto) 앱 기능 정리
+# SweepPic 앱 기능 정리
 
 > 최종 갱신: 2026-03-11 (MVP 기준)
 

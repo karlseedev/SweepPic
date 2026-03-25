@@ -1,6 +1,6 @@
 //
 //  PremiumMenuViewController.swift
-//  PickPhoto
+//  SweepPic
 //
 //  프리미엄 서브메뉴 빌더 + 액션 핸들러 (FR-043, FR-044, T047)
 //

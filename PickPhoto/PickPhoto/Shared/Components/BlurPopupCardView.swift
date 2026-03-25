@@ -1,6 +1,6 @@
 //
 //  BlurPopupCardView.swift
-//  PickPhoto
+//  SweepPic
 //
 //  반투명 Glass 팝업 카드 — 재사용 가능한 컴포넌트
 //  LiquidGlassEffect(iOS 18~25: Metal, iOS 26+: 네이티브)로 Glass 테두리 효과

@@ -1,7 +1,7 @@
-# PIClear 앱스토어 등록 가이드
+# SweepPic 앱스토어 등록 가이드
 
 > 작성일: 2026-02-11
-> 목적: iOS 앱스토어 제출을 위한 전체 요구사항 정리 및 PIClear 현재 상태 대조
+> 목적: iOS 앱스토어 제출을 위한 전체 요구사항 정리 및 SweepPic 현재 상태 대조
 
 ---
 
@@ -17,14 +17,14 @@
 8. [현지화 및 한국 특별 요구사항](#8-현지화-및-한국-특별-요구사항)
 9. [보안 및 수출 규정](#9-보안-및-수출-규정)
 10. [테스트 관련 요구사항](#10-테스트-관련-요구사항)
-11. [PIClear 현재 상태 점검](#11-pickphoto-현재-상태-점검)
+11. [SweepPic 현재 상태 점검](#11-sweeppic-현재-상태-점검)
 12. [사진 앱 리젝 사례 분석](#12-사진-앱-리젝-사례-분석)
-13. [Review Notes 작성 가이드 (PIClear용)](#13-review-notes-작성-가이드-pickphoto용)
+13. [Review Notes 작성 가이드 (SweepPic용)](#13-review-notes-작성-가이드-sweeppic용)
 14. [App Privacy Details 실전 응답 가이드](#14-app-privacy-details-실전-응답-가이드)
 15. [Guideline 4.2 방어 전략](#15-guideline-42-방어-전략)
 16. [ITMS 오류 코드 대응표](#16-itms-오류-코드-대응표)
 17. [심사 프로세스 실전 가이드](#17-심사-프로세스-실전-가이드)
-18. [PIClear 실행 계획](#18-pickphoto-실행-계획)
+18. [SweepPic 실행 계획](#18-sweeppic-실행-계획)
 19. [Apple 공식 참고 문서](#19-apple-공식-참고-문서)
 
 ---
@@ -396,20 +396,20 @@
 | Limited Access | `.limited` 상태. 사용자가 선택한 사진만 노출 | 중간 |
 | Full Access | `.authorized` 상태. 전체 라이브러리 접근 | **높음 — 사유 필요** |
 
-**PIClear 정당화 논거**: 전체 라이브러리 정리가 핵심 목적이므로 PHPicker로는 불가. → Section 13 Review Notes 참조
+**SweepPic 정당화 논거**: 전체 라이브러리 정리가 핵심 목적이므로 PHPicker로는 불가. → Section 13 Review Notes 참조
 
 ### 6-4. 얼굴 데이터 사용 제한 (Guideline 5.1.2(vi))
 
 > Photo APIs, 카메라, ARKit 등으로 수집한 **얼굴 매핑/데이터**는 마케팅, 광고, 데이터마이닝에 사용 금지.
 
-| 항목 | PIClear 해당 여부 |
+| 항목 | SweepPic 해당 여부 |
 |------|:-----------------:|
 | Vision Framework 얼굴 인식 사용 | **O** |
 | 얼굴 데이터 외부 전송 | X (온디바이스 전용) |
 | 마케팅/광고 활용 | X |
 | 데이터마이닝 활용 | X |
 
-> PIClear는 얼굴 인식 결과를 뷰어에서 자동 줌에만 사용하고, 기기 밖으로 전송하지 않으므로 **준수 상태**. Privacy Policy에 이를 명시해야 함.
+> SweepPic는 얼굴 인식 결과를 뷰어에서 자동 줌에만 사용하고, 기기 밖으로 전송하지 않으므로 **준수 상태**. Privacy Policy에 이를 명시해야 함.
 
 ### 6-5. App Tracking Transparency (ATT)
 
@@ -498,7 +498,7 @@
 | 한국 연령 등급 | 전체이용가 / 12+ / 15+ / 19+ | 필수 |
 | 한국어 지역화 | 한국 사용자 대상 시 한국어 메타데이터 | 강력 권장 |
 | 개인정보 처리방침 | 한국 개인정보보호법 준수 (2025.04 개정 지침) | 필수 |
-| 통신판매업 신고 | 유료 앱/IAP로 수익 발생 시 통신판매업 신고번호 필요할 수 있음. 현재 PIClear는 무료 앱이므로 해당 없음. 향후 유료화 시 확인 필요 | 참고 |
+| 통신판매업 신고 | 유료 앱/IAP로 수익 발생 시 통신판매업 신고번호 필요할 수 있음. 현재 SweepPic는 무료 앱이므로 해당 없음. 향후 유료화 시 확인 필요 | 참고 |
 | **공정위 다크패턴 규제** | 2025년 강화. 기만적/조작적 UI 패턴 금지 (강제 구독, 숨겨진 비용, 탈퇴 방해 등). 위반 시 500만원 과태료 | 필수 |
 
 ### 8-5. 한국 규정 준수 정보 입력 경로
@@ -576,7 +576,7 @@ App Store Connect > 앱 선택 > General > App Information >
 
 ---
 
-## 11. PIClear 현재 상태 점검
+## 11. SweepPic 현재 상태 점검
 
 > 점검일: 2026-02-11
 
@@ -589,7 +589,7 @@ App Store Connect > 앱 선택 > General > App Information >
 | 3 | 프라이버시 정책 URL | **없음** (앱 내/외부 모두) | 문서 작성 + URL 호스팅 |
 | 4 | 스크린샷 | 없음 | iPhone 6.9" (1260x2736) 1~10장 + iPad 13" (2064x2752) 1~10장 준비 (TARGETED_DEVICE_FAMILY=1,2이므로 iPad도 필수) |
 | 5 | App Store Connect 메타데이터 | 미설정 | 전체 메타데이터 입력 |
-| 6 | App Privacy Details 설문 | 미작성 | 사진 데이터 접근 선언. **단, PIClear는 온디바이스 처리 전용 (외부 전송 없음)이므로 Apple 기준 "Data Not Collected" 선택 가능성 있음 — 제출 시 확인 필요** |
+| 6 | App Privacy Details 설문 | 미작성 | 사진 데이터 접근 선언. **단, SweepPic는 온디바이스 처리 전용 (외부 전송 없음)이므로 Apple 기준 "Data Not Collected" 선택 가능성 있음 — 제출 시 확인 필요** |
 | 7 | 연령 등급 설문 | 미작성 | 새 양식 응답 |
 | 8 | 심사 연락처 | 미설정 | 이름/이메일/전화번호 |
 
@@ -630,7 +630,7 @@ App Store Connect > 앱 선택 > General > App Information >
 | 18 | IPv6 지원 | 외부 네트워크 통신 없음 → 해당 없음 |
 | 19 | ATS | HTTP 통신 없음 → 해당 없음 |
 | 20 | 코드 서명 | Automatic Signing, Team ID 7YD5497HFS |
-| 21 | Bundle ID | com.karl.PIClear |
+| 21 | Bundle ID | com.karl.SweepPic |
 | 22 | 버전 번호 | 1.0 (빌드 1) |
 | 23 | 배경 모드 | UIBackgroundModes 미선언 (불필요) |
 | 24 | ProMotion 120fps | CADisableMinimumFrameDurationOnPhone = true |
@@ -645,7 +645,7 @@ App Store Connect > 앱 선택 > General > App Information >
 | 28 | 한국 개인정보 처리방침 | 없음 | 2025.04 개정 지침 기반 작성 |
 | 29 | LaunchScreen 브랜딩 | 빈 흰색 화면 | 앱 로고 추가 권장 |
 
-### 11-7. 해당 없음 (PIClear에 불필요)
+### 11-7. 해당 없음 (SweepPic에 불필요)
 
 | 요구사항 | 이유 |
 |---------|------|
@@ -739,15 +739,15 @@ App Store Connect > 앱 선택 > General > App Information >
 
 ---
 
-## 13. Review Notes 작성 가이드 (PIClear용)
+## 13. Review Notes 작성 가이드 (SweepPic용)
 
 > Review Notes는 심사팀이 앱을 이해하는 핵심 창구. 4,000바이트 제한.
 
-### 13-1. PIClear Review Notes 템플릿
+### 13-1. SweepPic Review Notes 템플릿
 
 ```
 [App Overview]
-PIClear is a photo gallery app focused on fast photo organization.
+SweepPic is a photo gallery app focused on fast photo organization.
 Users can quickly sort their photo library using swipe-to-delete and
 similar photo detection features.
 
@@ -802,11 +802,11 @@ similar photo detection features.
 
 > App Store Connect 제출 시 "App Privacy" 섹션 응답 방법
 
-### 14-1. PIClear 응답 전략
+### 14-1. SweepPic 응답 전략
 
-PIClear는 **온디바이스 전용** 앱이므로 특별한 전략이 가능합니다.
+SweepPic는 **온디바이스 전용** 앱이므로 특별한 전략이 가능합니다.
 
-| 질문 | PIClear 답변 | 근거 |
+| 질문 | SweepPic 답변 | 근거 |
 |------|---------------|------|
 | "Do you or your third-party partners collect data from this app?" | **No** | 모든 처리가 온디바이스. 외부 전송 없음 |
 | Photos/Videos 데이터 수집? | (위에서 No 선택 시 이 질문 표시 안됨) | - |
@@ -816,7 +816,7 @@ PIClear는 **온디바이스 전용** 앱이므로 특별한 전략이 가능합
 
 Apple 기준에서 **다음 조건을 모두 만족**하면 "Data Not Collected" 선택 가능:
 
-| 조건 | PIClear 충족 여부 |
+| 조건 | SweepPic 충족 여부 |
 |------|:-----------------:|
 | 데이터가 기기를 떠나지 않음 | **O** |
 | 서버로 전송하지 않음 | **O** |
@@ -824,7 +824,7 @@ Apple 기준에서 **다음 조건을 모두 만족**하면 "Data Not Collected"
 | 분석/광고 SDK 미사용 | **O** |
 | 사용자 추적 안 함 | **O** |
 
-> **결론**: PIClear는 **"Data Not Collected"** 선택 가능. 이 경우 개별 데이터 타입 질문이 표시되지 않아 가장 깔끔한 프라이버시 라벨이 됨.
+> **결론**: SweepPic는 **"Data Not Collected"** 선택 가능. 이 경우 개별 데이터 타입 질문이 표시되지 않아 가장 깔끔한 프라이버시 라벨이 됨.
 
 ### 14-3. 주의사항
 
@@ -840,7 +840,7 @@ Apple 기준에서 **다음 조건을 모두 만족**하면 "Data Not Collected"
 
 ### 15-1. 차별화 근거
 
-| 차별화 기능 | 네이티브 사진 앱 | PIClear |
+| 차별화 기능 | 네이티브 사진 앱 | SweepPic |
 |------------|:---------------:|:---------:|
 | 스와이프 삭제 | X | **O** — 위로 스와이프로 빠른 삭제 |
 | 휴지통 복구 기반 안전장치 | X (삭제 확인 다이얼로그) | **O** — 확인 없이 삭제 + 즉시 복구 가능 |
@@ -927,7 +927,7 @@ Waiting for Review → In Review → [Approved / Rejected]
 
 ---
 
-## 18. PIClear 실행 계획
+## 18. SweepPic 실행 계획
 
 ### Phase 0 — 치명적 항목 즉시 수정 (최우선)
 

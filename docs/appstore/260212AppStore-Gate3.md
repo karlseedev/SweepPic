@@ -102,7 +102,7 @@ Apple은 "가능하면 PHPicker를 사용하라"고 명시. 전체 사진 접근
 | 터치 타겟 | 최소 44x44 포인트 | 권장 |
 | **Reduce Motion** | `isReduceMotionEnabled` 시 애니메이션 → crossfade 대체 | 강력 권장 |
 
-> **중요**: PIClear는 스와이프 삭제가 핵심 인터랙션이므로, VoiceOver 사용자를 위한 대체 삭제 액션(`accessibilityCustomActions`)이 반드시 필요합니다. 이 없이는 핵심 기능을 사용할 수 없어 접근성 심사에서 문제가 될 수 있습니다.
+> **중요**: SweepPic는 스와이프 삭제가 핵심 인터랙션이므로, VoiceOver 사용자를 위한 대체 삭제 액션(`accessibilityCustomActions`)이 반드시 필요합니다. 이 없이는 핵심 기능을 사용할 수 없어 접근성 심사에서 문제가 될 수 있습니다.
 
 **조치:**
 - 모든 UI 컴포넌트에 `accessibilityLabel` 추가
@@ -121,7 +121,7 @@ Apple은 "가능하면 PHPicker를 사용하라"고 명시. 전체 사진 접근
 | 적용 범위 | EU/EEA에서 다운로드 가능한 모든 앱 |
 | 핵심 요구 | WCAG 2.1 AA 수준 준수 (VoiceOver, Dynamic Type, 색상 대비, 키보드/스위치 대안, Reduce Motion) |
 | 위반 시 | 각국 시장 감시 기관이 제재 가능 (벌금, 앱 퇴출) |
-| PIClear 영향 | 한국만 배포 시 직접 적용 안 됨. 향후 글로벌 배포 시 필수 |
+| SweepPic 영향 | 한국만 배포 시 직접 적용 안 됨. 향후 글로벌 배포 시 필수 |
 
 > 현재 한국 배포 전용이므로 즉시 의무는 아니지만, Apple이 접근성을 점점 강화하는 추세이므로 선제 대응 권장.
 
@@ -133,11 +133,11 @@ Apple은 "가능하면 PHPicker를 사용하라"고 명시. 전체 사진 접근
 
 > **위험도: 높음** — 사진 접근 사유, Vision 설명 없이 제출하면 리젝 가능성 높음
 
-**PIClear Review Notes 템플릿:**
+**SweepPic Review Notes 템플릿:**
 
 ```
 [App Overview]
-PIClear is a photo gallery app focused on fast photo organization.
+SweepPic is a photo gallery app focused on fast photo organization.
 Users can quickly sort their photo library using swipe-to-delete and
 similar photo detection features.
 
@@ -187,7 +187,7 @@ similar photo detection features.
 | 테스트 조건 | 최소 사진 수(유사 사진 기능 50장+), 스와이프 방향 등 심사원이 기능을 빠르게 체험할 수 있게 안내 |
 | 차별화 기능 | 스와이프 삭제, 유사 사진 분석 등 네이티브 앱에 없는 기능 나열 |
 
-### PIClear 특화: AutoCleanup AI 의사결정 고지
+### SweepPic 특화: AutoCleanup AI 의사결정 고지
 
 > 2025년 한국 개인정보보호법 개정에 따라 자동화된 의사결정에 대한 고지 의무 추가
 
@@ -206,7 +206,7 @@ AutoCleanup 기능이 AI 기반 자동 정리를 수행하는 경우:
 
 **차별화 근거:**
 
-| 차별화 기능 | 네이티브 사진 앱 | PIClear |
+| 차별화 기능 | 네이티브 사진 앱 | SweepPic |
 |------------|:---------------:|:---------:|
 | 스와이프 삭제 | X | **O** — 위로 스와이프로 빠른 삭제 |
 | 휴지통 복구 기반 안전장치 | X (삭제 확인 다이얼로그) | **O** — 확인 없이 삭제 + 즉시 복구 가능 |

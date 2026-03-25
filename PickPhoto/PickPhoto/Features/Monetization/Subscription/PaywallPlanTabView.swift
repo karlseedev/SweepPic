@@ -1,6 +1,6 @@
 //
 //  PaywallPlanTabView.swift
-//  PickPhoto
+//  SweepPic
 //
 //  페이월 월간/연간 캡슐형 탭 컨트롤
 //

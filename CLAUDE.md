@@ -17,7 +17,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## 프로젝트 개요
 
-PickPhoto는 iOS 사진 갤러리 앱입니다. 네이티브 iOS 사진 앱과 유사한 경험을 제공하면서 빠른 사진 정리를 위한 생산성 기능을 추가하는 것을 목표로 합니다. 스와이프 삭제 제스처 등의 사진 정리를 간소화하는 특장점을 가지고 있습니다.
+SweepPic는 iOS 사진 갤러리 앱입니다. 네이티브 iOS 사진 앱과 유사한 경험을 제공하면서 빠른 사진 정리를 위한 생산성 기능을 추가하는 것을 목표로 합니다. 스와이프 삭제 제스처 등의 사진 정리를 간소화하는 특장점을 가지고 있습니다.
 
 주요 기능 :
 - 네이티브 사진 앱과 유사한 그리드 기반 사진 브라우징
@@ -149,7 +149,7 @@ Logger.app.notice("Memory warning received")
 
 **실기기 로그 확인:**
 ```bash
-log stream --predicate 'subsystem == "com.karl.PickPhoto"' --level debug
+log stream --predicate 'subsystem == "com.karl.SweepPic"' --level debug
 ```
 
 > ⚠️ `Log.swift`는 레거시로 남아있으나 실제 사용처 없음. 새 코드에서는 `Logger` 사용

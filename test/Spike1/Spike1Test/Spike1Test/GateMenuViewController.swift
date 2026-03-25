@@ -11,7 +11,7 @@ final class GateMenuViewController: UIViewController {
     }
 
     private func setupUI() {
-        title = "PickPhoto Gate Tests"
+        title = "SweepPic Gate Tests"
         view.backgroundColor = .systemBackground
 
         stackView.axis = .vertical

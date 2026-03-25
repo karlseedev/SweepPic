@@ -1,9 +1,9 @@
 //
 //  FaceButtonOverlay.swift
-//  PickPhoto
+//  SweepPic
 //
 //  Created by Claude on 2026-01-05.
-//  Copyright © 2026 PickPhoto. All rights reserved.
+//  Copyright © 2026 SweepPic. All rights reserved.
 //
 //  Description:
 //  뷰어에서 감지된 얼굴 위에 +버튼을 표시하는 오버레이 뷰입니다.

@@ -1,9 +1,9 @@
 //
 //  AnalysisRequest.swift
-//  PickPhoto
+//  SweepPic
 //
 //  Created by Claude on 2026-01-05.
-//  Copyright © 2026 PickPhoto. All rights reserved.
+//  Copyright © 2026 SweepPic. All rights reserved.
 //
 //  Description:
 //  분석 요청을 추적하는 구조체입니다.

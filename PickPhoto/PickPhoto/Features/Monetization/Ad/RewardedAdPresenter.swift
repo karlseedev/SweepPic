@@ -1,6 +1,6 @@
 //
 //  RewardedAdPresenter.swift
-//  PickPhoto
+//  SweepPic
 //
 //  리워드 광고 표시 오케스트레이터
 //  AdManager의 광고 로드 대기 + 타임아웃 + 결과 전달을 담당

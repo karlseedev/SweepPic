@@ -1,6 +1,6 @@
 //
 //  BorderAnimationLayer.swift
-//  PickPhoto
+//  SweepPic
 //
 //  Created by Claude on 2026/01/05.
 //

@@ -1,4 +1,4 @@
-# Quickstart: PickPhoto MVP
+# Quickstart: SweepPic MVP
 
 **Branch**: `001-pickphoto-mvp`
 **Created**: 2025-12-16

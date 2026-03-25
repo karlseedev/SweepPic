@@ -9,7 +9,7 @@
   "filter": {
     "type": "selector",
     "dimension": "type",
-    "value": "PickPhoto.permission.result"
+    "value": "SweepPic.permission.result"
   },
   "aggregations": [
     { "type": "eventCount", "name": "count" }

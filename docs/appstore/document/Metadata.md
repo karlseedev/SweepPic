@@ -9,7 +9,7 @@
 | 항목 | 값 |
 |------|-----|
 | Name (앱 이름) | SweepPic |
-| Bundle ID | com.karl.PIClear |
+| Bundle ID | com.karl.SweepPic |
 | SKU | SweepPic2026 |
 | Primary Language | 한국어 |
 | Primary Category | Photo & Video |

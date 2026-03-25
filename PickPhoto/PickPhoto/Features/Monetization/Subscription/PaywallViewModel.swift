@@ -1,6 +1,6 @@
 //
 //  PaywallViewModel.swift
-//  PickPhoto
+//  SweepPic
 //
 //  페이월 화면 뷰모델
 //  - 가격 포맷팅 (NumberFormatter, locale 반영)

@@ -1,6 +1,6 @@
 //
 //  TrashAlbumViewController+Gate.swift
-//  PickPhoto
+//  SweepPic
 //
 //  삭제대기함 게이트 관련 Extension
 //  - UsageGaugeView 설정/업데이트

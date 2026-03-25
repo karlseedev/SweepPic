@@ -1,9 +1,9 @@
 //
 //  FaceMatch.swift
-//  PickPhoto
+//  SweepPic
 //
 //  Created by Claude on 2026-01-05.
-//  Copyright © 2026 PickPhoto. All rights reserved.
+//  Copyright © 2026 SweepPic. All rights reserved.
 //
 //  Description:
 //  인물 매칭 검증 결과를 저장하는 구조체입니다.

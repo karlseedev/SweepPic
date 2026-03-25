@@ -1,9 +1,9 @@
 //
 //  S2DebugAnalyzer.swift
-//  PickPhoto
+//  SweepPic
 //
 //  Created by Claude on 2026-01-16.
-//  Copyright © 2026 PickPhoto. All rights reserved.
+//  Copyright © 2026 SweepPic. All rights reserved.
 //
 //  Description:
 //  S2(over-merge) 원인 분석을 위한 디버그 로그 출력 클래스입니다.

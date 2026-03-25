@@ -1,6 +1,6 @@
 //
 //  TrashGatePopupViewController.swift
-//  PickPhoto
+//  SweepPic
 //
 //  게이트 팝업 UI — present(.overFullScreen) + animator 블러
 //  UIViewPropertyAnimator로 블러 강도를 조절하여 뒤 콘텐츠 투과

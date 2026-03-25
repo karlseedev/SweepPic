@@ -1,4 +1,4 @@
-# Research: PickPhoto MVP
+# Research: SweepPic MVP
 
 **Branch**: `001-pickphoto-mvp`
 **Created**: 2025-12-16
@@ -6,7 +6,7 @@
 
 ## Overview
 
-PickPhoto MVP의 핵심 기술 결정은 Spike 테스트와 Gate 검증을 통해 완료되었습니다. 본 문서는 그 결과를 정리합니다.
+SweepPic MVP의 핵심 기술 결정은 Spike 테스트와 Gate 검증을 통해 완료되었습니다. 본 문서는 그 결과를 정리합니다.
 
 ---
 

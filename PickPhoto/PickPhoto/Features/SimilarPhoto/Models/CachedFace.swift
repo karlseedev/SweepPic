@@ -1,9 +1,9 @@
 //
 //  CachedFace.swift
-//  PickPhoto
+//  SweepPic
 //
 //  Created by Claude on 2026-01-05.
-//  Copyright © 2026 PickPhoto. All rights reserved.
+//  Copyright © 2026 SweepPic. All rights reserved.
 //
 //  Description:
 //  Vision 얼굴 감지 결과를 캐시하는 구조체입니다.

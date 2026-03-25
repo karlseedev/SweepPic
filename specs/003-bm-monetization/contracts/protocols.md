@@ -41,7 +41,7 @@ public protocol GracePeriodServiceProtocol {
 
 ---
 
-## SubscriptionStoreProtocol (PickPhoto)
+## SubscriptionStoreProtocol (SweepPic)
 
 ```swift
 protocol SubscriptionStoreProtocol: AnyObject {
@@ -58,7 +58,7 @@ protocol SubscriptionStoreProtocol: AnyObject {
 
 ---
 
-## TrashGateCoordinatorProtocol (PickPhoto)
+## TrashGateCoordinatorProtocol (SweepPic)
 
 ```swift
 protocol TrashGateCoordinatorProtocol {
@@ -74,7 +74,7 @@ protocol TrashGateCoordinatorProtocol {
 
 ---
 
-## AdManagerProtocol (PickPhoto)
+## AdManagerProtocol (SweepPic)
 
 ```swift
 protocol AdManagerProtocol: AnyObject {

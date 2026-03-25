@@ -1,6 +1,6 @@
 //
 //  RenderABTest.swift
-//  PickPhoto
+//  SweepPic
 //
 //  Description: Render hitch 원인 분석용 A/B 테스트
 //               스크롤 시작 시 테스트 조건을 적용하고,

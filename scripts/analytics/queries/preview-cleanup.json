@@ -8,7 +8,7 @@
   "filter": {
     "type": "selector",
     "dimension": "type",
-    "value": "PickPhoto.cleanup.previewCompleted"
+    "value": "SweepPic.cleanup.previewCompleted"
   },
   "aggregations": [
     { "type": "eventCount", "name": "count" }

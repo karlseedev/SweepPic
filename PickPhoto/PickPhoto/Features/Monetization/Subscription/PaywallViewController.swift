@@ -1,6 +1,6 @@
 //
 //  PaywallViewController.swift
-//  PickPhoto
+//  SweepPic
 //
 //  페이월 화면 — 구독 가치 제안 + 가격 + 구매 버튼
 //

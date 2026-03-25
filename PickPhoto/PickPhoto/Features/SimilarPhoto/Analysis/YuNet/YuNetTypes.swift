@@ -1,9 +1,9 @@
 //
 //  YuNetTypes.swift
-//  PickPhoto
+//  SweepPic
 //
 //  Created by Claude on 2026-01-15.
-//  Copyright © 2026 PickPhoto. All rights reserved.
+//  Copyright © 2026 SweepPic. All rights reserved.
 //
 //  Description:
 //  YuNet 얼굴 감지에 사용되는 타입 정의입니다.

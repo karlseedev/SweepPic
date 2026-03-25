@@ -1,9 +1,9 @@
 //
 //  YuNetDecoder.swift
-//  PickPhoto
+//  SweepPic
 //
 //  Created by Claude on 2026-01-15.
-//  Copyright © 2026 PickPhoto. All rights reserved.
+//  Copyright © 2026 SweepPic. All rights reserved.
 //
 //  Description:
 //  YuNet 모델 출력을 디코딩하여 얼굴 감지 결과로 변환합니다.

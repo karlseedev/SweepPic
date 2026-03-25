@@ -5,7 +5,7 @@
   "filter": {
     "type": "selector",
     "dimension": "type",
-    "value": "PickPhoto.session.errors"
+    "value": "SweepPic.session.errors"
   },
   "aggregations": [
     { "type": "eventCount", "name": "errorSessions" },

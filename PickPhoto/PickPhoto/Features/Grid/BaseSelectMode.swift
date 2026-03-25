@@ -1,6 +1,6 @@
 //
 //  BaseSelectMode.swift
-//  PickPhoto
+//  SweepPic
 //
 //  Description: BaseGridViewController의 Select Mode 공통 기능
 //               - Select Mode 진입/종료

@@ -1,6 +1,6 @@
 //
 //  FAQViewController.swift
-//  PickPhoto
+//  SweepPic
 //
 //  자주 묻는 질문 (FAQ) 화면 (FR-046, T049)
 //
@@ -77,7 +77,7 @@ final class FAQViewController: UIViewController, BarsVisibilityControlling {
             ),
             FAQItem(
                 question: "구독을 해지하고 싶어요",
-                answer: "설정 > [내 이름] > 구독 > PIClear Plus > 구독 취소를 탭하세요. 앱을 삭제해도 구독은 자동으로 해지되지 않으니 반드시 위 경로에서 취소해주세요."
+                answer: "설정 > [내 이름] > 구독 > SweepPic Plus > 구독 취소를 탭하세요. 앱을 삭제해도 구독은 자동으로 해지되지 않으니 반드시 위 경로에서 취소해주세요."
             ),
             FAQItem(
                 question: "환불받을 수 있나요?",
@@ -95,7 +95,7 @@ final class FAQViewController: UIViewController, BarsVisibilityControlling {
             ),
             FAQItem(
                 question: "광고 추적을 끄고 싶어요",
-                answer: "설정 > 개인정보 보호 및 보안 > 추적에서 PIClear의 추적 권한을 끌 수 있습니다. 추적을 끄면 맞춤형 광고 대신 일반 광고가 표시되며, 앱 기능에는 영향이 없습니다."
+                answer: "설정 > 개인정보 보호 및 보안 > 추적에서 SweepPic의 추적 권한을 끌 수 있습니다. 추적을 끄면 맞춤형 광고 대신 일반 광고가 표시되며, 앱 기능에는 영향이 없습니다."
             ),
         ]),
     ]

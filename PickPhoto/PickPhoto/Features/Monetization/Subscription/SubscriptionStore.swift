@@ -1,6 +1,6 @@
 //
 //  SubscriptionStore.swift
-//  PickPhoto
+//  SweepPic
 //
 //  StoreKit 2 기반 구독 상태 관리 싱글톤
 //  SubscriptionStoreProtocol 준수 (contracts/protocols.md)
