@@ -20,9 +20,11 @@ YEAR1_MONTHS = 10                   # 협약기간 10개월 (4~1월)
 CPI_YEAR1 = 2600    # 0.52×1500 + 0.33×3500 + 0.15×4500
 CPI_YEAR2 = 2700    # 2년차~ ASA 최적화
 
-# 구독 전환율
-IOS_CONVERSION = 0.05       # iOS 전환율 (체험시작률 20% × Trial→Paid 26%)
-ANDROID_CONVERSION = 0.015  # Android 전환율 (iOS의 30%, Photo 카테고리 iOS 편중 반영)
+# 구독 전환율 — 연차별 차등 적용
+# 1년차: 론칭 초기 높은 전환율 (얼리어답터 + 프로모션 효과)
+# 2년차~: 시장 확대에 따른 보수적 전환율
+IOS_CONVERSION_BY_YEAR = {1: 0.07, 2: 0.05, 3: 0.05, 4: 0.05, 5: 0.05}
+ANDROID_RATIO_TO_IOS = 0.30  # Android 전환율 = iOS × 0.30 (Photo 카테고리 iOS 편중 반영)
 
 # 구독 가격
 MONTHLY_PRICE = 4400        # 월구독 가격 (원)
@@ -214,8 +216,10 @@ def run_simulation():
         total_installs = ios_installs + android_installs
         cum_installs += total_installs
 
-        # 신규 구독자
-        new_subs = ios_installs * IOS_CONVERSION + android_installs * ANDROID_CONVERSION
+        # 신규 구독자 — 연차별 전환율 적용
+        ios_conv = IOS_CONVERSION_BY_YEAR[year]
+        android_conv = ios_conv * ANDROID_RATIO_TO_IOS
+        new_subs = ios_installs * ios_conv + android_installs * android_conv
 
         # 누적 구독자 (이탈 반영)
         cum_subs = cum_subs * monthly_retention + new_subs
@@ -261,7 +265,9 @@ def print_results(results, arpu, monthly_retention):
     print(f"   가중 ARPU: ₩{arpu:,.0f}/월")
     print(f"   월간 유지율: {monthly_retention:.4f} ({monthly_retention*100:.2f}%)")
     print(f"   CPI: 1년차 ₩{CPI_YEAR1:,} (가중평균) / 2년차~ ₩{CPI_YEAR2:,}")
-    print(f"   전환율: iOS {IOS_CONVERSION*100:.0f}% / Android {ANDROID_CONVERSION*100:.0f}%")
+    ios_y1 = IOS_CONVERSION_BY_YEAR[1] * 100
+    ios_y2 = IOS_CONVERSION_BY_YEAR[2] * 100
+    print(f"   전환율: iOS 1년차 {ios_y1:.0f}% → 2년차~ {ios_y2:.0f}% / Android = iOS×{ANDROID_RATIO_TO_IOS:.0%}")
     print(f"   재투자율: 1~3년차 {REINVEST_RATE[1]*100:.0f}% / 4년차 {REINVEST_RATE[4]*100:.0f}% / 5년차 {REINVEST_RATE[5]*100:.0f}%")
     print(f"   유료부스트: {PAID_BOOST_RATIO*100:.0f}% (Digital Turbine ×1.5)")
     print(f"   광고수익: ₩{AD_REV_PER_NONDAU_MONTH:,}/DAU/월")
