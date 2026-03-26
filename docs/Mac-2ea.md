@@ -79,7 +79,7 @@ git rm -r --cached test/Spike1/Spike1Test/Spike1Test.xcodeproj/project.xcworkspa
 ## 프로젝트 의존성 구조 참고
 
 ```
-PickPhoto.xcodeproj
+SweepPic.xcodeproj
 ├── AppCore (로컬 SPM: ../../iOS)
 ├── LiquidGlassKit (로컬 SPM: ../LiquidGlassKit, Git에 직접 포함)
 ├── BlurUIKit (원격 SPM: GitHub, Package.resolved로 잠금)

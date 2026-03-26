@@ -9,14 +9,14 @@ SIMULATOR="iPhone 16"
 
 echo "=== Step 1: 빌드 + 설치 ==="
 xcodebuild build \
-  -project PickPhoto/PickPhoto.xcodeproj \
-  -scheme PickPhoto \
+  -project SweepPic/SweepPic.xcodeproj \
+  -scheme SweepPic \
   -destination "platform=iOS Simulator,name=$SIMULATOR" \
   -configuration Debug
 
 APP_PATH=$(xcodebuild -showBuildSettings \
-  -project PickPhoto/PickPhoto.xcodeproj \
-  -scheme PickPhoto \
+  -project SweepPic/SweepPic.xcodeproj \
+  -scheme SweepPic \
   -destination "platform=iOS Simulator,name=$SIMULATOR" \
   -configuration Debug 2>/dev/null \
   | grep -m1 "BUILT_PRODUCTS_DIR" | awk '{print $3}')

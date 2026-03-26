@@ -47,11 +47,11 @@ echo "✅ $DEVICE_NAME 연결 확인"
 echo ""
 echo "=== $LABEL 실행 (TEST_START: $TEST_START) ==="
 xcodebuild test \
-  -project PickPhoto/PickPhoto.xcodeproj \
-  -scheme PickPhoto \
+  -project SweepPic/SweepPic.xcodeproj \
+  -scheme SweepPic \
   -destination "platform=iOS,id=$DEVICE_ID" \
   -configuration Debug \
   -allowProvisioningUpdates \
-  -skip-testing:PickPhotoTests \
-  -only-testing:PickPhotoUITests/AnalyticsUITest/$TEST_METHOD \
+  -skip-testing:SweepPicTests \
+  -only-testing:SweepPicUITests/AnalyticsUITest/$TEST_METHOD \
   2>&1

@@ -7,7 +7,7 @@
 영향: 계획대로 실행 시 Phase 1에서 바로 막힐 가능성이 높습니다.
 
 2. **High: Phase 3 API 변경 항목이 컴파일 영향 범위를 덜 잡았습니다.**  
-근거: 문서에서 `YuNetOutputNames.outputs(for inputSize:)` 형태 변경을 예고 ([260313YuNetUpgrade.md:137](/Users/karl/Project/Photos/iOS/docs/similar/260313YuNetUpgrade.md#L137))했는데, 실제 코드에는 기존 시그니처를 쓰는 호출부가 존재합니다 ([YuNetDebugTest.swift:155](/Users/karl/Project/Photos/iOS/PickPhoto/PickPhoto/Features/SimilarPhoto/Analysis/YuNet/YuNetDebugTest.swift#L155)).  
+근거: 문서에서 `YuNetOutputNames.outputs(for inputSize:)` 형태 변경을 예고 ([260313YuNetUpgrade.md:137](/Users/karl/Project/Photos/iOS/docs/similar/260313YuNetUpgrade.md#L137))했는데, 실제 코드에는 기존 시그니처를 쓰는 호출부가 존재합니다 ([YuNetDebugTest.swift:155](/Users/karl/Project/Photos/iOS/SweepPic/SweepPic/Features/SimilarPhoto/Analysis/YuNet/YuNetDebugTest.swift#L155)).  
 영향: 문서대로 구현하면 디버그 빌드 컴파일 에러 가능성이 큽니다.
 
 3. **Medium: 출력 이름 확인 코드 예시가 coremltools API와 맞지 않을 가능성이 큽니다.**  

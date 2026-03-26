@@ -19,8 +19,8 @@ iOS/
 ├── Package.swift              # AppCore Swift Package
 ├── Sources/AppCore/           # 비즈니스 로직
 ├── Tests/AppCoreTests/        # 패키지 테스트
-├── PickPhoto/                 # iOS 앱
-│   └── PickPhoto.xcodeproj
+├── SweepPic/                 # iOS 앱
+│   └── SweepPic.xcodeproj
 ├── docs/                      # PRD, TechSpec
 ├── specs/                     # Feature specs
 │   └── 001-pickphoto-mvp/
@@ -41,7 +41,7 @@ cd /Users/karl/Project/Photos/iOS
 
 ```bash
 # Xcode 빌드 (권장)
-xcodebuild -project PickPhoto/PickPhoto.xcodeproj -scheme PickPhoto -destination 'platform=iOS Simulator,name=iPhone 15' build
+xcodebuild -project SweepPic/SweepPic.xcodeproj -scheme SweepPic -destination 'platform=iOS Simulator,name=iPhone 15' build
 
 # 또는 iOS 시뮬레이터 SDK로 패키지 빌드
 xcodebuild -scheme AppCore -destination 'generic/platform=iOS Simulator' build
@@ -51,12 +51,12 @@ xcodebuild -scheme AppCore -destination 'generic/platform=iOS Simulator' build
 
 ```bash
 # Xcode에서 프로젝트 열기
-open PickPhoto/PickPhoto.xcodeproj
+open SweepPic/SweepPic.xcodeproj
 ```
 
 ### 4. Select Target & Run
 
-1. Xcode에서 `PickPhoto` 스킴 선택
+1. Xcode에서 `SweepPic` 스킴 선택
 2. 시뮬레이터 또는 실기기 선택
 3. `Cmd + R`로 실행
 
@@ -82,8 +82,8 @@ swift test --filter AppCoreTests
 
 ```bash
 # 커맨드라인 빌드
-xcodebuild -project PickPhoto/PickPhoto.xcodeproj \
-    -scheme PickPhoto \
+xcodebuild -project SweepPic/SweepPic.xcodeproj \
+    -scheme SweepPic \
     -configuration Debug \
     -destination 'platform=iOS Simulator,name=iPhone 15'
 
@@ -131,8 +131,8 @@ open test/Spike1/Spike1Test/Spike1Test.xcodeproj
 
 ```bash
 # Xcode에서 테스트 (권장)
-xcodebuild test -project PickPhoto/PickPhoto.xcodeproj \
-    -scheme PickPhoto \
+xcodebuild test -project SweepPic/SweepPic.xcodeproj \
+    -scheme SweepPic \
     -destination 'platform=iOS Simulator,name=iPhone 15'
 
 # 또는 iOS 시뮬레이터 SDK로 패키지 테스트
@@ -151,11 +151,11 @@ xcodebuild test -scheme AppCore \
 ```bash
 # Time Profiler
 xcrun xctrace record --template 'Time Profiler' \
-    --launch PickPhoto.app
+    --launch SweepPic.app
 
 # Core Animation (hitch 측정)
 xcrun xctrace record --template 'Core Animation' \
-    --launch PickPhoto.app
+    --launch SweepPic.app
 ```
 
 ## Debugging Tips
@@ -214,7 +214,7 @@ class HitchMonitor {
 
 ### "Photos access denied"
 
-1. 설정 앱 → 개인정보 보호 → 사진 → PickPhoto 활성화
+1. 설정 앱 → 개인정보 보호 → 사진 → SweepPic 활성화
 2. 시뮬레이터: Device → Erase All Content and Settings 후 재시도
 
 ### "Module 'AppCore' not found"
@@ -229,7 +229,7 @@ swift package resolve
 
 ```bash
 # DerivedData 정리
-rm -rf ~/Library/Developer/Xcode/DerivedData/PickPhoto-*
+rm -rf ~/Library/Developer/Xcode/DerivedData/SweepPic-*
 ```
 
 ## References

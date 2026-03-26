@@ -15,9 +15,9 @@
 
 ## Path Conventions
 
-- **App Source**: `PickPhoto/PickPhoto/`
-- **Features**: `PickPhoto/PickPhoto/Features/`
-- **Tests**: `PickPhoto/PickPhotoTests/`
+- **App Source**: `SweepPic/SweepPic/`
+- **Features**: `SweepPic/SweepPic/Features/`
+- **Tests**: `SweepPic/SweepPicTests/`
 
 ---
 
@@ -25,9 +25,9 @@
 
 **Purpose**: Feature Flag 및 기본 디렉토리 구조 생성
 
-- [X] T001 FeatureFlags.swift 생성 - `isSimilarPhotoEnabled` 플래그 정의 in `PickPhoto/PickPhoto/Shared/FeatureFlags.swift`
-- [X] T002 [P] SimilarPhoto 모듈 디렉토리 구조 생성 in `PickPhoto/PickPhoto/Features/SimilarPhoto/` (Analysis/, UI/, Models/ 하위 폴더)
-- [X] T003 SimilarPhoto 모듈을 Xcode 프로젝트에 추가 in `PickPhoto/PickPhoto.xcodeproj`
+- [X] T001 FeatureFlags.swift 생성 - `isSimilarPhotoEnabled` 플래그 정의 in `SweepPic/SweepPic/Shared/FeatureFlags.swift`
+- [X] T002 [P] SimilarPhoto 모듈 디렉토리 구조 생성 in `SweepPic/SweepPic/Features/SimilarPhoto/` (Analysis/, UI/, Models/ 하위 폴더)
+- [X] T003 SimilarPhoto 모듈을 Xcode 프로젝트에 추가 in `SweepPic/SweepPic.xcodeproj`
   - PBXGroup에 Features/SimilarPhoto/ 폴더 구조 추가
   - 신규 Swift 파일들을 Build Phases > Compile Sources에 등록
   - Extension 파일들(GridViewController+SimilarPhoto, ViewerViewController+SimilarPhoto) 등록
@@ -44,11 +44,11 @@
 
 ### 2.1 데이터 모델
 
-- [X] T004 [P] SimilarityAnalysisState 열거형 생성 in `PickPhoto/PickPhoto/Features/SimilarPhoto/Models/SimilarityAnalysisState.swift`
+- [X] T004 [P] SimilarityAnalysisState 열거형 생성 in `SweepPic/SweepPic/Features/SimilarPhoto/Models/SimilarityAnalysisState.swift`
   - `notAnalyzed`, `analyzing`, `analyzed(inGroup: Bool, groupID: String?)` 케이스
   - 상태 전환 유효성 검증 메서드
 
-- [X] T004.1 [P] SimilarityConstants 열거형 생성 in `PickPhoto/PickPhoto/Features/SimilarPhoto/Models/SimilarityConstants.swift`
+- [X] T004.1 [P] SimilarityConstants 열거형 생성 in `SweepPic/SweepPic/Features/SimilarPhoto/Models/SimilarityConstants.swift`
   - **공용 상수 파일** (여러 클래스에서 참조)
   - `similarityThreshold: Float = 10.0` - Feature Print 거리 임계값
   - `minGroupSize: Int = 3` - 최소 그룹 크기
@@ -63,7 +63,7 @@
   - `maxConcurrentAnalysis: Int = 5` - 동시 분석 제한 (기본)
   - `maxConcurrentAnalysisThermal: Int = 2` - 동시 분석 제한 (과열 시)
 
-- [X] T004.2 [P] AsyncSemaphore 유틸리티 생성 in `PickPhoto/PickPhoto/Features/SimilarPhoto/Utils/AsyncSemaphore.swift`
+- [X] T004.2 [P] AsyncSemaphore 유틸리티 생성 in `SweepPic/SweepPic/Features/SimilarPhoto/Utils/AsyncSemaphore.swift`
   - Swift Concurrency 환경에서 동시성 제한을 위한 세마포어
   - `init(value: Int)` - 초기 동시 실행 가능 수
   - `wait() async` - 슬롯 획득 대기
@@ -72,13 +72,13 @@
   - 내부 구현: continuation 큐 + 카운터 관리
   - T014.2에서 Feature Print 병렬 생성 시 사용
 
-- [X] T005 [P] CachedFace 구조체 생성 in `PickPhoto/PickPhoto/Features/SimilarPhoto/Models/CachedFace.swift`
+- [X] T005 [P] CachedFace 구조체 생성 in `SweepPic/SweepPic/Features/SimilarPhoto/Models/CachedFace.swift`
   - `boundingBox: CGRect` (Vision 정규화 좌표 0~1)
   - `personIndex: Int` (위치 기반 인물 번호, >= 1)
   - `isValidSlot: Bool` (그룹 내 2장 이상 감지 여부)
   - Vision → UIKit 좌표 변환 유틸리티 메서드
 
-- [X] T006 [P] SimilarThumbnailGroup + ComparisonGroup 구조체 생성 in `PickPhoto/PickPhoto/Features/SimilarPhoto/Models/SimilarPhotoGroup.swift`
+- [X] T006 [P] SimilarThumbnailGroup + ComparisonGroup 구조체 생성 in `SweepPic/SweepPic/Features/SimilarPhoto/Models/SimilarPhotoGroup.swift`
   - **SimilarThumbnailGroup** (유사사진썸네일그룹 - 크기 제한 없음):
     - `groupID: String` (UUID)
     - `memberAssetIDs: [String]` (>= 3개)
@@ -94,14 +94,14 @@
     - 유효 인물 슬롯: `SimilarityCache.groupValidPersonIndices`
     - 사진별 얼굴: `SimilarityCache.assetFaces`
 
-- [X] T007 [P] FaceMatch 구조체 생성 in `PickPhoto/PickPhoto/Features/SimilarPhoto/Models/FaceMatch.swift`
+- [X] T007 [P] FaceMatch 구조체 생성 in `SweepPic/SweepPic/Features/SimilarPhoto/Models/FaceMatch.swift`
   - `assetID: String`
   - `personIndex: Int`
   - `distance: Float`
   - `isSamePerson: Bool` computed property (거리 < 1.0이면 true)
   - 거리 >= 1.0이면 다른 인물로 판정하여 비교 그리드에서 제외 (spec FR-030)
 
-- [X] T008 [P] AnalysisRequest 구조체 생성 in `PickPhoto/PickPhoto/Features/SimilarPhoto/Models/AnalysisRequest.swift`
+- [X] T008 [P] AnalysisRequest 구조체 생성 in `SweepPic/SweepPic/Features/SimilarPhoto/Models/AnalysisRequest.swift`
   - `assetID: String`
   - `source: AnalysisSource` (.grid, .viewer)
   - `range: ClosedRange<Int>`
@@ -109,7 +109,7 @@
 
 ### 2.2 분석 엔진
 
-- [X] T009 SimilarityCache 클래스 생성 in `PickPhoto/PickPhoto/Features/SimilarPhoto/Analysis/SimilarityCache.swift`
+- [X] T009 SimilarityCache 클래스 생성 in `SweepPic/SweepPic/Features/SimilarPhoto/Analysis/SimilarityCache.swift`
   - `states: [String: SimilarityAnalysisState]` - 사진별 상태
   - `groups: [String: SimilarThumbnailGroup]` - 그룹 관리
   - `assetFaces: [String: [CachedFace]]` - 사진별 얼굴 캐시
@@ -131,7 +131,7 @@
     - 상태 → `analyzing`
   - 메모리 경고 시 50% LRU 제거 (`handleMemoryWarning()`)
 
-- [X] T010 그룹 유효성 필터링 및 상태 갱신 **(Gate Keeper)** in `PickPhoto/PickPhoto/Features/SimilarPhoto/Analysis/SimilarityCache.swift`
+- [X] T010 그룹 유효성 필터링 및 상태 갱신 **(Gate Keeper)** in `SweepPic/SweepPic/Features/SimilarPhoto/Analysis/SimilarityCache.swift`
   - **`addGroupIfValid()` 메서드** - T014.7에서 호출됨
   - **역할**: 최종 유효성 검증 후 저장/거부 결정 (T014.6 결과 검증)
   - 입력 파라미터:
@@ -148,14 +148,14 @@
   - **invalid 그룹이 캐시에 남지 않도록 보장**
   - 반환값: `String?` (저장된 groupID 또는 nil)
 
-- [X] T011 SimilarityImageLoader 클래스 생성 in `PickPhoto/PickPhoto/Features/SimilarPhoto/Analysis/SimilarityImageLoader.swift`
+- [X] T011 SimilarityImageLoader 클래스 생성 in `SweepPic/SweepPic/Features/SimilarPhoto/Analysis/SimilarityImageLoader.swift`
   - PHCachingImageManager 활용
   - 분석용 이미지: **긴 변 480px** 이하, `contentMode = .aspectFit`
   - `loadImage(for:completion:)` 메서드
   - 패딩/크롭 금지, 원본 비율 유지
   - 타임아웃: **3초**
 
-- [X] T012 SimilarityAnalyzer 클래스 생성 in `PickPhoto/PickPhoto/Features/SimilarPhoto/Analysis/SimilarityAnalyzer.swift`
+- [X] T012 SimilarityAnalyzer 클래스 생성 in `SweepPic/SweepPic/Features/SimilarPhoto/Analysis/SimilarityAnalyzer.swift`
   - **순수 계산만 담당** (로딩/큐 제어 안함)
   - `VNGenerateImageFeaturePrintRequest` 활용
   - `computeDistance(_:to:)` 로 유사도 계산
@@ -163,7 +163,7 @@
   - `generateFeaturePrint(for:completion:)` 메서드
   - `compareFeaturePrints(_:_:) -> Float` 메서드
 
-- [X] T013 SimilarityAnalysisQueue 클래스 생성 in `PickPhoto/PickPhoto/Features/SimilarPhoto/Analysis/SimilarityAnalysisQueue.swift`
+- [X] T013 SimilarityAnalysisQueue 클래스 생성 in `SweepPic/SweepPic/Features/SimilarPhoto/Analysis/SimilarityAnalysisQueue.swift`
   - FIFO 큐 관리
   - 동시 분석: **최대 5개** (기본), **2개** (과열 시) - `SimilarityConstants` 참조
   - `thermalState` 모니터링 (.serious/.critical 시 제한)
@@ -182,7 +182,7 @@
     - **빈 결과 정책**: groupIDs가 빈 배열이어도 알림 발송 (테두리 제거 트리거)
   - 그리드/뷰어에서 해당 알림 구독하여 UI 갱신
 
-- [X] T014 분석 파이프라인 통합 - `formGroupsForRange()` 메서드 in `PickPhoto/PickPhoto/Features/SimilarPhoto/Analysis/SimilarityAnalysisQueue.swift`
+- [X] T014 분석 파이프라인 통합 - `formGroupsForRange()` 메서드 in `SweepPic/SweepPic/Features/SimilarPhoto/Analysis/SimilarityAnalysisQueue.swift`
   > **⭐ 핵심 알고리즘**: research.md §10.5 Algorithm Steps, §10.10 Swift Implementation 참조
 
   - [X] **T014.1** 분석 준비 (범위는 호출자가 전달)
@@ -292,7 +292,7 @@
     - GridViewController: groupIDs 기반 테두리 표시/제거
     - ViewerViewController: +버튼 표시 준비
 
-- [X] T015 범위 겹침 그룹 병합 in `PickPhoto/PickPhoto/Features/SimilarPhoto/Analysis/SimilarityCache.swift`
+- [X] T015 범위 겹침 그룹 병합 in `SweepPic/SweepPic/Features/SimilarPhoto/Analysis/SimilarityCache.swift`
   - **호출 시점**: T010 `addGroupIfValid()` 내부에서 저장 직전 호출
   - **호출자**: `SimilarityCache.addGroupIfValid()` → `mergeOverlappingGroups()`
   - 연속 범위 분석이므로 동일 사진이 여러 그룹에 속하지 않도록 보장
@@ -304,7 +304,7 @@
     - validPersonIndices 재계산
   - 반환값: 병합된 멤버 목록, 병합된 validSlots
 
-- [X] T016 FaceDetector 클래스 생성 in `PickPhoto/PickPhoto/Features/SimilarPhoto/Analysis/FaceDetector.swift`
+- [X] T016 FaceDetector 클래스 생성 in `SweepPic/SweepPic/Features/SimilarPhoto/Analysis/FaceDetector.swift`
   - `VNDetectFaceRectanglesRequest` 활용
   - **간소화된 시그니처** (T014.5와 일치):
     ```swift
@@ -318,7 +318,7 @@
   - Vision 정규화 좌표 반환 (0~1, 원점 좌하단)
   - 인물 번호 부여는 T014.5에서 `assignPersonIndices()` 호출로 처리
 
-- [X] T017 FaceCropper 유틸리티 생성 in `PickPhoto/PickPhoto/Features/SimilarPhoto/Analysis/FaceCropper.swift`
+- [X] T017 FaceCropper 유틸리티 생성 in `SweepPic/SweepPic/Features/SimilarPhoto/Analysis/FaceCropper.swift`
   - bounding box + **30% 여백** 추가
   - **1:1 정사각형** 조정
   - 경계 처리: 중심 고정, 경계 내 최대 크기로 축소
@@ -343,7 +343,7 @@
 
 ### Implementation for User Story 1
 
-- [X] T018 [P] [US1] BorderAnimationLayer 클래스 생성 in `PickPhoto/PickPhoto/Features/SimilarPhoto/UI/BorderAnimationLayer.swift`
+- [X] T018 [P] [US1] BorderAnimationLayer 클래스 생성 in `SweepPic/SweepPic/Features/SimilarPhoto/UI/BorderAnimationLayer.swift`
   - `CAShapeLayer` + `CAKeyframeAnimation`
   - 사각형 path, 흰색 그라데이션
   - 시계방향 회전, **1.5초 주기**
@@ -352,7 +352,7 @@
   - `startAnimation()`, `stopAnimation()`, `showStaticBorder()` 메서드
   - 모든 셀 **동일한 위상으로 동기화** (CACurrentMediaTime 기준)
 
-- [X] T019 [US1] GridViewController+SimilarPhoto.swift Extension 생성 in `PickPhoto/PickPhoto/Features/Grid/GridViewController+SimilarPhoto.swift`
+- [X] T019 [US1] GridViewController+SimilarPhoto.swift Extension 생성 in `SweepPic/SweepPic/Features/Grid/GridViewController+SimilarPhoto.swift`
   - FeatureFlag 체크 (`FeatureFlags.isSimilarPhotoEnabled`)
   - VoiceOver 활성화 시 기능 비활성화 (`UIAccessibility.isVoiceOverRunning`)
   - 선택 모드 시 기능 비활성화
@@ -369,19 +369,19 @@
   - `scrollViewWillBeginDragging` 시 분석 취소 및 테두리 제거
   - `collectionView(_:didSelectItemAt:)` 에서 테두리 있는 셀 탭 시 뷰어 이동 처리
 
-- [X] T020 [US1] GridViewController 기존 파일에 최소 수정 in `PickPhoto/PickPhoto/Features/Grid/GridViewController.swift`
+- [X] T020 [US1] GridViewController 기존 파일에 최소 수정 in `SweepPic/SweepPic/Features/Grid/GridViewController.swift`
   - Extension 메서드 호출만 추가
   - `viewDidLoad`에서 `setupSimilarPhotoObserver()` 호출
   - `scrollViewDidEndDecelerating`에서 `handleScrollEnd()` 호출
   - `scrollViewWillBeginDragging`에서 `handleScrollStart()` 호출
   - 셀 구성 시 `configureBorderAnimation(for:)` 호출
 
-- [X] T021 [US1] 셀 레이어 관리 in `PickPhoto/PickPhoto/Features/Grid/GridViewController+SimilarPhoto.swift`
+- [X] T021 [US1] 셀 레이어 관리 in `SweepPic/SweepPic/Features/Grid/GridViewController+SimilarPhoto.swift`
   - `collectionView(_:willDisplay:forItemAt:)` - 테두리 레이어 추가/갱신
   - `collectionView(_:didEndDisplaying:forItemAt:)` - 테두리 레이어 제거 (메모리 최적화)
   - 테두리 레이어 재사용 풀 관리
 
-- [X] T022 [US1] 그룹 무효화 처리 in `PickPhoto/PickPhoto/Features/Grid/GridViewController+SimilarPhoto.swift`
+- [X] T022 [US1] 그룹 무효화 처리 in `SweepPic/SweepPic/Features/Grid/GridViewController+SimilarPhoto.swift`
   - 삭제 후 그룹 멤버 3장 미만 시 테두리 즉시 제거
   - SimilarityCache.invalidateGroup 호출 연동
   - NotificationCenter로 삭제 이벤트 감지
@@ -406,7 +406,7 @@
 
 ### Implementation for User Story 2
 
-- [X] T023 [P] [US2] FaceButtonOverlay 클래스 생성 in `PickPhoto/PickPhoto/Features/SimilarPhoto/UI/FaceButtonOverlay.swift`
+- [X] T023 [P] [US2] FaceButtonOverlay 클래스 생성 in `SweepPic/SweepPic/Features/SimilarPhoto/UI/FaceButtonOverlay.swift`
   - UIView 기반 오버레이
   - +버튼: SF Symbol `plus.circle.fill`, 탭 제스처
   - 최대 **5개** 버튼 (얼굴 크기순 상위)
@@ -417,13 +417,13 @@
   - 화면 회전 시 위치 재계산 (`viewWillTransition` 대응)
   - iPad 멀티윈도우 대응
 
-- [X] T024 [P] [US2] AnalysisLoadingIndicator 생성 in `PickPhoto/PickPhoto/Features/SimilarPhoto/UI/AnalysisLoadingIndicator.swift`
+- [X] T024 [P] [US2] AnalysisLoadingIndicator 생성 in `SweepPic/SweepPic/Features/SimilarPhoto/UI/AnalysisLoadingIndicator.swift`
   - UIActivityIndicatorView 기반
   - 분석 중(notAnalyzed → analyzing) 상태에서 표시
   - 분석 완료 시 자동 숨김
   - `show()`, `hide()` 메서드
 
-- [X] T025 [US2] ViewerViewController+SimilarPhoto.swift Extension 생성 in `PickPhoto/PickPhoto/Features/Viewer/ViewerViewController+SimilarPhoto.swift`
+- [X] T025 [US2] ViewerViewController+SimilarPhoto.swift Extension 생성 in `SweepPic/SweepPic/Features/Viewer/ViewerViewController+SimilarPhoto.swift`
   - FeatureFlag 체크
   - VoiceOver/선택모드/휴지통 시 비활성화
   - 뷰어 진입 시 캐시 조회 (`SimilarityCache.getState(for:)`)
@@ -441,13 +441,13 @@
   - +버튼 탭 핸들러: FaceComparisonViewController 표시
   - 스와이프로 다른 사진 이동 시 +버튼 갱신 (`pageViewController(_:didFinishAnimating:)`)
 
-- [X] T026 [US2] ViewerViewController 기존 파일에 최소 수정 in `PickPhoto/PickPhoto/Features/Viewer/ViewerViewController.swift`
+- [X] T026 [US2] ViewerViewController 기존 파일에 최소 수정 in `SweepPic/SweepPic/Features/Viewer/ViewerViewController.swift`
   - Extension 메서드 호출만 추가
   - `viewDidAppear`에서 `showSimilarPhotoOverlay()` 호출
   - 스와이프 완료 시 `updateSimilarPhotoOverlay()` 호출
   - FaceButtonOverlay와 AnalysisLoadingIndicator를 subview로 추가
 
-- [X] T027 [US2] +버튼 탭 → 인물 매칭 로직 in `PickPhoto/PickPhoto/Features/Viewer/ViewerViewController+SimilarPhoto.swift`
+- [X] T027 [US2] +버튼 탭 → 인물 매칭 로직 in `SweepPic/SweepPic/Features/Viewer/ViewerViewController+SimilarPhoto.swift`
   - 탭된 얼굴의 `personIndex` 확인
   - ComparisonGroup 생성: 현재 사진 기준 거리순 **최대 8장**
   - Feature Print 비교로 동일 인물 필터링 (거리 **1.0 이상** 제외)
@@ -473,7 +473,7 @@
 
 ### Implementation for User Story 3
 
-- [X] T028 [P] [US3] FaceComparisonViewController 기본 구조 생성 in `PickPhoto/PickPhoto/Features/SimilarPhoto/UI/FaceComparisonViewController.swift`
+- [X] T028 [P] [US3] FaceComparisonViewController 기본 구조 생성 in `SweepPic/SweepPic/Features/SimilarPhoto/UI/FaceComparisonViewController.swift`
   - UIViewController 기반
   - UICollectionView 2열 그리드 (`UICollectionViewFlowLayout`)
   - 셀 크기: (화면너비 - 간격) / 2, 정사각형
@@ -481,7 +481,7 @@
   - `comparisonGroup: ComparisonGroup` 프로퍼티
   - `delegate: FaceComparisonDelegate` (삭제/닫기 콜백)
 
-- [X] T029 [US3] FaceComparisonViewController 헤더 구현 in `PickPhoto/PickPhoto/Features/SimilarPhoto/UI/FaceComparisonViewController.swift`
+- [X] T029 [US3] FaceComparisonViewController 헤더 구현 in `SweepPic/SweepPic/Features/SimilarPhoto/UI/FaceComparisonViewController.swift`
   - 헤더 레이블: "인물 N (M장)" 형식
   - 순환 버튼: SF Symbol `arrow.trianglehead.2.clockwise.rotate.90`
   - 순환 로직: 인물 번호 오름차순, 마지막→첫 번째 (원형 순환)
@@ -489,26 +489,26 @@
   - iOS 16~25: 커스텀 FloatingTitleBar 사용
   - iOS 26+: 시스템 네비게이션바 사용 (Liquid Glass)
 
-- [X] T030 [US3] FaceComparisonViewController 그리드 셀 구현 in `PickPhoto/PickPhoto/Features/SimilarPhoto/UI/FaceComparisonViewController.swift`
+- [X] T030 [US3] FaceComparisonViewController 그리드 셀 구현 in `SweepPic/SweepPic/Features/SimilarPhoto/UI/FaceComparisonViewController.swift`
   - 셀: 크롭된 얼굴 이미지 (30% 여백, 정사각형)
   - FaceCropper 활용
   - 탭으로 선택/해제 토글
   - 선택 시 체크마크 오버레이 표시 (기존 선택 모드 UI 재사용)
   - 거리 1.0 이상 사진은 비교 그리드에 표시되지 않음 (T027에서 필터링됨)
 
-- [X] T031 [US3] FaceComparisonViewController 하단바 구현 in `PickPhoto/PickPhoto/Features/SimilarPhoto/UI/FaceComparisonViewController.swift`
+- [X] T031 [US3] FaceComparisonViewController 하단바 구현 in `SweepPic/SweepPic/Features/SimilarPhoto/UI/FaceComparisonViewController.swift`
   - FloatingTabBar 재사용 또는 커스텀 구현
   - Cancel 버튼: 선택 해제 후 뷰어로 복귀
   - 선택 개수 레이블: "N개 선택됨"
   - Delete 버튼: 선택된 사진 삭제 (비활성화 상태: 0개 선택 시)
 
-- [X] T032 [US3] 삭제 로직 구현 in `PickPhoto/PickPhoto/Features/SimilarPhoto/UI/FaceComparisonViewController.swift`
+- [X] T032 [US3] 삭제 로직 구현 in `SweepPic/SweepPic/Features/SimilarPhoto/UI/FaceComparisonViewController.swift`
   - Delete 탭 시 TrashStore.moveToTrash 호출
   - 삭제 후 그리드로 복귀 (뷰어와 얼굴 비교 화면 모두 닫힘)
   - 그룹 멤버 3장 미만 시 그룹 무효화 + 테두리/+버튼 즉시 제거
   - 휴지통 복구 지원: 기존 앱 휴지통 복구와 동일하게 복구 가능
 
-- [X] T033 [US3] TrashStore 연동 in `PickPhoto/PickPhoto/Stores/TrashStore.swift` (기존 파일 수정)
+- [X] T033 [US3] TrashStore 연동 in `SweepPic/SweepPic/Stores/TrashStore.swift` (기존 파일 수정)
   - `moveToTrash(assetIDs:)` 호출 시 SimilarityCache 알림
   - NotificationCenter.post로 삭제 이벤트 전파
   - 복구 시 SimilarityCache 상태 복원
@@ -529,12 +529,12 @@
 
 ### Implementation for User Story 4
 
-- [X] T034 [P] [US4] 토글 버튼 UI 추가 in `PickPhoto/PickPhoto/Features/SimilarPhoto/UI/FaceButtonOverlay.swift`
+- [X] T034 [P] [US4] 토글 버튼 UI 추가 in `SweepPic/SweepPic/Features/SimilarPhoto/UI/FaceButtonOverlay.swift`
   - eye/eye.slash 토글 아이콘 (SF Symbol)
   - 위치: 화면 우측 하단 또는 상단 (기존 UI와 충돌 방지)
   - 탭 제스처 핸들러
 
-- [X] T035 [US4] 토글 상태 관리 in `PickPhoto/PickPhoto/Features/Viewer/ViewerViewController+SimilarPhoto.swift`
+- [X] T035 [US4] 토글 상태 관리 in `SweepPic/SweepPic/Features/Viewer/ViewerViewController+SimilarPhoto.swift`
   - `isOverlayHidden: Bool` 상태 변수
   - 토글 시 FaceButtonOverlay.isHidden 설정
   - 다른 사진으로 스와이프 시 `isOverlayHidden = false` 리셋
@@ -550,67 +550,67 @@
 
 ### Edge Cases
 
-- [X] T036 [P] 유사 사진 3장 미만 처리 in `PickPhoto/PickPhoto/Features/SimilarPhoto/Analysis/SimilarityAnalyzer.swift`
+- [X] T036 [P] 유사 사진 3장 미만 처리 in `SweepPic/SweepPic/Features/SimilarPhoto/Analysis/SimilarityAnalyzer.swift`
   - 그룹 생성 조건: 최소 3장 이상
   - 미충족 시 테두리/+버튼 미표시
 
-- [X] T037 [P] 얼굴 없는 사진 처리 in `PickPhoto/PickPhoto/Features/Viewer/ViewerViewController+SimilarPhoto.swift`
+- [X] T037 [P] 얼굴 없는 사진 처리 in `SweepPic/SweepPic/Features/Viewer/ViewerViewController+SimilarPhoto.swift`
   - CachedFace 배열이 비어있으면 +버튼 미표시
   - 로딩 인디케이터 없이 정상 뷰어 표시
 
-- [X] T038 [P] 작은 얼굴 필터링 in `PickPhoto/PickPhoto/Features/SimilarPhoto/Analysis/FaceDetector.swift`
+- [X] T038 [P] 작은 얼굴 필터링 in `SweepPic/SweepPic/Features/SimilarPhoto/Analysis/FaceDetector.swift`
   - 화면 너비 5% 미만 얼굴 제외
   - `isValidFace(boundingBox:viewWidth:)` 메서드
 
-- [X] T039 [P] 유효 슬롯 미달 처리 in `PickPhoto/PickPhoto/Features/SimilarPhoto/UI/FaceButtonOverlay.swift`
+- [X] T039 [P] 유효 슬롯 미달 처리 in `SweepPic/SweepPic/Features/SimilarPhoto/UI/FaceButtonOverlay.swift`
   - 인물 슬롯에 2장 미만 시 해당 인물 +버튼 미표시
   - `isValidSlot` 필터링
 
-- [X] T040 분석 타임아웃 처리 in `PickPhoto/PickPhoto/Features/SimilarPhoto/Analysis/SimilarityAnalysisQueue.swift`
+- [X] T040 분석 타임아웃 처리 in `SweepPic/SweepPic/Features/SimilarPhoto/Analysis/SimilarityAnalysisQueue.swift`
   - 단일 사진 분석 **3초 초과** 시 실패 처리
   - `DispatchWorkItem` 타임아웃 설정
   - 실패 사진은 그룹에 미포함
 
 ### System State Handling
 
-- [X] T041 [P] 메모리 경고 처리 in `PickPhoto/PickPhoto/Features/SimilarPhoto/Analysis/SimilarityCache.swift`
+- [X] T041 [P] 메모리 경고 처리 in `SweepPic/SweepPic/Features/SimilarPhoto/Analysis/SimilarityCache.swift`
   - `UIApplication.didReceiveMemoryWarningNotification` 구독
   - 캐시 **50% LRU 제거**
   - 현재 분석 중인 사진은 eviction 제외
 
-- [X] T042 [P] 디바이스 과열 처리 in `PickPhoto/PickPhoto/Features/SimilarPhoto/Analysis/SimilarityAnalysisQueue.swift`
+- [X] T042 [P] 디바이스 과열 처리 in `SweepPic/SweepPic/Features/SimilarPhoto/Analysis/SimilarityAnalysisQueue.swift`
   - `ProcessInfo.thermalState` 모니터링
   - `.serious`/`.critical` 시 동시 분석 **5개 → 2개**
   - 상태 복구 시 원래 제한으로 복원
 
-- [X] T043 [P] 백그라운드 전환 처리 in `PickPhoto/PickPhoto/Features/SimilarPhoto/Analysis/SimilarityAnalysisQueue.swift`
+- [X] T043 [P] 백그라운드 전환 처리 in `SweepPic/SweepPic/Features/SimilarPhoto/Analysis/SimilarityAnalysisQueue.swift`
   - `UIApplication.didEnterBackgroundNotification` 구독
   - 진행 중인 분석 취소, 캐시 유지
   - 포그라운드 복귀 시 재분석 없음
 
-- [X] T044 외부 라이브러리 변경 처리 in `PickPhoto/PickPhoto/Features/SimilarPhoto/Analysis/SimilarityCache.swift`
+- [X] T044 외부 라이브러리 변경 처리 in `SweepPic/SweepPic/Features/SimilarPhoto/Analysis/SimilarityCache.swift`
   - `PHPhotoLibraryChangeObserver` 연동
   - 변경된 사진의 캐시 무효화
   - 그룹 멤버 변경 시 그룹 재계산
 
 ### Error Handling
 
-- [X] T045 [P] Vision API 오류 처리 in `PickPhoto/PickPhoto/Features/SimilarPhoto/Analysis/SimilarityAnalyzer.swift`
+- [X] T045 [P] Vision API 오류 처리 in `SweepPic/SweepPic/Features/SimilarPhoto/Analysis/SimilarityAnalyzer.swift`
   - 개별 사진 분석 실패 시 해당 사진만 건너뛰기
   - 다른 사진 분석은 계속 진행
   - silent failure (사용자 알림 없음)
   - **전체 분석 실패 시 (화면 내 모든 사진 실패) 기능 비활성화처럼 동작** (spec Error Handling)
 
-- [X] T046 [P] 이미지 로드 실패 처리 in `PickPhoto/PickPhoto/Features/SimilarPhoto/Analysis/SimilarityImageLoader.swift`
+- [X] T046 [P] 이미지 로드 실패 처리 in `SweepPic/SweepPic/Features/SimilarPhoto/Analysis/SimilarityImageLoader.swift`
   - 로드 실패 사진은 분석 실패로 처리
   - 유사 사진 그룹에서 제외
   - 에러 로깅만 수행
 
-- [X] T047 얼굴 감지 실패 폴백 in `PickPhoto/PickPhoto/Features/SimilarPhoto/Analysis/FaceDetector.swift`
+- [X] T047 얼굴 감지 실패 폴백 in `SweepPic/SweepPic/Features/SimilarPhoto/Analysis/FaceDetector.swift`
   - API 오류 시 "얼굴 없음"으로 처리
   - +버튼 미표시, 정상 동작 유지
 
-- [X] T048 권한 거부 시 기능 비활성화 in `PickPhoto/PickPhoto/Shared/FeatureFlags.swift`
+- [X] T048 권한 거부 시 기능 비활성화 in `SweepPic/SweepPic/Shared/FeatureFlags.swift`
   - PHPhotoLibrary 권한 상태 체크 (`PHPhotoLibrary.authorizationStatus()`)
   - 권한 거부/제한 시 `isSimilarPhotoEnabled` false 반환
   - 기존 앱 권한 요청 UI 따름 (spec System State)
@@ -623,20 +623,20 @@
 
 **Purpose**: 전체 기능에 걸친 개선 및 마무리
 
-- [X] T049 [P] 접근성 처리 통합 in `PickPhoto/PickPhoto/Features/SimilarPhoto/Analysis/SimilarityCache.swift`
+- [X] T049 [P] 접근성 처리 통합 in `SweepPic/SweepPic/Features/SimilarPhoto/Analysis/SimilarityCache.swift`
   - VoiceOver 활성화 체크 통합 (`UIAccessibility.isVoiceOverRunning`)
   - 기능 전체 비활성화 로직 일원화
 
-- [X] T050 [P] 모션 감소 설정 처리 in `PickPhoto/PickPhoto/Features/SimilarPhoto/UI/BorderAnimationLayer.swift`
+- [X] T050 [P] 모션 감소 설정 처리 in `SweepPic/SweepPic/Features/SimilarPhoto/UI/BorderAnimationLayer.swift`
   - `UIAccessibility.isReduceMotionEnabled` 체크
   - 정적 테두리로 대체 (흰색 2pt 실선, cornerRadius = 0)
 
-- [X] T051 [P] 성능 검증 in `PickPhoto/PickPhoto/Features/Grid/GridViewController+SimilarPhoto.swift`
+- [X] T051 [P] 성능 검증 in `SweepPic/SweepPic/Features/Grid/GridViewController+SimilarPhoto.swift`
   - 60fps/120fps 스크롤 유지 확인
   - 10개 이상 테두리 동시 표시 시 프레임 드롭 없음
   - Instruments 프로파일링
 
-- [X] T052 [P] 메모리 누수 검증 in `PickPhoto/PickPhoto/Features/SimilarPhoto/Analysis/SimilarityCache.swift`
+- [X] T052 [P] 메모리 누수 검증 in `SweepPic/SweepPic/Features/SimilarPhoto/Analysis/SimilarityCache.swift`
   - Instruments Leaks 도구로 검증
   - 10분간 기능 사용 후 누수 0건 확인
   - LRU eviction 정상 동작 확인

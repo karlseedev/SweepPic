@@ -686,7 +686,7 @@ func convertToViewerCoordinates(
 
 **파일 구조:**
 ```
-PickPhoto/PickPhoto/
+SweepPic/SweepPic/
 ├── Shared/
 │   └── FeatureFlags.swift                         # 플래그 정의
 ├── Features/

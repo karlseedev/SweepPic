@@ -1,0 +1,701 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		CB97217B2EF2D37900F85BF4 /* AppCore in Frameworks */ = {isa = PBXBuildFile; productRef = CB97217A2EF2D37900F85BF4 /* AppCore */; };
+		CB9721BB2EF3D12300F85BF4 /* BlurUIKit in Frameworks */ = {isa = PBXBuildFile; productRef = CB9721BA2EF3D12300F85BF4 /* BlurUIKit */; };
+		CB9721C22EF4000000F85BF4 /* LiquidGlassKit in Frameworks */ = {isa = PBXBuildFile; productRef = CB9721C12EF4000000F85BF4 /* LiquidGlassKit */; };
+		CBA00001300000000000AA01 /* TelemetryDeck in Frameworks */ = {isa = PBXBuildFile; productRef = CBA00002300000000000AA01 /* TelemetryDeck */; };
+		CBE079642F57232300405DD5 /* GoogleMobileAds in Frameworks */ = {isa = PBXBuildFile; productRef = CBA10002300000000000CC01 /* GoogleMobileAds */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		CBAB3B202EFAE2CB00548282 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = CB9721492EF2D2AB00F85BF4 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = CB9721502EF2D2AB00F85BF4;
+			remoteInfo = SweepPic;
+		};
+		CBE1F96A2F21E18200984B63 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = CB9721492EF2D2AB00F85BF4 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = CB9721502EF2D2AB00F85BF4;
+			remoteInfo = SweepPic;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXFileReference section */
+		CB9721512EF2D2AB00F85BF4 /* SweepPic.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = SweepPic.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		CBAB3B1A2EFAE2CB00548282 /* SweepPicUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = SweepPicUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		CBE07B402F5B258500405DD5 /* SweepPicProducts.storekit */ = {isa = PBXFileReference; lastKnownFileType = text; path = SweepPicProducts.storekit; sourceTree = "<group>"; };
+		CBE1F9662F21E18200984B63 /* SweepPicTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = SweepPicTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		CBE1F97C2F21E52800984B63 /* SweepPic.xctestplan */ = {isa = PBXFileReference; lastKnownFileType = text; name = SweepPic.xctestplan; path = SweepPicTests/SweepPic.xctestplan; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		CB9721632EF2D2AB00F85BF4 /* Exceptions for "SweepPic" folder in "SweepPic" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = CB9721502EF2D2AB00F85BF4 /* SweepPic */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
+/* Begin PBXFileSystemSynchronizedRootGroup section */
+		CB9721532EF2D2AB00F85BF4 /* SweepPic */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				CB9721632EF2D2AB00F85BF4 /* Exceptions for "SweepPic" folder in "SweepPic" target */,
+			);
+			path = SweepPic;
+			sourceTree = "<group>";
+		};
+		CBAB3B1B2EFAE2CB00548282 /* SweepPicUITests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = SweepPicUITests;
+			sourceTree = "<group>";
+		};
+		CBE1F9672F21E18200984B63 /* SweepPicTests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = SweepPicTests;
+			sourceTree = "<group>";
+		};
+/* End PBXFileSystemSynchronizedRootGroup section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		CB97214E2EF2D2AB00F85BF4 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				CBE079642F57232300405DD5 /* GoogleMobileAds in Frameworks */,
+				CB9721BB2EF3D12300F85BF4 /* BlurUIKit in Frameworks */,
+				CB9721C22EF4000000F85BF4 /* LiquidGlassKit in Frameworks */,
+				CB97217B2EF2D37900F85BF4 /* AppCore in Frameworks */,
+				CBA00001300000000000AA01 /* TelemetryDeck in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		CBAB3B172EFAE2CB00548282 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		CBE1F9632F21E18200984B63 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		CB9721482EF2D2AB00F85BF4 = {
+			isa = PBXGroup;
+			children = (
+				CBE07B402F5B258500405DD5 /* SweepPicProducts.storekit */,
+				CBE1F97C2F21E52800984B63 /* SweepPic.xctestplan */,
+				CB9721532EF2D2AB00F85BF4 /* SweepPic */,
+				CBAB3B1B2EFAE2CB00548282 /* SweepPicUITests */,
+				CBE1F9672F21E18200984B63 /* SweepPicTests */,
+				CB9721522EF2D2AB00F85BF4 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		CB9721522EF2D2AB00F85BF4 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				CB9721512EF2D2AB00F85BF4 /* SweepPic.app */,
+				CBAB3B1A2EFAE2CB00548282 /* SweepPicUITests.xctest */,
+				CBE1F9662F21E18200984B63 /* SweepPicTests.xctest */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		CB9721502EF2D2AB00F85BF4 /* SweepPic */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = CB9721642EF2D2AB00F85BF4 /* Build configuration list for PBXNativeTarget "SweepPic" */;
+			buildPhases = (
+				CB97214D2EF2D2AB00F85BF4 /* Sources */,
+				CB97214E2EF2D2AB00F85BF4 /* Frameworks */,
+				CB97214F2EF2D2AB00F85BF4 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				CB9721532EF2D2AB00F85BF4 /* SweepPic */,
+			);
+			name = SweepPic;
+			packageProductDependencies = (
+				CB97217A2EF2D37900F85BF4 /* AppCore */,
+				CB9721BA2EF3D12300F85BF4 /* BlurUIKit */,
+				CB9721C12EF4000000F85BF4 /* LiquidGlassKit */,
+				CBA00002300000000000AA01 /* TelemetryDeck */,
+				CBA10002300000000000CC01 /* GoogleMobileAds */,
+			);
+			productName = SweepPic;
+			productReference = CB9721512EF2D2AB00F85BF4 /* SweepPic.app */;
+			productType = "com.apple.product-type.application";
+		};
+		CBAB3B192EFAE2CB00548282 /* SweepPicUITests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = CBAB3B222EFAE2CB00548282 /* Build configuration list for PBXNativeTarget "SweepPicUITests" */;
+			buildPhases = (
+				CBAB3B162EFAE2CB00548282 /* Sources */,
+				CBAB3B172EFAE2CB00548282 /* Frameworks */,
+				CBAB3B182EFAE2CB00548282 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				CBAB3B212EFAE2CB00548282 /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				CBAB3B1B2EFAE2CB00548282 /* SweepPicUITests */,
+			);
+			name = SweepPicUITests;
+			packageProductDependencies = (
+			);
+			productName = SweepPicUITests;
+			productReference = CBAB3B1A2EFAE2CB00548282 /* SweepPicUITests.xctest */;
+			productType = "com.apple.product-type.bundle.ui-testing";
+		};
+		CBE1F9652F21E18200984B63 /* SweepPicTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = CBE1F96C2F21E18200984B63 /* Build configuration list for PBXNativeTarget "SweepPicTests" */;
+			buildPhases = (
+				CBE1F9622F21E18200984B63 /* Sources */,
+				CBE1F9632F21E18200984B63 /* Frameworks */,
+				CBE1F9642F21E18200984B63 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				CBE1F96B2F21E18200984B63 /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				CBE1F9672F21E18200984B63 /* SweepPicTests */,
+			);
+			name = SweepPicTests;
+			packageProductDependencies = (
+			);
+			productName = SweepPicTests;
+			productReference = CBE1F9662F21E18200984B63 /* SweepPicTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		CB9721492EF2D2AB00F85BF4 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 2600;
+				LastUpgradeCheck = 2600;
+				TargetAttributes = {
+					CB9721502EF2D2AB00F85BF4 = {
+						CreatedOnToolsVersion = 26.0.1;
+					};
+					CBAB3B192EFAE2CB00548282 = {
+						CreatedOnToolsVersion = 26.0.1;
+						TestTargetID = CB9721502EF2D2AB00F85BF4;
+					};
+					CBE1F9652F21E18200984B63 = {
+						CreatedOnToolsVersion = 26.0.1;
+						TestTargetID = CB9721502EF2D2AB00F85BF4;
+					};
+				};
+			};
+			buildConfigurationList = CB97214C2EF2D2AB00F85BF4 /* Build configuration list for PBXProject "SweepPic" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+				ko,
+			);
+			mainGroup = CB9721482EF2D2AB00F85BF4;
+			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				CB9721792EF2D37900F85BF4 /* XCLocalSwiftPackageReference "../../iOS" */,
+				CB9721B92EF3D12300F85BF4 /* XCRemoteSwiftPackageReference "BlurUIKit" */,
+				CB9721C02EF4000000F85BF4 /* XCLocalSwiftPackageReference "../LiquidGlassKit" */,
+				CBA00003300000000000AA01 /* XCRemoteSwiftPackageReference "SwiftSDK" */,
+				CBA10001300000000000CC01 /* XCRemoteSwiftPackageReference "swift-package-manager-google-mobile-ads" */,
+			);
+			preferredProjectObjectVersion = 77;
+			productRefGroup = CB9721522EF2D2AB00F85BF4 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				CB9721502EF2D2AB00F85BF4 /* SweepPic */,
+				CBAB3B192EFAE2CB00548282 /* SweepPicUITests */,
+				CBE1F9652F21E18200984B63 /* SweepPicTests */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		CB97214F2EF2D2AB00F85BF4 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		CBAB3B182EFAE2CB00548282 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		CBE1F9642F21E18200984B63 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		CB97214D2EF2D2AB00F85BF4 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		CBAB3B162EFAE2CB00548282 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		CBE1F9622F21E18200984B63 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		CBAB3B212EFAE2CB00548282 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = CB9721502EF2D2AB00F85BF4 /* SweepPic */;
+			targetProxy = CBAB3B202EFAE2CB00548282 /* PBXContainerItemProxy */;
+		};
+		CBE1F96B2F21E18200984B63 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = CB9721502EF2D2AB00F85BF4 /* SweepPic */;
+			targetProxy = CBE1F96A2F21E18200984B63 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		CB9721652EF2D2AB00F85BF4 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 7YD5497HFS;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = SweepPic/Info.plist;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchStoryboardName = LaunchScreen;
+				INFOPLIST_KEY_UIMainStoryboardFile = "";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.karl.SweepPic;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_OBJC_BRIDGING_HEADER = "SweepPic/Debug/SweepPic-Bridging-Header.h";
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		CB9721662EF2D2AB00F85BF4 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 7YD5497HFS;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = SweepPic/Info.plist;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchStoryboardName = LaunchScreen;
+				INFOPLIST_KEY_UIMainStoryboardFile = "";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.karl.SweepPic;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_OBJC_BRIDGING_HEADER = "SweepPic/Debug/SweepPic-Bridging-Header.h";
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		CB9721672EF2D2AB00F85BF4 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReferenceAnchor = CB9721532EF2D2AB00F85BF4 /* SweepPic */;
+			baseConfigurationReferenceRelativePath = Config/Supabase.xcconfig;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				DEVELOPMENT_TEAM = 7YD5497HFS;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+			};
+			name = Debug;
+		};
+		CB9721682EF2D2AB00F85BF4 /* Release */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReferenceAnchor = CB9721532EF2D2AB00F85BF4 /* SweepPic */;
+			baseConfigurationReferenceRelativePath = Config/Supabase.xcconfig;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				DEVELOPMENT_TEAM = 7YD5497HFS;
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
+		CBAB3B232EFAE2CB00548282 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 7YD5497HFS;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.karl.SweepPicUITests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_OBJC_BRIDGING_HEADER = "SweepPic/Debug/SweepPic-Bridging-Header.h";
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = SweepPic;
+			};
+			name = Debug;
+		};
+		CBAB3B242EFAE2CB00548282 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 7YD5497HFS;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.karl.SweepPicUITests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_OBJC_BRIDGING_HEADER = "SweepPic/Debug/SweepPic-Bridging-Header.h";
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = SweepPic;
+			};
+			name = Release;
+		};
+		CBE1F96D2F21E18200984B63 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 7YD5497HFS;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.karl.SweepPicTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/SweepPic.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/SweepPic";
+			};
+			name = Debug;
+		};
+		CBE1F96E2F21E18200984B63 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 7YD5497HFS;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.karl.SweepPicTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/SweepPic.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/SweepPic";
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		CB97214C2EF2D2AB00F85BF4 /* Build configuration list for PBXProject "SweepPic" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				CB9721672EF2D2AB00F85BF4 /* Debug */,
+				CB9721682EF2D2AB00F85BF4 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		CB9721642EF2D2AB00F85BF4 /* Build configuration list for PBXNativeTarget "SweepPic" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				CB9721652EF2D2AB00F85BF4 /* Debug */,
+				CB9721662EF2D2AB00F85BF4 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		CBAB3B222EFAE2CB00548282 /* Build configuration list for PBXNativeTarget "SweepPicUITests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				CBAB3B232EFAE2CB00548282 /* Debug */,
+				CBAB3B242EFAE2CB00548282 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		CBE1F96C2F21E18200984B63 /* Build configuration list for PBXNativeTarget "SweepPicTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				CBE1F96D2F21E18200984B63 /* Debug */,
+				CBE1F96E2F21E18200984B63 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+
+/* Begin XCLocalSwiftPackageReference section */
+		CB9721792EF2D37900F85BF4 /* XCLocalSwiftPackageReference "../../iOS" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = ../../iOS;
+		};
+		CB9721C02EF4000000F85BF4 /* XCLocalSwiftPackageReference "../LiquidGlassKit" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = ../LiquidGlassKit;
+		};
+/* End XCLocalSwiftPackageReference section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		CB9721B92EF3D12300F85BF4 /* XCRemoteSwiftPackageReference "BlurUIKit" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/TimOliver/BlurUIKit.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 1.2.2;
+			};
+		};
+		CBA00003300000000000AA01 /* XCRemoteSwiftPackageReference "SwiftSDK" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/TelemetryDeck/SwiftSDK";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 2.11.0;
+			};
+		};
+		CBA10001300000000000CC01 /* XCRemoteSwiftPackageReference "swift-package-manager-google-mobile-ads" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/googleads/swift-package-manager-google-mobile-ads";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 11.0.0;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		CB97217A2EF2D37900F85BF4 /* AppCore */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = AppCore;
+		};
+		CB9721BA2EF3D12300F85BF4 /* BlurUIKit */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = CB9721B92EF3D12300F85BF4 /* XCRemoteSwiftPackageReference "BlurUIKit" */;
+			productName = BlurUIKit;
+		};
+		CB9721C12EF4000000F85BF4 /* LiquidGlassKit */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = CB9721C02EF4000000F85BF4 /* XCLocalSwiftPackageReference "../LiquidGlassKit" */;
+			productName = LiquidGlassKit;
+		};
+		CBA00002300000000000AA01 /* TelemetryDeck */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = CBA00003300000000000AA01 /* XCRemoteSwiftPackageReference "SwiftSDK" */;
+			productName = TelemetryDeck;
+		};
+		CBA10002300000000000CC01 /* GoogleMobileAds */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = CBA10001300000000000CC01 /* XCRemoteSwiftPackageReference "swift-package-manager-google-mobile-ads" */;
+			productName = GoogleMobileAds;
+		};
+/* End XCSwiftPackageProductDependency section */
+	};
+	rootObject = CB9721492EF2D2AB00F85BF4 /* Project object */;
+}

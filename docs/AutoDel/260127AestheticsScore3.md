@@ -45,7 +45,7 @@ AestheticsScore >= X → 정상
 
 ### 파일 구조
 ```
-PickPhoto/Debug/
+SweepPic/Debug/
 └── AestheticsOnlyTester.swift   # 신규 (DEBUG 전용)
 ```
 

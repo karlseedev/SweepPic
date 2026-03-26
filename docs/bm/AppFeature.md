@@ -10,7 +10,7 @@
 
 ## 1. 그리드 뷰 (메인 사진 브라우징)
 
-**위치**: `PickPhoto/Features/Grid/`
+**위치**: `SweepPic/Features/Grid/`
 
 - 3열 정사각형 그리드 (고정)
 - ImagePipeline 기반 비동기 썸네일 로딩 + 프리히트(±1행 미리 로드)
@@ -26,7 +26,7 @@
 
 ## 2. 뷰어 (전체화면 사진 보기)
 
-**위치**: `PickPhoto/Features/Viewer/`
+**위치**: `SweepPic/Features/Viewer/`
 
 - UIPageViewController 기반 좌우 스와이프 탐색
 - 더블탭 2배 줌, 핀치 자유 줌 (1~3배)
@@ -55,7 +55,7 @@
 
 ## 4. 유사사진 분석 및 얼굴 비교
 
-**위치**: `PickPhoto/Features/SimilarPhoto/`
+**위치**: `SweepPic/Features/SimilarPhoto/`
 
 ### 4-1. 유사사진 분석 (SimilarityAnalysisQueue)
 - Vision Framework의 Feature Print 기반 이미지 유사도 비교
@@ -88,7 +88,7 @@
 
 ## 5. 자동정리 (AutoCleanup)
 
-**위치**: `PickPhoto/Features/AutoCleanup/`
+**위치**: `SweepPic/Features/AutoCleanup/`
 
 ### 5-1. 품질 분석 파이프라인 (4단계)
 
@@ -133,7 +133,7 @@
 
 ## 6. 삭제대기함 (앱 내 임시 저장소)
 
-**위치**: `PickPhoto/Features/Albums/TrashAlbumViewController.swift`, `AppCore/Stores/TrashStore.swift`
+**위치**: `SweepPic/Features/Albums/TrashAlbumViewController.swift`, `AppCore/Stores/TrashStore.swift`
 
 - iOS 시스템 휴지통과 **별개**의 앱 내 임시 저장소
 - TrashStore가 JSON 파일로 삭제 예정 사진 ID를 관리
@@ -150,7 +150,7 @@
 
 ## 7. 앨범 목록
 
-**위치**: `PickPhoto/Features/Albums/AlbumsViewController.swift`
+**위치**: `SweepPic/Features/Albums/AlbumsViewController.swift`
 
 - 스마트 앨범(최근 항목, 즐겨찾기 등) + 사용자 앨범 2열 그리드
 - 앨범 셀 탭 → AlbumGridViewController (메인 그리드와 동일 기능)

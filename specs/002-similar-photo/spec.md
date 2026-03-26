@@ -212,7 +212,7 @@
 
 **파일 구조:**
 ```
-PickPhoto/PickPhoto/
+SweepPic/SweepPic/
 ├── Shared/
 │   └── FeatureFlags.swift                         # Feature Flag 정의
 ├── Features/

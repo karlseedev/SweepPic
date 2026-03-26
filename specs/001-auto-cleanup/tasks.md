@@ -14,11 +14,11 @@
 
 ## Path Conventions
 
-- **Models**: `PickPhoto/PickPhoto/Features/AutoCleanup/Models/`
-- **Analysis**: `PickPhoto/PickPhoto/Features/AutoCleanup/Analysis/`
-- **Services**: `PickPhoto/PickPhoto/Features/AutoCleanup/Services/`
-- **UI**: `PickPhoto/PickPhoto/Features/AutoCleanup/UI/`
-- **Tests**: `PickPhoto/PickPhotoTests/AutoCleanup/`
+- **Models**: `SweepPic/SweepPic/Features/AutoCleanup/Models/`
+- **Analysis**: `SweepPic/SweepPic/Features/AutoCleanup/Analysis/`
+- **Services**: `SweepPic/SweepPic/Features/AutoCleanup/Services/`
+- **UI**: `SweepPic/SweepPic/Features/AutoCleanup/UI/`
+- **Tests**: `SweepPic/SweepPicTests/AutoCleanup/`
 
 ---
 
@@ -26,9 +26,9 @@
 
 **Purpose**: AutoCleanup 기능 디렉토리 구조 생성
 
-- [x] T001 `PickPhoto/PickPhoto/Features/AutoCleanup/` 폴더 구조 생성 (Models/, Analysis/, Services/, UI/, Debug/)
-- [x] T002 [P] `PickPhoto/PickPhotoTests/AutoCleanup/` 테스트 폴더 구조 생성
-- [x] T003 [P] CleanupConstants.swift 상수 정의 파일 생성 (`PickPhoto/PickPhoto/Features/AutoCleanup/CleanupConstants.swift`)
+- [x] T001 `SweepPic/SweepPic/Features/AutoCleanup/` 폴더 구조 생성 (Models/, Analysis/, Services/, UI/, Debug/)
+- [x] T002 [P] `SweepPic/SweepPicTests/AutoCleanup/` 테스트 폴더 구조 생성
+- [x] T003 [P] CleanupConstants.swift 상수 정의 파일 생성 (`SweepPic/SweepPic/Features/AutoCleanup/CleanupConstants.swift`)
 
 **Checkpoint**: 폴더 구조 준비 완료
 
@@ -60,9 +60,9 @@
 
 ### Unit Tests - Models
 
-- [x] T016 [P] CleanupSession 모델 테스트 (Codable 인코딩/디코딩, 상태 전이) in `PickPhoto/PickPhotoTests/AutoCleanup/Models/CleanupSessionTests.swift`
-- [x] T017 [P] QualitySignal 모델 테스트 in `PickPhoto/PickPhotoTests/AutoCleanup/Models/QualitySignalTests.swift`
-- [x] T018 [P] CleanupSessionStore 테스트 (저장/로드/삭제) in `PickPhoto/PickPhotoTests/AutoCleanup/Services/CleanupSessionStoreTests.swift`
+- [x] T016 [P] CleanupSession 모델 테스트 (Codable 인코딩/디코딩, 상태 전이) in `SweepPic/SweepPicTests/AutoCleanup/Models/CleanupSessionTests.swift`
+- [x] T017 [P] QualitySignal 모델 테스트 in `SweepPic/SweepPicTests/AutoCleanup/Models/QualitySignalTests.swift`
+- [x] T018 [P] CleanupSessionStore 테스트 (저장/로드/삭제) in `SweepPic/SweepPicTests/AutoCleanup/Services/CleanupSessionStoreTests.swift`
 
 ### PHAsset Extension
 
@@ -89,20 +89,20 @@
 - [x] T025 ExposureAnalyzer 구현 - 휘도 계산 (ITU-R BT.601) in `Analysis/ExposureAnalyzer.swift` (depends on T020)
 - [x] T026 ExposureAnalyzer - RGB 표준편차 계산 추가 in `Analysis/ExposureAnalyzer.swift` (depends on T025)
 - [x] T027 ExposureAnalyzer - 비네팅 계산 추가 (3x3 그리드) in `Analysis/ExposureAnalyzer.swift` (depends on T026)
-- [x] T028 [P] ExposureAnalyzer 테스트 (극단 어두움/밝음, 단색 감지) in `PickPhoto/PickPhotoTests/AutoCleanup/Analysis/ExposureAnalyzerTests.swift`
+- [x] T028 [P] ExposureAnalyzer 테스트 (극단 어두움/밝음, 단색 감지) in `SweepPic/SweepPicTests/AutoCleanup/Analysis/ExposureAnalyzerTests.swift`
 
 ### Blur Analyzer (Stage 3)
 
 - [x] T029 BlurAnalyzer 구현 - Metal 초기화 (MTLDevice, MPSImageLaplacian) in `Analysis/BlurAnalyzer.swift` (depends on T021)
 - [x] T030 BlurAnalyzer - Laplacian Variance 계산 구현 in `Analysis/BlurAnalyzer.swift` (depends on T029)
 - [x] T031 BlurAnalyzer - 256x256 다운샘플링 및 결과 반환 in `Analysis/BlurAnalyzer.swift` (depends on T030)
-- [x] T032 [P] BlurAnalyzer 테스트 (심각 블러/일반 블러 감지) in `PickPhoto/PickPhotoTests/AutoCleanup/Analysis/BlurAnalyzerTests.swift`
+- [x] T032 [P] BlurAnalyzer 테스트 (심각 블러/일반 블러 감지) in `SweepPic/SweepPicTests/AutoCleanup/Analysis/BlurAnalyzerTests.swift`
 
 ### Safe Guard (Stage 4)
 
 - [x] T033 SafeGuard 구현 - 심도 효과 감지 (PHAsset depthData 확인) in `Analysis/SafeGuard.swift` (depends on T022)
 - [x] T034 SafeGuard - 얼굴 품질 감지 (VNDetectFaceCaptureQualityRequest) in `Analysis/SafeGuard.swift` (depends on T033)
-- [x] T035 [P] SafeGuard 테스트 (블러 판정 무효화 케이스) in `PickPhoto/PickPhotoTests/AutoCleanup/Analysis/SafeGuardTests.swift`
+- [x] T035 [P] SafeGuard 테스트 (블러 판정 무효화 케이스) in `SweepPic/SweepPicTests/AutoCleanup/Analysis/SafeGuardTests.swift`
 
 ### Aesthetics Analyzer (iOS 18+)
 
@@ -114,7 +114,7 @@
 - [x] T038 QualityAnalyzer 구현 - iOS 버전별 분기 로직 in `Analysis/QualityAnalyzer.swift` (depends on T024, T025, T029, T033, T036)
 - [x] T039 QualityAnalyzer - Precision 모드 Strong 신호 판정 in `Analysis/QualityAnalyzer.swift` (depends on T038)
 - [x] T040 QualityAnalyzer - 배치 분석 (analyzeBatch) 구현 in `Analysis/QualityAnalyzer.swift` (depends on T039)
-- [x] T041 QualityAnalyzer Integration 테스트 (전체 파이프라인 통합) in `PickPhoto/PickPhotoTests/AutoCleanup/Analysis/QualityAnalyzerIntegrationTests.swift` (depends on T040)
+- [x] T041 QualityAnalyzer Integration 테스트 (전체 파이프라인 통합) in `SweepPic/SweepPicTests/AutoCleanup/Analysis/QualityAnalyzerIntegrationTests.swift` (depends on T040)
 
 **Checkpoint**: 분석 파이프라인 완료 - 서비스 레이어 구현 가능
 
@@ -153,8 +153,8 @@
 
 ### Tests for US1
 
-- [x] T058 [P] [US1] CleanupService Unit 테스트 (fromLatest 탐색, 종료 조건) in `PickPhoto/PickPhotoTests/AutoCleanup/Services/CleanupServiceTests.swift`
-- [x] T059 [US1] CleanupService Integration 테스트 (전체 정리 플로우) in `PickPhoto/PickPhotoTests/AutoCleanup/Services/CleanupServiceIntegrationTests.swift` (depends on T049)
+- [x] T058 [P] [US1] CleanupService Unit 테스트 (fromLatest 탐색, 종료 조건) in `SweepPic/SweepPicTests/AutoCleanup/Services/CleanupServiceTests.swift`
+- [x] T059 [US1] CleanupService Integration 테스트 (전체 정리 플로우) in `SweepPic/SweepPicTests/AutoCleanup/Services/CleanupServiceIntegrationTests.swift` (depends on T049)
 
 **Checkpoint**: User Story 1 완료 - 최신 사진부터 정리 기능 독립 테스트 가능
 
@@ -179,8 +179,8 @@
 
 ### Tests for US2
 
-- [x] T065 [P] [US2] byYear 탐색 Unit 테스트 (범위 제한, 확장 없이 종료) in `PickPhoto/PickPhotoTests/AutoCleanup/Services/CleanupServiceByYearTests.swift`
-- [x] T066 [US2] 연도별 정리 Integration 테스트 in `PickPhoto/PickPhotoTests/AutoCleanup/Services/CleanupServiceByYearIntegrationTests.swift` (depends on T062)
+- [x] T065 [P] [US2] byYear 탐색 Unit 테스트 (범위 제한, 확장 없이 종료) in `SweepPic/SweepPicTests/AutoCleanup/Services/CleanupServiceByYearTests.swift`
+- [x] T066 [US2] 연도별 정리 Integration 테스트 in `SweepPic/SweepPicTests/AutoCleanup/Services/CleanupServiceByYearIntegrationTests.swift` (depends on T062)
 
 **Checkpoint**: User Story 2 완료 - 연도별 정리 기능 독립 테스트 가능
 
@@ -205,8 +205,8 @@
 
 ### Tests for US3
 
-- [x] T072 [P] [US3] continueFromLast 탐색 Unit 테스트 (세션 연속성 확인) in `PickPhoto/PickPhotoTests/AutoCleanup/Services/CleanupServiceContinueTests.swift`
-- [x] T073 [US3] 이어서 정리 Integration 테스트 (세션 저장 후 재개) in `PickPhoto/PickPhotoTests/AutoCleanup/Services/CleanupServiceContinueIntegrationTests.swift` (depends on T069)
+- [x] T072 [P] [US3] continueFromLast 탐색 Unit 테스트 (세션 연속성 확인) in `SweepPic/SweepPicTests/AutoCleanup/Services/CleanupServiceContinueTests.swift`
+- [x] T073 [US3] 이어서 정리 Integration 테스트 (세션 저장 후 재개) in `SweepPic/SweepPicTests/AutoCleanup/Services/CleanupServiceContinueIntegrationTests.swift` (depends on T069)
 
 **Checkpoint**: User Story 3 완료 - 이어서 정리 기능 독립 테스트 가능
 
@@ -221,7 +221,7 @@
 ### Integration Verification
 
 - [x] T074 [US5] TrashStore 복구 API 확인 및 문서화 in `Services/CleanupService.swift` (주석으로 연동 방식 기술)
-- [x] T075 [US5] TrashStore Integration 테스트 (자동 정리 → 복구 플로우) in `PickPhoto/PickPhotoTests/AutoCleanup/Services/TrashStoreIntegrationTests.swift`
+- [x] T075 [US5] TrashStore Integration 테스트 (자동 정리 → 복구 플로우) in `SweepPic/SweepPicTests/AutoCleanup/Services/TrashStoreIntegrationTests.swift`
 
 **Checkpoint**: User Story 5 확인 완료 - 복구 플로우 정상 동작
 
@@ -245,8 +245,8 @@
 
 ### Tests for Special Media
 
-- [x] T082 [P] 비디오 분석 테스트 (프레임 추출, 중앙값 판정) in `PickPhoto/PickPhotoTests/AutoCleanup/Analysis/VideoAnalysisTests.swift`
-- [x] T083 [P] 특수 미디어 처리 테스트 (Live Photo, Burst, RAW) in `PickPhoto/PickPhotoTests/AutoCleanup/Analysis/SpecialMediaTests.swift`
+- [x] T082 [P] 비디오 분석 테스트 (프레임 추출, 중앙값 판정) in `SweepPic/SweepPicTests/AutoCleanup/Analysis/VideoAnalysisTests.swift`
+- [x] T083 [P] 특수 미디어 처리 테스트 (Live Photo, Burst, RAW) in `SweepPic/SweepPicTests/AutoCleanup/Analysis/SpecialMediaTests.swift`
 
 **Checkpoint**: 특수 미디어 처리 완료
 
@@ -270,8 +270,8 @@
 
 ### Tests
 
-- [x] T090 [P] 백그라운드 전환 테스트 (일시정지/재개) in `PickPhoto/PickPhotoTests/AutoCleanup/Services/CleanupServiceBackgroundTests.swift`
-- [x] T091 [P] 에러 처리 테스트 (SKIP, 중단 케이스) in `PickPhoto/PickPhotoTests/AutoCleanup/Services/CleanupServiceErrorTests.swift`
+- [x] T090 [P] 백그라운드 전환 테스트 (일시정지/재개) in `SweepPic/SweepPicTests/AutoCleanup/Services/CleanupServiceBackgroundTests.swift`
+- [x] T091 [P] 에러 처리 테스트 (SKIP, 중단 케이스) in `SweepPic/SweepPicTests/AutoCleanup/Services/CleanupServiceErrorTests.swift`
 
 **Checkpoint**: 안정성 처리 완료
 
@@ -292,7 +292,7 @@
 
 ### Final Validation
 
-- [x] T095 quickstart.md 시나리오 검증 (전체 플로우 E2E 테스트) in `PickPhoto/PickPhotoTests/AutoCleanup/E2E/CleanupE2ETests.swift`
+- [x] T095 quickstart.md 시나리오 검증 (전체 플로우 E2E 테스트) in `SweepPic/SweepPicTests/AutoCleanup/E2E/CleanupE2ETests.swift`
 - [x] T096 실기기 테스트 (iOS 18 AestheticsScore, Metal 성능) - Manual Test
 - [x] T097 코드 정리 및 주석 보완
 

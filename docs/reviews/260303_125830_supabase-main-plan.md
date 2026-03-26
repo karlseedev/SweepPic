@@ -35,7 +35,7 @@
 7. **[Medium] “스레드 안전성 확인 완료” 판단은 과함**
    - 근거: 계획은 `endTask` 메인 디스패치만으로 충분하다고 결론.
    - 문제: 실제 코드에서 `onFlushComplete`는 메인/백그라운드에서 동시 접근 가능해 data race 여지.
-   - 위치: [refactored-popping-origami.md:174](/Users/karl/.claude/plans/refactored-popping-origami.md:174), [AnalyticsService.swift:125](/Users/karl/Project/Photos/iOS/PickPhoto/PickPhoto/Shared/Analytics/AnalyticsService.swift:125), [AnalyticsService.swift:268](/Users/karl/Project/Photos/iOS/PickPhoto/PickPhoto/Shared/Analytics/AnalyticsService.swift:268), [SceneDelegate.swift:357](/Users/karl/Project/Photos/iOS/PickPhoto/PickPhoto/App/SceneDelegate.swift:357)
+   - 위치: [refactored-popping-origami.md:174](/Users/karl/.claude/plans/refactored-popping-origami.md:174), [AnalyticsService.swift:125](/Users/karl/Project/Photos/iOS/SweepPic/SweepPic/Shared/Analytics/AnalyticsService.swift:125), [AnalyticsService.swift:268](/Users/karl/Project/Photos/iOS/SweepPic/SweepPic/Shared/Analytics/AnalyticsService.swift:268), [SceneDelegate.swift:357](/Users/karl/Project/Photos/iOS/SweepPic/SweepPic/App/SceneDelegate.swift:357)
 
 8. **[Low] SQL 실행 안정성/검증 범위 부족**
    - `DROP POLICY`에 `IF EXISTS` 없음(환경별 실패 가능): [refactored-popping-origami.md:61](/Users/karl/.claude/plans/refactored-popping-origami.md:61)

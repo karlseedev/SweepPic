@@ -139,7 +139,7 @@ Plan 문서의 모든 🔍 항목이 다음 중 하나로 전환될 때:
 
 ### 3.1. SystemUIInspector3
 
-**위치**: `PickPhoto/PickPhoto/Debug/SystemUIInspector3.swift`
+**위치**: `SweepPic/SweepPic/Debug/SystemUIInspector3.swift`
 
 **기능**:
 - CALayer 전체 속성 수집

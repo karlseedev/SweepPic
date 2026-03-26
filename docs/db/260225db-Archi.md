@@ -1132,7 +1132,7 @@ SELECT cron.schedule(
 
 **xcconfig → Info.plist 경로:**
 
-`PickPhoto/PickPhoto/Config/Supabase.xcconfig` (git-ignored):
+`SweepPic/SweepPic/Config/Supabase.xcconfig` (git-ignored):
 ```xcconfig
 // ⚠️ //가 xcconfig에서 주석으로 해석되므로 이스케이프 필수
 SUPABASE_URL = https:/$()/xxx.supabase.co
@@ -1178,7 +1178,7 @@ Info.plist에서 참조:
 Sources/AppCore/Services/
 └── AnalyticsReporting.swift              ← 경량 프로토콜 + Analytics.reporter
 
-PickPhoto/PickPhoto/Shared/Analytics/
+SweepPic/SweepPic/Shared/Analytics/
 ├── AnalyticsService.swift                ← 본체: 싱글톤, configure, queue, counters
 │                                            + supabaseProvider, sendEvent, sendEventBatch
 │                                            + configureSupabase, onFlushComplete
@@ -1197,7 +1197,7 @@ PickPhoto/PickPhoto/Shared/Analytics/
 │   ├── CleanupEventData.swift            ← CleanupEventData + 관련 enum
 │   └── PreviewCleanupEventData.swift     ← PreviewCleanupEventData + 관련 enum
 
-PickPhoto/PickPhoto/Config/
+SweepPic/SweepPic/Config/
 └── Supabase.xcconfig                     ← Credentials (git-ignored)
 
 scripts/analytics/

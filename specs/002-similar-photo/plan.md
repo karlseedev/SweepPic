@@ -52,7 +52,7 @@ specs/002-similar-photo/
 ### Source Code (repository root)
 
 ```text
-PickPhoto/PickPhoto/
+SweepPic/SweepPic/
 ├── Shared/
 │   └── FeatureFlags.swift                # 신규 - Feature Flag 정의
 ├── Features/

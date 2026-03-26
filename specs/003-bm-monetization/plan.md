@@ -63,7 +63,7 @@ Sources/AppCore/
 └── Services/
     └── GracePeriodService.swift   # Grace Period 관리 (UserDefaults)
 
-PickPhoto/PickPhoto/Features/Monetization/    # 신규 폴더
+SweepPic/SweepPic/Features/Monetization/    # 신규 폴더
 ├── Gate/
 │   ├── TrashGateCoordinator.swift     # 게이트 판단 중앙 제어
 │   ├── TrashGatePopupViewController.swift  # 게이트 팝업 UI (커스텀 중앙 팝업)
@@ -294,7 +294,7 @@ P3 기능: US-9(리뷰), US-10(분석)
 | 경로 | 역할 |
 |------|------|
 | `Sources/AppCore/Services/ReviewService.swift` | 리뷰 요청 조건 평가 |
-| `PickPhoto/Shared/Analytics/MonetizationAnalytics.swift` | BM 이벤트 로깅 |
+| `SweepPic/Shared/Analytics/MonetizationAnalytics.swift` | BM 이벤트 로깅 |
 
 ### 기존 파일 수정
 

@@ -96,7 +96,7 @@ Sources/AppCore/           # Swift Package - Business Logic
     ├── PermissionStore.swift       # 권한 상태 관리
     └── AppStateStore.swift         # 백그라운드/메모리 관리
 
-PickPhoto/                 # iOS App Target - UI Layer
+SweepPic/                 # iOS App Target - UI Layer
 ├── App/
 │   ├── AppDelegate.swift           # App entry (UIKit lifecycle)
 │   └── SceneDelegate.swift         # Scene 관리
@@ -129,7 +129,7 @@ Tests/AppCoreTests/        # Package Tests
 test/Spike1/               # Spike Test App (기존)
 ```
 
-**Structure Decision**: iOS 앱 표준 구조 채택. AppCore Swift Package에 비즈니스 로직 분리, PickPhoto 앱 타겟에 UI 레이어 구현. Spike 테스트 앱은 별도 유지.
+**Structure Decision**: iOS 앱 표준 구조 채택. AppCore Swift Package에 비즈니스 로직 분리, SweepPic 앱 타겟에 UI 레이어 구현. Spike 테스트 앱은 별도 유지.
 
 **MVP 범위 참고**: GridDataSourceDriver가 ID↔indexPath 매핑 및 앵커 유지 담당. TimelineIndex는 M2 이후 Days/Months/Years 모드 도입 시 분리 예정.
 
@@ -282,8 +282,8 @@ swift build
 swift test
 
 # iOS 앱 (Xcode에서 열기)
-open PickPhoto/PickPhoto.xcodeproj
-# Xcode에서 PickPhoto 스킴 선택 후 Cmd+R
+open SweepPic/SweepPic.xcodeproj
+# Xcode에서 SweepPic 스킴 선택 후 Cmd+R
 ```
 
 ---

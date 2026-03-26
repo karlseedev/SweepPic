@@ -16,11 +16,11 @@ echo "✅ $DEVICE_NAME 연결"
 echo ""
 echo "=== testCellTapDiag 단독 실행 ==="
 xcodebuild test \
-  -project PickPhoto/PickPhoto.xcodeproj \
-  -scheme PickPhoto \
+  -project SweepPic/SweepPic.xcodeproj \
+  -scheme SweepPic \
   -destination "platform=iOS,id=$DEVICE_ID" \
   -configuration Debug \
   -allowProvisioningUpdates \
-  -skip-testing:PickPhotoTests \
-  -only-testing:PickPhotoUITests/AnalyticsUITest/testCellTapDiag \
+  -skip-testing:SweepPicTests \
+  -only-testing:SweepPicUITests/AnalyticsUITest/testCellTapDiag \
   2>&1

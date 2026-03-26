@@ -68,7 +68,7 @@ specs/001-auto-cleanup/
 
 ```text
 # 신규 생성
-PickPhoto/PickPhoto/Features/AutoCleanup/
+SweepPic/SweepPic/Features/AutoCleanup/
 ├── Models/
 │   ├── CleanupSession.swift       # 정리 세션 상태
 │   ├── QualitySignal.swift        # 품질 판정 신호 (Strong/Conditional/Weak)
@@ -92,8 +92,8 @@ PickPhoto/PickPhoto/Features/AutoCleanup/
 
 # 기존 파일 수정
 Sources/AppCore/Stores/TrashStore.swift        # 기존 moveToTrash(assetIDs:) API 활용 (수정 불필요)
-PickPhoto/PickPhoto/Features/Grid/GridViewController.swift  # 정리 버튼 추가
-PickPhoto/PickPhoto/Features/Grid/BaseGridViewController.swift  # 버튼 영역 확보
+SweepPic/SweepPic/Features/Grid/GridViewController.swift  # 정리 버튼 추가
+SweepPic/SweepPic/Features/Grid/BaseGridViewController.swift  # 버튼 영역 확보
 ```
 
 **Structure Decision**: 기존 Features/ 패턴을 따라 `AutoCleanup/` 폴더에 기능별로 분리. Analysis/ 폴더에 4단계 파이프라인 분석기 배치.

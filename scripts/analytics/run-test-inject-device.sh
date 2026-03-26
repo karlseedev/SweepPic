@@ -16,8 +16,8 @@ if [ -z "$DEVICE_ID" ]; then
   echo "=== Step 0: 실기기 대상 확인 ==="
   DEVICE_ID=$(
     xcodebuild -showdestinations \
-      -project PickPhoto/PickPhoto.xcodeproj \
-      -scheme PickPhoto 2>/dev/null \
+      -project SweepPic/SweepPic.xcodeproj \
+      -scheme SweepPic 2>/dev/null \
       | awk -v name="$DEVICE_NAME" '
           index($0, "platform:iOS") && index($0, "name:" name) {
             line = $0
@@ -43,15 +43,15 @@ echo "전제: 기기 사진 권한 전체 허용 상태여야 합니다."
 echo ""
 echo "=== Step 1: 빌드 (실기기) ==="
 xcodebuild build \
-  -project PickPhoto/PickPhoto.xcodeproj \
-  -scheme PickPhoto \
+  -project SweepPic/SweepPic.xcodeproj \
+  -scheme SweepPic \
   -destination "id=$DEVICE_ID" \
   -configuration Debug
 
 APP_PATH=$(
   xcodebuild -showBuildSettings \
-    -project PickPhoto/PickPhoto.xcodeproj \
-    -scheme PickPhoto \
+    -project SweepPic/SweepPic.xcodeproj \
+    -scheme SweepPic \
     -destination "id=$DEVICE_ID" \
     -configuration Debug 2>/dev/null \
     | awk '/^[[:space:]]*TARGET_BUILD_DIR = /{dir=$3} /^[[:space:]]*FULL_PRODUCT_NAME = /{name=$3} END{if(dir&&name) print dir "/" name; else exit 1}'

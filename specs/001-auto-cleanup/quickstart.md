@@ -206,7 +206,7 @@ class CleanupProgressView: UIView {
 ## 5. 파일 구조
 
 ```
-PickPhoto/PickPhoto/Features/AutoCleanup/
+SweepPic/SweepPic/Features/AutoCleanup/
 ├── Models/
 │   ├── CleanupSession.swift       # 세션 상태
 │   ├── QualitySignal.swift        # 품질 신호

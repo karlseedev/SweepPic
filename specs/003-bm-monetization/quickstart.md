@@ -8,7 +8,7 @@
 
 ### 1. SPM 의존성 추가
 
-Xcode > PickPhoto.xcodeproj > Package Dependencies:
+Xcode > SweepPic.xcodeproj > Package Dependencies:
 
 ```
 Google Mobile Ads SDK:

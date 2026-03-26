@@ -6,16 +6,16 @@
 `completion`에 상태 enum(예: success/degraded/inCloudWaiting/error/cancelled)을 추가해야 합니다.
 
 2. `[높음]` 문서의 “뒤로 가기 시 추가 작업 불필요”는 실제 코드와 다릅니다.  
-문서는 `deinit` 취소로 충분하다고 하나(`docs/260213iCloud.md:375`), 실제 `deinit`은 `requestCancellable`만 취소하고 `fullSizeRequestCancellable`은 취소하지 않습니다(`PickPhoto/PickPhoto/Features/Viewer/PhotoPageViewController.swift:221`).  
+문서는 `deinit` 취소로 충분하다고 하나(`docs/260213iCloud.md:375`), 실제 `deinit`은 `requestCancellable`만 취소하고 `fullSizeRequestCancellable`은 취소하지 않습니다(`SweepPic/SweepPic/Features/Viewer/PhotoPageViewController.swift:221`).  
 `fullSizeRequestCancellable`도 `deinit`/`viewDidDisappear`에서 취소해야 합니다.
 
 3. `[높음]` iCloud/로컬 판별 근거가 잘못되었습니다.  
-`sourceType`은 자산 출처 타입이지 “원본이 로컬에 있는지” 보장이 아닙니다. 현재 코드도 잘못된 가정이 들어가 있습니다(`PickPhoto/PickPhoto/Features/Grid/PhotoCell.swift:818`).  
+`sourceType`은 자산 출처 타입이지 “원본이 로컬에 있는지” 보장이 아닙니다. 현재 코드도 잘못된 가정이 들어가 있습니다(`SweepPic/SweepPic/Features/Grid/PhotoCell.swift:818`).  
 로컬 부재 판별은 `requestImage` 결과의 `image == nil` + `PHImageResultIsInCloudKey`로 처리해야 합니다.
 
 4. `[중간]` 문서의 현황/경로/전제가 실제 코드와 불일치합니다.  
-파일 경로가 실제보다 한 단계 짧습니다(`docs/260213iCloud.md:77` vs 실제 `PickPhoto/PickPhoto/...`).  
-또한 문서는 prefetch 취소 흐름을 핵심 전제로 설명하지만(`docs/260213iCloud.md:221`), 실제 `GridViewController`는 prefetch/cancel을 비활성화했습니다(`PickPhoto/PickPhoto/Features/Grid/GridViewController.swift:914`).
+파일 경로가 실제보다 한 단계 짧습니다(`docs/260213iCloud.md:77` vs 실제 `SweepPic/SweepPic/...`).  
+또한 문서는 prefetch 취소 흐름을 핵심 전제로 설명하지만(`docs/260213iCloud.md:221`), 실제 `GridViewController`는 prefetch/cancel을 비활성화했습니다(`SweepPic/SweepPic/Features/Grid/GridViewController.swift:914`).
 
 5. `[중간]` preheat stop 조건 누락입니다.  
 현재 `startCaching`은 `targetSize`로 시작하고(`Sources/AppCore/Services/ImagePipeline.swift:499`), `stopCaching`은 `PHImageManagerMaximumSize`로 중지하고 있습니다(`Sources/AppCore/Services/ImagePipeline.swift:511`). 캐싱 start/stop 매칭 불일치가 생길 수 있는데, 계획에서 이 리스크를 다루지 않았습니다.

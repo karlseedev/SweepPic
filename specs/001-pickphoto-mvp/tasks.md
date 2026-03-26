@@ -16,7 +16,7 @@
 ## 경로 규칙
 
 - **AppCore 패키지**: `Sources/AppCore/` (비즈니스 로직)
-- **iOS 앱**: `PickPhoto/PickPhoto/` (UI 레이어)
+- **iOS 앱**: `SweepPic/SweepPic/` (UI 레이어)
 - **테스트**: `Tests/AppCoreTests/`
 
 ---
@@ -25,12 +25,12 @@
 
 **목적**: 프로젝트 초기화 및 기본 구조 생성
 
-- [X] T001 iOS 16+ 배포 타겟으로 PickPhoto Xcode 프로젝트 생성 (PickPhoto/PickPhoto.xcodeproj)
+- [X] T001 iOS 16+ 배포 타겟으로 SweepPic Xcode 프로젝트 생성 (SweepPic/SweepPic.xcodeproj)
 - [X] T002 [P] Package.swift로 AppCore Swift 패키지 설정
-- [X] T003 [P] PickPhoto.xcodeproj에 AppCore를 로컬 패키지 의존성으로 추가
+- [X] T003 [P] SweepPic.xcodeproj에 AppCore를 로컬 패키지 의존성으로 추가
 - [X] T004 [P] Info.plist에 NSPhotoLibraryUsageDescription, NSPhotoLibraryAddUsageDescription 설정
 - [X] T005 [P] 디렉토리 구조 생성: Sources/AppCore/Models/, Sources/AppCore/Services/, Sources/AppCore/Stores/
-- [X] T006 [P] 디렉토리 구조 생성: PickPhoto/PickPhoto/App/, PickPhoto/PickPhoto/Features/, PickPhoto/PickPhoto/Shared/
+- [X] T006 [P] 디렉토리 구조 생성: SweepPic/SweepPic/App/, SweepPic/SweepPic/Features/, SweepPic/SweepPic/Shared/
 
 ---
 
@@ -60,13 +60,13 @@
 
 ### 앱 진입점
 
-- [X] T016 [P] UIKit 라이프사이클로 AppDelegate 생성 - PickPhoto/PickPhoto/App/AppDelegate.swift
-- [X] T017 [P] 윈도우 설정으로 SceneDelegate 생성 - PickPhoto/PickPhoto/App/SceneDelegate.swift
-- [X] T018 Photos/Albums 탭으로 TabBarController 생성 - PickPhoto/PickPhoto/Shared/Navigation/TabBarController.swift
+- [X] T016 [P] UIKit 라이프사이클로 AppDelegate 생성 - SweepPic/SweepPic/App/AppDelegate.swift
+- [X] T017 [P] 윈도우 설정으로 SceneDelegate 생성 - SweepPic/SweepPic/App/SceneDelegate.swift
+- [X] T018 Photos/Albums 탭으로 TabBarController 생성 - SweepPic/SweepPic/Shared/Navigation/TabBarController.swift
 
 ### 공유 UI 컴포넌트
 
-- [X] T019 [P] EmptyStateView 컴포넌트 생성 - PickPhoto/PickPhoto/Shared/Components/EmptyStateView.swift
+- [X] T019 [P] EmptyStateView 컴포넌트 생성 - SweepPic/SweepPic/Shared/Components/EmptyStateView.swift
 
 **체크포인트**: 기반 완료 - 유저 스토리 구현 시작 가능 ✅
 
@@ -80,17 +80,17 @@
 
 ### User Story 1 구현
 
-- [X] T020 [US1] GridDataSourceDriverProtocol 및 GridDataSourceDriver 생성 (assetID↔indexPath 매핑, performBatchUpdates 래퍼) - PickPhoto/PickPhoto/Features/Grid/GridDataSourceDriver.swift
-- [X] T021 [US1] PhotoCell 생성 (이미지 표시, 딤드 오버레이 65% opacity, 재사용 로직: 이전 요청 취소 + 토큰 검증) - PickPhoto/PickPhoto/Features/Grid/PhotoCell.swift
-- [X] T022 [US1] GridViewController 생성 (UICollectionView, 3열 기본 레이아웃, 2pt 셀 간격, 정사각형 비율, CompositionalLayout) - PickPhoto/PickPhoto/Features/Grid/GridViewController.swift
-- [X] T023 [US1] 핀치 줌 제스처 구현 (1/3/5열 전환, threshold 0.85/1.15, cooldown 200ms, 앵커 유지) - PickPhoto/PickPhoto/Features/Grid/GridViewController.swift
+- [X] T020 [US1] GridDataSourceDriverProtocol 및 GridDataSourceDriver 생성 (assetID↔indexPath 매핑, performBatchUpdates 래퍼) - SweepPic/SweepPic/Features/Grid/GridDataSourceDriver.swift
+- [X] T021 [US1] PhotoCell 생성 (이미지 표시, 딤드 오버레이 65% opacity, 재사용 로직: 이전 요청 취소 + 토큰 검증) - SweepPic/SweepPic/Features/Grid/PhotoCell.swift
+- [X] T022 [US1] GridViewController 생성 (UICollectionView, 3열 기본 레이아웃, 2pt 셀 간격, 정사각형 비율, CompositionalLayout) - SweepPic/SweepPic/Features/Grid/GridViewController.swift
+- [X] T023 [US1] 핀치 줌 제스처 구현 (1/3/5열 전환, threshold 0.85/1.15, cooldown 200ms, 앵커 유지) - SweepPic/SweepPic/Features/Grid/GridViewController.swift
 - [X] T024 [US1] ImagePipeline preheat/stopPreheating을 prefetchDataSource와 연동 - GridViewController
 - [X] T025 [US1] 스크롤 스로틀링 (100ms 간격) 및 품질 저하 (스크롤 중 50% 썸네일 크기) 구현 - GridViewController
 - [X] T026 [US1] PHPhotoLibraryChangeObserver 연동하여 실시간 업데이트 - GridViewController
 - [X] T027 [US1] 휴지통 사진 딤드 표시 구현 (isTrashed 체크 → 65% 검정 오버레이) - PhotoCell
-- [X] T027-1a [US1] FloatingTitleBar 컴포넌트 생성 (타이틀 + Select 버튼 + 블러 배경, 44pt + safe area, Select만 터치 반응, hitTest 오버라이드) - PickPhoto/PickPhoto/Shared/Components/FloatingTitleBar.swift
-- [X] T027-1b [US1] FloatingTabBar 컴포넌트 생성 (캡슐 형태 + 좌우 아이콘, iOS 18 Photos 스타일, 블러+딤, 버튼만 터치, Select 모드 시 Select 툴바로 대체). 이벤트 흐름: GridVC가 Select 진입/종료 이벤트 발생 → FloatingOverlayContainer가 UI 전환 - PickPhoto/PickPhoto/Shared/Components/FloatingTabBar.swift
-- [X] T027-1c [US1] FloatingOverlayContainer 생성 (상하단 그라데이션 + 블러뷰, FloatingTitleBar/FloatingTabBar 배치, 고정 레이어). 적용 위치: TabBarController.view 위에 한 번만 붙임 (탭 전환에도 유지), 현재 탭 타이틀/선택 상태만 동기화. Albums 탭: 동일 오버레이, 타이틀만 "Albums"로 변경 - PickPhoto/PickPhoto/Shared/Components/FloatingOverlayContainer.swift
+- [X] T027-1a [US1] FloatingTitleBar 컴포넌트 생성 (타이틀 + Select 버튼 + 블러 배경, 44pt + safe area, Select만 터치 반응, hitTest 오버라이드) - SweepPic/SweepPic/Shared/Components/FloatingTitleBar.swift
+- [X] T027-1b [US1] FloatingTabBar 컴포넌트 생성 (캡슐 형태 + 좌우 아이콘, iOS 18 Photos 스타일, 블러+딤, 버튼만 터치, Select 모드 시 Select 툴바로 대체). 이벤트 흐름: GridVC가 Select 진입/종료 이벤트 발생 → FloatingOverlayContainer가 UI 전환 - SweepPic/SweepPic/Shared/Components/FloatingTabBar.swift
+- [X] T027-1c [US1] FloatingOverlayContainer 생성 (상하단 그라데이션 + 블러뷰, FloatingTitleBar/FloatingTabBar 배치, 고정 레이어). 적용 위치: TabBarController.view 위에 한 번만 붙임 (탭 전환에도 유지), 현재 탭 타이틀/선택 상태만 동기화. Albums 탭: 동일 오버레이, 타이틀만 "Albums"로 변경 - SweepPic/SweepPic/Shared/Components/FloatingOverlayContainer.swift
 - [X] T027-1d [US1] TabBarController iOS 버전별 분기 (iOS 26+: 시스템 기본 + 네비바에 Select 버튼, iOS 16~25: 시스템 탭바 숨김 + 커스텀 플로팅 UI + 플로팅 타이틀바에 Select 버튼) - TabBarController.swift
 - [X] T027-1e [US1] 각 탭 UINavigationController 네비바 숨김 처리 (루트에서 일관 통제, iOS 16~25만 숨김, iOS 26+는 시스템 네비바 표시) - TabBarController.swift
 - [X] T027-1f [US1] GridViewController edge-to-edge 설정 (contentInsetAdjustmentBehavior=.never, contentInset/indicatorInsets=플로팅 UI 높이, viewDidLayoutSubviews/viewSafeAreaInsetsDidChange) - GridViewController.swift
@@ -111,9 +111,9 @@
 
 ### User Story 2 구현
 
-- [X] T028 [US2] ViewerViewController 생성 (UIPageViewController로 좌우 스와이프) - PickPhoto/PickPhoto/Features/Viewer/ViewerViewController.swift
-- [X] T029 [US2] ViewerCoordinator 생성 (네비게이션 로직, "이전 사진 우선" 규칙 구현) - PickPhoto/PickPhoto/Features/Viewer/ViewerCoordinator.swift
-- [X] T030 [US2] SwipeDeleteHandler 생성 (팬 제스처, 20% 임계값, 위 스와이프 → moveToTrash) - PickPhoto/PickPhoto/Features/Viewer/SwipeDeleteHandler.swift
+- [X] T028 [US2] ViewerViewController 생성 (UIPageViewController로 좌우 스와이프) - SweepPic/SweepPic/Features/Viewer/ViewerViewController.swift
+- [X] T029 [US2] ViewerCoordinator 생성 (네비게이션 로직, "이전 사진 우선" 규칙 구현) - SweepPic/SweepPic/Features/Viewer/ViewerCoordinator.swift
+- [X] T030 [US2] SwipeDeleteHandler 생성 (팬 제스처, 20% 임계값, 위 스와이프 → moveToTrash) - SweepPic/SweepPic/Features/Viewer/SwipeDeleteHandler.swift
 - [X] T031 [US2] 아래 스와이프로 닫기 구현 (뷰어 닫고 그리드로 복귀) - ViewerViewController
 - [X] T032 [US2] 줌 전환 애니메이션 구현 (그리드 ↔ 뷰어, Core Animation 사용) - ViewerCoordinator
 - [X] T033 [US2] 더블탭/핀치 줌 구현 (이미지 확대/축소) - ViewerViewController
@@ -135,7 +135,7 @@
 
 ### User Story 3 구현
 
-- [X] T037 [US3] SelectionManager 생성 (selectedAssetIDs Set, toggle/clear/selectRange) - PickPhoto/PickPhoto/Features/Grid/SelectionManager.swift
+- [X] T037 [US3] SelectionManager 생성 (selectedAssetIDs Set, toggle/clear/selectRange) - SweepPic/SweepPic/Features/Grid/SelectionManager.swift
 - [X] T038 [US3] 네비게이션 바에 Select 버튼 추가, 선택 모드 토글 구현 - GridViewController
 - [X] T039 [US3] 탭으로 선택 구현 (체크마크 토글, iOS 사진 앱 스타일) - PhotoCell
 - [X] T040 [US3] 드래그로 연속 선택 구현 (딤드 사진 제외, MVP에서 화면 경계 자동 스크롤 미지원) - GridViewController
@@ -162,8 +162,8 @@
 - [X] T046 [P] [US4] Album 구조체 생성 (localIdentifier, title, assetCount, keyAssetIdentifier) - Sources/AppCore/Models/AlbumModels.swift
 - [X] T047 [P] [US4] SmartAlbum 구조체 생성 (type, title, assetCount) - Sources/AppCore/Models/AlbumModels.swift
 - [X] T048 [US4] AlbumServiceProtocol 및 AlbumService 생성 (fetchUserAlbums, fetchSmartAlbums, fetchPhotosInAlbum) - Sources/AppCore/Services/AlbumService.swift
-- [X] T049 [US4] AlbumCell 생성 (썸네일, 제목, 사진 수 표시) - PickPhoto/PickPhoto/Features/Albums/AlbumCell.swift
-- [X] T050 [US4] AlbumsViewController 생성 (2열 그리드 레이아웃, iOS 사진 앱 스타일) - PickPhoto/PickPhoto/Features/Albums/AlbumsViewController.swift
+- [X] T049 [US4] AlbumCell 생성 (썸네일, 제목, 사진 수 표시) - SweepPic/SweepPic/Features/Albums/AlbumCell.swift
+- [X] T050 [US4] AlbumsViewController 생성 (2열 그리드 레이아웃, iOS 사진 앱 스타일) - SweepPic/SweepPic/Features/Albums/AlbumsViewController.swift
 - [X] T051 [US4] 앨범 목록에 "휴지통" 가상 앨범 (TrashAlbum) 추가 - AlbumsViewController
 - [X] T052 [US4] 앨범 탭 → 앨범 그리드 뷰 구현 (GridViewController 재사용, 앨범 필터 적용) - AlbumsViewController
 - [X] T053 [US4] 앨범에서 삭제 구현 (moveToTrash) - 앨범 그리드 뷰
@@ -182,7 +182,7 @@
 ### User Story 5 구현
 
 - [X] T054 [US5] TrashAlbum 구조체 생성 → 하단 탭으로 대체 (별도 Trash 탭)
-- [X] T055 [US5] TrashAlbumViewController 생성 (휴지통 전용 그리드, 빈 상태 표시) - PickPhoto/PickPhoto/Features/Albums/TrashAlbumViewController.swift
+- [X] T055 [US5] TrashAlbumViewController 생성 (휴지통 전용 그리드, 빈 상태 표시) - SweepPic/SweepPic/Features/Albums/TrashAlbumViewController.swift
 - [X] T056 [US5] "복구" 액션 구현 (TrashStore.restore → 딤드 효과 제거) - 휴지통 뷰어
 - [X] T057 [US5] "완전삭제" 액션 구현 (TrashStore.permanentlyDelete → PHPhotoLibrary.performChanges로 iOS 시스템 팝업) - 휴지통 뷰어
 - [X] T058 [US5] "비우기" 버튼 구현 (TrashStore.emptyTrash → 일괄 삭제 iOS 시스템 팝업) - TrashAlbumViewController
@@ -203,7 +203,7 @@
 
 ### User Story 6 구현
 
-- [X] T061 [US6] PermissionViewController 생성 (권한 요청 UI) - PickPhoto/PickPhoto/Features/Permissions/PermissionViewController.swift
+- [X] T061 [US6] PermissionViewController 생성 (권한 요청 UI) - SweepPic/SweepPic/Features/Permissions/PermissionViewController.swift
 - [X] T062 [US6] "사진 접근 허용" 버튼 구현 (시스템 권한 다이얼로그 트리거) - PermissionViewController
 - [X] T063 [US6] 거부/제한 상태 UI 구현 (Limited도 Denied와 동일하게 "설정에서 권한을 허용해주세요" + "설정 열기" 버튼) - PermissionViewController
 - [X] T064 [US6] ~~제한 접근 배너 구현~~ → Limited도 Denied와 동일하게 PermissionViewController 표시로 변경됨
@@ -308,7 +308,7 @@ User Story 내:
 Task: T002 "Package.swift로 AppCore Swift 패키지 설정"
 Task: T004 "사진 라이브러리 권한으로 Info.plist 설정"
 Task: T005 "AppCore 디렉토리 구조 생성"
-Task: T006 "PickPhoto 디렉토리 구조 생성"
+Task: T006 "SweepPic 디렉토리 구조 생성"
 
 # 핵심 모델 병렬 실행:
 Task: T007 "MediaType enum 생성"

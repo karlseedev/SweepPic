@@ -121,7 +121,7 @@ if isLowQuality {
 ### 파일 구조
 
 ```
-PickPhoto/
+SweepPic/
 ├── Debug/
 │   └── AestheticsComparisonTester.swift  # 신규 (DEBUG 전용)
 │

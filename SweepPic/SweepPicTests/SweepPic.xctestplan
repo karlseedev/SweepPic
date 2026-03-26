@@ -1,0 +1,31 @@
+{
+  "configurations" : [
+    {
+      "id" : "5002343F-2995-4952-A293-FF9E31562E21",
+      "name" : "Configuration 1",
+      "options" : {
+
+      }
+    }
+  ],
+  "defaultOptions" : {
+
+  },
+  "testTargets" : [
+    {
+      "target" : {
+        "containerPath" : "container:SweepPic.xcodeproj",
+        "identifier" : "CBE1F9652F21E18200984B63",
+        "name" : "SweepPicTests"
+      }
+    },
+    {
+      "target" : {
+        "containerPath" : "container:SweepPic.xcodeproj",
+        "identifier" : "CBAB3B192EFAE2CB00548282",
+        "name" : "SweepPicUITests"
+      }
+    }
+  ],
+  "version" : 1
+}

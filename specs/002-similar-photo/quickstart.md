@@ -22,7 +22,7 @@
 
 ```bash
 cd /Users/karl/Project/Photos/iOS
-open PickPhoto/PickPhoto.xcodeproj
+open SweepPic/SweepPic.xcodeproj
 ```
 
 ### 2. 시뮬레이터/기기 선택
@@ -33,8 +33,8 @@ open PickPhoto/PickPhoto.xcodeproj
 ### 3. 빌드 및 실행
 
 ```bash
-xcodebuild -project PickPhoto/PickPhoto.xcodeproj \
-  -scheme PickPhoto \
+xcodebuild -project SweepPic/SweepPic.xcodeproj \
+  -scheme SweepPic \
   -configuration Debug \
   -destination 'platform=iOS Simulator,name=iPhone 15 Pro'
 ```
@@ -53,8 +53,8 @@ swift test --filter AppCoreTests
 
 ```bash
 xcodebuild test \
-  -project PickPhoto/PickPhoto.xcodeproj \
-  -scheme PickPhoto \
+  -project SweepPic/SweepPic.xcodeproj \
+  -scheme SweepPic \
   -destination 'platform=iOS Simulator,name=iPhone 15'
 ```
 

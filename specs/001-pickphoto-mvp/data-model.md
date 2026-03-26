@@ -68,7 +68,7 @@ struct TrashState: Codable {
 
 **Persistence**:
 - 파일 기반 저장 (대용량 ID Set 대응)
-- Key: `"PickPhoto.TrashState"`
+- Key: `"SweepPic.TrashState"`
 
 **State Transitions**:
 

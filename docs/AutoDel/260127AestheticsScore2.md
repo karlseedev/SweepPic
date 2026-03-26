@@ -72,7 +72,7 @@ lowQuality 판정 예정?
 ### 파일 구조
 
 ```
-PickPhoto/Features/AutoCleanup/Analysis/
+SweepPic/Features/AutoCleanup/Analysis/
 ├── AestheticsAnalyzer.swift   # 기존 (수정 없음)
 └── QualityAnalyzer.swift      # 수정 (구제 로직 추가)
 ```
