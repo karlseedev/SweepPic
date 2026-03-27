@@ -171,6 +171,8 @@ open SweepPic/SweepPic.xcodeproj
 ## Active Technologies
 - Swift 5.9+ + UIKit, PhotoKit, StoreKit 2, Google Mobile Ads SDK 11.x (SPM), AppTrackingTransparency (003-bm-monetization)
 - Keychain (UsageLimit), Documents/JSON (DeletionStats), UserDefaults (GracePeriod, ATT, Review), 인메모리 (SubscriptionState, AdCounters) (003-bm-monetization)
+- Swift 5.9+, TypeScript (Deno — Supabase Edge Functions) + UIKit, StoreKit 2, Supabase (PostgreSQL + Edge Functions), APNs HTTP/2 (004-referral-reward)
+- Supabase PostgreSQL (서버), Keychain (클라이언트 user_id), UserDefaults (Push 상태) (004-referral-reward)
 
 ## Recent Changes
 - 003-bm-monetization: Added Swift 5.9+ + UIKit, PhotoKit, StoreKit 2, Google Mobile Ads SDK 11.x (SPM), AppTrackingTransparency
