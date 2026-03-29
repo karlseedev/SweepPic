@@ -31,11 +31,11 @@
 
 **⚠️ CRITICAL**: 이 Phase 완료 전까지 User Story 작업 시작 불가
 
-- [ ] T006 [P] 초대 데이터 모델 — `Sources/AppCore/Models/ReferralModels.swift` (ReferralLink, ReferralMatchResult, ReferralStatus, PendingRewardResponse, RewardType, RewardStatus, PromotionalOfferSignature — data-model.md의 Client-Side Models 참조)
-- [ ] T007 [P] 초대 전용 Keychain Store — `Sources/AppCore/Stores/ReferralStore.swift` (sweeppic_referral_id UUID 생성/조회, Push 프리프롬프트 표시 여부 UserDefaults 기록, FR-029/FR-025)
-- [ ] T008 [P] 초대 전용 Logger — `Sources/AppCore/Services/Logger+Referral.swift` (Logger.referral 카테고리 추가, 기존 Logger+App.swift 패턴 참조)
-- [ ] T009 [P] 네트워크 모니터 — `Sources/AppCore/Services/ReferralNetworkMonitor.swift` (NWPathMonitor 래퍼, isConnected, onStatusChange 콜백, FR-039)
-- [ ] T010 ReferralService 기반 구조 — `Sources/AppCore/Services/ReferralService.swift` (Supabase URL/Key 설정, URLSession async/await 기본 구조, HTTP 상태별 에러 분기 200/429/500/timeout, FR-042. 엔드포인트 메서드는 각 Story에서 추가)
+- [X] T006 [P] 초대 데이터 모델 — `Sources/AppCore/Models/ReferralModels.swift` (ReferralLink, ReferralMatchResult, ReferralStatus, PendingRewardResponse, RewardType, RewardStatus, PromotionalOfferSignature — data-model.md의 Client-Side Models 참조)
+- [X] T007 [P] 초대 전용 Keychain Store — `Sources/AppCore/Stores/ReferralStore.swift` (sweeppic_referral_id UUID 생성/조회, Push 프리프롬프트 표시 여부 UserDefaults 기록, FR-029/FR-025)
+- [X] T008 [P] 초대 전용 Logger — `Sources/AppCore/Services/Logger+Referral.swift` (Logger.referral 카테고리 추가, 기존 Logger+App.swift 패턴 참조)
+- [X] T009 [P] 네트워크 모니터 — `Sources/AppCore/Services/ReferralNetworkMonitor.swift` (NWPathMonitor 래퍼, isConnected, onStatusChange 콜백, FR-039)
+- [X] T010 ReferralService 기반 구조 — `Sources/AppCore/Services/ReferralService.swift` (Supabase URL/Key 설정, URLSession async/await 기본 구조, HTTP 상태별 에러 분기 200/429/500/timeout, FR-042. 엔드포인트 메서드는 각 Story에서 추가)
 
 **Checkpoint**: 기반 레이어 완료 — User Story 구현 시작 가능
 
