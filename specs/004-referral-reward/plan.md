@@ -1,5 +1,13 @@
 # Implementation Plan: 초대 리워드 프로그램
 
+> **⚠️ Apple Developer Program (유료) 가입 후 설정 필요 항목**
+>
+> | 항목 | 설정 위치 | 용도 | 필요 시점 |
+> |------|----------|------|----------|
+> | Associated Domains | Apple Developer > Identifiers > App ID | `sweeppic.link` Universal Link 작동 | Phase 7~8 |
+> | APNs Key (.p8) | Apple Developer > Keys | 초대자 보상 도착 푸시 알림 | Phase 8 |
+> | ASC API Key | App Store Connect > Users and Access > Keys | Promotional Offer 서명 + Offer Code 관리 | Phase 3~ |
+
 **Branch**: `004-referral-reward` | **Date**: 2026-03-26 | **Spec**: [spec.md](spec.md)
 **Input**: Feature specification from `/specs/004-referral-reward/spec.md`
 

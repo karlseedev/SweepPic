@@ -1,5 +1,12 @@
 # BM 수익화 Analytics 데이터 수집 총괄 계획
 
+> **✅ 전체 완료 (2026-03-27 확인)**
+> - Phase A (Supabase 서버: subscription_tier + RLS 20종): 완료
+> - Phase B (코드 구현: tierProvider 주입, CancelReason, source 파라미터, 게이지 analytics): 완료
+> - Phase E (IDFV device_id 수집 + 배너 analytics): 완료
+> - Phase C (영구보존 문서 3종 업데이트: Archi.md, Spec.md, API.md): 완료
+> - Phase D (최종 통합 테스트): 완료
+
 ## Context
 
 BM 수익화(specs/003-bm-monetization) 구현 중. Supabase를 **Claude의 메인 분석 데이터셋**으로 사용한다. Claude가 직접 Supabase를 쿼리하여 데이터 분석을 수행하므로, Claude가 분석해야 할 모든 데이터는 Supabase에 있어야 한다. ASC/AdMob은 Claude가 접근 불가하므로 보조 역할.

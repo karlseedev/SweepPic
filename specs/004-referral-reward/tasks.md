@@ -17,11 +17,11 @@
 
 **Purpose**: 프로젝트 초기화 및 기본 구조 생성
 
-- [ ] T001 Supabase 프로젝트 초기화 — `supabase/config.toml` 생성, 로컬 개발 환경 설정
-- [ ] T002 DB 스키마 마이그레이션 생성 — `supabase/migrations/001_referral_tables.sql` (referral_links, referrals, pending_rewards, offer_codes 4개 테이블 + 인덱스 + RLS)
-- [ ] T003 [P] Info.plist에 URL Scheme(`sweeppic://`) + Associated Domains(`applinks:{domain}`) + Push Notification Entitlement 추가 — `SweepPic/SweepPic/Info.plist`
-- [ ] T004 [P] Supabase Edge Function 공유 모듈 — `supabase/functions/_shared/rate-limiter.ts` (IP/user_id 기반 분당 제한, FR-037)
-- [ ] T005 [P] 환경 변수 설정 — `.env.local` (SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, APP_STORE_APP_ID, BUNDLE_ID, TEAM_ID, ASC_KEY_ID, ASC_ISSUER_ID, APNS_KEY_ID, CUSTOM_DOMAIN, SLACK_WEBHOOK_URL)
+- [X] T001 Supabase 프로젝트 초기화 — `supabase/config.toml` 생성, 로컬 개발 환경 설정
+- [X] T002 DB 스키마 마이그레이션 생성 — `supabase/migrations/001_referral_tables.sql` (referral_links, referrals, pending_rewards, offer_codes 4개 테이블 + 인덱스 + RLS)
+- [X] T003 [P] Info.plist에 URL Scheme(`sweeppic://`) + Associated Domains(`applinks:{domain}`) + Push Notification Entitlement 추가 — `SweepPic/SweepPic/Info.plist`
+- [X] T004 [P] Supabase Edge Function 공유 모듈 — `supabase/functions/_shared/rate-limiter.ts` (IP/user_id 기반 분당 제한, FR-037)
+- [X] T005 [P] 환경 변수 설정 — `.env.local` (SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, APP_STORE_APP_ID, BUNDLE_ID, TEAM_ID, ASC_KEY_ID, ASC_ISSUER_ID, APNS_KEY_ID, CUSTOM_DOMAIN, SLACK_WEBHOOK_URL)
 
 ---
 
@@ -185,10 +185,20 @@
 
 ## Phase 10: Polish & Cross-Cutting Concerns
 
-**Purpose**: 전체 Story에 걸친 분석 이벤트 + 마무리
+**Purpose**: 전체 Story에 걸친 분석 이벤트 + 데이터 조회 인프라 + 마무리
 
-- [ ] T047 [P] 초대 분석 이벤트 — `SweepPic/SweepPic/Features/Referral/Analytics/ReferralAnalytics.swift` (9개 이벤트 + 속성: link_created, link_shared(share_target), landing_visited, code_entered(input_method), auto_matched(entry_method), code_assigned(offer_name, subscription_status), code_redeemed, reward_shown(entry_method), reward_claimed(reward_type, offer_name). 기존 AnalyticsService 패턴 참조, FR-044)
+### 분석 인프라 (T047 선행)
+
+- [ ] T051 Supabase RLS 화이트리스트 확장 — events 테이블 RLS 정책에 `referral.*` 9종 이벤트 추가 SQL 제공 (주인님 Supabase SQL Editor에서 실행). 기존 20종 → 29종. 참조: `docs/db/260310BMdata-impl.md` §2.2
+- [ ] T052 [P] 범용 SQL 조회 RPC — Supabase에 `run_query(query_text TEXT)` RPC 함수 생성 (service_role 전용, anon/authenticated REVOKE). `scripts/analytics/sb-query.sh`에 `--sql` 모드 추가. SC-003~SC-008 크로스 테이블 측정 + ad-hoc 분석용
+
+### 분석 이벤트
+
+- [ ] T047 [P] 초대 분석 이벤트 — `SweepPic/SweepPic/Features/Referral/Analytics/ReferralAnalytics.swift` (9개 이벤트 + 속성: link_created, link_shared(share_target), landing_visited, code_entered(input_method), auto_matched(entry_method), code_assigned(offer_name, subscription_status), code_redeemed, reward_shown(entry_method), reward_claimed(reward_type, offer_name). 기존 AnalyticsService 패턴 참조, FR-044) + `docs/db/260225db-Spec.md` §3.1 총괄표에 초대 9종 추가 (21~29번) 및 §2 비용 수치 업데이트
 - [ ] T048 각 Story VC에 분석 이벤트 호출 삽입 — ReferralExplainVC(link_created), ReferralShareManager(link_shared), ReferralCodeInputVC(code_entered, code_assigned, code_redeemed), ReferralDeepLinkHandler(auto_matched), ReferralRewardVC(reward_shown, reward_claimed)
+
+### 통합 검증
+
 - [ ] T049 전체 플로우 통합 검증 — 초대 링크 생성 → 앱 설치 → 링크 재탭 → 코드 입력 → 보상 수령 전 경로 E2E 테스트 (시뮬레이터 + 실기기)
 - [ ] T050 실기기 테스트 — 카카오톡/인스타그램 인앱 브라우저 전체 플로우, Universal Link 동작, Push 수신, Offer Code 리딤 (Production 환경)
 
@@ -205,7 +215,7 @@
 - **US5 (Phase 7)**: US2 완료 후 시작 (check-status/match-code API 필요)
 - **US6 (Phase 8)**: US3 완료 후 시작 (report-redemption + push-notify 연동)
 - **US7 (Phase 9)**: Phase 2 완료 후 독립 시작 가능 (서버만, 클라이언트 의존 없음)
-- **Polish (Phase 10)**: US1~6 완료 후
+- **Polish (Phase 10)**: US1~6 완료 후. T051(RLS 확장) → T047(분석 이벤트) 순서 필수. T052(범용 SQL RPC)는 T051과 병렬 가능
 
 ### User Story Dependencies
 
@@ -262,4 +272,4 @@ US7 (코드 풀 관리) — Phase 2 이후 독립 진행 가능
 - Offer Code 리딤은 Production 환경에서만 테스트 가능 (Apple 제한)
 - Universal Link / Push 테스트는 실기기 필요
 - referral-api는 단일 파일(index.ts)에 모든 엔드포인트 — 각 Story에서 점진적 추가
-- 총 50개 태스크: Setup 5, Foundational 5, US1 5, US2 8, US3 7, US4 4, US5 3, US6 6, US7 2, Polish 4
+- 총 52개 태스크: Setup 5, Foundational 5, US1 5, US2 8, US3 7, US4 4, US5 3, US6 6, US7 2, Polish 6
