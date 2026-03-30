@@ -161,19 +161,20 @@ final class TrashGatePopupViewController: UIViewController {
 
     // MARK: - Referral Promo (T032, US4)
 
-    /// 초대 프로모 구분선 — 반투명 흰색
-    private let referralSeparator: UIView = {
+    /// 초대 프로모 영역 배경 — 기존 카드와 구분되는 살짝 밝은 톤
+    private let referralPromoContainer: UIView = {
         let view = UIView()
-        view.backgroundColor = UIColor.white.withAlphaComponent(0.15)
+        view.backgroundColor = UIColor.white.withAlphaComponent(0.06)
+        view.layer.cornerRadius = 16
+        view.clipsToBounds = true
         view.translatesAutoresizingMaskIntoConstraints = false
-        view.heightAnchor.constraint(equalToConstant: 1).isActive = true
         return view
     }()
 
-    /// 초대 프로모 안내 라벨: "초대 한 번마다 나도 친구도 14일 프리미엄 제공!"
+    /// 초대 프로모 안내 라벨
     private let referralPromoLabel: UILabel = {
         let label = UILabel()
-        label.text = "초대 한 번마다 나도 친구도\n14일 프리미엄 제공!"
+        label.text = "14일 프리미엄 무료 제공"
         label.font = .systemFont(ofSize: 14, weight: .medium)
         label.textColor = UIColor.white.withAlphaComponent(0.8)
         label.textAlignment = .center
@@ -182,14 +183,14 @@ final class TrashGatePopupViewController: UIViewController {
         return label
     }()
 
-    /// 초대하기 버튼 — 반투명 흰색 배경 + 흰색 텍스트
+    /// 초대하기 버튼 — 다른 버튼과 동일 높이 50pt, cornerRadius 25
     private let referralButton: UIButton = {
         let button = UIButton(type: .system)
         button.backgroundColor = UIColor.white.withAlphaComponent(0.12)
         button.setTitle("친구 초대하기", for: .normal)
         button.setTitleColor(.white, for: .normal)
-        button.titleLabel?.font = .systemFont(ofSize: 15, weight: .semibold)
-        button.layer.cornerRadius = 20
+        button.titleLabel?.font = .systemFont(ofSize: 17, weight: .semibold)
+        button.layer.cornerRadius = 25
         button.clipsToBounds = true
         button.translatesAutoresizingMaskIntoConstraints = false
         return button
@@ -261,13 +262,12 @@ final class TrashGatePopupViewController: UIViewController {
         ])
 
         // 카드 내부 스택뷰 — contentView에 추가 (블러 위)
-        // T032: 닫기 버튼 아래에 초대 프로모 섹션 추가
+        // T032: 닫기 버튼 아래에 초대 프로모 컨테이너 추가
         let stackView = UIStackView(arrangedSubviews: [
             titleLabel, infoLabel,
             goldenMomentLabel, offlineLabel,
             adButton, proButton, closeButton,
-            referralSeparator, referralPromoLabel,
-            referralButton, referralSubtitleLabel
+            referralPromoContainer
         ])
         stackView.axis = .vertical
         stackView.spacing = 16
@@ -291,15 +291,31 @@ final class TrashGatePopupViewController: UIViewController {
         NSLayoutConstraint.activate([
             adButton.heightAnchor.constraint(equalToConstant: 50),
             proButton.heightAnchor.constraint(equalToConstant: 50),
-            closeButton.heightAnchor.constraint(equalToConstant: 50),
-            referralButton.heightAnchor.constraint(equalToConstant: 40)
+            closeButton.heightAnchor.constraint(equalToConstant: 50)
         ])
 
-        // T032: 닫기 버튼과 초대 프로모 사이 구분선 간격
+        // T032: 닫기 버튼과 초대 프로모 컨테이너 간격
         stackView.setCustomSpacing(16, after: closeButton)
-        stackView.setCustomSpacing(10, after: referralSeparator)
-        stackView.setCustomSpacing(8, after: referralPromoLabel)
-        stackView.setCustomSpacing(4, after: referralButton)
+
+        // T032: 초대 프로모 컨테이너 내부 레이아웃
+        referralPromoContainer.addSubview(referralPromoLabel)
+        referralPromoContainer.addSubview(referralButton)
+        referralPromoContainer.addSubview(referralSubtitleLabel)
+
+        NSLayoutConstraint.activate([
+            referralPromoLabel.topAnchor.constraint(equalTo: referralPromoContainer.topAnchor, constant: 14),
+            referralPromoLabel.leadingAnchor.constraint(equalTo: referralPromoContainer.leadingAnchor, constant: 16),
+            referralPromoLabel.trailingAnchor.constraint(equalTo: referralPromoContainer.trailingAnchor, constant: -16),
+
+            referralButton.topAnchor.constraint(equalTo: referralPromoLabel.bottomAnchor, constant: 10),
+            referralButton.leadingAnchor.constraint(equalTo: referralPromoContainer.leadingAnchor),
+            referralButton.trailingAnchor.constraint(equalTo: referralPromoContainer.trailingAnchor),
+            referralButton.heightAnchor.constraint(equalToConstant: 50),
+
+            referralSubtitleLabel.topAnchor.constraint(equalTo: referralButton.bottomAnchor, constant: 6),
+            referralSubtitleLabel.centerXAnchor.constraint(equalTo: referralPromoContainer.centerXAnchor),
+            referralSubtitleLabel.bottomAnchor.constraint(equalTo: referralPromoContainer.bottomAnchor, constant: -12)
+        ])
 
         // 광고 버튼 내부 스피너
         adButton.addSubview(adSpinner)
@@ -509,7 +525,7 @@ final class TrashGatePopupViewController: UIViewController {
         goldenMomentLabel.accessibilityLabel = "오늘 광고 횟수를 모두 사용했습니다"
         offlineLabel.accessibilityLabel = "인터넷 연결이 필요합니다"
         // T032: 초대 프로모 접근성
-        referralPromoLabel.accessibilityLabel = "초대 한 번마다 나도 친구도 14일 프리미엄 제공"
+        referralPromoLabel.accessibilityLabel = "14일 프리미엄 무료 제공"
         referralButton.accessibilityLabel = "친구 초대하기"
         referralButton.accessibilityHint = "초대 설명 화면으로 이동합니다"
         referralSubtitleLabel.accessibilityLabel = "이미 구독 중이어도 14일 무료 연장"

@@ -103,10 +103,12 @@ final class CelebrationViewController: UIViewController {
 
     // MARK: - Referral Promo (T034, US4)
 
-    /// 구분선 — 반투명 흰색
-    private lazy var referralSeparator: UIView = {
+    /// 초대 프로모 영역 배경 — 기존 카드와 구분되는 살짝 밝은 톤
+    private lazy var referralPromoContainer: UIView = {
         let view = UIView()
-        view.backgroundColor = UIColor.white.withAlphaComponent(0.15)
+        view.backgroundColor = UIColor.white.withAlphaComponent(0.06)
+        view.layer.cornerRadius = 16
+        view.clipsToBounds = true
         view.translatesAutoresizingMaskIntoConstraints = false
         return view
     }()
@@ -122,14 +124,14 @@ final class CelebrationViewController: UIViewController {
         return label
     }()
 
-    /// 초대 버튼 — 반투명 흰색 배경 + 흰색 텍스트
+    /// 초대 버튼 — 다른 버튼과 동일 높이 50pt, cornerRadius 25
     private lazy var referralButton: UIButton = {
         let button = UIButton(type: .system)
         button.backgroundColor = UIColor.white.withAlphaComponent(0.12)
         button.setTitle("친구 초대하기", for: .normal)
         button.setTitleColor(.white, for: .normal)
-        button.titleLabel?.font = .systemFont(ofSize: 15, weight: .semibold)
-        button.layer.cornerRadius = 20
+        button.titleLabel?.font = .systemFont(ofSize: 17, weight: .semibold)
+        button.layer.cornerRadius = 25
         button.clipsToBounds = true
         button.translatesAutoresizingMaskIntoConstraints = false
         button.addTarget(self, action: #selector(referralButtonTapped), for: .touchUpInside)
@@ -140,14 +142,12 @@ final class CelebrationViewController: UIViewController {
 
     /// 메인 스택 뷰
     private lazy var stackView: UIStackView = {
-        // T034: 확인 버튼 아래에 초대 프로모 섹션 추가
+        // T034: 확인 버튼 아래에 초대 프로모 컨테이너 추가
         let stack = UIStackView(arrangedSubviews: [
             sessionLabel,
             statsStackView,
             confirmButton,
-            referralSeparator,
-            referralLabel,
-            referralButton
+            referralPromoContainer
         ])
         stack.translatesAutoresizingMaskIntoConstraints = false
         stack.axis = .vertical
@@ -220,17 +220,27 @@ final class CelebrationViewController: UIViewController {
             confirmButton.widthAnchor.constraint(equalTo: stackView.widthAnchor),
             confirmButton.heightAnchor.constraint(equalToConstant: 50),
 
-            // T034: 초대 프로모 제약
-            referralSeparator.widthAnchor.constraint(equalTo: stackView.widthAnchor),
-            referralSeparator.heightAnchor.constraint(equalToConstant: 1),
-            referralButton.widthAnchor.constraint(equalTo: stackView.widthAnchor),
-            referralButton.heightAnchor.constraint(equalToConstant: 40)
+            // T034: 초대 프로모 컨테이너 너비
+            referralPromoContainer.widthAnchor.constraint(equalTo: stackView.widthAnchor)
         ])
 
-        // T034: 확인 버튼과 초대 프로모 사이 간격
+        // T034: 확인 버튼과 초대 프로모 컨테이너 간격
         stackView.setCustomSpacing(16, after: confirmButton)
-        stackView.setCustomSpacing(10, after: referralSeparator)
-        stackView.setCustomSpacing(8, after: referralLabel)
+
+        // T034: 초대 프로모 컨테이너 내부 레이아웃
+        referralPromoContainer.addSubview(referralLabel)
+        referralPromoContainer.addSubview(referralButton)
+
+        NSLayoutConstraint.activate([
+            referralLabel.topAnchor.constraint(equalTo: referralPromoContainer.topAnchor, constant: 14),
+            referralLabel.centerXAnchor.constraint(equalTo: referralPromoContainer.centerXAnchor),
+
+            referralButton.topAnchor.constraint(equalTo: referralLabel.bottomAnchor, constant: 10),
+            referralButton.leadingAnchor.constraint(equalTo: referralPromoContainer.leadingAnchor),
+            referralButton.trailingAnchor.constraint(equalTo: referralPromoContainer.trailingAnchor),
+            referralButton.heightAnchor.constraint(equalToConstant: 50),
+            referralButton.bottomAnchor.constraint(equalTo: referralPromoContainer.bottomAnchor, constant: -12)
+        ])
 
         // 접근성 설정 (FR-057)
         confirmButton.accessibilityLabel = "확인"

@@ -321,19 +321,20 @@ final class UsageGaugeDetailPopup: UIViewController {
 
     // MARK: - Referral Promo (T033, US4)
 
-    /// 초대 프로모 구분선 — 반투명 흰색
-    private let referralSeparator: UIView = {
+    /// 초대 프로모 영역 배경 — 기존 카드와 구분되는 살짝 밝은 톤
+    private let referralPromoContainer: UIView = {
         let view = UIView()
-        view.backgroundColor = UIColor.white.withAlphaComponent(0.15)
+        view.backgroundColor = UIColor.white.withAlphaComponent(0.06)
+        view.layer.cornerRadius = 16
+        view.clipsToBounds = true
         view.translatesAutoresizingMaskIntoConstraints = false
-        view.heightAnchor.constraint(equalToConstant: 1).isActive = true
         return view
     }()
 
     /// 초대 프로모 안내 라벨
     private let referralPromoLabel: UILabel = {
         let label = UILabel()
-        label.text = "초대 한 번마다 나도 친구도\n14일 프리미엄 제공!"
+        label.text = "14일 프리미엄 무료 제공"
         label.font = .systemFont(ofSize: 14, weight: .medium)
         label.textColor = UIColor.white.withAlphaComponent(0.8)
         label.textAlignment = .center
@@ -342,14 +343,14 @@ final class UsageGaugeDetailPopup: UIViewController {
         return label
     }()
 
-    /// 초대하기 버튼
+    /// 초대하기 버튼 — 다른 버튼과 동일 높이 50pt
     private let referralButton: UIButton = {
         let button = UIButton(type: .system)
         button.backgroundColor = UIColor.white.withAlphaComponent(0.12)
         button.setTitle("친구 초대하기", for: .normal)
         button.setTitleColor(.white, for: .normal)
-        button.titleLabel?.font = .systemFont(ofSize: 15, weight: .semibold)
-        button.layer.cornerRadius = 20
+        button.titleLabel?.font = .systemFont(ofSize: 17, weight: .semibold)
+        button.layer.cornerRadius = 25
         button.clipsToBounds = true
         button.translatesAutoresizingMaskIntoConstraints = false
         return button
@@ -402,10 +403,10 @@ final class UsageGaugeDetailPopup: UIViewController {
         ])
 
         // 카드 내부 스택뷰 — contentView에 추가 (블러 위)
-        // T033: 닫기 버튼 아래에 초대 프로모 섹션 추가
+        // T033: 닫기 버튼 아래에 초대 프로모 컨테이너 추가
         let stack = UIStackView(arrangedSubviews: [
             titleLabel, statusLabel, watchAdButton, proButton, closeButton,
-            referralSeparator, referralPromoLabel, referralButton, referralSubtitleLabel
+            referralPromoContainer
         ])
         stack.axis = .vertical
         stack.spacing = 16
@@ -425,15 +426,31 @@ final class UsageGaugeDetailPopup: UIViewController {
             stack.bottomAnchor.constraint(equalTo: cardView.contentView.bottomAnchor, constant: -32),
             watchAdButton.heightAnchor.constraint(equalToConstant: 50),
             proButton.heightAnchor.constraint(equalToConstant: 50),
-            closeButton.heightAnchor.constraint(equalToConstant: 50),
-            referralButton.heightAnchor.constraint(equalToConstant: 40)
+            closeButton.heightAnchor.constraint(equalToConstant: 50)
         ])
 
-        // T033: 닫기 버튼과 초대 프로모 사이 구분선 간격
+        // T033: 닫기 버튼과 초대 프로모 컨테이너 간격
         stack.setCustomSpacing(16, after: closeButton)
-        stack.setCustomSpacing(10, after: referralSeparator)
-        stack.setCustomSpacing(8, after: referralPromoLabel)
-        stack.setCustomSpacing(4, after: referralButton)
+
+        // T033: 초대 프로모 컨테이너 내부 레이아웃
+        referralPromoContainer.addSubview(referralPromoLabel)
+        referralPromoContainer.addSubview(referralButton)
+        referralPromoContainer.addSubview(referralSubtitleLabel)
+
+        NSLayoutConstraint.activate([
+            referralPromoLabel.topAnchor.constraint(equalTo: referralPromoContainer.topAnchor, constant: 14),
+            referralPromoLabel.leadingAnchor.constraint(equalTo: referralPromoContainer.leadingAnchor, constant: 16),
+            referralPromoLabel.trailingAnchor.constraint(equalTo: referralPromoContainer.trailingAnchor, constant: -16),
+
+            referralButton.topAnchor.constraint(equalTo: referralPromoLabel.bottomAnchor, constant: 10),
+            referralButton.leadingAnchor.constraint(equalTo: referralPromoContainer.leadingAnchor, constant: 0),
+            referralButton.trailingAnchor.constraint(equalTo: referralPromoContainer.trailingAnchor, constant: 0),
+            referralButton.heightAnchor.constraint(equalToConstant: 50),
+
+            referralSubtitleLabel.topAnchor.constraint(equalTo: referralButton.bottomAnchor, constant: 6),
+            referralSubtitleLabel.centerXAnchor.constraint(equalTo: referralPromoContainer.centerXAnchor),
+            referralSubtitleLabel.bottomAnchor.constraint(equalTo: referralPromoContainer.bottomAnchor, constant: -12)
+        ])
 
         // 액션
         watchAdButton.addTarget(self, action: #selector(watchAdTapped), for: .touchUpInside)
@@ -469,7 +486,7 @@ final class UsageGaugeDetailPopup: UIViewController {
         closeButton.accessibilityLabel = "닫기"
         closeButton.accessibilityHint = "한도 상세 팝업을 닫습니다"
         // T033: 초대 프로모 접근성
-        referralPromoLabel.accessibilityLabel = "초대 한 번마다 나도 친구도 14일 프리미엄 제공"
+        referralPromoLabel.accessibilityLabel = "14일 프리미엄 무료 제공"
         referralButton.accessibilityLabel = "친구 초대하기"
         referralButton.accessibilityHint = "초대 설명 화면으로 이동합니다"
         referralSubtitleLabel.accessibilityLabel = "이미 구독 중이어도 14일 무료 연장"
