@@ -174,7 +174,7 @@ final class TrashGatePopupViewController: UIViewController {
     /// 초대 프로모 안내 라벨
     private let referralPromoLabel: UILabel = {
         let label = UILabel()
-        label.text = "14일 프리미엄 무료 제공"
+        label.text = "초대 한 번마다 나도 친구도\n14일 프리미엄 무료 제공!"
         label.font = .systemFont(ofSize: 14, weight: .medium)
         label.textColor = UIColor.white.withAlphaComponent(0.8)
         label.textAlignment = .center
@@ -527,7 +527,7 @@ final class TrashGatePopupViewController: UIViewController {
         goldenMomentLabel.accessibilityLabel = "오늘 광고 횟수를 모두 사용했습니다"
         offlineLabel.accessibilityLabel = "인터넷 연결이 필요합니다"
         // T032: 초대 프로모 접근성
-        referralPromoLabel.accessibilityLabel = "14일 프리미엄 무료 제공"
+        referralPromoLabel.accessibilityLabel = "초대 한 번마다 나도 친구도 14일 프리미엄 무료 제공"
         referralButton.accessibilityLabel = "친구 초대하기"
         referralButton.accessibilityHint = "초대 설명 화면으로 이동합니다"
         referralSubtitleLabel.accessibilityLabel = "이미 구독 중이어도 14일 무료 연장"
