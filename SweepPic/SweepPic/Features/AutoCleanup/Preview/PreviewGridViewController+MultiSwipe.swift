@@ -338,6 +338,7 @@ extension PreviewGridViewController {
                     cell.cancelDimmedAnimation {
                         cell.isAnimating = false
                         if isUnexcludeMode {
+                            cell.setRestoredPreview()
                             cell.prepareSwipeOverlay(style: .restore)
                             cell.setFullDimmed(isTrashed: false)
                         }
@@ -448,8 +449,8 @@ extension PreviewGridViewController {
             if let cell = collectionView.cellForItem(at: ip) as? PhotoCell {
                 cell.cancelDimmedAnimation {
                     cell.isAnimating = false
-                    // 해제 취소: completion이 마룬으로 리셋한 후 실행되므로 green 복구 안전
                     if wasUnexcludeMode {
+                        cell.setRestoredPreview()
                         cell.prepareSwipeOverlay(style: .restore)
                         cell.setFullDimmed(isTrashed: false)
                     }
