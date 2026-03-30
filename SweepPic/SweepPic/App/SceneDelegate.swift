@@ -270,7 +270,6 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         // [BM] T041: ATT 프리프롬프트 표시 (FR-041)
         // ATT 프리프롬프트 표시 (설치 2시간 경과 + Pro 미구독 + ATT .notDetermined + skipCount < 2)
         checkAndShowATTPrompt()
-
     }
 
     /// Scene이 비활성화될 때 호출

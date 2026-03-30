@@ -468,28 +468,41 @@ final class ReferralExplainViewController: UIViewController {
     /// Push 프리프롬프트 알림 표시
     /// - Parameter isDenied: true이면 이전에 거부한 상태 (설정으로 이동 안내 필요)
     private func showPushPrePrompt(isDenied: Bool) {
+        let denialCount = ReferralStore.shared.pushDenialCount
+        // 0: 첫 번째 프리프롬프트, 1: 재확인 프리프롬프트
+        let isRetry = denialCount >= 1
+
+        let title = isRetry
+            ? "알림이 없으면 보상 받기가 어려워요"
+            : "친구가 등록하면 알려드릴까요?"
+        let message = "알림을 허용해야 친구가 등록했을 때\n바로 보상을 받을 수 있어요"
+
         let alert = UIAlertController(
-            title: "친구가 가입하면 알려드릴까요?",
-            message: "초대한 친구가 SweepPic에 가입하면\n푸시 알림으로 알려드립니다.",
+            title: title,
+            message: message,
             preferredStyle: .alert
         )
 
         // [알림 받기] 액션
+        // count는 여기서 올리지 않음 — 시스템 팝업 결과에 따라 처리
         alert.addAction(UIAlertAction(title: "알림 받기", style: .default) { [weak self] _ in
-            ReferralStore.shared.hasAskedPushPermission = true
-
             if isDenied {
-                // 이전에 거부 → 알림 꺼짐 안내 + 설정으로 이동
+                // 이전에 시스템에서 거부 → 알림 꺼짐 안내 + 설정으로 이동
+                // 설정으로 이동 안내까지 했으면 더 이상 표시 안 함
+                ReferralStore.shared.pushDenialCount = 2
                 self?.showDeniedAlert()
             } else {
                 // .notDetermined → 시스템 Push 권한 요청
+                // 허용/거부 결과는 requestSystemPushPermission에서 처리
                 self?.requestSystemPushPermission()
             }
         })
 
-        // [닫기] 액션
-        alert.addAction(UIAlertAction(title: "닫기", style: .cancel) { _ in
-            ReferralStore.shared.hasAskedPushPermission = true
+        // [닫기] 액션 — 거부 횟수 증가
+        let closeTitle = "닫기"
+        alert.addAction(UIAlertAction(title: closeTitle, style: .cancel) { _ in
+            ReferralStore.shared.pushDenialCount = denialCount + 1
+            Logger.referral.debug("ReferralExplain: Push 프리프롬프트 거부 (\(denialCount + 1)회)")
         })
 
         present(alert, animated: true)
@@ -502,13 +515,16 @@ final class ReferralExplainViewController: UIViewController {
             do {
                 let granted = try await center.requestAuthorization(options: [.alert, .sound, .badge])
                 if granted {
-                    // 허용됨 → 원격 알림 등록 (device token 수신)
+                    // 허용됨 → 원격 알림 등록 + 더 이상 프리프롬프트 표시 안 함
+                    ReferralStore.shared.pushDenialCount = 2
                     await MainActor.run {
                         UIApplication.shared.registerForRemoteNotifications()
                     }
                     Logger.referral.debug("ReferralExplain: Push 권한 허용됨")
                 } else {
-                    Logger.referral.debug("ReferralExplain: Push 권한 거부됨")
+                    // 시스템 팝업에서 거부 → 거부 횟수 증가 (다음 공유 시 재확인)
+                    ReferralStore.shared.pushDenialCount += 1
+                    Logger.referral.debug("ReferralExplain: Push 시스템 거부 (\(ReferralStore.shared.pushDenialCount)회)")
                 }
             } catch {
                 Logger.referral.error("ReferralExplain: Push 권한 요청 실패 — \(error.localizedDescription)")
@@ -520,7 +536,7 @@ final class ReferralExplainViewController: UIViewController {
     private func showDeniedAlert() {
         let alert = UIAlertController(
             title: "알림이 꺼져 있어요",
-            message: "설정에서 SweepPic 알림을 켜면\n친구 가입 소식을 받을 수 있어요",
+            message: "설정에서 SweepPic 알림을 켜야\n친구 등록 시 혜택을 바로 받을 수 있어요",
             preferredStyle: .alert
         )
 

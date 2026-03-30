@@ -80,13 +80,24 @@ public final class ReferralStore: ReferralStoreProtocol {
         return newId
     }
 
-    /// Push 프리프롬프트를 이미 표시했는지 (1회만 표시)
-    /// UserDefaults에 저장 — 앱 삭제 시 리셋됨 (의도적: 재설치 시 다시 물어봄)
+    /// Push 프리프롬프트를 이미 표시했는지 (하위 호환용)
+    /// pushDenialCount >= 2이면 true
     public var hasAskedPushPermission: Bool {
-        get { UserDefaults.standard.bool(forKey: Self.pushAskedKey) }
+        get { pushDenialCount >= 2 }
+        set {
+            if newValue { pushDenialCount = 2 }
+            Logger.referral.debug("ReferralStore: hasAskedPushPermission = \(newValue)")
+        }
+    }
+
+    /// Push 프리프롬프트 거부 횟수
+    /// 0: 첫 프리프롬프트 표시, 1: 재확인 표시, 2+: 더 이상 표시 안 함
+    /// UserDefaults에 저장 — 앱 삭제 시 리셋됨 (의도적: 재설치 시 다시 물어봄)
+    public var pushDenialCount: Int {
+        get { UserDefaults.standard.integer(forKey: Self.pushAskedKey) }
         set {
             UserDefaults.standard.set(newValue, forKey: Self.pushAskedKey)
-            Logger.referral.debug("ReferralStore: hasAskedPushPermission = \(newValue)")
+            Logger.referral.debug("ReferralStore: pushDenialCount = \(newValue)")
         }
     }
 }
