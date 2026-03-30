@@ -106,8 +106,8 @@ final class ReferralShareManager {
         초대코드: \(link.referralCode)
 
         1. 아래 링크를 눌러 앱 설치
-        2. 앱 설치 후 아래 링크를 한 번 더 누르면 무료 혜택 자동 적용
 
+        2. 앱 설치 후 아래 링크를 한 번 더 누르면 무료 혜택 자동 적용
         (적용이 안되면 본 메시지를 통째로 복사해서 SweepPic앱 > 설정 > 초대코드입력에 붙여넣기 해주세요)
 
         \(link.shareURL.absoluteString)
