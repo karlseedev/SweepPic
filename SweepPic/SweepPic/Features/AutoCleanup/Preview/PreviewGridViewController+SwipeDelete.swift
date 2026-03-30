@@ -207,12 +207,13 @@ extension PreviewGridViewController {
         swipeDeleteState.reset()
 
         if wasExcluded {
-            // 제외 해제: 그린 딤드 걷어내기 → 원래 사진으로 복귀
-            cell.confirmDimmedAnimation(toTrashed: false) { [weak self] in
-                cell.isAnimating = false
-                self?.excludedAssetIDs.remove(assetID)
-                self?.updateBottomView()
-            }
+            // 제외 해제: 마스크 즉시 제거 → 원래 사진으로 복귀
+            // confirmDimmedAnimation(toTrashed:false)는 마스크를 completion까지 유지하여
+            // 녹색 잔상이 보이므로, setRestoredPreview()로 즉시 처리
+            cell.setRestoredPreview()
+            cell.isAnimating = false
+            excludedAssetIDs.remove(assetID)
+            updateBottomView()
         } else {
             // 제외: 그린 딤드 채우기
             cell.confirmDimmedAnimation(toTrashed: true) { [weak self] in

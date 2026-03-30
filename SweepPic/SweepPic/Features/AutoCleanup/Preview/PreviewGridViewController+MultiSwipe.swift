@@ -381,18 +381,24 @@ extension PreviewGridViewController {
         }
 
         // 3. 보이는 셀 confirm 애니메이션
-        let toTrashed = deleteAction  // 제외=true(딤드 유지), 해제=false(딤드 제거)
         for item in selectedItems {
             let ip = IndexPath(item: item, section: section)
             if let cell = collectionView.cellForItem(at: ip) as? PhotoCell {
-                cell.isAnimating = true
                 if deleteAction {
-                    cell.prepareSwipeOverlay(style: .restore)  // 제외: 그린 보장
+                    // 제외 확정: 그린 딤드로 confirm 애니메이션
+                    cell.isAnimating = true
+                    cell.prepareSwipeOverlay(style: .restore)
                     if item == swipeDeleteState.curtainItem {
                         cell.setFullDimmed(isTrashed: false)
                     }
-                }
-                cell.confirmDimmedAnimation(toTrashed: toTrashed) {
+                    cell.confirmDimmedAnimation(toTrashed: true) {
+                        cell.isAnimating = false
+                    }
+                } else {
+                    // 해제 확정: 마스크 즉시 제거 후 원래 사진으로 복귀
+                    // confirmDimmedAnimation(toTrashed:false)는 마스크를 completion까지
+                    // 유지하여 녹색 잔상이 보이므로, setRestoredPreview()로 즉시 처리
+                    cell.setRestoredPreview()
                     cell.isAnimating = false
                 }
             }
