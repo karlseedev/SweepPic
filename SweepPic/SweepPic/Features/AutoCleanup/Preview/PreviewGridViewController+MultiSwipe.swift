@@ -40,13 +40,20 @@ extension PreviewGridViewController {
         // 4. 앵커 셀 선택 등록
         swipeDeleteState.selectedItems = [anchorIndexPath.item]
 
-        // 5. 앵커 셀 커튼 전환 애니메이션
+        // 5. 앵커 셀 커튼 전환
         if let anchorCell = collectionView.cellForItem(at: anchorIndexPath) as? PhotoCell,
            let gesture = swipeDeleteState.swipeGesture {
             let translation = gesture.translation(in: collectionView)
             let direction: PhotoCell.SwipeDirection = translation.x > 0 ? .right : .left
             swipeDeleteState.swipeDirection = direction
-            anchorCell.animateCurtainToTarget(direction: direction, isTrashed: swipeDeleteState.targetIsTrashed)
+
+            if swipeDeleteState.deleteAction {
+                // 제외 모드: 앵커 딤드를 채우는 애니메이션
+                anchorCell.animateCurtainToTarget(direction: direction, isTrashed: false)
+            } else {
+                // 해제 모드: 앵커 딤드를 즉시 제거 (animateCurtainToTarget의 CA 완료 타이밍 충돌 방지)
+                anchorCell.setRestoredPreview()
+            }
         }
 
         // 6. 자동 스크롤 콜백 설정
