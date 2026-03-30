@@ -163,7 +163,7 @@ extension PreviewGridViewController {
                     cell.prepareSwipeOverlay(style: .restore)
                     cell.setFullDimmed(isTrashed: false)  // 제외: 그린 딤드
                 } else {
-                    cell.clearDimmed()  // 해제: 원래 사진
+                    cell.setRestoredPreview()  // 해제: 원래 사진 (trash icon도 숨김)
                 }
             }
         }
@@ -180,7 +180,7 @@ extension PreviewGridViewController {
                         cell.prepareSwipeOverlay(style: .restore)
                         cell.setFullDimmed(isTrashed: false)  // 제외: 그린 딤드
                     } else {
-                        cell.clearDimmed()  // 해제: 원래 사진
+                        cell.setRestoredPreview()  // 해제: 원래 사진 (trash icon도 숨김)
                     }
                 }
             }
@@ -239,7 +239,7 @@ extension PreviewGridViewController {
                         cell.prepareSwipeOverlay(style: .restore)
                         cell.setFullDimmed(isTrashed: false)  // 제외: 그린 딤드
                     } else {
-                        cell.clearDimmed()  // 해제: 원래 사진
+                        cell.setRestoredPreview()  // 해제: 원래 사진 (trash icon도 숨김)
                     }
                 }
             }
@@ -264,7 +264,7 @@ extension PreviewGridViewController {
                 photoCell.setFullDimmed(isTrashed: false)
             } else if !deleteAction && photoCell.isDimmedActive {
                 // 해제 모드: 딤드 남아있는 셀 보정
-                photoCell.clearDimmed()
+                photoCell.setRestoredPreview()
             }
         }
 
