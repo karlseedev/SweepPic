@@ -382,7 +382,7 @@ enum CancelReason: String {
 | §3.1 총괄표 | BM 9종 행 추가 (#12~20) |
 | §3.4 이벤트 상세 | §3.4.9 BM 수익화 신규 섹션 (9개 이벤트 상세) |
 | §3.5 전송 여부 | BM 9종 모두 Supabase O / TD O |
-| §4.1 메타데이터 | subscription_tier (free/plus) + device_id (IDFV) 추가 |
+| §4.1 메타데이터 | subscription_tier (free/pro) + device_id (IDFV) 추가 |
 | §5 변경 이력 | BM 9종 + subscription_tier + device_id 기재 |
 
 ### 260225db-API.md
