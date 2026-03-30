@@ -66,9 +66,7 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         // 앱이 포그라운드에서 자정을 넘길 때 일일 한도 자동 리셋
         setupMidnightResetObserver()
 
-        // [TEST] 실기기 Keychain user_id 확인용 임시 로그
-        let referralUserId = ReferralStore.shared.userId
-        Logger.app.debug("Scene connected, window configured — referral_user_id: \(referralUserId)")
+        Logger.app.debug("Scene connected, window configured")
     }
 
     // MARK: - T065: Permission Check

@@ -33,7 +33,7 @@ final class CustomerServiceViewController: NSObject {
     private static let feedbackEmail = "support@sweeppic.app"
 
     /// 피드백 이메일 제목
-    private static let feedbackSubject = "[SweepPic] 피드백"
+    private static let feedbackSubject = "[SweepPic] 문의하기"
 
     /// 이용약관 URL (출시 전 실제 URL로 교체)
     private static let termsURL = URL(string: "https://sweeppic.app/terms")!
