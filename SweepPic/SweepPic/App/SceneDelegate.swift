@@ -172,14 +172,6 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         // CoachMarkType.firstDeleteGuide.resetShown()
 
         AnalyticsTestInjector.runIfNeeded()
-
-        // ===== Phase 4 테스트: 코드 입력 화면 =====
-        // 앱 실행 2초 후 ReferralCodeInputViewController 모달 표시
-        DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
-            let codeInputVC = ReferralCodeInputViewController()
-            tabBarController.present(codeInputVC, animated: true)
-        }
-        // ===== Phase 4 테스트 끝 =====
         #endif
     }
 
