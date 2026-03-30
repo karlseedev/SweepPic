@@ -32,28 +32,19 @@ extension PreviewGridViewController {
         swipeDeleteState.anchorRow = anchorIndexPath.item / columnCount
         swipeDeleteState.anchorCol = anchorIndexPath.item % columnCount
 
-        // 3. 제외/해제 방향 결정 (앵커 셀 상태 기준)
-        // targetIsTrashed=false(일반) → deleteAction=true(제외)
-        // targetIsTrashed=true(제외됨) → deleteAction=false(해제)
-        swipeDeleteState.deleteAction = !swipeDeleteState.targetIsTrashed
+        // 3. 항상 삭제(제외) 방향
+        swipeDeleteState.deleteAction = true
 
         // 4. 앵커 셀 선택 등록
         swipeDeleteState.selectedItems = [anchorIndexPath.item]
 
-        // 5. 앵커 셀 커튼 전환
+        // 5. 앵커 셀 커튼 전환 애니메이션
         if let anchorCell = collectionView.cellForItem(at: anchorIndexPath) as? PhotoCell,
            let gesture = swipeDeleteState.swipeGesture {
             let translation = gesture.translation(in: collectionView)
             let direction: PhotoCell.SwipeDirection = translation.x > 0 ? .right : .left
             swipeDeleteState.swipeDirection = direction
-
-            if swipeDeleteState.deleteAction {
-                // 제외 모드: 앵커 딤드를 채우는 애니메이션
-                anchorCell.animateCurtainToTarget(direction: direction, isTrashed: false)
-            } else {
-                // 해제 모드: 앵커 딤드를 즉시 제거 (animateCurtainToTarget의 CA 완료 타이밍 충돌 방지)
-                anchorCell.setRestoredPreview()
-            }
+            anchorCell.animateCurtainToTarget(direction: direction, isTrashed: false)
         }
 
         // 6. 자동 스크롤 콜백 설정
@@ -122,8 +113,7 @@ extension PreviewGridViewController {
         let currentCol = currentItem % columnCount
         let deleteAction = swipeDeleteState.deleteAction
 
-        // 사각형 범위 계산 — deleteAction에 따라 필터
-        // deleteAction=true(제외): 미제외 셀만 / deleteAction=false(해제): 제외 셀만
+        // 사각형 범위 계산 — 이미 제외된 셀(그린 딤드) 필터링
         let newSelection = calculateRectangleSelection(
             anchorRow: swipeDeleteState.anchorRow,
             anchorCol: swipeDeleteState.anchorCol,
@@ -133,8 +123,7 @@ extension PreviewGridViewController {
             totalItemsInSection: candidates.count
         ).filter { item in
             guard item < candidates.count else { return false }
-            let isExcluded = excludedAssetIDs.contains(candidates[item].assetID)
-            return deleteAction ? !isExcluded : isExcluded
+            return !excludedAssetIDs.contains(candidates[item].assetID)
         }
 
         let previousSelection = swipeDeleteState.selectedItems
@@ -151,31 +140,21 @@ extension PreviewGridViewController {
             for item in removed {
                 let ip = IndexPath(item: item, section: section)
                 if let cell = collectionView.cellForItem(at: ip) as? PhotoCell {
-                    if deleteAction {
-                        cell.clearDimmed()  // 제외 모드: 딤드 해제
-                    } else {
-                        // 해제 모드: 그린 딤드 복구 (선택에서 빠졌으므로 다시 제외 상태)
-                        cell.prepareSwipeOverlay(style: .restore)
-                        cell.setFullDimmed(isTrashed: false)
-                    }
+                    cell.clearDimmed()
                 }
             }
         }
 
-        // --- 2) 이전 커튼 셀 → 대상 상태로 전환 (선택 범위 내이면) ---
+        // --- 2) 이전 커튼 셀 → 전체 딤드로 전환 (선택 범위 내이면) ---
         if curtainCellChanged, let prev = prevCurtainItem, newSelection.contains(prev) {
             let ip = IndexPath(item: prev, section: section)
             if let cell = collectionView.cellForItem(at: ip) as? PhotoCell {
-                if deleteAction {
-                    cell.prepareSwipeOverlay(style: .restore)
-                    cell.setFullDimmed(isTrashed: false)  // 제외: 그린 딤드
-                } else {
-                    cell.setRestoredPreview()  // 해제: 원래 사진 (trash icon도 숨김)
-                }
+                cell.prepareSwipeOverlay(style: .restore)  // 그린 보장
+                cell.setFullDimmed(isTrashed: false)
             }
         }
 
-        // --- 3) 새로 추가된 셀 → 대상 상태 적용 (커튼 대상 제외) ---
+        // --- 3) 새로 추가된 셀 → 전체 딤드 적용 (커튼 대상 제외) ---
         if selectionChanged {
             let added = newSelection.subtracting(previousSelection)
             for item in added {
@@ -183,12 +162,8 @@ extension PreviewGridViewController {
                 let ip = IndexPath(item: item, section: section)
                 if let cell = collectionView.cellForItem(at: ip) as? PhotoCell,
                    !cell.isAnimating {
-                    if deleteAction {
-                        cell.prepareSwipeOverlay(style: .restore)
-                        cell.setFullDimmed(isTrashed: false)  // 제외: 그린 딤드
-                    } else {
-                        cell.setRestoredPreview()  // 해제: 원래 사진 (trash icon도 숨김)
-                    }
+                    cell.prepareSwipeOverlay(style: .restore)  // 그린 보장
+                    cell.setFullDimmed(isTrashed: false)
                 }
             }
         }
@@ -210,7 +185,7 @@ extension PreviewGridViewController {
                 case .left:
                     progress = min(1.0, max(0, (cellFrame.maxX - location.x) / cellFrame.width))
                 }
-                cell.setDimmedProgress(progress, direction: direction, isTrashed: !deleteAction)
+                cell.setDimmedProgress(progress, direction: direction, isTrashed: false)
             }
             swipeDeleteState.curtainItem = currentItem
 
@@ -231,7 +206,7 @@ extension PreviewGridViewController {
                 case .left:
                     progress = min(1.0, max(0, (cellFrame.maxX - location.x) / cellFrame.width))
                 }
-                cell.setDimmedProgress(progress, direction: direction, isTrashed: !deleteAction)
+                cell.setDimmedProgress(progress, direction: direction, isTrashed: false)
             }
             swipeDeleteState.curtainItem = currentItem
 
@@ -242,12 +217,8 @@ extension PreviewGridViewController {
                 if let cell = collectionView.cellForItem(at: ip) as? PhotoCell,
                    newSelection.contains(currentItem),
                    !cell.isAnimating {
-                    if deleteAction {
-                        cell.prepareSwipeOverlay(style: .restore)
-                        cell.setFullDimmed(isTrashed: false)  // 제외: 그린 딤드
-                    } else {
-                        cell.setRestoredPreview()  // 해제: 원래 사진 (trash icon도 숨김)
-                    }
+                    cell.prepareSwipeOverlay(style: .restore)  // 그린 보장
+                    cell.setFullDimmed(isTrashed: false)
                 }
             }
             swipeDeleteState.curtainItem = nil
@@ -266,12 +237,8 @@ extension PreviewGridViewController {
                   !photoCell.isAnimating else { continue }
 
             if deleteAction && !photoCell.isDimmedActive {
-                // 제외 모드: 딤드 안 칠해진 셀 보정
-                photoCell.prepareSwipeOverlay(style: .restore)
+                photoCell.prepareSwipeOverlay(style: .restore)  // 그린 보장
                 photoCell.setFullDimmed(isTrashed: false)
-            } else if !deleteAction && photoCell.isDimmedActive {
-                // 해제 모드: 딤드 남아있는 셀 보정
-                photoCell.setRestoredPreview()
             }
         }
 
@@ -334,15 +301,7 @@ extension PreviewGridViewController {
                 swipeDeleteState.curtainItem = nil
 
                 if let cell = collectionView.cellForItem(at: ip) as? PhotoCell {
-                    let isUnexcludeMode = !swipeDeleteState.deleteAction
-                    cell.cancelDimmedAnimation {
-                        cell.isAnimating = false
-                        if isUnexcludeMode {
-                            cell.setRestoredPreview()
-                            cell.prepareSwipeOverlay(style: .restore)
-                            cell.setFullDimmed(isTrashed: false)
-                        }
-                    }
+                    cell.cancelDimmedAnimation { cell.isAnimating = false }
                 }
 
                 if swipeDeleteState.selectedItems.isEmpty {
@@ -363,7 +322,7 @@ extension PreviewGridViewController {
 
     // MARK: - 다중 모드 확정
 
-    /// 선택된 모든 셀을 제외 또는 제외 해제
+    /// 선택된 모든 셀을 제외
     func confirmMultiSwipeExclude() {
         // 1. 자동 스크롤 정지
         stopAutoScroll()
@@ -371,7 +330,6 @@ extension PreviewGridViewController {
         autoScrollHandler = nil
 
         let selectedItems = swipeDeleteState.selectedItems
-        let deleteAction = swipeDeleteState.deleteAction
         let section = swipeTargetSection
 
         guard case .photos(let candidates) = sectionType(for: section) else {
@@ -387,48 +345,34 @@ extension PreviewGridViewController {
             assetIDs.append(candidates[item].assetID)
         }
 
-        // 3. 보이는 셀 confirm 애니메이션
+        // 3. 보이는 셀 confirm 애니메이션 (그린 보장)
         for item in selectedItems {
             let ip = IndexPath(item: item, section: section)
             if let cell = collectionView.cellForItem(at: ip) as? PhotoCell {
-                if deleteAction {
-                    // 제외 확정: 그린 딤드로 confirm 애니메이션
-                    cell.isAnimating = true
-                    cell.prepareSwipeOverlay(style: .restore)
-                    if item == swipeDeleteState.curtainItem {
-                        cell.setFullDimmed(isTrashed: false)
-                    }
-                    cell.confirmDimmedAnimation(toTrashed: true) {
-                        cell.isAnimating = false
-                    }
-                } else {
-                    // 해제 확정: 마스크 즉시 제거 후 원래 사진으로 복귀
-                    // confirmDimmedAnimation(toTrashed:false)는 마스크를 completion까지
-                    // 유지하여 녹색 잔상이 보이므로, setRestoredPreview()로 즉시 처리
-                    cell.setRestoredPreview()
+                cell.isAnimating = true
+                cell.prepareSwipeOverlay(style: .restore)  // 그린 보장
+                if item == swipeDeleteState.curtainItem {
+                    cell.setFullDimmed(isTrashed: false)
+                }
+                cell.confirmDimmedAnimation(toTrashed: true) {
                     cell.isAnimating = false
                 }
             }
         }
 
-        // 4. excludedAssetIDs 갱신
-        if deleteAction {
-            // 제외: 추가 (이미 제외된 건 필터)
-            let newIDs = assetIDs.filter { !excludedAssetIDs.contains($0) }
-            applySwipeExclusion(assetIDs: newIDs)
-        } else {
-            // 해제: 제거
-            for id in assetIDs { excludedAssetIDs.remove(id) }
-            updateBottomView()
-        }
+        // 4. 이미 제외된 ID 필터링 (이중 카운트 방지)
+        let newIDs = assetIDs.filter { !excludedAssetIDs.contains($0) }
 
-        // 5. 상태 초기화
+        // 5. 즉시 카운트 갱신 (reloadData 없음 — 셀은 그린 딤드로 남아있음)
+        applySwipeExclusion(assetIDs: newIDs)
+
+        // 6. 상태 초기화
         swipeDeleteState.reset()
 
-        // 6. 하단 버튼 복원
+        // 7. 하단 버튼 복원
         bottomView.isUserInteractionEnabled = true
 
-        // 7. 확정 햅틱
+        // 8. 확정 햅틱
         HapticFeedback.light()
     }
 
@@ -443,18 +387,10 @@ extension PreviewGridViewController {
 
         // 2. 보이는 셀 cancel 애니메이션
         let section = swipeTargetSection
-        let wasUnexcludeMode = !swipeDeleteState.deleteAction
         for item in swipeDeleteState.selectedItems {
             let ip = IndexPath(item: item, section: section)
             if let cell = collectionView.cellForItem(at: ip) as? PhotoCell {
-                cell.cancelDimmedAnimation {
-                    cell.isAnimating = false
-                    if wasUnexcludeMode {
-                        cell.setRestoredPreview()
-                        cell.prepareSwipeOverlay(style: .restore)
-                        cell.setFullDimmed(isTrashed: false)
-                    }
-                }
+                cell.cancelDimmedAnimation { cell.isAnimating = false }
             }
         }
 

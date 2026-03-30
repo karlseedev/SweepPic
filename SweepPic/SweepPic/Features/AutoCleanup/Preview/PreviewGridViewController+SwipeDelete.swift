@@ -180,14 +180,8 @@ extension PreviewGridViewController {
             swipeDeleteState.reset()
             return
         }
-        let wasUnexclude = swipeDeleteState.targetIsTrashed
         cell.cancelDimmedAnimation {
             cell.isAnimating = false
-            if wasUnexclude {
-                cell.setRestoredPreview()
-                cell.prepareSwipeOverlay(style: .restore)
-                cell.setFullDimmed(isTrashed: false)
-            }
         }
         swipeDeleteState.reset()
     }
@@ -207,13 +201,12 @@ extension PreviewGridViewController {
         swipeDeleteState.reset()
 
         if wasExcluded {
-            // 제외 해제: 마스크 즉시 제거 → 원래 사진으로 복귀
-            // confirmDimmedAnimation(toTrashed:false)는 마스크를 completion까지 유지하여
-            // 녹색 잔상이 보이므로, setRestoredPreview()로 즉시 처리
-            cell.setRestoredPreview()
-            cell.isAnimating = false
-            excludedAssetIDs.remove(assetID)
-            updateBottomView()
+            // 제외 해제: 그린 딤드 걷어내기 → 원래 사진으로 복귀
+            cell.confirmDimmedAnimation(toTrashed: false) { [weak self] in
+                cell.isAnimating = false
+                self?.excludedAssetIDs.remove(assetID)
+                self?.updateBottomView()
+            }
         } else {
             // 제외: 그린 딤드 채우기
             cell.confirmDimmedAnimation(toTrashed: true) { [weak self] in
@@ -229,16 +222,8 @@ extension PreviewGridViewController {
 
     /// 단일 스와이프 취소 → spring 복귀
     private func cancelSingleSwipe(cell: PhotoCell) {
-        let wasUnexclude = swipeDeleteState.targetIsTrashed
         cell.cancelDimmedAnimation {
             cell.isAnimating = false
-            // 해제 취소: completion이 마룬+icon표시로 리셋한 후 실행됨
-            // setRestoredPreview()로 icon 숨김 + 전체 초기화 후 green 재적용
-            if wasUnexclude {
-                cell.setRestoredPreview()
-                cell.prepareSwipeOverlay(style: .restore)
-                cell.setFullDimmed(isTrashed: false)
-            }
         }
         swipeDeleteState.reset()
     }
