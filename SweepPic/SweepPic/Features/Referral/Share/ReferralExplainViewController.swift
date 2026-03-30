@@ -55,10 +55,10 @@ final class ReferralExplainViewController: UIViewController {
 
     // MARK: - UI Components
 
-    /// 블러 배경
-    private lazy var blurView: UIVisualEffectView = {
-        let effect = UIBlurEffect(style: .systemUltraThinMaterialDark)
-        let view = UIVisualEffectView(effect: effect)
+    /// 딤드 배경 (TrashGatePopup 패턴 — 40% 검정)
+    private lazy var dimView: UIView = {
+        let view = UIView()
+        view.backgroundColor = UIColor.black.withAlphaComponent(0.4)
         view.translatesAutoresizingMaskIntoConstraints = false
         return view
     }()
@@ -212,18 +212,18 @@ final class ReferralExplainViewController: UIViewController {
     private func setupUI() {
         view.backgroundColor = .clear
 
-        // 블러 배경
-        view.addSubview(blurView)
+        // 딤드 배경 (TrashGatePopup 패턴)
+        view.addSubview(dimView)
         NSLayoutConstraint.activate([
-            blurView.topAnchor.constraint(equalTo: view.topAnchor),
-            blurView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
-            blurView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
-            blurView.bottomAnchor.constraint(equalTo: view.bottomAnchor)
+            dimView.topAnchor.constraint(equalTo: view.topAnchor),
+            dimView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+            dimView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+            dimView.bottomAnchor.constraint(equalTo: view.bottomAnchor)
         ])
 
-        // 블러 배경 탭 → 닫기
+        // 딤드 배경 탭 → 닫기
         let tapGesture = UITapGestureRecognizer(target: self, action: #selector(backgroundTapped(_:)))
-        blurView.addGestureRecognizer(tapGesture)
+        dimView.addGestureRecognizer(tapGesture)
 
         // 카드 뷰
         view.addSubview(cardView)

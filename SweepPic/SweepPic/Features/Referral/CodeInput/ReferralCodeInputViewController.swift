@@ -64,10 +64,10 @@ final class ReferralCodeInputViewController: UIViewController {
 
     // MARK: - UI Components
 
-    /// 블러 배경
-    private lazy var blurView: UIVisualEffectView = {
-        let effect = UIBlurEffect(style: .systemUltraThinMaterialDark)
-        let view = UIVisualEffectView(effect: effect)
+    /// 딤드 배경 (TrashGatePopup 패턴 — 40% 검정)
+    private lazy var dimView: UIView = {
+        let view = UIView()
+        view.backgroundColor = UIColor.black.withAlphaComponent(0.4)
         view.translatesAutoresizingMaskIntoConstraints = false
         return view
     }()
@@ -137,15 +137,15 @@ final class ReferralCodeInputViewController: UIViewController {
         return label
     }()
 
-    /// 클립보드에서 붙여넣기 버튼
+    /// 클립보드에서 붙여넣기 버튼 (actionButton과 동일 스타일, 흰색 90%)
     private lazy var pasteButton: UIButton = {
         let button = UIButton(type: .system)
-        let config = UIImage.SymbolConfiguration(pointSize: 13, weight: .medium)
-        let image = UIImage(systemName: "doc.on.clipboard", withConfiguration: config)
-        button.setImage(image, for: .normal)
-        button.setTitle(" 붙여넣기", for: .normal)
-        button.tintColor = UIColor.white.withAlphaComponent(0.6)
-        button.titleLabel?.font = .systemFont(ofSize: 14, weight: .medium)
+        button.backgroundColor = UIColor.white.withAlphaComponent(0.9)
+        button.setTitle("붙여넣기", for: .normal)
+        button.setTitleColor(.black, for: .normal)
+        button.titleLabel?.font = .systemFont(ofSize: 17, weight: .semibold)
+        button.layer.cornerRadius = 25
+        button.clipsToBounds = true
         button.translatesAutoresizingMaskIntoConstraints = false
         button.addTarget(self, action: #selector(pasteButtonTapped), for: .touchUpInside)
         return button
@@ -230,18 +230,18 @@ final class ReferralCodeInputViewController: UIViewController {
     private func setupUI() {
         view.backgroundColor = .clear
 
-        // 블러 배경
-        view.addSubview(blurView)
+        // 딤드 배경 (TrashGatePopup 패턴)
+        view.addSubview(dimView)
         NSLayoutConstraint.activate([
-            blurView.topAnchor.constraint(equalTo: view.topAnchor),
-            blurView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
-            blurView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
-            blurView.bottomAnchor.constraint(equalTo: view.bottomAnchor)
+            dimView.topAnchor.constraint(equalTo: view.topAnchor),
+            dimView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+            dimView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+            dimView.bottomAnchor.constraint(equalTo: view.bottomAnchor)
         ])
 
-        // 블러 배경 탭 → 닫기
+        // 딤드 배경 탭 → 닫기
         let tapGesture = UITapGestureRecognizer(target: self, action: #selector(backgroundTapped(_:)))
-        blurView.addGestureRecognizer(tapGesture)
+        dimView.addGestureRecognizer(tapGesture)
 
         // 카드 뷰
         view.addSubview(cardView)
@@ -297,6 +297,10 @@ final class ReferralCodeInputViewController: UIViewController {
             placeholderLabel.topAnchor.constraint(equalTo: codeTextView.topAnchor, constant: 12),
             placeholderLabel.leadingAnchor.constraint(equalTo: codeTextView.leadingAnchor, constant: 17),
 
+            // 붙여넣기 버튼
+            pasteButton.widthAnchor.constraint(equalTo: stackView.widthAnchor),
+            pasteButton.heightAnchor.constraint(equalToConstant: 50),
+
             // 액션 버튼
             actionButton.widthAnchor.constraint(equalTo: stackView.widthAnchor),
             actionButton.heightAnchor.constraint(equalToConstant: 50),
@@ -334,7 +338,7 @@ final class ReferralCodeInputViewController: UIViewController {
 
         case .inputReady:
             titleLabel.text = "초대 코드 입력"
-            descriptionLabel.text = "친구에게 받은 초대 메시지를\n붙여넣으면 자동으로 코드를 찾아줘요"
+            descriptionLabel.text = "받은 초대 메시지 전체를 붙여넣으면\n자동으로 코드가 입력됩니다"
             codeTextView.isHidden = false
             pasteButton.isHidden = false
             actionButton.isHidden = false
