@@ -159,6 +159,53 @@ final class TrashGatePopupViewController: UIViewController {
         return label
     }()
 
+    // MARK: - Referral Promo (T032, US4)
+
+    /// 초대 프로모 구분선 — 반투명 흰색
+    private let referralSeparator: UIView = {
+        let view = UIView()
+        view.backgroundColor = UIColor.white.withAlphaComponent(0.15)
+        view.translatesAutoresizingMaskIntoConstraints = false
+        view.heightAnchor.constraint(equalToConstant: 1).isActive = true
+        return view
+    }()
+
+    /// 초대 프로모 안내 라벨: "초대 한 번마다 나도 친구도 14일 프리미엄 제공!"
+    private let referralPromoLabel: UILabel = {
+        let label = UILabel()
+        label.text = "초대 한 번마다 나도 친구도\n14일 프리미엄 제공!"
+        label.font = .systemFont(ofSize: 14, weight: .medium)
+        label.textColor = UIColor.white.withAlphaComponent(0.8)
+        label.textAlignment = .center
+        label.numberOfLines = 0
+        label.translatesAutoresizingMaskIntoConstraints = false
+        return label
+    }()
+
+    /// 초대하기 버튼 — 반투명 흰색 배경 + 흰색 텍스트
+    private let referralButton: UIButton = {
+        let button = UIButton(type: .system)
+        button.backgroundColor = UIColor.white.withAlphaComponent(0.12)
+        button.setTitle("친구 초대하기", for: .normal)
+        button.setTitleColor(.white, for: .normal)
+        button.titleLabel?.font = .systemFont(ofSize: 15, weight: .semibold)
+        button.layer.cornerRadius = 20
+        button.clipsToBounds = true
+        button.translatesAutoresizingMaskIntoConstraints = false
+        return button
+    }()
+
+    /// 초대 부가 문구: "이미 구독 중이어도 14일 무료 연장"
+    private let referralSubtitleLabel: UILabel = {
+        let label = UILabel()
+        label.text = "이미 구독 중이어도 14일 무료 연장"
+        label.font = .systemFont(ofSize: 11, weight: .regular)
+        label.textColor = UIColor.white.withAlphaComponent(0.4)
+        label.textAlignment = .center
+        label.translatesAutoresizingMaskIntoConstraints = false
+        return label
+    }()
+
     // MARK: - Init
 
     init(trashCount: Int, remainingFreeDeletes: Int, adsNeeded: Int, remainingRewards: Int) {
@@ -214,10 +261,13 @@ final class TrashGatePopupViewController: UIViewController {
         ])
 
         // 카드 내부 스택뷰 — contentView에 추가 (블러 위)
+        // T032: 닫기 버튼 아래에 초대 프로모 섹션 추가
         let stackView = UIStackView(arrangedSubviews: [
             titleLabel, infoLabel,
             goldenMomentLabel, offlineLabel,
-            adButton, proButton, closeButton
+            adButton, proButton, closeButton,
+            referralSeparator, referralPromoLabel,
+            referralButton, referralSubtitleLabel
         ])
         stackView.axis = .vertical
         stackView.spacing = 16
@@ -237,12 +287,19 @@ final class TrashGatePopupViewController: UIViewController {
             stackView.bottomAnchor.constraint(equalTo: cardView.contentView.bottomAnchor, constant: -32)
         ])
 
-        // 버튼 높이 통일 44pt
+        // 버튼 높이
         NSLayoutConstraint.activate([
             adButton.heightAnchor.constraint(equalToConstant: 50),
             proButton.heightAnchor.constraint(equalToConstant: 50),
-            closeButton.heightAnchor.constraint(equalToConstant: 50)
+            closeButton.heightAnchor.constraint(equalToConstant: 50),
+            referralButton.heightAnchor.constraint(equalToConstant: 40)
         ])
+
+        // T032: 닫기 버튼과 초대 프로모 사이 구분선 간격
+        stackView.setCustomSpacing(16, after: closeButton)
+        stackView.setCustomSpacing(10, after: referralSeparator)
+        stackView.setCustomSpacing(8, after: referralPromoLabel)
+        stackView.setCustomSpacing(4, after: referralButton)
 
         // 광고 버튼 내부 스피너
         adButton.addSubview(adSpinner)
@@ -259,6 +316,8 @@ final class TrashGatePopupViewController: UIViewController {
         adButton.addTarget(self, action: #selector(adButtonTapped), for: .touchUpInside)
         proButton.addTarget(self, action: #selector(proButtonTapped), for: .touchUpInside)
         closeButton.addTarget(self, action: #selector(closeButtonTapped), for: .touchUpInside)
+        // T032: 초대 프로모 버튼 액션
+        referralButton.addTarget(self, action: #selector(referralButtonTapped), for: .touchUpInside)
 
         // 배경 탭 → 닫기
         let dimTap = UITapGestureRecognizer(target: self, action: #selector(closeButtonTapped))
@@ -283,6 +342,16 @@ final class TrashGatePopupViewController: UIViewController {
         Logger.app.debug("TrashGatePopup: 닫기 버튼 탭")
         dismiss(animated: true) { [weak self] in
             self?.onDismiss?()
+        }
+    }
+
+    /// T032: 초대 프로모 버튼 탭 → ReferralExplainViewController 모달
+    @objc private func referralButtonTapped() {
+        Logger.app.debug("TrashGatePopup: 초대 프로모 버튼 탭")
+        dismiss(animated: true) { [weak self] in
+            guard let presenter = self?.presentingViewController ?? self?.view.window?.rootViewController else { return }
+            let referralVC = ReferralExplainViewController()
+            presenter.present(referralVC, animated: true)
         }
     }
 
@@ -426,7 +495,8 @@ final class TrashGatePopupViewController: UIViewController {
         cardView.isAccessibilityElement = false
         cardView.accessibilityElements = [
             titleLabel, infoLabel, goldenMomentLabel,
-            offlineLabel, adButton, proButton, closeButton
+            offlineLabel, adButton, proButton, closeButton,
+            referralPromoLabel, referralButton, referralSubtitleLabel
         ]
         titleLabel.accessibilityTraits = .header
         infoLabel.accessibilityLabel = "\(trashCount)장 삭제 대상, 무료 삭제 한도 \(remainingFreeDeletes)장 남음"
@@ -438,5 +508,10 @@ final class TrashGatePopupViewController: UIViewController {
         closeButton.accessibilityHint = "팝업을 닫습니다"
         goldenMomentLabel.accessibilityLabel = "오늘 광고 횟수를 모두 사용했습니다"
         offlineLabel.accessibilityLabel = "인터넷 연결이 필요합니다"
+        // T032: 초대 프로모 접근성
+        referralPromoLabel.accessibilityLabel = "초대 한 번마다 나도 친구도 14일 프리미엄 제공"
+        referralButton.accessibilityLabel = "친구 초대하기"
+        referralButton.accessibilityHint = "초대 설명 화면으로 이동합니다"
+        referralSubtitleLabel.accessibilityLabel = "이미 구독 중이어도 14일 무료 연장"
     }
 }

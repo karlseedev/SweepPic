@@ -101,12 +101,53 @@ final class CelebrationViewController: UIViewController {
         return button
     }()
 
+    // MARK: - Referral Promo (T034, US4)
+
+    /// 구분선 — 반투명 흰색
+    private lazy var referralSeparator: UIView = {
+        let view = UIView()
+        view.backgroundColor = UIColor.white.withAlphaComponent(0.15)
+        view.translatesAutoresizingMaskIntoConstraints = false
+        return view
+    }()
+
+    /// "친구에게도 알려주세요" 라벨
+    private lazy var referralLabel: UILabel = {
+        let label = UILabel()
+        label.translatesAutoresizingMaskIntoConstraints = false
+        label.text = "친구에게도 알려주세요"
+        label.font = .systemFont(ofSize: 14, weight: .medium)
+        label.textColor = UIColor.white.withAlphaComponent(0.8)
+        label.textAlignment = .center
+        return label
+    }()
+
+    /// 초대 버튼 — 반투명 흰색 배경 + 흰색 텍스트
+    private lazy var referralButton: UIButton = {
+        let button = UIButton(type: .system)
+        button.backgroundColor = UIColor.white.withAlphaComponent(0.12)
+        button.setTitle("친구 초대하기", for: .normal)
+        button.setTitleColor(.white, for: .normal)
+        button.titleLabel?.font = .systemFont(ofSize: 15, weight: .semibold)
+        button.layer.cornerRadius = 20
+        button.clipsToBounds = true
+        button.translatesAutoresizingMaskIntoConstraints = false
+        button.addTarget(self, action: #selector(referralButtonTapped), for: .touchUpInside)
+        button.accessibilityLabel = "친구 초대하기"
+        button.accessibilityHint = "초대 설명 화면으로 이동합니다"
+        return button
+    }()
+
     /// 메인 스택 뷰
     private lazy var stackView: UIStackView = {
+        // T034: 확인 버튼 아래에 초대 프로모 섹션 추가
         let stack = UIStackView(arrangedSubviews: [
             sessionLabel,
             statsStackView,
-            confirmButton
+            confirmButton,
+            referralSeparator,
+            referralLabel,
+            referralButton
         ])
         stack.translatesAutoresizingMaskIntoConstraints = false
         stack.axis = .vertical
@@ -177,8 +218,19 @@ final class CelebrationViewController: UIViewController {
 
             // 버튼 크기 — 스택 전체 너비, 높이 50 (기존 팝업 통일)
             confirmButton.widthAnchor.constraint(equalTo: stackView.widthAnchor),
-            confirmButton.heightAnchor.constraint(equalToConstant: 50)
+            confirmButton.heightAnchor.constraint(equalToConstant: 50),
+
+            // T034: 초대 프로모 제약
+            referralSeparator.widthAnchor.constraint(equalTo: stackView.widthAnchor),
+            referralSeparator.heightAnchor.constraint(equalToConstant: 1),
+            referralButton.widthAnchor.constraint(equalTo: stackView.widthAnchor),
+            referralButton.heightAnchor.constraint(equalToConstant: 40)
         ])
+
+        // T034: 확인 버튼과 초대 프로모 사이 간격
+        stackView.setCustomSpacing(16, after: confirmButton)
+        stackView.setCustomSpacing(10, after: referralSeparator)
+        stackView.setCustomSpacing(8, after: referralLabel)
 
         // 접근성 설정 (FR-057)
         confirmButton.accessibilityLabel = "확인"
@@ -214,5 +266,16 @@ final class CelebrationViewController: UIViewController {
     @objc private func confirmButtonTapped() {
         cardView.deactivateBlur()
         dismiss(animated: true)
+    }
+
+    /// T034: 초대 버튼 탭 → ReferralExplainViewController 모달
+    @objc private func referralButtonTapped() {
+        Logger.app.debug("CelebrationVC: 초대 버튼 탭")
+        cardView.deactivateBlur()
+        dismiss(animated: true) { [weak self] in
+            guard let presenter = self?.presentingViewController ?? self?.view.window?.rootViewController else { return }
+            let referralVC = ReferralExplainViewController()
+            presenter.present(referralVC, animated: true)
+        }
     }
 }

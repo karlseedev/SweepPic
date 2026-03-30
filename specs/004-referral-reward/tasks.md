@@ -125,10 +125,10 @@
 
 **Independent Test**: 각 노출 포인트에서 초대 프로모 UI 확인
 
-- [ ] T032 [P] [US4] 게이트 팝업 하단에 초대 프로모 추가 — `SweepPic/SweepPic/Features/Monetization/Gate/TrashGatePopupViewController.swift` 수정 ("초대 한 번마다 나도 친구도 14일 프리미엄 제공!" + [초대하기] + "이미 구독 중이어도 14일 무료 연장", 탭 시 ReferralExplainViewController 모달)
-- [ ] T033 [P] [US4] 게이지 바 팝업 하단에 초대 프로모 추가 — `SweepPic/SweepPic/Features/Monetization/Gate/UsageGaugeDetailPopup.swift` 수정 (동일 UI, 탭 시 ReferralExplainViewController 모달)
-- [ ] T034 [P] [US4] 축하 화면에 초대 버튼 추가 — `SweepPic/SweepPic/Features/Monetization/Celebration/CelebrationViewController.swift` 수정 ("친구에게도 알려주세요" + 초대 버튼, 탭 시 ReferralExplainViewController)
-- [ ] T035 [US4] 프리미엄 메뉴 3개 항목 추가 — `SweepPic/SweepPic/Features/Monetization/Menu/PremiumMenuViewController.swift` 수정 (UIMenu에 UIAction 3개: "친구 초대" → ReferralExplainVC, "초대 코드 입력" → ReferralCodeInputVC, "초대 혜택 받기" → ReferralRewardVC 모달, FR-041)
+- [X] T032 [P] [US4] 게이트 팝업 하단에 초대 프로모 추가 — `SweepPic/SweepPic/Features/Monetization/Gate/TrashGatePopupViewController.swift` 수정 ("초대 한 번마다 나도 친구도 14일 프리미엄 제공!" + [초대하기] + "이미 구독 중이어도 14일 무료 연장", 탭 시 ReferralExplainViewController 모달)
+- [X] T033 [P] [US4] 게이지 바 팝업 하단에 초대 프로모 추가 — `SweepPic/SweepPic/Features/Monetization/Gate/UsageGaugeDetailPopup.swift` 수정 (동일 UI, 탭 시 ReferralExplainViewController 모달)
+- [X] T034 [P] [US4] 축하 화면에 초대 버튼 추가 — `SweepPic/SweepPic/Features/Monetization/Celebration/CelebrationViewController.swift` 수정 ("친구에게도 알려주세요" + 초대 버튼, 탭 시 ReferralExplainViewController)
+- [X] T035 [US4] 프리미엄 메뉴 3개 항목 추가 — `SweepPic/SweepPic/Features/Monetization/Menu/PremiumMenuViewController.swift` 수정 (UIMenu에 UIAction 3개: "친구 초대" → ReferralExplainVC, "초대 코드 입력" → ReferralCodeInputVC, "초대 혜택 받기" → ReferralRewardVC 모달, FR-041)
 
 **Checkpoint**: 4개 노출 포인트 독립 확인 가능
 

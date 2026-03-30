@@ -49,10 +49,35 @@ final class PremiumMenuViewController {
             handleRedeemCode(from: presenter)
         }
 
+        // T035: 초대 프로그램 3개 항목 (FR-041)
+        let referralInviteAction = UIAction(
+            title: "친구 초대",
+            image: UIImage(systemName: "person.badge.plus")
+        ) { _ in
+            handleReferralInvite(from: presenter)
+        }
+
+        let referralCodeAction = UIAction(
+            title: "초대 코드 입력",
+            image: UIImage(systemName: "ticket")
+        ) { _ in
+            handleReferralCodeInput(from: presenter)
+        }
+
+        let referralRewardAction = UIAction(
+            title: "초대 혜택 받기",
+            image: UIImage(systemName: "gift")
+        ) { _ in
+            handleReferralReward(from: presenter)
+        }
+
         return UIMenu(
             title: "프리미엄",
             image: UIImage(systemName: "star.fill"),
-            children: [subscribeAction, restoreAction, redeemAction]
+            children: [
+                subscribeAction, restoreAction, redeemAction,
+                referralInviteAction, referralCodeAction, referralRewardAction
+            ]
         )
     }
 
@@ -121,5 +146,28 @@ final class PremiumMenuViewController {
         if let url = URL(string: "https://apps.apple.com/account/subscriptions") {
             UIApplication.shared.open(url)
         }
+    }
+
+    // MARK: - Referral Actions (T035, FR-041)
+
+    /// 친구 초대 → ReferralExplainViewController 모달
+    private static func handleReferralInvite(from presenter: UIViewController) {
+        let referralVC = ReferralExplainViewController()
+        presenter.present(referralVC, animated: true)
+        Logger.app.debug("PremiumMenu: 친구 초대 화면 표시")
+    }
+
+    /// 초대 코드 입력 → ReferralCodeInputViewController 모달
+    private static func handleReferralCodeInput(from presenter: UIViewController) {
+        let codeInputVC = ReferralCodeInputViewController()
+        presenter.present(codeInputVC, animated: true)
+        Logger.app.debug("PremiumMenu: 초대 코드 입력 화면 표시")
+    }
+
+    /// 초대 혜택 받기 → ReferralRewardViewController 모달
+    private static func handleReferralReward(from presenter: UIViewController) {
+        let rewardVC = ReferralRewardViewController()
+        presenter.present(rewardVC, animated: true)
+        Logger.app.debug("PremiumMenu: 초대 혜택 받기 화면 표시")
     }
 }
