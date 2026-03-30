@@ -328,10 +328,9 @@ extension PreviewGridViewController {
 
                 if let cell = collectionView.cellForItem(at: ip) as? PhotoCell {
                     let isUnexcludeMode = !swipeDeleteState.deleteAction
-                    cell.cancelDimmedAnimation {
-                        cell.isAnimating = false
-                        // 해제 모드 취소: 그린 딤드 복구
-                        if isUnexcludeMode {
+                    cell.cancelDimmedAnimation { cell.isAnimating = false }
+                    if isUnexcludeMode {
+                        DispatchQueue.main.async {
                             cell.prepareSwipeOverlay(style: .restore)
                             cell.setFullDimmed(isTrashed: false)
                         }
@@ -436,17 +435,22 @@ extension PreviewGridViewController {
 
         // 2. 보이는 셀 cancel 애니메이션
         let section = swipeTargetSection
-        let wasUnexcludeMode = !swipeDeleteState.deleteAction  // 해제 모드였는지
+        let wasUnexcludeMode = !swipeDeleteState.deleteAction
+        var cellsToRestore: [PhotoCell] = []
         for item in swipeDeleteState.selectedItems {
             let ip = IndexPath(item: item, section: section)
             if let cell = collectionView.cellForItem(at: ip) as? PhotoCell {
-                cell.cancelDimmedAnimation { [weak self] in
-                    cell.isAnimating = false
-                    // 해제 모드 취소: cancelDimmedAnimation이 딤드를 지우므로 그린 딤드 복구
-                    if wasUnexcludeMode {
-                        cell.prepareSwipeOverlay(style: .restore)
-                        cell.setFullDimmed(isTrashed: false)
-                    }
+                if wasUnexcludeMode { cellsToRestore.append(cell) }
+                cell.cancelDimmedAnimation { cell.isAnimating = false }
+            }
+        }
+        // 해제 모드 취소: cancelDimmedAnimation completion이 마룬으로 리셋하므로
+        // completion 후 그린 딤드를 DispatchQueue로 복구
+        if wasUnexcludeMode {
+            DispatchQueue.main.async {
+                for cell in cellsToRestore {
+                    cell.prepareSwipeOverlay(style: .restore)
+                    cell.setFullDimmed(isTrashed: false)
                 }
             }
         }
