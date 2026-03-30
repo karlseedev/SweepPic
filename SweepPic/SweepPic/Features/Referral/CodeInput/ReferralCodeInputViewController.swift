@@ -501,30 +501,18 @@ final class ReferralCodeInputViewController: UIViewController {
     // MARK: - Subscription Status
 
     /// 현재 구독 상태를 서버 API용 문자열로 반환한다.
-    /// SubscriptionStore는 앱 레이어에 있으므로 여기서 직접 접근한다.
+    /// 피초대자 대부분은 비구독자(none)이므로, 간소화된 분기를 사용한다.
+    /// 월간/연간 정확한 구분은 Phase 5(SubscriptionStore 확장)에서 추가.
     private func getSubscriptionStatus() -> String {
         let store = SubscriptionStore.shared
-        let state = store.state
 
         // 비구독자
-        guard state.tier == .pro else {
+        guard store.isProUser else {
             return "none"
         }
 
-        // 활성 구독 — 월간/연간 구분
-        if state.isActive {
-            // 상품 ID로 월간/연간 구분
-            if let yearly = store.yearlyProduct,
-               store.products.contains(where: { $0.id == yearly.id }) {
-                // 연간 상품이 있고, 현재 활성 구독 중이면 연간 가능성 확인
-                // 실제로는 Transaction에서 productID를 확인해야 정확
-                // 여기서는 간소화: expirationDate 유무로 판단하지 않고 기본 monthly
-            }
-            return "monthly" // 기본값 — Phase 5에서 정확한 구분 추가
-        }
-
-        // 만료된 구독
-        return "expired_monthly" // 기본값
+        // 활성 Pro 구독자 — 기본 monthly (Phase 5에서 정확한 구분 추가)
+        return "monthly"
     }
 
     // MARK: - Actions

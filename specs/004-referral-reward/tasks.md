@@ -73,20 +73,20 @@
 
 ### Server
 
-- [ ] T016 [US2] referral-api match-code 엔드포인트 — `supabase/functions/referral-api/index.ts` 에 추가 (POST /match-code: 코드 유효성 검증, 자기 초대 감지, 중복 체크, subscription_status 기반 offer_name 결정, SELECT FOR UPDATE 원자적 코드 할당, 리딤 URL 생성. 5개 응답 status: matched/already_redeemed/self_referral/invalid_code/no_codes_available)
-- [ ] T017 [P] [US2] referral-api check-status 엔드포인트 — `supabase/functions/referral-api/index.ts` 에 추가 (POST /check-status: user_id로 referrals 조회, none/matched/redeemed 3분기 응답, matched 시 할당 코드 만료 확인 → 만료면 새 코드 할당)
-- [ ] T018 [P] [US2] referral-api report-redemption 엔드포인트 — `supabase/functions/referral-api/index.ts` 에 추가 (POST /report-redemption: referrals → redeemed, offer_codes → used, pending_rewards INSERT. push-notify 연동은 T040에서 추가)
-- [ ] T019 [P] [US2] 랜딩 페이지 — `supabase/functions/referral-landing/index.ts` (GET /r/{code}: 코드 유효성 검증, 분석 이벤트 기록, OG 메타태그 HTML 응답, 인앱 브라우저 감지 JS — 카카오톡/LINE/Instagram/Facebook/X 대응, Custom URL Scheme + App Store 리다이렉트. 기획문서 §A 랜딩 페이지 구현 코드 참조)
+- [X] T016 [US2] referral-api match-code 엔드포인트 — `supabase/functions/referral-api/index.ts` 에 추가 (POST /match-code: 코드 유효성 검증, 자기 초대 감지, 중복 체크, subscription_status 기반 offer_name 결정, SELECT FOR UPDATE 원자적 코드 할당, 리딤 URL 생성. 5개 응답 status: matched/already_redeemed/self_referral/invalid_code/no_codes_available)
+- [X] T017 [P] [US2] referral-api check-status 엔드포인트 — `supabase/functions/referral-api/index.ts` 에 추가 (POST /check-status: user_id로 referrals 조회, none/matched/redeemed 3분기 응답, matched 시 할당 코드 만료 확인 → 만료면 새 코드 할당)
+- [X] T018 [P] [US2] referral-api report-redemption 엔드포인트 — `supabase/functions/referral-api/index.ts` 에 추가 (POST /report-redemption: referrals → redeemed, offer_codes → used, pending_rewards INSERT. push-notify 연동은 T040에서 추가)
+- [X] T019 [P] [US2] 랜딩 페이지 — `supabase/functions/referral-landing/index.ts` (GET /r/{code}: 코드 유효성 검증, 분석 이벤트 기록, OG 메타태그 HTML 응답, 인앱 브라우저 감지 JS — 카카오톡/LINE/Instagram/Facebook/X 대응, Custom URL Scheme + App Store 리다이렉트. 기획문서 §A 랜딩 페이지 구현 코드 참조)
 
 ### Client — AppCore
 
-- [ ] T020 [P] [US2] 정규식 코드 파서 — `Sources/AppCore/Services/ReferralCodeParser.swift` (정규식 /x0([a-zA-Z0-9]{6})9j/ 매칭, 실패 시 nil 반환, 다수 매칭 시 첫 번째 코드 사용, FR-006)
-- [ ] T021 [P] [US2] ReferralService에 matchCode(), checkStatus(), reportRedemption() 메서드 추가 — `Sources/AppCore/Services/ReferralService.swift`
-- [ ] T022 [US2] Offer Code 리딤 서비스 — `Sources/AppCore/Services/OfferRedemptionService.swift` (리딤 URL 열기 UIApplication.shared.open, Transaction.updates에서 referral_invited_* offerName 감지, report-redemption 호출 + 지수 백오프 3회 재시도, 미보고 리딤 앱 실행 시 재감지, FR-035)
+- [X] T020 [P] [US2] 정규식 코드 파서 — `Sources/AppCore/Services/ReferralCodeParser.swift` (정규식 /x0([a-zA-Z0-9]{6})9j/ 매칭, 실패 시 nil 반환, 다수 매칭 시 첫 번째 코드 사용, FR-006)
+- [X] T021 [P] [US2] ReferralService에 matchCode(), checkStatus(), reportRedemption() 메서드 추가 — `Sources/AppCore/Services/ReferralService.swift`
+- [X] T022 [US2] Offer Code 리딤 서비스 — `Sources/AppCore/Services/OfferRedemptionService.swift` (리딤 URL 열기 UIApplication.shared.open, Transaction.updates에서 referral_invited_* offerName 감지, report-redemption 호출 + 지수 백오프 3회 재시도, 미보고 리딤 앱 실행 시 재감지, FR-035)
 
 ### Client — UI
 
-- [ ] T023 [US2] 코드 입력 화면 — `SweepPic/SweepPic/Features/Referral/CodeInput/ReferralCodeInputViewController.swift` (진입 시 check-status 우선 호출 → 3분기: none=붙여넣기 화면, matched="혜택이 아직 적용되지 않았어요"+[혜택 받기], redeemed="이미 초대 코드가 적용되었습니다.". 붙여넣기 → ReferralCodeParser로 추출 → matchCode API → 리딤 URL 열기. 에러 문구: 정규식 실패/자기 초대/무효 코드/코드 풀 소진/리딤 성공. 로딩/에러/오프라인 상태 FR-038~039)
+- [X] T023 [US2] 코드 입력 화면 — `SweepPic/SweepPic/Features/Referral/CodeInput/ReferralCodeInputViewController.swift` (진입 시 check-status 우선 호출 → 3분기: none=붙여넣기 화면, matched="혜택이 아직 적용되지 않았어요"+[혜택 받기], redeemed="이미 초대 코드가 적용되었습니다.". 붙여넣기 → ReferralCodeParser로 추출 → matchCode API → 리딤 URL 열기. 에러 문구: 정규식 실패/자기 초대/무효 코드/코드 풀 소진/리딤 성공. 로딩/에러/오프라인 상태 FR-038~039)
 
 **Checkpoint**: 피초대자 코드 입력 → 혜택 적용 독립 테스트 가능
 
