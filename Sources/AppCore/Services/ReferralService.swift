@@ -346,4 +346,74 @@ public final class ReferralService {
             body: ["user_id": userId]
         )
     }
+
+    // MARK: - Public API: User Story 2 (피초대자 혜택 적용)
+
+    /// 피초대자가 초대 코드를 매칭하고 Offer Code를 할당받는다 (match-code)
+    ///
+    /// 서버에서 5가지 상태 중 하나를 반환:
+    /// - matched: 코드 매칭 성공 + Offer Code 할당
+    /// - already_redeemed: 이미 다른 초대 코드를 사용한 사용자
+    /// - self_referral: 본인의 초대 코드 사용 시도
+    /// - invalid_code: 유효하지 않은 초대 코드
+    /// - no_codes_available: Offer Code 풀 소진
+    ///
+    /// - Parameters:
+    ///   - userId: 피초대자 Keychain UUID
+    ///   - referralCode: 초대 코드 (x0{6chars}9j 형식)
+    ///   - subscriptionStatus: 피초대자 구독 상태 (none/monthly/yearly/expired_monthly/expired_yearly)
+    /// - Returns: ReferralMatchResult (상태 + 리딤 URL)
+    /// - Throws: ReferralServiceError
+    public func matchCode(
+        userId: String,
+        referralCode: String,
+        subscriptionStatus: String
+    ) async throws -> ReferralMatchResult {
+        return try await post(
+            endpoint: "match-code",
+            body: [
+                "user_id": userId,
+                "referral_code": referralCode,
+                "subscription_status": subscriptionStatus
+            ]
+        )
+    }
+
+    /// 피초대자의 초대 코드 적용 상태를 확인한다 (check-status)
+    ///
+    /// 3가지 분기:
+    /// - none: 아직 초대 코드를 사용하지 않음 → 코드 입력 화면 표시
+    /// - matched: 코드 매칭됨, 리딤 미완료 → "혜택이 아직 적용되지 않았어요" + [혜택 받기]
+    /// - redeemed: 이미 적용됨 → "이미 초대 코드가 적용되어 있습니다"
+    ///
+    /// - Parameter userId: 피초대자 Keychain UUID
+    /// - Returns: ReferralMatchResult (상태 + 리딤 URL)
+    /// - Throws: ReferralServiceError
+    public func checkStatus(userId: String) async throws -> ReferralMatchResult {
+        return try await post(
+            endpoint: "check-status",
+            body: ["user_id": userId]
+        )
+    }
+
+    /// 피초대자가 Offer Code 리딤 완료를 서버에 보고한다 (report-redemption)
+    ///
+    /// 서버 동작:
+    /// - referrals 상태 → redeemed
+    /// - offer_codes 상태 → used
+    /// - pending_rewards INSERT (초대자 보상 대기)
+    ///
+    /// - Parameters:
+    ///   - userId: 피초대자 Keychain UUID
+    ///   - referralId: referrals 테이블 ID (match-code 응답에서 받은 값)
+    /// - Throws: ReferralServiceError
+    public func reportRedemption(userId: String, referralId: String) async throws {
+        try await postVoid(
+            endpoint: "report-redemption",
+            body: [
+                "user_id": userId,
+                "referral_id": referralId
+            ]
+        )
+    }
 }
