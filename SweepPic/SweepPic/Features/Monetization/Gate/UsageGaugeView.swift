@@ -321,12 +321,10 @@ final class UsageGaugeDetailPopup: UIViewController {
 
     // MARK: - Referral Promo (T033, US4)
 
-    /// 초대 프로모 영역 배경 — 기존 카드와 구분되는 살짝 밝은 톤
-    private let referralPromoContainer: UIView = {
+    /// 초대 프로모 하단 배경 — 카드 하단을 가로로 잘라 색상 차별화
+    private let referralPromoBackground: UIView = {
         let view = UIView()
         view.backgroundColor = UIColor.white.withAlphaComponent(0.06)
-        view.layer.cornerRadius = 16
-        view.clipsToBounds = true
         view.translatesAutoresizingMaskIntoConstraints = false
         return view
     }()
@@ -402,11 +400,13 @@ final class UsageGaugeDetailPopup: UIViewController {
             cardView.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -24)
         ])
 
+        // T033: 카드 하단 배경 — contentView에 먼저 삽입
+        cardView.contentView.addSubview(referralPromoBackground)
+
         // 카드 내부 스택뷰 — contentView에 추가 (블러 위)
-        // T033: 닫기 버튼 아래에 초대 프로모 컨테이너 추가
         let stack = UIStackView(arrangedSubviews: [
             titleLabel, statusLabel, watchAdButton, proButton, closeButton,
-            referralPromoContainer
+            referralPromoLabel, referralButton, referralSubtitleLabel
         ])
         stack.axis = .vertical
         stack.spacing = 16
@@ -429,27 +429,19 @@ final class UsageGaugeDetailPopup: UIViewController {
             closeButton.heightAnchor.constraint(equalToConstant: 50)
         ])
 
-        // T033: 닫기 버튼과 초대 프로모 컨테이너 간격
+        // T033: 닫기 버튼과 초대 프로모 간격
         stack.setCustomSpacing(16, after: closeButton)
+        stack.setCustomSpacing(8, after: referralPromoLabel)
+        stack.setCustomSpacing(4, after: referralButton)
 
-        // T033: 초대 프로모 컨테이너 내부 레이아웃
-        referralPromoContainer.addSubview(referralPromoLabel)
-        referralPromoContainer.addSubview(referralButton)
-        referralPromoContainer.addSubview(referralSubtitleLabel)
+        referralButton.heightAnchor.constraint(equalToConstant: 50).isActive = true
 
+        // T033: 배경 뷰 — 프로모 라벨 위에서 카드 하단 끝까지
         NSLayoutConstraint.activate([
-            referralPromoLabel.topAnchor.constraint(equalTo: referralPromoContainer.topAnchor, constant: 14),
-            referralPromoLabel.leadingAnchor.constraint(equalTo: referralPromoContainer.leadingAnchor, constant: 16),
-            referralPromoLabel.trailingAnchor.constraint(equalTo: referralPromoContainer.trailingAnchor, constant: -16),
-
-            referralButton.topAnchor.constraint(equalTo: referralPromoLabel.bottomAnchor, constant: 10),
-            referralButton.leadingAnchor.constraint(equalTo: referralPromoContainer.leadingAnchor, constant: 0),
-            referralButton.trailingAnchor.constraint(equalTo: referralPromoContainer.trailingAnchor, constant: 0),
-            referralButton.heightAnchor.constraint(equalToConstant: 50),
-
-            referralSubtitleLabel.topAnchor.constraint(equalTo: referralButton.bottomAnchor, constant: 6),
-            referralSubtitleLabel.centerXAnchor.constraint(equalTo: referralPromoContainer.centerXAnchor),
-            referralSubtitleLabel.bottomAnchor.constraint(equalTo: referralPromoContainer.bottomAnchor, constant: -12)
+            referralPromoBackground.leadingAnchor.constraint(equalTo: cardView.contentView.leadingAnchor),
+            referralPromoBackground.trailingAnchor.constraint(equalTo: cardView.contentView.trailingAnchor),
+            referralPromoBackground.bottomAnchor.constraint(equalTo: cardView.contentView.bottomAnchor),
+            referralPromoBackground.topAnchor.constraint(equalTo: referralPromoLabel.topAnchor, constant: -16)
         ])
 
         // 액션

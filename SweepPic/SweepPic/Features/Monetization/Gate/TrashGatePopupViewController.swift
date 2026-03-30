@@ -161,12 +161,11 @@ final class TrashGatePopupViewController: UIViewController {
 
     // MARK: - Referral Promo (T032, US4)
 
-    /// 초대 프로모 영역 배경 — 기존 카드와 구분되는 살짝 밝은 톤
-    private let referralPromoContainer: UIView = {
+    /// 초대 프로모 하단 배경 — 카드 하단을 가로로 잘라 색상 차별화
+    /// cardView.contentView에 삽입하여 카드의 clipsToBounds로 하단 모서리 자동 처리
+    private let referralPromoBackground: UIView = {
         let view = UIView()
         view.backgroundColor = UIColor.white.withAlphaComponent(0.06)
-        view.layer.cornerRadius = 16
-        view.clipsToBounds = true
         view.translatesAutoresizingMaskIntoConstraints = false
         return view
     }()
@@ -261,13 +260,15 @@ final class TrashGatePopupViewController: UIViewController {
             cardView.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -24)
         ])
 
+        // T032: 카드 하단 배경 — contentView에 먼저 삽입 (스택뷰 뒤에 깔림)
+        cardView.contentView.addSubview(referralPromoBackground)
+
         // 카드 내부 스택뷰 — contentView에 추가 (블러 위)
-        // T032: 닫기 버튼 아래에 초대 프로모 컨테이너 추가
         let stackView = UIStackView(arrangedSubviews: [
             titleLabel, infoLabel,
             goldenMomentLabel, offlineLabel,
             adButton, proButton, closeButton,
-            referralPromoContainer
+            referralPromoLabel, referralButton, referralSubtitleLabel
         ])
         stackView.axis = .vertical
         stackView.spacing = 16
@@ -294,27 +295,21 @@ final class TrashGatePopupViewController: UIViewController {
             closeButton.heightAnchor.constraint(equalToConstant: 50)
         ])
 
-        // T032: 닫기 버튼과 초대 프로모 컨테이너 간격
+        // T032: 닫기 버튼과 초대 프로모 간격
         stackView.setCustomSpacing(16, after: closeButton)
+        stackView.setCustomSpacing(8, after: referralPromoLabel)
+        stackView.setCustomSpacing(4, after: referralButton)
 
-        // T032: 초대 프로모 컨테이너 내부 레이아웃
-        referralPromoContainer.addSubview(referralPromoLabel)
-        referralPromoContainer.addSubview(referralButton)
-        referralPromoContainer.addSubview(referralSubtitleLabel)
+        // 버튼 높이 (다른 버튼과 동일)
+        referralButton.heightAnchor.constraint(equalToConstant: 50).isActive = true
 
+        // T032: 배경 뷰 — 프로모 라벨 위에서 카드 하단 끝까지 채움
+        // cardView의 clipsToBounds가 하단 둥근 모서리 자동 처리
         NSLayoutConstraint.activate([
-            referralPromoLabel.topAnchor.constraint(equalTo: referralPromoContainer.topAnchor, constant: 14),
-            referralPromoLabel.leadingAnchor.constraint(equalTo: referralPromoContainer.leadingAnchor, constant: 16),
-            referralPromoLabel.trailingAnchor.constraint(equalTo: referralPromoContainer.trailingAnchor, constant: -16),
-
-            referralButton.topAnchor.constraint(equalTo: referralPromoLabel.bottomAnchor, constant: 10),
-            referralButton.leadingAnchor.constraint(equalTo: referralPromoContainer.leadingAnchor),
-            referralButton.trailingAnchor.constraint(equalTo: referralPromoContainer.trailingAnchor),
-            referralButton.heightAnchor.constraint(equalToConstant: 50),
-
-            referralSubtitleLabel.topAnchor.constraint(equalTo: referralButton.bottomAnchor, constant: 6),
-            referralSubtitleLabel.centerXAnchor.constraint(equalTo: referralPromoContainer.centerXAnchor),
-            referralSubtitleLabel.bottomAnchor.constraint(equalTo: referralPromoContainer.bottomAnchor, constant: -12)
+            referralPromoBackground.leadingAnchor.constraint(equalTo: cardView.contentView.leadingAnchor),
+            referralPromoBackground.trailingAnchor.constraint(equalTo: cardView.contentView.trailingAnchor),
+            referralPromoBackground.bottomAnchor.constraint(equalTo: cardView.contentView.bottomAnchor),
+            referralPromoBackground.topAnchor.constraint(equalTo: referralPromoLabel.topAnchor, constant: -16)
         ])
 
         // 광고 버튼 내부 스피너

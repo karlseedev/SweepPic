@@ -103,12 +103,10 @@ final class CelebrationViewController: UIViewController {
 
     // MARK: - Referral Promo (T034, US4)
 
-    /// 초대 프로모 영역 배경 — 기존 카드와 구분되는 살짝 밝은 톤
-    private lazy var referralPromoContainer: UIView = {
+    /// 초대 프로모 하단 배경 — 카드 하단을 가로로 잘라 색상 차별화
+    private lazy var referralPromoBackground: UIView = {
         let view = UIView()
         view.backgroundColor = UIColor.white.withAlphaComponent(0.06)
-        view.layer.cornerRadius = 16
-        view.clipsToBounds = true
         view.translatesAutoresizingMaskIntoConstraints = false
         return view
     }()
@@ -142,12 +140,13 @@ final class CelebrationViewController: UIViewController {
 
     /// 메인 스택 뷰
     private lazy var stackView: UIStackView = {
-        // T034: 확인 버튼 아래에 초대 프로모 컨테이너 추가
+        // T034: 확인 버튼 아래에 초대 프로모 추가
         let stack = UIStackView(arrangedSubviews: [
             sessionLabel,
             statsStackView,
             confirmButton,
-            referralPromoContainer
+            referralLabel,
+            referralButton
         ])
         stack.translatesAutoresizingMaskIntoConstraints = false
         stack.axis = .vertical
@@ -198,6 +197,8 @@ final class CelebrationViewController: UIViewController {
         // 카드 뷰
         view.addSubview(cardView)
         cardView.activateBlur()
+        // T034: 하단 배경 먼저 삽입 (스택뷰 뒤에 깔림)
+        cardView.contentView.addSubview(referralPromoBackground)
         cardView.contentView.addSubview(stackView)
 
         // 간격 조정
@@ -220,26 +221,21 @@ final class CelebrationViewController: UIViewController {
             confirmButton.widthAnchor.constraint(equalTo: stackView.widthAnchor),
             confirmButton.heightAnchor.constraint(equalToConstant: 50),
 
-            // T034: 초대 프로모 컨테이너 너비
-            referralPromoContainer.widthAnchor.constraint(equalTo: stackView.widthAnchor)
+            // T034: 초대 버튼 크기
+            referralButton.widthAnchor.constraint(equalTo: stackView.widthAnchor),
+            referralButton.heightAnchor.constraint(equalToConstant: 50)
         ])
 
-        // T034: 확인 버튼과 초대 프로모 컨테이너 간격
+        // T034: 확인 버튼과 초대 프로모 간격
         stackView.setCustomSpacing(16, after: confirmButton)
+        stackView.setCustomSpacing(8, after: referralLabel)
 
-        // T034: 초대 프로모 컨테이너 내부 레이아웃
-        referralPromoContainer.addSubview(referralLabel)
-        referralPromoContainer.addSubview(referralButton)
-
+        // T034: 배경 뷰 — 프로모 라벨 위에서 카드 하단 끝까지
         NSLayoutConstraint.activate([
-            referralLabel.topAnchor.constraint(equalTo: referralPromoContainer.topAnchor, constant: 14),
-            referralLabel.centerXAnchor.constraint(equalTo: referralPromoContainer.centerXAnchor),
-
-            referralButton.topAnchor.constraint(equalTo: referralLabel.bottomAnchor, constant: 10),
-            referralButton.leadingAnchor.constraint(equalTo: referralPromoContainer.leadingAnchor),
-            referralButton.trailingAnchor.constraint(equalTo: referralPromoContainer.trailingAnchor),
-            referralButton.heightAnchor.constraint(equalToConstant: 50),
-            referralButton.bottomAnchor.constraint(equalTo: referralPromoContainer.bottomAnchor, constant: -12)
+            referralPromoBackground.leadingAnchor.constraint(equalTo: cardView.contentView.leadingAnchor),
+            referralPromoBackground.trailingAnchor.constraint(equalTo: cardView.contentView.trailingAnchor),
+            referralPromoBackground.bottomAnchor.constraint(equalTo: cardView.contentView.bottomAnchor),
+            referralPromoBackground.topAnchor.constraint(equalTo: referralLabel.topAnchor, constant: -16)
         ])
 
         // 접근성 설정 (FR-057)
