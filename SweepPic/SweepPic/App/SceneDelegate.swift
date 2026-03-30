@@ -66,7 +66,9 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         // 앱이 포그라운드에서 자정을 넘길 때 일일 한도 자동 리셋
         setupMidnightResetObserver()
 
-        Logger.app.debug("Scene connected, window configured")
+        // [TEST] 실기기 Keychain user_id 확인용 임시 로그
+        let referralUserId = ReferralStore.shared.userId
+        Logger.app.debug("Scene connected, window configured — referral_user_id: \(referralUserId)")
     }
 
     // MARK: - T065: Permission Check
@@ -153,10 +155,7 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         Logger.app.debug("Showing main interface (TabBarController)")
 
         // [Referral] T031: 콜드 스타트 시 보상 팝업 체크
-        // TabBarController가 표시된 후 약간의 딜레이로 팝업 표시
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { [weak self] in
-            self?.checkAndShowReferralRewardPopup()
-        }
+        checkAndShowReferralRewardPopup()
 
         // 실측용 Inspector 활성화 (iOS 26 버튼 크기/모양 수집)
         #if DEBUG

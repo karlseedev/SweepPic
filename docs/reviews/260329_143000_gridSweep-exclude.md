@@ -1,0 +1,24 @@
+**Findings**
+1. **High**: 문서의 “`confirmDimmedAnimation`이 `.restore`면 그린이 유지된다”는 전제는 **조건부로만 맞습니다**. 단일 스와이프 앵커 셀은 [PreviewGridViewController+SwipeDelete.swift:80](/Users/karl/Project/Photos/iOS/SweepPic/SweepPic/Features/AutoCleanup/Preview/PreviewGridViewController+SwipeDelete.swift:80)에서 `.restore`가 세팅되지만, 다중 스와이프에서 나중에 선택되는 셀들은 [PreviewGridViewController+MultiSwipe.swift:159](/Users/karl/Project/Photos/iOS/SweepPic/SweepPic/Features/AutoCleanup/Preview/PreviewGridViewController+MultiSwipe.swift:159), [PreviewGridViewController+MultiSwipe.swift:348](/Users/karl/Project/Photos/iOS/SweepPic/SweepPic/Features/AutoCleanup/Preview/PreviewGridViewController+MultiSwipe.swift:348)처럼 `prepareSwipeOverlay(.restore)` 없이 `setFullDimmed`/`confirmDimmedAnimation`만 탑니다. `PhotoCell`은 스타일이 `.restore`일 때만 색 리셋을 건너뛰므로 [PhotoCell.swift:352](/Users/karl/Project/Photos/iOS/SweepPic/SweepPic/Features/Grid/PhotoCell.swift:352), [PhotoCell.swift:954](/Users/karl/Project/Photos/iOS/SweepPic/SweepPic/Features/Grid/PhotoCell.swift:954), 계획의 “다중 스와이프도 모두 그린 유지”는 현재 안 맞습니다.
+
+2. **High**: `excludedAssetIDs`를 하나로 통합하는 방향 자체는 섹션 인덱스보다 안전하지만, 계획안대로면 **이미 제외된 셀이 다중 스와이프에 다시 포함될 수 있습니다**. 시작 셀 차단은 [zippy-doodling-otter.md:74](/Users/karl/.claude/plans/zippy-doodling-otter.md:74)처럼 넣었지만, 실제 선택 집합은 [PreviewGridViewController+MultiSwipe.swift:117](/Users/karl/Project/Photos/iOS/SweepPic/SweepPic/Features/AutoCleanup/Preview/PreviewGridViewController+MultiSwipe.swift:117)에서 전 아이템 기준으로 계산되고, 확정 시 [PreviewGridViewController+MultiSwipe.swift:333](/Users/karl/Project/Photos/iOS/SweepPic/SweepPic/Features/AutoCleanup/Preview/PreviewGridViewController+MultiSwipe.swift:333)에서 그대로 assetID를 수집합니다. 즉 “재스와이프 차단”은 단일 시작점에만 적용되고, 드래그로 지나가는 제외 셀은 다시 잡힙니다.
+
+3. **High**: `applyExclusions()`에서 `previewResult` 필터링을 제거하는 것만으로는 **뷰어 복귀 경로가 안전하지 않습니다**. 정리 버튼은 필터링해도 [PreviewGridViewController.swift:807](/Users/karl/Project/Photos/iOS/SweepPic/SweepPic/Features/AutoCleanup/Preview/PreviewGridViewController.swift:807), 뷰어를 여는 소스는 여전히 [PreviewGridViewController.swift:602](/Users/karl/Project/Photos/iOS/SweepPic/SweepPic/Features/AutoCleanup/Preview/PreviewGridViewController.swift:602), [PreviewGridViewController.swift:749](/Users/karl/Project/Photos/iOS/SweepPic/SweepPic/Features/AutoCleanup/Preview/PreviewGridViewController.swift:749)의 raw `previewResult`입니다. 그래서 그린 딤드된 제외 사진이 이후 뷰어 페이지 시퀀스에 계속 남고, [ViewerViewController+Actions.swift:107](/Users/karl/Project/Photos/iOS/SweepPic/SweepPic/Features/Viewer/ViewerViewController+Actions.swift:107) 경로로 다시 제외 요청/카운트 누적까지 가능합니다.
+
+4. **Medium**: expand/collapse 시 **시각적 유지 자체는 가능**합니다. `previewResult`를 원본으로 유지하고 [PreviewGridViewController.swift:699](/Users/karl/Project/Photos/iOS/SweepPic/SweepPic/Features/AutoCleanup/Preview/PreviewGridViewController.swift:699)에서 `excludedAssetIDs.contains`로 다시 칠하면, 섹션 삽입/삭제 후에도 상태는 복원됩니다. 다만 계획은 `totalCount`만 `effectiveCount`로 바꾸고 있어서 [zippy-doodling-otter.md:33](/Users/karl/.claude/plans/zippy-doodling-otter.md:33), `canExpand`, `standardCount`, `deepCount`, 배너 카운트는 여전히 raw 값입니다 [PreviewGridViewController.swift:557](/Users/karl/Project/Photos/iOS/SweepPic/SweepPic/Features/AutoCleanup/Preview/PreviewGridViewController.swift:557), [PreviewBottomView.swift:176](/Users/karl/Project/Photos/iOS/SweepPic/SweepPic/Features/AutoCleanup/Preview/PreviewBottomView.swift:176). 그래서 “더 보기”가 실제로는 전부 제외된 섹션에도 남을 수 있고, 버튼/배너 숫자도 어긋납니다.
+
+5. **Medium**: 검증표의 “전체 제외 → Alert → pop”은 **스와이프 경로에만 해당**합니다. 계획의 `applySwipeExclusion()`에는 0장 처리 제안이 있지만 [zippy-doodling-otter.md:97](/Users/karl/.claude/plans/zippy-doodling-otter.md:97), 뷰어 복귀 시 타는 [PreviewGridViewController.swift:904](/Users/karl/Project/Photos/iOS/SweepPic/SweepPic/Features/AutoCleanup/Preview/PreviewGridViewController.swift:904) `applyExclusions()`에는 같은 처리가 없습니다. 즉 뷰어에서 전부 제외하면 alert/pop 없이 “0장 이동” 상태의 그리드로 돌아올 가능성이 남습니다.
+
+**질문별 답**
+1. `excludedAssetIDs` 관리 자체는 section/item보다 `assetID` 기준이라 방향은 맞습니다. 다만 지금 계획대로면 다중 스와이프가 제외 셀을 다시 집어갈 수 있어서 “안전하다”까지는 아닙니다.
+2. `PhotoCell`의 `.restore` 스타일이 `confirmDimmedAnimation`에서 리셋되지 않는다는 전제는 맞습니다. 근거는 [PhotoCell.swift:954](/Users/karl/Project/Photos/iOS/SweepPic/SweepPic/Features/Grid/PhotoCell.swift:954)입니다. 하지만 그 셀에 미리 `.restore`를 넣어둔 경우에만 유효합니다.
+3. expand/collapse 시 제외 상태 유지는 시각적으로는 됩니다. 대신 숫자/버튼 노출 조건까지 맞추려면 stage별 effective count도 같이 설계해야 합니다.
+4. 뷰어 제외 후 복귀에서 `applyExclusions()`의 `previewResult` 필터링을 제거해도 되느냐는 질문에는, **그리드 표시만 보면 가능하지만 뷰어 재진입까지 포함하면 그대로는 안 됩니다**가 답입니다.
+
+**보완 제안**
+- 다중 스와이프 선택 집합에서 `excludedAssetIDs`를 제외하고, 확정 시에도 한 번 더 필터링하세요.
+- 다중 스와이프의 모든 선택 셀에 `prepareSwipeOverlay(.restore)`를 보장하세요.
+- 뷰어 소스 `allVisibleAssets()` 또는 `didSelectItemAt`에서 제외 사진을 빼거나, 제외 셀 탭을 막는 정책을 정하세요.
+- `excludedAssetIDs`는 단순 `var`보다 `private(set)` + 전용 helper가 안전합니다.
+
+웹검색은 하지 않았습니다. 이 검토는 로컬 코드 대조만으로 충분했습니다.

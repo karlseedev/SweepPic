@@ -199,13 +199,21 @@ final class ReferralRewardViewController: UIViewController {
         fatalError("init(coder:) has not been implemented")
     }
 
+    /// App Store에서 돌아오기 대기 중 여부
+    private var isWaitingForReturn = false
+
     // MARK: - Lifecycle
 
     override func viewDidLoad() {
         super.viewDidLoad()
         setupUI()
         setupClaimManager()
+        setupForegroundObserver()
         loadPendingRewards()
+    }
+
+    deinit {
+        NotificationCenter.default.removeObserver(self)
     }
 
     // MARK: - Setup
@@ -273,16 +281,35 @@ final class ReferralRewardViewController: UIViewController {
                 self.displayState = .claiming
 
             case .success:
+                // Promotional Offer 경로 — 앱 내에서 즉시 완료
                 self.displayState = .claimed
-                // 2초 후 다음 보상 확인
-                DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) { [weak self] in
-                    self?.proceedToNextReward()
-                }
+
+            case .waitingForReturn:
+                // Offer Code 경로 — App Store로 전환됨
+                // 스피너 상태 유지, 포그라운드 복귀 시 성공 화면 표시
+                self.isWaitingForReturn = true
 
             case .failed(let message):
                 self.displayState = .error(message)
             }
         }
+    }
+
+    /// 포그라운드 복귀 감지 옵저버 등록
+    private func setupForegroundObserver() {
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(handleForegroundReturn),
+            name: UIScene.willEnterForegroundNotification,
+            object: nil
+        )
+    }
+
+    /// App Store에서 돌아왔을 때 성공 화면 표시
+    @objc private func handleForegroundReturn() {
+        guard isWaitingForReturn else { return }
+        isWaitingForReturn = false
+        displayState = .claimed
     }
 
     // MARK: - Data Loading
@@ -322,11 +349,12 @@ final class ReferralRewardViewController: UIViewController {
 
     /// 상태에 따른 UI 업데이트
     private func updateUI(for state: DisplayState) {
-        // 공통: 에러 라벨 숨기기
+        // 공통: 상태 초기화
         errorLabel.isHidden = true
         buttonSpinner.stopAnimating()
         actionButton.isEnabled = true
         actionButton.setTitle("", for: .normal)
+        titleLabel.font = .systemFont(ofSize: 22, weight: .bold)
 
         switch state {
         case .loading:
@@ -339,6 +367,7 @@ final class ReferralRewardViewController: UIViewController {
 
         case .hasRewards(let count):
             statusIconView.text = "🎉"
+            statusIconView.isHidden = false
             titleLabel.text = "초대 보상 도착!"
             descriptionLabel.text = "초대한 사람이 SweepPic에 가입했어요!\n14일 무료 혜택을 받으세요"
             countLabel.text = "수령 가능한 보상: \(count)건"
@@ -367,11 +396,17 @@ final class ReferralRewardViewController: UIViewController {
             buttonSpinner.startAnimating()
 
         case .claimed:
-            statusIconView.text = "✅"
+            statusIconView.text = ""
+            statusIconView.isHidden = true
             titleLabel.text = "14일 무료 혜택이\n적용되었습니다!"
+            titleLabel.font = .systemFont(ofSize: 22, weight: .regular)
             descriptionLabel.text = ""
             countLabel.isHidden = true
-            actionButton.isHidden = true
+            actionButton.isHidden = false
+            actionButton.setTitle("확인", for: .normal)
+            actionButton.backgroundColor = .white
+            actionButton.setTitleColor(.black, for: .normal)
+            closeButton.isHidden = true
 
         case .error(let message):
             errorLabel.text = message
@@ -388,6 +423,10 @@ final class ReferralRewardViewController: UIViewController {
     /// 메인 액션 버튼 탭
     @objc private func actionButtonTapped() {
         switch displayState {
+        case .claimed:
+            // [확인] 탭 → 다음 보상 진행
+            proceedToNextReward()
+
         case .hasRewards:
             // 현재 보상 수령
             guard currentRewardIndex < pendingRewards.count else { return }

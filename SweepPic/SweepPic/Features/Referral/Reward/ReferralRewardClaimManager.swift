@@ -28,8 +28,10 @@ enum ClaimState {
     case idle
     /// 서버 통신 중 (서명/코드 요청)
     case loading
-    /// 수령 성공
+    /// 수령 성공 (Promotional Offer — 앱 내 즉시 완료)
     case success
+    /// App Store로 전환됨 — 포그라운드 복귀 시 성공 화면 표시 (Offer Code 경로)
+    case waitingForReturn
     /// 실패 (재시도 가능)
     case failed(message: String)
 }
@@ -92,19 +94,22 @@ final class ReferralRewardClaimManager {
                 try await applyPromotionalOffer(productId: productId, signature: signature)
 
             case "offer_code":
-                // Offer Code: 리딤 URL 열기
+                // Offer Code: 리딤 URL 열기 → App Store로 전환
+                // 성공 화면은 포그라운드 복귀 시 VC에서 표시
                 guard let redeemURL = response.redeemURL else {
                     await updateState(.failed(message: "리딤 URL이 없습니다."))
                     return
                 }
                 await applyOfferCode(redeemURL: redeemURL)
+                await updateState(.waitingForReturn)
+                return
 
             default:
                 await updateState(.failed(message: "알 수 없는 보상 유형입니다."))
                 return
             }
 
-            // 3. 성공
+            // 3. 성공 (Promotional Offer 경로만 여기 도달)
             await updateState(.success)
 
             // 구독 상태 갱신
