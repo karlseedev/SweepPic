@@ -63,14 +63,6 @@ final class TrashGatePopupViewController: UIViewController {
 
     // MARK: - UI Components
 
-    /// 딤 배경 (터치 차단용, 투명)
-    private let dimView: UIView = {
-        let view = UIView()
-        view.backgroundColor = .clear
-        view.translatesAutoresizingMaskIntoConstraints = false
-        return view
-    }()
-
     /// 블러 팝업 카드 (재사용 컴포넌트)
     private let cardView = BlurPopupCardView()
 
@@ -212,15 +204,6 @@ final class TrashGatePopupViewController: UIViewController {
 
     /// UI 레이아웃 구성 — 딤 + 블러 카드 + Glass 버튼
     private func setupUI() {
-        // 딤 배경 (전체 화면)
-        view.addSubview(dimView)
-        NSLayoutConstraint.activate([
-            dimView.topAnchor.constraint(equalTo: view.topAnchor),
-            dimView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
-            dimView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
-            dimView.bottomAnchor.constraint(equalTo: view.bottomAnchor)
-        ])
-
         // 블러 카드 — 화면 - 48pt 너비
         view.addSubview(cardView)
         NSLayoutConstraint.activate([
@@ -277,9 +260,9 @@ final class TrashGatePopupViewController: UIViewController {
         proButton.addTarget(self, action: #selector(proButtonTapped), for: .touchUpInside)
         closeButton.addTarget(self, action: #selector(closeButtonTapped), for: .touchUpInside)
 
-        // 딤 배경 탭 → 닫기
+        // 배경 탭 → 닫기
         let dimTap = UITapGestureRecognizer(target: self, action: #selector(closeButtonTapped))
-        dimView.addGestureRecognizer(dimTap)
+        view.addGestureRecognizer(dimTap)
     }
 
     @objc private func adButtonTapped() {

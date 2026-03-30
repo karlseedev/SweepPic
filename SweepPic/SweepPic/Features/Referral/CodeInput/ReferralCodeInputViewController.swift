@@ -64,23 +64,18 @@ final class ReferralCodeInputViewController: UIViewController {
 
     // MARK: - UI Components
 
-    /// 딤드 배경 (TrashGatePopup 패턴 — 40% 검정)
-    private lazy var dimView: UIView = {
-        let view = UIView()
-        view.backgroundColor = UIColor.black.withAlphaComponent(0.4)
-        view.translatesAutoresizingMaskIntoConstraints = false
-        return view
-    }()
-
     /// Glass 팝업 카드
     private lazy var cardView = BlurPopupCardView()
 
-    /// 닫기 버튼 (X)
+    /// 닫기 버튼 — 스택 하단 텍스트 버튼 (TrashGatePopup 패턴)
     private lazy var closeButton: UIButton = {
         let button = UIButton(type: .system)
-        let config = UIImage.SymbolConfiguration(pointSize: 14, weight: .semibold)
-        button.setImage(UIImage(systemName: "xmark", withConfiguration: config), for: .normal)
-        button.tintColor = UIColor.white.withAlphaComponent(0.6)
+        button.backgroundColor = UIColor.white.withAlphaComponent(0.12)
+        button.setTitle("닫기", for: .normal)
+        button.setTitleColor(.secondaryLabel, for: .normal)
+        button.titleLabel?.font = .systemFont(ofSize: 17, weight: .regular)
+        button.layer.cornerRadius = 25
+        button.clipsToBounds = true
         button.translatesAutoresizingMaskIntoConstraints = false
         button.addTarget(self, action: #selector(closeTapped), for: .touchUpInside)
         button.accessibilityLabel = "닫기"
@@ -113,7 +108,7 @@ final class ReferralCodeInputViewController: UIViewController {
     private lazy var codeTextView: UITextView = {
         let tv = UITextView()
         tv.translatesAutoresizingMaskIntoConstraints = false
-        tv.backgroundColor = UIColor.white.withAlphaComponent(0.1)
+        tv.backgroundColor = UIColor.black.withAlphaComponent(0.4)
         tv.textColor = .white
         tv.font = .monospacedSystemFont(ofSize: 14, weight: .regular)
         tv.layer.cornerRadius = 12
@@ -140,7 +135,7 @@ final class ReferralCodeInputViewController: UIViewController {
     /// 클립보드에서 붙여넣기 버튼 (actionButton과 동일 스타일, 흰색 90%)
     private lazy var pasteButton: UIButton = {
         let button = UIButton(type: .system)
-        button.backgroundColor = UIColor.white.withAlphaComponent(0.9)
+        button.backgroundColor = UIColor.white.withAlphaComponent(0.7)
         button.setTitle("붙여넣기", for: .normal)
         button.setTitleColor(.black, for: .normal)
         button.titleLabel?.font = .systemFont(ofSize: 17, weight: .semibold)
@@ -228,35 +223,26 @@ final class ReferralCodeInputViewController: UIViewController {
     // MARK: - UI Setup
 
     private func setupUI() {
-        view.backgroundColor = .clear
+        view.backgroundColor = UIColor.black.withAlphaComponent(0.4)
 
-        // 딤드 배경 (TrashGatePopup 패턴)
-        view.addSubview(dimView)
-        NSLayoutConstraint.activate([
-            dimView.topAnchor.constraint(equalTo: view.topAnchor),
-            dimView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
-            dimView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
-            dimView.bottomAnchor.constraint(equalTo: view.bottomAnchor)
-        ])
-
-        // 딤드 배경 탭 → 닫기
+        // 배경 탭 → 닫기
         let tapGesture = UITapGestureRecognizer(target: self, action: #selector(backgroundTapped(_:)))
-        dimView.addGestureRecognizer(tapGesture)
+        view.addGestureRecognizer(tapGesture)
 
         // 카드 뷰
         view.addSubview(cardView)
         cardView.activateBlur()
-        cardView.contentView.addSubview(closeButton)
         cardView.contentView.addSubview(stackView)
 
-        // 스택 구성 — 기본 레이아웃 (상태별로 show/hide)
+        // 스택 구성 — 닫기 버튼은 스택 하단 (TrashGatePopup 패턴)
         stackView.addArrangedSubview(statusIconView)
         stackView.addArrangedSubview(titleLabel)
         stackView.addArrangedSubview(descriptionLabel)
         stackView.addArrangedSubview(codeTextView)
-        stackView.addArrangedSubview(pasteButton)
         stackView.addArrangedSubview(errorLabel)
+        stackView.addArrangedSubview(pasteButton)
         stackView.addArrangedSubview(actionButton)
+        stackView.addArrangedSubview(closeButton)
 
         // 텍스트뷰 위에 플레이스홀더
         codeTextView.addSubview(placeholderLabel)
@@ -267,24 +253,19 @@ final class ReferralCodeInputViewController: UIViewController {
         // 간격 조정
         stackView.setCustomSpacing(8, after: statusIconView)
         stackView.setCustomSpacing(16, after: descriptionLabel)
-        stackView.setCustomSpacing(4, after: codeTextView)
-        stackView.setCustomSpacing(4, after: pasteButton)
+        stackView.setCustomSpacing(30, after: codeTextView)
+        stackView.setCustomSpacing(4, after: errorLabel)
         stackView.setCustomSpacing(16, after: errorLabel)
 
         NSLayoutConstraint.activate([
-            // 카드 — 화면 중앙
+            // 카드 — 화면 중앙, 좌우 24pt (TrashGatePopup 패턴)
             cardView.centerXAnchor.constraint(equalTo: view.centerXAnchor),
             cardView.centerYAnchor.constraint(equalTo: view.centerYAnchor),
-            cardView.widthAnchor.constraint(equalToConstant: 320),
+            cardView.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 24),
+            cardView.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -24),
 
-            // 닫기 버튼
-            closeButton.topAnchor.constraint(equalTo: cardView.contentView.topAnchor, constant: 12),
-            closeButton.trailingAnchor.constraint(equalTo: cardView.contentView.trailingAnchor, constant: -12),
-            closeButton.widthAnchor.constraint(equalToConstant: 30),
-            closeButton.heightAnchor.constraint(equalToConstant: 30),
-
-            // 스택 뷰
-            stackView.topAnchor.constraint(equalTo: cardView.contentView.topAnchor, constant: 40),
+            // 스택 뷰 — 상단 36pt (TrashGatePopup 동일)
+            stackView.topAnchor.constraint(equalTo: cardView.contentView.topAnchor, constant: 36),
             stackView.leadingAnchor.constraint(equalTo: cardView.contentView.leadingAnchor, constant: 24),
             stackView.trailingAnchor.constraint(equalTo: cardView.contentView.trailingAnchor, constant: -24),
             stackView.bottomAnchor.constraint(equalTo: cardView.contentView.bottomAnchor, constant: -24),
@@ -305,6 +286,10 @@ final class ReferralCodeInputViewController: UIViewController {
             actionButton.widthAnchor.constraint(equalTo: stackView.widthAnchor),
             actionButton.heightAnchor.constraint(equalToConstant: 50),
 
+            // 닫기 버튼
+            closeButton.widthAnchor.constraint(equalTo: stackView.widthAnchor),
+            closeButton.heightAnchor.constraint(equalToConstant: 50),
+
             // 상태 아이콘
             statusIconView.widthAnchor.constraint(equalToConstant: 48),
             statusIconView.heightAnchor.constraint(equalToConstant: 48),
@@ -314,8 +299,8 @@ final class ReferralCodeInputViewController: UIViewController {
             loadingIndicator.centerYAnchor.constraint(equalTo: cardView.centerYAnchor)
         ])
 
-        // 초기 상태: 로딩
-        displayState = .loading
+        // 초기 상태: 입력 화면 바로 표시 (check-status는 백그라운드에서 확인)
+        displayState = .inputReady
     }
 
     // MARK: - State Management
@@ -384,9 +369,9 @@ final class ReferralCodeInputViewController: UIViewController {
 
     // MARK: - API: check-status
 
-    /// 진입 시 check-status API로 현재 상태를 확인한다.
+    /// 백그라운드에서 check-status API로 현재 상태를 확인한다.
+    /// 기본 입력 화면을 먼저 표시하고, matched/redeemed일 때만 화면을 전환한다.
     private func checkCurrentStatus() {
-        displayState = .loading
         let userId = ReferralStore.shared.userId
 
         Task { @MainActor in
@@ -413,12 +398,9 @@ final class ReferralCodeInputViewController: UIViewController {
                     displayState = .inputReady
                 }
 
-            } catch let error as ReferralServiceError {
-                Logger.referral.error("ReferralCodeInput: check-status 실패 — \(error.localizedDescription)")
-                displayState = .error(error.localizedDescription ?? "알 수 없는 오류")
             } catch {
+                // check-status 실패 시 입력 화면 유지 (이미 표시 중)
                 Logger.referral.error("ReferralCodeInput: check-status 실패 — \(error)")
-                displayState = .error("서버에 연결할 수 없습니다.")
             }
         }
     }
@@ -478,7 +460,7 @@ final class ReferralCodeInputViewController: UIViewController {
                     showError("유효하지 않은 초대 코드입니다.")
 
                 case .noCodesAvailable:
-                    showError("일시적으로 혜택을 적용할 수 없습니다.\n잠시 후 다시 시도해주세요.")
+                    showError("현재 일시적으로 오류가 발생했습니다.\n다음날 다시 시도해주세요.")
 
                 default:
                     showError("알 수 없는 응답입니다.")

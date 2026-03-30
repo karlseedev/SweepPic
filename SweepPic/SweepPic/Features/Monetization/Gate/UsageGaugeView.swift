@@ -255,14 +255,6 @@ final class UsageGaugeDetailPopup: UIViewController {
 
     // MARK: - UI
 
-    /// 딤 배경 (터치 차단용, 투명)
-    private let dimView: UIView = {
-        let view = UIView()
-        view.backgroundColor = .clear
-        view.translatesAutoresizingMaskIntoConstraints = false
-        return view
-    }()
-
     /// 블러 팝업 카드 (게이트와 동일)
     private let cardView = BlurPopupCardView()
 
@@ -353,15 +345,6 @@ final class UsageGaugeDetailPopup: UIViewController {
     // MARK: - Setup
 
     private func setupUI() {
-        // 딤 배경 (전체 화면)
-        view.addSubview(dimView)
-        NSLayoutConstraint.activate([
-            dimView.topAnchor.constraint(equalTo: view.topAnchor),
-            dimView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
-            dimView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
-            dimView.bottomAnchor.constraint(equalTo: view.bottomAnchor)
-        ])
-
         // 블러 카드 — 게이트와 동일 레이아웃
         view.addSubview(cardView)
         NSLayoutConstraint.activate([
@@ -399,8 +382,9 @@ final class UsageGaugeDetailPopup: UIViewController {
         proButton.addTarget(self, action: #selector(plusTapped), for: .touchUpInside)
         closeButton.addTarget(self, action: #selector(closeTapped), for: .touchUpInside)
 
+        // 배경 탭 → 닫기
         let dimTap = UITapGestureRecognizer(target: self, action: #selector(closeTapped))
-        dimView.addGestureRecognizer(dimTap)
+        view.addGestureRecognizer(dimTap)
     }
 
     /// 현재 한도 정보로 콘텐츠 구성

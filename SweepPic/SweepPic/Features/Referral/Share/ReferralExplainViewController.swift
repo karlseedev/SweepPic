@@ -55,23 +55,18 @@ final class ReferralExplainViewController: UIViewController {
 
     // MARK: - UI Components
 
-    /// 딤드 배경 (TrashGatePopup 패턴 — 40% 검정)
-    private lazy var dimView: UIView = {
-        let view = UIView()
-        view.backgroundColor = UIColor.black.withAlphaComponent(0.4)
-        view.translatesAutoresizingMaskIntoConstraints = false
-        return view
-    }()
-
     /// Glass 팝업 카드
     private lazy var cardView = BlurPopupCardView()
 
-    /// 닫기 버튼 (X)
+    /// 닫기 버튼 — 스택 하단 텍스트 버튼 (TrashGatePopup 패턴)
     private lazy var closeButton: UIButton = {
         let button = UIButton(type: .system)
-        let config = UIImage.SymbolConfiguration(pointSize: 14, weight: .semibold)
-        button.setImage(UIImage(systemName: "xmark", withConfiguration: config), for: .normal)
-        button.tintColor = UIColor.white.withAlphaComponent(0.6)
+        button.backgroundColor = UIColor.white.withAlphaComponent(0.12)
+        button.setTitle("닫기", for: .normal)
+        button.setTitleColor(.secondaryLabel, for: .normal)
+        button.titleLabel?.font = .systemFont(ofSize: 17, weight: .regular)
+        button.layer.cornerRadius = 25
+        button.clipsToBounds = true
         button.translatesAutoresizingMaskIntoConstraints = false
         button.addTarget(self, action: #selector(closeTapped), for: .touchUpInside)
         button.accessibilityLabel = "닫기"
@@ -177,7 +172,8 @@ final class ReferralExplainViewController: UIViewController {
             friendRewardRow,
             errorLabel,
             inviteButton,
-            subtitleLabel
+            subtitleLabel,
+            closeButton
         ])
         stack.translatesAutoresizingMaskIntoConstraints = false
         stack.axis = .vertical
@@ -210,25 +206,15 @@ final class ReferralExplainViewController: UIViewController {
     // MARK: - UI Setup
 
     private func setupUI() {
-        view.backgroundColor = .clear
+        view.backgroundColor = UIColor.black.withAlphaComponent(0.4)
 
-        // 딤드 배경 (TrashGatePopup 패턴)
-        view.addSubview(dimView)
-        NSLayoutConstraint.activate([
-            dimView.topAnchor.constraint(equalTo: view.topAnchor),
-            dimView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
-            dimView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
-            dimView.bottomAnchor.constraint(equalTo: view.bottomAnchor)
-        ])
-
-        // 딤드 배경 탭 → 닫기
+        // 배경 탭 → 닫기
         let tapGesture = UITapGestureRecognizer(target: self, action: #selector(backgroundTapped(_:)))
-        dimView.addGestureRecognizer(tapGesture)
+        view.addGestureRecognizer(tapGesture)
 
         // 카드 뷰
         view.addSubview(cardView)
         cardView.activateBlur()
-        cardView.contentView.addSubview(closeButton)
         cardView.contentView.addSubview(stackView)
 
         // 로딩 인디케이터를 버튼 위에 추가
@@ -242,19 +228,14 @@ final class ReferralExplainViewController: UIViewController {
         stackView.setCustomSpacing(8, after: inviteButton)
 
         NSLayoutConstraint.activate([
-            // 카드 — 화면 중앙
+            // 카드 — 화면 중앙, 좌우 24pt (TrashGatePopup 패턴)
             cardView.centerXAnchor.constraint(equalTo: view.centerXAnchor),
             cardView.centerYAnchor.constraint(equalTo: view.centerYAnchor),
-            cardView.widthAnchor.constraint(equalToConstant: 320),
+            cardView.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 24),
+            cardView.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -24),
 
-            // 닫기 버튼 — 카드 우상단
-            closeButton.topAnchor.constraint(equalTo: cardView.contentView.topAnchor, constant: 12),
-            closeButton.trailingAnchor.constraint(equalTo: cardView.contentView.trailingAnchor, constant: -12),
-            closeButton.widthAnchor.constraint(equalToConstant: 30),
-            closeButton.heightAnchor.constraint(equalToConstant: 30),
-
-            // 스택 뷰 — 카드 내부
-            stackView.topAnchor.constraint(equalTo: cardView.contentView.topAnchor, constant: 40),
+            // 스택 뷰 — 상단 36pt (TrashGatePopup 동일)
+            stackView.topAnchor.constraint(equalTo: cardView.contentView.topAnchor, constant: 36),
             stackView.leadingAnchor.constraint(equalTo: cardView.contentView.leadingAnchor, constant: 24),
             stackView.trailingAnchor.constraint(equalTo: cardView.contentView.trailingAnchor, constant: -24),
             stackView.bottomAnchor.constraint(equalTo: cardView.contentView.bottomAnchor, constant: -24),
@@ -262,6 +243,10 @@ final class ReferralExplainViewController: UIViewController {
             // 버튼 크기
             inviteButton.widthAnchor.constraint(equalTo: stackView.widthAnchor),
             inviteButton.heightAnchor.constraint(equalToConstant: 50),
+
+            // 닫기 버튼
+            closeButton.widthAnchor.constraint(equalTo: stackView.widthAnchor),
+            closeButton.heightAnchor.constraint(equalToConstant: 50),
 
             // 보상 행 너비
             myRewardRow.widthAnchor.constraint(equalTo: stackView.widthAnchor),
