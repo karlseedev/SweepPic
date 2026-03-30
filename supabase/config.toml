@@ -3,8 +3,7 @@
 # 프로젝트: SweepPic 초대 리워드 (004-referral-reward)
 # =============================================================================
 
-[project]
-id = "sweeppic-referral"
+# project id는 supabase link --project-ref 로 설정됨
 
 # -----------------------------------------------------------------------------
 # API 설정
@@ -26,7 +25,7 @@ max_rows = 1000
 # 로컬 PostgreSQL 포트
 port = 54322
 # PostgreSQL 메이저 버전
-major_version = 15
+major_version = 17
 
 # -----------------------------------------------------------------------------
 # Supabase Studio (로컬 관리 UI)
@@ -50,9 +49,18 @@ enabled = false
 # Edge Functions 설정
 # -----------------------------------------------------------------------------
 
+# referral-api: JWT 검증 비활성화
+# 이유: Supabase 신규 키 형식(sb_publishable_)은 Gateway JWT 검증 미지원
+# 보안: user_id 필수 검증 + rate limiting + 비즈니스 로직으로 대체
+# 참조: https://github.com/orgs/supabase/discussions/41834
+[functions.referral-api]
+verify_jwt = false
+
 # offer-code-replenish: Offer Code 풀 자동 보충
 # 매일 새벽 3시 KST (= UTC 18:00) 실행
 # - offer_name별 available 코드 5,000개 미만 시 ASC API로 보충
 # - 만료된 코드 정리
-[functions.offer-code-replenish]
-schedule = "0 18 * * *"
+# ⚠️ schedule은 Supabase Dashboard > Edge Functions에서 cron 설정
+#    CLI config.toml에서는 schedule 키를 지원하지 않음
+# [functions.offer-code-replenish]
+# schedule = "0 18 * * *"

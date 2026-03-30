@@ -59,6 +59,22 @@ extension ReferralServiceError: LocalizedError {
     }
 }
 
+// MARK: - API Response Wrapper
+
+/// Supabase Edge Function 공통 응답 래퍼
+/// 형식: { "success": true, "data": {...} } 또는 { "success": false, "error": "..." }
+private struct APIResponse<T: Decodable>: Decodable {
+    let success: Bool
+    let data: T?
+    let error: String?
+}
+
+/// 응답 바디가 없는 엔드포인트용 래퍼 (report-redemption 등)
+private struct APIResponseBase: Decodable {
+    let success: Bool
+    let error: String?
+}
+
 // MARK: - ReferralService
 
 /// Supabase Edge Functions(referral-api) 통신 서비스
@@ -198,10 +214,26 @@ public final class ReferralService {
             throw ReferralServiceError.unexpectedStatus(statusCode)
         }
 
-        // 응답 디코딩
+        // 응답 디코딩 — API 래퍼 { "success": bool, "data": T?, "error": string? }
         let decoder = JSONDecoder()
         do {
-            return try decoder.decode(T.self, from: data)
+            let apiResponse = try decoder.decode(APIResponse<T>.self, from: data)
+
+            // success: false → 비즈니스 에러 (API 레벨)
+            if !apiResponse.success {
+                let message = apiResponse.error ?? "알 수 없는 에러입니다."
+                Logger.referral.error("ReferralService: 비즈니스 에러 — /\(endpoint): \(message)")
+                throw ReferralServiceError.serverError(message)
+            }
+
+            // data 필드 추출
+            guard let result = apiResponse.data else {
+                Logger.referral.error("ReferralService: 응답에 data 필드 없음 — /\(endpoint)")
+                throw ReferralServiceError.decodingFailed
+            }
+            return result
+        } catch let error as ReferralServiceError {
+            throw error
         } catch {
             Logger.referral.error("ReferralService: 디코딩 실패 — /\(endpoint): \(error)")
             throw ReferralServiceError.decodingFailed
@@ -263,6 +295,13 @@ public final class ReferralService {
 
         switch statusCode {
         case 200:
+            // API 래퍼 확인: success: false → 비즈니스 에러
+            if let apiResponse = try? JSONDecoder().decode(APIResponseBase.self, from: data),
+               !apiResponse.success {
+                let message = apiResponse.error ?? "알 수 없는 에러입니다."
+                Logger.referral.error("ReferralService: 비즈니스 에러 — /\(endpoint): \(message)")
+                throw ReferralServiceError.serverError(message)
+            }
             Logger.referral.debug("ReferralService: /\(endpoint) → 성공")
             return
 
@@ -280,5 +319,21 @@ public final class ReferralService {
             }
             throw ReferralServiceError.unexpectedStatus(statusCode)
         }
+    }
+
+    // MARK: - Public API: User Story 1 (초대 링크 생성)
+
+    /// 초대 코드를 생성하거나 기존 코드를 조회한다 (create-link)
+    /// 초대자의 user_id로 고유 초대 코드를 생성하고, 공유 URL을 반환한다.
+    /// 이미 코드가 있으면 기존 코드를 반환.
+    ///
+    /// - Parameter userId: Keychain 기반 영구 사용자 ID
+    /// - Returns: ReferralLink (초대 코드 + 공유 URL)
+    /// - Throws: ReferralServiceError
+    public func createOrGetLink(userId: String) async throws -> ReferralLink {
+        return try await post(
+            endpoint: "create-link",
+            body: ["user_id": userId]
+        )
     }
 }

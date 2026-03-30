@@ -49,17 +49,17 @@
 
 ### Server
 
-- [ ] T011 [US1] referral-api create-link 엔드포인트 — `supabase/functions/referral-api/index.ts` (POST /create-link: user_id로 referral_code 조회 또는 생성, x0{6chars}9j 형식, 충돌 시 최대 5회 재생성, rate limit 적용. contracts/api-endpoints.md 참조)
+- [X] T011 [US1] referral-api create-link 엔드포인트 — `supabase/functions/referral-api/index.ts` (POST /create-link: user_id로 referral_code 조회 또는 생성, x0{6chars}9j 형식, 충돌 시 최대 5회 재생성, rate limit 적용. contracts/api-endpoints.md 참조)
 
 ### Client — AppCore
 
-- [ ] T012 [P] [US1] ReferralService.createOrGetLink() 메서드 추가 — `Sources/AppCore/Services/ReferralService.swift` (create-link API 호출, ReferralLink 반환)
+- [X] T012 [P] [US1] ReferralService.createOrGetLink() 메서드 추가 — `Sources/AppCore/Services/ReferralService.swift` (create-link API 호출, ReferralLink 반환)
 
 ### Client — UI
 
-- [ ] T013 [US1] 초대 설명 화면 — `SweepPic/SweepPic/Features/Referral/Share/ReferralExplainViewController.swift` (기획문서 Phase 1 와이어프레임 참조: "친구에게 초대하고 함께 프리미엄 받기!" 제목, 나/친구 보상 설명, [초대하기] 버튼 + "이미 구독 중이어도 14일 무료 연장" 부가 문구, 로딩/에러 상태 FR-038)
-- [ ] T014 [US1] 공유 메시지 생성 + 공유 시트 — `SweepPic/SweepPic/Features/Referral/Share/ReferralShareManager.swift` (FR-003 공유 메시지 5개 요소: 앱 소개/초대코드/설치링크/재탭 안내/수동 입력 폴백. UIActivityViewController 표시, completionHandler에서 completed=true/false 분기, completed=false 시 아무 동작 없음)
-- [ ] T015 [US1] Push 프리프롬프트 로직 — `SweepPic/SweepPic/Features/Referral/Share/ReferralExplainViewController.swift` 에 추가 (공유 완료 후: ReferralStore.hasAskedPushPermission 체크 → 1회만 표시, .notDetermined → 시스템 팝업, .denied → 알림 꺼짐 안내 + [설정으로 이동]/[나중에], .authorized → 미표시, FR-025)
+- [X] T013 [US1] 초대 설명 화면 — `SweepPic/SweepPic/Features/Referral/Share/ReferralExplainViewController.swift` (기획문서 Phase 1 와이어프레임 참조: "친구에게 초대하고 함께 프리미엄 받기!" 제목, 나/친구 보상 설명, [초대하기] 버튼 + "이미 구독 중이어도 14일 무료 연장" 부가 문구, 로딩/에러 상태 FR-038)
+- [X] T014 [US1] 공유 메시지 생성 + 공유 시트 — `SweepPic/SweepPic/Features/Referral/Share/ReferralShareManager.swift` (FR-003 공유 메시지 5개 요소: 앱 소개/초대코드/설치링크/재탭 안내/수동 입력 폴백. UIActivityViewController 표시, completionHandler에서 completed=true/false 분기, completed=false 시 아무 동작 없음)
+- [X] T015 [US1] Push 프리프롬프트 로직 — `SweepPic/SweepPic/Features/Referral/Share/ReferralExplainViewController.swift` 에 추가 (공유 완료 후: ReferralStore.hasAskedPushPermission 체크 → 1회만 표시, .notDetermined → 시스템 팝업, .denied → 알림 꺼짐 안내 + [설정으로 이동]/[나중에], .authorized → 미표시, FR-025)
 
 **Checkpoint**: 초대 링크 생성 및 공유 독립 테스트 가능
 
