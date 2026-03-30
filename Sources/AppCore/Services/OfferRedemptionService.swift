@@ -35,7 +35,8 @@ public final class OfferRedemptionService {
     // MARK: - Constants
 
     /// 초대 관련 Offer Name 접두사 — 이 접두사로 시작하는 트랜잭션을 감지
-    private static let referralOfferPrefix = "referral_"
+    /// 피초대자 전용 접두사 (초대자 보상 referral_reward_*와 구분)
+    private static let referralOfferPrefix = "referral_invited_"
 
     /// 리딤 보고 최대 재시도 횟수 (지수 백오프)
     private static let maxRetryCount = 3

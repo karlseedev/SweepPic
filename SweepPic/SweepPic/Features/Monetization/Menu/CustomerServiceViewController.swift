@@ -19,6 +19,8 @@ import SafariServices
 import AppCore
 import OSLog
 
+// ReferralStore user_id 접근용
+
 // MARK: - CustomerServiceViewController
 
 /// 고객센터 서브메뉴 빌더
@@ -51,7 +53,7 @@ final class CustomerServiceViewController: NSObject {
     /// - Returns: UIMenu 서브메뉴
     static func makeMenu(from presenter: UIViewController) -> UIMenu {
         let feedbackAction = UIAction(
-            title: "피드백 보내기",
+            title: "이메일 문의하기",
             image: UIImage(systemName: "envelope")
         ) { _ in
             handleFeedback(from: presenter)
@@ -155,6 +157,8 @@ final class CustomerServiceViewController: NSObject {
         let model = device.model
         let name = device.name
 
+        let userId = ReferralStore.shared.userId
+
         return """
 
 
@@ -163,6 +167,7 @@ final class CustomerServiceViewController: NSObject {
         iOS: \(osVersion)
         기기: \(model)
         기기명: \(name)
+        지원 ID: \(userId)
         """
     }
 }

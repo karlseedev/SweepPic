@@ -649,21 +649,21 @@ async function handleReportRedemption(body: Record<string, unknown>): Promise<Re
  * @returns { rewards: PendingReward[] }
  */
 async function handleGetPendingRewards(userId: string): Promise<Response> {
-  // 1. 만료 보상을 먼저 expired 처리
+  // 1. 만료 보상을 먼저 expired 처리 (pending + claimed 모두 대상)
   const now = new Date().toISOString();
   await supabase
     .from("pending_rewards")
     .update({ status: "expired" })
     .eq("user_id", userId)
-    .eq("status", "pending")
+    .in("status", ["pending", "claimed"])
     .lt("expires_at", now);
 
-  // 2. pending 보상 조회 (만료되지 않은 것만)
+  // 2. pending + claimed 보상 조회 (만료되지 않은 것만)
   const { data: rewards, error } = await supabase
     .from("pending_rewards")
     .select("id, referral_id, reward_type, redeem_url, status, created_at, expires_at")
     .eq("user_id", userId)
-    .eq("status", "pending")
+    .in("status", ["pending", "claimed"])
     .gte("expires_at", now)
     .order("created_at", { ascending: true });
 
@@ -825,7 +825,7 @@ async function handleClaimReward(body: Record<string, unknown>): Promise<Respons
   // 1. 보상 조회 및 상태 확인
   const { data: reward, error: selectError } = await supabase
     .from("pending_rewards")
-    .select("id, user_id, referral_id, status, expires_at")
+    .select("id, user_id, referral_id, status, expires_at, offer_code, redeem_url, reward_type")
     .eq("id", rewardId)
     .maybeSingle();
 
@@ -851,7 +851,6 @@ async function handleClaimReward(body: Record<string, unknown>): Promise<Respons
   // 만료 확인
   if (reward.status === "expired" ||
     (reward.expires_at && new Date(reward.expires_at) < new Date())) {
-    // 만료 처리
     await supabase
       .from("pending_rewards")
       .update({ status: "expired" })
@@ -861,6 +860,31 @@ async function handleClaimReward(body: Record<string, unknown>): Promise<Respons
 
   // 2. 보상 방식 결정
   const method = determineRewardMethod(subscriptionStatus);
+
+  // 재호출 처리: claimed 상태에서 다시 요청한 경우
+  if (reward.status === "claimed") {
+    if (method.type === "offer_code" && reward.offer_code) {
+      // Offer Code: 기존 할당 코드 반환
+      const redeemUrl = buildRedeemURL(reward.offer_code);
+      console.log(`claim-reward: 재호출 — 기존 Offer Code 반환 (${reward.offer_code})`);
+      return successResponse({
+        reward_type: "offer_code",
+        redeem_url: redeemUrl,
+      });
+    }
+    // Promotional: 새 서명 생성 (nonce/timestamp 유효기간 제한)
+    if (method.type === "promotional") {
+      const signature = await generatePromotionalOfferSignature(productId, method.offerName);
+      if (!signature) {
+        return errorResponse("서명 생성에 실패했습니다. 잠시 후 다시 시도해주세요.");
+      }
+      console.log(`claim-reward: 재호출 — 새 Promotional 서명 생성`);
+      return successResponse({
+        reward_type: "promotional",
+        signature,
+      });
+    }
+  }
 
   // 3. 보상 방식별 처리
   if (method.type === "promotional") {
@@ -874,28 +898,15 @@ async function handleClaimReward(body: Record<string, unknown>): Promise<Respons
       return errorResponse("서명 생성에 실패했습니다. 잠시 후 다시 시도해주세요.");
     }
 
-    // pending_rewards → completed
-    const now = new Date().toISOString();
+    // pending_rewards → claimed (중간 상태, completed는 confirm-claim에서)
     await supabase
       .from("pending_rewards")
       .update({
-        status: "completed",
+        status: "claimed",
         reward_type: "promotional",
-        completed_at: now,
       })
       .eq("id", rewardId)
       .eq("status", "pending");
-
-    // referrals → rewarded
-    if (reward.referral_id) {
-      await supabase
-        .from("referrals")
-        .update({
-          status: "rewarded",
-          rewarded_at: now,
-        })
-        .eq("id", reward.referral_id);
-    }
 
     console.log(
       `claim-reward: Promotional Offer — user=${userId.substring(0, 8)}, offer=${method.offerName}`
@@ -915,30 +926,17 @@ async function handleClaimReward(body: Record<string, unknown>): Promise<Respons
 
     const redeemUrl = buildRedeemURL(allocatedCode);
 
-    // pending_rewards → completed
-    const now = new Date().toISOString();
+    // pending_rewards → claimed (중간 상태, completed는 confirm-claim에서)
     await supabase
       .from("pending_rewards")
       .update({
-        status: "completed",
+        status: "claimed",
         reward_type: "offer_code",
         offer_code: allocatedCode,
         redeem_url: redeemUrl,
-        completed_at: now,
       })
       .eq("id", rewardId)
       .eq("status", "pending");
-
-    // referrals → rewarded
-    if (reward.referral_id) {
-      await supabase
-        .from("referrals")
-        .update({
-          status: "rewarded",
-          rewarded_at: now,
-        })
-        .eq("id", reward.referral_id);
-    }
 
     console.log(
       `claim-reward: Offer Code — user=${userId.substring(0, 8)}, code=${allocatedCode}`
@@ -949,6 +947,96 @@ async function handleClaimReward(body: Record<string, unknown>): Promise<Respons
       redeem_url: redeemUrl,
     });
   }
+}
+
+// MARK: - confirm-claim 엔드포인트
+
+/**
+ * POST /confirm-claim — 보상 수령 확인 (Transaction 감지 후 호출)
+ *
+ * claim-reward에서 claimed 상태로 변경된 보상을 completed로 확정한다.
+ * 클라이언트에서 StoreKit Transaction을 감지한 후 호출.
+ *
+ * @param body - { user_id, reward_id, transaction_id? }
+ * @returns { status: "confirmed" | "already_confirmed" }
+ */
+async function handleConfirmClaim(body: Record<string, unknown>): Promise<Response> {
+  const userId = body.user_id as string;
+  const rewardId = body.reward_id as string;
+  const transactionId = body.transaction_id as string | undefined;
+
+  if (!rewardId) {
+    return errorResponse("reward_id가 필요합니다.", 400);
+  }
+
+  // 1. 보상 조회
+  const { data: reward, error: selectError } = await supabase
+    .from("pending_rewards")
+    .select("id, user_id, referral_id, status")
+    .eq("id", rewardId)
+    .maybeSingle();
+
+  if (selectError) {
+    console.error("confirm-claim: 조회 실패 —", selectError.message);
+    return errorResponse("서버 오류가 발생했습니다.", 500);
+  }
+
+  if (!reward) {
+    return errorResponse("해당 보상을 찾을 수 없습니다.");
+  }
+
+  // 본인 확인
+  if (reward.user_id !== userId) {
+    return errorResponse("잘못된 요청입니다.");
+  }
+
+  // 멱등성: 이미 completed
+  if (reward.status === "completed") {
+    return successResponse({ status: "already_confirmed" });
+  }
+
+  // claimed 상태만 confirm 가능
+  if (reward.status !== "claimed") {
+    return errorResponse("보상이 수령 대기 상태가 아닙니다.");
+  }
+
+  // 2. pending_rewards → completed
+  const now = new Date().toISOString();
+  const { error: updateError } = await supabase
+    .from("pending_rewards")
+    .update({
+      status: "completed",
+      completed_at: now,
+    })
+    .eq("id", rewardId)
+    .eq("status", "claimed");
+
+  if (updateError) {
+    console.error("confirm-claim: UPDATE 실패 —", updateError.message);
+    return errorResponse("서버 오류가 발생했습니다.", 500);
+  }
+
+  // 3. referrals → rewarded
+  if (reward.referral_id) {
+    await supabase
+      .from("referrals")
+      .update({
+        status: "rewarded",
+        rewarded_at: now,
+      })
+      .eq("id", reward.referral_id);
+  }
+
+  // transaction_id 로깅 (고객 문의 대응용)
+  if (transactionId) {
+    console.log(
+      `confirm-claim: 완료 — reward=${rewardId}, transaction=${transactionId}`
+    );
+  } else {
+    console.log(`confirm-claim: 완료 — reward=${rewardId}`);
+  }
+
+  return successResponse({ status: "confirmed" });
 }
 
 // MARK: - 메인 핸들러
@@ -1014,6 +1102,8 @@ Deno.serve(async (req: Request): Promise<Response> => {
       return handleGetPendingRewards(userId);
     case "claim-reward":
       return handleClaimReward(body);
+    case "confirm-claim":
+      return handleConfirmClaim(body);
 
     // 이후 Phase에서 추가:
     // case "update-device-token": return handleUpdateDeviceToken(body);

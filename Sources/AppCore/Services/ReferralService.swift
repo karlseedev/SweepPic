@@ -407,6 +407,31 @@ public final class ReferralService {
     ///   - userId: 피초대자 Keychain UUID
     ///   - referralId: referrals 테이블 ID (match-code 응답에서 받은 값)
     /// - Throws: ReferralServiceError
+    /// 보상 수령을 확정한다 (confirm-claim)
+    ///
+    /// claim-reward에서 claimed 상태로 변경된 보상을 completed로 확정.
+    /// 클라이언트에서 StoreKit Transaction 감지 후 호출.
+    ///
+    /// - Parameters:
+    ///   - userId: 초대자 Keychain UUID
+    ///   - rewardId: pending_rewards 테이블 ID
+    ///   - transactionId: StoreKit Transaction ID (고객 문의 대응용, 선택)
+    /// - Throws: ReferralServiceError
+    public func confirmClaim(
+        userId: String,
+        rewardId: String,
+        transactionId: UInt64? = nil
+    ) async throws {
+        var body: [String: Any] = [
+            "user_id": userId,
+            "reward_id": rewardId
+        ]
+        if let txId = transactionId {
+            body["transaction_id"] = String(txId)
+        }
+        try await postVoid(endpoint: "confirm-claim", body: body)
+    }
+
     public func reportRedemption(userId: String, referralId: String) async throws {
         try await postVoid(
             endpoint: "report-redemption",

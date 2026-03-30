@@ -89,6 +89,7 @@ export const RATE_LIMITS: Record<string, number> = {
   "create-link": 5,
   "match-code": 10,
   "claim-reward": 5,
+  "confirm-claim": 10,
   "report-redemption": 10,
   "check-status": 20,
   "get-pending-rewards": 20,

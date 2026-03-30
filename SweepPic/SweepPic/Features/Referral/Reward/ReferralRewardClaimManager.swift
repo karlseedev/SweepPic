@@ -4,15 +4,16 @@
 //
 //  보상 수령 로직 매니저 (Phase 5, T030)
 //
-//  역할:
-//  - claimReward API 호출 → RewardClaimResult 분기
-//  - .promotional → PromotionalOfferService로 StoreKit 2 구매
-//  - .offerCode → OfferRedemptionService로 리딤 URL 열기
-//  - .error → 에러 안내
-//  - 순차 수령 지원 (1건 완료 후 다음 건 자동 진행)
+//  2단계 확인 구조:
+//  1. claim-reward → 코드 할당/서명 생성 (status: claimed)
+//  2. confirm-claim → 실제 적용 확인 후 completed
+//
+//  경로별 동작:
+//  - Promotional: claim → 서명 → StoreKit 구매 성공 → confirm-claim → .success
+//  - Offer Code: claim → URL 열기 → App Store → 복귀 → Transaction 스캔 → confirm-claim → .success
+//  - 취소 시: 보상 화면 복귀, 숫자 유지 (서버는 claimed 상태, 재시도 가능)
 //
 //  참조: specs/004-referral-reward/spec.md §User Story 3
-//  참조: specs/004-referral-reward/contracts/api-endpoints.md §claim-reward
 //
 
 import UIKit
@@ -28,10 +29,10 @@ enum ClaimState {
     case idle
     /// 서버 통신 중 (서명/코드 요청)
     case loading
-    /// 수령 성공 (Promotional Offer — 앱 내 즉시 완료)
+    /// 수령 성공 (confirm-claim 완료)
     case success
-    /// App Store로 전환됨 — 포그라운드 복귀 시 성공 화면 표시 (Offer Code 경로)
-    case waitingForReturn
+    /// App Store로 전환됨 — 포그라운드 복귀 시 Transaction 스캔 (Offer Code 경로)
+    case waitingForReturn(rewardId: String)
     /// 실패 (재시도 가능)
     case failed(message: String)
 }
@@ -39,7 +40,7 @@ enum ClaimState {
 // MARK: - ReferralRewardClaimManager
 
 /// 보상 수령 로직 매니저
-/// claim-reward API → 보상 방식 분기 → 적용
+/// claim-reward API → 보상 방식 분기 → 적용 → confirm-claim
 final class ReferralRewardClaimManager {
 
     // MARK: - Properties
@@ -55,8 +56,9 @@ final class ReferralRewardClaimManager {
     /// 보상을 수령한다
     ///
     /// 1. SubscriptionStore에서 구독 상태 확인
-    /// 2. claim-reward API 호출
+    /// 2. claim-reward API 호출 (서버: claimed 중간 상태)
     /// 3. 응답에 따라 Promotional Offer 또는 Offer Code 적용
+    /// 4. 적용 확인 후 confirm-claim API 호출 (completed)
     ///
     /// - Parameter rewardId: pending_rewards 테이블 ID
     func claimReward(rewardId: String) async {
@@ -68,7 +70,7 @@ final class ReferralRewardClaimManager {
         let productId = await SubscriptionStore.shared.referralProductId()
 
         do {
-            // 1. claim-reward API 호출
+            // 1. claim-reward API 호출 (서버: pending → claimed)
             let response = try await ReferralService.shared.claimReward(
                 userId: userId,
                 rewardId: rewardId,
@@ -93,15 +95,21 @@ final class ReferralRewardClaimManager {
                 }
                 try await applyPromotionalOffer(productId: productId, signature: signature)
 
+                // 구매 성공 → confirm-claim
+                await confirmClaim(rewardId: rewardId)
+
+                // 구독 상태 갱신
+                await SubscriptionStore.shared.refreshSubscriptionStatus()
+
             case "offer_code":
                 // Offer Code: 리딤 URL 열기 → App Store로 전환
-                // 성공 화면은 포그라운드 복귀 시 VC에서 표시
+                // confirm은 VC에서 Transaction 스캔 후 호출
                 guard let redeemURL = response.redeemURL else {
                     await updateState(.failed(message: "리딤 URL이 없습니다."))
                     return
                 }
                 await applyOfferCode(redeemURL: redeemURL)
-                await updateState(.waitingForReturn)
+                await updateState(.waitingForReturn(rewardId: rewardId))
                 return
 
             default:
@@ -109,28 +117,23 @@ final class ReferralRewardClaimManager {
                 return
             }
 
-            // 3. 성공 (Promotional Offer 경로만 여기 도달)
+            // 3. 성공 (Promotional 경로만 여기 도달)
             await updateState(.success)
-
-            // 구독 상태 갱신
-            await SubscriptionStore.shared.refreshSubscriptionStatus()
 
             Logger.referral.debug(
                 "ReferralRewardClaimManager: 보상 수령 성공 — type=\(response.rewardType)"
             )
 
         } catch let error as ReferralServiceError {
-            // API 에러
             await updateState(.failed(message: error.errorDescription ?? "서버 오류가 발생했습니다."))
             Logger.referral.error(
                 "ReferralRewardClaimManager: API 에러 — \(error.localizedDescription)"
             )
 
         } catch let error as PromotionalOfferService.OfferError {
-            // Promotional Offer 에러
             switch error {
             case .userCancelled:
-                // 사용자 취소 → idle로 복귀 (에러 표시 안 함)
+                // 사용자 취소 → idle 복귀 (서버는 claimed, 재시도 가능)
                 await updateState(.idle)
             default:
                 await updateState(.failed(
@@ -151,7 +154,37 @@ final class ReferralRewardClaimManager {
         }
     }
 
-    // MARK: - Private: Promotional Offer 적용
+    // MARK: - Public API: confirm-claim
+
+    /// 보상 수령을 확정한다 (Transaction 감지 후 VC에서 호출)
+    ///
+    /// - Parameters:
+    ///   - rewardId: pending_rewards ID
+    ///   - transactionId: StoreKit Transaction ID (선택)
+    func confirmClaim(rewardId: String, transactionId: UInt64? = nil) async {
+        let userId = ReferralStore.shared.userId
+        do {
+            try await ReferralService.shared.confirmClaim(
+                userId: userId,
+                rewardId: rewardId,
+                transactionId: transactionId
+            )
+            Logger.referral.debug("ReferralRewardClaimManager: confirm-claim 성공 — \(rewardId)")
+        } catch {
+            // confirm 실패해도 구독은 이미 적용됨 — 다음 실행 시 재시도
+            Logger.referral.error(
+                "ReferralRewardClaimManager: confirm-claim 실패 — \(error.localizedDescription)"
+            )
+        }
+
+        // confirm 성공/실패 관계없이 성공 표시 (구독은 이미 적용됨)
+        await updateState(.success)
+
+        // 구독 상태 갱신
+        await SubscriptionStore.shared.refreshSubscriptionStatus()
+    }
+
+    // MARK: - Private
 
     /// Promotional Offer 서명으로 StoreKit 2 구매를 실행한다
     private func applyPromotionalOffer(
@@ -164,15 +197,11 @@ final class ReferralRewardClaimManager {
         )
     }
 
-    // MARK: - Private: Offer Code 적용
-
     /// Offer Code 리딤 URL을 열어 App Store 시트를 표시한다
     @MainActor
     private func applyOfferCode(redeemURL: URL) {
         OfferRedemptionService.shared.openRedeemURL(redeemURL)
     }
-
-    // MARK: - Private: 상태 업데이트
 
     /// 메인 스레드에서 상태 업데이트
     @MainActor

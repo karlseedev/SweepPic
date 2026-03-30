@@ -155,6 +155,8 @@ public enum RewardType: String, Codable, Sendable {
 public enum RewardStatus: String, Codable, Sendable {
     /// 수령 대기 중
     case pending
+    /// 코드 할당됨, 리딤 미확인 (중간 상태)
+    case claimed
     /// 수령 완료
     case completed
     /// 만료 (30일 경과)

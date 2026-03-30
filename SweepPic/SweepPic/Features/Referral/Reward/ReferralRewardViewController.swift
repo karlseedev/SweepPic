@@ -30,6 +30,7 @@
 
 import UIKit
 import AppCore
+import StoreKit
 import OSLog
 
 // MARK: - ReferralRewardViewController
@@ -199,8 +200,11 @@ final class ReferralRewardViewController: UIViewController {
         fatalError("init(coder:) has not been implemented")
     }
 
-    /// App Store에서 돌아오기 대기 중 여부
-    private var isWaitingForReturn = false
+    /// App Store에서 돌아오기 대기 중인 reward_id (nil이면 대기 안 함)
+    private var waitingRewardId: String?
+
+    /// claim 시작 시점 (Transaction 스캔 시 이전 거래와 구분용)
+    private var claimStartDate: Date?
 
     // MARK: - Lifecycle
 
@@ -284,10 +288,10 @@ final class ReferralRewardViewController: UIViewController {
                 // Promotional Offer 경로 — 앱 내에서 즉시 완료
                 self.displayState = .claimed
 
-            case .waitingForReturn:
+            case .waitingForReturn(let rewardId):
                 // Offer Code 경로 — App Store로 전환됨
-                // 스피너 상태 유지, 포그라운드 복귀 시 성공 화면 표시
-                self.isWaitingForReturn = true
+                // 포그라운드 복귀 시 Transaction 스캔
+                self.waitingRewardId = rewardId
 
             case .failed(let message):
                 self.displayState = .error(message)
@@ -305,11 +309,50 @@ final class ReferralRewardViewController: UIViewController {
         )
     }
 
-    /// App Store에서 돌아왔을 때 성공 화면 표시
+    /// App Store에서 돌아왔을 때 Transaction 스캔 → 성공/복귀 분기
     @objc private func handleForegroundReturn() {
-        guard isWaitingForReturn else { return }
-        isWaitingForReturn = false
-        displayState = .claimed
+        guard let rewardId = waitingRewardId else { return }
+        waitingRewardId = nil
+
+        Task {
+            // Transaction.currentEntitlements에서 referral_reward_* 감지 (3회 재시도)
+            let result = await scanForReferralRewardTransaction()
+
+            if let transactionId = result {
+                // 리딤 성공 → confirm-claim → 성공 화면
+                await claimManager.confirmClaim(rewardId: rewardId, transactionId: transactionId)
+            } else {
+                // 리딤 취소 → 보상 화면 복귀 (숫자 유지)
+                let count = pendingRewards.count - currentRewardIndex
+                displayState = .hasRewards(count: count)
+                Logger.referral.debug("ReferralRewardVC: App Store 리딤 취소 → 보상 화면 복귀")
+            }
+        }
+    }
+
+    /// Transaction.currentEntitlements에서 referral_reward_* 트랜잭션 검색 (3회 재시도)
+    /// - Returns: 발견된 Transaction ID (nil이면 미발견)
+    private func scanForReferralRewardTransaction() async -> UInt64? {
+        guard let claimStart = claimStartDate else { return nil }
+
+        // 3회 재시도: 즉시 → 2초 후 → 3초 후 (총 5초)
+        let delays: [UInt64] = [0, 2_000_000_000, 3_000_000_000]
+        for delay in delays {
+            if delay > 0 {
+                try? await Task.sleep(nanoseconds: delay)
+            }
+            for await result in Transaction.currentEntitlements {
+                guard case .verified(let tx) = result,
+                      let offerID = tx.offerID,
+                      offerID.hasPrefix("referral_reward_"),
+                      tx.purchaseDate >= claimStart else { continue }
+                Logger.referral.debug(
+                    "ReferralRewardVC: Transaction 발견 — offerID=\(offerID), txId=\(tx.id)"
+                )
+                return tx.id
+            }
+        }
+        return nil
     }
 
     // MARK: - Data Loading
@@ -431,6 +474,7 @@ final class ReferralRewardViewController: UIViewController {
             // 현재 보상 수령
             guard currentRewardIndex < pendingRewards.count else { return }
             let reward = pendingRewards[currentRewardIndex]
+            claimStartDate = Date()
             Task {
                 await claimManager.claimReward(rewardId: reward.id)
             }
