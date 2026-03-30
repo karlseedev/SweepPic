@@ -28,7 +28,7 @@ protocol PreviewGridViewControllerDelegate: AnyObject {
 // MARK: - SectionType
 
 /// 섹션 타입 (사진 그리드 또는 배너)
-private enum SectionType {
+enum SectionType {
     case photos([PreviewCandidate])
     case banner(scoreRange: String, count: Int)  // 품질지수 구간 + 개수
 }
@@ -44,12 +44,12 @@ final class PreviewGridViewController: UIViewController {
     // MARK: - Properties
 
     /// 분석 결과 (제외 시 새 인스턴스로 재할당)
-    private var previewResult: PreviewResult
+    var previewResult: PreviewResult
 
     /// 현재 표시 단계
-    private var currentStage: PreviewStage = .light
+    var currentStage: PreviewStage = .light
 
-    /// 뷰어에서 제외된 assetID (viewWillAppear에서 일괄 반영)
+    /// 뷰어에서 제외된 assetID (viewWillAppear에서 일괄 반영) — 스와이프 제외에서는 사용하지 않음
     private var excludedAssetIDs: Set<String> = []
 
     /// delegate
@@ -66,8 +66,8 @@ final class PreviewGridViewController: UIViewController {
     /// 뷰어 열람 횟수
     private var analyticsViewerOpenCount: Int = 0
 
-    /// 뷰어에서 제외한 횟수 (excludedAssetIDs는 applyExclusions 후 초기화되므로 별도 카운터)
-    private var analyticsExcludeCount: Int = 0
+    /// 뷰어/스와이프에서 제외한 총 횟수
+    var analyticsExcludeCount: Int = 0
 
     /// "제외하기" (단계 축소) 탭 횟수
     private var analyticsCollapseCount: Int = 0
@@ -98,8 +98,8 @@ final class PreviewGridViewController: UIViewController {
 
     // MARK: - UI Elements
 
-    /// 컬렉션뷰
-    private lazy var collectionView: UICollectionView = {
+    /// 컬렉션뷰 (extension에서 접근 가능)
+    lazy var collectionView: UICollectionView = {
         let cv = UICollectionView(frame: .zero, collectionViewLayout: createLayout())
         cv.backgroundColor = .systemBackground
         cv.dataSource = self
@@ -115,19 +115,47 @@ final class PreviewGridViewController: UIViewController {
         return cv
     }()
 
-    /// 하단 고정 버튼 영역
-    private let bottomView = PreviewBottomView()
+    /// 하단 고정 버튼 영역 (다중 스와이프 중 비활성화용)
+    let bottomView = PreviewBottomView()
 
     // MARK: - Constants
 
     /// 셀 간격
-    private let cellSpacing: CGFloat = 2.0
+    let cellSpacing: CGFloat = 2.0
 
     /// 열 수
-    private let columns: CGFloat = 3
+    let columns: CGFloat = 3
 
     /// 배너 높이
     private let bannerHeight: CGFloat = 44
+
+    // MARK: - Swipe Delete Properties
+
+    /// 스와이프 삭제 상태 (BaseGridViewController와 동일 구조체 재사용)
+    var swipeDeleteState = SwipeDeleteState()
+
+    /// 스와이프 대상 셀의 섹션 인덱스 (다중 섹션 대응 — section: 0 하드코딩 방지)
+    var swipeTargetSection: Int = 0
+
+    /// 제외 적용 중 플래그 (reloadData 사이에 새 스와이프 차단)
+    var isApplyingExclusion: Bool = false
+
+    /// 자동 스크롤 타이머
+    var autoScrollTimer: Timer?
+
+    /// 자동 스크롤 구동 중인 제스처
+    weak var autoScrollGesture: UIGestureRecognizer?
+
+    /// 자동 스크롤 틱마다 호출할 핸들러 (다중 스와이프 범위 갱신용)
+    var autoScrollHandler: ((CGPoint) -> Void)?
+
+    /// 현재 자동 스크롤 속도 (pt/s)
+    var currentAutoScrollSpeed: CGFloat = 0
+
+    /// 자동 스크롤 상수
+    static let autoScrollMinSpeed: CGFloat = 200
+    static let autoScrollMaxSpeed: CGFloat = 1500
+    static let autoScrollEdgeHeight: CGFloat = 100
 
     // MARK: - Initialization
 
@@ -148,6 +176,7 @@ final class PreviewGridViewController: UIViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
         setupUI()
+        setupSwipeDeleteGesture()  // 스와이프 삭제 제스처 등록
         updateHeader()
         updateBottomView()
 
@@ -161,6 +190,8 @@ final class PreviewGridViewController: UIViewController {
 
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
+        // 잔여 스와이프 상태 정리 (뷰어 pop 후 스와이프 상태가 남아있을 수 있음)
+        cancelActiveSwipeIfNeeded()
         // 뷰어에서 돌아올 때 제외된 사진 반영
         if !excludedAssetIDs.isEmpty {
             applyExclusions()
@@ -447,7 +478,7 @@ final class PreviewGridViewController: UIViewController {
     /// light: 0=사진
     /// standard/deep: 0=배너(5등급), 1=light사진, 2=배너(4등급), 3=standard사진,
     ///                4=배너(3등급), 5=deep사진
-    private func sectionType(for sectionIndex: Int) -> SectionType {
+    func sectionType(for sectionIndex: Int) -> SectionType {
         // light 단계: 배너 없이 사진만
         if currentStage == .light {
             return .photos(previewResult.lightCandidates)
@@ -498,7 +529,7 @@ final class PreviewGridViewController: UIViewController {
     /// - light: "품질 5등급 사진 N장"
     /// - standard: "품질 4등급 이하 사진 N장"
     /// - deep: "품질 3등급 이하 사진 N장"
-    private func updateHeader() {
+    func updateHeader() {
         let count = previewResult.count(upToStage: currentStage)
 
         // 단계별 등급 (숫자가 높을수록 저품질: 5등급=최저, 3등급=보통이하)
@@ -516,7 +547,7 @@ final class PreviewGridViewController: UIViewController {
     }
 
     /// 하단 버튼 영역 업데이트
-    private func updateBottomView() {
+    func updateBottomView() {
         let totalCount = previewResult.count(upToStage: currentStage)
 
         // 확장 가능 여부: 다음 단계가 있고 + 추가분이 있고 + iOS 18 이상
@@ -707,6 +738,9 @@ extension PreviewGridViewController: UICollectionViewDelegate {
     func collectionView(_ collectionView: UICollectionView, didSelectItemAt indexPath: IndexPath) {
         collectionView.deselectItem(at: indexPath, animated: true)
 
+        // 스와이프 진행 중이면 뷰어 열기 차단
+        guard !swipeDeleteState.angleCheckPassed && !swipeDeleteState.isMultiMode else { return }
+
         // 배너 셀은 무시
         guard case .photos(let candidates) = sectionType(for: indexPath.section),
               indexPath.item < candidates.count else { return }
@@ -775,6 +809,9 @@ extension PreviewGridViewController: PreviewBottomViewDelegate {
     }
 
     func previewBottomViewDidTapCollapse(_ view: PreviewBottomView) {
+        // 스와이프 진행 중이면 취소
+        cancelActiveSwipeIfNeeded()
+
         // [Analytics] 이벤트 7-2: "제외하기" (단계 축소) 카운트
         analyticsCollapseCount += 1
 
@@ -808,6 +845,9 @@ extension PreviewGridViewController: PreviewBottomViewDelegate {
     }
 
     func previewBottomViewDidTapExpand(_ view: PreviewBottomView) {
+        // 스와이프 진행 중이면 취소
+        cancelActiveSwipeIfNeeded()
+
         guard let nextStage = currentStage.next else { return }
 
         // [Analytics] 이벤트 7-2: "더 보기" 카운트 + 최대 도달 단계 갱신
