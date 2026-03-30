@@ -183,9 +183,7 @@ extension PreviewGridViewController {
         let wasUnexclude = swipeDeleteState.targetIsTrashed
         cell.cancelDimmedAnimation {
             cell.isAnimating = false
-        }
-        if wasUnexclude {
-            DispatchQueue.main.async {
+            if wasUnexclude {
                 cell.prepareSwipeOverlay(style: .restore)
                 cell.setFullDimmed(isTrashed: false)
             }
@@ -233,11 +231,8 @@ extension PreviewGridViewController {
         let wasUnexclude = swipeDeleteState.targetIsTrashed
         cell.cancelDimmedAnimation {
             cell.isAnimating = false
-        }
-        // 해제 취소: cancelDimmedAnimation completion이 마룬으로 리셋하므로,
-        // completion 후 그린 딤드를 DispatchQueue로 복구
-        if wasUnexclude {
-            DispatchQueue.main.async {
+            // 해제 취소: completion이 마룬으로 리셋한 후 실행되므로 green 복구 안전
+            if wasUnexclude {
                 cell.prepareSwipeOverlay(style: .restore)
                 cell.setFullDimmed(isTrashed: false)
             }
