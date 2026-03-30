@@ -174,6 +174,7 @@ extension PreviewGridViewController {
             let ip = IndexPath(item: currentItem, section: section)
             if let cell = collectionView.cellForItem(at: ip) as? PhotoCell,
                let attrs = collectionView.layoutAttributesForItem(at: ip) {
+                cell.prepareSwipeOverlay(style: .restore)  // 그린 보장 (커튼 진행 중)
                 let cellFrame = attrs.frame
                 let direction = swipeDeleteState.swipeDirection
 
@@ -193,6 +194,7 @@ extension PreviewGridViewController {
             let ip = IndexPath(item: currentItem, section: section)
             if let cell = collectionView.cellForItem(at: ip) as? PhotoCell,
                let attrs = collectionView.layoutAttributesForItem(at: ip) {
+                cell.prepareSwipeOverlay(style: .restore)  // 그린 보장 (커튼 진행 중)
                 let cellFrame = attrs.frame
                 let direction: PhotoCell.SwipeDirection =
                     currentCol > swipeDeleteState.anchorCol ? .right : .left
