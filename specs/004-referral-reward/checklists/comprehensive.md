@@ -27,7 +27,7 @@
 
 ## Requirement Clarity
 
-- [x] CHK011 - "14일 프리미엄 무료" 범위가 명확한가? **PASS** — Offer Code가 plus_monthly/yearly 구독 상품이므로 기존 isPlusUser 권한과 동일.
+- [x] CHK011 - "14일 프리미엄 무료" 범위가 명확한가? **PASS** — Offer Code가 pro_monthly/yearly 구독 상품이므로 기존 isProUser 권한과 동일.
 - [x] CHK012 - "순차적으로 수령" UX가 정의되어 있는가? **PASS** — Story 3 시나리오 6에서 "가장 오래된 1건 팝업 → 수령 완료 후 다음 자동 표시 → 닫기 시 다음 앱 실행에 재표시" 명세.
 - [x] CHK013 - 토큰 갱신 시점이 명확한가? **PASS** — FR-026에서 "sceneWillEnterForeground마다 갱신" 명시.
 - [x] CHK014 - 코드 충돌 해결 전략이 명세되어 있는가? **PASS** — FR-001에서 "최대 5회 재생성, 초과 시 서버 에러" 명세.

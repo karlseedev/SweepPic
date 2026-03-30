@@ -12,7 +12,7 @@
 //  1. skipCount < 2
 //  2. !hasShownPrompt
 //  3. 설치 후 2시간 경과
-//  4. Plus 미구독
+//  4. Pro 미구독
 //  5. ATT == .notDetermined
 //
 
@@ -60,7 +60,7 @@ final class ATTStateManager {
     /// 1. skipCount < 2 (건너뛰기 2회 미만)
     /// 2. !hasShownPrompt (시스템 팝업 미표시)
     /// 3. 설치 후 2시간 경과
-    /// 4. Plus 미구독
+    /// 4. Pro 미구독
     /// 5. ATT == .notDetermined (아직 시스템 팝업 미노출)
     var shouldShowPrompt: Bool {
         // 이미 시스템 팝업까지 표시 완료
@@ -82,9 +82,9 @@ final class ATTStateManager {
             return false
         }
 
-        // Plus 구독자 → ATT 미표시 (광고 불필요)
-        guard !SubscriptionStore.shared.isPlusUser else {
-            Logger.app.debug("ATTStateManager: shouldShowPrompt=false — Plus 구독자")
+        // Pro 구독자 → ATT 미표시 (광고 불필요)
+        guard !SubscriptionStore.shared.isProUser else {
+            Logger.app.debug("ATTStateManager: shouldShowPrompt=false — Pro 구독자")
             return false
         }
 

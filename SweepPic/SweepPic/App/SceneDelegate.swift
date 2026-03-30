@@ -268,7 +268,7 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         ReviewService.shared.resetProhibitedFlags()
 
         // [BM] T041: ATT 프리프롬프트 표시 (FR-041)
-        // ATT 프리프롬프트 표시 (설치 2시간 경과 + Plus 미구독 + ATT .notDetermined + skipCount < 2)
+        // ATT 프리프롬프트 표시 (설치 2시간 경과 + Pro 미구독 + ATT .notDetermined + skipCount < 2)
         checkAndShowATTPrompt()
 
         // ⚠️ 임시 테스트: ReferralExplainViewController UI 확인용 — 확인 후 삭제
@@ -486,7 +486,7 @@ extension SceneDelegate {
 extension SceneDelegate {
 
     /// [BM] T041: ATT 프리프롬프트 표시 체크 (FR-041)
-    /// 설치 2시간 경과 + Plus 미구독 + ATT .notDetermined + skipCount < 2 → ATTPromptVC present
+    /// 설치 2시간 경과 + Pro 미구독 + ATT .notDetermined + skipCount < 2 → ATTPromptVC present
     func checkAndShowATTPrompt() {
         guard ATTStateManager.shared.shouldShowPrompt else { return }
 

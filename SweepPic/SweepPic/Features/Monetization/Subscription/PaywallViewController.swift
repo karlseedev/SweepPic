@@ -6,7 +6,7 @@
 //
 //  구성:
 //  - 가치 헤드라인: "쌓인 사진, 한 번에 비우세요" (FR-035)
-//  - 무료/Plus 비교표 (FR-035)
+//  - 무료/Pro 비교표 (FR-035)
 //  - 연간 크게 / 월간 보조 (FR-036)
 //  - 하단 법적 고지: 자동 갱신, 해지 방법, 약관/처리방침 링크 (FR-037)
 //  - 구매 버튼 → SubscriptionStore.purchase()
@@ -334,7 +334,7 @@ final class PaywallViewController: UIViewController {
         tableStack.translatesAutoresizingMaskIntoConstraints = false
 
         // 헤더 행
-        let headerRow = createComparisonRow(feature: "", freeValue: "일반", plusValue: "무료체험(Plus)", isHeader: true)
+        let headerRow = createComparisonRow(feature: "", freeValue: "일반", proValue: "무료체험(Pro)", isHeader: true)
         tableStack.addArrangedSubview(headerRow)
 
         // 데이터 행
@@ -342,7 +342,7 @@ final class PaywallViewController: UIViewController {
             let rowView = createComparisonRow(
                 feature: row.feature,
                 freeValue: row.freeValue,
-                plusValue: row.plusValue,
+                proValue: row.proValue,
                 isHeader: false
             )
             tableStack.addArrangedSubview(rowView)
@@ -358,7 +358,7 @@ final class PaywallViewController: UIViewController {
     }
 
     /// 비교표 행 생성
-    private func createComparisonRow(feature: String, freeValue: String, plusValue: String, isHeader: Bool) -> UIView {
+    private func createComparisonRow(feature: String, freeValue: String, proValue: String, isHeader: Bool) -> UIView {
         let container = UIStackView()
         container.axis = .horizontal
         container.distribution = .fillEqually
@@ -378,15 +378,15 @@ final class PaywallViewController: UIViewController {
         // 온보딩 포인트컬러 (#FFEA00)
         let highlightYellow = UIColor(red: 1.0, green: 0.918, blue: 0.0, alpha: 1.0)
 
-        let plusLabel = UILabel()
-        plusLabel.text = plusValue
-        plusLabel.font = isHeader ? .systemFont(ofSize: 16, weight: .bold) : .systemFont(ofSize: 17, weight: .semibold)
-        plusLabel.textColor = highlightYellow
-        plusLabel.textAlignment = .center
+        let proLabel = UILabel()
+        proLabel.text = proValue
+        proLabel.font = isHeader ? .systemFont(ofSize: 16, weight: .bold) : .systemFont(ofSize: 17, weight: .semibold)
+        proLabel.textColor = highlightYellow
+        proLabel.textAlignment = .center
 
         container.addArrangedSubview(featureLabel)
         container.addArrangedSubview(freeLabel)
-        container.addArrangedSubview(plusLabel)
+        container.addArrangedSubview(proLabel)
 
         // 행 높이
         container.heightAnchor.constraint(equalToConstant: isHeader ? 30 : 36).isActive = true
@@ -394,7 +394,7 @@ final class PaywallViewController: UIViewController {
         // 접근성: 행 단위로 읽히도록 설정 (FR-057)
         if !isHeader && !feature.isEmpty {
             container.isAccessibilityElement = true
-            container.accessibilityLabel = "\(feature), 무료: \(freeValue), Plus: \(plusValue)"
+            container.accessibilityLabel = "\(feature), 무료: \(freeValue), Pro: \(proValue)"
         }
 
         // 구분선 (헤더 아래)
@@ -473,7 +473,7 @@ final class PaywallViewController: UIViewController {
                 let restored = try await viewModel.restorePurchases()
                 spinner.stopAnimating()
                 if restored {
-                    showAlert(title: "복원 완료", message: "Plus 구독이 복원되었습니다.") { [weak self] in
+                    showAlert(title: "복원 완료", message: "Pro 구독이 복원되었습니다.") { [weak self] in
                         self?.dismiss(animated: true) {
                             self?.onSubscribed?()
                         }

@@ -82,7 +82,7 @@ CREATE INDEX IF NOT EXISTS idx_events_device_id ON events(device_id);
 
 **subscription_tier:**
 - 기존 행: NULL (BM 이전 데이터)
-- 새 이벤트: `free` 또는 `plus`
+- 새 이벤트: `free` 또는 `pro`
 - `Prefer: missing=default` 헤더 → 미전송 시 NULL (호환성 유지)
 - ⚠️ 앱 시작 직후 초기 이벤트(app.launched 등)는 SubscriptionStore.refreshSubscriptionStatus() 완료 전이라 `free`로 기록될 수 있음. BM 이벤트는 사용자 인터랙션 이후 발생하므로 영향 없음.
 
@@ -131,7 +131,7 @@ CREATE POLICY "anon_insert" ON events FOR INSERT TO anon
 | # | 이벤트명 (코드) | params | 전송 시점 | 구현 상태 |
 |---|----------------|--------|----------|----------|
 | 12 | `bm.gateShown` | `trashCount`, `remainingLimit` | 게이트 팝업 표시 시 | ✅ 구현됨 |
-| 13 | `bm.gateSelection` | `choice` (ad/plus/dismiss) | 게이트에서 버튼 탭 | ✅ 구현됨 |
+| 13 | `bm.gateSelection` | `choice` (ad/pro/dismiss) | 게이트에서 버튼 탭 | ✅ 구현됨 |
 | 14 | `bm.adWatched` | `type` (rewarded/interstitial/banner), `source` (gate/gauge/auto/analysis) | 광고 시청/노출 완료 | ⚠️ banner 누락 |
 | 15 | `bm.paywallShown` | `source` (gate/menu/banner/gauge) | 페이월 화면 표시 | ✅ 구현됨 |
 | 16 | `bm.subscriptionCompleted` | `productID` | 구독 구매 완료 | ✅ 구현됨 |
@@ -143,7 +143,7 @@ CREATE POLICY "anon_insert" ON events FOR INSERT TO anon
 ### 2.4 기존 코드의 Enum 값
 
 ```swift
-enum GateChoice: String { case ad, plus, dismiss }
+enum GateChoice: String { case ad, pro, dismiss }
 enum AdType: String { case rewarded, interstitial, banner }  // ← banner 추가 (Phase E)
 enum PaywallSource: String { case gate, menu, banner, gauge }
 ```
@@ -254,7 +254,7 @@ configureSupabase()에서 주입:
 ```swift
 supabaseProvider = SupabaseProvider(
     baseURL: url, anonKey: key,
-    subscriptionTierProvider: { SubscriptionStore.shared.isPlusUser ? "plus" : "free" }
+    subscriptionTierProvider: { SubscriptionStore.shared.isProUser ? "pro" : "free" }
 )
 ```
 

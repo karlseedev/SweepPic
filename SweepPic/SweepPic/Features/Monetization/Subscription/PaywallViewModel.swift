@@ -6,7 +6,7 @@
 //  - 가격 포맷팅 (NumberFormatter, locale 반영)
 //  - 연간 메인 + 월간 보조 가격 표시
 //  - 취소선 정가 계산 (연간 = 월간×12 대비 할인율)
-//  - 무료/Plus 비교표 데이터
+//  - 무료/Pro 비교표 데이터
 //
 
 import StoreKit
@@ -42,8 +42,8 @@ final class PaywallViewModel {
 
     /// 직접 로드한 상품으로 설정 (SubscriptionStore 미로드 시 폴백)
     func setProducts(_ products: [Product]) {
-        yearlyProduct = products.first { $0.id == SubscriptionProductID.plusYearly }
-        monthlyProduct = products.first { $0.id == SubscriptionProductID.plusMonthly }
+        yearlyProduct = products.first { $0.id == SubscriptionProductID.proYearly }
+        monthlyProduct = products.first { $0.id == SubscriptionProductID.proMonthly }
         checkIntroOfferEligibility()
     }
 
@@ -152,16 +152,16 @@ final class PaywallViewModel {
     struct ComparisonRow {
         let feature: String
         let freeValue: String
-        let plusValue: String
+        let proValue: String
     }
 
-    /// 무료/Plus 비교표 항목
+    /// 무료/Pro 비교표 항목
     var comparisonRows: [ComparisonRow] {
         [
-            ComparisonRow(feature: "일일 삭제", freeValue: "10장", plusValue: "무제한"),
-            ComparisonRow(feature: "광고", freeValue: "있음", plusValue: "없음"),
-            ComparisonRow(feature: "유사 사진 정리", freeValue: "광고포함", plusValue: "광고없음"),
-            ComparisonRow(feature: "얼굴 인식 확대", freeValue: "광고포함", plusValue: "광고없음"),
+            ComparisonRow(feature: "일일 삭제", freeValue: "10장", proValue: "무제한"),
+            ComparisonRow(feature: "광고", freeValue: "있음", proValue: "없음"),
+            ComparisonRow(feature: "유사 사진 정리", freeValue: "광고포함", proValue: "광고없음"),
+            ComparisonRow(feature: "얼굴 인식 확대", freeValue: "광고포함", proValue: "광고없음"),
         ]
     }
 

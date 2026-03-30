@@ -93,7 +93,7 @@ public struct UsageLimit: Codable, Sendable {
 
         // 남은 리워드 횟수 내에서 가능한지
         if needed > remainingRewards {
-            return -1 // 광고로도 부족 (Plus만 가능)
+            return -1 // 광고로도 부족 (Pro만 가능)
         }
 
         return needed

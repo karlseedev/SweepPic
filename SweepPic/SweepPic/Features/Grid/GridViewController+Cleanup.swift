@@ -603,7 +603,7 @@ extension GridViewController {
     func makeDebugResetMenu() -> UIMenu {
         let remaining = UsageLimitStore.shared.remainingFreeDeletes
         let total = UsageLimitStore.shared.totalDailyCapacity
-        let isPlusUser = SubscriptionStore.shared.isPlusUser
+        let isProUser = SubscriptionStore.shared.isProUser
 
         return UIMenu(
             title: "(테스트)리셋",
@@ -618,7 +618,7 @@ extension GridViewController {
                     #endif
                     self?.setupCleanupButton()
                 },
-                UIAction(title: isPlusUser ? "구독 리셋 (현재 Plus)" : "구독 리셋 (현재 Free)") { [weak self] _ in
+                UIAction(title: isProUser ? "구독 리셋 (현재 Pro)" : "구독 리셋 (현재 Free)") { [weak self] _ in
                     #if DEBUG
                     SubscriptionStore.shared.debugResetToFree()
                     Logger.app.debug("GridVC+Cleanup: 디버그 구독 → Free 리셋")
@@ -626,10 +626,10 @@ extension GridViewController {
                     #endif
                     self?.setupCleanupButton()
                 },
-                UIAction(title: "구독 강제 Plus") { [weak self] _ in
+                UIAction(title: "구독 강제 Pro") { [weak self] _ in
                     #if DEBUG
-                    SubscriptionStore.shared.debugSetPlus()
-                    Logger.app.debug("GridVC+Cleanup: 디버그 구독 → Plus 설정")
+                    SubscriptionStore.shared.debugSetPro()
+                    Logger.app.debug("GridVC+Cleanup: 디버그 구독 → Pro 설정")
                     NotificationCenter.default.post(name: .debugMonetizationStateChanged, object: nil)
                     #endif
                     self?.setupCleanupButton()

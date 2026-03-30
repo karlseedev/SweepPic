@@ -10,7 +10,7 @@
 
 **Rationale**:
 - iOS 16+ 타겟이므로 StoreKit 2 전면 사용 가능
-- 단일 상품(Plus 월간/연간)이라 SDK 래퍼 불필요
+- 단일 상품(Pro 월간/연간)이라 SDK 래퍼 불필요
 - 서버 없이 온디바이스 검증 가능 (AppTransaction, Transaction.currentEntitlements)
 - RevenueCat 수수료(월 $0~$2,500 구간 무료, 이후 1%) 절감
 
@@ -195,7 +195,7 @@ let size = resources.first.flatMap {
 **구현 접근**:
 - UIViewController를 모달로 present (modalPresentationStyle = .overFullScreen, .crossDissolve)
 - 반투명 배경(dim) + 중앙 카드 형태
-- 카드 내: 안내 텍스트 + 버튼 목록 (광고 보기 / Plus / 닫기)
+- 카드 내: 안내 텍스트 + 버튼 목록 (광고 보기 / Pro / 닫기)
 - 기존 CoachMarkOverlayView 또는 alert 커스텀 패턴 참고
 
 **Alternatives Considered**:

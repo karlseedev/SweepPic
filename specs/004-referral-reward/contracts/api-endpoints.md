@@ -123,8 +123,8 @@ HTTP 429
 
 `subscription_status` 값:
 - `"none"` — 비구독자 (Free Trial 포함)
-- `"monthly"` — plus_monthly 구독 중
-- `"yearly"` — plus_yearly 구독 중
+- `"monthly"` — pro_monthly 구독 중
+- `"yearly"` — pro_yearly 구독 중
 - `"expired_monthly"` — monthly 구독 만료
 - `"expired_yearly"` — yearly 구독 만료
 
@@ -316,7 +316,7 @@ HTTP 429
   "user_id": "referrer-keychain-uuid",
   "reward_id": "uuid",
   "subscription_status": "monthly",
-  "product_id": "plus_monthly"
+  "product_id": "pro_monthly"
 }
 ```
 

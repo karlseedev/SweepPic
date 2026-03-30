@@ -115,7 +115,7 @@ const header = { alg: "ES256", kid: keyId, typ: "JWT" };
 const payload = {
   appBundleId: bundleId,
   keyId: keyId,
-  productId: productId,      // "plus_monthly" or "plus_yearly"
+  productId: productId,      // "pro_monthly" or "pro_yearly"
   offerIdentifier: offerId,  // "referral_extend_monthly" etc.
   applicationUsername: "",
   nonce: uuid,
@@ -180,7 +180,7 @@ let result = try await product.purchase(options: [offer])
 ### Findings
 
 **TrashGatePopupViewController.swift**:
-- 현재 구조: 블러 배경 + BlurPopupCardView + 광고/Plus/닫기 버튼
+- 현재 구조: 블러 배경 + BlurPopupCardView + 광고/Pro/닫기 버튼
 - 수정: 닫기 버튼 아래에 초대 프로모 섹션 추가
 - 패턴: 기존 `setupUI()` 메서드에 `setupReferralPromo()` 추가
 

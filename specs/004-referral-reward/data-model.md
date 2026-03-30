@@ -131,9 +131,9 @@ available ──────▶ assigned ──────▶ used
 
 | offer_name | 용도 | 대상 |
 |------------|------|------|
-| `referral_invited_monthly` | 피초대자 (비구독/무료/monthly) | plus_monthly |
-| `referral_invited_yearly` | 피초대자 (yearly 구독자) | plus_yearly |
-| `referral_reward_01` | 초대자 (한 번도 구독 안 한 비구독자) | plus_monthly |
+| `referral_invited_monthly` | 피초대자 (비구독/무료/monthly) | pro_monthly |
+| `referral_invited_yearly` | 피초대자 (yearly 구독자) | pro_yearly |
+| `referral_reward_01` | 초대자 (한 번도 구독 안 한 비구독자) | pro_monthly |
 
 **Allocation Rules**:
 - `SELECT FOR UPDATE` — 원자적 할당 (동시 요청 시 중복 방지)

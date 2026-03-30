@@ -174,7 +174,7 @@ final class CleanupProgressView: UIView {
 
     // MARK: - Banner Ad Setup
 
-    /// 배너 광고 설정 (Plus/Grace 시 미표시)
+    /// 배너 광고 설정 (Pro/Grace 시 미표시)
     /// rootViewController 필요 → show(in:) 시점에 호출
     private func setupBannerAd(rootViewController: UIViewController?) {
         Logger.app.debug("CleanupProgressView: setupBannerAd 호출 — shouldShowAds=\(AdManager.shared.shouldShowAds()), rootVC=\(String(describing: rootViewController)), SDK초기화=\(AdManager.shared.isConfigured)")

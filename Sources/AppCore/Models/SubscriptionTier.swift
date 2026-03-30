@@ -3,7 +3,7 @@
 //  AppCore
 //
 //  구독 티어 모델
-//  - SubscriptionTier: Free / Plus 구분 enum
+//  - SubscriptionTier: Free / Pro 구분 enum
 //  - SubscriptionState: 구독 상태 정보 구조체
 //  data-model.md 참조
 //
@@ -14,10 +14,10 @@ import Foundation
 
 /// 구독 티어 enum
 /// - free: 무료 사용자 (일일 한도 + 광고)
-/// - plus: Plus 구독자 (무제한 삭제 + 광고 제거)
+/// - pro: Pro 구독자 (무제한 삭제 + 광고 제거)
 public enum SubscriptionTier: String, Codable, Sendable {
     case free
-    case plus
+    case pro
 }
 
 // MARK: - SubscriptionState
@@ -27,10 +27,10 @@ public enum SubscriptionTier: String, Codable, Sendable {
 /// SubscriptionStore에서 관리하며, 앱 실행 중 상태를 추적
 public struct SubscriptionState: Sendable {
 
-    /// 현재 구독 티어 (.free / .plus)
+    /// 현재 구독 티어 (.free / .pro)
     public let tier: SubscriptionTier
 
-    /// Plus 구독 활성 여부
+    /// Pro 구독 활성 여부
     public let isActive: Bool
 
     /// 자동 갱신 활성 여부
@@ -73,11 +73,11 @@ public struct SubscriptionState: Sendable {
 
 /// StoreKit 상품 ID 상수
 public enum SubscriptionProductID {
-    /// 월간 Plus 구독 ($2.99/월)
-    public static let plusMonthly = "plus_monthly"
-    /// 연간 Plus 구독 ($19.99/년)
-    public static let plusYearly = "plus_yearly"
+    /// 월간 Pro 구독 ($2.99/월)
+    public static let proMonthly = "pro_monthly"
+    /// 연간 Pro 구독 ($19.99/년)
+    public static let proYearly = "pro_yearly"
 
     /// 모든 상품 ID 배열
-    public static let all: Set<String> = [plusMonthly, plusYearly]
+    public static let all: Set<String> = [proMonthly, proYearly]
 }

@@ -113,12 +113,22 @@ public final class ReferralService {
         config.timeoutIntervalForRequest = Self.requestTimeout
         config.timeoutIntervalForResource = Self.requestTimeout * 2
         self.session = URLSession(configuration: config)
+
+        // Info.plist에서 Supabase 설정 자동 로드
+        // xcconfig → Info.plist → Bundle.main으로 전달되는 값을 읽음
+        if let url = Bundle.main.object(forInfoDictionaryKey: "SUPABASE_URL") as? String,
+           let key = Bundle.main.object(forInfoDictionaryKey: "SUPABASE_ANON_KEY") as? String,
+           !url.isEmpty, !key.isEmpty {
+            self.baseURL = url
+            self.anonKey = key
+            self.isConfigured = true
+            Logger.referral.debug("ReferralService: 자동 설정 완료 — URL: \(url.prefix(30))...")
+        }
     }
 
     // MARK: - Configuration
 
-    /// Supabase URL과 anon key 설정
-    /// SceneDelegate에서 앱 시작 시 호출
+    /// Supabase URL과 anon key 수동 설정 (자동 로드 실패 시 폴백)
     /// - Parameters:
     ///   - url: Supabase 프로젝트 URL
     ///   - anonKey: Supabase anon key
@@ -126,7 +136,7 @@ public final class ReferralService {
         self.baseURL = url
         self.anonKey = anonKey
         self.isConfigured = true
-        Logger.referral.debug("ReferralService: 설정 완료 — URL: \(url.prefix(30))...")
+        Logger.referral.debug("ReferralService: 수동 설정 완료 — URL: \(url.prefix(30))...")
     }
 
     // MARK: - Internal: HTTP Request

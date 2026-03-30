@@ -8,7 +8,7 @@
 //  역할:
 //  - GADMobileAds SDK 초기화
 //  - 리워드/전면/배너 광고 사전 로드 관리
-//  - Plus 상태에 따른 광고 표시 여부 판단
+//  - Pro 상태에 따른 광고 표시 여부 판단
 //
 
 import UIKit
@@ -132,13 +132,13 @@ final class AdManager: NSObject, AdManagerProtocol {
 
     // MARK: - Should Show Ads
 
-    /// Plus 구독자이면 광고 미표시
+    /// Pro 구독자이면 광고 미표시
     func shouldShowAds() -> Bool {
         // FeatureFlags 체크
         guard FeatureFlags.isAdEnabled else { return false }
 
-        // Plus 구독자이면 광고 미표시 (FR-027, T033)
-        if SubscriptionStore.shared.isPlusUser { return false }
+        // Pro 구독자이면 광고 미표시 (FR-027, T033)
+        if SubscriptionStore.shared.isProUser { return false }
 
         return true
     }

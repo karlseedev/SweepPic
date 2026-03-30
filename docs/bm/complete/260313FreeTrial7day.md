@@ -36,7 +36,7 @@
 **변경 후:**
 ```
 설치 → 첫 삭제대기함 비우기 시도 → 페이월 표시 (7일 무료 체험 강조)
-  ├─ 구독 시작 → 7일 무료 체험 (Plus), 이후 자동 과금
+  ├─ 구독 시작 → 7일 무료 체험 (Pro), 이후 자동 과금
   └─ 건너뛰기 → 일일 10장 무료 삭제 + 광고로 최대 30장
 ```
 
@@ -68,7 +68,7 @@
 **파일:** `PickPhoto/PickPhoto/Features/Monetization/Gate/TrashGateCoordinator.swift`
 
 - Grace Period 분기 제거
-- 첫 페이월 분기 추가 (Plus 체크 바로 뒤, 1회만 표시)
+- 첫 페이월 분기 추가 (Pro 체크 바로 뒤, 1회만 표시)
   - `hasSeenFirstPaywall` — UserDefaults 기반 플래그
   - 구독 완료 → 바로 삭제 실행
   - 건너뛰기 → 게이트 평가 계속 (한도 체크 → 게이트 팝업)
@@ -95,7 +95,7 @@
 | 파일 | 변경 내용 |
 |------|----------|
 | `AdManager.swift` | `shouldShowAds()`에서 Grace Period 조건 제거 |
-| `ATTStateManager.swift` | Grace Period 조건을 **설치 후 2시간 경과 + !isPlusUser** 조건으로 교체 |
+| `ATTStateManager.swift` | Grace Period 조건을 **설치 후 2시간 경과 + !isProUser** 조건으로 교체 |
 | `SceneDelegate.swift` | `trackGracePeriodEndedOnce()` 호출 제거, Grace Period Analytics extension 주석 처리 |
 | `SubscriptionStore.swift` | 구매 완료 후 `endGracePeriod()` 호출 제거 |
 | `TrashAlbumViewController+Gate.swift` | Grace Period 배너 분기 제거 → 항상 게이지 표시, `checkGracePeriodTransition()` 비활성화 |
@@ -112,8 +112,8 @@
 
 ### Phase 7: App Store Connect 설정 (코드 외)
 
-- `plus_yearly` 상품: 7일 Free Trial Introductory Offer 설정
-- `plus_monthly` 상품: 7일 Free Trial Introductory Offer 설정
+- `pro_yearly` 상품: 7일 Free Trial Introductory Offer 설정
+- `pro_monthly` 상품: 7일 Free Trial Introductory Offer 설정
 
 ---
 
@@ -127,7 +127,7 @@
 | `PaywallViewModel.swift` | eligibility 체크 + 월간 freeTrialText + 법적 고지 |
 | `AnalyticsService+Monetization.swift` | PaywallSource.firstPaywall 추가 |
 | `AdManager.swift` | Grace Period 조건 제거 |
-| `ATTStateManager.swift` | 설치 후 2시간 + !isPlusUser 조건으로 교체 |
+| `ATTStateManager.swift` | 설치 후 2시간 + !isProUser 조건으로 교체 |
 | `SceneDelegate.swift` | Grace Period analytics 제거 |
 | `SubscriptionStore.swift` | endGracePeriod 호출 제거 |
 | `TrashAlbumViewController+Gate.swift` | 배너 분기 제거, 게이지만 표시 |

@@ -7,11 +7,11 @@
 //
 //  버튼 구성 (반투명 흰색 배경, 44pt 통일):
 //  - 광고 버튼: "광고 N회 보고 X장 전체 삭제" (Ready/Loading/Failed 3상태, 흰색 텍스트)
-//  - Plus 버튼: "Plus로 무제한" (흰색 텍스트)
+//  - Pro 버튼: "Pro로 무제한" (흰색 텍스트)
 //  - 닫기 버튼 (회색 텍스트)
 //
 //  오프라인 시: 광고/구독 비활성 + "인터넷 연결 필요" (FR-055)
-//  리워드 소진 시: 골든 모먼트 (Plus 전환 유도, FR-014)
+//  리워드 소진 시: 골든 모먼트 (Pro 전환 유도, FR-014)
 //
 
 import UIKit
@@ -38,8 +38,8 @@ final class TrashGatePopupViewController: UIViewController {
 
     /// 광고 시청 선택 시
     var onAdWatch: (() -> Void)?
-    /// Plus 업그레이드 선택 시
-    var onPlusUpgrade: (() -> Void)?
+    /// Pro 업그레이드 선택 시
+    var onProUpgrade: (() -> Void)?
     /// 닫기 선택 시
     var onDismiss: (() -> Void)?
 
@@ -117,11 +117,11 @@ final class TrashGatePopupViewController: UIViewController {
         return spinner
     }()
 
-    /// Plus 버튼 — 반투명 흰색 배경 + 흰색 텍스트
-    private let plusButton: UIButton = {
+    /// Pro 버튼 — 반투명 흰색 배경 + 흰색 텍스트
+    private let proButton: UIButton = {
         let button = UIButton(type: .system)
         button.backgroundColor = UIColor.white.withAlphaComponent(0.12)
-        button.setTitle("Plus로 무제한", for: .normal)
+        button.setTitle("Pro로 무제한", for: .normal)
         button.setTitleColor(.white, for: .normal)
         button.titleLabel?.font = .systemFont(ofSize: 17, weight: .semibold)
         button.layer.cornerRadius = 25
@@ -234,7 +234,7 @@ final class TrashGatePopupViewController: UIViewController {
         let stackView = UIStackView(arrangedSubviews: [
             titleLabel, infoLabel,
             goldenMomentLabel, offlineLabel,
-            adButton, plusButton, closeButton
+            adButton, proButton, closeButton
         ])
         stackView.axis = .vertical
         stackView.spacing = 16
@@ -244,7 +244,7 @@ final class TrashGatePopupViewController: UIViewController {
         // 버튼 영역 전 여유 간격
         stackView.setCustomSpacing(28, after: offlineLabel)
         stackView.setCustomSpacing(12, after: adButton)
-        stackView.setCustomSpacing(10, after: plusButton)
+        stackView.setCustomSpacing(10, after: proButton)
 
         cardView.contentView.addSubview(stackView)
         NSLayoutConstraint.activate([
@@ -257,7 +257,7 @@ final class TrashGatePopupViewController: UIViewController {
         // 버튼 높이 통일 44pt
         NSLayoutConstraint.activate([
             adButton.heightAnchor.constraint(equalToConstant: 50),
-            plusButton.heightAnchor.constraint(equalToConstant: 50),
+            proButton.heightAnchor.constraint(equalToConstant: 50),
             closeButton.heightAnchor.constraint(equalToConstant: 50)
         ])
 
@@ -274,7 +274,7 @@ final class TrashGatePopupViewController: UIViewController {
     /// 버튼 액션 연결
     private func setupActions() {
         adButton.addTarget(self, action: #selector(adButtonTapped), for: .touchUpInside)
-        plusButton.addTarget(self, action: #selector(plusButtonTapped), for: .touchUpInside)
+        proButton.addTarget(self, action: #selector(proButtonTapped), for: .touchUpInside)
         closeButton.addTarget(self, action: #selector(closeButtonTapped), for: .touchUpInside)
 
         // 딤 배경 탭 → 닫기
@@ -289,10 +289,10 @@ final class TrashGatePopupViewController: UIViewController {
         }
     }
 
-    @objc private func plusButtonTapped() {
-        Logger.app.debug("TrashGatePopup: Plus 버튼 탭")
+    @objc private func proButtonTapped() {
+        Logger.app.debug("TrashGatePopup: Pro 버튼 탭")
         dismiss(animated: true) { [weak self] in
-            self?.onPlusUpgrade?()
+            self?.onProUpgrade?()
         }
     }
 
@@ -335,7 +335,7 @@ final class TrashGatePopupViewController: UIViewController {
     private func configureGoldenMoment() {
         adButton.isHidden = true
         goldenMomentLabel.isHidden = false
-        Logger.app.debug("TrashGatePopup: 골든 모먼트 — 리워드 소진, Plus 전환 유도")
+        Logger.app.debug("TrashGatePopup: 골든 모먼트 — 리워드 소진, Pro 전환 유도")
     }
 
     // MARK: - Ad Button State
@@ -424,15 +424,15 @@ final class TrashGatePopupViewController: UIViewController {
             offlineLabel.isHidden = true
             adButton.isEnabled = true
             adButton.alpha = 1.0
-            plusButton.isEnabled = true
-            plusButton.alpha = 1.0
+            proButton.isEnabled = true
+            proButton.alpha = 1.0
             configureContent()
         } else {
             offlineLabel.isHidden = false
             adButton.isEnabled = false
             adButton.alpha = 0.35
-            plusButton.isEnabled = false
-            plusButton.alpha = 0.35
+            proButton.isEnabled = false
+            proButton.alpha = 0.35
         }
     }
 
@@ -443,14 +443,14 @@ final class TrashGatePopupViewController: UIViewController {
         cardView.isAccessibilityElement = false
         cardView.accessibilityElements = [
             titleLabel, infoLabel, goldenMomentLabel,
-            offlineLabel, adButton, plusButton, closeButton
+            offlineLabel, adButton, proButton, closeButton
         ]
         titleLabel.accessibilityTraits = .header
         infoLabel.accessibilityLabel = "\(trashCount)장 삭제 대상, 무료 삭제 한도 \(remainingFreeDeletes)장 남음"
         adButton.accessibilityLabel = "광고를 보고 사진 삭제하기"
         adButton.accessibilityHint = "광고를 시청한 후 사진을 삭제합니다"
-        plusButton.accessibilityLabel = "Plus 구독으로 무제한 삭제"
-        plusButton.accessibilityHint = "Plus 구독 안내 화면으로 이동합니다"
+        proButton.accessibilityLabel = "Pro 구독으로 무제한 삭제"
+        proButton.accessibilityHint = "Pro 구독 안내 화면으로 이동합니다"
         closeButton.accessibilityLabel = "닫기"
         closeButton.accessibilityHint = "팝업을 닫습니다"
         goldenMomentLabel.accessibilityLabel = "오늘 광고 횟수를 모두 사용했습니다"

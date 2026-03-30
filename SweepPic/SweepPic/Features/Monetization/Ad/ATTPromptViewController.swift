@@ -4,7 +4,7 @@
 //
 //  ATT(App Tracking Transparency) 프리프롬프트 화면 (FR-041, FR-042)
 //
-//  설치 후 2시간 경과 + Plus 미구독 시 표시
+//  설치 후 2시간 경과 + Pro 미구독 시 표시
 //  - "계속" → 시스템 ATT 팝업 호출 → dismiss
 //  - "건너뛰기" → skipCount 증가 → dismiss
 //  - 총 2회 기회 (skipCount < 2), 이후 영구 미표시
@@ -22,7 +22,7 @@ import OSLog
 // MARK: - ATTPromptViewController
 
 /// ATT 프리프롬프트 전체 화면
-/// 설치 후 2시간 경과 + Plus 미구독 시 표시 (FR-041)
+/// 설치 후 2시간 경과 + Pro 미구독 시 표시 (FR-041)
 final class ATTPromptViewController: UIViewController {
 
     // MARK: - Callbacks

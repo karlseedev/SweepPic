@@ -21,7 +21,7 @@
 
 - [x] T001 Google Mobile Ads SDK SPM 의존성 추가 — SweepPic.xcodeproj > Package Dependencies에 `https://github.com/googleads/swift-package-manager-google-mobile-ads` (11.x Up to Next Major) 추가
 - [x] T002 [P] Info.plist에 AdMob/ATT 항목 추가 — `SweepPic/SweepPic/Info.plist`에 GADApplicationIdentifier(테스트용 `ca-app-pub-3940256099942544~1458002511`), NSUserTrackingUsageDescription, SKAdNetworkItems 추가
-- [x] T003 [P] StoreKit Configuration File 생성 — `SweepPic/SweepPicProducts.storekit` 파일 생성, 상품: `plus_monthly` ($2.99/월 Auto-Renewable), `plus_yearly` ($19.99/년 Auto-Renewable). Scheme > Run > Options에서 선택
+- [x] T003 [P] StoreKit Configuration File 생성 — `SweepPic/SweepPicProducts.storekit` 파일 생성, 상품: `pro_monthly` ($2.99/월 Auto-Renewable), `pro_yearly` ($19.99/년 Auto-Renewable). Scheme > Run > Options에서 선택
 - [x] T004 [P] FeatureFlags에 BM 플래그 추가 — `SweepPic/SweepPic/Shared/FeatureFlags.swift`에 `isGateEnabled`, `isAdEnabled`, `isSubscriptionEnabled` static computed property 추가 (기존 패턴: `isSimilarPhotoEnabled`)
 - [x] T005 [P] Monetization 폴더 구조 생성 — `SweepPic/SweepPic/Features/Monetization/` 하위에 `Gate/`, `Ad/`, `Subscription/`, `Celebration/`, `Menu/` 빈 폴더 생성
 
@@ -39,7 +39,7 @@
 - [x] T007 [P] KeychainHelper 유틸리티 생성 — `Sources/AppCore/Services/KeychainHelper.swift`. kSecClassGenericPassword 기반 CRUD. Service=`com.karl.SweepPic.usageLimit`. save(key:data:), load(key:)->Data?, delete(key:), setBool(key:value:), getBool(key:)->Bool?. kSecAttrAccessibleAfterFirstUnlock 사용. research.md §R3 참조
 - [x] T008 UsageLimitStore 생성 — `Sources/AppCore/Stores/UsageLimitStore.swift`. 싱글톤, KeychainHelper 기반. 인메모리 캐시 + Keychain 영속화. UsageLimitStoreProtocol 준수 (contracts/protocols.md). recordDelete(count:), recordReward(), recordLifetimeFreeGrant(), resetIfNewDay(serverDate:). Keychain 읽기 실패 시 한도 내 간주 (FR-051c). T006, T007 완료 후
 - [x] T009 [P] GracePeriodService 생성 — `Sources/AppCore/Services/GracePeriodService.swift`. 싱글톤, UserDefaults 기반. GracePeriodServiceProtocol 준수. installDate 1회 기록, isActive(3일 판단), remainingDays, currentDay(0~3+). Keychain hasUsedGracePeriod 체크 — true면 Grace Period 미부여 (FR-051a). 새 기기는 정상 부여 (iCloud Keychain 미동기화)
-- [x] T010 AdManager 기본 구조 생성 — `SweepPic/SweepPic/Features/Monetization/Ad/AdManager.swift`. 싱글톤, AdManagerProtocol 준수. configure() — GADMobileAds 초기화. shouldShowAds() — Plus/Grace 체크. preloadRewardedAd(), isRewardedAdReady. 테스트 광고 ID 상수 (research.md §R2). T001 완료 후
+- [x] T010 AdManager 기본 구조 생성 — `SweepPic/SweepPic/Features/Monetization/Ad/AdManager.swift`. 싱글톤, AdManagerProtocol 준수. configure() — GADMobileAds 초기화. shouldShowAds() — Pro/Grace 체크. preloadRewardedAd(), isRewardedAdReady. 테스트 광고 ID 상수 (research.md §R2). T001 완료 후
 - [x] T011 AppDelegate에 AdManager.configure() 호출 추가 — `SweepPic/SweepPic/App/AppDelegate.swift`의 didFinishLaunching에 AdManager.shared.configure() 추가. T010 완료 후
 - [x] T012 SceneDelegate에 한도 리셋 체크 추가 — `SweepPic/SweepPic/App/SceneDelegate.swift`의 sceneWillEnterForeground에서 UsageLimitStore.shared.resetIfNewDay(serverDate:) 호출. 서버 시간 확인 실패 시 로컬 시간 폴백 (FR-052). T008 완료 후
 - [x] T012a [P] 자정 리셋 알림 등록 — `SweepPic/SweepPic/App/SceneDelegate.swift`에서 `NSCalendar.calendarDayChangedNotification` 옵저버 등록. 앱이 포그라운드에서 자정을 넘길 때 UsageLimitStore.resetIfNewDay() 호출 + 게이지 UI 갱신 (FR-005 이중 체크의 두 번째 메커니즘). T008 완료 후
@@ -56,9 +56,9 @@
 
 ### Implementation
 
-- [x] T013 [US1] TrashGateCoordinator 생성 — `SweepPic/SweepPic/Features/Monetization/Gate/TrashGateCoordinator.swift`. 싱글톤, TrashGateCoordinatorProtocol 준수. evaluateAndPresent(from:trashCount:onApproved:). 판단 흐름: Plus? → 바로실행 / Grace Period? → 바로실행 / ≤남은한도? → 바로실행+recordDelete / 초과? → 팝업 표시. 필요 광고 수 N = ceil((trashCount - remainingFreeDeletes) / 10). plan.md 게이트 판단 흐름 참조
-- [x] T014 [US1] TrashGatePopupViewController 생성 — `SweepPic/SweepPic/Features/Monetization/Gate/TrashGatePopupViewController.swift`. 커스텀 중앙 팝업: modalPresentationStyle=.overFullScreen, crossDissolve. 반투명 배경 + 중앙 라운드 카드. 안내 텍스트("삭제대기함을 비우려면 / N장 · 한도 M장 남음") + 광고 버튼(Ready/Loading/Failed 3상태) + Plus 버튼 + 닫기 버튼. 광고 소진 시 "Plus만 가능" 분기. 오프라인 시 광고/구독 비활성 + "인터넷 연결 필요" (FR-055). plan.md 게이트 팝업 UI 레이아웃 참조
-- [x] T015 [P] [US1] UsageGaugeView 생성 — `SweepPic/SweepPic/Features/Monetization/Gate/UsageGaugeView.swift`. 프로그레스 바 + "N/M장 남음" 텍스트. 탭 시 상세 팝업 (한도 상태 + 광고 잔여 + "광고 보기" 버튼). Plus/Grace Period 시 미표시. accessibilityLabel 설정 (FR-057)
+- [x] T013 [US1] TrashGateCoordinator 생성 — `SweepPic/SweepPic/Features/Monetization/Gate/TrashGateCoordinator.swift`. 싱글톤, TrashGateCoordinatorProtocol 준수. evaluateAndPresent(from:trashCount:onApproved:). 판단 흐름: Pro? → 바로실행 / Grace Period? → 바로실행 / ≤남은한도? → 바로실행+recordDelete / 초과? → 팝업 표시. 필요 광고 수 N = ceil((trashCount - remainingFreeDeletes) / 10). plan.md 게이트 판단 흐름 참조
+- [x] T014 [US1] TrashGatePopupViewController 생성 — `SweepPic/SweepPic/Features/Monetization/Gate/TrashGatePopupViewController.swift`. 커스텀 중앙 팝업: modalPresentationStyle=.overFullScreen, crossDissolve. 반투명 배경 + 중앙 라운드 카드. 안내 텍스트("삭제대기함을 비우려면 / N장 · 한도 M장 남음") + 광고 버튼(Ready/Loading/Failed 3상태) + Pro 버튼 + 닫기 버튼. 광고 소진 시 "Pro만 가능" 분기. 오프라인 시 광고/구독 비활성 + "인터넷 연결 필요" (FR-055). plan.md 게이트 팝업 UI 레이아웃 참조
+- [x] T015 [P] [US1] UsageGaugeView 생성 — `SweepPic/SweepPic/Features/Monetization/Gate/UsageGaugeView.swift`. 프로그레스 바 + "N/M장 남음" 텍스트. 탭 시 상세 팝업 (한도 상태 + 광고 잔여 + "광고 보기" 버튼). Pro/Grace Period 시 미표시. accessibilityLabel 설정 (FR-057)
 - [x] T016 [US1] TrashAlbumViewController+Gate.swift Extension 생성 — `SweepPic/SweepPic/Features/Albums/TrashAlbumViewController+Gate.swift`. 게이지 뷰 setup/update, Grace Period 배너 placeholder (US3에서 구현), 게이트 호출 헬퍼. 기존 TrashAlbumVC 786줄 방지를 위한 Extension 분리
 - [x] T017 [US1] 게이트 삽입 #1 — `SweepPic/SweepPic/Features/Albums/TrashAlbumViewController.swift:593` performEmptyTrash()를 TrashGateCoordinator.evaluateAndPresent()로 래핑. plan.md 게이트 삽입 패턴 참조
 - [x] T018 [US1] 게이트 삽입 #2 — `SweepPic/SweepPic/Features/Albums/TrashSelectMode.swift:173` trashDeleteSelectedTapped()를 게이트 래핑
@@ -80,7 +80,7 @@
 - [x] T021 [US2] RewardedAdPresenter 생성 — `SweepPic/SweepPic/Features/Monetization/Ad/RewardedAdPresenter.swift`. GADRewardedAd 래핑. showAd(from:completion:(Bool)->Void). 시청 완료=true, 취소/에러=false. 사전 로드 + 시청 완료 후 즉시 다음 로드 (FR-019). 지수 백오프 재시도 2→4→8초 (FR-020)
 - [x] T022 [US2] TrashGatePopupVC에 광고 흐름 연동 — `TrashGatePopupViewController.swift` 수정. "광고 N회 보고 X장 삭제" 버튼 탭 → 팝업 dismiss → RewardedAdPresenter.showAd → 완료 시 삭제 콜백. 광고 버튼 3단계 상태 (Ready/Loading/Failed) (FR-018). 시스템 팝업 취소 시 리워드 미차감 (FR-013). no-fill: 스피너 10초 → 재시도/취소 팝업
 - [x] T023 [US2] 생애 최초 no-fill 무료 +10장 처리 — `TrashGateCoordinator.swift` 또는 `RewardedAdPresenter.swift`에서 lifetimeFreeGrantUsed 체크. 최초 no-fill 시 usageLimitStore.recordLifetimeFreeGrant() 호출 (FR-021)
-- [x] T024 [US2] 골든 모먼트 UI — `TrashGatePopupViewController.swift`에서 리워드 2회 소진 시 Plus 전환 유도 강조 UI (FR-014). 광고 옵션 비활성 + "오늘 광고 횟수를 모두 사용했습니다" 안내
+- [x] T024 [US2] 골든 모먼트 UI — `TrashGatePopupViewController.swift`에서 리워드 2회 소진 시 Pro 전환 유도 강조 UI (FR-014). 광고 옵션 비활성 + "오늘 광고 횟수를 모두 사용했습니다" 안내
 
 **Checkpoint**: 테스트 광고 ID로 시청 → 한도 +10 → 삭제 실행. 시스템 팝업 취소 → 리워드 미차감. 2회 소진 → 골든 모먼트 표시
 
@@ -96,30 +96,30 @@
 
 - [x] T025 [US3] Grace Period 배너 UI 구현 — `TrashAlbumViewController+Gate.swift`에 배너 뷰 추가. 게이지 위치에 "무료 체험 중 — N일 남음" + "체험 종료 후 일일 무료 삭제 한도가 적용됩니다" 배너 표시. 모든 Day 동일 UI (CTA 없음). 배너 탭 → 페이월 (FR-025, 페이월은 US4에서 구현 — 탭 핸들러만 준비)
 - [x] T026 [US3] Day 4 전환 로직 — `TrashAlbumViewController+Gate.swift`에서 Grace Period 만료 시 배너 → 게이지 전환. 게이지 첫 표시 시 1회 툴팁 "오늘의 무료 삭제 한도예요. 탭해서 자세히 볼 수 있어요" (Edge Case: 카운터 게이지 첫 표시)
-- [x] T027 [US3] TrashGateCoordinator Grace Period 바이패스 확인 — T013에서 이미 Grace Period 체크 포함. 실제 통합 테스트: Grace Period 중 게이트/광고 미표시 확인. Grace Period 중 구독 시 즉시 종료 → Plus 전환 (Edge Case)
+- [x] T027 [US3] TrashGateCoordinator Grace Period 바이패스 확인 — T013에서 이미 Grace Period 체크 포함. 실제 통합 테스트: Grace Period 중 게이트/광고 미표시 확인. Grace Period 중 구독 시 즉시 종료 → Pro 전환 (Edge Case)
 
 **Checkpoint**: 설치 직후 무제한 삭제. 배너 모든 Day 동일 UI 확인. Day 4 게이지 + 툴팁
 
 ---
 
-## Phase 6: User Story 4 — Plus 구독 & 페이월 (Priority: P2)
+## Phase 6: User Story 4 — Pro 구독 & 페이월 (Priority: P2)
 
-**Goal**: 페이월에서 구독 구매 → Plus 활성화 → 모든 제한 해제
+**Goal**: 페이월에서 구독 구매 → Pro 활성화 → 모든 제한 해제
 
-**Independent Test**: 페이월 → Sandbox 구독 → Plus 활성화 → 게이트 스킵 + 광고 미표시
+**Independent Test**: 페이월 → Sandbox 구독 → Pro 활성화 → 게이트 스킵 + 광고 미표시
 
 ### Implementation
 
-- [x] T028 [P] [US4] SubscriptionTier 모델 생성 — `Sources/AppCore/Models/SubscriptionTier.swift`. SubscriptionTier enum(.free/.plus) + SubscriptionState 구조체(tier, isActive, autoRenewEnabled, hasPaymentIssue, expirationDate, originalPurchaseDate). data-model.md 참조
-- [x] T029 [US4] SubscriptionStore 생성 — `SweepPic/SweepPic/Features/Monetization/Subscription/SubscriptionStore.swift`. 싱글톤, SubscriptionStoreProtocol 준수. StoreKit 2: Product.products(for:), Product.purchase(), Transaction.currentEntitlements, Transaction.updates AsyncSequence. 앱 시작 시 구독 확인 (FR-028). 실시간 변경 감지 (FR-029). 환불 → Plus 즉시 해제 (FR-033). 오프라인: expirationDate 기반 (FR-053). 구독 완료 시 GracePeriodService.shared.endGracePeriod() 호출하여 Grace Period 즉시 종료 (Edge Case). T028 완료 후
-- [x] T030 [US4] PaywallViewModel 생성 — `SweepPic/SweepPic/Features/Monetization/Subscription/PaywallViewModel.swift`. 가격 포맷팅 (NumberFormatter, locale 반영). 연간 메인 + 월간 보조 가격 표시. 취소선 정가 계산. 무료/Plus 비교표 데이터
+- [x] T028 [P] [US4] SubscriptionTier 모델 생성 — `Sources/AppCore/Models/SubscriptionTier.swift`. SubscriptionTier enum(.free/.pro) + SubscriptionState 구조체(tier, isActive, autoRenewEnabled, hasPaymentIssue, expirationDate, originalPurchaseDate). data-model.md 참조
+- [x] T029 [US4] SubscriptionStore 생성 — `SweepPic/SweepPic/Features/Monetization/Subscription/SubscriptionStore.swift`. 싱글톤, SubscriptionStoreProtocol 준수. StoreKit 2: Product.products(for:), Product.purchase(), Transaction.currentEntitlements, Transaction.updates AsyncSequence. 앱 시작 시 구독 확인 (FR-028). 실시간 변경 감지 (FR-029). 환불 → Pro 즉시 해제 (FR-033). 오프라인: expirationDate 기반 (FR-053). 구독 완료 시 GracePeriodService.shared.endGracePeriod() 호출하여 Grace Period 즉시 종료 (Edge Case). T028 완료 후
+- [x] T030 [US4] PaywallViewModel 생성 — `SweepPic/SweepPic/Features/Monetization/Subscription/PaywallViewModel.swift`. 가격 포맷팅 (NumberFormatter, locale 반영). 연간 메인 + 월간 보조 가격 표시. 취소선 정가 계산. 무료/Pro 비교표 데이터
 - [x] T031 [US4] PaywallViewController 생성 — `SweepPic/SweepPic/Features/Monetization/Subscription/PaywallViewController.swift`. 가치 헤드라인 "쌓인 사진, 한 번에 비우세요" + 비교표 (FR-035). 연간 크게 / 월간 보조 (FR-036). 하단 법적 고지: 자동 갱신, 해지 방법, 약관/처리방침 링크 — 스크롤 없이 보이는 영역 (FR-037). 구매 버튼 → SubscriptionStore.purchase(). 복원 버튼 → restorePurchases(). 리딤 코드 버튼 → presentRedemptionSheet (FR-031). 결제 실패별 안내 (FR-038). Ask to Buy (FR-038)
-- [x] T032 [US4] TrashGateCoordinator 구독 연동 — `TrashGateCoordinator.swift` 수정. SubscriptionStore.shared.isPlusUser 체크 추가 (이미 T013에서 구조 준비됨). Plus → 게이트 즉시 스킵
-- [x] T033 [US4] AdManager 구독 연동 — `AdManager.swift` 수정. shouldShowAds()에 SubscriptionStore.isPlusUser 반영. Plus → 모든 광고 미표시 (FR-027)
+- [x] T032 [US4] TrashGateCoordinator 구독 연동 — `TrashGateCoordinator.swift` 수정. SubscriptionStore.shared.isProUser 체크 추가 (이미 T013에서 구조 준비됨). Pro → 게이트 즉시 스킵
+- [x] T033 [US4] AdManager 구독 연동 — `AdManager.swift` 수정. shouldShowAds()에 SubscriptionStore.isProUser 반영. Pro → 모든 광고 미표시 (FR-027)
 - [x] T034 [US4] AppDelegate에 SubscriptionStore.configure() 추가 — `AppDelegate.swift` 수정. didFinishLaunching에 SubscriptionStore.shared.configure() 추가
 - [x] T035 [US4] 갱신 실패 뱃지 표시 — SubscriptionStore.hasPaymentIssue 감지 시 ellipsis 메뉴 아이콘에 ⚠️ 뱃지 (FR-034). `GridViewController+Cleanup.swift` 또는 관련 메뉴 버튼 수정
 
-**Checkpoint**: Sandbox 구독 구매 → Plus 활성화 → 게이트 스킵 + 광고 미표시. 복원 성공. 리딤 코드 입력. 환불 → Free 복귀
+**Checkpoint**: Sandbox 구독 구매 → Pro 활성화 → 게이트 스킵 + 광고 미표시. 복원 성공. 리딤 코드 입력. 환불 → Free 복귀
 
 ---
 
@@ -134,9 +134,9 @@
 - [x] T036 [P] [US5] InterstitialAdPresenter 생성 — `SweepPic/SweepPic/Features/Monetization/Ad/InterstitialAdPresenter.swift`. GADInterstitialAd 래핑. showAd(from:completion:). 사전 로드 + 표시 완료 후 즉시 다음 로드. 스킵 가능 (FR-016). 테스트 광고 ID (research.md §R2)
 - [x] T037 [P] [US5] BannerAdViewController 생성 — `SweepPic/SweepPic/Features/Monetization/Ad/BannerAdViewController.swift`. GADBannerView 래핑. 사진 분석 대기 화면 하단에 삽입 가능한 컨테이너 뷰컨 (FR-017)
 - [x] T038 [US5] 전면 광고 트리거 연동 — AdCounters(인메모리) 구현 + 유사사진 삭제 완료 / 자동정리 완료 짝수 회차에만 표시 (FR-015). 각 트리거별 독립 카운터. 관련 파일: `GridViewController+SimilarPhoto.swift`, `GridViewController+Cleanup.swift` 수정
-- [x] T039 [US5] 배너 광고 삽입 — 사진 분석 대기 화면(유사사진 분석 중 표시 화면) 하단에 BannerAdViewController embed. Plus/Grace Period 시 미표시
+- [x] T039 [US5] 배너 광고 삽입 — 사진 분석 대기 화면(유사사진 분석 중 표시 화면) 하단에 BannerAdViewController embed. Pro/Grace Period 시 미표시
 
-**Checkpoint**: 유사사진 2회차 → 전면 광고. 홀수 회차 → 미표시. 분석 대기 → 배너 표시. Plus → 모두 미표시
+**Checkpoint**: 유사사진 2회차 → 전면 광고. 홀수 회차 → 미표시. 분석 대기 → 배너 표시. Pro → 모두 미표시
 
 ---
 
@@ -181,7 +181,7 @@
 
 ### Implementation
 
-- [x] T047 [P] [US8] PremiumMenuViewController 생성 — `SweepPic/SweepPic/Features/Monetization/Menu/PremiumMenuViewController.swift`. "구독 관리" (무료→페이월, Plus→시스템 구독관리), "구독 복원" (이미 Plus→토스트), "리딤 코드" (FR-043, FR-044). SubscriptionStore 연동
+- [x] T047 [P] [US8] PremiumMenuViewController 생성 — `SweepPic/SweepPic/Features/Monetization/Menu/PremiumMenuViewController.swift`. "구독 관리" (무료→페이월, Pro→시스템 구독관리), "구독 복원" (이미 Pro→토스트), "리딤 코드" (FR-043, FR-044). SubscriptionStore 연동
 - [x] T048 [P] [US8] CustomerServiceViewController 생성 — `SweepPic/SweepPic/Features/Monetization/Menu/CustomerServiceViewController.swift`. "피드백 보내기", "자주 묻는 질문", "이용약관", "개인정보처리방침", "사업자 정보" 메뉴 리스트
 - [x] T049 [P] [US8] FAQViewController 생성 — `SweepPic/SweepPic/Features/Monetization/Menu/FAQViewController.swift`. 인앱 정적 아코디언 리스트, 오프라인 지원 (FR-046)
 - [x] T050 [P] [US8] BusinessInfoViewController 생성 — `SweepPic/SweepPic/Features/Monetization/Menu/BusinessInfoViewController.swift`. 상호/대표자/등록번호/연락처 정적 표시 (FR-048, 전자상거래법 제10조)

@@ -20,11 +20,11 @@
 
 | Offer Name | 유형 | 상품 | 기간 | 대상 | Intro Offer 중복 |
 |-----------|------|------|------|------|----------------|
-| `referral_invited_monthly` | Offer Code (One-time) | plus_monthly | 2주 무료 | New+Existing+Expired | Yes |
-| `referral_invited_yearly` | Offer Code (One-time) | plus_yearly | 2주 무료 | Existing | — |
-| `referral_extend_monthly` | Promotional Offer | plus_monthly | 2주 무료 | Existing+Expired | — |
-| `referral_extend_yearly` | Promotional Offer | plus_yearly | 2주 무료 | Existing+Expired | — |
-| `referral_reward_01` | Offer Code (One-time) | plus_monthly | 2주 무료 | New | — |
+| `referral_invited_monthly` | Offer Code (One-time) | pro_monthly | 2주 무료 | New+Existing+Expired | Yes |
+| `referral_invited_yearly` | Offer Code (One-time) | pro_yearly | 2주 무료 | Existing | — |
+| `referral_extend_monthly` | Promotional Offer | pro_monthly | 2주 무료 | Existing+Expired | — |
+| `referral_extend_yearly` | Promotional Offer | pro_yearly | 2주 무료 | Existing+Expired | — |
+| `referral_reward_01` | Offer Code (One-time) | pro_monthly | 2주 무료 | New | — |
 
 ### P8 키 용도
 

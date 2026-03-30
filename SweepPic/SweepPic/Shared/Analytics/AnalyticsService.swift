@@ -218,7 +218,7 @@ final class AnalyticsService: AnalyticsServiceProtocol {
         }
         supabaseProvider = SupabaseProvider(
             baseURL: url, anonKey: key,
-            subscriptionTierProvider: { SubscriptionStore.shared.isPlusUser ? "plus" : "free" }
+            subscriptionTierProvider: { SubscriptionStore.shared.isProUser ? "pro" : "free" }
         )
         Logger.analytics.debug("Supabase 초기화 완료 (url: \(url.prefix(30))...)")
     }

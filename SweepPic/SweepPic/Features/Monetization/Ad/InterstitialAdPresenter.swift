@@ -101,7 +101,7 @@ final class InterstitialAdPresenter: NSObject {
     func showAd(from vc: UIViewController, completion: @escaping () -> Void) {
         // 광고 미표시 조건 체크
         guard AdManager.shared.shouldShowAds() else {
-            Logger.app.debug("InterstitialAdPresenter: 광고 미표시 조건 (Plus/Grace)")
+            Logger.app.debug("InterstitialAdPresenter: 광고 미표시 조건 (Pro/Grace)")
             completion()
             return
         }

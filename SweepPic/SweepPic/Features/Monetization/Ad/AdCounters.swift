@@ -9,7 +9,7 @@
 //  - 유사사진 삭제 완료 / 자동정리 완료 각각 독립 카운터
 //  - 짝수 회차(2, 4, 6...)에만 전면 광고 표시 (FR-015)
 //  - 앱 재시작 시 리셋 (인메모리)
-//  - Plus 시 카운터 미증가
+//  - Pro 시 카운터 미증가
 //
 
 import Foundation
@@ -51,7 +51,7 @@ final class AdCounters {
     /// - Parameter trigger: 발생한 트리거
     /// - Returns: true면 이번에 전면 광고를 표시해야 함 (짝수 회차)
     func incrementAndShouldShowAd(for trigger: AdTrigger) -> Bool {
-        // Plus 시 광고 미표시 → 카운터도 증가하지 않음
+        // Pro 시 광고 미표시 → 카운터도 증가하지 않음
         guard AdManager.shared.shouldShowAds() else {
             Logger.app.debug("AdCounters: 광고 미표시 조건 → 카운터 미증가")
             return false

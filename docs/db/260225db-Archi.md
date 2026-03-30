@@ -711,7 +711,7 @@ enum AnalyticsError {
 // ── BM 수익화 enum ──
 enum GateChoice: String {
     case ad      = "ad"       // 광고 시청
-    case plus    = "plus"     // Plus 업그레이드
+    case pro     = "pro"      // Pro 업그레이드
     case dismiss = "dismiss"  // 닫기
 }
 enum AdType: String {
@@ -720,7 +720,7 @@ enum AdType: String {
     case banner       = "banner"        // 배너 광고
 }
 enum PaywallSource: String {
-    case gate   = "gate"    // 게이트 팝업에서 Plus 선택
+    case gate   = "gate"    // 게이트 팝업에서 Pro 선택
     case menu   = "menu"    // 프리미엄 메뉴에서 구독 관리
     case banner = "banner"  // Grace Period 배너 탭
     case gauge  = "gauge"   // 게이지 상세 팝업
@@ -948,7 +948,7 @@ CREATE TABLE events (
     os_version TEXT,
     app_version TEXT,
     photo_bucket TEXT,
-    subscription_tier TEXT,              -- "free" 또는 "plus" (BM 추가)
+    subscription_tier TEXT,              -- "free" 또는 "pro" (BM 추가)
     device_id TEXT,                      -- IDFV UUID (유저 단위 분석용)
     is_test BOOLEAN NOT NULL DEFAULT true,
     created_at TIMESTAMPTZ NOT NULL DEFAULT now()

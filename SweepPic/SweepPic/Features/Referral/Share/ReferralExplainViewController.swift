@@ -107,7 +107,7 @@ final class ReferralExplainViewController: UIViewController {
     private lazy var myRewardRow: UIView = {
         return makeRewardRow(
             icon: "person.fill",
-            title: "나",
+            title: "초대한 사람",
             detail: "초대 1회마다 Pro 14일 무료 혜택 제공"
         )
     }()
@@ -116,7 +116,7 @@ final class ReferralExplainViewController: UIViewController {
     private lazy var friendRewardRow: UIView = {
         return makeRewardRow(
             icon: "person.2.fill",
-            title: "친구",
+            title: "초대받은 사람",
             detail: "14일 Pro 무료 혜택 제공"
         )
     }()
@@ -245,7 +245,7 @@ final class ReferralExplainViewController: UIViewController {
             // 카드 — 화면 중앙
             cardView.centerXAnchor.constraint(equalTo: view.centerXAnchor),
             cardView.centerYAnchor.constraint(equalTo: view.centerYAnchor),
-            cardView.widthAnchor.constraint(equalToConstant: 340),
+            cardView.widthAnchor.constraint(equalToConstant: 320),
 
             // 닫기 버튼 — 카드 우상단
             closeButton.topAnchor.constraint(equalTo: cardView.contentView.topAnchor, constant: 12),
@@ -288,7 +288,7 @@ final class ReferralExplainViewController: UIViewController {
         iconView.translatesAutoresizingMaskIntoConstraints = false
         let config = UIImage.SymbolConfiguration(pointSize: 16, weight: .medium)
         iconView.image = UIImage(systemName: icon, withConfiguration: config)
-        iconView.tintColor = highlightYellow
+        iconView.tintColor = .white
         iconView.contentMode = .scaleAspectFit
 
         // 제목
@@ -296,7 +296,7 @@ final class ReferralExplainViewController: UIViewController {
         titleLbl.translatesAutoresizingMaskIntoConstraints = false
         titleLbl.text = title
         titleLbl.font = .systemFont(ofSize: 15, weight: .semibold)
-        titleLbl.textColor = highlightYellow
+        titleLbl.textColor = .white
 
         // 설명
         let detailLbl = UILabel()

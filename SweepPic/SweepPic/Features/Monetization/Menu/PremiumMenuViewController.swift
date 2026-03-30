@@ -58,12 +58,12 @@ final class PremiumMenuViewController {
 
     // MARK: - Actions
 
-    /// 구독 관리 — 무료: 페이월 표시 / Plus: 시스템 구독 관리 화면
+    /// 구독 관리 — 무료: 페이월 표시 / Pro: 시스템 구독 관리 화면
     private static func handleSubscriptionManagement(from presenter: UIViewController) {
-        if SubscriptionStore.shared.isPlusUser {
-            // Plus 사용자 → 시스템 구독 관리 화면
+        if SubscriptionStore.shared.isProUser {
+            // Pro 사용자 → 시스템 구독 관리 화면
             openSystemSubscriptionSettings()
-            Logger.app.debug("PremiumMenu: Plus 사용자 → 시스템 구독 관리")
+            Logger.app.debug("PremiumMenu: Pro 사용자 → 시스템 구독 관리")
         } else {
             // 무료 사용자 → 페이월 표시
             let paywallVC = PaywallViewController()
@@ -74,14 +74,14 @@ final class PremiumMenuViewController {
         }
     }
 
-    /// 구독 복원 — 이미 Plus: 토스트 / 아닐 때: restorePurchases 실행
+    /// 구독 복원 — 이미 Pro: 토스트 / 아닐 때: restorePurchases 실행
     private static func handleRestorePurchases(from presenter: UIViewController) {
-        if SubscriptionStore.shared.isPlusUser {
-            // 이미 Plus → 토스트
+        if SubscriptionStore.shared.isProUser {
+            // 이미 Pro → 토스트
             if let window = presenter.view.window {
                 ToastView.show("이미 구독 중입니다", in: window)
             }
-            Logger.app.debug("PremiumMenu: 이미 Plus 사용자 → 토스트")
+            Logger.app.debug("PremiumMenu: 이미 Pro 사용자 → 토스트")
             return
         }
 
@@ -98,7 +98,7 @@ final class PremiumMenuViewController {
                         }
                     }
                 }
-                Logger.app.debug("PremiumMenu: 복원 결과 — isPlusUser=\(restored)")
+                Logger.app.debug("PremiumMenu: 복원 결과 — isProUser=\(restored)")
             } catch {
                 await MainActor.run {
                     if let window = presenter.view.window {

@@ -197,7 +197,7 @@ Offer Code 풀이 소진되지 않도록 자동으로 재고를 확인하고 보
 **보상 구조**
 
 - **FR-016**: 모든 보상은 14일(2주) 프리미엄 무료로 통일한다 (초대자/피초대자 모두).
-- **FR-017**: 기본 보상 상품은 plus_monthly (월간)로 한다. yearly 구독자만 plus_yearly Offer를 받는다.
+- **FR-017**: 기본 보상 상품은 pro_monthly (월간)로 한다. yearly 구독자만 pro_yearly Offer를 받는다.
 - **FR-018**: Free Trial + Offer Code 중복 적용을 지원해야 한다 (ASC에서 Introductory Offer 적용 여부 = Yes 설정).
 
 **랜딩 페이지 및 인앱 브라우저**
@@ -297,7 +297,7 @@ Offer Code 풀이 소진되지 않도록 자동으로 재고를 확인하고 보
 
 ### Dependencies
 
-- **003-bm-monetization**: 구독 상품(plus_monthly, plus_yearly), StoreKit 2 인프라, Transaction.updates 리스너
+- **003-bm-monetization**: 구독 상품(pro_monthly, pro_yearly), StoreKit 2 인프라, Transaction.updates 리스너
 - **커스텀 도메인 구매**: 랜딩 페이지 및 Universal Link에 필요
 - **App Store Connect 설정**: 5개 Offer 생성, P8 키 발급
 - **APNs Authentication Key**: Push 알림 발송에 필요 (ASC API 키와 별도)

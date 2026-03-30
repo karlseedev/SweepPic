@@ -5,11 +5,15 @@
 //  초대 공유 메시지 생성 + UIActivityViewController 표시
 //
 //  공유 메시지 5개 요소 (FR-003):
-//  1. 앱 소개: "SweepPic으로 사진 정리하고 14일 프리미엄 무료 받기!"
+//  1. 앱 소개: "SweepPic으로 사진 정리하고 14일 무료 혜택 받기!"
 //  2. 초대 코드: "초대 코드: x0k7m2x99j"
 //  3. 설치 + 자동 적용 안내: "아래 링크로 앱 설치 → 링크 한 번 더 누르면 자동 적용"
 //  4. 수동 입력 폴백: "앱 > 설정 > 초대 코드 입력에 붙여넣기"
 //  5. 링크: "https://sweeppic.link/r/x0k7m2x99j"
+//
+//  UIActivityItemSource 구현:
+//  - 공유 시트 상단에 제목 + 메시지 미리보기 표시
+//  - LPLinkMetadata로 리치 프리뷰 제공
 //
 //  completionHandler:
 //  - completed=true → 호출부에서 Push 프리프롬프트 진행
@@ -21,12 +25,70 @@
 
 import UIKit
 import AppCore
+import LinkPresentation
 import OSLog
+
+// MARK: - ReferralShareItemSource
+
+/// 공유 시트 상단 미리보기를 위한 UIActivityItemSource 구현
+/// 제목 + 메시지 본문이 공유 시트에 표시됨
+final class ReferralShareItemSource: NSObject, UIActivityItemSource {
+
+    /// 공유할 메시지 전체 텍스트
+    private let message: String
+    /// 공유 시트 상단 제목
+    private let title: String
+
+    /// - Parameters:
+    ///   - message: 공유할 메시지 전체 텍스트
+    ///   - title: 공유 시트 미리보기 제목
+    init(message: String, title: String) {
+        self.message = message
+        self.title = title
+        super.init()
+    }
+
+    /// 플레이스홀더 — 공유 시트가 데이터 타입을 결정할 때 사용
+    func activityViewControllerPlaceholderItem(_ activityViewController: UIActivityViewController) -> Any {
+        return message
+    }
+
+    /// 실제 공유 데이터 반환
+    func activityViewController(
+        _ activityViewController: UIActivityViewController,
+        itemForActivityType activityType: UIActivity.ActivityType?
+    ) -> Any? {
+        return message
+    }
+
+    /// 공유 시트 상단 제목 (subject)
+    func activityViewController(
+        _ activityViewController: UIActivityViewController,
+        subjectForActivityType activityType: UIActivity.ActivityType?
+    ) -> String {
+        return title
+    }
+
+    /// 공유 시트 상단 리치 미리보기 (LPLinkMetadata)
+    /// 제목 + 메시지 첫 줄이 미리보기 영역에 표시됨
+    func activityViewControllerLinkMetadata(
+        _ activityViewController: UIActivityViewController
+    ) -> LPLinkMetadata? {
+        let metadata = LPLinkMetadata()
+        metadata.title = title
+        return metadata
+    }
+}
 
 // MARK: - ReferralShareManager
 
 /// 초대 공유 메시지 생성 + UIActivityViewController 표시 매니저
 final class ReferralShareManager {
+
+    // MARK: - Constants
+
+    /// 공유 시트 미리보기 제목
+    private static let shareTitle = "SweepPic 초대"
 
     // MARK: - Share Message
 
@@ -37,15 +99,16 @@ final class ReferralShareManager {
         // 공유 메시지 5개 구성 요소
         // docs/bm/260316Reward.md §Phase 1 와이어프레임 기준
         return """
-        SweepPic으로 사진 정리하고 14일 프리미엄 무료 받기!
+        편리한 사진 정리 앱 SweepPic을 추천합니다!
+        초대 링크로 가입하고 Pro멤버십 14일 무료 혜택을 받으세요!
+        (최초 등록 시 14+7일 무료 제공)
 
-        초대 코드: \(link.referralCode)
+        초대코드: \(link.referralCode)
 
-        1. 아래 링크로 앱 설치
-        2. 앱 설치 후 링크를 한 번 더 누르면 무료혜택 자동 적용!
+        1. 아래 링크를 눌러 앱 설치
+        2. 앱 설치 후 아래 링크를 한 번 더 누르면 무료 혜택 자동 적용
 
-        적용이 안 되면 이 메시지를 복사해서
-        앱 > 설정 > 초대 코드 입력에 붙여넣기 해주세요.
+        (적용이 안되면 본 메시지를 통째로 복사해서 SweepPic앱 > 설정 > 초대코드입력에 붙여넣기 해주세요)
 
         \(link.shareURL.absoluteString)
         """
@@ -65,12 +128,9 @@ final class ReferralShareManager {
     ) {
         let message = buildShareMessage(link: link)
 
-        // UIActivityViewController 설정
-        // 텍스트 메시지 + URL을 별도 항목으로 전달
-        let activityItems: [Any] = [message]
-
+        // 일반 String으로 전달 — 카카오톡 등 서드파티 앱 호환성 보장
         let activityVC = UIActivityViewController(
-            activityItems: activityItems,
+            activityItems: [message],
             applicationActivities: nil
         )
 

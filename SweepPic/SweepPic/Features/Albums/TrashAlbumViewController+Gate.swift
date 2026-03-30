@@ -20,10 +20,10 @@ extension TrashAlbumViewController {
     // MARK: - Gauge Setup
 
     /// 게이지 뷰 설정 (viewDidLoad에서 호출)
-    /// Plus 시 미표시
+    /// Pro 시 미표시
     func setupGaugeView() {
-        // Plus 구독자는 게이지 미표시 (T032)
-        if SubscriptionStore.shared.isPlusUser { return }
+        // Pro 구독자는 게이지 미표시 (T032)
+        if SubscriptionStore.shared.isProUser { return }
 
         // 게이트 비활성 시 미표시
         guard FeatureFlags.isGateEnabled else { return }
@@ -97,7 +97,7 @@ extension TrashAlbumViewController {
                 }
             }
         }
-        detail.onPlusUpgrade = { [weak self] in
+        detail.onProUpgrade = { [weak self] in
             guard let self = self else { return }
             let paywall = PaywallViewController()
             paywall.analyticsSource = .gauge
@@ -189,7 +189,7 @@ extension TrashAlbumViewController {
 
     // MARK: - Subscription State Observer
 
-    /// 구독 상태 변경 시 게이지 갱신 (Plus 전환 시 게이지 제거)
+    /// 구독 상태 변경 시 게이지 갱신 (Pro 전환 시 게이지 제거)
     /// setupGaugeView() 이후 호출
     func observeSubscriptionStateForGauge() {
         SubscriptionStore.shared.onStateChange { [weak self] _ in
