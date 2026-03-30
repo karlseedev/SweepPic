@@ -56,6 +56,11 @@ enabled = false
 [functions.referral-api]
 verify_jwt = false
 
+# referral-landing: 랜딩 페이지 — JWT 불필요 (공개 GET 요청)
+# 초대 링크 클릭 시 브라우저에서 접근하므로 인증 헤더 없음
+[functions.referral-landing]
+verify_jwt = false
+
 # offer-code-replenish: Offer Code 풀 자동 보충
 # 매일 새벽 3시 KST (= UTC 18:00) 실행
 # - offer_name별 available 코드 5,000개 미만 시 ASC API로 보충
