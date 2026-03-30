@@ -113,7 +113,7 @@ extension PreviewGridViewController {
         let currentCol = currentItem % columnCount
         let deleteAction = swipeDeleteState.deleteAction
 
-        // 사각형 범위 계산
+        // 사각형 범위 계산 — 이미 제외된 셀(그린 딤드) 필터링
         let newSelection = calculateRectangleSelection(
             anchorRow: swipeDeleteState.anchorRow,
             anchorCol: swipeDeleteState.anchorCol,
@@ -121,7 +121,10 @@ extension PreviewGridViewController {
             currentCol: currentCol,
             columnCount: columnCount,
             totalItemsInSection: candidates.count
-        )
+        ).filter { item in
+            guard item < candidates.count else { return false }
+            return !excludedAssetIDs.contains(candidates[item].assetID)
+        }
 
         let previousSelection = swipeDeleteState.selectedItems
         let prevCurtainItem = swipeDeleteState.curtainItem
@@ -146,6 +149,7 @@ extension PreviewGridViewController {
         if curtainCellChanged, let prev = prevCurtainItem, newSelection.contains(prev) {
             let ip = IndexPath(item: prev, section: section)
             if let cell = collectionView.cellForItem(at: ip) as? PhotoCell {
+                cell.prepareSwipeOverlay(style: .restore)  // 그린 보장
                 cell.setFullDimmed(isTrashed: false)
             }
         }
@@ -158,6 +162,7 @@ extension PreviewGridViewController {
                 let ip = IndexPath(item: item, section: section)
                 if let cell = collectionView.cellForItem(at: ip) as? PhotoCell,
                    !cell.isAnimating {
+                    cell.prepareSwipeOverlay(style: .restore)  // 그린 보장
                     cell.setFullDimmed(isTrashed: false)
                 }
             }
@@ -210,6 +215,7 @@ extension PreviewGridViewController {
                 if let cell = collectionView.cellForItem(at: ip) as? PhotoCell,
                    newSelection.contains(currentItem),
                    !cell.isAnimating {
+                    cell.prepareSwipeOverlay(style: .restore)  // 그린 보장
                     cell.setFullDimmed(isTrashed: false)
                 }
             }
@@ -229,6 +235,7 @@ extension PreviewGridViewController {
                   !photoCell.isAnimating else { continue }
 
             if deleteAction && !photoCell.isDimmedActive {
+                photoCell.prepareSwipeOverlay(style: .restore)  // 그린 보장
                 photoCell.setFullDimmed(isTrashed: false)
             }
         }
@@ -336,12 +343,12 @@ extension PreviewGridViewController {
             assetIDs.append(candidates[item].assetID)
         }
 
-        // 3. 보이는 셀 confirm 애니메이션
+        // 3. 보이는 셀 confirm 애니메이션 (그린 보장)
         for item in selectedItems {
             let ip = IndexPath(item: item, section: section)
             if let cell = collectionView.cellForItem(at: ip) as? PhotoCell {
                 cell.isAnimating = true
-                // 커튼 셀은 전체 딤드로 전환
+                cell.prepareSwipeOverlay(style: .restore)  // 그린 보장
                 if item == swipeDeleteState.curtainItem {
                     cell.setFullDimmed(isTrashed: false)
                 }
@@ -351,19 +358,20 @@ extension PreviewGridViewController {
             }
         }
 
-        // 4. 상태 초기화 (애니메이션 완료 전에 초기화해도 안전 — weak ref)
+        // 4. 이미 제외된 ID 필터링 (이중 카운트 방지)
+        let newIDs = assetIDs.filter { !excludedAssetIDs.contains($0) }
+
+        // 5. 즉시 카운트 갱신 (reloadData 없음 — 셀은 그린 딤드로 남아있음)
+        applySwipeExclusion(assetIDs: newIDs)
+
+        // 6. 상태 초기화
         swipeDeleteState.reset()
 
-        // 5. 하단 버튼 복원
+        // 7. 하단 버튼 복원
         bottomView.isUserInteractionEnabled = true
 
-        // 6. 확정 햅틱
+        // 8. 확정 햅틱
         HapticFeedback.light()
-
-        // 7. 딜레이 후 제외 적용 (confirm 애니메이션이 보이도록 0.2초 대기)
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) { [weak self] in
-            self?.applySwipeExclusion(assetIDs: assetIDs)
-        }
     }
 
     // MARK: - 다중 모드 취소

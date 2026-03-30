@@ -69,6 +69,12 @@ extension PreviewGridViewController {
             return
         }
 
+        // 이미 제외된 셀이면 스와이프 차단
+        guard !excludedAssetIDs.contains(candidates[indexPath.item].assetID) else {
+            gesture.state = .cancelled
+            return
+        }
+
         // 상태 설정
         swipeDeleteState.targetCell = cell
         swipeDeleteState.targetIndexPath = indexPath
@@ -76,8 +82,8 @@ extension PreviewGridViewController {
         swipeDeleteState.angleCheckPassed = false
         swipeTargetSection = indexPath.section
 
-        // 마룬색 오버레이 준비
-        cell.prepareSwipeOverlay(style: .delete)
+        // 그린 오버레이 준비 (제외 = "살림" 의미의 초록색)
+        cell.prepareSwipeOverlay(style: .restore)
         cell.isAnimating = true
         HapticFeedback.prepare()
     }
@@ -218,38 +224,23 @@ extension PreviewGridViewController {
 
     // MARK: - 제외 처리 (단일/다중 공통)
 
-    /// assetID 제외 → previewResult 갱신 → reloadData
-    /// ⚠️ excludedAssetIDs(뷰어 전용)는 건드리지 않음
+    /// assetID 제외 등록 + 버튼 텍스트 갱신 (reloadData 없음 — 셀은 그린 딤드로 남아있음)
     func applySwipeExclusion(assetIDs: [String]) {
         guard !assetIDs.isEmpty else { return }
 
-        isApplyingExclusion = true
+        // 1. excludedAssetIDs에 등록 (previewResult는 변경하지 않음)
+        for id in assetIDs { excludedAssetIDs.insert(id) }
 
-        // 1. previewResult 직접 갱신
-        previewResult = previewResult.excluding(Set(assetIDs))
-
-        // 2. 빈 stage 축소 (reloadData 전에 → 1회 리로드로 완료)
-        if currentStage == .deep && previewResult.deepCandidates.isEmpty {
-            currentStage = .standard
-        }
-        if currentStage == .standard && previewResult.standardCandidates.isEmpty {
-            currentStage = .light
-        }
-
-        // 3. UI 갱신
-        collectionView.reloadData()
-        updateHeader()
+        // 2. 버튼 텍스트 갱신 (실시간 카운트 반영)
         updateBottomView()
 
-        // 4. [Analytics]
+        // 3. [Analytics]
         analyticsExcludeCount += assetIDs.count
 
-        // 5. 전체 0장 처리
-        if previewResult.count(upToStage: currentStage) == 0 {
+        // 4. 전체 제외 시 Alert → pop
+        if effectiveCount(upToStage: currentStage) == 0 {
             showAllExcludedAlert()
         }
-
-        isApplyingExclusion = false
     }
 
     // MARK: - 스와이프 강제 취소 (stage 전환, viewWillAppear 등)
@@ -270,7 +261,7 @@ extension PreviewGridViewController {
     // MARK: - 전체 제외 Alert
 
     /// 모든 사진이 제외되었을 때 Alert → pop
-    private func showAllExcludedAlert() {
+    func showAllExcludedAlert() {
         let alert = UIAlertController(
             title: "모든 사진이 제외되었습니다",
             message: nil,
@@ -293,9 +284,6 @@ extension PreviewGridViewController: UIGestureRecognizerDelegate {
     /// - velocity 기반 각도 35° 이내만 수락 (수직 스크롤과 분리)
     public func gestureRecognizerShouldBegin(_ gestureRecognizer: UIGestureRecognizer) -> Bool {
         guard gestureRecognizer == swipeDeleteState.swipeGesture else { return true }
-
-        // 제외 적용 중이면 차단
-        if isApplyingExclusion { return false }
 
         // 스크롤 momentum 중이면 차단
         if collectionView.isDecelerating { return false }

@@ -49,8 +49,8 @@ final class PreviewGridViewController: UIViewController {
     /// 현재 표시 단계
     var currentStage: PreviewStage = .light
 
-    /// 뷰어에서 제외된 assetID (viewWillAppear에서 일괄 반영) — 스와이프 제외에서는 사용하지 않음
-    private var excludedAssetIDs: Set<String> = []
+    /// 스와이프/뷰어 제외 통합 관리. previewResult는 변경하지 않음 — 셀 외관만 그린 딤드로 표시.
+    var excludedAssetIDs: Set<String> = []
 
     /// delegate
     weak var delegate: PreviewGridViewControllerDelegate?
@@ -136,9 +136,6 @@ final class PreviewGridViewController: UIViewController {
 
     /// 스와이프 대상 셀의 섹션 인덱스 (다중 섹션 대응 — section: 0 하드코딩 방지)
     var swipeTargetSection: Int = 0
-
-    /// 제외 적용 중 플래그 (reloadData 사이에 새 스와이프 차단)
-    var isApplyingExclusion: Bool = false
 
     /// 자동 스크롤 타이머
     var autoScrollTimer: Timer?
@@ -546,9 +543,15 @@ final class PreviewGridViewController: UIViewController {
         headerTitleLabel?.text = titleText
     }
 
+    /// 제외되지 않은 유효 사진 수 (버튼 텍스트, 삭제대기함 이동용)
+    func effectiveCount(upToStage stage: PreviewStage) -> Int {
+        let allIDs = previewResult.assetIDs(upToStage: stage)
+        return allIDs.filter { !excludedAssetIDs.contains($0) }.count
+    }
+
     /// 하단 버튼 영역 업데이트
     func updateBottomView() {
-        let totalCount = previewResult.count(upToStage: currentStage)
+        let totalCount = effectiveCount(upToStage: currentStage)
 
         // 확장 가능 여부: 다음 단계가 있고 + 추가분이 있고 + iOS 18 이상
         let canExpand: Bool
@@ -711,6 +714,12 @@ extension PreviewGridViewController: UICollectionViewDataSource {
                 targetSize: thumbnailSize()
             )
 
+            // 제외된 셀 → 그린 딤드 표시 (셀 재사용 시에도 올바르게 복원)
+            if excludedAssetIDs.contains(candidate.assetID) {
+                cell.prepareSwipeOverlay(style: .restore)  // 그린 색상
+                cell.setFullDimmed(isTrashed: false)        // 60% 딤드
+            }
+
             // [DEBUG] 셀 위에 assetID 앞 6자 + 신호 요약 표시
             // TODO: 스크린샷 촬영 후 복원할 것
             // #if DEBUG
@@ -744,6 +753,9 @@ extension PreviewGridViewController: UICollectionViewDelegate {
         // 배너 셀은 무시
         guard case .photos(let candidates) = sectionType(for: indexPath.section),
               indexPath.item < candidates.count else { return }
+
+        // 제외된 셀(그린 딤드)은 탭해도 뷰어 안 열림
+        guard !excludedAssetIDs.contains(candidates[indexPath.item].assetID) else { return }
 
         // 탭한 사진의 flat 배열 내 인덱스 계산
         let allAssets = allVisibleAssets()
@@ -803,8 +815,10 @@ extension PreviewGridViewController: BarsVisibilityControlling {
 extension PreviewGridViewController: PreviewBottomViewDelegate {
 
     func previewBottomViewDidTapCleanup(_ view: PreviewBottomView) {
-        // 현재 단계까지의 모든 assetIDs
-        let assetIDs = previewResult.assetIDs(upToStage: currentStage)
+        // 현재 단계까지의 assetIDs 중 제외되지 않은 것만
+        let allIDs = previewResult.assetIDs(upToStage: currentStage)
+        let assetIDs = allIDs.filter { !excludedAssetIDs.contains($0) }
+        guard !assetIDs.isEmpty else { return }
         showCleanupConfirmation(assetIDs: assetIDs)
     }
 
@@ -901,17 +915,16 @@ extension PreviewGridViewController: PreviewBottomViewDelegate {
 
     /// 뷰어에서 제외된 사진들을 그리드에 반영
     /// viewWillAppear에서 호출 (뷰어 pop 후)
+    /// previewResult는 변경하지 않음 — excludedAssetIDs로만 관리하고 cellForItemAt에서 그린 딤드 적용
     private func applyExclusions() {
-        // previewResult에서 제외된 에셋 필터링
-        previewResult = previewResult.excluding(excludedAssetIDs)
-
-        // 적용 완료 — 제외 목록 초기화
-        excludedAssetIDs.removeAll()
-
-        // UI 갱신
-        collectionView.reloadData()
+        collectionView.reloadData()  // cellForItemAt에서 excludedAssetIDs 체크 → 그린 딤드
         updateBottomView()
         updateHeader()
+
+        // 뷰어에서 전부 제외 시 빈 화면 방지
+        if effectiveCount(upToStage: currentStage) == 0 {
+            showAllExcludedAlert()
+        }
     }
 }
 
