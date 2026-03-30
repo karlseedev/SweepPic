@@ -69,20 +69,17 @@ extension PreviewGridViewController {
             return
         }
 
-        // 이미 제외된 셀이면 스와이프 차단
-        guard !excludedAssetIDs.contains(candidates[indexPath.item].assetID) else {
-            gesture.state = .cancelled
-            return
-        }
+        // 제외 여부에 따라 방향 결정
+        let isExcluded = excludedAssetIDs.contains(candidates[indexPath.item].assetID)
 
         // 상태 설정
         swipeDeleteState.targetCell = cell
         swipeDeleteState.targetIndexPath = indexPath
-        swipeDeleteState.targetIsTrashed = false  // 미리보기는 항상 미삭제
+        swipeDeleteState.targetIsTrashed = isExcluded  // 제외됨 → 커튼 걷힘 방향
         swipeDeleteState.angleCheckPassed = false
         swipeTargetSection = indexPath.section
 
-        // 그린 오버레이 준비 (제외 = "살림" 의미의 초록색)
+        // 그린 오버레이 준비
         cell.prepareSwipeOverlay(style: .restore)
         cell.isAnimating = true
         HapticFeedback.prepare()
@@ -122,11 +119,12 @@ extension PreviewGridViewController {
             swipeDeleteState.angleCheckPassed = true
         }
 
-        // 다른 셀 도달 체크 → 다중 모드 진입 (같은 photos 섹션 내에서만)
+        // 다른 셀 도달 체크 → 다중 모드 진입 (제외 해제 모드에서는 단일만)
         let location = gesture.location(in: collectionView)
         let locationInView = gesture.location(in: view)
 
-        if let currentIP = collectionView.indexPathForItem(at: location),
+        if !swipeDeleteState.targetIsTrashed,  // 제외 해제 중이면 다중 차단
+           let currentIP = collectionView.indexPathForItem(at: location),
            currentIP != swipeDeleteState.targetIndexPath,
            currentIP.section == swipeTargetSection,
            case .photos = sectionType(for: currentIP.section) {
@@ -139,7 +137,7 @@ extension PreviewGridViewController {
         // 같은 셀 내: 커튼 딤드 진행도
         let progress = min(1.0, absX / currentCellWidth)
         let direction: PhotoCell.SwipeDirection = translation.x > 0 ? .right : .left
-        cell.setDimmedProgress(progress, direction: direction, isTrashed: false)
+        cell.setDimmedProgress(progress, direction: direction, isTrashed: swipeDeleteState.targetIsTrashed)
     }
 
     // MARK: - Ended
@@ -191,7 +189,7 @@ extension PreviewGridViewController {
 
     // MARK: - 단일 확정
 
-    /// 단일 스와이프 확정 → 셀 제외
+    /// 단일 스와이프 확정 → 제외 또는 제외 해제
     private func confirmSingleSwipeExclude(cell: PhotoCell, indexPath: IndexPath) {
         guard case .photos(let candidates) = sectionType(for: indexPath.section),
               indexPath.item < candidates.count else {
@@ -200,15 +198,24 @@ extension PreviewGridViewController {
         }
 
         let assetID = candidates[indexPath.item].assetID
+        let wasExcluded = swipeDeleteState.targetIsTrashed  // true = 제외 해제 모드
         swipeDeleteState.reset()
 
-        // 확정 애니메이션 → completion에서 제외 적용
-        cell.confirmDimmedAnimation(toTrashed: true) { [weak self] in
-            cell.isAnimating = false
-            self?.applySwipeExclusion(assetIDs: [assetID])
+        if wasExcluded {
+            // 제외 해제: 그린 딤드 걷어내기 → 원래 사진으로 복귀
+            cell.confirmDimmedAnimation(toTrashed: false) { [weak self] in
+                cell.isAnimating = false
+                self?.excludedAssetIDs.remove(assetID)
+                self?.updateBottomView()
+            }
+        } else {
+            // 제외: 그린 딤드 채우기
+            cell.confirmDimmedAnimation(toTrashed: true) { [weak self] in
+                cell.isAnimating = false
+                self?.applySwipeExclusion(assetIDs: [assetID])
+            }
         }
 
-        // 햅틱
         HapticFeedback.light()
     }
 
