@@ -372,30 +372,39 @@ final class PreviewGridViewController: UIViewController {
     }
 
     /// 사진 섹션 레이아웃 (3열 정사각형)
+    /// - Note: .absolute + repeatingSubitem:count: + contentInsetsReference = .none 조합 사용.
+    ///   .fractionalWidth + subitems: + .automatic(기본값) 조합은
+    ///   contentInsetAdjustmentBehavior = .never와 결합 시 우측 비대칭 여백 발생.
+    ///   BaseGridViewController.createLayout()과 동일 패턴 적용.
     private func photosSection(environment: NSCollectionLayoutEnvironment) -> NSCollectionLayoutSection {
+        let columnCount = Int(columns)
         let totalSpacing = cellSpacing * (columns - 1)
         let availableWidth = environment.container.effectiveContentSize.width
         let cellWidth = floor((availableWidth - totalSpacing) / columns)
-        let fraction = cellWidth / availableWidth
 
-        // 아이템
+        // 아이템 — .absolute()로 컨테이너 비율 의존 제거
         let itemSize = NSCollectionLayoutSize(
-            widthDimension: .fractionalWidth(fraction),
-            heightDimension: .fractionalWidth(fraction)
+            widthDimension: .absolute(cellWidth),
+            heightDimension: .absolute(cellWidth)
         )
         let item = NSCollectionLayoutItem(layoutSize: itemSize)
 
-        // 그룹 (가로 3개)
+        // 그룹 — repeatingSubitem:count:로 균등 분배
         let groupSize = NSCollectionLayoutSize(
             widthDimension: .fractionalWidth(1.0),
-            heightDimension: .fractionalWidth(fraction)
+            heightDimension: .absolute(cellWidth)
         )
-        let group = NSCollectionLayoutGroup.horizontal(layoutSize: groupSize, subitems: [item])
+        let group = NSCollectionLayoutGroup.horizontal(
+            layoutSize: groupSize,
+            repeatingSubitem: item,
+            count: columnCount
+        )
         group.interItemSpacing = .fixed(cellSpacing)
 
-        // 섹션
+        // 섹션 — contentInsetsReference = .none으로 시스템 자동 inset 비활성화
         let section = NSCollectionLayoutSection(group: group)
         section.interGroupSpacing = cellSpacing
+        section.contentInsetsReference = .none
         return section
     }
 
