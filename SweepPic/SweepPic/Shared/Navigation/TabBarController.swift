@@ -50,7 +50,19 @@ class TabBarController: UITabBarController {
         return true
     }
 
+    // MARK: - Onboarding Touch Catcher
+
+    /// 온보딩 첫 터치 감지용 투명 컨트롤
+    /// 온보딩 A 미완료 시 window 위에 설치하여
+    /// 사용자의 첫 터치(탭/스크롤/스와이프 등)를 가로채고 온보딩 A를 즉시 표시
+    private var onboardingTouchCatcher: UIControl?
+
     // MARK: - Lifecycle
+
+    override func viewDidAppear(_ animated: Bool) {
+        super.viewDidAppear(animated)
+        installOnboardingTouchCatcherIfNeeded()
+    }
 
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -253,6 +265,40 @@ class TabBarController: UITabBarController {
         } else {
             // iOS 26+: 시스템 탭바 배지
             trashNav?.tabBarItem.badgeValue = count > 0 ? "\(count)" : nil
+        }
+    }
+
+    // MARK: - Onboarding Touch Catcher Methods
+
+    /// 온보딩 A 미완료 시 터치 캐처를 window 위에 설치
+    /// UIControl의 .touchDown은 손가락이 닿는 순간 발동하므로
+    /// 탭, 스크롤 시작, 스와이프 시작, 롱프레스 등 모든 종류의 터치를 잡음
+    private func installOnboardingTouchCatcherIfNeeded() {
+        // 이미 온보딩 A를 본 사용자에게는 설치하지 않음
+        guard !CoachMarkType.gridSwipeDelete.hasBeenShown else { return }
+        // 중복 설치 방지
+        guard onboardingTouchCatcher == nil else { return }
+        guard let window = view.window else { return }
+
+        let catcher = UIControl(frame: window.bounds)
+        catcher.backgroundColor = .clear
+        catcher.addTarget(self, action: #selector(onboardingFirstTouchCaught), for: .touchDown)
+        window.addSubview(catcher)
+        onboardingTouchCatcher = catcher
+    }
+
+    /// 사용자의 첫 터치 감지 → 터치 차단 + 온보딩 A 표시
+    @objc private func onboardingFirstTouchCaught() {
+        // 터치 캐처 제거 (이후 터치는 정상 전달)
+        onboardingTouchCatcher?.removeFromSuperview()
+        onboardingTouchCatcher = nil
+
+        // 보관함(Photos) 탭으로 전환 (다른 탭이었을 경우 대비)
+        selectedIndex = 0
+
+        // GridViewController에서 온보딩 A 즉시 표시
+        if let gridVC = photosNav?.viewControllers.first as? GridViewController {
+            gridVC.showGridSwipeDeleteCoachMark()
         }
     }
 

@@ -188,7 +188,7 @@ extension CoachMarkOverlayView {
         // t=0.55: 메시지 텍스트 교체 + 위치를 Row 2 아래로 이동
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.55) { [weak self] in
             guard let self else { return }
-            let fullText = "밀면서 옆이나 위로 쓸면\u{2028}여러 장을 한번에 정리해요"
+            let fullText = "가로로 밀면서 좌우/상하까지 더 선택하면\u{2028}여러 장을 한번에 정리해요"
             let style = NSMutableParagraphStyle()
             style.alignment = .center
             style.paragraphSpacing = 8
