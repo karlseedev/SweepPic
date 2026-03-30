@@ -165,7 +165,7 @@ final class TrashGatePopupViewController: UIViewController {
     /// cardView.contentView에 삽입하여 카드의 clipsToBounds로 하단 모서리 자동 처리
     private let referralPromoBackground: UIView = {
         let view = UIView()
-        view.backgroundColor = UIColor.white.withAlphaComponent(0.06)
+        view.backgroundColor = UIColor.black.withAlphaComponent(0.15)
         view.translatesAutoresizingMaskIntoConstraints = false
         return view
     }()
@@ -295,8 +295,8 @@ final class TrashGatePopupViewController: UIViewController {
             closeButton.heightAnchor.constraint(equalToConstant: 50)
         ])
 
-        // T032: 닫기 버튼과 초대 프로모 간격
-        stackView.setCustomSpacing(16, after: closeButton)
+        // T032: 닫기 버튼과 초대 프로모 간격 (배경 색상 변경 시작점 여유 15pt 포함)
+        stackView.setCustomSpacing(31, after: closeButton)
         stackView.setCustomSpacing(8, after: referralPromoLabel)
         stackView.setCustomSpacing(4, after: referralButton)
 
