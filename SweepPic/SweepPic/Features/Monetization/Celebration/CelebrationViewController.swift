@@ -106,7 +106,7 @@ final class CelebrationViewController: UIViewController {
     /// 초대 프로모 하단 배경 — 카드 하단을 가로로 잘라 색상 차별화
     private lazy var referralPromoBackground: UIView = {
         let view = UIView()
-        view.backgroundColor = UIColor.white.withAlphaComponent(0.06)
+        view.backgroundColor = UIColor.black.withAlphaComponent(0.25)
         view.translatesAutoresizingMaskIntoConstraints = false
         return view
     }()
@@ -226,8 +226,8 @@ final class CelebrationViewController: UIViewController {
             referralButton.heightAnchor.constraint(equalToConstant: 50)
         ])
 
-        // T034: 확인 버튼과 초대 프로모 간격
-        stackView.setCustomSpacing(16, after: confirmButton)
+        // T034: 확인 버튼과 초대 프로모 간격 (배경 시작점 18pt 여유 포함)
+        stackView.setCustomSpacing(34, after: confirmButton)
         stackView.setCustomSpacing(8, after: referralLabel)
 
         // T034: 배경 뷰 — 프로모 라벨 위에서 카드 하단 끝까지

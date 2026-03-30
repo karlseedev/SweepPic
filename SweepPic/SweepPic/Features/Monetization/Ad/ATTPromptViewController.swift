@@ -128,6 +128,53 @@ final class ATTPromptViewController: UIViewController {
         return button
     }()
 
+    // MARK: - Referral Promo (US4)
+
+    /// 초대 프로모 하단 배경 — 카드 하단을 가로로 잘라 색상 차별화
+    private lazy var referralPromoBackground: UIView = {
+        let view = UIView()
+        view.backgroundColor = UIColor.black.withAlphaComponent(0.25)
+        view.translatesAutoresizingMaskIntoConstraints = false
+        return view
+    }()
+
+    /// 초대 프로모 안내 라벨
+    private lazy var referralPromoLabel: UILabel = {
+        let label = UILabel()
+        label.text = "초대 한 번마다 나도 친구도\n14일 프리미엄 무료 제공!"
+        label.font = .systemFont(ofSize: 14, weight: .medium)
+        label.textColor = UIColor.white.withAlphaComponent(0.8)
+        label.textAlignment = .center
+        label.numberOfLines = 0
+        label.translatesAutoresizingMaskIntoConstraints = false
+        return label
+    }()
+
+    /// 초대하기 버튼 — 다른 버튼과 동일 스타일
+    private lazy var referralButton: UIButton = {
+        let button = UIButton(type: .system)
+        button.backgroundColor = UIColor.white.withAlphaComponent(0.12)
+        button.setTitle("친구 초대하기", for: .normal)
+        button.setTitleColor(.white, for: .normal)
+        button.titleLabel?.font = .systemFont(ofSize: 17, weight: .semibold)
+        button.layer.cornerRadius = 25
+        button.clipsToBounds = true
+        button.translatesAutoresizingMaskIntoConstraints = false
+        button.addTarget(self, action: #selector(referralButtonTapped), for: .touchUpInside)
+        return button
+    }()
+
+    /// 초대 부가 문구
+    private lazy var referralSubtitleLabel: UILabel = {
+        let label = UILabel()
+        label.text = "이미 구독 중이어도 14일 무료 연장"
+        label.font = .systemFont(ofSize: 11, weight: .regular)
+        label.textColor = UIColor.white.withAlphaComponent(0.4)
+        label.textAlignment = .center
+        label.translatesAutoresizingMaskIntoConstraints = false
+        return label
+    }()
+
     /// 스택 뷰
     private lazy var stackView: UIStackView = {
         let stack = UIStackView(arrangedSubviews: [
@@ -135,7 +182,10 @@ final class ATTPromptViewController: UIViewController {
             titleLabel,
             descriptionLabel,
             continueButton,
-            skipButton
+            skipButton,
+            referralPromoLabel,
+            referralButton,
+            referralSubtitleLabel
         ])
         stack.translatesAutoresizingMaskIntoConstraints = false
         stack.axis = .vertical
@@ -172,6 +222,8 @@ final class ATTPromptViewController: UIViewController {
         // 카드 뷰
         view.addSubview(cardView)
         cardView.activateBlur()
+        // 하단 배경 먼저 삽입 (스택뷰 뒤에 깔림)
+        cardView.contentView.addSubview(referralPromoBackground)
         cardView.contentView.addSubview(stackView)
 
         // 아이콘 — 설명 사이 간격 조정
@@ -198,13 +250,33 @@ final class ATTPromptViewController: UIViewController {
             continueButton.widthAnchor.constraint(equalTo: stackView.widthAnchor),
             continueButton.heightAnchor.constraint(equalToConstant: 50),
             skipButton.widthAnchor.constraint(equalTo: stackView.widthAnchor),
-            skipButton.heightAnchor.constraint(equalToConstant: 50)
+            skipButton.heightAnchor.constraint(equalToConstant: 50),
+
+            // 초대 버튼 크기
+            referralButton.widthAnchor.constraint(equalTo: stackView.widthAnchor),
+            referralButton.heightAnchor.constraint(equalToConstant: 50)
+        ])
+
+        // 건너뛰기 버튼과 초대 프로모 간격 (배경 시작점 18pt 여유 포함)
+        stackView.setCustomSpacing(34, after: skipButton)
+        stackView.setCustomSpacing(8, after: referralPromoLabel)
+        stackView.setCustomSpacing(4, after: referralButton)
+
+        // 배경 뷰 — 프로모 라벨 위에서 카드 하단 끝까지
+        NSLayoutConstraint.activate([
+            referralPromoBackground.leadingAnchor.constraint(equalTo: cardView.contentView.leadingAnchor),
+            referralPromoBackground.trailingAnchor.constraint(equalTo: cardView.contentView.trailingAnchor),
+            referralPromoBackground.bottomAnchor.constraint(equalTo: cardView.contentView.bottomAnchor),
+            referralPromoBackground.topAnchor.constraint(equalTo: referralPromoLabel.topAnchor, constant: -16)
         ])
 
         // 접근성 설정 (FR-057)
         iconImageView.accessibilityLabel = "광고 맞춤 설정 아이콘"
         continueButton.accessibilityLabel = "계속하여 추적 허용 여부 선택"
         skipButton.accessibilityLabel = "건너뛰기"
+        referralPromoLabel.accessibilityLabel = "초대 한 번마다 나도 친구도 14일 프리미엄 무료 제공"
+        referralButton.accessibilityLabel = "친구 초대하기"
+        referralButton.accessibilityHint = "초대 설명 화면으로 이동합니다"
     }
 
     // MARK: - Actions
@@ -238,6 +310,18 @@ final class ATTPromptViewController: UIViewController {
 
         // 시스템 팝업 미호출 — .notDetermined 상태 유지
         dismissWithResult(.notDetermined)
+    }
+
+    /// 초대 프로모 버튼 탭 → ReferralExplainViewController 모달
+    @objc private func referralButtonTapped() {
+        Logger.app.debug("ATTPromptVC: 초대 프로모 버튼 탭")
+        let presenter = presentingViewController
+        cardView.deactivateBlur()
+        dismiss(animated: true) {
+            guard let presenter = presenter else { return }
+            let referralVC = ReferralExplainViewController()
+            presenter.present(referralVC, animated: true)
+        }
     }
 
     /// dismiss + 결과 콜백
