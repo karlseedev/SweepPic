@@ -119,12 +119,11 @@ extension PreviewGridViewController {
             swipeDeleteState.angleCheckPassed = true
         }
 
-        // 다른 셀 도달 체크 → 다중 모드 진입 (제외 해제 모드에서는 단일만)
+        // 다른 셀 도달 체크 → 다중 모드 진입 (제외/해제 모두 가능)
         let location = gesture.location(in: collectionView)
         let locationInView = gesture.location(in: view)
 
-        if !swipeDeleteState.targetIsTrashed,  // 제외 해제 중이면 다중 차단
-           let currentIP = collectionView.indexPathForItem(at: location),
+        if let currentIP = collectionView.indexPathForItem(at: location),
            currentIP != swipeDeleteState.targetIndexPath,
            currentIP.section == swipeTargetSection,
            case .photos = sectionType(for: currentIP.section) {
