@@ -46,7 +46,7 @@ extension PreviewGridViewController {
             let translation = gesture.translation(in: collectionView)
             let direction: PhotoCell.SwipeDirection = translation.x > 0 ? .right : .left
             swipeDeleteState.swipeDirection = direction
-            anchorCell.animateCurtainToTarget(direction: direction, isTrashed: false)
+            anchorCell.animateCurtainToTarget(direction: direction, isTrashed: swipeDeleteState.targetIsTrashed)
         }
 
         // 6. 자동 스크롤 콜백 설정
@@ -203,7 +203,7 @@ extension PreviewGridViewController {
                 case .left:
                     progress = min(1.0, max(0, (cellFrame.maxX - location.x) / cellFrame.width))
                 }
-                cell.setDimmedProgress(progress, direction: direction, isTrashed: false)
+                cell.setDimmedProgress(progress, direction: direction, isTrashed: !deleteAction)
             }
             swipeDeleteState.curtainItem = currentItem
 
@@ -224,7 +224,7 @@ extension PreviewGridViewController {
                 case .left:
                     progress = min(1.0, max(0, (cellFrame.maxX - location.x) / cellFrame.width))
                 }
-                cell.setDimmedProgress(progress, direction: direction, isTrashed: false)
+                cell.setDimmedProgress(progress, direction: direction, isTrashed: !deleteAction)
             }
             swipeDeleteState.curtainItem = currentItem
 
@@ -327,7 +327,15 @@ extension PreviewGridViewController {
                 swipeDeleteState.curtainItem = nil
 
                 if let cell = collectionView.cellForItem(at: ip) as? PhotoCell {
-                    cell.cancelDimmedAnimation { cell.isAnimating = false }
+                    let isUnexcludeMode = !swipeDeleteState.deleteAction
+                    cell.cancelDimmedAnimation {
+                        cell.isAnimating = false
+                        // 해제 모드 취소: 그린 딤드 복구
+                        if isUnexcludeMode {
+                            cell.prepareSwipeOverlay(style: .restore)
+                            cell.setFullDimmed(isTrashed: false)
+                        }
+                    }
                 }
 
                 if swipeDeleteState.selectedItems.isEmpty {

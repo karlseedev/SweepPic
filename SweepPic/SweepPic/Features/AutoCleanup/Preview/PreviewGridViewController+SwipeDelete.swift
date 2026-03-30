@@ -180,8 +180,14 @@ extension PreviewGridViewController {
             swipeDeleteState.reset()
             return
         }
+        let wasUnexclude = swipeDeleteState.targetIsTrashed
         cell.cancelDimmedAnimation {
             cell.isAnimating = false
+            // 해제 취소: 그린 딤드 복구
+            if wasUnexclude {
+                cell.prepareSwipeOverlay(style: .restore)
+                cell.setFullDimmed(isTrashed: false)
+            }
         }
         swipeDeleteState.reset()
     }
@@ -222,8 +228,14 @@ extension PreviewGridViewController {
 
     /// 단일 스와이프 취소 → spring 복귀
     private func cancelSingleSwipe(cell: PhotoCell) {
+        let wasUnexclude = swipeDeleteState.targetIsTrashed
         cell.cancelDimmedAnimation {
             cell.isAnimating = false
+            // 해제 취소: cancelDimmedAnimation이 딤드를 지우므로 그린 딤드 복구
+            if wasUnexclude {
+                cell.prepareSwipeOverlay(style: .restore)
+                cell.setFullDimmed(isTrashed: false)
+            }
         }
         swipeDeleteState.reset()
     }
