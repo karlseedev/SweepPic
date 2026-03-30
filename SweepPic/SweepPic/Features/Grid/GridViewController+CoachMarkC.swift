@@ -64,9 +64,6 @@ extension GridViewController {
         // E-1(첫 삭제 안내) 완료 후에만 C 표시
         guard CoachMarkType.firstDeleteGuide.hasBeenShown else { return }
 
-        // B(뷰어 스와이프) 완료 후에만 C 표시 (기본 기능 B → 고급 기능 C 순서)
-        guard CoachMarkType.viewerSwipeDelete.hasBeenShown else { return }
-
         // 현재 다른 코치마크 표시 중이면 스킵
         guard !CoachMarkManager.shared.isShowing else { return }
 

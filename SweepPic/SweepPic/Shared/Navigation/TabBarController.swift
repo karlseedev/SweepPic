@@ -302,10 +302,35 @@ class TabBarController: UITabBarController {
         }
     }
 
+    // MARK: - Coach Mark A-1 Intercept
+
+    /// A-1 온보딩 인터셉트 조건 확인
+    /// A 완료 + E-1 미완료 + 다른 코치마크 미표시 시 true 반환
+    /// 탭바 전환, 상단 버튼 등에서 동작 차단 판단용
+    private func shouldInterceptForCoachMarkA1() -> Bool {
+        guard CoachMarkType.gridSwipeDelete.hasBeenShown else { return false }
+        guard !CoachMarkType.firstDeleteGuide.hasBeenShown else { return false }
+        guard !CoachMarkManager.shared.isShowing else { return false }
+        return true
+    }
+
+    /// A-1 온보딩 즉시 표시 (탭바/상단 버튼 인터셉트 시 호출)
+    /// 기존 3초 타이머를 취소하고 GridViewController에서 A-1을 바로 띄움
+    private func showCoachMarkA1OnGrid() {
+        guard let gridVC = photosNav?.viewControllers.first as? GridViewController else { return }
+        gridVC.cancelCoachMarkA1Timer()
+        gridVC.showCoachMarkA1()
+    }
+
     // MARK: - Actions
 
     /// 시스템 네비바의 Select 버튼 탭 (iOS 26+)
     @objc private func systemSelectButtonTapped() {
+        // A-1 인터셉트: 선택 모드 진입 차단 → A-1 먼저 표시
+        if shouldInterceptForCoachMarkA1() {
+            showCoachMarkA1OnGrid()
+            return
+        }
         // GridViewController에 Select 모드 진입 알림
         if let photosVC = photosNav?.viewControllers.first as? GridViewController {
             photosVC.enterSelectMode()
@@ -416,6 +441,17 @@ class TabBarController: UITabBarController {
 // MARK: - UITabBarControllerDelegate
 
 extension TabBarController: UITabBarControllerDelegate {
+
+    /// iOS 26+: 탭 전환 허용 여부 판단
+    /// A-1 인터셉트 조건이면 탭 전환을 차단하고 A-1 표시
+    func tabBarController(_ tabBarController: UITabBarController, shouldSelect viewController: UIViewController) -> Bool {
+        if shouldInterceptForCoachMarkA1() {
+            showCoachMarkA1OnGrid()
+            return false
+        }
+        return true
+    }
+
     func tabBarController(_ tabBarController: UITabBarController, didSelect viewController: UIViewController) {
         // 플로팅 오버레이 탭 동기화
         if let index = viewControllers?.firstIndex(of: viewController) {
@@ -440,11 +476,22 @@ extension TabBarController: FloatingOverlayContainerDelegate {
     }
 
     func floatingOverlay(_ container: FloatingOverlayContainer, didSelectTabAt index: Int) {
+        // A-1 인터셉트: 탭 전환 차단 → 시각 상태 되돌리기 → A-1 표시
+        if shouldInterceptForCoachMarkA1() {
+            container.selectedTabIndex = selectedIndex
+            showCoachMarkA1OnGrid()
+            return
+        }
         // 탭 전환
         selectedIndex = index
     }
 
     func floatingOverlayDidTapSelect(_ container: FloatingOverlayContainer) {
+        // A-1 인터셉트: 선택 모드 진입 차단 → A-1 먼저 표시
+        if shouldInterceptForCoachMarkA1() {
+            showCoachMarkA1OnGrid()
+            return
+        }
         // 현재 탭의 Select 모드 지원 VC에 진입 요청
         currentSelectModeTarget()?.enterSelectMode()
     }

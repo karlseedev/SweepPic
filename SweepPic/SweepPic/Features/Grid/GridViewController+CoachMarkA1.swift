@@ -75,8 +75,8 @@ extension GridViewController {
 
     // MARK: - Show
 
-    /// A-1 오버레이 표시
-    private func showCoachMarkA1() {
+    /// A-1 오버레이 표시 (외부에서도 호출 가능 — 탭바/상단 버튼 인터셉트 시)
+    func showCoachMarkA1() {
         // 재가드 (5초 사이에 상태 변경 가능)
         guard CoachMarkType.gridSwipeDelete.hasBeenShown else {
             Logger.coachMark.debug("A1 표시 스킵: A 미완료")

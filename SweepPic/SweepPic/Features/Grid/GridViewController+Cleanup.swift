@@ -642,6 +642,22 @@ extension GridViewController {
                     #endif
                     self?.setupCleanupButton()
                 },
+                UIAction(title: "온보딩 리셋") { _ in
+                    #if DEBUG
+                    // 모든 CoachMarkType 리셋 — 신규 설치 상태로 초기화
+                    let allTypes: [CoachMarkType] = [
+                        .gridSwipeDelete,       // A
+                        .viewerSwipeDelete,     // B
+                        .similarPhoto,          // C
+                        .autoCleanup,           // D
+                        .firstDeleteGuide,      // E-1+E-2
+                        .firstEmpty,            // E-3
+                        .faceComparisonGuide,   // C-3
+                    ]
+                    allTypes.forEach { $0.resetShown() }
+                    Logger.coachMark.notice("디버그: 온보딩 전체 초기화 완료 (\(allTypes.count)개)")
+                    #endif
+                },
             ]
         )
     }
