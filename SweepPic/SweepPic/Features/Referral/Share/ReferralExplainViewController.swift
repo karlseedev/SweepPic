@@ -78,13 +78,26 @@ final class ReferralExplainViewController: UIViewController {
         return button
     }()
 
-    /// 제목 라벨: "친구에게 초대하고\n함께 프리미엄 받기!"
+    /// 포인트 노란색 (#FFEA00 — PaywallVC, ATTPromptVC와 동일)
+    private let highlightYellow = UIColor(red: 1.0, green: 0.918, blue: 0.0, alpha: 1.0)
+
+    /// 제목 라벨: "친구 초대하고\n함께 무료 혜택 받기" — "함께 무료 혜택 받기" 부분 노란색
     private lazy var titleLabel: UILabel = {
         let label = UILabel()
         label.translatesAutoresizingMaskIntoConstraints = false
-        label.text = "친구에게 초대하고\n함께 프리미엄 받기!"
-        label.font = .systemFont(ofSize: 22, weight: .bold)
-        label.textColor = .white
+        let fullText = "친구 초대하고\n함께 무료 혜택 받기"
+        let attributed = NSMutableAttributedString(
+            string: fullText,
+            attributes: [
+                .font: UIFont.systemFont(ofSize: 22, weight: .bold),
+                .foregroundColor: UIColor.white
+            ]
+        )
+        // "함께 무료 혜택 받기" 부분 포인트 노란색 적용
+        if let range = fullText.range(of: "함께 무료 혜택 받기") {
+            attributed.addAttribute(.foregroundColor, value: highlightYellow, range: NSRange(range, in: fullText))
+        }
+        label.attributedText = attributed
         label.textAlignment = .center
         label.numberOfLines = 0
         return label
@@ -95,7 +108,7 @@ final class ReferralExplainViewController: UIViewController {
         return makeRewardRow(
             icon: "person.fill",
             title: "나",
-            detail: "초대 1회마다 14일 프리미엄"
+            detail: "초대 1회마다 Pro 14일 무료 혜택 제공"
         )
     }()
 
@@ -104,16 +117,16 @@ final class ReferralExplainViewController: UIViewController {
         return makeRewardRow(
             icon: "person.2.fill",
             title: "친구",
-            detail: "14일 프리미엄 무료 체험"
+            detail: "14일 Pro 무료 혜택 제공"
         )
     }()
 
     /// [초대하기] 버튼
     private lazy var inviteButton: UIButton = {
         let button = UIButton(type: .system)
-        button.backgroundColor = UIColor.systemBlue
+        button.backgroundColor = .white
         button.setTitle("초대하기", for: .normal)
-        button.setTitleColor(.white, for: .normal)
+        button.setTitleColor(.black, for: .normal)
         button.titleLabel?.font = .systemFont(ofSize: 17, weight: .semibold)
         button.layer.cornerRadius = 25
         button.clipsToBounds = true
@@ -137,7 +150,7 @@ final class ReferralExplainViewController: UIViewController {
     private lazy var subtitleLabel: UILabel = {
         let label = UILabel()
         label.translatesAutoresizingMaskIntoConstraints = false
-        label.text = "이미 구독 중이어도 14일 무료 연장"
+        label.text = "이미 Pro 구독 중이어도 14일 무료 연장"
         label.font = .systemFont(ofSize: 13, weight: .regular)
         label.textColor = UIColor.white.withAlphaComponent(0.5)
         label.textAlignment = .center
@@ -232,7 +245,7 @@ final class ReferralExplainViewController: UIViewController {
             // 카드 — 화면 중앙
             cardView.centerXAnchor.constraint(equalTo: view.centerXAnchor),
             cardView.centerYAnchor.constraint(equalTo: view.centerYAnchor),
-            cardView.widthAnchor.constraint(equalToConstant: 300),
+            cardView.widthAnchor.constraint(equalToConstant: 340),
 
             // 닫기 버튼 — 카드 우상단
             closeButton.topAnchor.constraint(equalTo: cardView.contentView.topAnchor, constant: 12),
@@ -275,7 +288,7 @@ final class ReferralExplainViewController: UIViewController {
         iconView.translatesAutoresizingMaskIntoConstraints = false
         let config = UIImage.SymbolConfiguration(pointSize: 16, weight: .medium)
         iconView.image = UIImage(systemName: icon, withConfiguration: config)
-        iconView.tintColor = UIColor.systemBlue
+        iconView.tintColor = highlightYellow
         iconView.contentMode = .scaleAspectFit
 
         // 제목
@@ -283,7 +296,7 @@ final class ReferralExplainViewController: UIViewController {
         titleLbl.translatesAutoresizingMaskIntoConstraints = false
         titleLbl.text = title
         titleLbl.font = .systemFont(ofSize: 15, weight: .semibold)
-        titleLbl.textColor = .white
+        titleLbl.textColor = highlightYellow
 
         // 설명
         let detailLbl = UILabel()
@@ -291,6 +304,7 @@ final class ReferralExplainViewController: UIViewController {
         detailLbl.text = detail
         detailLbl.font = .systemFont(ofSize: 14, weight: .regular)
         detailLbl.textColor = UIColor.white.withAlphaComponent(0.7)
+        detailLbl.numberOfLines = 0
 
         container.addSubview(iconView)
         container.addSubview(titleLbl)
