@@ -100,20 +100,20 @@
 
 ### Server
 
-- [ ] T024 [P] [US3] referral-api get-pending-rewards 엔드포인트 — `supabase/functions/referral-api/index.ts` 에 추가 (POST /get-pending-rewards: user_id로 status=pending인 보상 조회, 만료 보상 미포함 FR-043)
-- [ ] T025 [P] [US3] referral-api claim-reward 엔드포인트 — `supabase/functions/referral-api/index.ts` 에 추가 (POST /claim-reward: subscription_status 기반 보상 방식 결정 — monthly/expired_monthly → referral_extend_monthly, yearly/expired_yearly → referral_extend_yearly, none → referral_reward_01. Promotional: P8 키로 서명 생성 반환. Offer Code: 코드 할당 + 리딤 URL 반환. pending_rewards → completed, referrals → rewarded)
+- [X] T024 [P] [US3] referral-api get-pending-rewards 엔드포인트 — `supabase/functions/referral-api/index.ts` 에 추가 (POST /get-pending-rewards: user_id로 status=pending인 보상 조회, 만료 보상 미포함 FR-043)
+- [X] T025 [P] [US3] referral-api claim-reward 엔드포인트 — `supabase/functions/referral-api/index.ts` 에 추가 (POST /claim-reward: subscription_status 기반 보상 방식 결정 — monthly/expired_monthly → referral_extend_monthly, yearly/expired_yearly → referral_extend_yearly, none → referral_reward_01. Promotional: P8 키로 서명 생성 반환. Offer Code: 코드 할당 + 리딤 URL 반환. pending_rewards → completed, referrals → rewarded)
 
 ### Client — AppCore
 
-- [ ] T026 [P] [US3] Promotional Offer 서비스 — `Sources/AppCore/Services/PromotionalOfferService.swift` (서버에서 서명 요청 → Product.PurchaseOption.promotionalOffer 생성 → Product.purchase 호출, 실패 시 에러 반환)
-- [ ] T027 [P] [US3] ReferralService에 getPendingRewards(), claimReward() 메서드 추가 — `Sources/AppCore/Services/ReferralService.swift`
-- [ ] T028 [US3] SubscriptionStore 확장 — `SweepPic/SweepPic/Features/Monetization/Subscription/SubscriptionStore.swift` 에 추가 (referralSubscriptionStatus() → "none"/"monthly"/"yearly"/"expired_monthly"/"expired_yearly" 반환, purchaseWithPromotionalOffer() 메서드)
+- [X] T026 [P] [US3] Promotional Offer 서비스 — `Sources/AppCore/Services/PromotionalOfferService.swift` (서버에서 서명 요청 → Product.PurchaseOption.promotionalOffer 생성 → Product.purchase 호출, 실패 시 에러 반환)
+- [X] T027 [P] [US3] ReferralService에 getPendingRewards(), claimReward() 메서드 추가 — `Sources/AppCore/Services/ReferralService.swift`
+- [X] T028 [US3] SubscriptionStore 확장 — `SweepPic/SweepPic/Features/Monetization/Subscription/SubscriptionStore.swift` 에 추가 (referralSubscriptionStatus() → "none"/"monthly"/"yearly"/"expired_monthly"/"expired_yearly" 반환, purchaseWithPromotionalOffer() 메서드)
 
 ### Client — UI
 
-- [ ] T029 [US3] 보상 수령 화면 — `SweepPic/SweepPic/Features/Referral/Reward/ReferralRewardViewController.swift` (모달, 블러+카드, 콜드스타트/메뉴 공용. 보상 있음: "초대 보상 도착!" + "초대한 사람이 SweepPic에 가입했어요! 14일 무료 혜택을 받으세요" + [보상 받기] + "수령 가능한 보상: N건" + X닫기. 보상 없음: "수령 가능한 보상이 없습니다" + [친구 초대하기]. 수령 완료: "14일 무료 혜택이 적용되었습니다!" 다음 보상 자동 표시. 로딩/에러/재시도 FR-038. 기획문서 §초대 혜택 받기 UI 참조)
-- [ ] T030 [US3] 보상 수령 로직 매니저 — `SweepPic/SweepPic/Features/Referral/Reward/ReferralRewardClaimManager.swift` (claimReward API 호출 → RewardClaimResult 분기: .promotional → PromotionalOfferService로 적용, .offerCode → OfferRedemptionService로 리딤 URL 열기, .error → 에러 안내. 순차 수령 지원 — 1건 완료 후 다음 건 자동 진행)
-- [ ] T031 [US3] SceneDelegate 콜드 스타트 보상 팝업 — `SweepPic/SweepPic/App/SceneDelegate.swift` 에 추가 (scene(_:willConnectTo:) 에서 pending_rewards 조회 → 보상 있으면 ReferralRewardViewController 모달 표시, 포그라운드 복귀 시 미표시)
+- [X] T029 [US3] 보상 수령 화면 — `SweepPic/SweepPic/Features/Referral/Reward/ReferralRewardViewController.swift` (모달, 블러+카드, 콜드스타트/메뉴 공용. 보상 있음: "초대 보상 도착!" + "초대한 사람이 SweepPic에 가입했어요! 14일 무료 혜택을 받으세요" + [보상 받기] + "수령 가능한 보상: N건" + X닫기. 보상 없음: "수령 가능한 보상이 없습니다" + [친구 초대하기]. 수령 완료: "14일 무료 혜택이 적용되었습니다!" 다음 보상 자동 표시. 로딩/에러/재시도 FR-038. 기획문서 §초대 혜택 받기 UI 참조)
+- [X] T030 [US3] 보상 수령 로직 매니저 — `SweepPic/SweepPic/Features/Referral/Reward/ReferralRewardClaimManager.swift` (claimReward API 호출 → RewardClaimResult 분기: .promotional → PromotionalOfferService로 적용, .offerCode → OfferRedemptionService로 리딤 URL 열기, .error → 에러 안내. 순차 수령 지원 — 1건 완료 후 다음 건 자동 진행)
+- [X] T031 [US3] SceneDelegate 콜드 스타트 보상 팝업 — `SweepPic/SweepPic/App/SceneDelegate.swift` 에 추가 (scene(_:willConnectTo:) 에서 pending_rewards 조회 → 보상 있으면 ReferralRewardViewController 모달 표시, 포그라운드 복귀 시 미표시)
 
 **Checkpoint**: 초대자 보상 수령 독립 테스트 가능 (콜드 스타트 팝업 + 메뉴 진입)
 

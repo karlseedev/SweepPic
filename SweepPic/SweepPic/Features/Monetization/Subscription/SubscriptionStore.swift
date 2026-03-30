@@ -376,6 +376,72 @@ final class SubscriptionStore: SubscriptionStoreProtocol {
     }
     #endif
 
+    // MARK: - Referral Subscription Status (T028)
+
+    /// 초대 리워드용 구독 상태 문자열 반환
+    ///
+    /// claim-reward API에 전달하는 subscription_status 값:
+    /// - "none": 한 번도 구독한 적 없는 비구독자
+    /// - "monthly": pro_monthly 활성 구독
+    /// - "yearly": pro_yearly 활성 구독
+    /// - "expired_monthly": monthly 구독 만료 (과거 구독 이력 있음)
+    /// - "expired_yearly": yearly 구독 만료 (과거 구독 이력 있음)
+    ///
+    /// - Returns: 구독 상태 문자열
+    func referralSubscriptionStatus() async -> String {
+        // 활성 구독자인 경우 — 현재 구독 상품 확인
+        if isProUser {
+            // Transaction.currentEntitlements에서 현재 활성 상품 확인
+            for await result in Transaction.currentEntitlements {
+                guard case .verified(let transaction) = result else { continue }
+                if transaction.productID == SubscriptionProductID.proYearly {
+                    return "yearly"
+                }
+                if transaction.productID == SubscriptionProductID.proMonthly {
+                    return "monthly"
+                }
+            }
+            // 활성이지만 상품 특정 불가 → monthly 기본값
+            return "monthly"
+        }
+
+        // 비구독자 — 과거 구독 이력 확인
+        // Transaction.all에서 구독 이력을 순회하여 과거 구독 여부 판단
+        var hadMonthly = false
+        var hadYearly = false
+
+        for await result in Transaction.all {
+            guard case .verified(let transaction) = result else { continue }
+            if transaction.productID == SubscriptionProductID.proYearly {
+                hadYearly = true
+            }
+            if transaction.productID == SubscriptionProductID.proMonthly {
+                hadMonthly = true
+            }
+        }
+
+        // 과거 구독 이력이 있으면 expired 상태
+        if hadYearly { return "expired_yearly" }
+        if hadMonthly { return "expired_monthly" }
+
+        // 한 번도 구독한 적 없음
+        return "none"
+    }
+
+    /// 초대 리워드용 현재 상품 ID 반환
+    /// claim-reward API의 product_id 파라미터에 사용
+    ///
+    /// - Returns: 현재 활성 상품 ID 또는 기본값 "pro_monthly"
+    func referralProductId() async -> String {
+        for await result in Transaction.currentEntitlements {
+            guard case .verified(let transaction) = result else { continue }
+            if SubscriptionProductID.all.contains(transaction.productID) {
+                return transaction.productID
+            }
+        }
+        return SubscriptionProductID.proMonthly
+    }
+
     // MARK: - Deinit
 
     deinit {

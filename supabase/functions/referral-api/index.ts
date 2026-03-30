@@ -6,8 +6,8 @@
  * - POST /match-code     : 피초대자 코드 매칭 + Offer Code 할당 (Phase 4)
  * - POST /check-status   : 피초대자 상태 확인 (Phase 4)
  * - POST /report-redemption : 리딤 완료 보고 (Phase 4)
- * - POST /get-pending-rewards : 초대자 보상 조회 (Phase 5)
- * - POST /claim-reward   : 초대자 보상 수령 (Phase 5)
+ * - POST /get-pending-rewards : 초대자 보상 조회 (Phase 5, T024)
+ * - POST /claim-reward   : 초대자 보상 수령 (Phase 5, T025)
  * - POST /update-device-token : Push 토큰 갱신 (Phase 8)
  *
  * 공통 사항:
@@ -210,7 +210,7 @@ async function allocateOfferCode(
       .select("id, code")
       .eq("offer_name", offerName)
       .eq("status", "available")
-      .gt("expires_at", new Date().toISOString())
+      .or(`expires_at.is.null,expires_at.gt.${new Date().toISOString()}`)
       .limit(1);
 
     if (selectErr) {
@@ -636,6 +636,321 @@ async function handleReportRedemption(body: Record<string, unknown>): Promise<Re
   return successResponse({ status: "redeemed" });
 }
 
+// MARK: - get-pending-rewards 엔드포인트
+
+/**
+ * POST /get-pending-rewards — 초대자의 대기 중인 보상 목록 조회
+ *
+ * 로직:
+ * 1. pending_rewards에서 user_id + status=pending인 보상 조회
+ * 2. 만료 보상(expires_at < now()) 미포함 (FR-043)
+ *
+ * @param userId - 초대자 user_id
+ * @returns { rewards: PendingReward[] }
+ */
+async function handleGetPendingRewards(userId: string): Promise<Response> {
+  // 1. 만료 보상을 먼저 expired 처리
+  const now = new Date().toISOString();
+  await supabase
+    .from("pending_rewards")
+    .update({ status: "expired" })
+    .eq("user_id", userId)
+    .eq("status", "pending")
+    .lt("expires_at", now);
+
+  // 2. pending 보상 조회 (만료되지 않은 것만)
+  const { data: rewards, error } = await supabase
+    .from("pending_rewards")
+    .select("id, referral_id, reward_type, redeem_url, status, created_at, expires_at")
+    .eq("user_id", userId)
+    .eq("status", "pending")
+    .gte("expires_at", now)
+    .order("created_at", { ascending: true });
+
+  if (error) {
+    console.error("get-pending-rewards: 조회 실패 —", error.message);
+    return errorResponse("서버 오류가 발생했습니다.", 500);
+  }
+
+  console.log(
+    `get-pending-rewards: user=${userId.substring(0, 8)}, pending=${rewards?.length ?? 0}건`
+  );
+
+  return successResponse({ rewards: rewards || [] });
+}
+
+// MARK: - claim-reward 엔드포인트
+
+/**
+ * subscription_status에 따라 초대자용 보상 방식을 결정한다.
+ * - monthly/expired_monthly → Promotional Offer referral_extend_monthly
+ * - yearly/expired_yearly → Promotional Offer referral_extend_yearly
+ * - none (한 번도 구독 안 함) → Offer Code referral_reward_01
+ *
+ * @param subscriptionStatus - 클라이언트에서 전달한 구독 상태
+ * @returns { type: "promotional" | "offer_code", offerName: string }
+ */
+function determineRewardMethod(subscriptionStatus: string): {
+  type: "promotional" | "offer_code";
+  offerName: string;
+} {
+  switch (subscriptionStatus) {
+    case "monthly":
+    case "expired_monthly":
+      return { type: "promotional", offerName: "referral_extend_monthly" };
+    case "yearly":
+    case "expired_yearly":
+      return { type: "promotional", offerName: "referral_extend_yearly" };
+    case "none":
+    default:
+      return { type: "offer_code", offerName: "referral_reward_01" };
+  }
+}
+
+/**
+ * Promotional Offer 서명 생성 (ES256 — ECDSA P-256)
+ *
+ * Apple 요구사항:
+ * - P8 키로 ES256 서명
+ * - payload: appBundleId, keyId, productId, offerIdentifier, applicationUsername, nonce, timestamp
+ *
+ * @param productId - StoreKit 상품 ID (pro_monthly/pro_yearly)
+ * @param offerId - ASC Offer ID (referral_extend_monthly 등)
+ * @returns PromotionalOfferSignature 또는 null (서명 실패)
+ */
+async function generatePromotionalOfferSignature(
+  productId: string,
+  offerId: string
+): Promise<{
+  offer_id: string;
+  key_id: string;
+  nonce: string;
+  signature: string;
+  timestamp: number;
+} | null> {
+  const keyId = Deno.env.get("ASC_KEY_ID");
+  const bundleId = Deno.env.get("BUNDLE_ID");
+  const p8Key = Deno.env.get("ASC_P8_KEY");
+
+  if (!keyId || !bundleId || !p8Key) {
+    console.error("generateSignature: 환경 변수 미설정 (ASC_KEY_ID, BUNDLE_ID, ASC_P8_KEY)");
+    return null;
+  }
+
+  try {
+    // nonce와 timestamp 생성
+    const nonce = crypto.randomUUID();
+    const timestamp = Date.now();
+
+    // 서명할 페이로드 구성 (Apple 문서 기준: 구분자 '\u2063')
+    // appBundleId + keyId + productId + offerIdentifier + applicationUsername + nonce + timestamp
+    const separator = "\u2063"; // invisible separator
+    const payload = [
+      bundleId,
+      keyId,
+      productId,
+      offerId,
+      "", // applicationUsername — 빈 문자열
+      nonce.toLowerCase(),
+      String(timestamp),
+    ].join(separator);
+
+    // P8 키를 CryptoKey로 변환 (PKCS#8 PEM → binary)
+    const pemBody = p8Key
+      .replace("-----BEGIN PRIVATE KEY-----", "")
+      .replace("-----END PRIVATE KEY-----", "")
+      .replace(/\s/g, "");
+    const binaryKey = Uint8Array.from(atob(pemBody), (c) => c.charCodeAt(0));
+
+    const cryptoKey = await crypto.subtle.importKey(
+      "pkcs8",
+      binaryKey,
+      { name: "ECDSA", namedCurve: "P-256" },
+      false,
+      ["sign"]
+    );
+
+    // ES256 서명 생성
+    const encoder = new TextEncoder();
+    const signatureBuffer = await crypto.subtle.sign(
+      { name: "ECDSA", hash: "SHA-256" },
+      cryptoKey,
+      encoder.encode(payload)
+    );
+
+    // DER 인코딩된 서명을 Base64로 변환
+    const signatureBase64 = btoa(
+      String.fromCharCode(...new Uint8Array(signatureBuffer))
+    );
+
+    console.log(`generateSignature: 서명 생성 성공 — offer=${offerId}, product=${productId}`);
+
+    return {
+      offer_id: offerId,
+      key_id: keyId,
+      nonce,
+      signature: signatureBase64,
+      timestamp,
+    };
+  } catch (err) {
+    console.error("generateSignature: 서명 생성 실패 —", err);
+    return null;
+  }
+}
+
+/**
+ * POST /claim-reward — 초대자 보상 수령
+ *
+ * 로직:
+ * 1. pending_rewards에서 reward_id 조회, status == pending 확인
+ * 2. subscription_status 기반 보상 방식 결정
+ * 3. Promotional → P8 키 서명 생성 반환
+ * 4. Offer Code → 코드 할당 + 리딤 URL 반환
+ * 5. pending_rewards → completed, referrals → rewarded
+ *
+ * @param body - { user_id, reward_id, subscription_status, product_id }
+ * @returns { reward_type, signature? | redeem_url? }
+ */
+async function handleClaimReward(body: Record<string, unknown>): Promise<Response> {
+  const userId = body.user_id as string;
+  const rewardId = body.reward_id as string;
+  const subscriptionStatus = (body.subscription_status as string) || "none";
+  const productId = (body.product_id as string) || "pro_monthly";
+
+  // 필수 파라미터 확인
+  if (!rewardId) {
+    return errorResponse("reward_id가 필요합니다.", 400);
+  }
+
+  // 1. 보상 조회 및 상태 확인
+  const { data: reward, error: selectError } = await supabase
+    .from("pending_rewards")
+    .select("id, user_id, referral_id, status, expires_at")
+    .eq("id", rewardId)
+    .maybeSingle();
+
+  if (selectError) {
+    console.error("claim-reward: pending_rewards 조회 실패 —", selectError.message);
+    return errorResponse("서버 오류가 발생했습니다.", 500);
+  }
+
+  if (!reward) {
+    return errorResponse("해당 보상을 찾을 수 없습니다.");
+  }
+
+  // 본인의 보상인지 확인
+  if (reward.user_id !== userId) {
+    return errorResponse("잘못된 요청입니다.");
+  }
+
+  // 이미 수령 완료
+  if (reward.status === "completed") {
+    return successResponse({ status: "already_claimed" });
+  }
+
+  // 만료 확인
+  if (reward.status === "expired" ||
+    (reward.expires_at && new Date(reward.expires_at) < new Date())) {
+    // 만료 처리
+    await supabase
+      .from("pending_rewards")
+      .update({ status: "expired" })
+      .eq("id", rewardId);
+    return errorResponse("보상 수령 기간이 만료되었습니다.");
+  }
+
+  // 2. 보상 방식 결정
+  const method = determineRewardMethod(subscriptionStatus);
+
+  // 3. 보상 방식별 처리
+  if (method.type === "promotional") {
+    // Promotional Offer: P8 키로 서명 생성
+    const signature = await generatePromotionalOfferSignature(
+      productId,
+      method.offerName
+    );
+
+    if (!signature) {
+      return errorResponse("서명 생성에 실패했습니다. 잠시 후 다시 시도해주세요.");
+    }
+
+    // pending_rewards → completed
+    const now = new Date().toISOString();
+    await supabase
+      .from("pending_rewards")
+      .update({
+        status: "completed",
+        reward_type: "promotional",
+        completed_at: now,
+      })
+      .eq("id", rewardId)
+      .eq("status", "pending");
+
+    // referrals → rewarded
+    if (reward.referral_id) {
+      await supabase
+        .from("referrals")
+        .update({
+          status: "rewarded",
+          rewarded_at: now,
+        })
+        .eq("id", reward.referral_id);
+    }
+
+    console.log(
+      `claim-reward: Promotional Offer — user=${userId.substring(0, 8)}, offer=${method.offerName}`
+    );
+
+    return successResponse({
+      reward_type: "promotional",
+      signature,
+    });
+  } else {
+    // Offer Code: 코드 할당
+    const allocatedCode = await allocateOfferCode(method.offerName, userId);
+
+    if (!allocatedCode) {
+      return errorResponse("현재 일시적으로 오류가 발생했습니다. 다음날 다시 시도해주세요.");
+    }
+
+    const redeemUrl = buildRedeemURL(allocatedCode);
+
+    // pending_rewards → completed
+    const now = new Date().toISOString();
+    await supabase
+      .from("pending_rewards")
+      .update({
+        status: "completed",
+        reward_type: "offer_code",
+        offer_code: allocatedCode,
+        redeem_url: redeemUrl,
+        completed_at: now,
+      })
+      .eq("id", rewardId)
+      .eq("status", "pending");
+
+    // referrals → rewarded
+    if (reward.referral_id) {
+      await supabase
+        .from("referrals")
+        .update({
+          status: "rewarded",
+          rewarded_at: now,
+        })
+        .eq("id", reward.referral_id);
+    }
+
+    console.log(
+      `claim-reward: Offer Code — user=${userId.substring(0, 8)}, code=${allocatedCode}`
+    );
+
+    return successResponse({
+      reward_type: "offer_code",
+      redeem_url: redeemUrl,
+    });
+  }
+}
+
 // MARK: - 메인 핸들러
 
 Deno.serve(async (req: Request): Promise<Response> => {
@@ -695,9 +1010,12 @@ Deno.serve(async (req: Request): Promise<Response> => {
     case "report-redemption":
       return handleReportRedemption(body);
 
+    case "get-pending-rewards":
+      return handleGetPendingRewards(userId);
+    case "claim-reward":
+      return handleClaimReward(body);
+
     // 이후 Phase에서 추가:
-    // case "get-pending-rewards": return handleGetPendingRewards(userId);
-    // case "claim-reward": return handleClaimReward(body);
     // case "update-device-token": return handleUpdateDeviceToken(body);
 
     default:

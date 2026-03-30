@@ -416,4 +416,51 @@ public final class ReferralService {
             ]
         )
     }
+
+    // MARK: - Public API: User Story 3 (초대자 보상 수령)
+
+    /// 초대자의 대기 중인 보상 목록을 조회한다 (get-pending-rewards)
+    ///
+    /// 만료 보상은 서버에서 자동으로 expired 처리되어 결과에 포함되지 않는다.
+    ///
+    /// - Parameter userId: 초대자 Keychain UUID
+    /// - Returns: PendingRewardsListResponse (rewards 배열)
+    /// - Throws: ReferralServiceError
+    public func getPendingRewards(userId: String) async throws -> PendingRewardsListResponse {
+        return try await post(
+            endpoint: "get-pending-rewards",
+            body: ["user_id": userId]
+        )
+    }
+
+    /// 초대자가 보상을 수령한다 (claim-reward)
+    ///
+    /// 서버에서 subscription_status를 기반으로 보상 방식을 결정:
+    /// - monthly/expired_monthly → Promotional Offer (referral_extend_monthly)
+    /// - yearly/expired_yearly → Promotional Offer (referral_extend_yearly)
+    /// - none → Offer Code (referral_reward_01)
+    ///
+    /// - Parameters:
+    ///   - userId: 초대자 Keychain UUID
+    ///   - rewardId: pending_rewards 테이블 ID
+    ///   - subscriptionStatus: 구독 상태 (none/monthly/yearly/expired_monthly/expired_yearly)
+    ///   - productId: StoreKit 상품 ID (pro_monthly/pro_yearly)
+    /// - Returns: RewardClaimResponse (reward_type + signature 또는 redeem_url)
+    /// - Throws: ReferralServiceError
+    public func claimReward(
+        userId: String,
+        rewardId: String,
+        subscriptionStatus: String,
+        productId: String
+    ) async throws -> RewardClaimResponse {
+        return try await post(
+            endpoint: "claim-reward",
+            body: [
+                "user_id": userId,
+                "reward_id": rewardId,
+                "subscription_status": subscriptionStatus,
+                "product_id": productId
+            ]
+        )
+    }
 }

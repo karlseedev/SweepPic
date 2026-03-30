@@ -204,6 +204,37 @@ public struct PromotionalOfferSignature: Codable, Sendable {
     }
 }
 
+// MARK: - PendingRewardsListResponse
+
+/// get-pending-rewards API 응답 래퍼
+/// 서버에서 { rewards: [...] } 형태로 반환
+public struct PendingRewardsListResponse: Codable, Sendable {
+    /// 대기 중인 보상 목록 (생성일 오름차순)
+    public let rewards: [PendingRewardResponse]
+}
+
+// MARK: - RewardClaimResponse
+
+/// claim-reward API 응답 모델
+/// 서버에서 보상 방식에 따라 signature 또는 redeem_url을 반환
+public struct RewardClaimResponse: Codable, Sendable {
+    /// 보상 지급 방식 ("promotional" 또는 "offer_code")
+    public let rewardType: String
+    /// Promotional Offer 서명 (promotional 타입만)
+    public let signature: PromotionalOfferSignature?
+    /// Offer Code 리딤 URL (offer_code 타입만)
+    public let redeemURL: URL?
+    /// 이미 수령 완료 상태일 때
+    public let status: String?
+
+    enum CodingKeys: String, CodingKey {
+        case rewardType = "reward_type"
+        case signature
+        case redeemURL = "redeem_url"
+        case status
+    }
+}
+
 // MARK: - RewardClaimResult
 
 /// 보상 수령 결과 (claim-reward API 응답을 파싱한 클라이언트 결과)

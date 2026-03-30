@@ -152,6 +152,12 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
 
         Logger.app.debug("Showing main interface (TabBarController)")
 
+        // [Referral] T031: 콜드 스타트 시 보상 팝업 체크
+        // TabBarController가 표시된 후 약간의 딜레이로 팝업 표시
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { [weak self] in
+            self?.checkAndShowReferralRewardPopup()
+        }
+
         // 실측용 Inspector 활성화 (iOS 26 버튼 크기/모양 수집)
         #if DEBUG
         // SystemUIInspector3.shared.showDebugButton()  // JSON Dump - 현재 미사용
@@ -498,6 +504,60 @@ extension SceneDelegate {
         attVC.modalPresentationStyle = .overFullScreen
         attVC.modalTransitionStyle = .crossDissolve
         rootVC.present(attVC, animated: true)
+    }
+}
+
+// MARK: - Referral Reward Popup (T031)
+
+extension SceneDelegate {
+
+    /// 콜드 스타트 시 대기 중인 보상이 있으면 팝업을 표시한다.
+    ///
+    /// 조건:
+    /// - 메인 화면(TabBarController)이 표시된 상태
+    /// - 다른 모달이 표시 중이 아닐 때
+    /// - pending 보상이 1건 이상 존재
+    ///
+    /// 포그라운드 복귀 시에는 팝업 미표시 (콜드 스타트 전용)
+    func checkAndShowReferralRewardPopup() {
+        let userId = ReferralStore.shared.userId
+
+        Task {
+            do {
+                let response = try await ReferralService.shared.getPendingRewards(userId: userId)
+
+                // 보상 없으면 무시
+                guard !response.rewards.isEmpty else { return }
+
+                await MainActor.run {
+                    // 루트가 TabBarController인지 확인
+                    guard let rootVC = self.window?.rootViewController,
+                          rootVC is TabBarController else {
+                        Logger.referral.debug("SceneDelegate: 보상 팝업 미표시 — 메인 화면 아님")
+                        return
+                    }
+
+                    // 다른 모달이 표시 중이면 미표시
+                    guard rootVC.presentedViewController == nil else {
+                        Logger.referral.debug("SceneDelegate: 보상 팝업 미표시 — 다른 모달 표시 중")
+                        return
+                    }
+
+                    // 보상 팝업 표시
+                    let rewardVC = ReferralRewardViewController()
+                    rootVC.present(rewardVC, animated: true)
+
+                    Logger.referral.debug(
+                        "SceneDelegate: 보상 팝업 표시 — \(response.rewards.count)건"
+                    )
+                }
+            } catch {
+                // 네트워크 오류 등 — 무시 (다음 실행 시 재시도)
+                Logger.referral.error(
+                    "SceneDelegate: 보상 조회 실패 — \(error.localizedDescription)"
+                )
+            }
+        }
     }
 }
 
