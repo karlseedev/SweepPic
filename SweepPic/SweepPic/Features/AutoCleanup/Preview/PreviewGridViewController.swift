@@ -921,10 +921,7 @@ extension PreviewGridViewController: PreviewBottomViewDelegate {
         updateBottomView()
         updateHeader()
 
-        // 뷰어에서 전부 제외 시 빈 화면 방지
-        if effectiveCount(upToStage: currentStage) == 0 {
-            showAllExcludedAlert()
-        }
+        // 전부 제외해도 그리드 유지 — 0장이면 버튼이 무반응, 사용자가 X로 나감
     }
 }
 

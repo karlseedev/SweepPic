@@ -237,10 +237,7 @@ extension PreviewGridViewController {
         // 3. [Analytics]
         analyticsExcludeCount += assetIDs.count
 
-        // 4. 전체 제외 시 Alert → pop
-        if effectiveCount(upToStage: currentStage) == 0 {
-            showAllExcludedAlert()
-        }
+        // 전부 제외해도 그리드 유지 — 0장이면 버튼이 무반응, 사용자가 X로 나감
     }
 
     // MARK: - 스와이프 강제 취소 (stage 전환, viewWillAppear 등)
@@ -258,20 +255,7 @@ extension PreviewGridViewController {
         }
     }
 
-    // MARK: - 전체 제외 Alert
-
-    /// 모든 사진이 제외되었을 때 Alert → pop
-    func showAllExcludedAlert() {
-        let alert = UIAlertController(
-            title: "모든 사진이 제외되었습니다",
-            message: nil,
-            preferredStyle: .alert
-        )
-        alert.addAction(UIAlertAction(title: "확인", style: .default) { [weak self] _ in
-            self?.navigationController?.popViewController(animated: true)
-        })
-        present(alert, animated: true)
-    }
+    // 전부 제외해도 그리드 유지 — "0장 삭제대기함 이동" 버튼은 무반응 (guard !assetIDs.isEmpty)
 }
 
 // MARK: - UIGestureRecognizerDelegate
