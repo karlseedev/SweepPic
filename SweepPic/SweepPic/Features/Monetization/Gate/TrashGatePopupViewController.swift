@@ -364,8 +364,10 @@ final class TrashGatePopupViewController: UIViewController {
     /// T032: 초대 프로모 버튼 탭 → ReferralExplainViewController 모달
     @objc private func referralButtonTapped() {
         Logger.app.debug("TrashGatePopup: 초대 프로모 버튼 탭")
-        dismiss(animated: true) { [weak self] in
-            guard let presenter = self?.presentingViewController ?? self?.view.window?.rootViewController else { return }
+        // dismiss 전에 presenter 캡처 (dismiss 후에는 presentingViewController가 nil)
+        let presenter = presentingViewController
+        dismiss(animated: true) {
+            guard let presenter = presenter else { return }
             let referralVC = ReferralExplainViewController()
             presenter.present(referralVC, animated: true)
         }

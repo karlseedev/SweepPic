@@ -281,9 +281,10 @@ final class CelebrationViewController: UIViewController {
     /// T034: 초대 버튼 탭 → ReferralExplainViewController 모달
     @objc private func referralButtonTapped() {
         Logger.app.debug("CelebrationVC: 초대 버튼 탭")
+        let presenter = presentingViewController
         cardView.deactivateBlur()
-        dismiss(animated: true) { [weak self] in
-            guard let presenter = self?.presentingViewController ?? self?.view.window?.rootViewController else { return }
+        dismiss(animated: true) {
+            guard let presenter = presenter else { return }
             let referralVC = ReferralExplainViewController()
             presenter.present(referralVC, animated: true)
         }

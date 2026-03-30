@@ -511,8 +511,9 @@ final class UsageGaugeDetailPopup: UIViewController {
     /// T033: 초대 프로모 버튼 탭 → ReferralExplainViewController 모달
     @objc private func referralTapped() {
         Logger.app.debug("UsageGaugeDetailPopup: 초대 프로모 버튼 탭")
-        dismiss(animated: true) { [weak self] in
-            guard let presenter = self?.presentingViewController ?? self?.view.window?.rootViewController else { return }
+        let presenter = presentingViewController
+        dismiss(animated: true) {
+            guard let presenter = presenter else { return }
             let referralVC = ReferralExplainViewController()
             presenter.present(referralVC, animated: true)
         }
