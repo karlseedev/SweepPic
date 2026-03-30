@@ -271,15 +271,6 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         // ATT 프리프롬프트 표시 (설치 2시간 경과 + Pro 미구독 + ATT .notDetermined + skipCount < 2)
         checkAndShowATTPrompt()
 
-        // ⚠️ 임시 테스트: ReferralExplainViewController UI 확인용 — 확인 후 삭제
-        #if DEBUG
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { [weak self] in
-            guard let root = self?.window?.rootViewController,
-                  root.presentedViewController == nil else { return }
-            let vc = ReferralExplainViewController()
-            root.present(vc, animated: true)
-        }
-        #endif
     }
 
     /// Scene이 비활성화될 때 호출
