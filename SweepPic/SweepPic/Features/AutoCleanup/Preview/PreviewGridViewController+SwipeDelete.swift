@@ -69,16 +69,13 @@ extension PreviewGridViewController {
             return
         }
 
-        // 이미 제외된 셀이면 스와이프 차단
-        guard !excludedAssetIDs.contains(candidates[indexPath.item].assetID) else {
-            gesture.state = .cancelled
-            return
-        }
+        // 제외 여부에 따라 방향 결정 (제외됨=해제 모드, 미제외=제외 모드)
+        let isExcluded = excludedAssetIDs.contains(candidates[indexPath.item].assetID)
 
         // 상태 설정
         swipeDeleteState.targetCell = cell
         swipeDeleteState.targetIndexPath = indexPath
-        swipeDeleteState.targetIsTrashed = false  // 미리보기는 항상 미삭제
+        swipeDeleteState.targetIsTrashed = isExcluded  // true: 해제(걷힘), false: 제외(채움)
         swipeDeleteState.angleCheckPassed = false
         swipeTargetSection = indexPath.section
 
@@ -139,7 +136,7 @@ extension PreviewGridViewController {
         // 같은 셀 내: 커튼 딤드 진행도
         let progress = min(1.0, absX / currentCellWidth)
         let direction: PhotoCell.SwipeDirection = translation.x > 0 ? .right : .left
-        cell.setDimmedProgress(progress, direction: direction, isTrashed: false)
+        cell.setDimmedProgress(progress, direction: direction, isTrashed: swipeDeleteState.targetIsTrashed)
     }
 
     // MARK: - Ended
@@ -183,15 +180,21 @@ extension PreviewGridViewController {
             swipeDeleteState.reset()
             return
         }
+        let wasUnexclude = swipeDeleteState.targetIsTrashed
         cell.cancelDimmedAnimation {
             cell.isAnimating = false
+            if wasUnexclude {
+                cell.setRestoredPreview()
+                cell.prepareSwipeOverlay(style: .restore)
+                cell.setFullDimmed(isTrashed: false)
+            }
         }
         swipeDeleteState.reset()
     }
 
     // MARK: - 단일 확정
 
-    /// 단일 스와이프 확정 → 셀 제외
+    /// 단일 스와이프 확정 → 제외 또는 제외 해제
     private func confirmSingleSwipeExclude(cell: PhotoCell, indexPath: IndexPath) {
         guard case .photos(let candidates) = sectionType(for: indexPath.section),
               indexPath.item < candidates.count else {
@@ -200,15 +203,25 @@ extension PreviewGridViewController {
         }
 
         let assetID = candidates[indexPath.item].assetID
+        let wasExcluded = swipeDeleteState.targetIsTrashed
         swipeDeleteState.reset()
 
-        // 확정 애니메이션 → completion에서 제외 적용
-        cell.confirmDimmedAnimation(toTrashed: true) { [weak self] in
-            cell.isAnimating = false
-            self?.applySwipeExclusion(assetIDs: [assetID])
+        if wasExcluded {
+            // 해제: fade out + isTrashed=false 자동 리셋
+            // .restore 스타일이라 마룬 리셋 스킵 + icon hidden
+            cell.confirmDimmedAnimation(toTrashed: false) { [weak self] in
+                cell.isAnimating = false
+                self?.excludedAssetIDs.remove(assetID)
+                self?.updateBottomView()
+            }
+        } else {
+            // 제외: 기존과 동일
+            cell.confirmDimmedAnimation(toTrashed: true) { [weak self] in
+                cell.isAnimating = false
+                self?.applySwipeExclusion(assetIDs: [assetID])
+            }
         }
 
-        // 햅틱
         HapticFeedback.light()
     }
 
@@ -216,8 +229,15 @@ extension PreviewGridViewController {
 
     /// 단일 스와이프 취소 → spring 복귀
     private func cancelSingleSwipe(cell: PhotoCell) {
+        let wasUnexclude = swipeDeleteState.targetIsTrashed
         cell.cancelDimmedAnimation {
             cell.isAnimating = false
+            // 해제 취소: completion이 마룬+아이콘 리셋 → 동기적 green 재적용 (렌더 안 됨)
+            if wasUnexclude {
+                cell.setRestoredPreview()
+                cell.prepareSwipeOverlay(style: .restore)
+                cell.setFullDimmed(isTrashed: false)
+            }
         }
         swipeDeleteState.reset()
     }
@@ -247,10 +267,17 @@ extension PreviewGridViewController {
         if swipeDeleteState.isMultiMode {
             cancelMultiSwipeDelete()
         } else if let cell = swipeDeleteState.targetCell {
-            cell.cancelDimmedAnimation { cell.isAnimating = false }
+            let wasUnexclude = swipeDeleteState.targetIsTrashed
+            cell.cancelDimmedAnimation {
+                cell.isAnimating = false
+                if wasUnexclude {
+                    cell.setRestoredPreview()
+                    cell.prepareSwipeOverlay(style: .restore)
+                    cell.setFullDimmed(isTrashed: false)
+                }
+            }
             swipeDeleteState.reset()
         } else if swipeDeleteState.swipeGesture != nil && swipeDeleteState.angleCheckPassed {
-            // targetCell이 이미 nil(weak ref 해제)된 경우
             swipeDeleteState.reset()
         }
     }

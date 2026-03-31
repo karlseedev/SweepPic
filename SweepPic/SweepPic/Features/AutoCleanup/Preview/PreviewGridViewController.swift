@@ -708,16 +708,18 @@ extension PreviewGridViewController: UICollectionViewDataSource {
             ) as! PhotoCell
 
             let candidate = candidates[indexPath.item]
+            let isExcluded = excludedAssetIDs.contains(candidate.assetID)
             cell.configure(
                 asset: candidate.asset,
-                isTrashed: false,
+                isTrashed: isExcluded,  // 제외=true → isTrashed와 시각 상태 일치
                 targetSize: thumbnailSize()
             )
 
-            // 제외된 셀 → 그린 딤드 표시 (셀 재사용 시에도 올바르게 복원)
-            if excludedAssetIDs.contains(candidate.assetID) {
-                cell.prepareSwipeOverlay(style: .restore)  // 그린 색상
-                cell.setFullDimmed(isTrashed: false)        // 60% 딤드
+            // 제외된 셀: configure(isTrashed:true)가 마룬+아이콘 표시 → 그린으로 override
+            if isExcluded {
+                cell.setRestoredPreview()                    // icon 숨김 + alpha=0
+                cell.prepareSwipeOverlay(style: .restore)    // green 색상
+                cell.setFullDimmed(isTrashed: false)         // alpha=0.6
             }
 
             // [DEBUG] 셀 위에 assetID 앞 6자 + 신호 요약 표시
