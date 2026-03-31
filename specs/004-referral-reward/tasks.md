@@ -156,15 +156,15 @@
 
 ### Server
 
-- [ ] T039 [US6] Push 발송 Edge Function — `supabase/functions/push-notify/index.ts` (APNs HTTP/2 직접 호출: P8 키로 JWT 생성(iss=team_id), POST /3/device/{token}, payload: title "초대 보상 도착!" + body "초대한 사람이 SweepPic에 가입했어요! 14일 무료 혜택을 받으세요" + action_type "referral_reward" + reward_id + badge:1. 410 Gone 시 referral_links.device_token NULL 설정)
-- [ ] T040 [US6] referral-api/report-redemption에서 push-notify 호출 연동 — `supabase/functions/referral-api/index.ts` 수정 (report-redemption 로직 끝에서 초대자의 device_token 조회 → 있으면 push-notify 호출)
+- [X] T039 [US6] Push 발송 Edge Function — `supabase/functions/push-notify/index.ts` (APNs HTTP/2 직접 호출: P8 키로 JWT 생성(iss=team_id), POST /3/device/{token}, payload: title "초대 보상 도착!" + body "초대한 사람이 SweepPic에 가입했어요! 14일 무료 혜택을 받으세요" + action_type "referral_reward" + reward_id + badge:1. 410 Gone 시 referral_links.device_token NULL 설정)
+- [X] T040 [US6] referral-api/report-redemption에서 push-notify 호출 연동 — `supabase/functions/referral-api/index.ts` 수정 (report-redemption 로직 끝에서 초대자의 device_token 조회 → 있으면 push-notify 호출)
 
 ### Client
 
-- [ ] T041 [US6] Push 알림 서비스 — `Sources/AppCore/Services/PushNotificationService.swift` (UNUserNotificationCenter 권한 요청, registerForRemoteNotifications, device token 서버 전송 ReferralService.updateDeviceToken(), 배지 초기화 UIApplication.shared.applicationIconBadgeNumber=0, FR-026/028)
-- [ ] T042 [US6] referral-api update-device-token 엔드포인트 — `supabase/functions/referral-api/index.ts` 에 추가 (POST /update-device-token: referral_links.device_token 갱신)
-- [ ] T043 [US6] AppDelegate Push 등록 — `SweepPic/SweepPic/App/AppDelegate.swift` 수정 (UNUserNotificationCenter.delegate 설정, didRegisterForRemoteNotificationsWithDeviceToken → PushNotificationService 토큰 전달)
-- [ ] T044 [US6] SceneDelegate Push 연동 — `SweepPic/SweepPic/App/SceneDelegate.swift` 수정 (Push notification userInfo에서 action_type=="referral_reward" 감지 → ReferralRewardViewController 모달 표시, 포그라운드 Push → 인앱 배너 UNNotificationPresentationOptions [.banner, .sound], sceneWillEnterForeground에서 device token 서버 갱신 FR-026)
+- [X] T041 [US6] Push 알림 서비스 — `Sources/AppCore/Services/PushNotificationService.swift` (UNUserNotificationCenter 권한 요청, registerForRemoteNotifications, device token 서버 전송 ReferralService.updateDeviceToken(), 배지 초기화 UIApplication.shared.applicationIconBadgeNumber=0, FR-026/028)
+- [X] T042 [US6] referral-api update-device-token 엔드포인트 — `supabase/functions/referral-api/index.ts` 에 추가 (POST /update-device-token: referral_links.device_token 갱신)
+- [X] T043 [US6] AppDelegate Push 등록 — `SweepPic/SweepPic/App/AppDelegate.swift` 수정 (UNUserNotificationCenter.delegate 설정, didRegisterForRemoteNotificationsWithDeviceToken → PushNotificationService 토큰 전달)
+- [X] T044 [US6] SceneDelegate Push 연동 — `SweepPic/SweepPic/App/SceneDelegate.swift` 수정 (Push notification userInfo에서 action_type=="referral_reward" 감지 → ReferralRewardViewController 모달 표시, 포그라운드 Push → 인앱 배너 UNNotificationPresentationOptions [.banner, .sound], sceneWillEnterForeground에서 device token 서버 갱신 FR-026)
 
 **Checkpoint**: Push 알림 전체 플로우 테스트 가능 (실기기 필요)
 
