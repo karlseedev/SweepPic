@@ -261,7 +261,7 @@ final class UsageGaugeDetailPopup: UIViewController {
     /// 제목 라벨 — 흰색 텍스트
     private let titleLabel: UILabel = {
         let label = UILabel()
-        label.text = "오늘의 삭제 한도"
+        label.text = "무료 삭제 한도"
         label.font = .systemFont(ofSize: 22, weight: .semibold)
         label.textColor = .white
         label.textAlignment = .center
@@ -296,7 +296,7 @@ final class UsageGaugeDetailPopup: UIViewController {
     /// Pro 구독 버튼 — 반투명 흰색 배경 + 흰색 텍스트
     private let proButton: UIButton = {
         let button = UIButton(type: .system)
-        button.setTitle("Pro로 무제한", for: .normal)
+        button.setTitle("Pro 멤버십으로 무제한 삭제", for: .normal)
         button.backgroundColor = UIColor.white.withAlphaComponent(0.12)
         button.setTitleColor(.white, for: .normal)
         button.titleLabel?.font = .systemFont(ofSize: 17, weight: .semibold)
@@ -324,7 +324,7 @@ final class UsageGaugeDetailPopup: UIViewController {
     /// 초대 프로모 하단 배경 — 카드 하단을 가로로 잘라 색상 차별화
     private let referralPromoBackground: UIView = {
         let view = UIView()
-        view.backgroundColor = UIColor.black.withAlphaComponent(0.25)
+        view.backgroundColor = UIColor.black.withAlphaComponent(0.35)
         view.translatesAutoresizingMaskIntoConstraints = false
         return view
     }()
@@ -332,7 +332,7 @@ final class UsageGaugeDetailPopup: UIViewController {
     /// 초대 프로모 안내 라벨
     private let referralPromoLabel: UILabel = {
         let label = UILabel()
-        label.text = "초대 한 번마다 나도 친구도\n14일 프리미엄 무료 제공!"
+        label.text = "초대 한 번마다 나도 친구도\nPro 멤버십 14일 무료 제공!"
         label.font = .systemFont(ofSize: 14, weight: .medium)
         label.textColor = UIColor.white.withAlphaComponent(0.8)
         label.textAlignment = .center
@@ -344,9 +344,9 @@ final class UsageGaugeDetailPopup: UIViewController {
     /// 초대하기 버튼 — 다른 버튼과 동일 높이 50pt
     private let referralButton: UIButton = {
         let button = UIButton(type: .system)
-        button.backgroundColor = UIColor.white.withAlphaComponent(0.12)
+        button.backgroundColor = UIColor.white.withAlphaComponent(0.8)
         button.setTitle("친구 초대하기", for: .normal)
-        button.setTitleColor(.white, for: .normal)
+        button.setTitleColor(.black, for: .normal)
         button.titleLabel?.font = .systemFont(ofSize: 17, weight: .semibold)
         button.layer.cornerRadius = 25
         button.clipsToBounds = true
@@ -505,7 +505,7 @@ final class UsageGaugeDetailPopup: UIViewController {
         closeButton.accessibilityLabel = "닫기"
         closeButton.accessibilityHint = "한도 상세 팝업을 닫습니다"
         // T033: 초대 프로모 접근성
-        referralPromoLabel.accessibilityLabel = "초대 한 번마다 나도 친구도 14일 프리미엄 무료 제공"
+        referralPromoLabel.accessibilityLabel = "초대 한 번마다 나도 친구도 Pro 멤버십 14일 무료 제공"
         referralButton.accessibilityLabel = "친구 초대하기"
         referralButton.accessibilityHint = "초대 설명 화면으로 이동합니다"
         referralSubtitleLabel.accessibilityLabel = "이미 구독 중이어도 14일 무료 연장"

@@ -86,7 +86,7 @@ final class TrashGatePopupViewController: UIViewController {
     /// 제목 라벨 — 흰색 텍스트
     private let titleLabel: UILabel = {
         let label = UILabel()
-        label.text = "삭제대기함을 비우려면"
+        label.text = "무료 삭제 한도 초과"
         label.font = .systemFont(ofSize: 22, weight: .semibold)
         label.textColor = .white
         label.textAlignment = .center
@@ -130,7 +130,7 @@ final class TrashGatePopupViewController: UIViewController {
     private let proButton: UIButton = {
         let button = UIButton(type: .system)
         button.backgroundColor = UIColor.white.withAlphaComponent(0.12)
-        button.setTitle("Pro로 무제한", for: .normal)
+        button.setTitle("Pro 멤버십으로 무제한 삭제", for: .normal)
         button.setTitleColor(.white, for: .normal)
         button.titleLabel?.font = .systemFont(ofSize: 17, weight: .semibold)
         button.layer.cornerRadius = 25
@@ -182,7 +182,7 @@ final class TrashGatePopupViewController: UIViewController {
     /// cardView.contentView에 삽입하여 카드의 clipsToBounds로 하단 모서리 자동 처리
     private let referralPromoBackground: UIView = {
         let view = UIView()
-        view.backgroundColor = UIColor.black.withAlphaComponent(0.25)
+        view.backgroundColor = UIColor.black.withAlphaComponent(0.35)
         view.translatesAutoresizingMaskIntoConstraints = false
         return view
     }()
@@ -190,7 +190,7 @@ final class TrashGatePopupViewController: UIViewController {
     /// 초대 프로모 안내 라벨
     private let referralPromoLabel: UILabel = {
         let label = UILabel()
-        label.text = "초대 한 번마다 나도 친구도\n14일 프리미엄 무료 제공!"
+        label.text = "초대 한 번마다 나도 친구도\nPro 멤버십 14일 무료 제공!"
         label.font = .systemFont(ofSize: 14, weight: .medium)
         label.textColor = UIColor.white.withAlphaComponent(0.8)
         label.textAlignment = .center
@@ -202,9 +202,9 @@ final class TrashGatePopupViewController: UIViewController {
     /// 초대하기 버튼 — 다른 버튼과 동일 높이 50pt, cornerRadius 25
     private let referralButton: UIButton = {
         let button = UIButton(type: .system)
-        button.backgroundColor = UIColor.white.withAlphaComponent(0.12)
+        button.backgroundColor = UIColor.white.withAlphaComponent(0.8)
         button.setTitle("친구 초대하기", for: .normal)
-        button.setTitleColor(.white, for: .normal)
+        button.setTitleColor(.black, for: .normal)
         button.titleLabel?.font = .systemFont(ofSize: 17, weight: .semibold)
         button.layer.cornerRadius = 25
         button.clipsToBounds = true
@@ -402,7 +402,7 @@ final class TrashGatePopupViewController: UIViewController {
 
     /// 데이터 기반 콘텐츠 구성
     private func configureContent() {
-        infoLabel.text = "\(trashCount)장 · 무료 삭제 한도 \(remainingFreeDeletes)장 남음"
+        infoLabel.text = "삭제할 사진 \(trashCount)장 · 무료 삭제 가능 \(remainingFreeDeletes)장"
 
         let isRewardExhausted = remainingRewards <= 0
 
@@ -542,7 +542,7 @@ final class TrashGatePopupViewController: UIViewController {
             referralPromoLabel, referralButton, referralSubtitleLabel
         ]
         titleLabel.accessibilityTraits = .header
-        infoLabel.accessibilityLabel = "\(trashCount)장 삭제 대상, 무료 삭제 한도 \(remainingFreeDeletes)장 남음"
+        infoLabel.accessibilityLabel = "삭제할 사진 \(trashCount)장, 무료 삭제 가능 \(remainingFreeDeletes)장"
         adButton.accessibilityLabel = "광고를 보고 사진 삭제하기"
         adButton.accessibilityHint = "광고를 시청한 후 사진을 삭제합니다"
         proButton.accessibilityLabel = "Pro 구독으로 무제한 삭제"
@@ -552,7 +552,7 @@ final class TrashGatePopupViewController: UIViewController {
         goldenMomentLabel.accessibilityLabel = "오늘 광고 횟수를 모두 사용했습니다"
         offlineLabel.accessibilityLabel = "인터넷 연결이 필요합니다"
         // T032: 초대 프로모 접근성
-        referralPromoLabel.accessibilityLabel = "초대 한 번마다 나도 친구도 14일 프리미엄 무료 제공"
+        referralPromoLabel.accessibilityLabel = "초대 한 번마다 나도 친구도 Pro 멤버십 14일 무료 제공"
         referralButton.accessibilityLabel = "친구 초대하기"
         referralButton.accessibilityHint = "초대 설명 화면으로 이동합니다"
         referralSubtitleLabel.accessibilityLabel = "이미 구독 중이어도 14일 무료 연장"

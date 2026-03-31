@@ -418,7 +418,16 @@ final class ReferralRewardViewController: UIViewController {
 
     /// 상태에 따른 UI 업데이트
     private func updateUI(for state: DisplayState) {
-        // 공통: 상태 초기화
+        // 공통: 상태 초기화 — 카드가 제거된 상태면 다시 추가
+        if cardView.superview == nil {
+            view.addSubview(cardView)
+            cardView.activateBlur()
+            NSLayoutConstraint.activate([
+                cardView.centerYAnchor.constraint(equalTo: view.centerYAnchor),
+                cardView.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 24),
+                cardView.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -24),
+            ])
+        }
         errorLabel.isHidden = true
         buttonSpinner.stopAnimating()
         actionButton.isEnabled = true
@@ -427,12 +436,9 @@ final class ReferralRewardViewController: UIViewController {
 
         switch state {
         case .loading:
-            statusIconView.text = ""
-            titleLabel.text = "불러오는 중..."
-            descriptionLabel.text = ""
-            countLabel.text = ""
-            actionButton.isHidden = true
-            closeButton.isHidden = false
+            // 카드 완전히 제거 후 데이터 로드 완료 시 다시 추가 (Glass 잔상 방지)
+            cardView.removeFromSuperview()
+            return
 
         case .hasRewards(let count):
             statusIconView.text = "🎉"
@@ -448,9 +454,9 @@ final class ReferralRewardViewController: UIViewController {
             closeButton.isHidden = false
 
         case .noRewards:
-            statusIconView.text = "📭"
+            statusIconView.isHidden = true
             titleLabel.text = "수령 가능한 보상이 없습니다"
-            descriptionLabel.text = "친구를 초대하고 프리미엄 혜택을 받으세요!"
+            descriptionLabel.text = "친구를 초대하고\nPro 멤버십 14일 무료 혜택을 받으세요!"
             countLabel.isHidden = true
             actionButton.isHidden = false
             actionButton.setTitle("친구 초대하기", for: .normal)

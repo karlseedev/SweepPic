@@ -151,9 +151,9 @@ final class ReferralCodeInputViewController: UIViewController {
     /// 클립보드에서 붙여넣기 버튼 (actionButton과 동일 스타일, 흰색 90%)
     private lazy var pasteButton: UIButton = {
         let button = UIButton(type: .system)
-        button.backgroundColor = UIColor.white.withAlphaComponent(0.7)
+        button.backgroundColor = UIColor.white.withAlphaComponent(0.12)
         button.setTitle("붙여넣기", for: .normal)
-        button.setTitleColor(.black, for: .normal)
+        button.setTitleColor(.white, for: .normal)
         button.titleLabel?.font = .systemFont(ofSize: 17, weight: .semibold)
         button.layer.cornerRadius = 25
         button.clipsToBounds = true
@@ -165,8 +165,8 @@ final class ReferralCodeInputViewController: UIViewController {
     /// 메인 액션 버튼 (적용하기 / 혜택 받기)
     private lazy var actionButton: UIButton = {
         let button = UIButton(type: .system)
-        button.backgroundColor = .white
-        button.setTitleColor(.black, for: .normal)
+        button.backgroundColor = UIColor.white.withAlphaComponent(0.12)
+        button.setTitleColor(.white, for: .normal)
         button.titleLabel?.font = .systemFont(ofSize: 17, weight: .semibold)
         button.layer.cornerRadius = 25
         button.clipsToBounds = true
