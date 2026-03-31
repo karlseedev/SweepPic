@@ -78,6 +78,22 @@ final class ReferralRewardViewController: UIViewController {
 
     // MARK: - UI Components
 
+    /// 배경 블러 (딤드 위에 10% 강도 블러)
+    private let backgroundBlurView: UIVisualEffectView = {
+        let view = UIVisualEffectView(effect: nil)
+        view.translatesAutoresizingMaskIntoConstraints = false
+        return view
+    }()
+
+    private lazy var blurAnimator: UIViewPropertyAnimator = {
+        let animator = UIViewPropertyAnimator(duration: 0, curve: .linear) { [weak self] in
+            self?.backgroundBlurView.effect = UIBlurEffect(style: .systemUltraThinMaterialDark)
+        }
+        animator.fractionComplete = 0.1
+        animator.pausesOnCompletion = true
+        return animator
+    }()
+
     /// Glass 팝업 카드
     private lazy var cardView = BlurPopupCardView()
 
@@ -225,11 +241,21 @@ final class ReferralRewardViewController: UIViewController {
     private func setupUI() {
         // 딤 배경 (TrashGatePopup 패턴)
         view.backgroundColor = UIColor.black.withAlphaComponent(0.4)
+        _ = blurAnimator
 
         // 배경 탭으로 닫기
         let tapGesture = UITapGestureRecognizer(target: self, action: #selector(closeTapped))
         tapGesture.delegate = self
         view.addGestureRecognizer(tapGesture)
+
+        // 배경 블러
+        view.addSubview(backgroundBlurView)
+        NSLayoutConstraint.activate([
+            backgroundBlurView.topAnchor.constraint(equalTo: view.topAnchor),
+            backgroundBlurView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+            backgroundBlurView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+            backgroundBlurView.bottomAnchor.constraint(equalTo: view.bottomAnchor)
+        ])
 
         // Glass 카드
         view.addSubview(cardView)
@@ -481,6 +507,7 @@ final class ReferralRewardViewController: UIViewController {
 
         case .noRewards:
             // 친구 초대하기 → ReferralExplainVC
+            blurAnimator.stopAnimation(true)
             cardView.deactivateBlur()
             dismiss(animated: true) {
                 // 최상위 VC에서 ReferralExplainVC 표시
@@ -513,6 +540,7 @@ final class ReferralRewardViewController: UIViewController {
 
     /// 닫기 버튼 / 배경 탭
     @objc private func closeTapped() {
+        blurAnimator.stopAnimation(true)
         cardView.deactivateBlur()
         dismiss(animated: true)
     }

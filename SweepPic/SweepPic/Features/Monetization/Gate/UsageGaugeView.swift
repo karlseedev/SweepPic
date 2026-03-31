@@ -324,7 +324,7 @@ final class UsageGaugeDetailPopup: UIViewController {
     /// 초대 프로모 하단 배경 — 카드 하단을 가로로 잘라 색상 차별화
     private let referralPromoBackground: UIView = {
         let view = UIView()
-        view.backgroundColor = UIColor.white.withAlphaComponent(0.06)
+        view.backgroundColor = UIColor.black.withAlphaComponent(0.25)
         view.translatesAutoresizingMaskIntoConstraints = false
         return view
     }()
@@ -378,12 +378,30 @@ final class UsageGaugeDetailPopup: UIViewController {
         fatalError("init(coder:) has not been implemented")
     }
 
+    /// 배경 블러 (딤드 위에 20% 강도 블러)
+    private let backgroundBlurView: UIVisualEffectView = {
+        let view = UIVisualEffectView(effect: nil)
+        view.translatesAutoresizingMaskIntoConstraints = false
+        return view
+    }()
+
+    /// 블러 강도 제어용 애니메이터 (fractionComplete로 0.0~1.0 조절)
+    private lazy var blurAnimator: UIViewPropertyAnimator = {
+        let animator = UIViewPropertyAnimator(duration: 0, curve: .linear) { [weak self] in
+            self?.backgroundBlurView.effect = UIBlurEffect(style: .systemUltraThinMaterialDark)
+        }
+        animator.fractionComplete = 0.1
+        animator.pausesOnCompletion = true
+        return animator
+    }()
+
     // MARK: - Lifecycle
 
     override func viewDidLoad() {
         super.viewDidLoad()
         view.backgroundColor = UIColor.black.withAlphaComponent(0.4)
         setupUI()
+        _ = blurAnimator // 블러 20% 적용
         cardView.activateBlur()
         configureContent()
     }
@@ -391,6 +409,15 @@ final class UsageGaugeDetailPopup: UIViewController {
     // MARK: - Setup
 
     private func setupUI() {
+        // 배경 블러 — 딤드 위에 연한 블러 추가
+        view.addSubview(backgroundBlurView)
+        NSLayoutConstraint.activate([
+            backgroundBlurView.topAnchor.constraint(equalTo: view.topAnchor),
+            backgroundBlurView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+            backgroundBlurView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+            backgroundBlurView.bottomAnchor.constraint(equalTo: view.bottomAnchor)
+        ])
+
         // 블러 카드 — 게이트와 동일 레이아웃
         view.addSubview(cardView)
         NSLayoutConstraint.activate([
@@ -430,7 +457,7 @@ final class UsageGaugeDetailPopup: UIViewController {
         ])
 
         // T033: 닫기 버튼과 초대 프로모 간격
-        stack.setCustomSpacing(16, after: closeButton)
+        stack.setCustomSpacing(34, after: closeButton)
         stack.setCustomSpacing(8, after: referralPromoLabel)
         stack.setCustomSpacing(4, after: referralButton)
 
@@ -485,24 +512,28 @@ final class UsageGaugeDetailPopup: UIViewController {
     }
 
     @objc private func watchAdTapped() {
+        blurAnimator.stopAnimation(true)
         dismiss(animated: true) { [weak self] in
             self?.onWatchAd?()
         }
     }
 
     @objc private func plusTapped() {
+        blurAnimator.stopAnimation(true)
         dismiss(animated: true) { [weak self] in
             self?.onProUpgrade?()
         }
     }
 
     @objc private func closeTapped() {
+        blurAnimator.stopAnimation(true)
         dismiss(animated: true)
     }
 
     /// T033: 초대 프로모 버튼 탭 → ReferralExplainViewController 모달
     @objc private func referralTapped() {
         Logger.app.debug("UsageGaugeDetailPopup: 초대 프로모 버튼 탭")
+        blurAnimator.stopAnimation(true)
         let presenter = presentingViewController
         dismiss(animated: true) {
             guard let presenter = presenter else { return }

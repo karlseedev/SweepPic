@@ -63,6 +63,23 @@ final class TrashGatePopupViewController: UIViewController {
 
     // MARK: - UI Components
 
+    /// 배경 블러 (딤드 위에 10% 강도 블러)
+    private let backgroundBlurView: UIVisualEffectView = {
+        let view = UIVisualEffectView(effect: nil)
+        view.translatesAutoresizingMaskIntoConstraints = false
+        return view
+    }()
+
+    /// 블러 강도 제어용 애니메이터
+    private lazy var blurAnimator: UIViewPropertyAnimator = {
+        let animator = UIViewPropertyAnimator(duration: 0, curve: .linear) { [weak self] in
+            self?.backgroundBlurView.effect = UIBlurEffect(style: .systemUltraThinMaterialDark)
+        }
+        animator.fractionComplete = 0.1
+        animator.pausesOnCompletion = true
+        return animator
+    }()
+
     /// 블러 팝업 카드 (재사용 컴포넌트)
     private let cardView = BlurPopupCardView()
 
@@ -165,7 +182,7 @@ final class TrashGatePopupViewController: UIViewController {
     /// cardView.contentView에 삽입하여 카드의 clipsToBounds로 하단 모서리 자동 처리
     private let referralPromoBackground: UIView = {
         let view = UIView()
-        view.backgroundColor = UIColor.black.withAlphaComponent(0.15)
+        view.backgroundColor = UIColor.black.withAlphaComponent(0.25)
         view.translatesAutoresizingMaskIntoConstraints = false
         return view
     }()
@@ -231,6 +248,7 @@ final class TrashGatePopupViewController: UIViewController {
         view.backgroundColor = UIColor.black.withAlphaComponent(0.4)
 
         setupUI()
+        _ = blurAnimator // 블러 10% 적용
         setupBlurAnimator()
         setupActions()
         setupAccessibility()
@@ -251,6 +269,15 @@ final class TrashGatePopupViewController: UIViewController {
 
     /// UI 레이아웃 구성 — 딤 + 블러 카드 + Glass 버튼
     private func setupUI() {
+        // 배경 블러
+        view.addSubview(backgroundBlurView)
+        NSLayoutConstraint.activate([
+            backgroundBlurView.topAnchor.constraint(equalTo: view.topAnchor),
+            backgroundBlurView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+            backgroundBlurView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+            backgroundBlurView.bottomAnchor.constraint(equalTo: view.bottomAnchor)
+        ])
+
         // 블러 카드 — 화면 - 48pt 너비
         view.addSubview(cardView)
         NSLayoutConstraint.activate([
@@ -296,7 +323,7 @@ final class TrashGatePopupViewController: UIViewController {
         ])
 
         // T032: 닫기 버튼과 초대 프로모 간격 (배경 색상 변경 시작점 여유 15pt 포함)
-        stackView.setCustomSpacing(31, after: closeButton)
+        stackView.setCustomSpacing(34, after: closeButton)
         stackView.setCustomSpacing(8, after: referralPromoLabel)
         stackView.setCustomSpacing(4, after: referralButton)
 
@@ -337,6 +364,7 @@ final class TrashGatePopupViewController: UIViewController {
 
     @objc private func adButtonTapped() {
         Logger.app.debug("TrashGatePopup: 광고 버튼 탭")
+        blurAnimator.stopAnimation(true)
         dismiss(animated: true) { [weak self] in
             self?.onAdWatch?()
         }
@@ -344,6 +372,7 @@ final class TrashGatePopupViewController: UIViewController {
 
     @objc private func proButtonTapped() {
         Logger.app.debug("TrashGatePopup: Pro 버튼 탭")
+        blurAnimator.stopAnimation(true)
         dismiss(animated: true) { [weak self] in
             self?.onProUpgrade?()
         }
@@ -351,6 +380,7 @@ final class TrashGatePopupViewController: UIViewController {
 
     @objc private func closeButtonTapped() {
         Logger.app.debug("TrashGatePopup: 닫기 버튼 탭")
+        blurAnimator.stopAnimation(true)
         dismiss(animated: true) { [weak self] in
             self?.onDismiss?()
         }
@@ -359,7 +389,7 @@ final class TrashGatePopupViewController: UIViewController {
     /// T032: 초대 프로모 버튼 탭 → ReferralExplainViewController 모달
     @objc private func referralButtonTapped() {
         Logger.app.debug("TrashGatePopup: 초대 프로모 버튼 탭")
-        // dismiss 전에 presenter 캡처 (dismiss 후에는 presentingViewController가 nil)
+        blurAnimator.stopAnimation(true)
         let presenter = presentingViewController
         dismiss(animated: true) {
             guard let presenter = presenter else { return }

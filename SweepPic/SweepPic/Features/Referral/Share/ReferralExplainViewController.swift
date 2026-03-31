@@ -55,6 +55,22 @@ final class ReferralExplainViewController: UIViewController {
 
     // MARK: - UI Components
 
+    /// 배경 블러 (딤드 위에 10% 강도 블러)
+    private let backgroundBlurView: UIVisualEffectView = {
+        let view = UIVisualEffectView(effect: nil)
+        view.translatesAutoresizingMaskIntoConstraints = false
+        return view
+    }()
+
+    private lazy var blurAnimator: UIViewPropertyAnimator = {
+        let animator = UIViewPropertyAnimator(duration: 0, curve: .linear) { [weak self] in
+            self?.backgroundBlurView.effect = UIBlurEffect(style: .systemUltraThinMaterialDark)
+        }
+        animator.fractionComplete = 0.1
+        animator.pausesOnCompletion = true
+        return animator
+    }()
+
     /// Glass 팝업 카드
     private lazy var cardView = BlurPopupCardView()
 
@@ -207,10 +223,20 @@ final class ReferralExplainViewController: UIViewController {
 
     private func setupUI() {
         view.backgroundColor = UIColor.black.withAlphaComponent(0.4)
+        _ = blurAnimator
 
         // 배경 탭 → 닫기
         let tapGesture = UITapGestureRecognizer(target: self, action: #selector(backgroundTapped(_:)))
         view.addGestureRecognizer(tapGesture)
+
+        // 배경 블러
+        view.addSubview(backgroundBlurView)
+        NSLayoutConstraint.activate([
+            backgroundBlurView.topAnchor.constraint(equalTo: view.topAnchor),
+            backgroundBlurView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+            backgroundBlurView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+            backgroundBlurView.bottomAnchor.constraint(equalTo: view.bottomAnchor)
+        ])
 
         // 카드 뷰
         view.addSubview(cardView)
@@ -355,6 +381,7 @@ final class ReferralExplainViewController: UIViewController {
 
     /// 닫기 버튼 탭
     @objc private func closeTapped() {
+        blurAnimator.stopAnimation(true)
         dismiss(animated: true)
     }
 
@@ -362,6 +389,7 @@ final class ReferralExplainViewController: UIViewController {
     @objc private func backgroundTapped(_ gesture: UITapGestureRecognizer) {
         let point = gesture.location(in: view)
         if !cardView.frame.contains(point) {
+            blurAnimator.stopAnimation(true)
             dismiss(animated: true)
         }
     }
