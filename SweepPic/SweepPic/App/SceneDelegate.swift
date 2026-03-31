@@ -66,6 +66,9 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         // 앱이 포그라운드에서 자정을 넘길 때 일일 한도 자동 리셋
         setupMidnightResetObserver()
 
+        // [Referral] T044: Push 알림 탭 시 보상 화면 표시 옵저버
+        setupPushNotificationObserver()
+
         Logger.app.debug("Scene connected, window configured")
     }
 
@@ -326,6 +329,14 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
                 }
             }()
             AnalyticsService.shared.trackPermissionResult(result: result, timing: .settingsChange)
+        }
+
+        // [Referral] T044: 포그라운드 복귀 시 device token 서버 갱신 (FR-026)
+        PushNotificationService.shared.refreshTokenIfNeeded()
+
+        // [Referral] T044: 배지 초기화 (FR-028)
+        Task { @MainActor in
+            PushNotificationService.shared.clearBadge()
         }
 
         // T060: 외부 삭제 처리 - PhotoKit에서 삭제된 사진을 TrashState에서 제거
@@ -607,6 +618,40 @@ extension SceneDelegate {
         // 최상위 뷰컨트롤러에서 처리 (모달이 표시 중이면 모달 위에서)
         let presenter = rootVC.presentedViewController ?? rootVC
         ReferralDeepLinkHandler.shared.handleReferralURL(url, from: presenter)
+    }
+}
+
+// MARK: - Push Notification Observer (T044)
+
+extension SceneDelegate {
+
+    /// Push 알림 탭 시 보상 화면을 표시하는 옵저버를 등록한다.
+    /// AppDelegate의 UNUserNotificationCenterDelegate에서 NotificationCenter로 전달받는다.
+    func setupPushNotificationObserver() {
+        NotificationCenter.default.addObserver(
+            forName: .referralRewardPushTapped,
+            object: nil,
+            queue: .main
+        ) { [weak self] notification in
+            Logger.referral.debug("SceneDelegate: Push 탭 알림 수신 — 보상 화면 표시")
+
+            guard let self = self,
+                  let rootVC = self.window?.rootViewController,
+                  rootVC is TabBarController else {
+                return
+            }
+
+            // 다른 모달이 표시 중이면 dismiss 후 보상 화면 표시
+            if let presented = rootVC.presentedViewController {
+                presented.dismiss(animated: false) {
+                    let rewardVC = ReferralRewardViewController()
+                    rootVC.present(rewardVC, animated: true)
+                }
+            } else {
+                let rewardVC = ReferralRewardViewController()
+                rootVC.present(rewardVC, animated: true)
+            }
+        }
     }
 }
 

@@ -488,4 +488,28 @@ public final class ReferralService {
             ]
         )
     }
+
+    // MARK: - Public API: User Story 6 (Push 알림)
+
+    /// Push 알림 device token을 서버에 갱신한다 (update-device-token)
+    ///
+    /// referral_links 테이블의 device_token 필드를 업데이트한다.
+    /// 포그라운드 복귀 시마다 호출하여 최신 토큰을 유지한다 (FR-026).
+    ///
+    /// - Parameters:
+    ///   - userId: Keychain 기반 영구 사용자 ID
+    ///   - deviceToken: APNs device token (hex 문자열)
+    /// - Throws: ReferralServiceError
+    public func updateDeviceToken(
+        userId: String,
+        deviceToken: String
+    ) async throws {
+        try await postVoid(
+            endpoint: "update-device-token",
+            body: [
+                "user_id": userId,
+                "device_token": deviceToken
+            ]
+        )
+    }
 }

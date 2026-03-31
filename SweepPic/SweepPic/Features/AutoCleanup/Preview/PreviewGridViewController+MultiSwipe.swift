@@ -386,9 +386,12 @@ extension PreviewGridViewController {
             if let cell = collectionView.cellForItem(at: ip) as? PhotoCell {
                 cell.isAnimating = true
                 if deleteAction {
-                    // 제외: 마스크 즉시 제거 후 confirm (layer.mask 잔상 방지)
+                    // 제외: green 딤드 확정
+                    cell.isAnimating = true
                     cell.prepareSwipeOverlay(style: .restore)
-                    cell.setFullDimmed(isTrashed: false)
+                    if item == swipeDeleteState.curtainItem {
+                        cell.setFullDimmed(isTrashed: false)
+                    }
                     cell.confirmDimmedAnimation(toTrashed: true) {
                         cell.isAnimating = false
                     }

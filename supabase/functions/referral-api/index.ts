@@ -626,8 +626,28 @@ async function handleReportRedemption(body: Record<string, unknown>): Promise<Re
     // 치명적이지 않으므로 계속 진행 (다음 실행 시 재시도 가능)
   }
 
-  // 5. Push 알림 발송 (Phase 8에서 구현)
-  // TODO: push-notify 호출 — referral.referrer_user_id의 device_token 조회 후 APNs 발송
+  // 5. Push 알림 발송 — push-notify Edge Function 호출 (T040)
+  // fire-and-forget: Push 실패해도 리딤 보고에는 영향 없음
+  try {
+    const pushUrl = `${supabaseUrl}/functions/v1/push-notify`;
+    await fetch(pushUrl, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${supabaseServiceRoleKey}`,
+      },
+      body: JSON.stringify({
+        referrer_user_id: referral.referrer_user_id,
+        reward_id: referralId,
+      }),
+    });
+    console.log(
+      `report-redemption: push-notify 호출 완료 — referrer=${referral.referrer_user_id.substring(0, 8)}`
+    );
+  } catch (pushError) {
+    // Push 실패는 무시 — 리딤 보고 자체는 성공
+    console.warn("report-redemption: push-notify 호출 실패 —", pushError);
+  }
 
   console.log(
     `report-redemption: 리딤 완료 — referral=${referralId}, referrer=${referral.referrer_user_id.substring(0, 8)}`
@@ -1039,6 +1059,61 @@ async function handleConfirmClaim(body: Record<string, unknown>): Promise<Respon
   return successResponse({ status: "confirmed" });
 }
 
+// MARK: - update-device-token 엔드포인트 (Phase 8, T042)
+
+/**
+ * POST /update-device-token — Push 토큰 갱신
+ *
+ * referral_links 테이블의 device_token 필드를 업데이트한다.
+ * 앱 실행 시 + 포그라운드 복귀 시 호출하여 최신 토큰을 유지 (FR-026).
+ *
+ * @param body - { user_id, device_token }
+ * @returns { success: true }
+ */
+async function handleUpdateDeviceToken(
+  body: Record<string, unknown>
+): Promise<Response> {
+  const userId = body.user_id as string;
+  const deviceToken = body.device_token as string;
+
+  if (!deviceToken) {
+    return errorResponse("device_token은 필수입니다.", 400);
+  }
+
+  // referral_links에 user_id가 있는지 확인
+  const { data: existing } = await supabase
+    .from("referral_links")
+    .select("id")
+    .eq("user_id", userId)
+    .maybeSingle();
+
+  if (!existing) {
+    // referral_links가 없으면 무시 (초대 링크를 만든 적 없는 사용자)
+    // Push 토큰은 초대 링크 생성 후에야 의미 있음
+    console.log(
+      `update-device-token: 스킵 — user=${userId.substring(0, 8)}, referral_link 없음`
+    );
+    return successResponse({ updated: false, reason: "no_referral_link" });
+  }
+
+  // device_token 업데이트
+  const { error } = await supabase
+    .from("referral_links")
+    .update({ device_token: deviceToken })
+    .eq("user_id", userId);
+
+  if (error) {
+    console.error("update-device-token: 업데이트 실패 —", error.message);
+    return errorResponse("서버 오류가 발생했습니다.", 500);
+  }
+
+  console.log(
+    `update-device-token: 성공 — user=${userId.substring(0, 8)}, token=${deviceToken.substring(0, 12)}...`
+  );
+
+  return successResponse({ updated: true });
+}
+
 // MARK: - 메인 핸들러
 
 Deno.serve(async (req: Request): Promise<Response> => {
@@ -1105,8 +1180,8 @@ Deno.serve(async (req: Request): Promise<Response> => {
     case "confirm-claim":
       return handleConfirmClaim(body);
 
-    // 이후 Phase에서 추가:
-    // case "update-device-token": return handleUpdateDeviceToken(body);
+    case "update-device-token":
+      return handleUpdateDeviceToken(body);
 
     default:
       return errorResponse(`알 수 없는 엔드포인트: ${endpoint}`, 404);

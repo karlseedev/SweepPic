@@ -8,6 +8,7 @@
 
 import UIKit
 import Photos
+import UserNotifications
 import AppCore
 import OSLog
 
@@ -62,6 +63,9 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
 
         // [BM] AdMob SDK 초기화 + 광고 사전 로드 (리워드/전면/InterstitialAdPresenter)
         AdManager.shared.configure()
+
+        // [Referral] T043: UNUserNotificationCenter delegate 설정
+        UNUserNotificationCenter.current().delegate = self
 
         return true
     }
@@ -150,4 +154,70 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         // T072: AppStateStore를 통한 메모리 경고 처리
         AppStateStore.shared.handleMemoryWarning()
     }
+
+    // MARK: - Push Notification Token (T043)
+
+    /// APNs에서 device token 수신 시 호출
+    /// PushNotificationService에 토큰을 전달하여 서버에 전송한다.
+    func application(
+        _ application: UIApplication,
+        didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data
+    ) {
+        PushNotificationService.shared.handleDeviceToken(deviceToken)
+    }
+
+    /// APNs 등록 실패 시 호출
+    func application(
+        _ application: UIApplication,
+        didFailToRegisterForRemoteNotificationsWithError error: Error
+    ) {
+        Logger.referral.error("AppDelegate: Push 등록 실패 — \(error.localizedDescription)")
+    }
+}
+
+// MARK: - UNUserNotificationCenterDelegate (T043)
+
+extension AppDelegate: UNUserNotificationCenterDelegate {
+
+    /// 포그라운드에서 Push 수신 시 호출
+    /// 인앱 배너 + 사운드로 표시 (FR-028)
+    func userNotificationCenter(
+        _ center: UNUserNotificationCenter,
+        willPresent notification: UNNotification,
+        withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void
+    ) {
+        completionHandler([.banner, .sound])
+    }
+
+    /// Push 알림 탭 시 호출
+    /// action_type에 따라 적절한 화면으로 이동
+    func userNotificationCenter(
+        _ center: UNUserNotificationCenter,
+        didReceive response: UNNotificationResponse,
+        withCompletionHandler completionHandler: @escaping () -> Void
+    ) {
+        let userInfo = response.notification.request.content.userInfo
+
+        // action_type == "referral_reward" → 보상 화면 표시
+        if let actionType = userInfo["action_type"] as? String,
+           actionType == "referral_reward" {
+            Logger.referral.debug("AppDelegate: Push 탭 — referral_reward 액션")
+
+            // SceneDelegate에서 보상 화면 표시
+            NotificationCenter.default.post(
+                name: .referralRewardPushTapped,
+                object: nil,
+                userInfo: userInfo
+            )
+        }
+
+        completionHandler()
+    }
+}
+
+// MARK: - Notification Names
+
+extension Notification.Name {
+    /// Push 알림에서 보상 화면 탭 시 전송되는 알림
+    static let referralRewardPushTapped = Notification.Name("referralRewardPushTapped")
 }
