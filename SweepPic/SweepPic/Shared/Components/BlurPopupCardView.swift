@@ -37,7 +37,7 @@ final class BlurPopupCardView: UIView {
     /// iOS 26+: 사용 안 함 — dimLayer가 있으면 UIGlassEffect가 뒤 콘텐츠를 캡처 못함
     private let dimLayer: UIView = {
         let view = UIView()
-        view.backgroundColor = UIColor(white: 0.1, alpha: 0.85)
+        view.backgroundColor = UIColor(white: 0.05, alpha: 0.85)
         view.translatesAutoresizingMaskIntoConstraints = false
         return view
     }()

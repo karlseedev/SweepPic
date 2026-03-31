@@ -88,7 +88,7 @@ final class PaywallViewController: UIViewController {
     /// 서브헤드라인
     private let subheadlineLabel: UILabel = {
         let label = UILabel()
-        label.text = "Plus로 삭제 한도 없이, 광고 없이"
+        label.text = "Pro 멤버십으로 삭제 한도 없이, 광고 없이"
         label.font = .systemFont(ofSize: 16, weight: .regular)
         label.textColor = .secondaryLabel
         label.textAlignment = .center
