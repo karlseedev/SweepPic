@@ -416,6 +416,39 @@ class BaseGridViewController: UIViewController {
         collectionView.scrollToItem(at: indexPath, at: .centeredVertically, animated: false)
     }
 
+    /// 실제 가시 영역 기준으로 셀을 수직 중앙에 스크롤
+    /// adjustedContentInset을 반영하여 FloatingUI/SafeArea 영역을 제외한 중앙 계산
+    /// - Parameters:
+    ///   - indexPath: 대상 셀의 indexPath (padding 포함)
+    ///   - animated: 애니메이션 여부
+    func scrollToCenteredItem(at indexPath: IndexPath, animated: Bool) {
+        // layoutAttributes 조회 (nil이면 layoutIfNeeded 후 재시도)
+        var attributes = collectionView.layoutAttributesForItem(at: indexPath)
+        if attributes == nil {
+            collectionView.layoutIfNeeded()
+            attributes = collectionView.layoutAttributesForItem(at: indexPath)
+        }
+
+        guard let attrs = attributes else {
+            // fallback: 기존 scrollToItem 사용 (부정확하지만 스크롤은 됨)
+            collectionView.scrollToItem(at: indexPath, at: .centeredVertically, animated: animated)
+            return
+        }
+
+        let cellCenterY = attrs.frame.midY
+        let insetTop = collectionView.adjustedContentInset.top
+        let insetBottom = collectionView.adjustedContentInset.bottom
+        let visibleHeight = collectionView.bounds.height - insetTop - insetBottom
+        let targetOffsetY = cellCenterY - insetTop - visibleHeight / 2
+
+        // 스크롤 범위 클램핑
+        let minOffset = -insetTop
+        let maxOffset = max(minOffset, collectionView.contentSize.height - collectionView.bounds.height + insetBottom)
+        let clampedY = max(minOffset, min(targetOffsetY, maxOffset))
+
+        collectionView.setContentOffset(CGPoint(x: 0, y: clampedY), animated: animated)
+    }
+
     // MARK: - Setup
 
     /// UI 설정

@@ -117,8 +117,8 @@ extension GridViewController {
         let blocker = UIView(frame: window.bounds)
         window.addSubview(blocker)
 
-        // 셀을 화면 중앙으로 즉시 스크롤 (1초 대기 없이)
-        collectionView.scrollToItem(at: indexPath, at: .centeredVertically, animated: true)
+        // 셀을 실제 가시 영역 기준 중앙으로 스크롤
+        scrollToCenteredItem(at: indexPath, animated: true)
 
         // 스크롤 애니메이션 완료 대기 후 코치마크 표시
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) { [weak self, weak cell, weak blocker] in

@@ -168,8 +168,8 @@ extension GridViewController {
         // padding 보정
         let gridIndexPath = IndexPath(item: found.item + paddingCellCount, section: found.section)
 
-        // 셀로 스크롤
-        collectionView.scrollToItem(at: gridIndexPath, at: .centeredVertically, animated: true)
+        // 셀을 실제 가시 영역 기준 중앙으로 스크롤
+        scrollToCenteredItem(at: gridIndexPath, animated: true)
 
         // 스크롤 완료 대기 → 뱃지 표시 → C-1 직접 호출
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
