@@ -717,30 +717,10 @@ extension PreviewGridViewController: UICollectionViewDataSource {
 
             // 제외된 셀: configure(isTrashed:true)가 마룬+아이콘 표시 → 그린으로 override
             if isExcluded {
-                #if DEBUG
-                print("🟡 BEFORE layout [\(indexPath)] overlay=\(cell.contentView.subviews[1].frame) cell=\(cell.frame)")
-                #endif
                 cell.setRestoredPreview()                    // icon 숨김 + alpha=0
                 cell.prepareSwipeOverlay(style: .restore)    // green 색상
                 cell.setFullDimmed(isTrashed: false)         // alpha=0.6
-                #if DEBUG
-                print("🟡 AFTER setFullDimmed [\(indexPath)] overlay=\(cell.contentView.subviews[1].frame)")
-                #endif
             }
-
-            // [DEBUG] 제외 셀 overlay 상태 확인 (잔상 디버깅용)
-            #if DEBUG
-            if isExcluded {
-                DispatchQueue.main.async {
-                    for (i, sub) in cell.contentView.subviews.enumerated() {
-                        if sub.alpha > 0 && !sub.isHidden && sub != cell.thumbnailImageView {
-                            print("🟢 [\(indexPath.section)-\(indexPath.item)] sub[\(i)] \(type(of: sub)) frame=\(sub.frame) alpha=\(sub.alpha) hidden=\(sub.isHidden) mask=\(sub.layer.mask != nil)")
-                        }
-                    }
-                    print("🟢 [\(indexPath.section)-\(indexPath.item)] cell.frame=\(cell.frame) contentView=\(cell.contentView.frame)")
-                }
-            }
-            #endif
 
             return cell
 

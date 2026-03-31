@@ -211,22 +211,6 @@ extension PreviewGridViewController {
             // .restore 스타일이라 마룬 리셋 스킵 + icon hidden
             cell.confirmDimmedAnimation(toTrashed: false) { [weak self] in
                 cell.isAnimating = false
-                #if DEBUG
-                let overlay = cell.contentView.subviews[1]
-                let pLayer = overlay.layer.presentation()
-                print("🟣 unexclude[\(indexPath.section)-\(indexPath.item)] model: frame=\(overlay.frame) alpha=\(overlay.alpha) hidden=\(overlay.isHidden) mask=\(overlay.layer.mask != nil) bg=\(overlay.backgroundColor ?? .clear)")
-                print("🟣 unexclude[\(indexPath.section)-\(indexPath.item)] presentation: frame=\(pLayer?.frame ?? .zero) opacity=\(pLayer?.opacity ?? -1) mask=\(pLayer?.mask != nil)")
-                if let sublayers = overlay.layer.sublayers {
-                    for (j, sl) in sublayers.enumerated() {
-                        print("🟣 unexclude[\(indexPath.section)-\(indexPath.item)] overlay.sublayer[\(j)] \(type(of: sl)) frame=\(sl.frame) opacity=\(sl.opacity)")
-                    }
-                }
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                    let pLayer2 = overlay.layer.presentation()
-                    print("🔴 0.5s unexclude[\(indexPath.section)-\(indexPath.item)] model: frame=\(overlay.frame) alpha=\(overlay.alpha) hidden=\(overlay.isHidden) mask=\(overlay.layer.mask != nil)")
-                    print("🔴 0.5s unexclude[\(indexPath.section)-\(indexPath.item)] presentation: frame=\(pLayer2?.frame ?? .zero) opacity=\(pLayer2?.opacity ?? -1) mask=\(pLayer2?.mask != nil)")
-                }
-                #endif
                 self?.excludedAssetIDs.remove(assetID)
                 self?.updateBottomView()
             }
@@ -234,26 +218,6 @@ extension PreviewGridViewController {
             // 제외: 기존과 동일
             cell.confirmDimmedAnimation(toTrashed: true) { [weak self] in
                 cell.isAnimating = false
-                #if DEBUG
-                let overlay = cell.contentView.subviews[1]
-                print("🔵 confirm[\(indexPath.section)-\(indexPath.item)] overlay: frame=\(overlay.frame) alpha=\(overlay.alpha) mask=\(overlay.layer.mask != nil) bg=\(overlay.backgroundColor ?? .clear)")
-                // overlay의 sublayer 확인
-                if let sublayers = overlay.layer.sublayers {
-                    for (j, sl) in sublayers.enumerated() {
-                        print("🔵 confirm[\(indexPath.section)-\(indexPath.item)] overlay.sublayer[\(j)] \(type(of: sl)) frame=\(sl.frame) opacity=\(sl.opacity) mask=\(sl.mask != nil)")
-                    }
-                } else {
-                    print("🔵 confirm[\(indexPath.section)-\(indexPath.item)] overlay.sublayers = nil")
-                }
-                // contentView의 sublayer 확인 (subview layer 외 추가 layer)
-                if let cvSublayers = cell.contentView.layer.sublayers {
-                    for (j, sl) in cvSublayers.enumerated() {
-                        if sl !== cell.thumbnailImageView.layer && sl !== overlay.layer {
-                            print("🔵 confirm[\(indexPath.section)-\(indexPath.item)] cv.extraLayer[\(j)] \(type(of: sl)) frame=\(sl.frame) opacity=\(sl.opacity) bg=\(sl.backgroundColor ?? nil)")
-                        }
-                    }
-                }
-                #endif
                 self?.applySwipeExclusion(assetIDs: [assetID])
             }
         }
