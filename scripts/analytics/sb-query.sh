@@ -1,5 +1,5 @@
 #!/bin/bash
-# sb-query.sh — Supabase PostgREST 조회 + RPC 호출
+# sb-query.sh — Supabase PostgREST 조회 + RPC 호출 + SQL 직접 실행
 #
 # 사용법:
 #   ./sb-query.sh --table events --limit 10
@@ -7,6 +7,10 @@
 #   ./sb-query.sh --rpc daily_summary '{"p_days": 30}'
 #   ./sb-query.sh --rpc delete_restore_summary '{"p_days": 7}'
 #   ./sb-query.sh --rpc purge_old_events '{"p_retention_days": 90}'
+#   ./sb-query.sh --sql "SELECT event_name, count(*) FROM events GROUP BY 1 ORDER BY 2 DESC LIMIT 10"
+#
+# --sql 모드: run_query RPC 함수를 통해 임의 SQL 실행 (service_role 전용, T052)
+#   사전 조건: Supabase SQL Editor에서 run_query RPC 함수 생성 필요
 #
 # 참조: docs/db/260217db-hybrid.md Phase 4
 
@@ -41,6 +45,7 @@ RPC_NAME=""
 RPC_BODY="{}"
 ORDER="created_at.desc"
 SELECT="*"
+SQL_QUERY=""
 
 while [[ $# -gt 0 ]]; do
     case "$1" in
@@ -75,6 +80,11 @@ while [[ $# -gt 0 ]]; do
                 shift 2
             fi
             ;;
+        --sql)
+            MODE="sql"
+            SQL_QUERY="$2"
+            shift 2
+            ;;
         *)
             echo "Unknown option: $1"
             exit 1
@@ -86,11 +96,13 @@ if [[ -z "$MODE" ]]; then
     echo "Usage:"
     echo "  $0 --table <table_name> [--filter <filter>] [--limit <n>] [--order <col.dir>] [--select <cols>]"
     echo "  $0 --rpc <function_name> ['{\"param\": value}']"
+    echo "  $0 --sql '<SQL query>'"
     echo ""
     echo "Examples:"
     echo "  $0 --table events --limit 10"
     echo "  $0 --table events --filter 'event_name=eq.app.launched' --limit 5"
     echo "  $0 --rpc daily_summary '{\"p_days\": 7}'"
+    echo "  $0 --sql 'SELECT event_name, count(*) FROM events GROUP BY 1 ORDER BY 2 DESC LIMIT 10'"
     exit 0
 fi
 
@@ -118,5 +130,27 @@ elif [[ "$MODE" == "rpc" ]]; then
         -H "Content-Type: application/json" \
         -H "Accept: application/json" \
         -d "$RPC_BODY" \
+        | python3 -m json.tool 2>/dev/null || echo "(JSON 파싱 실패 — 원본 출력)"
+
+elif [[ "$MODE" == "sql" ]]; then
+    # T052: run_query RPC를 통한 SQL 직접 실행
+    # 사전 조건: Supabase SQL Editor에서 아래 함수 생성 필요
+    # CREATE OR REPLACE FUNCTION run_query(query_text TEXT)
+    # RETURNS JSONB LANGUAGE plpgsql SECURITY DEFINER AS $$
+    # DECLARE result JSONB;
+    # BEGIN EXECUTE 'SELECT jsonb_agg(row_to_json(t)) FROM (' || query_text || ') t' INTO result;
+    #   RETURN COALESCE(result, '[]'::jsonb);
+    # END; $$;
+    # REVOKE ALL ON FUNCTION run_query(TEXT) FROM anon, authenticated;
+    # GRANT EXECUTE ON FUNCTION run_query(TEXT) TO service_role;
+    URL="${SUPABASE_URL}/rest/v1/rpc/run_query"
+
+    curl -s "$URL" \
+        -X POST \
+        -H "apikey: $SUPABASE_SERVICE_KEY" \
+        -H "Authorization: $AUTH_HEADER" \
+        -H "Content-Type: application/json" \
+        -H "Accept: application/json" \
+        -d "{\"query_text\": $(echo "$SQL_QUERY" | python3 -c 'import json,sys; print(json.dumps(sys.stdin.read().strip()))')}" \
         | python3 -m json.tool 2>/dev/null || echo "(JSON 파싱 실패 — 원본 출력)"
 fi

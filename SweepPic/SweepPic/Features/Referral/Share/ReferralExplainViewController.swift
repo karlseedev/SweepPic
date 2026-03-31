@@ -405,6 +405,9 @@ final class ReferralExplainViewController: UIViewController {
                 let link = try await ReferralService.shared.createOrGetLink(userId: userId)
                 Logger.referral.debug("ReferralExplain: 초대 링크 — \(link.referralCode)")
 
+                // [Analytics] T048: 링크 생성 이벤트
+                AnalyticsService.shared.trackReferralLinkCreated()
+
                 await MainActor.run {
                     viewState = .ready
                 }

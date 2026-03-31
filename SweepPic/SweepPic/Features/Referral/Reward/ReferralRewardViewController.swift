@@ -314,6 +314,15 @@ final class ReferralRewardViewController: UIViewController {
                 // Promotional Offer 경로 — 앱 내에서 즉시 완료
                 self.displayState = .claimed
 
+                // [Analytics] T048: 보상 수령 완료 이벤트
+                if self.currentRewardIndex < self.pendingRewards.count {
+                    let reward = self.pendingRewards[self.currentRewardIndex]
+                    AnalyticsService.shared.trackReferralRewardClaimed(
+                        rewardType: reward.rewardType?.rawValue ?? "promotional",
+                        offerName: "referral_extend"
+                    )
+                }
+
             case .waitingForReturn(let rewardId):
                 // Offer Code 경로 — App Store로 전환됨
                 // 포그라운드 복귀 시 Transaction 스캔
@@ -398,6 +407,9 @@ final class ReferralRewardViewController: UIViewController {
                     self.displayState = .noRewards
                 } else {
                     self.displayState = .hasRewards(count: response.rewards.count)
+
+                    // [Analytics] T048: 보상 화면 표시 이벤트
+                    AnalyticsService.shared.trackReferralRewardShown(entryMethod: "menu")
                 }
 
                 Logger.referral.debug(

@@ -123,6 +123,10 @@ final class ReferralDeepLinkHandler {
         }
         processingCode = code
 
+        // [Analytics] T048: 딥링크 자동 매칭 이벤트
+        let entryMethod = url.scheme == "sweeppic" ? "custom_scheme" : "universal_link"
+        AnalyticsService.shared.trackReferralAutoMatched(entryMethod: entryMethod)
+
         Logger.referral.debug("DeepLinkHandler: 초대 코드 처리 시작 — \(code)")
 
         let userId = ReferralStore.shared.userId

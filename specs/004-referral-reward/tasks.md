@@ -189,13 +189,13 @@
 
 ### 분석 인프라 (T047 선행)
 
-- [ ] T051 Supabase RLS 화이트리스트 확장 — events 테이블 RLS 정책에 `referral.*` 9종 이벤트 추가 SQL 제공 (주인님 Supabase SQL Editor에서 실행). 기존 20종 → 29종. 참조: `docs/db/260310BMdata-impl.md` §2.2
-- [ ] T052 [P] 범용 SQL 조회 RPC — Supabase에 `run_query(query_text TEXT)` RPC 함수 생성 (service_role 전용, anon/authenticated REVOKE). `scripts/analytics/sb-query.sh`에 `--sql` 모드 추가. SC-003~SC-008 크로스 테이블 측정 + ad-hoc 분석용
+- [X] T051 Supabase RLS 화이트리스트 확장 — events 테이블 RLS 정책에 `referral.*` 9종 이벤트 추가 SQL 제공 (주인님 Supabase SQL Editor에서 실행). 기존 20종 → 29종. 참조: `docs/db/260310BMdata-impl.md` §2.2
+- [X] T052 [P] 범용 SQL 조회 RPC — Supabase에 `run_query(query_text TEXT)` RPC 함수 생성 (service_role 전용, anon/authenticated REVOKE). `scripts/analytics/sb-query.sh`에 `--sql` 모드 추가. SC-003~SC-008 크로스 테이블 측정 + ad-hoc 분석용
 
 ### 분석 이벤트
 
-- [ ] T047 [P] 초대 분석 이벤트 — `SweepPic/SweepPic/Features/Referral/Analytics/ReferralAnalytics.swift` (9개 이벤트 + 속성: link_created, link_shared(share_target), landing_visited, code_entered(input_method), auto_matched(entry_method), code_assigned(offer_name, subscription_status), code_redeemed, reward_shown(entry_method), reward_claimed(reward_type, offer_name). 기존 AnalyticsService 패턴 참조, FR-044) + `docs/db/260225db-Spec.md` §3.1 총괄표에 초대 9종 추가 (21~29번) 및 §2 비용 수치 업데이트
-- [ ] T048 각 Story VC에 분석 이벤트 호출 삽입 — ReferralExplainVC(link_created), ReferralShareManager(link_shared), ReferralCodeInputVC(code_entered, code_assigned, code_redeemed), ReferralDeepLinkHandler(auto_matched), ReferralRewardVC(reward_shown, reward_claimed)
+- [X] T047 [P] 초대 분석 이벤트 — `SweepPic/SweepPic/Features/Referral/Analytics/ReferralAnalytics.swift` (9개 이벤트 + 속성: link_created, link_shared(share_target), landing_visited, code_entered(input_method), auto_matched(entry_method), code_assigned(offer_name, subscription_status), code_redeemed, reward_shown(entry_method), reward_claimed(reward_type, offer_name). 기존 AnalyticsService 패턴 참조, FR-044) + `docs/db/260225db-Spec.md` §3.1 총괄표에 초대 9종 추가 (21~29번) 및 §2 비용 수치 업데이트
+- [X] T048 각 Story VC에 분석 이벤트 호출 삽입 — ReferralExplainVC(link_created), ReferralShareManager(link_shared), ReferralCodeInputVC(code_entered, code_assigned, code_redeemed), ReferralDeepLinkHandler(auto_matched), ReferralRewardVC(reward_shown, reward_claimed)
 
 ### 통합 검증
 

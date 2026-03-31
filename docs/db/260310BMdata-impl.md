@@ -93,7 +93,52 @@ CREATE INDEX IF NOT EXISTS idx_events_device_id ON events(device_id);
 - 리셋 조건: 동일 벤더의 모든 앱 삭제 후 재설치 시 변경 (일반적이지 않음)
 - Privacy Label: "Identifiers → Device ID", 용도: "Analytics", Linked: No, Tracking: No (AdMob은 별도 Tracking: Yes)
 
-### 2.2 RLS 화이트리스트 확장 (11종 → 20종)
+### 2.2 RLS 화이트리스트 확장 (11종 → 20종 → 29종)
+
+> **Phase 10 (T051)**: 아래 SQL을 Supabase SQL Editor에서 실행하여 초대 9종 이벤트를 추가합니다.
+>
+> ```sql
+> DROP POLICY IF EXISTS "anon_insert" ON events;
+> CREATE POLICY "anon_insert" ON events FOR INSERT TO anon
+>     WITH CHECK (
+>         event_name IN (
+>             -- 기존 11종
+>             'app.launched',
+>             'permission.result',
+>             'session.photoViewing',
+>             'session.deleteRestore',
+>             'session.trashViewer',
+>             'session.similarAnalysis',
+>             'session.errors',
+>             'similar.groupClosed',
+>             'cleanup.completed',
+>             'cleanup.previewCompleted',
+>             'session.gridPerformance',
+>             -- BM 9종
+>             'bm.gateShown',
+>             'bm.gateSelection',
+>             'bm.adWatched',
+>             'bm.paywallShown',
+>             'bm.subscriptionCompleted',
+>             'bm.deletionCompleted',
+>             'bm.gracePeriodEnded',
+>             'bm.attResult',
+>             'bm.cancelReason',
+>             -- 초대 9종 (004-referral-reward)
+>             'referral.linkCreated',
+>             'referral.linkShared',
+>             'referral.landingVisited',
+>             'referral.codeEntered',
+>             'referral.autoMatched',
+>             'referral.codeAssigned',
+>             'referral.codeRedeemed',
+>             'referral.rewardShown',
+>             'referral.rewardClaimed'
+>         )
+>     );
+> ```
+
+#### 기존 20종 SQL (참고용)
 
 ```sql
 DROP POLICY IF EXISTS "anon_insert" ON events;

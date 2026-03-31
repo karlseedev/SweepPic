@@ -142,6 +142,10 @@ final class ReferralShareManager {
 
             if completed {
                 Logger.referral.debug("ReferralShare: 공유 완료 — \(activityType?.rawValue ?? "unknown")")
+                // [Analytics] T048: 공유 완료 이벤트
+                AnalyticsService.shared.trackReferralLinkShared(
+                    shareTarget: activityType?.rawValue ?? "unknown"
+                )
             } else {
                 Logger.referral.debug("ReferralShare: 공유 취소")
             }

@@ -460,6 +460,12 @@ final class ReferralCodeInputViewController: UIViewController {
                     currentReferralId = result.referralId
                     OfferRedemptionService.shared.currentReferralId = result.referralId
 
+                    // [Analytics] T048: 코드 할당 이벤트
+                    AnalyticsService.shared.trackReferralCodeAssigned(
+                        offerName: result.offerName ?? "unknown",
+                        subscriptionStatus: subscriptionStatus
+                    )
+
                     if let redeemURL = result.redeemURL {
                         Logger.referral.debug("ReferralCodeInput: 매칭 성공 → 리딤 URL 열기")
                         OfferRedemptionService.shared.openRedeemURL(redeemURL)
@@ -467,6 +473,8 @@ final class ReferralCodeInputViewController: UIViewController {
                         // Transaction 감지 시작
                         OfferRedemptionService.shared.startObservingRedemptions { [weak self] offerName in
                             Logger.referral.debug("ReferralCodeInput: 리딤 감지 — \(offerName)")
+                            // [Analytics] T048: 리딤 완료 이벤트
+                            AnalyticsService.shared.trackReferralCodeRedeemed()
                             self?.displayState = .redeemed
                         }
 
@@ -592,6 +600,10 @@ final class ReferralCodeInputViewController: UIViewController {
         }
 
         Logger.referral.debug("ReferralCodeInput: 코드 추출 성공 — \(code)")
+
+        // [Analytics] T048: 코드 입력 이벤트
+        AnalyticsService.shared.trackReferralCodeEntered(inputMethod: "paste")
+
         matchCode(code)
     }
 }
