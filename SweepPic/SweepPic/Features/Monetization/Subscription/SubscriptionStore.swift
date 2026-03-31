@@ -70,6 +70,10 @@ final class SubscriptionStore: SubscriptionStoreProtocol {
     /// 구독 설정 완료 여부
     private(set) var isConfigured = false
 
+    /// 구독 상태 확인 완료 여부 (refreshSubscriptionStatus 완료 후 true)
+    /// ATT 프롬프트 등 구독 상태에 의존하는 로직이 레이스 컨디션 없이 동작하도록 사용
+    private(set) var isStatusResolved = false
+
     #if DEBUG
     /// 디버그 오버라이드 활성 여부 — true이면 refreshSubscriptionStatus()가 상태를 덮어쓰지 않음
     private var debugOverrideActive = false
@@ -89,6 +93,7 @@ final class SubscriptionStore: SubscriptionStoreProtocol {
 
             // 현재 구독 상태 확인 (FR-028)
             await refreshSubscriptionStatus()
+            isStatusResolved = true
 
             // 실시간 상태 변경 감지 시작 (FR-029)
             startTransactionListener()

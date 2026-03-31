@@ -76,13 +76,22 @@ final class ATTStateManager {
         }
 
         // 설치 후 2시간 미경과 → ATT 미표시 (사용자가 앱에 익숙해진 후 표시)
-        if let installDate = UserDefaults.standard.object(forKey: "App.installDate") as? Date,
-           Date().timeIntervalSince(installDate) < 7200 {  // 2시간 = 7200초
+        // installDate가 nil이면 아직 GracePeriodService가 기록 전이므로 미표시 처리
+        guard let installDate = UserDefaults.standard.object(forKey: "App.installDate") as? Date else {
+            Logger.app.debug("ATTStateManager: shouldShowPrompt=false — installDate 미기록")
+            return false
+        }
+        if Date().timeIntervalSince(installDate) < 7200 {  // 2시간 = 7200초
             Logger.app.debug("ATTStateManager: shouldShowPrompt=false — 설치 후 2시간 미경과")
             return false
         }
 
         // Pro 구독자 → ATT 미표시 (광고 불필요)
+        // SubscriptionStore.configure()가 비동기이므로 상태 확인 완료 전이면 미표시
+        guard SubscriptionStore.shared.isStatusResolved else {
+            Logger.app.debug("ATTStateManager: shouldShowPrompt=false — 구독 상태 확인 미완료")
+            return false
+        }
         guard !SubscriptionStore.shared.isProUser else {
             Logger.app.debug("ATTStateManager: shouldShowPrompt=false — Pro 구독자")
             return false
