@@ -215,7 +215,8 @@ extension PreviewGridViewController {
                 self?.updateBottomView()
             }
         } else {
-            // 제외: 기존과 동일
+            // 제외: 마스크 즉시 제거 후 confirm (layer.mask 잔상 방지)
+            cell.setFullDimmed(isTrashed: false)
             cell.confirmDimmedAnimation(toTrashed: true) { [weak self] in
                 cell.isAnimating = false
                 self?.applySwipeExclusion(assetIDs: [assetID])
