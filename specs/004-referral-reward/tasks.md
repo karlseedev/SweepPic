@@ -140,9 +140,9 @@
 
 **Independent Test**: 앱 설치 상태에서 초대 링크 재탭 → 앱 열림 → 코드 자동 추출 → 리딤 URL 열기
 
-- [ ] T036 [US5] 딥링크 핸들러 — `SweepPic/SweepPic/Features/Referral/DeepLink/ReferralDeepLinkHandler.swift` (Universal Link URL에서 /r/{code} 추출, Custom URL Scheme sweeppic://referral/{code} 추출, check-status → 분기: none → matchCode + 리딤, matched → 기존 코드 리딤, redeemed → 무시, 자기 초대 감지 → "본인의 초대 코드는 사용할 수 없습니다" 안내)
-- [ ] T037 [US5] SceneDelegate URL 핸들링 — `SweepPic/SweepPic/App/SceneDelegate.swift` 에 추가 (scene(_:continue:) Universal Link 처리, scene(_:openURLContexts:) Custom URL Scheme 처리, 둘 다 ReferralDeepLinkHandler로 위임)
-- [ ] T038 [US5] apple-app-site-association 파일 — `supabase/functions/referral-landing/` 에서 `/.well-known/apple-app-site-association` 경로 응답 추가 (JSON: applinks → appIDs + paths ["/r/*"])
+- [X] T036 [US5] 딥링크 핸들러 — `SweepPic/SweepPic/Features/Referral/DeepLink/ReferralDeepLinkHandler.swift` (Universal Link URL에서 /r/{code} 추출, Custom URL Scheme sweeppic://referral/{code} 추출, check-status → 분기: none → matchCode + 리딤, matched → 기존 코드 리딤, redeemed → 무시, 자기 초대 감지 → "본인의 초대 코드는 사용할 수 없습니다" 안내)
+- [X] T037 [US5] SceneDelegate URL 핸들링 — `SweepPic/SweepPic/App/SceneDelegate.swift` 에 추가 (scene(_:continue:) Universal Link 처리, scene(_:openURLContexts:) Custom URL Scheme 처리, 둘 다 ReferralDeepLinkHandler로 위임)
+- [X] T038 [US5] apple-app-site-association 파일 — `supabase/functions/referral-landing/` 에서 `/.well-known/apple-app-site-association` 경로 응답 추가 (JSON: applinks → appIDs + paths ["/r/*"])
 
 **Checkpoint**: 링크 재탭 자동 처리 독립 테스트 가능 (실기기 필요)
 

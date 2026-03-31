@@ -558,6 +558,58 @@ extension SceneDelegate {
     }
 }
 
+// MARK: - Referral Deep Link (T037)
+
+extension SceneDelegate {
+
+    /// Universal Link 처리 (scene(_:continue:))
+    /// 앱이 설치된 상태에서 https://sweeppic.link/r/{code} 링크 탭 시 호출
+    func scene(_ scene: UIScene, continue userActivity: NSUserActivity) {
+        // Universal Link인지 확인
+        guard userActivity.activityType == NSUserActivityTypeBrowsingWeb,
+              let url = userActivity.webpageURL else {
+            Logger.referral.debug("SceneDelegate: Universal Link 아님 — 무시")
+            return
+        }
+
+        Logger.referral.debug("SceneDelegate: Universal Link 수신 — \(url.absoluteString.prefix(80))")
+
+        // ReferralDeepLinkHandler로 위임
+        handleDeepLink(url: url)
+    }
+
+    /// Custom URL Scheme 처리 (scene(_:openURLContexts:))
+    /// sweeppic://referral/{code} URL로 앱이 열렸을 때 호출
+    func scene(_ scene: UIScene, openURLContexts URLContexts: Set<UIOpenURLContext>) {
+        guard let url = URLContexts.first?.url else { return }
+
+        Logger.referral.debug("SceneDelegate: Custom URL Scheme 수신 — \(url.absoluteString.prefix(80))")
+
+        // ReferralDeepLinkHandler로 위임
+        handleDeepLink(url: url)
+    }
+
+    /// 딥링크 URL을 ReferralDeepLinkHandler로 전달
+    private func handleDeepLink(url: URL) {
+        // 초대 코드가 포함된 URL인지 먼저 확인
+        guard ReferralDeepLinkHandler.shared.extractReferralCode(from: url) != nil else {
+            Logger.referral.debug("SceneDelegate: 초대 코드 없는 URL — 무시")
+            return
+        }
+
+        // 루트 뷰컨트롤러가 TabBarController인지 확인
+        guard let rootVC = window?.rootViewController,
+              rootVC is TabBarController else {
+            Logger.referral.debug("SceneDelegate: 메인 화면 아님 — 딥링크 무시")
+            return
+        }
+
+        // 최상위 뷰컨트롤러에서 처리 (모달이 표시 중이면 모달 위에서)
+        let presenter = rootVC.presentedViewController ?? rootVC
+        ReferralDeepLinkHandler.shared.handleReferralURL(url, from: presenter)
+    }
+}
+
 // MARK: - PermissionViewControllerDelegate
 
 extension SceneDelegate: PermissionViewControllerDelegate {
