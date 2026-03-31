@@ -176,8 +176,8 @@
 
 **Independent Test**: 코드 잔여량 5,000개 미만 시 자동 보충 트리거 확인
 
-- [ ] T045 [US7] 코드 풀 보충 Edge Function — `supabase/functions/offer-code-replenish/index.ts` (offer_name별 available 코드 카운트 → 5,000개 미만 시 ASC API 호출로 코드 생성(최대 25,000개/배치) → CSV 다운로드 → offer_codes INSERT. 만료 코드 정리: expires_at < now() → status='expired'. 재시도: 1h→3h→6h. 최종 실패 시 Slack/Email 알림 FR-034)
-- [ ] T046 [US7] Supabase cron 스케줄 설정 — `supabase/config.toml` 에 offer-code-replenish 함수 cron 추가 (`0 3 * * *` 매일 새벽 3시)
+- [X] T045 [US7] 코드 풀 보충 Edge Function — `supabase/functions/offer-code-replenish/index.ts` (offer_name별 available 코드 카운트 → 5,000개 미만 시 ASC API 호출로 코드 생성(최대 25,000개/배치) → CSV 다운로드 → offer_codes INSERT. 만료 코드 정리: expires_at < now() → status='expired'. 재시도: 1h→3h→6h. 최종 실패 시 Slack/Email 알림 FR-034)
+- [X] T046 [US7] Supabase cron 스케줄 설정 — `supabase/config.toml` 에 offer-code-replenish 함수 cron 추가 (`0 3 * * *` 매일 새벽 3시)
 
 **Checkpoint**: 코드 풀 자동 보충 독립 테스트 가능
 

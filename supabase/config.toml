@@ -61,11 +61,13 @@ verify_jwt = false
 [functions.referral-landing]
 verify_jwt = false
 
-# offer-code-replenish: Offer Code 풀 자동 보충
+# offer-code-replenish: Offer Code 풀 자동 보충 (T045)
 # 매일 새벽 3시 KST (= UTC 18:00) 실행
 # - offer_name별 available 코드 5,000개 미만 시 ASC API로 보충
-# - 만료된 코드 정리
-# ⚠️ schedule은 Supabase Dashboard > Edge Functions에서 cron 설정
-#    CLI config.toml에서는 schedule 키를 지원하지 않음
-# [functions.offer-code-replenish]
-# schedule = "0 18 * * *"
+# - 만료된 코드 정리 (expires_at < now() → status='expired')
+# ⚠️ Supabase Dashboard > Edge Functions에서 cron 설정 필요:
+#    함수: offer-code-replenish
+#    스케줄: 0 18 * * * (UTC) = 매일 새벽 3시 KST
+#    CLI config.toml에서는 schedule 키를 지원하지 않음 (T046)
+[functions.offer-code-replenish]
+verify_jwt = false
