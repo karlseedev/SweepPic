@@ -301,33 +301,29 @@ final class SubscriptionStore: SubscriptionStoreProtocol {
     // MARK: - Auto Renew / Payment Issue Check
 
     /// 자동 갱신 상태 확인
+    /// - Note: transaction.subscriptionStatus는 iOS 15+ (backDeployed)로
+    ///   해당 트랜잭션의 구독 상태를 정확히 반환한다.
+    ///   기존 Product.SubscriptionInfo.status(for:)에 productID를 넘기던 버그를 수정.
     private func checkAutoRenewStatus(for transaction: Transaction) async -> Bool {
-        guard let statuses = try? await Product.SubscriptionInfo.status(
-            for: transaction.productID
-        ) else {
-            return true // 확인 실패 시 기본값
+        guard let status = transaction.subscriptionStatus else {
+            return true // 비구독 상품이거나 상태 없음 → 기본값
         }
 
-        for status in statuses {
-            if case .verified(let renewalInfo) = status.renewalInfo {
-                return renewalInfo.willAutoRenew
-            }
+        if case .verified(let renewalInfo) = status.renewalInfo {
+            return renewalInfo.willAutoRenew
         }
         return true
     }
 
     /// 결제 문제 확인 (갱신 실패)
+    /// - Note: transaction.subscriptionStatus 사용으로 정확한 상태 조회
     private func checkPaymentIssue(for transaction: Transaction) async -> Bool {
-        guard let statuses = try? await Product.SubscriptionInfo.status(
-            for: transaction.productID
-        ) else {
+        guard let status = transaction.subscriptionStatus else {
             return false
         }
 
-        for status in statuses {
-            if status.state == .inBillingRetryPeriod || status.state == .inGracePeriod {
-                return true
-            }
+        if status.state == .inBillingRetryPeriod || status.state == .inGracePeriod {
+            return true
         }
         return false
     }

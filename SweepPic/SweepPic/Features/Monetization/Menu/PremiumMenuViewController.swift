@@ -84,11 +84,19 @@ final class PremiumMenuViewController {
     // MARK: - Actions
 
     /// 구독 관리 — 무료: 페이월 표시 / Pro: 시스템 구독 관리 화면
+    /// - Note: Pro 사용자가 시스템 구독 관리로 이동할 때
+    ///   pendingCancelCheck 플래그를 설정해 해지 감지를 준비한다.
+    ///   SceneDelegate.sceneDidBecomeActive에서 이 플래그를 확인한다.
     private static func handleSubscriptionManagement(from presenter: UIViewController) {
         if SubscriptionStore.shared.isProUser {
-            // Pro 사용자 → 시스템 구독 관리 화면
+            // Pro 사용자 → 해지 감지 플래그 설정 + 시스템 구독 관리 화면
+            UserDefaults.standard.set(true, forKey: "pendingCancelCheck")
+            UserDefaults.standard.set(
+                SubscriptionStore.shared.state.autoRenewEnabled,
+                forKey: "wasAutoRenewing"
+            )
             openSystemSubscriptionSettings()
-            Logger.app.debug("PremiumMenu: Pro 사용자 → 시스템 구독 관리")
+            Logger.app.debug("PremiumMenu: Pro 사용자 → 시스템 구독 관리 (해지 감지 플래그 설정)")
         } else {
             // 무료 사용자 → 페이월 표시
             let paywallVC = PaywallViewController()

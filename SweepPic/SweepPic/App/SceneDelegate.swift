@@ -276,6 +276,10 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         // [BM] T041: ATT 프리프롬프트 표시 (FR-041)
         // ATT 프리프롬프트 표시 (설치 2시간 경과 + Pro 미구독 + ATT .notDetermined + skipCount < 2)
         checkAndShowATTPrompt()
+
+        // [BM] US11: 구독 해지 감지 → Exit Survey 표시
+        // PremiumMenuViewController에서 시스템 구독 관리 이동 시 설정한 플래그 확인
+        checkAndShowExitSurvey()
     }
 
     /// Scene이 비활성화될 때 호출
@@ -512,6 +516,51 @@ extension SceneDelegate {
         attVC.modalPresentationStyle = .overFullScreen
         attVC.modalTransitionStyle = .crossDissolve
         rootVC.present(attVC, animated: true)
+    }
+}
+
+// MARK: - Exit Survey (US11)
+
+extension SceneDelegate {
+
+    /// 구독 해지 감지 → Exit Survey 표시
+    /// PremiumMenuViewController에서 시스템 구독 관리 이동 시 설정한
+    /// pendingCancelCheck 플래그를 확인하고, autoRenewEnabled 변화를 감지한다.
+    func checkAndShowExitSurvey() {
+        // 플래그 확인
+        guard UserDefaults.standard.bool(forKey: "pendingCancelCheck") else { return }
+        let wasAutoRenewing = UserDefaults.standard.bool(forKey: "wasAutoRenewing")
+
+        // 플래그 초기화 (1회만 체크)
+        UserDefaults.standard.set(false, forKey: "pendingCancelCheck")
+
+        Task { @MainActor in
+            // 구독 상태 갱신 (await로 완료 보장)
+            await SubscriptionStore.shared.refreshSubscriptionStatus()
+
+            let currentState = SubscriptionStore.shared.state
+
+            // 해지 감지: 이전에 자동갱신 활성 → 현재 비활성 + 구독 아직 유효
+            guard wasAutoRenewing,
+                  !currentState.autoRenewEnabled,
+                  currentState.isActive else {
+                Logger.app.debug("SceneDelegate: Exit Survey 미표시 — 해지 미감지 (wasAutoRenew=\(wasAutoRenewing), current=\(currentState.autoRenewEnabled), active=\(currentState.isActive))")
+                return
+            }
+
+            // 다른 모달이 표시 중이면 미표시 (충돌 방지)
+            guard let rootVC = self.window?.rootViewController,
+                  rootVC.presentedViewController == nil else {
+                Logger.app.debug("SceneDelegate: Exit Survey 미표시 — 다른 모달 표시 중")
+                return
+            }
+
+            // Exit Survey 표시
+            let exitSurveyVC = ExitSurveyViewController()
+            exitSurveyVC.modalPresentationStyle = .pageSheet
+            rootVC.present(exitSurveyVC, animated: true)
+            Logger.app.debug("SceneDelegate: Exit Survey 표시")
+        }
     }
 }
 
