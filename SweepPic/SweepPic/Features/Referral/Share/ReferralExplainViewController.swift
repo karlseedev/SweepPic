@@ -157,11 +157,11 @@ final class ReferralExplainViewController: UIViewController {
         return indicator
     }()
 
-    /// 부가 문구: "이미 구독 중이어도 14일 무료 연장"
+    /// 부가 문구: "이미 Pro멤버십 이용 중이어도 14일 무료 연장"
     private lazy var subtitleLabel: UILabel = {
         let label = UILabel()
         label.translatesAutoresizingMaskIntoConstraints = false
-        label.text = "이미 Pro 구독 중이어도 14일 무료 연장"
+        label.text = "이미 Pro멤버십 이용 중이어도 14일 무료 연장"
         label.font = .systemFont(ofSize: 13, weight: .regular)
         label.textColor = UIColor.white.withAlphaComponent(0.5)
         label.textAlignment = .center

@@ -49,6 +49,11 @@ final class FloatingTitleBar: UIView {
 
     weak var delegate: FloatingTitleBarDelegate?
 
+    /// 상단 우측 버튼(간편정리, 메뉴) 탭 인터셉트 핸들러
+    /// true를 반환하면 버튼 동작 차단 (UIMenu 풀다운이 뜨지 않음)
+    /// hitTest에서 호출되므로 내부에서 대체 동작(예: A-1 표시)을 직접 수행
+    var rightButtonInterceptor: (() -> Bool)?
+
     /// 현재 타이틀 텍스트
     // ⚠️ 사진보관함 명칭 변경 시 동시 수정 필요:
     // - TabBarController.swift, GridViewController.swift, FloatingOverlayContainer.swift, FloatingTitleBar.swift (여기)
@@ -386,15 +391,19 @@ final class FloatingTitleBar: UIView {
             return secondRightButton
         }
 
-        // Select 버튼 영역 체크
+        // Select(간편정리) 버튼 영역 체크
         let selectPoint = convert(point, to: selectButton)
         if selectButton.bounds.contains(selectPoint) && !selectButton.isHidden {
+            // A-1 인터셉트: 버튼 동작 차단 → 대체 동작 수행
+            if rightButtonInterceptor?() == true { return self }
             return selectButton
         }
 
         // 메뉴 버튼 영역 체크 (최우측)
         let menuPoint = convert(point, to: menuButton)
         if menuButton.bounds.contains(menuPoint) && !menuButton.isHidden {
+            // A-1 인터셉트: 버튼 동작 차단 → 대체 동작 수행
+            if rightButtonInterceptor?() == true { return self }
             return menuButton
         }
 

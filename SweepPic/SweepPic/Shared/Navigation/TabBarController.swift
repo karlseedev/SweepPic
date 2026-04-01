@@ -173,6 +173,13 @@ class TabBarController: UITabBarController {
 
         self.floatingOverlay = overlay
 
+        // A-1 인터셉트: 상단 버튼(간편정리, 메뉴) 탭 시 A-1 조건이면 차단 → A-1 표시
+        overlay.titleBar.rightButtonInterceptor = { [weak self] in
+            guard let self, self.shouldInterceptForCoachMarkA1() else { return false }
+            self.showCoachMarkA1OnGrid()
+            return true
+        }
+
     }
 
     /// 시스템 바 가시성 설정

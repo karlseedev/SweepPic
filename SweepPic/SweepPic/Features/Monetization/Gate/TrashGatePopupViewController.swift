@@ -212,10 +212,10 @@ final class TrashGatePopupViewController: UIViewController {
         return button
     }()
 
-    /// 초대 부가 문구: "이미 구독 중이어도 14일 무료 연장"
+    /// 초대 부가 문구: "이미 Pro멤버십 이용 중이어도 14일 무료 연장"
     private let referralSubtitleLabel: UILabel = {
         let label = UILabel()
-        label.text = "이미 구독 중이어도 14일 무료 연장"
+        label.text = "이미 Pro멤버십 이용 중이어도 14일 무료 연장"
         label.font = .systemFont(ofSize: 11, weight: .regular)
         label.textColor = UIColor.white.withAlphaComponent(0.4)
         label.textAlignment = .center
@@ -545,8 +545,8 @@ final class TrashGatePopupViewController: UIViewController {
         infoLabel.accessibilityLabel = "삭제할 사진 \(trashCount)장, 무료 삭제 가능 \(remainingFreeDeletes)장"
         adButton.accessibilityLabel = "광고를 보고 사진 삭제하기"
         adButton.accessibilityHint = "광고를 시청한 후 사진을 삭제합니다"
-        proButton.accessibilityLabel = "Pro 구독으로 무제한 삭제"
-        proButton.accessibilityHint = "Pro 구독 안내 화면으로 이동합니다"
+        proButton.accessibilityLabel = "Pro멤버십으로 무제한 삭제"
+        proButton.accessibilityHint = "Pro멤버십 안내 화면으로 이동합니다"
         closeButton.accessibilityLabel = "닫기"
         closeButton.accessibilityHint = "팝업을 닫습니다"
         goldenMomentLabel.accessibilityLabel = "오늘 광고 횟수를 모두 사용했습니다"
@@ -555,6 +555,6 @@ final class TrashGatePopupViewController: UIViewController {
         referralPromoLabel.accessibilityLabel = "초대 한 번마다 나도 친구도 Pro 멤버십 14일 무료 제공"
         referralButton.accessibilityLabel = "친구 초대하기"
         referralButton.accessibilityHint = "초대 설명 화면으로 이동합니다"
-        referralSubtitleLabel.accessibilityLabel = "이미 구독 중이어도 14일 무료 연장"
+        referralSubtitleLabel.accessibilityLabel = "이미 Pro멤버십 이용 중이어도 14일 무료 연장"
     }
 }

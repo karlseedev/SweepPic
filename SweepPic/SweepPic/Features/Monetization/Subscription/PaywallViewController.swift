@@ -146,7 +146,7 @@ final class PaywallViewController: UIViewController {
     /// 복원 버튼
     private let restoreButton: UIButton = {
         let button = UIButton(type: .system)
-        button.setTitle("구독 복원", for: .normal)
+        button.setTitle("멤버십 복원", for: .normal)
         button.setTitleColor(.secondaryLabel, for: .normal)
         button.titleLabel?.font = .systemFont(ofSize: 14, weight: .regular)
         button.translatesAutoresizingMaskIntoConstraints = false
@@ -473,13 +473,13 @@ final class PaywallViewController: UIViewController {
                 let restored = try await viewModel.restorePurchases()
                 spinner.stopAnimating()
                 if restored {
-                    showAlert(title: "복원 완료", message: "Pro 구독이 복원되었습니다.") { [weak self] in
+                    showAlert(title: "복원 완료", message: "Pro멤버십이 복원되었습니다.") { [weak self] in
                         self?.dismiss(animated: true) {
                             self?.onSubscribed?()
                         }
                     }
                 } else {
-                    showAlert(title: "복원 결과", message: "복원할 구독이 없습니다.")
+                    showAlert(title: "복원 결과", message: "복원할 멤버십이 없습니다.")
                 }
             } catch {
                 spinner.stopAnimating()
@@ -739,10 +739,10 @@ final class PaywallViewController: UIViewController {
     private func setupAccessibility() {
         closeButton.accessibilityLabel = "닫기"
         closeButton.accessibilityHint = "페이월 화면을 닫습니다"
-        planTabView.accessibilityLabel = "구독 플랜 선택"
+        planTabView.accessibilityLabel = "멤버십 플랜 선택"
         purchaseButton.accessibilityLabel = "무료 체험 시작하기"
-        restoreButton.accessibilityLabel = "구독 복원"
-        restoreButton.accessibilityHint = "이전에 구매한 구독을 복원합니다"
+        restoreButton.accessibilityLabel = "멤버십 복원"
+        restoreButton.accessibilityHint = "이전에 구매한 멤버십을 복원합니다"
         redeemButton.accessibilityLabel = "리딤 코드 입력"
         redeemButton.accessibilityHint = "프로모션 코드를 입력합니다"
     }

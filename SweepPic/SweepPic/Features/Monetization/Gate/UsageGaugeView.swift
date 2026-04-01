@@ -357,7 +357,7 @@ final class UsageGaugeDetailPopup: UIViewController {
     /// 초대 부가 문구
     private let referralSubtitleLabel: UILabel = {
         let label = UILabel()
-        label.text = "이미 구독 중이어도 14일 무료 연장"
+        label.text = "이미 Pro멤버십 이용 중이어도 14일 무료 연장"
         label.font = .systemFont(ofSize: 11, weight: .regular)
         label.textColor = UIColor.white.withAlphaComponent(0.4)
         label.textAlignment = .center
@@ -501,14 +501,14 @@ final class UsageGaugeDetailPopup: UIViewController {
         // 접근성 (FR-057)
         statusLabel.accessibilityLabel = text
         watchAdButton.accessibilityLabel = "광고를 보고 삭제 한도 10장 추가"
-        proButton.accessibilityLabel = "Pro 구독으로 삭제 한도 무제한"
+        proButton.accessibilityLabel = "Pro멤버십으로 삭제 한도 무제한"
         closeButton.accessibilityLabel = "닫기"
         closeButton.accessibilityHint = "한도 상세 팝업을 닫습니다"
         // T033: 초대 프로모 접근성
         referralPromoLabel.accessibilityLabel = "초대 한 번마다 나도 친구도 Pro 멤버십 14일 무료 제공"
         referralButton.accessibilityLabel = "친구 초대하기"
         referralButton.accessibilityHint = "초대 설명 화면으로 이동합니다"
-        referralSubtitleLabel.accessibilityLabel = "이미 구독 중이어도 14일 무료 연장"
+        referralSubtitleLabel.accessibilityLabel = "이미 Pro멤버십 이용 중이어도 14일 무료 연장"
     }
 
     @objc private func watchAdTapped() {

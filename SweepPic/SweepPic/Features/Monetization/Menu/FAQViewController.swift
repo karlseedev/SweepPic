@@ -67,18 +67,18 @@ final class FAQViewController: UIViewController, BarsVisibilityControlling {
                 answer: "유사 사진 그룹에서 화질, 초점, 구도 등을 분석하여 가장 좋은 사진을 남기고 나머지를 삭제대기함으로 이동합니다. 바로 삭제되지 않으니 안심하세요."
             ),
         ]),
-        FAQSection(title: "구독/결제", items: [
+        FAQSection(title: "멤버십/결제", items: [
             FAQItem(
                 question: "무료로 사용할 수 있나요?",
                 answer: "네. 사진 정리(스와이프 삭제, 유사 사진 분석, 자동 정리, 복구)는 모두 무료입니다. 삭제대기함 비우기에만 일일 한도(10장)가 있으며, 광고를 보면 추가 삭제가 가능합니다."
             ),
             FAQItem(
-                question: "구독했는데 프리미엄이 활성화되지 않아요",
-                answer: "전체 메뉴 > 프리미엄 > \"구독 복원\"을 탭해주세요. 네트워크 연결 상태를 확인하고, 구독에 사용한 Apple ID로 로그인되어 있는지 확인해주세요."
+                question: "멤버십 가입했는데 멤버십이 활성화되지 않아요",
+                answer: "전체 메뉴 > 멤버십 > \"멤버십 복원\"을 탭해주세요. 네트워크 연결 상태를 확인하고, 결제에 사용한 Apple ID로 로그인되어 있는지 확인해주세요."
             ),
             FAQItem(
-                question: "구독을 해지하고 싶어요",
-                answer: "설정 > [내 이름] > 구독 > SweepPic Pro > 구독 취소를 탭하세요. 앱을 삭제해도 구독은 자동으로 해지되지 않으니 반드시 위 경로에서 취소해주세요."
+                question: "멤버십을 해지하고 싶어요",
+                answer: "설정 > [내 이름] > 구독 > SweepPic Pro > 구독 취소를 탭하세요. 앱을 삭제해도 자동으로 해지되지 않으니 반드시 위 경로에서 취소해주세요."
             ),
             FAQItem(
                 question: "환불받을 수 있나요?",
@@ -86,7 +86,7 @@ final class FAQViewController: UIViewController, BarsVisibilityControlling {
             ),
             FAQItem(
                 question: "삭제 한도가 뭔가요?",
-                answer: "무료 사용자는 하루 \(UsageLimit.dailyFreeLimit)장까지 삭제대기함 비우기가 가능합니다. 광고를 보면 하루 최대 \(UsageLimit.maxDailyTotal)장까지 늘릴 수 있고, Pro 구독 시 무제한입니다. 한도는 매일 자정에 초기화됩니다."
+                answer: "무료 사용자는 하루 \(UsageLimit.dailyFreeLimit)장까지 삭제대기함 비우기가 가능합니다. 광고를 보면 하루 최대 \(UsageLimit.maxDailyTotal)장까지 늘릴 수 있고, Pro멤버십 가입 시 무제한입니다. 한도는 매일 자정에 초기화됩니다."
             ),
         ]),
         FAQSection(title: "개인정보/보안", items: [

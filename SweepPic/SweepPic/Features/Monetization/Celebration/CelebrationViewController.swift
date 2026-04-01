@@ -134,7 +134,7 @@ final class CelebrationViewController: UIViewController {
     /// 초대 부가 문구
     private lazy var referralSubtitleLabel: UILabel = {
         let label = UILabel()
-        label.text = "이미 구독 중이어도 14일 무료 연장"
+        label.text = "이미 Pro멤버십 이용 중이어도 14일 무료 연장"
         label.font = .systemFont(ofSize: 11, weight: .regular)
         label.textColor = UIColor.white.withAlphaComponent(0.4)
         label.textAlignment = .center
