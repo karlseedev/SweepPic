@@ -160,7 +160,7 @@ extension GridViewController {
             CoachMarkType.similarPhoto.markAsShown()
             CoachMarkType.faceComparisonGuide.markAsShown()
             if let window = view.window {
-                ToastView.show("유사 사진을 찾지 못했습니다", in: window)
+                ToastView.show("인물사진 비교정리 할 사진을 찾지 못했습니다", in: window)
             }
             return
         }
@@ -247,7 +247,7 @@ extension GridViewController {
                     CoachMarkType.similarPhoto.markAsShown()
                     CoachMarkType.faceComparisonGuide.markAsShown()
                     if let window = self.view.window {
-                        ToastView.show("유사 사진을 찾지 못했습니다", in: window)
+                        ToastView.show("인물사진 비교정리 할 사진을 찾지 못했습니다", in: window)
                     }
                 }
             }

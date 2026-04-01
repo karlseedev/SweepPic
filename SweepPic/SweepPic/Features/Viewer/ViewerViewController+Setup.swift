@@ -118,15 +118,15 @@ extension ViewerViewController {
         setupSimilarPhotoTitleLabel()
     }
 
-    /// "유사사진정리 가능" 커스텀 타이틀 라벨 설정
+    /// "인물사진 비교정리 가능" 커스텀 타이틀 라벨 설정
     /// iOS 16~25: setupTopGradientAndTitle()에서 딤드와 함께 호출 → view.addSubview
     /// iOS 26: navigationItem.titleView에 설정 → 네비바 버튼과 자동 수평 정렬
     func setupSimilarPhotoTitleLabel() {
         let titleLabel = UILabel()
-        // "유사사진정리"(레귤러/흰색) + " 가능"(볼드/밝은 노란색)
+        // "인물사진 비교정리"(레귤러/흰색) + " 가능"(볼드/밝은 노란색)
         let attr = NSMutableAttributedString()
         attr.append(NSAttributedString(
-            string: "유사사진정리 ",
+            string: "인물사진 비교정리 ",
             attributes: [.font: UIFont.systemFont(ofSize: 17, weight: .regular), .foregroundColor: UIColor.white]
         ))
         attr.append(NSAttributedString(

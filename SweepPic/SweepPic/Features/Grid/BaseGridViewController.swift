@@ -1149,6 +1149,7 @@ extension BaseGridViewController {
                             CoachMarkManager.shared.currentOverlay = nil  // isShowing = false
                             overlay?.dismiss()  // 시각적 페이드아웃 (백그라운드)
                             self?.collectionView.isScrollEnabled = true  // A-1 스크롤 차단 해제
+                            (self as? GridViewController)?.disableA1NavigationButtonIntercept()
                             Logger.coachMark.debug("스와이프 삭제 성공 → A-1 dismiss → E-1 트리거")
                         }
                         self?.showDeleteSystemGuideIfNeeded(cell: cell)

@@ -53,7 +53,7 @@ extension CoachMarkOverlayView {
         overlay.updateDimPath()
 
         // 안내 텍스트 (하이라이트 셀 아래, 행간 1.2배)
-        let c1Text = "하얀색 테두리가 표시된 사진은\n여러 사진의 얼굴을 비교해서 삭제하는\n유사사진 정리가 가능한 사진이에요"
+        let c1Text = "하얀색 테두리가 표시된 사진은\n여러 사진의 얼굴을 비교해서 삭제하는\n인물사진 비교정리가 가능한 사진이에요"
         let c1Style = NSMutableParagraphStyle()
         c1Style.alignment = .center
         c1Style.lineSpacing = CoachMarkOverlayView.bodyFont.pointSize * 0.2
