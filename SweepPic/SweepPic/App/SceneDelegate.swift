@@ -557,8 +557,7 @@ extension SceneDelegate {
             // Exit Survey 표시 → 플래그 초기화
             UserDefaults.standard.set(false, forKey: "pendingCancelCheck")
             let exitSurveyVC = ExitSurveyViewController()
-            exitSurveyVC.modalPresentationStyle = .overFullScreen
-            exitSurveyVC.modalTransitionStyle = .crossDissolve
+            exitSurveyVC.modalPresentationStyle = .pageSheet
             rootVC.present(exitSurveyVC, animated: true)
             Logger.app.debug("SceneDelegate: Exit Survey 표시")
         }
