@@ -313,6 +313,13 @@ final class PhotoCell: UICollectionViewCell {
         }
     }
 
+    /// 터치 다운/업 시 즉시 축소 피드백 (시스템이 자동 설정)
+    override var isHighlighted: Bool {
+        didSet {
+            updateTransform()
+        }
+    }
+
     // MARK: - PRD7: Swipe Delete Animation Properties
 
     /// 스와이프 오버레이 스타일 (삭제: 마룬, 복구: 녹색)
@@ -808,10 +815,17 @@ final class PhotoCell: UICollectionViewCell {
     /// 선택 UI 업데이트 (T039)
     private func updateSelectionUI() {
         selectionCheckmarkView.isHidden = !isSelectedForDeletion
+        updateTransform()
+    }
 
-        // 선택 시 살짝 축소 효과 (iOS 사진 앱 스타일)
-        UIView.animate(withDuration: 0.15) {
-            self.transform = self.isSelectedForDeletion
+    /// 축소 transform 업데이트 (터치 하이라이트 또는 선택 시 0.95배 축소)
+    /// - isHighlighted: 터치 다운 즉시 true, 떼면 false (시스템 관리)
+    /// - isSelectedForDeletion: 선택 모드에서 선택된 셀 (앱 관리)
+    /// - 둘 중 하나라도 true면 축소 유지
+    private func updateTransform() {
+        let shouldShrink = isHighlighted || isSelectedForDeletion
+        UIView.animate(withDuration: 0.1) {
+            self.transform = shouldShrink
                 ? CGAffineTransform(scaleX: 0.95, y: 0.95)
                 : .identity
         }

@@ -114,6 +114,7 @@ class BaseGridViewController: UIViewController {
         cv.dataSource = self
         cv.prefetchDataSource = self
         cv.alwaysBounceVertical = true
+        cv.delaysContentTouches = false  // 터치 즉시 셀 하이라이트 (축소 피드백)
         cv.accessibilityIdentifier = "photo_grid"
         // Edge-to-edge 설정 (플로팅 UI 사용 시 수동으로 contentInset 설정)
         cv.contentInsetAdjustmentBehavior = .never
