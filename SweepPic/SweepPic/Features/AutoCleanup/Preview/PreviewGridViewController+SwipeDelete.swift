@@ -23,6 +23,7 @@ extension PreviewGridViewController {
     /// 스와이프 삭제 제스처 추가 (viewDidLoad에서 호출)
     func setupSwipeDeleteGesture() {
         let pan = UIPanGestureRecognizer(target: self, action: #selector(handleSwipeDelete(_:)))
+        pan.maximumNumberOfTouches = 1  // 두 손가락 시 centroid로 엉뚱한 셀 삭제 방지
         pan.delegate = self
         collectionView.addGestureRecognizer(pan)
         swipeDeleteState.swipeGesture = pan

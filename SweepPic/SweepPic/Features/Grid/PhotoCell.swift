@@ -400,6 +400,7 @@ final class PhotoCell: UICollectionViewCell {
         isSelectedForDeletion = false
 
         // UI 초기화
+        dimmedOverlayView.frame = contentView.bounds
         dimmedOverlayView.isHidden = true
         dimmedOverlayView.alpha = 0
         dimmedOverlayView.backgroundColor = Self.defaultOverlayColor  // 녹색 잔존 방지
@@ -973,17 +974,25 @@ extension PhotoCell {
             // 셀이 재사용되었으면 UI 변경 건너뜀
             guard self.reuseGeneration == gen else { return }
 
-            // frame을 전체로 복원 (커튼 → 전체 영역)
-            self.dimmedOverlayView.frame = self.contentView.bounds
-
             if self.isTrashed {
-                // 원래 삭제 상태: 전체 딤드로 복귀
+                // 원래 삭제 상태: 전체 딤드로 복귀 (frame 확장 + alpha 복원)
+                self.dimmedOverlayView.frame = self.contentView.bounds
                 self.dimmedMaskLayer?.removeFromSuperlayer()
                 self.dimmedMaskLayer = nil
                 self.dimmedOverlayView.alpha = Self.dimmedOverlayAlpha
             } else {
-                // 원래 정상 상태: 딤드 제거
-                self.dimmedOverlayView.alpha = 0
+                // 원래 정상 상태: 커튼이 걷히는 방향으로 frame 축소
+                let bounds = self.contentView.bounds
+                let zeroRect: CGRect
+                switch self.currentSwipeDirection {
+                case .right:
+                    // 오른쪽 스와이프였으면 → 왼쪽으로 걷힘 (x=0, width→0)
+                    zeroRect = CGRect(x: 0, y: 0, width: 0, height: bounds.height)
+                case .left:
+                    // 왼쪽 스와이프였으면 → 오른쪽으로 걷힘 (x=width, width→0)
+                    zeroRect = CGRect(x: bounds.width, y: 0, width: 0, height: bounds.height)
+                }
+                self.dimmedOverlayView.frame = zeroRect
             }
         } completion: { [weak self] _ in
             guard let self = self else { return }
@@ -1019,7 +1028,8 @@ extension PhotoCell {
         dimmedMaskLayer = nil
         dimmedOverlayView.layer.mask = nil
 
-        // 전체 딤드 표시
+        // frame 복원 (커튼 상태에서 전체로) + 전체 딤드 표시
+        dimmedOverlayView.frame = contentView.bounds
         dimmedOverlayView.isHidden = false
         dimmedOverlayView.alpha = Self.dimmedOverlayAlpha
     }
@@ -1032,7 +1042,8 @@ extension PhotoCell {
         dimmedMaskLayer = nil
         dimmedOverlayView.layer.mask = nil
 
-        // 원래 상태로 복귀
+        // frame 복원 + 원래 상태로 복귀
+        dimmedOverlayView.frame = contentView.bounds
         dimmedOverlayView.isHidden = !isTrashed
         dimmedOverlayView.alpha = isTrashed ? Self.dimmedOverlayAlpha : 0
         trashIconView.isHidden = !isTrashed
@@ -1053,6 +1064,8 @@ extension PhotoCell {
         dimmedMaskLayer = nil
         dimmedOverlayView.layer.mask = nil
 
+        // frame 복원 + 복원 미리보기
+        dimmedOverlayView.frame = contentView.bounds
         dimmedOverlayView.isHidden = false  // cancel 시 alpha 애니메이션 가능하게
         dimmedOverlayView.alpha = 0
         trashIconView.isHidden = true
@@ -1070,66 +1083,43 @@ extension PhotoCell {
     ///   - direction: 스와이프 방향
     ///   - isTrashed: 셀의 현재 삭제대기함 상태 (마스크 방향 결정)
     func animateCurtainToTarget(direction: SwipeDirection, isTrashed: Bool) {
-        guard let mask = dimmedMaskLayer else {
-            // 마스크 없으면 즉시 적용
-            if !isTrashed {
-                setFullDimmed(isTrashed: isTrashed)
-            } else {
-                setRestoredPreview()
-            }
-            return
-        }
-
         let gen = self.reuseGeneration
-        let bounds = dimmedOverlayView.bounds
+        let bounds = contentView.bounds
         let width = bounds.width
         let height = bounds.height
 
-        // progress=1.0일 때의 타겟 rect 계산 (updateDimmedMask와 동일 로직)
-        let targetRect: CGRect
+        // 타겟 frame 계산 (updateDimmedMask의 progress=1.0과 동일)
+        let targetFrame: CGRect
         if isTrashed {
-            // 복원: 빨간색 완전히 밀어냄 (마스크 → 빈 영역)
+            // 복원: overlay를 밀어냄 (width → 0)
             switch direction {
             case .right:
-                targetRect = CGRect(x: width, y: 0, width: 0, height: height)
+                targetFrame = CGRect(x: width, y: 0, width: 0, height: height)
             case .left:
-                targetRect = CGRect(x: 0, y: 0, width: 0, height: height)
+                targetFrame = CGRect(x: 0, y: 0, width: 0, height: height)
             }
         } else {
-            // 삭제: 빨간색 완전히 채움 (마스크 → 전체 bounds)
-            targetRect = bounds
+            // 삭제: overlay를 전체로 확장
+            targetFrame = bounds
         }
 
-        let targetPath = UIBezierPath(rect: targetRect).cgPath
-
-        // 마스크 path 애니메이션 (0.12초)
-        let anim = CABasicAnimation(keyPath: "path")
-        anim.toValue = targetPath
-        anim.duration = 0.12
-        anim.timingFunction = CAMediaTimingFunction(name: .easeOut)
-
-        CATransaction.begin()
-        CATransaction.setCompletionBlock { [weak self] in
+        // frame 애니메이션 (0.12초, mask path 애니메이션 대체)
+        UIView.animate(withDuration: 0.12, delay: 0, options: .curveEaseOut) { [weak self] in
             guard let self = self else { return }
-            // 셀이 재사용되었으면 스킵
+            guard self.reuseGeneration == gen else { return }
+            self.dimmedOverlayView.frame = targetFrame
+        } completion: { [weak self] _ in
+            guard let self = self else { return }
             guard self.reuseGeneration == gen else { return }
 
-            // 애니메이션 완료 → 마스크 제거 + 최종 상태 설정
-            self.dimmedMaskLayer?.removeFromSuperlayer()
-            self.dimmedMaskLayer = nil
-            self.dimmedOverlayView.layer.mask = nil
-
             if isTrashed {
-                // 복원 완료: 빨간색 제거
+                // 복원 완료: 딤드 제거
+                self.dimmedOverlayView.frame = self.contentView.bounds
                 self.dimmedOverlayView.isHidden = false
                 self.dimmedOverlayView.alpha = 0
                 self.trashIconView.isHidden = true
             }
-            // 삭제 완료: alpha/isHidden 이미 올바른 상태 (setDimmedProgress에서 설정됨)
         }
-        mask.path = targetPath
-        mask.add(anim, forKey: "curtainTarget")
-        CATransaction.commit()
     }
 
     // MARK: - Private Animation Helpers

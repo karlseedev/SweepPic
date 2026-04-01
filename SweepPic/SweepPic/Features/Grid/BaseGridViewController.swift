@@ -865,6 +865,7 @@ extension BaseGridViewController {
     func setupSwipeDeleteGestures() {
         // 스와이프 삭제 제스처
         let swipe = UIPanGestureRecognizer(target: self, action: #selector(handleSwipeDelete(_:)))
+        swipe.maximumNumberOfTouches = 1  // 두 손가락 시 centroid로 엉뚱한 셀 삭제 방지
         swipe.delegate = self
         collectionView.addGestureRecognizer(swipe)
         swipeDeleteState.swipeGesture = swipe
