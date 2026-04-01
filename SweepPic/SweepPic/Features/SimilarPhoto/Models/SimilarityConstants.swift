@@ -132,8 +132,8 @@ enum SimilarityConstants: Sendable {
 
     // MARK: - Comparison Group
 
-    /// 비교 그룹 최대 크기
-    nonisolated static let maxComparisonGroupSize: Int = 8
+    /// 비교 그룹 최대 크기 (뷰어 + FaceScan 공통)
+    nonisolated static let maxComparisonGroupSize: Int = 12
 
     // MARK: - Face Cropping
 
