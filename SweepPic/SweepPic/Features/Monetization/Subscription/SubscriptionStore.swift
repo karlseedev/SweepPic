@@ -363,6 +363,20 @@ final class SubscriptionStore: SubscriptionStoreProtocol {
         Logger.app.debug("SubscriptionStore: DEBUG Pro 설정 (오버라이드 ON)")
     }
 
+    /// 디버그용: 해지 시뮬레이션 (Exit Survey 테스트)
+    /// Pro 상태 + autoRenewEnabled: false로 설정. 오버라이드 ON으로 refresh 스킵.
+    /// UserDefaults 플래그는 호출측에서 별도 설정.
+    func debugSimulateCancellation() {
+        debugOverrideActive = true
+        state = SubscriptionState(
+            tier: .pro,
+            isActive: true,
+            autoRenewEnabled: false,
+            expirationDate: Date().addingTimeInterval(365 * 24 * 3600)
+        )
+        Logger.app.debug("SubscriptionStore: DEBUG 해지 시뮬레이션 (autoRenew=false, 오버라이드 ON)")
+    }
+
     /// 디버그용: 결제 문제 시뮬레이션 (갱신 실패 뱃지 테스트)
     func debugSetPaymentIssue() {
         debugOverrideActive = true

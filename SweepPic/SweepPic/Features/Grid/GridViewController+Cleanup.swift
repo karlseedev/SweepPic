@@ -40,16 +40,16 @@ extension GridViewController {
     /// iOS 26+ 시스템 네비바에 간편정리 + 전체메뉴 버튼 추가
     @available(iOS 26.0, *)
     private func setupSystemCleanupButton() {
-        // 간편정리 버튼 — 탭 시 UIMenu 풀다운 (유사사진정리 / 저품질자동정리)
+        // 간편정리 버튼 — 탭 시 UIMenu 풀다운 (인물사진 비교정리 / 저품질사진 자동정리)
         let cleanupMenuItem = UIBarButtonItem(
             title: "간편정리",
             image: nil,
             primaryAction: nil,
             menu: UIMenu(children: [
-                UIAction(title: "유사사진정리",
+                UIAction(title: "인물사진 비교정리",
                          image: UIImage(systemName: "person.2.crop.square.stack"),
                          attributes: .disabled) { _ in },
-                UIAction(title: "저품질자동정리",
+                UIAction(title: "저품질사진 자동정리",
                          image: UIImage(systemName: "wand.and.stars")) { [weak self] _ in
                     self?.cleanupButtonTapped()
                 },
@@ -95,10 +95,10 @@ extension GridViewController {
         overlay.titleBar.setRightMenuButton(
             title: "간편정리",
             menu: UIMenu(children: [
-                UIAction(title: "유사사진정리",
+                UIAction(title: "인물사진 비교정리",
                          image: UIImage(systemName: "person.2.crop.square.stack"),
                          attributes: .disabled) { _ in },
-                UIAction(title: "저품질자동정리",
+                UIAction(title: "저품질사진 자동정리",
                          image: UIImage(systemName: "wand.and.stars")) { [weak self] _ in
                     self?.cleanupButtonTapped()
                 },
@@ -277,7 +277,7 @@ extension GridViewController {
     /// 삭제대기함 비어있지 않음 알림 표시
     private func showTrashNotEmptyAlert() {
         let alert = UIAlertController(
-            title: "저품질 사진 자동 정리",
+            title: "저품질사진 자동정리",
             message: "저품질 사진 정리 기능을 사용하려면\n삭제대기함을 먼저 비워주세요\n\n-Pro멤버십 가입 시 제한 해제-",
             preferredStyle: .alert
         )
@@ -589,10 +589,10 @@ extension GridViewController {
                 UIAction(title: "뷰어 스와이프 삭제") { [weak self] _ in
                     self?.replayCoachMarkB()
                 },
-                UIAction(title: "유사 사진 얼굴 비교") { [weak self] _ in
+                UIAction(title: "인물사진 비교정리") { [weak self] _ in
                     self?.replayCoachMarkC()
                 },
-                UIAction(title: "저품질 사진 정리") { [weak self] _ in
+                UIAction(title: "저품질사진 자동정리") { [weak self] _ in
                     self?.replayCoachMarkD()
                 },
                 UIAction(title: "삭제 시스템 안내") { [weak self] _ in
@@ -647,6 +647,22 @@ extension GridViewController {
                     NotificationCenter.default.post(name: .debugMonetizationStateChanged, object: nil)
                     #endif
                     self?.setupCleanupButton()
+                },
+                UIAction(title: "해지 시뮬레이션 (Exit Survey 테스트)") { [weak self] _ in
+                    #if DEBUG
+                    // Pro + autoRenewEnabled: false 상태로 설정 (오버라이드 ON → refresh 스킵)
+                    SubscriptionStore.shared.debugSimulateCancellation()
+                    // 해지 감지 플래그 설정
+                    UserDefaults.standard.set(true, forKey: "pendingCancelCheck")
+                    UserDefaults.standard.set(true, forKey: "wasAutoRenewing")
+                    Logger.app.debug("GridVC+Cleanup: 해지 시뮬레이션 — 백그라운드→포그라운드 복귀 시 Exit Survey 표시")
+                    NotificationCenter.default.post(name: .debugMonetizationStateChanged, object: nil)
+                    #endif
+                    self?.setupCleanupButton()
+                    // 토스트로 안내
+                    if let window = self?.view.window {
+                        ToastView.show("앱을 백그라운드로 보냈다가 복귀하세요", in: window)
+                    }
                 },
                 UIAction(title: "온보딩 리셋") { _ in
                     #if DEBUG
