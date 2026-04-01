@@ -121,7 +121,7 @@ final class ExitSurveyViewController: UIViewController {
         // 선택지 버튼 생성
         let reasons: [(CancelReason, String)] = [
             (.price, "가격이 부담돼요"),
-            (.enoughFree, "삭제 한도가 충분해요"),
+            (.enoughFree, "무료로도 충분해요"),
             (.done, "사진 정리를 다 했어요"),
             (.competitor, "다른 앱을 사용해요"),
             (.other, "기타")
