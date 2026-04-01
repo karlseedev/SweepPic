@@ -47,8 +47,9 @@ extension GridViewController {
             primaryAction: nil,
             menu: UIMenu(children: [
                 UIAction(title: "인물사진 비교정리",
-                         image: UIImage(systemName: "person.2.crop.square.stack"),
-                         attributes: .disabled) { _ in },
+                         image: UIImage(systemName: "person.2.crop.square.stack")) { [weak self] _ in
+                    self?.faceScanButtonTapped()
+                },
                 UIAction(title: "저품질사진 자동정리",
                          image: UIImage(systemName: "wand.and.stars")) { [weak self] _ in
                     self?.cleanupButtonTapped()
@@ -96,8 +97,9 @@ extension GridViewController {
             title: "간편정리",
             menu: UIMenu(children: [
                 UIAction(title: "인물사진 비교정리",
-                         image: UIImage(systemName: "person.2.crop.square.stack"),
-                         attributes: .disabled) { _ in },
+                         image: UIImage(systemName: "person.2.crop.square.stack")) { [weak self] _ in
+                    self?.faceScanButtonTapped()
+                },
                 UIAction(title: "저품질사진 자동정리",
                          image: UIImage(systemName: "wand.and.stars")) { [weak self] _ in
                     self?.cleanupButtonTapped()
