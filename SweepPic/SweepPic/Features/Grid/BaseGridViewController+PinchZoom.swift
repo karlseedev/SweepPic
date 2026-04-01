@@ -61,6 +61,9 @@ extension BaseGridViewController {
     /// - changed: 임계값 체크 후 줌 수행
     /// - ended/cancelled: 앵커 초기화
     @objc func handlePinchGesture(_ gesture: UIPinchGestureRecognizer) {
+        // A-1 활성 중이면 핀치 줌 차단
+        if CoachMarkManager.shared.isA1Active { return }
+
         switch gesture.state {
         case .began:
             // 앵커 에셋 ID 저장 (padding 보정)

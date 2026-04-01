@@ -385,6 +385,7 @@ final class GridViewController: BaseGridViewController {
         if CoachMarkManager.shared.isA1Active {
             CoachMarkManager.shared.isA1Active = false
             CoachMarkManager.shared.currentOverlay?.dismiss()
+            collectionView.isScrollEnabled = true  // A-1 스크롤 차단 해제
         }
 
         // D 타이머 취소 (화면 이탈 시)

@@ -116,6 +116,9 @@ extension GridViewController {
 
         Logger.coachMark.debug("A1 표시 — cellFrame=\(String(describing: cellFrame))")
 
+        // A-1 활성 중 스크롤 차단 (스와이프 삭제만 허용)
+        collectionView.isScrollEnabled = false
+
         // A-1 오버레이 표시 (스냅샷 없음, 확인 버튼 없음)
         CoachMarkOverlayView.showA1(
             highlightFrame: cellFrame,

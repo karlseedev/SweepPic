@@ -179,7 +179,6 @@ final class TrashAlbumViewController: BaseGridViewController {
         // [BM] 게이지 뷰 설정 (Phase 3 T016)
         setupGaugeView()
         observeSubscriptionStateForGauge()
-        observeDeleteGuideCompletion()
         #if DEBUG
         observeDebugMonetizationStateChange()
         #endif
@@ -245,6 +244,9 @@ final class TrashAlbumViewController: BaseGridViewController {
         // [LiquidGlass 최적화] 블러 뷰 사전 생성 + idle pause
         LiquidGlassOptimizer.preload(in: view.window)
         LiquidGlassOptimizer.enterIdle(in: view.window)
+
+        // 온보딩 중 스킵된 게이지 첫 툴팁 재시도
+        retryGaugeFirstTooltipIfNeeded()
     }
 
     // MARK: - Setup

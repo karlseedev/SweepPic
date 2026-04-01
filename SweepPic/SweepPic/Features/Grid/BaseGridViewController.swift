@@ -797,6 +797,9 @@ extension BaseGridViewController: UICollectionViewDelegate {
         // 빈 셀 무시
         guard indexPath.item >= paddingCellCount else { return }
 
+        // A-1 활성 중이면 뷰어 진입 차단 (스와이프 삭제만 허용)
+        if CoachMarkManager.shared.isA1Active { return }
+
         // Select 모드일 때는 선택 토글 처리
         if isSelectMode {
             toggleSelectionForSelectMode(at: indexPath)
@@ -1145,6 +1148,7 @@ extension BaseGridViewController {
                             let overlay = CoachMarkManager.shared.currentOverlay
                             CoachMarkManager.shared.currentOverlay = nil  // isShowing = false
                             overlay?.dismiss()  // 시각적 페이드아웃 (백그라운드)
+                            self?.collectionView.isScrollEnabled = true  // A-1 스크롤 차단 해제
                             Logger.coachMark.debug("스와이프 삭제 성공 → A-1 dismiss → E-1 트리거")
                         }
                         self?.showDeleteSystemGuideIfNeeded(cell: cell)

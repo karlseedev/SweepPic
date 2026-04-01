@@ -292,6 +292,9 @@ extension BaseGridViewController {
     /// .changed: 드래그 연속 선택 (기존 로직 재사용)
     /// .ended/.cancelled: 드래그 종료 + 일반 드래그 선택 재활성화
     @objc private func handleLongPressSelect(_ gesture: UILongPressGestureRecognizer) {
+        // A-1 활성 중이면 롱프레스 차단 (Select 모드 진입 방지)
+        if CoachMarkManager.shared.isA1Active { return }
+
         switch gesture.state {
         case .began:
             handleLongPressBegan(gesture)

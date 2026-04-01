@@ -899,9 +899,6 @@ final class CoachMarkOverlayView: UIView {
         cleanupFirstEmpty()
         cleanupFaceComparisonGuide()
 
-        // dismiss 완료 후 노티 발송이 필요한 타입 기록 (removeFromSuperview 후 isShowing=false 보장)
-        let wasDeleteGuide = (coachMarkType == .firstDeleteGuide)
-
         UIView.animate(withDuration: 0.2, animations: {
             self.alpha = 0
         }) { _ in
@@ -911,14 +908,6 @@ final class CoachMarkOverlayView: UIView {
             self.snapshotView?.removeFromSuperview()
             self.snapshotView = nil
             self.removeFromSuperview()
-            // completion block이 self를 강한 참조하므로 removeFromSuperview만으로는 dealloc 안 됨
-            // → weak currentOverlay가 아직 nil이 아님 → 명시적으로 해제
-            CoachMarkManager.shared.currentOverlay = nil
-
-            // E-1+E-2 완료 알림 (isShowing=false 보장된 상태에서 수신)
-            if wasDeleteGuide {
-                NotificationCenter.default.post(name: .deleteGuideDidComplete, object: nil)
-            }
         }
     }
 
