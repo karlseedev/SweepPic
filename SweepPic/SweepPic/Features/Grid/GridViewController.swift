@@ -372,7 +372,7 @@ final class GridViewController: BaseGridViewController {
         // 뒤로가기 버튼 숨김
         overlay.titleBar.setShowsBackButton(false)
 
-        // [Select] [정리] 두 개 버튼으로 설정 (auto-cleanup)
+        // [간편정리] [전체메뉴] 두 개 버튼으로 설정
         setupFloatingCleanupButton()
     }
 

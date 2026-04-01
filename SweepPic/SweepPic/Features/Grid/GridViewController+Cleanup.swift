@@ -37,39 +37,44 @@ extension GridViewController {
         }
     }
 
-    /// iOS 26+ 시스템 네비바에 정리 버튼 추가
+    /// iOS 26+ 시스템 네비바에 간편정리 + 전체메뉴 버튼 추가
     @available(iOS 26.0, *)
     private func setupSystemCleanupButton() {
-        let cleanupItem = UIBarButtonItem(
-            image: UIImage(systemName: "wand.and.stars"),
-            style: .plain,
-            target: self,
-            action: #selector(cleanupButtonTapped)
+        // 간편정리 버튼 — 탭 시 UIMenu 풀다운 (유사사진정리 / 저품질자동정리)
+        let cleanupMenuItem = UIBarButtonItem(
+            title: "간편정리",
+            image: nil,
+            primaryAction: nil,
+            menu: UIMenu(children: [
+                UIAction(title: "유사사진정리",
+                         image: UIImage(systemName: "person.2.crop.square.stack"),
+                         attributes: .disabled) { _ in },
+                UIAction(title: "저품질자동정리",
+                         image: UIImage(systemName: "wand.and.stars")) { [weak self] _ in
+                    self?.cleanupButtonTapped()
+                },
+            ])
         )
-        cleanupItem.tintColor = .systemBlue
-        let selectItem = UIBarButtonItem(
-            title: "선택",
-            style: .plain,
-            target: self,
-            action: #selector(selectButtonTapped)
-        )
-        // 전체 메뉴 버튼 (최우측, 탭 시 풀다운 메뉴)
+
+        // 전체메뉴 버튼 (최우측, 탭 시 풀다운 메뉴)
         // 표준 UIBarButtonItem 사용 — iOS 26 Liquid Glass 스타일 자동 적용
-        // T053: "프리미엄 ▸" / "고객센터 ▸" 서브메뉴로 재구성 (FR-043)
         let menuItem = UIBarButtonItem(
             image: UIImage(systemName: "ellipsis"),
             menu: UIMenu(children: [
-                UIAction(title: "자동정리", image: UIImage(systemName: "wand.and.stars")) { _ in },
                 PremiumMenuViewController.makeMenu(from: self),
                 CustomerServiceViewController.makeMenu(from: self),
+                UIAction(title: "사진 선택 모드",
+                         image: UIImage(systemName: "checkmark.circle")) { [weak self] _ in
+                    self?.selectButtonTapped()
+                },
                 self.makeCoachMarkReplayMenu(),
                 self.makeDebugResetMenu(),
                 self.makeDebugAdTestMenu(),
             ])
         )
 
-        // [정리] [선택] [메뉴] 순서 (배열 첫 번째가 최우측)
-        navigationItem.rightBarButtonItems = [menuItem, selectItem, cleanupItem]
+        // [간편정리] [전체메뉴] 순서 (배열 첫 번째가 최우측)
+        navigationItem.rightBarButtonItems = [menuItem, cleanupMenuItem]
 
         // 버튼 활성화 상태 초기화
         updateCleanupButtonState()
@@ -78,32 +83,35 @@ extension GridViewController {
         updatePaymentIssueBadge()
     }
 
-    /// iOS 16~25 FloatingUI에 정리 버튼 추가
+    /// iOS 16~25 FloatingUI에 간편정리 + 전체메뉴 버튼 추가
     func setupFloatingCleanupButton() {
         guard let tabBarController = tabBarController as? TabBarController,
               let overlay = tabBarController.floatingOverlay else {
             return
         }
 
-        // 기존 Select 버튼 대신 [Select] [정리] 두 개 버튼으로 변경
-        overlay.titleBar.setTwoRightButtons(
-            firstTitle: "선택",
-            firstColor: .white,
-            firstAction: { [weak self] in
-                self?.selectButtonTapped()
-            },
-            secondIcon: "wand.and.stars",
-            secondAction: { [weak self] in
-                self?.cleanupButtonTapped()
-            }
+        // 간편정리 메뉴 버튼 — 탭 시 UIMenu 풀다운
+        overlay.titleBar.setRightMenuButton(
+            title: "간편정리",
+            menu: UIMenu(children: [
+                UIAction(title: "유사사진정리",
+                         image: UIImage(systemName: "person.2.crop.square.stack"),
+                         attributes: .disabled) { _ in },
+                UIAction(title: "저품질자동정리",
+                         image: UIImage(systemName: "wand.and.stars")) { [weak self] _ in
+                    self?.cleanupButtonTapped()
+                },
+            ])
         )
 
-        // 메뉴 버튼 (최우측, 풀다운 메뉴)
-        // T053: "프리미엄 ▸" / "고객센터 ▸" 서브메뉴로 재구성 (FR-043)
+        // 전체메뉴 버튼 (최우측, 풀다운 메뉴)
         overlay.titleBar.showMenuButton(menu: UIMenu(children: [
-            UIAction(title: "자동정리", image: UIImage(systemName: "wand.and.stars")) { _ in },
             PremiumMenuViewController.makeMenu(from: self),
             CustomerServiceViewController.makeMenu(from: self),
+            UIAction(title: "사진 선택 모드",
+                     image: UIImage(systemName: "checkmark.circle")) { [weak self] _ in
+                self?.selectButtonTapped()
+            },
             self.makeCoachMarkReplayMenu(),
             self.makeDebugResetMenu(),
             self.makeDebugAdTestMenu(),
@@ -190,29 +198,25 @@ extension GridViewController {
         }
     }
 
-    /// 정리 버튼 활성화 상태 업데이트
+    /// 간편정리 버튼 활성화 상태 업데이트
     ///
-    /// 사진이 있을 때만 버튼 활성화
+    /// 사진이 있을 때만 간편정리 버튼 활성화 (전체메뉴는 항상 활성)
     func updateCleanupButtonState() {
         let hasPhotos = gridDataSource.assetCount > 0
 
         if #available(iOS 26.0, *) {
-            // 시스템 네비바: [메뉴, 선택, 정리] 순서
-            if let items = navigationItem.rightBarButtonItems, items.count >= 3 {
-                // items[0] = 메뉴 (항상 활성화)
-                items[1].isEnabled = hasPhotos  // 선택
-                items[2].isEnabled = hasPhotos  // 정리
+            // 시스템 네비바: [전체메뉴, 간편정리] 순서
+            if let items = navigationItem.rightBarButtonItems, items.count >= 2 {
+                // items[0] = 전체메뉴 (항상 활성화)
+                items[1].isEnabled = hasPhotos  // 간편정리
             }
         } else {
-            // FloatingUI
+            // FloatingUI: 간편정리 메뉴 버튼만 활성화/비활성화
             guard let tabBarController = tabBarController as? TabBarController,
                   let overlay = tabBarController.floatingOverlay else {
                 return
             }
-            overlay.titleBar.setTwoRightButtonsEnabled(
-                firstEnabled: hasPhotos,
-                secondEnabled: hasPhotos
-            )
+            overlay.titleBar.setRightMenuButtonEnabled(hasPhotos)
         }
     }
 

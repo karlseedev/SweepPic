@@ -112,10 +112,6 @@ extension TrashAlbumViewController {
     private func showGaugeFirstTooltipIfNeeded(for gauge: UIView) {
         let key = "GaugeFirstTooltipShown"
         guard !UserDefaults.standard.bool(forKey: key) else { return }
-
-        // 온보딩(코치마크) 진행 중이면 미표시 — 온보딩 완료 후 재진입 시 표시
-        guard !CoachMarkManager.shared.isShowing else { return }
-
         UserDefaults.standard.set(true, forKey: key)
 
         // 약간의 딜레이 후 툴팁 표시 (레이아웃 완료 대기)

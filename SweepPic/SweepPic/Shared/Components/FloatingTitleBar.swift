@@ -198,7 +198,8 @@ final class FloatingTitleBar: UIView {
     /// Select 버튼 (Liquid Glass 스타일) - 가장 오른쪽
     /// iOS 26 스펙: 높이 44pt, fontSize 17pt
     private lazy var selectButton: GlassTextButton = {
-        let button = GlassTextButton(title: "선택", style: .plain, tintColor: .white)
+        // 초기 크기를 "간편정리"(4글자) 기준으로 생성 — 보관함 첫 화면에서 Glass 배경 크기 보장
+        let button = GlassTextButton(title: "간편정리", style: .plain, tintColor: .white)
         button.addTarget(self, action: #selector(selectButtonTapped), for: .touchUpInside)
         button.translatesAutoresizingMaskIntoConstraints = false
         return button
@@ -482,6 +483,10 @@ final class FloatingTitleBar: UIView {
         selectButton.isHidden = false
         rightButtonAction = action
 
+        // UIMenu 모드 해제 (간편정리 메뉴 → 취소 버튼 전환 시)
+        selectButton.menu = nil
+        selectButton.showsMenuAsPrimaryAction = false
+
         // 기존 액션 제거 후 새 액션 연결
         selectButton.removeTarget(self, action: #selector(selectButtonTapped), for: .touchUpInside)
         selectButton.removeTarget(self, action: #selector(rightButtonTapped), for: .touchUpInside)
@@ -495,6 +500,10 @@ final class FloatingTitleBar: UIView {
 
         // GlassTextButton 텍스트 설정
         selectButton.setButtonTitle("선택")
+
+        // UIMenu 모드 해제 (간편정리 메뉴 → 선택 버튼 복원 시)
+        selectButton.menu = nil
+        selectButton.showsMenuAsPrimaryAction = false
 
         rightButtonAction = nil
 
@@ -652,5 +661,47 @@ final class FloatingTitleBar: UIView {
         // Select 버튼 trailing을 컨테이너 우측으로 복원
         selectButtonTrailingToMenu?.isActive = false
         selectButtonTrailingToContainer?.isActive = true
+    }
+
+    // MARK: - Right Menu Button (간편정리 등 텍스트+UIMenu 풀다운)
+
+    /// 오른쪽 메뉴 버튼 설정 (탭 시 UIMenu 풀다운)
+    /// selectButton 위치에 텍스트 + UIMenu를 배치합니다.
+    /// - Parameters:
+    ///   - title: 버튼 타이틀 (예: "간편정리")
+    ///   - menu: 탭 시 표시할 UIMenu
+    func setRightMenuButton(title: String, menu: UIMenu) {
+        // 두 번째 버튼 숨기기 (메뉴 버튼 단일 모드)
+        hideSecondRightButton()
+
+        // GlassTextButton 텍스트 설정
+        selectButton.setButtonTitle(title)
+
+        // 기존 target/action 제거
+        selectButton.removeTarget(self, action: #selector(selectButtonTapped), for: .touchUpInside)
+        selectButton.removeTarget(self, action: #selector(rightButtonTapped), for: .touchUpInside)
+        rightButtonAction = nil
+
+        // UIMenu 풀다운으로 동작하도록 설정
+        selectButton.menu = menu
+        selectButton.showsMenuAsPrimaryAction = true
+
+        isSelectButtonHidden = false
+    }
+
+    /// 오른쪽 메뉴 버튼 활성화/비활성화 (간편정리 버튼용)
+    /// - Parameter enabled: 활성화 여부
+    func setRightMenuButtonEnabled(_ enabled: Bool) {
+        selectButton.isEnabled = enabled
+        selectButton.alpha = enabled ? 1.0 : 0.5
+    }
+
+    /// 오른쪽 메뉴 버튼(간편정리)의 window 좌표 frame 반환
+    /// 코치마크 D 하이라이트 위치 등에서 사용
+    /// 버튼이 숨겨져 있거나 window가 없으면 nil 반환
+    func rightMenuButtonFrameInWindow() -> CGRect? {
+        guard !selectButton.isHidden,
+              let window = selectButton.window else { return nil }
+        return selectButton.convert(selectButton.bounds, to: window)
     }
 }
