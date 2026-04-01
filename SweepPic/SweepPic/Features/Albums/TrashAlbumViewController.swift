@@ -179,6 +179,7 @@ final class TrashAlbumViewController: BaseGridViewController {
         // [BM] 게이지 뷰 설정 (Phase 3 T016)
         setupGaugeView()
         observeSubscriptionStateForGauge()
+        observeDeleteGuideCompletion()
         #if DEBUG
         observeDebugMonetizationStateChange()
         #endif

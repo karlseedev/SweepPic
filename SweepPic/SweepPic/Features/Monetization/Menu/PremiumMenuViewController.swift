@@ -4,8 +4,9 @@
 //
 //  프리미엄 서브메뉴 빌더 + 액션 핸들러 (FR-043, FR-044, T047)
 //
-//  ellipsis 메뉴의 "프리미엄 ▸" 서브메뉴를 생성하고,
-//  각 액션(구독 관리 / 구독 복원 / 리딤 코드)을 처리한다.
+//  ellipsis 메뉴의 "멤버십 ▸" 서브메뉴를 생성하고,
+//  각 액션(멤버십 관리 / 멤버십 복원 / 리딤 코드)을 처리한다.
+//  친구 초대 관련 항목은 ReferralMenuViewController로 분리됨.
 //
 //  구독 상태와 무관하게 메뉴 구조는 동일 (FR-044),
 //  내부에서 상태에 따라 분기 처리한다.
@@ -24,19 +25,19 @@ final class PremiumMenuViewController {
 
     // MARK: - Menu Builder
 
-    /// "프리미엄 ▸" 서브메뉴 생성
+    /// "멤버십 ▸" 서브메뉴 생성
     /// - Parameter presenter: 메뉴 액션에서 VC를 present/push할 UIViewController
     /// - Returns: UIMenu 서브메뉴
     static func makeMenu(from presenter: UIViewController) -> UIMenu {
         let subscribeAction = UIAction(
-            title: "구독 관리",
+            title: "멤버십 관리",
             image: UIImage(systemName: "creditcard")
         ) { _ in
             handleSubscriptionManagement(from: presenter)
         }
 
         let restoreAction = UIAction(
-            title: "구독 복원",
+            title: "멤버십 복원",
             image: UIImage(systemName: "arrow.clockwise")
         ) { _ in
             handleRestorePurchases(from: presenter)
@@ -49,34 +50,11 @@ final class PremiumMenuViewController {
             handleRedeemCode(from: presenter)
         }
 
-        // T035: 초대 프로그램 3개 항목 (FR-041)
-        let referralInviteAction = UIAction(
-            title: "친구 초대",
-            image: UIImage(systemName: "person.badge.plus")
-        ) { _ in
-            handleReferralInvite(from: presenter)
-        }
-
-        let referralCodeAction = UIAction(
-            title: "초대 코드 입력",
-            image: UIImage(systemName: "ticket")
-        ) { _ in
-            handleReferralCodeInput(from: presenter)
-        }
-
-        let referralRewardAction = UIAction(
-            title: "초대 혜택 받기",
-            image: UIImage(systemName: "gift")
-        ) { _ in
-            handleReferralReward(from: presenter)
-        }
-
         return UIMenu(
-            title: "프리미엄",
+            title: "멤버십",
             image: UIImage(systemName: "star.fill"),
             children: [
                 subscribeAction, restoreAction, redeemAction,
-                referralInviteAction, referralCodeAction, referralRewardAction
             ]
         )
     }
@@ -112,7 +90,7 @@ final class PremiumMenuViewController {
         if SubscriptionStore.shared.isProUser {
             // 이미 Pro → 토스트
             if let window = presenter.view.window {
-                ToastView.show("이미 구독 중입니다", in: window)
+                ToastView.show("이미 멤버십 이용 중입니다", in: window)
             }
             Logger.app.debug("PremiumMenu: 이미 Pro 사용자 → 토스트")
             return
@@ -125,9 +103,9 @@ final class PremiumMenuViewController {
                 await MainActor.run {
                     if let window = presenter.view.window {
                         if restored {
-                            ToastView.show("구독이 복원되었습니다", in: window)
+                            ToastView.show("멤버십이 복원되었습니다", in: window)
                         } else {
-                            ToastView.show("복원할 구독이 없습니다", in: window)
+                            ToastView.show("복원할 멤버십이 없습니다", in: window)
                         }
                     }
                 }
@@ -156,26 +134,4 @@ final class PremiumMenuViewController {
         }
     }
 
-    // MARK: - Referral Actions (T035, FR-041)
-
-    /// 친구 초대 → ReferralExplainViewController 모달
-    private static func handleReferralInvite(from presenter: UIViewController) {
-        let referralVC = ReferralExplainViewController()
-        presenter.present(referralVC, animated: true)
-        Logger.app.debug("PremiumMenu: 친구 초대 화면 표시")
-    }
-
-    /// 초대 코드 입력 → ReferralCodeInputViewController 모달
-    private static func handleReferralCodeInput(from presenter: UIViewController) {
-        let codeInputVC = ReferralCodeInputViewController()
-        presenter.present(codeInputVC, animated: true)
-        Logger.app.debug("PremiumMenu: 초대 코드 입력 화면 표시")
-    }
-
-    /// 초대 혜택 받기 → ReferralRewardViewController 모달
-    private static func handleReferralReward(from presenter: UIViewController) {
-        let rewardVC = ReferralRewardViewController()
-        presenter.present(rewardVC, animated: true)
-        Logger.app.debug("PremiumMenu: 초대 혜택 받기 화면 표시")
-    }
 }

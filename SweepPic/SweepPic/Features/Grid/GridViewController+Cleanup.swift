@@ -62,6 +62,7 @@ extension GridViewController {
             image: UIImage(systemName: "ellipsis"),
             menu: UIMenu(children: [
                 PremiumMenuViewController.makeMenu(from: self),
+                ReferralMenuViewController.makeMenu(from: self),
                 CustomerServiceViewController.makeMenu(from: self),
                 UIAction(title: "사진 선택 모드",
                          image: UIImage(systemName: "checkmark.circle")) { [weak self] _ in
@@ -107,6 +108,7 @@ extension GridViewController {
         // 전체메뉴 버튼 (최우측, 풀다운 메뉴)
         overlay.titleBar.showMenuButton(menu: UIMenu(children: [
             PremiumMenuViewController.makeMenu(from: self),
+            ReferralMenuViewController.makeMenu(from: self),
             CustomerServiceViewController.makeMenu(from: self),
             UIAction(title: "사진 선택 모드",
                      image: UIImage(systemName: "checkmark.circle")) { [weak self] _ in

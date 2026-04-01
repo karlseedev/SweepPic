@@ -174,7 +174,7 @@ deletedAssetsByGroup: [String: Set<String>]
 
 ## 7. 상한 조건
 
-자동정리(CleanupService)와 동일한 방식: **먼저 도달하는 조건에서 종료**
+**먼저 도달하는 조건에서 종료**
 
 | 조건 | 값 |
 |------|-----|
@@ -248,6 +248,7 @@ hasChanges = !toDelete.isEmpty || !toRestore.isEmpty
 ```swift
 struct FaceScanSession: Codable {
     let lastAssetDate: Date    // 마지막 스캔 사진 날짜
+    let lastAssetID: String    // 마지막 스캔 사진 ID (동일 날짜 정밀 위치)
     let scannedCount: Int      // 총 스캔 장수
     let savedAt: Date          // 저장 시각
 }
@@ -339,6 +340,9 @@ SweepPic/Features/FaceScan/
 | formGroupsForRange() 부작용 | `prepareForReanalysis()`가 기존 캐시 정리 — FaceScan용 분리 필요 |
 | LRU 캐시 크기 | 500 → 1,500 증가 검토 (1,000장 분석 시 기존 캐시 eviction 방지) |
 | ComparisonGroup 생성 | FaceScan용: 그룹 첫 번째 사진을 currentAssetID로 사용 |
+| 재진입 시 그룹 데이터 | FaceScanListVC가 콜백으로 받은 그룹 데이터를 보유 → 캐시가 아닌 자체 데이터에서 ComparisonGroup 생성 (캐시 무효화와 무관하게 재진입 가능) |
+| restore 방어 코드 | diff에서 복원 시 `trashStore.restore()` 호출 전 실제 trash 상태 확인 |
+| 분석 대상 필터 | 삭제대기함(`TrashStore`) 사진은 분석 대상에서 제외 |
 
 ---
 

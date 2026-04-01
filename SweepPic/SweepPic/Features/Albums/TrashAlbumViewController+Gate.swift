@@ -109,9 +109,14 @@ extension TrashAlbumViewController {
 
     /// 게이지 첫 표시 시 1회 툴팁 표시
     /// "오늘의 무료 삭제 한도예요. 탭해서 자세히 볼 수 있어요"
+    /// 온보딩(E-1+E-2) 진행 중이면 플래그를 찍지 않고 스킵 → 온보딩 완료 노티로 재시도
     private func showGaugeFirstTooltipIfNeeded(for gauge: UIView) {
         let key = "GaugeFirstTooltipShown"
         guard !UserDefaults.standard.bool(forKey: key) else { return }
+
+        // 온보딩 진행 중이면 미표시 (플래그 미기록 → 온보딩 완료 후 재시도)
+        guard !CoachMarkManager.shared.isShowing else { return }
+
         UserDefaults.standard.set(true, forKey: key)
 
         // 약간의 딜레이 후 툴팁 표시 (레이아웃 완료 대기)
@@ -119,6 +124,21 @@ extension TrashAlbumViewController {
             guard let self = self, self.view.viewWithTag(ViewTag.gaugeView) != nil else { return }
             self.showGaugeTooltip()
         }
+    }
+
+    /// E-1+E-2 온보딩 완료 알림 구독 (viewDidLoad에서 호출)
+    /// 온보딩이 삭제대기함 탭으로 전환시키므로, 완료 후 게이지 툴팁 재시도
+    func observeDeleteGuideCompletion() {
+        NotificationCenter.default.addObserver(
+            self, selector: #selector(handleDeleteGuideDidComplete),
+            name: .deleteGuideDidComplete, object: nil
+        )
+    }
+
+    /// E-1+E-2 완료 → 게이지 툴팁 재시도
+    @objc private func handleDeleteGuideDidComplete() {
+        guard let gauge = view.viewWithTag(ViewTag.gaugeView) else { return }
+        showGaugeFirstTooltipIfNeeded(for: gauge)
     }
 
     /// 게이지 아래에 툴팁 말풍선 표시 (3초 후 자동 소멸)
@@ -270,7 +290,13 @@ extension TrashAlbumViewController {
     }
 }
 
-// MARK: - Debug Notification Name
+// MARK: - Notification Names
+
+extension Notification.Name {
+    /// E-1+E-2 삭제 시스템 온보딩 완료 알림
+    /// 온보딩이 삭제대기함 탭으로 전환시키므로, 완료 후 게이지 툴팁 등 후속 UI 표시용
+    static let deleteGuideDidComplete = Notification.Name("deleteGuideDidComplete")
+}
 
 #if DEBUG
 extension Notification.Name {
