@@ -32,33 +32,33 @@ import OSLog
 /// 기존 SimilarityAnalysisQueue/Cache와 완전 격리된 분석 파이프라인을 실행합니다.
 final class FaceScanService {
 
-    // MARK: - 분석 도구
+    // MARK: - 분석 도구 (Pipeline extension에서 접근하므로 internal)
 
     /// Feature Print 분석기
-    private let analyzer = SimilarityAnalyzer()
+    let analyzer = SimilarityAnalyzer()
 
     /// 얼굴 감지기 (싱글톤 공유 — stateless에 가까움)
-    private var faceDetector: YuNetFaceDetector? { YuNetFaceDetector.shared }
+    var faceDetector: YuNetFaceDetector? { YuNetFaceDetector.shared }
 
     /// 얼굴 인식기 (싱글톤 공유 — stateless에 가까움)
-    private var faceRecognizer: SFaceRecognizer? { SFaceRecognizer.shared }
+    var faceRecognizer: SFaceRecognizer? { SFaceRecognizer.shared }
 
     /// 얼굴 정렬기 (싱글톤 공유 — stateless)
-    private let faceAligner = FaceAligner.shared
+    let faceAligner = FaceAligner.shared
 
     /// 이미지 로더 (싱글톤 공유 — 참조 카운팅으로 안전)
-    private let imageLoader = SimilarityImageLoader.shared
+    let imageLoader = SimilarityImageLoader.shared
 
     // MARK: - 결과 저장
 
     /// 전용 캐시 (외부에서 주입)
-    private let cache: FaceScanCache
+    let cache: FaceScanCache
 
-    // MARK: - 취소
+    // MARK: - 취소 (Pipeline extension에서 접근하므로 internal)
 
     /// 취소 플래그 (thread-safe)
-    private var isCancelled = false
-    private let cancelLock = NSLock()
+    var isCancelled = false
+    let cancelLock = NSLock()
 
     // MARK: - 세션 저장 키 (UserDefaults)
 
@@ -106,8 +106,8 @@ final class FaceScanService {
         cancelLock.unlock()
     }
 
-    /// 취소 여부 확인 (thread-safe)
-    private var cancelled: Bool {
+    /// 취소 여부 확인 (thread-safe, Pipeline extension에서도 접근)
+    var cancelled: Bool {
         cancelLock.lock()
         defer { cancelLock.unlock() }
         return isCancelled
@@ -212,7 +212,7 @@ final class FaceScanService {
             }
 
             // 열 상태 확인 — 과열 시 잠시 대기
-            if ProcessInfo.processInfo.thermalState >= .serious {
+            if ProcessInfo.processInfo.thermalState.rawValue >= ProcessInfo.ThermalState.serious.rawValue {
                 try await Task.sleep(nanoseconds: 500_000_000)  // 0.5초 대기
             }
         }

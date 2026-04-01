@@ -8,6 +8,7 @@
 //
 
 import UIKit
+import AppCore
 import OSLog
 
 // MARK: - FaceScan Menu Actions

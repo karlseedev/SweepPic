@@ -138,7 +138,7 @@ extension FaceScanService {
         var hasFaces: [Bool] = Array(repeating: false, count: photos.count)
 
         // AsyncSemaphore 대신 TaskGroup으로 동시성 제한
-        let maxConcurrent = ProcessInfo.processInfo.thermalState >= .serious
+        let maxConcurrent = ProcessInfo.processInfo.thermalState.rawValue >= ProcessInfo.ThermalState.serious.rawValue
             ? FaceScanConstants.maxConcurrentAnalysisThermal
             : FaceScanConstants.maxConcurrentAnalysis
 
@@ -148,19 +148,27 @@ extension FaceScanService {
 
             await withTaskGroup(of: (Int, VNFeaturePrintObservation?, Bool).self) { group in
                 for i in batchStart..<batchEnd {
-                    group.addTask { [weak self] in
-                        guard let self = self else { return (i, nil, false) }
-
+                    let asset = photos[i]
+                    let loader = self.imageLoader
+                    let fpAnalyzer = self.analyzer
+                    group.addTask {
                         do {
                             // 이미지 로딩 (480px)
-                            let image = try await self.imageLoader.loadImage(
-                                for: photos[i],
+                            let image = try await loader.loadImage(
+                                for: asset,
                                 maxSize: CGFloat(FaceScanConstants.analysisImageMaxSize)
                             )
 
-                            // Feature Print + 얼굴 유무
-                            let (fp, face) = try self.analyzer.generateFeaturePrintWithFaceCheck(for: image)
-                            return (i, fp, face)
+                            // Feature Print 생성 + 얼굴 유무 (MainActor에서 실행)
+                            let result: (VNFeaturePrintObservation, Bool) = try await MainActor.run {
+                                let fp = try fpAnalyzer.generateFeaturePrint(for: image)
+                                let faceRequest = VNDetectFaceRectanglesRequest()
+                                let handler = VNImageRequestHandler(cgImage: image, options: [:])
+                                try? handler.perform([faceRequest])
+                                let hasFace = !(faceRequest.results?.isEmpty ?? true)
+                                return (fp, hasFace)
+                            }
+                            return (i, result.0, result.1)
                         } catch {
                             Logger.similarPhoto.debug("FaceScan FP 생성 실패 [\(i)]: \(error.localizedDescription)")
                             return (i, nil, false)
