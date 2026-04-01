@@ -5,9 +5,12 @@
 //  구독 해지 사유 설문 (Exit Survey)
 //  US11: 해지 감지 후 모달로 표시
 //
-//  5개 선택지 + 기타(텍스트 입력) 구성
+//  UI 구성:
+//  - 반투명 블러 배경 (ATT/Gate/Celebration 동일 패턴)
+//  - BlurPopupCardView 중앙 카드
+//  - 5개 선택지 + 기타 텍스트 입력
+//  - 제출/건너뛰기 버튼
 //  제출 시 AnalyticsService.trackCancelReason() 호출
-//  닫기 버튼으로 스킵 가능 (강제하지 않음)
 //
 
 import UIKit
@@ -17,9 +20,9 @@ import OSLog
 // MARK: - ExitSurveyViewController
 
 /// 구독 해지 사유 설문 모달
-/// - 5개 선택지 버튼 + 기타 텍스트 입력
+/// - overFullScreen + crossDissolve (앱 공통 팝업 패턴)
+/// - BlurPopupCardView + Dark Blur 배경
 /// - 제출 시 bm.cancelReason 이벤트 전송
-/// - 닫기 버튼으로 스킵 가능
 final class ExitSurveyViewController: UIViewController {
 
     // MARK: - Properties
@@ -32,69 +35,105 @@ final class ExitSurveyViewController: UIViewController {
 
     // MARK: - UI Components
 
+    /// 블러 배경
+    private lazy var blurView: UIVisualEffectView = {
+        let effect = UIBlurEffect(style: .systemUltraThinMaterialDark)
+        let view = UIVisualEffectView(effect: effect)
+        view.translatesAutoresizingMaskIntoConstraints = false
+        return view
+    }()
+
+    /// 카드 컨테이너 (Glass 팝업 카드)
+    private lazy var cardView = BlurPopupCardView()
+
     /// 제목 라벨
-    private let titleLabel: UILabel = {
+    private lazy var titleLabel: UILabel = {
         let label = UILabel()
         label.text = "왜 해지하셨나요?"
-        label.font = .systemFont(ofSize: 20, weight: .bold)
+        label.font = .systemFont(ofSize: 22, weight: .semibold)
+        label.textColor = .white
         label.textAlignment = .center
+        label.numberOfLines = 0
         label.translatesAutoresizingMaskIntoConstraints = false
         return label
     }()
 
     /// 부제 라벨
-    private let subtitleLabel: UILabel = {
+    private lazy var subtitleLabel: UILabel = {
         let label = UILabel()
-        label.text = "더 나은 서비스를 위해 사유를 알려주세요"
-        label.font = .systemFont(ofSize: 14)
-        label.textColor = .secondaryLabel
+        label.text = "더 나은 서비스를 위해 알려주세요"
+        label.font = .systemFont(ofSize: 16, weight: .regular)
+        label.textColor = UIColor.white.withAlphaComponent(0.7)
         label.textAlignment = .center
+        label.numberOfLines = 0
         label.translatesAutoresizingMaskIntoConstraints = false
         return label
     }()
 
     /// 선택지 버튼 스택뷰
-    private let buttonsStackView: UIStackView = {
+    private lazy var reasonStackView: UIStackView = {
         let stack = UIStackView()
         stack.axis = .vertical
-        stack.spacing = 10
+        stack.spacing = 8
         stack.translatesAutoresizingMaskIntoConstraints = false
         return stack
     }()
 
     /// 기타 텍스트 입력 필드 (기타 선택 시 표시)
-    private let otherTextField: UITextField = {
+    private lazy var otherTextField: UITextField = {
         let field = UITextField()
-        field.placeholder = "사유를 입력해주세요"
-        field.borderStyle = .roundedRect
+        field.attributedPlaceholder = NSAttributedString(
+            string: "사유를 입력해주세요",
+            attributes: [.foregroundColor: UIColor.white.withAlphaComponent(0.3)]
+        )
         field.font = .systemFont(ofSize: 15)
+        field.textColor = .white
+        field.backgroundColor = UIColor.white.withAlphaComponent(0.08)
+        field.layer.cornerRadius = 10
+        field.leftView = UIView(frame: CGRect(x: 0, y: 0, width: 12, height: 0))
+        field.leftViewMode = .always
         field.isHidden = true
         field.returnKeyType = .done
         field.translatesAutoresizingMaskIntoConstraints = false
         return field
     }()
 
-    /// 제출 버튼
-    private let submitButton: UIButton = {
+    /// 제출 버튼 — 반투명 흰색 배경 (앱 공통 팝업 스타일)
+    private lazy var submitButton: UIButton = {
         let button = UIButton(type: .system)
         button.setTitle("제출", for: .normal)
-        button.titleLabel?.font = .systemFont(ofSize: 17, weight: .semibold)
-        button.backgroundColor = .systemBlue
         button.setTitleColor(.white, for: .normal)
-        button.setTitleColor(.white.withAlphaComponent(0.5), for: .disabled)
-        button.layer.cornerRadius = 12
+        button.setTitleColor(UIColor.white.withAlphaComponent(0.3), for: .disabled)
+        button.titleLabel?.font = .systemFont(ofSize: 17, weight: .semibold)
+        button.backgroundColor = UIColor.white.withAlphaComponent(0.12)
+        button.layer.cornerRadius = 25
+        button.clipsToBounds = true
         button.isEnabled = false
         button.translatesAutoresizingMaskIntoConstraints = false
         return button
     }()
 
-    /// 닫기 버튼 (스킵)
-    private let closeButton: UIButton = {
+    /// 건너뛰기 버튼 — 반투명 흰색 배경 + 회색 텍스트 (ATT 패턴)
+    private lazy var skipButton: UIButton = {
         let button = UIButton(type: .system)
-        button.setImage(UIImage(systemName: "xmark"), for: .normal)
-        button.tintColor = .label
+        button.setTitle("건너뛰기", for: .normal)
+        button.setTitleColor(.secondaryLabel, for: .normal)
+        button.titleLabel?.font = .systemFont(ofSize: 17, weight: .regular)
+        button.backgroundColor = UIColor.white.withAlphaComponent(0.12)
+        button.layer.cornerRadius = 25
+        button.clipsToBounds = true
         button.translatesAutoresizingMaskIntoConstraints = false
         return button
+    }()
+
+    /// 메인 스택뷰
+    private lazy var stackView: UIStackView = {
+        let stack = UIStackView()
+        stack.axis = .vertical
+        stack.spacing = 16
+        stack.alignment = .fill
+        stack.translatesAutoresizingMaskIntoConstraints = false
+        return stack
     }()
 
     // MARK: - Lifecycle
@@ -107,16 +146,20 @@ final class ExitSurveyViewController: UIViewController {
 
     // MARK: - Setup
 
-    /// UI 구성
     private func setupUI() {
-        view.backgroundColor = .systemBackground
+        // 모달 설정
+        modalPresentationStyle = .overFullScreen
+        modalTransitionStyle = .crossDissolve
+        view.backgroundColor = .clear
 
-        // 닫기 버튼
-        view.addSubview(closeButton)
-
-        // 제목 + 부제
-        view.addSubview(titleLabel)
-        view.addSubview(subtitleLabel)
+        // 블러 배경
+        view.addSubview(blurView)
+        NSLayoutConstraint.activate([
+            blurView.topAnchor.constraint(equalTo: view.topAnchor),
+            blurView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+            blurView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+            blurView.bottomAnchor.constraint(equalTo: view.bottomAnchor)
+        ])
 
         // 선택지 버튼 생성
         let reasons: [(CancelReason, String)] = [
@@ -130,86 +173,83 @@ final class ExitSurveyViewController: UIViewController {
         for (reason, title) in reasons {
             let button = makeReasonButton(title: title, reason: reason)
             reasonButtons.append(button)
-            buttonsStackView.addArrangedSubview(button)
+            reasonStackView.addArrangedSubview(button)
         }
 
-        view.addSubview(buttonsStackView)
+        // 스택뷰 구성
+        stackView.addArrangedSubview(titleLabel)
+        stackView.addArrangedSubview(subtitleLabel)
+        stackView.addArrangedSubview(reasonStackView)
+        stackView.addArrangedSubview(otherTextField)
+        stackView.addArrangedSubview(submitButton)
+        stackView.addArrangedSubview(skipButton)
 
-        // 기타 텍스트 필드
-        view.addSubview(otherTextField)
-        otherTextField.delegate = self
+        // 간격 조정
+        stackView.setCustomSpacing(8, after: titleLabel)
+        stackView.setCustomSpacing(20, after: subtitleLabel)
+        stackView.setCustomSpacing(8, after: reasonStackView)
+        stackView.setCustomSpacing(20, after: otherTextField)
+        stackView.setCustomSpacing(8, after: submitButton)
 
-        // 제출 버튼
-        view.addSubview(submitButton)
+        // 카드 뷰
+        view.addSubview(cardView)
+        cardView.activateBlur()
+        cardView.contentView.addSubview(stackView)
 
-        // 레이아웃
         NSLayoutConstraint.activate([
-            // 닫기 버튼
-            closeButton.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 16),
-            closeButton.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -16),
-            closeButton.widthAnchor.constraint(equalToConstant: 30),
-            closeButton.heightAnchor.constraint(equalToConstant: 30),
+            // 카드 - 화면 중앙, 좌우 여백 24
+            cardView.centerXAnchor.constraint(equalTo: view.centerXAnchor),
+            cardView.centerYAnchor.constraint(equalTo: view.centerYAnchor),
+            cardView.widthAnchor.constraint(equalTo: view.widthAnchor, constant: -48),
 
-            // 제목
-            titleLabel.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 60),
-            titleLabel.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 24),
-            titleLabel.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -24),
+            // 스택뷰 — 카드 내부
+            stackView.topAnchor.constraint(equalTo: cardView.contentView.topAnchor, constant: 28),
+            stackView.leadingAnchor.constraint(equalTo: cardView.contentView.leadingAnchor, constant: 24),
+            stackView.trailingAnchor.constraint(equalTo: cardView.contentView.trailingAnchor, constant: -24),
+            stackView.bottomAnchor.constraint(equalTo: cardView.contentView.bottomAnchor, constant: -24),
 
-            // 부제
-            subtitleLabel.topAnchor.constraint(equalTo: titleLabel.bottomAnchor, constant: 8),
-            subtitleLabel.leadingAnchor.constraint(equalTo: titleLabel.leadingAnchor),
-            subtitleLabel.trailingAnchor.constraint(equalTo: titleLabel.trailingAnchor),
-
-            // 선택지 스택뷰
-            buttonsStackView.topAnchor.constraint(equalTo: subtitleLabel.bottomAnchor, constant: 28),
-            buttonsStackView.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 24),
-            buttonsStackView.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -24),
-
-            // 기타 텍스트 필드
-            otherTextField.topAnchor.constraint(equalTo: buttonsStackView.bottomAnchor, constant: 12),
-            otherTextField.leadingAnchor.constraint(equalTo: buttonsStackView.leadingAnchor),
-            otherTextField.trailingAnchor.constraint(equalTo: buttonsStackView.trailingAnchor),
-            otherTextField.heightAnchor.constraint(equalToConstant: 44),
-
-            // 제출 버튼
-            submitButton.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor, constant: -24),
-            submitButton.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 24),
-            submitButton.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -24),
+            // 버튼 높이
             submitButton.heightAnchor.constraint(equalToConstant: 50),
+            skipButton.heightAnchor.constraint(equalToConstant: 50),
+
+            // 기타 텍스트 필드 높이
+            otherTextField.heightAnchor.constraint(equalToConstant: 44),
         ])
     }
 
-    /// 액션 연결
     private func setupActions() {
-        closeButton.addTarget(self, action: #selector(closeTapped), for: .touchUpInside)
         submitButton.addTarget(self, action: #selector(submitTapped), for: .touchUpInside)
-
-        // 기타 텍스트 필드 변경 감지 (제출 버튼 활성화 제어)
+        skipButton.addTarget(self, action: #selector(skipTapped), for: .touchUpInside)
         otherTextField.addTarget(self, action: #selector(otherTextChanged), for: .editingChanged)
+        otherTextField.delegate = self
     }
 
     // MARK: - Button Factory
 
-    /// 선택지 버튼 생성
-    /// - Parameters:
-    ///   - title: 버튼 텍스트
-    ///   - reason: 대응하는 CancelReason
-    /// - Returns: 설정된 UIButton
+    /// 선택지 버튼 생성 — 반투명 흰색 배경 (앱 공통 스타일)
     private func makeReasonButton(title: String, reason: CancelReason) -> UIButton {
         let button = UIButton(type: .system)
         button.setTitle(title, for: .normal)
-        button.titleLabel?.font = .systemFont(ofSize: 16)
+        button.setTitleColor(.white, for: .normal)
+        button.titleLabel?.font = .systemFont(ofSize: 16, weight: .regular)
         button.contentHorizontalAlignment = .leading
-        button.contentEdgeInsets = UIEdgeInsets(top: 14, left: 16, bottom: 14, right: 16)
-        button.backgroundColor = .secondarySystemBackground
-        button.setTitleColor(.label, for: .normal)
-        button.layer.cornerRadius = 10
+        button.backgroundColor = UIColor.white.withAlphaComponent(0.08)
+        button.layer.cornerRadius = 12
         button.layer.borderWidth = 1.5
         button.layer.borderColor = UIColor.clear.cgColor
-        button.tag = reasonButtons.count // 인덱스로 사용
+        button.clipsToBounds = true
+        button.tag = reasonButtons.count
         button.accessibilityIdentifier = reason.rawValue
         button.translatesAutoresizingMaskIntoConstraints = false
-        button.heightAnchor.constraint(equalToConstant: 48).isActive = true
+        button.heightAnchor.constraint(equalToConstant: 44).isActive = true
+
+        // 좌측 패딩
+        var config = UIButton.Configuration.plain()
+        config.contentInsets = NSDirectionalEdgeInsets(top: 0, leading: 16, bottom: 0, trailing: 16)
+        config.title = title
+        config.baseForegroundColor = .white
+        button.configuration = config
+
         button.addTarget(self, action: #selector(reasonTapped(_:)), for: .touchUpInside)
         return button
     }
@@ -221,12 +261,12 @@ final class ExitSurveyViewController: UIViewController {
         // 모든 버튼 선택 해제
         for button in reasonButtons {
             button.layer.borderColor = UIColor.clear.cgColor
-            button.backgroundColor = .secondarySystemBackground
+            button.backgroundColor = UIColor.white.withAlphaComponent(0.08)
         }
 
         // 탭한 버튼 선택
-        sender.layer.borderColor = UIColor.systemBlue.cgColor
-        sender.backgroundColor = UIColor.systemBlue.withAlphaComponent(0.08)
+        sender.layer.borderColor = UIColor.white.withAlphaComponent(0.5).cgColor
+        sender.backgroundColor = UIColor.white.withAlphaComponent(0.15)
 
         // CancelReason 매핑
         let allReasons: [CancelReason] = [.price, .enoughFree, .done, .competitor, .other]
@@ -244,12 +284,11 @@ final class ExitSurveyViewController: UIViewController {
             otherTextField.becomeFirstResponder()
         }
 
-        // 제출 버튼 활성화 상태 업데이트
         updateSubmitButtonState()
     }
 
-    /// 닫기 버튼 탭 (스킵)
-    @objc private func closeTapped() {
+    /// 건너뛰기 버튼 탭
+    @objc private func skipTapped() {
         Logger.app.debug("ExitSurvey: 스킵")
         dismiss(animated: true)
     }
@@ -258,7 +297,6 @@ final class ExitSurveyViewController: UIViewController {
     @objc private func submitTapped() {
         guard let reason = selectedReason else { return }
 
-        // 기타인 경우 텍스트 포함
         let text = reason == .other ? otherTextField.text : nil
 
         // [Analytics] bm.cancelReason 이벤트 전송
@@ -268,7 +306,7 @@ final class ExitSurveyViewController: UIViewController {
         dismiss(animated: true)
     }
 
-    /// 기타 텍스트 필드 변경 시 제출 버튼 상태 업데이트
+    /// 기타 텍스트 필드 변경
     @objc private func otherTextChanged() {
         updateSubmitButtonState()
     }
@@ -276,25 +314,22 @@ final class ExitSurveyViewController: UIViewController {
     // MARK: - Helpers
 
     /// 제출 버튼 활성화 상태 업데이트
-    /// - 선택지가 선택되어야 활성화
-    /// - 기타 선택 시 텍스트가 비어있으면 비활성화
     private func updateSubmitButtonState() {
         guard let reason = selectedReason else {
             submitButton.isEnabled = false
-            submitButton.backgroundColor = .systemGray4
+            submitButton.alpha = 0.4
             return
         }
 
         let isEnabled: Bool
         if reason == .other {
-            // 기타: 텍스트가 있어야 제출 가능
             isEnabled = !(otherTextField.text?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ?? true)
         } else {
             isEnabled = true
         }
 
         submitButton.isEnabled = isEnabled
-        submitButton.backgroundColor = isEnabled ? .systemBlue : .systemGray4
+        submitButton.alpha = isEnabled ? 1.0 : 0.4
     }
 }
 
@@ -302,7 +337,6 @@ final class ExitSurveyViewController: UIViewController {
 
 extension ExitSurveyViewController: UITextFieldDelegate {
 
-    /// 리턴 키 → 키보드 닫기
     func textFieldShouldReturn(_ textField: UITextField) -> Bool {
         textField.resignFirstResponder()
         return true
