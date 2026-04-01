@@ -207,9 +207,9 @@ extension CoachMarkOverlayView {
             }
         }
 
-        // --- 설명 (AttributedString: "저품질 사진을 AI가 자동" 볼드+노란색) ---
+        // --- 설명 (AttributedString: 경로 + 강조) ---
         let descLabel = UILabel()
-        let descText = "흔들리거나 초점이 맞지 않은\n저품질 사진을 AI가 자동으로 찾아주는\n정리 기능을 사용해보세요"
+        let descText = "흔들리거나 초점이 맞지 않은\n저품질 사진을 AI가 자동으로 찾아드려요\n\n간편정리 > 저품질자동정리"
         let descStyle = NSMutableParagraphStyle()
         descStyle.alignment = .center
         descStyle.lineSpacing = Self.bodyFont.pointSize * 0.2

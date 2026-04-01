@@ -221,22 +221,22 @@ extension GridViewController {
 
     // MARK: - Cleanup Button Frame
 
-    /// 정리 버튼의 윈도우 좌표 프레임 반환 (재생 기능에서도 호출)
+    /// 간편정리 버튼의 윈도우 좌표 프레임 반환 (재생 기능에서도 호출)
     /// iOS 버전에 따라 FloatingTitleBar 또는 시스템 네비바에서 프레임 획득
     func getCleanupButtonFrame(in window: UIWindow) -> CGRect? {
         if #available(iOS 26.0, *) {
-            // iOS 26+: rightBarButtonItems = [menuItem, selectItem, cleanupItem]
+            // iOS 26+: rightBarButtonItems = [menuItem, cleanupMenuItem]
             guard let items = navigationItem.rightBarButtonItems,
-                  items.count >= 3,
-                  let itemView = items[2].value(forKey: "view") as? UIView
+                  items.count >= 2,
+                  let itemView = items[1].value(forKey: "view") as? UIView
             else { return nil }
             return itemView.convert(itemView.bounds, to: window)
         } else {
-            // iOS 16~25: FloatingTitleBar의 두 번째 오른쪽 버튼 (정리)
+            // iOS 16~25: FloatingTitleBar의 간편정리 메뉴 버튼 (selectButton 위치)
             guard let tabBarController = tabBarController as? TabBarController,
                   let overlay = tabBarController.floatingOverlay
             else { return nil }
-            return overlay.titleBar.secondRightButtonFrameInWindow()
+            return overlay.titleBar.rightMenuButtonFrameInWindow()
         }
     }
 }
