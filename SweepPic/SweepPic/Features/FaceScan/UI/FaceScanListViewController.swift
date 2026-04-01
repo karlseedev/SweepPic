@@ -20,7 +20,12 @@ import OSLog
 // MARK: - FaceScanListViewController
 
 /// 인물사진 비교정리 그룹 목록 화면
-final class FaceScanListViewController: UIViewController {
+final class FaceScanListViewController: UIViewController, BarsVisibilityControlling {
+
+    // MARK: - BarsVisibilityControlling
+
+    /// iOS 16~25: FloatingOverlay 숨김 (사진보관함 타이틀 + 버튼 제거)
+    var prefersFloatingOverlayHidden: Bool? { true }
 
     // MARK: - Properties
 
