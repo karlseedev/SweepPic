@@ -15,6 +15,7 @@
 import UIKit
 import Photos
 import AppCore
+import BlurUIKit
 import OSLog
 
 // MARK: - FaceScanListViewController
@@ -53,6 +54,21 @@ final class FaceScanListViewController: UIViewController, BarsVisibilityControll
 
     /// 현재 열려있는 그룹 ID (delegate 콜백에서 사용)
     private var presentedGroupID: String?
+
+    // MARK: - Header (iOS 16~25 커스텀 헤더)
+
+    /// iOS 16~25 커스텀 헤더 뷰 (FloatingOverlay 대체)
+    private var customHeaderView: UIView?
+
+    /// 그라데이션 딤 레이어 (헤더용)
+    private var headerGradientLayer: CAGradientLayer?
+
+    /// 커스텀 헤더 높이 (safe area 상단 + 44 + 35)
+    private var customHeaderHeight: CGFloat {
+        let contentHeight: CGFloat = 44
+        let gradientExtension: CGFloat = 35
+        return view.safeAreaInsets.top + contentHeight + gradientExtension
+    }
 
     // MARK: - UI Components
 
@@ -136,11 +152,24 @@ final class FaceScanListViewController: UIViewController, BarsVisibilityControll
     // MARK: - Setup
 
     private func setupUI() {
-        // 진행바 (상단)
+        setupHeader()
+
+        // 진행바 (헤더 아래)
         progressBar.translatesAutoresizingMaskIntoConstraints = false
         view.addSubview(progressBar)
+
+        // 진행바 상단 기준: iOS 26 = safeArea, iOS 16~25 = 커스텀 헤더 아래
+        let progressTopAnchor: NSLayoutAnchor<NSLayoutYAxisAnchor>
+        if #available(iOS 26.0, *) {
+            progressTopAnchor = view.safeAreaLayoutGuide.topAnchor
+        } else {
+            // 커스텀 헤더 contentHeight 영역 아래 (safe area + 44pt)
+            progressTopAnchor = view.safeAreaLayoutGuide.topAnchor
+            // 커스텀 헤더의 콘텐츠 영역(44pt) 아래에 배치
+        }
+
         NSLayoutConstraint.activate([
-            progressBar.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor),
+            progressBar.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: customHeaderView != nil ? 44 : 0),
             progressBar.leadingAnchor.constraint(equalTo: view.leadingAnchor),
             progressBar.trailingAnchor.constraint(equalTo: view.trailingAnchor),
             progressBar.heightAnchor.constraint(equalToConstant: FaceScanProgressBar.barHeight),
@@ -163,6 +192,121 @@ final class FaceScanListViewController: UIViewController, BarsVisibilityControll
             emptyLabel.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 40),
             emptyLabel.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -40),
         ])
+
+        // 커스텀 헤더를 최상위에 (테이블뷰 위에 오버레이)
+        if let header = customHeaderView {
+            view.bringSubviewToFront(header)
+        }
+        view.bringSubviewToFront(progressBar)
+        view.bringSubviewToFront(emptyLabel)
+    }
+
+    // MARK: - Header
+
+    /// 헤더 구성 (iOS 버전별 분기)
+    private func setupHeader() {
+        if #available(iOS 26.0, *) {
+            // iOS 26: 시스템 네비바 사용 — title은 viewDidLoad에서 설정됨
+            // 뒤로가기 버튼은 시스템이 자동 생성
+        } else {
+            // iOS 16~25: 커스텀 헤더 (PreviewGridVC 패턴)
+            setupCustomHeader()
+        }
+    }
+
+    /// iOS 16~25: 커스텀 헤더 (FloatingTitleBar 스타일)
+    /// progressive blur + 딤 + 뒤로가기 버튼 + 타이틀
+    private func setupCustomHeader() {
+        let contentHeight: CGFloat = 44
+        let gradientExtension: CGFloat = 35
+        let maxDimAlpha: CGFloat = LiquidGlassStyle.maxDimAlpha
+
+        let header = UIView()
+        header.translatesAutoresizingMaskIntoConstraints = false
+        header.backgroundColor = .clear
+        view.addSubview(header)
+
+        // Progressive blur (BlurUIKit)
+        let blurView = VariableBlurView()
+        blurView.translatesAutoresizingMaskIntoConstraints = false
+        blurView.direction = .down
+        blurView.maximumBlurRadius = 1.5
+        blurView.dimmingTintColor = UIColor.black
+        blurView.dimmingAlpha = .interfaceStyle(lightModeAlpha: 0.45, darkModeAlpha: 0.3)
+        header.addSubview(blurView)
+
+        // 그라데이션 딤
+        let gradientLayer = CAGradientLayer()
+        gradientLayer.colors = [
+            UIColor.black.withAlphaComponent(maxDimAlpha).cgColor,
+            UIColor.black.withAlphaComponent(maxDimAlpha * 0.7).cgColor,
+            UIColor.black.withAlphaComponent(maxDimAlpha * 0.3).cgColor,
+            UIColor.black.withAlphaComponent(maxDimAlpha * 0.1).cgColor,
+            UIColor.clear.cgColor
+        ]
+        gradientLayer.locations = [0, 0.25, 0.5, 0.75, 1.0]
+        gradientLayer.startPoint = CGPoint(x: 0.5, y: 0)
+        gradientLayer.endPoint = CGPoint(x: 0.5, y: 1)
+        header.layer.addSublayer(gradientLayer)
+        self.headerGradientLayer = gradientLayer
+
+        // 뒤로가기 버튼 (GlassIconButton)
+        let backButton = GlassIconButton(icon: "chevron.left", size: .medium, tintColor: .white)
+        backButton.translatesAutoresizingMaskIntoConstraints = false
+        backButton.addTarget(self, action: #selector(backButtonTapped), for: .touchUpInside)
+        header.addSubview(backButton)
+
+        // 타이틀 라벨
+        let titleLabel = UILabel()
+        titleLabel.font = .systemFont(ofSize: 17, weight: .semibold)
+        titleLabel.textColor = .white
+        titleLabel.textAlignment = .center
+        titleLabel.text = "인물사진 비교정리"
+        titleLabel.translatesAutoresizingMaskIntoConstraints = false
+        header.addSubview(titleLabel)
+
+        NSLayoutConstraint.activate([
+            // 헤더
+            header.topAnchor.constraint(equalTo: view.topAnchor),
+            header.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+            header.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+            header.bottomAnchor.constraint(
+                equalTo: view.safeAreaLayoutGuide.topAnchor,
+                constant: contentHeight + gradientExtension
+            ),
+
+            // blur
+            blurView.topAnchor.constraint(equalTo: header.topAnchor),
+            blurView.leadingAnchor.constraint(equalTo: header.leadingAnchor),
+            blurView.trailingAnchor.constraint(equalTo: header.trailingAnchor),
+            blurView.bottomAnchor.constraint(equalTo: header.bottomAnchor, constant: 8),
+
+            // 뒤로가기 버튼
+            backButton.leadingAnchor.constraint(equalTo: header.leadingAnchor, constant: 8),
+            backButton.centerYAnchor.constraint(
+                equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 29
+            ),
+
+            // 타이틀
+            titleLabel.centerXAnchor.constraint(equalTo: header.centerXAnchor),
+            titleLabel.centerYAnchor.constraint(equalTo: backButton.centerYAnchor),
+            titleLabel.leadingAnchor.constraint(greaterThanOrEqualTo: backButton.trailingAnchor, constant: 8),
+        ])
+
+        self.customHeaderView = header
+    }
+
+    /// 뒤로가기 버튼 탭 (iOS 16~25)
+    @objc private func backButtonTapped() {
+        navigationController?.popViewController(animated: true)
+    }
+
+    override func viewDidLayoutSubviews() {
+        super.viewDidLayoutSubviews()
+        // 그라데이션 딤 프레임 업데이트
+        if let header = customHeaderView {
+            headerGradientLayer?.frame = header.bounds
+        }
     }
 
     // MARK: - Analysis
