@@ -531,9 +531,6 @@ extension SceneDelegate {
         guard UserDefaults.standard.bool(forKey: "pendingCancelCheck") else { return }
         let wasAutoRenewing = UserDefaults.standard.bool(forKey: "wasAutoRenewing")
 
-        // 플래그 초기화 (1회만 체크)
-        UserDefaults.standard.set(false, forKey: "pendingCancelCheck")
-
         Task { @MainActor in
             // 구독 상태 갱신 (await로 완료 보장)
             await SubscriptionStore.shared.refreshSubscriptionStatus()
@@ -544,18 +541,21 @@ extension SceneDelegate {
             guard wasAutoRenewing,
                   !currentState.autoRenewEnabled,
                   currentState.isActive else {
+                // 해지 미감지 → 플래그 초기화
+                UserDefaults.standard.set(false, forKey: "pendingCancelCheck")
                 Logger.app.debug("SceneDelegate: Exit Survey 미표시 — 해지 미감지 (wasAutoRenew=\(wasAutoRenewing), current=\(currentState.autoRenewEnabled), active=\(currentState.isActive))")
                 return
             }
 
-            // 다른 모달이 표시 중이면 미표시 (충돌 방지)
+            // 다른 모달이 표시 중이면 플래그 유지 (다음 active에서 재시도)
             guard let rootVC = self.window?.rootViewController,
                   rootVC.presentedViewController == nil else {
-                Logger.app.debug("SceneDelegate: Exit Survey 미표시 — 다른 모달 표시 중")
+                Logger.app.debug("SceneDelegate: Exit Survey 미표시 — 다른 모달 표시 중 (플래그 유지)")
                 return
             }
 
-            // Exit Survey 표시
+            // Exit Survey 표시 → 플래그 초기화
+            UserDefaults.standard.set(false, forKey: "pendingCancelCheck")
             let exitSurveyVC = ExitSurveyViewController()
             exitSurveyVC.modalPresentationStyle = .pageSheet
             rootVC.present(exitSurveyVC, animated: true)
