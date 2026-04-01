@@ -14,6 +14,7 @@
 //
 
 import UIKit
+import AppCore
 import OSLog
 
 // MARK: - FAQ Data Model
@@ -85,7 +86,7 @@ final class FAQViewController: UIViewController, BarsVisibilityControlling {
             ),
             FAQItem(
                 question: "삭제 한도가 뭔가요?",
-                answer: "무료 사용자는 하루 10장까지 삭제대기함 비우기가 가능합니다. 광고를 보면 하루 최대 30장까지 늘릴 수 있고, Pro 구독 시 무제한입니다. 한도는 매일 자정에 초기화됩니다."
+                answer: "무료 사용자는 하루 \(UsageLimit.dailyFreeLimit)장까지 삭제대기함 비우기가 가능합니다. 광고를 보면 하루 최대 \(UsageLimit.maxDailyTotal)장까지 늘릴 수 있고, Pro 구독 시 무제한입니다. 한도는 매일 자정에 초기화됩니다."
             ),
         ]),
         FAQSection(title: "개인정보/보안", items: [

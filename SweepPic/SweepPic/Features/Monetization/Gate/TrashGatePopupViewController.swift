@@ -407,7 +407,7 @@ final class TrashGatePopupViewController: UIViewController {
         let isRewardExhausted = remainingRewards <= 0
 
         if isRewardExhausted {
-            // 리워드 2회 소진 → 골든 모먼트 (FR-014, T024)
+            // 리워드 4회 소진 → 골든 모먼트 (FR-014, T024)
             configureGoldenMoment()
         } else if adsNeeded > 0 {
             let adText = "광고 \(adsNeeded)회 보고 \(trashCount)장 전체 삭제"
