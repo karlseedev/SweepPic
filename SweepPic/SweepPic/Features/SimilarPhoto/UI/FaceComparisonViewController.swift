@@ -29,12 +29,28 @@ import Vision
 import AppCore
 import BlurUIKit
 
+// MARK: - FaceComparisonMode
+
+/// 얼굴 비교 화면 동작 모드
+enum FaceComparisonMode {
+    /// 기존 뷰어에서 호출 (즉시 삭제)
+    case viewer
+    /// FaceScan에서 호출 (diff 기반 삭제/복원, 재진입 지원)
+    case faceScan(initialSelected: Set<String>)
+
+    /// FaceScan 모드 여부
+    var isFaceScan: Bool {
+        if case .faceScan = self { return true }
+        return false
+    }
+}
+
 // MARK: - FaceComparisonDelegate
 
 /// 얼굴 비교 화면 델리게이트
 /// 삭제/닫기 이벤트를 전달합니다.
 protocol FaceComparisonDelegate: AnyObject {
-    /// 사진 삭제 완료 시 호출
+    /// 사진 삭제 완료 시 호출 (뷰어 모드)
     func faceComparisonViewController(
         _ viewController: FaceComparisonViewController,
         didDeletePhotos deletedAssetIDs: [String]
@@ -42,6 +58,23 @@ protocol FaceComparisonDelegate: AnyObject {
 
     /// 화면 닫기 시 호출
     func faceComparisonViewControllerDidClose(_ viewController: FaceComparisonViewController)
+
+    /// diff 적용 완료 시 호출 (FaceScan 모드)
+    /// - Parameter finalSelectedAssetIDs: 최종 선택(삭제) 상태
+    func faceComparisonViewController(
+        _ viewController: FaceComparisonViewController,
+        didApplyChanges finalSelectedAssetIDs: Set<String>
+    )
+}
+
+// MARK: - FaceComparisonDelegate 기본 구현
+
+extension FaceComparisonDelegate {
+    /// 기존 뷰어 delegate는 didApplyChanges를 구현하지 않아도 됨
+    func faceComparisonViewController(
+        _ viewController: FaceComparisonViewController,
+        didApplyChanges finalSelectedAssetIDs: Set<String>
+    ) {}
 }
 
 // MARK: - FaceComparisonViewController
@@ -106,6 +139,9 @@ final class FaceComparisonViewController: UIViewController {
 
     /// 유사 사진 캐시
     private let cache: any SimilarityCacheProtocol
+
+    /// 동작 모드 (뷰어 또는 FaceScan)
+    private let mode: FaceComparisonMode
 
     /// 델리게이트
     weak var delegate: FaceComparisonDelegate?
@@ -207,15 +243,28 @@ final class FaceComparisonViewController: UIViewController {
     // MARK: - Initialization
 
     /// FaceComparisonViewController를 생성합니다.
+    ///
+    /// - Parameters:
+    ///   - comparisonGroup: 비교 그룹
+    ///   - mode: 동작 모드 (.viewer: 기존 뷰어, .faceScan: diff 기반)
+    ///   - trashStore: 삭제대기함 스토어
+    ///   - cache: 유사 사진 캐시 (FaceScan: FaceScanCache 주입)
     init(
         comparisonGroup: ComparisonGroup,
+        mode: FaceComparisonMode = .viewer,
         trashStore: TrashStoreProtocol = TrashStore.shared,
         cache: any SimilarityCacheProtocol = SimilarityCache.shared
     ) {
         self.comparisonGroup = comparisonGroup
+        self.mode = mode
         self.trashStore = trashStore
         self.cache = cache
         super.init(nibName: nil, bundle: nil)
+
+        // FaceScan 모드: 초기 선택 상태 설정
+        if case .faceScan(let initialSelected) = mode {
+            self.selectedAssetIDs = initialSelected
+        }
 
         modalPresentationStyle = .fullScreen
         modalTransitionStyle = .coverVertical
@@ -538,36 +587,109 @@ final class FaceComparisonViewController: UIViewController {
 
     /// Cancel 버튼 탭
     @objc private func cancelButtonTapped() {
-        selectedAssetIDs.removeAll()
+        switch mode {
+        case .viewer:
+            // 기존 뷰어 동작: 선택 해제 후 닫기
+            selectedAssetIDs.removeAll()
+            dismiss(animated: true) { [weak self] in
+                guard let self = self else { return }
+                self.delegate?.faceComparisonViewControllerDidClose(self)
+            }
 
-        dismiss(animated: true) { [weak self] in
-            guard let self = self else { return }
-            self.delegate?.faceComparisonViewControllerDidClose(self)
+        case .faceScan(let initialSelected):
+            // FaceScan 모드: 변동사항 확인
+            let hasChanges = selectedAssetIDs != initialSelected
+            if hasChanges {
+                // 팝업: "변경사항을 적용하시겠습니까?"
+                showChangesAlert(initialSelected: initialSelected)
+            } else {
+                // 변동 없으면 그냥 닫기
+                dismiss(animated: true) { [weak self] in
+                    guard let self = self else { return }
+                    self.delegate?.faceComparisonViewControllerDidClose(self)
+                }
+            }
         }
     }
 
     /// Delete 버튼 탭
     @objc private func deleteButtonTapped() {
-        guard !selectedAssetIDs.isEmpty else {
+        guard !selectedAssetIDs.isEmpty || mode.isFaceScan else {
             let alert = UIAlertController(title: nil, message: "사진을 먼저 선택하세요", preferredStyle: .alert)
             alert.addAction(UIAlertAction(title: "확인", style: .default))
             present(alert, animated: true)
             return
         }
 
-        let deletedIDs = Array(selectedAssetIDs)
+        switch mode {
+        case .viewer:
+            // 기존 뷰어 동작: 즉시 삭제
+            let deletedIDs = Array(selectedAssetIDs)
+            trashStore.moveToTrash(assetIDs: deletedIDs)
 
-        trashStore.moveToTrash(assetIDs: deletedIDs)
-
-        Task { @MainActor in
-            for assetID in deletedIDs {
-                _ = await cache.removeMemberFromGroup(assetID, groupID: comparisonGroup.sourceGroupID)
+            Task { @MainActor in
+                for assetID in deletedIDs {
+                    _ = await cache.removeMemberFromGroup(assetID, groupID: comparisonGroup.sourceGroupID)
+                }
+                selectedAssetIDs.removeAll()
+                delegate?.faceComparisonViewController(self, didDeletePhotos: deletedIDs)
             }
 
-            selectedAssetIDs.removeAll()
-
-            delegate?.faceComparisonViewController(self, didDeletePhotos: deletedIDs)
+        case .faceScan(let initialSelected):
+            // FaceScan 모드: diff 적용
+            applyDiffAndDismiss(initialSelected: initialSelected)
         }
+    }
+
+    // MARK: - FaceScan Diff 처리
+
+    /// diff를 적용하고 dismiss합니다.
+    /// - Parameter initialSelected: 진입 시점의 선택 상태
+    private func applyDiffAndDismiss(initialSelected: Set<String>) {
+        let currentSelected = selectedAssetIDs
+
+        // 새로 삭제할 것 = 현재 선택 - 진입 시 선택
+        let toDelete = currentSelected.subtracting(initialSelected)
+        // 복원할 것 = 진입 시 선택 - 현재 선택
+        let toRestore = initialSelected.subtracting(currentSelected)
+
+        // 새로 삭제
+        if !toDelete.isEmpty {
+            trashStore.moveToTrash(assetIDs: Array(toDelete))
+        }
+
+        // 복원 (방어: 실제 trash에 있는지 확인)
+        if !toRestore.isEmpty {
+            let actuallyTrashed = toRestore.filter { trashStore.isTrashed($0) }
+            if !actuallyTrashed.isEmpty {
+                trashStore.restore(assetIDs: Array(actuallyTrashed))
+            }
+        }
+
+        // delegate에 최종 상태 전달
+        delegate?.faceComparisonViewController(self, didApplyChanges: currentSelected)
+    }
+
+    /// "변경사항을 적용하시겠습니까?" 팝업
+    private func showChangesAlert(initialSelected: Set<String>) {
+        let alert = UIAlertController(
+            title: nil,
+            message: "변경사항을 적용하시겠습니까?",
+            preferredStyle: .alert
+        )
+
+        alert.addAction(UIAlertAction(title: "적용", style: .default) { [weak self] _ in
+            self?.applyDiffAndDismiss(initialSelected: initialSelected)
+        })
+
+        alert.addAction(UIAlertAction(title: "취소", style: .cancel) { [weak self] _ in
+            guard let self = self else { return }
+            self.dismiss(animated: true) {
+                self.delegate?.faceComparisonViewControllerDidClose(self)
+            }
+        })
+
+        present(alert, animated: true)
     }
 
     /// 순환 버튼 탭
