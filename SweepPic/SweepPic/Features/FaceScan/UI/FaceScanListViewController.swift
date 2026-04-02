@@ -84,6 +84,9 @@ final class FaceScanListViewController: UIViewController, BarsVisibilityControll
         tv.register(FaceScanGroupCell.self, forCellReuseIdentifier: FaceScanGroupCell.reuseIdentifier)
         tv.rowHeight = FaceScanGroupCell.cellHeight
         tv.contentInsetAdjustmentBehavior = .never  // 수동 inset 관리 (PreviewGridVC 패턴)
+        // 맨 위/맨 아래 구분선 제거
+        tv.tableHeaderView = UIView(frame: CGRect(x: 0, y: 0, width: 0, height: CGFloat.leastNormalMagnitude))
+        tv.tableFooterView = UIView()
         return tv
     }()
 
