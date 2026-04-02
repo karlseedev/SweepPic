@@ -69,6 +69,7 @@ final class ExitSurveyViewController: UIViewController {
         field.borderStyle = .roundedRect
         field.font = .systemFont(ofSize: 15)
         field.isHidden = true
+        field.tintColor = .white
         field.returnKeyType = .done
         field.translatesAutoresizingMaskIntoConstraints = false
         return field
