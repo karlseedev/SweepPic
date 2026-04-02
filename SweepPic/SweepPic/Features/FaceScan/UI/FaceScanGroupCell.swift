@@ -38,7 +38,7 @@ final class FaceScanGroupCell: UITableViewCell {
     private static let leftPadding: CGFloat = 0
 
     /// 상하 패딩
-    private static let verticalPadding: CGFloat = 8
+    private static let verticalPadding: CGFloat = 16
 
     // MARK: - Dynamic Size
 
