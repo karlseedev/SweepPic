@@ -35,7 +35,7 @@ final class FaceScanGroupCell: UITableViewCell {
     private static let thumbnailSpacing: CGFloat = 4
 
     /// 좌측 패딩
-    private static let leftPadding: CGFloat = 16
+    private static let leftPadding: CGFloat = 0
 
     /// 상하 패딩
     private static let verticalPadding: CGFloat = 8
