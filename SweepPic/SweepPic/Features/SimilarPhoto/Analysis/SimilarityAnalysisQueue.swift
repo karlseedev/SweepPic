@@ -531,14 +531,6 @@ final class SimilarityAnalysisQueue {
         return photos
     }
 
-    // NOTE: PersonSlot, MatchCandidate, minEmbeddingNorm, generateFeaturePrints(),
-    // assignPersonIndicesForGroup()는 PersonMatchingEngine.swift로 이동됨.
-
-    // MARK: - Placeholder (이전 Face Processing 코드 참조용)
-    // PersonMatchingEngine을 통해 호출:
-    // - matchingEngine.generateFeaturePrints(for:)
-    // - matchingEngine.assignPersonIndicesForGroup(assetIDs:photos:)
-    private let _faceProcessingMovedToEngine = true  // 컴파일 경계 마커 (삭제 가능)
     // MARK: - Private Methods - UI
 
     /// 분석 완료 알림을 발송합니다.
