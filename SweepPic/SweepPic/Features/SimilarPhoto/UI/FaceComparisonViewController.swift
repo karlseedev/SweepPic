@@ -683,7 +683,7 @@ final class FaceComparisonViewController: UIViewController {
     private func showViewerCancelAlert() {
         let alert = UIAlertController(
             title: nil,
-            message: "선택을 취소하시겠습니까?",
+            message: "변경사항을 적용하시겠습니까?",
             preferredStyle: .alert
         )
         alert.addAction(UIAlertAction(title: "취소", style: .cancel))
