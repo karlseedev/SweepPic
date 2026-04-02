@@ -52,6 +52,9 @@ final class FaceScanListViewController: UIViewController, BarsVisibilityControll
     /// 분석 완료 여부
     private var isAnalysisComplete: Bool = false
 
+    /// 최근 분석된 사진 수 (완료 문구용)
+    private var lastScannedCount: Int = 0
+
     /// 현재 열려있는 그룹 ID (delegate 콜백에서 사용)
     private var presentedGroupID: String?
 
@@ -513,6 +516,7 @@ final class FaceScanListViewController: UIViewController, BarsVisibilityControll
     @MainActor
     private func handleProgress(_ progress: FaceScanProgress) {
         progressBar.update(with: progress)
+        lastScannedCount = progress.scannedCount
     }
 
     /// 분석 완료 처리
@@ -521,7 +525,7 @@ final class FaceScanListViewController: UIViewController, BarsVisibilityControll
         isAnalysisComplete = true
 
         // 진행바 완료 문구 표시
-        progressBar.showCompletion(groupCount: groups.count)
+        progressBar.showCompletion(groupCount: groups.count, scannedCount: lastScannedCount)
 
         // 0그룹일 때 안내 메시지
         if groups.isEmpty {

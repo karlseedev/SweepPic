@@ -108,14 +108,14 @@ final class FaceScanProgressBar: UIView {
     }
 
     /// 분석 완료 처리 — 완료 문구 표시 (fade out은 부모 VC가 contentInset과 동시 처리)
-    func showCompletion(groupCount: Int) {
+    func showCompletion(groupCount: Int, scannedCount: Int) {
         // 프로그레스 바 완료
         progressView.setProgress(1.0, animated: true)
 
         // 완료 문구 — "분석 완료" (bold, white) + 나머지 (regular, secondaryLabel)
         let detailText = groupCount > 0
-            ? " · \(groupCount)그룹 발견"
-            : " · 발견된 그룹 없음"
+            ? " · \(groupCount)그룹 발견(\(scannedCount)장 분석 결과)"
+            : " · 발견된 그룹 없음(\(scannedCount)장 분석 결과)"
 
         let attrStr = NSMutableAttributedString(
             string: "분석 완료",

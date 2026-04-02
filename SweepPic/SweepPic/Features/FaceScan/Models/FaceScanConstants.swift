@@ -49,7 +49,7 @@ enum FaceScanConstants {
     // MARK: - UI
 
     /// 진행바 완료 후 fade out 대기 시간 (초)
-    static let progressBarFadeDelay: TimeInterval = 4.0
+    static let progressBarFadeDelay: TimeInterval = 5.0
 
     /// 진행바 fade out 애니메이션 시간 (초)
     static let progressBarFadeDuration: TimeInterval = 0.5
