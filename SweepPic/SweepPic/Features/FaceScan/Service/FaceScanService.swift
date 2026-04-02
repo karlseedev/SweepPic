@@ -132,6 +132,7 @@ final class FaceScanService {
         var totalGroupsFound = 0
         var lastAssetDate: Date?
         var lastAssetID: String?
+        var discoveredAssetIDs = Set<String>()  // 이미 그룹에 포함된 assetID 추적 (중복 방지)
 
         let totalToScan = min(fetchResult.count - startIndex, FaceScanConstants.maxScanCount)
 
@@ -158,16 +159,20 @@ final class FaceScanService {
 
             // 최소 3장 미만이면 다음 청크로
             guard photos.count >= SimilarityConstants.minGroupSize else {
+                let skipped = chunkEnd - currentIndex + 1  // currentIndex 변경 전에 계산
                 currentIndex = chunkEnd + 1
-                totalScanned += (chunkEnd - currentIndex + 1)
+                totalScanned += skipped
                 continue
             }
 
-            // 청크 분석 실행
-            let groups = await analyzeChunk(photos: photos)
+            // 청크 분석 실행 (이미 발견된 assetID 전달 → 중복 그룹 방지)
+            let groups = await analyzeChunk(photos: photos, excludeAssets: discoveredAssetIDs)
 
             // 그룹 발견 처리
             for group in groups {
+                // 발견된 멤버를 추적 Set에 등록
+                discoveredAssetIDs.formUnion(group.memberAssetIDs)
+
                 totalGroupsFound += 1
 
                 // FaceScanCache에 저장 + 콜백
