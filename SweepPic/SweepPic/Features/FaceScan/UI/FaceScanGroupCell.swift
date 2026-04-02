@@ -141,6 +141,10 @@ final class FaceScanGroupCell: UITableViewCell {
         backgroundColor = .systemBackground
         selectionStyle = .none
 
+        // 스크롤뷰 탭 → 셀 선택 전달 (scrollView가 탭을 흡수하므로 수동 전달)
+        let tap = UITapGestureRecognizer(target: self, action: #selector(scrollViewTapped))
+        thumbnailScrollView.addGestureRecognizer(tap)
+
         // 상단 구분선
         contentView.addSubview(topSeparator)
         NSLayoutConstraint.activate([
@@ -239,6 +243,23 @@ final class FaceScanGroupCell: UITableViewCell {
     func setDimmed(_ dimmed: Bool) {
         dimOverlay.isHidden = !dimmed
         completionLabel.isHidden = !dimmed
+    }
+
+    /// 스크롤뷰 탭 시 부모 tableView의 didSelectRowAt 호출
+    @objc private func scrollViewTapped() {
+        guard let tableView = findParentTableView(),
+              let indexPath = tableView.indexPath(for: self) else { return }
+        tableView.delegate?.tableView?(tableView, didSelectRowAt: indexPath)
+    }
+
+    /// 부모 tableView 탐색
+    private func findParentTableView() -> UITableView? {
+        var responder: UIResponder? = superview
+        while let r = responder {
+            if let tv = r as? UITableView { return tv }
+            responder = r.next
+        }
+        return nil
     }
 
     // MARK: - Private
