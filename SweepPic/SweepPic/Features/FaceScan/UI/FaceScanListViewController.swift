@@ -469,7 +469,7 @@ final class FaceScanListViewController: UIViewController, BarsVisibilityControll
         let service = FaceScanService(cache: faceScanCache)
         self.scanService = service
 
-        scanTask = Task.detached { [weak self] in
+        scanTask = Task { [weak self] in
             do {
                 try await service.analyze(
                     method: scanMethod,
