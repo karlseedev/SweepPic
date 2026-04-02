@@ -352,15 +352,20 @@ final class PersonMatchingEngine {
             // === Step 2: 부팅 (ActiveSlots 비어있을 때) ===
             // 부팅 시에는 저품질 포함 모든 얼굴로 슬롯 생성 (모든 인물이 슬롯 보유)
             if activeSlots.isEmpty {
-                // 위치 정렬된 순서로 슬롯 생성 (YuNet 결과 기반)
+                // 얼굴 크기 내림차순 정렬 (큰 얼굴 = 주요 인물 → 인물 1)
+                // 면적 차이 10% 이내면 동률로 보고 임베딩 품질(norm) 높은 쪽 우선
                 let sortedIndices = faceData.keys.sorted { idx1, idx2 in
                     guard let data1 = faceData[idx1], let data2 = faceData[idx2] else { return false }
-                    let xDiff = abs(data1.boundingBox.origin.x - data2.boundingBox.origin.x)
-                    if xDiff > 0.05 {
-                        return data1.boundingBox.origin.x < data2.boundingBox.origin.x
-                    } else {
-                        return data1.boundingBox.origin.y > data2.boundingBox.origin.y
+                    let area1 = data1.boundingBox.width * data1.boundingBox.height
+                    let area2 = data2.boundingBox.width * data2.boundingBox.height
+                    let maxArea = max(area1, area2)
+                    if maxArea > 0 && abs(area1 - area2) / maxArea > 0.1 {
+                        return area1 > area2  // 10% 초과 차이 → 큰 얼굴 우선
                     }
+                    // 10% 이내 동률 → 임베딩 품질(norm) 비교
+                    let norm1 = faceEmbeddings[idx1].map { emb in sqrt(emb.reduce(0) { $0 + $1 * $1 }) } ?? 0
+                    let norm2 = faceEmbeddings[idx2].map { emb in sqrt(emb.reduce(0) { $0 + $1 * $1 }) } ?? 0
+                    return norm1 > norm2
                 }
 
                 for faceIdx in sortedIndices {
@@ -737,6 +742,59 @@ final class PersonMatchingEngine {
             Logger.similarPhoto.debug("[Perf] assignPerson: \(assetIDs.count)장, \(perfFaceCount)faces — Load:\(String(format: "%.0f", perfLoadTotal))ms YuNet:\(String(format: "%.0f", perfYunetTotal))ms SFace:\(String(format: "%.0f", perfSfaceTotal))ms Match:\(String(format: "%.0f", perfMatchTotal))ms Total:\(String(format: "%.0f", perfGroupTotal))ms")
         }
 
-        return result
+        // === 후처리: personIndex 재배정 (전체 사진 평균 얼굴 크기 기준) ===
+        // 부팅 시 첫 사진 기준으로 배정된 번호를, 모든 사진의 평균 면적 기준으로 재배정
+        // → 그룹 전체에서 가장 크게 나오는 인물이 인물 1번
+        return remapPersonIndicesByAverageArea(result)
+    }
+
+    // MARK: - PersonIndex 재배정
+
+    /// 전체 사진의 평균 얼굴 크기 기준으로 personIndex를 재배정합니다.
+    ///
+    /// 매칭 알고리즘(Step 2~7)이 완료된 후, 각 personIndex별 평균 boundingBox 면적을
+    /// 계산하여 큰 순서대로 1, 2, 3으로 재번호를 부여합니다.
+    ///
+    /// - Parameter result: 매칭 결과 (assetID → [CachedFace])
+    /// - Returns: personIndex가 재배정된 결과
+    private func remapPersonIndicesByAverageArea(
+        _ result: [String: [CachedFace]]
+    ) -> [String: [CachedFace]] {
+        // 각 personIndex별 모든 사진에서의 면적 수집
+        var areasByPerson: [Int: [CGFloat]] = [:]
+        for (_, faces) in result {
+            for face in faces {
+                areasByPerson[face.personIndex, default: []].append(face.area)
+            }
+        }
+
+        guard !areasByPerson.isEmpty else { return result }
+
+        // 평균 면적 내림차순 정렬 → 새 번호 (1부터)
+        let sorted = areasByPerson
+            .map { (personIndex: $0.key, avgArea: $0.value.reduce(0, +) / CGFloat($0.value.count)) }
+            .sorted { $0.avgArea > $1.avgArea }
+
+        var remap: [Int: Int] = [:]
+        for (i, entry) in sorted.enumerated() {
+            remap[entry.personIndex] = i + 1
+        }
+
+        // 리매핑이 동일하면 (이미 올바른 순서) 원본 반환
+        if remap.allSatisfy({ $0.key == $0.value }) { return result }
+
+        // 새 personIndex로 CachedFace 재생성
+        var remapped: [String: [CachedFace]] = [:]
+        for (assetID, faces) in result {
+            remapped[assetID] = faces.map { face in
+                CachedFace(
+                    boundingBox: face.boundingBox,
+                    personIndex: remap[face.personIndex] ?? face.personIndex,
+                    isValidSlot: face.isValidSlot,
+                    sfaceCost: face.sfaceCost
+                )
+            }
+        }
+        return remapped
     }
 }
