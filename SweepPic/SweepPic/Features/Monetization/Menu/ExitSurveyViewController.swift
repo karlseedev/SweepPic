@@ -74,15 +74,16 @@ final class ExitSurveyViewController: UIViewController {
         return field
     }()
 
-    /// 제출 버튼
+    /// 제출 버튼 — Gate/Celebration 동일 스타일 (white.12, cornerRadius 25, height 50)
     private let submitButton: UIButton = {
         let button = UIButton(type: .system)
         button.setTitle("제출", for: .normal)
         button.titleLabel?.font = .systemFont(ofSize: 17, weight: .semibold)
-        button.backgroundColor = .systemBlue
+        button.backgroundColor = UIColor.white.withAlphaComponent(0.12)
         button.setTitleColor(.white, for: .normal)
-        button.setTitleColor(.white.withAlphaComponent(0.5), for: .disabled)
-        button.layer.cornerRadius = 12
+        button.setTitleColor(UIColor.white.withAlphaComponent(0.3), for: .disabled)
+        button.layer.cornerRadius = 25
+        button.clipsToBounds = true
         button.isEnabled = false
         button.translatesAutoresizingMaskIntoConstraints = false
         return button
@@ -225,8 +226,8 @@ final class ExitSurveyViewController: UIViewController {
         }
 
         // 탭한 버튼 선택
-        sender.layer.borderColor = UIColor.systemBlue.cgColor
-        sender.backgroundColor = UIColor.systemBlue.withAlphaComponent(0.08)
+        sender.layer.borderColor = UIColor.white.cgColor
+        sender.backgroundColor = UIColor.white.withAlphaComponent(0.08)
 
         // CancelReason 매핑
         let allReasons: [CancelReason] = [.price, .enoughFree, .done, .competitor, .other]
@@ -281,7 +282,7 @@ final class ExitSurveyViewController: UIViewController {
     private func updateSubmitButtonState() {
         guard let reason = selectedReason else {
             submitButton.isEnabled = false
-            submitButton.backgroundColor = .systemGray4
+            submitButton.alpha = 0.4
             return
         }
 
@@ -294,7 +295,7 @@ final class ExitSurveyViewController: UIViewController {
         }
 
         submitButton.isEnabled = isEnabled
-        submitButton.backgroundColor = isEnabled ? .systemBlue : .systemGray4
+        submitButton.alpha = isEnabled ? 1.0 : 0.4
     }
 }
 
