@@ -60,8 +60,8 @@ final class FaceScanListViewController: UIViewController, BarsVisibilityControll
     /// iOS 26: 네비바 우측 버튼
     private var nextAnalysisBarButton: UIBarButtonItem?
 
-    /// iOS 16~25: 커스텀 헤더 우측 버튼
-    private var nextAnalysisCustomButton: UIButton?
+    /// iOS 16~25: 커스텀 헤더 우측 버튼 (GlassTextButton)
+    private var nextAnalysisCustomButton: GlassTextButton?
 
     // MARK: - Header (iOS 16~25 커스텀 헤더)
 
@@ -297,15 +297,14 @@ final class FaceScanListViewController: UIViewController, BarsVisibilityControll
         titleLabel.translatesAutoresizingMaskIntoConstraints = false
         header.addSubview(titleLabel)
 
-        // "다음 분석" 우측 버튼
-        let nextButton = UIButton(type: .system)
-        nextButton.setTitle("다음 분석", for: .normal)
-        nextButton.titleLabel?.font = .systemFont(ofSize: 16, weight: .semibold)
-        nextButton.setTitleColor(.white, for: .normal)
-        nextButton.setTitleColor(.white.withAlphaComponent(0.3), for: .disabled)
-        nextButton.isEnabled = false
+        // "다음 분석" 우측 버튼 (GlassTextButton — 간편정리 버튼과 동일 스타일)
+        let nextButton = GlassTextButton(
+            title: "다음 분석", style: .plain, tintColor: .white, fontSize: 15
+        )
         nextButton.translatesAutoresizingMaskIntoConstraints = false
         nextButton.addTarget(self, action: #selector(nextAnalysisTapped), for: .touchUpInside)
+        nextButton.isEnabled = false
+        nextButton.alpha = 0.4  // 비활성 시 dimmed
         header.addSubview(nextButton)
         self.nextAnalysisCustomButton = nextButton
 
@@ -352,8 +351,11 @@ final class FaceScanListViewController: UIViewController, BarsVisibilityControll
 
     /// "다음 분석" 버튼 활성/비활성
     private func setNextAnalysisEnabled(_ enabled: Bool) {
+        // iOS 26
         nextAnalysisBarButton?.isEnabled = enabled
+        // iOS 16~25 (GlassTextButton)
         nextAnalysisCustomButton?.isEnabled = enabled
+        nextAnalysisCustomButton?.alpha = enabled ? 1.0 : 0.4
     }
 
     /// "다음 분석" 버튼 탭 — 현재 세션 이어서 다음 구간 분석 시작

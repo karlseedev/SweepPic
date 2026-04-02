@@ -112,11 +112,25 @@ final class FaceScanProgressBar: UIView {
         // 프로그레스 바 완료
         progressView.setProgress(1.0, animated: true)
 
-        // 완료 문구
-        if groupCount > 0 {
-            statusLabel.text = "분석 완료 · \(groupCount)그룹 발견"
-        } else {
-            statusLabel.text = "분석 완료 · 발견된 그룹 없음"
-        }
+        // 완료 문구 — "분석 완료" (bold, white) + 나머지 (regular, secondaryLabel)
+        let detailText = groupCount > 0
+            ? " · \(groupCount)그룹 발견"
+            : " · 발견된 그룹 없음"
+
+        let attrStr = NSMutableAttributedString(
+            string: "분석 완료",
+            attributes: [
+                .font: UIFont.systemFont(ofSize: 13, weight: .bold),
+                .foregroundColor: UIColor.white,
+            ]
+        )
+        attrStr.append(NSAttributedString(
+            string: detailText,
+            attributes: [
+                .font: UIFont.systemFont(ofSize: 13, weight: .regular),
+                .foregroundColor: UIColor.secondaryLabel,
+            ]
+        ))
+        statusLabel.attributedText = attrStr
     }
 }
