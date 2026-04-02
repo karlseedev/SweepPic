@@ -83,6 +83,7 @@ final class FaceScanListViewController: UIViewController, BarsVisibilityControll
         tv.separatorColor = .separator
         tv.register(FaceScanGroupCell.self, forCellReuseIdentifier: FaceScanGroupCell.reuseIdentifier)
         tv.rowHeight = FaceScanGroupCell.cellHeight
+        tv.contentInsetAdjustmentBehavior = .never  // 수동 inset 관리 (PreviewGridVC 패턴)
         return tv
     }()
 
@@ -113,6 +114,10 @@ final class FaceScanListViewController: UIViewController, BarsVisibilityControll
         fatalError("init(coder:) has not been implemented")
     }
 
+    deinit {
+        scanTask?.cancel()
+    }
+
     // MARK: - Lifecycle
 
     override func viewDidLoad() {
@@ -128,8 +133,22 @@ final class FaceScanListViewController: UIViewController, BarsVisibilityControll
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
 
+        // iOS 26: 시스템 네비바 표시 (뒤로가기 + 타이틀)
+        if #available(iOS 26.0, *) {
+            navigationController?.setNavigationBarHidden(false, animated: animated)
+        }
+
         // 비교 화면에서 돌아온 경우 dim 상태 갱신
         tableView.reloadData()
+    }
+
+    override func viewWillDisappear(_ animated: Bool) {
+        super.viewWillDisappear(animated)
+
+        // iOS 16~25: 시스템 네비바 다시 숨김 (FloatingOverlay 복원)
+        if #unavailable(iOS 26.0) {
+            navigationController?.setNavigationBarHidden(true, animated: animated)
+        }
     }
 
     override func willMove(toParent parent: UIViewController?) {
@@ -152,53 +171,51 @@ final class FaceScanListViewController: UIViewController, BarsVisibilityControll
     // MARK: - Setup
 
     private func setupUI() {
-        setupHeader()
-
-        // 진행바 (헤더 아래)
-        progressBar.translatesAutoresizingMaskIntoConstraints = false
-        view.addSubview(progressBar)
-
-        // 진행바 상단 기준: iOS 26 = safeArea, iOS 16~25 = 커스텀 헤더 아래
-        let progressTopAnchor: NSLayoutAnchor<NSLayoutYAxisAnchor>
-        if #available(iOS 26.0, *) {
-            progressTopAnchor = view.safeAreaLayoutGuide.topAnchor
-        } else {
-            // 커스텀 헤더 contentHeight 영역 아래 (safe area + 44pt)
-            progressTopAnchor = view.safeAreaLayoutGuide.topAnchor
-            // 커스텀 헤더의 콘텐츠 영역(44pt) 아래에 배치
-        }
-
-        NSLayoutConstraint.activate([
-            progressBar.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: customHeaderView != nil ? 44 : 0),
-            progressBar.leadingAnchor.constraint(equalTo: view.leadingAnchor),
-            progressBar.trailingAnchor.constraint(equalTo: view.trailingAnchor),
-            progressBar.heightAnchor.constraint(equalToConstant: FaceScanProgressBar.barHeight),
-        ])
-
-        // 테이블뷰
+        // 1. 테이블뷰: 전체 화면 edge-to-edge (PreviewGridVC 패턴)
+        //    헤더/진행바는 오버레이, contentInset으로 콘텐츠 영역 확보
         view.addSubview(tableView)
         NSLayoutConstraint.activate([
-            tableView.topAnchor.constraint(equalTo: progressBar.bottomAnchor),
+            tableView.topAnchor.constraint(equalTo: view.topAnchor),
             tableView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
             tableView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
             tableView.bottomAnchor.constraint(equalTo: view.bottomAnchor),
         ])
 
-        // 빈 상태 라벨 (중앙)
+        // 2. 헤더 오버레이 (iOS 16~25 커스텀 / iOS 26 시스템)
+        setupHeader()
+
+        // 3. 진행바 오버레이 (헤더 콘텐츠 영역 바로 아래)
+        progressBar.translatesAutoresizingMaskIntoConstraints = false
+        view.addSubview(progressBar)
+        NSLayoutConstraint.activate([
+            progressBar.topAnchor.constraint(
+                equalTo: view.safeAreaLayoutGuide.topAnchor,
+                constant: customHeaderView != nil ? 44 : 0
+            ),
+            progressBar.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+            progressBar.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+            progressBar.heightAnchor.constraint(equalToConstant: FaceScanProgressBar.barHeight),
+        ])
+
+        // 4. 빈 상태 라벨 (중앙, 진행바와 겹치지 않도록)
         view.addSubview(emptyLabel)
         NSLayoutConstraint.activate([
             emptyLabel.centerXAnchor.constraint(equalTo: view.centerXAnchor),
             emptyLabel.centerYAnchor.constraint(equalTo: view.centerYAnchor),
             emptyLabel.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 40),
             emptyLabel.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -40),
+            emptyLabel.topAnchor.constraint(greaterThanOrEqualTo: progressBar.bottomAnchor, constant: 20),
         ])
 
-        // 커스텀 헤더를 최상위에 (테이블뷰 위에 오버레이)
+        // 5. Z-order: 테이블뷰(뒤) → 헤더 → 진행바 → 빈 라벨(앞)
         if let header = customHeaderView {
             view.bringSubviewToFront(header)
         }
         view.bringSubviewToFront(progressBar)
         view.bringSubviewToFront(emptyLabel)
+
+        // 6. 초기 contentInset 설정
+        updateTableViewInsets()
     }
 
     // MARK: - Header
@@ -309,6 +326,44 @@ final class FaceScanListViewController: UIViewController, BarsVisibilityControll
         }
     }
 
+    override func viewSafeAreaInsetsDidChange() {
+        super.viewSafeAreaInsetsDidChange()
+        updateTableViewInsets()
+    }
+
+    // MARK: - Content Inset
+
+    /// 테이블뷰 contentInset 업데이트 (헤더 + 진행바 영역)
+    ///
+    /// PreviewGridVC 패턴: contentInsetAdjustmentBehavior = .never + 수동 inset 관리
+    /// 진행바 fade out 시 inset 축소 → 테이블 콘텐츠가 자연스럽게 올라감
+    private func updateTableViewInsets() {
+        // 상단: 헤더 높이 + 진행바 높이 (보이는 경우)
+        var topInset: CGFloat
+        if customHeaderView != nil {
+            // iOS 16~25: safe area + 헤더 콘텐츠 (44pt)
+            topInset = view.safeAreaInsets.top + 44
+        } else {
+            // iOS 26: safe area (시스템 네비바 포함)
+            topInset = view.safeAreaInsets.top
+        }
+
+        // 진행바 높이 추가 (보이는 경우)
+        if !progressBar.isHidden {
+            topInset += FaceScanProgressBar.barHeight
+        }
+
+        // 하단: safe area bottom
+        let bottomInset = view.safeAreaInsets.bottom
+
+        tableView.contentInset = UIEdgeInsets(
+            top: topInset, left: 0, bottom: bottomInset, right: 0
+        )
+        tableView.verticalScrollIndicatorInsets = UIEdgeInsets(
+            top: topInset, left: 0, bottom: bottomInset, right: 0
+        )
+    }
+
     // MARK: - Analysis
 
     /// 스캔 시작
@@ -367,7 +422,7 @@ final class FaceScanListViewController: UIViewController, BarsVisibilityControll
     private func handleAnalysisComplete() {
         isAnalysisComplete = true
 
-        // 진행바 완료 처리
+        // 진행바 완료 문구 표시
         progressBar.showCompletion(groupCount: groups.count)
 
         // 0그룹일 때 안내 메시지
@@ -377,6 +432,27 @@ final class FaceScanListViewController: UIViewController, BarsVisibilityControll
         }
 
         Logger.similarPhoto.debug("FaceScanListVC: 분석 완료 — \(self.groups.count)그룹 발견")
+
+        // 진행바 fade out + contentInset 동시 애니메이션
+        // 진행바가 사라지면서 테이블 콘텐츠가 자연스럽게 올라감
+        DispatchQueue.main.asyncAfter(deadline: .now() + FaceScanConstants.progressBarFadeDelay) {
+            [weak self] in
+            guard let self = self else { return }
+            UIView.animate(
+                withDuration: FaceScanConstants.progressBarFadeDuration,
+                animations: {
+                    self.progressBar.alpha = 0
+                    // contentInset 동시 갱신 — 부드러운 전환
+                    var inset = self.tableView.contentInset
+                    inset.top -= FaceScanProgressBar.barHeight
+                    self.tableView.contentInset = inset
+                    self.tableView.verticalScrollIndicatorInsets.top = inset.top
+                },
+                completion: { _ in
+                    self.progressBar.isHidden = true
+                }
+            )
+        }
     }
 
     // MARK: - Group Selection

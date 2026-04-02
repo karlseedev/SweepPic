@@ -63,6 +63,9 @@ final class FaceScanProgressBar: UIView {
     // MARK: - Setup
 
     private func setupUI() {
+        // 오버레이 시 테이블 콘텐츠가 비치지 않도록 배경색 설정
+        backgroundColor = .systemBackground
+
         // 프로그레스 바
         addSubview(progressView)
         NSLayoutConstraint.activate([
@@ -89,7 +92,7 @@ final class FaceScanProgressBar: UIView {
         statusLabel.text = progress.progressText
     }
 
-    /// 분석 완료 처리 — 완료 문구 표시 후 fade out
+    /// 분석 완료 처리 — 완료 문구 표시 (fade out은 부모 VC가 contentInset과 동시 처리)
     func showCompletion(groupCount: Int) {
         // 프로그레스 바 완료
         progressView.setProgress(1.0, animated: true)
@@ -99,20 +102,6 @@ final class FaceScanProgressBar: UIView {
             statusLabel.text = "분석 완료 · \(groupCount)그룹 발견"
         } else {
             statusLabel.text = "분석 완료 · 발견된 그룹 없음"
-        }
-
-        // 2초 후 fade out
-        DispatchQueue.main.asyncAfter(deadline: .now() + FaceScanConstants.progressBarFadeDelay) {
-            [weak self] in
-            UIView.animate(
-                withDuration: FaceScanConstants.progressBarFadeDuration,
-                animations: {
-                    self?.alpha = 0
-                },
-                completion: { _ in
-                    self?.isHidden = true
-                }
-            )
         }
     }
 }
