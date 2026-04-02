@@ -184,14 +184,17 @@ final class FaceScanListViewController: UIViewController, BarsVisibilityControll
         // 2. 헤더 오버레이 (iOS 16~25 커스텀 / iOS 26 시스템)
         setupHeader()
 
-        // 3. 진행바 오버레이 (화면 하단)
+        // 3. 진행바 오버레이 (화면 하단, safe area 아래까지 배경 확장)
         progressBar.translatesAutoresizingMaskIntoConstraints = false
         view.addSubview(progressBar)
         NSLayoutConstraint.activate([
-            progressBar.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor),
+            progressBar.topAnchor.constraint(
+                equalTo: view.safeAreaLayoutGuide.bottomAnchor,
+                constant: -FaceScanProgressBar.barHeight
+            ),
+            progressBar.bottomAnchor.constraint(equalTo: view.bottomAnchor),
             progressBar.leadingAnchor.constraint(equalTo: view.leadingAnchor),
             progressBar.trailingAnchor.constraint(equalTo: view.trailingAnchor),
-            progressBar.heightAnchor.constraint(equalToConstant: FaceScanProgressBar.barHeight),
         ])
 
         // 4. 빈 상태 라벨 (중앙)
