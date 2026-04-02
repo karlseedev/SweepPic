@@ -32,22 +32,11 @@ import OSLog
 /// 기존 SimilarityAnalysisQueue/Cache와 완전 격리된 분석 파이프라인을 실행합니다.
 final class FaceScanService {
 
-    // MARK: - 분석 도구 (Pipeline extension에서 접근하므로 internal)
+    // MARK: - 분석 도구
 
-    /// Feature Print 분석기
-    let analyzer = SimilarityAnalyzer()
-
-    /// 얼굴 감지기 (싱글톤 공유 — stateless에 가까움)
-    var faceDetector: YuNetFaceDetector? { YuNetFaceDetector.shared }
-
-    /// 얼굴 인식기 (싱글톤 공유 — stateless에 가까움)
-    var faceRecognizer: SFaceRecognizer? { SFaceRecognizer.shared }
-
-    /// 얼굴 정렬기 (싱글톤 공유 — stateless)
-    let faceAligner = FaceAligner.shared
-
-    /// 이미지 로더 (싱글톤 공유 — 참조 카운팅으로 안전)
-    let imageLoader = SimilarityImageLoader.shared
+    /// 인물 매칭 엔진 (generateFeaturePrints + assignPersonIndicesForGroup)
+    /// SimilarityAnalysisQueue와 동일한 분석 로직을 사용합니다.
+    let matchingEngine = PersonMatchingEngine()
 
     // MARK: - 결과 저장
 
