@@ -89,7 +89,7 @@ final class FaceScanListViewController: UIViewController, BarsVisibilityControll
         tv.delegate = self
         tv.separatorStyle = .none
         tv.register(FaceScanGroupCell.self, forCellReuseIdentifier: FaceScanGroupCell.reuseIdentifier)
-        tv.rowHeight = FaceScanGroupCell.cellHeight
+        tv.estimatedRowHeight = 154  // iPhone 16 기준 근사값 (스크롤 성능)
         tv.contentInsetAdjustmentBehavior = .never  // 수동 inset 관리 (PreviewGridVC 패턴)
         // 맨 위/맨 아래 구분선 제거
         tv.tableHeaderView = UIView(frame: CGRect(x: 0, y: 0, width: 0, height: CGFloat.leastNormalMagnitude))
@@ -417,6 +417,14 @@ final class FaceScanListViewController: UIViewController, BarsVisibilityControll
         }
     }
 
+    override func viewWillTransition(to size: CGSize, with coordinator: UIViewControllerTransitionCoordinator) {
+        super.viewWillTransition(to: size, with: coordinator)
+        // 회전 시 썸네일 크기 재계산 (heightForRowAt + configure가 새 너비 사용)
+        coordinator.animate(alongsideTransition: { _ in
+            self.tableView.reloadData()
+        })
+    }
+
     override func viewSafeAreaInsetsDidChange() {
         super.viewSafeAreaInsetsDidChange()
         updateTableViewInsets()
@@ -612,7 +620,7 @@ extension FaceScanListViewController: UITableViewDataSource {
 
         let group = groups[indexPath.row]
         let isDimmed = isGroupDimmed(group.groupID)
-        cell.configure(with: group, isDimmed: isDimmed)
+        cell.configure(with: group, isDimmed: isDimmed, cellWidth: tableView.bounds.width)
         cell.showsTopSeparator = indexPath.row > 0
 
         return cell
@@ -622,6 +630,10 @@ extension FaceScanListViewController: UITableViewDataSource {
 // MARK: - UITableViewDelegate
 
 extension FaceScanListViewController: UITableViewDelegate {
+
+    func tableView(_ tableView: UITableView, heightForRowAt indexPath: IndexPath) -> CGFloat {
+        return FaceScanGroupCell.cellHeight(for: tableView.bounds.width)
+    }
 
     func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
         tableView.deselectRow(at: indexPath, animated: true)

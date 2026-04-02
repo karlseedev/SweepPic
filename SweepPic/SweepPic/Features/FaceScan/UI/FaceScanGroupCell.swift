@@ -4,14 +4,15 @@
 //
 //  인물사진 비교정리 — 그룹 셀
 //
-//  썸네일을 좌측부터 가로 나열, 3~4개째부터 우측 화면 밖으로 반쯤 잘림.
+//  썸네일을 좌측부터 가로 나열, 좌우 스크롤 가능.
+//  화면에 2+2/3개 썸네일이 보여 스크롤 가능함을 암시.
 //  개별 썸네일 클릭 불가, 셀 전체 탭 → 그룹 선택.
-//  dim 처리: alpha 0.3 + "정리 완료" 오버레이.
+//  dim 처리: black 0.6 오버레이 + "정리 완료" 라벨.
 //
-//  스타일: PhotoCell 패턴 참조
-//  - 썸네일: 80×80pt, scaleAspectFill, .systemGray6 배경
-//  - 간격: 4pt
-//  - 좌측 패딩: 16pt
+//  썸네일 크기: 동적 계산 (cellWidth 기반)
+//  - iPhone SE (375pt) → 131pt
+//  - iPhone 16 (393pt) → 138pt
+//  - iPhone Plus (430pt) → 152pt
 //
 
 import UIKit
@@ -21,8 +22,8 @@ import Photos
 
 /// 인물사진 비교정리 그룹 셀
 ///
-/// 각 그룹의 사진 썸네일을 가로로 나열합니다.
-/// 우측으로 잘리면서 나가는 형태 (clipsToBounds).
+/// 각 그룹의 사진 썸네일을 가로 스크롤뷰에 나열합니다.
+/// 2+2/3개가 보여 우측에 잘린 썸네일이 스크롤 힌트 역할.
 final class FaceScanGroupCell: UITableViewCell {
 
     // MARK: - Constants
@@ -30,27 +31,49 @@ final class FaceScanGroupCell: UITableViewCell {
     /// 셀 재사용 식별자
     static let reuseIdentifier = "FaceScanGroupCell"
 
-    /// 셀 전체 높이 (썸네일 80pt + 상하 8pt)
-    static let cellHeight: CGFloat = 96
-
-    /// 썸네일 크기
-    private static let thumbnailSize: CGFloat = 80
-
     /// 썸네일 간격
     private static let thumbnailSpacing: CGFloat = 4
 
     /// 좌측 패딩
     private static let leftPadding: CGFloat = 16
 
+    /// 상하 패딩
+    private static let verticalPadding: CGFloat = 8
+
+    // MARK: - Dynamic Size
+
+    /// 동적 썸네일 크기 계산 (2+2/3개가 보이도록)
+    /// 공식: (가용너비 - 간격×2) × 3/8
+    static func thumbnailSize(for cellWidth: CGFloat) -> CGFloat {
+        let available = cellWidth - leftPadding
+        return floor((available - thumbnailSpacing * 2) * 3.0 / 8.0)
+    }
+
+    /// 동적 셀 높이 계산
+    static func cellHeight(for cellWidth: CGFloat) -> CGFloat {
+        return thumbnailSize(for: cellWidth) + verticalPadding * 2
+    }
+
+    /// 현재 셀의 썸네일 크기 (configure 시 cellWidth로부터 계산)
+    private var thumbnailSize: CGFloat = 80
+
     // MARK: - UI Components
 
-    /// 썸네일 컨테이너 (가로 스택, clipsToBounds)
-    private let thumbnailContainer: UIView = {
-        let view = UIView()
-        view.translatesAutoresizingMaskIntoConstraints = false
-        view.clipsToBounds = true
-        return view
+    /// 썸네일 가로 스크롤뷰
+    private let thumbnailScrollView: UIScrollView = {
+        let sv = UIScrollView()
+        sv.translatesAutoresizingMaskIntoConstraints = false
+        sv.showsHorizontalScrollIndicator = false
+        sv.showsVerticalScrollIndicator = false
+        sv.isPagingEnabled = false
+        sv.alwaysBounceHorizontal = true
+        sv.clipsToBounds = true
+        sv.delaysContentTouches = false  // 탭 응답성 향상 (주 동작=탭, 보조=스크롤)
+        return sv
     }()
+
+    /// 스크롤뷰 높이 제약 (thumbnailSize 변경 시 업데이트)
+    private var scrollViewHeightConstraint: NSLayoutConstraint?
 
     /// 썸네일 이미지뷰 배열
     private var thumbnailViews: [UIImageView] = []
@@ -72,9 +95,7 @@ final class FaceScanGroupCell: UITableViewCell {
         label.textColor = .white
         label.textAlignment = .center
         label.isHidden = true
-
         label.text = "정리 완료"
-
         return label
     }()
 
@@ -129,18 +150,20 @@ final class FaceScanGroupCell: UITableViewCell {
             topSeparator.heightAnchor.constraint(equalToConstant: 1.0 / UIScreen.main.scale),
         ])
 
-        // 썸네일 컨테이너
-        contentView.addSubview(thumbnailContainer)
+        // 썸네일 스크롤뷰
+        contentView.addSubview(thumbnailScrollView)
+        let heightConstraint = thumbnailScrollView.heightAnchor.constraint(equalToConstant: 80)
+        scrollViewHeightConstraint = heightConstraint
         NSLayoutConstraint.activate([
-            thumbnailContainer.leadingAnchor.constraint(
+            thumbnailScrollView.leadingAnchor.constraint(
                 equalTo: contentView.leadingAnchor, constant: Self.leftPadding
             ),
-            thumbnailContainer.trailingAnchor.constraint(equalTo: contentView.trailingAnchor),
-            thumbnailContainer.centerYAnchor.constraint(equalTo: contentView.centerYAnchor),
-            thumbnailContainer.heightAnchor.constraint(equalToConstant: Self.thumbnailSize),
+            thumbnailScrollView.trailingAnchor.constraint(equalTo: contentView.trailingAnchor),
+            thumbnailScrollView.centerYAnchor.constraint(equalTo: contentView.centerYAnchor),
+            heightConstraint,
         ])
 
-        // dim 오버레이
+        // dim 오버레이 (contentView 전체 — 스크롤뷰 위에 덮음)
         contentView.addSubview(dimOverlay)
         NSLayoutConstraint.activate([
             dimOverlay.topAnchor.constraint(equalTo: contentView.topAnchor),
@@ -175,6 +198,10 @@ final class FaceScanGroupCell: UITableViewCell {
         }
         thumbnailViews.removeAll()
 
+        // 스크롤 위치/크기 리셋 (재사용 시 이전 위치 잔류 방지)
+        thumbnailScrollView.contentOffset = .zero
+        thumbnailScrollView.contentSize = .zero
+
         // dim 해제
         dimOverlay.isHidden = true
         completionLabel.isHidden = true
@@ -190,10 +217,15 @@ final class FaceScanGroupCell: UITableViewCell {
     /// - Parameters:
     ///   - group: 그룹 데이터
     ///   - isDimmed: dim 상태 (정리 완료)
-    func configure(with group: FaceScanGroup, isDimmed: Bool) {
+    ///   - cellWidth: 셀 너비 (동적 썸네일 크기 계산용)
+    func configure(with group: FaceScanGroup, isDimmed: Bool, cellWidth: CGFloat) {
         currentGroupID = group.groupID
 
-        // 썸네일 이미지뷰 생성
+        // 동적 썸네일 크기 계산
+        thumbnailSize = Self.thumbnailSize(for: cellWidth)
+        scrollViewHeightConstraint?.constant = thumbnailSize
+
+        // 썸네일 이미지뷰 생성 (프레임 기반)
         createThumbnailViews(count: group.memberAssetIDs.count)
 
         // 썸네일 로딩
@@ -207,43 +239,39 @@ final class FaceScanGroupCell: UITableViewCell {
     func setDimmed(_ dimmed: Bool) {
         dimOverlay.isHidden = !dimmed
         completionLabel.isHidden = !dimmed
-        // 썸네일 알파 조정
-        thumbnailContainer.alpha = 1.0
     }
 
     // MARK: - Private
 
-    /// 썸네일 이미지뷰 생성 및 배치
+    /// 썸네일 이미지뷰 생성 및 배치 (프레임 기반 — UIScrollView 내부)
     private func createThumbnailViews(count: Int) {
+        let size = thumbnailSize
+        let spacing = Self.thumbnailSpacing
+
         for i in 0..<count {
             let imageView = UIImageView()
             imageView.contentMode = .scaleAspectFill
             imageView.clipsToBounds = true
             imageView.backgroundColor = .systemGray6
-            imageView.translatesAutoresizingMaskIntoConstraints = false
 
-            thumbnailContainer.addSubview(imageView)
+            let xOffset = CGFloat(i) * (size + spacing)
+            imageView.frame = CGRect(x: xOffset, y: 0, width: size, height: size)
 
-            let xOffset = CGFloat(i) * (Self.thumbnailSize + Self.thumbnailSpacing)
-
-            NSLayoutConstraint.activate([
-                imageView.leadingAnchor.constraint(
-                    equalTo: thumbnailContainer.leadingAnchor, constant: xOffset
-                ),
-                imageView.topAnchor.constraint(equalTo: thumbnailContainer.topAnchor),
-                imageView.widthAnchor.constraint(equalToConstant: Self.thumbnailSize),
-                imageView.heightAnchor.constraint(equalToConstant: Self.thumbnailSize),
-            ])
-
+            thumbnailScrollView.addSubview(imageView)
             thumbnailViews.append(imageView)
         }
+
+        // 전체 콘텐츠 크기 설정 (스크롤 영역)
+        let totalWidth = CGFloat(count) * size + CGFloat(max(count - 1, 0)) * spacing
+        thumbnailScrollView.contentSize = CGSize(width: totalWidth, height: size)
     }
 
     /// 썸네일 로딩 (PHCachingImageManager)
     private func loadThumbnails(assetIDs: [String]) {
+        // 동적 크기에 맞춘 이미지 요청 사이즈
         let targetSize = CGSize(
-            width: Self.thumbnailSize * UIScreen.main.scale,
-            height: Self.thumbnailSize * UIScreen.main.scale
+            width: thumbnailSize * UIScreen.main.scale,
+            height: thumbnailSize * UIScreen.main.scale
         )
         let options = PHImageRequestOptions()
         options.deliveryMode = .opportunistic
