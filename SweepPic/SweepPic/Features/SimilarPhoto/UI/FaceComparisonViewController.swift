@@ -820,6 +820,7 @@ extension FaceComparisonViewController: FaceComparisonDataSource {
         options.deliveryMode = .highQualityFormat
         options.resizeMode = .exact
         options.isSynchronous = false
+        options.isNetworkAccessAllowed = true  // iCloud 사진 지원
 
         imageManager.requestImage(
             for: asset,

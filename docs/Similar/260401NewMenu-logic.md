@@ -1,368 +1,753 @@
-# 인물사진 비교정리 — 기능 설계 문서
+# 인물사진 비교정리 — 구현 계획
 
-> 작성일: 2026-04-01
-> 상태: 설계 확정 (구현 전)
+## Context
 
----
-
-## 1. 기능 개요
-
-기존 유사사진 분석(그리드 스크롤 멈춤 / 뷰어 진입 시 자동 분석)은 **그대로 유지**하면서,
-메뉴에서 수동으로 진입하여 **최신 사진부터 자동으로 인물사진 그룹을 찾아 비교·정리**하는 기능을 추가한다.
-
-### 메뉴 이름: **인물사진 비교정리**
-- 아이콘: `person.2.crop.square.stack` (기존 메뉴 아이콘 유지)
-- 위치: "간편정리" 서브메뉴 내 (현재 disabled 상태인 "유사사진정리" 항목을 활성화하여 연결)
-
-### 메뉴 구조 변경
-
-```
-간편정리
-├─ 인물사진 비교정리    ← 기존 "유사사진정리" (disabled) → 이름 변경 + 활성화
-└─ 저품질사진 자동정리  ← 기존 "저품질자동정리" → 이름 변경
-```
+설계 문서 `docs/similar/260401NewMenu-logic.md`에 확정된 "인물사진 비교정리" 기능을 구현한다.
+기존 간편정리 메뉴의 disabled 항목을 활성화하고, 최신 사진부터 인물사진 그룹을 자동 탐색하여 비교·정리하는 기능이다.
 
 ---
 
-## 2. 전체 UX 흐름
+## Phase 1: 기반 모델 + 상수 변경
 
+### 1-1. maxComparisonGroupSize 변경 (8→12)
+
+**파일:** `SweepPic/Features/SimilarPhoto/Models/SimilarityConstants.swift:136`
 ```
-[간편정리 메뉴] → "인물사진 비교정리" 탭
-        ↓
-[방식 선택 시트]
- ┌─ 최신사진부터 정리
- ├─ 이어서 정리 (이전 완료 세션 위치부터)
- └─ 연도별 정리
-        ↓
-[그룹 목록 화면] (빈 상태로 즉시 push)
- - 분석 시작 → 그룹 발견되면 하나씩 추가
- - 상단 미니 진행바 표시
-        ↓ (그룹 탭)
-[FaceComparisonVC] (기존 재활용, present modal)
- - 인물별 페이지 스와이프
- - 선택 → "삭제" → 즉시 삭제대기함 이동
-        ↓ (삭제/닫기)
-[그룹 목록 화면으로 복귀]
- - 처리된 그룹: dim 처리
- - dim 그룹 재진입 가능 (선택 수정)
+nonisolated static let maxComparisonGroupSize: Int = 8  →  12
 ```
 
----
+### 1-2. FaceScanMethod.swift (신규)
 
-## 3. 방식 선택 시트
+**위치:** `SweepPic/Features/FaceScan/Models/FaceScanMethod.swift`
 
-CleanupMethodSheet 패턴을 따른다.
-
+CleanupMethod 패턴 참조 (`Features/AutoCleanup/Models/CleanupMethod.swift`)
 ```
-┌──────────────────────────────┐
-│     인물사진 비교정리          │
-│                               │
-│  비슷한 사진에서 같은 인물을   │
-│  찾아 얼굴을 비교합니다.      │
-│  마음에 들지 않는 사진을       │
-│  골라 정리할 수 있어요.       │
-│                               │
-│  [최신사진부터 정리]           │
-│  [이어서 정리 (날짜)]         │  ← 이전 완료 세션 있을 때만 활성
-│  [연도별 정리]                │
-│  [취소]                      │
-└──────────────────────────────┘
+enum FaceScanMethod: Codable, Equatable {
+    case fromLatest
+    case continueFromLast
+    case byYear(year: Int, continueFrom: Date? = nil)
+}
 ```
+- displayTitle, description 등 UI 지원 computed property 포함
 
-- **삭제대기함 비어있는지 체크: 없음** (저품질 정리와 다르게 체크 안 함)
+### 1-3. FaceScanProgress.swift (신규)
 
----
+**위치:** `SweepPic/Features/FaceScan/Models/FaceScanProgress.swift`
 
-## 4. 그룹 목록 화면 (FaceScanListViewController)
-
-### 4.1 레이아웃
-
+CleanupProgress 패턴 참조 (`Features/AutoCleanup/Models/CleanupProgress.swift`)
 ```
-┌──────────────────────────────────────┐
-│ ← 뒤로    인물사진 비교정리           │
-├──────────────────────────────────────┤
-│  ██████░░░░ 12그룹 발견 · 480/1,000장 │ ← 미니 진행바
-├──────────────────────────────────────┤
-│ ┌────┐┌────┐┌────┐┌────┐┌──         │
-│ │ 📷 ││ 📷 ││ 📷 ││ 📷 ││📷← 잘림  │ 그룹 1
-│ └────┘└────┘└────┘└────┘└──         │
-├──────────────────────────────────────┤
-│ ✓ 정리 완료                          │
-│ ┌────┐┌────┐┌────┐┌──              │ 그룹 2 (dim)
-│ │    ││    ││    ││   ← dim        │
-│ └────┘└────┘└────┘└──              │
-├──────────────────────────────────────┤
-│ ┌────┐┌────┐┌────┐┌────┐┌────┐┌──  │
-│ │ 📷 ││ 📷 ││ 📷 ││ 📷 ││ 📷 ││📷 │ 그룹 3
-│ └────┘└────┘└────┘└────┘└────┘└──  │
-└──────────────────────────────────────┘
-```
-
-### 4.2 상태별 화면
-
-| 상태 | 표시 |
-|------|------|
-| 분석 중 + 0그룹 | 미니 진행바 + 중앙에 "분석 중" 텍스트 |
-| 분석 중 + N그룹 | 미니 진행바 + 그룹 목록 |
-| 분석 완료 + 0그룹 | "비교할 인물사진 그룹을 찾지 못했습니다" 안내 메시지 |
-| 분석 완료 + N그룹 | 그룹 목록만 (진행바 fade out 후) |
-
-### 4.3 뒤로가기 (닫기) 동작
-
-| 상황 | 동작 |
-|------|------|
-| 분석 **진행 중** | 분석 중단 + 데이터 버림 (세션 저장 안 함) |
-| 분석 **완료 후** | 위치만 저장 → "이어서 정리" 가능 (그룹 데이터는 저장 안 함) |
-
-### 4.4 그룹별 삭제 상태 관리
-
-그룹 목록 화면이 살아있는 동안, **그룹별 삭제된 assetID 딕셔너리**를 메모리에 유지한다.
-
-```
-deletedAssetsByGroup: [String: Set<String>]
-  그룹1 → {"photo_1", "photo_3"}  (삭제된 것들)
-  그룹2 → {"photo_7"}
-  그룹3 → {}  (미처리)
-```
-
-- 비교 화면 진입 시 → 이 목록을 전달 (진입 시점 선택 상태)
-- 비교 화면에서 돌아오면 → 변경된 목록으로 업데이트
-- 화면을 닫으면 → 메모리에서 자연스럽게 해제
-
----
-
-## 5. 그룹 셀 (FaceScanGroupCell)
-
-### 5.1 레이아웃
-
-- 썸네일 좌측부터 가로 나열, 정사각형, 간격 4~6pt
-- 3~4개째부터 우측 화면 밖으로 반쯤 잘림 (`clipsToBounds = true`)
-- 장수 표시 없음
-- 개별 썸네일 클릭 불가, **셀 전체 탭 → 그룹 선택**
-
-### 5.2 dim 처리
-
-| 조건 | 표시 |
-|------|------|
-| 1장이라도 삭제한 그룹 | 알파 dim + "정리 완료" 오버레이 |
-| 재진입 후 전부 복원 | dim 해제 (미처리 상태로 복귀) |
-| 아무것도 삭제 안 하고 닫음 | dim 안 함 |
-
-### 5.3 dim 그룹 탭
-
-- **탭 가능** → 비교 화면 재진입 (present modal)
-- 이전 삭제 상태가 선택된 채로 표시
-- 선택 수정 가능 (추가 삭제, 복원)
-
----
-
-## 6. 미니 진행바 (FaceScanProgressBar)
-
-### 6.1 문구
-
-| 상태 | 표시 |
-|------|------|
-| 진행 중 | `██░░ N그룹 발견 · N / 1,000장 검색` |
-| 완료 | `████ 분석 완료 · N그룹 발견` → 2~3초 후 fade out |
-| 완료 (0그룹) | `████ 분석 완료 · 발견된 그룹 없음` → fade out |
-
-### 6.2 취소 버튼
-
-- **없음** — 화면 뒤로가기가 취소 역할
-
----
-
-## 7. 상한 조건
-
-**먼저 도달하는 조건에서 종료**
-
-| 조건 | 값 |
-|------|-----|
-| 검색 장수 | 1,000장 |
-| 발견 그룹 | 30그룹 |
-
----
-
-## 8. 비교 화면 (FaceComparisonVC) 동작 분기
-
-기존 뷰어에서의 호출과 FaceScan에서의 호출을 분기한다.
-**전환 방식: present (fullScreen modal)** — 기존 뷰어와 동일 패턴.
-
-### 8.1 기존 뷰어에서 호출 (변경 없음)
-
-- "삭제" → 즉시 삭제대기함 이동 → 뷰어 복귀
-
-### 8.2 FaceScan에서 호출
-
-#### 첫 진입 (해당 그룹 첫 방문)
-
-- 전부 미선택 상태
-- 사진 선택 → "삭제" → 즉시 삭제대기함 이동 → 목록 복귀 (그룹 dim)
-
-#### 재진입 (dim 그룹 탭)
-
-- 삭제된 사진 = 선택 상태로 표시
-- 선택 수정 가능 (체크 해제 = 복원 대상, 추가 선택 = 추가 삭제 대상)
-
-**"삭제" 버튼 동작 (재진입 시):**
-- diff 적용: 새로 체크된 것 → 삭제대기함 이동, 체크 해제된 것 → 삭제대기함에서 복원
-- 변동 없으면 → 비활성 또는 그냥 닫기
-
-**뒤로가기 동작 (재진입 시):**
-- 변동사항 없음 → 그냥 닫기
-- 변동사항 있음 → 팝업: "변경사항을 적용하시겠습니까?"
-  - 적용 → diff 적용 (삭제 + 복원)
-  - 취소 → 원상태 유지
-
-### 8.3 diff 판단 방법
-
-진입 시점의 선택 상태(삭제된 assetID 목록)를 변수에 저장해두고,
-"삭제" 버튼 또는 뒤로가기 시점에 현재 선택 상태와 비교한다.
-
-```
-initialSelected = 진입 시점에 선택된 assetID 집합
-currentSelected = 현재 선택된 assetID 집합
-
-toDelete  = currentSelected - initialSelected  → 삭제대기함 이동
-toRestore = initialSelected - currentSelected  → 삭제대기함에서 복원
-hasChanges = !toDelete.isEmpty || !toRestore.isEmpty
-```
-
-### 8.4 비교 그룹 표시 제한
-
-- **최대 12장** (`maxComparisonGroupSize`를 8 → 12로 변경)
-- 기존 뷰어의 비교 화면도 동일하게 12장으로 변경
-- 그룹 분석 시간에는 영향 없음 (UI 표시 제한이므로)
-
----
-
-## 9. 세션 저장 (이어서 정리용)
-
-### 9.1 저장 조건
-
-- 분석 **완료 시에만** 저장 (분석 중 닫기 → 저장 안 함)
-- 그룹 데이터는 저장하지 않음 (위치만 저장)
-
-### 9.2 데이터 구조
-
-```swift
-struct FaceScanSession: Codable {
-    let lastAssetDate: Date    // 마지막 스캔 사진 날짜
-    let lastAssetID: String    // 마지막 스캔 사진 ID (동일 날짜 정밀 위치)
-    let scannedCount: Int      // 총 스캔 장수
-    let savedAt: Date          // 저장 시각
+struct FaceScanProgress {
+    let scannedCount: Int
+    let groupCount: Int
+    let currentDate: Date
+    let progress: Float
+    let maxScanCount: Int      // 1,000
+    let maxGroupCount: Int     // 30
 }
 ```
 
-### 9.3 저장 위치
+### 1-4. FaceScanSession.swift (신규)
 
-- UserDefaults (가벼운 데이터)
+**위치:** `SweepPic/Features/FaceScan/Models/FaceScanSession.swift`
+```
+struct FaceScanSession: Codable {
+    let lastAssetDate: Date
+    let lastAssetID: String
+    let scannedCount: Int
+    let savedAt: Date
+}
+```
+
+### 1-5. FaceScanGroup.swift (신규)
+
+**위치:** `SweepPic/Features/FaceScan/Models/FaceScanGroup.swift`
+
+FaceScanListVC가 보유하는 그룹 데이터 모델:
+```
+struct FaceScanGroup {
+    let groupID: String
+    let memberAssetIDs: [String]    // 원본 멤버 목록 (캐시 무효화와 무관)
+    let validPersonIndices: Set<Int>
+}
+```
+
+### 1-6. FaceScanConstants.swift (신규)
+
+**위치:** `SweepPic/Features/FaceScan/Models/FaceScanConstants.swift`
+```
+enum FaceScanConstants {
+    static let maxScanCount: Int = 1_000
+    static let maxGroupCount: Int = 30
+    static let chunkSize: Int = 20
+    static let chunkOverlap: Int = 3
+}
+```
 
 ---
 
-## 10. 스캔 엔진 (FaceScanService)
+## Phase 2: 메뉴 연결 + 방식 선택 시트
 
-### 10.1 분석 방식
+### 2-1. 메뉴명 변경 + 활성화
 
-기존 `SimilarityAnalysisQueue`의 분석 파이프라인을 **청크 단위**로 호출한다.
+**파일:** `SweepPic/Features/Grid/GridViewController+Cleanup.swift`
 
+iOS 26+ (`setupSystemCleanupButton`, 라인 48-56):
 ```
-1,000장을 ~20장씩 청크로 분할
-    ↓
-[청크 1: 사진 1~20]
- → Feature Print 생성 → 그룹 형성 → YuNet+SFace 인물 매칭
-    ↓ 그룹 발견 시 즉시 콜백 → UI에 추가
-[청크 2: 사진 18~40] (경계 2~3장 overlap)
-    ↓ ...반복
-[완료: 1,000장 도달 or 30그룹 발견]
+변경 전: UIAction(title: "유사사진정리", attributes: .disabled) { _ in }
+변경 후: UIAction(title: "인물사진 비교정리", image: ...) { [weak self] _ in self?.faceScanButtonTapped() }
+```
+```
+변경 전: UIAction(title: "저품질자동정리", ...)
+변경 후: UIAction(title: "저품질사진 자동정리", ...)
 ```
 
-### 10.2 경계 overlap
+iOS 16~25 (`setupFloatingCleanupButton`, 라인 96-104): 동일 변경
 
-청크 경계에서 이어지는 그룹을 놓치지 않도록 이전 청크 마지막 2~3장을 다음 청크에 포함한다.
+### 2-2. GridViewController+FaceScan.swift (신규)
 
-### 10.3 콜백
+**위치:** `SweepPic/Features/FaceScan/GridViewController+FaceScan.swift`
+
+GridViewController extension:
+- `faceScanButtonTapped()` — 방식 선택 시트 표시
+- `showFaceScanMethodSheet()` — FaceScanMethodSheet 생성/표시
+- `FaceScanMethodSheetDelegate` 구현 — 선택된 method로 FaceScanListVC push
+
+### 2-3. FaceScanMethodSheet.swift (신규)
+
+**위치:** `SweepPic/Features/FaceScan/UI/FaceScanMethodSheet.swift`
+
+CleanupMethodSheet 패턴 참조 (`Features/AutoCleanup/UI/CleanupMethodSheet.swift`)
+- UIAlertController(.alert) 사용
+- 타이틀: "인물사진 비교정리"
+- 메시지: "비슷한 사진에서 같은 인물을\n찾아 얼굴을 비교합니다.\n마음에 들지 않는 사진을\n골라 정리할 수 있어요."
+- 액션: 최신사진부터 / 이어서 정리 (조건부 활성) / 연도별 / 취소
+- delegate: `FaceScanMethodSheetDelegate`
+
+---
+
+## Phase 3: 전용 캐시 + 스캔 서비스
+
+### 3-1. FaceScanCache.swift (신규)
+
+**위치:** `SweepPic/Features/FaceScan/Service/FaceScanCache.swift`
+
+기존 `SimilarityCacheProtocol`을 준수하는 **FaceScan 전용 경량 캐시**.
+기존 `SimilarityCache.shared`와 완전 격리 — 기존 그리드/뷰어 분석에 영향 제로.
 
 ```swift
-onGroupFound: (FaceScanGroup) -> Void    // 그룹 발견 시
-onProgress: (FaceScanProgress) -> Void    // 진행 상황 업데이트
-onComplete: () -> Void                    // 분석 완료
+actor FaceScanCache: SimilarityCacheProtocol {
+    // 저장소
+    private var groups: [String: SimilarThumbnailGroup] = [:]
+    private var faces: [String: [CachedFace]] = [:]
+    private var validSlots: [String: Set<Int>] = [:]
+
+    // FaceComparisonVC가 사용하는 메서드 구현
+    func getFaces(for assetID: String) -> [CachedFace]
+    func getGroupMembers(groupID: String) -> [String]
+    func getGroupValidPersonIndices(for groupID: String) -> Set<Int>
+    func removeMemberFromGroup(_ assetID: String, groupID: String) -> Bool
+
+    // FaceScanService가 분석 결과를 저장하는 메서드
+    func addGroup(_ group: SimilarThumbnailGroup, validSlots: Set<Int>, photoFaces: [String: [CachedFace]])
+
+    // SimilarityCacheProtocol의 나머지 메서드는 빈 구현
+}
 ```
 
-### 10.4 취소
+**생명주기:** FaceScanListVC가 소유 → 화면 닫히면 자연스럽게 해제
 
-화면 뒤로가기 시 `Task.cancel()`로 분석 중단한다.
+### 3-2. FaceScanService.swift (신규, 핵심)
+
+**위치:** `SweepPic/Features/FaceScan/Service/FaceScanService.swift`
+
+**핵심 전략: 기존 SimilarityAnalysisQueue를 호출하지 않고, 개별 분석기를 직접 사용**
+
+기존 코드(SimilarityAnalysisQueue, SimilarityCache) **수정 없음**.
+분석 도구(SimilarityAnalyzer, YuNetFaceDetector, SFaceRecognizer, FaceAligner)만 재사용.
+
+```swift
+class FaceScanService {
+    // 분석 도구 (독립 인스턴스)
+    private let analyzer = SimilarityAnalyzer()
+    private let faceDetector = YuNetFaceDetector()
+    private let faceRecognizer = SFaceRecognizer()
+    private let faceAligner = FaceAligner()
+    private let imageLoader = SimilarityImageLoader.shared  // 공유 (참조 카운팅)
+
+    // 결과 저장소 (외부에서 주입)
+    private let cache: FaceScanCache
+
+    // 취소
+    private var isCancelled = false
+    private let lock = NSLock()
+
+    func cancel() { ... }
+}
+```
+
+**책임:**
+- PHFetchResult 구성 (method별 predicate, 최신순 정렬)
+- **삭제대기함 사진 제외** (TrashStore.shared.trashedAssetIDs 필터, 기존 fetchPhotos 패턴)
+- 청크 단위 분석 루프 (chunkSize: 20, overlap: 3)
+- 종료 조건: 1,000장 OR 30그룹 (먼저 도달 시)
+- 진행률 콜백
+- 취소 지원 (NSLock + isCancelled 체크)
+- **열 상태(thermal) 모니터링** — ProcessInfo.thermalState 감지, 과열 시 동시성 축소 (기존 패턴)
+
+**각 청크 분석 파이프라인 (formGroupsForRange 참조, 자체 구현):**
+
+```
+1. 이미지 로딩 + Feature Print 생성 (병렬)
+   - SimilarityImageLoader.shared로 480px 이미지 로딩
+   - VNGenerateImageFeaturePrintRequest 실행
+   - VNDetectFaceRectanglesRequest로 얼굴 유무 확인
+   → [VNFeaturePrintObservation?], [Bool] (hasFaces)
+
+2. 그룹 형성
+   - analyzer.formGroups(featurePrints:photoIDs:threshold:)
+   → [[String]] (rawGroups, 최소 3장)
+
+3. 얼굴 감지 + 인물 매칭 (그룹별)
+   - SimilarityImageLoader로 960px 이미지 로딩
+   - YuNetFaceDetector.detect() → [YuNetDetection]
+   - FaceAligner.align() → 112×112 정렬 이미지
+   - SFaceRecognizer.extractEmbedding() → [Float] 128차원
+   - 코사인 유사도 기반 인물 슬롯 할당 (threshold: 0.363)
+   → [String: [CachedFace]] (photoFacesMap)
+
+4. 유효 슬롯 계산
+   - personIndex가 2장 이상에서 나타나는 것만 유효
+   - 유효 슬롯 얼굴이 있는 사진만 그룹 멤버로 인정
+   → Set<Int> (validSlots), [String] (validMembers)
+
+5. FaceScanCache에 결과 저장
+   - cache.addGroup(group, validSlots, photoFaces)
+   → FaceComparisonVC가 캐시에서 얼굴 데이터 조회 가능
+
+6. onGroupFound 콜백
+   - FaceScanGroup(groupID, memberAssetIDs, validPersonIndices) 전달
+   → FaceScanListVC에 그룹 추가
+```
+
+**재사용하는 개별 분석기 (독립 인스턴스, 기존 코드 수정 없음):**
+| 분석기 | 파일 | 사용 메서드 |
+|--------|------|-----------|
+| SimilarityAnalyzer | Analysis/SimilarityAnalyzer.swift | formGroups() |
+| YuNetFaceDetector | Analysis/YuNet/YuNetFaceDetector.swift | detect() |
+| SFaceRecognizer | Analysis/SFaceRecognizer.swift | extractEmbedding(), cosineSimilarity() |
+| FaceAligner | Analysis/FaceAligner.swift | align() |
+| SimilarityImageLoader | Analysis/SimilarityImageLoader.swift | .shared (공유, 참조 카운팅) |
+
+**이어서 정리 fetch 조건:**
+```swift
+// continueFromLast일 때:
+// creationDate <= lastDate인 사진 중, lastAssetID 이후부터 시작
+// PHFetchOptions.predicate + fetchResult 순회 시 lastAssetID 위치 탐색
+```
+
+**세션 저장:**
+- UserDefaults 패턴 (CleanupPreviewService 참조)
+- 키: `FaceScanSession.lastScanDate`, `FaceScanSession.lastAssetID`
+- 연도별: `FaceScanSession.byYear.*`
+- static canContinue / lastScanDate 프로퍼티
+- **분석 완료 시에만 저장** (취소 시 저장 안 함)
 
 ---
 
-## 11. 기존 기능과의 관계
+## Phase 4: 그룹 목록 UI
 
-| 항목 | 기존 | 새 기능 |
-|------|------|--------|
-| 트리거 | 그리드 스크롤 멈춤 / 뷰어 진입 | 메뉴 수동 진입 |
-| 분석 범위 | 화면 보이는 셀 ± 7장 | 최대 1,000장 (연속) |
-| 분석 로직 | SimilarityAnalysisQueue | 동일 로직 재활용 (청크 단위) |
-| 캐시 | SimilarityCache | 공유 |
-| 비교 화면 | FaceComparisonVC | 동일 (동작 분기, present modal) |
-| 그리드 스크롤/뷰어 분석 | 유지 | 독립적으로 병존 |
+### 4-1. FaceScanListViewController.swift (신규, 핵심)
+
+**위치:** `SweepPic/Features/FaceScan/UI/FaceScanListViewController.swift`
+
+**스타일:** PreviewGridViewController 패턴 참조
+- `view.backgroundColor = .systemBackground`
+- `hidesBottomBarWhenPushed = true`
+- iOS 26: 시스템 네비바 (`title = "인물사진 비교정리"`)
+- iOS 16~25: 커스텀 헤더 (FloatingTitleBar 패턴 — 36pt light 타이틀, progressive blur)
+
+**레이아웃 구조:**
+```
+┌─ 네비바 / 커스텀 헤더 ─────────────────┐
+├─ FaceScanProgressBar (상단 고정, 48pt) ─┤
+├─ UITableView (그룹 셀 목록) ────────────┤
+│  또는 빈 상태 라벨 (중앙)               │
+└─────────────────────────────────────────┘
+```
+
+**빈 상태 라벨:**
+- 폰트: 17pt, .regular
+- 색상: .secondaryLabel
+- 정렬: 중앙
+- 텍스트: "분석 중" / "비교할 인물사진 그룹을 찾지 못했습니다"
+
+**데이터 관리:**
+```swift
+// 발견된 그룹 (콜백으로 추가)
+private var groups: [FaceScanGroup] = []
+
+// 그룹별 삭제 상태 (메모리에만 유지)
+private var deletedAssetsByGroup: [String: Set<String>] = [:]
+
+// 전용 캐시 (FaceComparisonVC에 주입)
+private let faceScanCache = FaceScanCache()
+
+// 스캔 서비스
+private var scanService: FaceScanService?
+
+// 분석 완료 여부
+private var isAnalysisComplete: Bool = false
+
+// 현재 열려있는 그룹 ID (delegate 콜백에서 사용)
+private var presentedGroupID: String?
+```
+
+**lifecycle:**
+```
+viewDidLoad:
+  - UI 구성 (tableView, progressBar, emptyLabel)
+  - FaceScanService 시작 (cache: faceScanCache)
+  - onGroupFound → groups.append + tableView insertRows (with animation)
+  - onProgress → progressBar 업데이트
+  - onComplete → isAnalysisComplete = true, progressBar fade out
+
+viewWillAppear:
+  - 비교 화면에서 돌아온 경우 dim 상태 갱신 (tableView.reloadData)
+
+뒤로가기(pop) — willMove(toParent: nil):
+  - isAnalysisComplete == false → scanService.cancel() + 데이터 버림
+  - isAnalysisComplete == true → 세션은 이미 저장됨
+```
+
+**그룹 탭 → 비교 화면:**
+```swift
+func tableView(_, didSelectRowAt indexPath: IndexPath) {
+    let group = groups[indexPath.row]
+    presentedGroupID = group.groupID  // delegate에서 참조
+
+    let comparisonGroup = ComparisonGroup(
+        sourceGroupID: group.groupID,
+        selectedAssetIDs: Array(group.memberAssetIDs.prefix(12)),
+        personIndex: group.validPersonIndices.sorted().first ?? 1
+    )
+    let initialSelected = deletedAssetsByGroup[group.groupID] ?? []
+
+    let vc = FaceComparisonViewController(
+        comparisonGroup: comparisonGroup,
+        mode: .faceScan(initialSelected: initialSelected),
+        cache: faceScanCache  // ← 전용 캐시 주입
+    )
+    vc.delegate = self
+
+    // present (fullScreen modal) — iOS 버전별 분기 (기존 뷰어 패턴)
+    if #available(iOS 26.0, *) {
+        let nav = UINavigationController(rootViewController: vc)
+        nav.modalPresentationStyle = .fullScreen
+        present(nav, animated: true)
+    } else {
+        vc.modalPresentationStyle = .fullScreen
+        present(vc, animated: true)
+    }
+}
+```
+
+### 4-2. FaceScanGroupCell.swift (신규)
+
+**위치:** `SweepPic/Features/FaceScan/UI/FaceScanGroupCell.swift`
+
+UITableViewCell:
+
+**레이아웃 스펙:**
+| 속성 | 값 | 참조 |
+|------|-----|------|
+| 셀 높이 | 96pt | 썸네일 80pt + 상 8pt + 하 8pt |
+| 썸네일 크기 | 80×80pt 정사각형 | |
+| 썸네일 간격 | 4pt | 그리드 셀 간격 2pt보다 넓게 (독립 그룹 느낌) |
+| 좌측 패딩 | 16pt | 앱 표준 margin (20pt에서 조정) |
+| 우측 | 패딩 없음 (clipsToBounds로 잘림) | |
+| 셀 배경 | .systemBackground | 앱 표준 |
+| 구분선 | 셀 사이 1px 구분선 (.separator) | 앱 표준 패턴 |
+
+**썸네일 스타일:** (PhotoCell 패턴)
+| 속성 | 값 |
+|------|-----|
+| contentMode | .scaleAspectFill |
+| backgroundColor | .systemGray6 (플레이스홀더) |
+| clipsToBounds | true |
+| cornerRadius | 0 (사각) |
+
+**썸네일 로딩:** PHCachingImageManager, 80px 타겟 사이즈
+
+**dim 상태:**
+| 속성 | 값 |
+|------|-----|
+| 썸네일 영역 alpha | 0.3 |
+| "정리 완료" 라벨 | 14pt .medium, .white, 셀 중앙 |
+| "정리 완료" 배경 | 없음 (dim된 썸네일 위에 직접 표시) |
+| 체크마크 | SF Symbol `checkmark.circle.fill`, .systemBlue, 라벨 좌측 |
+
+### 4-3. FaceScanProgressBar.swift (신규)
+
+**위치:** `SweepPic/Features/FaceScan/UI/FaceScanProgressBar.swift`
+
+UIView (tableView 상단에 고정):
+
+**레이아웃 스펙:**
+| 속성 | 값 | 참조 |
+|------|-----|------|
+| 전체 높이 | 48pt | |
+| 좌우 패딩 | 20pt | 앱 표준 |
+| 상 패딩 | 8pt | |
+| 하 패딩 | 8pt | |
+| 프로그레스 바 높이 | UIProgressView 기본 (4pt) | |
+
+**프로그레스 바 스타일:** (CleanupProgressView 패턴)
+| 속성 | 값 |
+|------|-----|
+| tintColor | .systemBlue |
+| trackTintColor | .systemGray5 |
+
+**라벨 스타일:**
+| 속성 | 값 |
+|------|-----|
+| 폰트 | 13pt, .regular |
+| 색상 | .secondaryLabel |
+| 정렬 | .center |
+| 진행 중 | "N그룹 발견 · N / 1,000장 검색" |
+| 완료 | "분석 완료 · N그룹 발견" |
+| 0그룹 완료 | "분석 완료 · 발견된 그룹 없음" |
+
+**fade out:** 완료 후 2초 대기 → UIView.animate(duration: 0.5) alpha → 0 → removeFromSuperview
 
 ---
 
-## 12. 신규 파일 구조
+## Phase 5: FaceComparisonVC 분기
 
+### 5-1. 모드 enum 추가
+
+**파일:** `SweepPic/Features/SimilarPhoto/UI/FaceComparisonViewController.swift`
+
+```swift
+enum FaceComparisonMode {
+    case viewer                                    // 기존 뷰어 동작
+    case faceScan(initialSelected: Set<String>)    // FaceScan 재진입
+}
 ```
-SweepPic/Features/FaceScan/
-├── Models/
-│   ├── FaceScanMethod.swift          # 스캔 방식 enum
-│   ├── FaceScanProgress.swift        # 진행 상황 모델
-│   └── FaceScanSession.swift         # 세션 저장 (이어서 정리용)
-├── Service/
-│   └── FaceScanService.swift         # 스캔 엔진
-├── UI/
-│   ├── FaceScanMethodSheet.swift     # 방식 선택 시트
-│   ├── FaceScanListViewController.swift  # 그룹 목록 화면
-│   ├── FaceScanGroupCell.swift       # 그룹 셀
-│   └── FaceScanProgressBar.swift     # 미니 진행바
-└── GridViewController+FaceScan.swift # 메뉴 연결
+
+### 5-2. init 확장
+
+```swift
+init(
+    comparisonGroup: ComparisonGroup,
+    mode: FaceComparisonMode = .viewer,    // 추가
+    trashStore: TrashStoreProtocol = TrashStore.shared,
+    cache: any SimilarityCacheProtocol = SimilarityCache.shared
+)
+```
+
+- `.faceScan(initialSelected:)` 모드일 때 selectedAssetIDs를 초기값으로 설정
+- viewDidLoad에서 초기 선택 상태 반영
+
+### 5-3. deleteButtonTapped() 분기
+
+```swift
+@objc private func deleteButtonTapped() {
+    switch mode {
+    case .viewer:
+        // 기존 로직 그대로
+
+    case .faceScan(let initialSelected):
+        let currentSelected = selectedAssetIDs
+        let toDelete = currentSelected.subtracting(initialSelected)
+        let toRestore = initialSelected.subtracting(currentSelected)
+
+        // 새로 삭제
+        if !toDelete.isEmpty {
+            trashStore.moveToTrash(assetIDs: Array(toDelete))
+        }
+        // 복원 (방어: 실제 trash에 있는지 확인)
+        if !toRestore.isEmpty {
+            let actuallyTrashed = toRestore.filter { trashStore.isTrashed($0) }
+            if !actuallyTrashed.isEmpty {
+                trashStore.restore(assetIDs: Array(actuallyTrashed))
+            }
+        }
+
+        delegate?.faceComparisonViewController(self, didApplyChanges: currentSelected)
+    }
+}
+```
+
+### 5-4. cancelButtonTapped() 분기
+
+```swift
+@objc private func cancelButtonTapped() {
+    switch mode {
+    case .viewer:
+        // 기존 로직 그대로
+
+    case .faceScan(let initialSelected):
+        let hasChanges = selectedAssetIDs != initialSelected
+        if hasChanges {
+            // 팝업: "변경사항을 적용하시겠습니까?"
+            showChangesAlert(initialSelected: initialSelected)
+        } else {
+            dismiss(animated: true) { [weak self] in
+                self?.delegate?.faceComparisonViewControllerDidClose(self!)
+            }
+        }
+    }
+}
+
+private func showChangesAlert(initialSelected: Set<String>) {
+    let alert = UIAlertController(
+        title: nil,
+        message: "변경사항을 적용하시겠습니까?",
+        preferredStyle: .alert
+    )
+    alert.addAction(UIAlertAction(title: "적용", style: .default) { [weak self] _ in
+        self?.applyDiffAndDismiss(initialSelected: initialSelected)
+    })
+    alert.addAction(UIAlertAction(title: "취소", style: .cancel) { [weak self] _ in
+        self?.dismiss(animated: true) { ... didClose }
+    })
+    present(alert, animated: true)
+}
+```
+
+### 5-5. FaceComparisonDelegate 확장
+
+```swift
+protocol FaceComparisonDelegate: AnyObject {
+    // 기존
+    func faceComparisonViewController(_:, didDeletePhotos:)
+    func faceComparisonViewControllerDidClose(_:)
+    // 추가 (FaceScan 모드용)
+    func faceComparisonViewController(_:, didApplyChanges finalSelectedAssetIDs: Set<String>)
+}
+
+// 기본 구현 (기존 코드 깨지지 않도록)
+extension FaceComparisonDelegate {
+    func faceComparisonViewController(_:, didApplyChanges:) {}
+}
+```
+
+### 5-6. FaceScanListVC의 delegate 구현
+
+FaceScan 모드에서는 첫 진입이든 재진입이든 항상 `didApplyChanges`가 호출됨.
+(첫 진입: initialSelected = [] → diff = 선택한 것 전부 새 삭제)
+`didDeletePhotos`는 기존 뷰어(.viewer 모드)에서만 호출됨.
+
+```swift
+extension FaceScanListViewController: FaceComparisonDelegate {
+    func faceComparisonViewController(_, didApplyChanges finalSelected: Set<String>) {
+        guard let groupID = presentedGroupID else { return }
+        // 최종 선택 상태로 교체 + dim 갱신
+        deletedAssetsByGroup[groupID] = finalSelected
+        presentedGroupID = nil
+        dismiss(animated: true) { [weak self] in
+            self?.tableView.reloadData()  // dim 상태 반영
+        }
+    }
+
+    func faceComparisonViewControllerDidClose(_ vc: FaceComparisonViewController) {
+        presentedGroupID = nil
+        // 아무것도 안 하고 닫음 (변경사항 없이 뒤로가기)
+    }
+
+    // 기존 뷰어용 — FaceScan에서는 호출되지 않음
+    func faceComparisonViewController(_, didDeletePhotos: [String]) {}
+}
 ```
 
 ---
 
-## 13. 검토에서 발견된 기술적 고려사항
+## Phase 6: 세션 저장 + 이어서 정리
 
-구현 시 처리해야 할 기술적 문제들 (설계 논의 불필요, 구현 시 해결):
+### 6-1. FaceScanService 내 세션 저장
 
-| 항목 | 내용 |
+CleanupPreviewService 패턴 참조:
+```swift
+// UserDefaults 키
+private static let lastScanDateKey = "FaceScanSession.lastScanDate"
+private static let lastAssetIDKey = "FaceScanSession.lastAssetID"
+private static let byYearLastScanDateKey = "FaceScanSession.byYear.lastScanDate"
+private static let byYearLastAssetIDKey = "FaceScanSession.byYear.lastAssetID"
+private static let byYearYearKey = "FaceScanSession.byYear.year"
+private static let byYearCanContinueKey = "FaceScanSession.byYear.canContinue"
+
+// static 접근
+static var canContinue: Bool { lastScanDate != nil }
+static var lastScanDate: Date? { UserDefaults... }
+
+// 연도별
+static func canContinueByYear(_ year: Int) -> Bool { ... }
+static func lastScanDateByYear(_ year: Int) -> Date? { ... }
+```
+
+### 6-2. FaceScanMethodSheet에서 canContinue 연동
+
+- `FaceScanService.canContinue` == true → "이어서 정리" 활성화
+- `FaceScanService.lastScanDate` → 날짜 표시
+
+---
+
+## Phase 7: 통합 테스트 + 정리
+
+### 7-1. 빈 상태 UI 최종 확인
+- 분석 중 + 0그룹: "분석 중" 텍스트
+- 분석 완료 + 0그룹: "비교할 인물사진 그룹을 찾지 못했습니다"
+
+### 7-2. dim 상태 갱신 로직
+- 비교 화면에서 돌아온 후 viewWillAppear에서 dim 갱신
+- deletedAssetsByGroup이 빈 Set → dim 해제
+- deletedAssetsByGroup이 비어있지 않음 → dim 유지
+
+### 7-3. 진행바 fade out
+- 분석 완료 → "분석 완료 · N그룹 발견" → 2~3초 후 UIView.animate fadeOut
+
+### 7-4. 뒤로가기(pop) 인터셉트
+- UINavigationControllerDelegate 또는 willMove(toParent:) 오버라이드
+- 분석 중 → Task.cancel()
+- 분석 완료 → 세션 이미 저장됨, 추가 작업 없음
+
+---
+
+## 수정 대상 기존 파일 목록
+
+| 파일 | 변경 내용 |
+|------|----------|
+| `SimilarPhoto/Models/SimilarityConstants.swift` | maxComparisonGroupSize 8→12 |
+| `SimilarPhoto/UI/FaceComparisonViewController.swift` | mode enum, init 확장, delete/cancel 분기 |
+| `Grid/GridViewController+Cleanup.swift` | 메뉴명 변경 + 활성화 |
+
+**수정하지 않는 기존 파일 (완전 격리):**
+- `SimilarityAnalysisQueue.swift` — 수정 없음
+- `SimilarityCache.swift` — 수정 없음
+- `AnalysisRequest.swift` — 수정 없음 (.faceScan 불필요, 전용 서비스 사용)
+
+## 신규 파일 목록
+
+| 파일 | 역할 |
 |------|------|
-| AnalysisSource 확장 | `.faceScan` case 추가 (취소/우선순위 관리) |
-| SimilarityCache 멤버 복원 | `removeMemberFromGroup()`의 역연산 메서드 추가 필요 |
-| FaceComparisonVC 분기 | 초기 선택 상태 주입, cancel/delete 동작 분기 |
-| formGroupsForRange() 부작용 | `prepareForReanalysis()`가 기존 캐시 정리 — FaceScan용 분리 필요 |
-| LRU 캐시 크기 | 500 → 1,500 증가 검토 (1,000장 분석 시 기존 캐시 eviction 방지) |
-| ComparisonGroup 생성 | FaceScan용: 그룹 첫 번째 사진을 currentAssetID로 사용 |
-| 재진입 시 그룹 데이터 | FaceScanListVC가 콜백으로 받은 그룹 데이터를 보유 → 캐시가 아닌 자체 데이터에서 ComparisonGroup 생성 (캐시 무효화와 무관하게 재진입 가능) |
-| restore 방어 코드 | diff에서 복원 시 `trashStore.restore()` 호출 전 실제 trash 상태 확인 |
-| 분석 대상 필터 | 삭제대기함(`TrashStore`) 사진은 분석 대상에서 제외 |
+| `FaceScan/Models/FaceScanMethod.swift` | 스캔 방식 enum |
+| `FaceScan/Models/FaceScanProgress.swift` | 진행 상황 모델 |
+| `FaceScan/Models/FaceScanSession.swift` | 세션 데이터 (Codable) |
+| `FaceScan/Models/FaceScanGroup.swift` | 그룹 데이터 모델 |
+| `FaceScan/Models/FaceScanConstants.swift` | 상수 정의 |
+| `FaceScan/Service/FaceScanCache.swift` | 전용 캐시 (SimilarityCacheProtocol) |
+| `FaceScan/Service/FaceScanService.swift` | 스캔 엔진 |
+| `FaceScan/UI/FaceScanMethodSheet.swift` | 방식 선택 시트 |
+| `FaceScan/UI/FaceScanListViewController.swift` | 그룹 목록 화면 |
+| `FaceScan/UI/FaceScanGroupCell.swift` | 그룹 셀 |
+| `FaceScan/UI/FaceScanProgressBar.swift` | 미니 진행바 |
+| `FaceScan/GridViewController+FaceScan.swift` | 메뉴 연결 |
+
+## 검증 방법
+
+1. **빌드 확인**: `xcodebuild -project SweepPic/SweepPic.xcodeproj -scheme SweepPic -destination 'platform=iOS Simulator,name=iPhone 17'`
+2. **메뉴 동작**: 간편정리 > 인물사진 비교정리 탭 → 방식 선택 시트 표시
+3. **분석 흐름**: 최신사진부터 → 빈 목록 진입 → 그룹 하나씩 추가 → 진행바 업데이트
+4. **비교 화면**: 그룹 탭 → FaceComparisonVC present → 삭제 → dismiss → dim 처리
+5. **재진입**: dim 그룹 탭 → 선택 상태 유지 → 수정 → 삭제(diff) 또는 뒤로가기(팝업)
+6. **이어서 정리**: 분석 완료 후 닫기 → 다시 메뉴 → 이어서 정리 활성화
+7. **12장 제한**: 뷰어에서 +버튼 → 비교 화면 최대 12장 표시
 
 ---
 
-## 14. 결정 사항 요약
+## Phase 8: UI 레이아웃 수정 (구현 후 발견된 문제)
 
-| 항목 | 결정 |
-|------|------|
-| 메뉴 이름 | 인물사진 비교정리 |
-| 메뉴 위치 | 간편정리 서브메뉴 (기존 disabled 항목 활성화) |
-| 하위 메뉴 이름 변경 | 저품질자동정리 → 저품질사진 자동정리 |
-| 진행률 화면 | 없음 — 바로 목록 화면 진입 |
-| 그룹 목록 | 스크롤 (페이징 없음) |
-| 그룹 셀 | 썸네일 가로 나열, 우측 잘림, 셀 전체 탭 |
-| 상한 | 1,000장 OR 30그룹 (먼저 도달 시 종료) |
-| 비교 화면 전환 | present (fullScreen modal) |
-| 비교 그룹 최대 장수 | 12장 (기존 8장에서 변경, 뷰어도 동일 적용) |
-| dim 그룹 탭 | 재진입 가능, 선택 수정 가능 |
-| "삭제" 버튼 | 텍스트 유지, 재진입 시 diff 적용 |
-| 뒤로가기 (비교화면) | 변동사항 있으면 팝업 |
-| 뒤로가기 (목록화면, 분석 중) | 분석 중단 + 데이터 버림 |
-| 뒤로가기 (목록화면, 분석 완료) | 위치만 저장 (이어서 정리용) |
-| 삭제대기함 체크 | 없음 |
-| 진행바 완료 후 | "분석 완료 · N그룹 발견" → 2~3초 fade out |
+### 근본 원인: 레이아웃 구조가 PreviewGridVC 패턴과 다름
+
+```
+현재 (잘못됨):
+  [헤더] ← 고정
+  [진행바] ← 고정 (48pt) — fade out 해도 공간 남음
+  [테이블뷰] ← 진행바 아래부터
+
+변경 (PreviewGridVC 패턴):
+  [테이블뷰] ← view 전체 (edge-to-edge, top=view.top)
+  [헤더] ← 오버레이 (view 위에)
+  [진행바] ← 오버레이 (헤더 아래)
+  → contentInset.top = 헤더 + 진행바
+  → 진행바 fade out 시 contentInset 줄임 → 테이블 자연스럽게 올라감
+```
+
+### 수정 대상 파일: 3개
+
+**FaceScanListViewController.swift** — 대폭 수정
+**FaceScanProgressBar.swift** — 일부 수정
+**FaceScanGroupCell.swift** — 사소한 수정
+
+### 수정 항목 상세 (12개)
+
+#### FaceScanListViewController.swift
+
+**#1. 테이블뷰 edge-to-edge 변경**
+- 현재: `tableView.top = progressBar.bottom`
+- 변경: `tableView.top = view.top`, `bottom = view.bottom` (PreviewGridVC:217-220)
+- `contentInsetAdjustmentBehavior = .never` 추가
+
+**#2. 미사용 변수 `progressTopAnchor` 제거** (:162-169)
+- 선언만 하고 사용 안 함
+
+**#3. 진행바를 오버레이로 변경**
+- 현재: auto layout으로 고정 (테이블뷰 위)
+- 변경: view 위에 오버레이 (테이블뷰 위에 떠있는 구조)
+- top = 커스텀 헤더 아래 (iOS 16~25) / safeArea.top (iOS 26)
+
+**#4. contentInset 동적 관리 추가**
+- `updateTableViewInsets()` 메서드 추가
+- top = 헤더높이 + 진행바높이 (진행 중) → 헤더높이만 (진행 완료 후)
+- bottom = safeAreaInsets.bottom
+- `viewSafeAreaInsetsDidChange()`에서 호출
+
+**#5. 진행바 fade out 시 contentInset 갱신**
+- fade out 애니메이션과 함께 contentInset.top 줄임
+- 테이블이 자연스럽게 올라감
+
+**#6. 진행바 높이 constraint 참조 보유**
+- `progressBarHeightConstraint` 프로퍼티 추가
+- fade out 시 height를 0으로 애니메이션 (또는 isHidden + inset 갱신)
+
+**#7. deinit 추가 — Task 취소**
+```swift
+deinit {
+    scanTask?.cancel()
+}
+```
+
+**#8. emptyLabel topAnchor 제약 추가**
+- `emptyLabel.top >= progressBar.bottom + 20` (겹침 방지)
+
+**#9. iOS 26 setupHeader 명시화**
+- 빈 주석 → `navigationItem.hidesBackButton = false` 명시
+
+**#10. 헤더/진행바를 테이블뷰 뒤에 addSubview 후 bringToFront**
+- PreviewGridVC 패턴: collectionView → setupHeader → bringToFront
+
+#### FaceScanProgressBar.swift
+
+**#11. removeFromSuperview 제거**
+- 현재: fade out 완료 시 `removeFromSuperview()` 호출
+- 변경: `isHidden = true`만 (constraint 유지)
+- 부모(FaceScanListVC)에서 contentInset 갱신 담당
+
+#### FaceScanGroupCell.swift
+
+**#12. 확인 완료 — 사소한 수정 없음**
+- 재사용 안전장치 ✅
+- dim 처리 ✅
+- 썸네일 로딩 ✅
+
+### iOS 16~25 vs 26 분기 확인
+
+| 항목 | iOS 16~25 | iOS 26 | 상태 |
+|------|-----------|--------|------|
+| 네비바 | 숨김 유지 (TabBarController:192) | 시스템 표시 | ✅ |
+| FloatingOverlay | prefersFloatingOverlayHidden=true | 없음 | ✅ |
+| 헤더 | 커스텀 (blur+딤+backButton+타이틀) | 시스템 네비바 | ✅ |
+| 뒤로가기 | 커스텀 backButton | 시스템 자동 | ✅ |
+| contentInset.top | 헤더높이(safeArea+44+35) + 진행바(48) | safeArea.top + 진행바(48) | ✅ |
+| FaceComparisonVC present | 직접 present | NavController 감싸기 | ✅ |
+| 스와이프 백 | 네비바 숨김→비활성 가능 (PreviewGridVC도 동일) | 정상 | ✅ 허용 |
