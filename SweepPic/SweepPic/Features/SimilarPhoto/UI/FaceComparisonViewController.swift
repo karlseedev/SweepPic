@@ -137,8 +137,11 @@ final class FaceComparisonViewController: UIViewController {
     /// 삭제대기함 스토어
     private let trashStore: TrashStoreProtocol
 
-    /// 유사 사진 캐시
+    /// 유사 사진 캐시 (읽기 전용)
     private let cache: any SimilarityCacheProtocol
+
+    /// 캐시 쓰기 (그룹 멤버 제거 등, .viewer 모드에서만 사용)
+    private let cacheMutator: (any SimilarityCacheMutating)?
 
     /// 동작 모드 (뷰어 또는 FaceScan)
     private let mode: FaceComparisonMode
@@ -249,16 +252,19 @@ final class FaceComparisonViewController: UIViewController {
     ///   - mode: 동작 모드 (.viewer: 기존 뷰어, .faceScan: diff 기반)
     ///   - trashStore: 삭제대기함 스토어
     ///   - cache: 유사 사진 캐시 (FaceScan: FaceScanCache 주입)
+    ///   - cacheMutator: 캐시 쓰기 (nil이면 그룹 멤버 제거 안 함, FaceScan 모드용)
     init(
         comparisonGroup: ComparisonGroup,
         mode: FaceComparisonMode = .viewer,
         trashStore: TrashStoreProtocol = TrashStore.shared,
-        cache: any SimilarityCacheProtocol = SimilarityCache.shared
+        cache: any SimilarityCacheProtocol = SimilarityCache.shared,
+        cacheMutator: (any SimilarityCacheMutating)? = SimilarityCache.shared
     ) {
         self.comparisonGroup = comparisonGroup
         self.mode = mode
         self.trashStore = trashStore
         self.cache = cache
+        self.cacheMutator = cacheMutator
         super.init(nibName: nil, bundle: nil)
 
         // FaceScan 모드: 초기 선택 상태 설정
@@ -589,11 +595,14 @@ final class FaceComparisonViewController: UIViewController {
     @objc private func cancelButtonTapped() {
         switch mode {
         case .viewer:
-            // 기존 뷰어 동작: 선택 해제 후 닫기
-            selectedAssetIDs.removeAll()
-            dismiss(animated: true) { [weak self] in
-                guard let self = self else { return }
-                self.delegate?.faceComparisonViewControllerDidClose(self)
+            // 뷰어 동작: 선택이 있으면 확인 팝업, 없으면 바로 닫기
+            if !selectedAssetIDs.isEmpty {
+                showViewerCancelAlert()
+            } else {
+                dismiss(animated: true) { [weak self] in
+                    guard let self = self else { return }
+                    self.delegate?.faceComparisonViewControllerDidClose(self)
+                }
             }
 
         case .faceScan(let initialSelected):
@@ -629,7 +638,7 @@ final class FaceComparisonViewController: UIViewController {
 
             Task { @MainActor in
                 for assetID in deletedIDs {
-                    _ = await cache.removeMemberFromGroup(assetID, groupID: comparisonGroup.sourceGroupID)
+                    _ = await cacheMutator?.removeMemberFromGroup(assetID, groupID: comparisonGroup.sourceGroupID)
                 }
                 selectedAssetIDs.removeAll()
                 delegate?.faceComparisonViewController(self, didDeletePhotos: deletedIDs)
@@ -670,7 +679,25 @@ final class FaceComparisonViewController: UIViewController {
         delegate?.faceComparisonViewController(self, didApplyChanges: currentSelected)
     }
 
-    /// "변경사항을 적용하시겠습니까?" 팝업
+    /// .viewer 모드: "선택을 취소하시겠습니까?" 팝업
+    private func showViewerCancelAlert() {
+        let alert = UIAlertController(
+            title: nil,
+            message: "선택을 취소하시겠습니까?",
+            preferredStyle: .alert
+        )
+        alert.addAction(UIAlertAction(title: "취소", style: .cancel))
+        alert.addAction(UIAlertAction(title: "확인", style: .destructive) { [weak self] _ in
+            guard let self = self else { return }
+            self.selectedAssetIDs.removeAll()
+            self.dismiss(animated: true) {
+                self.delegate?.faceComparisonViewControllerDidClose(self)
+            }
+        })
+        present(alert, animated: true)
+    }
+
+    /// .faceScan 모드: "변경사항을 적용하시겠습니까?" 팝업
     private func showChangesAlert(initialSelected: Set<String>) {
         let alert = UIAlertController(
             title: nil,

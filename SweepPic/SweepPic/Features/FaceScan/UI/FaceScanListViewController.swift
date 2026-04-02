@@ -578,11 +578,12 @@ final class FaceScanListViewController: UIViewController, BarsVisibilityControll
         // 초기 선택 상태 = 삭제된 assetID 집합
         let initialSelected = deletedAssetsByGroup[group.groupID] ?? []
 
-        // FaceComparisonVC 생성 (전용 캐시 주입)
+        // FaceComparisonVC 생성 (전용 캐시 주입, FaceScan은 diff 기반이므로 cacheMutator 불필요)
         let vc = FaceComparisonViewController(
             comparisonGroup: comparisonGroup,
             mode: .faceScan(initialSelected: initialSelected),
-            cache: faceScanCache
+            cache: faceScanCache,
+            cacheMutator: nil
         )
         vc.delegate = self
 

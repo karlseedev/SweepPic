@@ -23,9 +23,9 @@
 import Foundation
 import UIKit
 
-// MARK: - SimilarityCacheProtocol
+// MARK: - SimilarityCacheProtocol (읽기 전용)
 
-/// SimilarityCache 의존성 주입을 위한 프로토콜
+/// SimilarityCache 읽기 전용 프로토콜
 ///
 /// FaceComparisonViewController에서 테스트 가능성을 위해 사용됩니다.
 /// Actor 기반이므로 호출 시 await가 필요합니다.
@@ -38,7 +38,15 @@ protocol SimilarityCacheProtocol: Actor {
 
     /// 그룹 멤버 목록을 조회합니다.
     func getGroupMembers(groupID: String) -> [String]
+}
 
+// MARK: - SimilarityCacheMutating (쓰기)
+
+/// SimilarityCache 쓰기 프로토콜
+///
+/// 그룹 멤버 제거 등 캐시 변경 작업을 위한 프로토콜입니다.
+/// SimilarityCache만 채택하며, .viewer 모드에서 사용됩니다.
+protocol SimilarityCacheMutating: SimilarityCacheProtocol {
     /// 그룹에서 멤버를 제거합니다.
     @discardableResult
     func removeMemberFromGroup(_ assetID: String, groupID: String) -> Bool
@@ -52,7 +60,7 @@ protocol SimilarityCacheProtocol: Actor {
 /// 최대 500장까지 캐시하며, 초과 시 LRU 정책으로 오래된 항목부터 제거합니다.
 ///
 /// - Important: Actor 기반이므로 모든 메서드 호출 시 `await` 키워드가 필요합니다.
-actor SimilarityCache: SimilarityCacheProtocol {
+actor SimilarityCache: SimilarityCacheMutating {
 
     // MARK: - Singleton
 

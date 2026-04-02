@@ -2,20 +2,22 @@
 //  FaceScanCache.swift
 //  SweepPic
 //
-//  인물사진 비교정리 — 전용 캐시
-//  SimilarityCacheProtocol을 준수하는 경량 캐시.
+//  인물사진 비교정리 — 읽기 전용 조회 캐시
+//  SimilarityCacheProtocol(읽기 전용)을 준수하는 경량 캐시.
 //  기존 SimilarityCache.shared와 완전 격리 — 기존 그리드/뷰어 분석에 영향 제로.
+//  쓰기(removeMemberFromGroup)는 불필요 — FaceScan은 diff 기반 삭제/복원 사용.
 //
 //  생명주기: FaceScanListVC가 소유 → 화면 닫히면 자연스럽게 해제
 //
 
 import Foundation
 
-/// FaceScan 전용 경량 캐시
+/// FaceScan 전용 읽기 전용 조회 캐시
 ///
 /// FaceComparisonVC가 `cache: any SimilarityCacheProtocol` 파라미터로 받아서
 /// 얼굴 데이터, 그룹 멤버, 유효 슬롯을 조회합니다.
 /// 기존 `SimilarityCache.shared`를 대체하여 주입됩니다.
+/// 쓰기(removeMemberFromGroup)는 미채택 — .faceScan 모드는 diff 기반 삭제.
 actor FaceScanCache: SimilarityCacheProtocol {
 
     // MARK: - 저장소
@@ -44,16 +46,6 @@ actor FaceScanCache: SimilarityCacheProtocol {
     /// 그룹 멤버 목록을 조회합니다.
     func getGroupMembers(groupID: String) -> [String] {
         return groups[groupID]?.memberAssetIDs ?? []
-    }
-
-    /// 그룹에서 멤버를 제거합니다.
-    /// - Note: FaceScan 모드에서는 캐시 무효화 없이 단순 제거만 수행
-    @discardableResult
-    func removeMemberFromGroup(_ assetID: String, groupID: String) -> Bool {
-        guard var group = groups[groupID] else { return false }
-        group.removeMember(assetID)
-        groups[groupID] = group
-        return group.isValid
     }
 
     // MARK: - FaceScanService 전용 저장 메서드
