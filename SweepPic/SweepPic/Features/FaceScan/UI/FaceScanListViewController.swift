@@ -79,8 +79,7 @@ final class FaceScanListViewController: UIViewController, BarsVisibilityControll
         tv.backgroundColor = .systemBackground
         tv.dataSource = self
         tv.delegate = self
-        tv.separatorStyle = .singleLine
-        tv.separatorColor = .separator
+        tv.separatorStyle = .none
         tv.register(FaceScanGroupCell.self, forCellReuseIdentifier: FaceScanGroupCell.reuseIdentifier)
         tv.rowHeight = FaceScanGroupCell.cellHeight
         tv.contentInsetAdjustmentBehavior = .never  // 수동 inset 관리 (PreviewGridVC 패턴)
@@ -520,6 +519,7 @@ extension FaceScanListViewController: UITableViewDataSource {
         let group = groups[indexPath.row]
         let isDimmed = isGroupDimmed(group.groupID)
         cell.configure(with: group, isDimmed: isDimmed)
+        cell.showsTopSeparator = indexPath.row > 0
 
         return cell
     }

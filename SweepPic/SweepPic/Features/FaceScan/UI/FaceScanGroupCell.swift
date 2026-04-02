@@ -78,7 +78,21 @@ final class FaceScanGroupCell: UITableViewCell {
         return label
     }()
 
+    /// 상단 구분선 (2번째 셀부터 표시)
+    private let topSeparator: UIView = {
+        let view = UIView()
+        view.translatesAutoresizingMaskIntoConstraints = false
+        view.backgroundColor = .separator
+        view.isHidden = true
+        return view
+    }()
+
     // MARK: - Properties
+
+    /// 상단 구분선 표시 여부 (첫 번째 셀은 false)
+    var showsTopSeparator: Bool = false {
+        didSet { topSeparator.isHidden = !showsTopSeparator }
+    }
 
     /// 현재 표시 중인 그룹 ID (재사용 안전장치)
     var currentGroupID: String?
@@ -105,6 +119,15 @@ final class FaceScanGroupCell: UITableViewCell {
     private func setupUI() {
         backgroundColor = .systemBackground
         selectionStyle = .none
+
+        // 상단 구분선
+        contentView.addSubview(topSeparator)
+        NSLayoutConstraint.activate([
+            topSeparator.topAnchor.constraint(equalTo: contentView.topAnchor),
+            topSeparator.leadingAnchor.constraint(equalTo: contentView.leadingAnchor),
+            topSeparator.trailingAnchor.constraint(equalTo: contentView.trailingAnchor),
+            topSeparator.heightAnchor.constraint(equalToConstant: 1.0 / UIScreen.main.scale),
+        ])
 
         // 썸네일 컨테이너
         contentView.addSubview(thumbnailContainer)
@@ -155,6 +178,7 @@ final class FaceScanGroupCell: UITableViewCell {
         // dim 해제
         dimOverlay.isHidden = true
         completionLabel.isHidden = true
+        topSeparator.isHidden = true
 
         currentGroupID = nil
     }
