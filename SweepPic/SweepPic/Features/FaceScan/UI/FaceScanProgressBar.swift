@@ -45,7 +45,6 @@ final class FaceScanProgressBar: UIView {
         label.font = .systemFont(ofSize: 13, weight: .regular)
         label.textColor = .secondaryLabel
         label.textAlignment = .center
-        label.text = "0그룹 발견 · 0 / 1,000장 검색"
         return label
     }()
 
@@ -89,7 +88,23 @@ final class FaceScanProgressBar: UIView {
     /// 진행 상황 업데이트
     func update(with progress: FaceScanProgress) {
         progressView.setProgress(progress.progress, animated: true)
-        statusLabel.text = progress.progressText
+
+        // "분석 중" (bold, white) + " · N그룹 발견 · N / 1,000장 검색" (regular, secondaryLabel)
+        let attrStr = NSMutableAttributedString(
+            string: "분석 중",
+            attributes: [
+                .font: UIFont.systemFont(ofSize: 13, weight: .bold),
+                .foregroundColor: UIColor.white,
+            ]
+        )
+        attrStr.append(NSAttributedString(
+            string: " · \(progress.progressText)",
+            attributes: [
+                .font: UIFont.systemFont(ofSize: 13, weight: .regular),
+                .foregroundColor: UIColor.secondaryLabel,
+            ]
+        ))
+        statusLabel.attributedText = attrStr
     }
 
     /// 분석 완료 처리 — 완료 문구 표시 (fade out은 부모 VC가 contentInset과 동시 처리)
