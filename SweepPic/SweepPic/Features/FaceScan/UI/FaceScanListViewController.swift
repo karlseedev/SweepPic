@@ -143,10 +143,13 @@ final class FaceScanListViewController: UIViewController, BarsVisibilityControll
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
 
-        // iOS 26: 시스템 네비바 표시 (뒤로가기 + 타이틀)
+        // iOS 26: 시스템 네비바 표시
         if #available(iOS 26.0, *) {
             navigationController?.setNavigationBarHidden(false, animated: animated)
         }
+
+        // 스와이프 백 차단 (닫기 시 알럿 표시를 위해)
+        navigationController?.interactivePopGestureRecognizer?.isEnabled = false
 
         // 비교 화면에서 돌아온 경우 dim 상태 갱신
         tableView.reloadData()
@@ -159,6 +162,9 @@ final class FaceScanListViewController: UIViewController, BarsVisibilityControll
         if #unavailable(iOS 26.0) {
             navigationController?.setNavigationBarHidden(true, animated: animated)
         }
+
+        // 스와이프 백 복원
+        navigationController?.interactivePopGestureRecognizer?.isEnabled = true
     }
 
     override func willMove(toParent parent: UIViewController?) {
@@ -232,7 +238,12 @@ final class FaceScanListViewController: UIViewController, BarsVisibilityControll
     /// 헤더 구성 (iOS 버전별 분기)
     private func setupHeader() {
         if #available(iOS 26.0, *) {
-            // iOS 26: 시스템 네비바 — "다음 분석" 우측 버튼
+            // iOS 26: 시스템 네비바 — 좌측 닫기(X) + 우측 "다음 분석"
+            navigationItem.leftBarButtonItem = UIBarButtonItem(
+                image: UIImage(systemName: "xmark"),
+                style: .plain,
+                target: self, action: #selector(closeButtonTapped)
+            )
             let barButton = UIBarButtonItem(
                 title: "다음 분석", style: .plain,
                 target: self, action: #selector(nextAnalysisTapped)
@@ -282,10 +293,10 @@ final class FaceScanListViewController: UIViewController, BarsVisibilityControll
         header.layer.addSublayer(gradientLayer)
         self.headerGradientLayer = gradientLayer
 
-        // 뒤로가기 버튼 (GlassIconButton)
-        let backButton = GlassIconButton(icon: "chevron.left", size: .medium, tintColor: .white)
+        // 닫기 버튼 (GlassIconButton — xmark)
+        let backButton = GlassIconButton(icon: "xmark", size: .medium, tintColor: .white)
         backButton.translatesAutoresizingMaskIntoConstraints = false
-        backButton.addTarget(self, action: #selector(backButtonTapped), for: .touchUpInside)
+        backButton.addTarget(self, action: #selector(closeButtonTapped), for: .touchUpInside)
         header.addSubview(backButton)
 
         // 타이틀 라벨
@@ -344,8 +355,9 @@ final class FaceScanListViewController: UIViewController, BarsVisibilityControll
         self.customHeaderView = header
     }
 
-    /// 뒤로가기 버튼 탭 (iOS 16~25)
-    @objc private func backButtonTapped() {
+    /// 닫기 버튼 탭 (iOS 16~25 / iOS 26 공용)
+    @objc private func closeButtonTapped() {
+        // TODO: 상태별 알럿 표시 후 pop
         navigationController?.popViewController(animated: true)
     }
 
