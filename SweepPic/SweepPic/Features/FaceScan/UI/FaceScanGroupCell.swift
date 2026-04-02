@@ -73,21 +73,7 @@ final class FaceScanGroupCell: UITableViewCell {
         label.textAlignment = .center
         label.isHidden = true
 
-        // 체크마크 + 텍스트
-        let attachment = NSTextAttachment()
-        attachment.image = UIImage(systemName: "checkmark.circle.fill")?
-            .withTintColor(.systemBlue, renderingMode: .alwaysOriginal)
-        // 폰트 크기에 맞춰 아이콘 조정
-        let iconSize: CGFloat = 16
-        attachment.bounds = CGRect(
-            x: 0,
-            y: (UIFont.systemFont(ofSize: 14).capHeight - iconSize) / 2,
-            width: iconSize,
-            height: iconSize
-        )
-        let attrStr = NSMutableAttributedString(attachment: attachment)
-        attrStr.append(NSAttributedString(string: " 정리 완료"))
-        label.attributedText = attrStr
+        label.text = "정리 완료"
 
         return label
     }()
@@ -198,7 +184,7 @@ final class FaceScanGroupCell: UITableViewCell {
         dimOverlay.isHidden = !dimmed
         completionLabel.isHidden = !dimmed
         // 썸네일 알파 조정
-        thumbnailContainer.alpha = dimmed ? 0.3 : 1.0
+        thumbnailContainer.alpha = 1.0
     }
 
     // MARK: - Private
