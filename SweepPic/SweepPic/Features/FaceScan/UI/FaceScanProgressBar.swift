@@ -32,7 +32,7 @@ final class FaceScanProgressBar: UIView {
     private lazy var progressView: UIProgressView = {
         let pv = UIProgressView(progressViewStyle: .default)
         pv.translatesAutoresizingMaskIntoConstraints = false
-        pv.tintColor = .systemBlue
+        pv.tintColor = .white
         pv.trackTintColor = .systemGray5
         pv.progress = 0
         return pv
