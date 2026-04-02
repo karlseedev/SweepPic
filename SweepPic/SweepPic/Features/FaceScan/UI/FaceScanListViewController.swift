@@ -33,8 +33,8 @@ final class FaceScanListViewController: UIViewController, BarsVisibilityControll
     /// 스캔 방식
     private let method: FaceScanMethod
 
-    /// 전용 캐시 (FaceComparisonVC에 주입)
-    private let faceScanCache = FaceScanCache()
+    /// 전용 캐시 (FaceComparisonVC에 주입, 다음 분석 시 재생성)
+    private var faceScanCache = FaceScanCache()
 
     /// 스캔 서비스
     private var scanService: FaceScanService?
@@ -54,6 +54,14 @@ final class FaceScanListViewController: UIViewController, BarsVisibilityControll
 
     /// 현재 열려있는 그룹 ID (delegate 콜백에서 사용)
     private var presentedGroupID: String?
+
+    // MARK: - "다음 분석" 버튼
+
+    /// iOS 26: 네비바 우측 버튼
+    private var nextAnalysisBarButton: UIBarButtonItem?
+
+    /// iOS 16~25: 커스텀 헤더 우측 버튼
+    private var nextAnalysisCustomButton: UIButton?
 
     // MARK: - Header (iOS 16~25 커스텀 헤더)
 
@@ -224,8 +232,14 @@ final class FaceScanListViewController: UIViewController, BarsVisibilityControll
     /// 헤더 구성 (iOS 버전별 분기)
     private func setupHeader() {
         if #available(iOS 26.0, *) {
-            // iOS 26: 시스템 네비바 사용 — title은 viewDidLoad에서 설정됨
-            // 뒤로가기 버튼은 시스템이 자동 생성
+            // iOS 26: 시스템 네비바 — "다음 분석" 우측 버튼
+            let barButton = UIBarButtonItem(
+                title: "다음 분석", style: .plain,
+                target: self, action: #selector(nextAnalysisTapped)
+            )
+            barButton.isEnabled = false
+            navigationItem.rightBarButtonItem = barButton
+            nextAnalysisBarButton = barButton
         } else {
             // iOS 16~25: 커스텀 헤더 (PreviewGridVC 패턴)
             setupCustomHeader()
@@ -283,6 +297,18 @@ final class FaceScanListViewController: UIViewController, BarsVisibilityControll
         titleLabel.translatesAutoresizingMaskIntoConstraints = false
         header.addSubview(titleLabel)
 
+        // "다음 분석" 우측 버튼
+        let nextButton = UIButton(type: .system)
+        nextButton.setTitle("다음 분석", for: .normal)
+        nextButton.titleLabel?.font = .systemFont(ofSize: 16, weight: .semibold)
+        nextButton.setTitleColor(.white, for: .normal)
+        nextButton.setTitleColor(.white.withAlphaComponent(0.3), for: .disabled)
+        nextButton.isEnabled = false
+        nextButton.translatesAutoresizingMaskIntoConstraints = false
+        nextButton.addTarget(self, action: #selector(nextAnalysisTapped), for: .touchUpInside)
+        header.addSubview(nextButton)
+        self.nextAnalysisCustomButton = nextButton
+
         NSLayoutConstraint.activate([
             // 헤더
             header.topAnchor.constraint(equalTo: view.topAnchor),
@@ -309,6 +335,11 @@ final class FaceScanListViewController: UIViewController, BarsVisibilityControll
             titleLabel.centerXAnchor.constraint(equalTo: header.centerXAnchor),
             titleLabel.centerYAnchor.constraint(equalTo: backButton.centerYAnchor),
             titleLabel.leadingAnchor.constraint(greaterThanOrEqualTo: backButton.trailingAnchor, constant: 8),
+            titleLabel.trailingAnchor.constraint(lessThanOrEqualTo: nextButton.leadingAnchor, constant: -8),
+
+            // "다음 분석" 우측 버튼
+            nextButton.trailingAnchor.constraint(equalTo: header.trailingAnchor, constant: -16),
+            nextButton.centerYAnchor.constraint(equalTo: backButton.centerYAnchor),
         ])
 
         self.customHeaderView = header
@@ -317,6 +348,37 @@ final class FaceScanListViewController: UIViewController, BarsVisibilityControll
     /// 뒤로가기 버튼 탭 (iOS 16~25)
     @objc private func backButtonTapped() {
         navigationController?.popViewController(animated: true)
+    }
+
+    /// "다음 분석" 버튼 활성/비활성
+    private func setNextAnalysisEnabled(_ enabled: Bool) {
+        nextAnalysisBarButton?.isEnabled = enabled
+        nextAnalysisCustomButton?.isEnabled = enabled
+    }
+
+    /// "다음 분석" 버튼 탭 — 현재 세션 이어서 다음 구간 분석 시작
+    @objc private func nextAnalysisTapped() {
+        // 현재 상태 초기화
+        groups.removeAll()
+        deletedAssetsByGroup.removeAll()
+        isAnalysisComplete = false
+        setNextAnalysisEnabled(false)
+        tableView.reloadData()
+
+        // 진행바 복원
+        progressBar.alpha = 1
+        progressBar.isHidden = false
+        updateTableViewInsets()
+
+        // 빈 상태 라벨 복원
+        emptyLabel.text = "분석 중"
+        emptyLabel.isHidden = false
+
+        // 캐시 재생성 + 이어서 분석 시작
+        scanService?.cancel()
+        scanTask?.cancel()
+        faceScanCache = FaceScanCache()
+        startAnalysis(method: .continueFromLast)
     }
 
     override func viewDidLayoutSubviews() {
@@ -365,15 +427,16 @@ final class FaceScanListViewController: UIViewController, BarsVisibilityControll
 
     // MARK: - Analysis
 
-    /// 스캔 시작
-    private func startAnalysis() {
+    /// 스캔 시작 (method 미지정 시 초기 method 사용)
+    private func startAnalysis(method overrideMethod: FaceScanMethod? = nil) {
+        let scanMethod = overrideMethod ?? self.method
         let service = FaceScanService(cache: faceScanCache)
         self.scanService = service
 
         scanTask = Task { [weak self] in
             do {
                 try await service.analyze(
-                    method: self?.method ?? .fromLatest,
+                    method: scanMethod,
                     onGroupFound: { [weak self] group in
                         self?.handleGroupFound(group)
                     },
@@ -431,6 +494,9 @@ final class FaceScanListViewController: UIViewController, BarsVisibilityControll
         }
 
         Logger.similarPhoto.debug("FaceScanListVC: 분석 완료 — \(self.groups.count)그룹 발견")
+
+        // "다음 분석" 버튼 활성화
+        setNextAnalysisEnabled(true)
 
         // 진행바 fade out + contentInset 동시 애니메이션
         // 진행바가 사라지면서 테이블 콘텐츠가 자연스럽게 올라감
