@@ -106,7 +106,7 @@ final class SFaceRecognizer {
 
         // Core ML 모델 로드
         let config = MLModelConfiguration()
-        config.computeUnits = .all
+        config.computeUnits = .cpuAndNeuralEngine  // GPU는 UI/이미지용으로 남기고 ML은 CPU+ANE로 격리
 
         do {
             self.model = try SFace(configuration: config).model

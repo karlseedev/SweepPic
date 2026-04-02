@@ -218,9 +218,9 @@ final class PersonMatchingEngine {
             let photo = photoMap[assetID]
             let photoMeta = photo.map { "\($0.pixelWidth)x\($0.pixelHeight)" } ?? "?"
 
-            // 이미지 로드 (인물 매칭용 고해상도) — 진단 정보 포함
+            // === Step 0: 이미지 로드 (async 그대로) ===
             let perfLoadStart = CFAbsoluteTimeGetCurrent()
-            let perfGapMs = (perfLoadStart - prevLoadEndTime) * 1000  // 이전 Load 완료 후 경과 시간
+            let perfGapMs = (perfLoadStart - prevLoadEndTime) * 1000
             var cgImage: CGImage? = nil
             var degradedMs: Double? = nil
             if let photo = photo {
@@ -236,71 +236,110 @@ final class PersonMatchingEngine {
             perfLoadTotal += perfLoadMs
             prevLoadEndTime = CFAbsoluteTimeGetCurrent()
 
-            // === Step 1: YuNet으로 얼굴 감지 + SFace 임베딩 생성 ===
-            var faceEmbeddings: [Int: [Float]] = [:]
-            var faceData: [Int: (center: CGPoint, boundingBox: CGRect)] = [:]
 
-            guard let image = cgImage,
-                  let yunet = YuNetFaceDetector.shared,
-                  let sface = SFaceRecognizer.shared else {
-                // 모델 또는 이미지 로드 실패 시 빈 결과 (얼굴 없는 것으로 처리)
-                result[assetID] = []
-                continue
+
+            // === Step 1: YuNet + SFace 추론을 전용 inference queue에서 순수 동기 실행 ===
+            // DispatchQueue.global에서 async/await 없이 동기 코드만 실행하여
+            // 스레드 전환 없이 확실하게 백그라운드에서 추론합니다.
+            let inferenceResult: (
+                faceEmbeddings: [Int: [Float]],
+                faceData: [Int: (center: CGPoint, boundingBox: CGRect)],
+                yunetMs: Double,
+                sfaceMs: Double,
+                faceCount: Int
+            ) = await withCheckedContinuation { continuation in
+                DispatchQueue.global(qos: .userInitiated).async {
+                    // 모델/이미지 확인
+                    guard let image = cgImage,
+                          let yunet = YuNetFaceDetector.shared,
+                          let sface = SFaceRecognizer.shared else {
+                        continuation.resume(returning: (
+                            faceEmbeddings: [:], faceData: [:], yunetMs: 0, sfaceMs: 0, faceCount: 0
+                        ))
+                        return
+                    }
+
+                    // YuNet 얼굴 감지 (순수 동기)
+
+                    let perfYunetStart = CFAbsoluteTimeGetCurrent()
+                    let yunetDetections: [YuNetDetection]
+                    do {
+                        yunetDetections = try yunet.detect(in: image)
+                    } catch {
+                        let perfYunetMs = (CFAbsoluteTimeGetCurrent() - perfYunetStart) * 1000
+                        continuation.resume(returning: (
+                            faceEmbeddings: [:], faceData: [:], yunetMs: perfYunetMs, sfaceMs: 0, faceCount: 0
+                        ))
+                        return
+                    }
+                    let perfYunetMs = (CFAbsoluteTimeGetCurrent() - perfYunetStart) * 1000
+
+
+                    // SFace 임베딩 추출 (순수 동기)
+                    var faceEmbeddings: [Int: [Float]] = [:]
+                    var faceData: [Int: (center: CGPoint, boundingBox: CGRect)] = [:]
+
+                    let perfSfaceStart = CFAbsoluteTimeGetCurrent()
+                    for (faceIdx, detection) in yunetDetections.enumerated() {
+                        let imageWidth = CGFloat(image.width)
+                        let imageHeight = CGFloat(image.height)
+                        let normalizedBox = CGRect(
+                            x: detection.boundingBox.origin.x / imageWidth,
+                            y: 1.0 - (detection.boundingBox.origin.y + detection.boundingBox.size.height) / imageHeight,
+                            width: detection.boundingBox.size.width / imageWidth,
+                            height: detection.boundingBox.size.height / imageHeight
+                        )
+                        let center = CGPoint(x: normalizedBox.midX, y: normalizedBox.midY)
+                        faceData[faceIdx] = (center: center, boundingBox: normalizedBox)
+
+                        guard let alignedFace = try? FaceAligner.shared.align(
+                            image: image,
+                            landmarks: detection.landmarks
+                        ) else { continue }
+
+
+                        do {
+                            let embedding = try sface.extractEmbedding(from: alignedFace)
+                            faceEmbeddings[faceIdx] = embedding
+                        } catch {
+                            AnalyticsService.shared.countError(.embedding as AnalyticsError.Face)
+                            continue
+                        }
+                    }
+                    let perfSfaceMs = (CFAbsoluteTimeGetCurrent() - perfSfaceStart) * 1000
+
+                    continuation.resume(returning: (
+                        faceEmbeddings: faceEmbeddings, faceData: faceData,
+                        yunetMs: perfYunetMs, sfaceMs: perfSfaceMs, faceCount: faceEmbeddings.count
+                    ))
+                }
             }
 
-            // YuNet으로 얼굴 감지 (landmark 포함)
-            let perfYunetStart = CFAbsoluteTimeGetCurrent()
-            let yunetDetections: [YuNetDetection]
-            do {
-                yunetDetections = try yunet.detect(in: image)
-            } catch {
-                result[assetID] = []
-                continue
-            }
-            let perfYunetMs = (CFAbsoluteTimeGetCurrent() - perfYunetStart) * 1000
+            // 워커 결과를 로컬 변수로 풀기
+            var faceEmbeddings = inferenceResult.faceEmbeddings
+            var faceData = inferenceResult.faceData
+            let perfYunetMs = inferenceResult.yunetMs
+            let perfSfaceMs = inferenceResult.sfaceMs
+
             perfYunetTotal += perfYunetMs
+            perfSfaceTotal += perfSfaceMs
+            perfFaceCount += inferenceResult.faceCount
 
-            let perfSfaceStart = CFAbsoluteTimeGetCurrent()
-            for (faceIdx, detection) in yunetDetections.enumerated() {
-                // normalized 좌표로 변환 (Vision 좌표계: 원점이 왼쪽 아래)
-                // YuNet은 일반 이미지 좌표계 (원점이 왼쪽 위)이므로 y좌표 뒤집기 필요
-                let imageWidth = CGFloat(image.width)
-                let imageHeight = CGFloat(image.height)
-                let normalizedBox = CGRect(
-                    x: detection.boundingBox.origin.x / imageWidth,
-                    y: 1.0 - (detection.boundingBox.origin.y + detection.boundingBox.size.height) / imageHeight,
-                    width: detection.boundingBox.size.width / imageWidth,
-                    height: detection.boundingBox.size.height / imageHeight
-                )
-                let center = CGPoint(x: normalizedBox.midX, y: normalizedBox.midY)
-                faceData[faceIdx] = (center: center, boundingBox: normalizedBox)
-
-                // FaceAligner로 정렬 (픽셀 좌표 landmark 사용)
-                guard let alignedFace = try? FaceAligner.shared.align(
-                    image: image,
-                    landmarks: detection.landmarks
-                ) else {
-                    continue
-                }
-
-                // SFace로 임베딩 추출
-                do {
-                    let embedding = try sface.extractEmbedding(from: alignedFace)
-                    faceEmbeddings[faceIdx] = embedding
-                } catch {
-                    // [Analytics] 얼굴 임베딩 추출 실패
-                    AnalyticsService.shared.countError(.embedding as AnalyticsError.Face)
-                    continue
-                }
+            // 이미지/모델 로드 실패 시 빈 결과 (워커에서 nil 반환)
+            if cgImage == nil {
+                result[assetID] = []
+                continue
             }
 
-            let perfSfaceMs = (CFAbsoluteTimeGetCurrent() - perfSfaceStart) * 1000
-            perfSfaceTotal += perfSfaceMs
-            perfFaceCount += faceEmbeddings.count
+            // 매칭 단계에서 cosineSimilarity 사용을 위해 sface 참조
+            guard let sface = SFaceRecognizer.shared else {
+                result[assetID] = []
+                continue
+            }
 
             // per-photo 성능 로그 (프리로드 비교용, 진단 정보 포함)
             let degStr = degradedMs.map { String(format: "deg:%.0fms", $0) } ?? "deg:none"
-            let perfLog = "photo \(shortID): Load:\(String(format: "%.0f", perfLoadMs))ms(\(degStr) gap:\(String(format: "%.0f", perfGapMs))ms) YuNet:\(String(format: "%.0f", perfYunetMs))ms SFace:\(String(format: "%.0f", perfSfaceMs))ms faces:\(yunetDetections.count) (\(photoMeta))"
+            let perfLog = "photo \(shortID): Load:\(String(format: "%.0f", perfLoadMs))ms(\(degStr) gap:\(String(format: "%.0f", perfGapMs))ms) YuNet:\(String(format: "%.0f", perfYunetMs))ms SFace:\(String(format: "%.0f", perfSfaceMs))ms faces:\(faceData.count) (\(photoMeta))"
             // Logger.similarPhoto.debug("[Perf] \(perfLog)")  // 분석완료로 비활성화
 
             // Load 500ms 이상: SLOW 태그로 중복 출력 (검색 편의)
