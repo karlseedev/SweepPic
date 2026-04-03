@@ -232,7 +232,19 @@ final class SimilarityAnalysisQueue {
         guard source == .grid else { return }
 
         // [Analytics] 이벤트 5-1: 유사 분석 취소
+        #if DEBUG
+        if self !== SimilarityAnalysisQueue.shared { /* 격리 인스턴스: analytics 생략 */ }
+        else { AnalyticsService.shared.countSimilarAnalysisCancelled() }
+        #else
         AnalyticsService.shared.countSimilarAnalysisCancelled()
+        #endif
+
+        // #if DEBUG: shared 인스턴스 취소 기록 (Stage 2 recorder)
+        #if DEBUG
+        if self === SimilarityAnalysisQueue.shared {
+            GridAnalysisSessionRecorder.shared.recordCancellation(source: source.rawValue)
+        }
+        #endif
 
         serialQueue.sync {
             // 큐에서 해당 소스 요청 제거
@@ -265,6 +277,16 @@ final class SimilarityAnalysisQueue {
         source: AnalysisSource,
         fetchResult: PHFetchResult<PHAsset>
     ) async -> [String] {
+        // #if DEBUG: shared 인스턴스 분석 기록 (Stage 2 recorder)
+        #if DEBUG
+        let debugRequestID = UUID().uuidString
+        if self === SimilarityAnalysisQueue.shared {
+            GridAnalysisSessionRecorder.shared.recordRequest(
+                id: debugRequestID, source: source.rawValue, range: range
+            )
+        }
+        #endif
+
         // 성능 측정 시작
         let totalStartTime = CFAbsoluteTimeGetCurrent()
         let startMemory = getMemoryUsageMB()
@@ -473,10 +495,24 @@ final class SimilarityAnalysisQueue {
 
         // [Analytics] 이벤트 5-1: 유사 분석 완료
         let analysisDuration = CFAbsoluteTimeGetCurrent() - totalStartTime
+        #if DEBUG
+        if self !== SimilarityAnalysisQueue.shared { /* 격리 인스턴스: analytics 생략 */ }
+        else { AnalyticsService.shared.countSimilarAnalysisCompleted(groups: validGroupIDs.count, duration: analysisDuration) }
+        #else
         AnalyticsService.shared.countSimilarAnalysisCompleted(groups: validGroupIDs.count, duration: analysisDuration)
+        #endif
 
         // T014.8: UI 알림 발송
         postAnalysisComplete(range: range, groupIDs: validGroupIDs, analyzedAssetIDs: assetIDs)
+
+        // #if DEBUG: shared 인스턴스 완료 기록 (Stage 2 recorder)
+        #if DEBUG
+        if self === SimilarityAnalysisQueue.shared {
+            GridAnalysisSessionRecorder.shared.recordCompletion(
+                id: debugRequestID, groupIDs: validGroupIDs
+            )
+        }
+        #endif
 
         return validGroupIDs
     }
@@ -539,6 +575,10 @@ final class SimilarityAnalysisQueue {
         groupIDs: [String],
         analyzedAssetIDs: [String]
     ) {
+        // #if DEBUG: 격리 인스턴스에서는 글로벌 notification 억제
+        #if DEBUG
+        if self !== SimilarityAnalysisQueue.shared { return }
+        #endif
         DispatchQueue.main.async {
             NotificationCenter.default.post(
                 name: .similarPhotoAnalysisComplete,
@@ -602,4 +642,49 @@ final class SimilarityAnalysisQueue {
     deinit {
         NotificationCenter.default.removeObserver(self)
     }
+
+    // MARK: - Debug Helpers
+
+    #if DEBUG
+
+    /// 격리 인스턴스에서 formGroupsForRange()를 호출하고 결과를 추출합니다 (검증 하네스용).
+    ///
+    /// production formGroupsForRange()를 그대로 호출하며,
+    /// 격리 캐시에서 그룹 멤버를 읽어 반환합니다.
+    ///
+    /// - Parameters:
+    ///   - range: 분석할 인덱스 범위
+    ///   - fetchResult: 사진 fetch 결과
+    /// - Returns: (그룹 ID 배열, 그룹별 멤버 배열, 분석된 사진 ID 배열)
+    func debugGroupsForRange(
+        _ range: ClosedRange<Int>,
+        fetchResult: PHFetchResult<PHAsset>
+    ) async -> (groupIDs: [String], groups: [[String]], analyzedAssetIDs: [String]) {
+        // production formGroupsForRange를 그대로 호출
+        let groupIDs = await formGroupsForRange(range, source: .grid, fetchResult: fetchResult)
+
+        // 격리 캐시에서 그룹 멤버 추출
+        var groups: [[String]] = []
+        for groupID in groupIDs {
+            let members = await cache.getGroupMembers(groupID: groupID)
+            groups.append(members)
+        }
+
+        // 분석 투입 사진 ID 추출
+        let photos = fetchPhotos(in: range, fetchResult: fetchResult)
+        let analyzedAssetIDs = photos.map(\.localIdentifier)
+
+        return (groupIDs, groups, analyzedAssetIDs)
+    }
+
+    /// private fetchPhotos를 debug 용도로 노출합니다 (입력 동등성 검증용).
+    ///
+    /// - Parameters:
+    ///   - range: 인덱스 범위
+    ///   - fetchResult: 사진 fetch 결과
+    /// - Returns: 삭제대기함 제외된 PHAsset 배열
+    func debugFetchPhotos(in range: ClosedRange<Int>, fetchResult: PHFetchResult<PHAsset>) -> [PHAsset] {
+        return fetchPhotos(in: range, fetchResult: fetchResult)
+    }
+    #endif
 }

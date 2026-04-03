@@ -326,4 +326,148 @@ final class FaceScanService {
 
         Logger.similarPhoto.debug("FaceScanService: 세션 저장 — \(method.description)")
     }
+
+    // MARK: - Debug Helpers
+
+    #if DEBUG
+
+    /// FaceScan 디버그 결과 (검증 하네스용)
+    struct FaceScanDebugResult {
+        /// 발견된 그룹 배열
+        let groups: [FaceScanGroup]
+        /// 분석에 투입된 사진 ID (중복 제거, 순서 보존)
+        let analyzedAssetIDs: [String]
+        /// 종료 사유
+        let terminationReason: FaceScanDebugTerminationReason
+    }
+
+    /// FaceScan 디버그 종료 사유
+    enum FaceScanDebugTerminationReason: String, Codable {
+        /// 범위 끝까지 자연 종료
+        case naturalEnd
+        /// maxScanCount(1,000장) 도달
+        case maxScanCount
+        /// maxGroupCount(30그룹) 도달
+        case maxGroupCount
+        /// 취소됨
+        case cancelled
+    }
+
+    /// private buildFetchResult를 debug 용도로 노출합니다.
+    /// 격리 인스턴스에서 호출하여 Grid oracle과 같은 PHFetchResult를 공유합니다.
+    func debugBuildFetchResult(method: FaceScanMethod) -> PHFetchResult<PHAsset> {
+        return buildFetchResult(method: method)
+    }
+
+    /// 명시적 범위로 FaceScan 분석을 실행합니다 (검증 하네스용).
+    ///
+    /// production analyze()의 청크 루프를 범위 제한 버전으로 재현합니다.
+    /// 내부에서 기존 analyzeChunk(photos:excludeAssets:)를 그대로 호출합니다.
+    ///
+    /// 반드시 유지: chunkSize=20, chunkOverlap=3, excludeAssets, hasAnyFace,
+    /// Step 2.5/5.5, maxScanCount/maxGroupCount, 삭제대기함 제외
+    /// 반드시 금지: saveSession(), UserDefaults 갱신
+    ///
+    /// - Parameters:
+    ///   - fetchResult: 분석 대상 PHFetchResult
+    ///   - range: 분석할 인덱스 범위
+    /// - Returns: FaceScanDebugResult (그룹, 투입 사진 ID, 종료 사유)
+    func analyzeDebugRange(
+        fetchResult: PHFetchResult<PHAsset>,
+        range: ClosedRange<Int>
+    ) async -> FaceScanDebugResult {
+        let trashedIDs = TrashStore.shared.trashedAssetIDs
+
+        // 범위 보정
+        let safeRange = max(0, range.lowerBound)...min(fetchResult.count - 1, range.upperBound)
+
+        var currentIndex = safeRange.lowerBound
+        var totalScanned = 0
+        var totalGroupsFound = 0
+        var discoveredAssetIDs = Set<String>()
+        var allGroups: [FaceScanGroup] = []
+        var analyzedAssetIDs: [String] = []       // 순서 보존, 중복 제거
+        var analyzedAssetIDSet = Set<String>()     // 빠른 중복 체크용
+        var terminationReason: FaceScanDebugTerminationReason = .naturalEnd
+
+        while currentIndex <= safeRange.upperBound {
+            // 취소 체크
+            if cancelled {
+                terminationReason = .cancelled
+                break
+            }
+
+            // 종료 조건 체크
+            if totalScanned >= FaceScanConstants.maxScanCount {
+                terminationReason = .maxScanCount
+                break
+            }
+            if totalGroupsFound >= FaceScanConstants.maxGroupCount {
+                terminationReason = .maxGroupCount
+                break
+            }
+
+            // 청크 범위 계산 (overlap 포함, safeRange 내로 클램프)
+            let chunkStart = max(safeRange.lowerBound, currentIndex - FaceScanConstants.chunkOverlap)
+            let chunkEnd = min(safeRange.upperBound, currentIndex + FaceScanConstants.chunkSize - 1)
+
+            // 청크 내 사진 추출 (삭제대기함 제외)
+            var photos: [PHAsset] = []
+            for i in chunkStart...chunkEnd {
+                let asset = fetchResult.object(at: i)
+                if !trashedIDs.contains(asset.localIdentifier) {
+                    photos.append(asset)
+                }
+            }
+
+            // 투입 사진 ID 누적 (중복 제거, 순서 보존)
+            for photo in photos {
+                let id = photo.localIdentifier
+                if !analyzedAssetIDSet.contains(id) {
+                    analyzedAssetIDSet.insert(id)
+                    analyzedAssetIDs.append(id)
+                }
+            }
+
+            // 최소 3장 미만이면 다음 청크로
+            guard photos.count >= SimilarityConstants.minGroupSize else {
+                let skipped = chunkEnd - currentIndex + 1
+                currentIndex = chunkEnd + 1
+                totalScanned += skipped
+                continue
+            }
+
+            // 청크 분석 실행 (production analyzeChunk 그대로 호출)
+            let groups = await analyzeChunk(photos: photos, excludeAssets: discoveredAssetIDs)
+
+            // 그룹 발견 처리
+            for group in groups {
+                discoveredAssetIDs.formUnion(group.memberAssetIDs)
+                totalGroupsFound += 1
+                allGroups.append(group)
+
+                if totalGroupsFound >= FaceScanConstants.maxGroupCount {
+                    terminationReason = .maxGroupCount
+                    break
+                }
+            }
+
+            // 진행 카운트 갱신
+            let newScanned = chunkEnd - currentIndex + 1
+            totalScanned += newScanned
+            currentIndex = chunkEnd + 1
+
+            // 열 상태 확인 — 과열 시 잠시 대기
+            if ProcessInfo.processInfo.thermalState.rawValue >= ProcessInfo.ThermalState.serious.rawValue {
+                try? await Task.sleep(nanoseconds: 500_000_000)
+            }
+        }
+
+        return FaceScanDebugResult(
+            groups: allGroups,
+            analyzedAssetIDs: analyzedAssetIDs,
+            terminationReason: terminationReason
+        )
+    }
+    #endif
 }

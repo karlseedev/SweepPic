@@ -285,6 +285,11 @@ final class GridViewController: BaseGridViewController {
 
         // 구독 상태 변경 시 메뉴 뱃지 업데이트 (결제 문제 아이콘)
         observeSubscriptionStateForBadge()
+
+        // DEBUG: 동등성 테스트 버튼
+        #if DEBUG
+        setupEquivalenceTestButton()
+        #endif
     }
 
     /// 추가 제스처 설정 (setupGestures에서 호출됨)
@@ -1231,3 +1236,142 @@ extension GridViewController: ZoomTransitionSourceProviding {
         view.layoutIfNeeded()
     }
 }
+
+// MARK: - DEBUG: FaceScan ↔ Grid 동등성 테스트
+
+#if DEBUG
+extension GridViewController {
+
+    /// 마지막 테스트 범위 끝 인덱스 (이어서 하기용)
+    private static var lastTestedEndIndex: Int = 0
+
+    /// 동등성 테스트 버튼 설정 (우측 하단 주황색 "EQ" 버튼)
+    func setupEquivalenceTestButton() {
+        let button = UIButton(type: .system)
+        button.setTitle("EQ", for: .normal)
+        button.titleLabel?.font = .systemFont(ofSize: 13, weight: .bold)
+        button.backgroundColor = UIColor.systemOrange.withAlphaComponent(0.85)
+        button.setTitleColor(.white, for: .normal)
+        button.layer.cornerRadius = 18
+        button.translatesAutoresizingMaskIntoConstraints = false
+
+        view.addSubview(button)
+        NSLayoutConstraint.activate([
+            button.widthAnchor.constraint(equalToConstant: 36),
+            button.heightAnchor.constraint(equalToConstant: 36),
+            button.trailingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.trailingAnchor, constant: -16),
+            button.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor, constant: -60),
+        ])
+
+        button.addTarget(self, action: #selector(eqButtonTapped), for: .touchUpInside)
+    }
+
+    /// EQ 버튼 탭 → ActionSheet (처음부터 / 이어서 하기)
+    @objc private func eqButtonTapped() {
+        let chunkSize = 3000
+        let nextStart = Self.lastTestedEndIndex
+        let nextEnd = nextStart + chunkSize - 1
+
+        let alert = UIAlertController(
+            title: "Engine Equivalence Test",
+            message: "Grid oracle vs FaceScan 비교 (1,000장 단위)",
+            preferredStyle: .actionSheet
+        )
+
+        // 처음부터 (0...999)
+        alert.addAction(UIAlertAction(title: "처음부터 (0...\(chunkSize - 1))", style: .default) { [weak self] _ in
+            Self.lastTestedEndIndex = 0
+            self?.runEqTest(range: 0...(chunkSize - 1))
+        })
+
+        // 이어서 하기 (이전 범위 다음부터)
+        if nextStart > 0 {
+            alert.addAction(UIAlertAction(title: "이어서 (\(nextStart)...\(nextEnd))", style: .default) { [weak self] _ in
+                self?.runEqTest(range: nextStart...nextEnd)
+            })
+        }
+
+        alert.addAction(UIAlertAction(title: "취소", style: .cancel))
+
+        // iPad popover 대응
+        if let popover = alert.popoverPresentationController {
+            popover.sourceView = view
+            popover.sourceRect = CGRect(x: view.bounds.maxX - 60, y: view.bounds.maxY - 100, width: 36, height: 36)
+        }
+
+        present(alert, animated: true)
+    }
+
+    /// 동등성 테스트 실행
+    private func runEqTest(range: ClosedRange<Int>) {
+        let rangeText = "\(range.lowerBound)...\(range.upperBound)"
+
+        // 진행 중 알림
+        let progressAlert = UIAlertController(
+            title: "Engine Equivalence 실행 중",
+            message: "범위: \(rangeText)\n잠시 기다려주세요...",
+            preferredStyle: .alert
+        )
+        present(progressAlert, animated: true)
+
+        Task {
+            let tester = FaceScanGridEquivalenceTester()
+            do {
+                let report = try await tester.runEngineEquivalence(
+                    method: .fromLatest, range: range
+                )
+
+                // 이어서 하기 인덱스 갱신
+                Self.lastTestedEndIndex = range.upperBound + 1
+
+                await MainActor.run {
+                    progressAlert.dismiss(animated: true) {
+                        self.showEqResult(report)
+                    }
+                }
+            } catch {
+                await MainActor.run {
+                    progressAlert.dismiss(animated: true) {
+                        let errorAlert = UIAlertController(
+                            title: "테스트 실패", message: error.localizedDescription, preferredStyle: .alert
+                        )
+                        errorAlert.addAction(UIAlertAction(title: "확인", style: .default))
+                        self.present(errorAlert, animated: true)
+                    }
+                }
+            }
+        }
+    }
+
+    /// 결과 알림 표시
+    private func showEqResult(_ report: EngineEquivalenceReport) {
+        let statusText: String
+        switch report.status {
+        case .pass: statusText = "PASS"
+        case .partial: statusText = "PARTIAL"
+        case .fail: statusText = "FAIL"
+        }
+
+        let message = """
+        \(statusText)
+        범위: \(report.clampedRange ?? "N/A")
+        fetchResult: \(report.fetchResultCount)장
+
+        Grid: \(report.gridGroups.count)개 그룹 (\(report.gridAnalyzedAssetIDs.count)장)
+        FaceScan: \(report.faceScanGroups.count)개 그룹 (\(report.faceScanAnalyzedAssetIDs.count)장)
+
+        일치: \(report.common.count)개
+        Grid에만: \(report.gridOnly.count)개
+        FaceScan에만: \(report.faceScanOnly.count)개
+
+        FaceScan 종료: \(report.faceScanTerminationReason)
+
+        다음: 이어서 하기 (\(Self.lastTestedEndIndex)~)
+        """
+
+        let alert = UIAlertController(title: "Engine Equivalence 결과", message: message, preferredStyle: .alert)
+        alert.addAction(UIAlertAction(title: "확인", style: .default))
+        present(alert, animated: true)
+    }
+}
+#endif

@@ -683,3 +683,4 @@ extension FaceScanListViewController: FaceComparisonDelegate {
         // FaceScan 모드에서는 사용하지 않음
     }
 }
+

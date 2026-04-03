@@ -609,6 +609,16 @@ actor SimilarityCache: SimilarityCacheMutating {
         """
     }
 
+    // MARK: - Debug Helpers
+
+    #if DEBUG
+    /// 현재 캐시의 모든 유효 그룹을 반환합니다 (검증 하네스용).
+    /// preliminary 상태 제외, isValid(멤버 3장 이상)인 그룹만 반환합니다.
+    func debugAllGroups() -> [SimilarThumbnailGroup] {
+        return groups.values.filter { $0.isValid }
+    }
+    #endif
+
     deinit {
         if let observer = memoryWarningObserver {
             NotificationCenter.default.removeObserver(observer)
