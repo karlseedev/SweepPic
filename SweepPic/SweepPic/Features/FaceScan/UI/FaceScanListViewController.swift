@@ -406,10 +406,21 @@ final class FaceScanListViewController: UIViewController, BarsVisibilityControll
         emptyLabel.isHidden = false
 
         // 캐시 재생성 + 이어서 분석 시작
+        // byYear 모드: 해당 연도 내에서 이어서 (세션에 저장된 위치 기반)
+        // fromLatest/continueFromLast 모드: 전체 사진에서 이어서
         scanService?.cancel()
         scanTask?.cancel()
         faceScanCache = FaceScanCache()
-        startAnalysis(method: .continueFromLast)
+
+        let nextMethod: FaceScanMethod
+        if case .byYear(let year, _) = method,
+           let continueDate = FaceScanService.lastScanDateByYear(year) {
+            // 해당 연도 내에서 마지막 스캔 위치부터 이어서
+            nextMethod = .byYear(year: year, continueFrom: continueDate)
+        } else {
+            nextMethod = .continueFromLast
+        }
+        startAnalysis(method: nextMethod)
     }
 
     override func viewDidLayoutSubviews() {

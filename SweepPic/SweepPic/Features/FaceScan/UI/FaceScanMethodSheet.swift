@@ -105,13 +105,48 @@ final class FaceScanMethodSheet {
     }
 
     /// 연도 선택 화면 표시
+    /// - 로딩 Alert 표시하며 전체 사진에서 연도 목록 추출
+    /// - CleanupMethodSheet 패턴: strongSelf + 로딩 Alert dismiss completion 내 present
     private func loadYearsAndShowSelection(from viewController: UIViewController) {
+        // 로딩 Alert 생성
+        let loadingAlert = UIAlertController(
+            title: nil,
+            message: "사진별 연도 목록 확인 중",
+            preferredStyle: .alert
+        )
+
+        // ActivityIndicator 추가
+        let indicator = UIActivityIndicatorView(style: .medium)
+        indicator.translatesAutoresizingMaskIntoConstraints = false
+        indicator.startAnimating()
+
+        loadingAlert.view.addSubview(indicator)
+
+        NSLayoutConstraint.activate([
+            indicator.centerYAnchor.constraint(equalTo: loadingAlert.view.centerYAnchor),
+            indicator.leadingAnchor.constraint(equalTo: loadingAlert.view.leadingAnchor, constant: 20),
+            loadingAlert.view.heightAnchor.constraint(greaterThanOrEqualToConstant: 80)
+        ])
+
+        // 로딩 Alert 표시
+        viewController.present(loadingAlert, animated: true)
+
+        // self 강참조로 Task 완료까지 유지
+        // Note: [self] 강참조 — 비동기 작업 완료 시까지 sheet 인스턴스 유지 필요
+        let strongSelf = self
+
         // 백그라운드에서 연도 목록 로드
-        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
-            let years = self?.fetchAvailableYears() ?? []
-            DispatchQueue.main.async {
-                self?.availableYears = years
-                self?.showYearSelectionAlert(from: viewController)
+        Task {
+            let years = await withCheckedContinuation { continuation in
+                continuation.resume(returning: strongSelf.fetchAvailableYears())
+            }
+            strongSelf.availableYears = years
+
+            await MainActor.run {
+                // 로딩 Alert 닫고 연도 선택 시트 표시
+                loadingAlert.dismiss(animated: true) {
+                    strongSelf.showYearSelectionAlert(from: viewController)
+                }
             }
         }
     }
