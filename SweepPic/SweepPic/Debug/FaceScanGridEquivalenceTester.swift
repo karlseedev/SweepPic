@@ -151,52 +151,41 @@ final class FaceScanGridEquivalenceTester {
 
         Logger.similarPhoto.notice("[Engine Equivalence] Grid oracle: \(gridResult.groups.count)개 그룹, \(gridResult.analyzedAssetIDs.count)장 분석")
 
-        // Step 4. FaceScan 실행 (격리)
-        let faceScanCache = FaceScanCache()
-        let faceScanService2 = FaceScanService(cache: faceScanCache)
-        let faceScanResult = await faceScanService2.analyzeDebugRange(
-            fetchResult: fetchResult,
-            range: clampedRange
-        )
+        // Step 4. FaceScan 실행 (격리 인스턴스에서 formGroupsForRange — production과 동일 경로)
+        // production FaceScan도 이제 격리 formGroupsForRange()를 호출하므로,
+        // 여기서도 동일한 방식으로 실행하여 production 코드 경로를 검증합니다.
+        let fsCache = SimilarityCache()
+        let fsQueue = SimilarityAnalysisQueue(cache: fsCache)
+        let fsResult = await fsQueue.debugGroupsForRange(clampedRange, fetchResult: fetchResult)
 
-        Logger.similarPhoto.notice("[Engine Equivalence] FaceScan: \(faceScanResult.groups.count)개 그룹, \(faceScanResult.analyzedAssetIDs.count)장 분석, 종료:\(faceScanResult.terminationReason.rawValue)")
+        Logger.similarPhoto.notice("[Engine Equivalence] FaceScan: \(fsResult.groups.count)개 그룹, \(fsResult.analyzedAssetIDs.count)장 분석")
 
         // Step 5. 입력 동등성 사전 검증
         let gridInputIDs = Set(gridResult.analyzedAssetIDs)
-        let faceScanInputIDs = Set(faceScanResult.analyzedAssetIDs)
-        let inputDiff = gridInputIDs.symmetricDifference(faceScanInputIDs)
+        let fsInputIDs = Set(fsResult.analyzedAssetIDs)
+        let inputDiff = gridInputIDs.symmetricDifference(fsInputIDs)
         if !inputDiff.isEmpty {
-            Logger.similarPhoto.warning("[Engine Equivalence] ⚠️ 입력 불일치: \(inputDiff.count)장 차이 (Grid에만: \(gridInputIDs.subtracting(faceScanInputIDs).count), FaceScan에만: \(faceScanInputIDs.subtracting(gridInputIDs).count))")
+            Logger.similarPhoto.warning("[Engine Equivalence] ⚠️ 입력 불일치: \(inputDiff.count)장 차이")
         }
 
         // Step 6. 정규화 + diff
         let gridSigs = Set(gridResult.groups.map { GroupSignature(members: $0) })
-        let fsSigs = Set(faceScanResult.groups.map { GroupSignature(members: $0.memberAssetIDs) })
+        let fsSigs = Set(fsResult.groups.map { GroupSignature(members: $0) })
         let common = gridSigs.intersection(fsSigs)
         let gridOnly = gridSigs.subtracting(fsSigs)
         let faceScanOnly = fsSigs.subtracting(gridSigs)
 
-        // PASS/PARTIAL/FAIL 판정
-        let status: EngineEquivalenceStatus
-        if gridOnly.isEmpty && faceScanOnly.isEmpty {
-            status = .pass
-        } else if faceScanResult.terminationReason == .maxGroupCount
-                    && !gridOnly.isEmpty && faceScanOnly.isEmpty {
-            // maxGroupCount 도달 → 상한 내 일치, 상한 초과 미검증
-            status = .partial
-        } else {
-            status = .fail
-        }
+        // PASS/FAIL 판정 (양쪽 모두 동일 formGroupsForRange 호출이므로 PARTIAL 불필요)
+        let status: EngineEquivalenceStatus = (gridOnly.isEmpty && faceScanOnly.isEmpty) ? .pass : .fail
 
         // Step 7. 로그 출력
-        let statusEmoji = status == .pass ? "✅" : (status == .partial ? "⚠️" : "❌")
+        let statusEmoji = status == .pass ? "✅" : "❌"
         Logger.similarPhoto.notice("""
         [Engine Equivalence] \(statusEmoji) \(status.rawValue.uppercased())
           범위: \(clampedRange.lowerBound)...\(clampedRange.upperBound) (fetchResult: \(fetchResult.count)장)
-          입력: Grid \(gridResult.analyzedAssetIDs.count)장, FaceScan \(faceScanResult.analyzedAssetIDs.count)장
+          입력: Grid \(gridResult.analyzedAssetIDs.count)장, FaceScan \(fsResult.analyzedAssetIDs.count)장
           그룹: Grid \(gridSigs.count)개, FaceScan \(fsSigs.count)개
           일치: \(common.count)개, Grid에만: \(gridOnly.count)개, FaceScan에만: \(faceScanOnly.count)개
-          FaceScan 종료: \(faceScanResult.terminationReason.rawValue)
         """)
 
         // 리포트 생성
@@ -207,13 +196,13 @@ final class FaceScanGridEquivalenceTester {
             requestedRange: range.map { "\($0.lowerBound)...\($0.upperBound)" } ?? "전체",
             clampedRange: "\(clampedRange.lowerBound)...\(clampedRange.upperBound)",
             gridAnalyzedAssetIDs: gridResult.analyzedAssetIDs,
-            faceScanAnalyzedAssetIDs: faceScanResult.analyzedAssetIDs,
+            faceScanAnalyzedAssetIDs: fsResult.analyzedAssetIDs,
             gridGroups: Array(gridSigs),
             faceScanGroups: Array(fsSigs),
             gridOnly: Array(gridOnly),
             faceScanOnly: Array(faceScanOnly),
             common: Array(common),
-            faceScanTerminationReason: faceScanResult.terminationReason.rawValue,
+            faceScanTerminationReason: "formGroupsForRange",
             status: status
         )
 

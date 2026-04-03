@@ -232,12 +232,10 @@ final class SimilarityAnalysisQueue {
         guard source == .grid else { return }
 
         // [Analytics] 이벤트 5-1: 유사 분석 취소
-        #if DEBUG
-        if self !== SimilarityAnalysisQueue.shared { /* 격리 인스턴스: analytics 생략 */ }
-        else { AnalyticsService.shared.countSimilarAnalysisCancelled() }
-        #else
-        AnalyticsService.shared.countSimilarAnalysisCancelled()
-        #endif
+        // 격리 인스턴스(FaceScan 등)에서는 analytics 생략
+        if self === SimilarityAnalysisQueue.shared {
+            AnalyticsService.shared.countSimilarAnalysisCancelled()
+        }
 
         // #if DEBUG: shared 인스턴스 취소 기록 (Stage 2 recorder)
         #if DEBUG
@@ -494,13 +492,11 @@ final class SimilarityAnalysisQueue {
         }
 
         // [Analytics] 이벤트 5-1: 유사 분석 완료
+        // 격리 인스턴스(FaceScan 등)에서는 analytics 생략
         let analysisDuration = CFAbsoluteTimeGetCurrent() - totalStartTime
-        #if DEBUG
-        if self !== SimilarityAnalysisQueue.shared { /* 격리 인스턴스: analytics 생략 */ }
-        else { AnalyticsService.shared.countSimilarAnalysisCompleted(groups: validGroupIDs.count, duration: analysisDuration) }
-        #else
-        AnalyticsService.shared.countSimilarAnalysisCompleted(groups: validGroupIDs.count, duration: analysisDuration)
-        #endif
+        if self === SimilarityAnalysisQueue.shared {
+            AnalyticsService.shared.countSimilarAnalysisCompleted(groups: validGroupIDs.count, duration: analysisDuration)
+        }
 
         // T014.8: UI 알림 발송
         postAnalysisComplete(range: range, groupIDs: validGroupIDs, analyzedAssetIDs: assetIDs)
@@ -575,10 +571,8 @@ final class SimilarityAnalysisQueue {
         groupIDs: [String],
         analyzedAssetIDs: [String]
     ) {
-        // #if DEBUG: 격리 인스턴스에서는 글로벌 notification 억제
-        #if DEBUG
-        if self !== SimilarityAnalysisQueue.shared { return }
-        #endif
+        // 격리 인스턴스(FaceScan 등)에서는 글로벌 notification 억제
+        guard self === SimilarityAnalysisQueue.shared else { return }
         DispatchQueue.main.async {
             NotificationCenter.default.post(
                 name: .similarPhotoAnalysisComplete,

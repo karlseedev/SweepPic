@@ -106,8 +106,15 @@ final class FaceScanService {
 
     /// 인물사진 비교정리 분석 실행
     ///
-    /// 청크 단위로 사진을 분석하여 유사 인물 그룹을 발견하고 콜백으로 전달합니다.
-    /// 종료 조건: 1,000장 검색 OR 30그룹 발견 (먼저 도달 시)
+    /// 격리 SimilarityAnalysisQueue 인스턴스에서 formGroupsForRange()를 호출하여
+    /// Grid와 동일한 알고리즘으로 유사 인물 그룹을 발견합니다.
+    /// 종료 조건: maxScanCount(1,000장) 범위 제한 OR maxGroupCount(30그룹)
+    ///
+    /// 이전 구조(청크 루프 + analyzeChunk)에서 변경됨:
+    /// - 청크 경계에서 그룹이 잘리는 문제 해결
+    /// - Grid formGroupsForRange()를 그대로 호출하므로 Grid 알고리즘 변경 시 자동 반영
+    /// - 격리 인스턴스 사용으로 SimilarityCache.shared 오염 없음
+    /// - self !== .shared 가드로 analytics/notification 부수효과 억제
     ///
     /// - Parameters:
     ///   - method: 스캔 방식 (fromLatest, continueFromLast, byYear)
@@ -121,99 +128,88 @@ final class FaceScanService {
     ) async throws {
         // 1. PHFetchResult 구성
         let fetchResult = buildFetchResult(method: method)
-        let trashedIDs = TrashStore.shared.trashedAssetIDs
 
         // 2. 이어서 정리: 시작 인덱스 결정
         let startIndex = findStartIndex(method: method, fetchResult: fetchResult)
 
-        // 3. 청크 단위 분석 루프
-        var currentIndex = startIndex
-        var totalScanned = 0
+        guard startIndex < fetchResult.count else { return }
+
+        // 3. 분석 범위 결정 (maxScanCount로 제한)
+        let endIndex = min(startIndex + FaceScanConstants.maxScanCount - 1, fetchResult.count - 1)
+        let analysisRange = startIndex...endIndex
+
+        // 취소 체크
+        if cancelled { throw CancellationError() }
+
+        // 진행률 콜백: 시작
+        let initialProgress = FaceScanProgress.updated(
+            scannedCount: 0, groupCount: 0, currentDate: Date()
+        )
+        await MainActor.run { onProgress(initialProgress) }
+
+        // 4. 격리 인스턴스에서 formGroupsForRange() 호출
+        // 격리 SimilarityCache → 격리 SimilarityAnalysisQueue
+        // self !== .shared 가드에 의해 analytics/notification 자동 억제
+        let isolatedCache = SimilarityCache()
+        let isolatedQueue = SimilarityAnalysisQueue(cache: isolatedCache)
+        let groupIDs = await isolatedQueue.formGroupsForRange(
+            analysisRange, source: .grid, fetchResult: fetchResult
+        )
+
+        // 취소 체크
+        if cancelled { throw CancellationError() }
+
+        // 5. 격리 캐시에서 결과 추출 → FaceScanGroup 변환 + 콜백
         var totalGroupsFound = 0
-        var lastAssetDate: Date?
-        var lastAssetID: String?
-        var discoveredAssetIDs = Set<String>()  // 이미 그룹에 포함된 assetID 추적 (중복 방지)
 
-        let totalToScan = min(fetchResult.count - startIndex, FaceScanConstants.maxScanCount)
-
-        while currentIndex < fetchResult.count {
+        for groupID in groupIDs {
             // 취소 체크
             if cancelled { throw CancellationError() }
 
-            // 종료 조건 체크
-            if totalScanned >= FaceScanConstants.maxScanCount { break }
+            // maxGroupCount 제한
             if totalGroupsFound >= FaceScanConstants.maxGroupCount { break }
 
-            // 청크 범위 계산 (overlap 포함)
-            let chunkStart = max(0, currentIndex - FaceScanConstants.chunkOverlap)
-            let chunkEnd = min(fetchResult.count - 1, currentIndex + FaceScanConstants.chunkSize - 1)
+            let members = await isolatedCache.getGroupMembers(groupID: groupID)
+            guard members.count >= SimilarityConstants.minGroupSize else { continue }
 
-            // 청크 내 사진 추출 (삭제대기함 제외)
-            var photos: [PHAsset] = []
-            for i in chunkStart...chunkEnd {
-                let asset = fetchResult.object(at: i)
-                if !trashedIDs.contains(asset.localIdentifier) {
-                    photos.append(asset)
+            let validSlots = await isolatedCache.getGroupValidPersonIndices(for: groupID)
+
+            // FaceScanCache에 얼굴 데이터 복사 (FaceComparisonVC 조회용)
+            for assetID in members {
+                let faces = await isolatedCache.getFaces(for: assetID)
+                if !faces.isEmpty {
+                    await cache.setFaces(faces, for: assetID)
                 }
             }
 
-            // 최소 3장 미만이면 다음 청크로
-            guard photos.count >= SimilarityConstants.minGroupSize else {
-                let skipped = chunkEnd - currentIndex + 1  // currentIndex 변경 전에 계산
-                currentIndex = chunkEnd + 1
-                totalScanned += skipped
-                continue
-            }
+            // FaceScanCache에 그룹 저장
+            let group = SimilarThumbnailGroup(memberAssetIDs: members)
+            await cache.addGroup(group, validSlots: validSlots, photoFaces: [:])
 
-            // 청크 분석 실행 (이미 발견된 assetID 전달 → 중복 그룹 방지)
-            let groups = await analyzeChunk(photos: photos, excludeAssets: discoveredAssetIDs)
-
-            // 그룹 발견 처리
-            for group in groups {
-                // 발견된 멤버를 추적 Set에 등록
-                discoveredAssetIDs.formUnion(group.memberAssetIDs)
-
-                totalGroupsFound += 1
-
-                // FaceScanCache에 저장 + 콜백
-                await MainActor.run {
-                    onGroupFound(group)
-                }
-
-                // 종료 조건 재체크
-                if totalGroupsFound >= FaceScanConstants.maxGroupCount { break }
-            }
-
-            // 진행 상황 업데이트
-            let newScanned = chunkEnd - currentIndex + 1
-            totalScanned += newScanned
-            currentIndex = chunkEnd + 1
-
-            // 마지막 사진 정보 기록 (세션 저장용)
-            if let lastPhoto = photos.last {
-                lastAssetDate = lastPhoto.creationDate
-                lastAssetID = lastPhoto.localIdentifier
-            }
-
-            // 진행률 콜백 (메인 스레드)
-            let progress = FaceScanProgress.updated(
-                scannedCount: totalScanned,
-                groupCount: totalGroupsFound,
-                currentDate: lastAssetDate ?? Date()
+            // FaceScanGroup 생성 + 콜백
+            let scanGroup = FaceScanGroup(
+                groupID: group.groupID,
+                memberAssetIDs: members,
+                validPersonIndices: validSlots
             )
-            await MainActor.run {
-                onProgress(progress)
-            }
+            totalGroupsFound += 1
 
-            // 열 상태 확인 — 과열 시 잠시 대기
-            if ProcessInfo.processInfo.thermalState.rawValue >= ProcessInfo.ThermalState.serious.rawValue {
-                try await Task.sleep(nanoseconds: 500_000_000)  // 0.5초 대기
-            }
+            await MainActor.run { onGroupFound(scanGroup) }
+
+            // 진행률 콜백
+            let progress = FaceScanProgress.updated(
+                scannedCount: endIndex - startIndex + 1,
+                groupCount: totalGroupsFound,
+                currentDate: Date()
+            )
+            await MainActor.run { onProgress(progress) }
         }
 
-        // 4. 세션 저장 (분석 완료 시에만)
-        if let date = lastAssetDate, let assetID = lastAssetID {
-            saveSession(method: method, lastDate: date, lastAssetID: assetID)
+        // 6. 세션 저장
+        // 마지막 분석 사진의 날짜/ID 기록
+        let lastAsset = fetchResult.object(at: endIndex)
+        if let lastDate = lastAsset.creationDate {
+            saveSession(method: method, lastDate: lastDate, lastAssetID: lastAsset.localIdentifier)
         }
     }
 
