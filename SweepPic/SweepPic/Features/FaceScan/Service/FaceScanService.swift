@@ -106,15 +106,16 @@ final class FaceScanService {
 
     /// 인물사진 비교정리 분석 실행
     ///
-    /// 격리 SimilarityAnalysisQueue 인스턴스에서 formGroupsForRange()를 호출하여
-    /// Grid와 동일한 알고리즘으로 유사 인물 그룹을 발견합니다.
-    /// 종료 조건: maxScanCount(1,000장) 범위 제한 OR maxGroupCount(30그룹)
+    /// 배치 FP 생성 + IncrementalGroupBuilder 증분 그루핑 방식.
+    /// formGroups()의 코어 로직(IncrementalGroupBuilder)을 공유하여
+    /// Grid(경로 A)와 동일한 그루핑 알고리즘을 사용합니다.
     ///
-    /// 이전 구조(청크 루프 + analyzeChunk)에서 변경됨:
-    /// - 청크 경계에서 그룹이 잘리는 문제 해결
-    /// - Grid formGroupsForRange()를 그대로 호출하므로 Grid 알고리즘 변경 시 자동 반영
-    /// - 격리 인스턴스 사용으로 SimilarityCache.shared 오염 없음
-    /// - self !== .shared 가드로 analytics/notification 부수효과 억제
+    /// 이전 구조(청크 루프 + analyzeChunk + overlap + excludeAssets)에서 변경됨:
+    /// - IncrementalGroupBuilder가 배치 간 상태를 유지하므로 경계에서 그룹이 잘리지 않음
+    /// - overlap/excludeAssets 불필요 (연속 스캔)
+    /// - 그룹이 확정되는 즉시 onGroupFound 콜백 (점진적 표시)
+    ///
+    /// 종료 조건: maxScanCount(1,000장) OR maxGroupCount(30그룹)
     ///
     /// - Parameters:
     ///   - method: 스캔 방식 (fromLatest, continueFromLast, byYear)
@@ -128,88 +129,120 @@ final class FaceScanService {
     ) async throws {
         // 1. PHFetchResult 구성
         let fetchResult = buildFetchResult(method: method)
+        let trashedIDs = TrashStore.shared.trashedAssetIDs
 
         // 2. 이어서 정리: 시작 인덱스 결정
         let startIndex = findStartIndex(method: method, fetchResult: fetchResult)
 
-        guard startIndex < fetchResult.count else { return }
-
-        // 3. 분석 범위 결정 (maxScanCount로 제한)
-        let endIndex = min(startIndex + FaceScanConstants.maxScanCount - 1, fetchResult.count - 1)
-        let analysisRange = startIndex...endIndex
-
-        // 취소 체크
-        if cancelled { throw CancellationError() }
-
-        // 진행률 콜백: 시작
-        let initialProgress = FaceScanProgress.updated(
-            scannedCount: 0, groupCount: 0, currentDate: Date()
-        )
-        await MainActor.run { onProgress(initialProgress) }
-
-        // 4. 격리 인스턴스에서 formGroupsForRange() 호출
-        // 격리 SimilarityCache → 격리 SimilarityAnalysisQueue
-        // self !== .shared 가드에 의해 analytics/notification 자동 억제
-        let isolatedCache = SimilarityCache()
-        let isolatedQueue = SimilarityAnalysisQueue(cache: isolatedCache)
-        let groupIDs = await isolatedQueue.formGroupsForRange(
-            analysisRange, source: .grid, fetchResult: fetchResult
-        )
-
-        // 취소 체크
-        if cancelled { throw CancellationError() }
-
-        // 5. 격리 캐시에서 결과 추출 → FaceScanGroup 변환 + 콜백
+        // 3. 배치 FP + IncrementalGroupBuilder 증분 그루핑
+        var currentIndex = startIndex
+        var totalScanned = 0
         var totalGroupsFound = 0
+        var lastAssetDate: Date?
+        var lastAssetID: String?
 
-        for groupID in groupIDs {
+        // 증분 그루핑 빌더 (formGroups 코어 공유)
+        let builder = IncrementalGroupBuilder(
+            analyzer: matchingEngine.analyzer,
+            threshold: SimilarityConstants.similarityThreshold
+        )
+
+        // PHAsset 배치 간 누적 (processCompletedGroup에서 재조회 방지)
+        var assetMap: [String: PHAsset] = [:]
+
+        // FP 생성은 배치 단위, 그루핑은 연속
+        let batchSize = FaceScanConstants.chunkSize  // 기존 20장 유지
+
+        while currentIndex < fetchResult.count {
             // 취소 체크
             if cancelled { throw CancellationError() }
 
-            // maxGroupCount 제한
+            // 종료 조건
             if totalGroupsFound >= FaceScanConstants.maxGroupCount { break }
+            if totalScanned >= FaceScanConstants.maxScanCount { break }
 
-            let members = await isolatedCache.getGroupMembers(groupID: groupID)
-            guard members.count >= SimilarityConstants.minGroupSize else { continue }
+            // 배치 범위 계산 (overlap 불필요 — 연속 스캔)
+            let batchEnd = min(fetchResult.count - 1, currentIndex + batchSize - 1)
 
-            let validSlots = await isolatedCache.getGroupValidPersonIndices(for: groupID)
-
-            // FaceScanCache에 얼굴 데이터 복사 (FaceComparisonVC 조회용)
-            for assetID in members {
-                let faces = await isolatedCache.getFaces(for: assetID)
-                if !faces.isEmpty {
-                    await cache.setFaces(faces, for: assetID)
+            // 배치 내 사진 추출 (삭제대기함 제외)
+            var batchPhotos: [PHAsset] = []
+            for i in currentIndex...batchEnd {
+                let asset = fetchResult.object(at: i)
+                if !trashedIDs.contains(asset.localIdentifier) {
+                    batchPhotos.append(asset)
                 }
             }
 
-            // FaceScanCache에 그룹 저장
-            let group = SimilarThumbnailGroup(memberAssetIDs: members)
-            await cache.addGroup(group, validSlots: validSlots, photoFaces: [:])
+            // PHAsset 누적 (그룹 멤버가 이전 배치에서 올 수 있음)
+            for photo in batchPhotos {
+                assetMap[photo.localIdentifier] = photo
+            }
 
-            // FaceScanGroup 생성 + 콜백
-            let scanGroup = FaceScanGroup(
-                groupID: group.groupID,
-                memberAssetIDs: members,
-                validPersonIndices: validSlots
-            )
-            totalGroupsFound += 1
+            // FP 생성 (PersonMatchingEngine — 기존과 동일)
+            let (featurePrints, _) = await matchingEngine.generateFeaturePrints(for: batchPhotos)
 
-            await MainActor.run { onGroupFound(scanGroup) }
+            guard !cancelled else { throw CancellationError() }
 
-            // 진행률 콜백
+            // FP를 하나씩 builder에 feed
+            let batchIDs = batchPhotos.map { $0.localIdentifier }
+
+            for i in 0..<batchIDs.count {
+                if let completedGroupIDs = builder.feed(fp: featurePrints[i], id: batchIDs[i]) {
+                    // 그룹 확정 → 얼굴 감지 + 캐시 저장 + UI 표시
+                    // hasAnyFace 게이트 없음 — 경로 A와 동일하게 모든 그룹을 YuNet/SFace로 처리
+                    let group = await processCompletedGroup(
+                        groupAssetIDs: completedGroupIDs,
+                        assetMap: assetMap
+                    )
+                    if let group = group {
+                        totalGroupsFound += 1
+                        await MainActor.run { onGroupFound(group) }
+                        if totalGroupsFound >= FaceScanConstants.maxGroupCount { break }
+                    }
+                }
+            }
+
+            // 진행 상황 업데이트
+            let newScanned = batchEnd - currentIndex + 1
+            totalScanned += newScanned
+            currentIndex = batchEnd + 1
+
+            // 마지막 사진 정보 기록 (세션 저장용)
+            if let lastPhoto = batchPhotos.last {
+                lastAssetDate = lastPhoto.creationDate
+                lastAssetID = lastPhoto.localIdentifier
+            }
+
+            // 진행률 콜백 (메인 스레드)
             let progress = FaceScanProgress.updated(
-                scannedCount: endIndex - startIndex + 1,
+                scannedCount: totalScanned,
                 groupCount: totalGroupsFound,
-                currentDate: Date()
+                currentDate: lastAssetDate ?? Date()
             )
             await MainActor.run { onProgress(progress) }
+
+            // 열 상태 확인 — 과열 시 잠시 대기
+            if ProcessInfo.processInfo.thermalState.rawValue >= ProcessInfo.ThermalState.serious.rawValue {
+                try await Task.sleep(nanoseconds: 500_000_000)
+            }
         }
 
-        // 6. 세션 저장
-        // 마지막 분석 사진의 날짜/ID 기록
-        let lastAsset = fetchResult.object(at: endIndex)
-        if let lastDate = lastAsset.creationDate {
-            saveSession(method: method, lastDate: lastDate, lastAssetID: lastAsset.localIdentifier)
+        // 4. 마지막 미확정 그룹 처리 (maxGroupCount 미도달 시에만)
+        if totalGroupsFound < FaceScanConstants.maxGroupCount,
+           let lastGroupIDs = builder.flush() {
+            let group = await processCompletedGroup(
+                groupAssetIDs: lastGroupIDs,
+                assetMap: assetMap
+            )
+            if let group = group {
+                totalGroupsFound += 1
+                await MainActor.run { onGroupFound(group) }
+            }
+        }
+
+        // 5. 세션 저장 (분석 완료 시에만)
+        if let date = lastAssetDate, let assetID = lastAssetID {
+            saveSession(method: method, lastDate: date, lastAssetID: assetID)
         }
     }
 
@@ -357,12 +390,8 @@ final class FaceScanService {
 
     /// 명시적 범위로 FaceScan 분석을 실행합니다 (검증 하네스용).
     ///
-    /// production analyze()의 청크 루프를 범위 제한 버전으로 재현합니다.
-    /// 내부에서 기존 analyzeChunk(photos:excludeAssets:)를 그대로 호출합니다.
-    ///
-    /// 반드시 유지: chunkSize=20, chunkOverlap=3, excludeAssets, hasAnyFace,
-    /// Step 2.5/5.5, maxScanCount/maxGroupCount, 삭제대기함 제외
-    /// 반드시 금지: saveSession(), UserDefaults 갱신
+    /// production analyze()와 동일한 배치 FP + IncrementalGroupBuilder 방식.
+    /// saveSession/UserDefaults 갱신 없음.
     ///
     /// - Parameters:
     ///   - fetchResult: 분석 대상 PHFetchResult
@@ -380,82 +409,83 @@ final class FaceScanService {
         var currentIndex = safeRange.lowerBound
         var totalScanned = 0
         var totalGroupsFound = 0
-        var discoveredAssetIDs = Set<String>()
         var allGroups: [FaceScanGroup] = []
-        var analyzedAssetIDs: [String] = []       // 순서 보존, 중복 제거
-        var analyzedAssetIDSet = Set<String>()     // 빠른 중복 체크용
+        var analyzedAssetIDs: [String] = []
+        var analyzedAssetIDSet = Set<String>()
         var terminationReason: FaceScanDebugTerminationReason = .naturalEnd
 
+        // 증분 그루핑 빌더 (production analyze와 동일)
+        let builder = IncrementalGroupBuilder(
+            analyzer: matchingEngine.analyzer,
+            threshold: SimilarityConstants.similarityThreshold
+        )
+        var assetMap: [String: PHAsset] = [:]
+        let batchSize = FaceScanConstants.chunkSize
+
         while currentIndex <= safeRange.upperBound {
-            // 취소 체크
-            if cancelled {
-                terminationReason = .cancelled
-                break
-            }
+            if cancelled { terminationReason = .cancelled; break }
+            if totalGroupsFound >= FaceScanConstants.maxGroupCount { terminationReason = .maxGroupCount; break }
 
-            // 종료 조건 체크
-            if totalScanned >= FaceScanConstants.maxScanCount {
-                terminationReason = .maxScanCount
-                break
-            }
-            if totalGroupsFound >= FaceScanConstants.maxGroupCount {
-                terminationReason = .maxGroupCount
-                break
-            }
+            // 배치 범위 계산
+            let batchEnd = min(safeRange.upperBound, currentIndex + batchSize - 1)
 
-            // 청크 범위 계산 (overlap 포함, safeRange 내로 클램프)
-            let chunkStart = max(safeRange.lowerBound, currentIndex - FaceScanConstants.chunkOverlap)
-            let chunkEnd = min(safeRange.upperBound, currentIndex + FaceScanConstants.chunkSize - 1)
-
-            // 청크 내 사진 추출 (삭제대기함 제외)
-            var photos: [PHAsset] = []
-            for i in chunkStart...chunkEnd {
+            // 배치 내 사진 추출 (삭제대기함 제외)
+            var batchPhotos: [PHAsset] = []
+            for i in currentIndex...batchEnd {
                 let asset = fetchResult.object(at: i)
                 if !trashedIDs.contains(asset.localIdentifier) {
-                    photos.append(asset)
+                    batchPhotos.append(asset)
                 }
             }
 
-            // 투입 사진 ID 누적 (중복 제거, 순서 보존)
-            for photo in photos {
+            // PHAsset 누적 + 투입 사진 ID 누적
+            for photo in batchPhotos {
                 let id = photo.localIdentifier
+                assetMap[id] = photo
                 if !analyzedAssetIDSet.contains(id) {
                     analyzedAssetIDSet.insert(id)
                     analyzedAssetIDs.append(id)
                 }
             }
 
-            // 최소 3장 미만이면 다음 청크로
-            guard photos.count >= SimilarityConstants.minGroupSize else {
-                let skipped = chunkEnd - currentIndex + 1
-                currentIndex = chunkEnd + 1
-                totalScanned += skipped
-                continue
-            }
+            // FP 생성
+            let (featurePrints, _) = await matchingEngine.generateFeaturePrints(for: batchPhotos)
+            guard !cancelled else { terminationReason = .cancelled; break }
 
-            // 청크 분석 실행 (production analyzeChunk 그대로 호출)
-            let groups = await analyzeChunk(photos: photos, excludeAssets: discoveredAssetIDs)
-
-            // 그룹 발견 처리
-            for group in groups {
-                discoveredAssetIDs.formUnion(group.memberAssetIDs)
-                totalGroupsFound += 1
-                allGroups.append(group)
-
-                if totalGroupsFound >= FaceScanConstants.maxGroupCount {
-                    terminationReason = .maxGroupCount
-                    break
+            // FP를 하나씩 builder에 feed
+            let batchIDs = batchPhotos.map { $0.localIdentifier }
+            for i in 0..<batchIDs.count {
+                if let completedGroupIDs = builder.feed(fp: featurePrints[i], id: batchIDs[i]) {
+                    let group = await processCompletedGroup(
+                        groupAssetIDs: completedGroupIDs,
+                        assetMap: assetMap
+                    )
+                    if let group = group {
+                        totalGroupsFound += 1
+                        allGroups.append(group)
+                        if totalGroupsFound >= FaceScanConstants.maxGroupCount {
+                            terminationReason = .maxGroupCount
+                            break
+                        }
+                    }
                 }
             }
 
             // 진행 카운트 갱신
-            let newScanned = chunkEnd - currentIndex + 1
+            let newScanned = batchEnd - currentIndex + 1
             totalScanned += newScanned
-            currentIndex = chunkEnd + 1
+            currentIndex = batchEnd + 1
+        }
 
-            // 열 상태 확인 — 과열 시 잠시 대기
-            if ProcessInfo.processInfo.thermalState.rawValue >= ProcessInfo.ThermalState.serious.rawValue {
-                try? await Task.sleep(nanoseconds: 500_000_000)
+        // 마지막 미확정 그룹 처리
+        if totalGroupsFound < FaceScanConstants.maxGroupCount,
+           let lastGroupIDs = builder.flush() {
+            let group = await processCompletedGroup(
+                groupAssetIDs: lastGroupIDs,
+                assetMap: assetMap
+            )
+            if let group = group {
+                allGroups.append(group)
             }
         }
 

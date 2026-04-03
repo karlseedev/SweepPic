@@ -296,6 +296,7 @@ final class SimilarityAnalyzer {
     ///
     /// 인접한 사진들의 거리가 threshold 이하면 같은 그룹으로 묶습니다.
     /// 거리가 threshold 초과하거나 nil이면 그룹을 분리합니다.
+    /// 내부적으로 IncrementalGroupBuilder를 사용합니다.
     ///
     /// - Parameters:
     ///   - featurePrints: Feature Print 배열 (nil 가능)
@@ -312,34 +313,175 @@ final class SimilarityAnalyzer {
             return []
         }
 
-        // 인접 거리 계산
-        let distances = calculateAdjacentDistances(featurePrints)
+        // IncrementalGroupBuilder를 사용하여 그룹 형성
+        let builder = IncrementalGroupBuilder(analyzer: self, threshold: threshold)
+        var groups: [[String]] = []
 
+        for (fp, id) in zip(featurePrints, photoIDs) {
+            if let completed = builder.feed(fp: fp, id: id) {
+                groups.append(completed)
+            }
+        }
+        if let last = builder.flush() {
+            groups.append(last)
+        }
+
+        #if DEBUG
+        // differential test: 기존 로직과 새 builder 결과 비교
+        let legacyGroups = _formGroupsLegacy(
+            featurePrints: featurePrints,
+            photoIDs: photoIDs,
+            threshold: threshold
+        )
+        assert(groups == legacyGroups,
+               "[formGroups] builder 결과가 legacy와 다름: \(groups) vs \(legacyGroups)")
+        #endif
+
+        return groups
+    }
+
+    #if DEBUG
+    /// 기존 formGroups 로직 보존 (DEBUG differential test용)
+    private func _formGroupsLegacy(
+        featurePrints: [VNFeaturePrintObservation?],
+        photoIDs: [String],
+        threshold: Float
+    ) -> [[String]] {
+        let distances = calculateAdjacentDistances(featurePrints)
         var groups: [[String]] = []
         var currentGroup: [String] = [photoIDs[0]]
 
         for i in 0..<distances.count {
             let distance = distances[i]
-
-            // nil이거나 threshold 초과하면 그룹 분리
             if distance == nil || distance! > threshold {
-                // 현재 그룹이 최소 크기 이상이면 저장
                 if currentGroup.count >= SimilarityConstants.minGroupSize {
                     groups.append(currentGroup)
                 }
-                // 새 그룹 시작
                 currentGroup = [photoIDs[i + 1]]
             } else {
-                // 같은 그룹에 추가
                 currentGroup.append(photoIDs[i + 1])
             }
         }
 
-        // 마지막 그룹 처리
         if currentGroup.count >= SimilarityConstants.minGroupSize {
             groups.append(currentGroup)
         }
 
         return groups
+    }
+    #endif
+}
+
+// MARK: - IncrementalGroupBuilder
+
+/// 인접 거리 기반 증분 그룹 빌더
+///
+/// formGroups()의 코어 로직을 상태 기반으로 추출.
+/// 그리드(배치)와 FaceScan(증분) 모두 이 코어를 공유합니다.
+/// FP를 하나씩 feed하면 그룹 경계가 감지될 때 확정된 그룹을 반환합니다.
+class IncrementalGroupBuilder {
+
+    // MARK: - Dependencies
+
+    /// 거리 계산용 분석기
+    private let analyzer: SimilarityAnalyzer
+
+    /// 유사도 임계값
+    private let threshold: Float
+
+    /// 최소 그룹 크기
+    private let minGroupSize: Int
+
+    // MARK: - State
+
+    /// 현재 구축 중인 그룹
+    private var currentGroup: [String] = []
+
+    /// 직전 FP (거리 계산용)
+    private var lastFP: VNFeaturePrintObservation?
+
+    /// 열린 그룹이 있는지 여부 (1장이라도 누적되어 있으면 true)
+    /// 아직 3장 미만이더라도 추가 사진으로 유효 그룹이 될 수 있으므로,
+    /// 스캔 상한 도달 시 조기 종료를 방지합니다.
+    var hasOpenGroup: Bool { !currentGroup.isEmpty }
+
+    // MARK: - Init
+
+    init(
+        analyzer: SimilarityAnalyzer,
+        threshold: Float = SimilarityConstants.similarityThreshold,
+        minGroupSize: Int = SimilarityConstants.minGroupSize
+    ) {
+        self.analyzer = analyzer
+        self.threshold = threshold
+        self.minGroupSize = minGroupSize
+    }
+
+    // MARK: - Feed
+
+    /// FP와 ID를 하나씩 feed합니다.
+    ///
+    /// 직전 FP와 새 FP의 거리를 비교하여 그룹 경계를 판단합니다.
+    /// 경계가 감지되면 직전 그룹을 확정하여 반환합니다.
+    ///
+    /// - Parameters:
+    ///   - fp: Feature Print (nil 가능)
+    ///   - id: 사진 ID
+    /// - Returns: 직전 그룹이 확정되면 해당 그룹의 ID 배열, 아니면 nil
+    func feed(fp: VNFeaturePrintObservation?, id: String) -> [String]? {
+        var completedGroup: [String]? = nil
+
+        // 거리 계산: lastFP와 새 FP 비교
+        // 원본 formGroups 동작: fp[i] 또는 fp[i+1] 중 하나라도 nil이면 distance=nil → 끊김
+        // 단, 첫 feed (lastFP==nil, 이전 사진 없음)는 끊김이 아님
+        let isFirstFeed = (lastFP == nil && currentGroup.isEmpty)
+        let shouldBreak: Bool
+        if isFirstFeed {
+            shouldBreak = false
+        } else if let last = lastFP, let current = fp {
+            let distance = try? analyzer.computeDistance(last, current)
+            shouldBreak = (distance == nil || distance! > threshold)
+        } else {
+            // lastFP 또는 fp 중 하나라도 nil → distance=nil → 끊김
+            shouldBreak = true
+        }
+
+        if shouldBreak {
+            // 현재 그룹 확정
+            if currentGroup.count >= minGroupSize {
+                completedGroup = currentGroup
+            }
+            // 새 그룹 시작 (원본 formGroups: FP nil이어도 다음 사진은 항상 새 그룹 시작)
+            currentGroup = [id]
+        } else {
+            // 같은 그룹에 추가 (원본 formGroups: 첫 사진은 FP nil이어도 그룹에 포함)
+            if currentGroup.isEmpty {
+                currentGroup = [id]
+            } else {
+                currentGroup.append(id)
+            }
+        }
+
+        // nil FP는 lastFP를 리셋 (원본 formGroups 동작 일치)
+        lastFP = fp
+        return completedGroup
+    }
+
+    // MARK: - Flush
+
+    /// 스캔 종료 시 미확정 그룹을 반환합니다.
+    ///
+    /// 마지막 그룹이 최소 크기 이상이면 반환, 아니면 nil.
+    /// 호출 후 내부 상태가 초기화됩니다.
+    func flush() -> [String]? {
+        guard currentGroup.count >= minGroupSize else {
+            currentGroup = []
+            lastFP = nil
+            return nil
+        }
+        let group = currentGroup
+        currentGroup = []
+        lastFP = nil
+        return group
     }
 }
