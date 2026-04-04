@@ -680,5 +680,175 @@ final class SimilarityAnalysisQueue {
     func debugFetchPhotos(in range: ClosedRange<Int>, fetchResult: PHFetchResult<PHAsset>) -> [PHAsset] {
         return fetchPhotos(in: range, fetchResult: fetchResult)
     }
+
+    // MARK: - 그룹 진단: 파이프라인 추적 (로그 3)
+
+    /// 특정 멤버들이 격리 분석에서 어느 단계에서 탈락하는지 추적합니다.
+    ///
+    /// 파이프라인 단계:
+    /// 1. fetchPhotos → 분석 대상 사진 추출
+    /// 2. generateFeaturePrints → FP 생성
+    /// 3. formGroups → rawGroups 형성 (인접 FP 거리)
+    /// 4. assignPersonIndicesForGroup → 얼굴 감지 + 인물 매칭
+    /// 5. validSlots 계산 → 슬롯별 사진 수 검증
+    /// 6. validMembers 필터 → 유효 슬롯 얼굴 보유 사진만
+    ///
+    /// - Parameters:
+    ///   - targetMembers: 진단 대상 그룹의 멤버 assetID 집합
+    ///   - range: 분석 범위 (Grid fetchResult 기준)
+    ///   - fetchResult: Grid fetchResult (ascending)
+    /// - Returns: 파이프라인 각 단계의 상세 추적 결과
+    struct PipelineTrace {
+        /// 분석 범위
+        let range: ClosedRange<Int>
+        /// 분석 투입 사진 수
+        let analyzedPhotoCount: Int
+        /// rawGroups 총 수 (formGroups 결과)
+        let rawGroupCount: Int
+        /// 타깃 멤버를 포함하는 rawGroup (없으면 nil)
+        let targetRawGroup: [String]?
+        /// 멤버별 얼굴 감지 수
+        let faceCountPerMember: [String: Int]
+        /// personIndex별 등장 사진 수
+        let slotPhotoCount: [Int: Int]
+        /// 유효 슬롯 (minPhotosPerSlot 이상)
+        let validSlots: Set<Int>
+        /// 유효 멤버 (유효 슬롯 얼굴 보유)
+        let validMembers: [String]
+        /// 탈락 멤버
+        let excludedMembers: [String]
+        /// 판정 결과
+        let result: String
+        /// 판정 사유
+        let rejectionReason: String?
+    }
+
+    func debugPipelineTrace(
+        targetMembers: Set<String>,
+        range: ClosedRange<Int>,
+        fetchResult: PHFetchResult<PHAsset>
+    ) async -> PipelineTrace {
+        // Step 1: 사진 추출
+        let photos = fetchPhotos(in: range, fetchResult: fetchResult)
+        let photoIDs = photos.map(\.localIdentifier)
+
+        // Step 2: FP 생성
+        let (featurePrints, _) = await matchingEngine.generateFeaturePrints(for: photos)
+
+        // Step 3: rawGroups 형성
+        let rawGroups = analyzer.formGroups(
+            featurePrints: featurePrints,
+            photoIDs: photoIDs,
+            threshold: SimilarityConstants.similarityThreshold
+        )
+
+        // 타깃 멤버를 포함하는 rawGroup 찾기
+        var targetRawGroup: [String]? = nil
+        for group in rawGroups {
+            let groupSet = Set(group)
+            if !groupSet.isDisjoint(with: targetMembers) {
+                targetRawGroup = group
+                break
+            }
+        }
+
+        // rawGroup에 없으면 여기서 탈락
+        guard let rawGroup = targetRawGroup else {
+            return PipelineTrace(
+                range: range,
+                analyzedPhotoCount: photos.count,
+                rawGroupCount: rawGroups.count,
+                targetRawGroup: nil,
+                faceCountPerMember: [:],
+                slotPhotoCount: [:],
+                validSlots: [],
+                validMembers: [],
+                excludedMembers: Array(targetMembers),
+                result: "rejected",
+                rejectionReason: "notInRawGroups — FP 인접 거리에서 그룹 미형성"
+            )
+        }
+
+        // Step 4: 얼굴 감지 + 인물 매칭
+        let groupPhotos = photos.filter { rawGroup.contains($0.localIdentifier) }
+        let photoFacesMap = await matchingEngine.assignPersonIndicesForGroup(
+            assetIDs: rawGroup,
+            photos: groupPhotos
+        )
+
+        // 멤버별 얼굴 수
+        let faceCountPerMember = rawGroup.reduce(into: [String: Int]()) { dict, id in
+            dict[id] = photoFacesMap[id]?.count ?? 0
+        }
+
+        // Step 5: 슬롯 계산
+        var slotPhotoCountMap: [Int: Set<String>] = [:]
+        for (assetID, faces) in photoFacesMap {
+            for face in faces {
+                slotPhotoCountMap[face.personIndex, default: []].insert(assetID)
+            }
+        }
+
+        let validSlots = Set(slotPhotoCountMap.filter {
+            $0.value.count >= SimilarityConstants.minPhotosPerSlot
+        }.keys)
+        let slotCounts = slotPhotoCountMap.mapValues { $0.count }
+
+        // validSlots 미달 탈락
+        guard validSlots.count >= SimilarityConstants.minValidSlots else {
+            return PipelineTrace(
+                range: range,
+                analyzedPhotoCount: photos.count,
+                rawGroupCount: rawGroups.count,
+                targetRawGroup: rawGroup,
+                faceCountPerMember: faceCountPerMember,
+                slotPhotoCount: slotCounts,
+                validSlots: validSlots,
+                validMembers: [],
+                excludedMembers: rawGroup,
+                result: "rejected",
+                rejectionReason: "noValidSlots — 유효 슬롯 \(validSlots.count)개 < 최소 \(SimilarityConstants.minValidSlots)개"
+            )
+        }
+
+        // Step 6: 유효 멤버 필터
+        let validMembers = rawGroup.filter { assetID in
+            guard let faces = photoFacesMap[assetID] else { return false }
+            return faces.contains { validSlots.contains($0.personIndex) }
+        }
+        let excludedMembers = rawGroup.filter { !validMembers.contains($0) }
+
+        // 멤버 수 미달 탈락
+        guard validMembers.count >= SimilarityConstants.minGroupSize else {
+            return PipelineTrace(
+                range: range,
+                analyzedPhotoCount: photos.count,
+                rawGroupCount: rawGroups.count,
+                targetRawGroup: rawGroup,
+                faceCountPerMember: faceCountPerMember,
+                slotPhotoCount: slotCounts,
+                validSlots: validSlots,
+                validMembers: validMembers,
+                excludedMembers: excludedMembers,
+                result: "rejected",
+                rejectionReason: "validMembersTooSmall — 유효 멤버 \(validMembers.count)장 < 최소 \(SimilarityConstants.minGroupSize)장"
+            )
+        }
+
+        // 통과
+        return PipelineTrace(
+            range: range,
+            analyzedPhotoCount: photos.count,
+            rawGroupCount: rawGroups.count,
+            targetRawGroup: rawGroup,
+            faceCountPerMember: faceCountPerMember,
+            slotPhotoCount: slotCounts,
+            validSlots: validSlots,
+            validMembers: validMembers,
+            excludedMembers: excludedMembers,
+            result: "accepted",
+            rejectionReason: nil
+        )
+    }
     #endif
 }

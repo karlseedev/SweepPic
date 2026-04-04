@@ -22,6 +22,8 @@
 
 import Foundation
 import UIKit
+import OSLog
+import AppCore
 
 // MARK: - SimilarityCacheProtocol (읽기 전용)
 
@@ -483,6 +485,21 @@ actor SimilarityCache: SimilarityCacheMutating {
 
         // 병합된 결과에서 유효 슬롯 재계산 필요
         // (호출자가 다시 계산하므로 여기서는 기존 값 반환)
+
+        // #if DEBUG: 로그 4 — 그리드 merge 이력 기록
+        #if DEBUG
+        let overlapDetails = overlappingGroupIDs.compactMap { groupID -> String? in
+            // 이미 invalidateGroup()으로 제거되었을 수 있으므로 nil 허용
+            return "  \(groupID.prefix(8))"
+        }
+        Logger.similarPhoto.notice("""
+        [MergeLog] ═══ 그룹 병합 발생 ═══
+          newMembers(\(newMembers.count)): \(newMembers.map { String($0.prefix(8)) })
+          overlapGroupIDs(\(overlappingGroupIDs.count)): \(overlapDetails)
+          mergedMembers(\(mergedMemberSet.count)): \(mergedMemberSet.map { String($0.prefix(8)) })
+          mergedSlots: \(mergedSlots)
+        """)
+        #endif
 
         return (Array(mergedMemberSet), mergedSlots)
     }

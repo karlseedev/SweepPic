@@ -58,6 +58,9 @@ extension ViewerViewController {
         sheet.addAction(UIAlertAction(title: "인물 매칭 디버그", style: .default) { [weak self] _ in
             self?.runPersonMatchDebug()
         })
+        sheet.addAction(UIAlertAction(title: "🔍 그룹 진단 (Grid vs EQ)", style: .default) { [weak self] _ in
+            self?.runGroupDiagnostic()
+        })
         sheet.addAction(UIAlertAction(title: "취소", style: .cancel))
         present(sheet, animated: true)
     }
@@ -528,6 +531,211 @@ extension ViewerViewController {
             await MainActor.run {
                 let message = lines.joined(separator: "\n")
                 showFaceDebugAlert(title: "인물매칭 \(shortID)", message: message)
+            }
+        }
+    }
+
+    // MARK: - 그룹 진단 (Grid vs EQ)
+
+    /// 현재 사진의 그룹이 왜 EQ 테스트에서 안 잡히는지 진단합니다.
+    ///
+    /// 4종 로그를 한번에 출력:
+    /// - 로그 1: 타깃 그룹 식별 (멤버, validSlots, fetchResult 인덱스)
+    /// - 로그 2: FaceScan 입력 계약 (범위 포함 여부, 상한)
+    /// - 로그 3: 격리 파이프라인 추적 (rawGroups → 얼굴 → 슬롯 → 멤버)
+    /// - 로그 4: merge 로그는 SimilarityCache에서 실시간으로 출력됨
+    private func runGroupDiagnostic() {
+        guard let asset = coordinator.asset(at: currentIndex) else {
+            Logger.similarPhoto.error("[GroupDiag] asset을 가져올 수 없음")
+            return
+        }
+
+        let assetID = asset.localIdentifier
+        let shortID = String(assetID.prefix(8))
+        Logger.similarPhoto.notice("[GroupDiag] ═══════════════════════════════════════")
+        Logger.similarPhoto.notice("[GroupDiag] 그룹 진단 시작: \(shortID)")
+        showFaceDebugToast("그룹 진단 중...")
+
+        Task {
+            // ── 로그 1: 타깃 그룹 식별 ──
+            let state = await SimilarityCache.shared.getState(for: assetID)
+
+            guard case .analyzed(true, let groupID?) = state,
+                  let group = await SimilarityCache.shared.getGroup(groupID: groupID) else {
+                Logger.similarPhoto.error("[GroupDiag] 현재 사진이 그룹에 속하지 않음 (state: \(String(describing: state)))")
+                await MainActor.run {
+                    showFaceDebugAlert(title: "그룹 진단", message: "현재 사진이 그룹에 속하지 않습니다.")
+                }
+                return
+            }
+
+            let members = group.memberAssetIDs.sorted()
+            let validSlots = await SimilarityCache.shared.getGroupValidPersonIndices(for: groupID)
+            let currentFaces = await SimilarityCache.shared.getFaces(for: assetID)
+
+            // 멤버별 fetchResult 인덱스 조회
+            // Grid: ascending (오래된 순), FaceScan: descending (최신 순)
+            let gridFetchResult = PhotoLibraryService.shared.fetchAllPhotos()
+            let faceScanService = FaceScanService(cache: FaceScanCache())
+            let fsFetchResult = faceScanService.debugBuildFetchResult(method: .fromLatest)
+
+            // PHFetchResult.index(of:)로 각 멤버 위치 조회
+            let targetAssets = PHAsset.fetchAssets(withLocalIdentifiers: members, options: nil)
+            var assetMap: [String: PHAsset] = [:]
+            targetAssets.enumerateObjects { asset, _, _ in
+                assetMap[asset.localIdentifier] = asset
+            }
+
+            var gridIndices: [String: Int] = [:]
+            var fsIndices: [String: Int] = [:]
+            for memberID in members {
+                if let memberAsset = assetMap[memberID] {
+                    let gIdx = gridFetchResult.index(of: memberAsset)
+                    let fIdx = fsFetchResult.index(of: memberAsset)
+                    if gIdx != NSNotFound { gridIndices[memberID] = gIdx }
+                    if fIdx != NSNotFound { fsIndices[memberID] = fIdx }
+                }
+            }
+
+            // 멤버별 인덱스 문자열 구성
+            let memberIndexStr = members.map { id -> String in
+                let short = String(id.prefix(8))
+                let gIdx = gridIndices[id].map(String.init) ?? "N/A"
+                let fIdx = fsIndices[id].map(String.init) ?? "N/A"
+                return "  \(short) → Grid:\(gIdx), FS:\(fIdx)"
+            }.joined(separator: "\n")
+
+            Logger.similarPhoto.notice("""
+            [GroupDiag] ═══ 로그 1: 타깃 그룹 식별 ═══
+              groupID: \(groupID.prefix(8))
+              members(\(members.count)장):
+            \(memberIndexStr)
+              validSlots: \(validSlots)
+              currentAsset: \(shortID)
+              currentPersonIndices: \(currentFaces.map { $0.personIndex })
+              정렬: Grid=ascending(오래된순), FaceScan=descending(최신순)
+              Grid fetchResult: \(gridFetchResult.count)장
+              FaceScan fetchResult: \(fsFetchResult.count)장
+            """)
+
+            // ── 로그 2: FaceScan 입력 계약 ──
+            let fsCount = fsFetchResult.count
+            let fsStartIndex = 0  // fromLatest는 0부터
+            let fsEndIndex = min(fsStartIndex + FaceScanConstants.maxScanCount - 1, fsCount - 1)
+            let fsAnalysisRange = fsStartIndex...fsEndIndex
+
+            let membersInFS = members.filter { fsIndices[$0] != nil }
+            let membersInRange = members.filter { id in
+                guard let idx = fsIndices[id] else { return false }
+                return fsAnalysisRange.contains(idx)
+            }
+            let membersOutOfRange = members.filter { id in
+                guard let idx = fsIndices[id] else { return true }
+                return !fsAnalysisRange.contains(idx)
+            }
+
+            // 원인 즉시 판별
+            var inputDiagnosis: String
+            if membersInFS.count < members.count {
+                inputDiagnosis = "❌ 일부 멤버가 FaceScan fetchResult에 없음 (mediaType 차이?)"
+            } else if membersInRange.count == 0 {
+                inputDiagnosis = "❌ 전체 멤버가 분석 범위 밖 (maxScanCount=\(FaceScanConstants.maxScanCount) 초과)"
+            } else if membersInRange.count < members.count {
+                inputDiagnosis = "⚠️ 일부 멤버만 분석 범위 내 (\(membersInRange.count)/\(members.count))"
+            } else {
+                inputDiagnosis = "✅ 전체 멤버가 분석 범위 내"
+            }
+
+            let outOfRangeStr = membersOutOfRange.map { id -> String in
+                let short = String(id.prefix(8))
+                let idx = fsIndices[id].map(String.init) ?? "N/A"
+                return "\(short)@\(idx)"
+            }.joined(separator: ", ")
+
+            Logger.similarPhoto.notice("""
+            [GroupDiag] ═══ 로그 2: FaceScan 입력 계약 ═══
+              method: fromLatest
+              fetchResult.count: \(fsCount)장
+              analysisRange: \(fsStartIndex)...\(fsEndIndex)
+              maxScanCount: \(FaceScanConstants.maxScanCount)
+              maxGroupCount: \(FaceScanConstants.maxGroupCount)
+              멤버 fetchResult 포함: \(membersInFS.count)/\(members.count)
+              멤버 분석범위 포함: \(membersInRange.count)/\(members.count)
+              범위 밖: [\(outOfRangeStr)]
+              진단: \(inputDiagnosis)
+            """)
+
+            // ── 로그 3: 격리 파이프라인 추적 ──
+            // Grid fetchResult에서 멤버들을 포함하는 범위를 자동 결정
+            let memberGridIdxs = members.compactMap { gridIndices[$0] }
+            guard let minGridIdx = memberGridIdxs.min(),
+                  let maxGridIdx = memberGridIdxs.max() else {
+                Logger.similarPhoto.error("[GroupDiag] Grid fetchResult에서 멤버 인덱스를 찾을 수 없음")
+                await MainActor.run {
+                    showFaceDebugAlert(title: "그룹 진단", message: "Grid fetchResult에서 멤버를 찾을 수 없습니다.")
+                }
+                return
+            }
+
+            // 분석 범위: 멤버 범위 ± analysisRangeExtension
+            let ext = SimilarityConstants.analysisRangeExtension
+            let diagLower = max(0, minGridIdx - ext)
+            let diagUpper = min(gridFetchResult.count - 1, maxGridIdx + ext)
+            let diagRange = diagLower...diagUpper
+
+            // 격리 인스턴스에서 파이프라인 추적
+            let isolatedCache = SimilarityCache()
+            let isolatedQueue = SimilarityAnalysisQueue(cache: isolatedCache)
+            let trace = await isolatedQueue.debugPipelineTrace(
+                targetMembers: Set(members),
+                range: diagRange,
+                fetchResult: gridFetchResult
+            )
+
+            // 멤버별 얼굴 수 문자열
+            let faceStr = trace.faceCountPerMember.sorted(by: { $0.key < $1.key }).map { id, count in
+                "\(String(id.prefix(8))):\(count)개"
+            }.joined(separator: ", ")
+
+            // 슬롯별 사진 수 문자열
+            let slotStr = trace.slotPhotoCount.sorted(by: { $0.key < $1.key }).map { slot, count in
+                "slot\(slot):\(count)장"
+            }.joined(separator: ", ")
+
+            Logger.similarPhoto.notice("""
+            [GroupDiag] ═══ 로그 3: 격리 파이프라인 추적 ═══
+              분석 범위: \(diagRange.lowerBound)...\(diagRange.upperBound) (Grid fetchResult 기준)
+              투입 사진: \(trace.analyzedPhotoCount)장
+              rawGroups: \(trace.rawGroupCount)개
+              타깃 rawGroup: \(trace.targetRawGroup?.count ?? 0)장 \(trace.targetRawGroup == nil ? "(미형성 ❌)" : "")
+              얼굴 감지: [\(faceStr)]
+              슬롯: [\(slotStr)]
+              validSlots: \(trace.validSlots)
+              validMembers: \(trace.validMembers.count)장 \(trace.validMembers.map { String($0.prefix(8)) })
+              excludedMembers: \(trace.excludedMembers.count)장 \(trace.excludedMembers.map { String($0.prefix(8)) })
+              ────────────────────────
+              결과: \(trace.result)
+              사유: \(trace.rejectionReason ?? "통과")
+            """)
+
+            // ── 요약 알럿 ──
+            Logger.similarPhoto.notice("[GroupDiag] ═══════════════════════════════════════")
+
+            var summaryLines: [String] = []
+            summaryLines.append("▸ 그룹: \(members.count)장, slots: \(validSlots)")
+            summaryLines.append("")
+            summaryLines.append("▸ FaceScan 입력: \(inputDiagnosis)")
+            summaryLines.append("")
+            summaryLines.append("▸ 파이프라인: \(trace.result)")
+            if let reason = trace.rejectionReason {
+                summaryLines.append("  사유: \(reason)")
+            }
+            summaryLines.append("")
+            summaryLines.append("(상세 로그: 콘솔 확인)")
+
+            await MainActor.run {
+                let message = summaryLines.joined(separator: "\n")
+                self.showFaceDebugAlert(title: "그룹 진단 \(shortID)", message: message)
             }
         }
     }
