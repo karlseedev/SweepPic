@@ -1268,7 +1268,7 @@ extension GridViewController {
 
     /// EQ 버튼 탭 → ActionSheet (처음부터 / 이어서 하기)
     @objc private func eqButtonTapped() {
-        let chunkSize = 3000
+        let chunkSize = 1000
         let nextStart = Self.lastTestedEndIndex
         let nextEnd = nextStart + chunkSize - 1
 

@@ -4,18 +4,18 @@
 //
 //  인물사진 비교정리 — 스캔 엔진
 //
-//  핵심 전략: 기존 SimilarityAnalysisQueue를 호출하지 않고, 개별 분석기를 직접 사용.
+//  핵심 전략: formGroupsForRange()의 내부 로직을 단계별로 분해하여 직접 실행.
 //  기존 코드(SimilarityAnalysisQueue, SimilarityCache) 수정 없음.
-//  분석 도구(SimilarityAnalyzer, YuNetFaceDetector, SFaceRecognizer, FaceAligner)만 재사용.
+//  분석 도구(PersonMatchingEngine, SimilarityAnalyzer)만 재사용.
 //
-//  책임:
-//  - PHFetchResult 구성 (method별 predicate, 최신순 정렬)
-//  - 삭제대기함 사진 제외
-//  - 청크 단위 분석 루프 (chunkSize: 20, overlap: 3)
-//  - 그룹 발견 시 즉시 콜백
-//  - 종료 조건: 1,000장 OR 30그룹
-//  - 취소 지원
-//  - 열 상태(thermal) 모니터링
+//  Decomposed Pipeline:
+//  1. 전체 FP 생성 (matchingEngine.generateFeaturePrints)
+//  2. 전체 FP로 그루핑 1회 (analyzer.formGroups)
+//  3. 그룹별 얼굴 감지 + 즉시 콜백 (점진적 표시)
+//
+//  이전 방식(격리 formGroupsForRange 단일 호출)과의 차이:
+//  - formGroupsForRange는 모든 그룹 처리 후 한꺼번에 반환
+//  - decomposed pipeline은 그룹별 얼굴 감지 완료 즉시 콜백 (점진적 표시)
 //
 
 import Foundation
@@ -104,17 +104,21 @@ final class FaceScanService {
 
     // MARK: - Analyze (메인 진입점)
 
-    /// 인물사진 비교정리 분석 실행
+    /// 인물사진 비교정리 분석 실행 (Decomposed Pipeline)
     ///
-    /// 격리 SimilarityAnalysisQueue 인스턴스에서 formGroupsForRange()를 호출하여
-    /// Grid와 동일한 알고리즘으로 유사 인물 그룹을 발견합니다.
+    /// formGroupsForRange()의 내부 로직을 단계별로 분해하여 직접 실행합니다.
+    /// 전체 FP 생성 → formGroups 1회 호출 → 그룹별 얼굴 감지 + 즉시 콜백.
+    ///
+    /// Grid(formGroupsForRange)와 동일한 알고리즘을 각 단계에서 직접 호출하므로
+    /// 그루핑 결과가 동일하면서도 그룹별 점진적 표시가 가능합니다.
+    ///
+    /// EQ 동등성 보장:
+    /// - FP 생성: 동일 matchingEngine.generateFeaturePrints (PersonMatchingEngine 무상태)
+    /// - 그루핑: 동일 analyzer.formGroups (순수 함수, 전체 FP 1회 호출)
+    /// - 얼굴 감지: 동일 matchingEngine.assignPersonIndicesForGroup (그룹별 독립)
+    /// - 검증 게이트: addGroupIfValid와 동일 (minGroupSize + minValidSlots)
+    ///
     /// 종료 조건: maxScanCount(1,000장) 범위 제한 OR maxGroupCount(30그룹)
-    ///
-    /// 이전 구조(청크 루프 + analyzeChunk)에서 변경됨:
-    /// - 청크 경계에서 그룹이 잘리는 문제 해결
-    /// - Grid formGroupsForRange()를 그대로 호출하므로 Grid 알고리즘 변경 시 자동 반영
-    /// - 격리 인스턴스 사용으로 SimilarityCache.shared 오염 없음
-    /// - self !== .shared 가드로 analytics/notification 부수효과 억제
     ///
     /// - Parameters:
     ///   - method: 스캔 방식 (fromLatest, continueFromLast, byYear)
@@ -147,70 +151,143 @@ final class FaceScanService {
         )
         await MainActor.run { onProgress(initialProgress) }
 
-        // 4. 격리 인스턴스에서 formGroupsForRange() 호출
-        // 격리 SimilarityCache → 격리 SimilarityAnalysisQueue
-        // self !== .shared 가드에 의해 analytics/notification 자동 억제
-        let isolatedCache = SimilarityCache()
-        let isolatedQueue = SimilarityAnalysisQueue(cache: isolatedCache)
-        let groupIDs = await isolatedQueue.formGroupsForRange(
-            analysisRange, source: .grid, fetchResult: fetchResult
-        )
+        // ── Step 1: 사진 추출 (삭제대기함 제외) ──
+        // SimilarityAnalysisQueue.fetchPhotos(:fetchResult:) 동일 로직
+        let photos = fetchPhotosInRange(analysisRange, fetchResult: fetchResult)
+        guard photos.count >= SimilarityConstants.minGroupSize else { return }
+        let assetIDs = photos.map { $0.localIdentifier }
+
+        // ── Step 2: 전체 FP 생성 (PersonMatchingEngine) ──
+        // Grid formGroupsForRange와 동일: 전체 사진에 대해 1회 호출
+        let (featurePrints, _) = await matchingEngine.generateFeaturePrints(for: photos)
 
         // 취소 체크
         if cancelled { throw CancellationError() }
 
-        // 5. 격리 캐시에서 결과 추출 → FaceScanGroup 변환 + 콜백
-        var totalGroupsFound = 0
+        // ── Step 3: 전체 FP로 그루핑 1회 (SimilarityAnalyzer.formGroups) ──
+        // 전체 FP를 한 번에 전달하므로 경계 잘림 문제 없음
+        let rawGroups = matchingEngine.analyzer.formGroups(
+            featurePrints: featurePrints,
+            photoIDs: assetIDs,
+            threshold: SimilarityConstants.similarityThreshold
+        )
 
-        for groupID in groupIDs {
+        guard !rawGroups.isEmpty else { return }
+
+        // ── Step 4: 그룹별 얼굴 감지 + 즉시 콜백 (점진적 표시) ──
+        // formGroupsForRange:373-430 로직과 동일한 검증 파이프라인
+        var totalGroupsFound = 0
+        let totalPhotosInRange = endIndex - startIndex + 1
+        let totalRawGroups = max(rawGroups.count, 1)
+        var processedGroupIndex = 0
+
+        for (groupIndex, groupAssetIDs) in rawGroups.enumerated() {
             // 취소 체크
             if cancelled { throw CancellationError() }
 
             // maxGroupCount 제한
             if totalGroupsFound >= FaceScanConstants.maxGroupCount { break }
 
-            let members = await isolatedCache.getGroupMembers(groupID: groupID)
-            guard members.count >= SimilarityConstants.minGroupSize else { continue }
+            // 그룹 내 사진 추출 (photos 배열에서 직접 필터 — assetMap 불필요)
+            let groupPhotos = photos.filter { groupAssetIDs.contains($0.localIdentifier) }
 
-            let validSlots = await isolatedCache.getGroupValidPersonIndices(for: groupID)
+            // 인물 매칭 실행 (YuNet 960 + SFace — formGroupsForRange와 동일 알고리즘)
+            let photoFacesMap = await matchingEngine.assignPersonIndicesForGroup(
+                assetIDs: groupAssetIDs,
+                photos: groupPhotos
+            )
 
-            // FaceScanCache에 얼굴 데이터 복사 (FaceComparisonVC 조회용)
-            for assetID in members {
-                let faces = await isolatedCache.getFaces(for: assetID)
-                if !faces.isEmpty {
-                    await cache.setFaces(faces, for: assetID)
+            // 유효 슬롯 계산: 같은 personIndex가 2장 이상의 사진에서 나타나야 함
+            // (formGroupsForRange:392-401 동일 로직)
+            var slotPhotoCount: [Int: Set<String>] = [:]
+            for (assetID, faces) in photoFacesMap {
+                for face in faces {
+                    slotPhotoCount[face.personIndex, default: []].insert(assetID)
                 }
             }
 
-            // FaceScanCache에 그룹 저장
-            let group = SimilarThumbnailGroup(memberAssetIDs: members)
-            await cache.addGroup(group, validSlots: validSlots, photoFaces: [:])
+            let validSlots = Set(slotPhotoCount.filter {
+                $0.value.count >= SimilarityConstants.minPhotosPerSlot
+            }.keys)
 
-            // FaceScanGroup 생성 + 콜백
-            let scanGroup = FaceScanGroup(
-                groupID: group.groupID,
-                memberAssetIDs: members,
-                validPersonIndices: validSlots
-            )
-            totalGroupsFound += 1
+            // addGroupIfValid Gate 2: 유효 슬롯 최소 개수 (SimilarityCache:239)
+            if validSlots.count >= SimilarityConstants.minValidSlots {
+                // 유효 슬롯 얼굴이 있는 사진만 그룹 멤버로 인정 (formGroupsForRange:405-408)
+                let validMembers = groupAssetIDs.filter { assetID in
+                    guard let faces = photoFacesMap[assetID] else { return false }
+                    return faces.contains { validSlots.contains($0.personIndex) }
+                }
 
-            await MainActor.run { onGroupFound(scanGroup) }
+                // addGroupIfValid Gate 1: 최소 그룹 크기 (SimilarityCache:228)
+                if validMembers.count >= SimilarityConstants.minGroupSize {
+                    // FaceScanCache에 얼굴 데이터 저장 (FaceComparisonVC 조회용)
+                    for (assetID, faces) in photoFacesMap {
+                        await cache.setFaces(faces, for: assetID)
+                    }
 
-            // 진행률 콜백
+                    // FaceScanCache에 그룹 저장
+                    let group = SimilarThumbnailGroup(memberAssetIDs: validMembers)
+                    await cache.addGroup(group, validSlots: validSlots, photoFaces: [:])
+
+                    // FaceScanGroup 생성 + 즉시 콜백 (점진적 표시!)
+                    let scanGroup = FaceScanGroup(
+                        groupID: group.groupID,
+                        memberAssetIDs: validMembers,
+                        validPersonIndices: validSlots
+                    )
+                    totalGroupsFound += 1
+
+                    await MainActor.run { onGroupFound(scanGroup) }
+                }
+            }
+
+            // 진행률 콜백: 유효 여부와 무관하게 rawGroup 처리 진행률 보고
+            // (그룹 처리가 실제 시간 소요 구간이므로 이 시점에서 점진적 증가)
+            let scannedSoFar = Int(Float(totalPhotosInRange) * Float(groupIndex + 1) / Float(totalRawGroups))
             let progress = FaceScanProgress.updated(
-                scannedCount: endIndex - startIndex + 1,
+                scannedCount: scannedSoFar,
                 groupCount: totalGroupsFound,
                 currentDate: Date()
             )
             await MainActor.run { onProgress(progress) }
         }
 
-        // 6. 세션 저장
+        // 5. 세션 저장
         // 마지막 분석 사진의 날짜/ID 기록
         let lastAsset = fetchResult.object(at: endIndex)
         if let lastDate = lastAsset.creationDate {
             saveSession(method: method, lastDate: lastDate, lastAssetID: lastAsset.localIdentifier)
         }
+    }
+
+    // MARK: - Photo Fetching
+
+    /// 범위 내 사진을 가져옵니다 (삭제대기함 제외).
+    ///
+    /// SimilarityAnalysisQueue.fetchPhotos(in:fetchResult:)와 동일한 로직입니다.
+    /// 삭제대기함에 있는 사진은 분석 대상에서 제외합니다.
+    ///
+    /// - Parameters:
+    ///   - range: 인덱스 범위
+    ///   - fetchResult: 사진 fetch 결과
+    /// - Returns: PHAsset 배열 (삭제대기함 사진 제외)
+    private func fetchPhotosInRange(
+        _ range: ClosedRange<Int>,
+        fetchResult: PHFetchResult<PHAsset>
+    ) -> [PHAsset] {
+        let trashedIDs = TrashStore.shared.trashedAssetIDs
+        var photos: [PHAsset] = []
+        let clampedRange = max(0, range.lowerBound)...min(fetchResult.count - 1, range.upperBound)
+
+        for i in clampedRange {
+            let asset = fetchResult.object(at: i)
+            // 삭제대기함에 있는 사진은 분석 대상에서 제외
+            if !trashedIDs.contains(asset.localIdentifier) {
+                photos.append(asset)
+            }
+        }
+
+        return photos
     }
 
     // MARK: - PHFetchResult 구성
@@ -357,12 +434,9 @@ final class FaceScanService {
 
     /// 명시적 범위로 FaceScan 분석을 실행합니다 (검증 하네스용).
     ///
-    /// production analyze()의 청크 루프를 범위 제한 버전으로 재현합니다.
-    /// 내부에서 기존 analyzeChunk(photos:excludeAssets:)를 그대로 호출합니다.
-    ///
-    /// 반드시 유지: chunkSize=20, chunkOverlap=3, excludeAssets, hasAnyFace,
-    /// Step 2.5/5.5, maxScanCount/maxGroupCount, 삭제대기함 제외
-    /// 반드시 금지: saveSession(), UserDefaults 갱신
+    /// production analyze()와 동일한 decomposed pipeline 방식:
+    /// 전체 FP 생성 → formGroups 1회 → 그룹별 얼굴 감지
+    /// saveSession/UserDefaults 갱신 없음.
     ///
     /// - Parameters:
     ///   - fetchResult: 분석 대상 PHFetchResult
@@ -372,97 +446,98 @@ final class FaceScanService {
         fetchResult: PHFetchResult<PHAsset>,
         range: ClosedRange<Int>
     ) async -> FaceScanDebugResult {
-        let trashedIDs = TrashStore.shared.trashedAssetIDs
+        // 범위 보정 + 사진 추출
+        let photos = fetchPhotosInRange(range, fetchResult: fetchResult)
+        guard photos.count >= SimilarityConstants.minGroupSize else {
+            return FaceScanDebugResult(
+                groups: [],
+                analyzedAssetIDs: photos.map { $0.localIdentifier },
+                terminationReason: .naturalEnd
+            )
+        }
 
-        // 범위 보정
-        let safeRange = max(0, range.lowerBound)...min(fetchResult.count - 1, range.upperBound)
-
-        var currentIndex = safeRange.lowerBound
-        var totalScanned = 0
-        var totalGroupsFound = 0
-        var discoveredAssetIDs = Set<String>()
+        let assetIDs = photos.map { $0.localIdentifier }
         var allGroups: [FaceScanGroup] = []
-        var analyzedAssetIDs: [String] = []       // 순서 보존, 중복 제거
-        var analyzedAssetIDSet = Set<String>()     // 빠른 중복 체크용
-        var terminationReason: FaceScanDebugTerminationReason = .naturalEnd
+        var totalGroupsFound = 0
 
-        while currentIndex <= safeRange.upperBound {
-            // 취소 체크
-            if cancelled {
-                terminationReason = .cancelled
-                break
+        // 취소 체크
+        guard !cancelled else {
+            return FaceScanDebugResult(groups: [], analyzedAssetIDs: assetIDs, terminationReason: .cancelled)
+        }
+
+        // Step 1: 전체 FP 생성
+        let (featurePrints, _) = await matchingEngine.generateFeaturePrints(for: photos)
+
+        guard !cancelled else {
+            return FaceScanDebugResult(groups: [], analyzedAssetIDs: assetIDs, terminationReason: .cancelled)
+        }
+
+        // Step 2: 전체 FP로 그루핑 1회
+        let rawGroups = matchingEngine.analyzer.formGroups(
+            featurePrints: featurePrints,
+            photoIDs: assetIDs,
+            threshold: SimilarityConstants.similarityThreshold
+        )
+
+        // Step 3: 그룹별 얼굴 감지 + 검증 (production analyze와 동일 로직)
+        // EQ 테스트에서는 그룹 제한 없이 전체 비교 (Grid oracle도 제한 없음)
+        for groupAssetIDs in rawGroups {
+            guard !cancelled else {
+                return FaceScanDebugResult(groups: allGroups, analyzedAssetIDs: assetIDs, terminationReason: .cancelled)
             }
 
-            // 종료 조건 체크
-            if totalScanned >= FaceScanConstants.maxScanCount {
-                terminationReason = .maxScanCount
-                break
-            }
-            if totalGroupsFound >= FaceScanConstants.maxGroupCount {
-                terminationReason = .maxGroupCount
-                break
-            }
+            // 그룹 내 사진 추출
+            let groupPhotos = photos.filter { groupAssetIDs.contains($0.localIdentifier) }
 
-            // 청크 범위 계산 (overlap 포함, safeRange 내로 클램프)
-            let chunkStart = max(safeRange.lowerBound, currentIndex - FaceScanConstants.chunkOverlap)
-            let chunkEnd = min(safeRange.upperBound, currentIndex + FaceScanConstants.chunkSize - 1)
+            // 인물 매칭 실행
+            let photoFacesMap = await matchingEngine.assignPersonIndicesForGroup(
+                assetIDs: groupAssetIDs,
+                photos: groupPhotos
+            )
 
-            // 청크 내 사진 추출 (삭제대기함 제외)
-            var photos: [PHAsset] = []
-            for i in chunkStart...chunkEnd {
-                let asset = fetchResult.object(at: i)
-                if !trashedIDs.contains(asset.localIdentifier) {
-                    photos.append(asset)
+            // 유효 슬롯 계산
+            var slotPhotoCount: [Int: Set<String>] = [:]
+            for (assetID, faces) in photoFacesMap {
+                for face in faces {
+                    slotPhotoCount[face.personIndex, default: []].insert(assetID)
                 }
             }
 
-            // 투입 사진 ID 누적 (중복 제거, 순서 보존)
-            for photo in photos {
-                let id = photo.localIdentifier
-                if !analyzedAssetIDSet.contains(id) {
-                    analyzedAssetIDSet.insert(id)
-                    analyzedAssetIDs.append(id)
-                }
+            let validSlots = Set(slotPhotoCount.filter {
+                $0.value.count >= SimilarityConstants.minPhotosPerSlot
+            }.keys)
+
+            // 검증 게이트 (addGroupIfValid 동일)
+            guard validSlots.count >= SimilarityConstants.minValidSlots else { continue }
+
+            let validMembers = groupAssetIDs.filter { assetID in
+                guard let faces = photoFacesMap[assetID] else { return false }
+                return faces.contains { validSlots.contains($0.personIndex) }
             }
 
-            // 최소 3장 미만이면 다음 청크로
-            guard photos.count >= SimilarityConstants.minGroupSize else {
-                let skipped = chunkEnd - currentIndex + 1
-                currentIndex = chunkEnd + 1
-                totalScanned += skipped
-                continue
+            guard validMembers.count >= SimilarityConstants.minGroupSize else { continue }
+
+            // 캐시 저장
+            for (assetID, faces) in photoFacesMap {
+                await cache.setFaces(faces, for: assetID)
             }
 
-            // 청크 분석 실행 (production analyzeChunk 그대로 호출)
-            let groups = await analyzeChunk(photos: photos, excludeAssets: discoveredAssetIDs)
+            let group = SimilarThumbnailGroup(memberAssetIDs: validMembers)
+            await cache.addGroup(group, validSlots: validSlots, photoFaces: [:])
 
-            // 그룹 발견 처리
-            for group in groups {
-                discoveredAssetIDs.formUnion(group.memberAssetIDs)
-                totalGroupsFound += 1
-                allGroups.append(group)
-
-                if totalGroupsFound >= FaceScanConstants.maxGroupCount {
-                    terminationReason = .maxGroupCount
-                    break
-                }
-            }
-
-            // 진행 카운트 갱신
-            let newScanned = chunkEnd - currentIndex + 1
-            totalScanned += newScanned
-            currentIndex = chunkEnd + 1
-
-            // 열 상태 확인 — 과열 시 잠시 대기
-            if ProcessInfo.processInfo.thermalState.rawValue >= ProcessInfo.ThermalState.serious.rawValue {
-                try? await Task.sleep(nanoseconds: 500_000_000)
-            }
+            let scanGroup = FaceScanGroup(
+                groupID: group.groupID,
+                memberAssetIDs: validMembers,
+                validPersonIndices: validSlots
+            )
+            totalGroupsFound += 1
+            allGroups.append(scanGroup)
         }
 
         return FaceScanDebugResult(
             groups: allGroups,
-            analyzedAssetIDs: analyzedAssetIDs,
-            terminationReason: terminationReason
+            analyzedAssetIDs: assetIDs,
+            terminationReason: .naturalEnd
         )
     }
     #endif

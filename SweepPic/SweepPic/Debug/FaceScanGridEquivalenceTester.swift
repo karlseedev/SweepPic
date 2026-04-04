@@ -151,41 +151,55 @@ final class FaceScanGridEquivalenceTester {
 
         Logger.similarPhoto.notice("[Engine Equivalence] Grid oracle: \(gridResult.groups.count)개 그룹, \(gridResult.analyzedAssetIDs.count)장 분석")
 
-        // Step 4. FaceScan 실행 (격리 인스턴스에서 formGroupsForRange — production과 동일 경로)
-        // production FaceScan도 이제 격리 formGroupsForRange()를 호출하므로,
-        // 여기서도 동일한 방식으로 실행하여 production 코드 경로를 검증합니다.
-        let fsCache = SimilarityCache()
-        let fsQueue = SimilarityAnalysisQueue(cache: fsCache)
-        let fsResult = await fsQueue.debugGroupsForRange(clampedRange, fetchResult: fetchResult)
+        // Step 4. FaceScan 실행 (decomposed pipeline — production analyze와 동일 경로)
+        // production FaceScan은 FP 생성 → formGroups → 그룹별 얼굴 감지 방식.
+        // analyzeDebugRange가 이 경로를 그대로 실행하므로 production 코드를 직접 검증합니다.
+        let fsScanCache = FaceScanCache()
+        let fsScanService = FaceScanService(cache: fsScanCache)
+        let fsResult = await fsScanService.analyzeDebugRange(
+            fetchResult: fetchResult,
+            range: clampedRange
+        )
 
-        Logger.similarPhoto.notice("[Engine Equivalence] FaceScan: \(fsResult.groups.count)개 그룹, \(fsResult.analyzedAssetIDs.count)장 분석")
+        Logger.similarPhoto.notice("[Engine Equivalence] FaceScan: \(fsResult.groups.count)개 그룹, \(fsResult.analyzedAssetIDs.count)장 분석, 종료:\(fsResult.terminationReason.rawValue)")
 
         // Step 5. 입력 동등성 사전 검증
         let gridInputIDs = Set(gridResult.analyzedAssetIDs)
         let fsInputIDs = Set(fsResult.analyzedAssetIDs)
         let inputDiff = gridInputIDs.symmetricDifference(fsInputIDs)
         if !inputDiff.isEmpty {
-            Logger.similarPhoto.warning("[Engine Equivalence] ⚠️ 입력 불일치: \(inputDiff.count)장 차이")
+            Logger.similarPhoto.warning("[Engine Equivalence] ⚠️ 입력 불일치: \(inputDiff.count)장 차이 (Grid에만: \(gridInputIDs.subtracting(fsInputIDs).count), FaceScan에만: \(fsInputIDs.subtracting(gridInputIDs).count))")
         }
 
         // Step 6. 정규화 + diff
         let gridSigs = Set(gridResult.groups.map { GroupSignature(members: $0) })
-        let fsSigs = Set(fsResult.groups.map { GroupSignature(members: $0) })
+        let fsSigs = Set(fsResult.groups.map { GroupSignature(members: $0.memberAssetIDs) })
         let common = gridSigs.intersection(fsSigs)
         let gridOnly = gridSigs.subtracting(fsSigs)
         let faceScanOnly = fsSigs.subtracting(gridSigs)
 
-        // PASS/FAIL 판정 (양쪽 모두 동일 formGroupsForRange 호출이므로 PARTIAL 불필요)
-        let status: EngineEquivalenceStatus = (gridOnly.isEmpty && faceScanOnly.isEmpty) ? .pass : .fail
+        // PASS/PARTIAL/FAIL 판정
+        // PARTIAL: FaceScan이 maxGroupCount에 도달하여 일부 그룹만 검증된 경우
+        let status: EngineEquivalenceStatus
+        if gridOnly.isEmpty && faceScanOnly.isEmpty {
+            status = .pass
+        } else if fsResult.terminationReason == FaceScanService.FaceScanDebugTerminationReason.maxGroupCount
+                    && !gridOnly.isEmpty && faceScanOnly.isEmpty {
+            // FaceScan이 그룹 상한 도달로 조기 종료 → 미검증 그룹 존재는 정상
+            status = .partial
+        } else {
+            status = .fail
+        }
 
         // Step 7. 로그 출력
-        let statusEmoji = status == .pass ? "✅" : "❌"
+        let statusEmoji = status == .pass ? "✅" : (status == .partial ? "⚠️" : "❌")
         Logger.similarPhoto.notice("""
         [Engine Equivalence] \(statusEmoji) \(status.rawValue.uppercased())
           범위: \(clampedRange.lowerBound)...\(clampedRange.upperBound) (fetchResult: \(fetchResult.count)장)
           입력: Grid \(gridResult.analyzedAssetIDs.count)장, FaceScan \(fsResult.analyzedAssetIDs.count)장
           그룹: Grid \(gridSigs.count)개, FaceScan \(fsSigs.count)개
           일치: \(common.count)개, Grid에만: \(gridOnly.count)개, FaceScan에만: \(faceScanOnly.count)개
+          FaceScan 종료: \(fsResult.terminationReason.rawValue)
         """)
 
         // 리포트 생성
@@ -202,7 +216,7 @@ final class FaceScanGridEquivalenceTester {
             gridOnly: Array(gridOnly),
             faceScanOnly: Array(faceScanOnly),
             common: Array(common),
-            faceScanTerminationReason: "formGroupsForRange",
+            faceScanTerminationReason: fsResult.terminationReason.rawValue,
             status: status
         )
 
