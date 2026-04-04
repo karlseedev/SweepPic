@@ -210,6 +210,8 @@ final class FaceScanService {
         // ═══════════════════════════════════════════════════
         let isolatedCache = SimilarityCache()
         var totalGroupsFound = 0
+        var sessionBoundaryAssetID: String? = nil   // maxGroupCount 도달 시 세션 경계
+        var sessionBoundaryDate: Date? = nil
 
         for groupAssetIDs in rawGroups.reversed() {
             if cancelled { throw CancellationError() }
@@ -261,7 +263,7 @@ final class FaceScanService {
 
                 totalGroupsFound += 1
 
-                // maxGroupCount는 UI 전달 상한 (엔진 미제한)
+                // UI 전달 (maxGroupCount 이내)
                 if totalGroupsFound <= FaceScanConstants.maxGroupCount {
                     let scanGroup = FaceScanGroup(
                         groupID: groupID,
@@ -278,14 +280,33 @@ final class FaceScanService {
                         onProgress(progress)
                     }
                 }
+
+                // maxGroupCount 도달 → 세션 경계 기록 + 루프 종료
+                // 남은 그룹은 "다음 분석"에서 다시 발견됨
+                if totalGroupsFound >= FaceScanConstants.maxGroupCount {
+                    // groupAssetIDs는 ascending 순서 (formGroups 보장)
+                    // first = 이 그룹의 가장 오래된 멤버 → 다음 분석이 여기부터 시작
+                    if let oldestID = groupAssetIDs.first,
+                       let oldestPhoto = photos.first(where: { $0.localIdentifier == oldestID }) {
+                        sessionBoundaryAssetID = oldestID
+                        sessionBoundaryDate = oldestPhoto.creationDate
+                    }
+                    break
+                }
             }
         }
 
-        // ── 세션 저장 (ascending 기준: lowerBound = 가장 오래된 쪽) ──
-        // 다음 continue는 이보다 더 오래된 쪽으로 확장
-        let boundaryAsset = fetchResult.object(at: analysisRange.lowerBound)
-        if let lastDate = boundaryAsset.creationDate {
-            saveSession(method: method, lastDate: lastDate, lastAssetID: boundaryAsset.localIdentifier)
+        // ── 세션 저장 ──
+        if let boundaryID = sessionBoundaryAssetID, let boundaryDate = sessionBoundaryDate {
+            // maxGroupCount 도달: 마지막 표시 그룹의 가장 오래된 멤버 기준
+            // → "다음 분석"이 이 그룹 앞부터 시작하여 미표시 그룹 포함
+            saveSession(method: method, lastDate: boundaryDate, lastAssetID: boundaryID)
+        } else {
+            // 범위 전체 처리 완료: lowerBound 기준
+            let boundaryAsset = fetchResult.object(at: analysisRange.lowerBound)
+            if let lastDate = boundaryAsset.creationDate {
+                saveSession(method: method, lastDate: lastDate, lastAssetID: boundaryAsset.localIdentifier)
+            }
         }
 
         Logger.similarPhoto.debug("FaceScanService: 분석 완료 — \(totalGroupsFound)그룹 발견 (전체 \(rawGroups.count)그룹 중)")
