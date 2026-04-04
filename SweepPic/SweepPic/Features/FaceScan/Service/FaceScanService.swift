@@ -205,11 +205,13 @@ final class FaceScanService {
         // ═══════════════════════════════════════════════════
         // Phase C: 그룹별 얼굴 감지 + 검증 + 브리지 (진행률 보고)
         // 격리 SimilarityCache에서 addGroupIfValid 호출 → merge 동작 동일
+        // rawGroups 역순 소비: 최신 사진 그룹부터 즉시 전달
+        // (formGroups 비겹침 보장 → 소비 순서 무관)
         // ═══════════════════════════════════════════════════
         let isolatedCache = SimilarityCache()
         var totalGroupsFound = 0
 
-        for groupAssetIDs in rawGroups {
+        for groupAssetIDs in rawGroups.reversed() {
             if cancelled { throw CancellationError() }
 
             let groupPhotos = photos.filter { groupAssetIDs.contains($0.localIdentifier) }
