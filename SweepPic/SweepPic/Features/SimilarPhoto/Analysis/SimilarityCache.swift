@@ -24,6 +24,8 @@ import Foundation
 import UIKit
 import OSLog
 import AppCore
+import OSLog
+import AppCore
 
 // MARK: - SimilarityCacheProtocol (읽기 전용)
 

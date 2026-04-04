@@ -58,6 +58,15 @@ final class FaceScanService {
     private static let byYearYearKey = "FaceScanSession.byYear.year"
     private static let byYearCanContinueKey = "FaceScanSession.byYear.canContinue"
 
+    // MARK: - Debug: 배치 진단용 타깃 그룹
+
+    #if DEBUG
+    /// 배치 진단 시 추적할 타깃 그룹의 멤버 assetID 집합.
+    /// runGroupDiagnostic()에서 설정, analyze() 배치 루프에서 읽음.
+    /// nil이면 배치 로그 미출력 (성능 영향 없음).
+    static var debugTargetGroupSignature: Set<String>? = nil
+    #endif
+
     // MARK: - Static Session Accessors
 
     /// 이어서 정리 가능 여부 (fromLatest / continueFromLast 용)
@@ -159,6 +168,11 @@ final class FaceScanService {
         var processedGroupCount = 0  // formGroups 결과 중 이미 얼굴감지 처리한 그룹 수
         var totalGroupsFound = 0
 
+        // #if DEBUG: 배치 진단용 타깃 시그니처
+        #if DEBUG
+        let diagTarget = Self.debugTargetGroupSignature
+        #endif
+
         var batchStart = 0
         while batchStart < totalPhotos {
             // 취소 체크
@@ -192,6 +206,35 @@ final class FaceScanService {
             // 단, 마지막 배치면 모든 그룹이 확정
             let sealedCount = isLastBatch ? currentGroups.count : max(currentGroups.count - 1, 0)
 
+            // #if DEBUG: 로그 A — 배치 로그 (타깃 그룹이 보이는 배치에서만 출력)
+            #if DEBUG
+            if let target = diagTarget {
+                var targetIndex: Int? = nil
+                for (idx, group) in currentGroups.enumerated() {
+                    if !Set(group).isDisjoint(with: target) {
+                        targetIndex = idx
+                        break
+                    }
+                }
+                if let tIdx = targetIndex {
+                    let isSealed = tIdx < sealedCount
+                    let isNew = tIdx >= processedGroupCount
+                    let willProcess = isSealed && isNew
+                    Logger.similarPhoto.notice("""
+                    [FaceScanBatch] ═══ 배치 로그 ═══
+                      batch: \(batchStart)...\(batchEnd - 1), isLast: \(isLastBatch)
+                      currentGroups: \(currentGroups.count)개
+                      타깃 위치: index \(tIdx)/\(currentGroups.count)
+                      타깃 멤버: \(currentGroups[tIdx].map { String($0.prefix(8)) })
+                      processedGroupCount: \(processedGroupCount)
+                      sealedCount: \(sealedCount)
+                      isSealed: \(isSealed), isNew: \(isNew)
+                      ▸ willProcess: \(willProcess) \(willProcess ? "✅" : "❌ (보류/스킵)")
+                    """)
+                }
+            }
+            #endif
+
             // 새로 확정된 그룹만 처리 (이전에 처리한 그룹은 스킵)
             for groupIndex in processedGroupCount..<sealedCount {
                 if cancelled { throw CancellationError() }
@@ -199,12 +242,41 @@ final class FaceScanService {
 
                 let groupAssetIDs = currentGroups[groupIndex]
 
+                // #if DEBUG: 타깃 그룹 여부 판별
+                #if DEBUG
+                let isTargetGroup: Bool = {
+                    guard let target = diagTarget else { return false }
+                    return !Set(groupAssetIDs).isDisjoint(with: target)
+                }()
+                if isTargetGroup {
+                    Logger.similarPhoto.notice("""
+                    [FaceScanDispatch] 타깃 그룹 processGroupForFaceScan() 진입
+                      groupIndex: \(groupIndex), members: \(groupAssetIDs.map { String($0.prefix(8)) })
+                    """)
+                }
+                #endif
+
                 // 얼굴 감지 + 검증 + 캐시 저장
-                if let scanGroup = await processGroupForFaceScan(
+                let scanGroup = await processGroupForFaceScan(
                     groupAssetIDs: groupAssetIDs,
                     allPhotos: photos
-                ) {
+                )
+
+                if let scanGroup = scanGroup {
                     totalGroupsFound += 1
+
+                    // #if DEBUG: 로그 C — UI 전달 로그
+                    #if DEBUG
+                    if isTargetGroup {
+                        Logger.similarPhoto.notice("""
+                        [FaceScanDeliver] 타깃 그룹 accepted ✅ → onGroupFound 호출
+                          groupID: \(scanGroup.groupID.prefix(8))
+                          members: \(scanGroup.memberAssetIDs.map { String($0.prefix(8)) })
+                          validSlots: \(scanGroup.validPersonIndices)
+                        """)
+                    }
+                    #endif
+
                     // 그룹 표시 + 진행률을 동시에 업데이트 (화면과 게이지바 동기화)
                     let groupProgress = FaceScanProgress.updated(
                         scannedCount: batchEnd,
@@ -216,6 +288,16 @@ final class FaceScanService {
                         onProgress(groupProgress)
                     }
                 }
+
+                // #if DEBUG: 타깃 그룹이 rejected
+                #if DEBUG
+                if scanGroup == nil && isTargetGroup {
+                    Logger.similarPhoto.notice("""
+                    [FaceScanDispatch] 타깃 그룹 rejected ❌ (processGroupForFaceScan → nil)
+                      groupIndex: \(groupIndex), members: \(groupAssetIDs.map { String($0.prefix(8)) })
+                    """)
+                }
+                #endif
             }
             processedGroupCount = sealedCount
 
@@ -229,6 +311,14 @@ final class FaceScanService {
 
             batchStart = batchEnd
         }
+
+        // #if DEBUG: 배치 추적 시그니처 자동 해제
+        #if DEBUG
+        if Self.debugTargetGroupSignature != nil {
+            Logger.similarPhoto.notice("[FaceScanBatch] 배�� 추적 시그니처 해제됨")
+            Self.debugTargetGroupSignature = nil
+        }
+        #endif
 
         // 5. 세션 저장
         let lastAsset = fetchResult.object(at: endIndex)

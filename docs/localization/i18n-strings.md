@@ -67,6 +67,7 @@
 | 448 | 미디어 유형 | Media Types | 앨범 섹션 헤더 | |
 | 449 | 나의 앨범 | My Albums | 앨범 섹션 헤더 | |
 | 450 | 제목 없음 | Untitled | 앨범 제목 fallback | |
+| 494 | {count}개의 항목 | {count} Items | 보관함/삭제대기함 서브타이틀 (plural 처리 필요 - 1 Item / N Items) | |
 
 ---
 
@@ -311,6 +312,12 @@
 | 451 | 리딤 코드 입력 | Enter redeem code | 리딤 버튼 accessibilityLabel | |
 | 452 | {feature}, 무료: {freeValue}, Pro: {proValue} | {feature}, Free: {freeValue}, Pro: {proValue} | 비교표 행 accessibilityLabel (포맷) | |
 
+### Paywall 이용약관 본문
+
+| # | 한국어 (현재) | 영어 (제안) | 용도 | 확인 |
+|---|---|---|---|---|
+| 488 | 무료 체험 기간이 끝나면 선택한 요금제로 자동 구독이 시작됩니다. 구독은 확인 시 Apple ID 계정으로 청구됩니다. 구독은 현재 기간 종료 최소 24시간 전에 해지하지 않으면 자동으로 갱신됩니다. 갱신 비용은 현재 기간 종료 24시간 이내에 청구됩니다. 구독은 구매 후 설정 > Apple ID > 구독에서 관리하고 해지할 수 있습니다. 이용약관 및 개인정보처리방침이 적용됩니다. | Your subscription will automatically begin at the selected plan rate when the free trial ends. Payment will be charged to your Apple ID account upon confirmation. Subscriptions automatically renew unless cancelled at least 24 hours before the end of the current period. Renewal will be charged within 24 hours before the end of the current period. You can manage and cancel subscriptions in Settings > Apple ID > Subscriptions after purchase. Terms of Use and Privacy Policy apply. | 이용약관 시트 법적 고지 본문 | |
+
 ---
 
 ## 8. Monetization — FAQ
@@ -361,6 +368,10 @@
 | 191 | 이용약관 | Terms of Use | 메뉴 액션 | |
 | 192 | 개인정보처리방침 | Privacy Policy | 메뉴 액션 | |
 | 193 | 사업자 정보 | Legal Information | 메뉴 액션 | |
+| 489 | 앱 버전: | App Version: | 이메일 문의 디바이스 정보 라벨 | |
+| 490 | 기기: | Device: | 이메일 문의 디바이스 정보 라벨 | |
+| 491 | 기기명: | Device Name: | 이메일 문의 디바이스 정보 라벨 | |
+| 492 | 지원 ID: | Support ID: | 이메일 문의 디바이스 정보 라벨 | |
 
 ### BusinessInfoViewController
 
@@ -796,6 +807,7 @@ Invite code: {referralCode}
 | 433 | 탭하면 답변을 접습니다 | Tap to collapse answer | FAQ 힌트 (열림) | FAQViewController | |
 | 434 | 인물 {personIndex} 비교 | Compare person {personIndex} | 얼굴 버튼 | FaceButtonOverlay | |
 | 435 | 탭하여 이 인물의 사진들을 비교합니다 | Tap to compare this person's photos | 얼굴 버튼 힌트 | FaceButtonOverlay | |
+| 493 | Pro멤버십으로 삭제 한도 무제한 | Unlimited deletions with Pro membership | UsageGaugeView proButton accessibilityLabel (기존 #112 "Go Unlimited with Pro"와 별개의 접근성 전용 문자열) | UsageGaugeView | |
 
 ---
 
@@ -878,6 +890,19 @@ Invite code: {referralCode}
 
 ---
 
-**총 문자열 수: 약 487개**
+### 참고: 날짜 포맷 코드 변경 대상
+
+아래 파일의 DateFormatter 하드코딩을 setLocalizedDateFormatFromTemplate으로 변경 필요:
+
+| 파일 | 현재 포맷 | 변경할 템플릿 |
+|---|---|---|
+| CleanupMethodSheet.swift:233 | "yyyy년 M월" | "yMMMM" |
+| CleanupMethodSheet.swift:242 | "M월" | "MMM" |
+| CleanupProgressView.swift:337 | "yyyy년 M월" | "yMMMM" |
+| FaceScanMethodSheet.swift:210 | "yyyy년 M월" | "yMMMM" |
+
+---
+
+**총 문자열 수: 약 494개**
 
 > 이 문서는 주인님의 확인/수정 후 확정됩니다. 각 항목의 "확인" 열에 ✅ 또는 수정 내용을 기입해주세요.

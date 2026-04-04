@@ -718,6 +718,16 @@ extension ViewerViewController {
               사유: \(trace.rejectionReason ?? "통과")
             """)
 
+            // ── 배치 추적 시그니처 설정 ──
+            // FaceScan을 사용자가 직접 실행하면 배치 로그가 자동으로 출력됩니다.
+            FaceScanService.debugTargetGroupSignature = Set(members)
+            Logger.similarPhoto.notice("""
+            [GroupDiag] ═══ 배치 추적 시그니처 설정 완료 ═══
+              타깃: \(members.map { String($0.prefix(8)) })
+              → FaceScan 실행 시 [FaceScanBatch], [FaceScanDispatch], [FaceScanDeliver] 로그 자동 출력
+              → 해제: 다음 FaceScan 완료 시 자동 해제
+            """)
+
             // ── 요약 알럿 ──
             Logger.similarPhoto.notice("[GroupDiag] ═══════════════════════════════════════")
 
@@ -726,12 +736,15 @@ extension ViewerViewController {
             summaryLines.append("")
             summaryLines.append("▸ FaceScan 입력: \(inputDiagnosis)")
             summaryLines.append("")
-            summaryLines.append("▸ 파이프라인: \(trace.result)")
+            summaryLines.append("▸ 격리 파이프라인: \(trace.result)")
             if let reason = trace.rejectionReason {
                 summaryLines.append("  사유: \(reason)")
             }
             summaryLines.append("")
-            summaryLines.append("(상세 로그: 콘솔 확인)")
+            summaryLines.append("▸ 배치 추적: 시그니처 설정됨")
+            summaryLines.append("  FaceScan 실행 시 자동 로그")
+            summaryLines.append("")
+            summaryLines.append("(콘솔: [GroupDiag] 확인)")
 
             await MainActor.run {
                 let message = summaryLines.joined(separator: "\n")

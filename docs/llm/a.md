@@ -1,281 +1,258 @@
-# E2E 그룹 동등성 검증 하네스 구현 계획
+# FaceScan → Grid 경로 통합 계획
 
-## 배경
+## 문제
 
-FaceScan(경로 B)이 그리드(경로 A)와 동일한 그룹을 찾는지 검증하는 도구.
-구조 수정(IncrementalGroupBuilder) 착수 전에 이 하네스를 먼저 만든다.
+FaceScan이 Grid에서 보이는 그룹을 못 찾는다. 구조적 불일치가 원인이다.
 
-**핵심 원칙:**
-- 비교 지점: 최종 출력 (validSlot 필터링 후 memberAssetIDs)
-- 그룹 매칭: 멤버 집합 **완전 일치** (겹침 판정 불필요)
-- 사진 목록: 한 번만 생성하여 양쪽에 동일하게 전달
-- 기준값 함수: 캐시에 쓰지 않음 (읽기 전용)
+### 확인된 구조적 차이
 
----
+| | Grid | FaceScan |
+|---|---|---|
+| fetchResult | ascending, images+videos (18,265장) | descending, images only (17,617장) |
+| 그룹 형성 | formGroupsForRange() 단일 호출 | 20장 배치 축적 + sealed-group |
+| 얼굴 매칭 순서 | ascending (오래된 순) | descending (최신 순) |
+| 그룹 병합 | mergeOverlappingGroups (SimilarityCache) | 없음 (FaceScanCache) |
+| 재시도 | 없음 (1회 판정) | 없음 (1회 판정 후 영원히 스킵) |
 
-## 기준값의 정의
+### 진단 로그로 확인된 직접 원인
 
-그리드의 스크롤 결과는 범위에 따라 달라지므로 기준이 될 수 없다.
-대신 **그리드 로직(formGroups → 얼굴 감지 → slot 필터링)을 FaceScan과 같은 사진 범위에 한 번에 실행**한 결과를 기준값으로 사용한다.
-
-이것은 "그리드가 전체를 볼 수 있었다면 찾았을 그룹"이며, 스크롤 의존성이 없고 결정적(deterministic)이다.
-
----
-
-## 구현 범위
-
-### 새 파일 1개
-
-| 파일 | 위치 |
-|------|------|
-| `FaceScanEquivalenceHarness.swift` | `SweepPic/SweepPic/Features/FaceScan/Debug/` |
-
-### 수정 파일 1개
-
-| 파일 | 변경 |
-|------|------|
-| `FaceScanService.swift` | analyze() 내부에 하네스 호출 코드 추가 (#if DEBUG) |
+1. 타깃 그룹 3장이 FaceScan 첫 배치(0...19)에서 `processGroupForFaceScan()` 진입
+2. `assignPersonIndicesForGroup()`에서 3얼굴 감지됨
+3. 그러나 **rejected** (nil 반환) — 격리 파이프라인(Grid 방식)에서는 같은 3장이 accepted
+4. FaceScan은 rejected된 그룹을 이후 배치에서 `isNew: false`로 영원히 스킵
+5. 근본 원인: descending 순서로 인해 기준 얼굴이 달라지고, SFace 매칭이 경계값에서 갈림
 
 ---
 
-## 새 파일: FaceScanEquivalenceHarness.swift
+## 해결 방향
 
-전체가 `#if DEBUG` 블록. 릴리즈 빌드에 포함되지 않음.
+FaceScan의 자체 배치 파이프라인을 소스 오브 트루스로 쓰지 않는다.
+Grid의 `formGroupsForRange()`를 격리 인스턴스에서 직접 호출하여 동일한 결과를 보장한다.
 
-### 구조
+260403groupLogic.md "수정 방향"에 이미 계획됨:
+> 수정 후 FaceScan: buildFetchResult → 격리 인스턴스 생성 → formGroupsForRange() 호출 → 결과를 FaceScanGroup으로 변환
+
+격리 테스트(EQ)에서 이 방식으로 PASS를 확인했으므로 방향은 검증됨.
+
+---
+
+## 구체 변경
+
+### 변경 대상: `FaceScanService.analyze()` 1개 메서드
+
+**호출자**: `FaceScanListViewController.startAnalysis()` (단 1곳)
 
 ```
-FaceScanEquivalenceHarness
-├── Report (결과 구조체)
-├── generateBaseline(photos:) → [Set<String>]    // 기준값 생성
-├── compare(baseline:faceScan:) → Report          // 자동 diff
-└── logReport(_:)                                 // 로그 출력
+현재 analyze():
+  buildFetchResult(descending, images only)
+  → 배치 루프 50회 (20장씩 FP 축적 → formGroups → sealed → processGroup)
+  → saveSession
+
+변경 후 analyze():
+  PhotoLibraryService.fetchAllPhotos()               ← Grid와 동일 (ascending, images+videos)
+  → 범위 결정 (method 기반, ascending 기준)
+  → 격리 SimilarityAnalysisQueue.formGroupsForRange() 1회 호출
+  → 격리 SimilarityCache에서 결과 읽기 → FaceScanCache로 복사
+  → onGroupFound 콜백 (1개씩)
+  → saveSession (ascending 기준)
 ```
 
-### Report 구조체
+### 건드리지 않는 것
+
+- `FaceScanListViewController` — 콜백 인터페이스 동일
+- `FaceScanCache` — 그대로 사용, 쓰기 방식만 변경
+- `FaceComparisonViewController` — FaceScanCache에서 읽으므로 영향 없음
+- `SimilarityCache.shared` — 격리 인스턴스 사용으로 무관
+- `SimilarityAnalysisQueue` — 변경 없음 (호출만)
+- `processGroupForFaceScan()` — 더 이상 호출 안 함 (formGroupsForRange가 대체)
+
+---
+
+## 세부 설계
+
+### 1. fetchResult 통일
 
 ```swift
-struct Report {
-    let baselineGroups: [Set<String>]     // 기준값 그룹들
-    let faceScanGroups: [Set<String>]     // FaceScan 그룹들
-    let matched: [Set<String>]            // 양쪽 일치
-    let baselineOnly: [Set<String>]       // 기준값에만 존재 (FaceScan이 놓침)
-    let faceScanOnly: [Set<String>]       // FaceScan에만 존재 (기준값에 없음)
-    var passed: Bool { baselineOnly.isEmpty && faceScanOnly.isEmpty }
-}
+// 기존: FaceScan 전용 (descending, images only)
+let fetchResult = buildFetchResult(method: method)
+
+// 변경: Grid와 동일 (ascending, images+videos)
+let fetchResult = PhotoLibraryService.shared.fetchAllPhotos()
 ```
 
-### generateBaseline(photos:) — 기준값 생성
-
-FaceScan이 실제로 스캔한 사진 목록을 받아서, 그리드 로직으로 한 번에 처리한다.
-
-```
-입력: [PHAsset] (FaceScan이 스캔한 순서 그대로, 중복 없음)
-  ↓
-Step 1: FP 생성 (배치 단위로 생성, 결과는 하나의 배열로 합침)
-  - 배치 크기: 50장 (메모리 보호)
-  - matchingEngine.generateFeaturePrints(for: batch)
-  - 모든 배치의 FP를 allFPs 배열에 순서대로 append
-  ↓
-Step 2: formGroups 호출 (전체 FP 배열을 한 번에)
-  - matchingEngine.analyzer.formGroups(featurePrints: allFPs, photoIDs: allIDs)
-  - 청크 분할 없음 → 경계 문제 원천 제거
-  - 결과: rawGroups: [[String]]
-  ↓
-Step 3: 각 그룹별 얼굴 감지 + slot 필터링 (그리드 파이프라인과 동일)
-  - matchingEngine.assignPersonIndicesForGroup(assetIDs:, photos:)
-  - slotPhotoCount 계산 → validSlots (2장 이상 등장한 personIndex)
-  - validSlots에 속하는 얼굴이 있는 사진만 validMembers
-  - validMembers >= 3장인 그룹만 최종 결과에 포함
-  ↓
-출력: [Set<String>] (각 그룹의 memberAssetIDs를 Set으로 변환)
-```
-
-**주의: 캐시에 쓰지 않는다.** SimilarityCache, FaceScanCache 모두 건드리지 않음.
-별도의 PersonMatchingEngine 인스턴스를 생성하여 기존 상태와 격리.
-
-### compare(baseline:faceScan:) — 자동 diff
-
-```
-for each group in baseline:
-    faceScan에 완전 일치하는 Set이 있는가?
-    → 있으면: matched
-    → 없으면: baselineOnly
-
-faceScan에서 매칭되지 않은 나머지 → faceScanOnly
-```
-
-매칭 판정: `Set<String> == Set<String>` (완전 일치만 통과)
-
-### logReport(_:) — 로그 출력
-
-```
-[Equivalence] PASS (또는 FAIL)
-  기준값: N개 그룹
-  FaceScan: M개 그룹
-  일치: K개
-  기준값에만: X개
-  FaceScan에만: Y개
-
-FAIL인 경우 추가 출력:
-  [기준값에만] {assetID1, assetID2, ...} (N장)
-  [FaceScan에만] {assetID3, assetID4, ...} (M장)
-```
-
-Logger.similarPhoto 카테고리 사용. PASS는 .debug, FAIL은 .error 레벨.
-
----
-
-## 수정: FaceScanService.swift — analyze()
-
-### 변경 1: 스캔한 사진 목록 캡처
-
-analyze() 내부에서 실제로 처리한 사진을 순서대로 캡처한다.
-청크 overlap으로 같은 사진이 중복 포함될 수 있으므로 중복 제거한다.
+### 2. 범위 결정 (ascending 기준)
 
 ```swift
-// analyze() 상단, 루프 시작 전
-#if DEBUG
-var scannedPhotoIDs: [String] = []           // 순서 유지
-var scannedPhotoSet: Set<String> = []        // 중복 체크
-var scannedPhotos: [String: PHAsset] = [:]   // ID → PHAsset
-#endif
+// fromLatest: 최신 N장 = 끝에서 N장
+let start = max(0, fetchResult.count - FaceScanConstants.maxScanCount)
+let end = fetchResult.count - 1
+let range = start...end
 
-// 각 청크에서 photos 배열 구성 후 (trashedIDs 제외 완료된 시점)
-#if DEBUG
-for photo in photos {
-    let id = photo.localIdentifier
-    if !scannedPhotoSet.contains(id) {
-        scannedPhotoSet.insert(id)
-        scannedPhotoIDs.append(id)
-        scannedPhotos[id] = photo
+// continueFromLast: lastAssetID에서 더 오래된 방향으로
+// ascending에서 lastAssetID를 찾아 그 왼쪽으로 maxScanCount장
+let lastIdx = findIndex(of: lastAssetID, in: fetchResult)
+let end = lastIdx - 1
+let start = max(0, end - maxScanCount + 1)
+let range = start...end
+
+// byYear: ascending fetchResult에서 연도 경계 이진탐색
+// creationDate가 정렬되어 있으므로 ~14회 비교로 결정
+let yearStart = binarySearch(fetchResult, firstDateIn: year)
+let yearEnd = binarySearch(fetchResult, lastDateIn: year)
+let scanEnd = min(yearEnd, yearStart + maxScanCount - 1)
+let range = yearStart...scanEnd
+```
+
+### 3. 격리 인스턴스에서 formGroupsForRange 호출
+
+```swift
+let isolatedCache = SimilarityCache()
+let isolatedQueue = SimilarityAnalysisQueue(cache: isolatedCache)
+
+let groupIDs = await isolatedQueue.formGroupsForRange(
+    range, source: .grid, fetchResult: fetchResult
+)
+```
+
+격리 인스턴스 안전성 (검증됨):
+- `self !== .shared` 가드로 analytics/notification 자동 억제
+- postAnalysisComplete의 `guard self === .shared` 가드로 Grid/Viewer 알림 차단
+- 격리 SimilarityCache에만 쓰기 → .shared 오염 없음
+
+### 4. 결과 변환 + FaceScanCache 복사
+
+```swift
+var totalGroupsFound = 0
+for groupID in groupIDs {
+    if cancelled { throw CancellationError() }
+    if totalGroupsFound >= FaceScanConstants.maxGroupCount { break }
+
+    // 격리 캐시에서 읽기
+    let members = await isolatedCache.getGroupMembers(groupID: groupID)
+    let validSlots = await isolatedCache.getGroupValidPersonIndices(for: groupID)
+
+    // FaceScanCache에 복사 (FaceComparisonViewController 조회용)
+    for memberID in members {
+        let faces = await isolatedCache.getFaces(for: memberID)
+        await cache.setFaces(faces, for: memberID)
+    }
+    let group = SimilarThumbnailGroup(memberAssetIDs: members)
+    await cache.addGroup(group, validSlots: validSlots, photoFaces: [:])
+
+    // 콜백
+    let scanGroup = FaceScanGroup(
+        groupID: groupID,
+        memberAssetIDs: members,
+        validPersonIndices: validSlots
+    )
+    totalGroupsFound += 1
+
+    let progress = FaceScanProgress.updated(
+        scannedCount: range.count,
+        groupCount: totalGroupsFound,
+        currentDate: Date()
+    )
+    await MainActor.run {
+        onGroupFound(scanGroup)
+        onProgress(progress)
     }
 }
-#endif
 ```
 
-이렇게 하면 FaceScan이 실제로 본 사진 목록이 정확히 캡처된다.
-(trashedIDs 제외됨, overlap 중복 제거됨, 순서 유지됨)
-
-### 변경 2: 분석 완료 후 하네스 실행
+### 5. session 저장 (ascending 기준)
 
 ```swift
-// analyze() 종료 직전, 세션 저장 후
-#if DEBUG
-Task.detached(priority: .utility) {
-    let orderedPhotos = scannedPhotoIDs.compactMap { scannedPhotos[$0] }
-    let faceScanGroupSets = allFoundGroups.map { Set($0.memberAssetIDs) }
-
-    let harness = FaceScanEquivalenceHarness()
-    let baseline = await harness.generateBaseline(photos: orderedPhotos)
-    let report = harness.compare(baseline: baseline, faceScan: faceScanGroupSets)
-    harness.logReport(report)
+// ascending에서 "다음에 이어서"는 범위의 lowerBound (가장 오래된 쪽)
+let lastAsset = fetchResult.object(at: range.lowerBound)
+if let lastDate = lastAsset.creationDate {
+    saveSession(method: method, lastDate: lastDate, lastAssetID: lastAsset.localIdentifier)
 }
-#endif
 ```
 
-**Task.detached를 쓰는 이유:**
-- 기준값 생성은 FP 생성 + 얼굴 감지를 다시 수행하므로 무겁다
-- FaceScan UI 완료 후 백그라운드에서 실행
-- 사용자 경험에 영향 없음
+---
 
-### 변경 3: FaceScan 결과 수집
+## 검증에서 발견된 오류 및 수정
 
-현재 analyze()에서 onGroupFound 콜백으로 그룹을 하나씩 전달한다.
-하네스 비교를 위해 모든 그룹을 내부 배열에도 누적한다.
+### 오류 1: 취소 메커니즘 불일치 (심각)
+
+`formGroupsForRange`는 `Task.isCancelled` 사용, FaceScan은 `self.isCancelled` 플래그 사용. 연결 안 됨.
+
+**증상**: 사용자 뒤로가기 → `scanService.cancel()` → `isCancelled = true` → 그러나 formGroupsForRange 내부의 `Task.isCancelled`는 false → FP 1000장 생성 완료까지 ~30-60초 블로킹
+
+**해결**: `FaceScanListViewController`에서 분석 `Task`를 저장하고, 취소 시 `task.cancel()` 호출 추가.
 
 ```swift
-// analyze() 상단
-#if DEBUG
-var allFoundGroups: [FaceScanGroup] = []
-#endif
+// FaceScanListViewController
+private var analysisTask: Task<Void, Error>?
 
-// 그룹 발견 시 (onGroupFound 호출 직전)
-#if DEBUG
-allFoundGroups.append(group)
-#endif
+func startAnalysis(method: FaceScanMethod) {
+    analysisTask = Task {
+        try await scanService.analyze(method: method, ...)
+    }
+}
+
+// 취소 시
+analysisTask?.cancel()
+scanService?.cancel()  // 기존 플래그도 유지
 ```
+
+이렇게 하면 `generateFeaturePrints` 내부의 `Task.checkCancellation()`이 동작하여 FP 생성 중에도 즉시 취소 가능.
+
+### 오류 2: session 저장 방향 반전
+
+descending에서는 `endIndex`(가장 오래된 쪽)를 저장. ascending에서는 `lowerBound`(가장 오래된 쪽)를 저장.
+
+`continueFromLast` 방향도 반전:
+- 기존(descending): lastAssetID → index + 1 (더 오래된 방향)
+- 변경(ascending): lastAssetID → index - 1에서 역방향
+
+위 "2. 범위 결정" 섹션에 반영 완료.
+
+### 오류 3: 진행률 0% 구간 ~60초 (UX 문제)
+
+- `generateFeaturePrints(1000장)`: AsyncSemaphore(5) → ~30초
+- 그룹별 `assignPersonIndicesForGroup`: ~60그룹 × ~500ms ≈ ~30초
+- **총 ~60초 동안 진행률 0%**, 이후 그룹 전달 시 한꺼번에 상승
+
+**해결 옵션 (결정 필요)**:
+- (A) 스피너로 대체 — 가장 간단, 진행률 포기
+- (B) FP 생성 중 진행률 보고 — formGroupsForRange 구조 변경 필요, 복잡
+- (C) "분석 중..." 텍스트만 표시, 게이지바는 그룹 전달 시에만 갱신 — 타협안
 
 ---
 
-## 실행 흐름 전체
+## 결정 필요 항목
 
-```
-사용자가 FaceScan 버튼 탭
-  ↓
-FaceScanService.analyze() 시작
-  ↓
-청크 루프 실행 (기존 로직 그대로)
-  ├─ 각 청크: photos 캡처 (#if DEBUG)
-  ├─ 그룹 발견: allFoundGroups에 누적 (#if DEBUG)
-  └─ 종료 조건 도달 (1000장 or 30그룹)
-  ↓
-세션 저장
-  ↓
-#if DEBUG: Task.detached로 하네스 실행
-  ├─ 캡처된 사진 목록으로 기준값 생성
-  │   └─ 전체 FP → formGroups → 얼굴 감지 → slot 필터
-  ├─ FaceScan 결과와 비교
-  └─ 로그 출력 (PASS/FAIL)
-  ↓
-사용자 화면: FaceScan 결과 정상 표시 (하네스는 백그라운드)
-```
+### 결정 1: 비디오 포함 여부
+
+Grid fetchResult = images + videos. 기존 FaceScan = images only.
+
+| 옵션 | 장점 | 단점 |
+|------|------|------|
+| Grid 동일 (비디오 포함) | 그룹 구성 100% 일치 | "인물사진 비교정리"에 비디오 노출 |
+| images only 필터 | 기존 UX 유지 | 인접 사진 사이 비디오 제거로 그룹 경계 미세 차이 가능 |
+
+### 결정 2: 진행률 표시 방식
+
+위 옵션 A/B/C 중 선택.
 
 ---
 
-## maxGroupCount / maxScanCount 처리
+## 영향 범위 요약
 
-FaceScan은 30그룹 또는 1000장에서 조기 종료한다.
-기준값은 같은 사진 목록(=FaceScan이 실제로 스캔한 사진)에서 생성하므로,
-스캔 범위는 동일하다.
+| 파일 | 변경 | 수정량 |
+|------|------|--------|
+| `FaceScanService.swift` | analyze() 배치 루프 → formGroupsForRange 호출로 교체 | ~100줄 제거, ~60줄 추가 |
+| `FaceScanService.swift` | 범위 결정 로직 신규 (ascending + method별) | ~40줄 추가 |
+| `FaceScanService.swift` | saveSession 방향 수정 | ~5줄 수정 |
+| `FaceScanListViewController.swift` | Task 저장 + task.cancel() | ~10줄 수정 |
+| `FaceScanService.swift` | byYear 이진탐색 구현 | ~30줄 추가 |
 
-단, 기준값이 30개 초과 그룹을 찾을 수 있다 (FaceScan은 30개에서 멈추므로).
-이 경우 diff에서 baselineOnly로 나타나는데, 이것은 **maxGroupCount에 의한 예상된 차이**이다.
-
-로그에서 구분할 수 있도록:
-- FaceScan이 maxGroupCount로 종료됐는지 플래그 전달
-- 해당 시 로그에 "[참고] FaceScan이 maxGroupCount(30)에 도달하여 조기 종료" 추가
-- baselineOnly 그룹은 "조기종료로 인한 미탐지"로 분류
-
----
+**변경 없음**: FaceScanListViewController(콜백), FaceScanCache, FaceComparisonViewController, SimilarityCache, SimilarityAnalysisQueue, GridViewController
 
 ## 검증 방법
 
-### 현재 코드 상태에서의 예상 결과
-
-현재 FaceScan은 청크 경계 문제가 있으므로, 경계에 걸린 그룹이 있는 경우 **FAIL**이 예상된다.
-이것이 정상이다 — 하네스가 문제를 감지하고 있다는 뜻이다.
-
-### 구조 수정(IncrementalGroupBuilder) 적용 후
-
-수정이 올바르면 **PASS**로 전환되어야 한다.
-PASS가 아니면 수정에 문제가 있다는 뜻이다.
-
-### 실기기 테스트
-
-1. 빌드 후 FaceScan 실행
-2. Console.app 또는 `log stream --predicate 'subsystem == "com.karl.SweepPic"'`에서 `[Equivalence]` 검색
-3. PASS/FAIL 확인
-4. FAIL이면 baselineOnly/faceScanOnly 그룹의 assetID로 원인 추적
-
----
-
-## 의존성
-
-| 의존 대상 | 사용 방식 | 비고 |
-|----------|----------|------|
-| `PersonMatchingEngine` | 별도 인스턴스 생성 | 기존 인스턴스와 격리 |
-| `SimilarityAnalyzer.formGroups()` | 기존 함수 그대로 호출 | 수정 없음 |
-| `SimilarityConstants` | threshold, minGroupSize 등 참조 | 수정 없음 |
-| `FaceScanCache` / `SimilarityCache` | **사용하지 않음** | 읽기도 쓰기도 안 함 |
-| `TrashStore` | **사용하지 않음** | 사진 목록 캡처 시점에 이미 제외됨 |
-
----
-
-## 파일별 변경 요약
-
-| 파일 | 작업 | 라인 수 (추정) |
-|------|------|--------------|
-| `FaceScanEquivalenceHarness.swift` (신규) | 하네스 클래스 전체 | ~120줄 |
-| `FaceScanService.swift` (수정) | #if DEBUG 블록 3개 추가 | ~30줄 |
-| **합계** | | ~150줄 |
+1. 기존 진단 버튼으로 문제 그룹 재확인 → FaceScan에서 accepted 여부
+2. EQ 테스트 재실행 → PASS 유지 확인
+3. continueFromLast/byYear 세션 이어서 하기 동작 확인
+4. 취소 동작 확인 (FP 생성 중 뒤로가기)

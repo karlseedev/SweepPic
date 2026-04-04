@@ -1,622 +1,508 @@
-# FaceScan-Grid 동등성 데이터 수집 선행 계획 v3
-
-## 문서 목적
-
-이 문서는 **수정안 문서가 아니라, 수정 전에 반드시 구현해야 하는 데이터 수집/검증 문서**다.
-
-최종 목표는 하나다.
-
-- **FaceScan 결과가 사용자가 실제 Grid에서 보던 최종 결과와 정확히 같아야 한다.**
-
-이 문서의 핵심은 그 목표를 애매하게 “비슷한 baseline”으로 검증하지 않고,
-**실제 live Grid final state를 oracle로 삼는 수집 체계**를 먼저 만드는 것이다.
-
-즉, 이 문서는 다음보다 우선한다.
-
-- `docs/llm/a.md`
-- `docs/llm/b.md`
-- 모든 구조 수정안
-- 모든 overlap 보정안
-- 모든 shared-core 추출안
-
----
-
-## 최종 oracle 정의
-
-이번 문서에서 oracle은 이것이다.
-
-- **실제 live Grid 세션에서, 사용자가 본 시점의 최종 shared-cache 그룹 상태**
-
-더 정확히 말하면:
-
-- 실제 Grid가 생성한 분석 요청들
-- 그 요청들의 취소/완료 순서
-- 그 결과로 `SimilarityCache.shared` 에 남은 최종 그룹들
-
-이 최종 cache snapshot이 oracle이다.
-
-중요:
-
-- “Grid 알고리즘과 비슷한 새 baseline 함수”는 oracle이 아니다.
-- “Grid 엔진을 같은 range로 한 번 돌린 결과”도 oracle이 아니다.
-- “FaceScan이 실제로 본 사진들로 재계산한 baseline”도 oracle이 아니다.
-
-최종 비교 대상은 오직:
-
-- **실제 live Grid final state**
-
-이다.
-
----
-
-## 왜 이전 문서들로는 부족했는가
-
-## `a.md`의 문제
-
-- baseline을 새로 구현하려 했다
-- 기준값이 Grid production 경로와 분리돼 있다
-- live Grid 결과와는 더 멀다
-
-즉 `a.md`는 oracle 정의부터 틀렸다.
-
-## `b.md`의 문제
-
-- Grid production 경로를 oracle로 쓰려는 방향은 맞다
-- 하지만 “명시적 range로 Grid 엔진 1회 실행” 수준이라
-  **실제 네가 보던 live Grid 결과**까지는 못 간다
-
-즉 `b.md`는 좋은 engine-level 수집 계획이지만,
-최종 목표인 live Grid equivalence를 직접 보장하진 못 한다.
-
-## v2 `d.md`의 문제
-
-- 2단계 구조 자체는 맞았다
-- 하지만 `Stage 2A`를 너무 열어둬서, “대충 live에 가까운 비교”로 타협할 여지가 남아 있었다
-
-이번 v3에서는 그걸 막는다.
-
-- `Stage 2A`는 선택적 보조 수집
-- **`Stage 2B`만 최종 oracle 경로**
-
-로 고정한다.
-
----
-
-## 두 단계가 필요한 이유
-
-최종 목표는 Stage 2B 하나로 충분해 보일 수 있다.
-하지만 실제 구현과 해석을 위해서는 Stage 1이 필요하다.
-
-## Stage 1
-
-목적:
-
-- 같은 명시적 입력 범위에서
-- Grid 엔진 결과와 FaceScan 결과가 같은지 확인
-
-이 단계의 역할:
-
-- 알고리즘/입력 처리 차이 분리
-
-여기서 다르면:
-
-- live Grid replay까지 갈 필요 없이
-- FaceScan 알고리즘 또는 range 처리부터 다르다는 뜻이다
-
-## Stage 2B
-
-목적:
-
-- 사용자가 실제로 본 live Grid final state와 FaceScan 결과 비교
-
-이 단계의 역할:
-
-- 최종 동등성 검증
-
-즉:
-
-- **Stage 1은 원인 분리용**
-- **Stage 2B는 최종 목표 검증용**
-
-이다.
-
-중요:
-
-- 최종 승인 기준은 Stage 2B다
-- Stage 1 통과만으로는 부족하다
-
----
-
-## 현재 코드 기준 사실 정리
-
-## Grid production 경로
-
-현재 Grid/Viewer 공용 분석 경로는:
-
-- `SimilarityAnalysisQueue.formGroupsForRange(...)`
-
-내부 핵심 단계:
-
-1. `fetchPhotos(in:range, fetchResult:)`
-2. `matchingEngine.generateFeaturePrints(for:)`
-3. `analyzer.formGroups(...)`
-4. `rawGroups` 전체에 대해 `assignPersonIndicesForGroup(...)`
-5. `SimilarityCache.addGroupIfValid(...)`
-6. notification 발송
-
-최종 그룹 source of truth:
-
-- `SimilarityCache.groups[groupID].memberAssetIDs`
-
-중요:
-
-- Grid는 `hasFaces`를 최종 그룹 스킵 조건으로 쓰지 않는다
-- Grid는 request 여러 개가 shared cache 위에 누적된다
-- live UI는 notification과 cache state를 보고 갱신된다
-
-## FaceScan production 경로
-
-현재 FaceScan은:
-
-- `FaceScanService.analyze(...)`
-- 청크 루프
-- `analyzeChunk(photos:excludeAssets:)`
-
-핵심 차이:
-
-- 20장 청크 + overlap 3장
-- Step 2.5 사전 필터
-- `hasAnyFace` 게이트
-- Step 5.5 overlap 제거
-- `FaceScanCache` 사용
-
-즉 현재는 구조적으로 Grid와 달라질 수 있다.
-
----
-
-## 최종 비교 대상 정의
-
-최종 비교 대상은 아래 둘이다.
-
-1. **Live Grid final group signatures**
-2. **FaceScan final group signatures**
-
-비교 단위:
-
-- `memberAssetIDs.sorted()`
-
-비교 시 무시:
-
-- `groupID`
-- 생성 순서
-- 셀 표시 순서
-
-중요:
-
-- 최종 그룹 시그니처 비교만으로 충분한가?
-  - **최종 동등성 검증 자체는 yes**
-  - 다만 원인 추적을 위해 request sequence와 cancellation 기록도 같이 필요하다
-
-즉 필수 저장 데이터는:
-
-- 최종 그룹 시그니처
-- live request/complete/cancel sequence
-
-둘 다다.
-
----
-
-## Stage 1: Engine Equivalence
-
-## 목적
-
-같은 명시적 입력 범위에 대해
-
-- Grid 엔진 결과
-- FaceScan 결과
-
-가 같은지 본다.
-
-이 단계는 최종 승인 기준이 아니라 **원인 분리 단계**다.
-
-## 동일 입력 계약
-
-1. 같은 `FaceScanMethod`
-2. 같은 `PHFetchResult` 생성 로직
-3. 같은 정렬
-   - `creationDate DESC`
-4. 같은 명시적 `ClosedRange<Int>`
-5. 같은 삭제대기함 제외 규칙
-6. 같은 clamp 결과
-
-## 구현 원칙
-
-- production 알고리즘은 바꾸지 않는다
-- baseline 재구현 금지
-- isolated execution 사용
-- shared cache 오염 금지
-
-## Stage 1 구현물
-
-### 1. `SweepPic/SweepPic/Debug/FaceScanGridEquivalenceTester.swift`
-
-책임:
-
-- method/range 입력
-- fetchResult 생성
-- range clamp
-- Grid engine oracle 실행
-- FaceScan debug range 실행
-- diff/report 저장
-
-핵심 타입:
-
-```swift
-enum FaceScanDebugTerminationReason: String, Codable {
-    case naturalEnd
-    case maxScanCount
-    case maxGroupCount
-    case cancelled
-}
-
-struct GroupSignature: Hashable, Codable {
-    let members: [String]
-}
-
-struct EngineEquivalenceReport: Codable {
-    let methodDescription: String
-    let requestedRange: ClosedRange<Int>
-    let clampedRange: ClosedRange<Int>?
-    let gridAnalyzedAssetIDs: [String]
-    let faceScanAnalyzedAssetIDs: [String]
-    let gridGroups: [GroupSignature]
-    let faceScanGroups: [GroupSignature]
-    let gridOnly: [GroupSignature]
-    let faceScanOnly: [GroupSignature]
-    let common: [GroupSignature]
-    let faceScanTerminationReason: FaceScanDebugTerminationReason
-}
-```
-
-### 2. `FaceScanService` debug helper
-
-추가:
-
-- `debugBuildFetchResult(method:)`
-- `analyzeDebugRange(fetchResult:range:)`
-
-계약:
-
-- 현재 FaceScan 알고리즘 그대로
-- 세션 저장 금지
-- 실제 처리 assetID 기록
-- 종료 사유 기록
-
-### 3. `SimilarityAnalysisQueue` isolated engine helper
-
-Stage 1 oracle도 shared cache를 건드리면 안 된다.
-
-따라서:
-
-- core 로직 추출
-- isolated cache 주입
-- analytics suppression
-- notification suppression
-
-이 필요하다.
-
-중요:
-
-- 이건 Grid 알고리즘을 바꾸는 게 아니라
-- **같은 알고리즘을 오염 없이 호출하는 경로**를 만드는 것이다
-
-## Stage 1 해석 기준
-
-결과 해석:
-
-- `gridOnly` / `faceScanOnly` 존재 → 알고리즘 또는 입력 처리 차이
-- 여기서 이미 다르면 Stage 2B 전에 원인을 좁힐 수 있음
-
-하지만 Stage 1이 PASS여도 끝이 아니다.
-
----
-
-## Stage 2B: Live Grid Equivalence
-
-## 이 단계가 필수다
-
-이번 문서에서 최종 oracle은 **Stage 2B** 다.
-
-Stage 2A 같은 “근사 live 비교”는 선택적 보조일 뿐, 승인 기준이 아니다.
-
-즉:
-
-- **실제 네가 보던 Grid 결과와 같다고 말하려면 Stage 2B가 반드시 구현되어야 한다**
+# FaceScan = Grid 동일성 보장 설계
 
 ## 목표
 
-실제 live Grid 세션의 final cache state를 기록하고,
-그 state와 FaceScan 결과를 비교한다.
+이 문서의 기준은 구현 편의가 아니다.
 
-## 핵심 아이디어
+기준은 오직 하나다.
 
-Grid를 새로 재현하지 않는다.
+**FaceScan이 Grid와 같은 입력을 보고, 같은 그룹 형성 엔진을 타서, 같은 결과를 내는가**
 
-대신 실제 Grid 세션에서:
+즉 질문은 이것이다.
 
-1. 어떤 request가 enqueue되었는지
-2. 어떤 request가 cancel되었는지
-3. 어떤 request가 complete되었는지
-4. 최종적으로 `SimilarityCache.shared` 에 어떤 그룹들이 남았는지
+- "잘 동작할까?"가 아니라
+- "**Grid와 FaceScan이 구조적으로 같은가?**"
 
-를 기록한다.
+이 기준에서 기존 `b.md`는 방향은 맞지만 아직 strict equality 관점에서 한 단계 부족하다.
 
-즉 oracle은 **관찰된 실제 세션 결과**다.
+가장 큰 부족점:
 
-## 필수 구현 요소
+- `PhotoLibraryService.fetchAllPhotos()`를 다시 호출하는 방식은 "같은 조건"일 수는 있어도
+- **Grid가 지금 실제로 들고 있는 그 fetchResult snapshot과 완전히 같다고 보장하지는 못한다**
 
-### 1. Live Grid Recorder
+따라서 이 문서는 `b.md`를 보강하여,
 
-새 DEBUG recorder 추가.
+1. **Grid의 실제 fetchResult를 FaceScan에 직접 전달**
+2. 그 fetchResult 위에서 **같은 range 의미**
+3. **같은 formGroupsForRange()**
+4. **같은 mergeOverlappingGroups**
 
-추천 파일:
+까지 맞추는 설계를 제안한다.
 
-- `SweepPic/SweepPic/Debug/GridAnalysisSessionRecorder.swift`
+---
 
-이 recorder는 다음을 기록해야 한다.
+## 결론
 
-#### a. request enqueue
+FaceScan을 Grid와 동일하게 만들려면 아래 4가지가 모두 같아야 한다.
 
-기록 항목:
+1. 같은 `PHFetchResult<PHAsset>` snapshot
+2. 같은 index space
+3. 같은 그룹 형성 함수
+4. 같은 캐시 병합 규칙
 
-- request id
-- source
-- assetID
-- range
-- timestamp
+이 조건을 만족하는 가장 직접적인 방법은:
 
-#### b. request cancel
+- Grid가 현재 보유 중인 `fetchResult`를 FaceScan 시작 시 그대로 넘기고
+- FaceScan은 그 fetchResult 위에서 `SimilarityAnalysisQueue.formGroupsForRange()`를 격리 호출하며
+- 결과만 `FaceScanCache`/`FaceScanGroup`으로 브리지하는 것이다.
 
-기록 항목:
+즉 FaceScan은 더 이상 독자 엔진이 아니라,
 
-- request id
-- timestamp
+**Grid 엔진의 다른 UI 모드**
 
-#### c. request completion
+가 되어야 한다.
 
-기록 항목:
+---
 
-- completion timestamp
-- `analysisRange`
-- `groupIDs`
-- `analyzedAssetIDs`
+## 왜 기존 구조는 동일하지 않은가
 
-#### d. final cache snapshot
+현재 차이는 크게 두 층이다.
 
-세션 종료 시점 또는 수동 dump 시점에:
+### 1. 입력이 다르다
 
-- `SimilarityCache.shared` 의 최종 그룹들
-- 각 그룹의 `memberAssetIDs`
+Grid:
+- `GridDataSourceDriver.fetchResult`
+- 실제 사용자 화면과 같은 snapshot
+- ascending
+- image + video
 
-를 snapshot 한다.
+기존 FaceScan:
+- `buildFetchResult(method:)`
+- 호출 시점에 새로 만든 별도 snapshot
+- descending
+- image only
 
-### 2. final snapshot 시점 계약
+이 시점에서 이미 strict equality는 깨진다.
 
-이 부분이 이번 버전에서 가장 중요하다.
+### 2. 엔진이 다르다
 
-final snapshot은 반드시 아래 조건을 만족하는 시점에서 찍어야 한다.
+Grid:
+- `SimilarityAnalysisQueue.formGroupsForRange()`
+- 내부에서 `addGroupIfValid()`
+- 내부에서 `mergeOverlappingGroups()`
 
-- 사용자가 비교 대상으로 삼는 화면 상태가 **안정화된 직후**
-- 즉:
-  - 스크롤이 멈춰 있고
-  - 관련 analysis completion이 끝났고
-  - UI가 최종 badge/group 상태를 반영한 뒤
+기존 FaceScan:
+- 누적 배치
+- sealed/unsealed 처리
+- 독자 `processGroupForFaceScan()`
+- merge 없음
 
-추천 방식:
+즉 같은 멤버가 있어도 최종 그룹 경계가 달라질 수밖에 없다.
 
-- 수동 DEBUG 액션으로 “현재 Grid 세션 snapshot 저장” 버튼/명령을 만든다
-- 사용자가 “지금 보이는 상태”에서 직접 snapshot을 찍게 한다
+---
 
-이유:
+## 동일성의 정의
 
-- 자동 시점 추정은 틀릴 수 있다
-- 최종 oracle은 “사용자가 보던 상태”여야 하므로, 관찰 시점을 사용자가 고정하는 편이 더 정확하다
+이 설계에서 "동일"은 아래 의미다.
 
-### 3. preliminary 상태 처리 계약
+### 동일 입력
 
-live Grid는 intermediate 상태로 `groupID == "preliminary"` 가 있을 수 있다.
+- 같은 `PHFetchResult` 인스턴스 또는 적어도 같은 snapshot
+- 같은 인덱스
+- 같은 asset ordering
+- 같은 trashed 제외 규칙
 
-최종 oracle에는 이 상태를 포함하면 안 된다.
+### 동일 엔진
 
-final snapshot 규칙:
+- 같은 `fetchPhotos`
+- 같은 `generateFeaturePrints`
+- 같은 `formGroups`
+- 같은 `assignPersonIndicesForGroup`
+- 같은 `validSlots / validMembers`
+- 같은 `addGroupIfValid`
+- 같은 `mergeOverlappingGroups`
 
-- `preliminary` 그룹 제외
-- 최종 유효 groupID만 포함
+### 동일 출력
 
-즉, snapshot은 **최종 확정 그룹만** 담아야 한다.
+- 비교 기준은 `memberAssetIDs` 집합
+- `groupID`는 동일성 기준이 아님
 
-### 4. cancellation 처리 계약
+---
 
-취소된 request가 이전에 cache에 남긴 흔적이 있을 수 있다.
+## b.md 대비 핵심 보강점
 
-이번 문서의 원칙:
+`b.md`의 핵심 장점은 유지하되, 아래를 강화한다.
 
-- cancellation 자체를 oracle에서 제거하지 않는다
-- cancellation은 **live Grid 동작의 일부**로 기록한다
-- 최종 oracle은 “그 모든 과정을 거친 뒤 shared cache에 남은 최종 상태”다
+### 보강 1. fetchAllPhotos() 재조회 대신 Grid fetchResult 직접 전달
 
-즉:
+`b.md`의 약점:
 
-- request sequence는 원인 추적용
-- 최종 cache snapshot은 비교 기준용
+- `PhotoLibraryService.shared.fetchAllPhotos()`를 새로 호출하면
+- "Grid와 같은 쿼리"일 수는 있어도
+- "Grid가 지금 들고 있는 정확한 snapshot"은 아닐 수 있다
 
-### 5. Live Grid Snapshot 구조체
+예:
+
+- 사용자가 FaceScan 시작 직전 사진을 추가/삭제
+- PhotoKit change 반영 타이밍 차이
+- Grid는 old snapshot, FaceScan은 new snapshot
+
+이 경우 같은 설계를 써도 strict equality는 깨질 수 있다.
+
+### 보강 2. method 의미를 Grid fetchResult 위에서 정의
+
+`fromLatest`, `continueFromLast`, `byYear`는
+이제 "FaceScan이 만든 fetchResult"가 아니라
+**Grid fetchResult 위의 range 해석 규칙**이어야 한다.
+
+### 보강 3. 비디오 포함 여부를 옵션으로 두지 않음
+
+strict equality가 목표라면
+"비디오를 포함할지 말지"는 선택지가 아니다.
+
+Grid가 비디오를 포함하면 FaceScan도 포함해야 한다.
+
+### 보강 4. 진행률/취소/세션 저장을 equality를 깨지 않는 보조 정책으로 제한
+
+이 항목들은 엔진보다 우선할 수 없다.
+
+- progress는 단순화 가능
+- cancellation은 호출 제어의 문제
+- session 저장은 다음 range 계산 규칙의 문제
+
+하지만 이 셋이 그룹 형성 규칙을 바꾸면 안 된다.
+
+---
+
+## 최종 설계
+
+## 1. FaceScan 진입 시 Grid fetchResult를 직접 주입
+
+현재:
+
+- `GridViewController+FaceScan`에서 method만 넘김
+
+변경:
+
+- `GridViewController`가 현재 사용 중인 fetchResult를 `FaceScanListViewController`에 전달
+
+예시:
 
 ```swift
-struct LiveGridRequestRecord: Codable {
-    let requestID: String
-    let assetID: String
-    let source: String
-    let range: ClosedRange<Int>
-    let timestamp: Date
-}
+let listVC = FaceScanListViewController(
+    method: method,
+    sourceFetchResult: dataSourceDriver.fetchResult
+)
+```
 
-struct LiveGridCancellationRecord: Codable {
-    let requestID: String
-    let timestamp: Date
-}
+또는 직접 `PHFetchResult`를 넘기기 부담되면,
 
-struct LiveGridCompletionRecord: Codable {
-    let range: ClosedRange<Int>
-    let groupIDs: [String]
-    let analyzedAssetIDs: [String]
-    let timestamp: Date
-}
+- `GridDataSourceDriver` 또는 `GridDataSource`를 넘겨서
+- 시작 시점의 fetchResult를 고정 스냅샷처럼 읽게 할 수 있다
 
-struct LiveGridFinalSnapshot: Codable {
-    let finalGroups: [GroupSignature]
-    let capturedAt: Date
-}
+하지만 strict equality 관점에서는
 
-struct LiveGridSessionRecord: Codable {
-    let requests: [LiveGridRequestRecord]
-    let cancellations: [LiveGridCancellationRecord]
-    let completions: [LiveGridCompletionRecord]
-    let finalSnapshot: LiveGridFinalSnapshot
+**실제 fetchResult 자체를 직접 넘기는 편이 더 좋다.**
+
+### 권장 시그니처
+
+```swift
+final class FaceScanListViewController: UIViewController {
+    init(method: FaceScanMethod, sourceFetchResult: PHFetchResult<PHAsset>)
 }
 ```
 
-### 6. FaceScan 비교 report
+그리고 `FaceScanService`에도 전달:
 
 ```swift
-struct LiveEquivalenceReport: Codable {
-    let liveGridFinalGroups: [GroupSignature]
-    let faceScanGroups: [GroupSignature]
-    let gridOnly: [GroupSignature]
-    let faceScanOnly: [GroupSignature]
-    let common: [GroupSignature]
-}
+func analyze(
+    method: FaceScanMethod,
+    fetchResult: PHFetchResult<PHAsset>,
+    onGroupFound: @escaping (FaceScanGroup) -> Void,
+    onProgress: @escaping (FaceScanProgress) -> Void
+) async throws
 ```
 
-## Stage 2B 실행 방식
-
-1. 사용자가 실제 Grid에서 원하는 상태까지 스크롤/대기
-2. DEBUG 액션으로 live session snapshot 저장
-3. 같은 method/range 조건으로 FaceScan 데이터 수집 실행
-4. live snapshot의 finalGroups 와 FaceScan groups 비교
-
-여기서 중요한 건:
-
-- Grid 쪽은 **실제 관찰 결과**
-- FaceScan 쪽은 **동일 범위를 위한 수집 실행**
-
-이라는 점이다.
+이렇게 하면 FaceScan이 독자 fetch를 만드는 경로를 원천 차단할 수 있다.
 
 ---
 
-## Stage 2A의 위치
+## 2. FaceScanMethod는 주입된 Grid fetchResult 위에서 range로 해석
 
-이번 버전에서 Stage 2A는 필수가 아니다.
+새 helper:
 
-있다면 용도는 하나다.
-
-- live session replay를 만들기 전, 보조적으로 범위 기반 근사 비교를 해보는 것
-
-하지만 이 결과로는
-
-- “실제 Grid와 같다”
-
-고 말할 수 없다.
-
-따라서:
-
-- Stage 2A는 선택적 참고 수단
-- **승인 기준에서 제외**
-
-로 명시한다.
-
----
-
-## side effect 전략
-
-## Stage 1
-
-- isolated cache
-- isolated queue/helper
-- analytics suppression
-- notification suppression
-- session save 금지
-
-## Stage 2B
-
-- live Grid는 실제 production 동작을 그대로 관찰
-- recorder는 관찰만 하고 변경하지 않음
-- snapshot 캡처만 추가
-
-즉:
-
-- Stage 1은 격리 실행
-- Stage 2B는 관찰 실행
-
----
-
-## 반드시 수집할 메타데이터
-
-### Stage 1
-
-1. requested range
-2. clamped range
-3. Grid analyzedAssetIDs
-4. FaceScan analyzedAssetIDs
-5. Grid groups
-6. FaceScan groups
-7. gridOnly
-8. faceScanOnly
-9. common
-10. FaceScan terminationReason
-
-### Stage 2B
-
-1. request sequence
-2. cancellation sequence
-3. completion sequence
-4. final live snapshot groups
-5. FaceScan groups
-6. gridOnly
-7. faceScanOnly
-8. common
-9. snapshot capture timestamp
-
----
-
-## 승인 기준
-
-이번 문서가 충족해야 하는 기준은 아래다.
-
-1. 최종 oracle이 live Grid final state로 명시되어 있는가
-2. Stage 1과 Stage 2B의 역할이 분리되어 있는가
-3. Stage 2A가 필수가 아니라는 점이 명시되어 있는가
-4. baseline 재구현을 금지하는가
-5. Stage 1은 isolated execution인가
-6. Stage 2B는 actual observation인가
-7. final snapshot 시점 계약이 명확한가
-8. preliminary 제외 규칙이 있는가
-
-이 8개를 만족해야, 이 문서는 “실제 사용자가 보던 Grid 결과와의 동등성”을 목표로 하는 선행 문서가 된다.
-
----
-
-## 구현 우선순위
-
-1. Stage 1 구현
-2. Stage 1 diff 수집
-3. Live Grid Recorder 구현
-4. 수동 final snapshot capture 구현
-5. Stage 2B live snapshot 수집
-6. Stage 2B 기준 diff 수집
-7. 그 다음에만 구조 수정 문서 작성
+```swift
+private func resolveAnalysisRange(
+    method: FaceScanMethod,
+    fetchResult: PHFetchResult<PHAsset>
+) -> ClosedRange<Int>?
+```
 
 중요:
 
-- 구조 수정의 합격 기준은 Stage 2B PASS다
-- Stage 1 PASS만으로는 출시 기준을 만족하지 않는다
+- 이 함수는 **반드시 Grid fetchResult 기준**
+- 정렬 가정은 ascending
+
+### fromLatest
+
+```swift
+let upper = fetchResult.count - 1
+let lower = max(0, upper - FaceScanConstants.maxScanCount + 1)
+return lower...upper
+```
+
+### continueFromLast
+
+의미:
+
+- 이전 실행에서 처리한 가장 오래된 경계보다 더 오래된 쪽으로 계속
+
+ascending 기준:
+
+```swift
+let boundaryIndex = ...
+let upper = boundaryIndex - 1
+let lower = max(0, upper - FaceScanConstants.maxScanCount + 1)
+return lower...upper
+```
+
+### byYear
+
+의미:
+
+- 주입된 Grid fetchResult 안에서 해당 연도 subrange만 사용
+
+구현 원칙:
+
+- 연도에 해당하는 최소/최대 index를 찾는다
+- 그 안에서 최신 쪽 1000장만 취한다
+- `continueFrom`이 있으면 upperBound를 더 줄인다
+
+중요:
+
+연도 계산도 **새 fetch가 아니라 주입된 fetchResult 기준**이어야 한다.
+
+---
+
+## 3. 그룹 형성은 격리 formGroupsForRange 1회 호출
+
+FaceScan의 독자 배치 루프는 제거한다.
+
+```swift
+let isolatedCache = SimilarityCache()
+let isolatedQueue = SimilarityAnalysisQueue(cache: isolatedCache)
+
+let groupIDs = await isolatedQueue.formGroupsForRange(
+    analysisRange,
+    source: .grid,
+    fetchResult: sourceFetchResult
+)
+```
+
+이 방식이 중요한 이유:
+
+- Grid와 같은 engine
+- Grid와 같은 merge
+- Grid와 같은 group validation
+
+즉 "비슷하게 만든다"가 아니라
+"같은 코드를 실행한다"가 된다.
+
+---
+
+## 4. 결과는 FaceScan UI 모델로만 브리지
+
+그룹 형성은 Grid 엔진이 한다.
+FaceScan은 결과를 보여주는 UI 레이어만 담당한다.
+
+브리지 방식:
+
+```swift
+for groupID in groupIDs.prefix(FaceScanConstants.maxGroupCount) {
+    let members = await isolatedCache.getGroupMembers(groupID: groupID)
+    let validSlots = await isolatedCache.getGroupValidPersonIndices(for: groupID)
+
+    var photoFaces: [String: [CachedFace]] = [:]
+    for assetID in members {
+        photoFaces[assetID] = await isolatedCache.getFaces(for: assetID)
+    }
+
+    let group = SimilarThumbnailGroup(groupID: groupID, memberAssetIDs: members)
+    await cache.addGroup(group, validSlots: validSlots, photoFaces: photoFaces)
+
+    await MainActor.run {
+        onGroupFound(FaceScanGroup(
+            groupID: groupID,
+            memberAssetIDs: members,
+            validPersonIndices: validSlots
+        ))
+    }
+}
+```
+
+### 원칙
+
+- 결과 형성은 Grid
+- 결과 저장/표시는 FaceScan
+
+즉 responsibility를 분리한다.
+
+---
+
+## 5. maxGroupCount는 UI 정책이지 엔진 입력 제한이 아님
+
+strict equality 관점에서 중요한 점:
+
+- 그룹 형성 자체는 전부 해야 한다
+- 그 뒤 UI에 몇 개 보여줄지는 FaceScan 정책일 수 있다
+
+따라서:
+
+- `analysisRange`는 최대 1000장 정책을 그대로 적용 가능
+- 하지만 range 안 그룹 형성은 전부 수행
+- `maxGroupCount`는 `prefix(30)`로 전달만 제한
+
+이게 맞는 이유:
+
+- 그룹 형성 단계에서 30개에 도달했다고 멈추면 Grid와 동등성이 약해진다
+- UI 상한과 engine 상한은 분리해야 한다
+
+---
+
+## 6. 세션 저장도 Grid fetchResult 기준
+
+세션 저장은 다음 continue range를 계산하기 위한 boundary 저장이다.
+
+ascending 기준이므로:
+
+- 다음 continue는 더 오래된 쪽으로 이동해야 한다
+- 따라서 현재 range의 `lowerBound` asset을 저장해야 한다
+
+```swift
+let boundaryAsset = sourceFetchResult.object(at: analysisRange.lowerBound)
+saveSession(
+    method: method,
+    lastDate: boundaryAsset.creationDate,
+    lastAssetID: boundaryAsset.localIdentifier
+)
+```
+
+여기서도 기준은 항상:
+
+**Grid fetchResult index space**
+
+다.
+
+---
+
+## 7. cancellation과 progress는 equality를 깨지 않는 선에서 단순화
+
+### cancellation
+
+권장:
+
+- `scanTask.cancel()`
+- `scanService.cancel()`
+
+둘 다 유지
+
+이유:
+
+- `formGroupsForRange()`는 `Task.isCancelled`를 봄
+- service 레벨 플래그는 외부 상태 표현용으로 유지 가능
+
+### progress
+
+이 설계는 배치 progress를 잃는다.
+하지만 strict equality 목표에서는 허용 가능하다.
+
+1차 구현:
+
+1. 시작 시 0
+2. `formGroupsForRange()` 완료 후 `scannedCount = 실제 range 장수`
+3. 그룹 브리지하면서 `groupCount` 증가
+4. 완료
+
+즉 progress는 약해져도 엔진 동일성은 유지한다.
+
+---
+
+## 파일별 변경안
+
+### 1. `GridViewController+FaceScan.swift`
+
+변경:
+
+- `FaceScanListViewController(method:)`
+- ->
+- `FaceScanListViewController(method:sourceFetchResult:)`
+
+필요 조건:
+
+- 현재 Grid가 쓰는 fetchResult가 nil이 아니어야 함
+
+### 2. `FaceScanListViewController.swift`
+
+변경:
+
+- init에 `sourceFetchResult` 추가
+- `startAnalysis()`에서 service.analyze 호출 시 함께 전달
+- cancel 시 `scanTask.cancel()` 유지/보강
+
+### 3. `FaceScanService.swift`
+
+변경:
+
+- `buildFetchResult(method:)`를 analyze 핵심 경로에서 제거
+- `resolveAnalysisRange(method:fetchResult:)` 추가
+- 기존 배치 루프 제거
+- 격리 `SimilarityAnalysisQueue(cache:)` 호출
+- 결과 브리지
+- 세션 저장 경계 수정
+
+### 4. 선택적 정리
+
+- 진단용 debug path는 유지 가능
+- 하지만 production 경로는 더 이상 독자 배치 엔진을 타지 않도록 분리
+
+---
+
+## 이 설계의 장점
+
+- strict equality 관점에서 가장 강하다
+- Grid와 FaceScan이 같은 snapshot을 본다
+- Grid와 FaceScan이 같은 engine을 탄다
+- 기존 FaceScan UI는 대부분 유지 가능하다
+- 문제 원인인 batch/sealed/descending/image-only 차이를 전부 제거한다
+
+---
+
+## 이 설계의 단점
+
+### 1. 진행률 UX 저하
+
+배치형 progress가 사라진다.
+
+하지만 equality 목표에서는 수용 가능하다.
+
+### 2. Grid fetchResult 의존성 증가
+
+FaceScan이 더 이상 완전히 독립적인 스캔기가 아니다.
+
+하지만 이번 목표는 "독립성"이 아니라 "동일성"이므로 오히려 맞는 방향이다.
+
+### 3. Grid가 없는 진입점은 별도 처리 필요
+
+만약 미래에 FaceScan을 Grid 밖에서 실행한다면,
+
+- 그때는 별도 snapshot 생성 규칙이 필요하다
+- 하지만 그 경우는 strict equality 대상이 아니므로 별도 정책으로 분리하면 된다
+
+---
+
+## 최종 판단
+
+`b.md`는 "같은 쿼리 + 같은 엔진" 수준의 설계다.
+
+이 문서 `d.md`는 그걸 더 밀어붙여
+
+**"같은 snapshot + 같은 engine"**
+
+으로 만든다.
+
+Grid와 FaceScan이 정말 동일해야 한다면,
+이게 더 맞다.
+
+한 줄로 요약하면:
+
+**FaceScan은 Grid와 같은 fetchResult를 받아, Grid 엔진을 그대로 실행하는 다른 UI여야 한다.**
