@@ -574,10 +574,9 @@ extension ViewerViewController {
             let currentFaces = await SimilarityCache.shared.getFaces(for: assetID)
 
             // 멤버별 fetchResult 인덱스 조회
-            // Grid: ascending (오래된 순), FaceScan: descending (최신 순)
+            // Grid/FaceScan 모두 동일 ascending fetchResult 사용
             let gridFetchResult = PhotoLibraryService.shared.fetchAllPhotos()
-            let faceScanService = FaceScanService(cache: FaceScanCache())
-            let fsFetchResult = faceScanService.debugBuildFetchResult(method: .fromLatest)
+            let fsFetchResult = gridFetchResult  // FaceScan도 Grid fetchResult 사용
 
             // PHFetchResult.index(of:)로 각 멤버 위치 조회
             let targetAssets = PHAsset.fetchAssets(withLocalIdentifiers: members, options: nil)

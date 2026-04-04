@@ -35,8 +35,17 @@ extension GridViewController: FaceScanMethodSheetDelegate {
     func faceScanMethodSheet(_ sheet: FaceScanMethodSheet, didSelect method: FaceScanMethod) {
         Logger.app.debug("GridVC+FaceScan: 방식 선택 — \(method.description)")
 
-        // FaceScanListVC push
-        let listVC = FaceScanListViewController(method: method)
+        // Grid의 fetchResult를 FaceScan에 주입 (동일 snapshot 보장)
+        guard let fetchResult = dataSourceDriver.fetchResult else {
+            Logger.app.error("GridVC+FaceScan: fetchResult nil — FaceScan 시작 불가")
+            return
+        }
+
+        // FaceScanListVC push (Grid fetchResult 직접 주입)
+        let listVC = FaceScanListViewController(
+            method: method,
+            sourceFetchResult: fetchResult
+        )
         navigationController?.pushViewController(listVC, animated: true)
     }
 

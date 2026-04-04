@@ -33,6 +33,9 @@ final class FaceScanListViewController: UIViewController, BarsVisibilityControll
     /// 스캔 방식
     private let method: FaceScanMethod
 
+    /// Grid에서 주입받은 fetchResult (ascending, image+video — Grid 동일 snapshot)
+    private let sourceFetchResult: PHFetchResult<PHAsset>
+
     /// 전용 캐시 (FaceComparisonVC에 주입, 다음 분석 시 재생성)
     private var faceScanCache = FaceScanCache()
 
@@ -117,8 +120,9 @@ final class FaceScanListViewController: UIViewController, BarsVisibilityControll
 
     // MARK: - Init
 
-    init(method: FaceScanMethod) {
+    init(method: FaceScanMethod, sourceFetchResult: PHFetchResult<PHAsset>) {
         self.method = method
+        self.sourceFetchResult = sourceFetchResult
         super.init(nibName: nil, bundle: nil)
         hidesBottomBarWhenPushed = true
     }
@@ -484,9 +488,11 @@ final class FaceScanListViewController: UIViewController, BarsVisibilityControll
         self.scanService = service
 
         scanTask = Task { [weak self] in
+            guard let self = self else { return }
             do {
                 try await service.analyze(
                     method: scanMethod,
+                    fetchResult: self.sourceFetchResult,
                     onGroupFound: { [weak self] group in
                         self?.handleGroupFound(group)
                     },

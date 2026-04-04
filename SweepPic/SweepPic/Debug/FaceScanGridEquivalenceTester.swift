@@ -122,9 +122,9 @@ final class FaceScanGridEquivalenceTester {
     ) async throws -> EngineEquivalenceReport {
         Logger.similarPhoto.notice("[Engine Equivalence] 시작: method=\(method.description)")
 
-        // Step 1. fetchResult 생성 (FaceScan predicate 재사용)
+        // Step 1. fetchResult 생성 (Grid와 동일한 ascending fetchResult 사용)
         let faceScanService = FaceScanService(cache: FaceScanCache())
-        let fetchResult = faceScanService.debugBuildFetchResult(method: method)
+        let fetchResult = PhotoLibraryService.shared.fetchAllPhotos()
 
         Logger.similarPhoto.notice("[Engine Equivalence] fetchResult: \(fetchResult.count)장")
 

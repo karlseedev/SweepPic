@@ -5,12 +5,20 @@
 
 ### 통일 규칙
 1. **"Trash"**: 삭제대기함은 모두 "Trash"로 통일
-2. **"Rewards"**: referral 맥락에서 "Benefits" 대신 "Rewards" 통일
+2. **"Rewards"**: referral 맥락에서 "benefit" 대신 "reward" 통일
 3. **단복수**: {count} 사용 항목에 "(plural 처리 필요)" 주석 추가
 4. **닫기 버튼**: 모달/팝업은 "Close", 네비게이션은 "Back"으로 구분
 5. **"cell" 금지**: 개발 용어 "cell" 대신 사진/항목 등 사용자 용어 사용
 6. **"invite" 통일**: referral 맥락에서 사용자 대면 문자열은 "invite" 통일
 7. **등급 표현**: "Grade 5/4/3" 대신 사용자 친화적 표현 사용 (Lowest Quality / Low Quality / Poor Quality)
+8. **"Restore Purchases"**: 구매 복원은 Apple StoreKit 표준 "Restore Purchases" 사용
+9. **"Pro"**: 멤버십 명칭은 "Pro"로 통일 ("Premium" 사용 금지)
+10. **"Open Settings"**: 설정 이동 버튼은 "Open Settings"로 통일
+11. **"photo library access"**: 사진 접근 권한 표현 통일 ("photo access" 단독 사용 금지)
+12. **인용 부호**: Apple 인용 스타일에 따라 큰따옴표("") 사용
+13. **네트워크 에러**: "Please check your network connection."으로 통일
+14. **미국식 영어**: "canceled" (미국식), "cancelled" (영국식) 금지
+15. **"Yearly"**: 구독 기간 표현은 "Yearly"로 통일 ("Annual" 대신)
 
 ---
 
@@ -23,7 +31,7 @@
 | 3 | 설정 열기 | Open Settings | 버튼 | |
 | 4 | 설정 > 스크린 타임에서 제한을 해제할 수 있습니다. | You can remove restrictions in Settings > Screen Time. | 보조 설명 | |
 | 5 | 앱을 이용하려면\n전체 사진 접근 권한이\n필요합니다 | Full Photo Access\nRequired | 제목 (권한 거부) | |
-| 6 | SweepPic은 전체 사진 라이브러리에\n접근해야 정상적으로 동작합니다.\n설정에서 '전체 접근 허용'을 선택해 주세요. | SweepPic needs full access to your\nphoto library to work properly.\nPlease select 'Allow Full Access' in Settings. | 설명 (권한 거부) | |
+| 6 | SweepPic은 전체 사진 라이브러리에\n접근해야 정상적으로 동작합니다.\n설정에서 '전체 접근 허용'을 선택해 주세요. | SweepPic needs full access to your\nphoto library to work properly.\nPlease select "Allow Full Access" in Settings. | 설명 (권한 거부) | |
 
 ---
 
@@ -37,7 +45,7 @@
 | 10 | 사진이 없습니다 | No Photos | EmptyState 제목 | |
 | 11 | 이 앨범에 사진이 없습니다 | This album has no photos | EmptyState 부제 | |
 | 12 | 선택 | Select | 네비게이션 바 버튼 | |
-| 13 | 삭제대기함이 비어 있습니다 | Trash Is Empty | EmptyState 제목 | |
+| 13 | 삭제대기함이 비어 있습니다 | Trash is Empty | EmptyState 제목 | |
 | 14 | 삭제대기함 | Trash | 네비게이션 타이틀 | |
 | 15 | 비우기 | Empty | 네비게이션 바 버튼 | |
 | 16 | 오늘의 무료 삭제 한도예요.\n탭해서 자세히 볼 수 있어요 | Today's free deletion limit.\nTap for details. | 게이지 툴팁 | |
@@ -80,7 +88,7 @@
 | 23 | {count}개 항목 선택됨 | {count} Selected | 선택 모드 라벨 (동적) (plural 처리 필요 - 1 Selected / N Selected) | |
 | 24 | 기능이 실행되는\n사진을 찾고 있어요 | Finding a photo\nto demonstrate... | 코치마크 온보딩 | |
 | 25 | 사진을 촬영하거나 가져오세요 | Take or import photos | 빈 상태 부제 | |
-| 26 | 표시할 이미지가 없습니다 | No images to display | Toast (코치마크) | |
+| 26 | 표시할 이미지가 없습니다 | No photos to display | Toast (코치마크) | |
 | 27 | 인물사진 비교정리 할 사진을 찾지 못했습니다 | No photos found for Face Comparison | Toast | |
 | 28 | 간편정리 | Quick Menu | 메뉴 버튼 타이틀 | |
 | 29 | 인물사진 비교정리 | Face Comparison | 메뉴 항목 | |
@@ -109,7 +117,7 @@
 | 43 | 사진 라이브러리에 사진을 추가해주세요 | Add photos to your library | noPhotos 프리셋 부제 | |
 | 44 | 사진 없음 | No Photos | emptyAlbum 프리셋 제목 | |
 | 45 | 이 앨범에는 사진이 없습니다 | This album has no photos | emptyAlbum 프리셋 부제 | |
-| 46 | 삭제대기함이 비어 있습니다 | Trash Is Empty | emptyTrash 프리셋 제목 | |
+| 46 | 삭제대기함이 비어 있습니다 | Trash is Empty | emptyTrash 프리셋 제목 | |
 | 47 | 사진 접근 권한 필요 | Photo Access Required | permissionRequired 프리셋 제목 | |
 | 48 | 설정에서 사진 라이브러리 접근을 허용해주세요 | Please allow photo library access in Settings | permissionRequired 프리셋 부제 | |
 
@@ -120,7 +128,7 @@
 | 49 | 보관함 | Photos | 사진 탭 버튼 | |
 | 50 | 앨범 | Albums | 앨범 탭 버튼 | |
 | 51 | 삭제대기함 | Trash | 삭제대기함 탭 버튼 | |
-| 52 | 삭제하기 | Empty Trash | 접근성 라벨 | |
+| 52 | 삭제하기 | Delete | 접근성 라벨 | |
 | 53 | 항목 선택 | Select Items | Select 모드 라벨 | |
 | 54 | 삭제 | Delete | Select 모드 삭제 버튼 | |
 | 55 | 복구 | Restore | Trash Select 모드 복구 버튼 | |
@@ -207,7 +215,7 @@
 | # | 한국어 (현재) | 영어 (제안) | 용도 | 확인 |
 |---|---|---|---|---|
 | 94 | 삭제 완료 | Deletion Complete | 타이틀 | |
-| 95 | 애플 사진앱의 '최근 삭제된 항목'에서\n30일 후 완전히 삭제됩니다. | Photos will be permanently deleted\nafter 30 days in the Photos app's\n'Recently Deleted' album. | 본문 | |
+| 95 | 애플 사진앱의 '최근 삭제된 항목'에서\n30일 후 완전히 삭제됩니다. | Photos will be permanently deleted\nafter 30 days in the Photos app's\n"Recently Deleted" album. | 본문 | |
 
 ---
 
@@ -228,7 +236,7 @@
 | 104 | 초대 한 번마다 나도 친구도\nPro 멤버십 14일 무료 제공! | Invite a friend — you both get\n14 days of Pro free! | 초대 프로모 라벨 | |
 | 105 | 친구 초대하기 | Invite Friends | 초대 버튼 | |
 | 106 | 이미 Pro멤버십 이용 중이어도 14일 무료 연장 | Already Pro? Get 14 extra days free! | 초대 부가 문구 | |
-| 107 | 네트워크 상태를 확인하고 다시 시도해주세요. | Please check your network and try again. | 광고 실패 alert 메시지 | |
+| 107 | 네트워크 상태를 확인하고 다시 시도해주세요. | Please check your network connection and try again. | 광고 실패 alert 메시지 | |
 | 108 | 다시 시도 | Try Again | alert 버튼 | |
 
 ### UsageGaugeView
@@ -253,16 +261,16 @@
 | 115 | 무료 체험하고\n한 번에 비우세요 | Start Free Trial\nand Clean Up All at Once | 헤드라인 | |
 | 116 | Pro 멤버십으로 삭제 한도 없이, 광고 없이 | No limits, no ads with Pro | 서브헤드라인 | |
 | 117 | 무료 체험 시작하기 | Start Free Trial | 구매 버튼 | |
-| 118 | 멤버십 복원 | Restore Membership | 복원 버튼 | |
+| 118 | 멤버십 복원 | Restore Purchases | 복원 버튼 | |
 | 119 | 리딤 코드 | Redeem Code | 리딤 버튼 | |
 | 120 | Apple로 보호됨 | Secured by Apple | 보호 라벨 (NSAttributedString) | |
 | 121 | 약관 | Terms | 약관 링크 (밑줄) | |
 | 122 | 무료체험(Pro) | Free Trial (Pro) | 비교표 Pro 헤더 | |
 | 123 | 일반 | Free | 비교표 Free 헤더 | |
 | 124 | 복원 완료 | Restored | alert 제목 | |
-| 125 | Pro멤버십이 복원되었습니다. | Pro membership has been restored. | alert 메시지 | |
+| 125 | Pro멤버십이 복원되었습니다. | Your purchase has been restored. | alert 메시지 | |
 | 126 | 복원 결과 | Restore Result | alert 제목 | |
-| 127 | 복원할 멤버십이 없습니다. | No membership to restore. | alert 메시지 | |
+| 127 | 복원할 멤버십이 없습니다. | No purchases to restore. | alert 메시지 | |
 | 128 | 승인 대기 | Awaiting Approval | alert 제목 (Ask to Buy) | |
 | 129 | 구매 요청이 전송되었습니다.\n보호자의 승인 후 활성화됩니다. | Your purchase request has been sent.\nIt will be activated after approval. | alert 메시지 | |
 | 130 | 네트워크 연결을 확인해주세요. | Please check your network connection. | 에러 메시지 | |
@@ -295,15 +303,15 @@
 | 152 | 광고포함 | With Ads | 비교표 (무료) | |
 | 153 | 광고없음 | Ad-Free | 비교표 (Pro) | |
 | 154 | 얼굴 인식 확대 | Face Zoom | 비교표 feature | |
-| 155 | 상품 정보를 불러올 수 없습니다. 네트워크 연결을 확인해주세요. | Unable to load product info. Please check your connection. | 에러 메시지 | |
+| 155 | 상품 정보를 불러올 수 없습니다. 네트워크 연결을 확인해주세요. | Unable to load product info. Please check your network connection. | 에러 메시지 | |
 
 ### PaywallPlanTabView
 
 | # | 한국어 (현재) | 영어 (제안) | 용도 | 확인 |
 |---|---|---|---|---|
 | 156 | 월간 | Monthly | 탭 텍스트 | |
-| 157 | 연간 | Annual | 탭 텍스트 | |
-| 158 | 인기 | Best Value | 인기 배지 | |
+| 157 | 연간 | Yearly | 탭 텍스트 | |
+| 158 | 인기 | Most Popular | 인기 배지 | |
 
 ### Paywall 접근성
 
@@ -316,7 +324,7 @@
 
 | # | 한국어 (현재) | 영어 (제안) | 용도 | 확인 |
 |---|---|---|---|---|
-| 488 | 무료 체험 기간이 끝나면 선택한 요금제로 자동 구독이 시작됩니다. 구독은 확인 시 Apple ID 계정으로 청구됩니다. 구독은 현재 기간 종료 최소 24시간 전에 해지하지 않으면 자동으로 갱신됩니다. 갱신 비용은 현재 기간 종료 24시간 이내에 청구됩니다. 구독은 구매 후 설정 > Apple ID > 구독에서 관리하고 해지할 수 있습니다. 이용약관 및 개인정보처리방침이 적용됩니다. | Your subscription will automatically begin at the selected plan rate when the free trial ends. Payment will be charged to your Apple ID account upon confirmation. Subscriptions automatically renew unless cancelled at least 24 hours before the end of the current period. Renewal will be charged within 24 hours before the end of the current period. You can manage and cancel subscriptions in Settings > Apple ID > Subscriptions after purchase. Terms of Use and Privacy Policy apply. | 이용약관 시트 법적 고지 본문 | |
+| 488 | 무료 체험 기간이 끝나면 선택한 요금제로 자동 구독이 시작됩니다. 구독은 확인 시 Apple ID 계정으로 청구됩니다. 구독은 현재 기간 종료 최소 24시간 전에 해지하지 않으면 자동으로 갱신됩니다. 갱신 비용은 현재 기간 종료 24시간 이내에 청구됩니다. 구독은 구매 후 설정 > Apple ID > 구독에서 관리하고 해지할 수 있습니다. 이용약관 및 개인정보처리방침이 적용됩니다. | Your subscription will automatically begin at the selected plan rate when the free trial ends. Payment will be charged to your Apple ID account upon confirmation. Subscriptions automatically renew unless canceled at least 24 hours before the end of the current period. Renewal will be charged within 24 hours before the end of the current period. You can manage and cancel subscriptions in Settings > [Your Name] > Subscriptions after purchase. Terms of Use and Privacy Policy apply. | 이용약관 시트 법적 고지 본문 | |
 
 ---
 
@@ -327,7 +335,7 @@
 | 159 | 자주 묻는 질문 | FAQ | 네비게이션 타이틀 | |
 | 160 | 사진/기능 | Photos & Features | 섹션 제목 | |
 | 161 | 삭제한 사진을 복구할 수 있나요? | Can I recover deleted photos? | Q1 | |
-| 162 | 삭제대기함에 있는 사진은 언제든 복구할 수 있습니다. 삭제대기함을 비운 후에는 최근 삭제된 항목(iOS 기본 사진 앱)에서 30일 이내에 복구 가능합니다. | Photos in Trash can be restored anytime. After emptying Trash, you can recover them within 30 days from 'Recently Deleted' in the Photos app. | A1 | |
+| 162 | 삭제대기함에 있는 사진은 언제든 복구할 수 있습니다. 삭제대기함을 비운 후에는 최근 삭제된 항목(iOS 기본 사진 앱)에서 30일 이내에 복구 가능합니다. | Photos in Trash can be restored anytime. After emptying Trash, you can recover them within 30 days from "Recently Deleted" in the Photos app. | A1 | |
 | 163 | 사진이 서버로 전송되나요? | Are my photos sent to a server? | Q2 | |
 | 164 | 아니요. 모든 사진 처리(유사 사진 분석, 얼굴 감지 포함)는 기기 내에서만 이루어집니다. 사진 데이터는 외부 서버로 전송되지 않습니다. | No. All photo processing (including similarity analysis and face detection) happens entirely on your device. No photo data is sent to external servers. | A2 | |
 | 165 | 지원하는 iOS 버전은? | What iOS versions are supported? | Q3 | |
@@ -340,7 +348,7 @@
 | 172 | 무료로 사용할 수 있나요? | Can I use it for free? | Q6 | |
 | 173 | 네. 사진 정리(스와이프 삭제, 유사 사진 분석, 자동 정리, 복구)는 모두 무료입니다. 삭제대기함 비우기에만 일일 한도(10장)가 있으며, 광고를 보면 추가 삭제가 가능합니다. | Yes. Photo organizing (swipe delete, similarity analysis, auto cleanup, restore) is entirely free. Only emptying Trash has a daily limit (10 photos), and you can watch ads for more. | A6 | |
 | 174 | 멤버십 가입했는데 멤버십이 활성화되지 않아요 | I subscribed but my membership isn't active | Q7 | |
-| 175 | 전체 메뉴 > 멤버십 > "멤버십 복원"을 탭해주세요. 네트워크 연결 상태를 확인하고, 결제에 사용한 Apple ID로 로그인되어 있는지 확인해주세요. | Go to Menu > Membership > "Restore Membership". Check your network connection and make sure you're signed in with the Apple ID used for the purchase. | A7 | |
+| 175 | 전체 메뉴 > 멤버십 > "멤버십 복원"을 탭해주세요. 네트워크 연결 상태를 확인하고, 결제에 사용한 Apple ID로 로그인되어 있는지 확인해주세요. | Go to Menu > Membership > "Restore Purchases". Check your network connection and make sure you're signed in with the Apple ID used for the purchase. | A7 | |
 | 176 | 멤버십을 해지하고 싶어요 | I want to cancel my membership | Q8 | |
 | 177 | 설정 > [내 이름] > 구독 > SweepPic Pro > 구독 취소를 탭하세요. 앱을 삭제해도 자동으로 해지되지 않으니 반드시 위 경로에서 취소해주세요. | Go to Settings > [Your Name] > Subscriptions > SweepPic Pro > Cancel. Deleting the app does not cancel your subscription, so please use the path above. | A8 | |
 | 178 | 환불받을 수 있나요? | Can I get a refund? | Q9 | |
@@ -390,12 +398,12 @@
 |---|---|---|---|---|
 | 200 | 멤버십 | Membership | UIMenu 제목 | |
 | 201 | 멤버십 관리 | Manage Membership | 메뉴 액션 | |
-| 202 | 멤버십 복원 | Restore Membership | 메뉴 액션 | |
+| 202 | 멤버십 복원 | Restore Purchases | 메뉴 액션 | |
 | 203 | 리딤 코드 | Redeem Code | 메뉴 액션 | |
 | 204 | 이미 멤버십 이용 중입니다 | You already have a membership | 토스트 | |
-| 205 | 멤버십이 복원되었습니다 | Membership has been restored | 토스트 | |
-| 206 | 복원할 멤버십이 없습니다 | No membership to restore | 토스트 | |
-| 207 | 복원 실패: 네트워크를 확인해주세요 | Restore failed: Please check your network | 토스트 | |
+| 205 | 멤버십이 복원되었습니다 | Purchase has been restored | 토스트 | |
+| 206 | 복원할 멤버십이 없습니다 | No purchases to restore | 토스트 | |
+| 207 | 복원 실패: 네트워크를 확인해주세요 | Restore failed: Please check your network connection | 토스트 | |
 
 ### ATTPromptViewController
 
@@ -470,9 +478,9 @@
 | # | 한국어 (현재) | 영어 (제안) | 용도 | 확인 |
 |---|---|---|---|---|
 | 247 | 저품질 사진 정리 기능을 사용하려면\n삭제대기함을 먼저 비워주세요\n\n-Pro멤버십 가입 시 제한 해제- | To use Auto Cleanup,\nplease empty Trash first\n\n-No restriction with Pro membership- | 삭제대기함 비어있지 않음 | |
-| 248 | 50장의 정리할 사진을 찾았습니다.\n더 찾으려면 '이어서 정리'를 사용하세요. | Found 50 photos to clean up.\nUse 'Continue' to find more. | 50장 발견 | |
-| 249 | 2,000장을 검색하여 {n}장을 찾았습니다.\n더 찾으려면 '이어서 정리'를 사용하세요. | Scanned 2,000 photos and found {n}.\nUse 'Continue' to find more. | 2,000장 + n장 | |
-| 250 | 2,000장을 검색했지만 정리할 사진이 없습니다.\n더 검색하려면 '이어서 정리'를 사용하세요. | Scanned 2,000 photos but found none to clean up.\nUse 'Continue' to scan more. | 2,000장 + 0장 | |
+| 248 | 50장의 정리할 사진을 찾았습니다.\n더 찾으려면 '이어서 정리'를 사용하세요. | Found 50 photos to clean up.\nUse "Continue" to find more. | 50장 발견 | |
+| 249 | 2,000장을 검색하여 {n}장을 찾았습니다.\n더 찾으려면 '이어서 정리'를 사용하세요. | Scanned 2,000 photos and found {n}.\nUse "Continue" to find more. | 2,000장 + n장 | |
+| 250 | 2,000장을 검색했지만 정리할 사진이 없습니다.\n더 검색하려면 '이어서 정리'를 사용하세요. | Scanned 2,000 photos but found none to clean up.\nUse "Continue" to scan more. | 2,000장 + 0장 | |
 | 251 | {year}년의 마지막 사진까지 검색하여 {n}장을 찾았습니다. | Scanned all photos from {year} and found {n}. | 연도별 + n장 | |
 | 252 | 보관함의 마지막 사진까지 검색하여 {n}장을 찾았습니다. | Scanned all photos in your library and found {n}. | 범위 끝 + n장 | |
 | 253 | {year}년의 마지막 사진까지 검색했지만 정리할 사진이 없습니다. | Scanned all photos from {year} but found none to clean up. | 연도별 + 0장 | |
@@ -519,8 +527,8 @@
 | 279 | 삭제대기함 이동 중 오류가 발생했습니다: {message} | An error occurred while moving to Trash: {message} | 에러 | |
 | 280 | 현재 정리가 완료될 때까지 기다려주세요 | Please wait until the current cleanup finishes | 복구 제안 | |
 | 281 | 삭제대기함을 비운 후 다시 시도해주세요 | Please empty Trash and try again | 복구 제안 | |
-| 282 | 설정에서 사진 접근 권한을 허용해주세요 | Please allow photo access in Settings | 복구 제안 | |
-| 283 | '최신사진부터 정리'를 선택해주세요 | Please select 'From Latest Photos' | 복구 제안 | |
+| 282 | 설정에서 사진 접근 권한을 허용해주세요 | Please allow photo library access in Settings | 복구 제안 | |
+| 283 | '최신사진부터 정리'를 선택해주세요 | Please select "From Latest Photos" | 복구 제안 | |
 | 284 | 앱을 재시작한 후 다시 시도해주세요 | Please restart the app and try again | 복구 제안 | |
 | 285 | 다시 시도해주세요 | Please try again | 복구 제안 | |
 
@@ -635,7 +643,7 @@
 | # | 한국어 (현재) | 영어 (제안) | 용도 | 확인 |
 |---|---|---|---|---|
 | 338 | 친구 초대 | Invite Friends | UIMenu 제목 | |
-| 339 | 친구 초대하기 | Invite a Friend | 메뉴 액션 | |
+| 339 | 친구 초대하기 | Invite Friends | 메뉴 액션 | |
 | 340 | 초대 코드 입력 | Enter Referral Code | 메뉴 액션 | |
 | 341 | 초대 혜택 받기 | Claim Referral Reward | 메뉴 액션 | |
 
@@ -660,7 +668,7 @@
 | 356 | 알림 받기 | Enable Notifications | 알림 허용 버튼 | |
 | 357 | 알림이 꺼져 있어요 | Notifications Are Off | 알림 비활성 alert 제목 | |
 | 358 | 설정에서 SweepPic 알림을 켜야\n친구 등록 시 혜택을 바로 받을 수 있어요 | Turn on SweepPic notifications in Settings\nto claim rewards right away | 알림 비활성 alert 메시지 | |
-| 359 | 설정으로 이동 | Go to Settings | alert 버튼 | |
+| 359 | 설정으로 이동 | Open Settings | alert 버튼 | |
 | 360 | 나중에 | Later | alert 버튼 | |
 | 361 | 닫기 | Close | 닫기 버튼 | |
 
@@ -694,7 +702,7 @@
 | # | 한국어 (현재) | 영어 (제안) | 용도 | 확인 |
 |---|---|---|---|---|
 | 382 | 초대 보상 도착! | Your Referral Reward Is Here! | 제목 (hasRewards) | |
-| 383 | 초대한 사람이 SweepPic에 가입했어요!\n14일 무료 혜택을 받으세요 | Your friend joined SweepPic!\nClaim your 14-day free Pro benefit | 설명 (hasRewards) | |
+| 383 | 초대한 사람이 SweepPic에 가입했어요!\n14일 무료 혜택을 받으세요 | Your friend joined SweepPic!\nClaim your 14-day free Pro reward | 설명 (hasRewards) | |
 | 384 | 수령 가능한 보상: {count}건 | {count} rewards available | 보상 건수 (plural 처리 필요 - 1 reward available / N rewards available) | |
 | 385 | 보상 받기 | Claim Reward | 액션 버튼 (hasRewards) | |
 | 386 | 수령 가능한 보상이 없습니다 | No rewards available | 제목 (noRewards) | |
@@ -714,8 +722,8 @@
 | 395 | 리딤 URL이 없습니다. | Redemption URL not found. | Offer Code 에러 | |
 | 396 | 알 수 없는 보상 유형입니다. | Unknown reward type. | 보상 유형 에러 | |
 | 397 | 서버 오류가 발생했습니다. | A server error occurred. | API 에러 폴백 | |
-| 398 | 혜택 적용에 실패했습니다. 잠시 후 다시 시도해주세요. | Failed to apply benefit. Please try again later. | StoreKit 에러 | |
-| 399 | 일시적으로 혜택을 적용할 수 없습니다. | Unable to apply benefit at this time. | 딥링크 코드풀 소진 | |
+| 398 | 혜택 적용에 실패했습니다. 잠시 후 다시 시도해주세요. | Failed to apply reward. Please try again later. | StoreKit 에러 | |
+| 399 | 일시적으로 혜택을 적용할 수 없습니다. | Unable to apply reward at this time. | 딥링크 코드풀 소진 | |
 | 400 | 알 수 없는 에러가 발생했습니다. | An unexpected error occurred. | 일반 에러 (#352 "알 수 없는 에러입니다."와 구분) | |
 
 ### ReferralShareManager (공유 메시지)
@@ -752,7 +760,7 @@ Invite code: {referralCode}
 
 1. Tap the link below to install the app
 
-2. After installing, tap the link again to activate your free Pro benefit
+2. After installing, tap the link again to activate your free Pro reward
 (If it doesn't work, copy this entire message and paste it in SweepPic > Settings > Enter Referral Code)
 
 {shareURL}
@@ -798,7 +806,7 @@ Invite code: {referralCode}
 | 424 | 닫기 | Close | 닫기 버튼 | 여러 파일 | |
 | 425 | 페이월 화면을 닫습니다 | Closes the paywall | 닫기 힌트 | PaywallVC | |
 | 426 | 멤버십 플랜 선택 | Choose membership plan | 플랜 선택 | PaywallVC | |
-| 427 | 이전에 구매한 멤버십을 복원합니다 | Restores a previously purchased membership | 복원 힌트 | PaywallVC | |
+| 427 | 이전에 구매한 멤버십을 복원합니다 | Restores a previous purchase | 복원 힌트 | PaywallVC | |
 | 428 | 프로모션 코드를 입력합니다 | Enter a promotion code | 리딤 힌트 | PaywallVC | |
 | 429 | 축하 화면을 닫습니다 | Closes the celebration screen | 확인 힌트 | CelebrationVC | |
 | 430 | 광고 맞춤 설정 아이콘 | Ad personalization icon | ATT 아이콘 | ATTPromptVC | |
@@ -818,9 +826,9 @@ Invite code: {referralCode}
 | # | 한국어 (현재) | 영어 (제안) | 용도 | 확인 |
 |---|---|---|---|---|
 | 454 | 상품을 찾을 수 없습니다. ({id}) | Product not found. ({id}) | productNotFound | |
-| 455 | 구매가 취소되었습니다. | Purchase was cancelled. | userCancelled | |
+| 455 | 구매가 취소되었습니다. | Purchase was canceled. | userCanceled | |
 | 456 | 구매가 대기 중입니다. | Purchase is pending. | purchasePending | |
-| 457 | 혜택 적용에 실패했습니다: {error} | Failed to apply benefit: {error} | storeKitError | |
+| 457 | 혜택 적용에 실패했습니다: {error} | Failed to apply reward: {error} | storeKitError | |
 | 458 | 거래 검증에 실패했습니다. | Transaction verification failed. | verificationFailed | |
 
 ### TrashStoreError
@@ -884,8 +892,8 @@ Invite code: {referralCode}
 
 | # | 한국어 (현재) | 영어 (제안) | 용도 | 확인 |
 |---|---|---|---|---|
-| 485 | 친구가 14일 프리미엄을 선물했어요! | Your friend gifted you 14 days of Premium! | OG/Twitter 메타 | |
-| 486 | 14일 프리미엄 무료 혜택을 받아보세요! | Get 14 days of Premium free! | 랜딩 페이지 본문 | |
+| 485 | 친구가 14일 프리미엄을 선물했어요! | Your friend gifted you 14 days of Pro! | OG/Twitter 메타 | |
+| 486 | 14일 프리미엄 무료 혜택을 받���보세요! | Get 14 days of Pro free! | ���딩 페이지 본문 | |
 | 487 | 앱을 설치해보세요! | Install the app! | 랜딩 페이지 본문 | |
 
 ---
