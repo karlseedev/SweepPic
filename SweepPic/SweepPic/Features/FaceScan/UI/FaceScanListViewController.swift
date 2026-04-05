@@ -103,9 +103,7 @@ final class FaceScanListViewController: UIViewController, BarsVisibilityControll
         tv.register(FaceScanGroupCell.self, forCellReuseIdentifier: FaceScanGroupCell.reuseIdentifier)
         tv.estimatedRowHeight = 154  // iPhone 16 기준 근사값 (스크롤 성능)
         tv.contentInsetAdjustmentBehavior = .never  // 수동 inset 관리 (PreviewGridVC 패턴)
-        // 맨 위/맨 아래 구분선 제거
-        tv.tableHeaderView = UIView(frame: CGRect(x: 0, y: 0, width: 0, height: CGFloat.leastNormalMagnitude))
-        tv.tableFooterView = UIView()
+        // separatorStyle = .none이므로 tableHeaderView/tableFooterView 불필요
         return tv
     }()
 
@@ -151,6 +149,13 @@ final class FaceScanListViewController: UIViewController, BarsVisibilityControll
 
         setupUI()
         startAnalysis()
+    }
+
+    override func viewIsAppearing(_ animated: Bool) {
+        super.viewIsAppearing(animated)
+        // 뷰가 윈도우에 추가되고 geometry 확정된 시점에서 inset 설정
+        // (viewDidLoad 시점에는 정확한 safe area 값이 없어 레이아웃 경고 발생)
+        updateTableViewInsets()
     }
 
     override func viewWillAppear(_ animated: Bool) {
@@ -241,9 +246,7 @@ final class FaceScanListViewController: UIViewController, BarsVisibilityControll
         }
         view.bringSubviewToFront(progressBar)
         view.bringSubviewToFront(emptyLabel)
-
-        // 6. 초기 contentInset 설정
-        updateTableViewInsets()
+        // contentInset은 viewIsAppearing에서 설정 (뷰가 윈도우에 추가된 후)
     }
 
     // MARK: - Header
@@ -537,6 +540,15 @@ final class FaceScanListViewController: UIViewController, BarsVisibilityControll
         // 테이블뷰에 행 삽입 (애니메이션)
         let indexPath = IndexPath(row: groups.count - 1, section: 0)
         tableView.insertRows(at: [indexPath], with: .automatic)
+
+        // 새 그룹이 추가되면 자동 스크롤 (사용자가 위로 스크롤한 경우 방해하지 않음)
+        // 마지막 셀 하단이 보이는 영역 근처일 때만 자동 스크롤
+        let visibleBottom = tableView.contentOffset.y + tableView.bounds.height
+        let contentBottom = tableView.contentSize.height + tableView.contentInset.bottom
+        let isNearBottom = visibleBottom >= contentBottom - 200
+        if isNearBottom {
+            tableView.scrollToRow(at: indexPath, at: .bottom, animated: true)
+        }
     }
 
     /// 진행 상황 처리 (메인 스레드에서 호출됨)
@@ -552,8 +564,8 @@ final class FaceScanListViewController: UIViewController, BarsVisibilityControll
     private func handleAnalysisComplete() {
         isAnalysisComplete = true
 
-        // 진행바 완료 문구 표시 (전체 분석 대상 사진 수 기준)
-        progressBar.showCompletion(groupCount: groups.count, scannedCount: lastActualPhotosCount)
+        // 진행바 완료 문구 표시 (실제 탐색한 사진 수 기준)
+        progressBar.showCompletion(groupCount: groups.count, scannedCount: lastScannedCount)
 
         // 0그룹일 때 안내 메시지
         if groups.isEmpty {
