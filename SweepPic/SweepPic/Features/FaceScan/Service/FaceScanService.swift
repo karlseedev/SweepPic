@@ -167,10 +167,10 @@ final class FaceScanService {
             // 분석 대상 부족 → actualPhotosCount 보정 후 종료
             // (initial()의 totalPhotoCount=0이 남으면 showCompletion에서 부정확한 ��치 표시)
             let finalProgress = FaceScanProgress.updated(
-                scannedCount: photos.count,
+                scannedCount: analysisRange.count,
                 groupCount: 0,
                 currentDate: Date(),
-                actualPhotosCount: photos.count,
+                actualPhotosCount: analysisRange.count,
                 state: .analyzing
             )
             await MainActor.run { onProgress(finalProgress) }
@@ -197,7 +197,7 @@ final class FaceScanService {
                 scannedCount: batchEnd,
                 groupCount: 0,
                 currentDate: Date(),
-                actualPhotosCount: photos.count,
+                actualPhotosCount: analysisRange.count,
                 state: .preparing
             )
             await MainActor.run { onProgress(phaseAProgress) }
@@ -312,13 +312,13 @@ final class FaceScanService {
             // 매 rawGroup 처리 완료 시 진행률 갱신 (유효 여부 무관)
             // scannedSoFar: rawGroup 처리 비율을 ���진 수로 환산 (체감용)
             let scannedSoFar = Int(
-                Float(processedRawGroupCount) / Float(max(rawGroups.count, 1)) * Float(photos.count)
+                Float(processedRawGroupCount) / Float(max(rawGroups.count, 1)) * Float(analysisRange.count)
             )
             let progress = FaceScanProgress.updated(
                 scannedCount: scannedSoFar,
                 groupCount: totalGroupsFound,
                 currentDate: Date(),
-                actualPhotosCount: photos.count,
+                actualPhotosCount: analysisRange.count,
                 state: .analyzing
             )
             await MainActor.run { onProgress(progress) }
@@ -331,10 +331,10 @@ final class FaceScanService {
         // (정수 ���눗셈 오차 보정 + rawGroups 비어��는 경우 처���)
         if sessionBoundaryAssetID == nil {
             let finalProgress = FaceScanProgress.updated(
-                scannedCount: photos.count,
+                scannedCount: analysisRange.count,
                 groupCount: totalGroupsFound,
                 currentDate: Date(),
-                actualPhotosCount: photos.count,
+                actualPhotosCount: analysisRange.count,
                 state: .analyzing
             )
             await MainActor.run { onProgress(finalProgress) }
