@@ -83,28 +83,65 @@ final class FaceScanProgressBar: UIView {
         ])
     }
 
+    // MARK: - State Tracking
+
+    /// 이전 분석 상태 (Phase 전환 감지용)
+    private var lastState: AnalysisState = .preparing
+
     // MARK: - Update
 
-    /// 진행 상황 업데이트
+    /// 진행 상황 업데이트 (state별 텍스트 분기)
     func update(with progress: FaceScanProgress) {
+        // Phase 전환 시 게이지 리셋 (preparing 100% → analyzing 0% 역방향 애니메이션 방지)
+        if lastState == .preparing && progress.state == .analyzing {
+            progressView.setProgress(0, animated: false)
+        }
+        lastState = progress.state
+
         progressView.setProgress(progress.progress, animated: true)
 
-        // "분석 중" (bold, white) + " · N그룹 발견 · N / 1,000장 검색" (regular, secondaryLabel)
-        let attrStr = NSMutableAttributedString(
-            string: "분석 중",
+        switch progress.state {
+        case .preparing:
+            // Phase A: "분석 준비 중" (bold, white) 단독 표시
+            statusLabel.attributedText = NSAttributedString(
+                string: "분석 준비 중",
+                attributes: [
+                    .font: UIFont.systemFont(ofSize: 13, weight: .bold),
+                    .foregroundColor: UIColor.white,
+                ]
+            )
+
+        case .analyzing:
+            // Phase C: "분석 중" (bold, white) + " · N그룹 발견 · N / N장 검색" (regular, secondaryLabel)
+            let attrStr = NSMutableAttributedString(
+                string: "분석 중",
+                attributes: [
+                    .font: UIFont.systemFont(ofSize: 13, weight: .bold),
+                    .foregroundColor: UIColor.white,
+                ]
+            )
+            attrStr.append(NSAttributedString(
+                string: " · \(progress.progressText)",
+                attributes: [
+                    .font: UIFont.systemFont(ofSize: 13, weight: .regular),
+                    .foregroundColor: UIColor.secondaryLabel,
+                ]
+            ))
+            statusLabel.attributedText = attrStr
+        }
+    }
+
+    /// 진행바 초기화 ("다음 분석" 시 호출)
+    func reset() {
+        lastState = .preparing
+        progressView.setProgress(0, animated: false)
+        statusLabel.attributedText = NSAttributedString(
+            string: "분석 준비 중",
             attributes: [
                 .font: UIFont.systemFont(ofSize: 13, weight: .bold),
                 .foregroundColor: UIColor.white,
             ]
         )
-        attrStr.append(NSAttributedString(
-            string: " · \(progress.progressText)",
-            attributes: [
-                .font: UIFont.systemFont(ofSize: 13, weight: .regular),
-                .foregroundColor: UIColor.secondaryLabel,
-            ]
-        ))
-        statusLabel.attributedText = attrStr
     }
 
     /// 분석 완료 처리 — 완료 문구 표시 (fade out은 부모 VC가 contentInset과 동시 처리)

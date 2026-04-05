@@ -58,6 +58,12 @@ final class FaceScanListViewController: UIViewController, BarsVisibilityControll
     /// 최근 분석된 사진 수 (완료 문구용)
     private var lastScannedCount: Int = 0
 
+    /// 실제 분석 대상 사진 수 (완료 문구용 — maxGroupCount 도달 시에도 정확한 전체 사진 수 표시)
+    private var lastActualPhotosCount: Int = 0
+
+    /// 진행바 fade-out 예약 작업 (다음 분석 시 cancel용)
+    private var fadeOutWorkItem: DispatchWorkItem?
+
     /// 현재 열려있는 그룹 ID (delegate 콜백에서 사용)
     private var presentedGroupID: String?
 
@@ -400,9 +406,13 @@ final class FaceScanListViewController: UIViewController, BarsVisibilityControll
         setNextAnalysisEnabled(false)
         tableView.reloadData()
 
-        // 진행바 복원
+        // 이전 분석의 fade-out 예약 취소 + 진행바 초기화
+        fadeOutWorkItem?.cancel()
+        fadeOutWorkItem = nil
         progressBar.alpha = 1
         progressBar.isHidden = false
+        progressBar.reset()
+        lastActualPhotosCount = 0
         updateTableViewInsets()
 
         // 빈 상태 라벨 복원
@@ -534,6 +544,7 @@ final class FaceScanListViewController: UIViewController, BarsVisibilityControll
     private func handleProgress(_ progress: FaceScanProgress) {
         progressBar.update(with: progress)
         lastScannedCount = progress.scannedCount
+        lastActualPhotosCount = progress.totalPhotoCount
     }
 
     /// 분석 완료 처리
@@ -541,8 +552,8 @@ final class FaceScanListViewController: UIViewController, BarsVisibilityControll
     private func handleAnalysisComplete() {
         isAnalysisComplete = true
 
-        // 진행바 완료 문구 표시
-        progressBar.showCompletion(groupCount: groups.count, scannedCount: lastScannedCount)
+        // 진행바 완료 문구 표시 (전체 분석 대상 사진 수 기준)
+        progressBar.showCompletion(groupCount: groups.count, scannedCount: lastActualPhotosCount)
 
         // 0그룹일 때 안내 메시지
         if groups.isEmpty {
@@ -556,9 +567,9 @@ final class FaceScanListViewController: UIViewController, BarsVisibilityControll
         setNextAnalysisEnabled(true)
 
         // 진행바 fade out + contentInset 동시 애니메이션
-        // 진행바가 사라지면서 테이블 콘텐츠가 자연스럽게 올라감
-        DispatchQueue.main.asyncAfter(deadline: .now() + FaceScanConstants.progressBarFadeDelay) {
-            [weak self] in
+        // DispatchWorkItem으로 참조 보관 → "다음 분석" 시 cancel 가능
+        fadeOutWorkItem?.cancel()
+        let workItem = DispatchWorkItem { [weak self] in
             guard let self = self else { return }
             UIView.animate(
                 withDuration: FaceScanConstants.progressBarFadeDuration,
@@ -575,6 +586,11 @@ final class FaceScanListViewController: UIViewController, BarsVisibilityControll
                 }
             )
         }
+        fadeOutWorkItem = workItem
+        DispatchQueue.main.asyncAfter(
+            deadline: .now() + FaceScanConstants.progressBarFadeDelay,
+            execute: workItem
+        )
     }
 
     // MARK: - Group Selection

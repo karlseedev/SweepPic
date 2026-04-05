@@ -10,13 +10,23 @@
 
 import Foundation
 
+// MARK: - AnalysisState
+
+/// 분석 상태 (게이지바 텍스트 분기용)
+enum AnalysisState: Equatable {
+    /// Phase A: FP 생성 중 — 게이지 0%, "분석 준비 중"
+    case preparing
+    /// Phase C: 그룹 검증 중 — 게이지 활성, "N그룹 발견 · N / N장 검색"
+    case analyzing
+}
+
 /// 인물사진 비교정리 스캔 진행 상황
 ///
 /// 스캔 중 UI 업데이트를 위한 진행 상황 데이터.
 /// onProgress 콜백을 통해 FaceScanListVC에 전달됨.
 struct FaceScanProgress: Equatable {
 
-    /// 검색한 사진 수 (현재까지 분석 완료한 사진 수)
+    /// 검색한 사진 수 (Phase C rawGroup 처리 비율 기반 체감 환산값)
     let scannedCount: Int
 
     /// 발견한 그룹 수
@@ -26,49 +36,72 @@ struct FaceScanProgress: Equatable {
     let currentDate: Date
 
     /// 진행률 (0.0 ~ 1.0)
-    /// - scannedCount / maxScanCount와 groupCount / maxGroupCount 중 큰 값
+    /// - scannedCount / totalPhotoCount와 groupCount / maxGroupCount 중 큰 값
     let progress: Float
 
-    /// 최대 검색 수 (UI 분모용): 1,000장
-    let maxScanCount: Int
+    /// 실제 분석 대상 사진 수 (UI 분모용, 런타임 결정)
+    let totalPhotoCount: Int
 
     /// 최대 그룹 수 (UI 분모용): 30그룹
     let maxGroupCount: Int
+
+    /// 분석 상태 (preparing: FP 생성 중, analyzing: 그룹 검증 중)
+    let state: AnalysisState
 }
 
 // MARK: - Factory Methods
 
 extension FaceScanProgress {
 
-    /// 초기 진행 상황 생성
+    /// 초기 진행 상황 생성 (Phase A 시작 — "분석 준비 중")
     static func initial() -> FaceScanProgress {
         return FaceScanProgress(
             scannedCount: 0,
             groupCount: 0,
             currentDate: Date(),
             progress: 0,
-            maxScanCount: FaceScanConstants.maxScanCount,
-            maxGroupCount: FaceScanConstants.maxGroupCount
+            totalPhotoCount: 0,
+            maxGroupCount: FaceScanConstants.maxGroupCount,
+            state: .preparing
         )
     }
 
     /// 업데이트된 진행 상황 생성
+    ///
+    /// - Parameters:
+    ///   - scannedCount: Phase C rawGroup 처리 비율 기반 체감 환산값
+    ///   - groupCount: 발견된 유효 그룹 수
+    ///   - currentDate: 현재 시점
+    ///   - actualPhotosCount: 실제 분석 대상 사진 수 (scanRatio 분모)
+    ///   - state: 분석 상태 (기본: .analyzing)
     static func updated(
         scannedCount: Int,
         groupCount: Int,
-        currentDate: Date
+        currentDate: Date,
+        actualPhotosCount: Int,
+        state: AnalysisState = .analyzing
     ) -> FaceScanProgress {
-        // 진행률 계산: 검색 비율과 그룹 비율 중 큰 값
-        let scanRatio = Float(scannedCount) / Float(FaceScanConstants.maxScanCount)
+        // 진행률 계산 (state별 분기)
+        let effectiveMax = max(actualPhotosCount, 1)  // division by zero 방지
+        let scanRatio = Float(scannedCount) / Float(effectiveMax)
         let groupRatio = Float(groupCount) / Float(FaceScanConstants.maxGroupCount)
-        let progress = max(scanRatio, groupRatio)
+        let progress: Float
+        switch state {
+        case .preparing:
+            // Phase A: FP 생성 진행률만 (0% → 100%)
+            progress = scanRatio
+        case .analyzing:
+            // Phase C: 사진 검색 비율과 그룹 비율 중 큰 값
+            progress = max(scanRatio, groupRatio)
+        }
         return FaceScanProgress(
             scannedCount: scannedCount,
             groupCount: groupCount,
             currentDate: currentDate,
             progress: min(progress, 1.0),
-            maxScanCount: FaceScanConstants.maxScanCount,
-            maxGroupCount: FaceScanConstants.maxGroupCount
+            totalPhotoCount: actualPhotosCount,
+            maxGroupCount: FaceScanConstants.maxGroupCount,
+            state: state
         )
     }
 }
@@ -77,12 +110,12 @@ extension FaceScanProgress {
 
 extension FaceScanProgress {
 
-    /// 진행 중 문구: "N그룹 발견 · N / 1,000장 검색"
+    /// 진행 중 문구: "N그룹 발견 · N / N장 검색"
     var progressText: String {
-        let scanFormatted = NumberFormatter.localizedString(
-            from: NSNumber(value: maxScanCount), number: .decimal
+        let totalFormatted = NumberFormatter.localizedString(
+            from: NSNumber(value: totalPhotoCount), number: .decimal
         )
-        return "\(groupCount)그룹 발견 · \(scannedCount) / \(scanFormatted)장 검색"
+        return "\(groupCount)그룹 발견 · \(scannedCount) / \(totalFormatted)장 검색"
     }
 
     /// 완료 문구: "분석 완료 · N그룹 발견" 또는 "분석 완료 · 발견된 그룹 없음"
@@ -103,6 +136,6 @@ extension FaceScanProgress: CustomStringConvertible {
         let dateFormatter = DateFormatter()
         dateFormatter.dateFormat = "yyyy-MM-dd"
         let dateStr = dateFormatter.string(from: currentDate)
-        return "[FaceScanProgress] Scanned: \(scannedCount)/\(maxScanCount), Groups: \(groupCount)/\(maxGroupCount), Date: \(dateStr)"
+        return "[FaceScanProgress] Scanned: \(scannedCount)/\(totalPhotoCount), Groups: \(groupCount)/\(maxGroupCount), State: \(state), Date: \(dateStr)"
     }
 }

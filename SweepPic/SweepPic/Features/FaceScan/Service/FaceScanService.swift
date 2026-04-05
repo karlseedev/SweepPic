@@ -156,17 +156,30 @@ final class FaceScanService {
         // 취소 체크
         if cancelled { throw CancellationError() }
 
-        // 진행률 콜백: 시작
+        // 진행률 콜백: 시작 (Phase A — "분석 준비 중", 게이지 0%)
         await MainActor.run {
-            onProgress(FaceScanProgress.updated(scannedCount: 0, groupCount: 0, currentDate: Date()))
+            onProgress(FaceScanProgress.initial())
         }
 
         // ── 사진 추출 (삭제대기함 제외) ──
         let photos = fetchPhotosInRange(analysisRange, fetchResult: fetchResult)
-        guard photos.count >= SimilarityConstants.minGroupSize else { return }
+        guard photos.count >= SimilarityConstants.minGroupSize else {
+            // 분석 대상 부족 → actualPhotosCount 보정 후 종료
+            // (initial()의 totalPhotoCount=0이 남으면 showCompletion에서 부정확한 ��치 표시)
+            let finalProgress = FaceScanProgress.updated(
+                scannedCount: photos.count,
+                groupCount: 0,
+                currentDate: Date(),
+                actualPhotosCount: photos.count,
+                state: .analyzing
+            )
+            await MainActor.run { onProgress(finalProgress) }
+            return
+        }
 
         // ═══════════════════════════════════════════════════
-        // Phase A: FP 배치 생성 (진행률 보고)
+        // Phase A: FP 배치 생성 ("분석 준비 중" + 게이지 0%→100%)
+        // Phase A 완료 후 Phase C에서 게이지가 0%로 리셋됨
         // ═══════════════════════════════════════════════════
         let batchSize = 20
         var allFPs: [VNFeaturePrintObservation?] = []
@@ -179,13 +192,15 @@ final class FaceScanService {
             let (batchFPs, _) = await matchingEngine.generateFeaturePrints(for: batchPhotos)
             allFPs.append(contentsOf: batchFPs)
 
-            // FP 배치마다 진행률 보고 (게이지 업데이트)
-            let progress = FaceScanProgress.updated(
+            // Phase A 진행률 보고 ("분석 준비 중" + FP 생성 비율 게이지)
+            let phaseAProgress = FaceScanProgress.updated(
                 scannedCount: batchEnd,
                 groupCount: 0,
-                currentDate: Date()
+                currentDate: Date(),
+                actualPhotosCount: photos.count,
+                state: .preparing
             )
-            await MainActor.run { onProgress(progress) }
+            await MainActor.run { onProgress(phaseAProgress) }
         }
 
         if cancelled { throw CancellationError() }
@@ -207,14 +222,19 @@ final class FaceScanService {
         // 격리 SimilarityCache에서 addGroupIfValid 호출 → merge 동작 동일
         // rawGroups 역순 소비: 최신 사진 그룹부터 즉시 전달
         // (formGroups 비겹침 보장 → 소비 순서 무관)
+        //
+        // 진행률: 매 rawGroup 처리 완료 시 onProgress 호출 (유효 여부 무관)
+        // scannedCount = processedRawGroupCount / rawGroups.count × photos.count (체감 환산��)
         // ═══════════════════════════════════════════════════
         let isolatedCache = SimilarityCache()
         var totalGroupsFound = 0
+        var processedRawGroupCount = 0
         var sessionBoundaryAssetID: String? = nil   // maxGroupCount 도달 시 세션 경계
         var sessionBoundaryDate: Date? = nil
 
         for groupAssetIDs in rawGroups.reversed() {
             if cancelled { throw CancellationError() }
+            processedRawGroupCount += 1
 
             let groupPhotos = photos.filter { groupAssetIDs.contains($0.localIdentifier) }
 
@@ -242,6 +262,8 @@ final class FaceScanService {
             }
 
             // addGroupIfValid (mergeOverlappingGroups 포함 — Grid와 동일)
+            var shouldBreak = false
+
             if let groupID = await isolatedCache.addGroupIfValid(
                 members: validMembers,
                 validSlots: validSlots,
@@ -263,25 +285,17 @@ final class FaceScanService {
 
                 totalGroupsFound += 1
 
-                // UI 전달 (maxGroupCount 이내)
+                // UI 전달 — onGroupFound만 (onProgress는 아래에서 매 rawGroup마다)
                 if totalGroupsFound <= FaceScanConstants.maxGroupCount {
                     let scanGroup = FaceScanGroup(
                         groupID: groupID,
                         memberAssetIDs: members,
                         validPersonIndices: mergedSlots
                     )
-                    let progress = FaceScanProgress.updated(
-                        scannedCount: photos.count,
-                        groupCount: totalGroupsFound,
-                        currentDate: Date()
-                    )
-                    await MainActor.run {
-                        onGroupFound(scanGroup)
-                        onProgress(progress)
-                    }
+                    await MainActor.run { onGroupFound(scanGroup) }
                 }
 
-                // maxGroupCount 도달 → 세션 경계 기록 + 루프 종료
+                // maxGroupCount 도달 → 세션 경계 기록
                 // 남은 그룹은 "다음 분석"에서 다시 발견됨
                 if totalGroupsFound >= FaceScanConstants.maxGroupCount {
                     // groupAssetIDs는 ascending 순서 (formGroups 보장)
@@ -291,9 +305,39 @@ final class FaceScanService {
                         sessionBoundaryAssetID = oldestID
                         sessionBoundaryDate = oldestPhoto.creationDate
                     }
-                    break
+                    shouldBreak = true
                 }
             }
+
+            // 매 rawGroup 처리 완료 시 진행률 갱신 (유효 여부 무관)
+            // scannedSoFar: rawGroup 처리 비율을 ���진 수로 환산 (체감용)
+            let scannedSoFar = Int(
+                Float(processedRawGroupCount) / Float(max(rawGroups.count, 1)) * Float(photos.count)
+            )
+            let progress = FaceScanProgress.updated(
+                scannedCount: scannedSoFar,
+                groupCount: totalGroupsFound,
+                currentDate: Date(),
+                actualPhotosCount: photos.count,
+                state: .analyzing
+            )
+            await MainActor.run { onProgress(progress) }
+
+            if shouldBreak { break }
+        }
+
+        // Phase C 완료 후 최종 진행률 보정
+        // maxGroupCount 미도달 자연 종료 시, scannedCount를 정확한 photos.count로 보정
+        // (정수 ���눗셈 오차 보정 + rawGroups 비어��는 경우 처���)
+        if sessionBoundaryAssetID == nil {
+            let finalProgress = FaceScanProgress.updated(
+                scannedCount: photos.count,
+                groupCount: totalGroupsFound,
+                currentDate: Date(),
+                actualPhotosCount: photos.count,
+                state: .analyzing
+            )
+            await MainActor.run { onProgress(finalProgress) }
         }
 
         // ── 세션 저장 ──
