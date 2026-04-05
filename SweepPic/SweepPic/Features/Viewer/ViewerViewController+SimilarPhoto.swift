@@ -493,6 +493,9 @@ extension ViewerViewController {
         // 삭제대기함 사진 확인 (보관함/앨범에서 삭제대기함 사진을 .normal 모드로 열어도 비활성화)
         guard !coordinator.isTrashed(at: currentIndex) else { return false }
 
+        // 동영상 확인 (동영상은 유사사진 분석 대상이 아님)
+        guard coordinator.asset(at: currentIndex)?.mediaType != .video else { return false }
+
         // 선행 온보딩(A, E-1, B) 미완료 시 비활성화
         // C 온보딩이 자연스럽게 유사사진 기능을 안내하도록 순서 보장
         guard CoachMarkType.gridSwipeDelete.hasBeenShown else { return false }
@@ -656,6 +659,12 @@ extension ViewerViewController {
 
     /// 분석 완료 처리
     private func handleAnalysisComplete(_ notification: Notification) {
+        // 동영상/삭제대기함 등 비활성화 상태에서는 콜백 무시 (race condition 방어)
+        guard shouldEnableSimilarPhoto else {
+            currentAnalyzingAssetID = nil
+            return
+        }
+
         guard let userInfo = notification.userInfo,
               let analyzedAssetIDs = userInfo["analyzedAssetIDs"] as? [String] else {
             return

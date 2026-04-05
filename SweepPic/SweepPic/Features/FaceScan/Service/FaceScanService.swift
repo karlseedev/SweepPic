@@ -358,15 +358,15 @@ final class FaceScanService {
 
     // MARK: - Photo Fetching
 
-    /// 범위 내 사진을 가져옵니다 (삭제대기함 제외).
+    /// 범위 내 사진을 가져옵니다 (삭제대기함 및 동영상 제외).
     ///
     /// SimilarityAnalysisQueue.fetchPhotos(in:fetchResult:)와 동일한 로직입니다.
-    /// 삭제대기함에 있는 사진은 분석 대상에서 제외합니다.
+    /// 삭제대기함 사진 및 동영상은 분석 대상에서 제외합니다.
     ///
     /// - Parameters:
     ///   - range: 인덱스 범위
     ///   - fetchResult: 사진 fetch 결과
-    /// - Returns: PHAsset 배열 (삭제대기함 사진 제외)
+    /// - Returns: PHAsset 배열 (삭제대기함 사진 및 동영상 제외)
     private func fetchPhotosInRange(
         _ range: ClosedRange<Int>,
         fetchResult: PHFetchResult<PHAsset>
@@ -377,8 +377,9 @@ final class FaceScanService {
 
         for i in clampedRange {
             let asset = fetchResult.object(at: i)
-            // 삭제대기함에 있는 사진은 분석 대상에서 제외
-            if !trashedIDs.contains(asset.localIdentifier) {
+            // 삭제대기함 사진 및 동영상은 분석 대상에서 제외
+            if !trashedIDs.contains(asset.localIdentifier)
+                && asset.mediaType == .image {
                 photos.append(asset)
             }
         }
