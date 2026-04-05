@@ -199,8 +199,8 @@ final class CleanupService: CleanupServiceProtocol {
             throw CleanupError.alreadyRunning
         }
 
-        // 삭제대기함 비어있는지 확인
-        if !isTrashEmpty() {
+        // 삭제대기함 비어있는지 확인 (Pro 멤버십은 제한 해제)
+        if !SubscriptionStore.shared.isProUser && !isTrashEmpty() {
             throw CleanupError.trashNotEmpty
         }
 

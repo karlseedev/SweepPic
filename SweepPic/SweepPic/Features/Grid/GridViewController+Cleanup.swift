@@ -263,8 +263,8 @@ extension GridViewController {
         // [Analytics] 정리 흐름 추적 시작
         cleanupTracker = CleanupFlowTracker()
 
-        // 1. 삭제대기함 비어있는지 확인
-        if !CleanupService.shared.isTrashEmpty() {
+        // 1. 삭제대기함 비어있는지 확인 (Pro 멤버십은 제한 해제)
+        if !SubscriptionStore.shared.isProUser && !CleanupService.shared.isTrashEmpty() {
             cleanupTracker?.trashWarningShown = true
             showTrashNotEmptyAlert()
             return
