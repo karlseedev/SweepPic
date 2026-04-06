@@ -677,6 +677,18 @@ extension GridViewController {
         CoachMarkManager.shared.pendingCleanupHighlight = false
         CoachMarkManager.shared.isAutoPopForC = false
 
+        // C 관련 상태 정리
+        CoachMarkManager.shared.resetC2State()
+
+        // C-1/C-2 오버레이가 window에 남아있을 수 있음 (C-3만 새로 생성되므로)
+        // 자동 pop 완료 시점이므로 모든 잔여 오버레이를 안전하게 제거
+        if let window = view.window {
+            for subview in window.subviews where subview is CoachMarkOverlayView {
+                subview.removeFromSuperview()
+            }
+        }
+        CoachMarkManager.shared.currentOverlay = nil
+
         // 약간의 딜레이 후 하이라이트 표시 (화면 전환 안정화)
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { [weak self] in
             self?.showCleanupButtonHighlight()
