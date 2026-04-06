@@ -237,8 +237,10 @@ extension CoachMarkOverlayView {
                 self.c3Step = 2
             }
         } else {
-            // Step 2 [확인] → dismiss (markAsShown은 dismiss()에서 자동)
+            // Step 2 [확인] → 자동 pop 시작 + dismiss
             CoachMarkManager.shared.isC3TransitionActive = false
+            CoachMarkManager.shared.isAutoPopForC = true
+            CoachMarkManager.shared.pendingCleanupHighlight = true
             dismiss()
         }
     }

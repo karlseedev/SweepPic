@@ -559,4 +559,116 @@ extension CoachMarkOverlayView {
             flashView.removeFromSuperview()
         }
     }
+
+    // MARK: - Cleanup Guide (C 완료 후 간편정리 안내)
+
+    /// C 완료 후 간편정리 버튼 하이라이트 + 안내 텍스트
+    /// D의 showAutoCleanup() 패턴을 간소화하여 재사용
+    /// - Parameters:
+    ///   - highlightFrame: 간편정리 버튼 프레임 (nil이면 전체 딤)
+    ///   - window: 표시할 윈도우
+    ///   - onConfirm: [확인] 탭 후 콜백
+    static func showCleanupGuide(
+        highlightFrame: CGRect?,
+        in window: UIWindow,
+        onConfirm: @escaping () -> Void
+    ) {
+        guard !UIAccessibility.isVoiceOverRunning else { return }
+
+        let overlay = CoachMarkOverlayView(frame: window.bounds)
+        // similarPhoto 타입 사용 — C 전체 흐름의 마지막 단계
+        overlay.coachMarkType = .similarPhoto
+        overlay.highlightFrame = highlightFrame ?? .zero
+        overlay.onConfirm = onConfirm
+        overlay.alpha = 0
+
+        if let frame = highlightFrame {
+            // 포커싱 모션: 큰 pill → 버튼 모양으로 축소
+            let margin: CGFloat = 8
+            let holeRect = frame.insetBy(dx: -margin, dy: -margin)
+            let scaleFactor = max(overlay.bounds.width, overlay.bounds.height) * 3.0
+                / max(holeRect.width, holeRect.height)
+            let startWidth = holeRect.width * scaleFactor
+            let startHeight = holeRect.height * scaleFactor
+            let startRect = CGRect(
+                x: holeRect.midX - startWidth / 2,
+                y: holeRect.midY - startHeight / 2,
+                width: startWidth,
+                height: startHeight
+            )
+            let startPath = UIBezierPath(rect: overlay.bounds)
+            startPath.append(UIBezierPath(roundedRect: startRect, cornerRadius: startRect.height / 2))
+            overlay.dimLayer.path = startPath.cgPath
+        } else {
+            overlay.updateDimPath()
+        }
+
+        window.addSubview(overlay)
+        CoachMarkManager.shared.currentOverlay = overlay
+
+        // 카드 구성 (텍스트 + 확인 버튼)
+        let card = UIView()
+        card.layer.cornerRadius = 20
+        card.clipsToBounds = true
+        card.translatesAutoresizingMaskIntoConstraints = false
+
+        let blur = UIVisualEffectView(effect: UIBlurEffect(style: .systemMaterialDark))
+        blur.frame = card.bounds
+        blur.autoresizingMask = [.flexibleWidth, .flexibleHeight]
+        card.addSubview(blur)
+        overlay.addSubview(card)
+
+        // 안내 텍스트
+        let label = UILabel()
+        label.text = "간편정리 메뉴에서\n더욱 편리하게 자동 탐색이 가능해요"
+        label.textColor = .white
+        label.font = .systemFont(ofSize: 16, weight: .medium)
+        label.textAlignment = .center
+        label.numberOfLines = 0
+        label.translatesAutoresizingMaskIntoConstraints = false
+        card.addSubview(label)
+
+        // 확인 버튼 (D와 동일 스타일)
+        overlay.confirmButton.translatesAutoresizingMaskIntoConstraints = false
+        card.addSubview(overlay.confirmButton)
+
+        NSLayoutConstraint.activate([
+            // 카드 중앙 배치 (하이라이트 아래)
+            card.centerXAnchor.constraint(equalTo: overlay.centerXAnchor),
+            card.topAnchor.constraint(equalTo: overlay.centerYAnchor, constant: 20),
+            card.widthAnchor.constraint(equalTo: overlay.widthAnchor, constant: -48),
+
+            // 텍스트
+            label.topAnchor.constraint(equalTo: card.topAnchor, constant: 24),
+            label.leadingAnchor.constraint(equalTo: card.leadingAnchor, constant: 20),
+            label.trailingAnchor.constraint(equalTo: card.trailingAnchor, constant: -20),
+
+            // 확인 버튼
+            overlay.confirmButton.topAnchor.constraint(equalTo: label.bottomAnchor, constant: 20),
+            overlay.confirmButton.centerXAnchor.constraint(equalTo: card.centerXAnchor),
+            overlay.confirmButton.bottomAnchor.constraint(equalTo: card.bottomAnchor, constant: -20),
+            overlay.confirmButton.widthAnchor.constraint(equalToConstant: 200),
+            overlay.confirmButton.heightAnchor.constraint(equalToConstant: 44),
+        ])
+
+        // 카드 비표시 → 포커싱 → 카드 페이드인
+        card.alpha = 0
+
+        if let frame = highlightFrame {
+            UIView.animate(withDuration: 0.3) { overlay.alpha = 1 }
+            // D와 동일한 포커싱 애니메이션 재사용
+            overlay.animateDFocus(to: frame) {
+                guard !overlay.shouldStopAnimation else { return }
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                    guard !overlay.shouldStopAnimation else { return }
+                    UIView.animate(withDuration: 0.3) { card.alpha = 1 }
+                }
+            }
+        } else {
+            UIView.animate(withDuration: 0.3) {
+                overlay.alpha = 1
+                card.alpha = 1
+            }
+        }
+    }
 }

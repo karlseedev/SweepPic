@@ -309,7 +309,7 @@ extension CoachMarkOverlayView {
     /// - Parameters:
     ///   - targetFrame: 정리 버튼 프레임 (윈도우 좌표)
     ///   - completion: 애니메이션 완료 후 콜백
-    private func animateDFocus(to targetFrame: CGRect, completion: @escaping () -> Void) {
+    func animateDFocus(to targetFrame: CGRect, completion: @escaping () -> Void) {
         // 최종 pill (버튼 + margin 8pt, cornerRadius = 높이/2)
         let margin: CGFloat = 8
         let holeRect = targetFrame.insetBy(dx: -margin, dy: -margin)

@@ -679,7 +679,12 @@ extension GridViewController {
                         .faceComparisonGuide,   // C-3
                     ]
                     allTypes.forEach { $0.resetShown() }
-                    Logger.coachMark.notice("디버그: 온보딩 전체 초기화 완료 (\(allTypes.count)개)")
+
+                    // C 사전 분석 + D 사전 스캔 상태 초기화
+                    GridViewController.debugResetCPreScan()
+                    CoachMarkDPreScanner.shared.debugReset()
+
+                    Logger.coachMark.notice("디버그: 온보딩 전체 초기화 완료 (\(allTypes.count)개 + 사전분석)")
                     #endif
                 },
             ]

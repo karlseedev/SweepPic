@@ -298,7 +298,7 @@ extension GridViewController {
 
     /// 보이는 셀들의 뱃지 상태 업데이트
     /// - SimilarityCache를 Single Source of Truth로 사용하여 뱃지 표시 여부 결정
-    private func updateVisibleCellBorders() {
+    func updateVisibleCellBorders() {
         let visibleIndexPaths = collectionView.indexPathsForVisibleItems
         let padding = paddingCellCount
 

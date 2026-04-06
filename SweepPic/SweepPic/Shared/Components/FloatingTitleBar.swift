@@ -49,10 +49,15 @@ final class FloatingTitleBar: UIView {
 
     weak var delegate: FloatingTitleBarDelegate?
 
-    /// 상단 우측 버튼(간편정리, 메뉴) 탭 인터셉트 핸들러
+    /// 상단 우측 버튼(간편정리, 메뉴) 탭 인터셉트 핸들러 (A-1 전용)
     /// true를 반환하면 버튼 동작 차단 (UIMenu 풀다운이 뜨지 않음)
     /// hitTest에서 호출되므로 내부에서 대체 동작(예: A-1 표시)을 직접 수행
     var rightButtonInterceptor: (() -> Bool)?
+
+    /// 간편정리 버튼(selectButton) 전용 인터셉트 핸들러 (C 온보딩용)
+    /// true를 반환하면 간편정리 버튼만 차단 (전체메뉴 버튼은 통과)
+    /// rightButtonInterceptor보다 먼저 체크됨
+    var cleanupButtonInterceptor: (() -> Bool)?
 
     /// 현재 타이틀 텍스트
     // ⚠️ 사진보관함 명칭 변경 시 동시 수정 필요:
@@ -394,7 +399,9 @@ final class FloatingTitleBar: UIView {
         // Select(간편정리) 버튼 영역 체크
         let selectPoint = convert(point, to: selectButton)
         if selectButton.bounds.contains(selectPoint) && !selectButton.isHidden {
-            // A-1 인터셉트: 버튼 동작 차단 → 대체 동작 수행
+            // C 인터셉트: 간편정리 버튼만 차단 (전체메뉴는 통과)
+            if cleanupButtonInterceptor?() == true { return self }
+            // A-1 인터셉트: 모든 버튼 차단 → 대체 동작 수행
             if rightButtonInterceptor?() == true { return self }
             return selectButton
         }

@@ -574,7 +574,7 @@
 
 | # | 한국어 (현재) | 영어 (제안) | 용도 | 확인 |
 |---|---|---|---|---|
-| 303 | 인물사진 비교정리 | Face Comparison | 타이틀 | |
+| 303 | 인물사진 비교정리 | Compare & Clean Portraits | 타이틀 | |
 | 304 | 다음 분석 | Next Scan | 바 버튼 | |
 | 305 | 분석 중 | Scanning... | emptyLabel | |
 | 306 | 비교할 인물사진 그룹을\n찾지 못했습니다 | No face comparison groups found | emptyLabel (결과 없음) | |

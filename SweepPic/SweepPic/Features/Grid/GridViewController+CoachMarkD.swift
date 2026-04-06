@@ -43,70 +43,66 @@ extension GridViewController {
 
     // MARK: - Pre-Scan Start (앱 시작 직후)
 
-    /// D 사전 스캔 시작 (D 미표시 상태에서만)
+    /// D 사전 스캔 시작 (D 미표시 + C 완료 후에만)
+    /// C와 D의 동시 분석을 방지하기 위해 C 완료 후에야 시작
     func startCoachMarkDPreScanIfNeeded() {
         guard !CoachMarkType.autoCleanup.hasBeenShown else { return }
+        // C 완료 OR C 사전분석 완료+0건이어야 D 사전 스캔 시작
+        guard CoachMarkType.similarPhoto.hasBeenShown
+              || Self.cPreScanCompleteWithNoGroups else { return }
         CoachMarkDPreScanner.shared.startIfNeeded()
     }
 
     // MARK: - Trigger 1: Auto (3초 타이머)
 
-    /// 트리거 1: 그리드 3초 체류 시 D 표시 타이머 시작
-    /// viewDidAppear에서 호출. 다른 화면 갔다 오면 타이머 리셋.
+    /// 트리거 1: D 표시 조건 체크 (3초 타이머 제거 — 조건 충족 시 즉시)
+    /// viewDidAppear에서 호출. C 완료 또는 C 사전분석 완료+0건이면 D 표시 시도.
     func startCoachMarkDTimerIfNeeded() {
         // D 이미 표시됨
         guard !CoachMarkType.autoCleanup.hasBeenShown else {
-            Logger.coachMark.debug("타이머 스킵: D 이미 표시됨")
+            Logger.coachMark.debug("D 스킵: D 이미 표시됨")
             return
         }
         // A 미완료
         guard CoachMarkType.gridSwipeDelete.hasBeenShown else {
-            Logger.coachMark.debug("타이머 스킵: A 미완료")
+            Logger.coachMark.debug("D 스킵: A 미완료")
             return
         }
         // E-1 미완료
         guard CoachMarkType.firstDeleteGuide.hasBeenShown else {
-            Logger.coachMark.debug("타이머 스킵: E-1 미완료")
+            Logger.coachMark.debug("D 스킵: E-1 미완료")
             return
         }
-        // C 미완료 (C 완료 후에야 D 표시)
-        guard CoachMarkType.similarPhoto.hasBeenShown else {
-            Logger.coachMark.debug("타이머 스킵: C 미완료")
+        // C 미완료 AND C 사전분석+0건 아님 → D 차단
+        guard CoachMarkType.similarPhoto.hasBeenShown
+              || Self.cPreScanCompleteWithNoGroups else {
+            Logger.coachMark.debug("D 스킵: C 미완료 + 사전분석 미완료/유사사진 있음")
             return
         }
 
-        // 기존 타이머 무효화 (화면 복귀 시 리셋)
-        coachMarkDTimer?.invalidate()
+        let scanner = CoachMarkDPreScanner.shared
 
-        Logger.coachMark.debug("타이머 시작 (3초)")
-
-        // 3초 후 트리거
-        coachMarkDTimer = Timer.scheduledTimer(withTimeInterval: 3.0, repeats: false) { [weak self] _ in
-            guard let self else { return }
-
-            let scanner = CoachMarkDPreScanner.shared
-
-            // 스캔 완료 + 1장 이상 → 즉시 표시
-            if let result = scanner.result {
-                guard result.lowQualityAssets.count > 0 else {
-                    Logger.coachMark.debug("타이머 만료, 스캔 결과 0건 — D 표시 안 함")
-                    return
-                }
-                self.showCoachMarkD()
+        // 스캔 완료 + 1장 이상 → 즉시 표시
+        if let result = scanner.result {
+            guard result.lowQualityAssets.count > 0 else {
+                Logger.coachMark.debug("D 스킵: 스캔 결과 0건")
                 return
             }
+            Logger.coachMark.debug("D 트리거: 즉시 표시")
+            showCoachMarkD()
+            return
+        }
 
-            // 스캔 미완료 → 완료 콜백 등록하여 대기
-            Logger.coachMark.debug("타이머 만료, 스캔 미완료 — 완료 대기")
-            scanner.onComplete = { [weak self] in
-                guard let self else { return }
-                let count = scanner.result?.lowQualityAssets.count ?? 0
-                guard count > 0 else {
-                    Logger.coachMark.debug("스캔 완료, 결과 0건 — D 표시 안 함")
-                    return
-                }
-                self.showCoachMarkD()
+        // 스캔 미완료 → 완료 콜백 등록하여 대기
+        Logger.coachMark.debug("D 대기: 스캔 미완료 — 완료 콜백 등록")
+        scanner.onComplete = { [weak self] in
+            guard let self else { return }
+            let count = scanner.result?.lowQualityAssets.count ?? 0
+            guard count > 0 else {
+                Logger.coachMark.debug("D 스킵: 스캔 완료, 결과 0건")
+                return
             }
+            self.showCoachMarkD()
         }
     }
 
