@@ -534,7 +534,7 @@ extension CoachMarkOverlayView {
         CoachMarkManager.shared.currentOverlay = overlay
 
         // 안내 텍스트 (C-1과 동일 스타일: bodyFont, white, 강조 bodyBoldFont + yellow)
-        let mainText = "간편정리 메뉴에서\n더욱 편리하게 자동 탐색이 가능해요"
+        let mainText = "간편정리 메뉴에서\u{2028}더욱 편리하게 자동 탐색이 가능해요"
         let pathText = "\n간편정리 → 인물사진 비교정리"
         let fullText = mainText + pathText
         let style = NSMutableParagraphStyle()
