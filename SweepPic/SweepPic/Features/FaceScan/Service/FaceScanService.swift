@@ -165,17 +165,20 @@ final class FaceScanService {
         let photos = fetchPhotosInRange(analysisRange, fetchResult: fetchResult)
         guard photos.count >= SimilarityConstants.minGroupSize else {
             // 분석 대상 부족 → actualPhotosCount 보정 후 종료
-            // (initial()의 totalPhotoCount=0이 남으면 showCompletion에서 부정확한 ��치 표시)
+            // (initial()의 totalPhotoCount=0이 남으면 showCompletion에서 부정확한 수치 표시)
             let finalProgress = FaceScanProgress.updated(
-                scannedCount: analysisRange.count,
+                scannedCount: photos.count,
                 groupCount: 0,
                 currentDate: Date(),
-                actualPhotosCount: analysisRange.count,
+                actualPhotosCount: photos.count,
                 state: .analyzing
             )
             await MainActor.run { onProgress(finalProgress) }
             return
         }
+
+        // 사용자에게 표시할 사진 수 (overlap 제외 — overlap은 경계 그룹 보호용 내부 구현)
+        let displayPhotoCount = min(photos.count, FaceScanConstants.maxScanCount)
 
         // ═══════════════════════════════════════════════════
         // Phase A: FP 배치 생성 ("분석 준비 중" + 게이지 0%→100%)
@@ -197,7 +200,7 @@ final class FaceScanService {
                 scannedCount: batchEnd,
                 groupCount: 0,
                 currentDate: Date(),
-                actualPhotosCount: analysisRange.count,
+                actualPhotosCount: displayPhotoCount,
                 state: .preparing
             )
             await MainActor.run { onProgress(phaseAProgress) }
@@ -311,14 +314,15 @@ final class FaceScanService {
 
             // 매 rawGroup 처리 완료 시 진행률 갱신 (유효 여부 무관)
             // scannedSoFar: rawGroup 처리 비율을 ���진 수로 환산 (체감용)
-            let scannedSoFar = Int(
-                Float(processedRawGroupCount) / Float(max(rawGroups.count, 1)) * Float(analysisRange.count)
+            let scannedSoFar = min(
+                Int(Float(processedRawGroupCount) / Float(max(rawGroups.count, 1)) * Float(photos.count)),
+                displayPhotoCount
             )
             let progress = FaceScanProgress.updated(
                 scannedCount: scannedSoFar,
                 groupCount: totalGroupsFound,
                 currentDate: Date(),
-                actualPhotosCount: analysisRange.count,
+                actualPhotosCount: displayPhotoCount,
                 state: .analyzing
             )
             await MainActor.run { onProgress(progress) }
@@ -331,10 +335,10 @@ final class FaceScanService {
         // (정수 ���눗셈 오차 보정 + rawGroups 비어��는 경우 처���)
         if sessionBoundaryAssetID == nil {
             let finalProgress = FaceScanProgress.updated(
-                scannedCount: analysisRange.count,
+                scannedCount: displayPhotoCount,
                 groupCount: totalGroupsFound,
                 currentDate: Date(),
-                actualPhotosCount: analysisRange.count,
+                actualPhotosCount: displayPhotoCount,
                 state: .analyzing
             )
             await MainActor.run { onProgress(finalProgress) }
@@ -389,10 +393,50 @@ final class FaceScanService {
 
     // MARK: - 분석 범위 결정
 
+    /// upper에서 하방으로 이미지(비동영상, 비삭제대기함)를 세면서
+    /// maxCount장 + overlap장을 포함하는 범위의 lower를 찾습니다.
+    ///
+    /// 동영상/삭제대기함 에셋을 건너뛰므로 반환 범위의 에셋 수 > maxCount일 수 있습니다.
+    /// overlap: 경계에서 그룹이 잘리는 것을 방지하기 위해 추가로 포함하는 사진 수.
+    ///
+    /// - Parameters:
+    ///   - upper: 범위 상한 (fetchResult 인덱스)
+    ///   - lowerLimit: 하방 탐색 한계 (0 또는 연도 범위 시작점)
+    ///   - maxCount: 확보할 이미지 수 (FaceScanConstants.maxScanCount)
+    ///   - overlap: 경계 overlap 사진 수 (FaceScanConstants.chunkOverlap)
+    ///   - fetchResult: Grid에서 주입한 ascending fetchResult
+    /// - Returns: lower 인덱스 (lowerLimit 이상)
+    private func findPhotoBasedLower(
+        upper: Int,
+        lowerLimit: Int,
+        maxCount: Int,
+        overlap: Int,
+        fetchResult: PHFetchResult<PHAsset>
+    ) -> Int {
+        let trashedIDs = TrashStore.shared.trashedAssetIDs
+        let targetCount = maxCount + overlap
+        var photoCount = 0
+
+        for i in stride(from: upper, through: lowerLimit, by: -1) {
+            let asset = fetchResult.object(at: i)
+            if asset.mediaType == .image && !trashedIDs.contains(asset.localIdentifier) {
+                photoCount += 1
+                if photoCount >= targetCount {
+                    return i
+                }
+            }
+        }
+        // 사진이 targetCount 미만이면 가능한 전체 범위
+        return lowerLimit
+    }
+
     /// method에 따라 ascending fetchResult 위의 분석 범위를 계산합니다.
     ///
     /// Grid fetchResult는 ascending (오래된 → 최신) 정렬입니다.
     /// 따라서 "최신 1000장"은 fetchResult의 **끝** 쪽에 위치합니다.
+    ///
+    /// 범위 결정 시 동영상/삭제대기함을 건너뛰고 **이미지 기준** maxScanCount장을 확보합니다.
+    /// 추가로 chunkOverlap만큼 여유를 두어 경계에서 그룹이 잘리는 것을 방지합니다.
     ///
     /// - Parameters:
     ///   - method: 스캔 방식
@@ -404,11 +448,18 @@ final class FaceScanService {
     ) -> ClosedRange<Int>? {
         guard fetchResult.count > 0 else { return nil }
 
+        let maxPhotos = FaceScanConstants.maxScanCount
+        let overlap = FaceScanConstants.chunkOverlap
+
         switch method {
         case .fromLatest:
-            // ascending: 최신 = 마지막 → 끝에서 maxScanCount만큼
+            // ascending: 최신 = 마지막 → 끝에서 이미지 maxScanCount+overlap장 확보
             let upper = fetchResult.count - 1
-            let lower = max(0, upper - FaceScanConstants.maxScanCount + 1)
+            let lower = findPhotoBasedLower(
+                upper: upper, lowerLimit: 0,
+                maxCount: maxPhotos, overlap: overlap,
+                fetchResult: fetchResult
+            )
             return lower...upper
 
         case .continueFromLast:
@@ -416,7 +467,11 @@ final class FaceScanService {
             guard let lastID = UserDefaults.standard.string(forKey: Self.lastAssetIDKey) else {
                 // 세션 없으면 fromLatest와 동일
                 let upper = fetchResult.count - 1
-                let lower = max(0, upper - FaceScanConstants.maxScanCount + 1)
+                let lower = findPhotoBasedLower(
+                    upper: upper, lowerLimit: 0,
+                    maxCount: maxPhotos, overlap: overlap,
+                    fetchResult: fetchResult
+                )
                 return lower...upper
             }
 
@@ -432,7 +487,11 @@ final class FaceScanService {
             guard let boundary = boundaryIndex else {
                 // 못 찾으면 fromLatest로 폴백
                 let upper = fetchResult.count - 1
-                let lower = max(0, upper - FaceScanConstants.maxScanCount + 1)
+                let lower = findPhotoBasedLower(
+                    upper: upper, lowerLimit: 0,
+                    maxCount: maxPhotos, overlap: overlap,
+                    fetchResult: fetchResult
+                )
                 return lower...upper
             }
 
@@ -440,7 +499,11 @@ final class FaceScanService {
             let upper = boundary - 1
             guard upper >= 0 else { return nil }  // 더 이상 분석할 사진 없음
 
-            let lower = max(0, upper - FaceScanConstants.maxScanCount + 1)
+            let lower = findPhotoBasedLower(
+                upper: upper, lowerLimit: 0,
+                maxCount: maxPhotos, overlap: overlap,
+                fetchResult: fetchResult
+            )
             return lower...upper
 
         case .byYear(let year, let continueFrom):
@@ -482,8 +545,12 @@ final class FaceScanService {
 
             guard effectiveUpper >= yLower else { return nil }
 
-            // 연도 범위 내 최신 maxScanCount장
-            let lower = max(yLower, effectiveUpper - FaceScanConstants.maxScanCount + 1)
+            // 연도 범위 내 최신 이미지 maxScanCount+overlap장 확보
+            let lower = findPhotoBasedLower(
+                upper: effectiveUpper, lowerLimit: yLower,
+                maxCount: maxPhotos, overlap: overlap,
+                fetchResult: fetchResult
+            )
             return lower...effectiveUpper
         }
     }
