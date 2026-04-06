@@ -15,6 +15,7 @@
 
 import UIKit
 import ObjectiveC
+import Photos
 import AppCore
 import OSLog
 
@@ -294,22 +295,40 @@ extension GridViewController {
     /// FaceScanService를 사용하여 유사사진 1그룹을 백그라운드에서 찾음
     func startCoachMarkCPreScanIfNeeded() {
         // C 이미 표시됨 → 불필요
-        guard !CoachMarkType.similarPhoto.hasBeenShown else { return }
+        guard !CoachMarkType.similarPhoto.hasBeenShown else {
+            Logger.coachMark.debug("C 사전분석 스킵: C 이미 표시됨")
+            return
+        }
 
         // A, E-1 미완료 → 아직 C 차례 아님
-        guard CoachMarkType.gridSwipeDelete.hasBeenShown,
-              CoachMarkType.firstDeleteGuide.hasBeenShown else { return }
+        guard CoachMarkType.gridSwipeDelete.hasBeenShown else {
+            Logger.coachMark.debug("C 사전분석 스킵: A 미완료")
+            return
+        }
+        guard CoachMarkType.firstDeleteGuide.hasBeenShown else {
+            Logger.coachMark.debug("C 사전분석 스킵: E-1 미완료")
+            return
+        }
 
         // 이전 분석 완료 → 재분석 불필요
-        guard !Self.cPreScanIsComplete else { return }
+        guard !Self.cPreScanIsComplete else {
+            Logger.coachMark.debug("C 사전분석 스킵: 이미 완료 (foundAssetID=\(Self.cPreScanFoundAssetID ?? "nil"))")
+            return
+        }
 
         // fetchResult 필요
-        guard let fetchResult = dataSourceDriver.fetchResult else { return }
+        guard let fetchResult = dataSourceDriver.fetchResult else {
+            Logger.coachMark.debug("C 사전분석 스킵: fetchResult 없음")
+            return
+        }
 
         // 이미 실행 중이면 스킵
-        guard cPreScanService == nil else { return }
+        guard cPreScanService == nil else {
+            Logger.coachMark.debug("C 사전분석 스킵: 이미 실행 중")
+            return
+        }
 
-        Logger.coachMark.debug("C 사전분석 시작")
+        Logger.coachMark.debug("C 사전분석 시작 (fetchResult \(fetchResult.count)장)")
 
         // FaceScanService 인스턴스 생성 (격리 캐시)
         let cache = FaceScanCache()
@@ -359,8 +378,10 @@ extension GridViewController {
                         // 1그룹 발견 → 나머지 분석 취소
                         service.cancel()
                     },
-                    onProgress: { _ in
-                        // 진행률은 무시 (UI 표시 불필요)
+                    onProgress: { progress in
+                        // UI 표시 불필요하지만 디버그 로그는 출력
+                        let stateStr = progress.state == .preparing ? "preparing" : "analyzing"
+                        Logger.coachMark.debug("C 사전분석 진행: \(progress.scannedCount)/\(progress.totalPhotoCount)장, \(progress.groupCount)그룹, state=\(stateStr)")
                     }
                 )
 
