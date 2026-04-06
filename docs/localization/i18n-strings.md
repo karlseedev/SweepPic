@@ -157,8 +157,8 @@
 
 | # | 한국어 (현재) | 영어 (제안) | 용도 | 확인 |
 |---|---|---|---|---|
-| 67 | 사진을 가로로 밀어서\n삭제해 보세요 | Swipe horizontally\nto delete | 본문 | |
-| 68 | 가로로 밀기 | Swipe horizontally | 키워드 (강조) | |
+| 67 | 사진을 가로로 밀어서\n삭제해 보세요 | Swipe horizontally\non a photo to delete | 본문 | |
+| 68 | 가로로 밀어서 | Swipe horizontally | 키워드 (강조) | |
 
 ### A-2
 
