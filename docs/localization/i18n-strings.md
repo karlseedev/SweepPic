@@ -610,7 +610,7 @@
 
 | # | 한국어 (현재) | 영어 (제안) | 용도 | 확인 |
 |---|---|---|---|---|
-| 320 | 인물사진 비교정리 - 인물 {N} | Face Comparison - Person {N} | 네비게이션 타이틀 | |
+| 320 | 인물사진 비교정리 - 인물 {N} | Face Compare - Person {N} | 네비게이션 타이틀 | |
 | 321 | 취소 | Cancel | 취소 버튼 | |
 | 322 | 항목 선택 | Select Items | 선택 개수 라벨 | |
 | 323 | {count}개 선택됨 | {count} Selected | 선택 개수 라벨 (동적) (plural 처리 필요 - 1 Selected / N Selected) | |
@@ -626,13 +626,13 @@
 
 | # | 한국어 (현재) | 영어 (제안) | 용도 | 확인 |
 |---|---|---|---|---|
-| 329 | 인물사진 비교정리 | Face Comparison | 뷰어 상단 타이틀 | |
+| 329 | 인물사진 비교정리 | Face Compare | 뷰어 상단 타이틀 | |
 | 330 | 가능 | available | 뷰어 상단 키워드 (강조) | |
-| 331 | 이전 사진 | Previous Photo | 뷰어 툴바 버튼 | |
+| 331 | 이전 사진 | Previous | 뷰어 툴바 버튼 | |
 | 332 | 삭제하기 | Delete | 뷰어 툴바 삭제 버튼 | |
 | 333 | 복구하기 | Restore | 뷰어 툴바 복구 버튼 | |
-| 334 | 최종 삭제 | Delete Permanently | 뷰어 툴바 최종 삭제 버튼 | |
-| 335 | 저품질 목록에서 제외 | Exclude from Cleanup | 뷰어 툴바 제외 버튼 | |
+| 334 | 최종 삭제 | Erase | 뷰어 툴바 최종 삭제 버튼 | |
+| 335 | 저품질 목록에서 제외 | Keep Photo | 뷰어 툴바 제외 버튼 | |
 | 336 | 동영상을 로드할 수 없습니다 | Unable to load video | 비디오 에러 | |
 | 337 | 재생 실패 | Playback Failed | 비디오 에러 | |
 

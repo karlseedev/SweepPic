@@ -545,24 +545,27 @@ extension GridViewController {
         // 셀을 중앙으로 스크롤
         scrollToCenteredItem(at: indexPath, animated: true)
 
-        // 스크롤 완료 후 뱃지 갱신 + C-1 트리거
+        // 스크롤 완료 후 C-1 직접 표시
+        // triggerCoachMarkCIfNeeded는 뱃지 재검증(비동기 타이밍 문제)이 있으므로
+        // 자동 스크롤 경로에서는 showSimilarBadgeCoachMark를 직접 호출
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) { [weak self] in
             guard let self else { return }
 
-            // 뱃지 강제 갱신 (SimilarityCache → 셀 뱃지)
-            self.updateVisibleCellBorders()
-
-            // 뱃지 갱신은 Task 내부에서 async → 추가 대기 후 트리거
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { [weak self] in
-                guard let self else { return }
-                guard let cell = self.collectionView.cellForItem(at: indexPath) as? PhotoCell else {
-                    Logger.coachMark.debug("C 자동스크롤: 셀 없음 → 메뉴 정상 진행")
-                    self.disableCCleanupButtonIntercept()
-                    self.cleanupButtonTapped()
-                    return
-                }
-                self.triggerCoachMarkCIfNeeded(for: cell)
+            guard let cell = self.collectionView.cellForItem(at: indexPath) as? PhotoCell else {
+                Logger.coachMark.debug("C 자동스크롤: 셀 없음 → 메뉴 정상 진행")
+                self.disableCCleanupButtonIntercept()
+                self.cleanupButtonTapped()
+                return
             }
+
+            // 뱃지 강제 표시 (시각적 일관성)
+            self.showBadge(on: cell)
+
+            // C-1 중복 방지 플래그
+            self.hasTriggeredC1 = true
+
+            // C-1 코치마크 직접 표시 (뱃지 재검증 우회)
+            self.showSimilarBadgeCoachMark(cell: cell, assetID: assetID)
         }
     }
 
