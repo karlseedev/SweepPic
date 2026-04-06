@@ -500,12 +500,9 @@ extension GridViewController {
     /// 간편정리 버튼 C 인터셉트 핸들러
     /// 사전분석 상태에 따라 분기
     private func handleCleanupInterceptForC() {
-        // C 이미 표시됨 → iOS 26+만 직접 호출 (iOS 16~25는 interceptor false에서 처리)
+        // C 이미 표시됨 → 인터셉트 해제만 (다음 탭에서 원래 UIMenu 표시)
         guard !CoachMarkType.similarPhoto.hasBeenShown else {
             disableCCleanupButtonIntercept()
-            if #available(iOS 26.0, *) {
-                cleanupButtonTapped()
-            }
             return
         }
 
@@ -514,12 +511,9 @@ extension GridViewController {
             Logger.coachMark.debug("C 인터셉트: 유사사진 발견, 스크롤 시작 assetID=\(foundAssetID)")
             scrollToBadgeCellAndTriggerC(assetID: foundAssetID)
         } else if Self.cPreScanIsComplete {
-            // 0건 완료 → iOS 26+만 직접 호출
-            Logger.coachMark.debug("C 인터셉트: 사전분석 0건, 정상 진행")
+            // 0건 완료 → 인터셉트 해제 (D 트리거 조건 cPreScanCompleteWithNoGroups 유지)
+            Logger.coachMark.debug("C 인터셉트: 사전분석 0건 — 인터셉트 해제, D로 진행")
             disableCCleanupButtonIntercept()
-            if #available(iOS 26.0, *) {
-                cleanupButtonTapped()
-            }
         } else {
             // 분석 중 → 로딩 표시 (5초 타임아웃)
             Logger.coachMark.debug("C 인터셉트: 분석 중, 로딩 시작")
@@ -532,17 +526,25 @@ extension GridViewController {
     /// 뱃지 셀로 스크롤 후 C-1을 직접 표시
     /// triggerCoachMarkCIfNeeded 대신 showSimilarBadgeCoachMark를 직접 호출하여
     /// 비동기 updateVisibleCellBorders 타이밍 문제를 회피
+    ///
+    /// race condition 방지: 스크롤 전에 hasTriggeredC1 = true 설정하여
+    /// triggerCoachMarkCIfNeeded 자동 경로를 차단 (두 경로가 동시에 scrollToCenteredItem
+    /// 호출하면 스크롤 충돌 + cellForItem 실패)
     private func scrollToBadgeCellAndTriggerC(assetID: String) {
         // assetID → indexPath 해석
         guard let found = dataSourceDriver.indexPath(for: assetID) else {
-            Logger.coachMark.error("C 자동스크롤: assetID 미발견 — 정상 메뉴 진행")
-            disableCCleanupButtonIntercept()
-            cleanupButtonTapped()
+            // stale 데이터 — 사전분석 리셋 후 재분석 (다음 기회에 C 재시도)
+            Logger.coachMark.error("C 자동스크롤: assetID 미발견 — 사전분석 리셋 후 재분석")
+            resetCPreScan()
+            startCoachMarkCPreScanIfNeeded()
             return
         }
 
         // padding 보정
         let indexPath = IndexPath(item: found.item + paddingCellCount, section: found.section)
+
+        // ★ 스크롤 전에 락 → triggerCoachMarkCIfNeeded 자동 경로 차단
+        hasTriggeredC1 = true
 
         // 스크롤
         scrollToCenteredItem(at: indexPath, animated: true)
@@ -551,26 +553,35 @@ extension GridViewController {
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) { [weak self] in
             guard let self else { return }
 
-            // 셀 확인
+            // 자동 경로에서 이미 C-1 표시됐으면 스킵
+            guard !CoachMarkManager.shared.isShowing else { return }
+
+            // 셀 확인 — 실패 시 retriggerForVisibleBadges로 즉시 재시도
             guard let cell = self.collectionView.cellForItem(at: indexPath) as? PhotoCell else {
-                Logger.coachMark.error("C 자동스크롤: 셀 없음 — 정상 메뉴 진행")
-                self.disableCCleanupButtonIntercept()
-                self.cleanupButtonTapped()
+                Logger.coachMark.error("C 자동스크롤: 셀 없음 — retrigger 재시도")
+                self.hasTriggeredC1 = false
+                self.retriggerForVisibleBadges()
                 return
             }
-
-            // 다른 코치마크 표시 중이면 스킵
-            guard !CoachMarkManager.shared.isShowing else { return }
 
             // 뱃지 수동 표시 (showBadge가 아직 호출 안 됐을 수 있음)
             self.showBadge(on: cell)
 
-            // 중복 방지 플래그 설정
-            self.hasTriggeredC1 = true
-
             // C-1 직접 표시 (triggerCoachMarkCIfNeeded 우회)
             self.showSimilarBadgeCoachMark(cell: cell, assetID: assetID)
         }
+    }
+
+    // MARK: - C 사전분석 리셋
+
+    /// 사전분석 결과 리셋 (assetID stale 등으로 재분석 필요 시)
+    /// debugResetCPreScan과 동일하지만 릴리즈 빌드에서도 사용 가능
+    private func resetCPreScan() {
+        UserDefaults.standard.removeObject(forKey: Self.cPreScanIsCompleteKey)
+        UserDefaults.standard.removeObject(forKey: Self.cPreScanFoundAssetIDKey)
+        cPreScanService?.cancel()
+        cPreScanService = nil
+        Logger.coachMark.debug("C 사전분석 리셋 (재분석 필요)")
     }
 
     // MARK: - 로딩 표시 (분석 중 대기)
@@ -611,17 +622,11 @@ extension GridViewController {
 
         window.addSubview(loadingView)
 
-        // 5초 타임아웃
+        // 5초 타임아웃 — 로딩만 닫기, 인터셉트 유지 (분석은 백그라운드 계속 진행)
+        // onCPreScanStateChanged 콜백이 살아있어서 분석 완료 시 자동 처리
         let timeoutWork = DispatchWorkItem { [weak self] in
             self?.dismissCPreScanLoading()
-            self?.disableCCleanupButtonIntercept()
-            Logger.coachMark.debug("C 로딩: 타임아웃 — 정상 메뉴 진행")
-
-            if #available(iOS 26.0, *) {
-                // iOS 26+: UIMenu를 프로그래밍으로 열 수 없음 → 저품질정리 시트 직접 표시
-                self?.cleanupButtonTapped()
-            }
-            // iOS 16~25: interceptor 해제 완료 → 다음 탭에서 UIMenu 정상 표시
+            Logger.coachMark.debug("C 로딩: 타임아웃 — 인터셉트 유지, 백그라운드 분석 계속")
         }
         cPreScanLoadingTimeout = timeoutWork
         DispatchQueue.main.asyncAfter(deadline: .now() + 5.0, execute: timeoutWork)
@@ -637,12 +642,9 @@ extension GridViewController {
                 // 유사사진 발견 → 스크롤 후 C 시작
                 self.scrollToBadgeCellAndTriggerC(assetID: foundAssetID)
             } else {
-                // 0건 완료 → 인터셉트 해제
+                // 0건 완료 → 인터셉트 해제 (D 트리거 조건 유지)
                 self.disableCCleanupButtonIntercept()
-                if #available(iOS 26.0, *) {
-                    self.cleanupButtonTapped()
-                }
-                // iOS 16~25: interceptor 해제 → 다음 탭에서 UIMenu 정상 표시
+                Logger.coachMark.debug("C 로딩: 0건 완료 — 인터셉트 해제, D로 진행")
             }
             self.onCPreScanStateChanged = nil
         }
