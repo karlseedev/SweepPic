@@ -441,8 +441,23 @@ extension GridViewController {
             guard let tabBarController = tabBarController as? TabBarController,
                   let overlay = tabBarController.floatingOverlay else { return }
             overlay.titleBar.cleanupButtonInterceptor = { [weak self] in
-                self?.handleCleanupInterceptForC()
-                return true  // 메뉴 차단
+                guard let self else { return false }
+
+                // C 이미 표시됨 → false (UIMenu 정상 표시)
+                if CoachMarkType.similarPhoto.hasBeenShown {
+                    self.disableCCleanupButtonIntercept()
+                    return false
+                }
+
+                // 0건 완료 → false (UIMenu 정상 표시)
+                if Self.cPreScanIsComplete && Self.cPreScanFoundAssetID == nil {
+                    self.disableCCleanupButtonIntercept()
+                    return false
+                }
+
+                // 유사사진 있음 or 분석 중 → true (메뉴 차단 + C 로직 실행)
+                self.handleCleanupInterceptForC()
+                return true
             }
             Logger.coachMark.debug("C 인터셉트 활성화 (iOS 16~25)")
         }
@@ -464,10 +479,12 @@ extension GridViewController {
     /// 간편정리 버튼 C 인터셉트 핸들러
     /// 사전분석 상태에 따라 분기
     private func handleCleanupInterceptForC() {
-        // C 이미 표시됨 → 정상 진행
+        // C 이미 표시됨 → iOS 26+만 직접 호출 (iOS 16~25는 interceptor false에서 처리)
         guard !CoachMarkType.similarPhoto.hasBeenShown else {
             disableCCleanupButtonIntercept()
-            cleanupButtonTapped()
+            if #available(iOS 26.0, *) {
+                cleanupButtonTapped()
+            }
             return
         }
 
@@ -476,10 +493,12 @@ extension GridViewController {
             Logger.coachMark.debug("C 인터셉트: 유사사진 발견, 스크롤 시작 assetID=\(foundAssetID)")
             scrollToBadgeCellAndTriggerC(assetID: foundAssetID)
         } else if Self.cPreScanIsComplete {
-            // 0건 완료 → 정상 메뉴 진행
+            // 0건 완료 → iOS 26+만 직접 호출
             Logger.coachMark.debug("C 인터셉트: 사전분석 0건, 정상 진행")
             disableCCleanupButtonIntercept()
-            cleanupButtonTapped()
+            if #available(iOS 26.0, *) {
+                cleanupButtonTapped()
+            }
         } else {
             // 분석 중 → 로딩 표시 (5초 타임아웃)
             Logger.coachMark.debug("C 인터셉트: 분석 중, 로딩 시작")
@@ -574,9 +593,14 @@ extension GridViewController {
         // 5초 타임아웃
         let timeoutWork = DispatchWorkItem { [weak self] in
             self?.dismissCPreScanLoading()
-            Logger.coachMark.debug("C 로딩: 타임아웃 — 정상 메뉴 진행")
             self?.disableCCleanupButtonIntercept()
-            self?.cleanupButtonTapped()
+            Logger.coachMark.debug("C 로딩: 타임아웃 — 정상 메뉴 진행")
+
+            if #available(iOS 26.0, *) {
+                // iOS 26+: UIMenu를 프로그래밍으로 열 수 없음 → 저품질정리 시트 직접 표시
+                self?.cleanupButtonTapped()
+            }
+            // iOS 16~25: interceptor 해제 완료 → 다음 탭에서 UIMenu 정상 표시
         }
         cPreScanLoadingTimeout = timeoutWork
         DispatchQueue.main.asyncAfter(deadline: .now() + 5.0, execute: timeoutWork)
@@ -592,9 +616,12 @@ extension GridViewController {
                 // 유사사진 발견 → 스크롤 후 C 시작
                 self.scrollToBadgeCellAndTriggerC(assetID: foundAssetID)
             } else {
-                // 0건 완료 → 정상 메뉴 진행
+                // 0건 완료 → 인터셉트 해제
                 self.disableCCleanupButtonIntercept()
-                self.cleanupButtonTapped()
+                if #available(iOS 26.0, *) {
+                    self.cleanupButtonTapped()
+                }
+                // iOS 16~25: interceptor 해제 → 다음 탭에서 UIMenu 정상 표시
             }
             self.onCPreScanStateChanged = nil
         }
