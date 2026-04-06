@@ -43,10 +43,13 @@ extension GridViewController {
 
     // MARK: - Pre-Scan Start (앱 시작 직후)
 
-    /// D 사전 스캔 시작 (D 미표시 + C 완료 후에만)
-    /// C와 D의 동시 분석을 방지하기 위해 C 완료 후에야 시작
+    /// D 사전 스캔 시작 (D 미표시 + C 완��� 후에만)
+    /// C와 D의 동시 분석�� 방지하기 위해 C 완료 후에야 시작
     func startCoachMarkDPreScanIfNeeded() {
         guard !CoachMarkType.autoCleanup.hasBeenShown else { return }
+        // C 자동 pop 진행 중이면 차단 (cleanup highlight까지 완료해야 C 완료)
+        guard !CoachMarkManager.shared.isAutoPopForC,
+              !CoachMarkManager.shared.pendingCleanupHighlight else { return }
         // C 완료 OR C 사전분석 완료+0건이어야 D 사전 스캔 시작
         guard CoachMarkType.similarPhoto.hasBeenShown
               || Self.cPreScanCompleteWithNoGroups else { return }
@@ -58,6 +61,12 @@ extension GridViewController {
     /// 트리거 1: D 표시 조건 체크 (3초 타이머 제거 — 조건 충족 시 즉시)
     /// viewDidAppear에서 호출. C 완료 또는 C 사전분석 완료+0건이면 D 표시 시도.
     func startCoachMarkDTimerIfNeeded() {
+        // C 자동 pop 진행 중이면 차단 (cleanup highlight까지 완료해야 C 완료)
+        guard !CoachMarkManager.shared.isAutoPopForC,
+              !CoachMarkManager.shared.pendingCleanupHighlight else {
+            Logger.coachMark.debug("D 스킵: C 자동 pop 진행 중")
+            return
+        }
         // D 이미 표시됨
         guard !CoachMarkType.autoCleanup.hasBeenShown else {
             Logger.coachMark.debug("D 스킵: D 이미 표시됨")
