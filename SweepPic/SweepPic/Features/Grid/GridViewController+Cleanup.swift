@@ -35,6 +35,9 @@ extension GridViewController {
         } else {
             setupFloatingCleanupButton()
         }
+
+        // 선택모드 복귀 후 버튼 재생성 시 C 인터셉트 재설정
+        enableCCleanupButtonIntercept()
     }
 
     /// iOS 26+ 시스템 네비바에 간편정리 + 전체메뉴 버튼 추가

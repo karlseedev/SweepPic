@@ -420,7 +420,8 @@ extension GridViewController {
     // MARK: Phase 2: 간편정리 버튼 C 인터셉트
     // MARK: - ═══════════════════════════════════════════
 
-    /// C 인터셉트 활성화 (viewDidAppear에서 호출)
+    /// C 인터셉트 활성화 (viewDidAppear + setupCleanupButton에서 호출)
+    /// 상단 버튼 모두에 가드를 걸어 선택모드 복귀 후에도 유지
     func enableCCleanupButtonIntercept() {
         // C 이미 표시됨 → 인터셉트 불필요
         guard !CoachMarkType.similarPhoto.hasBeenShown else { return }
@@ -430,17 +431,21 @@ extension GridViewController {
               CoachMarkType.firstDeleteGuide.hasBeenShown else { return }
 
         if #available(iOS 26.0, *) {
-            // iOS 26+: items[1](간편정리)에 primaryAction 설정
-            guard let items = navigationItem.rightBarButtonItems, items.count >= 2 else { return }
-            items[1].primaryAction = UIAction { [weak self] _ in
+            // iOS 26+: 모든 rightBarButtonItems에 primaryAction 설정
+            guard let items = navigationItem.rightBarButtonItems else { return }
+            let action = UIAction { [weak self] _ in
                 self?.handleCleanupInterceptForC()
             }
-            Logger.coachMark.debug("C 인터셉트 활성화 (iOS 26+)")
+            for item in items {
+                item.primaryAction = action
+            }
+            Logger.coachMark.debug("C 인터셉트 활성화 (iOS 26+, \(items.count)개 버튼)")
         } else {
-            // iOS 16~25: FloatingTitleBar cleanupButtonInterceptor 설정
+            // iOS 16~25: 기존 rightButtonInterceptor 사용 (간편정리 + 전체메뉴 모두 차단)
+            // A-1과 조건이 겹치지 않음 (A-1은 E-1 미완료, C는 E-1 완료)
             guard let tabBarController = tabBarController as? TabBarController,
                   let overlay = tabBarController.floatingOverlay else { return }
-            overlay.titleBar.cleanupButtonInterceptor = { [weak self] in
+            overlay.titleBar.rightButtonInterceptor = { [weak self] in
                 guard let self else { return false }
 
                 // C 이미 표시됨 → false (UIMenu 정상 표시)
@@ -466,12 +471,15 @@ extension GridViewController {
     /// C 인터셉트 비활성화
     func disableCCleanupButtonIntercept() {
         if #available(iOS 26.0, *) {
-            guard let items = navigationItem.rightBarButtonItems, items.count >= 2 else { return }
-            items[1].primaryAction = nil
+            if let items = navigationItem.rightBarButtonItems {
+                for item in items {
+                    item.primaryAction = nil
+                }
+            }
         } else {
             guard let tabBarController = tabBarController as? TabBarController,
                   let overlay = tabBarController.floatingOverlay else { return }
-            overlay.titleBar.cleanupButtonInterceptor = nil
+            overlay.titleBar.rightButtonInterceptor = nil
         }
         Logger.coachMark.debug("C 인터셉트 비활성화")
     }
