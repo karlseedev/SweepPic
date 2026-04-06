@@ -38,7 +38,7 @@ extension GridViewController {
 
     /// A 코치마크 즉시 재생
     func replayCoachMarkA() {
-        Logger.coachMark.debug("A: 그리드 스와이프 삭제 재생 시작")
+        Logger.coachMark.debug("A: 목록 스와이프 삭제 재생 시작")
 
         // 사진 0장 체크
         guard dataSourceDriver.count > 0 else {

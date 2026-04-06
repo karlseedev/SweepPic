@@ -27,7 +27,7 @@ import OSLog
 
 /// 코치마크 종류
 enum CoachMarkType: String {
-    case gridSwipeDelete = "coachMark_gridSwipe"       // A: 그리드 스와이프 삭제
+    case gridSwipeDelete = "coachMark_gridSwipe"       // A: 목록 스와이프 삭제
     case viewerSwipeDelete = "coachMark_viewerSwipe"   // B: 뷰어 스와이프 삭제
     case similarPhoto = "coachMark_similarPhoto"       // C: 유사사진·얼굴 비교 (C-1 + C-2 통합 플래그)
     case autoCleanup = "coachMark_autoCleanup"              // D: 저품질 자동 정리 안내

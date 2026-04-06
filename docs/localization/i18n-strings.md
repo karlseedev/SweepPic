@@ -90,9 +90,9 @@
 | 25 | 사진을 촬영하거나 가져오세요 | Take or import photos | 빈 상태 부제 | |
 | 26 | 표시할 이미지가 없습니다 | No photos to display | Toast (코치마크) | |
 | 27 | 인물사진 비교정리 할 사진을 찾지 못했습니다 | No photos found for Face Comparison | Toast | |
-| 28 | 간편정리 | Quick Menu | 메뉴 버튼 타이틀 | |
-| 29 | 인물사진 비교정리 | Face Comparison | 메뉴 항목 | |
-| 30 | 저품질사진 자동정리 | Auto Cleanup | 메뉴 항목 | |
+| 28 | 간편정리 | Clean Up | 메뉴 버튼 타이틀 | |
+| 29 | 인물사진 비교정리 | Compare & Clean Portraits | 메뉴 항목 (타이틀 겸용) | |
+| 30 | 저품질사진 자동정리 | Auto Low-Quality Cleanup | 메뉴 항목 (타이틀 겸용) | |
 | 31 | 사진 선택 모드 | Select Mode | 메뉴 항목 | |
 | 32 | 삭제대기함 보기 | View Trash | alert 버튼 | |
 | 33 | 정리 실패 | Cleanup Failed | alert 제목 | |
@@ -100,10 +100,10 @@
 | 35 | {year}년에서 정리할 저품질 사진을 찾지 못했습니다. | No low-quality photos found in {year}. | alert 메시지 | |
 | 36 | 정리할 저품질 사진을 찾지 못했습니다. | No low-quality photos found. | alert 메시지 | |
 | 37 | 설명 다시 보기 | Tutorial Replay | 메뉴 타이틀 | |
-| 38 | 그리드 스와이프 삭제 | Grid Swipe Delete | 메뉴 항목 | |
-| 39 | 뷰어 스와이프 삭제 | Viewer Swipe Delete | 메뉴 항목 | |
-| 40 | 삭제 시스템 안내 | Deletion System Guide | 메뉴 항목 | |
-| 41 | 비우기 완료 안내 | Empty Complete Guide | 메뉴 항목 | |
+| 38 | 목록에서 밀어서 삭제 | Library: Swipe to Delete | 메뉴 항목 | |
+| 39 | 뷰어에서 밀어서 삭제 | Viewer: Swipe Up to Delete | 메뉴 항목 | |
+| 40 | 삭제 시스템 안내 | How Trash Works | 메뉴 항목 | |
+| 41 | 비우기 완료 안내 | After Emptying Trash | 메뉴 항목 | |
 
 ---
 
@@ -142,7 +142,7 @@
 
 | # | 한국어 (현재) | 영어 (제안) | 용도 | 확인 |
 |---|---|---|---|---|
-| 57 | 새로운 삭제 방법 | A New Way to Delete | 타이틀 | |
+| 57 | 완전히 새로운 삭제 방법 | A Brand New Way to Delete | 타이틀 | |
 | 58 | 사진을 밀어서 바로 정리하세요\n다시 밀면 복원돼요\n정리한 사진은 삭제대기함으로 이동됩니다 | Swipe to organize your photos\nSwipe again to restore\nDeleted photos are moved to Trash | 본문 | |
 | 59 | 정리 | organize | 키워드 (강조) | |
 | 60 | 복원 | restore | 키워드 (강조) | |
@@ -157,8 +157,8 @@
 
 | # | 한국어 (현재) | 영어 (제안) | 용도 | 확인 |
 |---|---|---|---|---|
-| 67 | 셀을 가로로 스와이프해서\n삭제해 보세요 | Swipe horizontally\nto delete | 본문 | |
-| 68 | 가로로 스와이프 | Swipe horizontally | 키워드 (강조) | |
+| 67 | 사진을 가로로 밀어서\n삭제해 보세요 | Swipe horizontally\nto delete | 본문 | |
+| 68 | 가로로 밀기 | Swipe horizontally | 키워드 (강조) | |
 
 ### A-2
 

@@ -67,7 +67,7 @@ final class FaceComparisonCell: UICollectionViewCell {
     /// 선택 오버레이
     private lazy var selectionOverlay: UIView = {
         let view = UIView()
-        view.backgroundColor = UIColor.systemBlue.withAlphaComponent(0.3)
+        view.backgroundColor = UIColor(red: 0.5, green: 0, blue: 0, alpha: 0.6)  // Maroon #800000 (메인 그리드 삭제 대기와 동일)
         view.isHidden = true
         view.translatesAutoresizingMaskIntoConstraints = false
         return view
@@ -77,7 +77,7 @@ final class FaceComparisonCell: UICollectionViewCell {
     private lazy var checkmarkView: UIImageView = {
         let iv = UIImageView()
         iv.image = UIImage(systemName: "checkmark.circle.fill")
-        iv.tintColor = .systemBlue
+        iv.tintColor = UIColor(red: 0.5, green: 0, blue: 0, alpha: 1)  // Maroon #800000
         iv.backgroundColor = .white
         iv.layer.cornerRadius = 12
         iv.clipsToBounds = true

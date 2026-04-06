@@ -906,7 +906,7 @@ Cleanup, Cleaner Guru, AI Cleaner, Cleaner Kit, Swipewipe, Phone Cleaner, Powerf
 
 ### 종합 비교표
 
-| # | 앱 | 중복/유사 감지 | 흐림 감지 | 스와이프 삭제 (전체화면) | 그리드 스와이프 삭제 | 얼굴 인식 | 자동 정리 제안 | 저장공간 분석 | 얼굴 크롭 비교 |
+| # | 앱 | 중복/유사 감지 | 흐림 감지 | 스와이프 삭제 (전체화면) | 목록 스와이프 삭제 | 얼굴 인식 | 자동 정리 제안 | 저장공간 분석 | 얼굴 크롭 비교 |
 |:-:|-----|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|
 | 1 | Google Photos | **부분** | **O** | 부분 (별도 카드 UI) | **X** | **O** | **O** | **O** | X |
 | 2 | Amazon Photos | **부분** | X | X | **X** | **O** | X | 부분 | X |
@@ -937,7 +937,7 @@ Cleanup, Cleaner Guru, AI Cleaner, Cleaner Kit, Swipewipe, Phone Cleaner, Powerf
 | 중복/유사 사진 감지 | 8개 | 40% | Google Photos, Amazon Photos, OneDrive, Dropbox, HashPhotos, Slidebox, Mylio, Tidy Gallery, Immich |
 | 흐린/저품질 감지 | 2개 | 10% | Google Photos, Mylio |
 | 스와이프 삭제 (전체화면) | 6개 | 30% | Slidebox, Tidy Gallery, HashPhotos, MyPics, Mylio, Google Photos(별도 카드UI) |
-| **그리드 스와이프 삭제** | **0개** | **0%** | **어떤 앱에서도 미지원 (Apple Photos 포함)** |
+| **목록 스와이프 삭제** | **0개** | **0%** | **어떤 앱에서도 미지원 (Apple Photos 포함)** |
 | 얼굴 인식 | 6개 | 30% | Google Photos, Amazon Photos, Mylio, HashPhotos(부분), Ente, Immich |
 | 자동 정리/삭제 제안 | 3개 | 15% | Google Photos, Mylio, HashPhotos(부분) |
 | 저장 용량 분석 | 3개 | 15% | Google Photos, HashPhotos, Tidy Gallery |
@@ -972,7 +972,7 @@ Cleanup, Cleaner Guru, AI Cleaner, Cleaner Kit, Swipewipe, Phone Cleaner, Powerf
 - 스와이프 삭제가 있는 앱(Slidebox, Tidy Gallery, MyPics, HashPhotos, Mylio, Google Photos)도 **전체화면/단일사진 뷰에서만** 동작
 - 그리드에서 스와이프 제스처를 쓰는 앱(Darkroom, Piwigo, Apple Photos)은 **"다중 선택"** 용도로만 활용
 - 그리드 삭제는 예외 없이 **"선택 모드 → 탭/드래그 선택 → 삭제 버튼"** 패턴
-- 그리드 스와이프 삭제가 없는 이유(추정): ① 스크롤과 제스처 충돌 ② 작은 썸네일에서 오삭제 위험 ③ "선택→삭제" 2단계 방식이 업계 표준 ④ Apple HIG에서 해당 패턴 미제공
+- 목록 스와이프 삭제가 없는 이유(추정): ① 스크롤과 제스처 충돌 ② 작은 썸네일에서 오삭제 위험 ③ "선택→삭제" 2단계 방식이 업계 표준 ④ Apple HIG에서 해당 패턴 미제공
 
 **발견 4: 전체화면 스와이프 삭제는 소수 앱만 지원**
 - 뷰어 앱 중 전체화면 스와이프 삭제 지원: **Slidebox, Tidy Gallery, MyPics, HashPhotos, Mylio, Google Photos(별도 카드 UI)** (6개)
@@ -989,14 +989,14 @@ Cleanup, Cleaner Guru, AI Cleaner, Cleaner Kit, Swipewipe, Phone Cleaner, Powerf
 2. **Mylio Photos**: 온디바이스 AI + DeDupe + DeClutter + 블러 감지. 단, 스와이프 UX 없음, 파워유저 대상
 3. **Slidebox**: 스와이프 UX + 유사 사진 비교. 단, AI 자동 분석 없음 (완전 수동)
 
-### 그리드 스와이프 삭제 상세 조사
+### 목록 스와이프 삭제 상세 조사
 
 > 조사일: 2026-03-10
 > 핵심 질문: 전체화면이 아닌, 그리드 썸네일 위에서 직접 스와이프하여 삭제할 수 있는가?
 
 #### 앱별 그리드 삭제 방식
 
-| # | 앱 | 그리드 스와이프 삭제 | 전체화면 스와이프 삭제 | 그리드 삭제 방식 |
+| # | 앱 | 목록 스와이프 삭제 | 전체화면 스와이프 삭제 | 그리드 삭제 방식 |
 |:-:|-----|:---:|:---:|----------|
 | 1 | Google Photos | **X** | 부분 (별도 "Swipe to Clean" 카드 UI) | 롱프레스 → 다중선택 → 삭제 버튼 |
 | 2 | Amazon Photos | **X** | X | 롱프레스 → 다중선택 → 삭제 버튼 |

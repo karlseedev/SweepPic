@@ -115,7 +115,7 @@ photo cleaner,gallery cleanup,duplicate photos,storage,organizer,similar photos,
 
 - 전환율 15~30% 향상 기대
 - 직접 제작: 화면 녹화 + iMovie/CapCut
-- 첫 5초에 그리드 스와이프 삭제 시연
+- 첫 5초에 목록 스와이프 삭제 시연
 - 무음 자동재생이므로 텍스트 오버레이 필수
 
 ### 텍스트 오버레이 규칙

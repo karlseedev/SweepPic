@@ -585,7 +585,7 @@ extension GridViewController {
             title: "설명 다시 보기",
             image: UIImage(systemName: "arrow.counterclockwise"),
             children: [
-                UIAction(title: "그리드 스와이프 삭제") { [weak self] _ in
+                UIAction(title: "목록 스와이프 삭제") { [weak self] _ in
                     self?.replayCoachMarkA()
                 },
                 UIAction(title: "뷰어 스와이프 삭제") { [weak self] _ in

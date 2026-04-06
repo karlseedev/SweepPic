@@ -168,9 +168,7 @@ final class FaceScanListViewController: UIViewController, BarsVisibilityControll
 
         // 스와이프 백 차단 (닫기 시 알럿 표시를 위해)
         navigationController?.interactivePopGestureRecognizer?.isEnabled = false
-
-        // 비교 화면에서 돌아온 경우 dim 상태 갱신
-        tableView.reloadData()
+        // dim 상태 갱신은 didApplyChanges의 dismiss completion에서 처리 (line 713)
     }
 
     override func viewWillDisappear(_ animated: Bool) {

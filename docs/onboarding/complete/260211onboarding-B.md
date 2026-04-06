@@ -10,7 +10,7 @@
 
 ## Context
 
-온보딩 기획(`docs/onboarding/260211onboarding.md`)의 두 번째 코치마크. 코치마크 A(그리드 스와이프 삭제, 구현 완료)의 공용 구조(`CoachMarkOverlayView`, `CoachMarkManager`, `CoachMarkType`)를 확장하여 구현한다.
+온보딩 기획(`docs/onboarding/260211onboarding.md`)의 두 번째 코치마크. 코치마크 A(목록 스와이프 삭제, 구현 완료)의 공용 구조(`CoachMarkOverlayView`, `CoachMarkManager`, `CoachMarkType`)를 확장하여 구현한다.
 
 ### A와의 핵심 차이
 
