@@ -409,19 +409,6 @@ final class ViewerViewController: UIViewController {
         LiquidGlassOptimizer.preload(in: view.window)
         LiquidGlassOptimizer.enterIdle(in: view.window)
 
-        // C 자동 pop: C-3 완료 후 FaceComparison dismiss → 뷰어 자동 복귀 → 그리드로 pop
-        if CoachMarkManager.shared.isAutoPopForC {
-            Logger.coachMark.debug("C 자동 pop: 뷰어 → 그리드")
-            if isPushed {
-                // iOS 26+ (Navigation push)
-                navigationController?.popViewController(animated: true)
-            } else {
-                // iOS 16~25 (Modal)
-                dismiss(animated: true)
-            }
-            return  // B, C-2 트리거 스킵
-        }
-
         // 코치마크 B: 뷰어에서 밀어서 삭제 안내
         showViewerSwipeDeleteCoachMarkIfNeeded()
 

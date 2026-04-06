@@ -24,9 +24,6 @@ extension ViewerViewController {
         // C-2 대기 중이면 B 스킵 (C-2와 B 충돌 방지)
         guard !CoachMarkManager.shared.isWaitingForC2 else { return }
 
-        // C 자동 pop 진행 중이면 B 스킵
-        guard !CoachMarkManager.shared.isAutoPopForC else { return }
-
         // 다른 코치마크 표시 중이면 스킵 (A/B 동시 표시 방지)
         guard !CoachMarkManager.shared.isShowing else { return }
 

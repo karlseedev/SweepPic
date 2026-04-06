@@ -63,10 +63,6 @@ extension CoachMarkOverlayView {
         onSelect: @escaping () -> Void,
         onDeselect: @escaping () -> Void
     ) {
-        // C-1/C-2 오버레이 정리 (C-3는 새 오버레이를 사용하므로 기존 것 제거)
-        // currentOverlay는 weak이므로 removeFromSuperview → dealloc → nil
-        CoachMarkManager.shared.currentOverlay?.removeFromSuperview()
-
         let overlay = CoachMarkOverlayView(frame: window.bounds)
         overlay.coachMarkType = .faceComparisonGuide
         overlay.highlightFrame = cellFrame
@@ -241,10 +237,8 @@ extension CoachMarkOverlayView {
                 self.c3Step = 2
             }
         } else {
-            // Step 2 [확인] → 자동 pop 시작 + dismiss
+            // Step 2 [확인] → dismiss (markAsShown은 dismiss()에서 자동)
             CoachMarkManager.shared.isC3TransitionActive = false
-            CoachMarkManager.shared.isAutoPopForC = true
-            CoachMarkManager.shared.pendingCleanupHighlight = true
             dismiss()
         }
     }

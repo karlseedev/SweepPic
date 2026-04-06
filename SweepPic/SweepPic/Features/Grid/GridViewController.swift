@@ -344,10 +344,6 @@ final class GridViewController: BaseGridViewController {
                 let applyStart = CFAbsoluteTimeGetCurrent()
                 #endif
                 self?.applyPendingViewerReturn()
-
-                // C 자동 pop 후 간편정리 하이라이트 표시 (iOS 26+ Navigation pop)
-                self?.showCleanupHighlightIfPending()
-
                 #if DEBUG
                 let applyEnd = CFAbsoluteTimeGetCurrent()
                 Logger.performance.debug("[ScrollDiag] coordinator→applyPendingViewerReturn: \(String(format: "%.1f", (applyEnd - applyStart) * 1000))ms")
@@ -442,12 +438,6 @@ final class GridViewController: BaseGridViewController {
 
         // C-1 트리거 락 리셋 (뷰어에서 돌아올 때 재트리거 허용)
         hasTriggeredC1 = false
-
-        // C: 사전 분석 시작 (유사사진 1그룹 확보 — D보다 먼저)
-        startCoachMarkCPreScanIfNeeded()
-
-        // C: 간편정리 버튼 인터셉트 (E-1 완료 + C 미완료 시)
-        enableCCleanupButtonIntercept()
 
         // D: 사전 스캔 시작 (앱 시작 직후 가능한 빨리)
         startCoachMarkDPreScanIfNeeded()
@@ -1110,10 +1100,6 @@ extension GridViewController: ViewerViewControllerDelegate {
         let t = CFAbsoluteTimeGetCurrent()
         #endif
         applyPendingViewerReturn()
-
-        // C 자동 pop 후 간편정리 하이라이트 표시 (iOS 16~25 Modal dismiss)
-        showCleanupHighlightIfPending()
-
         #if DEBUG
         Logger.performance.debug("[ScrollDiag] viewerDidClose→applyPendingViewerReturn: \(String(format: "%.1f", (CFAbsoluteTimeGetCurrent() - t) * 1000))ms")
         #endif
