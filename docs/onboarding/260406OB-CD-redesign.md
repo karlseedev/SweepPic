@@ -153,22 +153,163 @@ C-3 (비교 화면 사용법) → 확인
 
 ---
 
-## 미구현 (향후 작업)
+## 구현 계획 (v2)
 
-- [ ] C 사전 분석 스캐너 클래스 (독립, CoachMarkDPreScanner 패턴)
-  - [ ] 1그룹 발견 즉시 중단
-  - [ ] 발견한 그룹을 SimilarityCache.shared에 반영
-  - [ ] pause/resume (백그라운드 대응)
-  - [ ] 진행 상태 디스크 저장 (앱 종료 대응)
-  - [ ] 앱 재시작 시 이어서 분석 또는 저장된 결과 사용
-- [ ] 간편정리 버튼 C 인터셉트 (A-1 인터셉트 메커니즘 확장)
-  - [ ] iOS 26: 간편정리 버튼만 인터셉트 (전체메뉴 버튼은 통과)
-- [ ] "비슷한 사진을 찾고 있어요" 로딩 UI (타임아웃 5초)
-- [ ] 유사사진 발견 시 뱃지 셀로 자동 스크롤 → C 시작
-- [ ] C-3 완료 후 자동 pop (뷰어 → 그리드) + 자동 pop 중 B 표시 방지 가드
-- [ ] C 완료 후 간편정리 버튼 하이라이트 (코치마크 오버레이)
-  - "간편정리 메뉴에서 더욱 편리하게 자동 탐색이 가능해요"
-- [ ] 유사사진 0건 시 D 언블록 (markAsShown 안 함, D 조건 분기)
-- [ ] D 사전 분석 시작 시점을 C 완료 후로 변경
-- [ ] D 트리거에서 3초 체류 조건 제거
-- [ ] D 트리거 조건에 "C 사전분석 완료+0건" 분기 추가
+### v1 테스트에서 발견된 버그
+
+| # | 증상 | 원인 | 해결 |
+|---|------|------|------|
+| 1 | 간편정리 탭 → 스크롤 후 C-1 안 뜸 | `triggerCoachMarkCIfNeeded` 뱃지 재검증이 비동기 타이밍으로 실패 | 자동스크롤 경로: `showSimilarBadgeCoachMark` 직접 호출 |
+| 2 | 간편정리 하이라이트 확인 → 탭 모션 + 먹통 | `showCleanupGuide`에 `.similarPhoto` 타입 → C 전용 시퀀스 실행 | `.autoCleanup` 타입 + confirmButton 타겟 교체 (dismiss 우회) |
+| 3 | 그리드 복귀 시 C-1 오버레이 잔존 (공통) | C-3 생성 시 기존 C-1/C-2 오버레이를 제거하지 않음 | `showFaceComparisonGuide()`에서 `currentOverlay?.removeFromSuperview()` |
+| 4 | C 미완료인데 D 표시 | `similarPhoto.markAsShown()`이 FaceComparison present 시 호출 | D 트리거에 `isAutoPopForC`/`pendingCleanupHighlight`/`pendingDAfterCComplete` 가드 |
+| 5 | 하이라이트 dismiss 후 터치 불가 | `dismiss()` 내부 `.autoCleanup.markAsShown()` 호출 | dismiss() 호출 안 함 — 직접 fadeOut + removeFromSuperview |
+| 6 | C-1→C-2→C-3 전환 시 전 화면 잔존 (iOS 26+만) | window 위 오버레이가 nav stack 위에 노출 | C-1 confirm 후 오버레이 숨김 → C-2에서 복원 |
+
+### iOS 버전별 차이점
+
+| 항목 | iOS 16~25 | iOS 26+ |
+|------|----------|---------|
+| 뷰어 전환 | Modal present | Navigation push |
+| 오버레이 가시성 | Modal 뒤에 숨겨짐 | window 위 → nav 위에 보임 (#6) |
+| 뷰어 → 그리드 복귀 | dismiss → viewerDidClose() | pop → transitionCoordinator completion |
+| 그리드 viewDidAppear | Modal dismiss 시 호출 안 될 수 있음 | Pop 시 호출됨 → D 트리거 주의 (#4) |
+| 간편정리 인터셉트 | FloatingTitleBar.cleanupButtonInterceptor | items[1].primaryAction |
+| 자동 pop | `dismiss(animated:)` | `popViewController(animated:)` |
+
+---
+
+### Phase 1: C 사전 분석
+
+FaceScanService를 직접 활용하여 앱 시작 시 유사사진 1그룹을 백그라운드에서 찾아둔다.
+
+**수정 파일:**
+
+- [ ] `GridViewController+CoachMarkC.swift` — 사전 분석 메서드 추가
+  - `startCoachMarkCPreScanIfNeeded()`: FaceScanService 활용, 1그룹 발견 즉시 cancel
+  - `onGroupFound`: bridge → SimilarityCache.shared.addGroupIfValid → UserDefaults 저장
+  - **순서**: SimilarityCache 반영 완료 → UserDefaults 저장 → `updateVisibleCellBorders()` → `onCPreScanStateChanged?()` 콜백
+  - `cancel()` 후 `CancellationError`는 성공적 조기 종료로 처리
+  - UserDefaults: `CoachMarkCPreScan.isComplete`, `CoachMarkCPreScan.foundAssetID`
+  - `#if DEBUG debugResetCPreScan()` 메서드
+- [ ] `GridViewController+SimilarPhoto.swift` — `updateVisibleCellBorders()` private → internal
+- [ ] `GridViewController.swift` — viewDidAppear에 `startCoachMarkCPreScanIfNeeded()` 호출
+- [ ] `GridViewController+Cleanup.swift` — 온보딩 리셋 메뉴에 C 사전분석 리셋 추가
+
+---
+
+### Phase 2: 간편정리 버튼 C 인터셉트 + 로딩 + 자동 스크롤
+
+C 미완료 상태에서 간편정리 버튼 탭 시 메뉴를 차단하고, 사전 분석 결과에 따라 C를 트리거한다.
+
+**수정 파일:**
+
+- [ ] `FloatingTitleBar.swift` — iOS 16~25 간편정리 전용 인터셉터
+  - `cleanupButtonInterceptor: (() -> Bool)?` 프로퍼티 추가
+  - hitTest: selectButton(간편정리)에만 체크 → 전체메뉴(menuButton)는 통과
+- [ ] `GridViewController+CoachMarkC.swift` — C 인터셉트 + 자동 스크롤 + 로딩
+  - `enableCCleanupButtonIntercept()` / `disableCCleanupButtonIntercept()`
+    - iOS 26+: `items[1].primaryAction` 설정/해제
+    - iOS 16~25: `cleanupButtonInterceptor` 설정/해제
+  - `handleCleanupInterceptForC()`: 사전 분석 상태 분기
+    - 유사사진 있음 → `scrollToBadgeCellAndTriggerC(assetID:)`
+    - 0건 → `cleanupButtonTapped()` (메뉴 정상)
+    - 분석 중 → `showCPreScanLoading()` (5초 타임아웃)
+  - **`scrollToBadgeCellAndTriggerC(assetID:)`** — **버그 #1 대응**
+    - `scrollToCenteredItem` → 0.6초 딜레이
+    - ~~`triggerCoachMarkCIfNeeded`~~ → **`showSimilarBadgeCoachMark(cell:assetID:)` 직접 호출**
+    - `hasTriggeredC1 = true` 수동 설정, `showBadge(on:)` 수동 호출
+    - (이유: `triggerCoachMarkCIfNeeded` 내부 뱃지 재검증이 비동기 `updateVisibleCellBorders` 완료 전에 실패)
+  - `showCPreScanLoading()` / `dismissCPreScanLoading()`
+    - 5초 DispatchWorkItem 타임아웃
+    - `onCPreScanStateChanged` 콜백으로 그룹 발견/완료 감지
+- [ ] `GridViewController.swift` — viewDidAppear에 `enableCCleanupButtonIntercept()` 호출
+
+---
+
+### Phase 3: C-3 자동 pop + B 가드 + 간편정리 하이라이트
+
+C-3 확인 후 자동으로 그리드까지 복귀하고, 간편정리 버튼 안내를 표시한다.
+
+**수정 파일:**
+
+- [ ] `CoachMarkOverlayView.swift` — CoachMarkManager 프로퍼티 추가
+  - `isAutoPopForC: Bool = false`
+  - `pendingCleanupHighlight: Bool = false`
+- [ ] `CoachMarkOverlayView+CoachMarkC3.swift`
+  - **버그 #3 대응**: `showFaceComparisonGuide()` 진입부에 `currentOverlay?.removeFromSuperview()` (C-1/C-2 오버레이 제거)
+  - Step 2 확인 시: `isAutoPopForC = true`, `pendingCleanupHighlight = true`, `dismiss()`
+- [ ] `CoachMarkOverlayView+CoachMarkC.swift` — **버그 #6 대응**
+  - `startC_ConfirmSequence()` onConfirm 직전: iOS 26+에서 `overlay.alpha = 0.01` (nav push 동안 오버레이 숨김)
+  - `transitionToC2()`에서 alpha 복원
+- [ ] `FaceComparisonViewController.swift` — C-3 dismiss 후 자동 dismiss
+  - `showFaceComparisonGuide()` 마지막에 `currentOverlay?.onDismiss` 설정
+  - `isAutoPopForC` 체크 → `self.dismiss(animated:)` 또는 `navigationController?.dismiss(animated:)`
+- [ ] `ViewerViewController.swift` — viewDidAppear에서 자동 pop
+  - `isAutoPopForC` 체크 → pop/dismiss + `return` (B, C-2 스킵)
+  - `isPushed` 분기: iOS 26+ pop, iOS 16~25 dismiss
+- [ ] `ViewerViewController+CoachMark.swift` — B 가드
+  - `guard !CoachMarkManager.shared.isAutoPopForC` 추가
+- [ ] `GridViewController+CoachMarkC.swift` — 그리드 복귀 + 간편정리 하이라이트
+  - `showCleanupHighlightIfPending()`: 플래그 체크 → 리셋 → 0.3초 딜레이 → `showCleanupButtonHighlight()`
+  - `showCleanupButtonHighlight()`: `getCleanupButtonFrame(in:)` → `showCleanupGuide()`
+- [ ] `CoachMarkOverlayView+CoachMarkC.swift` — **버그 #2, #5 대응**: `showCleanupGuide()` static 메서드
+  - 타입: `.autoCleanup` (pill shape 하이라이트 재사용)
+  - **confirmButton 타겟 완전 교체** (기존 `confirmTapped` 제거):
+    ```swift
+    overlay.confirmButton.removeTarget(overlay, action: nil, for: .touchUpInside)
+    overlay.confirmButton.addAction(UIAction { [weak overlay] _ in
+        // dismiss() 호출 안 함 — .autoCleanup.markAsShown() 방지 (#5)
+        CoachMarkManager.shared.currentOverlay = nil
+        UIView.animate(withDuration: 0.2, animations: { overlay?.alpha = 0 }) { _ in
+            overlay?.removeFromSuperview()
+        }
+        onConfirm()
+    }, for: .touchUpInside)
+    ```
+  - 텍스트: "간편정리 메뉴에서\n더욱 편리하게 자동 탐색이 가능해요"
+  - D 포커싱 애니메이션 재사용 → `animateDFocus` private → internal 변경 필요
+- [ ] `GridViewController.swift` — 그리드 복귀 시점에 `showCleanupHighlightIfPending()` 호출
+  - iOS 26+: transitionCoordinator completion 내부
+  - iOS 16~25: `viewerDidClose()` 내부
+
+---
+
+### Phase 4: D 조건 변경
+
+D 사전 분석을 C 완료 후로 지연하고, D 표시를 탭 전환 복귀 시로 제한한다.
+
+**D 표시 타이밍:**
+- C 완료 직후 D를 바로 표시하지 **않음** (연속 온보딩 피로)
+- **D 표시 조건**: C 완료 + 다른 탭 이동 후 보관함 탭 복귀 시
+- 구현: `pendingDAfterCComplete` 플래그 — C 완료 시 true, 탭 전환 복귀 시 D 트리거
+
+**수정 파일:**
+
+- [ ] `CoachMarkOverlayView.swift` — CoachMarkManager에 D 대기 플래그 추가
+  - `pendingDAfterCComplete: Bool = false`
+- [ ] `GridViewController+CoachMarkD.swift`
+  - `startCoachMarkDPreScanIfNeeded()`: C 완료 가드 추가 — **버그 #4 대응**
+    ```swift
+    guard !CoachMarkManager.shared.isAutoPopForC,
+          !CoachMarkManager.shared.pendingCleanupHighlight else { return }
+    guard CoachMarkType.similarPhoto.hasBeenShown
+          || Self.cPreScanCompleteWithNoGroups else { return }
+    ```
+  - `startCoachMarkDTimerIfNeeded()`: 3초 타이머 제거 → 즉시 체크
+    - `isAutoPopForC`/`pendingCleanupHighlight` 가드 (#4)
+    - `pendingDAfterCComplete` 가드: true일 때만 D 표시 허용
+    - C 완료 가드: `similarPhoto.hasBeenShown || cPreScanCompleteWithNoGroups`
+- [ ] `GridViewController+CoachMarkC.swift` — cleanup highlight onConfirm
+  - `disableCCleanupButtonIntercept()`
+  - `CoachMarkManager.shared.pendingDAfterCComplete = true` (D 대기 시작)
+  - `startCoachMarkDPreScanIfNeeded()` (사전 스캔만 시작, D 표시는 안 함)
+- [ ] `GridViewController.swift` — viewDidAppear에서 탭 복귀 감지
+  - 기존 `startCoachMarkDTimerIfNeeded()` 호출이 viewDidAppear에 이미 있음
+  - `startCoachMarkDTimerIfNeeded()` 내부에서 `pendingDAfterCComplete` 체크
+
+---
+
+### 구현 순서
+
+Phase 1 → Phase 2 → Phase 3 → Phase 4 (각 Phase 완료 시 커밋)
