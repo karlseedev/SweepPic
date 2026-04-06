@@ -479,7 +479,7 @@
 
 | # | 한국어 (현재) | 영어 (제안) | 용도 | 확인 |
 |---|---|---|---|---|
-| 247 | 저품질 사진 정리 기능을 사용하려면\n삭제대기함을 먼저 비워주세요\n\n-Pro멤버십 가입 시 제한 해제- | To use Auto Cleanup,\nplease empty Trash first\n\n-No restriction with Pro membership- | 삭제대기함 비어있지 않음 | |
+| 247 | 저품질 사진 정리 기능을 사용하려면\n삭제대기함을 먼저 비워주세요\n\n-Pro멤버십 가입 시 제한 해제- | To use Auto Cleanup,\nplease empty Trash first\n\n-No restriction with Pro- | 삭제대기함 비어있지 않음 | |
 | ~~248-254~~ | *(삭제 — 번역 대상 제외)* | | | |
 
 ### PreviewGridViewController

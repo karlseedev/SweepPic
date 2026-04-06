@@ -164,7 +164,7 @@ C-3 (비교 화면 사용법) → 확인
 | 3 | 그리드 복귀 시 C-1 오버레이 잔존 (공통) | C-3 생성 시 기존 C-1/C-2 오버레이를 제거하지 않음 | `showFaceComparisonGuide()`에서 `currentOverlay?.removeFromSuperview()` |
 | 4 | C 미완료인데 D 표시 | `similarPhoto.markAsShown()`이 FaceComparison present 시 호출 | D 트리거에 `isAutoPopForC`/`pendingCleanupHighlight`/`pendingDAfterCComplete` 가드 |
 | 5 | 하이라이트 dismiss 후 터치 불가 | `dismiss()` 내부 `.autoCleanup.markAsShown()` 호출 | dismiss() 호출 안 함 — 직접 fadeOut + removeFromSuperview |
-| ~~6~~ | ~~C-1→C-2→C-3 전환 시 전 화면 잔존 (iOS 26+만)~~ | 기존 코드에서 이미 처리됨 (`startC_ConfirmSequence` alpha=0.01 + `transitionToC2` alpha 복원) | 수정 불필요 |
+| 6 | C-1→C-2→C-3 전환 시 전 화면 잔존 (iOS 26+만) | 기존 코드에 alpha 처리(`startC_ConfirmSequence` 0.01 → `transitionToC2` 1.0)가 있으나, v1 자동 pop 개입 시 타이밍 불일치 가능 / iOS 26+ nav push 환경에서 미발견 버그 가능 / 버그 #3과 겹쳐 보였을 가능성 있음 | v2 구현 후 iOS 26+에서 C-1→C-2→C-3 전환 재확인 필수. 재현 시 추가 수정 |
 
 ### iOS 버전별 차이점
 
