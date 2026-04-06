@@ -784,6 +784,7 @@ final class FaceComparisonViewController: UIViewController {
             print("[Debug] ExtendedFallbackTester 비활성화됨 (Vision 제거)")
         }
     }
+
 }
 
 // MARK: - FaceComparisonBottomBar
@@ -843,6 +844,33 @@ extension FaceComparisonViewController: FaceComparisonDataSource {
 
         let boundingBox = face.boundingBox
 
+        // --- targetSize 적정화: 셀 크기에 필요한 만큼만 요청 ---
+        // 셀 픽셀 크기 (2열 그리드 근사값)
+        let cellPixels = UIScreen.main.bounds.width / 2 * UIScreen.main.scale
+
+        // 원본 이미지의 실제 픽셀 치수
+        let originalW = CGFloat(asset.pixelWidth)
+        let originalH = CGFloat(asset.pixelHeight)
+        let originalLongSide = max(originalW, originalH)
+
+        // 원본에서의 얼굴 실제 픽셀 크기 (종횡비 반영)
+        let facePixelW = boundingBox.width * originalW
+        let facePixelH = boundingBox.height * originalH
+        let maxFaceDim = max(facePixelW, facePixelH)
+        let paddedFaceDim = maxFaceDim * (1 + 2 * FaceCropper.paddingRatio)  // ×1.6
+
+        // 통합 제약: 얼굴 크롭 충분 + clampToBounds 시 짧은 변 보장
+        let shortSide = min(originalW, originalH)
+        let effectiveDim = min(paddedFaceDim, shortSide)
+        let requiredLongSide = cellPixels * originalLongSide / effectiveDim * 1.2  // 20% 품질 여유
+
+        // 범위 제한: 최소 960px, 최대 원본
+        let clampedLongSide = min(originalLongSide, max(960, requiredLongSide))
+
+        // 원본 종횡비 유지 직사각형으로 요청 (정사각형 targetSize 모호함 제거)
+        let sizeScale = clampedLongSide / originalLongSide
+        let targetSize = CGSize(width: originalW * sizeScale, height: originalH * sizeScale)
+
         let options = PHImageRequestOptions()
         options.deliveryMode = .highQualityFormat
         options.resizeMode = .exact
@@ -851,7 +879,7 @@ extension FaceComparisonViewController: FaceComparisonDataSource {
 
         imageManager.requestImage(
             for: asset,
-            targetSize: CGSize(width: asset.pixelWidth, height: asset.pixelHeight),
+            targetSize: targetSize,
             contentMode: .aspectFit,
             options: options
         ) { image, _ in
@@ -975,6 +1003,7 @@ extension FaceComparisonViewController: FaceComparisonTitleBarDelegate {
     func faceComparisonTitleBarDidTapClose(_ titleBar: FaceComparisonTitleBar) {
         cancelButtonTapped()
     }
+
 }
 
 // MARK: - LiquidGlass 최적화 (UIScrollViewDelegate)
