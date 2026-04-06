@@ -568,7 +568,7 @@ extension CoachMarkOverlayView {
         overlay.messageLabel.attributedText = attr
         overlay.messageLabel.alpha = 0
 
-        // 텍스트 위치: 하이라이트 버튼과 화면 하단 사이 중앙에 배치
+        // 텍스트 위치: 하이라이트 버튼과 화면 하단 사이 상단 1/3 지점에 배치
         let labelWidth = window.bounds.width - 40
         let labelSize = overlay.messageLabel.sizeThatFits(CGSize(width: labelWidth, height: .greatestFiniteMagnitude))
         let textHeight = ceil(labelSize.height)
@@ -577,7 +577,7 @@ extension CoachMarkOverlayView {
         let totalContentHeight = textHeight + gap + buttonHeight
         let availableTop = highlightFrame.maxY + 24
         let availableBottom = window.bounds.height - (window.safeAreaInsets.bottom + 20)
-        let contentY = availableTop + (availableBottom - availableTop - totalContentHeight) / 2
+        let contentY = availableTop + (availableBottom - availableTop - totalContentHeight) / 4
         overlay.messageLabel.frame = CGRect(
             x: 20,
             y: contentY,

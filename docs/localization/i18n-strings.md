@@ -148,7 +148,7 @@
 | 60 | 복원 | restore | 키워드 (강조) | |
 | 61 | 삭제대기함 | Trash | 키워드 (강조) | |
 | 62 | 확인 | OK | 버튼 | |
-| 63 | 설명을 위해 사진을 임시로 삭제합니다\n(삭제대기함에서 복구 가능) | A photo will be temporarily deleted for this demo\n(You can restore it from Trash) | A 변형 카드 | |
+| 63 | 설명을 위해 사진을 임시로 삭제합니다\n(삭제대기함에서 복구 가능) | A photo will be temporarily deleted\nfor this demo\n(You can restore it from Trash) | A 변형 카드 | |
 | 64 | 임시로 삭제 | temporarily deleted | 키워드 (강조) | |
 | 65 | 사진을 위로 밀면 바로\n삭제대기함으로 이동해요 | Swipe up to move a photo\nto Trash | B 뷰어 카드 | |
 | 66 | 삭제대기함 | Trash | 키워드 (강조) | |
@@ -173,10 +173,11 @@
 
 | # | 한국어 (현재) | 영어 (제안) | 용도 | 확인 |
 |---|---|---|---|---|
-| 73 | 하얀색 테두리가 표시된 사진은\n여러 사진의 얼굴을 비교해서 삭제하는\n인물사진 비교정리가 가능한 사진이에요 | Photos with a white border support\nFace Comparison — compare faces\nacross photos and choose which to remove | C-1 본문 | |
-| 74 | 얼굴을 비교해서 삭제 | compare faces...choose which to remove | C-1 키워드 | |
-| 75 | +버튼을 눌러 얼굴비교화면으로 이동하세요\n인물이 여러 명이면 좌우로 넘겨볼 수 있어요 | Tap the + button to open Face Comparison\nSwipe left/right to see other people | C-2 본문 | |
-| 76 | ※ 얼굴은 각도, 해상도에 따라 검출되지 않거나\n다른 인물로 분류될 수 있습니다 | Note: Faces may not be detected or may be\nmisclassified depending on angle or resolution | C-2 부가 안내 | |
+| 73 | 하얀색 테두리가 표시된 사진은\n여러 사진의 얼굴을 비교해서 삭제하는\n인물사진 비교정리가 가능한 사진이에요 | Photos with a white border support\nFace Comparison — compare faces\nacross photos and choose\nwhich to remove | C-1 본문 | |
+| 74a | 얼굴을 비교해서 삭제 | compare faces | C-1 키워드 1 | |
+| 74b | (위와 동일) | choose which to remove | C-1 키워드 2 | |
+| 75 | +버튼을 눌러 얼굴비교화면으로 이동하세요\n인물이 여러 명이면 좌우로 넘겨볼 수 있어요 | Tap the + button\nto open Face Comparison\nSwipe left/right to see other people | C-2 본문 | |
+| 76 | ※ 얼굴은 각도, 해상도에 따라 검출되지 않거나\n다른 인물로 분류될 수 있습니다 | Note: Faces may not be detected\nor misclassified depending on\nangle or resolution | C-2 부가 안내 | |
 | 77 | +버튼 | + button | C-2 키워드 | |
 | 78 | 얼굴비교화면 | Face Comparison | C-2 키워드 | |
 | 78-1 | 간편정리 메뉴에서\n더욱 편리하게 자동 탐색이 가능해요\n\n간편정리 → 인물사진 비교정리 | Auto scanning is available\nfrom the Clean Up menu\n\nClean Up → Compare & Clean Portraits | C-2 후속 안내 본문 (키워드: "자동 탐색" / "Auto scanning") | |
@@ -194,10 +195,10 @@
 
 | # | 한국어 (현재) | 영어 (제안) | 용도 | 확인 |
 |---|---|---|---|---|
-| 83 | 저품질사진 자동정리 | Auto Cleanup | 타이틀 | |
-| 84 | 흔들리거나 초점이 맞지 않은\n저품질 사진을 AI가 자동으로 찾아주는\n정리 기능을 사용해보세요\n\n간편정리 → 저품질사진 자동정리 | Try Auto Cleanup — AI finds\nblurry and out-of-focus photos automatically\n\nQuick Menu → Auto Cleanup | 본문 | |
+| 83 | 저품질사진 자동정리 | Auto Low-Quality Cleanup | 타이틀 | |
+| 84 | 흔들리거나 초점이 맞지 않은\n저품질 사진을 AI가 자동으로 찾아주는\n정리 기능을 사용해보세요\n\n간편정리 → 저품질사진 자동정리 | Try Auto Low-Quality Cleanup —\nAI finds blurry and out-of-focus\nphotos automatically\n\nClean Up → Auto Low-Quality Cleanup | 본문 | |
 | 85 | 저품질 사진을 AI가 자동 | AI finds | 키워드 (강조) | |
-| 86 | 간편정리 → 저품질사진 자동정리 | Quick Menu → Auto Cleanup | 경로 안내 | |
+| 86 | 간편정리 → 저품질사진 자동정리 | Clean Up → Auto Low-Quality Cleanup | 경로 안내 | |
 | 87 | 비우기 | Empty | E-1 페이크 버튼 라벨 | |
 
 ### E-1, E-2
@@ -208,7 +209,7 @@
 | 89 | 삭제대기함으로 이동 | moved to Trash | E-1 키워드 | |
 | 90 | 보관함에서 삭제된 사진은\n삭제대기함에 임시 보관돼요 | Deleted photos from your library\nare temporarily stored in Trash | E-2 Step 2 본문 | |
 | 91 | 삭제대기함에 임시 보관 | temporarily stored in Trash | E-2 키워드 | |
-| 92 | [비우기]를 누르면 사진이 최종 삭제돼요 | Tap [Empty] to permanently delete photos | E-2 Step 3 본문 | |
+| 92 | [비우기]를 누르면 사진이 최종 삭제돼요 | Tap [Empty] to permanently\ndelete photos | E-2 Step 3 본문 | |
 | 93 | [비우기] | [Empty] | E-2 키워드 | |
 
 ### E-3
