@@ -533,59 +533,70 @@ extension CoachMarkOverlayView {
         window.addSubview(overlay)
         CoachMarkManager.shared.currentOverlay = overlay
 
-        // 카드 구성
-        let card = UIView()
-        card.layer.cornerRadius = 20
-        card.clipsToBounds = true
-        card.translatesAutoresizingMaskIntoConstraints = false
-
-        let blur = UIVisualEffectView(effect: UIBlurEffect(style: .systemMaterialDark))
-        blur.frame = card.bounds
-        blur.autoresizingMask = [.flexibleWidth, .flexibleHeight]
-        card.addSubview(blur)
-        overlay.addSubview(card)
-
-        // 타이틀
-        let titleLabel = UILabel()
-        titleLabel.text = "간편정리 메뉴에서\n더욱 편리하게 자동 탐색이 가능해요"
-        titleLabel.textColor = .white
-        titleLabel.font = .systemFont(ofSize: 24, weight: .bold)
-        titleLabel.textAlignment = .center
-        titleLabel.numberOfLines = 0
-        titleLabel.translatesAutoresizingMaskIntoConstraints = false
-        card.addSubview(titleLabel)
-
-        // 본문: 메뉴 경로 안내 (1뎁스 → 2뎁스)
-        let descLabel = UILabel()
-        let descText = "간편정리 → 인물사진 비교정리"
-        let descStyle = NSMutableParagraphStyle()
-        descStyle.alignment = .center
-        descStyle.lineSpacing = bodyFont.pointSize * 0.2
-        let descAttr = NSMutableAttributedString(
-            string: descText,
+        // 안내 텍스트 (C-1과 동일 스타일: bodyFont, white, 강조 bodyBoldFont + yellow)
+        let mainText = "간편정리 메뉴에서\n더욱 편리하게 자동 탐색이 가능해요"
+        let pathText = "\n\n간편정리 → 인물사진 비교정리"
+        let fullText = mainText + pathText
+        let style = NSMutableParagraphStyle()
+        style.alignment = .center
+        style.lineSpacing = bodyFont.pointSize * 0.2
+        style.paragraphSpacing = 12
+        let attr = NSMutableAttributedString(
+            string: fullText,
             attributes: [
-                .font: UIFont.systemFont(ofSize: 16, weight: .regular),
-                .foregroundColor: UIColor.white.withAlphaComponent(0.7),
-                .paragraphStyle: descStyle
+                .font: bodyFont,
+                .foregroundColor: UIColor.white,
+                .paragraphStyle: style
             ]
         )
-        descLabel.attributedText = descAttr
-        descLabel.numberOfLines = 0
-        descLabel.translatesAutoresizingMaskIntoConstraints = false
-        card.addSubview(descLabel)
+        // "자동 탐색" 강조
+        if let range = fullText.range(of: "자동 탐색") {
+            let nsRange = NSRange(range, in: fullText)
+            attr.addAttributes([
+                .font: bodyBoldFont,
+                .foregroundColor: highlightYellow,
+            ], range: nsRange)
+        }
+        // 메뉴 경로: 16pt regular, white 70%
+        if let range = fullText.range(of: "간편정리 → 인물사진 비교정리") {
+            let nsRange = NSRange(range, in: fullText)
+            attr.addAttributes([
+                .font: UIFont.systemFont(ofSize: 16, weight: .regular),
+                .foregroundColor: UIColor.white.withAlphaComponent(0.7),
+            ], range: nsRange)
+        }
+        overlay.messageLabel.attributedText = attr
+        overlay.messageLabel.alpha = 0
 
-        // 확인 버튼 — confirmButton 타겟 완전 교체 (버그 #2, #5 대응)
-        // dismiss()를 호출하지 않아 .autoCleanup.markAsShown() 방지
+        // 텍스트 위치: 하이라이트 아래 배치 (C-1과 동일 패턴)
+        let labelWidth = window.bounds.width - 40
+        let labelSize = overlay.messageLabel.sizeThatFits(CGSize(width: labelWidth, height: .greatestFiniteMagnitude))
+        overlay.messageLabel.frame = CGRect(
+            x: 20,
+            y: highlightFrame.maxY + 24,
+            width: labelWidth,
+            height: ceil(labelSize.height)
+        )
+        overlay.addSubview(overlay.messageLabel)
+
+        // 확인 버튼 (C-1과 동일: 흰색 라운드)
         overlay.confirmButton.setTitleColor(.black, for: .normal)
         overlay.confirmButton.backgroundColor = .white
         overlay.confirmButton.isEnabled = true
-        overlay.confirmButton.alpha = 1
-        overlay.confirmButton.translatesAutoresizingMaskIntoConstraints = false
+        overlay.confirmButton.alpha = 0
+        let buttonWidth: CGFloat = 120
+        let buttonHeight: CGFloat = 44
+        overlay.confirmButton.frame = CGRect(
+            x: (window.bounds.width - buttonWidth) / 2,
+            y: overlay.messageLabel.frame.maxY + 16,
+            width: buttonWidth,
+            height: buttonHeight
+        )
 
-        // 기존 타겟 제거 + 커스텀 액션 추가
+        // 기존 타겟 제거 + 커스텀 액션 추가 (버그 #2, #5 대응)
+        // dismiss()를 호출하지 않아 .autoCleanup.markAsShown() 방지
         overlay.confirmButton.removeTarget(overlay, action: nil, for: .touchUpInside)
         overlay.confirmButton.addAction(UIAction { [weak overlay] _ in
-            // dismiss() 호출 안 함 — .autoCleanup.markAsShown() 방지 (#5)
             CoachMarkManager.shared.currentOverlay = nil
             UIView.animate(withDuration: 0.2, animations: {
                 overlay?.alpha = 0
@@ -595,41 +606,14 @@ extension CoachMarkOverlayView {
             }
         }, for: .touchUpInside)
 
-        card.addSubview(overlay.confirmButton)
-
-        // 레이아웃
-        NSLayoutConstraint.activate([
-            card.centerXAnchor.constraint(equalTo: overlay.centerXAnchor),
-            card.centerYAnchor.constraint(equalTo: overlay.centerYAnchor),
-            card.leadingAnchor.constraint(greaterThanOrEqualTo: overlay.leadingAnchor, constant: 24),
-            card.trailingAnchor.constraint(lessThanOrEqualTo: overlay.trailingAnchor, constant: -24),
-            card.widthAnchor.constraint(equalTo: overlay.widthAnchor, constant: -48),
-
-            titleLabel.topAnchor.constraint(equalTo: card.topAnchor, constant: 24),
-            titleLabel.leadingAnchor.constraint(equalTo: card.leadingAnchor, constant: 20),
-            titleLabel.trailingAnchor.constraint(equalTo: card.trailingAnchor, constant: -20),
-
-            descLabel.topAnchor.constraint(equalTo: titleLabel.bottomAnchor, constant: 12),
-            descLabel.leadingAnchor.constraint(equalTo: card.leadingAnchor, constant: 20),
-            descLabel.trailingAnchor.constraint(equalTo: card.trailingAnchor, constant: -20),
-
-            overlay.confirmButton.topAnchor.constraint(equalTo: descLabel.bottomAnchor, constant: 20),
-            overlay.confirmButton.centerXAnchor.constraint(equalTo: card.centerXAnchor),
-            overlay.confirmButton.widthAnchor.constraint(equalToConstant: 120),
-            overlay.confirmButton.heightAnchor.constraint(equalToConstant: 44),
-            overlay.confirmButton.bottomAnchor.constraint(equalTo: card.bottomAnchor, constant: -24),
-        ])
+        overlay.addSubview(overlay.confirmButton)
 
         // lifecycle dismiss 대응 (버그 #4 보완)
-        // 탭 전환 등으로 dismiss() 호출 시 autoCleanup.markAsShown()이 호출되므로
-        // onDismiss에서 resetShown()으로 되돌림
         overlay.onDismiss = {
             CoachMarkType.autoCleanup.resetShown()
         }
 
-        // 카드 초기 비표시 → 포커싱 모션 → 카드 ��이드인
-        card.alpha = 0
-
+        // 포커싱 모션 → 텍스트 + 버튼 페이드인 (C-2와 동일 패턴)
         UIView.animate(withDuration: 0.3) {
             overlay.alpha = 1
         }
@@ -638,7 +622,8 @@ extension CoachMarkOverlayView {
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
                 guard !overlay.shouldStopAnimation else { return }
                 UIView.animate(withDuration: 0.3) {
-                    card.alpha = 1
+                    overlay.messageLabel.alpha = 1
+                    overlay.confirmButton.alpha = 1
                 }
             }
         }
