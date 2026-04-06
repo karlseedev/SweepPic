@@ -69,6 +69,11 @@ extension GridViewController {
             Logger.coachMark.debug("타이머 스킵: E-1 미완료")
             return
         }
+        // C 미완료 (C 완료 후에야 D 표시)
+        guard CoachMarkType.similarPhoto.hasBeenShown else {
+            Logger.coachMark.debug("타이머 스킵: C 미완료")
+            return
+        }
 
         // 기존 타이머 무효화 (화면 복귀 시 리셋)
         coachMarkDTimer?.invalidate()

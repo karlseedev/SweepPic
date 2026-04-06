@@ -22,8 +22,14 @@
 
 ### Subtitle (부제목) — 30자 이내
 
+**한국어:**
 ```
-스와이프로 사진 정리, 한 번에
+표정까지 비교하는 사진 정리 앱
+```
+
+**영어:**
+```
+Compares even your expressions to clean up photos
 ```
 
 ### Promotional Text (프로모션 텍스트) — 170자 이내, 심사 없이 수정 가능

@@ -51,7 +51,7 @@ final class FAQViewController: UIViewController, BarsVisibilityControlling {
                 answer: "삭제대기함에 있는 사진은 언제든 복구할 수 있습니다. 삭제대기함을 비운 후에는 최근 삭제된 항목(iOS 기본 사진 앱)에서 30일 이내에 복구 가능합니다."
             ),
             FAQItem(
-                question: "사진이 서버로 전송되나요?",
+                question: "내 사진이 외부 서버로 전송 또는 유출되나요?",
                 answer: "아니요. 모든 사진 처리(유사 사진 분석, 얼굴 감지 포함)는 기기 내에서만 이루어집니다. 사진 데이터는 외부 서버로 전송되지 않습니다."
             ),
             FAQItem(
@@ -93,10 +93,6 @@ final class FAQViewController: UIViewController, BarsVisibilityControlling {
             FAQItem(
                 question: "얼굴 인식 데이터는 어떻게 처리되나요?",
                 answer: "얼굴 감지는 기기의 Vision 프레임워크를 사용하며, 기기 내에서만 처리됩니다. 얼굴 데이터는 서버에 전송되거나 저장되지 않습니다."
-            ),
-            FAQItem(
-                question: "광고 추적을 끄고 싶어요",
-                answer: "설정 > 개인정보 보호 및 보안 > 추적에서 SweepPic의 추적 권한을 끌 수 있습니다. 추적을 끄면 맞춤형 광고 대신 일반 광고가 표시되며, 앱 기능에는 영향이 없습니다."
             ),
         ]),
     ]

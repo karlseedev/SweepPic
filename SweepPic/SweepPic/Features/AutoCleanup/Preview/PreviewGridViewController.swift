@@ -532,7 +532,7 @@ final class PreviewGridViewController: UIViewController {
         // 단계별 등급 (숫자가 높을수록 저품질: 5등급=최저, 3등급=보통이하)
         let titleText: String
         switch currentStage {
-        case .light:    titleText = "품질 5등급 사진 \(count)장"
+        case .light:    titleText = "품질 5등급(최저) 사진 \(count)장"
         case .standard: titleText = "품질 4등급 이하 사진 \(count)장"
         case .deep:     titleText = "품질 3등급 이하 사진 \(count)장"
         }

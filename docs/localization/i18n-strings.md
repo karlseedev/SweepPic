@@ -10,7 +10,7 @@
 4. **닫기 버튼**: 모달/팝업은 "Close", 네비게이션은 "Back"으로 구분
 5. **"cell" 금지**: 개발 용어 "cell" 대신 사진/항목 등 사용자 용어 사용
 6. **"invite" 통일**: referral 맥락에서 사용자 대면 문자열은 "invite" 통일
-7. **등급 표현**: "Grade 5/4/3" 대신 사용자 친화적 표현 사용 (Lowest Quality / Low Quality / Poor Quality)
+7. **등급 표현**: 한국어는 숫자 등급 유지 + 5등급에 "(최저)" 표기. 영어는 Lowest Quality / Lower Quality & Below / Low Quality & Below
 8. **"Restore Purchases"**: 구매 복원은 Apple StoreKit 표준 "Restore Purchases" 사용
 9. **"Pro"**: 멤버십 명칭은 "Pro"로 통일 ("Premium" 사용 금지)
 10. **"Open Settings"**: 설정 이동 버튼은 "Open Settings"로 통일
@@ -336,7 +336,7 @@
 | 160 | 사진/기능 | Photos & Features | 섹션 제목 | |
 | 161 | 삭제한 사진을 복구할 수 있나요? | Can I recover deleted photos? | Q1 | |
 | 162 | 삭제대기함에 있는 사진은 언제든 복구할 수 있습니다. 삭제대기함을 비운 후에는 최근 삭제된 항목(iOS 기본 사진 앱)에서 30일 이내에 복구 가능합니다. | Photos in Trash can be restored anytime. After emptying Trash, you can recover them within 30 days from "Recently Deleted" in the Photos app. | A1 | |
-| 163 | 사진이 서버로 전송되나요? | Are my photos sent to a server? | Q2 | |
+| 163 | 내 사진이 외부 서버로 전송 또는 유출되나요? | Are my photos sent to or leaked to external servers? | Q2 | |
 | 164 | 아니요. 모든 사진 처리(유사 사진 분석, 얼굴 감지 포함)는 기기 내에서만 이루어집니다. 사진 데이터는 외부 서버로 전송되지 않습니다. | No. All photo processing (including similarity analysis and face detection) happens entirely on your device. No photo data is sent to external servers. | A2 | |
 | 165 | 지원하는 iOS 버전은? | What iOS versions are supported? | Q3 | |
 | 166 | iOS 16 이상을 지원합니다. | Requires iOS 16 or later. | A3 | |
@@ -358,8 +358,8 @@
 | 182 | 개인정보/보안 | Privacy & Security | 섹션 제목 | |
 | 183 | 얼굴 인식 데이터는 어떻게 처리되나요? | How is face recognition data handled? | Q11 | |
 | 184 | 얼굴 감지는 기기의 Vision 프레임워크를 사용하며, 기기 내에서만 처리됩니다. 얼굴 데이터는 서버에 전송되거나 저장되지 않습니다. | Face detection uses the device's Vision framework and is processed entirely on-device. No face data is sent to or stored on any server. | A11 | |
-| 185 | 광고 추적을 끄고 싶어요 | I want to turn off ad tracking | Q12 | |
-| 186 | 설정 > 개인정보 보호 및 보안 > 추적에서 SweepPic의 추적 권한을 끌 수 있습니다. 추적을 끄면 맞춤형 광고 대신 일반 광고가 표시되며, 앱 기능에는 영향이 없습니다. | Go to Settings > Privacy & Security > Tracking and turn off tracking for SweepPic. This switches to generic ads instead of personalized ones. App features are not affected. | A12 | |
+| ~~185~~ | ~~광고 추적을 끄고 싶어요~~ | ~~삭제~~ | ~~Q12 — 해당 기능 없음~~ | |
+| ~~186~~ | ~~설정 > 개인정보 보호 및 보안 > 추적에서...~~ | ~~삭제~~ | ~~A12 — 해당 기능 없음~~ | |
 
 ---
 
@@ -375,7 +375,7 @@
 | 190 | 자주 묻는 질문 | FAQ | 메뉴 액션 | |
 | 191 | 이용약관 | Terms of Use | 메뉴 액션 | |
 | 192 | 개인정보처리방침 | Privacy Policy | 메뉴 액션 | |
-| 193 | 사업자 정보 | Legal Information | 메뉴 액션 | |
+| 193 | 사업자 정보 | ~~ko locale 전용 — 메뉴 숨김~~ | 메뉴 액션 | |
 | 489 | 앱 버전: | App Version: | 이메일 문의 디바이스 정보 라벨 | |
 | 490 | 기기: | Device: | 이메일 문의 디바이스 정보 라벨 | |
 | 491 | 기기명: | Device Name: | 이메일 문의 디바이스 정보 라벨 | |
@@ -383,14 +383,16 @@
 
 ### BusinessInfoViewController
 
+> ⚠️ **locale 분기**: 한국 전자상거래법 제10조 전용. ko locale에서만 메뉴 노출, 영어 번역 불필요.
+
 | # | 한국어 (현재) | 영어 (제안) | 용도 | 확인 |
 |---|---|---|---|---|
-| 194 | 사업자 정보 | Legal Information | 네비게이션 타이틀 | |
-| 195 | 상호 | Business Name | 항목 제목 | |
-| 196 | 대표자 | Representative | 항목 제목 | |
-| 197 | 사업자등록번호 | Business Registration No. | 항목 제목 | |
-| 198 | 연락처 | Contact | 항목 제목 | |
-| 199 | 전자상거래 등에서의 소비자보호에 관한 법률 제10조에 따른 사업자 정보입니다. | Required business disclosure under Korean e-commerce law (Article 10, Act on Consumer Protection in Electronic Commerce, etc.). | footer | |
+| ~~194~~ | 사업자 정보 | ~~ko locale 전용 — 번역 제외~~ | 네비게이션 타이틀 | |
+| ~~195~~ | 상호 | ~~ko locale 전용 — 번역 제외~~ | 항목 제목 | |
+| ~~196~~ | 대표자 | ~~ko locale 전용 — 번역 제외~~ | 항목 제목 | |
+| ~~197~~ | 사업자등록번호 | ~~ko locale 전용 — 번역 제외~~ | 항목 제목 | |
+| ~~198~~ | 연락처 | ~~ko locale 전용 — 번역 제외~~ | 항목 제목 | |
+| ~~199~~ | 전자상거래 등에서의... | ~~ko locale 전용 — 번역 제외~~ | footer | |
 
 ### PremiumMenuViewController
 
@@ -421,7 +423,7 @@
 |---|---|---|---|---|
 | 213 | 확인 | OK | 확인 버튼 | |
 | 214 | {count}장 삭제 완료 | {count} Photos Cleaned Up | 세션 라벨 (plural 처리 필요 - 1 Photo Cleaned Up / N Photos Cleaned Up) | |
-| 215 | SweepPic에서 총 {total}장 삭제 | {total} photos deleted with SweepPic | 총 삭제 라벨 | |
+| 215 | SweepPic에서 총 {total}장 삭제 | {total} photos cleaned up with SweepPic | 총 삭제 라벨 | |
 | 216 | {freed} 확보 | {freed} freed | 확보 용량 라벨 | |
 
 ### ExitSurveyViewController
@@ -448,10 +450,10 @@
 |---|---|---|---|---|
 | 226 | 저품질 사진 정리 | Low-Quality Photo Cleanup | 시트 제목 | |
 | 227 | 흔들리거나 초점이 맞지 않은 사진들을\n자동으로 찾아 정리합니다.\n정리된 사진은 삭제대기함에서 복구할 수 있어요. | Automatically finds and cleans up\nblurry or out-of-focus photos.\nCleaned-up photos can be restored from Trash. | 시트 설명문 | |
-| 228 | 최신사진부터 정리 | From Latest Photos | 액션 버튼 | |
-| 229 | 이어서 정리 ({dateString} 이전) | Continue ({dateString} and earlier) | 액션 버튼 | |
-| 230 | 이어서 정리 | Continue (disabled) | 액션 버튼 (비활성) | |
-| 231 | 연도별 정리 | By Year | 액션 버튼 | |
+| 228 | 최신사진부터 정리 | Clean Up from Latest | 액션 버튼 | |
+| 229 | 이어서 정리 ({dateString} 이전) | Clean Up from {dateString} and Earlier | 액션 버튼 | |
+| 230 | 이어서 정리 | Clean Up | 액션 버튼 (비활성) | |
+| 231 | 연도별 정리 | Clean Up by Year | 액션 버튼 | |
 | 232 | 취소 | Cancel | 액션 버튼 | |
 | 233 | 사진별 연도 목록 확인 중 | Checking photo years... | 로딩 메시지 | |
 | 234 | 연도 선택 | Select Year | 연도 시트 제목 | |
@@ -490,16 +492,16 @@
 
 | # | 한국어 (현재) | 영어 (제안) | 용도 | 확인 |
 |---|---|---|---|---|
-| 255 | 품질 5등급 사진 {count}장 | {count} Lowest Quality Photos | 헤더 (light) (plural 처리 필요) | |
-| 256 | 품질 4등급 이하 사진 {count}장 | {count} Low Quality Photos | 헤더 (standard) (plural 처리 필요) | |
-| 257 | 품질 3등급 이하 사진 {count}장 | {count} Poor Quality Photos | 헤더 (deep) (plural 처리 필요) | |
+| 255 | 품질 5등급(최저) 사진 {count}장 | {count} Lowest Quality Photos | 헤더 (light) (plural 처리 필요) | |
+| 256 | 품질 4등급 이하 사진 {count}장 | {count} Lower Quality & Below Photos | 헤더 (standard) (plural 처리 필요) | |
+| 257 | 품질 3등급 이하 사진 {count}장 | {count} Low Quality & Below Photos | 헤더 (deep) (plural 처리 필요) | |
 | 258 | 분석 결과를 닫으시겠습니까? | Close analysis results? | alert 제목 | |
 | 259 | 현재 화면을 닫으면 분석 결과가 사라집니다. | Closing this screen will discard the results. | alert 메시지 | |
 | 260 | 취소 | Cancel | alert 버튼 | |
 | 261 | 닫기 | Close | alert 버튼 | |
-| 262 | 품질 5등급 | Lowest Quality | 등급 텍스트 | |
-| 263 | 품질 4등급 이하 | Low Quality | 등급 텍스트 | |
-| 264 | 품질 3등급 이하 | Poor Quality | 등급 텍스트 | |
+| 262 | 품질 5등급(최저) | Lowest Quality | 등급 텍스트 | |
+| 263 | 품질 4등급 이하 | Lower Quality & Below | 등급 텍스트 | |
+| 264 | 품질 3등급 이하 | Low Quality & Below | 등급 텍스트 | |
 | 265 | {gradeText} 사진 {count}장을\n삭제대기함으로 이동할까요? | Move {count} {gradeText} photos\nto Trash? | 정리 확인 alert (plural 처리 필요) | |
 | 266 | 이동하기 | Move | alert 버튼 | |
 
@@ -507,13 +509,13 @@
 
 | # | 한국어 (현재) | 영어 (제안) | 용도 | 확인 |
 |---|---|---|---|---|
-| 267 | 5등급 사진 {count}장 삭제대기함 이동 | Move {count} Lowest Quality photos to Trash | 정리 버튼 (light) (plural 처리 필요) | |
-| 268 | 4등급 이하 사진 {count}장 삭제대기함 이동 | Move {count} Low Quality photos to Trash | 정리 버튼 (standard) (plural 처리 필요) | |
-| 269 | 3등급 이하 사진 {count}장 삭제대기함 이동 | Move {count} Poor Quality photos to Trash | 정리 버튼 (deep) (plural 처리 필요) | |
-| 270 | 4등급 사진 {N}장 덜 보기 | Show fewer: {N} Low Quality photos | 축소 버튼 | |
-| 271 | 3등급 사진 {N}장 덜 보기 | Show fewer: {N} Poor Quality photos | 축소 버튼 | |
-| 272 | 4등급 사진 {N}장 더 보기 | Show more: {N} Low Quality photos | 확장 버튼 | |
-| 273 | 3등급 사진 {N}장 더 보기 | Show more: {N} Poor Quality photos | 확장 버튼 | |
+| 267 | 5등급(최저) 사진 {count}장 삭제대기함 이동 | Move {count} Lowest Quality photos to Trash | 정리 버튼 (light) (plural 처리 필요) | |
+| 268 | 4등급 이하 사진 {count}장 삭제대기함 이동 | Move {count} Lower Quality & Below photos to Trash | 정리 버튼 (standard) (plural 처리 필요) | |
+| 269 | 3등급 이하 사진 {count}장 삭제대기함 이동 | Move {count} Low Quality & Below photos to Trash | 정리 버튼 (deep) (plural 처리 필요) | |
+| 270 | 4등급 사진 {N}장 덜 보기 | Show fewer: {N} Lower Quality photos | 축소 버튼 | |
+| 271 | 3등급 사진 {N}장 덜 보기 | Show fewer: {N} Low Quality photos | 축소 버튼 | |
+| 272 | 4등급 사진 {N}장 더 보기 | Show more: {N} Lower Quality photos | 확장 버튼 | |
+| 273 | 3등급 사진 {N}장 더 보기 | Show more: {N} Low Quality photos | 확장 버튼 | |
 
 ### CleanupError
 
@@ -528,7 +530,7 @@
 | 280 | 현재 정리가 완료될 때까지 기다려주세요 | Please wait until the current cleanup finishes | 복구 제안 | |
 | 281 | 삭제대기함을 비운 후 다시 시도해주세요 | Please empty Trash and try again | 복구 제안 | |
 | 282 | 설정에서 사진 접근 권한을 허용해주세요 | Please allow photo library access in Settings | 복구 제안 | |
-| 283 | '최신사진부터 정리'를 선택해주세요 | Please select "From Latest Photos" | 복구 제안 | |
+| 283 | '최신사진부터 정리'를 선택해주세요 | Please select "Clean Up from Latest" | 복구 제안 | |
 | 284 | 앱을 재시작한 후 다시 시도해주세요 | Please restart the app and try again | 복구 제안 | |
 | 285 | 다시 시도해주세요 | Please try again | 복구 제안 | |
 
@@ -555,12 +557,12 @@
 
 | # | 한국어 (현재) | 영어 (제안) | 용도 | 확인 |
 |---|---|---|---|---|
-| 291 | 인물사진 비교정리 | Face Comparison | 시트 제목 | |
+| 291 | 인물사진 비교정리 | Compare & Clean Portraits | 시트 제목 | |
 | 292 | 비슷한 사진에서 같은 인물을\n찾아 얼굴을 비교합니다.\n마음에 들지 않는 사진을\n골라 정리할 수 있어요. | Finds the same person across similar photos\nand compares their faces.\nChoose the ones you don't like\nand clean them up. | 시트 설명문 | |
-| 293 | 최신사진부터 정리 | From Latest Photos | 액션 버튼 | |
-| 294 | 이어서 정리 ({dateString} 이전) | Continue ({dateString} and earlier) | 액션 버튼 | |
-| 295 | 이어서 정리 | Continue (disabled) | 액션 버튼 (비활성) | |
-| 296 | 연도별 정리 | By Year | 액션 버튼 | |
+| 293 | 최신사진부터 정리 | Clean Up from Latest | 액션 버튼 | |
+| 294 | 이어서 정리 ({dateString} 이전) | Clean Up from {dateString} and Earlier | 액션 버튼 | |
+| 295 | 이어서 정리 | Clean Up | 액션 버튼 (비활성) | |
+| 296 | 연도별 정리 | Clean Up by Year | 액션 버튼 | |
 | 297 | 취소 | Cancel | 액션 버튼 | |
 | 298 | 사진별 연도 목록 확인 중 | Checking photo years... | 로딩 메시지 | |
 | 299 | 연도 선택 | Select Year | 연도 시트 제목 | |
