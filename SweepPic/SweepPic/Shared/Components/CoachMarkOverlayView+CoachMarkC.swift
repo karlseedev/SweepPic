@@ -576,11 +576,19 @@ extension CoachMarkOverlayView {
         guard !UIAccessibility.isVoiceOverRunning else { return }
 
         let overlay = CoachMarkOverlayView(frame: window.bounds)
-        // similarPhoto 타입 사용 — C 전체 흐름의 마지막 단계
-        overlay.coachMarkType = .similarPhoto
+        // autoCleanup 타입 사용 — pill shape 하이라이트 + 단순 confirm
+        // (similarPhoto를 사용하면 confirmTapped에서 C 전용 시퀀스가 실행됨)
+        overlay.coachMarkType = .autoCleanup
         overlay.highlightFrame = highlightFrame ?? .zero
-        overlay.onConfirm = onConfirm
         overlay.alpha = 0
+
+        // confirmButton의 기존 타겟(confirmTapped) 제거 → 단순 dismiss + onConfirm 직접 연결
+        // D의 startD_ConfirmSequence(탭 모션)을 우회하기 위함
+        overlay.confirmButton.removeTarget(overlay, action: nil, for: .touchUpInside)
+        overlay.confirmButton.addAction(UIAction { [weak overlay] _ in
+            overlay?.dismiss()
+            onConfirm()
+        }, for: .touchUpInside)
 
         if let frame = highlightFrame {
             // 포커싱 모션: 큰 pill → 버튼 모양으로 축소
