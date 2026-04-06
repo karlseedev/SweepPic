@@ -160,7 +160,20 @@ extension GridViewController {
                 return
             }
 
-            self.showSimilarBadgeCoachMark(cell: cell, assetID: assetID)
+            // 재검증: 얼굴 데이터가 존재하는지 (얼굴 감지까지 완료된 그룹만 C 트리거)
+            // feature print만으로 뱃지가 표시된 경우 뷰어에서 얼굴 버튼이 안 뜰 수 있음
+            Task {
+                let faces = await SimilarityCache.shared.getFaces(for: assetID)
+                await MainActor.run {
+                    guard !faces.isEmpty else {
+                        Logger.coachMark.debug("C1 스킵: 얼굴 데이터 없음 assetID=\(assetID)")
+                        self.hasTriggeredC1 = false
+                        self.retriggerForVisibleBadges()
+                        return
+                    }
+                    self.showSimilarBadgeCoachMark(cell: cell, assetID: assetID)
+                }
+            }
         }
     }
 
