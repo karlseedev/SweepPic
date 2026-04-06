@@ -57,12 +57,12 @@ extension ViewerViewController {
             guard let self else { return }
 
             guard success else {
-                // 타임아웃 — 터치 복원 + C 이번 시도 실패 (다음 뱃지에서 재시도)
-                // markAsShown() 호출 안 함 → 다음 기회에 C 재트리거 가능
-                Logger.coachMark.error("C2 TIMEOUT — faceButtons never appeared, 재시도 허용")
+                // 타임아웃 — 터치 복원 + C 전체 스킵
+                Logger.coachMark.error("C2 TIMEOUT — faceButtons never appeared")
                 self.view.isUserInteractionEnabled = true
                 CoachMarkManager.shared.resetC2State()
                 CoachMarkManager.shared.currentOverlay?.dismiss()
+                CoachMarkType.similarPhoto.markAsShown()
                 return
             }
 
