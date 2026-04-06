@@ -287,13 +287,13 @@
 | # | 한국어 (현재) | 영어 (제안) | 용도 | 확인 |
 |---|---|---|---|---|
 | 138 | 로딩 중... | Loading... | 가격 텍스트 (로딩) | |
-| 139 | 월 {formatted} | {formatted}/mo | 연간 월 환산 가격 | |
-| 140 | {price}/연 | {price}/yr | 연간 가격 | |
-| 141 | {price}/월 | {price}/mo | 월간 가격 | |
+| 139 | 월 {formatted} | {formatted}/month | 연간 월 환산 가격 | |
+| 140 | {price}/연 | {price}/year | 연간 가격 | |
+| 141 | {price}/월 | {price}/month | 월간 가격 | |
 | 142 | {N}일 무료체험 | {N}-day free trial | 체험 기간 (일) | |
 | 143 | {N}개월 무료체험 | {N}-month free trial | 체험 기간 (월) | |
 | 144 | {N}년 무료체험 | {N}-year free trial | 체험 기간 (년) | |
-| 145 | 일일 삭제 | Daily Deletion | 비교표 feature | |
+| 145 | 일일 삭제 | Daily Deletes | 비교표 feature | |
 | 146 | 10장 | 10 photos | 비교표 (무료) | |
 | 147 | 무제한 | Unlimited | 비교표 (Pro) | |
 | 148 | 광고 | Ads | 비교표 feature | |
@@ -340,8 +340,8 @@
 | 164 | 아니요. 모든 사진 처리(유사 사진 분석, 얼굴 감지 포함)는 기기 내에서만 이루어집니다. 사진 데이터는 외부 서버로 전송되지 않습니다. | No. All photo processing (including similarity analysis and face detection) happens entirely on your device. No photo data is sent to external servers. | A2 | |
 | 165 | 지원하는 iOS 버전은? | What iOS versions are supported? | Q3 | |
 | 166 | iOS 16 이상을 지원합니다. | Requires iOS 16 or later. | A3 | |
-| 167 | 인물사진 비교정리가 정확하지 않아요 | Face Comparison isn't accurate | Q4 | |
-| 168 | 인물사진 비교정리는 AI 기반이라 일부 오분류가 있을 수 있습니다. 삭제 전 반드시 확인하시고, 실수로 삭제해도 삭제대기함에서 복구할 수 있습니다. | Face Comparison is AI-based and may occasionally misclassify. Always review before deleting. Accidentally deleted photos can be restored from Trash. | A4 | |
+| 167 | 인물사진 비교정리가 정확하지 않아요 | Compare & Clean Portraits isn't accurate | Q4 | |
+| 168 | 인물사진 비교정리는 사진의 화질, 얼굴 각도, 얼굴 위치 등에 따라 일부 오분류가 있을 수 있습니다. 삭제 전 반드시 확인하시고, 실수로 삭제해도 삭제대기함에서 복구할 수 있습니다. | Compare & Clean Portraits may occasionally misclassify due to photo quality, face angle, or face position. Always review before deleting. Accidentally deleted photos can be restored from Trash. | A4 | |
 | 169 | 자동 정리는 어떤 기준으로 사진을 선택하나요? | How does Auto Cleanup select photos? | Q5 | |
 | 170 | 유사 사진 그룹에서 화질, 초점, 구도 등을 분석하여 가장 좋은 사진을 남기고 나머지를 삭제대기함으로 이동합니다. 바로 삭제되지 않으니 안심하세요. | It analyzes quality, focus, and composition in similar photo groups, keeps the best one, and moves the rest to Trash. Don't worry — nothing is permanently deleted. | A5 | |
 | 171 | 멤버십/결제 | Membership & Billing | 섹션 제목 | |

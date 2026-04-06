@@ -101,8 +101,8 @@ cat <<EOF
 |------|-----|
 | 앱 실행 | ${LAUNCHES}회 |
 | 사진 열람 | ${VIEWS}장 |
-| 그리드 삭제 | ${DELETES}건 |
-| 그리드 복구 | ${RESTORES}건 |
+| 목록에서 밀어서 삭제 | ${DELETES}건 |
+| 목록에서 밀어서 복구 | ${RESTORES}건 |
 | 뷰어에서 밀어서 삭제 | ${VIEWER_DEL}건 |
 | 뷰어 휴지통 버튼 | ${VIEWER_TRASH}건 |
 | 뷰어 복구 버튼 | ${VIEWER_RESTORE}건 |

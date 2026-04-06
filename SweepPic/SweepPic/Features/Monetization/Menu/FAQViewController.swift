@@ -60,7 +60,7 @@ final class FAQViewController: UIViewController, BarsVisibilityControlling {
             ),
             FAQItem(
                 question: "인물사진 비교정리가 정확하지 않아요",
-                answer: "인물사진 비교정리는 AI 기반이라 일부 오분류가 있을 수 있습니다. 삭제 전 반드시 확인하시고, 실수로 삭제해도 삭제대기함에서 복구할 수 있습니다."
+                answer: "인물사진 비교정리는 사진의 화질, 얼굴 각도, 얼굴 위치 등에 따라 일부 오분류가 있을 수 있습니다. 삭제 전 반드시 확인하시고, 실수로 삭제해도 삭제대기함에서 복구할 수 있습니다."
             ),
             FAQItem(
                 question: "자동 정리는 어떤 기준으로 사진을 선택하나요?",
