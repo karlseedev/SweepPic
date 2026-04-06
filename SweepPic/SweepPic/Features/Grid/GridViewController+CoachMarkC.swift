@@ -336,77 +336,60 @@ extension GridViewController {
 
         Logger.coachMark.debug("C 사전분석 시작 (fetchResult \(fetchResult.count)장)")
 
-        // FaceScanService 인스턴스 생성 (격리 캐시)
+        // FaceScanService 인스턴스 생성 (격리 캐시 + 전용 이미지 로더)
+        // 전용 SimilarityImageLoader — 스크롤 시 .shared.pause() 영향을 받지 않음
         let cache = FaceScanCache()
-        let service = FaceScanService(cache: cache)
+        let service = FaceScanService(cache: cache, imageLoader: SimilarityImageLoader())
         service.skipSessionSave = true  // 사용자 세션 오염 방지
         cPreScanService = service
 
         Task(priority: .utility) { [weak self] in
             do {
-                try await service.analyze(
-                    method: .fromLatest,
-                    fetchResult: fetchResult,
-                    onGroupFound: { [weak self] group in
-                        // 메인 스레드 — 1그룹 발견 즉시 처리
-                        guard let self else { return }
-                        let assetID = group.memberAssetIDs.first ?? ""
+                // 경량 분석: 유효 그룹 1개 발견 시 즉시 반환 (race condition 없음)
+                let group = try await service.analyzeForFirstGroup(fetchResult: fetchResult)
 
-                        Logger.coachMark.debug("C 사전분석: 그룹 발견 (\(group.memberAssetIDs.count)장), 대표=\(assetID)")
+                guard let self else { return }
 
-                        // SimilarityCache.shared에 그룹 반영 (뱃지 표시용)
-                        Task {
-                            await SimilarityCache.shared.addGroupIfValid(
-                                members: group.memberAssetIDs,
-                                validSlots: group.validPersonIndices,
-                                photoFaces: [:]
-                            )
+                if let group {
+                    // ── 그룹 발견: 순차 await로 브리지/저장 (race 없음) ──
+                    let assetID = group.memberAssetIDs.first ?? ""
+                    Logger.coachMark.debug("C 사전분석: 그룹 발견 (\(group.memberAssetIDs.count)장), 대표=\(assetID)")
 
-                            // FaceScanCache에서 얼굴 데이터도 복사 (FaceComparisonVC용)
-                            for memberID in group.memberAssetIDs {
-                                let faces = await cache.getFaces(for: memberID)
-                                await SimilarityCache.shared.setFaces(faces, for: memberID)
-                            }
+                    // SimilarityCache.shared에 그룹 반영 (뱃지 표시용)
+                    await SimilarityCache.shared.addGroupIfValid(
+                        members: group.memberAssetIDs,
+                        validSlots: group.validPersonIndices,
+                        photoFaces: [:]
+                    )
 
-                            // UserDefaults 저장
-                            await MainActor.run {
-                                UserDefaults.standard.set(true, forKey: Self.cPreScanIsCompleteKey)
-                                UserDefaults.standard.set(assetID, forKey: Self.cPreScanFoundAssetIDKey)
-
-                                // 뱃지 갱신
-                                self.updateVisibleCellBorders()
-
-                                // 로딩 대기 중이면 알림
-                                self.onCPreScanStateChanged?()
-                            }
-                        }
-
-                        // 1그룹 발견 → 나머지 분석 취소
-                        service.cancel()
-                    },
-                    onProgress: { progress in
-                        // UI 표시 불필요하지만 디버그 로그는 출력
-                        let stateStr = progress.state == .preparing ? "preparing" : "analyzing"
-                        Logger.coachMark.debug("C 사전분석 진행: \(progress.scannedCount)/\(progress.totalPhotoCount)장, \(progress.groupCount)그룹, state=\(stateStr)")
+                    // FaceScanCache → SimilarityCache 얼굴 데이터 복사 (FaceComparisonVC용)
+                    for memberID in group.memberAssetIDs {
+                        let faces = await cache.getFaces(for: memberID)
+                        await SimilarityCache.shared.setFaces(faces, for: memberID)
                     }
-                )
 
-                // 자연 종료 (0건 완료)
-                await MainActor.run { [weak self] in
-                    guard let self else { return }
-                    if Self.cPreScanFoundAssetID == nil {
-                        // 0건 완료 마킹
+                    // UserDefaults 저장 + UI 갱신
+                    await MainActor.run {
+                        UserDefaults.standard.set(true, forKey: Self.cPreScanIsCompleteKey)
+                        UserDefaults.standard.set(assetID, forKey: Self.cPreScanFoundAssetIDKey)
+                        self.updateVisibleCellBorders()
+                        self.onCPreScanStateChanged?()
+                        self.cPreScanService = nil
+                    }
+                } else {
+                    // ── 0건 완료 ──
+                    await MainActor.run {
                         UserDefaults.standard.set(true, forKey: Self.cPreScanIsCompleteKey)
                         Logger.coachMark.debug("C 사전분석 완료: 0건")
+                        self.onCPreScanStateChanged?()
+                        self.cPreScanService = nil
                     }
-                    self.onCPreScanStateChanged?()
-                    self.cPreScanService = nil
                 }
             } catch is CancellationError {
-                // cancel()에 의한 정상 종료 (1그룹 발견 후)
+                // 외부 취소 (화면 이탈 등)
                 await MainActor.run { [weak self] in
                     self?.cPreScanService = nil
-                    Logger.coachMark.debug("C 사전분석: 1그룹 발견 후 정상 취소")
+                    Logger.coachMark.debug("C 사전분석: 취소됨")
                 }
             } catch {
                 await MainActor.run { [weak self] in

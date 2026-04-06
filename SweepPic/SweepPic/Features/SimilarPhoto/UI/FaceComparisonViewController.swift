@@ -567,6 +567,9 @@ final class FaceComparisonViewController: UIViewController {
                 }
             )
 
+            // C-3 오버레이가 올라갔으므로 터치 차단 해제 (오버레이가 대신 차단)
+            self.view.isUserInteractionEnabled = true
+
             // C-3 dismiss 후 auto pop 처리
             // isAutoPopForC가 true이면 FaceComparison을 자동 dismiss하여 뷰어로 복귀
             CoachMarkManager.shared.currentOverlay?.onDismiss = { [weak self] in

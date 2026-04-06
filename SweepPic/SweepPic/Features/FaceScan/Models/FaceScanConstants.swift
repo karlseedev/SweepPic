@@ -19,6 +19,14 @@ enum FaceScanConstants {
     /// 최대 발견 그룹 수
     static let maxGroupCount: Int = 30
 
+    // MARK: - 사전분석 (온보딩 C)
+
+    /// 사전분석 검색 상한 (그룹 1개만 빠르게 찾기 위한 경량 탐색)
+    static let preScanMaxCount: Int = 2_000
+
+    /// 사전분석 그루핑 체크 간격 (FP 누적 후 formGroups 실행 주기)
+    static let preScanGroupingInterval: Int = 100
+
     // MARK: - 청크 처리
 
     /// 한 번에 분석할 사진 수
