@@ -555,9 +555,9 @@ extension CoachMarkOverlayView {
         titleLabel.translatesAutoresizingMaskIntoConstraints = false
         card.addSubview(titleLabel)
 
-        // 설명
+        // 본문: 메뉴 경로 안내 (1뎁스 → 2뎁스)
         let descLabel = UILabel()
-        let descText = "간편정리 메뉴에서\n더욱 편리하��� 자동 탐색이 가능해요"
+        let descText = "간편정리 → 인물사진 비교정리"
         let descStyle = NSMutableParagraphStyle()
         descStyle.alignment = .center
         descStyle.lineSpacing = bodyFont.pointSize * 0.2
