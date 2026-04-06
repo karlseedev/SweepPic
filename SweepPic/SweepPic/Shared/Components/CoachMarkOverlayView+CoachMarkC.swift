@@ -545,9 +545,9 @@ extension CoachMarkOverlayView {
         card.addSubview(blur)
         overlay.addSubview(card)
 
-        // 타이틀: "간편정리 → 인물사진 비교정리" (메뉴 경로)
+        // 타이틀
         let titleLabel = UILabel()
-        titleLabel.text = "간편정리 → 인물사진 비교정리"
+        titleLabel.text = "간편정리 메뉴에서\n더욱 편리하게 자동 탐색이 가능해요"
         titleLabel.textColor = .white
         titleLabel.font = .systemFont(ofSize: 24, weight: .bold)
         titleLabel.textAlignment = .center
@@ -564,19 +564,11 @@ extension CoachMarkOverlayView {
         let descAttr = NSMutableAttributedString(
             string: descText,
             attributes: [
-                .font: bodyFont,
-                .foregroundColor: UIColor.white,
+                .font: UIFont.systemFont(ofSize: 16, weight: .regular),
+                .foregroundColor: UIColor.white.withAlphaComponent(0.7),
                 .paragraphStyle: descStyle
             ]
         )
-        // "자동 탐색" 강조
-        if let range = descText.range(of: "자동 탐색") {
-            let nsRange = NSRange(range, in: descText)
-            descAttr.addAttributes([
-                .font: bodyBoldFont,
-                .foregroundColor: highlightYellow,
-            ], range: nsRange)
-        }
         descLabel.attributedText = descAttr
         descLabel.numberOfLines = 0
         descLabel.translatesAutoresizingMaskIntoConstraints = false
