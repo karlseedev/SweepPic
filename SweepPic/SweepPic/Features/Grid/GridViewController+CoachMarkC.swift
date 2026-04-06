@@ -300,15 +300,8 @@ extension GridViewController {
             return
         }
 
-        // A, E-1 미완료 → 아직 C 차례 아님
-        guard CoachMarkType.gridSwipeDelete.hasBeenShown else {
-            Logger.coachMark.debug("C 사전분석 스킵: A 미완료")
-            return
-        }
-        guard CoachMarkType.firstDeleteGuide.hasBeenShown else {
-            Logger.coachMark.debug("C 사전분석 스킵: E-1 미완료")
-            return
-        }
+        // A/E-1 가드 없음 — 사전분석은 앱 시작 시 즉시 실행
+        // A/E-1 완료 전에 미리 그룹을 찾아두어야 C 트리거 시 즉시 표시 가능
 
         // 이전 분석 완료 → 재분석 불필요
         guard !Self.cPreScanIsComplete else {
