@@ -63,6 +63,10 @@ extension CoachMarkOverlayView {
         onSelect: @escaping () -> Void,
         onDeselect: @escaping () -> Void
     ) {
+        // C-1/C-2 오버레이 정리 (C-3는 새 오버레이를 사용하므로 기존 것 제거)
+        // currentOverlay는 weak이므로 removeFromSuperview → dealloc → nil
+        CoachMarkManager.shared.currentOverlay?.removeFromSuperview()
+
         let overlay = CoachMarkOverlayView(frame: window.bounds)
         overlay.coachMarkType = .faceComparisonGuide
         overlay.highlightFrame = cellFrame
