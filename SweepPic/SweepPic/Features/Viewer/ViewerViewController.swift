@@ -402,6 +402,19 @@ final class ViewerViewController: UIViewController {
             }
         }
 
+        // C-3 완료 후 자동 pop: 뷰어를 즉시 닫고 그리드로 복귀
+        if CoachMarkManager.shared.isAutoPopForC {
+            Logger.coachMark.debug("뷰어 자동 pop (isAutoPopForC=true)")
+            if isPushed {
+                // iOS 26+: Navigation pop
+                navigationController?.popViewController(animated: true)
+            } else {
+                // iOS 16~25: Modal dismiss
+                dismiss(animated: true)
+            }
+            return  // B, C-2, 유사사진 오버레이 등 모두 스킵
+        }
+
         // T026: 유사 사진 오버레이 표시
         showSimilarPhotoOverlay()
 

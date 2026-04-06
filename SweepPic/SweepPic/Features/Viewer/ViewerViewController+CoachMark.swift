@@ -21,6 +21,9 @@ extension ViewerViewController {
         // 이미 표시된 적 있으면 스킵
         guard !CoachMarkType.viewerSwipeDelete.hasBeenShown else { return }
 
+        // C 자동 pop 진행 중이면 B 스킵
+        guard !CoachMarkManager.shared.isAutoPopForC else { return }
+
         // C-2 대기 중이면 B 스킵 (C-2와 B 충돌 방지)
         guard !CoachMarkManager.shared.isWaitingForC2 else { return }
 

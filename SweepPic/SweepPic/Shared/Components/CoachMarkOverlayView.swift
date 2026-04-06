@@ -99,6 +99,19 @@ final class CoachMarkManager {
     /// A Step 1→2 전환 중 (true 동안 dismissCurrent() 차단)
     var isA2TransitionActive: Bool = false
 
+    // MARK: - C 자동 pop + 간편정리 하이라이트 상태
+
+    /// C-3 완료 후 자동 pop 진행 중 (true 동안 B 표시 차단, 뷰어 자동 pop)
+    var isAutoPopForC: Bool = false
+
+    /// 자동 pop 완료 후 간편정리 하이라이트 표시 대기 중
+    var pendingCleanupHighlight: Bool = false
+
+    // MARK: - D 표시 조건
+
+    /// C 완료 후 그리드를 떠났다 돌아올 때 D 표시 (viewWillDisappear에서 설정)
+    var pendingDAfterCComplete: Bool = false
+
     /// 현재 코치마크 dismiss
     /// ⚠️ C-1 → C-2 전환 중, E-1+E-2 시퀀스 진행 중, C-3 전환 중, A-1 진행 중에는 dismiss 차단 (오버레이 보호)
     func dismissCurrent() {

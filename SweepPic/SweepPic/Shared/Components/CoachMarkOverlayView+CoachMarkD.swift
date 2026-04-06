@@ -306,10 +306,11 @@ extension CoachMarkOverlayView {
     /// D 포커스 축소 애니메이션 (C-2 animateC2FocusCircle과 동일 패턴)
     /// 화면 전체를 덮는 큰 pill에서 정리 버튼 모양의 작은 pill로 축소
     /// pill shape (roundedRect) 사용 → 버튼 형태 유지하며 축소
+    /// internal: C 간편정리 하이라이트에서도 재사용
     /// - Parameters:
     ///   - targetFrame: 정리 버튼 프레임 (윈도우 좌표)
     ///   - completion: 애니메이션 완료 후 콜백
-    private func animateDFocus(to targetFrame: CGRect, completion: @escaping () -> Void) {
+    func animateDFocus(to targetFrame: CGRect, completion: @escaping () -> Void) {
         // 최종 pill (버튼 + margin 8pt, cornerRadius = 높이/2)
         let margin: CGFloat = 8
         let holeRect = targetFrame.insetBy(dx: -margin, dy: -margin)

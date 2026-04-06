@@ -259,4 +259,403 @@ extension GridViewController {
     private func navigateToViewerForCoachMark(at indexPath: IndexPath) {
         collectionView(collectionView, didSelectItemAt: indexPath)
     }
+
+    // MARK: - ═══════════════════════════════════════════
+    // MARK: Phase 1: C 사전 분석
+    // MARK: - ═══════════════════════════════════════════
+
+    // MARK: - UserDefaults Keys (C 사전분석)
+
+    /// C 사전분석 완료 여부
+    private static let cPreScanIsCompleteKey = "CoachMarkCPreScan.isComplete"
+    /// C 사전분석에서 발견된 대표 assetID (nil이면 0건)
+    private static let cPreScanFoundAssetIDKey = "CoachMarkCPreScan.foundAssetID"
+
+    /// C 사전분석 완료 + 0건 여부 (D 트리거 조건용)
+    static var cPreScanCompleteWithNoGroups: Bool {
+        let isComplete = UserDefaults.standard.bool(forKey: cPreScanIsCompleteKey)
+        let foundID = UserDefaults.standard.string(forKey: cPreScanFoundAssetIDKey)
+        return isComplete && foundID == nil
+    }
+
+    /// C 사전분석 결과 assetID (있으면 유사사진 그룹 발견됨)
+    private static var cPreScanFoundAssetID: String? {
+        UserDefaults.standard.string(forKey: cPreScanFoundAssetIDKey)
+    }
+
+    /// C 사전분석 완료 여부
+    private static var cPreScanIsComplete: Bool {
+        UserDefaults.standard.bool(forKey: cPreScanIsCompleteKey)
+    }
+
+    // MARK: - C 사전분석 실행
+
+    /// C 사전분석 시작 (viewDidAppear에서 호출)
+    /// FaceScanService를 사용하여 유사사진 1그룹을 백그라운드에서 찾음
+    func startCoachMarkCPreScanIfNeeded() {
+        // C 이미 표시됨 → 불필요
+        guard !CoachMarkType.similarPhoto.hasBeenShown else { return }
+
+        // A, E-1 미완료 → 아직 C 차례 아님
+        guard CoachMarkType.gridSwipeDelete.hasBeenShown,
+              CoachMarkType.firstDeleteGuide.hasBeenShown else { return }
+
+        // 이전 분석 완료 → 재분석 불필요
+        guard !Self.cPreScanIsComplete else { return }
+
+        // fetchResult 필요
+        guard let fetchResult = dataSourceDriver.fetchResult else { return }
+
+        // 이미 실행 중이면 스킵
+        guard cPreScanService == nil else { return }
+
+        Logger.coachMark.debug("C 사전분석 시작")
+
+        // FaceScanService 인스턴스 생성 (격리 캐시)
+        let cache = FaceScanCache()
+        let service = FaceScanService(cache: cache)
+        service.skipSessionSave = true  // 사용자 세션 오염 방지
+        cPreScanService = service
+
+        Task(priority: .utility) { [weak self] in
+            do {
+                try await service.analyze(
+                    method: .fromLatest,
+                    fetchResult: fetchResult,
+                    onGroupFound: { [weak self] group in
+                        // 메인 스레드 — 1그룹 발견 즉시 처리
+                        guard let self else { return }
+                        let assetID = group.memberAssetIDs.first ?? ""
+
+                        Logger.coachMark.debug("C 사전분석: 그룹 발견 (\(group.memberAssetIDs.count)장), 대표=\(assetID)")
+
+                        // SimilarityCache.shared에 그룹 반영 (뱃지 표시용)
+                        Task {
+                            await SimilarityCache.shared.addGroupIfValid(
+                                members: group.memberAssetIDs,
+                                validSlots: group.validPersonIndices,
+                                photoFaces: [:]
+                            )
+
+                            // FaceScanCache에서 얼굴 데이터도 복사 (FaceComparisonVC용)
+                            for memberID in group.memberAssetIDs {
+                                let faces = await cache.getFaces(for: memberID)
+                                await SimilarityCache.shared.setFaces(faces, for: memberID)
+                            }
+
+                            // UserDefaults 저장
+                            await MainActor.run {
+                                UserDefaults.standard.set(true, forKey: Self.cPreScanIsCompleteKey)
+                                UserDefaults.standard.set(assetID, forKey: Self.cPreScanFoundAssetIDKey)
+
+                                // 뱃지 갱신
+                                self.updateVisibleCellBorders()
+
+                                // 로딩 대기 중이면 알림
+                                self.onCPreScanStateChanged?()
+                            }
+                        }
+
+                        // 1그룹 발견 → 나머지 분석 취소
+                        service.cancel()
+                    },
+                    onProgress: { _ in
+                        // 진행률은 무시 (UI 표시 불필요)
+                    }
+                )
+
+                // 자연 종료 (0건 완료)
+                await MainActor.run { [weak self] in
+                    guard let self else { return }
+                    if Self.cPreScanFoundAssetID == nil {
+                        // 0건 완료 마킹
+                        UserDefaults.standard.set(true, forKey: Self.cPreScanIsCompleteKey)
+                        Logger.coachMark.debug("C 사전분석 완료: 0건")
+                    }
+                    self.onCPreScanStateChanged?()
+                    self.cPreScanService = nil
+                }
+            } catch is CancellationError {
+                // cancel()에 의한 정상 종료 (1그룹 발견 후)
+                await MainActor.run { [weak self] in
+                    self?.cPreScanService = nil
+                    Logger.coachMark.debug("C 사전분석: 1그룹 발견 후 정상 취소")
+                }
+            } catch {
+                await MainActor.run { [weak self] in
+                    self?.cPreScanService = nil
+                    Logger.coachMark.error("C 사전분석 오류: \(error)")
+                }
+            }
+        }
+    }
+
+    /// C 사전분석 FaceScanService 참조 (실행 중 관리용)
+    private var cPreScanService: FaceScanService? {
+        get { objc_getAssociatedObject(self, &CoachMarkCPreScanKeys.service) as? FaceScanService }
+        set { objc_setAssociatedObject(self, &CoachMarkCPreScanKeys.service, newValue, .OBJC_ASSOCIATION_RETAIN_NONATOMIC) }
+    }
+
+    /// C 사전분석 상태 변경 콜백 (로딩 대기 중 그룹 발견/완료 감지용)
+    var onCPreScanStateChanged: (() -> Void)? {
+        get { objc_getAssociatedObject(self, &CoachMarkCPreScanKeys.stateChanged) as? (() -> Void) }
+        set { objc_setAssociatedObject(self, &CoachMarkCPreScanKeys.stateChanged, newValue, .OBJC_ASSOCIATION_COPY_NONATOMIC) }
+    }
+
+    // MARK: - ═══════════════════════════════════════════
+    // MARK: Phase 2: 간편정리 버튼 C 인터셉트
+    // MARK: - ═══════════════════════════════════════════
+
+    /// C 인터셉트 활성화 (viewDidAppear에서 호출)
+    func enableCCleanupButtonIntercept() {
+        // C 이미 표시됨 → 인터셉트 불필요
+        guard !CoachMarkType.similarPhoto.hasBeenShown else { return }
+
+        // A, E-1 완료 후에만
+        guard CoachMarkType.gridSwipeDelete.hasBeenShown,
+              CoachMarkType.firstDeleteGuide.hasBeenShown else { return }
+
+        if #available(iOS 26.0, *) {
+            // iOS 26+: items[1](간편정리)에 primaryAction 설정
+            guard let items = navigationItem.rightBarButtonItems, items.count >= 2 else { return }
+            items[1].primaryAction = UIAction { [weak self] _ in
+                self?.handleCleanupInterceptForC()
+            }
+            Logger.coachMark.debug("C 인터셉트 활성화 (iOS 26+)")
+        } else {
+            // iOS 16~25: FloatingTitleBar cleanupButtonInterceptor 설정
+            guard let tabBarController = tabBarController as? TabBarController,
+                  let overlay = tabBarController.floatingOverlay else { return }
+            overlay.titleBar.cleanupButtonInterceptor = { [weak self] in
+                self?.handleCleanupInterceptForC()
+                return true  // 메뉴 차단
+            }
+            Logger.coachMark.debug("C 인터셉트 활성화 (iOS 16~25)")
+        }
+    }
+
+    /// C 인터셉트 비활성화
+    func disableCCleanupButtonIntercept() {
+        if #available(iOS 26.0, *) {
+            guard let items = navigationItem.rightBarButtonItems, items.count >= 2 else { return }
+            items[1].primaryAction = nil
+        } else {
+            guard let tabBarController = tabBarController as? TabBarController,
+                  let overlay = tabBarController.floatingOverlay else { return }
+            overlay.titleBar.cleanupButtonInterceptor = nil
+        }
+        Logger.coachMark.debug("C 인터셉트 비활성화")
+    }
+
+    /// 간편정리 버튼 C 인터셉트 핸들러
+    /// 사전분석 상태에 따라 분기
+    private func handleCleanupInterceptForC() {
+        // C 이미 표시됨 → 정상 진행
+        guard !CoachMarkType.similarPhoto.hasBeenShown else {
+            disableCCleanupButtonIntercept()
+            cleanupButtonTapped()
+            return
+        }
+
+        if let foundAssetID = Self.cPreScanFoundAssetID {
+            // 유사사진 있음 → 뱃지 셀로 스크롤 후 C 시작
+            Logger.coachMark.debug("C 인터셉트: 유사사진 발견, 스크롤 시작 assetID=\(foundAssetID)")
+            scrollToBadgeCellAndTriggerC(assetID: foundAssetID)
+        } else if Self.cPreScanIsComplete {
+            // 0건 완료 → 정상 메뉴 진행
+            Logger.coachMark.debug("C 인터셉트: 사전분석 0건, 정상 진행")
+            disableCCleanupButtonIntercept()
+            cleanupButtonTapped()
+        } else {
+            // 분석 중 → 로딩 표시 (5초 타임아웃)
+            Logger.coachMark.debug("C 인터셉트: 분석 중, 로딩 시작")
+            showCPreScanLoading()
+        }
+    }
+
+    // MARK: - 자동 스크롤 + C 트리거 (버그 #1 대응)
+
+    /// 뱃지 셀로 스크롤 후 C-1을 직접 표시
+    /// triggerCoachMarkCIfNeeded 대신 showSimilarBadgeCoachMark를 직접 호출하여
+    /// 비동기 updateVisibleCellBorders 타이밍 문제를 회피
+    private func scrollToBadgeCellAndTriggerC(assetID: String) {
+        // assetID → indexPath 해석
+        guard let found = dataSourceDriver.indexPath(for: assetID) else {
+            Logger.coachMark.error("C 자동스크롤: assetID 미발견 — 정상 메뉴 진행")
+            disableCCleanupButtonIntercept()
+            cleanupButtonTapped()
+            return
+        }
+
+        // padding 보정
+        let indexPath = IndexPath(item: found.item + paddingCellCount, section: found.section)
+
+        // 스크롤
+        scrollToCenteredItem(at: indexPath, animated: true)
+
+        // 0.6초 대기 후 C-1 직접 표시
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) { [weak self] in
+            guard let self else { return }
+
+            // 셀 확인
+            guard let cell = self.collectionView.cellForItem(at: indexPath) as? PhotoCell else {
+                Logger.coachMark.error("C 자동스크롤: 셀 없음 — 정상 메뉴 진행")
+                self.disableCCleanupButtonIntercept()
+                self.cleanupButtonTapped()
+                return
+            }
+
+            // 다른 코치마크 표시 중이면 스킵
+            guard !CoachMarkManager.shared.isShowing else { return }
+
+            // 뱃지 수동 표시 (showBadge가 아직 호출 안 됐을 수 있음)
+            self.showBadge(on: cell)
+
+            // 중복 방지 플래그 설정
+            self.hasTriggeredC1 = true
+
+            // C-1 직접 표시 (triggerCoachMarkCIfNeeded 우회)
+            self.showSimilarBadgeCoachMark(cell: cell, assetID: assetID)
+        }
+    }
+
+    // MARK: - 로딩 표시 (분석 중 대기)
+
+    /// "비슷한 사진을 찾고 있어요" 로딩 표시
+    /// 5초 타임아웃 또는 그룹 발견 시 자동 해제
+    private func showCPreScanLoading() {
+        // 로딩 뷰 생성 (간단한 UIActivityIndicator + 텍스트)
+        guard let window = view.window else { return }
+
+        let loadingView = UIView(frame: window.bounds)
+        loadingView.backgroundColor = UIColor.black.withAlphaComponent(0.6)
+        loadingView.tag = 99877  // 식별용
+
+        let stack = UIStackView()
+        stack.axis = .vertical
+        stack.spacing = 12
+        stack.alignment = .center
+        stack.translatesAutoresizingMaskIntoConstraints = false
+
+        let spinner = UIActivityIndicatorView(style: .large)
+        spinner.color = .white
+        spinner.startAnimating()
+
+        let label = UILabel()
+        label.text = "비슷한 사진을 찾고 있어요"
+        label.textColor = .white
+        label.font = .systemFont(ofSize: 17, weight: .medium)
+
+        stack.addArrangedSubview(spinner)
+        stack.addArrangedSubview(label)
+        loadingView.addSubview(stack)
+
+        NSLayoutConstraint.activate([
+            stack.centerXAnchor.constraint(equalTo: loadingView.centerXAnchor),
+            stack.centerYAnchor.constraint(equalTo: loadingView.centerYAnchor),
+        ])
+
+        window.addSubview(loadingView)
+
+        // 5초 타임아웃
+        let timeoutWork = DispatchWorkItem { [weak self] in
+            self?.dismissCPreScanLoading()
+            Logger.coachMark.debug("C 로딩: 타임아웃 — 정상 메뉴 진행")
+            self?.disableCCleanupButtonIntercept()
+            self?.cleanupButtonTapped()
+        }
+        cPreScanLoadingTimeout = timeoutWork
+        DispatchQueue.main.asyncAfter(deadline: .now() + 5.0, execute: timeoutWork)
+
+        // 그룹 발견/완료 콜백
+        onCPreScanStateChanged = { [weak self] in
+            guard let self else { return }
+            self.cPreScanLoadingTimeout?.cancel()
+            self.cPreScanLoadingTimeout = nil
+            self.dismissCPreScanLoading()
+
+            if let foundAssetID = Self.cPreScanFoundAssetID {
+                // 유사사진 발견 → 스크롤 후 C 시작
+                self.scrollToBadgeCellAndTriggerC(assetID: foundAssetID)
+            } else {
+                // 0건 완료 → 정상 메뉴 진행
+                self.disableCCleanupButtonIntercept()
+                self.cleanupButtonTapped()
+            }
+            self.onCPreScanStateChanged = nil
+        }
+    }
+
+    /// 로딩 뷰 제거
+    private func dismissCPreScanLoading() {
+        view.window?.viewWithTag(99877)?.removeFromSuperview()
+    }
+
+    /// 로딩 타임아웃 WorkItem (취소용)
+    private var cPreScanLoadingTimeout: DispatchWorkItem? {
+        get { objc_getAssociatedObject(self, &CoachMarkCPreScanKeys.loadingTimeout) as? DispatchWorkItem }
+        set { objc_setAssociatedObject(self, &CoachMarkCPreScanKeys.loadingTimeout, newValue, .OBJC_ASSOCIATION_RETAIN_NONATOMIC) }
+    }
+
+    // MARK: - ═══════════════════════════════════════════
+    // MARK: Phase 3: 간편정리 버튼 하이라이트
+    // MARK: - ═══════════════════════════════════════════
+
+    /// 그리드 복귀 시 간편정리 하이라이트 표시 (viewerDidClose/transitionCoordinator에서 호출)
+    func showCleanupHighlightIfPending() {
+        guard CoachMarkManager.shared.pendingCleanupHighlight else { return }
+
+        // 플래그 리셋
+        CoachMarkManager.shared.isAutoPopForC = false
+        CoachMarkManager.shared.pendingCleanupHighlight = false
+
+        // 0.3초 딜레이 (전환 애니메이션 완료 대기)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { [weak self] in
+            self?.showCleanupButtonHighlight()
+        }
+    }
+
+    /// 간편정리 버튼 하이라이트 코치마크 표시
+    private func showCleanupButtonHighlight() {
+        guard let window = view.window else { return }
+        guard let cleanupFrame = getCleanupButtonFrame(in: window) else {
+            Logger.coachMark.error("C 하이라이트: 간편정리 버튼 프레임 없음")
+            return
+        }
+
+        Logger.coachMark.debug("C 하이라이트: 간편정리 버튼 표시")
+
+        CoachMarkOverlayView.showCleanupGuide(
+            highlightFrame: cleanupFrame,
+            in: window,
+            onConfirm: { [weak self] in
+                guard let self else { return }
+                // 인터셉트 해제
+                self.disableCCleanupButtonIntercept()
+                // D 사전 스캔 시작 (D 표시는 나중에)
+                self.startCoachMarkDPreScanIfNeeded()
+            }
+        )
+    }
+
+    // MARK: - Debug Reset
+
+    #if DEBUG
+    /// C 사전분석 리셋 (테스트용)
+    func debugResetCPreScan() {
+        UserDefaults.standard.removeObject(forKey: Self.cPreScanIsCompleteKey)
+        UserDefaults.standard.removeObject(forKey: Self.cPreScanFoundAssetIDKey)
+        cPreScanService?.cancel()
+        cPreScanService = nil
+        Logger.coachMark.debug("C 사전분석 리셋 완료")
+    }
+    #endif
+}
+
+// MARK: - Associated Keys (C 사전분석)
+
+private enum CoachMarkCPreScanKeys {
+    static var service: UInt8 = 0
+    static var stateChanged: UInt8 = 0
+    static var loadingTimeout: UInt8 = 0
 }

@@ -566,6 +566,16 @@ final class FaceComparisonViewController: UIViewController {
                     firstCell.setSelected(false)
                 }
             )
+
+            // C-3 dismiss 후 auto pop 처리
+            // isAutoPopForC가 true이면 FaceComparison을 자동 dismiss하여 뷰어로 복귀
+            CoachMarkManager.shared.currentOverlay?.onDismiss = { [weak self] in
+                guard CoachMarkManager.shared.isAutoPopForC else { return }
+                // FaceComparison dismiss → 뷰어로 복귀
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                    self?.dismiss(animated: true)
+                }
+            }
         }
     }
 

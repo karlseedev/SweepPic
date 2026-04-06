@@ -666,7 +666,7 @@ extension GridViewController {
                         ToastView.show("앱을 백그라운드로 보냈다가 복귀하세요", in: window)
                     }
                 },
-                UIAction(title: "온보딩 리셋") { _ in
+                UIAction(title: "온보딩 리셋") { [weak self] _ in
                     #if DEBUG
                     // 모든 CoachMarkType 리셋 — 신규 설치 상태로 초기화
                     let allTypes: [CoachMarkType] = [
@@ -679,7 +679,14 @@ extension GridViewController {
                         .faceComparisonGuide,   // C-3
                     ]
                     allTypes.forEach { $0.resetShown() }
-                    Logger.coachMark.notice("디버그: 온보딩 전체 초기화 완료 (\(allTypes.count)개)")
+                    // C 사전분석 + D 사전스캔 리셋
+                    self?.debugResetCPreScan()
+                    CoachMarkDPreScanner.shared.debugReset()
+                    // CoachMarkManager 플래그 리셋
+                    CoachMarkManager.shared.isAutoPopForC = false
+                    CoachMarkManager.shared.pendingCleanupHighlight = false
+                    CoachMarkManager.shared.pendingDAfterCComplete = false
+                    Logger.coachMark.notice("디버그: 온보딩 전체 초기화 완료 (\(allTypes.count)개 + 사전분석)")
                     #endif
                 },
             ]

@@ -49,6 +49,12 @@ final class FaceScanService {
     var isCancelled = false
     let cancelLock = NSLock()
 
+    // MARK: - C 사전분석용 옵션
+
+    /// true이면 분석 완료 시 세션을 UserDefaults에 저장하지 않음
+    /// C 온보딩 사전분석에서 사용 — 사용자의 "이어서 정리" 세션 오염 방지
+    var skipSessionSave: Bool = false
+
     // MARK: - 세션 저장 키 (UserDefaults)
 
     private static let lastScanDateKey = "FaceScanSession.lastScanDate"
@@ -557,8 +563,12 @@ final class FaceScanService {
 
     // MARK: - 세션 저장
 
-    /// 분석 완료 시 세션 저장
+    /// 분석 완료 시 세션 저장 (skipSessionSave=true이면 저장 생략)
     private func saveSession(method: FaceScanMethod, lastDate: Date, lastAssetID: String) {
+        guard !skipSessionSave else {
+            Logger.similarPhoto.debug("FaceScanService: 세션 저장 생략 (skipSessionSave=true)")
+            return
+        }
         switch method {
         case .fromLatest, .continueFromLast:
             UserDefaults.standard.set(lastDate, forKey: Self.lastScanDateKey)

@@ -494,6 +494,164 @@ extension CoachMarkOverlayView {
         CATransaction.commit()
     }
 
+    // MARK: - C 간편정리 하이라이트 (Phase 3: 버그 #2, #5 대응)
+
+    /// C 완료 �� 간편정리 버튼 안내 코치마크 표시
+    /// D와 유사한 구조 (pill shape 하이라이트 + 카드)
+    /// - Parameters:
+    ///   - highlightFrame: 간편정리 버튼 프레임 (윈도우 좌표)
+    ///   - window: 표시할 윈도우
+    ///   - onConfirm: 확인 버튼 콜백
+    static func showCleanupGuide(
+        highlightFrame: CGRect,
+        in window: UIWindow,
+        onConfirm: @escaping () -> Void
+    ) {
+        let overlay = CoachMarkOverlayView(frame: window.bounds)
+        // .autoCleanup 타입 사용 (pill shape 하이라이트 재사용)
+        overlay.coachMarkType = .autoCleanup
+        overlay.highlightFrame = highlightFrame
+        overlay.alpha = 0
+
+        // 큰 pill에서 시작 → 버튼 모양으로 축소 (D showAutoCleanup과 동일 패턴)
+        let margin: CGFloat = 8
+        let holeRect = highlightFrame.insetBy(dx: -margin, dy: -margin)
+        let scaleFactor = max(overlay.bounds.width, overlay.bounds.height) * 3.0
+            / max(holeRect.width, holeRect.height)
+        let startWidth = holeRect.width * scaleFactor
+        let startHeight = holeRect.height * scaleFactor
+        let startRect = CGRect(
+            x: holeRect.midX - startWidth / 2,
+            y: holeRect.midY - startHeight / 2,
+            width: startWidth,
+            height: startHeight
+        )
+        let startPath = UIBezierPath(rect: overlay.bounds)
+        startPath.append(UIBezierPath(roundedRect: startRect, cornerRadius: startRect.height / 2))
+        overlay.dimLayer.path = startPath.cgPath
+
+        window.addSubview(overlay)
+        CoachMarkManager.shared.currentOverlay = overlay
+
+        // 카드 구성
+        let card = UIView()
+        card.layer.cornerRadius = 20
+        card.clipsToBounds = true
+        card.translatesAutoresizingMaskIntoConstraints = false
+
+        let blur = UIVisualEffectView(effect: UIBlurEffect(style: .systemMaterialDark))
+        blur.frame = card.bounds
+        blur.autoresizingMask = [.flexibleWidth, .flexibleHeight]
+        card.addSubview(blur)
+        overlay.addSubview(card)
+
+        // 타이틀: "간편정리 → 인물사진 비교정리" (메뉴 경로)
+        let titleLabel = UILabel()
+        titleLabel.text = "간편정리 → 인물사진 비교정리"
+        titleLabel.textColor = .white
+        titleLabel.font = .systemFont(ofSize: 24, weight: .bold)
+        titleLabel.textAlignment = .center
+        titleLabel.numberOfLines = 0
+        titleLabel.translatesAutoresizingMaskIntoConstraints = false
+        card.addSubview(titleLabel)
+
+        // 설명
+        let descLabel = UILabel()
+        let descText = "간편정리 메뉴에서\n더욱 편리하��� 자동 탐색이 가능해요"
+        let descStyle = NSMutableParagraphStyle()
+        descStyle.alignment = .center
+        descStyle.lineSpacing = bodyFont.pointSize * 0.2
+        let descAttr = NSMutableAttributedString(
+            string: descText,
+            attributes: [
+                .font: bodyFont,
+                .foregroundColor: UIColor.white,
+                .paragraphStyle: descStyle
+            ]
+        )
+        // "자동 탐색" 강조
+        if let range = descText.range(of: "자동 탐색") {
+            let nsRange = NSRange(range, in: descText)
+            descAttr.addAttributes([
+                .font: bodyBoldFont,
+                .foregroundColor: highlightYellow,
+            ], range: nsRange)
+        }
+        descLabel.attributedText = descAttr
+        descLabel.numberOfLines = 0
+        descLabel.translatesAutoresizingMaskIntoConstraints = false
+        card.addSubview(descLabel)
+
+        // 확인 버튼 — confirmButton 타겟 완전 교체 (버그 #2, #5 대응)
+        // dismiss()를 호출하지 않아 .autoCleanup.markAsShown() 방지
+        overlay.confirmButton.setTitleColor(.black, for: .normal)
+        overlay.confirmButton.backgroundColor = .white
+        overlay.confirmButton.isEnabled = true
+        overlay.confirmButton.alpha = 1
+        overlay.confirmButton.translatesAutoresizingMaskIntoConstraints = false
+
+        // 기존 타겟 제거 + 커스텀 액션 추가
+        overlay.confirmButton.removeTarget(overlay, action: nil, for: .touchUpInside)
+        overlay.confirmButton.addAction(UIAction { [weak overlay] _ in
+            // dismiss() 호출 안 함 — .autoCleanup.markAsShown() 방지 (#5)
+            CoachMarkManager.shared.currentOverlay = nil
+            UIView.animate(withDuration: 0.2, animations: {
+                overlay?.alpha = 0
+            }) { _ in
+                overlay?.removeFromSuperview()
+                onConfirm()
+            }
+        }, for: .touchUpInside)
+
+        card.addSubview(overlay.confirmButton)
+
+        // 레이아웃
+        NSLayoutConstraint.activate([
+            card.centerXAnchor.constraint(equalTo: overlay.centerXAnchor),
+            card.centerYAnchor.constraint(equalTo: overlay.centerYAnchor),
+            card.leadingAnchor.constraint(greaterThanOrEqualTo: overlay.leadingAnchor, constant: 24),
+            card.trailingAnchor.constraint(lessThanOrEqualTo: overlay.trailingAnchor, constant: -24),
+            card.widthAnchor.constraint(equalTo: overlay.widthAnchor, constant: -48),
+
+            titleLabel.topAnchor.constraint(equalTo: card.topAnchor, constant: 24),
+            titleLabel.leadingAnchor.constraint(equalTo: card.leadingAnchor, constant: 20),
+            titleLabel.trailingAnchor.constraint(equalTo: card.trailingAnchor, constant: -20),
+
+            descLabel.topAnchor.constraint(equalTo: titleLabel.bottomAnchor, constant: 12),
+            descLabel.leadingAnchor.constraint(equalTo: card.leadingAnchor, constant: 20),
+            descLabel.trailingAnchor.constraint(equalTo: card.trailingAnchor, constant: -20),
+
+            overlay.confirmButton.topAnchor.constraint(equalTo: descLabel.bottomAnchor, constant: 20),
+            overlay.confirmButton.centerXAnchor.constraint(equalTo: card.centerXAnchor),
+            overlay.confirmButton.widthAnchor.constraint(equalToConstant: 120),
+            overlay.confirmButton.heightAnchor.constraint(equalToConstant: 44),
+            overlay.confirmButton.bottomAnchor.constraint(equalTo: card.bottomAnchor, constant: -24),
+        ])
+
+        // lifecycle dismiss 대응 (버그 #4 보완)
+        // 탭 전환 등으로 dismiss() 호출 시 autoCleanup.markAsShown()이 호출되므로
+        // onDismiss에서 resetShown()으로 되돌림
+        overlay.onDismiss = {
+            CoachMarkType.autoCleanup.resetShown()
+        }
+
+        // 카드 초기 비표시 → 포커싱 모션 → 카드 ��이드인
+        card.alpha = 0
+
+        UIView.animate(withDuration: 0.3) {
+            overlay.alpha = 1
+        }
+        overlay.animateDFocus(to: highlightFrame) {
+            guard !overlay.shouldStopAnimation else { return }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                guard !overlay.shouldStopAnimation else { return }
+                UIView.animate(withDuration: 0.3) {
+                    card.alpha = 1
+                }
+            }
+        }
+    }
+
     // MARK: - Press Feedback
 
     /// 탭 모션 중 눌림 피드백
