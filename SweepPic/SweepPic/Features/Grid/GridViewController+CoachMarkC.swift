@@ -671,13 +671,10 @@ extension GridViewController {
         CoachMarkManager.shared.isAutoPopForC = false
         CoachMarkManager.shared.pendingCleanupHighlight = false
 
-        // 즉시 터치 차단 (그리드 복귀 ~ 간편정리 하이라이트 표시 사이 터치 방지)
-        let blocker = UIView(frame: view.window?.bounds ?? view.bounds)
-        view.window?.addSubview(blocker)
-
         // 0.3초 딜레이 (전환 애니메이션 완료 대기)
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { [weak self] in
-            blocker.removeFromSuperview()
+            // 뷰어 auto-pop 시 추가한 터치 차단 뷰 제거 (tag 99878)
+            self?.view.window?.viewWithTag(99878)?.removeFromSuperview()
             self?.showCleanupButtonHighlight()
         }
     }

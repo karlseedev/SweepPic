@@ -405,6 +405,14 @@ final class ViewerViewController: UIViewController {
         // C-3 완료 후 자동 pop: 뷰어를 즉시 닫고 그리드로 복귀
         if CoachMarkManager.shared.isAutoPopForC {
             Logger.coachMark.debug("뷰어 자동 pop (isAutoPopForC=true)")
+
+            // pop 애니메이션 중 그리드 터치 차단 (showCleanupHighlightIfPending에서 제거)
+            if let window = view.window {
+                let blocker = UIView(frame: window.bounds)
+                blocker.tag = 99878  // showCleanupHighlightIfPending에서 식별
+                window.addSubview(blocker)
+            }
+
             if isPushed {
                 // iOS 26+: Navigation pop
                 navigationController?.popViewController(animated: true)
