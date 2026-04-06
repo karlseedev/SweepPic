@@ -179,6 +179,7 @@
 | 76 | ※ 얼굴은 각도, 해상도에 따라 검출되지 않거나\n다른 인물로 분류될 수 있습니다 | Note: Faces may not be detected or may be\nmisclassified depending on angle or resolution | C-2 부가 안내 | |
 | 77 | +버튼 | + button | C-2 키워드 | |
 | 78 | 얼굴비교화면 | Face Comparison | C-2 키워드 | |
+| 78-1 | 간편정리 메뉴에서\n더욱 편리하게 자동 탐색이 가능해요\n\n간편정리 → 인물사진 비교정리 | Auto scanning is available\nfrom the Clean Up menu\n\nClean Up → Compare & Clean Portraits | C-2 후속 안내 본문 (키워드: "자동 탐색" / "Auto scanning") | |
 
 ### C-3
 
