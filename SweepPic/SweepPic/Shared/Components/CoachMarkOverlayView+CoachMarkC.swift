@@ -582,11 +582,16 @@ extension CoachMarkOverlayView {
         overlay.highlightFrame = highlightFrame ?? .zero
         overlay.alpha = 0
 
-        // confirmButton의 기존 타겟(confirmTapped) 제거 → 단순 dismiss + onConfirm 직접 연결
-        // D의 startD_ConfirmSequence(탭 모션)을 우회하기 위함
+        // confirmButton 동작을 완전 커스텀 — dismiss() 우회 (복잡한 분기 + markAsShown 부작용 방지)
         overlay.confirmButton.removeTarget(overlay, action: nil, for: .touchUpInside)
         overlay.confirmButton.addAction(UIAction { [weak overlay] _ in
-            overlay?.dismiss()
+            // 단순 페이드아웃 + 제거 (dismiss()의 autoCleanup 분기를 우회)
+            CoachMarkManager.shared.currentOverlay = nil
+            UIView.animate(withDuration: 0.2, animations: {
+                overlay?.alpha = 0
+            }) { _ in
+                overlay?.removeFromSuperview()
+            }
             onConfirm()
         }, for: .touchUpInside)
 
