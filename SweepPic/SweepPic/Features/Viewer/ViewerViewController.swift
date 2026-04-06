@@ -409,7 +409,7 @@ final class ViewerViewController: UIViewController {
         LiquidGlassOptimizer.preload(in: view.window)
         LiquidGlassOptimizer.enterIdle(in: view.window)
 
-        // 코치마크 B: 뷰어 스와이프 삭제 안내
+        // 코치마크 B: 뷰어에서 밀어서 삭제 안내
         showViewerSwipeDeleteCoachMarkIfNeeded()
 
         // 코치마크 C-2: + 버튼 하이라이트 (C-1에서 자동 네비게이션 후)

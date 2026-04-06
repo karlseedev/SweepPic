@@ -253,7 +253,7 @@ final class AnalyticsUITest: XCTestCase {
         endSession()
     }
 
-    // MARK: - Phase 4: 목록 스와이프 삭제 (gridSwipeDelete)
+    // MARK: - Phase 4: 목록에서 밀어서 삭제 (gridSwipeDelete)
 
     /// 기대값: session.deleteRestore — gridSwipeDelete=4, fromLibrary=4
     func testPhase4_gridSwipeDelete() throws {
@@ -323,7 +323,7 @@ final class AnalyticsUITest: XCTestCase {
     /// 기대값: session.photoViewing — total=3, fromAlbum=3
     ///         session.deleteRestore — gridSwipeDelete=1, fromAlbum=1
     ///
-    /// 앨범 탭 → 앨범 상세 그리드 → 뷰어 열기/스와이프 → 목록 스와이프 삭제
+    /// 앨범 탭 → 앨범 상세 그리드 → 뷰어 열기/스와이프 → 목록에서 밀어서 삭제
     /// AlbumGridViewController 경유 시 deleteSource=.album → fromAlbum 카운터 증가 확인
     ///
     /// 사전 조건: 앨범에 사진 4장 이상 필요 (스와이프 3회 + 삭제 1회)
@@ -366,7 +366,7 @@ final class AnalyticsUITest: XCTestCase {
         XCTAssertTrue(albumGrid.waitForExistence(timeout: 5), "앨범 그리드 복귀 실패")
         Thread.sleep(forTimeInterval: 0.3)
 
-        // 7. 목록 스와이프 삭제 1회 (countGridSwipeDelete source:.album → fromAlbum +1)
+        // 7. 목록에서 밀어서 삭제 1회 (countGridSwipeDelete source:.album → fromAlbum +1)
         // 패딩 셀 건너뛰기
         let swipeCell = albumGrid.cells.element(boundBy: 3)
         let start = swipeCell.coordinate(withNormalizedOffset: CGVector(dx: 0.8, dy: 0.5))
@@ -396,7 +396,7 @@ final class AnalyticsUITest: XCTestCase {
         // Phase 3: 뷰어 삭제
         phase3_viewerDelete()
 
-        // Phase 4: 목록 스와이프 삭제
+        // Phase 4: 목록에서 밀어서 삭제
         phase4_gridSwipeDelete()
 
         // Phase 5: 삭제대기함
@@ -582,7 +582,7 @@ final class AnalyticsUITest: XCTestCase {
         XCTAssertTrue(albumGrid.waitForExistence(timeout: 5), "앨범 그리드 복귀 실패")
         Thread.sleep(forTimeInterval: 0.3)
 
-        // 7. 목록 스와이프 삭제 1회 (deleteRestore.fromAlbum +1)
+        // 7. 목록에서 밀어서 삭제 1회 (deleteRestore.fromAlbum +1)
         // 패딩 셀 건너뛰기
         let swipeCell = albumGrid.cells.element(boundBy: 3)
         let start = swipeCell.coordinate(withNormalizedOffset: CGVector(dx: 0.8, dy: 0.5))

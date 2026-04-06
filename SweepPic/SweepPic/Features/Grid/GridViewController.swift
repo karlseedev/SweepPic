@@ -1036,7 +1036,7 @@ extension GridViewController: ViewerViewControllerDelegate {
         // [SimilarPhoto] 그룹 무효화 처리 (T022)
         handleSimilarPhotoAssetDeleted(assetID: assetID)
 
-        // E-1+E-2: 뷰어 삭제에서는 트리거하지 않음 (목록 스와이프 삭제에서만 트리거)
+        // E-1+E-2: 뷰어 삭제에서는 트리거하지 않음 (목록에서 밀어서 삭제할 때만 트리거)
     }
 
     /// 사진 복구 요청 (삭제대기함에서 복원)

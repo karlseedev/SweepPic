@@ -143,14 +143,14 @@
 | # | 한국어 (현재) | 영어 (제안) | 용도 | 확인 |
 |---|---|---|---|---|
 | 57 | 완전히 새로운 삭제 방법 | A Brand New Way to Delete | 타이틀 | |
-| 58 | 사진을 밀어서 바로 정리하세요\n다시 밀면 복원돼요\n정리한 사진은 삭제대기함으로 이동됩니다 | Swipe to organize your photos\nSwipe again to restore\nDeleted photos are moved to Trash | 본문 | |
-| 59 | 정리 | organize | 키워드 (강조) | |
+| 58 | 목록에서 사진을 밀어서 바로 정리하세요\n다시 밀면 복원돼요\n정리한 사진은 삭제대기함으로 이동됩니다 | Swipe photos in the library\nto delete\nSwipe again to restore\nDeleted photos move to Trash | 본문 | |
+| 59 | 정리 | delete | 키워드 (강조) | |
 | 60 | 복원 | restore | 키워드 (강조) | |
 | 61 | 삭제대기함 | Trash | 키워드 (강조) | |
 | 62 | 확인 | OK | 버튼 | |
 | 63 | 설명을 위해 사진을 임시로 삭제합니다\n(삭제대기함에서 복구 가능) | A photo will be temporarily deleted for this demo\n(You can restore it from Trash) | A 변형 카드 | |
 | 64 | 임시로 삭제 | temporarily deleted | 키워드 (강조) | |
-| 65 | 사진을 위로 밀면 바로\n삭제대기함으로 이동해요 | Swipe up to move photos\nto Trash | B 뷰어 카드 | |
+| 65 | 사진을 위로 밀면 바로\n삭제대기함으로 이동해요 | Swipe up to move a photo\nto Trash | B 뷰어 카드 | |
 | 66 | 삭제대기함 | Trash | 키워드 (강조) | |
 
 ### A-1
@@ -164,10 +164,10 @@
 
 | # | 한국어 (현재) | 영어 (제안) | 용도 | 확인 |
 |---|---|---|---|---|
-| 69 | 한번에 쓱 | Swipe & Select | 타이틀 | |
-| 70 | 가로로 밀면서 좌우/상하까지 더 선택하면\n여러 장을 한번에 정리해요 | Swipe horizontally and extend up/down\nto select and organize multiple photos at once | 본문 | |
+| 69 | 한번에 쓱 | All at Once | 타이틀 | |
+| 70 | 가로로 밀면서 좌우/상하까지 더 선택하면\n여러 장을 한번에 정리해요 | Swipe and extend up/down\nto select multiple photos\nand delete them all at once | 본문 | |
 | 71 | 여러 장 | multiple photos | 키워드 (강조) | |
-| 72 | 한번에 | at once | 키워드 (강조) | |
+| 72 | 한번에 | all at once | 키워드 (강조) | |
 
 ### C-1, C-2
 
@@ -447,7 +447,7 @@
 | # | 한국어 (현재) | 영어 (제안) | 용도 | 확인 |
 |---|---|---|---|---|
 | 226 | 저품질 사진 정리 | Low-Quality Photo Cleanup | 시트 제목 | |
-| 227 | 흔들리거나 초점이 맞지 않은 사진들을\n자동으로 찾아 정리합니다.\n정리된 사진은 삭제대기함에서 복구할 수 있어요. | Automatically finds and organizes\nblurry or out-of-focus photos.\nCleaned-up photos can be restored from Trash. | 시트 설명문 | |
+| 227 | 흔들리거나 초점이 맞지 않은 사진들을\n자동으로 찾아 정리합니다.\n정리된 사진은 삭제대기함에서 복구할 수 있어요. | Automatically finds and cleans up\nblurry or out-of-focus photos.\nCleaned-up photos can be restored from Trash. | 시트 설명문 | |
 | 228 | 최신사진부터 정리 | From Latest Photos | 액션 버튼 | |
 | 229 | 이어서 정리 ({dateString} 이전) | Continue ({dateString} and earlier) | 액션 버튼 | |
 | 230 | 이어서 정리 | Continue (disabled) | 액션 버튼 (비활성) | |

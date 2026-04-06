@@ -133,7 +133,7 @@ extension ViewerViewController {
         let tH1 = CACurrentMediaTime()
         Logger.viewer.debug("[DeleteLag] swipeDel haptic=\(String(format: "%.1f", (tH1-tH0)*1000))ms")
 
-        // [Analytics] 이벤트 4-1: 뷰어 스와이프 삭제
+        // [Analytics] 이벤트 4-1: 뷰어에서 밀어서 삭제
         AnalyticsService.shared.countViewerSwipeDelete(source: coordinator.deleteSource)
 
         performDeleteWithSlideAnimation(assetID: assetID)

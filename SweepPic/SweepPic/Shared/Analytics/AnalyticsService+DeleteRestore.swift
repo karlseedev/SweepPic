@@ -12,7 +12,7 @@ extension AnalyticsService {
 
     // MARK: - 이벤트 4-1: 보관함/앨범 삭제·복구
 
-    /// 목록 스와이프 삭제 카운터 증가
+    /// 목록에서 밀어서 삭제 카운터 증가
     /// - Parameter source: 진입 경로 (library/album)
     func countGridSwipeDelete(source: DeleteSource) {
         guard !shouldSkip() else { return }
@@ -26,7 +26,7 @@ extension AnalyticsService {
         }
     }
 
-    /// 그리드 스와이프 복구 카운터 증가
+    /// 목록에서 밀어서 복구 카운터 증가
     /// - Parameter source: 진입 경로 (library/album)
     func countGridSwipeRestore(source: DeleteSource) {
         guard !shouldSkip() else { return }
@@ -40,7 +40,7 @@ extension AnalyticsService {
         }
     }
 
-    /// 뷰어 스와이프 삭제 카운터 증가
+    /// 뷰어에서 밀어서 삭제 카운터 증가
     /// - Parameter source: 진입 경로 (library/album). nil이면 source 추적 생략
     func countViewerSwipeDelete(source: DeleteSource?) {
         guard !shouldSkip() else { return }

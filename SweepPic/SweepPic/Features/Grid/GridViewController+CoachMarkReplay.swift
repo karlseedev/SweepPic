@@ -38,7 +38,7 @@ extension GridViewController {
 
     /// A 코치마크 즉시 재생
     func replayCoachMarkA() {
-        Logger.coachMark.debug("A: 목록 스와이프 삭제 재생 시작")
+        Logger.coachMark.debug("A: 목록에서 밀어서 삭제 재생 시작")
 
         // 사진 0장 체크
         guard dataSourceDriver.count > 0 else {
@@ -67,7 +67,7 @@ extension GridViewController {
     /// 화면 중앙에서 가까운 이미지(비디오 제외) 셀을 찾아 뷰어로 이동
     /// viewDidAppear에서 B 가드 통과 → 자동 표시
     func replayCoachMarkB() {
-        Logger.coachMark.debug("B: 뷰어 스와이프 삭제 재생 시작")
+        Logger.coachMark.debug("B: 뷰어에서 밀어서 삭제 재생 시작")
 
         guard dataSourceDriver.count > 0 else {
             if let window = view.window {

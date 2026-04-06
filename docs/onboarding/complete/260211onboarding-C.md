@@ -385,7 +385,7 @@ C-1 → C-2 전환 중 `dismissCurrent()`를 호출하는 코드가 **5곳** 존
 | `ViewerViewController.viewWillDisappear` (라인 403) | 뷰어 닫힐 때 | NO (hitTest가 차단) |
 | `BaseGridViewController.handleSwipeDeleteBegan` (라인 809) | 그리드 스와이프 시 | NO (hitTest가 차단) |
 | `GridScroll.scrollDidBegin` (라인 104) | 그리드 스크롤 시 | NO (hitTest가 차단) |
-| `SwipeDeleteHandler.swift` (라인 80) | 뷰어 스와이프 삭제 시작 시 | NO (hitTest가 차단) |
+| `SwipeDeleteHandler.swift` (라인 80) | 뷰어에서 밀어서 삭제 시작 시 | NO (hitTest가 차단) |
 
 **GridVC.viewWillDisappear만이 실제 위협.** 뷰어 열림(push/present) 시 GridVC가 disappear하면서 반드시 발동.
 이 한 줄이 오버레이를 파괴하고 markAsShown()까지 호출하므로, **`isWaitingForC2` 가드 없이는 C 전체가 실패.**

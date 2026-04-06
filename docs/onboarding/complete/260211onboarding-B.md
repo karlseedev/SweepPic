@@ -1,4 +1,4 @@
-# 코치마크 B — 뷰어 스와이프 삭제 안내 구현 계획
+# 코치마크 B — 뷰어에서 밀어서 삭제 안내 구현 계획
 
 > **✅ 구현 완료** — 아래 계획 기반으로 구현 완료. 계획과 달라진 부분은 [하단 구현 완료 섹션](#구현-완료) 참조.
 
@@ -10,7 +10,7 @@
 
 ## Context
 
-온보딩 기획(`docs/onboarding/260211onboarding.md`)의 두 번째 코치마크. 코치마크 A(목록 스와이프 삭제, 구현 완료)의 공용 구조(`CoachMarkOverlayView`, `CoachMarkManager`, `CoachMarkType`)를 확장하여 구현한다.
+온보딩 기획(`docs/onboarding/260211onboarding.md`)의 두 번째 코치마크. 코치마크 A(목록에서 밀어서 삭제, 구현 완료)의 공용 구조(`CoachMarkOverlayView`, `CoachMarkManager`, `CoachMarkType`)를 확장하여 구현한다.
 
 ### A와의 핵심 차이
 
@@ -286,7 +286,7 @@ enum CoachMarkType: String {
 ### CoachMarkOverlayView — 새 show 메서드
 
 ```swift
-/// 코치마크 B: 뷰어 스와이프 삭제 표시
+/// 코치마크 B: 뷰어에서 밀어서 삭제 표시
 /// - photoSnapshot: currentPageImageView 스냅샷 (이미지만, 검은 여백 제외)
 /// - photoFrame: 윈도우 기준 이미지 프레임 (스냅샷 배치 좌표)
 /// - 즉시: 오버레이 생성 (alpha 0.01, 터치 차단) + 윈도우에 추가

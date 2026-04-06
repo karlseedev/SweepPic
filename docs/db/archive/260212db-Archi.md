@@ -309,9 +309,9 @@ struct SessionCounters {
 
     // ── 이벤트 4-1: 보관함/앨범 삭제·복구 ──
     struct DeleteRestore {
-        var gridSwipeDelete: Int = 0     // 목록 스와이프 삭제
-        var gridSwipeRestore: Int = 0    // 그리드 스와이프 복구
-        var viewerSwipeDelete: Int = 0   // 뷰어 스와이프 삭제
+        var gridSwipeDelete: Int = 0     // 목록에서 밀어서 삭제
+        var gridSwipeRestore: Int = 0    // 목록에서 밀어서 복구
+        var viewerSwipeDelete: Int = 0   // 뷰어에서 밀어서 삭제
         var viewerTrashButton: Int = 0   // 뷰어 휴지통 버튼
         var viewerRestoreButton: Int = 0 // 뷰어 복구 버튼
         var fromLibrary: Int = 0         // 보관함 경유 합계

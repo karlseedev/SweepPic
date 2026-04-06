@@ -27,8 +27,8 @@ import OSLog
 
 /// 코치마크 종류
 enum CoachMarkType: String {
-    case gridSwipeDelete = "coachMark_gridSwipe"       // A: 목록 스와이프 삭제
-    case viewerSwipeDelete = "coachMark_viewerSwipe"   // B: 뷰어 스와이프 삭제
+    case gridSwipeDelete = "coachMark_gridSwipe"       // A: 목록에서 밀어서 삭제
+    case viewerSwipeDelete = "coachMark_viewerSwipe"   // B: 뷰어에서 밀어서 삭제
     case similarPhoto = "coachMark_similarPhoto"       // C: 유사사진·얼굴 비교 (C-1 + C-2 통합 플래그)
     case autoCleanup = "coachMark_autoCleanup"              // D: 저품질 자동 정리 안내
     case firstDeleteGuide = "coachMark_firstDeleteGuide"  // E-1+E-2: 삭제 시스템 안내 (통합 시퀀스)
@@ -712,7 +712,7 @@ final class CoachMarkOverlayView: UIView {
 
     // MARK: - Show B (Viewer Swipe Delete)
 
-    /// 코치마크 B: 뷰어 스와이프 삭제 표시
+    /// 코치마크 B: 뷰어에서 밀어서 삭제 표시
     /// - 검정 배경 + 살짝 딤, 스냅샷+손가락 애니메이션 유지
     /// - 텍스트+확인 버튼은 E 스타일 blur 카드 팝업 (중앙 아래 배치)
     /// - containerView에 추가하여 뷰어의 상하단 버튼이 위에 보이도록 함

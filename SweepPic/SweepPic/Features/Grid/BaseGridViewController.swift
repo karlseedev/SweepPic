@@ -1122,7 +1122,7 @@ extension BaseGridViewController {
             return
         }
 
-        // [Analytics] 이벤트 4-1: 목록 스와이프 삭제/복구
+        // [Analytics] 이벤트 4-1: 목록에서 밀어서 삭제/복구
         let analyticsSource: DeleteSource = self is AlbumGridViewController ? .album : .library
 
         cell.confirmDimmedAnimation(toTrashed: toTrashed) { [weak self] in
