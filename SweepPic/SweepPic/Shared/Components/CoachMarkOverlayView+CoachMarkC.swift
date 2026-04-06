@@ -535,12 +535,11 @@ extension CoachMarkOverlayView {
 
         // 안내 텍스트 (C-1과 동일 스타일: bodyFont, white, 강조 bodyBoldFont + yellow)
         let mainText = "간편정리 메뉴에서\n더욱 편리하게 자동 탐색이 가능해요"
-        let pathText = "\n\n간편정리 → 인물사진 비교정리"
+        let pathText = "\n간편정리 → 인물사진 비교정리"
         let fullText = mainText + pathText
         let style = NSMutableParagraphStyle()
         style.alignment = .center
         style.lineSpacing = bodyFont.pointSize * 0.2
-        style.paragraphSpacing = 12
         let attr = NSMutableAttributedString(
             string: fullText,
             attributes: [
@@ -568,14 +567,21 @@ extension CoachMarkOverlayView {
         overlay.messageLabel.attributedText = attr
         overlay.messageLabel.alpha = 0
 
-        // 텍스트 위치: 하이라이트 아래 배치 (C-1과 동일 패턴)
+        // 텍스트 위치: 하이라이트 버튼과 화면 하단 사이 중앙에 배치
         let labelWidth = window.bounds.width - 40
         let labelSize = overlay.messageLabel.sizeThatFits(CGSize(width: labelWidth, height: .greatestFiniteMagnitude))
+        let textHeight = ceil(labelSize.height)
+        let buttonHeight: CGFloat = 44
+        let gap: CGFloat = 16
+        let totalContentHeight = textHeight + gap + buttonHeight
+        let availableTop = highlightFrame.maxY + 24
+        let availableBottom = window.bounds.height - (window.safeAreaInsets.bottom + 20)
+        let contentY = availableTop + (availableBottom - availableTop - totalContentHeight) / 2
         overlay.messageLabel.frame = CGRect(
             x: 20,
-            y: highlightFrame.maxY + 24,
+            y: contentY,
             width: labelWidth,
-            height: ceil(labelSize.height)
+            height: textHeight
         )
         overlay.addSubview(overlay.messageLabel)
 
@@ -585,10 +591,9 @@ extension CoachMarkOverlayView {
         overlay.confirmButton.isEnabled = true
         overlay.confirmButton.alpha = 0
         let buttonWidth: CGFloat = 120
-        let buttonHeight: CGFloat = 44
         overlay.confirmButton.frame = CGRect(
             x: (window.bounds.width - buttonWidth) / 2,
-            y: overlay.messageLabel.frame.maxY + 16,
+            y: overlay.messageLabel.frame.maxY + gap,
             width: buttonWidth,
             height: buttonHeight
         )
