@@ -480,13 +480,7 @@
 | # | 한국어 (현재) | 영어 (제안) | 용도 | 확인 |
 |---|---|---|---|---|
 | 247 | 저품질 사진 정리 기능을 사용하려면\n삭제대기함을 먼저 비워주세요\n\n-Pro멤버십 가입 시 제한 해제- | To use Auto Cleanup,\nplease empty Trash first\n\n-No restriction with Pro membership- | 삭제대기함 비어있지 않음 | |
-| 248 | 50장의 정리할 사진을 찾았습니다.\n더 찾으려면 '이어서 정리'를 사용하세요. | Found 50 photos to clean up.\nUse "Continue" to find more. | 50장 발견 | |
-| 249 | 2,000장을 검색하여 {n}장을 찾았습니다.\n더 찾으려면 '이어서 정리'를 사용하세요. | Scanned 2,000 photos and found {n}.\nUse "Continue" to find more. | 2,000장 + n장 | |
-| 250 | 2,000장을 검색했지만 정리할 사진이 없습니다.\n더 검색하려면 '이어서 정리'를 사용하세요. | Scanned 2,000 photos but found none to clean up.\nUse "Continue" to scan more. | 2,000장 + 0장 | |
-| 251 | {year}년의 마지막 사진까지 검색하여 {n}장을 찾았습니다. | Scanned all photos from {year} and found {n}. | 연도별 + n장 | |
-| 252 | 보관함의 마지막 사진까지 검색하여 {n}장을 찾았습니다. | Scanned all photos in your library and found {n}. | 범위 끝 + n장 | |
-| 253 | {year}년의 마지막 사진까지 검색했지만 정리할 사진이 없습니다. | Scanned all photos from {year} but found none to clean up. | 연도별 + 0장 | |
-| 254 | 보관함의 마지막 사진까지 검색했지만 정리할 사진이 없습니다. | Scanned all photos in your library but found none to clean up. | 범위 끝 + 0장 | |
+| ~~248-254~~ | *(삭제 — 번역 대상 제외)* | | | |
 
 ### PreviewGridViewController
 
