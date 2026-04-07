@@ -24,7 +24,12 @@ final class PaywallPlanTabView: UIControl {
     // MARK: - Properties
 
     /// 탭 항목 라벨 텍스트
-    private let items = ["월간", "연간"]
+    private var items: [String] {
+        [
+            String(localized: "monetization.paywall.tab.monthly"),
+            String(localized: "monetization.paywall.tab.yearly")
+        ]
+    }
 
     /// 현재 선택된 인덱스 (0: 월간, 1: 연간)
     var selectedSegmentIndex: Int = 0 {
@@ -67,7 +72,7 @@ final class PaywallPlanTabView: UIControl {
     /// 연간 탭 "인기" 배지
     private let popularBadge: UILabel = {
         let label = UILabel()
-        label.text = "인기"
+        label.text = String(localized: "monetization.paywall.tab.popular")
         label.font = .systemFont(ofSize: 10, weight: .bold)
         label.textColor = .black
         label.backgroundColor = UIColor.white.withAlphaComponent(0.6)

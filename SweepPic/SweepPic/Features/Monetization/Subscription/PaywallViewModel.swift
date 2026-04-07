@@ -63,14 +63,14 @@ final class PaywallViewModel {
 
     /// 연간 가격 표시 문자열 (예: "₩29,900/년")
     var yearlyPriceText: String {
-        guard let product = yearlyProduct else { return "로딩 중..." }
-        return "\(product.displayPrice)/년"
+        guard let product = yearlyProduct else { return String(localized: "monetization.paywall.vm.loading") }
+        return String(localized: "monetization.paywall.vm.yearlyPrice \(product.displayPrice)")
     }
 
     /// 월간 가격 표시 문자열 (예: "₩3,900/월")
     var monthlyPriceText: String {
-        guard let product = monthlyProduct else { return "로딩 중..." }
-        return "\(product.displayPrice)/월"
+        guard let product = monthlyProduct else { return String(localized: "monetization.paywall.vm.loading") }
+        return String(localized: "monetization.paywall.vm.monthlyPrice \(product.displayPrice)")
     }
 
     /// 연간 상품의 월 환산 가격 (예: "월 ₩2,492")
@@ -83,7 +83,7 @@ final class PaywallViewModel {
         formatter.locale = product.priceFormatStyle.locale
         formatter.maximumFractionDigits = 0
         let formatted = formatter.string(from: monthlyEquivalent as NSDecimalNumber) ?? "\(monthlyEquivalent)"
-        return "월 \(formatted)"
+        return String(localized: "monetization.paywall.vm.monthlyRate \(formatted)")
     }
 
     /// 취소선 정가 (월간×12 → 연간 비교용)
@@ -125,22 +125,25 @@ final class PaywallViewModel {
               intro.paymentMode == .freeTrial else { return nil }
         guard let trialDays = formatTrialDays(intro.period) else { return nil }
         // displayPrice는 StoreKit이 사용자 locale에 맞게 포맷 (예: $2.99, ₩3,900)
-        let priceSuffix = isYearly ? "\(product.displayPrice)/연" : "\(product.displayPrice)/월"
-        return (trialDays, " - 언제든 취소 가능", "(\(priceSuffix))")
+        let priceSuffix = isYearly
+            ? String(localized: "monetization.paywall.vm.yearlyPrice \(product.displayPrice)")
+            : String(localized: "monetization.paywall.vm.monthlyPrice \(product.displayPrice)")
+        let cancelNote = " " + String(localized: "monetization.paywall.cancelAnytime")
+        return (trialDays, cancelNote, "(\(priceSuffix))")
     }
 
     /// 체험 기간 → 일수 텍스트 변환 헬퍼
     private func formatTrialDays(_ period: Product.SubscriptionPeriod) -> String? {
         switch period.unit {
         case .day:
-            return "\(period.value)일 무료체험"
+            return String(localized: "monetization.paywall.vm.trialDays \(period.value)")
         case .week:
             let days = period.value * 7
-            return "\(days)일 무료체험"
+            return String(localized: "monetization.paywall.vm.trialDays \(days)")
         case .month:
-            return "\(period.value)개월 무료체험"
+            return String(localized: "monetization.paywall.vm.trialMonths \(period.value)")
         case .year:
-            return "\(period.value)년 무료체험"
+            return String(localized: "monetization.paywall.vm.trialYears \(period.value)")
         @unknown default:
             return nil
         }
@@ -158,10 +161,26 @@ final class PaywallViewModel {
     /// 무료/Pro 비교표 항목
     var comparisonRows: [ComparisonRow] {
         [
-            ComparisonRow(feature: "일일 삭제", freeValue: "10장", proValue: "무제한"),
-            ComparisonRow(feature: "광고", freeValue: "있음", proValue: "없음"),
-            ComparisonRow(feature: "인물사진 비교정리", freeValue: "광고포함", proValue: "광고없음"),
-            ComparisonRow(feature: "얼굴 인식 확대", freeValue: "광고포함", proValue: "광고없음"),
+            ComparisonRow(
+                feature: String(localized: "monetization.paywall.vm.featureDailyDeletes"),
+                freeValue: String(localized: "monetization.paywall.vm.free10"),
+                proValue: String(localized: "monetization.paywall.vm.unlimited")
+            ),
+            ComparisonRow(
+                feature: String(localized: "monetization.paywall.vm.featureAds"),
+                freeValue: String(localized: "monetization.paywall.vm.adsShown"),
+                proValue: String(localized: "monetization.paywall.vm.adsNone")
+            ),
+            ComparisonRow(
+                feature: String(localized: "monetization.paywall.vm.featureFaceCompare"),
+                freeValue: String(localized: "monetization.paywall.vm.withAds"),
+                proValue: String(localized: "monetization.paywall.vm.adFree")
+            ),
+            ComparisonRow(
+                feature: String(localized: "monetization.paywall.vm.featureFaceZoom"),
+                freeValue: String(localized: "monetization.paywall.vm.withAds"),
+                proValue: String(localized: "monetization.paywall.vm.adFree")
+            ),
         ]
     }
 
@@ -198,7 +217,7 @@ enum SubscriptionError: LocalizedError {
     var errorDescription: String? {
         switch self {
         case .productNotLoaded:
-            return "상품 정보를 불러올 수 없습니다. 네트워크 연결을 확인해주세요."
+            return String(localized: "monetization.paywall.vm.productError")
         }
     }
 }
