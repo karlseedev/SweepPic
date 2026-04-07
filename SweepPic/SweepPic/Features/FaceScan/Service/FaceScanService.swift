@@ -398,8 +398,8 @@ final class FaceScanService {
             fetchResult: fetchResult
         )
 
-        // 사진 추출 (삭제대기함 및 동영상 제외, 최신부터 탐색하기 위해 역순)
-        let photos = fetchPhotosInRange(lower...upper, fetchResult: fetchResult).reversed() as [PHAsset]
+        // 사진 추출 (삭제대기함 및 동영상 제외, ascending 유지 — 정규 분석과 동일한 순서)
+        let photos = fetchPhotosInRange(lower...upper, fetchResult: fetchResult)
         guard photos.count >= SimilarityConstants.minGroupSize else {
             Logger.similarPhoto.debug("analyzeForFirstGroup: 분석 대상 부족 (\(photos.count)장) — 종료")
             return nil
@@ -407,53 +407,68 @@ final class FaceScanService {
 
         Logger.similarPhoto.debug("analyzeForFirstGroup: 시작 (\(photos.count)장)")
 
-        // ── FP 누적 + 100장마다 그루핑 체크포인트 ──
+        // ── FP 생성: 최신부터 (끝에서부터), 체크포인트에서는 ascending 순서로 formGroups ──
+        //
+        // 탐색 순서: 최신부터 (UX — 빠른 첫 결과)
+        // formGroups/assignPersonIndices 순서: 과거→최신 (정규 분석과 동일 — 정확성)
+        // 그룹 검사 순서: 최신 그룹부터 (정규 분석의 rawGroups.reversed()와 동일)
+        //
+        // FP 배열은 최신부터 채워지므로, 체크포인트에서 ascending 정렬 후 formGroups에 전달.
         let batchSize = 20
         let groupingInterval = FaceScanConstants.preScanGroupingInterval
-        var allFPs: [VNFeaturePrintObservation?] = []
-        let allIDs = photos.map(\.localIdentifier)
+        // fpEntries: (photoIndex, fp) 쌍 — 체크포인트에서 photoIndex 기준 정렬용
+        var fpEntries: [(index: Int, fp: VNFeaturePrintObservation?)] = []
         var checkedAssetIDs: Set<String> = []  // 이미 얼굴감지 완료한 assetID
         let isolatedCache = SimilarityCache()
 
-        for batchStart in stride(from: 0, to: photos.count, by: batchSize) {
+        // 최신부터 FP 생성 (끝에서부터 역순 탐색)
+        let reversedIndices = stride(from: photos.count - 1, through: 0, by: -batchSize)
+        for batchLast in reversedIndices {
             // 취소 체크
             if cancelled { throw CancellationError() }
 
-            // FP 배치 생성 (20장)
-            let batchEnd = min(batchStart + batchSize, photos.count)
-            let batchPhotos = Array(photos[batchStart..<batchEnd])
+            // 배치 범위: [batchFirst...batchLast] (ascending 범위)
+            let batchFirst = max(batchLast - batchSize + 1, 0)
+            let batchPhotos = Array(photos[batchFirst...batchLast])
             let (batchFPs, _) = await matchingEngine.generateFeaturePrints(for: batchPhotos)
-            allFPs.append(contentsOf: batchFPs)
+
+            // (index, fp) 쌍으로 저장
+            for (offset, fp) in batchFPs.enumerated() {
+                fpEntries.append((index: batchFirst + offset, fp: fp))
+            }
 
             // 그루핑 체크포인트: groupingInterval(100장)마다 또는 마지막 배치
-            let isCheckpoint = allFPs.count >= groupingInterval
-                && allFPs.count % groupingInterval < batchSize
-            let isLastBatch = batchEnd >= photos.count
+            let isCheckpoint = fpEntries.count >= groupingInterval
+                && fpEntries.count % groupingInterval < batchSize
+            let isLastBatch = batchFirst == 0
 
             guard isCheckpoint || isLastBatch else { continue }
 
             // 취소 체크
             if cancelled { throw CancellationError() }
 
-            // formGroups: 누적된 전체 FP 대상
-            let currentIDs = Array(allIDs.prefix(allFPs.count))
+            // ── 체크포인트: ascending 순서로 정렬 후 formGroups (정규 분석과 동일) ──
+            let sorted = fpEntries.sorted { $0.index < $1.index }
+            let sortedFPs = sorted.map(\.fp)
+            let sortedIDs = sorted.map { photos[$0.index].localIdentifier }
+
             let rawGroups = matchingEngine.analyzer.formGroups(
-                featurePrints: allFPs,
-                photoIDs: currentIDs,
+                featurePrints: sortedFPs,
+                photoIDs: sortedIDs,
                 threshold: SimilarityConstants.similarityThreshold
             )
 
-            Logger.similarPhoto.debug("analyzeForFirstGroup: 체크포인트 \(allFPs.count)장, \(rawGroups.count)그룹 발견")
+            Logger.similarPhoto.debug("analyzeForFirstGroup: 체크포인트 \(fpEntries.count)장, \(rawGroups.count)그룹 발견")
 
-            // 새 그룹만 처리 (checkedAssetIDs에 없는 멤버가 있는 그룹)
-            for groupAssetIDs in rawGroups {
+            // 최신 그룹부터 검사 (정규 분석의 rawGroups.reversed()와 동일)
+            for groupAssetIDs in rawGroups.reversed() {
                 if cancelled { throw CancellationError() }
 
                 // 이미 체크한 멤버만으로 구성된 그룹은 스킵
                 let newMembers = groupAssetIDs.filter { !checkedAssetIDs.contains($0) }
                 guard !newMembers.isEmpty else { continue }
 
-                // 얼굴감지 + 인물 매칭
+                // 얼굴감지 + 인물 매칭 (ascending 순서 — 정규 분석과 동일)
                 let groupPhotos = photos.filter { groupAssetIDs.contains($0.localIdentifier) }
                 let photoFacesMap = await matchingEngine.assignPersonIndicesForGroup(
                     assetIDs: groupAssetIDs,
@@ -503,7 +518,7 @@ final class FaceScanService {
                     let group = SimilarThumbnailGroup(groupID: groupID, memberAssetIDs: members)
                     await cache.addGroup(group, validSlots: mergedSlots, photoFaces: [:])
 
-                    Logger.similarPhoto.debug("analyzeForFirstGroup: 유효 그룹 발견 — \(members.count)장, \(allFPs.count)/\(photos.count)장 검색 시점")
+                    Logger.similarPhoto.debug("analyzeForFirstGroup: 유효 그룹 발견 — \(members.count)장, \(fpEntries.count)/\(photos.count)장 검색 시점")
 
                     return FaceScanGroup(
                         groupID: groupID,
