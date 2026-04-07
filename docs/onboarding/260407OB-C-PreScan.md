@@ -127,3 +127,25 @@ FP 생성 루프 (20장씩 배치):
 4. **기존 메뉴 진입 무영향**: 인물사진 비교정리 메뉴 진입 시 기존과 동일하게 동작
 5. **0건 케이스**: 2,000장 검색 후 미발견 시 정상 종료
 6. **중복 방지**: 로그에서 같은 그룹이 반복 처리되지 않는지 확인
+
+## 후속 수정: 키보드 사진 false positive 해소 (dd728aa)
+
+### 문제
+사전분석에서 키보드 사진(얼굴 없음)이 유효 그룹에 포함되어 온보딩이 시작됨.
+그리드로 돌아오면 정규 분석에서 해당 사진에 테두리가 없어 UX 불일치 발생.
+
+### 원인
+사전분석이 `photos.reversed()`로 최신→과거 순서로 formGroups/assignPersonIndicesForGroup을 실행.
+정규 분석은 과거→최신 순서(ascending).
+`assignPersonIndicesForGroup`은 첫 사진에서 person slot을 부팅하고 이후 사진을 매칭하므로,
+입력 순서가 다르면 저품질 false positive(norm 3.8, minEmbeddingNorm 7.0 미만)가 기존 slot에 매칭되는 양상이 달라짐.
+
+### 해결
+- FP 생성 순서: 최신부터 유지 (속도)
+- formGroups/assignPersonIndices: 체크포인트 내에서 ascending 정렬 후 전달 (정규 분석과 동일)
+- 그룹 검사: `rawGroups.reversed()` (최신 그룹부터, 정규 분석과 동일)
+
+### 참고: hasFaces는 무관
+`hasFaces`(VNDetectFaceRectanglesRequest)는 그리드에서 예비 테두리 조기 표시용 UI 최적화일 뿐,
+최종 그룹 결정(YuNet → validSlots → validMembers → addGroupIfValid)과 무관.
+그리드와 메뉴 버튼의 최종 분석 로직은 동일.
