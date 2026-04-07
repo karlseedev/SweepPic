@@ -146,7 +146,7 @@ final class LiquidGlassTabBar: UIView {
     /// 선택 개수 라벨
     private lazy var selectionCountLabel: UILabel = {
         let label = UILabel()
-        label.text = "항목 선택"
+        label.text = String(localized: "common.selectItems")
         label.textColor = .white
         label.font = .systemFont(ofSize: 17, weight: .regular)
         label.textAlignment = .center
@@ -158,7 +158,7 @@ final class LiquidGlassTabBar: UIView {
     /// iOS 26 스펙: 높이 44pt, fontSize 17pt
     /// Phase 6: select 모드 전용이므로 Glass 효과(MTKView) 생성 지연
     private lazy var deleteButton: GlassTextButton = {
-        let button = GlassTextButton(title: "삭제", style: .plain, tintColor: .systemRed, deferGlassEffect: true)
+        let button = GlassTextButton(title: String(localized: "common.delete"), style: .plain, tintColor: .systemRed, deferGlassEffect: true)
         button.addTarget(self, action: #selector(deleteButtonTapped), for: .touchUpInside)
         button.translatesAutoresizingMaskIntoConstraints = false
         return button
@@ -179,7 +179,7 @@ final class LiquidGlassTabBar: UIView {
     /// iOS 26 스펙: 높이 44pt, fontSize 17pt
     /// Phase 6: trash select 모드 전용이므로 Glass 효과(MTKView) 생성 지연
     private lazy var trashRestoreButton: GlassTextButton = {
-        let button = GlassTextButton(title: "복구", style: .plain, tintColor: .white, deferGlassEffect: true)
+        let button = GlassTextButton(title: String(localized: "common.restore"), style: .plain, tintColor: .white, deferGlassEffect: true)
         button.addTarget(self, action: #selector(trashRestoreButtonTapped), for: .touchUpInside)
         button.translatesAutoresizingMaskIntoConstraints = false
         return button
@@ -188,7 +188,7 @@ final class LiquidGlassTabBar: UIView {
     /// Trash 선택 개수 라벨
     private lazy var trashSelectionCountLabel: UILabel = {
         let label = UILabel()
-        label.text = "항목 선택"
+        label.text = String(localized: "common.selectItems")
         label.textColor = .white
         label.font = .systemFont(ofSize: 17, weight: .regular)
         label.textAlignment = .center
@@ -200,7 +200,7 @@ final class LiquidGlassTabBar: UIView {
     /// iOS 26 스펙: 높이 44pt, fontSize 17pt
     /// Phase 6: trash select 모드 전용이므로 Glass 효과(MTKView) 생성 지연
     private lazy var trashDeleteButton: GlassTextButton = {
-        let button = GlassTextButton(title: "삭제", style: .plain, tintColor: .systemRed, deferGlassEffect: true)
+        let button = GlassTextButton(title: String(localized: "common.delete"), style: .plain, tintColor: .systemRed, deferGlassEffect: true)
         button.addTarget(self, action: #selector(trashDeleteButtonTapped), for: .touchUpInside)
         button.translatesAutoresizingMaskIntoConstraints = false
         return button
@@ -440,7 +440,7 @@ extension LiquidGlassTabBar {
         // Phase 6: deferred된 Glass 효과 생성 (select 모드 진입 시점)
         deleteButton.setupGlassEffectIfNeeded()
         isSelectMode = true
-        selectionCountLabel.text = "항목 선택"
+        selectionCountLabel.text = String(localized: "common.selectItems")
         deleteButton.isEnabled = false
 
         if animated {
@@ -485,7 +485,7 @@ extension LiquidGlassTabBar {
 
     /// 선택 개수 업데이트 (Grid/Album용)
     func updateSelectionCount(_ count: Int) {
-        selectionCountLabel.text = count > 0 ? "\(count)개 항목 선택됨" : "항목 선택"
+        selectionCountLabel.text = count > 0 ? String(localized: "common.selectedCount \(count)") : "항목 선택"
         deleteButton.isEnabled = count > 0
     }
 }
@@ -500,7 +500,7 @@ extension LiquidGlassTabBar {
         trashRestoreButton.setupGlassEffectIfNeeded()
         trashDeleteButton.setupGlassEffectIfNeeded()
         isTrashSelectMode = true
-        trashSelectionCountLabel.text = "항목 선택"
+        trashSelectionCountLabel.text = String(localized: "common.selectItems")
         trashRestoreButton.isEnabled = false
         trashDeleteButton.isEnabled = false
 
@@ -546,7 +546,7 @@ extension LiquidGlassTabBar {
 
     /// Trash 선택 개수 업데이트
     func updateTrashSelectionCount(_ count: Int) {
-        trashSelectionCountLabel.text = count > 0 ? "\(count)개 항목 선택됨" : "항목 선택"
+        trashSelectionCountLabel.text = count > 0 ? String(localized: "common.selectedCount \(count)") : "항목 선택"
         trashRestoreButton.isEnabled = count > 0
         trashDeleteButton.isEnabled = count > 0
     }

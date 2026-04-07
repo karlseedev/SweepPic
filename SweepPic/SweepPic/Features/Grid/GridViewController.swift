@@ -232,7 +232,7 @@ final class GridViewController: BaseGridViewController {
 
     /// 빈 상태 설정
     override var emptyStateConfig: (icon: String, title: String, subtitle: String?) {
-        ("photo.on.rectangle", "사진이 없습니다", "사진을 촬영하거나 가져오세요")
+        ("photo.on.rectangle", String(localized: "emptyState.noPhotos.title"), String(localized: "grid.empty.subtitle"))
     }
 
     /// 네비게이션 타이틀
@@ -241,7 +241,7 @@ final class GridViewController: BaseGridViewController {
     /// - FloatingOverlayContainer.swift: titleBar.title
     /// - FloatingTitleBar.swift: title 기본값
     override var navigationTitle: String {
-        "사진보관함"
+        String(localized: "tab.photos")
     }
 
     /// 줌 완료 후 호출 (고해상도 썸네일 재요청)
@@ -375,7 +375,7 @@ final class GridViewController: BaseGridViewController {
         // - GridViewController.swift: title, setTitle() (여기)
         // - FloatingOverlayContainer.swift: titleBar.title
         // - FloatingTitleBar.swift: title 기본값
-        overlay.titleBar.setTitle("사진보관함")
+        overlay.titleBar.setTitle(String(localized: "tab.photos"))
         updateItemCountSubtitle()
 
         // 뒤로가기 버튼 숨김

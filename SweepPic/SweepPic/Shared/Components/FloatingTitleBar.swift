@@ -58,7 +58,7 @@ final class FloatingTitleBar: UIView {
     /// 현재 타이틀 텍스트
     // ⚠️ 사진보관함 명칭 변경 시 동시 수정 필요:
     // - TabBarController.swift, GridViewController.swift, FloatingOverlayContainer.swift, FloatingTitleBar.swift (여기)
-    var title: String = "사진보관함" {
+    var title: String = "" {
         didSet {
             titleLabel.attributedText = Self.styledTitle(title)
         }
