@@ -45,54 +45,54 @@ final class FAQViewController: UIViewController, BarsVisibilityControlling {
     /// FAQ 데이터 (하드코딩 — FR-046, 오프라인 지원)
     /// 출처: docs/bm/260227Marketing.md §7
     private var sections: [FAQSection] = [
-        FAQSection(title: "사진/기능", items: [
+        FAQSection(title: String(localized: "monetization.faq.section.photos"), items: [
             FAQItem(
-                question: "삭제한 사진을 복구할 수 있나요?",
-                answer: "삭제대기함에 있는 사진은 언제든 복구할 수 있습니다. 삭제대기함을 비운 후에는 최근 삭제된 항목(iOS 기본 사진 앱)에서 30일 이내에 복구 가능합니다."
+                question: String(localized: "monetization.faq.q1"),
+                answer: String(localized: "monetization.faq.a1")
             ),
             FAQItem(
-                question: "내 사진이 외부 서버로 전송 또는 유출되나요?",
-                answer: "아니요. 모든 사진 처리(유사 사진 분석, 얼굴 감지 포함)는 기기 내에서만 이루어집니다. 사진 데이터는 외부 서버로 전송되지 않습니다."
+                question: String(localized: "monetization.faq.q2"),
+                answer: String(localized: "monetization.faq.a2")
             ),
             FAQItem(
-                question: "지원하는 iOS 버전은?",
-                answer: "iOS 16 이상을 지원합니다."
+                question: String(localized: "monetization.faq.q3"),
+                answer: String(localized: "monetization.faq.a3")
             ),
             FAQItem(
-                question: "인물사진 비교정리가 정확하지 않아요",
-                answer: "인물사진 비교정리는 사진의 화질, 얼굴 각도, 얼굴 위치 등에 따라 일부 오분류가 있을 수 있습니다. 삭제 전 반드시 확인하시고, 실수로 삭제해도 삭제대기함에서 복구할 수 있습니다."
+                question: String(localized: "monetization.faq.q4"),
+                answer: String(localized: "monetization.faq.a4")
             ),
             FAQItem(
-                question: "자동 정리는 어떤 기준으로 사진을 선택하나요?",
-                answer: "유사 사진 그룹에서 화질, 초점, 구도 등을 분석하여 가장 좋은 사진을 남기고 나머지를 삭제대기함으로 이동합니다. 바로 삭제되지 않으니 안심하세요."
-            ),
-        ]),
-        FAQSection(title: "멤버십/결제", items: [
-            FAQItem(
-                question: "무료로 사용할 수 있나요?",
-                answer: "네. 사진 정리(스와이프 삭제, 유사 사진 분석, 자동 정리, 복구)는 모두 무료입니다. 삭제대기함 비우기에만 일일 한도(10장)가 있으며, 광고를 보면 추가 삭제가 가능합니다."
-            ),
-            FAQItem(
-                question: "멤버십 가입했는데 멤버십이 활성화되지 않아요",
-                answer: "전체 메뉴 > 멤버십 > \"멤버십 복원\"을 탭해주세요. 네트워크 연결 상태를 확인하고, 결제에 사용한 Apple ID로 로그인되어 있는지 확인해주세요."
-            ),
-            FAQItem(
-                question: "멤버십을 해지하고 싶어요",
-                answer: "설정 > [내 이름] > 구독 > SweepPic Pro > 구독 취소를 탭하세요. 앱을 삭제해도 자동으로 해지되지 않으니 반드시 위 경로에서 취소해주세요."
-            ),
-            FAQItem(
-                question: "환불받을 수 있나요?",
-                answer: "환불은 Apple을 통해 처리됩니다. reportaproblem.apple.com에서 신청해주세요."
-            ),
-            FAQItem(
-                question: "삭제 한도가 뭔가요?",
-                answer: "무료 사용자는 하루 \(UsageLimit.dailyFreeLimit)장까지 삭제대기함 비우기가 가능합니다. 광고를 보면 하루 최대 \(UsageLimit.maxDailyTotal)장까지 늘릴 수 있고, Pro멤버십 가입 시 무제한입니다. 한도는 매일 자정에 초기화됩니다."
+                question: String(localized: "monetization.faq.q5"),
+                answer: String(localized: "monetization.faq.a5")
             ),
         ]),
-        FAQSection(title: "개인정보/보안", items: [
+        FAQSection(title: String(localized: "monetization.faq.section.billing"), items: [
             FAQItem(
-                question: "얼굴 인식 데이터는 어떻게 처리되나요?",
-                answer: "얼굴 감지는 기기의 Vision 프레임워크를 사용하며, 기기 내에서만 처리됩니다. 얼굴 데이터는 서버에 전송되거나 저장되지 않습니다."
+                question: String(localized: "monetization.faq.q6"),
+                answer: String(localized: "monetization.faq.a6")
+            ),
+            FAQItem(
+                question: String(localized: "monetization.faq.q7"),
+                answer: String(localized: "monetization.faq.a7")
+            ),
+            FAQItem(
+                question: String(localized: "monetization.faq.q8"),
+                answer: String(localized: "monetization.faq.a8")
+            ),
+            FAQItem(
+                question: String(localized: "monetization.faq.q9"),
+                answer: String(localized: "monetization.faq.a9")
+            ),
+            FAQItem(
+                question: String(localized: "monetization.faq.q10"),
+                answer: String(localized: "monetization.faq.a10 \(UsageLimit.dailyFreeLimit) \(UsageLimit.maxDailyTotal)")
+            ),
+        ]),
+        FAQSection(title: String(localized: "monetization.faq.section.privacy"), items: [
+            FAQItem(
+                question: String(localized: "monetization.faq.q11"),
+                answer: String(localized: "monetization.faq.a11")
             ),
         ]),
     ]
@@ -116,7 +116,7 @@ final class FAQViewController: UIViewController, BarsVisibilityControlling {
 
     override func viewDidLoad() {
         super.viewDidLoad()
-        title = "자주 묻는 질문"
+        title = String(localized: "monetization.faq.title")
         view.backgroundColor = .systemGroupedBackground
         setupTableView()
     }

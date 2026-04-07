@@ -33,13 +33,20 @@ final class CustomerServiceViewController: NSObject {
     private static let feedbackEmail = "support@sweeppic.app"
 
     /// 피드백 이메일 제목
-    private static let feedbackSubject = "[SweepPic] 문의하기"
+    private static var feedbackSubject: String {
+        String(localized: "monetization.support.emailSubject")
+    }
 
     /// 이용약관 URL (출시 전 실제 URL로 교체)
     private static let termsURL = URL(string: "https://sweeppic.app/terms")!
 
     /// 개인정보처리방침 URL (출시 전 실제 URL로 교체)
     private static let privacyURL = URL(string: "https://sweeppic.app/privacy")!
+
+    /// 사업자 정보는 한국어 locale에서만 노출
+    private static var shouldShowBusinessInfo: Bool {
+        Locale.preferredLanguages.first?.hasPrefix("ko") == true
+    }
 
     // MARK: - Shared Instance (MFMailComposeViewControllerDelegate 유지용)
 
@@ -53,44 +60,48 @@ final class CustomerServiceViewController: NSObject {
     /// - Returns: UIMenu 서브메뉴
     static func makeMenu(from presenter: UIViewController) -> UIMenu {
         let feedbackAction = UIAction(
-            title: "이메일 문의하기",
+            title: String(localized: "monetization.support.email"),
             image: UIImage(systemName: "envelope")
         ) { _ in
             handleFeedback(from: presenter)
         }
 
         let faqAction = UIAction(
-            title: "자주 묻는 질문",
+            title: String(localized: "monetization.support.faq"),
             image: UIImage(systemName: "questionmark.circle")
         ) { _ in
             handleFAQ(from: presenter)
         }
 
         let termsAction = UIAction(
-            title: "이용약관",
+            title: String(localized: "monetization.support.terms"),
             image: UIImage(systemName: "doc.text")
         ) { _ in
             handleTerms(from: presenter)
         }
 
         let privacyAction = UIAction(
-            title: "개인정보처리방침",
+            title: String(localized: "monetization.support.privacy"),
             image: UIImage(systemName: "hand.raised")
         ) { _ in
             handlePrivacy(from: presenter)
         }
 
-        let businessInfoAction = UIAction(
-            title: "사업자 정보",
-            image: UIImage(systemName: "building.2")
-        ) { _ in
-            handleBusinessInfo(from: presenter)
+        var children = [feedbackAction, faqAction, termsAction, privacyAction]
+        if shouldShowBusinessInfo {
+            let businessInfoAction = UIAction(
+                title: "사업자 정보",
+                image: UIImage(systemName: "building.2")
+            ) { _ in
+                handleBusinessInfo(from: presenter)
+            }
+            children.append(businessInfoAction)
         }
 
         return UIMenu(
-            title: "고객센터",
+            title: String(localized: "monetization.support.title"),
             image: UIImage(systemName: "questionmark.circle"),
-            children: [feedbackAction, faqAction, termsAction, privacyAction, businessInfoAction]
+            children: children
         )
     }
 
@@ -163,11 +174,11 @@ final class CustomerServiceViewController: NSObject {
 
 
         ---
-        앱 버전: \(appVersion) (\(buildNumber))
+        \(String(localized: "monetization.support.appVersion")) \(appVersion) (\(buildNumber))
         iOS: \(osVersion)
-        기기: \(model)
-        기기명: \(name)
-        지원 ID: \(userId)
+        \(String(localized: "monetization.support.device")) \(model)
+        \(String(localized: "monetization.support.deviceName")) \(name)
+        \(String(localized: "monetization.support.supportId")) \(userId)
         """
     }
 }

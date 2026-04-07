@@ -30,28 +30,28 @@ final class PremiumMenuViewController {
     /// - Returns: UIMenu 서브메뉴
     static func makeMenu(from presenter: UIViewController) -> UIMenu {
         let subscribeAction = UIAction(
-            title: "멤버십 관리",
+            title: String(localized: "monetization.menu.manage"),
             image: UIImage(systemName: "creditcard")
         ) { _ in
             handleSubscriptionManagement(from: presenter)
         }
 
         let restoreAction = UIAction(
-            title: "멤버십 복원",
+            title: String(localized: "monetization.menu.restore"),
             image: UIImage(systemName: "arrow.clockwise")
         ) { _ in
             handleRestorePurchases(from: presenter)
         }
 
         let redeemAction = UIAction(
-            title: "리딤 코드",
+            title: String(localized: "monetization.menu.redeem"),
             image: UIImage(systemName: "giftcard")
         ) { _ in
             handleRedeemCode(from: presenter)
         }
 
         return UIMenu(
-            title: "멤버십",
+            title: String(localized: "monetization.menu.title"),
             image: UIImage(systemName: "star.fill"),
             children: [
                 subscribeAction, restoreAction, redeemAction,
@@ -90,7 +90,7 @@ final class PremiumMenuViewController {
         if SubscriptionStore.shared.isProUser {
             // 이미 Pro → 토스트
             if let window = presenter.view.window {
-                ToastView.show("이미 멤버십 이용 중입니다", in: window)
+                ToastView.show(String(localized: "monetization.menu.alreadyPro"), in: window)
             }
             Logger.app.debug("PremiumMenu: 이미 Pro 사용자 → 토스트")
             return
@@ -103,9 +103,9 @@ final class PremiumMenuViewController {
                 await MainActor.run {
                     if let window = presenter.view.window {
                         if restored {
-                            ToastView.show("멤버십이 복원되었습니다", in: window)
+                            ToastView.show(String(localized: "monetization.menu.restored"), in: window)
                         } else {
-                            ToastView.show("복원할 멤버십이 없습니다", in: window)
+                            ToastView.show(String(localized: "monetization.menu.notFound"), in: window)
                         }
                     }
                 }
@@ -113,7 +113,7 @@ final class PremiumMenuViewController {
             } catch {
                 await MainActor.run {
                     if let window = presenter.view.window {
-                        ToastView.show("복원 실패: 네트워크를 확인해주세요", in: window)
+                        ToastView.show(String(localized: "monetization.menu.restoreFailed"), in: window)
                     }
                 }
                 Logger.app.error("PremiumMenu: 복원 실패 — \(error.localizedDescription)")

@@ -1554,7 +1554,7 @@
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "사진의 품질 점수를 측정하여 1~5 등급으로 분류했어요\n5등급 사진을 확인하세요"
+            "value": "사진의 품질 점수를 측정하여 1~5 등급으로 분류했어요\n가장 낮은 5등급 사진을 먼저 확인해 보세요"
           }
         }
       }
@@ -1614,24 +1614,13 @@
         }
       }
     },
-    "coachMark.d1.step2.keyword2": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "2등급 이상"
-          }
-        }
-      }
-    },
     "coachMark.d1.step2.notice": {
       "extractionState": "manual",
       "localizations": {
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "\n3~4등급 사진이 있는 경우에만 버튼이 보여요"
+            "value": "\n아래 더보기 버튼은 3~4등급 사진이 탐색된 경우에만 보여요"
           }
         }
       }
@@ -1686,7 +1675,7 @@
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "\n제외된 녹색 사진은 빼고 삭제돼요"
+            "value": "\n녹색으로 제외된 사진은 삭제대기함으로 이동되지 않아요"
           }
         }
       }
@@ -1708,18 +1697,7 @@
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "선별"
-          }
-        }
-      }
-    },
-    "coachMark.d1.step4.keyword2": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "삭제"
+            "value": "삭제대기함 이동 버튼"
           }
         }
       }
@@ -5033,6 +5011,1079 @@
           "stringUnit": {
             "state": "translated",
             "value": "%@/연"
+          }
+        }
+      }
+    },
+    "monetization.att.continue": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Continue"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "계속"
+          }
+        }
+      }
+    },
+    "monetization.att.description": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Allow tracking to see\nfewer irrelevant ads"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "활동 추적을 허용하면\n관련없는 스팸성 광고를 줄여드립니다"
+          }
+        }
+      }
+    },
+    "monetization.att.keyword": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Allow tracking"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "활동 추적을 허용"
+          }
+        }
+      }
+    },
+    "monetization.att.skip": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Skip"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "건너뛰기"
+          }
+        }
+      }
+    },
+    "monetization.att.title": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ad Personalization"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "광고 맞춤 설정"
+          }
+        }
+      }
+    },
+    "monetization.celebration.freed %@": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ freed"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ 확보"
+          }
+        }
+      }
+    },
+    "monetization.celebration.sessionCount %lld": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld Photo Cleaned Up"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld Photos Cleaned Up"
+                }
+              }
+            }
+          }
+        },
+        "ko": {
+          "variations": {
+            "plural": {
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld장 삭제 완료"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "monetization.celebration.totalCount %lld": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld photo cleaned up with SweepPic"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld photos cleaned up with SweepPic"
+                }
+              }
+            }
+          }
+        },
+        "ko": {
+          "variations": {
+            "plural": {
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "SweepPic에서 총 %lld장 삭제"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "monetization.exitSurvey.doneOrganizing": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "I've finished organizing my photos"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "사진 정리를 다 했어요"
+          }
+        }
+      }
+    },
+    "monetization.exitSurvey.freeEnough": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The free plan is enough"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "무료로도 충분해요"
+          }
+        }
+      }
+    },
+    "monetization.exitSurvey.other": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Other"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "기타"
+          }
+        }
+      }
+    },
+    "monetization.exitSurvey.placeholder": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Please enter your reason"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "사유를 입력해주세요"
+          }
+        }
+      }
+    },
+    "monetization.exitSurvey.submit": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Submit"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "제출"
+          }
+        }
+      }
+    },
+    "monetization.exitSurvey.subtitle": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Help us improve by sharing your reason"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "더 나은 서비스를 위해 사유를 알려주세요"
+          }
+        }
+      }
+    },
+    "monetization.exitSurvey.title": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Why did you cancel?"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "왜 해지하셨나요?"
+          }
+        }
+      }
+    },
+    "monetization.exitSurvey.tooExpensive": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "It's too expensive"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "가격이 부담돼요"
+          }
+        }
+      }
+    },
+    "monetization.exitSurvey.usingOther": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "I'm using a different app"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "다른 앱을 사용해요"
+          }
+        }
+      }
+    },
+    "monetization.faq.a1": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Photos in Trash can be restored anytime. After emptying Trash, you can recover them within 30 days from \"Recently Deleted\" in the Photos app."
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "삭제대기함에 있는 사진은 언제든 복구할 수 있습니다. 삭제대기함을 비운 후에는 최근 삭제된 항목(iOS 기본 사진 앱)에서 30일 이내에 복구 가능합니다."
+          }
+        }
+      }
+    },
+    "monetization.faq.a10 %lld %lld": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Free users can empty up to %1$lld photos from Trash per day. Watching ads increases this to %2$lld/day. Pro members have no limit. The limit resets daily at midnight."
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "무료 사용자는 하루 %1$lld장까지 삭제대기함 비우기가 가능합니다. 광고를 보면 하루 최대 %2$lld장까지 늘릴 수 있고, Pro멤버십 가입 시 무제한입니다. 한도는 매일 자정에 초기화됩니다."
+          }
+        }
+      }
+    },
+    "monetization.faq.a11": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Face detection uses the device's Vision framework and is processed entirely on-device. No face data is sent to or stored on any server."
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "얼굴 감지는 기기의 Vision 프레임워크를 사용하며, 기기 내에서만 처리됩니다. 얼굴 데이터는 서버에 전송되거나 저장되지 않습니다."
+          }
+        }
+      }
+    },
+    "monetization.faq.a2": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No. All photo processing (including similarity analysis and face detection) happens entirely on your device. No photo data is sent to external servers."
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "아니요. 모든 사진 처리(유사 사진 분석, 얼굴 감지 포함)는 기기 내에서만 이루어집니다. 사진 데이터는 외부 서버로 전송되지 않습니다."
+          }
+        }
+      }
+    },
+    "monetization.faq.a3": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Requires iOS 16 or later."
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "iOS 16 이상을 지원합니다."
+          }
+        }
+      }
+    },
+    "monetization.faq.a4": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Compare & Clean Portraits may occasionally misclassify due to photo quality, face angle, or face position. Always review before deleting. Accidentally deleted photos can be restored from Trash."
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "인물사진 비교정리는 사진의 화질, 얼굴 각도, 얼굴 위치 등에 따라 일부 오분류가 있을 수 있습니다. 삭제 전 반드시 확인하시고, 실수로 삭제해도 삭제대기함에서 복구할 수 있습니다."
+          }
+        }
+      }
+    },
+    "monetization.faq.a5": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "It analyzes quality, focus, and composition in similar photo groups, keeps the best one, and moves the rest to Trash. Don't worry — nothing is permanently deleted."
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "유사 사진 그룹에서 화질, 초점, 구도 등을 분석하여 가장 좋은 사진을 남기고 나머지를 삭제대기함으로 이동합니다. 바로 삭제되지 않으니 안심하세요."
+          }
+        }
+      }
+    },
+    "monetization.faq.a6": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Yes. Photo organizing (swipe delete, similarity analysis, auto cleanup, restore) is entirely free. Only emptying Trash has a daily limit (10 photos), and you can watch ads for more."
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "네. 사진 정리(스와이프 삭제, 유사 사진 분석, 자동 정리, 복구)는 모두 무료입니다. 삭제대기함 비우기에만 일일 한도(10장)가 있으며, 광고를 보면 추가 삭제가 가능합니다."
+          }
+        }
+      }
+    },
+    "monetization.faq.a7": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Go to Menu > Membership > \"Restore Purchases\". Check your network connection and make sure you're signed in with the Apple ID used for the purchase."
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "전체 메뉴 > 멤버십 > \"멤버십 복원\"을 탭해주세요. 네트워크 연결 상태를 확인하고, 결제에 사용한 Apple ID로 로그인되어 있는지 확인해주세요."
+          }
+        }
+      }
+    },
+    "monetization.faq.a8": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Go to Settings > [Your Name] > Subscriptions > SweepPic Pro > Cancel. Deleting the app does not cancel your subscription, so please use the path above."
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "설정 > [내 이름] > 구독 > SweepPic Pro > 구독 취소를 탭하세요. 앱을 삭제해도 자동으로 해지되지 않으니 반드시 위 경로에서 취소해주세요."
+          }
+        }
+      }
+    },
+    "monetization.faq.a9": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Refunds are handled by Apple. Please visit reportaproblem.apple.com."
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "환불은 Apple을 통해 처리됩니다. reportaproblem.apple.com에서 신청해주세요."
+          }
+        }
+      }
+    },
+    "monetization.faq.q1": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Can I recover deleted photos?"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "삭제한 사진을 복구할 수 있나요?"
+          }
+        }
+      }
+    },
+    "monetization.faq.q10": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "What is the deletion limit?"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "삭제 한도가 뭔가요?"
+          }
+        }
+      }
+    },
+    "monetization.faq.q11": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "How is face recognition data handled?"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "얼굴 인식 데이터는 어떻게 처리되나요?"
+          }
+        }
+      }
+    },
+    "monetization.faq.q2": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Are my photos sent to or leaked to external servers?"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "내 사진이 외부 서버로 전송 또는 유출되나요?"
+          }
+        }
+      }
+    },
+    "monetization.faq.q3": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "What iOS versions are supported?"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "지원하는 iOS 버전은?"
+          }
+        }
+      }
+    },
+    "monetization.faq.q4": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Compare & Clean Portraits isn't accurate"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "인물사진 비교정리가 정확하지 않아요"
+          }
+        }
+      }
+    },
+    "monetization.faq.q5": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "How does Auto Cleanup select photos?"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "자동 정리는 어떤 기준으로 사진을 선택하나요?"
+          }
+        }
+      }
+    },
+    "monetization.faq.q6": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Can I use it for free?"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "무료로 사용할 수 있나요?"
+          }
+        }
+      }
+    },
+    "monetization.faq.q7": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "I subscribed but my membership isn't active"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "멤버십 가입했는데 멤버십이 활성화되지 않아요"
+          }
+        }
+      }
+    },
+    "monetization.faq.q8": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "I want to cancel my membership"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "멤버십을 해지하고 싶어요"
+          }
+        }
+      }
+    },
+    "monetization.faq.q9": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Can I get a refund?"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "환불받을 수 있나요?"
+          }
+        }
+      }
+    },
+    "monetization.faq.section.billing": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Membership & Billing"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "멤버십/결제"
+          }
+        }
+      }
+    },
+    "monetization.faq.section.photos": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Photos & Features"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "사진/기능"
+          }
+        }
+      }
+    },
+    "monetization.faq.section.privacy": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Privacy & Security"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "개인정보/보안"
+          }
+        }
+      }
+    },
+    "monetization.faq.title": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "FAQ"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "자주 묻는 질문"
+          }
+        }
+      }
+    },
+    "monetization.menu.alreadyPro": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "You already have a membership"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이미 멤버십 이용 중입니다"
+          }
+        }
+      }
+    },
+    "monetization.menu.manage": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Manage Membership"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "멤버십 관리"
+          }
+        }
+      }
+    },
+    "monetization.menu.notFound": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No purchases to restore"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "복원할 멤버십이 없습니다"
+          }
+        }
+      }
+    },
+    "monetization.menu.redeem": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Redeem Code"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "리딤 코드"
+          }
+        }
+      }
+    },
+    "monetization.menu.restore": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Restore Purchases"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "멤버십 복원"
+          }
+        }
+      }
+    },
+    "monetization.menu.restoreFailed": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Restore failed: Please check your network connection"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "복원 실패: 네트워크를 확인해주세요"
+          }
+        }
+      }
+    },
+    "monetization.menu.restored": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Purchase has been restored"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "멤버십이 복원되었습니다"
+          }
+        }
+      }
+    },
+    "monetization.menu.title": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Membership"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "멤버십"
+          }
+        }
+      }
+    },
+    "monetization.support.appVersion": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "App Version:"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "앱 버전:"
+          }
+        }
+      }
+    },
+    "monetization.support.device": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Device:"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "기기:"
+          }
+        }
+      }
+    },
+    "monetization.support.deviceName": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Device Name:"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "기기명:"
+          }
+        }
+      }
+    },
+    "monetization.support.email": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Contact Us"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이메일 문의하기"
+          }
+        }
+      }
+    },
+    "monetization.support.emailSubject": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "[SweepPic] Support Request"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "[SweepPic] 문의하기"
+          }
+        }
+      }
+    },
+    "monetization.support.faq": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "FAQ"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "자주 묻는 질문"
+          }
+        }
+      }
+    },
+    "monetization.support.privacy": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Privacy Policy"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "개인정보처리방침"
+          }
+        }
+      }
+    },
+    "monetization.support.supportId": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Support ID:"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "지원 ID:"
+          }
+        }
+      }
+    },
+    "monetization.support.terms": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Terms of Use"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이용약관"
+          }
+        }
+      }
+    },
+    "monetization.support.title": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Support"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "고객센터"
           }
         }
       }

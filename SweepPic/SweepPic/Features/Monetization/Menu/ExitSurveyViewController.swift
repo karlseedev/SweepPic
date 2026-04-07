@@ -35,7 +35,7 @@ final class ExitSurveyViewController: UIViewController {
     /// 제목 라벨
     private let titleLabel: UILabel = {
         let label = UILabel()
-        label.text = "왜 해지하셨나요?"
+        label.text = String(localized: "monetization.exitSurvey.title")
         label.font = .systemFont(ofSize: 20, weight: .bold)
         label.textAlignment = .center
         label.translatesAutoresizingMaskIntoConstraints = false
@@ -45,7 +45,7 @@ final class ExitSurveyViewController: UIViewController {
     /// 부제 라벨
     private let subtitleLabel: UILabel = {
         let label = UILabel()
-        label.text = "더 나은 서비스를 위해 사유를 알려주세요"
+        label.text = String(localized: "monetization.exitSurvey.subtitle")
         label.font = .systemFont(ofSize: 14)
         label.textColor = .secondaryLabel
         label.textAlignment = .center
@@ -65,7 +65,7 @@ final class ExitSurveyViewController: UIViewController {
     /// 기타 텍스트 입력 필드 (기타 선택 시 표시)
     private let otherTextField: UITextField = {
         let field = UITextField()
-        field.placeholder = "사유를 입력해주세요"
+        field.placeholder = String(localized: "monetization.exitSurvey.placeholder")
         field.borderStyle = .roundedRect
         field.font = .systemFont(ofSize: 15)
         field.isHidden = true
@@ -78,7 +78,7 @@ final class ExitSurveyViewController: UIViewController {
     /// 제출 버튼 — Gate/Celebration 동일 스타일 (white.12, cornerRadius 25, height 50)
     private let submitButton: UIButton = {
         let button = UIButton(type: .system)
-        button.setTitle("제출", for: .normal)
+        button.setTitle(String(localized: "monetization.exitSurvey.submit"), for: .normal)
         button.titleLabel?.font = .systemFont(ofSize: 17, weight: .semibold)
         button.backgroundColor = UIColor.white.withAlphaComponent(0.12)
         button.setTitleColor(.white, for: .normal)
@@ -122,11 +122,11 @@ final class ExitSurveyViewController: UIViewController {
 
         // 선택지 버튼 생성
         let reasons: [(CancelReason, String)] = [
-            (.price, "가격이 부담돼요"),
-            (.enoughFree, "무료로도 충분해요"),
-            (.done, "사진 정리를 다 했어요"),
-            (.competitor, "다른 앱을 사용해요"),
-            (.other, "기타")
+            (.price, String(localized: "monetization.exitSurvey.tooExpensive")),
+            (.enoughFree, String(localized: "monetization.exitSurvey.freeEnough")),
+            (.done, String(localized: "monetization.exitSurvey.doneOrganizing")),
+            (.competitor, String(localized: "monetization.exitSurvey.usingOther")),
+            (.other, String(localized: "monetization.exitSurvey.other"))
         ]
 
         for (reason, title) in reasons {

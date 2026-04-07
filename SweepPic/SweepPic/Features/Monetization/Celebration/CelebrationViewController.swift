@@ -99,7 +99,7 @@ final class CelebrationViewController: UIViewController {
     private lazy var confirmButton: UIButton = {
         let button = UIButton(type: .system)
         button.backgroundColor = UIColor.white.withAlphaComponent(0.12)
-        button.setTitle("확인", for: .normal)
+        button.setTitle(String(localized: "common.ok"), for: .normal)
         button.setTitleColor(.white, for: .normal)
         button.titleLabel?.font = .systemFont(ofSize: 17, weight: .semibold)
         button.layer.cornerRadius = 25
@@ -269,17 +269,17 @@ final class CelebrationViewController: UIViewController {
     /// 데이터 표시
     private func configureData() {
         // 이번 삭제: "N장 삭제 완료!"
-        sessionLabel.text = "\(result.sessionDeletedCount)장 삭제 완료"
+        sessionLabel.text = String(localized: "monetization.celebration.sessionCount \(result.sessionDeletedCount)")
 
         // 누적 삭제: "총 M장 삭제"
         let totalFormatted = NumberFormatter.localizedString(
             from: NSNumber(value: result.totalDeletedCount), number: .decimal
         )
-        totalDeletedRow.text = "SweepPic에서 총 \(totalFormatted)장 삭제"
+        totalDeletedRow.text = String(localized: "monetization.celebration.totalCount \(result.totalDeletedCount)")
 
         // 누적 확보 용량: "X.XGB 확보"
         let freedFormatted = FileSizeCalculator.formatBytes(result.totalFreedBytes)
-        totalFreedRow.text = "\(freedFormatted) 확보"
+        totalFreedRow.text = String(localized: "monetization.celebration.freed \(freedFormatted)")
 
         // 접근성: 통계 라벨에 명시적 설명 (FR-057)
         sessionLabel.accessibilityLabel = "\(result.sessionDeletedCount)장 삭제 완료"
