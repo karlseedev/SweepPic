@@ -123,7 +123,7 @@ final class FloatingTabBar: UIView {
     /// Photos 탭 버튼
     private lazy var photosButton: UIButton = {
         let button = createTabButton(
-            title: "보관함",
+            title: String(localized: "tab.photos"),
             image: UIImage(systemName: "photo.on.rectangle"),
             selectedImage: UIImage(systemName: "photo.on.rectangle.fill"),
             tag: 0
@@ -134,7 +134,7 @@ final class FloatingTabBar: UIView {
     /// Albums 탭 버튼
     private lazy var albumsButton: UIButton = {
         let button = createTabButton(
-            title: "앨범",
+            title: String(localized: "tab.albums"),
             image: UIImage(systemName: "rectangle.stack"),
             selectedImage: UIImage(systemName: "rectangle.stack.fill"),
             tag: 1
@@ -145,7 +145,7 @@ final class FloatingTabBar: UIView {
     /// Trash 탭 버튼
     private lazy var trashButton: UIButton = {
         let button = createTabButton(
-            title: "삭제대기함",
+            title: String(localized: "tab.trash"),
             image: UIImage(systemName: "trash"),
             selectedImage: UIImage(systemName: "trash.fill"),
             tag: 2

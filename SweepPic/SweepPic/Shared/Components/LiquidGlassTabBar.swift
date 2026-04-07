@@ -110,19 +110,19 @@ final class LiquidGlassTabBar: UIView {
                 index: 0,
                 icon: "photo.on.rectangle",
                 selectedIcon: "photo.on.rectangle.fill",
-                title: "보관함"
+                title: String(localized: "tab.photos")
             ),
             LiquidGlassTabButton(
                 index: 1,
                 icon: "rectangle.stack",
                 selectedIcon: "rectangle.stack.fill",
-                title: "앨범"
+                title: String(localized: "tab.albums")
             ),
             LiquidGlassTabButton(
                 index: 2,
                 icon: "xmark.bin",
                 selectedIcon: "xmark.bin.fill",
-                title: "삭제대기함"
+                title: String(localized: "tab.trash")
             ),
         ]
         buttons.forEach { button in
