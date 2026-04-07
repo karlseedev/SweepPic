@@ -305,33 +305,33 @@ final class CleanupE2ETests: XCTestCase {
     func testResultMessages_AllEndReasons() {
         // maxFound
         let msg1 = CleanupConstants.resultMessage(endReason: .maxFound, foundCount: 50, method: .fromLatest)
-        XCTAssertTrue(msg1.contains("50장"), "maxFound message should mention 50")
+        XCTAssertTrue(msg1.contains("50"), "maxFound message should mention 50")
 
         // maxScanned + found
         let msg2 = CleanupConstants.resultMessage(endReason: .maxScanned, foundCount: 30, method: .fromLatest)
-        XCTAssertTrue(msg2.contains("2,000장"), "maxScanned message should mention 2000")
-        XCTAssertTrue(msg2.contains("30장"), "maxScanned message should mention found count")
+        XCTAssertTrue(msg2.contains("2,000"), "maxScanned message should mention 2000")
+        XCTAssertTrue(msg2.contains("30"), "maxScanned message should mention found count")
 
         // maxScanned + none found
         let msg3 = CleanupConstants.resultMessage(endReason: .maxScanned, foundCount: 0, method: .fromLatest)
-        XCTAssertTrue(msg3.contains("없습니다"), "No-found message should indicate nothing found")
+        XCTAssertFalse(msg3.isEmpty, "No-found message should not be empty")
 
         // endOfRange + found (general)
         let msg4 = CleanupConstants.resultMessage(endReason: .endOfRange, foundCount: 10, method: .fromLatest)
-        XCTAssertTrue(msg4.contains("보관함"), "General endOfRange should mention library")
+        XCTAssertTrue(msg4.contains("10"), "General endOfRange should mention found count")
 
         // endOfRange + found (byYear)
         let msg5 = CleanupConstants.resultMessage(
             endReason: .endOfRange, foundCount: 10, method: .byYear(year: 2024, continueFrom: nil)
         )
-        XCTAssertTrue(msg5.contains("2024년"), "ByYear endOfRange should mention the year")
+        XCTAssertTrue(msg5.contains("2024"), "ByYear endOfRange should mention the year")
 
         // endOfRange + none (byYear)
         let msg6 = CleanupConstants.resultMessage(
             endReason: .endOfRange, foundCount: 0, method: .byYear(year: 2023, continueFrom: nil)
         )
-        XCTAssertTrue(msg6.contains("2023년"), "ByYear no-found should mention the year")
-        XCTAssertTrue(msg6.contains("없습니다"), "No-found message should indicate nothing found")
+        XCTAssertTrue(msg6.contains("2023"), "ByYear no-found should mention the year")
+        XCTAssertFalse(msg6.isEmpty, "No-found message should not be empty")
 
         // userCancelled
         let msg7 = CleanupConstants.resultMessage(endReason: .userCancelled, foundCount: 0, method: .fromLatest)

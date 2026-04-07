@@ -58,9 +58,9 @@ extension JudgmentMode {
     var displayTitle: String {
         switch self {
         case .precision:
-            return "신중한 정리"
+            return String(localized: "autoCleanup.mode.precision.title")
         case .recall:
-            return "적극적 정리"
+            return String(localized: "autoCleanup.mode.recall.title")
         }
     }
 
@@ -68,9 +68,9 @@ extension JudgmentMode {
     var displayDescription: String {
         switch self {
         case .precision:
-            return "확실한 저품질 사진만 정리합니다"
+            return String(localized: "autoCleanup.mode.precision.description")
         case .recall:
-            return "더 많은 저품질 사진을 찾아 정리합니다"
+            return String(localized: "autoCleanup.mode.recall.description")
         }
     }
 

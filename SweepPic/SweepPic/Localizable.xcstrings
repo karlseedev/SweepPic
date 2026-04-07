@@ -1485,6 +1485,732 @@
           "stringUnit" : { "state" : "translated", "value" : "애플 사진앱의 '최근 삭제된 항목'에서\n30일 후 완전히 삭제됩니다." }
         }
       }
+    },
+    "autoCleanup.sheet.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Low-Quality Photo Cleanup" }
+        },
+        "ko" : {
+          "stringUnit" : { "state" : "translated", "value" : "저품질 사진 정리" }
+        }
+      }
+    },
+    "autoCleanup.sheet.message" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Automatically finds and organizes\nblurry or out-of-focus photos.\nOrganized photos can be restored\nfrom the Cleanup Bin." }
+        },
+        "ko" : {
+          "stringUnit" : { "state" : "translated", "value" : "흔들리거나 초점이 맞지 않은 사진들을\n자동으로 찾아 정리합니다.\n정리된 사진은 삭제대기함에서 복구할 수 있어요." }
+        }
+      }
+    },
+    "autoCleanup.sheet.fromLatest" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Clean Up from Latest" }
+        },
+        "ko" : {
+          "stringUnit" : { "state" : "translated", "value" : "최신사진부터 정리" }
+        }
+      }
+    },
+    "autoCleanup.sheet.continueWithDate %@" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Continue Cleanup (before %@)" }
+        },
+        "ko" : {
+          "stringUnit" : { "state" : "translated", "value" : "이어서 정리 (%@ 이전)" }
+        }
+      }
+    },
+    "autoCleanup.sheet.continue" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Continue Cleanup" }
+        },
+        "ko" : {
+          "stringUnit" : { "state" : "translated", "value" : "이어서 정리" }
+        }
+      }
+    },
+    "autoCleanup.sheet.byYear" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Clean Up by Year" }
+        },
+        "ko" : {
+          "stringUnit" : { "state" : "translated", "value" : "연도별 정리" }
+        }
+      }
+    },
+    "autoCleanup.sheet.loading" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Checking year list..." }
+        },
+        "ko" : {
+          "stringUnit" : { "state" : "translated", "value" : "사진별 연도 목록 확인 중" }
+        }
+      }
+    },
+    "autoCleanup.sheet.yearSelection.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Select Year" }
+        },
+        "ko" : {
+          "stringUnit" : { "state" : "translated", "value" : "연도 선택" }
+        }
+      }
+    },
+    "autoCleanup.sheet.yearSelection.message" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Choose a year to clean up" }
+        },
+        "ko" : {
+          "stringUnit" : { "state" : "translated", "value" : "정리할 연도를 선택하세요" }
+        }
+      }
+    },
+    "autoCleanup.sheet.yearContinue %lld %@" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "%1$lld Continue (before %2$@)" }
+        },
+        "ko" : {
+          "stringUnit" : { "state" : "translated", "value" : "%1$lld년 이어서 (%2$@ 이전)" }
+        }
+      }
+    },
+    "autoCleanup.sheet.yearLabel %lld" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "%lld" }
+        },
+        "ko" : {
+          "stringUnit" : { "state" : "translated", "value" : "%lld년" }
+        }
+      }
+    },
+    "autoCleanup.sheet.back" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Back" }
+        },
+        "ko" : {
+          "stringUnit" : { "state" : "translated", "value" : "뒤로" }
+        }
+      }
+    },
+    "autoCleanup.progress.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Searching Low-Quality Photos" }
+        },
+        "ko" : {
+          "stringUnit" : { "state" : "translated", "value" : "저품질 사진 탐색 중" }
+        }
+      }
+    },
+    "autoCleanup.progress.fromLatest" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "From latest" }
+        },
+        "ko" : {
+          "stringUnit" : { "state" : "translated", "value" : "최신 사진부터" }
+        }
+      }
+    },
+    "autoCleanup.progress.continue" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Continue scanning" }
+        },
+        "ko" : {
+          "stringUnit" : { "state" : "translated", "value" : "이어서 탐색" }
+        }
+      }
+    },
+    "autoCleanup.progress.year %lld" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "%lld" }
+        },
+        "ko" : {
+          "stringUnit" : { "state" : "translated", "value" : "%lld년" }
+        }
+      }
+    },
+    "autoCleanup.progress.preparing" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Preparing..." }
+        },
+        "ko" : {
+          "stringUnit" : { "state" : "translated", "value" : "준비 중..." }
+        }
+      }
+    },
+    "autoCleanup.progress.foundSuffix %lld" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "%lld found" }
+        },
+        "ko" : {
+          "stringUnit" : { "state" : "translated", "value" : "%lld장 발견" }
+        }
+      }
+    },
+    "autoCleanup.progress.scanned %@ %@" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "%1$@ / %2$@ scanned" }
+        },
+        "ko" : {
+          "stringUnit" : { "state" : "translated", "value" : "%1$@ / %2$@장 검색" }
+        }
+      }
+    },
+    "autoCleanup.progress.scanning %@" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Checking photos from %@..." }
+        },
+        "ko" : {
+          "stringUnit" : { "state" : "translated", "value" : "%@ 사진 확인 중..." }
+        }
+      }
+    },
+    "autoCleanup.trashNotEmpty" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "To use low-quality photo cleanup,\nplease empty the Cleanup Bin first.\n\n-No limit with Pro membership-" }
+        },
+        "ko" : {
+          "stringUnit" : { "state" : "translated", "value" : "저품질 사진 정리 기능을 사용하려면\n삭제대기함을 먼저 비워주세요\n\n-Pro멤버십 가입 시 제한 해제-" }
+        }
+      }
+    },
+    "autoCleanup.result.maxFound" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Found 50 photos to clean up.\nUse 'Continue Cleanup' to find more." }
+        },
+        "ko" : {
+          "stringUnit" : { "state" : "translated", "value" : "50장의 정리할 사진을 찾았습니다.\n더 찾으려면 '이어서 정리'를 사용하세요." }
+        }
+      }
+    },
+    "autoCleanup.result.maxScannedWithFound %lld" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Scanned 2,000 photos and found %lld.\nUse 'Continue Cleanup' to find more." }
+        },
+        "ko" : {
+          "stringUnit" : { "state" : "translated", "value" : "2,000장을 검색하여 %lld장을 찾았습니다.\n더 찾으려면 '이어서 정리'를 사용하세요." }
+        }
+      }
+    },
+    "autoCleanup.result.maxScannedNone" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Scanned 2,000 photos but found none to clean up.\nUse 'Continue Cleanup' to search more." }
+        },
+        "ko" : {
+          "stringUnit" : { "state" : "translated", "value" : "2,000장을 검색했지만 정리할 사진이 없습니다.\n더 검색하려면 '이어서 정리'를 사용하세요." }
+        }
+      }
+    },
+    "autoCleanup.result.endOfRangeWithFound %lld" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Searched to the last photo in your library\nand found %lld to clean up." }
+        },
+        "ko" : {
+          "stringUnit" : { "state" : "translated", "value" : "보관함의 마지막 사진까지 검색하여 %lld장을 찾았습니다." }
+        }
+      }
+    },
+    "autoCleanup.result.endOfRangeNone" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Searched to the last photo in your library\nbut found none to clean up." }
+        },
+        "ko" : {
+          "stringUnit" : { "state" : "translated", "value" : "보관함의 마지막 사진까지 검색했지만 정리할 사진이 없습니다." }
+        }
+      }
+    },
+    "autoCleanup.result.endOfRangeYearWithFound %lld %lld" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Searched to the last photo of %1$lld\nand found %2$lld to clean up." }
+        },
+        "ko" : {
+          "stringUnit" : { "state" : "translated", "value" : "%1$lld년의 마지막 사진까지 검색하여 %2$lld장을 찾았습니다." }
+        }
+      }
+    },
+    "autoCleanup.result.endOfRangeYearNone %lld" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Searched to the last photo of %lld\nbut found none to clean up." }
+        },
+        "ko" : {
+          "stringUnit" : { "state" : "translated", "value" : "%lld년의 마지막 사진까지 검색했지만 정리할 사진이 없습니다." }
+        }
+      }
+    },
+    "autoCleanup.error.alreadyRunning" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Cleanup is already in progress" }
+        },
+        "ko" : {
+          "stringUnit" : { "state" : "translated", "value" : "정리가 이미 진행 중입니다" }
+        }
+      }
+    },
+    "autoCleanup.error.noPhotoAccess" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Photo library access is required" }
+        },
+        "ko" : {
+          "stringUnit" : { "state" : "translated", "value" : "사진 라이브러리 접근 권한이 필요합니다" }
+        }
+      }
+    },
+    "autoCleanup.error.noPreviousSession" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "No previous cleanup history" }
+        },
+        "ko" : {
+          "stringUnit" : { "state" : "translated", "value" : "이전 정리 이력이 없습니다" }
+        }
+      }
+    },
+    "autoCleanup.error.analysisFailed %@" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "An error occurred during analysis: %@" }
+        },
+        "ko" : {
+          "stringUnit" : { "state" : "translated", "value" : "분석 중 오류가 발생했습니다: %@" }
+        }
+      }
+    },
+    "autoCleanup.error.metalInitFailed" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Cannot initialize image analysis" }
+        },
+        "ko" : {
+          "stringUnit" : { "state" : "translated", "value" : "이미지 분석을 초기화할 수 없습니다" }
+        }
+      }
+    },
+    "autoCleanup.error.trashMoveFailed %@" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Error moving to Cleanup Bin: %@" }
+        },
+        "ko" : {
+          "stringUnit" : { "state" : "translated", "value" : "삭제대기함 이동 중 오류가 발생했습니다: %@" }
+        }
+      }
+    },
+    "autoCleanup.recovery.alreadyRunning" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Please wait for the current cleanup to finish" }
+        },
+        "ko" : {
+          "stringUnit" : { "state" : "translated", "value" : "현재 정리가 완료될 때까지 기다려주세요" }
+        }
+      }
+    },
+    "autoCleanup.recovery.trashNotEmpty" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Please empty the Cleanup Bin and try again" }
+        },
+        "ko" : {
+          "stringUnit" : { "state" : "translated", "value" : "삭제대기함을 비운 후 다시 시도해주세요" }
+        }
+      }
+    },
+    "autoCleanup.recovery.noPhotoAccess" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Please allow photo access in Settings" }
+        },
+        "ko" : {
+          "stringUnit" : { "state" : "translated", "value" : "설정에서 사진 접근 권한을 허용해주세요" }
+        }
+      }
+    },
+    "autoCleanup.recovery.noPreviousSession" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Please select 'Clean Up from Latest'" }
+        },
+        "ko" : {
+          "stringUnit" : { "state" : "translated", "value" : "'최신사진부터 정리'를 선택해주세요" }
+        }
+      }
+    },
+    "autoCleanup.recovery.restart" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Please restart the app and try again" }
+        },
+        "ko" : {
+          "stringUnit" : { "state" : "translated", "value" : "앱을 재시작한 후 다시 시도해주세요" }
+        }
+      }
+    },
+    "autoCleanup.recovery.retry" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Please try again" }
+        },
+        "ko" : {
+          "stringUnit" : { "state" : "translated", "value" : "다시 시도해주세요" }
+        }
+      }
+    },
+    "autoCleanup.mode.precision.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Careful Cleanup" }
+        },
+        "ko" : {
+          "stringUnit" : { "state" : "translated", "value" : "신중한 정리" }
+        }
+      }
+    },
+    "autoCleanup.mode.precision.description" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Only cleans up clearly low-quality photos" }
+        },
+        "ko" : {
+          "stringUnit" : { "state" : "translated", "value" : "확실한 저품질 사진만 정리합니다" }
+        }
+      }
+    },
+    "autoCleanup.mode.recall.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Thorough Cleanup" }
+        },
+        "ko" : {
+          "stringUnit" : { "state" : "translated", "value" : "적극적 정리" }
+        }
+      }
+    },
+    "autoCleanup.mode.recall.description" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Finds and cleans up more low-quality photos" }
+        },
+        "ko" : {
+          "stringUnit" : { "state" : "translated", "value" : "더 많은 저품질 사진을 찾아 정리합니다" }
+        }
+      }
+    },
+    "preview.header.light %lld" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Grade 5 (Lowest) — %lld photos" }
+        },
+        "ko" : {
+          "stringUnit" : { "state" : "translated", "value" : "품질 5등급(최저) 사진 %lld장" }
+        }
+      }
+    },
+    "preview.header.standard %lld" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Grade 4 and below — %lld photos" }
+        },
+        "ko" : {
+          "stringUnit" : { "state" : "translated", "value" : "품질 4등급 이하 사진 %lld장" }
+        }
+      }
+    },
+    "preview.header.deep %lld" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Grade 3 and below — %lld photos" }
+        },
+        "ko" : {
+          "stringUnit" : { "state" : "translated", "value" : "품질 3등급 이하 사진 %lld장" }
+        }
+      }
+    },
+    "preview.grade5" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Grade 5" }
+        },
+        "ko" : {
+          "stringUnit" : { "state" : "translated", "value" : "5등급" }
+        }
+      }
+    },
+    "preview.grade4" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Grade 4" }
+        },
+        "ko" : {
+          "stringUnit" : { "state" : "translated", "value" : "4등급" }
+        }
+      }
+    },
+    "preview.grade3" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Grade 3" }
+        },
+        "ko" : {
+          "stringUnit" : { "state" : "translated", "value" : "3등급" }
+        }
+      }
+    },
+    "preview.grade.light" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Grade 5" }
+        },
+        "ko" : {
+          "stringUnit" : { "state" : "translated", "value" : "품질 5등급" }
+        }
+      }
+    },
+    "preview.grade.standard" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Grade 4 and below" }
+        },
+        "ko" : {
+          "stringUnit" : { "state" : "translated", "value" : "품질 4등급 이하" }
+        }
+      }
+    },
+    "preview.grade.deep" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Grade 3 and below" }
+        },
+        "ko" : {
+          "stringUnit" : { "state" : "translated", "value" : "품질 3등급 이하" }
+        }
+      }
+    },
+    "preview.close.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Close analysis results?" }
+        },
+        "ko" : {
+          "stringUnit" : { "state" : "translated", "value" : "분석 결과를 닫으시겠습니까?" }
+        }
+      }
+    },
+    "preview.close.message" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Closing this screen will discard the analysis results." }
+        },
+        "ko" : {
+          "stringUnit" : { "state" : "translated", "value" : "현재 화면을 닫으면 분석 결과가 사라집니다." }
+        }
+      }
+    },
+    "preview.close.confirm" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Close" }
+        },
+        "ko" : {
+          "stringUnit" : { "state" : "translated", "value" : "닫기" }
+        }
+      }
+    },
+    "preview.confirm.title %@ %lld" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Move %2$lld %1$@ photos\nto Cleanup Bin?" }
+        },
+        "ko" : {
+          "stringUnit" : { "state" : "translated", "value" : "%1$@ 사진 %2$lld장을\n삭제대기함으로 이동할까요?" }
+        }
+      }
+    },
+    "preview.confirm.move" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Move" }
+        },
+        "ko" : {
+          "stringUnit" : { "state" : "translated", "value" : "이동하기" }
+        }
+      }
+    },
+    "preview.banner %@ %lld" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Quality %1$@ — %2$lld photos ↓" }
+        },
+        "ko" : {
+          "stringUnit" : { "state" : "translated", "value" : "품질 %1$@ 사진 %2$lld장 ↓" }
+        }
+      }
+    },
+    "preview.bottom.primary.light %lld" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Move %lld Grade 5 photos to Cleanup Bin" }
+        },
+        "ko" : {
+          "stringUnit" : { "state" : "translated", "value" : "5등급 사진 %lld장 삭제대기함 이동" }
+        }
+      }
+    },
+    "preview.bottom.primary.standard %lld" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Move %lld Grade 4↓ photos to Cleanup Bin" }
+        },
+        "ko" : {
+          "stringUnit" : { "state" : "translated", "value" : "4등급 이하 사진 %lld장 삭제대기함 이동" }
+        }
+      }
+    },
+    "preview.bottom.primary.deep %lld" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Move %lld Grade 3↓ photos to Cleanup Bin" }
+        },
+        "ko" : {
+          "stringUnit" : { "state" : "translated", "value" : "3등급 이하 사진 %lld장 삭제대기함 이동" }
+        }
+      }
+    },
+    "preview.bottom.collapse.standard %@ %lld" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Grade 4%1$@%2$lld less" }
+        },
+        "ko" : {
+          "stringUnit" : { "state" : "translated", "value" : "4등급 사진%1$@%2$lld장 덜 보기" }
+        }
+      }
+    },
+    "preview.bottom.collapse.deep %@ %lld" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Grade 3%1$@%2$lld less" }
+        },
+        "ko" : {
+          "stringUnit" : { "state" : "translated", "value" : "3등급 사진%1$@%2$lld장 덜 보기" }
+        }
+      }
+    },
+    "preview.bottom.expand.standard %@ %lld" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Grade 4%1$@%2$lld more" }
+        },
+        "ko" : {
+          "stringUnit" : { "state" : "translated", "value" : "4등급 사진%1$@%2$lld장 더 보기" }
+        }
+      }
+    },
+    "preview.bottom.expand.deep %@ %lld" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Grade 3%1$@%2$lld more" }
+        },
+        "ko" : {
+          "stringUnit" : { "state" : "translated", "value" : "3등급 사진%1$@%2$lld장 더 보기" }
+        }
+      }
     }
   },
   "version" : "1.0"

@@ -183,9 +183,9 @@ final class PreviewBottomView: UIView {
         // 메인 버튼: "N등급 이하 사진 N장 삭제대기함 이동" (상단 타이틀 등급과 동일)
         let primaryTitle: String
         switch currentStage {
-        case .light:    primaryTitle = "5등급 사진 \(totalCount)장 삭제대기함 이동"
-        case .standard: primaryTitle = "4등급 이하 사진 \(totalCount)장 삭제대기함 이동"
-        case .deep:     primaryTitle = "3등급 이하 사진 \(totalCount)장 삭제대기함 이동"
+        case .light:    primaryTitle = String(localized: "preview.bottom.primary.light \(totalCount)")
+        case .standard: primaryTitle = String(localized: "preview.bottom.primary.standard \(totalCount)")
+        case .deep:     primaryTitle = String(localized: "preview.bottom.primary.deep \(totalCount)")
         }
         primaryButton.setButtonTitle(primaryTitle)
 
@@ -206,9 +206,9 @@ final class PreviewBottomView: UIView {
             let collapseTitle: String
             switch currentStage {
             case .standard:
-                collapseTitle = "4등급 사진\(separator)\(standardCount)장 덜 보기"
+                collapseTitle = String(localized: "preview.bottom.collapse.standard \(separator) \(standardCount)")
             case .deep:
-                collapseTitle = "3등급 사진\(separator)\(deepCount)장 덜 보기"
+                collapseTitle = String(localized: "preview.bottom.collapse.deep \(separator) \(deepCount)")
             default:
                 collapseTitle = ""
             }
@@ -222,9 +222,9 @@ final class PreviewBottomView: UIView {
             let expandTitle: String
             switch currentStage {
             case .light:
-                expandTitle = "4등급 사진\(separator)\(standardCount)장 더 보기"
+                expandTitle = String(localized: "preview.bottom.expand.standard \(separator) \(standardCount)")
             case .standard:
-                expandTitle = "3등급 사진\(separator)\(deepCount)장 더 보기"
+                expandTitle = String(localized: "preview.bottom.expand.deep \(separator) \(deepCount)")
             default:
                 expandTitle = ""
             }

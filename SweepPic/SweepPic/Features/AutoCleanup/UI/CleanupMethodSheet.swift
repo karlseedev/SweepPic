@@ -56,19 +56,15 @@ final class CleanupMethodSheet {
     /// 메인 ActionSheet 표시
     private func showMainActionSheet(from viewController: UIViewController) {
         let alert = UIAlertController(
-            title: "저품질 사진 정리",
-            message: """
-                흔들리거나 초점이 맞지 않은 사진들을
-                자동으로 찾아 정리합니다.
-                정리된 사진은 삭제대기함에서 복구할 수 있어요.
-                """,
+            title: String(localized: "autoCleanup.sheet.title"),
+            message: String(localized: "autoCleanup.sheet.message"),
             preferredStyle: .alert
         )
 
         // 최신사진부터 정리
         // Note: [self] 강참조 - ActionSheet가 닫힐 때까지 sheet 인스턴스 유지 필요
         alert.addAction(UIAlertAction(
-            title: "최신사진부터 정리",
+            title: String(localized: "autoCleanup.sheet.fromLatest"),
             style: .default
         ) { [self] _ in
             self.delegate?.cleanupMethodSheet(self, didSelect: .fromLatest)
@@ -79,14 +75,14 @@ final class CleanupMethodSheet {
         if CleanupPreviewService.canContinue, let lastDate = CleanupPreviewService.lastScanDate {
             let dateString = formatDate(lastDate)
             continueAction = UIAlertAction(
-                title: "이어서 정리 (\(dateString) 이전)",
+                title: String(localized: "autoCleanup.sheet.continueWithDate \(dateString)"),
                 style: .default
             ) { [self] _ in
                 self.delegate?.cleanupMethodSheet(self, didSelect: .continueFromLast)
             }
         } else {
             continueAction = UIAlertAction(
-                title: "이어서 정리",
+                title: String(localized: "autoCleanup.sheet.continue"),
                 style: .default,
                 handler: nil
             )
@@ -96,7 +92,7 @@ final class CleanupMethodSheet {
 
         // 연도별 정리 (선택 시 연도 목록 로드)
         alert.addAction(UIAlertAction(
-            title: "연도별 정리",
+            title: String(localized: "autoCleanup.sheet.byYear"),
             style: .default
         ) { [self] _ in
             self.loadYearsAndShowSelection(from: viewController)
@@ -104,7 +100,7 @@ final class CleanupMethodSheet {
 
         // 취소
         alert.addAction(UIAlertAction(
-            title: "취소",
+            title: String(localized: "common.cancel"),
             style: .cancel
         ) { [self] _ in
             self.delegate?.cleanupMethodSheetDidCancel(self)
@@ -119,7 +115,7 @@ final class CleanupMethodSheet {
         // 로딩 Alert 생성
         let loadingAlert = UIAlertController(
             title: nil,
-            message: "사진별 연도 목록 확인 중",
+            message: String(localized: "autoCleanup.sheet.loading"),
             preferredStyle: .alert
         )
 
@@ -158,8 +154,8 @@ final class CleanupMethodSheet {
     /// 연도 선택 ActionSheet 표시
     private func showYearSelectionSheet(from viewController: UIViewController) {
         let alert = UIAlertController(
-            title: "연도 선택",
-            message: "정리할 연도를 선택하세요",
+            title: String(localized: "autoCleanup.sheet.yearSelection.title"),
+            message: String(localized: "autoCleanup.sheet.yearSelection.message"),
             preferredStyle: .alert
         )
 
@@ -171,7 +167,7 @@ final class CleanupMethodSheet {
            let continueFrom = CleanupPreviewService.lastByYearScanDate {
             let monthString = formatMonth(continueFrom)
             alert.addAction(UIAlertAction(
-                title: "\(targetYear)년 이어서 (\(monthString) 이전)",
+                title: String(localized: "autoCleanup.sheet.yearContinue \(targetYear) \(monthString)"),
                 style: .default
             ) { [self] _ in
                 // 해당 연도에서 이어서 정리 (continueFrom으로 시작점 전달)
@@ -182,7 +178,7 @@ final class CleanupMethodSheet {
         // 최신 연도부터 표시
         for year in availableYears {
             alert.addAction(UIAlertAction(
-                title: "\(year)년",
+                title: String(localized: "autoCleanup.sheet.yearLabel \(year)"),
                 style: .default
             ) { [self] _ in
                 self.delegate?.cleanupMethodSheet(self, didSelect: .byYear(year: year))
@@ -191,7 +187,7 @@ final class CleanupMethodSheet {
 
         // 뒤로가기
         alert.addAction(UIAlertAction(
-            title: "뒤로",
+            title: String(localized: "autoCleanup.sheet.back"),
             style: .cancel
         ) { [self] _ in
             self.showMainActionSheet(from: viewController)
@@ -225,21 +221,21 @@ final class CleanupMethodSheet {
         }
     }
 
-    /// 날짜 포맷팅 (연도 포함)
+    /// 날짜 포맷팅 (연도 포함, locale-aware)
     private func formatDate(_ date: Date?) -> String {
         guard let date = date else { return "" }
 
         let formatter = DateFormatter()
-        formatter.dateFormat = "yyyy년 M월"
+        formatter.setLocalizedDateFormatFromTemplate("yMMM")
         return formatter.string(from: date)
     }
 
-    /// 월만 포맷팅 (연도별 이어서용)
+    /// 월만 포맷팅 (연도별 이어서용, locale-aware)
     private func formatMonth(_ date: Date?) -> String {
         guard let date = date else { return "" }
 
         let formatter = DateFormatter()
-        formatter.dateFormat = "M월"
+        formatter.setLocalizedDateFormatFromTemplate("MMM")
         return formatter.string(from: date)
     }
 }

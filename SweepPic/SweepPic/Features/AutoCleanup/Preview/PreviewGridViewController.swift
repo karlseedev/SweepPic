@@ -484,15 +484,15 @@ final class PreviewGridViewController: UIViewController {
         // standard/deep: 배너 포함 전체 매핑
         switch sectionIndex {
         case 0:
-            return .banner(scoreRange: "5등급", count: previewResult.lightCount)
+            return .banner(scoreRange: String(localized: "preview.grade5"), count: previewResult.lightCount)
         case 1:
             return .photos(previewResult.lightCandidates)
         case 2:
-            return .banner(scoreRange: "4등급", count: previewResult.standardCount)
+            return .banner(scoreRange: String(localized: "preview.grade4"), count: previewResult.standardCount)
         case 3:
             return .photos(previewResult.standardCandidates)
         case 4:
-            return .banner(scoreRange: "3등급", count: previewResult.deepCount)
+            return .banner(scoreRange: String(localized: "preview.grade3"), count: previewResult.deepCount)
         case 5:
             return .photos(previewResult.deepCandidates)
         default:
@@ -532,9 +532,9 @@ final class PreviewGridViewController: UIViewController {
         // 단계별 등급 (숫자가 높을수록 저품질: 5등급=최저, 3등급=보통이하)
         let titleText: String
         switch currentStage {
-        case .light:    titleText = "품질 5등급(최저) 사진 \(count)장"
-        case .standard: titleText = "품질 4등급 이하 사진 \(count)장"
-        case .deep:     titleText = "품질 3등급 이하 사진 \(count)장"
+        case .light:    titleText = String(localized: "preview.header.light \(count)")
+        case .standard: titleText = String(localized: "preview.header.standard \(count)")
+        case .deep:     titleText = String(localized: "preview.header.deep \(count)")
         }
 
         // iOS 26: 시스템 네비바 타이틀
@@ -584,13 +584,13 @@ final class PreviewGridViewController: UIViewController {
     /// X 버튼 탭 — 실수 방지 확인 Alert
     @objc private func closeTapped() {
         let alert = UIAlertController(
-            title: "분석 결과를 닫으시겠습니까?",
-            message: "현재 화면을 닫으면 분석 결과가 사라집니다.",
+            title: String(localized: "preview.close.title"),
+            message: String(localized: "preview.close.message"),
             preferredStyle: .alert
         )
 
-        alert.addAction(UIAlertAction(title: "취소", style: .cancel))
-        alert.addAction(UIAlertAction(title: "닫기", style: .destructive) { [weak self] _ in
+        alert.addAction(UIAlertAction(title: String(localized: "common.cancel"), style: .cancel))
+        alert.addAction(UIAlertAction(title: String(localized: "preview.close.confirm"), style: .destructive) { [weak self] _ in
             // [Analytics] 이벤트 7-2: 닫기
             self?.sendPreviewAnalyticsEvent(finalAction: .close, movedCount: 0)
             self?.navigationController?.popViewController(animated: true)
@@ -621,19 +621,19 @@ final class PreviewGridViewController: UIViewController {
         // 현재 단계에 따른 등급 텍스트
         let gradeText: String
         switch currentStage {
-        case .light:    gradeText = "품질 5등급"
-        case .standard: gradeText = "품질 4등급 이하"
-        case .deep:     gradeText = "품질 3등급 이하"
+        case .light:    gradeText = String(localized: "preview.grade.light")
+        case .standard: gradeText = String(localized: "preview.grade.standard")
+        case .deep:     gradeText = String(localized: "preview.grade.deep")
         }
 
         let alert = UIAlertController(
-            title: "\(gradeText) 사진 \(assetIDs.count)장을\n삭제대기함으로 이동할까요?",
+            title: String(localized: "preview.confirm.title \(gradeText) \(assetIDs.count)"),
             message: nil,
             preferredStyle: .alert
         )
 
-        alert.addAction(UIAlertAction(title: "취소", style: .cancel))
-        alert.addAction(UIAlertAction(title: "이동하기", style: .destructive) { [weak self] _ in
+        alert.addAction(UIAlertAction(title: String(localized: "common.cancel"), style: .cancel))
+        alert.addAction(UIAlertAction(title: String(localized: "preview.confirm.move"), style: .destructive) { [weak self] _ in
             guard let self = self else { return }
             // [Analytics] 이벤트 7-2: 삭제대기함 이동
             self.sendPreviewAnalyticsEvent(finalAction: .moveToTrash, movedCount: assetIDs.count)
