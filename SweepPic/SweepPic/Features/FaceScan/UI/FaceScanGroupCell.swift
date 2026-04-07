@@ -87,15 +87,31 @@ final class FaceScanGroupCell: UITableViewCell {
         return view
     }()
 
-    /// "정리 완료" 라벨
+    /// "체크마크 + 정리 완료" 라벨
     private let completionLabel: UILabel = {
         let label = UILabel()
         label.translatesAutoresizingMaskIntoConstraints = false
-        label.font = .systemFont(ofSize: 14, weight: .medium)
+        let font = UIFont.systemFont(ofSize: 16, weight: .medium)
+        label.font = font
         label.textColor = .white
-        label.textAlignment = .center
+        label.textAlignment = .left
         label.isHidden = true
-        label.text = "정리 완료"
+
+        // 체크마크 아이콘 + "정리 완료" attributed string
+        let attachment = NSTextAttachment()
+        attachment.image = UIImage(systemName: "checkmark.circle.fill")?
+            .withTintColor(.white, renderingMode: .alwaysOriginal)
+        let imageHeight = font.lineHeight
+        attachment.bounds = CGRect(
+            x: 0,
+            y: (font.capHeight - imageHeight) / 2,
+            width: imageHeight,
+            height: imageHeight
+        )
+        let attributed = NSMutableAttributedString(attachment: attachment)
+        attributed.append(NSAttributedString(string: " 정리 완료"))
+        label.attributedText = attributed
+
         return label
     }()
 
@@ -176,11 +192,11 @@ final class FaceScanGroupCell: UITableViewCell {
             dimOverlay.bottomAnchor.constraint(equalTo: contentView.bottomAnchor),
         ])
 
-        // 정리 완료 라벨
+        // 정리 완료 라벨 — 썸네일 그룹 좌측 상단 (좌측 15, 상단 15 여백)
         contentView.addSubview(completionLabel)
         NSLayoutConstraint.activate([
-            completionLabel.centerXAnchor.constraint(equalTo: contentView.centerXAnchor),
-            completionLabel.centerYAnchor.constraint(equalTo: contentView.centerYAnchor),
+            completionLabel.leadingAnchor.constraint(equalTo: thumbnailScrollView.leadingAnchor, constant: 15),
+            completionLabel.topAnchor.constraint(equalTo: thumbnailScrollView.topAnchor, constant: 15),
         ])
     }
 

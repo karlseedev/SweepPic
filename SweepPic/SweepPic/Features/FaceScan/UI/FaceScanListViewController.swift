@@ -372,8 +372,17 @@ final class FaceScanListViewController: UIViewController, BarsVisibilityControll
     /// 닫기 버튼 탭 (iOS 16~25 / iOS 26 공용)
     @objc private func closeButtonTapped() {
         if isAnalysisComplete {
-            // 분석 완료 → 바로 닫기
-            navigationController?.popViewController(animated: true)
+            // 분석 완료 → 나가기 확인 알럿
+            let alert = UIAlertController(
+                title: "인물비교정리를 종료하시겠습니까?",
+                message: nil,
+                preferredStyle: .alert
+            )
+            alert.addAction(UIAlertAction(title: "나가기", style: .destructive) { [weak self] _ in
+                self?.navigationController?.popViewController(animated: true)
+            })
+            alert.addAction(UIAlertAction(title: "취소", style: .cancel))
+            present(alert, animated: true)
         } else {
             // 분석 중 → 알럿 표시
             let alert = UIAlertController(
