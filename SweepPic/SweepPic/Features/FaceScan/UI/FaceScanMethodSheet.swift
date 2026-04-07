@@ -202,7 +202,7 @@ final class FaceScanMethodSheet {
     /// 날짜 포맷팅 ("2026년 3월" 형식)
     private func formatDate(_ date: Date) -> String {
         let formatter = DateFormatter()
-        formatter.setLocalizedDateFormatFromTemplate("yMMM")
+        formatter.setLocalizedDateFormatFromTemplate("yMMMM")
         return formatter.string(from: date)
     }
 }
