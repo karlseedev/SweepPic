@@ -86,7 +86,7 @@ final class TrashGatePopupViewController: UIViewController {
     /// 제목 라벨 — 흰색 텍스트
     private let titleLabel: UILabel = {
         let label = UILabel()
-        label.text = "무료 삭제 한도 초과"
+        label.text = String(localized: "monetization.gate.title")
         label.font = .systemFont(ofSize: 22, weight: .semibold)
         label.textColor = .white
         label.textAlignment = .center
@@ -130,7 +130,7 @@ final class TrashGatePopupViewController: UIViewController {
     private let proButton: UIButton = {
         let button = UIButton(type: .system)
         button.backgroundColor = UIColor.white.withAlphaComponent(0.12)
-        button.setTitle("Pro 멤버십으로 무제한 삭제", for: .normal)
+        button.setTitle(String(localized: "monetization.gate.proButton"), for: .normal)
         button.setTitleColor(.white, for: .normal)
         button.titleLabel?.font = .systemFont(ofSize: 17, weight: .semibold)
         button.layer.cornerRadius = 25
@@ -143,7 +143,7 @@ final class TrashGatePopupViewController: UIViewController {
     private let closeButton: UIButton = {
         let button = UIButton(type: .system)
         button.backgroundColor = UIColor.white.withAlphaComponent(0.12)
-        button.setTitle("닫기", for: .normal)
+        button.setTitle(String(localized: "common.close"), for: .normal)
         button.setTitleColor(.secondaryLabel, for: .normal)
         button.titleLabel?.font = .systemFont(ofSize: 17, weight: .regular)
         button.layer.cornerRadius = 25
@@ -155,7 +155,7 @@ final class TrashGatePopupViewController: UIViewController {
     /// 골든 모먼트 안내 라벨 (리워드 소진 시, FR-014)
     private let goldenMomentLabel: UILabel = {
         let label = UILabel()
-        label.text = "오늘 광고 횟수를 모두 사용했습니다"
+        label.text = String(localized: "monetization.gate.adLimitReached")
         label.font = .systemFont(ofSize: 13, weight: .regular)
         label.textColor = .systemOrange
         label.textAlignment = .center
@@ -167,7 +167,7 @@ final class TrashGatePopupViewController: UIViewController {
     /// 오프라인 안내 라벨 (FR-055)
     private let offlineLabel: UILabel = {
         let label = UILabel()
-        label.text = "인터넷 연결이 필요합니다"
+        label.text = String(localized: "monetization.gate.offline")
         label.font = .systemFont(ofSize: 13, weight: .regular)
         label.textColor = .systemRed
         label.textAlignment = .center
@@ -190,7 +190,7 @@ final class TrashGatePopupViewController: UIViewController {
     /// 초대 프로모 안내 라벨
     private let referralPromoLabel: UILabel = {
         let label = UILabel()
-        label.text = "초대 한 번마다 나도 친구도\nPro 멤버십 14일 무료 제공!"
+        label.text = String(localized: "monetization.gate.referralPromo")
         label.font = .systemFont(ofSize: 14, weight: .medium)
         label.textColor = UIColor.white.withAlphaComponent(0.8)
         label.textAlignment = .center
@@ -203,7 +203,7 @@ final class TrashGatePopupViewController: UIViewController {
     private let referralButton: UIButton = {
         let button = UIButton(type: .system)
         button.backgroundColor = UIColor.white.withAlphaComponent(0.8)
-        button.setTitle("친구 초대하기", for: .normal)
+        button.setTitle(String(localized: "monetization.gate.inviteButton"), for: .normal)
         button.setTitleColor(.black, for: .normal)
         button.titleLabel?.font = .systemFont(ofSize: 17, weight: .semibold)
         button.layer.cornerRadius = 25
@@ -215,7 +215,7 @@ final class TrashGatePopupViewController: UIViewController {
     /// 초대 부가 문구: "이미 Pro멤버십 이용 중이어도 14일 무료 연장"
     private let referralSubtitleLabel: UILabel = {
         let label = UILabel()
-        label.text = "이미 Pro멤버십 이용 중이어도 14일 무료 연장"
+        label.text = String(localized: "monetization.gate.referralNote")
         label.font = .systemFont(ofSize: 11, weight: .regular)
         label.textColor = UIColor.white.withAlphaComponent(0.4)
         label.textAlignment = .center
@@ -402,7 +402,7 @@ final class TrashGatePopupViewController: UIViewController {
 
     /// 데이터 기반 콘텐츠 구성
     private func configureContent() {
-        infoLabel.text = "삭제할 사진 \(trashCount)장 · 무료 삭제 가능 \(remainingFreeDeletes)장"
+        infoLabel.text = String(localized: "monetization.gate.info \(trashCount) \(remainingFreeDeletes)")
 
         let isRewardExhausted = remainingRewards <= 0
 
@@ -410,7 +410,7 @@ final class TrashGatePopupViewController: UIViewController {
             // 리워드 4회 소진 → 골든 모먼트 (FR-014, T024)
             configureGoldenMoment()
         } else if adsNeeded > 0 {
-            let adText = "광고 \(adsNeeded)회 보고 \(trashCount)장 전체 삭제"
+            let adText = String(localized: "monetization.gate.adButton \(adsNeeded) \(trashCount)")
             adButton.setTitle(adText, for: .normal)
             // AdManager 로드 상태에 따라 버튼 초기 상태 결정
             if AdManager.shared.isRewardedAdReady {
@@ -452,7 +452,7 @@ final class TrashGatePopupViewController: UIViewController {
         case .failed:
             adButton.isEnabled = false
             adButton.backgroundColor = UIColor.white.withAlphaComponent(0.12)
-            adButton.setTitle("광고를 불러올 수 없습니다", for: .normal)
+            adButton.setTitle(String(localized: "monetization.gate.adLoadFailed"), for: .normal)
             adSpinner.stopAnimating()
         }
     }
@@ -534,7 +534,7 @@ final class TrashGatePopupViewController: UIViewController {
     // MARK: - Accessibility (FR-057)
 
     private func setupAccessibility() {
-        cardView.accessibilityLabel = "삭제대기함 비우기 안내"
+        cardView.accessibilityLabel = String(localized: "monetization.gate.a11y.card")
         cardView.isAccessibilityElement = false
         cardView.accessibilityElements = [
             titleLabel, infoLabel, goldenMomentLabel,
@@ -542,19 +542,20 @@ final class TrashGatePopupViewController: UIViewController {
             referralPromoLabel, referralButton, referralSubtitleLabel
         ]
         titleLabel.accessibilityTraits = .header
-        infoLabel.accessibilityLabel = "삭제할 사진 \(trashCount)장, 무료 삭제 가능 \(remainingFreeDeletes)장"
-        adButton.accessibilityLabel = "광고를 보고 사진 삭제하기"
-        adButton.accessibilityHint = "광고를 시청한 후 사진을 삭제합니다"
-        proButton.accessibilityLabel = "Pro멤버십으로 무제한 삭제"
-        proButton.accessibilityHint = "Pro멤버십 안내 화면으로 이동합니다"
-        closeButton.accessibilityLabel = "닫기"
-        closeButton.accessibilityHint = "팝업을 닫습니다"
-        goldenMomentLabel.accessibilityLabel = "오늘 광고 횟수를 모두 사용했습니다"
-        offlineLabel.accessibilityLabel = "인터넷 연결이 필요합니다"
+        infoLabel.accessibilityLabel = String(localized: "monetization.gate.a11y.info \(trashCount) \(remainingFreeDeletes)")
+        adButton.accessibilityLabel = String(localized: "monetization.gate.a11y.adButton")
+        adButton.accessibilityHint = String(localized: "monetization.gate.a11y.adHint")
+        proButton.accessibilityLabel = String(localized: "monetization.gate.proButton")
+        proButton.accessibilityHint = String(localized: "monetization.gate.a11y.proHint")
+        closeButton.accessibilityLabel = String(localized: "common.close")
+        closeButton.accessibilityHint = String(localized: "monetization.gate.a11y.closeHint")
+        goldenMomentLabel.accessibilityLabel = String(localized: "monetization.gate.adLimitReached")
+        offlineLabel.accessibilityLabel = String(localized: "monetization.gate.offline")
         // T032: 초대 프로모 접근성
-        referralPromoLabel.accessibilityLabel = "초대 한 번마다 나도 친구도 Pro 멤버십 14일 무료 제공"
-        referralButton.accessibilityLabel = "친구 초대하기"
-        referralButton.accessibilityHint = "초대 설명 화면으로 이동합니다"
-        referralSubtitleLabel.accessibilityLabel = "이미 Pro멤버십 이용 중이어도 14일 무료 연장"
+        referralPromoLabel.accessibilityLabel = String(localized: "monetization.gate.referralPromo")
+            .replacingOccurrences(of: "\n", with: " ")
+        referralButton.accessibilityLabel = String(localized: "monetization.gate.inviteButton")
+        referralButton.accessibilityHint = String(localized: "monetization.gate.a11y.referralHint")
+        referralSubtitleLabel.accessibilityLabel = String(localized: "monetization.gate.referralNote")
     }
 }

@@ -60,7 +60,7 @@ final class UsageGaugeView: UIView {
     /// 타이틀 라벨: "오늘 삭제한도"
     private let titleLabel: UILabel = {
         let label = UILabel()
-        label.text = "무료 삭제 한도"
+        label.text = String(localized: "monetization.gauge.title")
         label.font = .systemFont(ofSize: 16, weight: .semibold)
         label.textColor = .white
         label.translatesAutoresizingMaskIntoConstraints = false
@@ -219,7 +219,7 @@ final class UsageGaugeView: UIView {
         fillView.backgroundColor = .white
 
         // 라벨 업데이트
-        countLabel.text = "\(remaining)/\(total)장 남음"
+        countLabel.text = String(localized: "monetization.gauge.remaining \(remaining) \(total)")
 
         // 프로그레스 바 업데이트 (layoutIfNeeded 후 트랙 너비 기반)
         setNeedsLayout()
@@ -233,8 +233,8 @@ final class UsageGaugeView: UIView {
         }
 
         // 접근성 업데이트 (FR-057)
-        accessibilityLabel = "삭제 한도 게이지, \(total)장 중 \(remaining)장 남음"
-        accessibilityHint = "탭하면 한도 상세 정보를 볼 수 있습니다"
+        accessibilityLabel = String(localized: "monetization.gauge.a11y.label \(total) \(remaining)")
+        accessibilityHint = String(localized: "monetization.gauge.a11y.hint")
         isAccessibilityElement = true
     }
 }
@@ -261,7 +261,7 @@ final class UsageGaugeDetailPopup: UIViewController {
     /// 제목 라벨 — 흰색 텍스트
     private let titleLabel: UILabel = {
         let label = UILabel()
-        label.text = "무료 삭제 한도"
+        label.text = String(localized: "monetization.gauge.title")
         label.font = .systemFont(ofSize: 22, weight: .semibold)
         label.textColor = .white
         label.textAlignment = .center
@@ -283,7 +283,7 @@ final class UsageGaugeDetailPopup: UIViewController {
     /// 광고 보기 버튼 — 반투명 흰색 배경 + 흰색 텍스트
     private let watchAdButton: UIButton = {
         let button = UIButton(type: .system)
-        button.setTitle("광고 보고 +10장 추가", for: .normal)
+        button.setTitle(String(localized: "monetization.gauge.watchAd"), for: .normal)
         button.backgroundColor = UIColor.white.withAlphaComponent(0.12)
         button.setTitleColor(.white, for: .normal)
         button.titleLabel?.font = .systemFont(ofSize: 17, weight: .semibold)
@@ -296,7 +296,7 @@ final class UsageGaugeDetailPopup: UIViewController {
     /// Pro 구독 버튼 — 반투명 흰색 배경 + 흰색 텍스트
     private let proButton: UIButton = {
         let button = UIButton(type: .system)
-        button.setTitle("Pro 멤버십으로 무제한 삭제", for: .normal)
+        button.setTitle(String(localized: "monetization.gauge.proButton"), for: .normal)
         button.backgroundColor = UIColor.white.withAlphaComponent(0.12)
         button.setTitleColor(.white, for: .normal)
         button.titleLabel?.font = .systemFont(ofSize: 17, weight: .semibold)
@@ -309,7 +309,7 @@ final class UsageGaugeDetailPopup: UIViewController {
     /// 닫기 버튼 — 반투명 흰색 배경 + 회색 텍스트
     private let closeButton: UIButton = {
         let button = UIButton(type: .system)
-        button.setTitle("닫기", for: .normal)
+        button.setTitle(String(localized: "common.close"), for: .normal)
         button.backgroundColor = UIColor.white.withAlphaComponent(0.12)
         button.setTitleColor(.secondaryLabel, for: .normal)
         button.titleLabel?.font = .systemFont(ofSize: 17, weight: .regular)
@@ -332,7 +332,7 @@ final class UsageGaugeDetailPopup: UIViewController {
     /// 초대 프로모 안내 라벨
     private let referralPromoLabel: UILabel = {
         let label = UILabel()
-        label.text = "초대 한 번마다 나도 친구도\nPro 멤버십 14일 무료 제공!"
+        label.text = String(localized: "monetization.gate.referralPromo")
         label.font = .systemFont(ofSize: 14, weight: .medium)
         label.textColor = UIColor.white.withAlphaComponent(0.8)
         label.textAlignment = .center
@@ -345,7 +345,7 @@ final class UsageGaugeDetailPopup: UIViewController {
     private let referralButton: UIButton = {
         let button = UIButton(type: .system)
         button.backgroundColor = UIColor.white.withAlphaComponent(0.8)
-        button.setTitle("친구 초대하기", for: .normal)
+        button.setTitle(String(localized: "monetization.gate.inviteButton"), for: .normal)
         button.setTitleColor(.black, for: .normal)
         button.titleLabel?.font = .systemFont(ofSize: 17, weight: .semibold)
         button.layer.cornerRadius = 25
@@ -357,7 +357,7 @@ final class UsageGaugeDetailPopup: UIViewController {
     /// 초대 부가 문구
     private let referralSubtitleLabel: UILabel = {
         let label = UILabel()
-        label.text = "이미 Pro멤버십 이용 중이어도 14일 무료 연장"
+        label.text = String(localized: "monetization.gate.referralNote")
         label.font = .systemFont(ofSize: 11, weight: .regular)
         label.textColor = UIColor.white.withAlphaComponent(0.4)
         label.textAlignment = .center
@@ -489,26 +489,27 @@ final class UsageGaugeDetailPopup: UIViewController {
         let total = UsageLimitStore.shared.totalDailyCapacity
         let rewardsLeft = UsageLimitStore.shared.remainingRewards
 
-        var text = "\(remaining)/\(total)장 남음"
+        var text = String(localized: "monetization.gauge.remaining \(remaining) \(total)")
         if rewardsLeft > 0 {
-            text += "\n광고 시청 가능: \(rewardsLeft)회 (회당 +10장)"
+            text += "\n" + String(localized: "monetization.gauge.adsLeft \(rewardsLeft)")
         } else {
-            text += "\n오늘 광고 시청 횟수를 모두 사용했습니다"
+            text += "\n" + String(localized: "monetization.gauge.noAdsLeft")
             watchAdButton.isHidden = true
         }
         statusLabel.text = text
 
         // 접근성 (FR-057)
         statusLabel.accessibilityLabel = text
-        watchAdButton.accessibilityLabel = "광고를 보고 삭제 한도 10장 추가"
-        proButton.accessibilityLabel = "Pro멤버십으로 삭제 한도 무제한"
-        closeButton.accessibilityLabel = "닫기"
-        closeButton.accessibilityHint = "한도 상세 팝업을 닫습니다"
+        watchAdButton.accessibilityLabel = String(localized: "monetization.gauge.a11y.watchAd")
+        proButton.accessibilityLabel = String(localized: "monetization.gauge.a11y.proButton")
+        closeButton.accessibilityLabel = String(localized: "common.close")
+        closeButton.accessibilityHint = String(localized: "monetization.gauge.a11y.closeHint")
         // T033: 초대 프로모 접근성
-        referralPromoLabel.accessibilityLabel = "초대 한 번마다 나도 친구도 Pro 멤버십 14일 무료 제공"
-        referralButton.accessibilityLabel = "친구 초대하기"
-        referralButton.accessibilityHint = "초대 설명 화면으로 이동합니다"
-        referralSubtitleLabel.accessibilityLabel = "이미 Pro멤버십 이용 중이어도 14일 무료 연장"
+        referralPromoLabel.accessibilityLabel = String(localized: "monetization.gate.referralPromo")
+            .replacingOccurrences(of: "\n", with: " ")
+        referralButton.accessibilityLabel = String(localized: "monetization.gate.inviteButton")
+        referralButton.accessibilityHint = String(localized: "monetization.gate.a11y.referralHint")
+        referralSubtitleLabel.accessibilityLabel = String(localized: "monetization.gate.referralNote")
     }
 
     @objc private func watchAdTapped() {

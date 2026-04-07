@@ -338,13 +338,13 @@ final class TrashGateCoordinator: TrashGateCoordinatorProtocol {
 
         // 재시도/취소 팝업 표시
         let alert = UIAlertController(
-            title: "광고를 불러올 수 없습니다",
-            message: "네트워크 상태를 확인하고 다시 시도해주세요.",
+            title: String(localized: "monetization.gate.adLoadFailed"),
+            message: String(localized: "monetization.gate.networkError"),
             preferredStyle: .alert
         )
 
         // 재시도 — 같은 광고 다시 시도
-        alert.addAction(UIAlertAction(title: "다시 시도", style: .default) { [weak self, weak viewController] _ in
+        alert.addAction(UIAlertAction(title: String(localized: "monetization.gate.retry"), style: .default) { [weak self, weak viewController] _ in
             guard let self = self, let viewController = viewController else { return }
             self.handleAdWatchFlow(
                 from: viewController,
@@ -356,7 +356,7 @@ final class TrashGateCoordinator: TrashGateCoordinatorProtocol {
         })
 
         // 취소 — 광고 흐름 중단
-        alert.addAction(UIAlertAction(title: "취소", style: .cancel))
+        alert.addAction(UIAlertAction(title: String(localized: "common.cancel"), style: .cancel))
 
         viewController.present(alert, animated: true)
     }
