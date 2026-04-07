@@ -285,6 +285,7 @@ extension GridViewController {
 
         // 플래그 리셋
         CoachMarkType.autoCleanup.resetShown()
+        CoachMarkType.autoCleanupPreview.resetShown()  // D-1도 함께 리셋
 
         // 정리 버튼 프레임 획득
         let cleanupFrame = getCleanupButtonFrame(in: window)

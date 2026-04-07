@@ -195,7 +195,7 @@ final class FloatingTabBar: UIView {
         config.baseForegroundColor = .systemRed
         config.preferredSymbolConfigurationForImage = UIImage.SymbolConfiguration(pointSize: 20, weight: .medium)
         let button = UIButton(configuration: config)
-        button.accessibilityLabel = "삭제하기"
+        button.accessibilityLabel = String(localized: "common.delete")
         button.addTarget(self, action: #selector(emptyTrashButtonTapped), for: .touchUpInside)
         button.translatesAutoresizingMaskIntoConstraints = false
         return button
@@ -625,7 +625,7 @@ final class FloatingTabBar: UIView {
     /// - Parameter count: 선택된 사진 개수
     func updateSelectionCount(_ count: Int) {
         // 0개: "항목 선택", 1개 이상: "N개 항목 선택됨"
-        selectionCountLabel.text = count > 0 ? String(localized: "common.selectedCount \(count)") : "항목 선택"
+        selectionCountLabel.text = count > 0 ? String(localized: "common.selectedCount \(count)") : String(localized: "common.selectItems")
         deleteButton.isEnabled = count > 0
     }
 
@@ -684,7 +684,7 @@ final class FloatingTabBar: UIView {
     /// - Parameter count: 선택된 사진 개수
     func updateTrashSelectionCount(_ count: Int) {
         // 0개: "항목 선택", 1개 이상: "N개 항목 선택됨"
-        trashSelectionCountLabel.text = count > 0 ? String(localized: "common.selectedCount \(count)") : "항목 선택"
+        trashSelectionCountLabel.text = count > 0 ? String(localized: "common.selectedCount \(count)") : String(localized: "common.selectItems")
         trashRestoreButton.isEnabled = count > 0
         trashDeleteButton.isEnabled = count > 0
     }

@@ -34,6 +34,7 @@ enum CoachMarkType: String {
     case firstDeleteGuide = "coachMark_firstDeleteGuide"  // E-1+E-2: 삭제 시스템 안내 (통합 시퀀스)
     case firstEmpty = "coachMark_firstEmpty"               // E-3: 첫 비우기 완료 안내
     case faceComparisonGuide = "coachMark_faceComparisonGuide"  // C-3: 얼굴 비교 화면 선택 안내
+    case autoCleanupPreview = "coachMark_autoCleanupPreview"   // D-1: 자동정리 미리보기 안내
 
     /// UserDefaults 키
     var shownKey: String { rawValue }
@@ -99,6 +100,11 @@ final class CoachMarkManager {
     /// A Step 1→2 전환 중 (true 동안 dismissCurrent() 차단)
     var isA2TransitionActive: Bool = false
 
+    // MARK: - D-1 전용 상태
+
+    /// D-1 4단계 시퀀스 전환 중 (true 동안 dismissCurrent() 차단)
+    var isD1SequenceActive: Bool = false
+
     // MARK: - C 자동 pop + 간편정리 하이라이트 상태
 
     /// C-3 완료 후 자동 pop 진행 중 (true 동안 B 표시 차단, 뷰어 자동 pop)
@@ -133,6 +139,10 @@ final class CoachMarkManager {
         }
         if isA2TransitionActive {
             Logger.coachMark.debug("dismissCurrent BLOCKED — isA2TransitionActive=true")
+            return
+        }
+        if isD1SequenceActive {
+            Logger.coachMark.debug("dismissCurrent BLOCKED — isD1SequenceActive=true")
             return
         }
         Logger.coachMark.debug("dismissCurrent — overlay=\(self.currentOverlay != nil)")
@@ -353,6 +363,21 @@ final class CoachMarkOverlayView: UIView {
             // A, C: 셀 크기 그대로, 각진 모서리 (margin 0, radius 0)
             let holePath = UIBezierPath(rect: highlightFrame)
             fullPath.append(holePath)
+        }
+        // D-1: 자동정리 미리보기 안내 (Step별 shape 분기)
+        if coachMarkType == .autoCleanupPreview && highlightFrame != .zero {
+            if d1CurrentStep == 3 {
+                // Step 3: 직사각형 (margin 0, C-1/A 패턴 — 셀 정확 크기)
+                let holePath = UIBezierPath(roundedRect: highlightFrame, cornerRadius: 0)
+                fullPath.append(holePath)
+            } else {
+                // Step 1,2,4: pill shape (margin 8pt, D/간편정리 패턴)
+                let margin: CGFloat = 8
+                let holeRect = highlightFrame.insetBy(dx: -margin, dy: -margin)
+                let radius = holeRect.height / 2
+                let holePath = UIBezierPath(roundedRect: holeRect, cornerRadius: radius)
+                fullPath.append(holePath)
+            }
         }
         // D: 정리 버튼 하이라이트 (pill shape, margin 8pt)
         // highlightFrame이 .zero가 아닐 때만 (트리거 1: 자동, 트리거 2는 구멍 없음)
@@ -902,7 +927,8 @@ final class CoachMarkOverlayView: UIView {
 
         // C 타입은 markAsShown을 별도 관리 (present 성공 후 호출)
         // C-3은 dismiss 시 자동 markAsShown (화면 전환 없음)
-        if coachMarkType != .similarPhoto {
+        // D-1은 Step 4 [확인] 완료 시에만 markAsShown (중간 이탈 시 다음에 다시 표시)
+        if coachMarkType != .similarPhoto && coachMarkType != .autoCleanupPreview {
             coachMarkType.markAsShown()
         }
 
@@ -916,8 +942,10 @@ final class CoachMarkOverlayView: UIView {
         cleanupA2()
         CoachMarkManager.shared.isA2TransitionActive = false
 
-        // D, E-1+E-2, E-3, C-3: 시퀀스 전용 리소스 정리
+        // D, D-1, E-1+E-2, E-3, C-3: 시퀀스 전용 리소스 정리
         cleanupAutoCleanup()
+        cleanupD1()
+        CoachMarkManager.shared.isD1SequenceActive = false
         cleanupDeleteGuide()
         cleanupFirstEmpty()
         cleanupFaceComparisonGuide()
@@ -996,6 +1024,10 @@ final class CoachMarkOverlayView: UIView {
             // C-3: 재진입 방지 → Step 1/2 시퀀스 관리
             confirmButton.isEnabled = false
             startC3ConfirmSequence()
+        case .autoCleanupPreview:
+            // D-1: 재진입 방지 → 4단계 시퀀스 관리
+            confirmButton.isEnabled = false
+            handleD1ConfirmTapped()
         }
     }
 

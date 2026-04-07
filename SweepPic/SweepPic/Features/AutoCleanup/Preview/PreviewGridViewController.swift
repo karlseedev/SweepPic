@@ -195,6 +195,22 @@ final class PreviewGridViewController: UIViewController {
         }
     }
 
+    override func viewDidAppear(_ animated: Bool) {
+        super.viewDidAppear(animated)
+        // D-1: 자동정리 미리보기 코치마크 (최초 1회)
+        showCoachMarkD1IfNeeded()
+    }
+
+    override func viewWillDisappear(_ animated: Bool) {
+        super.viewWillDisappear(animated)
+        // D-1 시퀀스 강제 정리 (시스템 인터럽트/화면 이탈 대비)
+        if CoachMarkManager.shared.isD1SequenceActive {
+            CoachMarkManager.shared.isD1SequenceActive = false
+            CoachMarkManager.shared.currentOverlay?.shouldStopAnimation = true
+            CoachMarkManager.shared.dismissCurrent()
+        }
+    }
+
     // MARK: - Setup
 
     private func setupUI() {
@@ -541,6 +557,23 @@ final class PreviewGridViewController: UIViewController {
         title = titleText
         // iOS 18: 커스텀 헤더 라벨
         headerTitleLabel?.text = titleText
+    }
+
+    // MARK: - CoachMark D-1 Support
+
+    /// 코치마크 D-1 Step 1: 헤더 타이틀 프레임 (윈도우 좌표)
+    /// iOS 26: 시스템 네비바 / iOS 18 이하: 커스텀 헤더 타이틀 라벨
+    var headerTitleFrameForCoachMark: CGRect? {
+        guard let window = view.window else { return nil }
+        if #available(iOS 26.0, *) {
+            guard let navBar = navigationController?.navigationBar else { return nil }
+            // TODO: 네비바 전체 대신 타이틀 UILabel을 subview 탐색하여 정밀 포커싱
+            // 탐색 실패 시 네비바 전체를 fallback으로 사용
+            return navBar.convert(navBar.bounds, to: window)
+        } else {
+            guard let label = headerTitleLabel else { return nil }
+            return label.convert(label.bounds, to: window)
+        }
     }
 
     /// 제외되지 않은 유효 사진 수 (버튼 텍스트, 삭제대기함 이동용)

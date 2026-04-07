@@ -204,8 +204,8 @@ final class FloatingTitleBar: UIView {
     /// Select 버튼 (Liquid Glass 스타일) - 가장 오른쪽
     /// iOS 26 스펙: 높이 44pt, fontSize 17pt
     private lazy var selectButton: GlassTextButton = {
-        // 초기 크기를 "간편정리"(4글자) 기준으로 생성 — 보관함 첫 화면에서 Glass 배경 크기 보장
-        let button = GlassTextButton(title: "간편정리", style: .plain, tintColor: .white)
+        // 초기 크기를 정리 버튼 기준으로 생성 — 보관함 첫 화면에서 Glass 배경 크기 보장
+        let button = GlassTextButton(title: String(localized: "cleanup.title"), style: .plain, tintColor: .white)
         button.addTarget(self, action: #selector(selectButtonTapped), for: .touchUpInside)
         button.translatesAutoresizingMaskIntoConstraints = false
         return button
@@ -509,7 +509,7 @@ final class FloatingTitleBar: UIView {
         hideSecondRightButton()
 
         // GlassTextButton 텍스트 설정
-        selectButton.setButtonTitle("선택")
+        selectButton.setButtonTitle(String(localized: "common.select"))
 
         // UIMenu 모드 해제 (간편정리 메뉴 → 선택 버튼 복원 시)
         selectButton.menu = nil
@@ -525,7 +525,7 @@ final class FloatingTitleBar: UIView {
     /// Select 모드 진입 - Cancel 버튼으로 변경
     /// - Parameter cancelAction: Cancel 버튼 탭 시 실행할 클로저
     func enterSelectMode(cancelAction: @escaping () -> Void) {
-        setRightButton(title: "취소", backgroundColor: .systemBlue, action: cancelAction)
+        setRightButton(title: String(localized: "common.cancel"), backgroundColor: .systemBlue, action: cancelAction)
         // 정리 버튼, 메뉴 버튼 숨기기 (iOS 26 시스템 UI와 동일하게)
         secondRightButton.isHidden = true
         secondRightIconButton.isHidden = true

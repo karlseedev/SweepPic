@@ -252,4 +252,25 @@ final class PreviewBottomView: UIView {
     @objc private func expandTapped() {
         delegate?.previewBottomViewDidTapExpand(self)
     }
+
+    // MARK: - CoachMark D-1 Support
+
+    /// D-1 Step 2: secondaryStack 프레임 (윈도우 좌표)
+    /// secondaryStack이 숨겨져 있으면 nil 반환
+    func secondaryStackFrameInWindow() -> CGRect? {
+        guard let window = window else { return nil }
+        guard !secondaryStack.isHidden else { return nil }
+        return secondaryStack.convert(secondaryStack.bounds, to: window)
+    }
+
+    /// D-1 Step 4: primaryButton 프레임 (윈도우 좌표)
+    func primaryButtonFrameInWindow() -> CGRect? {
+        guard let window = window else { return nil }
+        return primaryButton.convert(primaryButton.bounds, to: window)
+    }
+
+    /// D-1 Step 2: expand 버튼 표시 여부
+    var isExpandButtonVisible: Bool {
+        !expandButton.isHidden
+    }
 }

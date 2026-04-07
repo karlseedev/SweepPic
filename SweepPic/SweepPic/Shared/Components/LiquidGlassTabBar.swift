@@ -485,7 +485,7 @@ extension LiquidGlassTabBar {
 
     /// 선택 개수 업데이트 (Grid/Album용)
     func updateSelectionCount(_ count: Int) {
-        selectionCountLabel.text = count > 0 ? String(localized: "common.selectedCount \(count)") : "항목 선택"
+        selectionCountLabel.text = count > 0 ? String(localized: "common.selectedCount \(count)") : String(localized: "common.selectItems")
         deleteButton.isEnabled = count > 0
     }
 }
@@ -546,7 +546,7 @@ extension LiquidGlassTabBar {
 
     /// Trash 선택 개수 업데이트
     func updateTrashSelectionCount(_ count: Int) {
-        trashSelectionCountLabel.text = count > 0 ? String(localized: "common.selectedCount \(count)") : "항목 선택"
+        trashSelectionCountLabel.text = count > 0 ? String(localized: "common.selectedCount \(count)") : String(localized: "common.selectItems")
         trashRestoreButton.isEnabled = count > 0
         trashDeleteButton.isEnabled = count > 0
     }

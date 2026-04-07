@@ -701,10 +701,7 @@ final class GridViewController: BaseGridViewController {
     /// 사진 개수 서브타이틀 업데이트
     private func updateItemCountSubtitle() {
         let count = dataSourceDriver.count
-        let formatter = NumberFormatter()
-        formatter.numberStyle = .decimal
-        let formatted = formatter.string(from: NSNumber(value: count)) ?? "\(count)"
-        let subtitleText = "\(formatted)개의 항목"
+        let subtitleText = String(localized: "common.itemCount \(count)")
 
         // iOS 18: FloatingTitleBar 서브타이틀
         if let tabBarController = tabBarController as? TabBarController,
