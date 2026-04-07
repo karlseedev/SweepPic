@@ -218,7 +218,7 @@ extension CoachMarkOverlayView {
         let paragraphStyle = NSMutableParagraphStyle()
         paragraphStyle.alignment = .center
         paragraphStyle.paragraphSpacing = 8  // 1문단↔2문단 사이 추가 간격
-        let e1Text = "방금 삭제된 사진은\u{2028}삭제대기함으로 이동됐어요\n삭제대기함에서 확인해볼까요?"
+        let e1Text = String(localized: "coachMark.e1.body")
         let e1Attributed = NSMutableAttributedString(
             string: e1Text,
             attributes: [
@@ -227,8 +227,8 @@ extension CoachMarkOverlayView {
                 .paragraphStyle: paragraphStyle,
             ]
         )
-        // "삭제대기함으로 이동" 볼드 + 노란색 강조
-        if let range = e1Text.range(of: "삭제대기함으로 이동") {
+        // 키워드 볼드 + 노란색 강조 (fallback: range 미발견 시 무시)
+        if let range = e1Text.range(of: String(localized: "coachMark.e1.keyword")) {
             let nsRange = NSRange(range, in: e1Text)
             e1Attributed.addAttributes([
                 .font: CoachMarkOverlayView.bodyBoldFont,
@@ -534,7 +534,7 @@ extension CoachMarkOverlayView {
         label.numberOfLines = 0
         label.translatesAutoresizingMaskIntoConstraints = false
 
-        let step2Text = "보관함에서 삭제된 사진은\n삭제대기함에 임시 보관돼요"
+        let step2Text = String(localized: "coachMark.e2.step2.body")
         let step2Attributed = NSMutableAttributedString(
             string: step2Text,
             attributes: [
@@ -542,7 +542,7 @@ extension CoachMarkOverlayView {
                 .foregroundColor: UIColor.white,
             ]
         )
-        if let range = step2Text.range(of: "삭제대기함에 임시 보관") {
+        if let range = step2Text.range(of: String(localized: "coachMark.e2.step2.keyword")) {
             let nsRange = NSRange(range, in: step2Text)
             step2Attributed.addAttributes([
                 .font: CoachMarkOverlayView.bodyBoldFont,
@@ -606,7 +606,7 @@ extension CoachMarkOverlayView {
     private func blinkEmptyButton(at frame: CGRect, completion: @escaping () -> Void) {
         // 가짜 비우기 버튼 (실제 버튼 위에 오버레이)
         let fakeButton = UILabel()
-        fakeButton.text = "비우기"
+        fakeButton.text = String(localized: "trash.emptyAction")
         fakeButton.textColor = .systemRed
         fakeButton.font = .systemFont(ofSize: CoachMarkOverlayView.bodyFont.pointSize, weight: .semibold)
         fakeButton.textAlignment = .center
@@ -651,7 +651,7 @@ extension CoachMarkOverlayView {
         step3Label = label
 
         // Step 3 텍스트 (강조 없이 흰색 통일)
-        let text = "[비우기]를 누르면 사진이 최종 삭제돼요"
+        let text = String(localized: "coachMark.e2.step3.body")
         let attributed = NSMutableAttributedString(
             string: text,
             attributes: [
@@ -659,7 +659,7 @@ extension CoachMarkOverlayView {
                 .foregroundColor: UIColor.white,
             ]
         )
-        if let range = text.range(of: "[비우기]") {
+        if let range = text.range(of: String(localized: "coachMark.e2.step3.keyword")) {
             let nsRange = NSRange(range, in: text)
             attributed.addAttributes([
                 .font: CoachMarkOverlayView.bodyBoldFont,

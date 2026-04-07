@@ -138,7 +138,7 @@ extension CoachMarkOverlayView {
 
         // --- 타이틀 ---
         let titleLabel = UILabel()
-        titleLabel.text = "저품질사진 자동정리"
+        titleLabel.text = String(localized: "cleanup.autoLowQuality")
         titleLabel.textColor = .white
         titleLabel.font = .systemFont(ofSize: 24, weight: .bold)
         titleLabel.textAlignment = .center
@@ -209,7 +209,7 @@ extension CoachMarkOverlayView {
 
         // --- 설명 (AttributedString: 경로 + 강조) ---
         let descLabel = UILabel()
-        let descText = "흔들리거나 초점이 맞지 않은\n저품질 사진을 AI가 자동으로 찾아주는\n정리 기능을 사용해보세요\n\n간편정리 → 저품질사진 자동정리"
+        let descText = String(localized: "coachMark.d.body")
         let descStyle = NSMutableParagraphStyle()
         descStyle.alignment = .center
         descStyle.lineSpacing = Self.bodyFont.pointSize * 0.2
@@ -221,16 +221,18 @@ extension CoachMarkOverlayView {
                 .paragraphStyle: descStyle
             ]
         )
-        // "저품질 사진을 AI가 자동" 볼드 + 노란색 강조
-        let highlightRange = (descText as NSString).range(of: "저품질 사진을 AI가 자동")
+        // 키워드 볼드 + 노란색 강조 (fallback: range 미발견 시 무시)
+        let dKeyword = String(localized: "coachMark.d.keyword")
+        let highlightRange = (descText as NSString).range(of: dKeyword)
         if highlightRange.location != NSNotFound {
             descAttr.addAttributes([
                 .font: Self.bodyBoldFont,
                 .foregroundColor: Self.highlightYellow,
             ], range: highlightRange)
         }
-        // "간편정리 → 저품질사진 자동정리" 경로 안내: 16pt regular, 화이트 70%
-        let pathRange = (descText as NSString).range(of: "간편정리 → 저품질사진 자동정리")
+        // 경로 안내: 16pt regular, 화이트 70%
+        let dPathText = String(localized: "coachMark.d.path")
+        let pathRange = (descText as NSString).range(of: dPathText)
         if pathRange.location != NSNotFound {
             descAttr.addAttributes([
                 .font: UIFont.systemFont(ofSize: 16, weight: .regular),

@@ -259,7 +259,12 @@ final class CoachMarkOverlayView: UIView {
         style.alignment = .center
         style.paragraphSpacing = 8  // 2줄↔3줄 사이 추가 간격
         // \u{2028} = 같은 단락 내 줄바꿈, \n = 단락 구분 (paragraphSpacing 적용)
-        let fullText = "사진을 밀어서 바로 정리하세요\u{2028}다시 밀면 복원돼요\n정리한 사진은 삭제대기함으로 이동됩니다"
+        let fullText = String(localized: "coachMark.a.body")
+        let keywords = [
+            String(localized: "coachMark.a.keyword.delete"),
+            String(localized: "coachMark.a.keyword.restore"),
+            String(localized: "coachMark.a.keyword.trash"),
+        ]
         let attr = NSMutableAttributedString(
             string: fullText,
             attributes: [
@@ -268,10 +273,11 @@ final class CoachMarkOverlayView: UIView {
                 .paragraphStyle: style
             ]
         )
-        // 키워드 볼드 + 노란색 강조
-        for keyword in ["정리", "복원", "삭제대기함"] {
-            let range = (fullText as NSString).range(of: keyword)
-            attr.addAttributes([.font: CoachMarkOverlayView.bodyBoldFont, .foregroundColor: CoachMarkOverlayView.highlightYellow], range: range)
+        // 키워드 볼드 + 노란색 강조 (fallback: range 미발견 시 무시)
+        for keyword in keywords {
+            if let range = fullText.range(of: keyword) {
+                attr.addAttributes([.font: CoachMarkOverlayView.bodyBoldFont, .foregroundColor: CoachMarkOverlayView.highlightYellow], range: NSRange(range, in: fullText))
+            }
         }
         label.attributedText = attr
         label.numberOfLines = 0
@@ -281,7 +287,7 @@ final class CoachMarkOverlayView: UIView {
     /// 확인 버튼 (C 확장에서 enable/disable/페이드 사용)
     let confirmButton: UIButton = {
         let button = UIButton(type: .system)
-        button.setTitle("확인", for: .normal)
+        button.setTitle(String(localized: "common.ok"), for: .normal)
         button.setTitleColor(.black, for: .normal)
         button.titleLabel?.font = .systemFont(ofSize: 17, weight: .semibold)
         button.backgroundColor = .white
@@ -293,7 +299,7 @@ final class CoachMarkOverlayView: UIView {
     /// A 전용: 스냅샷 위 타이틀 라벨 (pill 테두리)
     let titleLabel: UILabel = {
         let label = UILabel()
-        label.text = "새로운 삭제 방법"
+        label.text = String(localized: "coachMark.a.title")
         label.textColor = .white
         label.font = .systemFont(ofSize: 24, weight: .light)
         label.textAlignment = .center
@@ -455,12 +461,14 @@ final class CoachMarkOverlayView: UIView {
         overlay.titleLabel.clipsToBounds = true
         overlay.addSubview(overlay.titleLabel)
 
-        // 텍스트 라벨 (3줄: 정리 + 복원 + 삭제대기함)
+        // 텍스트 라벨 (동적 높이 — 언어별 텍스트 길이 대응)
+        let labelWidth = overlay.bounds.width - 40
+        let labelSize = overlay.messageLabel.sizeThatFits(CGSize(width: labelWidth, height: .greatestFiniteMagnitude))
         overlay.messageLabel.frame = CGRect(
             x: 20,
             y: highlightFrame.maxY + 24,
-            width: overlay.bounds.width - 40,
-            height: 80
+            width: labelWidth,
+            height: ceil(labelSize.height)
         )
         overlay.addSubview(overlay.messageLabel)
 
@@ -649,7 +657,8 @@ final class CoachMarkOverlayView: UIView {
         let label = UILabel()
         label.numberOfLines = 0
         label.translatesAutoresizingMaskIntoConstraints = false
-        let text = "설명을 위해 사진을 임시로 삭제합니다\n(삭제대기함에서 복구 가능)"
+        let text = String(localized: "coachMark.a.variant.body")
+        let keyword = String(localized: "coachMark.a.variant.keyword")
         let attributed = NSMutableAttributedString(
             string: text,
             attributes: [
@@ -662,8 +671,8 @@ final class CoachMarkOverlayView: UIView {
                 }(),
             ]
         )
-        // "임시로 삭제" 볼드 + 노란색 강조
-        if let range = text.range(of: "임시로 삭제") {
+        // 키워드 볼드 + 노란색 강조 (fallback: range 미발견 시 무시)
+        if let range = text.range(of: keyword) {
             let nsRange = NSRange(range, in: text)
             attributed.addAttributes([
                 .font: Self.bodyBoldFont,
@@ -824,7 +833,8 @@ final class CoachMarkOverlayView: UIView {
         let label = UILabel()
         label.numberOfLines = 0
         label.translatesAutoresizingMaskIntoConstraints = false
-        let text = "사진을 위로 밀면 바로\n삭제대기함으로 이동해요"
+        let text = String(localized: "coachMark.b.body")
+        let keyword = String(localized: "coachMark.b.keyword")
         let attributed = NSMutableAttributedString(
             string: text,
             attributes: [
@@ -837,8 +847,8 @@ final class CoachMarkOverlayView: UIView {
                 }(),
             ]
         )
-        // "삭제대기함" 볼드 + 노란색 강조
-        if let range = text.range(of: "삭제대기함") {
+        // 키워드 볼드 + 노란색 강조 (fallback: range 미발견 시 무시)
+        if let range = text.range(of: keyword) {
             let nsRange = NSRange(range, in: text)
             attributed.addAttributes([
                 .font: Self.bodyBoldFont,

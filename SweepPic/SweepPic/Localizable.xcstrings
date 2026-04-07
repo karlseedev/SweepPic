@@ -1056,6 +1056,435 @@
           }
         }
       }
+    },
+    "coachMark.a.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "A Brand New Way to Delete" }
+        },
+        "ko" : {
+          "stringUnit" : { "state" : "translated", "value" : "새로운 삭제 방법" }
+        }
+      }
+    },
+    "coachMark.a.body" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Swipe photos in the library to delete\u2028Swipe again to restore\nDeleted photos move to Trash" }
+        },
+        "ko" : {
+          "stringUnit" : { "state" : "translated", "value" : "사진을 밀어서 바로 정리하세요\u2028다시 밀면 복원돼요\n정리한 사진은 삭제대기함으로 이동됩니다" }
+        }
+      }
+    },
+    "coachMark.a.keyword.delete" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "delete" }
+        },
+        "ko" : {
+          "stringUnit" : { "state" : "translated", "value" : "정리" }
+        }
+      }
+    },
+    "coachMark.a.keyword.restore" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "restore" }
+        },
+        "ko" : {
+          "stringUnit" : { "state" : "translated", "value" : "복원" }
+        }
+      }
+    },
+    "coachMark.a.keyword.trash" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Trash" }
+        },
+        "ko" : {
+          "stringUnit" : { "state" : "translated", "value" : "삭제대기함" }
+        }
+      }
+    },
+    "coachMark.a.variant.body" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "A photo will be temporarily deleted\nfor this demo\n(You can restore it from Trash)" }
+        },
+        "ko" : {
+          "stringUnit" : { "state" : "translated", "value" : "설명을 위해 사진을 임시로 삭제합니다\n(삭제대기함에서 복구 가능)" }
+        }
+      }
+    },
+    "coachMark.a.variant.keyword" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "temporarily deleted" }
+        },
+        "ko" : {
+          "stringUnit" : { "state" : "translated", "value" : "임시로 삭제" }
+        }
+      }
+    },
+    "coachMark.b.body" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Swipe up to move a photo\nto Trash" }
+        },
+        "ko" : {
+          "stringUnit" : { "state" : "translated", "value" : "사진을 위로 밀면 바로\n삭제대기함으로 이동해요" }
+        }
+      }
+    },
+    "coachMark.b.keyword" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Trash" }
+        },
+        "ko" : {
+          "stringUnit" : { "state" : "translated", "value" : "삭제대기함" }
+        }
+      }
+    },
+    "coachMark.a1.body" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Swipe horizontally\non a photo to delete" }
+        },
+        "ko" : {
+          "stringUnit" : { "state" : "translated", "value" : "셀을 가로로 스와이프해서\n삭제해 보세요" }
+        }
+      }
+    },
+    "coachMark.a1.keyword" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Swipe horizontally" }
+        },
+        "ko" : {
+          "stringUnit" : { "state" : "translated", "value" : "가로로 스와이프" }
+        }
+      }
+    },
+    "coachMark.a2.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "All at Once" }
+        },
+        "ko" : {
+          "stringUnit" : { "state" : "translated", "value" : "한번에 쓱" }
+        }
+      }
+    },
+    "coachMark.a2.body" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Swipe and extend up/down\nto select multiple photos\nand delete them all at once" }
+        },
+        "ko" : {
+          "stringUnit" : { "state" : "translated", "value" : "가로로 밀면서 좌우/상하까지 더 선택하면\u2028여러 장을 한번에 정리해요" }
+        }
+      }
+    },
+    "coachMark.a2.keyword.multiple" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "multiple photos" }
+        },
+        "ko" : {
+          "stringUnit" : { "state" : "translated", "value" : "여러 장" }
+        }
+      }
+    },
+    "coachMark.a2.keyword.atOnce" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "all at once" }
+        },
+        "ko" : {
+          "stringUnit" : { "state" : "translated", "value" : "한번에" }
+        }
+      }
+    },
+    "coachMark.c1.body" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Photos with a white border support\nFace Comparison — compare faces\nacross photos and choose\nwhich to remove" }
+        },
+        "ko" : {
+          "stringUnit" : { "state" : "translated", "value" : "하얀색 테두리가 표시된 사진은\n여러 사진의 얼굴을 비교해서 삭제하는\n인물사진 비교정리가 가능한 사진이에요" }
+        }
+      }
+    },
+    "coachMark.c1.keyword" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "compare faces" }
+        },
+        "ko" : {
+          "stringUnit" : { "state" : "translated", "value" : "얼굴을 비교해서 삭제" }
+        }
+      }
+    },
+    "coachMark.c2.body" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Tap the + button\nto open Face Comparison\nSwipe left/right to see other people" }
+        },
+        "ko" : {
+          "stringUnit" : { "state" : "translated", "value" : "+버튼을 눌러 얼굴비교화면으로 이동하세요\u2028인물이 여러 명이면 좌우로 넘겨볼 수 있어요" }
+        }
+      }
+    },
+    "coachMark.c2.notice" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "\nNote: Faces may not be detected\nor misclassified depending on\nangle or resolution" }
+        },
+        "ko" : {
+          "stringUnit" : { "state" : "translated", "value" : "\n※ 얼굴은 각도, 해상도에 따라 검출되지 않거나\u2028다른 인물로 분류될 수 있습니다" }
+        }
+      }
+    },
+    "coachMark.c2.keyword.plusButton" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "+ button" }
+        },
+        "ko" : {
+          "stringUnit" : { "state" : "translated", "value" : "+버튼" }
+        }
+      }
+    },
+    "coachMark.c2.keyword.faceComparison" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Face Comparison" }
+        },
+        "ko" : {
+          "stringUnit" : { "state" : "translated", "value" : "얼굴비교화면" }
+        }
+      }
+    },
+    "coachMark.c2.followup.body" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Auto scanning is available\nfrom the Clean Up menu" }
+        },
+        "ko" : {
+          "stringUnit" : { "state" : "translated", "value" : "간편정리 메뉴에서 편리하게\u2028인물비교 자동 탐색이 가능해요" }
+        }
+      }
+    },
+    "coachMark.c2.followup.path" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "\nClean Up → Compare & Clean Portraits" }
+        },
+        "ko" : {
+          "stringUnit" : { "state" : "translated", "value" : "\n간편정리 → 인물사진 비교정리" }
+        }
+      }
+    },
+    "coachMark.c2.followup.keyword" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Auto scanning" }
+        },
+        "ko" : {
+          "stringUnit" : { "state" : "translated", "value" : "자동 탐색" }
+        }
+      }
+    },
+    "coachMark.c3.step1.body" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Select the faces you don't like\nSwipe to check other people\nand remove their photos too" }
+        },
+        "ko" : {
+          "stringUnit" : { "state" : "translated", "value" : "마음에 들지 않는 얼굴을 선택하세요\n옆으로 이동해서 다른 인물의 얼굴도\u2028확인하고 삭제할 수 있어요" }
+        }
+      }
+    },
+    "coachMark.c3.step1.keyword" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Select the faces" }
+        },
+        "ko" : {
+          "stringUnit" : { "state" : "translated", "value" : "얼굴을 선택" }
+        }
+      }
+    },
+    "coachMark.c3.step2.body" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "This is the photo number\nin the current Face Comparison group.\nNumbers may differ per person\ndepending on face detection." }
+        },
+        "ko" : {
+          "stringUnit" : { "state" : "translated", "value" : "현재 인물사진 비교정리 그룹의\u2028사진 구별 번호예요\n얼굴 검출 여부에 따라\u2028인물별로 번호가 다르게 보일 수 있어요" }
+        }
+      }
+    },
+    "coachMark.c3.step2.keyword" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "photo number" }
+        },
+        "ko" : {
+          "stringUnit" : { "state" : "translated", "value" : "사진 구별 번호" }
+        }
+      }
+    },
+    "coachMark.d.body" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Try Auto Low-Quality Cleanup —\nAI finds blurry and out-of-focus\nphotos automatically\n\nClean Up → Auto Low-Quality Cleanup" }
+        },
+        "ko" : {
+          "stringUnit" : { "state" : "translated", "value" : "흔들리거나 초점이 맞지 않은\n저품질 사진을 AI가 자동으로 찾아주는\n정리 기능을 사용해보세요\n\n간편정리 → 저품질사진 자동정리" }
+        }
+      }
+    },
+    "coachMark.d.keyword" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "AI finds" }
+        },
+        "ko" : {
+          "stringUnit" : { "state" : "translated", "value" : "저품질 사진을 AI가 자동" }
+        }
+      }
+    },
+    "coachMark.d.path" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Clean Up → Auto Low-Quality Cleanup" }
+        },
+        "ko" : {
+          "stringUnit" : { "state" : "translated", "value" : "간편정리 → 저품질사진 자동정리" }
+        }
+      }
+    },
+    "coachMark.e1.body" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "The deleted photo has been\nmoved to Trash\nWant to check it in Trash?" }
+        },
+        "ko" : {
+          "stringUnit" : { "state" : "translated", "value" : "방금 삭제된 사진은\u2028삭제대기함으로 이동됐어요\n삭제대기함에서 확인해볼까요?" }
+        }
+      }
+    },
+    "coachMark.e1.keyword" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "moved to Trash" }
+        },
+        "ko" : {
+          "stringUnit" : { "state" : "translated", "value" : "삭제대기함으로 이동" }
+        }
+      }
+    },
+    "coachMark.e2.step2.body" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Deleted photos from your library\nare temporarily stored in Trash" }
+        },
+        "ko" : {
+          "stringUnit" : { "state" : "translated", "value" : "보관함에서 삭제된 사진은\n삭제대기함에 임시 보관돼요" }
+        }
+      }
+    },
+    "coachMark.e2.step2.keyword" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "temporarily stored in Trash" }
+        },
+        "ko" : {
+          "stringUnit" : { "state" : "translated", "value" : "삭제대기함에 임시 보관" }
+        }
+      }
+    },
+    "coachMark.e2.step3.body" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Tap [Empty] to permanently\ndelete photos" }
+        },
+        "ko" : {
+          "stringUnit" : { "state" : "translated", "value" : "[비우기]를 누르면 사진이 최종 삭제돼요" }
+        }
+      }
+    },
+    "coachMark.e2.step3.keyword" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "[Empty]" }
+        },
+        "ko" : {
+          "stringUnit" : { "state" : "translated", "value" : "[비우기]" }
+        }
+      }
+    },
+    "coachMark.e3.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Deletion Complete" }
+        },
+        "ko" : {
+          "stringUnit" : { "state" : "translated", "value" : "삭제 완료" }
+        }
+      }
+    },
+    "coachMark.e3.body" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Photos will be permanently deleted\nafter 30 days in the Photos app's\n\"Recently Deleted\" album." }
+        },
+        "ko" : {
+          "stringUnit" : { "state" : "translated", "value" : "애플 사진앱의 '최근 삭제된 항목'에서\n30일 후 완전히 삭제됩니다." }
+        }
+      }
     }
   },
   "version" : "1.0"

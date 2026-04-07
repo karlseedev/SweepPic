@@ -72,7 +72,7 @@ extension CoachMarkOverlayView {
 
         // 아이콘 + 타이틀
         let titleLabel = UILabel()
-        titleLabel.text = "삭제 완료"
+        titleLabel.text = String(localized: "coachMark.e3.title")
         titleLabel.textColor = .white
         titleLabel.font = .systemFont(ofSize: 22, weight: .bold)
         titleLabel.textAlignment = .center
@@ -81,7 +81,7 @@ extension CoachMarkOverlayView {
 
         // 본문
         let bodyLabel = UILabel()
-        bodyLabel.text = "애플 사진앱의 '최근 삭제된 항목'에서\n30일 후 완전히 삭제됩니다."
+        bodyLabel.text = String(localized: "coachMark.e3.body")
         bodyLabel.textColor = .white
         bodyLabel.font = CoachMarkOverlayView.bodyFont
         bodyLabel.textAlignment = .center

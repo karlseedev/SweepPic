@@ -131,7 +131,7 @@ extension CoachMarkOverlayView {
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) { [weak self] in
             guard let self, !self.shouldStopAnimation || CoachMarkManager.shared.isA2TransitionActive else { return }
             UIView.transition(with: self.titleLabel, duration: 0.3, options: .transitionCrossDissolve) {
-                self.titleLabel.text = "한번에 쓱"
+                self.titleLabel.text = String(localized: "coachMark.a2.title")
                 // 텍스트 변경 후 프레임 재계산 (좌우 패딩 맞춤)
                 self.titleLabel.sizeToFit()
                 let padding = UIEdgeInsets(top: 8, left: 20, bottom: 8, right: 20)
@@ -188,7 +188,11 @@ extension CoachMarkOverlayView {
         // t=0.55: 메시지 텍스트 교체 + 위치를 Row 2 아래로 이동
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.55) { [weak self] in
             guard let self else { return }
-            let fullText = "가로로 밀면서 좌우/상하까지 더 선택하면\u{2028}여러 장을 한번에 정리해요"
+            let fullText = String(localized: "coachMark.a2.body")
+            let keywords = [
+                String(localized: "coachMark.a2.keyword.multiple"),
+                String(localized: "coachMark.a2.keyword.atOnce"),
+            ]
             let style = NSMutableParagraphStyle()
             style.alignment = .center
             style.paragraphSpacing = 8
@@ -200,20 +204,23 @@ extension CoachMarkOverlayView {
                     .paragraphStyle: style
                 ]
             )
-            // 키워드 강조
-            for keyword in ["여러 장", "한번에"] {
-                let range = (fullText as NSString).range(of: keyword)
-                attr.addAttributes([
-                    .font: Self.bodyBoldFont,
-                    .foregroundColor: Self.highlightYellow
-                ], range: range)
+            // 키워드 강조 (fallback: range 미발견 시 무시)
+            for keyword in keywords {
+                if let range = fullText.range(of: keyword) {
+                    attr.addAttributes([
+                        .font: Self.bodyBoldFont,
+                        .foregroundColor: Self.highlightYellow
+                    ], range: NSRange(range, in: fullText))
+                }
             }
-            // 메시지를 3셀(Row 2) 아래로 재배치
+            // 메시지를 3셀(Row 2) 아래로 재배치 (동적 높이)
+            let labelWidth = self.bounds.width - 40
+            let labelSize = self.messageLabel.sizeThatFits(CGSize(width: labelWidth, height: .greatestFiniteMagnitude))
             self.messageLabel.frame = CGRect(
                 x: 20,
                 y: row3UnionRect.maxY,
-                width: self.bounds.width - 40,
-                height: 80
+                width: labelWidth,
+                height: ceil(labelSize.height)
             )
             self.messageLabel.alpha = 0
             self.messageLabel.attributedText = attr

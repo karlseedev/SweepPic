@@ -53,7 +53,8 @@ extension CoachMarkOverlayView {
         overlay.updateDimPath()
 
         // 안내 텍스트 (하이라이트 셀 아래, 행간 1.2배)
-        let c1Text = "하얀색 테두리가 표시된 사진은\n여러 사진의 얼굴을 비교해서 삭제하는\n인물사진 비교정리가 가능한 사진이에요"
+        let c1Text = String(localized: "coachMark.c1.body")
+        let c1Keyword = String(localized: "coachMark.c1.keyword")
         let c1Style = NSMutableParagraphStyle()
         c1Style.alignment = .center
         c1Style.lineSpacing = CoachMarkOverlayView.bodyFont.pointSize * 0.2
@@ -65,7 +66,7 @@ extension CoachMarkOverlayView {
                 .paragraphStyle: c1Style
             ]
         )
-        if let range = c1Text.range(of: "얼굴을 비교해서 삭제") {
+        if let range = c1Text.range(of: c1Keyword) {
             let nsRange = NSRange(range, in: c1Text)
             c1Attr.addAttributes([
                 .font: CoachMarkOverlayView.bodyBoldFont,
@@ -73,11 +74,13 @@ extension CoachMarkOverlayView {
             ], range: nsRange)
         }
         overlay.messageLabel.attributedText = c1Attr
+        let c1LabelWidth = window.bounds.width - 40
+        let c1LabelSize = overlay.messageLabel.sizeThatFits(CGSize(width: c1LabelWidth, height: .greatestFiniteMagnitude))
         overlay.messageLabel.frame = CGRect(
             x: 20,
             y: highlightFrame.maxY + 24,
-            width: window.bounds.width - 40,
-            height: 80
+            width: c1LabelWidth,
+            height: ceil(c1LabelSize.height)
         )
         overlay.addSubview(overlay.messageLabel)
 
@@ -134,8 +137,8 @@ extension CoachMarkOverlayView {
         let circleDiameter = max(newHighlightFrame.width, newHighlightFrame.height) * 1.2
         let circleBottom = newHighlightFrame.midY + circleDiameter / 2
         // 메인 텍스트 + ※ 안내 (문단 분리, ※는 16pt)
-        let mainText = "+버튼을 눌러 얼굴비교화면으로 이동하세요\u{2028}인물이 여러 명이면 좌우로 넘겨볼 수 있어요"
-        let noticeText = "\n※ 얼굴은 각도, 해상도에 따라 검출되지 않거나\u{2028}다른 인물로 분류될 수 있습니다"
+        let mainText = String(localized: "coachMark.c2.body")
+        let noticeText = String(localized: "coachMark.c2.notice")
         let c2Style = NSMutableParagraphStyle()
         c2Style.alignment = .center
         c2Style.lineSpacing = CoachMarkOverlayView.bodyFont.pointSize * 0.2
@@ -151,16 +154,16 @@ extension CoachMarkOverlayView {
         let noticeStyle = NSMutableParagraphStyle()
         noticeStyle.alignment = .center
         noticeStyle.lineSpacing = UIFont.systemFont(ofSize: 16).pointSize * 0.2
-        // "+버튼" 키워드 강조
-        if let range = mainText.range(of: "+버튼") {
+        // "+버튼" 키워드 강조 (fallback: range 미발견 시 무시)
+        if let range = mainText.range(of: String(localized: "coachMark.c2.keyword.plusButton")) {
             let nsRange = NSRange(range, in: mainText)
             c2Attr.addAttributes([
                 .font: CoachMarkOverlayView.bodyBoldFont,
                 .foregroundColor: CoachMarkOverlayView.highlightYellow
             ], range: nsRange)
         }
-        // "얼굴비교화면" 키워드 강조
-        if let range = mainText.range(of: "얼굴비교화면") {
+        // "얼굴비교화면" 키워드 강조 (fallback: range 미발견 시 무시)
+        if let range = mainText.range(of: String(localized: "coachMark.c2.keyword.faceComparison")) {
             let nsRange = NSRange(range, in: mainText)
             c2Attr.addAttributes([
                 .font: CoachMarkOverlayView.bodyBoldFont,
@@ -534,8 +537,8 @@ extension CoachMarkOverlayView {
         CoachMarkManager.shared.currentOverlay = overlay
 
         // 안내 텍스트 (C-1과 동일 스타일: bodyFont, white, 강조 bodyBoldFont + yellow)
-        let mainText = "간편정리 메뉴에서 편리하게\u{2028}인물비교 자동 탐색이 가능해요"
-        let pathText = "\n간편정리 → 인물사진 비교정리"
+        let mainText = String(localized: "coachMark.c2.followup.body")
+        let pathText = String(localized: "coachMark.c2.followup.path")
         let fullText = mainText + pathText
         let style = NSMutableParagraphStyle()
         style.alignment = .center
@@ -549,8 +552,8 @@ extension CoachMarkOverlayView {
                 .paragraphStyle: style
             ]
         )
-        // "자동 탐색" 강조
-        if let range = fullText.range(of: "자동 탐색") {
+        // "자동 탐색" 강조 (fallback: range 미발견 시 무시)
+        if let range = fullText.range(of: String(localized: "coachMark.c2.followup.keyword")) {
             let nsRange = NSRange(range, in: fullText)
             attr.addAttributes([
                 .font: bodyBoldFont,
@@ -558,7 +561,8 @@ extension CoachMarkOverlayView {
             ], range: nsRange)
         }
         // 메뉴 경로: 16pt regular, white 70%
-        if let range = fullText.range(of: "간편정리 → 인물사진 비교정리") {
+        let pathForStyling = pathText.trimmingCharacters(in: .whitespacesAndNewlines)
+        if let range = fullText.range(of: pathForStyling) {
             let nsRange = NSRange(range, in: fullText)
             attr.addAttributes([
                 .font: UIFont.systemFont(ofSize: 16, weight: .regular),

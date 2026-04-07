@@ -62,8 +62,8 @@ extension CoachMarkOverlayView {
     /// A-1 텍스트 설정 — "셀을 가로로 스와이프해서\n삭제해 보세요"
     /// "가로로 스와이프" 키워드 bold + yellow 강조
     private func setupA1Text(below highlightFrame: CGRect) {
-        let mainText = "셀을 가로로 스와이프해서\n삭제해 보세요"
-        let keyword = "가로로 스와이프"
+        let mainText = String(localized: "coachMark.a1.body")
+        let keyword = String(localized: "coachMark.a1.keyword")
 
         let style = NSMutableParagraphStyle()
         style.alignment = .center
@@ -89,11 +89,13 @@ extension CoachMarkOverlayView {
 
         messageLabel.attributedText = attributed
         // 하이라이트 아래 16pt 간격으로 배치
+        let labelWidth = bounds.width - 40
+        let labelSize = messageLabel.sizeThatFits(CGSize(width: labelWidth, height: .greatestFiniteMagnitude))
         messageLabel.frame = CGRect(
             x: 20,
             y: highlightFrame.maxY + 16,
-            width: bounds.width - 40,
-            height: 80
+            width: labelWidth,
+            height: ceil(labelSize.height)
         )
     }
 
