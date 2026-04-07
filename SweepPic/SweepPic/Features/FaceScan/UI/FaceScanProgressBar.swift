@@ -104,7 +104,7 @@ final class FaceScanProgressBar: UIView {
         case .preparing:
             // Phase A: "분석 준비 중" (bold, white) 단독 표시
             statusLabel.attributedText = NSAttributedString(
-                string: "분석 준비 중",
+                string: String(localized: "faceScan.progress.preparing"),
                 attributes: [
                     .font: UIFont.systemFont(ofSize: 13, weight: .bold),
                     .foregroundColor: UIColor.white,
@@ -114,7 +114,7 @@ final class FaceScanProgressBar: UIView {
         case .analyzing:
             // Phase C: "분석 중" (bold, white) + " · N그룹 발견 · N / N장 검색" (regular, secondaryLabel)
             let attrStr = NSMutableAttributedString(
-                string: "분석 중",
+                string: String(localized: "faceScan.progress.scanning"),
                 attributes: [
                     .font: UIFont.systemFont(ofSize: 13, weight: .bold),
                     .foregroundColor: UIColor.white,
@@ -136,7 +136,7 @@ final class FaceScanProgressBar: UIView {
         lastState = .preparing
         progressView.setProgress(0, animated: false)
         statusLabel.attributedText = NSAttributedString(
-            string: "분석 준비 중",
+            string: String(localized: "faceScan.progress.preparing"),
             attributes: [
                 .font: UIFont.systemFont(ofSize: 13, weight: .bold),
                 .foregroundColor: UIColor.white,
@@ -151,11 +151,11 @@ final class FaceScanProgressBar: UIView {
 
         // 완료 문구 — "분석 완료" (bold, white) + 나머지 (regular, secondaryLabel)
         let detailText = groupCount > 0
-            ? " · \(groupCount)그룹 발견(\(scannedCount)장 분석 결과)"
-            : " · 발견된 그룹 없음(\(scannedCount)장 분석 결과)"
+            ? String(localized: "faceScan.progress.completeWithGroups \(groupCount) \(scannedCount)")
+            : String(localized: "faceScan.progress.completeNoGroups \(scannedCount)")
 
         let attrStr = NSMutableAttributedString(
-            string: "분석 완료",
+            string: String(localized: "faceScan.progress.complete"),
             attributes: [
                 .font: UIFont.systemFont(ofSize: 13, weight: .bold),
                 .foregroundColor: UIColor.white,

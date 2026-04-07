@@ -112,18 +112,15 @@ extension FaceScanProgress {
 
     /// 진행 중 문구: "N그룹 발견 · N / N장 검색"
     var progressText: String {
-        let totalFormatted = NumberFormatter.localizedString(
-            from: NSNumber(value: totalPhotoCount), number: .decimal
-        )
-        return "\(groupCount)그룹 발견 · \(scannedCount) / \(totalFormatted)장 검색"
+        String(localized: "faceScan.progress.progressText \(groupCount) \(scannedCount) \(totalPhotoCount)")
     }
 
     /// 완료 문구: "분석 완료 · N그룹 발견" 또는 "분석 완료 · 발견된 그룹 없음"
     var completionText: String {
         if groupCount > 0 {
-            return "분석 완료 · \(groupCount)그룹 발견"
+            return String(localized: "faceScan.progress.completionWithGroups \(groupCount)")
         } else {
-            return "분석 완료 · 발견된 그룹 없음"
+            return String(localized: "faceScan.progress.completionNoGroups")
         }
     }
 }

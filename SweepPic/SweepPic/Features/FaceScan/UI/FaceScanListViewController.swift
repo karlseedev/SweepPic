@@ -118,7 +118,7 @@ final class FaceScanListViewController: UIViewController, BarsVisibilityControll
         label.textColor = .secondaryLabel
         label.textAlignment = .center
         label.numberOfLines = 0
-        label.text = "분석 중"
+        label.text = String(localized: "faceScan.list.scanning")
         return label
     }()
 
@@ -145,7 +145,7 @@ final class FaceScanListViewController: UIViewController, BarsVisibilityControll
         super.viewDidLoad()
 
         view.backgroundColor = .systemBackground
-        title = "인물사진 비교정리"
+        title = String(localized: "faceScan.list.title")
 
         setupUI()
         startAnalysis()
@@ -259,7 +259,7 @@ final class FaceScanListViewController: UIViewController, BarsVisibilityControll
                 target: self, action: #selector(closeButtonTapped)
             )
             let barButton = UIBarButtonItem(
-                title: "다음 분석", style: .plain,
+                title: String(localized: "faceScan.list.nextScan"), style: .plain,
                 target: self, action: #selector(nextAnalysisTapped)
             )
             barButton.isEnabled = false
@@ -318,13 +318,13 @@ final class FaceScanListViewController: UIViewController, BarsVisibilityControll
         titleLabel.font = .systemFont(ofSize: 17, weight: .semibold)
         titleLabel.textColor = .white
         titleLabel.textAlignment = .center
-        titleLabel.text = "인물사진 비교정리"
+        titleLabel.text = String(localized: "faceScan.list.title")
         titleLabel.translatesAutoresizingMaskIntoConstraints = false
         header.addSubview(titleLabel)
 
         // "다음 분석" 우측 버튼 (GlassTextButton — 간편정리 버튼과 동일 스타일)
         let nextButton = GlassTextButton(
-            title: "다음 분석", style: .plain, tintColor: .white, fontSize: 15
+            title: String(localized: "faceScan.list.nextScan"), style: .plain, tintColor: .white, fontSize: 15
         )
         nextButton.translatesAutoresizingMaskIntoConstraints = false
         nextButton.addTarget(self, action: #selector(nextAnalysisTapped), for: .touchUpInside)
@@ -374,26 +374,26 @@ final class FaceScanListViewController: UIViewController, BarsVisibilityControll
         if isAnalysisComplete {
             // 분석 완료 → 나가기 확인 알럿
             let alert = UIAlertController(
-                title: "인물비교정리를 종료하시겠습니까?",
+                title: String(localized: "faceScan.list.closeAlert.finishedTitle"),
                 message: nil,
                 preferredStyle: .alert
             )
-            alert.addAction(UIAlertAction(title: "나가기", style: .destructive) { [weak self] _ in
+            alert.addAction(UIAlertAction(title: String(localized: "faceScan.list.closeAlert.leave"), style: .destructive) { [weak self] _ in
                 self?.navigationController?.popViewController(animated: true)
             })
-            alert.addAction(UIAlertAction(title: "취소", style: .cancel))
+            alert.addAction(UIAlertAction(title: String(localized: "common.cancel"), style: .cancel))
             present(alert, animated: true)
         } else {
             // 분석 중 → 알럿 표시
             let alert = UIAlertController(
-                title: "분석이 진행 중입니다",
-                message: "현재까지의 분석결과는 초기화됩니다",
+                title: String(localized: "faceScan.list.closeAlert.title"),
+                message: String(localized: "faceScan.list.closeAlert.message"),
                 preferredStyle: .alert
             )
-            alert.addAction(UIAlertAction(title: "나가기", style: .destructive) { [weak self] _ in
+            alert.addAction(UIAlertAction(title: String(localized: "faceScan.list.closeAlert.leave"), style: .destructive) { [weak self] _ in
                 self?.navigationController?.popViewController(animated: true)
             })
-            alert.addAction(UIAlertAction(title: "취소", style: .cancel))
+            alert.addAction(UIAlertAction(title: String(localized: "common.cancel"), style: .cancel))
             present(alert, animated: true)
         }
     }
@@ -426,7 +426,7 @@ final class FaceScanListViewController: UIViewController, BarsVisibilityControll
         updateTableViewInsets()
 
         // 빈 상태 라벨 복원
-        emptyLabel.text = "분석 중"
+        emptyLabel.text = String(localized: "faceScan.list.scanning")
         emptyLabel.isHidden = false
 
         // 캐시 재생성 + 이어서 분석 시작
@@ -576,7 +576,7 @@ final class FaceScanListViewController: UIViewController, BarsVisibilityControll
 
         // 0그룹일 때 안내 메시지
         if groups.isEmpty {
-            emptyLabel.text = "비교할 인물사진 그룹을\n찾지 못했습니다"
+            emptyLabel.text = String(localized: "faceScan.list.noResults")
             emptyLabel.isHidden = false
         }
 
@@ -735,4 +735,3 @@ extension FaceScanListViewController: FaceComparisonDelegate {
         // FaceScan 모드에서는 사용하지 않음
     }
 }
-

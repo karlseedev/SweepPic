@@ -109,7 +109,7 @@ final class FaceScanGroupCell: UITableViewCell {
             height: imageHeight
         )
         let attributed = NSMutableAttributedString(attachment: attachment)
-        attributed.append(NSAttributedString(string: " 정리 완료"))
+        attributed.append(NSAttributedString(string: " " + String(localized: "faceScan.group.cleanedUp")))
         label.attributedText = attributed
 
         return label

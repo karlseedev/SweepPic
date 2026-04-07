@@ -112,11 +112,11 @@ extension FaceScanMethod {
     var displayTitle: String {
         switch self {
         case .fromLatest:
-            return "최신사진부터 정리"
+            return String(localized: "faceScan.sheet.fromLatest")
         case .continueFromLast:
-            return "이어서 정리"
+            return String(localized: "faceScan.sheet.continue")
         case .byYear(let year, _):
-            return "\(year)년 사진 정리"
+            return String(localized: "faceScan.method.yearTitle \(year)")
         }
     }
 

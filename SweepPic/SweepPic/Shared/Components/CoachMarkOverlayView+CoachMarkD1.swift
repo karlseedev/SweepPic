@@ -28,6 +28,7 @@ private var d1FakeExpandButtonKey: UInt8 = 0
 private var d1StepFramesKey: UInt8 = 0
 private var d1SwipeDistanceKey: UInt8 = 0
 private var d1SwipeLoopActiveKey: UInt8 = 0
+private var d1HighlightTintViewKey: UInt8 = 0
 
 // MARK: - D-1 Focus Shape
 
@@ -86,6 +87,52 @@ extension CoachMarkOverlayView {
     private var d1SwipeLoopActive: Bool {
         get { objc_getAssociatedObject(self, &d1SwipeLoopActiveKey) as? Bool ?? false }
         set { objc_setAssociatedObject(self, &d1SwipeLoopActiveKey, newValue, .OBJC_ASSOCIATION_RETAIN_NONATOMIC) }
+    }
+
+    /// 포커싱 구멍 위치에 흰색 반투명 배경 (검정 배경에서 구멍이 안 보이는 문제 대응)
+    private var d1HighlightTintView: UIView? {
+        get { objc_getAssociatedObject(self, &d1HighlightTintViewKey) as? UIView }
+        set { objc_setAssociatedObject(self, &d1HighlightTintViewKey, newValue, .OBJC_ASSOCIATION_RETAIN_NONATOMIC) }
+    }
+
+    // MARK: - Highlight Tint
+
+    /// 포커싱 구멍 위치에 흰색 반투명 배경 표시/이동
+    /// pill shape: margin 8pt + cornerRadius, rect: margin 0
+    private func updateD1HighlightTint(for frame: CGRect, shape: D1FocusShape) {
+        let tintView: UIView
+        if let existing = d1HighlightTintView {
+            tintView = existing
+        } else {
+            tintView = UIView()
+            tintView.backgroundColor = UIColor.white.withAlphaComponent(0.1)
+            tintView.isUserInteractionEnabled = false
+            // dimLayer 위, 다른 콘텐츠 아래에 배치
+            insertSubview(tintView, at: 1)
+            d1HighlightTintView = tintView
+        }
+
+        switch shape {
+        case .pill:
+            let margin: CGFloat = 8
+            let holeRect = frame.insetBy(dx: -margin, dy: -margin)
+            tintView.frame = holeRect
+            tintView.layer.cornerRadius = holeRect.height / 2
+        case .rect:
+            tintView.frame = frame
+            tintView.layer.cornerRadius = 0
+        }
+        tintView.clipsToBounds = true
+    }
+
+    /// 포커싱 전환 시 tint view 숨김 (확대 중에는 안 보이게)
+    private func hideD1HighlightTint() {
+        d1HighlightTintView?.alpha = 0
+    }
+
+    /// 포커싱 축소 완료 후 tint view 표시
+    private func showD1HighlightTint() {
+        d1HighlightTintView?.alpha = 1
     }
 
     // MARK: - Constants
@@ -178,12 +225,17 @@ extension CoachMarkOverlayView {
         window.addSubview(overlay)
         CoachMarkManager.shared.currentOverlay = overlay
 
+        // 포커싱 구멍 흰색 tint (검정 배경에서 구멍 가시성 확보)
+        overlay.updateD1HighlightTint(for: step1Frame, shape: .pill)
+        overlay.hideD1HighlightTint()  // 축소 완료 후 표시
+
         // alpha 페이드인 (0.3s) + pill 포커싱 축소 (0.9s) 동시
         UIView.animate(withDuration: 0.3) {
             overlay.alpha = 1
         }
         overlay.animateDFocus(to: step1Frame) {
             guard !overlay.shouldStopAnimation else { return }
+            overlay.showD1HighlightTint()
             // 포커싱 완료 → 0.5s 대기 → 텍스트 페이드인
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
                 guard !overlay.shouldStopAnimation else { return }
@@ -470,6 +522,7 @@ extension CoachMarkOverlayView {
                 return
             }
             // 확대 → 축소
+            self.hideD1HighlightTint()
             self.animateD1Expand { [weak self] in
                 guard let self, !self.shouldStopAnimation else {
                     CoachMarkManager.shared.isD1SequenceActive = false
@@ -477,11 +530,13 @@ extension CoachMarkOverlayView {
                 }
                 let targetFrame = self.d1StepFrames[1]
                 self.highlightFrame = targetFrame
+                self.updateD1HighlightTint(for: targetFrame, shape: .pill)
                 self.animateD1Shrink(to: targetFrame, shape: .pill) { [weak self] in
                     guard let self, !self.shouldStopAnimation else {
                         CoachMarkManager.shared.isD1SequenceActive = false
                         return
                     }
+                    self.showD1HighlightTint()
                     // 0.5s 대기 → 텍스트 페이드인
                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
                         guard let self, !self.shouldStopAnimation else {
@@ -521,6 +576,7 @@ extension CoachMarkOverlayView {
                 CoachMarkManager.shared.isD1SequenceActive = false
                 return
             }
+            self.hideD1HighlightTint()
             self.animateD1Expand { [weak self] in
                 guard let self, !self.shouldStopAnimation else {
                     CoachMarkManager.shared.isD1SequenceActive = false
@@ -528,6 +584,8 @@ extension CoachMarkOverlayView {
                 }
                 let targetFrame = self.d1StepFrames[2]
                 self.highlightFrame = targetFrame
+                // Step 3은 셀 스냅샷이 보이므로 tint 불필요 — rect shape로 업데이트만
+                self.updateD1HighlightTint(for: targetFrame, shape: .rect)
 
                 // 스냅샷 + 녹색 딤드 배치 (alpha 0)
                 if let snapshot = self.d1SnapshotView {
@@ -606,6 +664,7 @@ extension CoachMarkOverlayView {
             self.d1GreenView = nil
             self.fingerView.layer.removeAllAnimations()
 
+            self.hideD1HighlightTint()
             self.animateD1Expand { [weak self] in
                 guard let self, !self.shouldStopAnimation else {
                     CoachMarkManager.shared.isD1SequenceActive = false
@@ -613,11 +672,13 @@ extension CoachMarkOverlayView {
                 }
                 let targetFrame = self.d1StepFrames[3]
                 self.highlightFrame = targetFrame
+                self.updateD1HighlightTint(for: targetFrame, shape: .pill)
                 self.animateD1Shrink(to: targetFrame, shape: .pill) { [weak self] in
                     guard let self, !self.shouldStopAnimation else {
                         CoachMarkManager.shared.isD1SequenceActive = false
                         return
                     }
+                    self.showD1HighlightTint()
                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
                         guard let self, !self.shouldStopAnimation else {
                             CoachMarkManager.shared.isD1SequenceActive = false
@@ -775,6 +836,8 @@ extension CoachMarkOverlayView {
         fingerView.alpha = 0
         fingerView.transform = CGAffineTransform(scaleX: 1.1, y: 1.1)
         fingerView.layer.shadowOpacity = 0
+        // fingerView가 아직 subview가 아닐 수 있으므로 addSubview 후 최상단 배치
+        if fingerView.superview !== self { addSubview(fingerView) }
         bringSubviewToFront(fingerView)
 
         // 1) Touch Down (0.3초)
@@ -920,6 +983,8 @@ extension CoachMarkOverlayView {
         d1GreenView = nil
         d1FakeExpandButton?.removeFromSuperview()
         d1FakeExpandButton = nil
+        d1HighlightTintView?.removeFromSuperview()
+        d1HighlightTintView = nil
         fingerView.layer.removeAllAnimations()
         dimLayer.removeAnimation(forKey: "d1Expand")
         dimLayer.removeAnimation(forKey: "d1Shrink")

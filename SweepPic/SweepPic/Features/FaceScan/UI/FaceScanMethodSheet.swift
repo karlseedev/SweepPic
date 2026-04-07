@@ -50,19 +50,14 @@ final class FaceScanMethodSheet {
     /// 메인 Alert 표시
     private func showMainAlert(from viewController: UIViewController) {
         let alert = UIAlertController(
-            title: "인물사진 비교정리",
-            message: """
-                비슷한 사진에서 같은 인물을
-                찾아 얼굴을 비교합니다.
-                마음에 들지 않는 사진을
-                골라 정리할 수 있어요.
-                """,
+            title: String(localized: "faceScan.sheet.title"),
+            message: String(localized: "faceScan.sheet.message"),
             preferredStyle: .alert
         )
 
         // 최신사진부터 정리
         alert.addAction(UIAlertAction(
-            title: "최신사진부터 정리",
+            title: String(localized: "faceScan.sheet.fromLatest"),
             style: .default
         ) { [self] _ in
             self.delegate?.faceScanMethodSheet(self, didSelect: .fromLatest)
@@ -73,14 +68,14 @@ final class FaceScanMethodSheet {
         if FaceScanService.canContinue, let lastDate = FaceScanService.lastScanDate {
             let dateString = formatDate(lastDate)
             continueAction = UIAlertAction(
-                title: "이어서 정리 (\(dateString) 이전)",
+                title: String(localized: "faceScan.sheet.continueWithDate \(dateString)"),
                 style: .default
             ) { [self] _ in
                 self.delegate?.faceScanMethodSheet(self, didSelect: .continueFromLast)
             }
         } else {
             continueAction = UIAlertAction(
-                title: "이어서 정리",
+                title: String(localized: "faceScan.sheet.continue"),
                 style: .default,
                 handler: nil
             )
@@ -90,14 +85,14 @@ final class FaceScanMethodSheet {
 
         // 연도별 정리
         alert.addAction(UIAlertAction(
-            title: "연도별 정리",
+            title: String(localized: "faceScan.sheet.byYear"),
             style: .default
         ) { [self] _ in
             self.loadYearsAndShowSelection(from: viewController)
         })
 
         // 취소
-        alert.addAction(UIAlertAction(title: "취소", style: .cancel) { [self] _ in
+        alert.addAction(UIAlertAction(title: String(localized: "common.cancel"), style: .cancel) { [self] _ in
             self.delegate?.faceScanMethodSheetDidCancel(self)
         })
 
@@ -111,7 +106,7 @@ final class FaceScanMethodSheet {
         // 로딩 Alert 생성
         let loadingAlert = UIAlertController(
             title: nil,
-            message: "사진별 연도 목록 확인 중",
+            message: String(localized: "faceScan.sheet.loading"),
             preferredStyle: .alert
         )
 
@@ -154,8 +149,8 @@ final class FaceScanMethodSheet {
     /// 연도 선택 Alert
     private func showYearSelectionAlert(from viewController: UIViewController) {
         let alert = UIAlertController(
-            title: "연도 선택",
-            message: "정리할 연도를 선택하세요.",
+            title: String(localized: "faceScan.sheet.yearSelection.title"),
+            message: String(localized: "faceScan.sheet.yearSelection.message"),
             preferredStyle: .actionSheet
         )
 
@@ -165,9 +160,9 @@ final class FaceScanMethodSheet {
             let title: String
             if let date = continueDate {
                 let dateString = formatDate(date)
-                title = "\(year)년 (이어서: \(dateString) 이전)"
+                title = String(localized: "faceScan.sheet.yearContinue \(year) \(dateString)")
             } else {
-                title = "\(year)년"
+                title = String(localized: "faceScan.sheet.yearLabel \(year)")
             }
 
             alert.addAction(UIAlertAction(title: title, style: .default) { [self] _ in
@@ -178,7 +173,7 @@ final class FaceScanMethodSheet {
             })
         }
 
-        alert.addAction(UIAlertAction(title: "취소", style: .cancel) { [self] _ in
+        alert.addAction(UIAlertAction(title: String(localized: "common.cancel"), style: .cancel) { [self] _ in
             self.delegate?.faceScanMethodSheetDidCancel(self)
         })
 
@@ -207,7 +202,7 @@ final class FaceScanMethodSheet {
     /// 날짜 포맷팅 ("2026년 3월" 형식)
     private func formatDate(_ date: Date) -> String {
         let formatter = DateFormatter()
-        formatter.dateFormat = "yyyy년 M월"
+        formatter.setLocalizedDateFormatFromTemplate("yMMM")
         return formatter.string(from: date)
     }
 }

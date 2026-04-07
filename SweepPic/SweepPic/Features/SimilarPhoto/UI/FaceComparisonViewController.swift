@@ -213,7 +213,7 @@ final class FaceComparisonViewController: UIViewController {
 
     /// Cancel 버튼 - GlassTextButton (Liquid Glass 스타일)
     private lazy var cancelButton: GlassTextButton = {
-        let button = GlassTextButton(title: "취소", style: .plain, tintColor: .systemBlue)
+        let button = GlassTextButton(title: String(localized: "common.cancel"), style: .plain, tintColor: .systemBlue)
         button.addTarget(self, action: #selector(cancelButtonTapped), for: .touchUpInside)
         button.translatesAutoresizingMaskIntoConstraints = false
         button.accessibilityIdentifier = "comparison_cancel"
@@ -223,7 +223,7 @@ final class FaceComparisonViewController: UIViewController {
     /// 선택 개수 라벨
     private lazy var selectionCountLabel: UILabel = {
         let label = UILabel()
-        label.text = "항목 선택"
+        label.text = String(localized: "common.selectItems")
         label.textColor = .white
         label.font = .systemFont(ofSize: 17, weight: .regular)
         label.textAlignment = .center
@@ -233,7 +233,7 @@ final class FaceComparisonViewController: UIViewController {
 
     /// Delete 버튼 - GlassTextButton (Liquid Glass 스타일)
     private lazy var deleteButton: GlassTextButton = {
-        let button = GlassTextButton(title: "삭제", style: .plain, tintColor: .systemRed)
+        let button = GlassTextButton(title: String(localized: "common.delete"), style: .plain, tintColor: .systemRed)
         button.addTarget(self, action: #selector(deleteButtonTapped), for: .touchUpInside)
         button.translatesAutoresizingMaskIntoConstraints = false
         button.accessibilityIdentifier = "comparison_delete"
@@ -509,7 +509,7 @@ final class FaceComparisonViewController: UIViewController {
 
     /// 타이틀바 업데이트
     private func updateTitleBar() {
-        let title = "인물사진 비교정리 - 인물 \(currentPersonArrayIndex + 1)"
+        let title = String(localized: "faceComparison.title \(currentPersonArrayIndex + 1)")
 
         if #available(iOS 26.0, *) {
             self.title = title
@@ -521,7 +521,7 @@ final class FaceComparisonViewController: UIViewController {
     /// 네비게이션 타이틀 업데이트 (iOS 26+)
     @available(iOS 26.0, *)
     private func updateNavigationTitle() {
-        self.title = "인물사진 비교정리 - 인물\(currentPersonIndex)"
+        self.title = String(localized: "faceComparison.title \(currentPersonIndex)")
     }
 
     /// 선택 개수 업데이트
@@ -529,9 +529,9 @@ final class FaceComparisonViewController: UIViewController {
         let count = selectedAssetIDs.count
 
         if count > 0 {
-            selectionCountLabel.text = "\(count)개 선택됨"
+            selectionCountLabel.text = String(localized: "common.selectedCount \(count)")
         } else {
-            selectionCountLabel.text = "항목 선택"
+            selectionCountLabel.text = String(localized: "common.selectItems")
         }
     }
 
@@ -637,8 +637,12 @@ final class FaceComparisonViewController: UIViewController {
     /// Delete 버튼 탭
     @objc private func deleteButtonTapped() {
         guard !selectedAssetIDs.isEmpty || mode.isFaceScan else {
-            let alert = UIAlertController(title: nil, message: "사진을 먼저 선택하세요", preferredStyle: .alert)
-            alert.addAction(UIAlertAction(title: "확인", style: .default))
+            let alert = UIAlertController(
+                title: nil,
+                message: String(localized: "faceComparison.selectFirst"),
+                preferredStyle: .alert
+            )
+            alert.addAction(UIAlertAction(title: String(localized: "common.ok"), style: .default))
             present(alert, animated: true)
             return
         }
@@ -696,11 +700,11 @@ final class FaceComparisonViewController: UIViewController {
     private func showViewerCancelAlert() {
         let alert = UIAlertController(
             title: nil,
-            message: "변경사항을 적용하시겠습니까?",
+            message: String(localized: "faceComparison.applyAlert"),
             preferredStyle: .alert
         )
-        alert.addAction(UIAlertAction(title: "취소", style: .cancel))
-        alert.addAction(UIAlertAction(title: "확인", style: .destructive) { [weak self] _ in
+        alert.addAction(UIAlertAction(title: String(localized: "common.cancel"), style: .cancel))
+        alert.addAction(UIAlertAction(title: String(localized: "common.ok"), style: .destructive) { [weak self] _ in
             guard let self = self else { return }
             self.selectedAssetIDs.removeAll()
             self.dismiss(animated: true) {
@@ -714,15 +718,15 @@ final class FaceComparisonViewController: UIViewController {
     private func showChangesAlert(initialSelected: Set<String>) {
         let alert = UIAlertController(
             title: nil,
-            message: "변경사항을 적용하시겠습니까?",
+            message: String(localized: "faceComparison.applyAlert"),
             preferredStyle: .alert
         )
 
-        alert.addAction(UIAlertAction(title: "적용", style: .default) { [weak self] _ in
+        alert.addAction(UIAlertAction(title: String(localized: "faceComparison.apply"), style: .default) { [weak self] _ in
             self?.applyDiffAndDismiss(initialSelected: initialSelected)
         })
 
-        alert.addAction(UIAlertAction(title: "취소", style: .cancel) { [weak self] _ in
+        alert.addAction(UIAlertAction(title: String(localized: "common.cancel"), style: .cancel) { [weak self] _ in
             guard let self = self else { return }
             self.dismiss(animated: true) {
                 self.delegate?.faceComparisonViewControllerDidClose(self)

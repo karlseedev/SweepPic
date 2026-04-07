@@ -23,6 +23,11 @@ extension PreviewGridViewController {
     /// D-1 코치마크 표시 조건 확인 + 0.5초 지연 후 표시
     /// viewDidAppear에서 호출
     func showCoachMarkD1IfNeeded() {
+        // [DEBUG] 테스트용: 가드 조건 무시, 매번 표시
+        #if DEBUG
+        CoachMarkType.autoCleanupPreview.resetShown()
+        #endif
+
         // 이미 표시됨
         guard !CoachMarkType.autoCleanupPreview.hasBeenShown else { return }
         // VoiceOver 활성
