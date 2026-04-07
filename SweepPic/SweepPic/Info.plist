@@ -28,7 +28,7 @@
 	<key>GADApplicationIdentifier</key>
 	<string>ca-app-pub-3940256099942544~1458002511</string>
 	<key>NSUserTrackingUsageDescription</key>
-	<string>허용하시면 관련 없는 광고가 줄어듭니다. 데이터는 외부에 판매하지 않습니다.</string>
+	<string>Allowing tracking helps reduce irrelevant ads. Your data is never sold to third parties.</string>
 	<key>SKAdNetworkItems</key>
 	<array>
 		<dict>

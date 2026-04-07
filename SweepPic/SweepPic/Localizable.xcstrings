@@ -1,0 +1,108 @@
+{
+  "sourceLanguage" : "en",
+  "strings" : {
+    "permissions.restricted.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Photo Access\nIs Restricted"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "사진 접근이\n제한되어 있습니다"
+          }
+        }
+      }
+    },
+    "permissions.restricted.description" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Photo library access is restricted\non this device.\nPlease contact your administrator."
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "이 기기에서 사진 라이브러리 접근이\n제한되어 있습니다.\n관리자에게 문의해 주세요."
+          }
+        }
+      }
+    },
+    "permissions.openSettings" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Open Settings"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "설정 열기"
+          }
+        }
+      }
+    },
+    "permissions.restricted.secondary" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "You can remove restrictions in Settings > Screen Time."
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "설정 > 스크린 타임에서 제한을 해제할 수 있습니다."
+          }
+        }
+      }
+    },
+    "permissions.denied.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Full Photo Access\nRequired"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "앱을 이용하려면\n전체 사진 접근 권한이\n필요합니다"
+          }
+        }
+      }
+    },
+    "permissions.denied.description" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "SweepPic needs full access to your\nphoto library to work properly.\nPlease select \"Allow Full Access\" in Settings."
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "SweepPic은 전체 사진 라이브러리에\n접근해야 정상적으로 동작합니다.\n설정에서 '전체 접근 허용'을 선택해 주세요."
+          }
+        }
+      }
+    }
+  },
+  "version" : "1.0"
+}

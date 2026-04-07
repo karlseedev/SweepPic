@@ -225,17 +225,17 @@ final class PermissionViewController: UIViewController {
 
         if isRestricted {
             // 보호자 통제 등으로 제한됨
-            titleLabel.text = "사진 접근이\n제한되어 있습니다"
-            descriptionLabel.text = "이 기기에서 사진 라이브러리 접근이\n제한되어 있습니다.\n관리자에게 문의해 주세요."
-            actionButton.setTitle("설정 열기", for: .normal)
+            titleLabel.text = String(localized: "permissions.restricted.title")
+            descriptionLabel.text = String(localized: "permissions.restricted.description")
+            actionButton.setTitle(String(localized: "permissions.openSettings"), for: .normal)
             actionButton.backgroundColor = .systemGray
-            secondaryLabel.text = "설정 > 스크린 타임에서 제한을 해제할 수 있습니다."
+            secondaryLabel.text = String(localized: "permissions.restricted.secondary")
             secondaryLabel.isHidden = false
         } else {
             // 사용자가 거부함 또는 선택한 사진만 허용 (동일하게 처리)
-            titleLabel.text = "앱을 이용하려면\n전체 사진 접근 권한이\n필요합니다"
-            descriptionLabel.text = "SweepPic은 전체 사진 라이브러리에\n접근해야 정상적으로 동작합니다.\n설정에서 '전체 접근 허용'을 선택해 주세요."
-            actionButton.setTitle("설정 열기", for: .normal)
+            titleLabel.text = String(localized: "permissions.denied.title")
+            descriptionLabel.text = String(localized: "permissions.denied.description")
+            actionButton.setTitle(String(localized: "permissions.openSettings"), for: .normal)
             actionButton.backgroundColor = .systemBlue
             secondaryLabel.isHidden = true
         }
