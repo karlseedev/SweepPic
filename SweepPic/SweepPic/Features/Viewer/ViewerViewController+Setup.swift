@@ -126,11 +126,11 @@ extension ViewerViewController {
         // "인물사진 비교정리"(레귤러/흰색) + " 가능"(볼드/밝은 노란색)
         let attr = NSMutableAttributedString()
         attr.append(NSAttributedString(
-            string: "인물사진 비교정리 ",
+            string: String(localized: "viewer.faceCompare.title"),
             attributes: [.font: UIFont.systemFont(ofSize: 17, weight: .regular), .foregroundColor: UIColor.white]
         ))
         attr.append(NSAttributedString(
-            string: "가능",
+            string: String(localized: "viewer.faceCompare.available"),
             attributes: [.font: UIFont.systemFont(ofSize: 17, weight: .heavy), .foregroundColor: UIColor(red: 1.0, green: 234.0/255.0, blue: 0, alpha: 1.0)]
         ))
         titleLabel.attributedText = attr

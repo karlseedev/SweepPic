@@ -181,7 +181,7 @@ final class ViewerViewController: UIViewController {
 
     /// 이전 사진 버튼 (일반 모드 - 좌측 하단)
     lazy var previousPhotoButton: GlassTextButton = {
-        let button = GlassTextButton(title: "이전 사진", style: .plain, tintColor: .white)
+        let button = GlassTextButton(title: String(localized: "viewer.previous"), style: .plain, tintColor: .white)
         button.translatesAutoresizingMaskIntoConstraints = false
         button.addTarget(self, action: #selector(previousPhotoButtonTapped), for: .touchUpInside)
         button.accessibilityIdentifier = "viewer_previous_photo"
@@ -190,7 +190,7 @@ final class ViewerViewController: UIViewController {
 
     /// 삭제하기 버튼 (일반 모드 - 우측 하단)
     lazy var deleteButton: GlassTextButton = {
-        let button = GlassTextButton(title: "삭제하기", style: .plain, tintColor: .systemRed)
+        let button = GlassTextButton(title: String(localized: "viewer.delete"), style: .plain, tintColor: .systemRed)
         button.translatesAutoresizingMaskIntoConstraints = false
         button.addTarget(self, action: #selector(deleteButtonTapped), for: .touchUpInside)
         button.accessibilityIdentifier = "viewer_delete"
@@ -200,7 +200,7 @@ final class ViewerViewController: UIViewController {
     /// 복구 버튼 (삭제대기함 모드 - Liquid Glass 텍스트 버튼)
     /// iOS 26 스펙: 텍스트 "복구", tintColor #30D158 (녹색)
     lazy var restoreButton: GlassTextButton = {
-        let button = GlassTextButton(title: "복구하기", style: .plain, tintColor: .systemGreen)
+        let button = GlassTextButton(title: String(localized: "viewer.restore"), style: .plain, tintColor: .systemGreen)
         button.translatesAutoresizingMaskIntoConstraints = false
         button.addTarget(self, action: #selector(restoreButtonTapped), for: .touchUpInside)
         button.accessibilityIdentifier = "viewer_restore"
@@ -210,7 +210,7 @@ final class ViewerViewController: UIViewController {
     /// 최종 삭제 버튼 (삭제대기함 모드 - Liquid Glass 텍스트 버튼)
     /// iOS 26 스펙: 텍스트 "최종 삭제", tintColor #FF4245 (빨간색)
     lazy var permanentDeleteButton: GlassTextButton = {
-        let button = GlassTextButton(title: "최종 삭제", style: .plain, tintColor: .systemRed)
+        let button = GlassTextButton(title: String(localized: "viewer.erase"), style: .plain, tintColor: .systemRed)
         button.translatesAutoresizingMaskIntoConstraints = false
         button.addTarget(self, action: #selector(permanentDeleteButtonTapped), for: .touchUpInside)
         button.accessibilityIdentifier = "viewer_permanent_delete"
@@ -220,7 +220,7 @@ final class ViewerViewController: UIViewController {
     /// 제외 버튼 (정리 미리보기 모드 - Liquid Glass 텍스트 버튼)
     /// 정리 후보에서 개별 사진을 제외하는 버튼
     lazy var excludeButton: GlassTextButton = {
-        let button = GlassTextButton(title: "저품질 목록에서 제외", style: .plain, tintColor: .white)
+        let button = GlassTextButton(title: String(localized: "viewer.keepPhoto"), style: .plain, tintColor: .white)
         button.translatesAutoresizingMaskIntoConstraints = false
         button.addTarget(self, action: #selector(excludeButtonTapped), for: .touchUpInside)
         return button

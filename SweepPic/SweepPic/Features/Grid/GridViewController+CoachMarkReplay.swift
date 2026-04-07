@@ -43,7 +43,7 @@ extension GridViewController {
         // 사진 0장 체크
         guard dataSourceDriver.count > 0 else {
             if let window = view.window {
-                ToastView.show("사진이 없습니다", in: window)
+                ToastView.show(String(localized: "emptyState.noPhotos.title"), in: window)
             }
             return
         }
@@ -71,7 +71,7 @@ extension GridViewController {
 
         guard dataSourceDriver.count > 0 else {
             if let window = view.window {
-                ToastView.show("사진이 없습니다", in: window)
+                ToastView.show(String(localized: "emptyState.noPhotos.title"), in: window)
             }
             return
         }
@@ -79,7 +79,7 @@ extension GridViewController {
         // 중앙에서 가까운 이미지 셀 탐색 (비디오 제외)
         guard let indexPath = findNearestImageCell() else {
             if let window = view.window {
-                ToastView.show("표시할 이미지가 없습니다", in: window)
+                ToastView.show(String(localized: "grid.toast.noImageToDisplay"), in: window)
             }
             return
         }
@@ -160,7 +160,7 @@ extension GridViewController {
             CoachMarkType.similarPhoto.markAsShown()
             CoachMarkType.faceComparisonGuide.markAsShown()
             if let window = view.window {
-                ToastView.show("인물사진 비교정리 할 사진을 찾지 못했습니다", in: window)
+                ToastView.show(String(localized: "grid.toast.noFaceComparisonPhotos"), in: window)
             }
             return
         }
@@ -216,7 +216,7 @@ extension GridViewController {
         stack.addArrangedSubview(spinner)
 
         let label = UILabel()
-        label.text = "기능이 실행되는\n사진을 찾고 있어요"
+        label.text = String(localized: "grid.searching")
         label.textColor = .white
         label.font = .systemFont(ofSize: 16, weight: .medium)
         label.textAlignment = .center
@@ -247,7 +247,7 @@ extension GridViewController {
                     CoachMarkType.similarPhoto.markAsShown()
                     CoachMarkType.faceComparisonGuide.markAsShown()
                     if let window = self.view.window {
-                        ToastView.show("인물사진 비교정리 할 사진을 찾지 못했습니다", in: window)
+                        ToastView.show(String(localized: "grid.toast.noFaceComparisonPhotos"), in: window)
                     }
                 }
             }
@@ -313,7 +313,7 @@ extension GridViewController {
 
         guard dataSourceDriver.count > 0 else {
             if let window = view.window {
-                ToastView.show("사진이 없습니다", in: window)
+                ToastView.show(String(localized: "emptyState.noPhotos.title"), in: window)
             }
             return
         }
@@ -321,7 +321,7 @@ extension GridViewController {
         // 중앙 셀 찾기
         guard let (cell, indexPath) = findCenterCell() else {
             if let window = view.window {
-                ToastView.show("사진이 없습니다", in: window)
+                ToastView.show(String(localized: "emptyState.noPhotos.title"), in: window)
             }
             return
         }

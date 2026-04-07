@@ -45,15 +45,15 @@ extension GridViewController {
     private func setupSystemCleanupButton() {
         // 간편정리 버튼 — 탭 시 UIMenu 풀다운 (인물사진 비교정리 / 저품질사진 자동정리)
         let cleanupMenuItem = UIBarButtonItem(
-            title: "간편정리",
+            title: String(localized: "cleanup.title"),
             image: nil,
             primaryAction: nil,
             menu: UIMenu(children: [
-                UIAction(title: "인물사진 비교정리",
+                UIAction(title: String(localized: "cleanup.faceComparison"),
                          image: UIImage(systemName: "person.2.crop.square.stack")) { [weak self] _ in
                     self?.faceScanButtonTapped()
                 },
-                UIAction(title: "저품질사진 자동정리",
+                UIAction(title: String(localized: "cleanup.autoLowQuality"),
                          image: UIImage(systemName: "wand.and.stars")) { [weak self] _ in
                     self?.cleanupButtonTapped()
                 },
@@ -68,7 +68,7 @@ extension GridViewController {
                 PremiumMenuViewController.makeMenu(from: self),
                 ReferralMenuViewController.makeMenu(from: self),
                 CustomerServiceViewController.makeMenu(from: self),
-                UIAction(title: "사진 선택 모드",
+                UIAction(title: String(localized: "cleanup.selectMode"),
                          image: UIImage(systemName: "checkmark.circle")) { [weak self] _ in
                     self?.selectButtonTapped()
                 },
@@ -97,13 +97,13 @@ extension GridViewController {
 
         // 간편정리 메뉴 버튼 — 탭 시 UIMenu 풀다운
         overlay.titleBar.setRightMenuButton(
-            title: "간편정리",
+            title: String(localized: "cleanup.title"),
             menu: UIMenu(children: [
-                UIAction(title: "인물사진 비교정리",
+                UIAction(title: String(localized: "cleanup.faceComparison"),
                          image: UIImage(systemName: "person.2.crop.square.stack")) { [weak self] _ in
                     self?.faceScanButtonTapped()
                 },
-                UIAction(title: "저품질사진 자동정리",
+                UIAction(title: String(localized: "cleanup.autoLowQuality"),
                          image: UIImage(systemName: "wand.and.stars")) { [weak self] _ in
                     self?.cleanupButtonTapped()
                 },
@@ -115,7 +115,7 @@ extension GridViewController {
             PremiumMenuViewController.makeMenu(from: self),
             ReferralMenuViewController.makeMenu(from: self),
             CustomerServiceViewController.makeMenu(from: self),
-            UIAction(title: "사진 선택 모드",
+            UIAction(title: String(localized: "cleanup.selectMode"),
                      image: UIImage(systemName: "checkmark.circle")) { [weak self] _ in
                 self?.selectButtonTapped()
             },
@@ -282,19 +282,19 @@ extension GridViewController {
     /// 삭제대기함 비어있지 않음 알림 표시
     private func showTrashNotEmptyAlert() {
         let alert = UIAlertController(
-            title: "저품질사진 자동정리",
-            message: "저품질 사진 정리 기능을 사용하려면\n삭제대기함을 먼저 비워주세요\n\n-Pro멤버십 가입 시 제한 해제-",
+            title: String(localized: "cleanup.autoLowQuality"),
+            message: String(localized: "cleanup.trashNotEmpty.message"),
             preferredStyle: .alert
         )
 
-        alert.addAction(UIAlertAction(title: "삭제대기함 보기", style: .default) { [weak self] _ in
+        alert.addAction(UIAlertAction(title: String(localized: "cleanup.viewTrash"), style: .default) { [weak self] _ in
             // [Analytics] 삭제대기함 경고에서 이탈 (삭제대기함 보기)
             self?.cleanupTracker?.reachedStage = .trashWarningExit
             self?.sendCleanupTrackerAndClear()
             self?.navigateToTrash()
         })
 
-        alert.addAction(UIAlertAction(title: "취소", style: .cancel) { [weak self] _ in
+        alert.addAction(UIAlertAction(title: String(localized: "common.cancel"), style: .cancel) { [weak self] _ in
             // [Analytics] 삭제대기함 경고에서 이탈 (취소)
             self?.cleanupTracker?.reachedStage = .trashWarningExit
             self?.sendCleanupTrackerAndClear()
@@ -314,12 +314,12 @@ extension GridViewController {
     /// 정리 에러 표시
     private func showCleanupError(_ error: CleanupError) {
         let alert = UIAlertController(
-            title: "정리 실패",
+            title: String(localized: "cleanup.failed"),
             message: error.localizedDescription,
             preferredStyle: .alert
         )
 
-        alert.addAction(UIAlertAction(title: "확인", style: .default))
+        alert.addAction(UIAlertAction(title: String(localized: "common.ok"), style: .default))
 
         present(alert, animated: true)
     }
@@ -562,17 +562,17 @@ extension GridViewController {
     private func showNoPreviewResultAlert(method: CleanupMethod) {
         let message: String
         if case .byYear(let year, _) = method {
-            message = "\(year)년에서 정리할 저품질 사진을 찾지 못했습니다."
+            message = String(localized: "cleanup.noLowQualityInYear \(year)")
         } else {
-            message = "정리할 저품질 사진을 찾지 못했습니다."
+            message = String(localized: "cleanup.noLowQuality")
         }
 
         let alert = UIAlertController(
-            title: "정리할 사진 없음",
+            title: String(localized: "cleanup.noPhotos"),
             message: message,
             preferredStyle: .alert
         )
-        alert.addAction(UIAlertAction(title: "확인", style: .default))
+        alert.addAction(UIAlertAction(title: String(localized: "common.ok"), style: .default))
         present(alert, animated: true)
     }
 }
@@ -585,25 +585,25 @@ extension GridViewController {
     /// 각 항목 탭 시 CoachMarkReplay 확장의 재생 함수를 호출
     func makeCoachMarkReplayMenu() -> UIMenu {
         UIMenu(
-            title: "설명 다시 보기",
+            title: String(localized: "menu.tutorialReplay"),
             image: UIImage(systemName: "arrow.counterclockwise"),
             children: [
-                UIAction(title: "목록에서 밀어서 삭제") { [weak self] _ in
+                UIAction(title: String(localized: "menu.tutorialReplay.gridSwipe")) { [weak self] _ in
                     self?.replayCoachMarkA()
                 },
-                UIAction(title: "뷰어에서 밀어서 삭제") { [weak self] _ in
+                UIAction(title: String(localized: "menu.tutorialReplay.viewerSwipe")) { [weak self] _ in
                     self?.replayCoachMarkB()
                 },
-                UIAction(title: "인물사진 비교정리") { [weak self] _ in
+                UIAction(title: String(localized: "cleanup.faceComparison")) { [weak self] _ in
                     self?.replayCoachMarkC()
                 },
-                UIAction(title: "저품질사진 자동정리") { [weak self] _ in
+                UIAction(title: String(localized: "cleanup.autoLowQuality")) { [weak self] _ in
                     self?.replayCoachMarkD()
                 },
-                UIAction(title: "삭제 시스템 안내") { [weak self] _ in
+                UIAction(title: String(localized: "menu.tutorialReplay.trashSystem")) { [weak self] _ in
                     self?.replayCoachMarkE1E2()
                 },
-                UIAction(title: "비우기 완료 안내") { [weak self] _ in
+                UIAction(title: String(localized: "menu.tutorialReplay.emptyComplete")) { [weak self] _ in
                     self?.replayCoachMarkE3()
                 },
             ]
