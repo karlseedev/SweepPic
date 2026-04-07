@@ -297,7 +297,7 @@ final class AlbumsViewController: UIViewController {
 
             // 섹션 헤더 (스마트 앨범, 사용자 앨범 섹션)
             let albumSection = AlbumSection(rawValue: sectionIndex)
-            if albumSection?.headerTitle != nil {
+            if albumSection?.hasHeader == true {
                 let headerSize = NSCollectionLayoutSize(
                     widthDimension: .fractionalWidth(1.0),
                     heightDimension: .absolute(Self.headerHeight)
@@ -535,7 +535,12 @@ extension AlbumsViewController: UICollectionViewDataSource {
         }
 
         if let albumSection = AlbumSection(rawValue: indexPath.section) {
-            headerView.configure(title: albumSection.headerTitle)
+            let title: String?
+            switch albumSection {
+            case .smartAlbums: title = String(localized: "albums.section.mediaTypes")
+            case .userAlbums: title = String(localized: "albums.section.myAlbums")
+            }
+            headerView.configure(title: title)
         }
 
         return headerView

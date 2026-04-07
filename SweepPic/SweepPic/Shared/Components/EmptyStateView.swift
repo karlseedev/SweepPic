@@ -172,8 +172,8 @@ extension EmptyStateView {
     static func noPhotos() -> EmptyStateView {
         EmptyStateView(
             icon: "photo.on.rectangle.angled",
-            title: "사진이 없습니다",
-            subtitle: "사진 라이브러리에 사진을 추가해주세요"
+            title: String(localized: "emptyState.noPhotos.title"),
+            subtitle: String(localized: "emptyState.noPhotos.subtitle")
         )
     }
 
@@ -181,8 +181,8 @@ extension EmptyStateView {
     static func emptyAlbum() -> EmptyStateView {
         EmptyStateView(
             icon: "photo.on.rectangle",
-            title: "사진 없음",
-            subtitle: "이 앨범에는 사진이 없습니다"
+            title: String(localized: "emptyState.emptyAlbum.title"),
+            subtitle: String(localized: "emptyState.emptyAlbum.subtitle")
         )
     }
 
@@ -190,7 +190,7 @@ extension EmptyStateView {
     static func emptyTrash() -> EmptyStateView {
         EmptyStateView(
             icon: "trash",
-            title: "삭제대기함이 비어 있습니다",
+            title: String(localized: "emptyState.emptyTrash.title"),
             subtitle: nil
         )
     }
@@ -199,8 +199,8 @@ extension EmptyStateView {
     static func permissionRequired() -> EmptyStateView {
         let view = EmptyStateView(
             icon: "photo.badge.exclamationmark",
-            title: "사진 접근 권한 필요",
-            subtitle: "설정에서 사진 라이브러리 접근을 허용해주세요"
+            title: String(localized: "emptyState.permissionRequired.title"),
+            subtitle: String(localized: "emptyState.permissionRequired.subtitle")
         )
         return view
     }

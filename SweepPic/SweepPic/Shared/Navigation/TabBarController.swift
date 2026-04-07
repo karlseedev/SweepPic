@@ -109,7 +109,7 @@ class TabBarController: UITabBarController {
         let photosVC = GridViewController()
         let photosNavController = UINavigationController(rootViewController: photosVC)
         photosNavController.tabBarItem = UITabBarItem(
-            title: "보관함",
+            title: String(localized: "tab.photos"),
             image: UIImage(systemName: "photo.on.rectangle"),
             selectedImage: UIImage(systemName: "photo.on.rectangle.fill")
         )
@@ -124,7 +124,7 @@ class TabBarController: UITabBarController {
         let albumsVC = AlbumsViewController()
         let albumsNavController = UINavigationController(rootViewController: albumsVC)
         albumsNavController.tabBarItem = UITabBarItem(
-            title: "앨범",
+            title: String(localized: "tab.albums"),
             image: UIImage(systemName: "rectangle.stack"),
             selectedImage: UIImage(systemName: "rectangle.stack.fill")
         )
@@ -138,7 +138,7 @@ class TabBarController: UITabBarController {
         let trashVC = TrashAlbumViewController()
         let trashNavController = UINavigationController(rootViewController: trashVC)
         trashNavController.tabBarItem = UITabBarItem(
-            title: "삭제대기함",
+            title: String(localized: "tab.trash"),
             image: UIImage(systemName: "xmark.bin"),
             selectedImage: UIImage(systemName: "xmark.bin.fill")
         )
@@ -211,7 +211,7 @@ class TabBarController: UITabBarController {
         // Photos 탭에 Select 버튼 추가
         if let photosVC = photosNav?.viewControllers.first as? GridViewController {
             let selectButton = UIBarButtonItem(
-                title: "선택",
+                title: String(localized: "common.select"),
                 style: .plain,
                 target: self,
                 action: #selector(systemSelectButtonTapped)

@@ -137,10 +137,8 @@ public struct SmartAlbum: Identifiable, Hashable {
     /// 스마트 앨범 타입
     public let type: SmartAlbumType
 
-    /// 앨범 제목 (표시용)
-    public var title: String {
-        return type.displayTitle
-    }
+    /// 앨범 제목 (PHAssetCollection.localizedTitle 기반, 시스템 자동 번역)
+    public let title: String
 
     /// 앨범 내 에셋 개수
     public let assetCount: Int
@@ -151,11 +149,13 @@ public struct SmartAlbum: Identifiable, Hashable {
     public init(
         id: String,
         type: SmartAlbumType,
+        title: String,
         assetCount: Int,
         keyAssetIdentifier: String? = nil
     ) {
         self.id = id
         self.type = type
+        self.title = title
         self.assetCount = assetCount
         self.keyAssetIdentifier = keyAssetIdentifier
     }
@@ -171,8 +171,8 @@ public struct TrashAlbum: Identifiable, Hashable {
     /// 가상 앨범 ID (고정값)
     public let id: String = "app_trash_album"
 
-    /// 앨범 제목
-    public let title: String = "삭제대기함"
+    /// 앨범 제목 (앱 UI에서 로컬라이즈해서 전달)
+    public let title: String
 
     /// 삭제대기함 내 에셋 개수
     public let assetCount: Int
@@ -181,9 +181,11 @@ public struct TrashAlbum: Identifiable, Hashable {
     public let keyAssetIdentifier: String?
 
     public init(
+        title: String = "Trash",
         assetCount: Int,
         keyAssetIdentifier: String? = nil
     ) {
+        self.title = title
         self.assetCount = assetCount
         self.keyAssetIdentifier = keyAssetIdentifier
     }
@@ -200,11 +202,6 @@ public enum AlbumSection: Int, CaseIterable {
     /// 사용자 앨범 (직접 생성)
     case userAlbums = 1
 
-    /// 섹션 헤더 제목
-    public var headerTitle: String? {
-        switch self {
-        case .smartAlbums: return "미디어 유형"
-        case .userAlbums: return "나의 앨범"
-        }
-    }
+    /// 섹션 헤더 표시 여부 (제목은 앱 UI에서 String(localized:)로 제공)
+    public var hasHeader: Bool { true }
 }

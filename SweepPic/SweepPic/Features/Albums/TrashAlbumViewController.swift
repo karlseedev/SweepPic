@@ -101,7 +101,7 @@ final class TrashAlbumViewController: BaseGridViewController {
 
     /// 빈 상태 설정
     override var emptyStateConfig: (icon: String, title: String, subtitle: String?) {
-        ("xmark.bin", "삭제대기함이 비어 있습니다", nil)
+        ("xmark.bin", String(localized: "emptyState.emptyTrash.title"), nil)
     }
 
     /// 네비게이션 타이틀
@@ -110,7 +110,7 @@ final class TrashAlbumViewController: BaseGridViewController {
     /// - LiquidGlassTabBar.swift: tabButtons title
     /// - configureFloatingOverlayForTrash의 setTitle()
     override var navigationTitle: String {
-        "삭제대기함"
+        String(localized: "trash.title")
     }
 
     /// 스와이프 제스처 활성화 (녹색 커튼 복구)
@@ -270,7 +270,7 @@ final class TrashAlbumViewController: BaseGridViewController {
 
         // Select 버튼
         let selectButton = UIBarButtonItem(
-            title: "선택",
+            title: String(localized: "common.select"),
             style: .plain,
             target: self,
             action: #selector(selectButtonTapped)
@@ -279,7 +279,7 @@ final class TrashAlbumViewController: BaseGridViewController {
 
         // "비우기" 버튼
         let emptyButton = UIBarButtonItem(
-            title: "비우기",
+            title: String(localized: "trash.emptyAction"),
             style: .plain,
             target: self,
             action: #selector(emptyTrashButtonTapped)
@@ -315,12 +315,12 @@ final class TrashAlbumViewController: BaseGridViewController {
         // [Select] [비우기] 두 버튼 표시
         let isEmpty = _trashDataSource.isEmpty
         overlay.titleBar.setTwoRightButtons(
-            firstTitle: "선택",
+            firstTitle: String(localized: "common.select"),
             firstColor: .white,
             firstAction: { [weak self] in
                 self?.enterSelectMode()
             },
-            secondTitle: "비우기",
+            secondTitle: String(localized: "trash.emptyAction"),
             secondColor: .systemRed,
             secondAction: { [weak self] in
                 self?.emptyTrashButtonTapped()
@@ -605,7 +605,7 @@ final class TrashAlbumViewController: BaseGridViewController {
         let formatter = NumberFormatter()
         formatter.numberStyle = .decimal
         let formatted = formatter.string(from: NSNumber(value: count)) ?? "\(count)"
-        let subtitleText = "\(formatted)개의 항목"
+        let subtitleText = String(localized: "trash.itemCount \(count)")
 
         // iOS 18: FloatingTitleBar 서브타이틀
         if let tabBarController = tabBarController as? TabBarController,

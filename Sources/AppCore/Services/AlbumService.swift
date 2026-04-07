@@ -102,7 +102,7 @@ public final class AlbumService: AlbumServiceProtocol {
 
             let album = Album(
                 id: collection.localIdentifier,
-                title: collection.localizedTitle ?? "제목 없음",
+                title: collection.localizedTitle ?? "Untitled",
                 assetCount: assetCount,
                 keyAssetIdentifier: keyAssetID,
                 creationDate: collection.startDate
@@ -237,6 +237,7 @@ public final class AlbumService: AlbumServiceProtocol {
             smartAlbums.append(SmartAlbum(
                 id: collection.localIdentifier,
                 type: albumType,
+                title: collection.localizedTitle ?? albumType.rawValue,
                 assetCount: displayCount,
                 keyAssetIdentifier: nil  // Phase 2에서 채워짐
             ))
@@ -258,7 +259,7 @@ public final class AlbumService: AlbumServiceProtocol {
 
             userAlbumsList.append(Album(
                 id: collection.localIdentifier,
-                title: collection.localizedTitle ?? "제목 없음",
+                title: collection.localizedTitle ?? "Untitled",
                 assetCount: displayCount,
                 keyAssetIdentifier: nil,
                 creationDate: collection.startDate
@@ -334,6 +335,7 @@ public final class AlbumService: AlbumServiceProtocol {
                 smartAlbums.append(SmartAlbum(
                     id: albumID,
                     type: albumType,
+                    title: collection.localizedTitle ?? albumType.rawValue,
                     assetCount: assetCount,
                     keyAssetIdentifier: keyAsset?.localIdentifier
                 ))
@@ -389,7 +391,7 @@ public final class AlbumService: AlbumServiceProtocol {
 
                 userAlbumsList.append(Album(
                     id: albumID,
-                    title: collection.localizedTitle ?? "제목 없음",
+                    title: collection.localizedTitle ?? "Untitled",
                     assetCount: assetCount,
                     keyAssetIdentifier: keyAsset?.localIdentifier,
                     creationDate: collection.startDate
@@ -456,6 +458,7 @@ public final class AlbumService: AlbumServiceProtocol {
         return SmartAlbum(
             id: collection.localIdentifier,
             type: type,
+            title: collection.localizedTitle ?? type.rawValue,
             assetCount: assetCount,
             keyAssetIdentifier: keyAssetID
         )

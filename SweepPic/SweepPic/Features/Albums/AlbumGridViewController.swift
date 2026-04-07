@@ -53,7 +53,7 @@ final class AlbumGridViewController: BaseGridViewController {
     override var supportsSwipeDelete: Bool { true }
 
     override var emptyStateConfig: (icon: String, title: String, subtitle: String?) {
-        ("photo.on.rectangle", "사진이 없습니다", "이 앨범에 사진이 없습니다")
+        ("photo.on.rectangle", String(localized: "albums.detail.empty.title"), String(localized: "albums.detail.empty.subtitle"))
     }
 
     override var navigationTitle: String {
@@ -255,7 +255,7 @@ final class AlbumGridViewController: BaseGridViewController {
         guard !isSelectMode else { return }
 
         let selectButton = UIBarButtonItem(
-            title: "선택",
+            title: String(localized: "common.select"),
             style: .plain,
             target: self,
             action: #selector(selectButtonTapped)
