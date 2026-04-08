@@ -45,13 +45,13 @@ enum SFaceError: Error, LocalizedError {
     var errorDescription: String? {
         switch self {
         case .modelLoadFailed(let reason):
-            return "SFace 모델 로드 실패: \(reason)"
+            return "SFace model load failed: \(reason)"  // SFace 모델 로드 실패
         case .preprocessingFailed(let reason):
-            return "전처리 실패: \(reason)"
+            return "Preprocessing failed: \(reason)"  // 전처리 실패
         case .inferenceFailed(let reason):
-            return "추론 실패: \(reason)"
+            return "Inference failed: \(reason)"  // 추론 실패
         case .invalidImage(let reason):
-            return "잘못된 이미지: \(reason)"
+            return "Invalid image: \(reason)"  // 잘못된 이미지
         }
     }
 }
@@ -267,7 +267,7 @@ final class SFaceRecognizer {
             space: CGColorSpaceCreateDeviceRGB(),
             bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
         ) else {
-            throw SFaceError.preprocessingFailed("CGContext 생성 실패")
+            throw SFaceError.preprocessingFailed("failed to create CGContext")
         }
 
         context.draw(image, in: CGRect(x: 0, y: 0, width: size, height: size))
@@ -280,7 +280,7 @@ final class SFaceRecognizer {
                 dataType: .float32
             )
         } catch {
-            throw SFaceError.preprocessingFailed("MLMultiArray 생성 실패: \(error)")
+            throw SFaceError.preprocessingFailed("failed to create MLMultiArray: \(error)")
         }
 
         // RGB 순서로 복사 (iOS 이미지는 RGB, SFace도 RGB 기대)
@@ -330,7 +330,7 @@ final class SFaceRecognizer {
 
             // 임베딩 추출 (SFace 모델의 출력 이름은 "var_811")
             guard let embeddingArray = output.featureValue(for: "var_811")?.multiArrayValue else {
-                throw SFaceError.inferenceFailed("출력 임베딩을 찾을 수 없습니다")
+                throw SFaceError.inferenceFailed("output embedding not found")
             }
 
             // Float 배열로 변환

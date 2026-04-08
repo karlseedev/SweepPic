@@ -2723,6 +2723,427 @@
         }
       }
     },
+    "error.referralReward.unableToApply" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Unable to apply reward at this time."
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "일시적으로 혜택을 적용할 수 없습니다."
+          }
+        }
+      }
+    },
+    "error.server.alreadyReferred" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "A referral code has already been applied."
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "이미 초대 코드가 적용되어 있습니다."
+          }
+        }
+      }
+    },
+    "error.server.codeCreationFailed" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Failed to create code. Please try again later."
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "코드 생성에 실패했습니다. 잠시 후 다시 시도해주세요."
+          }
+        }
+      }
+    },
+    "error.server.decodingFailed" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Unable to process server response."
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "서버 응답을 처리할 수 없습니다."
+          }
+        }
+      }
+    },
+    "error.server.invalidReferralCode" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Invalid referral code."
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "유효하지 않은 초대 코드입니다."
+          }
+        }
+      }
+    },
+    "error.server.invalidRequest" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Invalid request."
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "잘못된 요청입니다."
+          }
+        }
+      }
+    },
+    "error.server.invalidResponse" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Invalid response."
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "잘못된 응답입니다."
+          }
+        }
+      }
+    },
+    "error.server.invalidURL" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Invalid URL."
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "잘못된 URL입니다."
+          }
+        }
+      }
+    },
+    "error.server.noConnection" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Please check your network connection."
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "네트워크 연결을 확인해주세요."
+          }
+        }
+      }
+    },
+    "error.server.rateLimited %lld" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "Too many requests. Please wait %lld second."
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "Too many requests. Please wait %lld seconds."
+                }
+              }
+            }
+          }
+        },
+        "ko" : {
+          "variations" : {
+            "plural" : {
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "요청이 너무 많습니다. %lld초 후 다시 시도해주세요."
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "error.server.referralNotFound" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Referral record not found."
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "해당 초대 기록을 찾을 수 없습니다."
+          }
+        }
+      }
+    },
+    "error.server.rewardExpired" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Reward has expired."
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "보상 수령 기간이 만료되었습니다."
+          }
+        }
+      }
+    },
+    "error.server.rewardNotFound" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Reward not found."
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "해당 보상을 찾을 수 없습니다."
+          }
+        }
+      }
+    },
+    "error.server.rewardNotPending" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Reward is not in pending state."
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "보상이 수령 대기 상태가 아닙니다."
+          }
+        }
+      }
+    },
+    "error.server.selfReferral" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "You cannot use your own code."
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "본인의 초대 코드는 사용할 수 없습니다."
+          }
+        }
+      }
+    },
+    "error.server.serverError" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "A server error occurred."
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "서버 오류가 발생했습니다."
+          }
+        }
+      }
+    },
+    "error.server.serverUnavailable" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Server is temporarily unavailable. Please try again later."
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "서버에 일시적인 문제가 있습니다. 잠시 후 다시 시도해주세요."
+          }
+        }
+      }
+    },
+    "error.server.serviceNotConfigured" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Service not initialized."
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "서비스가 초기화되지 않았습니다."
+          }
+        }
+      }
+    },
+    "error.server.signingFailed" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Signing failed. Please try again later."
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "서명 생성에 실패했습니다. 잠시 후 다시 시도해주세요."
+          }
+        }
+      }
+    },
+    "error.server.temporaryError" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "A temporary error occurred. Please try again tomorrow."
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "현재 일시적으로 오류가 발생했습니다. 다음날 다시 시도해주세요."
+          }
+        }
+      }
+    },
+    "error.server.timeout" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Network request timed out."
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "네트워크 응답 시간이 초과되었습니다."
+          }
+        }
+      }
+    },
+    "error.server.unexpectedStatus %lld" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "Unexpected server response. (Code: %lld)"
+                }
+              }
+            }
+          }
+        },
+        "ko" : {
+          "variations" : {
+            "plural" : {
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "예상치 못한 서버 응답입니다. (코드: %lld)"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "error.server.unknownError" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "An unknown error occurred."
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "알 수 없는 에러입니다."
+          }
+        }
+      }
+    },
     "error.videoFrameExtractionFailed %@" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -6596,6 +7017,91 @@
         }
       }
     },
+    "referral.codeInput.error.clipboardEmpty" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Clipboard is empty."
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "클립보드가 비어있습니다."
+          }
+        }
+      }
+    },
+    "referral.codeInput.error.codeNotFound" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Referral code not found.\nPlease paste the correct invite message."
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "초대 코드를 찾을 수 없습니다.\n올바른 초대 메시지를 붙여넣어 주세요."
+          }
+        }
+      }
+    },
+    "referral.codeInput.error.pasteMessageRequired" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Please paste the invite message."
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "초대 메시지를 붙여넣어 주세요."
+          }
+        }
+      }
+    },
+    "referral.codeInput.error.unableToConnect" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Unable to connect to server."
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "서버에 연결할 수 없습니다."
+          }
+        }
+      }
+    },
+    "referral.codeInput.error.unknownResponse" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Unknown response."
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "알 수 없는 응답입니다."
+          }
+        }
+      }
+    },
     "referral.codeInput.description" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -7222,6 +7728,23 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "친구를 초대하고\nPro 멤버십 14일 무료 혜택을 받으세요!"
+          }
+        }
+      }
+    },
+    "referral.reward.error.loadFailed" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Unable to load reward info.\nPlease try again later."
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "보상 정보를 불러올 수 없습니다.\n잠시 후 다시 시도해주세요."
           }
         }
       }

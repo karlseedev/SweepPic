@@ -415,9 +415,15 @@ final class ReferralRewardViewController: UIViewController {
                 Logger.referral.debug(
                     "ReferralRewardVC: 보상 \(response.rewards.count)건 로드"
                 )
+            } catch let error as ReferralServiceError {
+                let message = error.localizedDisplayMessage
+                self.displayState = .error(message)
+                Logger.referral.error(
+                    "ReferralRewardVC: 보상 조회 실패 — \(message)"
+                )
             } catch {
                 self.displayState = .error(
-                    "보상 정보를 불러올 수 없습니다.\n잠시 후 다시 시도해주세요."
+                    String(localized: "referral.reward.error.loadFailed")
                 )
                 Logger.referral.error(
                     "ReferralRewardVC: 보상 조회 실패 — \(error.localizedDescription)"

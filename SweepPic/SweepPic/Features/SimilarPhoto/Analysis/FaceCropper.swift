@@ -33,11 +33,11 @@ enum FaceCropError: Error, LocalizedError {
     var errorDescription: String? {
         switch self {
         case .invalidBoundingBox:
-            return "잘못된 bounding box"
+            return "Invalid bounding box"  // 잘못된 bounding box
         case .outOfBounds:
-            return "크롭 영역이 이미지 경계를 벗어남"
+            return "Crop area is outside image bounds"  // 크롭 영역이 이미지 경계를 벗어남
         case .cropFailed:
-            return "이미지 크롭 실패"
+            return "Image crop failed"  // 이미지 크롭 실패
         }
     }
 }

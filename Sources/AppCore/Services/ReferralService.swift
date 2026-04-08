@@ -36,29 +36,6 @@ public enum ReferralServiceError: Error, Sendable {
     case unexpectedStatus(Int)
 }
 
-// MARK: - ReferralServiceError + LocalizedError
-
-extension ReferralServiceError: LocalizedError {
-    public var errorDescription: String? {
-        switch self {
-        case .serverError(let message):
-            return message
-        case .rateLimited(let retryAfter):
-            return "요청이 너무 많습니다. \(retryAfter)초 후 다시 시도해주세요."
-        case .serverUnavailable:
-            return "서버에 일시적인 문제가 있습니다. 잠시 후 다시 시도해주세요."
-        case .timeout:
-            return "네트워크 응답 시간이 초과되었습니다."
-        case .noConnection:
-            return "네트워크 연결을 확인해주세요."
-        case .decodingFailed:
-            return "서버 응답을 처리할 수 없습니다."
-        case .unexpectedStatus(let code):
-            return "예상치 못한 서버 응답입니다. (코드: \(code))"
-        }
-    }
-}
-
 // MARK: - API Response Wrapper
 
 /// Supabase Edge Function 공통 응답 래퍼
@@ -154,12 +131,12 @@ public final class ReferralService {
         // 설정 확인
         guard let baseURL = baseURL, let anonKey = anonKey else {
             Logger.referral.error("ReferralService: 미설정 상태에서 API 호출 시도")
-            throw ReferralServiceError.serverError("서비스가 초기화되지 않았습니다.")
+            throw ReferralServiceError.serverError("service_not_configured")
         }
 
         // URL 구성: {baseURL}/functions/v1/referral-api/{endpoint}
         guard let url = URL(string: "\(baseURL)/functions/v1/referral-api/\(endpoint)") else {
-            throw ReferralServiceError.serverError("잘못된 URL입니다.")
+            throw ReferralServiceError.serverError("invalid_url")
         }
 
         // 요청 생성
@@ -193,7 +170,7 @@ public final class ReferralService {
 
         // HTTP 상태 코드 분기 (FR-043)
         guard let httpResponse = response as? HTTPURLResponse else {
-            throw ReferralServiceError.serverError("잘못된 응답입니다.")
+            throw ReferralServiceError.serverError("invalid_response")
         }
 
         let statusCode = httpResponse.statusCode
@@ -231,7 +208,7 @@ public final class ReferralService {
 
             // success: false → 비즈니스 에러 (API 레벨)
             if !apiResponse.success {
-                let message = apiResponse.error ?? "알 수 없는 에러입니다."
+                let message = apiResponse.error ?? "unknown_error"
                 Logger.referral.error("ReferralService: 비즈니스 에러 — /\(endpoint): \(message)")
                 throw ReferralServiceError.serverError(message)
             }
@@ -263,12 +240,12 @@ public final class ReferralService {
         // 설정 확인
         guard let baseURL = baseURL, let anonKey = anonKey else {
             Logger.referral.error("ReferralService: 미설정 상태에서 API 호출 시도")
-            throw ReferralServiceError.serverError("서비스가 초기화되지 않았습니다.")
+            throw ReferralServiceError.serverError("service_not_configured")
         }
 
         // URL 구성
         guard let url = URL(string: "\(baseURL)/functions/v1/referral-api/\(endpoint)") else {
-            throw ReferralServiceError.serverError("잘못된 URL입니다.")
+            throw ReferralServiceError.serverError("invalid_url")
         }
 
         // 요청 생성
@@ -298,7 +275,7 @@ public final class ReferralService {
 
         // HTTP 상태 코드 분기
         guard let httpResponse = response as? HTTPURLResponse else {
-            throw ReferralServiceError.serverError("잘못된 응답입니다.")
+            throw ReferralServiceError.serverError("invalid_response")
         }
 
         let statusCode = httpResponse.statusCode
@@ -308,7 +285,7 @@ public final class ReferralService {
             // API 래퍼 확인: success: false → 비즈니스 에러
             if let apiResponse = try? JSONDecoder().decode(APIResponseBase.self, from: data),
                !apiResponse.success {
-                let message = apiResponse.error ?? "알 수 없는 에러입니다."
+                let message = apiResponse.error ?? "unknown_error"
                 Logger.referral.error("ReferralService: 비즈니스 에러 — /\(endpoint): \(message)")
                 throw ReferralServiceError.serverError(message)
             }

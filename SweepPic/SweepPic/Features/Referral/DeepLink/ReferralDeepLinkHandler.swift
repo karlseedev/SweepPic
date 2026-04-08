@@ -170,15 +170,19 @@ final class ReferralDeepLinkHandler {
                 case .redeemed, .rewarded:
                     // 이미 적용됨 → 무시 (토스트로 안내)
                     Logger.referral.debug("DeepLinkHandler: 이미 적용됨 — 무시")
-                    self.showToast("이미 초대 코드가 적용되어 있습니다.", on: presenter)
+                    self.showToast(String(localized: "error.server.alreadyReferred"), on: presenter)
 
                 default:
                     Logger.referral.debug("DeepLinkHandler: 예상치 못한 상태 — \(statusResult.status.rawValue)")
                 }
 
+            } catch let error as ReferralServiceError {
+                let message = error.localizedDisplayMessage
+                Logger.referral.error("DeepLinkHandler: check-status 실패 — \(message)")
+                self.showToast(message, on: presenter)
             } catch {
                 Logger.referral.error("DeepLinkHandler: check-status 실패 — \(error.localizedDescription)")
-                self.showToast("네트워크 연결을 확인해주세요.", on: presenter)
+                self.showToast(String(localized: "error.server.noConnection"), on: presenter)
             }
         }
     }
@@ -228,28 +232,32 @@ final class ReferralDeepLinkHandler {
             case .selfReferral:
                 // 자기 초대 → 안내 메시지
                 Logger.referral.debug("DeepLinkHandler: 자기 초대 감지")
-                showToast("본인의 초대 코드는 사용할 수 없습니다.", on: presenter)
+                showToast(String(localized: "error.server.selfReferral"), on: presenter)
 
             case .alreadyRedeemed:
                 // 이미 적용됨
                 Logger.referral.debug("DeepLinkHandler: 이미 적용됨")
-                showToast("이미 초대 코드가 적용되어 있습니다.", on: presenter)
+                showToast(String(localized: "error.server.alreadyReferred"), on: presenter)
 
             case .invalidCode:
                 Logger.referral.debug("DeepLinkHandler: 유효하지 않은 코드")
-                showToast("유효하지 않은 초대 코드입니다.", on: presenter)
+                showToast(String(localized: "error.server.invalidReferralCode"), on: presenter)
 
             case .noCodesAvailable:
                 Logger.referral.debug("DeepLinkHandler: 코드 풀 소진")
-                showToast("일시적으로 혜택을 적용할 수 없습니다.", on: presenter)
+                showToast(String(localized: "error.referralReward.unableToApply"), on: presenter)
 
             default:
                 Logger.referral.debug("DeepLinkHandler: 예상치 못한 응답 — \(result.status.rawValue)")
             }
 
+        } catch let error as ReferralServiceError {
+            let message = error.localizedDisplayMessage
+            Logger.referral.error("DeepLinkHandler: match-code 실패 — \(message)")
+            showToast(message, on: presenter)
         } catch {
             Logger.referral.error("DeepLinkHandler: match-code 실패 — \(error.localizedDescription)")
-            showToast("서버에 연결할 수 없습니다.", on: presenter)
+            showToast(String(localized: "referral.codeInput.error.unableToConnect"), on: presenter)
         }
     }
 
@@ -276,7 +284,7 @@ final class ReferralDeepLinkHandler {
 
         // 폴백: UIAlertController
         let alert = UIAlertController(title: nil, message: message, preferredStyle: .alert)
-        alert.addAction(UIAlertAction(title: "확인", style: .default))
+        alert.addAction(UIAlertAction(title: String(localized: "common.ok"), style: .default))
         presenter.present(alert, animated: true)
     }
 }

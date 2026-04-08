@@ -55,13 +55,13 @@ enum YuNetError: Error, LocalizedError {
     var errorDescription: String? {
         switch self {
         case .modelLoadFailed(let reason):
-            return "YuNet 모델 로드 실패: \(reason)"
+            return "YuNet model load failed: \(reason)"  // YuNet 모델 로드 실패
         case .preprocessingFailed(let reason):
-            return "전처리 실패: \(reason)"
+            return "Preprocessing failed: \(reason)"  // 전처리 실패
         case .invalidImageFormat(let reason):
-            return "잘못된 이미지 포맷: \(reason)"
+            return "Invalid image format: \(reason)"  // 잘못된 이미지 포맷
         case .inferenceFailed(let reason):
-            return "추론 실패: \(reason)"
+            return "Inference failed: \(reason)"  // 추론 실패
         }
     }
 }

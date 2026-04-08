@@ -125,9 +125,10 @@ final class ReferralRewardClaimManager {
             )
 
         } catch let error as ReferralServiceError {
-            await updateState(.failed(message: error.errorDescription ?? String(localized: "error.referralReward.serverError")))
+            let message = error.localizedDisplayMessage
+            await updateState(.failed(message: message))
             Logger.referral.error(
-                "ReferralRewardClaimManager: API 에러 — \(error.localizedDescription)"
+                "ReferralRewardClaimManager: API 에러 — \(message)"
             )
 
         } catch let error as PromotionalOfferService.OfferError {
@@ -222,5 +223,71 @@ final class ReferralRewardClaimManager {
     private func updateState(_ newState: ClaimState) {
         state = newState
         onStateChange?(newState)
+    }
+}
+
+extension ReferralServiceError {
+    var localizedDisplayMessage: String {
+        switch self {
+        case .serverError(let message):
+            return Self.localizedServerMessage(for: message)
+        case .rateLimited(let retryAfter):
+            return String(localized: "error.server.rateLimited \(retryAfter)")
+        case .serverUnavailable:
+            return String(localized: "error.server.serverUnavailable")
+        case .timeout:
+            return String(localized: "error.server.timeout")
+        case .noConnection:
+            return String(localized: "error.server.noConnection")
+        case .decodingFailed:
+            return String(localized: "error.server.decodingFailed")
+        case .unexpectedStatus(let code):
+            return String(localized: "error.server.unexpectedStatus \(code)")
+        }
+    }
+
+    private static func localizedServerMessage(for code: String) -> String {
+        switch code {
+        case "server_error":
+            return String(localized: "error.server.serverError")
+        case "code_creation_failed":
+            return String(localized: "error.server.codeCreationFailed")
+        case "referral_not_found":
+            return String(localized: "error.server.referralNotFound")
+        case "reward_expired":
+            return String(localized: "error.server.rewardExpired")
+        case "invalid_referral_code":
+            return String(localized: "error.server.invalidReferralCode")
+        case "self_referral":
+            return String(localized: "error.server.selfReferral")
+        case "already_referred":
+            return String(localized: "error.server.alreadyReferred")
+        case "invalid_request":
+            return String(localized: "error.server.invalidRequest")
+        case "reward_not_found":
+            return String(localized: "error.server.rewardNotFound")
+        case "signing_failed":
+            return String(localized: "error.server.signingFailed")
+        case "temporary_error":
+            return String(localized: "error.server.temporaryError")
+        case "reward_not_pending":
+            return String(localized: "error.server.rewardNotPending")
+        case "service_not_configured":
+            return String(localized: "error.server.serviceNotConfigured")
+        case "invalid_url":
+            return String(localized: "error.server.invalidURL")
+        case "invalid_response":
+            return String(localized: "error.server.invalidResponse")
+        case "unknown_error":
+            return String(localized: "error.server.unknownError")
+        default:
+            return code.isServerCode ? String(localized: "error.server.serverError") : code
+        }
+    }
+}
+
+private extension String {
+    var isServerCode: Bool {
+        allSatisfy(\.isASCII) && contains("_")
     }
 }

@@ -68,8 +68,8 @@ final class ReferralCodeInputViewController: UIViewController {
     private let backgroundBlurView: UIVisualEffectView = {
         let view = UIVisualEffectView(effect: nil)
         view.translatesAutoresizingMaskIntoConstraints = false
-        return view
-    }()
+            return view
+        }()
 
     private lazy var blurAnimator: UIViewPropertyAnimator = {
         let animator = UIViewPropertyAnimator(duration: 0, curve: .linear) { [weak self] in
@@ -94,7 +94,7 @@ final class ReferralCodeInputViewController: UIViewController {
         button.clipsToBounds = true
         button.translatesAutoresizingMaskIntoConstraints = false
         button.addTarget(self, action: #selector(closeTapped), for: .touchUpInside)
-        button.accessibilityLabel = "닫기"
+        button.accessibilityLabel = String(localized: "common.close")
         return button
     }()
 
@@ -485,27 +485,28 @@ final class ReferralCodeInputViewController: UIViewController {
                     }
 
                 case .selfReferral:
-                    showError("본인의 초대 코드는 사용할 수 없습니다.")
+                    showError(String(localized: "error.server.selfReferral"))
 
                 case .alreadyRedeemed:
                     displayState = .redeemed
 
                 case .invalidCode:
-                    showError("유효하지 않은 초대 코드입니다.")
+                    showError(String(localized: "error.server.invalidReferralCode"))
 
                 case .noCodesAvailable:
-                    showError("현재 일시적으로 오류가 발생했습니다.\n다음날 다시 시도해주세요.")
+                    showError(String(localized: "error.server.temporaryError"))
 
                 default:
-                    showError("알 수 없는 응답입니다.")
+                    showError(String(localized: "referral.codeInput.error.unknownResponse"))
                 }
 
             } catch let error as ReferralServiceError {
-                Logger.referral.error("ReferralCodeInput: match-code 실패 — \(error.localizedDescription)")
-                showError(error.localizedDescription ?? "서버에 연결할 수 없습니다.")
+                let message = error.localizedDisplayMessage
+                Logger.referral.error("ReferralCodeInput: match-code 실패 — \(message)")
+                showError(message)
             } catch {
                 Logger.referral.error("ReferralCodeInput: match-code 실패 — \(error)")
-                showError("서버에 연결할 수 없습니다.")
+                showError(String(localized: "referral.codeInput.error.unableToConnect"))
             }
         }
     }
@@ -555,7 +556,7 @@ final class ReferralCodeInputViewController: UIViewController {
     /// 붙여넣기 버튼 탭
     @objc private func pasteButtonTapped() {
         guard let clipboardText = UIPasteboard.general.string else {
-            showError("클립보드가 비어있습니다.")
+            showError(String(localized: "referral.codeInput.error.clipboardEmpty"))
             return
         }
         codeTextView.text = clipboardText
@@ -589,13 +590,13 @@ final class ReferralCodeInputViewController: UIViewController {
     private func handleCodeInput() {
         let text = codeTextView.text ?? ""
         guard !text.isEmpty else {
-            showError("초대 메시지를 붙여넣어 주세요.")
+            showError(String(localized: "referral.codeInput.error.pasteMessageRequired"))
             return
         }
 
         // 정규식으로 코드 추출 (FR-006)
         guard let code = ReferralCodeParser.extractCode(from: text) else {
-            showError("초대 코드를 찾을 수 없습니다.\n올바른 초대 메시지를 붙여넣어 주세요.")
+            showError(String(localized: "referral.codeInput.error.codeNotFound"))
             return
         }
 

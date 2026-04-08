@@ -85,7 +85,7 @@ final class ReferralExplainViewController: UIViewController {
         button.clipsToBounds = true
         button.translatesAutoresizingMaskIntoConstraints = false
         button.addTarget(self, action: #selector(closeTapped), for: .touchUpInside)
-        button.accessibilityLabel = "닫기"
+        button.accessibilityLabel = String(localized: "common.close")
         return button
     }()
 
@@ -144,8 +144,8 @@ final class ReferralExplainViewController: UIViewController {
         button.clipsToBounds = true
         button.translatesAutoresizingMaskIntoConstraints = false
         button.addTarget(self, action: #selector(inviteButtonTapped), for: .touchUpInside)
-        button.accessibilityLabel = "초대하기"
-        button.accessibilityHint = "초대 링크를 생성하고 공유합니다"
+        button.accessibilityLabel = String(localized: "referral.explain.inviteButton")
+        button.accessibilityHint = String(localized: "a11y.celebration.referralHint")
         return button
     }()
 
@@ -428,9 +428,10 @@ final class ReferralExplainViewController: UIViewController {
                 }
 
             } catch let error as ReferralServiceError {
-                Logger.referral.error("ReferralExplain: 에러 — \(error.localizedDescription)")
+                let message = error.localizedDisplayMessage
+                Logger.referral.error("ReferralExplain: 에러 — \(message)")
                 await MainActor.run {
-                    viewState = .error(error.localizedDescription)
+                    viewState = .error(message)
                 }
             } catch {
                 Logger.referral.error("ReferralExplain: 에러 — \(error.localizedDescription)")
