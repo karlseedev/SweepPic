@@ -200,12 +200,15 @@ extension CoachMarkOverlayView {
         // addSubview 순서상 카드가 snapshot/fingerView보다 위에 위치함
         buildE3Card()
 
-        // 카드 뒤에서: 포커싱 축소 → 스냅샷 → 스와이프
-        animateE3Focus(to: frame) { [weak self] in
+        // 글씨를 읽을 시간 확보 후 포커싱 시작 (1.2초 대기)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) { [weak self] in
             guard let self, !self.shouldStopAnimation else { return }
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) { [weak self] in
-                guard let self, !self.shouldStopAnimation else { return }
-                self.beginE3Phase2(frame: frame, in: window)
+            self.animateE3Focus(to: frame) { [weak self] in
+            guard let self, !self.shouldStopAnimation else { return }
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) { [weak self] in
+                    guard let self, !self.shouldStopAnimation else { return }
+                    self.beginE3Phase2(frame: frame, in: window)
+                }
             }
         }
     }
@@ -267,7 +270,7 @@ extension CoachMarkOverlayView {
         let dimAnim = CABasicAnimation(keyPath: "path")
         dimAnim.fromValue = dimStartPath.cgPath
         dimAnim.toValue = dimEndPath.cgPath
-        dimAnim.duration = 0.7
+        dimAnim.duration = 0.9
         dimAnim.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
         dimAnim.fillMode = .forwards
         dimAnim.isRemovedOnCompletion = false
@@ -277,7 +280,7 @@ extension CoachMarkOverlayView {
         let tintAnim = CABasicAnimation(keyPath: "path")
         tintAnim.fromValue = tintStartPath.cgPath
         tintAnim.toValue = tintEndPath.cgPath
-        tintAnim.duration = 0.7
+        tintAnim.duration = 0.9
         tintAnim.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
         tintAnim.fillMode = .forwards
         tintAnim.isRemovedOnCompletion = false
