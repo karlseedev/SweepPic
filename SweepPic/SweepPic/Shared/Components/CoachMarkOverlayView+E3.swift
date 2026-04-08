@@ -200,11 +200,27 @@ extension CoachMarkOverlayView {
         // addSubview 순서상 카드가 snapshot/fingerView보다 위에 위치함
         buildE3Card()
 
-        // 글씨를 읽을 시간 확보 후 포커싱 시작 (1.2초 대기)
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) { [weak self] in
+        // 틴트를 카드와 동시에 셀 위에 페이드인 (1.2초 — 글씨 읽는 동안 배경에 등장)
+        // dim에 구멍이 없는 상태에서도 셀 위치를 살짝 밝혀 주의를 끔
+        setupE3TintLayer(frame: frame)
+        e3TintLayer?.opacity = 0
+        if !UIAccessibility.isReduceMotionEnabled {
+            let tintPreviewAnim = CABasicAnimation(keyPath: "opacity")
+            tintPreviewAnim.fromValue = 0
+            tintPreviewAnim.toValue = 1
+            tintPreviewAnim.duration = 1.2
+            tintPreviewAnim.fillMode = .forwards
+            tintPreviewAnim.isRemovedOnCompletion = false
+            e3TintLayer?.add(tintPreviewAnim, forKey: "e3TintPreview")
+        }
+        e3TintLayer?.opacity = 1  // CAAnimation 완료 후 확정값
+
+        // 1.2초 후 포커싱 시작 (틴트는 이미 셀 크기로 깔린 상태)
+        let delay: TimeInterval = UIAccessibility.isReduceMotionEnabled ? 0 : 1.2
+        DispatchQueue.main.asyncAfter(deadline: .now() + delay) { [weak self] in
             guard let self, !self.shouldStopAnimation else { return }
             self.animateE3Focus(to: frame) { [weak self] in
-            guard let self, !self.shouldStopAnimation else { return }
+                guard let self, !self.shouldStopAnimation else { return }
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) { [weak self] in
                     guard let self, !self.shouldStopAnimation else { return }
                     self.beginE3Phase2(frame: frame, in: window)
@@ -213,16 +229,14 @@ extension CoachMarkOverlayView {
         }
     }
 
-    /// Phase 1: 포커싱 축소 애니메이션 (dimLayer + tintLayer 동기화)
-    /// D-1 animateDFocusWithTint 패턴 참고, 단 tint opacity 방향이 반대:
-    /// D-1: opacity 0→1 (포커싱 끝에서 등장)
-    /// E-3: opacity 1→1 (포커싱 내내 유지) → 스냅샷 페이드인 시 0으로 사라짐
+    /// Phase 1: dimLayer 포커싱 축소 애니메이션
+    /// tintLayer는 이미 beginE3Animation에서 셀 크기로 설정+페이드인 완료 상태
+    /// → 여기서는 dimLayer(구멍)만 대형→셀크기로 축소
     private func animateE3Focus(to targetFrame: CGRect, completion: @escaping () -> Void) {
         if UIAccessibility.isReduceMotionEnabled {
-            // Reduce Motion: 즉시 구멍 + 틴트 설정
+            // Reduce Motion: 즉시 구멍 설정 (tintLayer는 이미 설정됨)
             highlightFrame = targetFrame
             updateDimPath()
-            setupE3TintLayer(frame: targetFrame)
             completion()
             return
         }
@@ -235,38 +249,20 @@ extension CoachMarkOverlayView {
             width: expandSize,
             height: expandSize
         )
-
-        // dimLayer 경로
         let dimStartPath = UIBezierPath(rect: bounds)
         dimStartPath.append(UIBezierPath(rect: startRect))
         let dimEndPath = UIBezierPath(rect: bounds)
         dimEndPath.append(UIBezierPath(rect: targetFrame))
 
-        // tintLayer 경로 (dimLayer 구멍과 동일한 rect만 채움)
-        let tintStartPath = UIBezierPath(rect: startRect)
-        let tintEndPath = UIBezierPath(rect: targetFrame)
-
-        // dimLayer 시작 path 설정
         highlightFrame = targetFrame
         dimLayer.path = dimStartPath.cgPath
 
-        // tintLayer 생성 + 시작 path 설정 (opacity = 1 — 처음부터 보임)
-        setupE3TintLayer(frame: targetFrame)
-        e3TintLayer?.path = tintStartPath.cgPath
-        e3TintLayer?.opacity = 1
-
-        // dimLayer + tintLayer 동시 축소 (같은 CATransaction)
         CATransaction.begin()
         CATransaction.setCompletionBlock { [weak self] in
-            guard let self else { return }
-            self.dimLayer.path = dimEndPath.cgPath
-            self.dimLayer.removeAnimation(forKey: "e3Focus")
-            self.e3TintLayer?.path = tintEndPath.cgPath
-            self.e3TintLayer?.removeAnimation(forKey: "e3Tint")
+            self?.dimLayer.path = dimEndPath.cgPath
+            self?.dimLayer.removeAnimation(forKey: "e3Focus")
             completion()
         }
-
-        // dimLayer path 축소
         let dimAnim = CABasicAnimation(keyPath: "path")
         dimAnim.fromValue = dimStartPath.cgPath
         dimAnim.toValue = dimEndPath.cgPath
@@ -275,17 +271,6 @@ extension CoachMarkOverlayView {
         dimAnim.fillMode = .forwards
         dimAnim.isRemovedOnCompletion = false
         dimLayer.add(dimAnim, forKey: "e3Focus")
-
-        // tintLayer path 축소 (dimLayer와 동기화)
-        let tintAnim = CABasicAnimation(keyPath: "path")
-        tintAnim.fromValue = tintStartPath.cgPath
-        tintAnim.toValue = tintEndPath.cgPath
-        tintAnim.duration = 0.9
-        tintAnim.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
-        tintAnim.fillMode = .forwards
-        tintAnim.isRemovedOnCompletion = false
-        e3TintLayer?.add(tintAnim, forKey: "e3Tint")
-
         CATransaction.commit()
     }
 
