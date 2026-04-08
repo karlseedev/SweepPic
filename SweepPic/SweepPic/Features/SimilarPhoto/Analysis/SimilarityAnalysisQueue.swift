@@ -643,46 +643,6 @@ final class SimilarityAnalysisQueue {
 
     #if DEBUG
 
-    /// 격리 인스턴스에서 formGroupsForRange()를 호출하고 결과를 추출합니다 (검증 하네스용).
-    ///
-    /// production formGroupsForRange()를 그대로 호출하며,
-    /// 격리 캐시에서 그룹 멤버를 읽어 반환합니다.
-    ///
-    /// - Parameters:
-    ///   - range: 분석할 인덱스 범위
-    ///   - fetchResult: 사진 fetch 결과
-    /// - Returns: (그룹 ID 배열, 그룹별 멤버 배열, 분석된 사진 ID 배열)
-    func debugGroupsForRange(
-        _ range: ClosedRange<Int>,
-        fetchResult: PHFetchResult<PHAsset>
-    ) async -> (groupIDs: [String], groups: [[String]], analyzedAssetIDs: [String]) {
-        // production formGroupsForRange를 그대로 호출
-        let groupIDs = await formGroupsForRange(range, source: .grid, fetchResult: fetchResult)
-
-        // 격리 캐시에서 그룹 멤버 추출
-        var groups: [[String]] = []
-        for groupID in groupIDs {
-            let members = await cache.getGroupMembers(groupID: groupID)
-            groups.append(members)
-        }
-
-        // 분석 투입 사진 ID 추출
-        let photos = fetchPhotos(in: range, fetchResult: fetchResult)
-        let analyzedAssetIDs = photos.map(\.localIdentifier)
-
-        return (groupIDs, groups, analyzedAssetIDs)
-    }
-
-    /// private fetchPhotos를 debug 용도로 노출합니다 (입력 동등성 검증용).
-    ///
-    /// - Parameters:
-    ///   - range: 인덱스 범위
-    ///   - fetchResult: 사진 fetch 결과
-    /// - Returns: 삭제대기함 제외된 PHAsset 배열
-    func debugFetchPhotos(in range: ClosedRange<Int>, fetchResult: PHFetchResult<PHAsset>) -> [PHAsset] {
-        return fetchPhotos(in: range, fetchResult: fetchResult)
-    }
-
     // MARK: - 그룹 진단: 파이프라인 추적 (로그 3)
 
     /// 특정 멤버들이 격리 분석에서 어느 단계에서 탈락하는지 추적합니다.

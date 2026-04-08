@@ -13,7 +13,7 @@
 //  1. Grid에서 스크롤 → formGroupsForRange 호출 → 자동 기록
 //  2. 스크롤 멈춤 → 분석 완료 대기
 //  3. DEBUG 액션: captureSnapshot() → live 상태 추출
-//  4. FaceScan 결과와 비교 (FaceScanGridEquivalenceTester.runLiveEquivalence)
+//  4. 저장된 snapshot을 수동 검증 자료로 사용
 //
 
 #if DEBUG
@@ -23,6 +23,18 @@ import OSLog
 import AppCore
 
 // MARK: - 데이터 타입
+
+/// 정규화된 그룹 비교 단위.
+/// memberAssetIDs를 정렬하여 순서 무관 비교를 수행합니다.
+struct GroupSignature: Hashable, Codable {
+    /// 정렬된 멤버 assetID 배열
+    let members: [String]
+
+    /// memberAssetIDs 배열에서 GroupSignature를 생성합니다.
+    init(members: [String]) {
+        self.members = members.sorted()
+    }
+}
 
 /// Live Grid 최종 snapshot
 ///
