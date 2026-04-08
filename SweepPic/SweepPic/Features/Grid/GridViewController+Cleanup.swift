@@ -562,7 +562,7 @@ extension GridViewController {
     private func showNoPreviewResultAlert(method: CleanupMethod) {
         let message: String
         if case .byYear(let year, _) = method {
-            message = String(localized: "cleanup.noLowQualityInYear \(year)")
+            message = String(localized: "cleanup.noLowQualityInYear \(String(year))")
         } else {
             message = String(localized: "cleanup.noLowQuality")
         }
@@ -753,4 +753,3 @@ extension GridViewController: PreviewGridViewControllerDelegate {
         }
     }
 }
-

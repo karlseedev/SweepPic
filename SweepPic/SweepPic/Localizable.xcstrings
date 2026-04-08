@@ -664,19 +664,19 @@
         }
       }
     },
-    "autoCleanup.progress.year %lld" : {
+    "autoCleanup.progress.year %@" : {
       "extractionState" : "manual",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "%lld"
+            "value" : "%@"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "%lld년"
+            "value" : "%@년"
           }
         }
       }
@@ -817,36 +817,36 @@
         }
       }
     },
-    "autoCleanup.result.endOfRangeYearNone %lld" : {
+    "autoCleanup.result.endOfRangeYearNone %@" : {
       "extractionState" : "manual",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Searched to the last photo of %lld\nbut found none to clean up."
+            "value" : "Searched to the last photo of %@\nbut found none to clean up."
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "%lld년의 마지막 사진까지 검색했지만 정리할 사진이 없습니다."
+            "value" : "%@년의 마지막 사진까지 검색했지만 정리할 사진이 없습니다."
           }
         }
       }
     },
-    "autoCleanup.result.endOfRangeYearWithFound %lld %lld" : {
+    "autoCleanup.result.endOfRangeYearWithFound %@ %lld" : {
       "extractionState" : "manual",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Searched to the last photo of %1$lld\nand found %2$lld to clean up."
+            "value" : "Searched to the last photo of %1$@\nand found %2$lld to clean up."
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "%1$lld년의 마지막 사진까지 검색하여 %2$lld장을 찾았습니다."
+            "value" : "%1$@년의 마지막 사진까지 검색하여 %2$lld장을 찾았습니다."
           }
         }
       }
@@ -1038,36 +1038,36 @@
         }
       }
     },
-    "autoCleanup.sheet.yearContinue %lld %@" : {
+    "autoCleanup.sheet.yearContinue %@ %@" : {
       "extractionState" : "manual",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "%1$lld Continue (%2$@ and earlier)"
+            "value" : "%1$@ Continue (%2$@ and earlier)"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "%1$lld년 이어서 (%2$@ 이전)"
+            "value" : "%1$@년 이어서 (%2$@ 이전)"
           }
         }
       }
     },
-    "autoCleanup.sheet.yearLabel %lld" : {
+    "autoCleanup.sheet.yearLabel %@" : {
       "extractionState" : "manual",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "%lld"
+            "value" : "%@"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "%lld년"
+            "value" : "%@년"
           }
         }
       }
@@ -1191,19 +1191,19 @@
         }
       }
     },
-    "cleanup.noLowQualityInYear %lld" : {
+    "cleanup.noLowQualityInYear %@" : {
       "extractionState" : "manual",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "No low-quality photos found in %lld."
+            "value" : "No low-quality photos found in %@."
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "%lld년에서 정리할 저품질 사진을 찾지 못했습니다."
+            "value" : "%@년에서 정리할 저품질 사진을 찾지 못했습니다."
           }
         }
       }
@@ -3144,6 +3144,40 @@
         }
       }
     },
+    "error.server.invalidFormat" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Invalid request format."
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "잘못된 요청 형식입니다."
+          }
+        }
+      }
+    },
+    "error.server.unknownEndpoint" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Unknown endpoint."
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "알 수 없는 엔드포인트입니다."
+          }
+        }
+      }
+    },
     "error.videoFrameExtractionFailed %@" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -3456,7 +3490,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Compare & Clean Portraits"
+            "value" : "Portrait Cleanup"
           }
         },
         "ko" : {
@@ -3467,19 +3501,19 @@
         }
       }
     },
-    "faceScan.method.yearTitle %lld" : {
+    "faceScan.method.yearTitle %@" : {
       "extractionState" : "manual",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "%lld Photo Cleanup"
+            "value" : "%@ Photo Cleanup"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "%lld년 사진 정리"
+            "value" : "%@년 사진 정리"
           }
         }
       }
@@ -3739,36 +3773,36 @@
         }
       }
     },
-    "faceScan.sheet.yearContinue %lld %@" : {
+    "faceScan.sheet.yearContinue %@ %@" : {
       "extractionState" : "manual",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "%1$lld (Continue: %2$@ and earlier)"
+            "value" : "%1$@ (Continue: %2$@ and earlier)"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "%1$lld년 (이어서: %2$@ 이전)"
+            "value" : "%1$@년 (이어서: %2$@ 이전)"
           }
         }
       }
     },
-    "faceScan.sheet.yearLabel %lld" : {
+    "faceScan.sheet.yearLabel %@" : {
       "extractionState" : "manual",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "%lld"
+            "value" : "%@"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "%lld년"
+            "value" : "%@년"
           }
         }
       }
@@ -7891,7 +7925,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Photos"
+            "value" : "Library"
           }
         },
         "ko" : {

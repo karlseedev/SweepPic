@@ -167,7 +167,7 @@ final class CleanupMethodSheet {
            let continueFrom = CleanupPreviewService.lastByYearScanDate {
             let monthString = formatMonth(continueFrom)
             alert.addAction(UIAlertAction(
-                title: String(localized: "autoCleanup.sheet.yearContinue \(targetYear) \(monthString)"),
+                title: String(localized: "autoCleanup.sheet.yearContinue \(String(targetYear)) \(monthString)"),
                 style: .default
             ) { [self] _ in
                 // 해당 연도에서 이어서 정리 (continueFrom으로 시작점 전달)
@@ -178,7 +178,7 @@ final class CleanupMethodSheet {
         // 최신 연도부터 표시
         for year in availableYears {
             alert.addAction(UIAlertAction(
-                title: String(localized: "autoCleanup.sheet.yearLabel \(year)"),
+                title: String(localized: "autoCleanup.sheet.yearLabel \(String(year))"),
                 style: .default
             ) { [self] _ in
                 self.delegate?.cleanupMethodSheet(self, didSelect: .byYear(year: year))

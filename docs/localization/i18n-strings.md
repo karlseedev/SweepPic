@@ -83,7 +83,7 @@
 
 | # | 한국어 (현재) | 영어 (제안) | 용도 | 확인 |
 |---|---|---|---|---|
-| 21 | 사진보관함 | Photos | FloatingOverlay 타이틀 | |
+| 21 | 사진보관함 | Library | FloatingOverlay 타이틀 | |
 | 22 | 항목 선택 | Select Items | 선택 모드 라벨 (초기) | |
 | 23 | {count}개 항목 선택됨 | {count} Selected | 선택 모드 라벨 (동적) (plural 처리 필요 - 1 Selected / N Selected) | |
 | 24 | 기능이 실행되는\n사진을 찾고 있어요 | Finding a photo\nto demonstrate... | 코치마크 온보딩 | |
@@ -97,7 +97,7 @@
 | 32 | 삭제대기함 보기 | View Trash | alert 버튼 | |
 | 33 | 정리 실패 | Cleanup Failed | alert 제목 | |
 | 34 | 정리할 사진 없음 | No Photos to Clean Up | alert 제목 | |
-| 35 | {year}년에서 정리할 저품질 사진을 찾지 못했습니다. | No low-quality photos found in {year}. | alert 메시지 | |
+| 35 | {yearString}년에서 정리할 저품질 사진을 찾지 못했습니다. | No low-quality photos found in {yearString}. | alert 메시지 (yearString placeholder) | |
 | 36 | 정리할 저품질 사진을 찾지 못했습니다. | No low-quality photos found. | alert 메시지 | |
 | 37 | 설명 다시 보기 | Tutorial Replay | 메뉴 타이틀 | |
 | 38 | 목록에서 밀어서 삭제 | Library: Swipe to Delete | 메뉴 항목 | |
@@ -125,7 +125,7 @@
 
 | # | 한국어 (현재) | 영어 (제안) | 용도 | 확인 |
 |---|---|---|---|---|
-| 49 | 보관함 | Photos | 사진 탭 버튼 | |
+| 49 | 보관함 | Library | 사진 탭 버튼 | |
 | 50 | 앨범 | Albums | 앨범 탭 버튼 | |
 | 51 | 삭제대기함 | Trash | 삭제대기함 탭 버튼 | |
 | 52 | 삭제하기 | Delete | 접근성 라벨 | |
@@ -480,8 +480,8 @@
 | 234 | 연도 선택 | Select Year | 연도 시트 제목 | |
 | 235 | 정리할 연도를 선택하세요 | Choose a year to clean up | 연도 시트 메시지 | |
 | 236 | 뒤로 | Back | 액션 버튼 | |
-| 237 | {year}년 이어서 ({month} 이전) | {year} Continue ({month} and earlier) | 연도별 이어서 버튼 | |
-| 238 | {year}년 | {year} | 연도 버튼 | |
+| 237 | {yearString}년 이어서 ({month} 이전) | {yearString} Continue ({month} and earlier) | 연도별 이어서 버튼 (yearString placeholder) | |
+| 238 | {yearString}년 | {yearString} | 연도 버튼 (yearString placeholder) | |
 
 ### CleanupProgressView
 
@@ -490,6 +490,7 @@
 | 239 | 저품질 사진 탐색 중 | Scanning for Low-Quality Photos | 메인 제목 | |
 | 240 | 최신 사진부터 | From latest | 서브 제목 | |
 | 241 | 이어서 탐색 | Continuing scan | 서브 제목 | |
+| 241-1 | {yearString}년 | {yearString} | 연도 서브 제목 (yearString placeholder) | |
 | 242 | 준비 중... | Preparing... | 날짜 라벨 초기 | |
 | 243 | {dateString} 사진 확인 중... | Checking photos from {dateString}... | 탐색 시점 라벨 | |
 | 244 | {found} / {max}장 발견 | {found} / {max} found | 발견 수 라벨 | |
@@ -501,7 +502,8 @@
 | # | 한국어 (현재) | 영어 (제안) | 용도 | 확인 |
 |---|---|---|---|---|
 | 247 | 저품질 사진 정리 기능을 사용하려면\n삭제대기함을 먼저 비워주세요\n\n-Pro멤버십 가입 시 제한 해제- | To use Auto Cleanup,\nplease empty Trash first\n\n-No restriction with Pro- | 삭제대기함 비어있지 않음 | |
-| ~~248-254~~ | *(삭제 — 번역 대상 제외)* | | | |
+| 248 | {yearString}년의 마지막 사진까지 검색했지만 정리할 사진이 없습니다. | Searched to the last photo of {yearString}\nbut found none to clean up. | 결과 메시지 (yearString placeholder) | |
+| 249 | {yearString}년의 마지막 사진까지 검색하여 {count}장을 찾았습니다. | Searched to the last photo of {yearString}\nand found {count} to clean up. | 결과 메시지 (yearString + count placeholder) | |
 
 ### PreviewGridViewController
 
@@ -582,14 +584,14 @@
 | 298 | 사진별 연도 목록 확인 중 | Checking photo years... | 로딩 메시지 | |
 | 299 | 연도 선택 | Select Year | 연도 시트 제목 | |
 | 300 | 정리할 연도를 선택하세요. | Choose a year to clean up. | 연도 시트 메시지 | |
-| 301 | {year}년 (이어서: {dateString} 이전) | {year} (Continue: {dateString} and earlier) | 연도별 이어서 버튼 | |
-| 302 | {year}년 | {year} | 연도 버튼 | |
+| 301 | {yearString}년 (이어서: {dateString} 이전) | {yearString} (Continue: {dateString} and earlier) | 연도별 이어서 버튼 (yearString placeholder) | |
+| 302 | {yearString}년 | {yearString} | 연도 버튼 (yearString placeholder) | |
 
 ### FaceScanListViewController
 
 | # | 한국어 (현재) | 영어 (제안) | 용도 | 확인 |
 |---|---|---|---|---|
-| 303 | 인물사진 비교정리 | Compare & Clean Portraits | 타이틀 | |
+| 303 | 인물사진 비교정리 | Portrait Cleanup | 타이틀 | |
 | 304 | 다음 분석 | Next Scan | 바 버튼 | |
 | 305 | 분석 중 | Scanning... | emptyLabel | |
 | 306 | 비교할 인물사진 그룹을\n찾지 못했습니다 | No face comparison groups found | emptyLabel (결과 없음) | |
@@ -609,7 +611,7 @@
 | 315 | {groupCount}그룹 발견 · {scannedCount} / {maxScanCount}장 검색 | {groupCount} groups found · {scannedCount} / {maxScanCount} scanned | progressText | |
 | 316 | 분석 완료 · {groupCount}그룹 발견 | Scan Complete · {groupCount} groups found | completionText (그룹 있음) | |
 | 317 | 분석 완료 · 발견된 그룹 없음 | Scan Complete · No groups found | completionText (그룹 없음) | |
-| 318 | {year}년 사진 정리 | {year} Photo Cleanup | displayTitle (byYear) | |
+| 318 | {yearString}년 사진 정리 | {yearString} Photo Cleanup | displayTitle (byYear, yearString placeholder) | |
 
 ### FaceScanGroupCell
 
@@ -904,6 +906,7 @@ Invite code: {referralCode}
 | 482 | invalid_format | 잘못된 요청 형식입니다. | Invalid request format. | |
 | 483 | push_query_failed | 조회 실패 | Query failed. | |
 | 484 | push_internal_error | 내부 오류 | Internal error. | |
+| 494 | unknown_endpoint | 알 수 없는 엔드포인트입니다. | Unknown endpoint. | |
 
 ### 랜딩 페이지 문자열
 

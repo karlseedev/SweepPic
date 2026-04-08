@@ -86,7 +86,24 @@ final class FaceScanService {
         return UserDefaults.standard.object(forKey: lastScanDateKey) as? Date
     }
 
-    /// 연도별 이어서 정리 날짜
+    /// 연도별 이어서 정리 가능 여부
+    static var canContinueByYear: Bool {
+        return UserDefaults.standard.bool(forKey: byYearCanContinueKey)
+            && UserDefaults.standard.object(forKey: byYearYearKey) != nil
+            && UserDefaults.standard.object(forKey: byYearLastScanDateKey) != nil
+    }
+
+    /// 연도별 이어서 정리 — 저장된 연도
+    static var lastByYearYear: Int? {
+        return UserDefaults.standard.object(forKey: byYearYearKey) as? Int
+    }
+
+    /// 연도별 이어서 정리 — 저장된 스캔 날짜
+    static var lastByYearScanDate: Date? {
+        return UserDefaults.standard.object(forKey: byYearLastScanDateKey) as? Date
+    }
+
+    /// 연도별 이어서 정리 날짜 (특정 연도 조회)
     static func lastScanDateByYear(_ year: Int) -> Date? {
         guard let savedYear = UserDefaults.standard.object(forKey: byYearYearKey) as? Int,
               savedYear == year,

@@ -154,21 +154,31 @@ final class FaceScanMethodSheet {
             preferredStyle: .actionSheet
         )
 
-        for year in availableYears {
-            // 연도별 이어서 정리 가능 여부 확인
-            let continueDate = FaceScanService.lastScanDateByYear(year)
-            let title: String
-            if let date = continueDate {
-                let dateString = formatDate(date)
-                title = String(localized: "faceScan.sheet.yearContinue \(year) \(dateString)")
-            } else {
-                title = String(localized: "faceScan.sheet.yearLabel \(year)")
-            }
-
-            alert.addAction(UIAlertAction(title: title, style: .default) { [self] _ in
+        // 연도별 이어서 정리 버튼 (조건 충족 시 최상단에 별도 표시)
+        if FaceScanService.canContinueByYear,
+           let targetYear = FaceScanService.lastByYearYear,
+           let continueFrom = FaceScanService.lastByYearScanDate {
+            let dateString = formatDate(continueFrom)
+            alert.addAction(UIAlertAction(
+                title: String(localized: "faceScan.sheet.yearContinue \(String(targetYear)) \(dateString)"),
+                style: .default
+            ) { [self] _ in
                 self.delegate?.faceScanMethodSheet(
                     self,
-                    didSelect: .byYear(year: year, continueFrom: continueDate)
+                    didSelect: .byYear(year: targetYear, continueFrom: continueFrom)
+                )
+            })
+        }
+
+        // 최신 ��도부터 표시
+        for year in availableYears {
+            alert.addAction(UIAlertAction(
+                title: String(localized: "faceScan.sheet.yearLabel \(String(year))"),
+                style: .default
+            ) { [self] _ in
+                self.delegate?.faceScanMethodSheet(
+                    self,
+                    didSelect: .byYear(year: year)
                 )
             })
         }

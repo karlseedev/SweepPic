@@ -224,7 +224,7 @@ enum CleanupConstants {
         // 4, 5. 범위 끝 + N장 발견
         case (.endOfRange, let n) where n > 0:
             if case .byYear(let year, _) = method {
-                return String(localized: "autoCleanup.result.endOfRangeYearWithFound \(year) \(n)")
+                return String(localized: "autoCleanup.result.endOfRangeYearWithFound \(String(year)) \(n)")
             } else {
                 return String(localized: "autoCleanup.result.endOfRangeWithFound \(n)")
             }
@@ -232,7 +232,7 @@ enum CleanupConstants {
         // 6, 7. 범위 끝 + 0장 발견
         case (.endOfRange, 0):
             if case .byYear(let year, _) = method {
-                return String(localized: "autoCleanup.result.endOfRangeYearNone \(year)")
+                return String(localized: "autoCleanup.result.endOfRangeYearNone \(String(year))")
             } else {
                 return String(localized: "autoCleanup.result.endOfRangeNone")
             }

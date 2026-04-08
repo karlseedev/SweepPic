@@ -116,7 +116,7 @@ extension FaceScanMethod {
         case .continueFromLast:
             return String(localized: "faceScan.sheet.continue")
         case .byYear(let year, _):
-            return String(localized: "faceScan.method.yearTitle \(year)")
+            return String(localized: "faceScan.method.yearTitle \(String(year))")
         }
     }
 

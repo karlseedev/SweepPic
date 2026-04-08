@@ -132,7 +132,7 @@ async function handleCreateLink(userId: string): Promise<Response> {
 
   if (selectError) {
     console.error("create-link: DB 조회 실패 —", selectError.message);
-    return errorResponse("서버 오류가 발생했습니다.", 500);
+    return errorResponse("server_error", 500);
   }
 
   // 2. 기존 코드가 있으면 반환
@@ -175,12 +175,12 @@ async function handleCreateLink(userId: string): Promise<Response> {
 
     // 기타 에러
     console.error("create-link: INSERT 실패 —", insertError.message);
-    return errorResponse("서버 오류가 발생했습니다.", 500);
+    return errorResponse("server_error", 500);
   }
 
   // 5회 모두 충돌 (극히 드문 경우)
   console.error("create-link: 코드 생성 실패 — 5회 충돌");
-  return errorResponse("코드 생성에 실패했습니다. 잠시 후 다시 시도해주세요.");
+  return errorResponse("code_creation_failed");
 }
 
 // MARK: - Offer Code 할당 유틸리티
@@ -314,7 +314,7 @@ async function handleMatchCode(body: Record<string, unknown>): Promise<Response>
 
   // 필수 파라미터 확인
   if (!referralCode) {
-    return errorResponse("referral_code가 필요합니다.", 400);
+    return errorResponse("invalid_request", 400);
   }
 
   // 1. 초대 코드로 초대자 조회
@@ -326,14 +326,14 @@ async function handleMatchCode(body: Record<string, unknown>): Promise<Response>
 
   if (linkError) {
     console.error("match-code: referral_links 조회 실패 —", linkError.message);
-    return errorResponse("서버 오류가 발생했습니다.", 500);
+    return errorResponse("server_error", 500);
   }
 
   // 무효한 초대 코드
   if (!link) {
     return successResponse({
       status: "invalid_code",
-      message: "유효하지 않은 초대 코드입니다.",
+      message: "invalid_referral_code",
     });
   }
 
@@ -341,7 +341,7 @@ async function handleMatchCode(body: Record<string, unknown>): Promise<Response>
   if (link.user_id === userId) {
     return successResponse({
       status: "self_referral",
-      message: "본인의 초대 코드는 사용할 수 없습니다.",
+      message: "self_referral",
     });
   }
 
@@ -354,13 +354,13 @@ async function handleMatchCode(body: Record<string, unknown>): Promise<Response>
 
   if (existError) {
     console.error("match-code: referrals 조회 실패 —", existError.message);
-    return errorResponse("서버 오류가 발생했습니다.", 500);
+    return errorResponse("server_error", 500);
   }
 
   if (existing) {
     return successResponse({
       status: "already_redeemed",
-      message: "이미 초대 코드가 적용되어 있습니다.",
+      message: "already_referred",
     });
   }
 
@@ -373,7 +373,7 @@ async function handleMatchCode(body: Record<string, unknown>): Promise<Response>
   if (!allocatedCode) {
     return successResponse({
       status: "no_codes_available",
-      message: "일시적으로 혜택을 적용할 수 없습니다.",
+      message: "temporary_error",
     });
   }
 
@@ -395,18 +395,18 @@ async function handleMatchCode(body: Record<string, unknown>): Promise<Response>
     if (insertError.code === "23505") {
       return successResponse({
         status: "already_redeemed",
-        message: "이미 초대 코드가 적용되어 있습니다.",
+        message: "already_referred",
       });
     }
     // CHECK 위반 (자기 초대) → self_referral
     if (insertError.code === "23514") {
       return successResponse({
         status: "self_referral",
-        message: "본인의 초대 코드는 사용할 수 없습니다.",
+        message: "self_referral",
       });
     }
     console.error("match-code: referrals INSERT 실패 —", insertError.message);
-    return errorResponse("서버 오류가 발생했습니다.", 500);
+    return errorResponse("server_error", 500);
   }
 
   // 7. 리딤 URL 생성 및 반환
@@ -448,7 +448,7 @@ async function handleCheckStatus(userId: string): Promise<Response> {
 
   if (selectError) {
     console.error("check-status: referrals 조회 실패 —", selectError.message);
-    return errorResponse("서버 오류가 발생했습니다.", 500);
+    return errorResponse("server_error", 500);
   }
 
   // 2. 레코드 없음 — 아직 초대 코드 미사용
@@ -508,14 +508,14 @@ async function handleCheckStatus(userId: string): Promise<Response> {
     return successResponse({
       status: "matched",
       redeem_url: redeemUrl,
-      message: "혜택이 아직 적용되지 않았어요.",
+      message: "reward_not_pending",
     });
   }
 
   // 4. redeemed 또는 그 이상 — 이미 적용됨
   return successResponse({
     status: "redeemed",
-    message: "이미 초대 코드가 적용되어 있습니다.",
+    message: "already_referred",
   });
 }
 
@@ -539,7 +539,7 @@ async function handleReportRedemption(body: Record<string, unknown>): Promise<Re
 
   // 필수 파라미터 확인
   if (!referralId) {
-    return errorResponse("referral_id가 필요합니다.", 400);
+    return errorResponse("invalid_request", 400);
   }
 
   // 1. referral 조회 및 상태 확인
@@ -551,11 +551,11 @@ async function handleReportRedemption(body: Record<string, unknown>): Promise<Re
 
   if (selectError) {
     console.error("report-redemption: referrals 조회 실패 —", selectError.message);
-    return errorResponse("서버 오류가 발생했습니다.", 500);
+    return errorResponse("server_error", 500);
   }
 
   if (!referral) {
-    return errorResponse("해당 초대 기록을 찾을 수 없습니다.");
+    return errorResponse("referral_not_found");
   }
 
   // 이미 redeemed 이상이면 중복 보고 무시 (멱등성)
@@ -568,7 +568,7 @@ async function handleReportRedemption(body: Record<string, unknown>): Promise<Re
 
   // 피초대자 본인인지 확인
   if (referral.referred_user_id !== userId) {
-    return errorResponse("잘못된 요청입니다.");
+    return errorResponse("invalid_request");
   }
 
   // 2. referrals → redeemed
@@ -586,7 +586,7 @@ async function handleReportRedemption(body: Record<string, unknown>): Promise<Re
       "report-redemption: referrals UPDATE 실패 —",
       updateReferralError.message
     );
-    return errorResponse("서버 오류가 발생했습니다.", 500);
+    return errorResponse("server_error", 500);
   }
 
   // 3. offer_codes → used
@@ -689,7 +689,7 @@ async function handleGetPendingRewards(userId: string): Promise<Response> {
 
   if (error) {
     console.error("get-pending-rewards: 조회 실패 —", error.message);
-    return errorResponse("서버 오류가 발생했습니다.", 500);
+    return errorResponse("server_error", 500);
   }
 
   console.log(
@@ -839,7 +839,7 @@ async function handleClaimReward(body: Record<string, unknown>): Promise<Respons
 
   // 필수 파라미터 확인
   if (!rewardId) {
-    return errorResponse("reward_id가 필요합니다.", 400);
+    return errorResponse("invalid_request", 400);
   }
 
   // 1. 보상 조회 및 상태 확인
@@ -851,16 +851,16 @@ async function handleClaimReward(body: Record<string, unknown>): Promise<Respons
 
   if (selectError) {
     console.error("claim-reward: pending_rewards 조회 실패 —", selectError.message);
-    return errorResponse("서버 오류가 발생했습니다.", 500);
+    return errorResponse("server_error", 500);
   }
 
   if (!reward) {
-    return errorResponse("해당 보상을 찾을 수 없습니다.");
+    return errorResponse("reward_not_found");
   }
 
   // 본인의 보상인지 확인
   if (reward.user_id !== userId) {
-    return errorResponse("잘못된 요청입니다.");
+    return errorResponse("invalid_request");
   }
 
   // 이미 수령 완료
@@ -875,7 +875,7 @@ async function handleClaimReward(body: Record<string, unknown>): Promise<Respons
       .from("pending_rewards")
       .update({ status: "expired" })
       .eq("id", rewardId);
-    return errorResponse("보상 수령 기간이 만료되었습니다.");
+    return errorResponse("reward_expired");
   }
 
   // 2. 보상 방식 결정
@@ -896,7 +896,7 @@ async function handleClaimReward(body: Record<string, unknown>): Promise<Respons
     if (method.type === "promotional") {
       const signature = await generatePromotionalOfferSignature(productId, method.offerName);
       if (!signature) {
-        return errorResponse("서명 생성에 실패했습니다. 잠시 후 다시 시도해주세요.");
+        return errorResponse("signing_failed");
       }
       console.log(`claim-reward: 재호출 — 새 Promotional 서명 생성`);
       return successResponse({
@@ -915,7 +915,7 @@ async function handleClaimReward(body: Record<string, unknown>): Promise<Respons
     );
 
     if (!signature) {
-      return errorResponse("서명 생성에 실패했습니다. 잠시 후 다시 시도해주세요.");
+      return errorResponse("signing_failed");
     }
 
     // pending_rewards → claimed (중간 상태, completed는 confirm-claim에서)
@@ -941,7 +941,7 @@ async function handleClaimReward(body: Record<string, unknown>): Promise<Respons
     const allocatedCode = await allocateOfferCode(method.offerName, userId);
 
     if (!allocatedCode) {
-      return errorResponse("현재 일시적으로 오류가 발생했습니다. 다음날 다시 시도해주세요.");
+      return errorResponse("temporary_error");
     }
 
     const redeemUrl = buildRedeemURL(allocatedCode);
@@ -986,7 +986,7 @@ async function handleConfirmClaim(body: Record<string, unknown>): Promise<Respon
   const transactionId = body.transaction_id as string | undefined;
 
   if (!rewardId) {
-    return errorResponse("reward_id가 필요합니다.", 400);
+    return errorResponse("invalid_request", 400);
   }
 
   // 1. 보상 조회
@@ -998,16 +998,16 @@ async function handleConfirmClaim(body: Record<string, unknown>): Promise<Respon
 
   if (selectError) {
     console.error("confirm-claim: 조회 실패 —", selectError.message);
-    return errorResponse("서버 오류가 발생했습니다.", 500);
+    return errorResponse("server_error", 500);
   }
 
   if (!reward) {
-    return errorResponse("해당 보상을 찾을 수 없습니다.");
+    return errorResponse("reward_not_found");
   }
 
   // 본인 확인
   if (reward.user_id !== userId) {
-    return errorResponse("잘못된 요청입니다.");
+    return errorResponse("invalid_request");
   }
 
   // 멱등성: 이미 completed
@@ -1017,7 +1017,7 @@ async function handleConfirmClaim(body: Record<string, unknown>): Promise<Respon
 
   // claimed 상태만 confirm 가능
   if (reward.status !== "claimed") {
-    return errorResponse("보상이 수령 대기 상태가 아닙니다.");
+    return errorResponse("reward_not_pending");
   }
 
   // 2. pending_rewards → completed
@@ -1033,7 +1033,7 @@ async function handleConfirmClaim(body: Record<string, unknown>): Promise<Respon
 
   if (updateError) {
     console.error("confirm-claim: UPDATE 실패 —", updateError.message);
-    return errorResponse("서버 오류가 발생했습니다.", 500);
+    return errorResponse("server_error", 500);
   }
 
   // 3. referrals → rewarded
@@ -1077,7 +1077,7 @@ async function handleUpdateDeviceToken(
   const deviceToken = body.device_token as string;
 
   if (!deviceToken) {
-    return errorResponse("device_token은 필수입니다.", 400);
+    return errorResponse("invalid_request", 400);
   }
 
   // referral_links에 user_id가 있는지 확인
@@ -1104,7 +1104,7 @@ async function handleUpdateDeviceToken(
 
   if (error) {
     console.error("update-device-token: 업데이트 실패 —", error.message);
-    return errorResponse("서버 오류가 발생했습니다.", 500);
+    return errorResponse("server_error", 500);
   }
 
   console.log(
@@ -1138,13 +1138,13 @@ Deno.serve(async (req: Request): Promise<Response> => {
   try {
     body = await req.json();
   } catch {
-    return errorResponse("잘못된 요청 형식입니다.", 400);
+    return errorResponse("invalid_format", 400);
   }
 
   // user_id 필수 확인
   const userId = body.user_id as string;
   if (!userId) {
-    return errorResponse("user_id가 필요합니다.", 400);
+    return errorResponse("invalid_request", 400);
   }
 
   // Rate Limiting (FR-037)
@@ -1184,6 +1184,6 @@ Deno.serve(async (req: Request): Promise<Response> => {
       return handleUpdateDeviceToken(body);
 
     default:
-      return errorResponse(`알 수 없는 엔드포인트: ${endpoint}`, 404);
+      return errorResponse(`unknown_endpoint: ${endpoint}`, 404);
   }
 });

@@ -242,7 +242,7 @@ final class CleanupProgressView: UIView {
         case .continueFromLast:
             subTitle = String(localized: "autoCleanup.progress.continue")
         case .byYear(let year, _):
-            subTitle = String(localized: "autoCleanup.progress.year \(year)")
+            subTitle = String(localized: "autoCleanup.progress.year \(String(year))")
         }
 
         let mainAttributes: [NSAttributedString.Key: Any] = [

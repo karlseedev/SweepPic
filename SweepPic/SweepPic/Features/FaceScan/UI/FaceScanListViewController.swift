@@ -330,6 +330,8 @@ final class FaceScanListViewController: UIViewController, BarsVisibilityControll
         nextButton.addTarget(self, action: #selector(nextAnalysisTapped), for: .touchUpInside)
         nextButton.isEnabled = false
         nextButton.alpha = 0.4  // 비활성 시 dimmed
+        // 버튼 텍스트가 잘리지 않도록 compression resistance를 타이틀보다 높게 설정
+        nextButton.setContentCompressionResistancePriority(.required, for: .horizontal)
         header.addSubview(nextButton)
         self.nextAnalysisCustomButton = nextButton
 
@@ -355,8 +357,8 @@ final class FaceScanListViewController: UIViewController, BarsVisibilityControll
                 equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 29
             ),
 
-            // 타이틀
-            titleLabel.centerXAnchor.constraint(equalTo: header.centerXAnchor),
+            // 타이틀 (centerX는 공간 부족 시 양보 가능하도록 750)
+            { let c = titleLabel.centerXAnchor.constraint(equalTo: header.centerXAnchor); c.priority = .defaultHigh; return c }(),
             titleLabel.centerYAnchor.constraint(equalTo: backButton.centerYAnchor),
             titleLabel.leadingAnchor.constraint(greaterThanOrEqualTo: backButton.trailingAnchor, constant: 8),
             titleLabel.trailingAnchor.constraint(lessThanOrEqualTo: nextButton.leadingAnchor, constant: -8),

@@ -280,6 +280,10 @@ extension ReferralServiceError {
             return String(localized: "error.server.invalidResponse")
         case "unknown_error":
             return String(localized: "error.server.unknownError")
+        case "invalid_format":
+            return String(localized: "error.server.invalidFormat")
+        case let code where code.hasPrefix("unknown_endpoint"):
+            return String(localized: "error.server.unknownEndpoint")
         default:
             return code.isServerCode ? String(localized: "error.server.serverError") : code
         }
