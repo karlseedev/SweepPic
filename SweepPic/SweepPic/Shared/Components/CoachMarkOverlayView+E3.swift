@@ -204,7 +204,7 @@ extension CoachMarkOverlayView {
 
         // 카드를 먼저 표시 (글씨 → 사용자 인지 → 뒤에서 시연)
         // addSubview 순서상 카드가 snapshot/fingerView보다 위에 위치함
-        buildE3Card()
+        buildE3Card(avoidingFrame: frame)
 
         // 1.2초 후 포커싱 시작 (글씨 읽을 시간 확보)
         let delay: TimeInterval = UIAccessibility.isReduceMotionEnabled ? 0 : 1.2
@@ -383,7 +383,8 @@ extension CoachMarkOverlayView {
     // MARK: - Card
 
     /// E-3 카드 구성: 본문 + [확인]
-    private func buildE3Card() {
+    /// - Parameter avoidingFrame: 포커싱 셀 frame — 겹치지 않는 쪽(위/아래)에 카드 배치
+    private func buildE3Card(avoidingFrame: CGRect) {
         let card = UIView()
         card.layer.cornerRadius = 20
         card.clipsToBounds = true
@@ -439,10 +440,27 @@ extension CoachMarkOverlayView {
         confirmButton.translatesAutoresizingMaskIntoConstraints = false
         card.addSubview(confirmButton)
 
+        // 셀을 가리지 않도록 Y 위치 결정:
+        // 셀 아래 여백 > 위 여백 → 카드를 셀 아래에, 아니면 셀 위에
+        let spaceAbove = avoidingFrame.minY
+        let spaceBelow = bounds.height - avoidingFrame.maxY
+        let cardGap: CGFloat = 24  // 셀과 카드 사이 간격
+
+        let cardYConstraint: NSLayoutConstraint
+        if spaceBelow >= spaceAbove {
+            // 셀 아래 공간이 더 넓음 → 카드를 셀 아래에 배치
+            cardYConstraint = card.topAnchor.constraint(
+                equalTo: topAnchor, constant: avoidingFrame.maxY + cardGap)
+        } else {
+            // 셀 위 공간이 더 넓음 → 카드를 셀 위에 배치
+            cardYConstraint = card.bottomAnchor.constraint(
+                equalTo: topAnchor, constant: avoidingFrame.minY - cardGap)
+        }
+
         // 레이아웃
         NSLayoutConstraint.activate([
             card.centerXAnchor.constraint(equalTo: centerXAnchor),
-            card.centerYAnchor.constraint(equalTo: centerYAnchor),
+            cardYConstraint,
             card.leadingAnchor.constraint(greaterThanOrEqualTo: leadingAnchor, constant: 24),
             card.trailingAnchor.constraint(lessThanOrEqualTo: trailingAnchor, constant: -24),
             card.widthAnchor.constraint(equalTo: widthAnchor, constant: -48),
