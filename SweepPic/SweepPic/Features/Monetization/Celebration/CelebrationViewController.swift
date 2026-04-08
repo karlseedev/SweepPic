@@ -123,7 +123,7 @@ final class CelebrationViewController: UIViewController {
     private lazy var referralLabel: UILabel = {
         let label = UILabel()
         label.translatesAutoresizingMaskIntoConstraints = false
-        label.text = "초대 한 번마다 나도 친구도\nPro 멤버십 14일 무료 제공!"
+        label.text = String(localized: "monetization.gate.referralPromo")
         label.font = .systemFont(ofSize: 14, weight: .medium)
         label.textColor = UIColor.white.withAlphaComponent(0.8)
         label.textAlignment = .center
@@ -134,7 +134,7 @@ final class CelebrationViewController: UIViewController {
     /// 초대 부가 문구
     private lazy var referralSubtitleLabel: UILabel = {
         let label = UILabel()
-        label.text = "이미 Pro멤버십 이용 중이어도 14일 무료 연장"
+        label.text = String(localized: "monetization.gate.referralNote")
         label.font = .systemFont(ofSize: 11, weight: .regular)
         label.textColor = UIColor.white.withAlphaComponent(0.4)
         label.textAlignment = .center
@@ -146,15 +146,15 @@ final class CelebrationViewController: UIViewController {
     private lazy var referralButton: UIButton = {
         let button = UIButton(type: .system)
         button.backgroundColor = UIColor.white.withAlphaComponent(0.8)
-        button.setTitle("친구 초대하기", for: .normal)
+        button.setTitle(String(localized: "monetization.gate.inviteButton"), for: .normal)
         button.setTitleColor(.black, for: .normal)
         button.titleLabel?.font = .systemFont(ofSize: 17, weight: .semibold)
         button.layer.cornerRadius = 25
         button.clipsToBounds = true
         button.translatesAutoresizingMaskIntoConstraints = false
         button.addTarget(self, action: #selector(referralButtonTapped), for: .touchUpInside)
-        button.accessibilityLabel = "친구 초대하기"
-        button.accessibilityHint = "초대 설명 화면으로 이동합니다"
+        button.accessibilityLabel = String(localized: "monetization.gate.inviteButton")
+        button.accessibilityHint = String(localized: "a11y.celebration.referralHint")
         return button
     }()
 
@@ -262,8 +262,8 @@ final class CelebrationViewController: UIViewController {
         ])
 
         // 접근성 설정 (FR-057)
-        confirmButton.accessibilityLabel = "확인"
-        confirmButton.accessibilityHint = "축하 화면을 닫습니다"
+        confirmButton.accessibilityLabel = String(localized: "common.ok")
+        confirmButton.accessibilityHint = String(localized: "a11y.celebration.closeHint")
     }
 
     /// 데이터 표시
@@ -282,9 +282,9 @@ final class CelebrationViewController: UIViewController {
         totalFreedRow.text = String(localized: "monetization.celebration.freed \(freedFormatted)")
 
         // 접근성: 통계 라벨에 명시적 설명 (FR-057)
-        sessionLabel.accessibilityLabel = "\(result.sessionDeletedCount)장 삭제 완료"
-        totalDeletedRow.accessibilityLabel = "SweepPic에서 총 \(totalFormatted)장 삭제"
-        totalFreedRow.accessibilityLabel = "\(freedFormatted) 확보"
+        sessionLabel.accessibilityLabel = String(localized: "monetization.celebration.sessionCount \(result.sessionDeletedCount)")
+        totalDeletedRow.accessibilityLabel = String(localized: "monetization.celebration.totalCount \(result.totalDeletedCount)")
+        totalFreedRow.accessibilityLabel = String(localized: "monetization.celebration.freed \(freedFormatted)")
 
         Logger.app.debug("CelebrationVC: 이번 \(self.result.sessionDeletedCount)장, 누적 \(self.result.totalDeletedCount)장, 누적 \(self.result.totalFreedBytes)bytes")
     }

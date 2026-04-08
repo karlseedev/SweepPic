@@ -90,7 +90,7 @@ final class ReferralRewardClaimManager {
             case "promotional":
                 // Promotional Offer: 서명으로 StoreKit 2 구매
                 guard let signature = response.signature else {
-                    await updateState(.failed(message: "서명 정보가 없습니다."))
+                    await updateState(.failed(message: String(localized: "error.referralReward.missingSignature")))
                     return
                 }
                 try await applyPromotionalOffer(productId: productId, signature: signature)
@@ -105,7 +105,7 @@ final class ReferralRewardClaimManager {
                 // Offer Code: 리딤 URL 열기 → App Store로 전환
                 // confirm은 VC에서 Transaction 스캔 후 호출
                 guard let redeemURL = response.redeemURL else {
-                    await updateState(.failed(message: "리딤 URL이 없습니다."))
+                    await updateState(.failed(message: String(localized: "error.referralReward.missingRedeemURL")))
                     return
                 }
                 await applyOfferCode(redeemURL: redeemURL)
@@ -113,7 +113,7 @@ final class ReferralRewardClaimManager {
                 return
 
             default:
-                await updateState(.failed(message: "알 수 없는 보상 유형입니다."))
+                await updateState(.failed(message: String(localized: "error.referralReward.unknownRewardType")))
                 return
             }
 
@@ -125,28 +125,27 @@ final class ReferralRewardClaimManager {
             )
 
         } catch let error as ReferralServiceError {
-            await updateState(.failed(message: error.errorDescription ?? "서버 오류가 발생했습니다."))
+            await updateState(.failed(message: error.errorDescription ?? String(localized: "error.referralReward.serverError")))
             Logger.referral.error(
                 "ReferralRewardClaimManager: API 에러 — \(error.localizedDescription)"
             )
 
         } catch let error as PromotionalOfferService.OfferError {
+            let message = localizedMessage(for: error)
             switch error {
             case .userCancelled:
                 // 사용자 취소 → idle 복귀 (서버는 claimed, 재시도 가능)
                 await updateState(.idle)
             default:
-                await updateState(.failed(
-                    message: "혜택 적용에 실패했습니다. 잠시 후 다시 시도해주세요."
-                ))
+                await updateState(.failed(message: message))
             }
             Logger.referral.error(
-                "ReferralRewardClaimManager: Offer 에러 — \(error.localizedDescription)"
+                "ReferralRewardClaimManager: Offer 에러 — \(message)"
             )
 
         } catch {
             await updateState(.failed(
-                message: "혜택 적용에 실패했습니다. 잠시 후 다시 시도해주세요."
+                message: String(localized: "error.referralReward.applyFailed")
             ))
             Logger.referral.error(
                 "ReferralRewardClaimManager: 알 수 없는 에러 — \(error.localizedDescription)"
@@ -201,6 +200,21 @@ final class ReferralRewardClaimManager {
     @MainActor
     private func applyOfferCode(redeemURL: URL) {
         OfferRedemptionService.shared.openRedeemURL(redeemURL)
+    }
+
+    private func localizedMessage(for error: PromotionalOfferService.OfferError) -> String {
+        switch error {
+        case .productNotFound(let id):
+            return String(localized: "error.offer.productNotFound \(id)")
+        case .userCancelled:
+            return String(localized: "error.offer.userCanceled")
+        case .purchasePending:
+            return String(localized: "error.offer.purchasePending")
+        case .storeKitError(let error):
+            return String(localized: "error.offer.storeKit \(error.localizedDescription)")
+        case .verificationFailed:
+            return String(localized: "error.offer.verificationFailed")
+        }
     }
 
     /// 메인 스레드에서 상태 업데이트

@@ -567,7 +567,7 @@ final class PreviewGridViewController: UIViewController {
         guard let window = view.window else { return nil }
         // 텍스트 기준 여백 (pill margin 8pt와 별도)
         let paddingH: CGFloat = 16  // 좌우
-        let paddingV: CGFloat = 12  // 상하
+        let paddingV: CGFloat = 2   // 상하 (pill margin 8pt 포함 → 총 10pt)
         if #available(iOS 26.0, *) {
             // iOS 26: 시스템 네비바에서 타이틀 UILabel 탐색
             guard let navBar = navigationController?.navigationBar else { return nil }

@@ -205,9 +205,9 @@ final class ATTPromptViewController: UIViewController {
         ])
 
         // 접근성 설정 (FR-057)
-        iconImageView.accessibilityLabel = "광고 맞춤 설정 아이콘"
-        continueButton.accessibilityLabel = "계속하여 추적 허용 여부 선택"
-        skipButton.accessibilityLabel = "건너뛰기"
+        iconImageView.accessibilityLabel = String(localized: "a11y.att.icon")
+        continueButton.accessibilityLabel = String(localized: "a11y.att.continue")
+        skipButton.accessibilityLabel = String(localized: "monetization.att.skip")
     }
 
     // MARK: - Actions

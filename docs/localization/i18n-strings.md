@@ -472,7 +472,7 @@
 | 226 | 저품질 사진 정리 | Low-Quality Photo Cleanup | 시트 제목 | |
 | 227 | 흔들리거나 초점이 맞지 않은 사진들을\n자동으로 찾아 정리합니다.\n정리된 사진은 삭제대기함에서 복구할 수 있어요. | Automatically finds and cleans up\nblurry or out-of-focus photos.\nCleaned-up photos can be restored from Trash. | 시트 설명문 | |
 | 228 | 최신사진부터 정리 | Clean Up from Latest | 액션 버튼 | |
-| 229 | 이어서 정리 ({dateString} 이전) | Clean Up from {dateString} and Earlier | 액션 버튼 | |
+| 229 | 이어서 정리 ({dateString} 이전) | Clean Up: Before {dateString} | 액션 버튼 | |
 | 230 | 이어서 정리 | Clean Up | 액션 버튼 (비활성) | |
 | 231 | 연도별 정리 | Clean Up by Year | 액션 버튼 | |
 | 232 | 취소 | Cancel | 액션 버튼 | |
@@ -575,7 +575,7 @@
 | 291 | 인물사진 비교정리 | Compare & Clean Portraits | 시트 제목 | |
 | 292 | 비슷한 사진에서 같은 인물을\n찾아 얼굴을 비교합니다.\n마음에 들지 않는 사진을\n골라 정리할 수 있어요. | Finds the same person across similar photos\nand compares their faces.\nChoose the ones you don't like\nand clean them up. | 시트 설명문 | |
 | 293 | 최신사진부터 정리 | Clean Up from Latest | 액션 버튼 | |
-| 294 | 이어서 정리 ({dateString} 이전) | Clean Up from {dateString} and Earlier | 액션 버튼 | |
+| 294 | 이어서 정리 ({dateString} 이전) | Clean Up: Before {dateString} | 액션 버튼 | |
 | 295 | 이어서 정리 | Clean Up | 액션 버튼 (비활성) | |
 | 296 | 연도별 정리 | Clean Up by Year | 액션 버튼 | |
 | 297 | 취소 | Cancel | 액션 버튼 | |

@@ -399,7 +399,7 @@ final class PaywallViewController: UIViewController {
         // 접근성: 행 단위로 읽히도록 설정 (FR-057)
         if !isHeader && !feature.isEmpty {
             container.isAccessibilityElement = true
-            container.accessibilityLabel = "\(feature), 무료: \(freeValue), Pro: \(proValue)"
+            container.accessibilityLabel = String(localized: "a11y.paywall.comparisonRow \(feature) \(freeValue) \(proValue)")
         }
 
         // 구분선 (헤더 아래)
@@ -744,14 +744,14 @@ final class PaywallViewController: UIViewController {
     // MARK: - Accessibility
 
     private func setupAccessibility() {
-        closeButton.accessibilityLabel = "닫기"
-        closeButton.accessibilityHint = "페이월 화면을 닫습니다"
-        planTabView.accessibilityLabel = "멤버십 플랜 선택"
-        purchaseButton.accessibilityLabel = "무료 체험 시작하기"
-        restoreButton.accessibilityLabel = "멤버십 복원"
-        restoreButton.accessibilityHint = "이전에 구매한 멤버십을 복원합니다"
-        redeemButton.accessibilityLabel = "리딤 코드 입력"
-        redeemButton.accessibilityHint = "프로모션 코드를 입력합니다"
+        closeButton.accessibilityLabel = String(localized: "common.close")
+        closeButton.accessibilityHint = String(localized: "a11y.paywall.closeHint")
+        planTabView.accessibilityLabel = String(localized: "a11y.paywall.planSelection")
+        purchaseButton.accessibilityLabel = String(localized: "monetization.paywall.purchaseButton")
+        restoreButton.accessibilityLabel = String(localized: "monetization.paywall.restoreButton")
+        restoreButton.accessibilityHint = String(localized: "a11y.paywall.restoreHint")
+        redeemButton.accessibilityLabel = String(localized: "a11y.paywall.redeemLabel")
+        redeemButton.accessibilityHint = String(localized: "a11y.paywall.redeemHint")
     }
 }
 

@@ -882,10 +882,10 @@ extension PhotoCell {
     /// 접근성 설정 업데이트
     func updateAccessibility(index: Int, total: Int, isTrashed: Bool) {
         isAccessibilityElement = true
-        accessibilityLabel = "사진 \(index + 1) / \(total)"
+        accessibilityLabel = String(localized: "a11y.photo.label \(index + 1) \(total)")
 
         if isTrashed {
-            accessibilityLabel? += ", 삭제대기함에 있음"
+            accessibilityLabel? += String(localized: "a11y.photo.inTrash")
         }
 
         accessibilityTraits = [.image]

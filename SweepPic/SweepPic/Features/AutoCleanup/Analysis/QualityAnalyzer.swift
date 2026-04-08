@@ -633,6 +633,34 @@ final class QualityAnalyzer {
 
 extension QualityAnalyzer {
 
+    static func localizedMessage(for error: CleanupImageLoadError) -> String {
+        switch error {
+        case .loadFailed(let reason):
+            return String(localized: "error.imageLoadFailed \(reason)")
+        case .timeout:
+            return String(localized: "error.imageLoadTimeout")
+        case .invalidImage:
+            return String(localized: "error.invalidImageFormat")
+        }
+    }
+
+    static func localizedMessage(for error: VideoFrameExtractError) -> String {
+        switch error {
+        case .urlNotAvailable:
+            return String(localized: "error.videoUrlNotAvailable")
+        case .iCloudOnly:
+            return String(localized: "error.videoICloudOnly")
+        case .extractionFailed(let reason):
+            return String(localized: "error.videoFrameExtractionFailed \(reason)")
+        case .tooShort:
+            return String(localized: "error.videoTooShort")
+        case .notVideo:
+            return String(localized: "error.videoNotVideo")
+        case .allFramesFailed:
+            return String(localized: "error.videoAllFramesFailed")
+        }
+    }
+
     /// 저품질 사진만 필터링
     ///
     /// - Parameter results: 분석 결과 배열

@@ -291,6 +291,8 @@ private final class FAQCell: UITableViewCell {
 
         // 접근성
         accessibilityLabel = question
-        accessibilityHint = isExpanded ? "탭하면 답변을 접습니다" : "탭하면 답변을 펼칩니다"
+        accessibilityHint = isExpanded
+            ? String(localized: "a11y.faq.collapseHint")
+            : String(localized: "a11y.faq.expandHint")
     }
 }

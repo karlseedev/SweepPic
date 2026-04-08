@@ -34,7 +34,7 @@ public final class PromotionalOfferService {
     // MARK: - Errors
 
     /// Promotional Offer 구매 중 발생할 수 있는 에러
-    public enum OfferError: Error, LocalizedError {
+    public enum OfferError: Error {
         /// 해당 상품을 찾을 수 없음
         case productNotFound(String)
         /// 사용자가 구매를 취소함
@@ -46,20 +46,6 @@ public final class PromotionalOfferService {
         /// 서명 검증 실패
         case verificationFailed
 
-        public var errorDescription: String? {
-            switch self {
-            case .productNotFound(let id):
-                return "상품을 찾을 수 없습니다. (\(id))"
-            case .userCancelled:
-                return "구매가 취소되었습니다."
-            case .purchasePending:
-                return "구매가 대기 중입니다."
-            case .storeKitError(let error):
-                return "혜택 적용에 실패했습니다: \(error.localizedDescription)"
-            case .verificationFailed:
-                return "거래 검증에 실패했습니다."
-            }
-        }
     }
 
     // MARK: - Purchase with Promotional Offer

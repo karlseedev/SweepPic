@@ -89,49 +89,33 @@ extension CoachMarkOverlayView {
         set { objc_setAssociatedObject(self, &d1SwipeLoopActiveKey, newValue, .OBJC_ASSOCIATION_RETAIN_NONATOMIC) }
     }
 
-    /// 포커싱 구멍 위치에 흰색 반투명 배경 (검정 배경에서 구멍이 안 보이는 문제 대응)
-    private var d1HighlightTintView: UIView? {
-        get { objc_getAssociatedObject(self, &d1HighlightTintViewKey) as? UIView }
+    /// 포커싱 구멍 위치에 흰색 반투명 배경 (CAShapeLayer — dimLayer와 동기화)
+    private var d1TintLayer: CAShapeLayer? {
+        get { objc_getAssociatedObject(self, &d1HighlightTintViewKey) as? CAShapeLayer }
         set { objc_setAssociatedObject(self, &d1HighlightTintViewKey, newValue, .OBJC_ASSOCIATION_RETAIN_NONATOMIC) }
     }
 
-    // MARK: - Highlight Tint
+    // MARK: - Highlight Tint (CAShapeLayer)
 
-    /// 포커싱 구멍 위치에 흰색 반투명 배경 표시/이동
-    /// pill shape: margin 8pt + cornerRadius, rect: margin 0
-    private func updateD1HighlightTint(for frame: CGRect, shape: D1FocusShape) {
-        let tintView: UIView
-        if let existing = d1HighlightTintView {
-            tintView = existing
-        } else {
-            tintView = UIView()
-            tintView.backgroundColor = UIColor.white.withAlphaComponent(0.2)
-            tintView.isUserInteractionEnabled = false
-            // dimLayer 위, 다른 콘텐츠 아래에 배치
-            insertSubview(tintView, at: 1)
-            d1HighlightTintView = tintView
-        }
+    /// tint layer 생성 (dimLayer 위에 배치)
+    private func setupD1TintLayer() {
+        guard d1TintLayer == nil else { return }
+        let tint = CAShapeLayer()
+        tint.fillColor = UIColor.white.withAlphaComponent(0.2).cgColor
+        // dimLayer 바로 위에 삽입
+        layer.insertSublayer(tint, above: dimLayer)
+        d1TintLayer = tint
+    }
 
+    /// tint layer path를 pill/rect 형태로 설정
+    private func setD1TintPath(for frame: CGRect, shape: D1FocusShape) -> UIBezierPath {
         switch shape {
         case .pill(let margin):
             let holeRect = frame.insetBy(dx: -margin, dy: -margin)
-            tintView.frame = holeRect
-            tintView.layer.cornerRadius = holeRect.height / 2
+            return UIBezierPath(roundedRect: holeRect, cornerRadius: holeRect.height / 2)
         case .rect:
-            tintView.frame = frame
-            tintView.layer.cornerRadius = 0
+            return UIBezierPath(roundedRect: frame, cornerRadius: 0)
         }
-        tintView.clipsToBounds = true
-    }
-
-    /// 포커싱 전환 시 tint view 숨김 (확대 중에는 안 보이게)
-    private func hideD1HighlightTint() {
-        d1HighlightTintView?.alpha = 0
-    }
-
-    /// 포커싱 축소 완료 후 tint view 표시
-    private func showD1HighlightTint() {
-        d1HighlightTintView?.alpha = 1
     }
 
     // MARK: - Constants
@@ -204,18 +188,15 @@ extension CoachMarkOverlayView {
         // 즉시 터치 차단 (alpha 0.01 — hitTest 활성화)
         overlay.alpha = 0.01
 
-        // 화면 전체 크기 pill로 시작 (딤 없음 상태)
+        // 화면 전체 크기 정사각형으로 시작 (원형처럼 전방향 축소 효과)
         let margin: CGFloat = 8
         let holeRect = step1Frame.insetBy(dx: -margin, dy: -margin)
-        let scaleFactor = max(overlay.bounds.width, overlay.bounds.height) * 3.0
-            / max(holeRect.width, holeRect.height)
-        let startWidth = holeRect.width * scaleFactor
-        let startHeight = holeRect.height * scaleFactor
+        let expandSize = max(overlay.bounds.width, overlay.bounds.height) * 3.0
         let startRect = CGRect(
-            x: holeRect.midX - startWidth / 2,
-            y: holeRect.midY - startHeight / 2,
-            width: startWidth,
-            height: startHeight
+            x: holeRect.midX - expandSize / 2,
+            y: holeRect.midY - expandSize / 2,
+            width: expandSize,
+            height: expandSize
         )
         let startPath = UIBezierPath(rect: overlay.bounds)
         startPath.append(UIBezierPath(roundedRect: startRect, cornerRadius: startRect.height / 2))
@@ -224,23 +205,18 @@ extension CoachMarkOverlayView {
         window.addSubview(overlay)
         CoachMarkManager.shared.currentOverlay = overlay
 
-        // 포커싱 구멍 흰색 tint — 큰 크기로 시작, 축소 모션과 동시에 줄어듦
-        let tintStartRect = startRect.insetBy(dx: -8, dy: -8)
-        overlay.updateD1HighlightTint(for: step1Frame, shape: .pill(margin: 8))
-        overlay.d1HighlightTintView?.frame = tintStartRect
-        overlay.d1HighlightTintView?.layer.cornerRadius = tintStartRect.height / 2
+        // 포커싱 구멍 흰색 tint (CAShapeLayer — dimLayer와 동일 CATransaction에서 동기화)
+        overlay.setupD1TintLayer()
+        let tintStartPath = UIBezierPath(roundedRect: startRect, cornerRadius: startRect.height / 2)
+        overlay.d1TintLayer?.path = tintStartPath.cgPath
 
         // alpha 페이드인 (0.3s) + pill 포커싱 축소 (0.9s) + tint 축소 (0.9s) 동시
         UIView.animate(withDuration: 0.3) {
             overlay.alpha = 1
         }
-        // tint view도 타겟 크기로 축소 (dimLayer CABasicAnimation과 동일 타이밍)
-        let tintEndRect = step1Frame.insetBy(dx: -margin, dy: -margin)
-        UIView.animate(withDuration: 0.9, delay: 0, options: .curveEaseInOut) {
-            overlay.d1HighlightTintView?.frame = tintEndRect
-            overlay.d1HighlightTintView?.layer.cornerRadius = tintEndRect.height / 2
-        }
-        overlay.animateDFocus(to: step1Frame) {
+        // dimLayer + tint 동시 축소 (같은 CATransaction)
+        let tintEndPath = overlay.setD1TintPath(for: step1Frame, shape: .pill(margin: 8))
+        overlay.animateDFocusWithTint(to: step1Frame, tintEndPath: tintEndPath) {
             guard !overlay.shouldStopAnimation else { return }
             // 포커싱 완료 → 0.5s 대기 → 텍스트 페이드인
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
@@ -284,13 +260,13 @@ extension CoachMarkOverlayView {
         messageLabel.numberOfLines = 0
         messageLabel.alpha = 0
 
-        // 레이아웃: 포커싱 아래 24pt
+        // 레이아웃: 포커싱 아래 64pt (기본 24pt + 40pt 추가)
         let frame = d1StepFrames[0]
         let margin: CGFloat = 8
         let highlightBottom = frame.maxY + margin
         let labelWidth = bounds.width - 40
         let textHeight = ceil(messageLabel.sizeThatFits(CGSize(width: labelWidth, height: .greatestFiniteMagnitude)).height)
-        messageLabel.frame = CGRect(x: 20, y: highlightBottom + 24, width: labelWidth, height: textHeight)
+        messageLabel.frame = CGRect(x: 20, y: highlightBottom + 64, width: labelWidth, height: textHeight)
         addSubview(messageLabel)
 
         // 확인 버튼
@@ -355,7 +331,7 @@ extension CoachMarkOverlayView {
         let buttonHeight: CGFloat = 44
         confirmButton.frame = CGRect(
             x: (bounds.width - buttonWidth) / 2,
-            y: highlightTop - 24 - buttonHeight,
+            y: highlightTop - 64 - buttonHeight,  // 기본 24pt + 40pt 올림
             width: buttonWidth,
             height: buttonHeight
         )
@@ -476,7 +452,7 @@ extension CoachMarkOverlayView {
         let buttonHeight: CGFloat = 44
         confirmButton.frame = CGRect(
             x: (bounds.width - buttonWidth) / 2,
-            y: highlightTop - 24 - buttonHeight,
+            y: highlightTop - 64 - buttonHeight,  // 기본 24pt + 40pt 올림
             width: buttonWidth,
             height: buttonHeight
         )
@@ -523,8 +499,8 @@ extension CoachMarkOverlayView {
                 return
             }
             // 확대 → 축소 (Step 2부터는 tint 불사용 — D-1-1 전용)
-            self.d1HighlightTintView?.removeFromSuperview()
-            self.d1HighlightTintView = nil
+            self.d1TintLayer?.removeFromSuperlayer()
+            self.d1TintLayer = nil
             self.animateD1Expand { [weak self] in
                 guard let self, !self.shouldStopAnimation else {
                     CoachMarkManager.shared.isD1SequenceActive = false
@@ -727,6 +703,69 @@ extension CoachMarkOverlayView {
         CATransaction.commit()
     }
 
+    /// Step 1 진입 전용: dimLayer 축소 + tint layer 축소를 같은 CATransaction에서 동기 실행
+    /// animateDFocus와 동일한 구조이지만 tint path도 함께 애니메이션
+    private func animateDFocusWithTint(to targetFrame: CGRect, tintEndPath: UIBezierPath, completion: @escaping () -> Void) {
+        let margin: CGFloat = 8
+        let holeRect = targetFrame.insetBy(dx: -margin, dy: -margin)
+        let finalRadius = holeRect.height / 2
+
+        let endPath = UIBezierPath(rect: bounds)
+        endPath.append(UIBezierPath(roundedRect: holeRect, cornerRadius: finalRadius))
+
+        // 시작 path는 이미 dimLayer.path에 설정되어 있음
+        let startPath = dimLayer.path ?? UIBezierPath(rect: bounds).cgPath
+        let tintStartPath = d1TintLayer?.path
+
+        CATransaction.begin()
+        CATransaction.setCompletionBlock { [weak self] in
+            guard let self else { return }
+            self.dimLayer.path = endPath.cgPath
+            self.dimLayer.removeAnimation(forKey: "dFocus")
+            self.d1TintLayer?.path = tintEndPath.cgPath
+            self.d1TintLayer?.opacity = 1
+            self.d1TintLayer?.removeAnimation(forKey: "d1Tint")
+            self.d1TintLayer?.removeAnimation(forKey: "d1TintOpacity")
+            completion()
+        }
+
+        // dimLayer 축소 (0.9s)
+        let dimAnim = CABasicAnimation(keyPath: "path")
+        dimAnim.fromValue = startPath
+        dimAnim.toValue = endPath.cgPath
+        dimAnim.duration = 0.9
+        dimAnim.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
+        dimAnim.fillMode = .forwards
+        dimAnim.isRemovedOnCompletion = false
+        dimLayer.add(dimAnim, forKey: "dFocus")
+
+        // tint layer 축소 (0.9s — 동기화) + opacity 0→1 (후반부에 부드럽게 등장)
+        if let tintLayer = d1TintLayer {
+            // path 축소
+            let tintAnim = CABasicAnimation(keyPath: "path")
+            tintAnim.fromValue = tintStartPath
+            tintAnim.toValue = tintEndPath.cgPath
+            tintAnim.duration = 0.9
+            tintAnim.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
+            tintAnim.fillMode = .forwards
+            tintAnim.isRemovedOnCompletion = false
+            tintLayer.add(tintAnim, forKey: "d1Tint")
+
+            // opacity: 0 → 1 (포커싱 마지막 부분에서 부드럽게 등장)
+            // keyframe으로 0~60% 구간은 0 유지, 60~100% 구간에서 0→1
+            tintLayer.opacity = 0
+            let opacityAnim = CAKeyframeAnimation(keyPath: "opacity")
+            opacityAnim.values = [0.0, 0.0, 1.0]
+            opacityAnim.keyTimes = [0.0, 0.6, 1.0]  // 60%까지 투명, 이후 등장
+            opacityAnim.duration = 0.9
+            opacityAnim.fillMode = .forwards
+            opacityAnim.isRemovedOnCompletion = false
+            tintLayer.add(opacityAnim, forKey: "d1TintOpacity")
+        }
+
+        CATransaction.commit()
+    }
+
     /// 화면 전체 구멍 → 타겟 크기로 축소
     private func animateD1Shrink(to targetFrame: CGRect, shape: D1FocusShape, completion: @escaping () -> Void) {
         // 시작: 화면 전체 크기 구멍 (타겟 중심)
@@ -742,19 +781,16 @@ extension CoachMarkOverlayView {
             let holeRect = targetFrame.insetBy(dx: -margin, dy: -margin)
             endRect = holeRect
             endRadius = holeRect.height / 2
-            // 시작 pill (비율 유지 확대)
-            let scale = expandSize / max(holeRect.width, holeRect.height)
-            let sw = holeRect.width * scale
-            let sh = holeRect.height * scale
-            startRect = CGRect(x: holeRect.midX - sw / 2, y: holeRect.midY - sh / 2, width: sw, height: sh)
+            // 시작: 가로세로 모두 화면 크기 × 3 (정사각형에 가까움 — 원형처럼 전방향 축소)
+            startRect = CGRect(x: holeRect.midX - expandSize / 2, y: holeRect.midY - expandSize / 2,
+                               width: expandSize, height: expandSize)
             startRadius = startRect.height / 2
         case .rect:
             endRect = targetFrame
             endRadius = 0
-            let scale = expandSize / max(targetFrame.width, targetFrame.height)
-            let sw = targetFrame.width * scale
-            let sh = targetFrame.height * scale
-            startRect = CGRect(x: targetFrame.midX - sw / 2, y: targetFrame.midY - sh / 2, width: sw, height: sh)
+            // 시작: 가로세로 모두 화면 크기 × 3 (정사각형 — 원형처럼 전방향 축소)
+            startRect = CGRect(x: targetFrame.midX - expandSize / 2, y: targetFrame.midY - expandSize / 2,
+                               width: expandSize, height: expandSize)
             startRadius = 0
         }
 
@@ -774,7 +810,7 @@ extension CoachMarkOverlayView {
         let anim = CABasicAnimation(keyPath: "path")
         anim.fromValue = startPath.cgPath
         anim.toValue = endPath.cgPath
-        anim.duration = 0.7
+        anim.duration = 0.9  // C-2와 동일
         anim.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
         anim.fillMode = .forwards
         anim.isRemovedOnCompletion = false
@@ -976,8 +1012,8 @@ extension CoachMarkOverlayView {
         d1GreenView = nil
         d1FakeExpandButton?.removeFromSuperview()
         d1FakeExpandButton = nil
-        d1HighlightTintView?.removeFromSuperview()
-        d1HighlightTintView = nil
+        d1TintLayer?.removeFromSuperlayer()
+        d1TintLayer = nil
         fingerView.layer.removeAllAnimations()
         dimLayer.removeAnimation(forKey: "d1Expand")
         dimLayer.removeAnimation(forKey: "d1Shrink")

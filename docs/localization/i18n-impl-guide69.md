@@ -930,3 +930,238 @@ Phase 7-9 파일에서 발견된 접근성 문자열(accessibilityLabel, accessi
 **Phase 7-9에서는 건드리지 않음.** Phase 11에서 일괄 처리 예정.
 
 단, **UI 라벨과 동일한 접근성 라벨**은 UI 키를 재사용하므로 Phase 11에서 자동으로 해결됩니다.
+
+---
+
+## 12. Phase 10 — Referral + 공유 메시지 (~65키)
+
+### 12.1 대상 파일
+
+| 파일 | 경로 (SweepPic/SweepPic/ 기준) |
+|------|------|
+| ReferralMenuViewController.swift | Features/Referral/Menu/ |
+| ReferralExplainViewController.swift | Features/Referral/Share/ |
+| ReferralShareManager.swift | Features/Referral/Share/ |
+| ReferralCodeInputViewController.swift | Features/Referral/CodeInput/ |
+| ReferralRewardViewController.swift | Features/Referral/Reward/ |
+| ReferralRewardClaimManager.swift | Features/Referral/Reward/ |
+
+### 12.2 핵심 규칙
+
+- **공유 메시지**: 보내는 사람 기기 locale 기준 → `String(localized:)` 사용 (패턴 A)
+- **Referral 프로모 문자열** (3곳 재사용): Phase 7에서 등록한 `monetization.gate.referralPromo/inviteButton/referralNote` 키 재사용. CelebrationViewController에도 있으므로 이 3키를 그대로 참조
+- **에러 메시지**: ReferralCodeInput/RewardVC에서 서버 에러를 표시하는 부분은 Phase 12에서 처리하므로, **Phase 10에서는 UI 문자열만 교체**. 서버 에러 관련 한글(`"서버에 연결할 수 없습니다"` 등)은 건드리지 않음
+
+### 12.3 문자열 매핑 — i18n-strings.md §14 참조
+
+> 전체 매핑은 i18n-strings.md §14 (Referral) 참조. 아래는 키 접두사만 정리.
+
+| 접두사 | 파일 | 대략 키 수 |
+|--------|------|---------|
+| `referral.menu.*` | ReferralMenuViewController | 4키 |
+| `referral.explain.*` | ReferralExplainViewController | ~20키 (Push 프리프롬프트 포함) |
+| `referral.codeInput.*` | ReferralCodeInputViewController | ~20키 |
+| `referral.reward.*` | ReferralRewardViewController | ~12키 |
+| `referral.share.*` | ReferralShareManager | ~2키 (제목 + 본문) |
+
+### 12.4 공유 메시지 (ReferralShareManager) 특수 처리
+
+공유 본문은 긴 멀티라인 텍스트. xcstrings에 하나의 키로 등록:
+
+```swift
+// BEFORE
+let body = "편리한 사진 정리 앱 SweepPic을 추천합니다!\n..."
+// AFTER
+let body = String(localized: "referral.share.body \(referralCode) \(shareURL)")
+```
+
+xcstrings 키: `"referral.share.body %@ %@"`
+- en value에 `%1$@` (referralCode), `%2$@` (shareURL)
+- ko value에도 동일 위치에 `%1$@`, `%2$@`
+- **영문/한글 본문은 i18n-strings.md #402 참조** (이미 전문 작성됨)
+
+### 12.5 Phase 10에서 건드리지 않는 것
+
+- 서버 에러 메시지 표시 로직 (Phase 12)
+- 접근성 문자열 (Phase 11)
+- ReferralRewardClaimManager의 에러 매핑 함수 (Phase 11)
+
+---
+
+## 13. Phase 11 — 접근성 전용 + 사용자 노출 에러 매핑 (~35키)
+
+### 13.1 대상 파일
+
+**접근성 (이미 터치한 파일 재방문):**
+
+| 파일 | 접근성 한글 수 |
+|------|-------------|
+| PhotoCell.swift | 2키 |
+| FaceButtonOverlay.swift | 2키 |
+| PaywallViewController.swift | ~8키 |
+| CelebrationViewController.swift | ~4키 |
+| ATTPromptViewController.swift | ~3키 |
+| FAQViewController.swift | 2키 |
+
+**에러 매핑 (errorDescription 제거 + 앱측 매핑):**
+
+| 파일 | 작업 |
+|------|------|
+| CleanupImageLoader.swift | `errorDescription` 제거 |
+| VideoFrameExtractor.swift | `errorDescription` 제거 |
+| [AppCore] PromotionalOfferService.swift | `errorDescription` 제거 |
+| QualityAnalyzer.swift | 에러 표시 매핑 함수 추가 |
+| ReferralRewardClaimManager.swift | 에러 표시 매핑 함수 추가 |
+
+### 13.2 접근성 키 매핑 — i18n-strings.md §16 참조
+
+> 전체 매핑은 i18n-strings.md §16 참조. 키 접두사: `a11y.*`
+
+Phase 7에서 이미 접근성을 처리한 파일(TrashGatePopup, UsageGaugeView)은 **스킵**.
+
+### 13.3 에러 매핑 패턴 (A안)
+
+```swift
+// BEFORE — AppCore 에러에 errorDescription 있음
+enum CleanupImageLoadError: LocalizedError {
+    case loadFailed(reason: String)
+    var errorDescription: String? { "이미지 로딩 실패: \(reason)" }
+}
+
+// AFTER — errorDescription 제거
+enum CleanupImageLoadError: Error {
+    case loadFailed(reason: String)
+    // errorDescription 삭제
+}
+
+// 앱측 — 표시 시점에 로컬라이제이션
+func localizedMessage(for error: CleanupImageLoadError) -> String {
+    switch error {
+    case .loadFailed(let reason):
+        return String(localized: "error.imageLoadFailed \(reason)")
+    case .timeout:
+        return String(localized: "error.imageLoadTimeout")
+    case .invalidFormat:
+        return String(localized: "error.invalidImageFormat")
+    }
+}
+```
+
+에러 타입별 매핑은 i18n-strings.md §17 참조.
+
+---
+
+## 14. Phase 12 — 서버 에러 코드 매핑 + 로그 영문 병기 (~32키)
+
+### 14.1 서버 에러 코드 매핑 (클라이언트)
+
+**대상 파일:**
+
+| 파일 | 작업 |
+|------|------|
+| [AppCore] ReferralService.swift | `errorDescription` 제거, typed error만 반환 |
+| ReferralCodeInputViewController.swift | 에러 표시 시 `String(localized:)` 매핑 |
+| ReferralRewardViewController.swift | 에러 표시 시 매핑 |
+| ReferralExplainViewController.swift | 에러 표시 시 매핑 |
+
+**하위 호환 패턴** (구 서버 한글 + 신 서버 영문 코드 양쪽 지원):
+
+```swift
+// ReferralService에서 서버 에러 메시지를 반환할 때
+case .serverError(let code):
+    // 새 형식(영문 코드) → 매핑 테이블에서 조회
+    // 구 형식(한글) → 그대로 표시 (하위 호환)
+    return code.allSatisfy({ $0.isASCII }) && code.contains("_")
+        ? Self.localizedMessage(for: code)
+        : code
+```
+
+**에러 코드 → 로컬라이즈 매핑 (12개):**
+
+| 서버 코드 | xcstrings 키 | en | ko |
+|----------|-------------|----|----|
+| `server_error` | `error.server.serverError` | A server error occurred. | 서버 오류가 발생했습니다. |
+| `code_creation_failed` | `error.server.codeCreationFailed` | Failed to create code. Please try again later. | 코드 생성에 실패했습니다. 잠시 후 다시 시도해주세요. |
+| `referral_not_found` | `error.server.referralNotFound` | Referral record not found. | 해당 초대 기록을 찾을 수 없습니다. |
+| `reward_expired` | `error.server.rewardExpired` | Reward has expired. | 보상 수령 기간이 만료되었습니다. |
+| `invalid_referral_code` | `error.server.invalidReferralCode` | Invalid referral code. | 유효하지 않은 초대 코드입니다. |
+| `self_referral` | `error.server.selfReferral` | You cannot use your own code. | 본인의 초대 코드는 사용할 수 없습니다. |
+| `already_referred` | `error.server.alreadyReferred` | A referral code has already been applied. | 이미 초대 코드가 적용되어 있습니다. |
+| `invalid_request` | `error.server.invalidRequest` | Invalid request. | 잘못된 요청입니다. |
+| `reward_not_found` | `error.server.rewardNotFound` | Reward not found. | 해당 보상을 찾을 수 없습니다. |
+| `signing_failed` | `error.server.signingFailed` | Signing failed. Please try again later. | 서명 생성에 실패했습니다. 잠시 후 다시 시도해주세요. |
+| `temporary_error` | `error.server.temporaryError` | A temporary error occurred. Please try again tomorrow. | 현재 일시적으로 오류가 발생했습니다. 다음날 다시 시도해주세요. |
+| `reward_not_pending` | `error.server.rewardNotPending` | Reward is not in pending state. | 보상이 수령 대기 상태가 아닙니다. |
+
+### 14.2 로그 전용 에러 — 영문+국문 병기
+
+**대상 파일:**
+
+| 파일 | 에러 타입 |
+|------|---------|
+| [AppCore] TrashStore.swift | TrashStoreError |
+| QualityAnalyzer.swift | AnalysisError |
+| SimilarityAnalyzer.swift | (내부 로그) |
+| SFaceRecognizer.swift | SFaceError |
+| YuNetTypes.swift | YuNetError |
+| FaceAligner.swift | FaceAlignerError |
+| FaceCropper.swift | FaceCropError |
+| SimilarityImageLoader.swift | SimilarityImageLoadError |
+
+**처리 방식**: `errorDescription`의 한글을 영문+국문 2줄로 변경. **String Catalog 미등록**.
+
+```swift
+// BEFORE
+var errorDescription: String? { "디스크 공간이 부족합니다" }
+
+// AFTER
+var errorDescription: String? {
+    "Not enough disk space"
+    // 디스크 공간이 부족합니다
+}
+```
+
+> ⚠️ 위 코드에서 두 번째 줄 `// 디스크 공간이 부족합니다`는 주석입니다. Swift에서 computed property의 마지막 표현식만 반환되므로 영문만 반환되고 한글은 주석으로 남습니다.
+
+**수정**: 위 패턴은 잘못됨. 로그 병기는 Logger 호출 시점에서 수행:
+
+```swift
+// errorDescription는 영문만
+var errorDescription: String? { "Not enough disk space" }
+
+// Logger 호출 시 2줄 병기
+Logger.app.error("Not enough disk space")
+Logger.app.error("디스크 공간이 부족합니다")
+```
+
+단, `errorDescription`이 Logger가 아닌 `error.localizedDescription`으로 로깅되는 경우가 많으므로, 실제 로깅 코드를 확인하여 적절히 처리할 것.
+
+**간단한 대안**: `errorDescription`을 영문으로 변경하고, 한글은 주석으로 남기기.
+
+```swift
+var errorDescription: String? {
+    switch self {
+    case .diskSpaceFull:
+        return "Not enough disk space"  // 디스크 공간이 부족합니다
+    case .fileSystemError(let error):
+        return "Failed to save file: \(error)"  // 파일 저장 실패
+    }
+}
+```
+
+### 14.3 서버 수정 (TypeScript) — 클라이언트 선출시 후 진행
+
+**대상 파일:** `supabase/functions/referral-api/index.ts`
+
+**작업:** `errorResponse()` 호출의 한글 메시지를 영문 에러 코드로 교체
+
+```typescript
+// BEFORE
+return errorResponse("서버 오류가 발생했습니다.", 500);
+// AFTER
+return errorResponse("server_error", 500);
+```
+
+12개 문자열 치환 — 매핑은 §14.1 테이블 참조.
+
+**⚠️ 배포 순서**: 클라이언트(§14.1 하위 호환 포함) 선출시 후 서버 수정. 구 앱이 영문 코드를 그대로 노출하는 것을 방지.
