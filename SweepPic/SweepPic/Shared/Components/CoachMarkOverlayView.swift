@@ -32,6 +32,7 @@ enum CoachMarkType: String {
     case similarPhoto = "coachMark_similarPhoto"       // C: 유사사진·얼굴 비교 (C-1 + C-2 통합 플래그)
     case autoCleanup = "coachMark_autoCleanup"              // D: 저품질 자동 정리 안내
     case firstDeleteGuide = "coachMark_firstDeleteGuide"  // E-1+E-2: 삭제 시스템 안내 (통합 시퀀스)
+    case trashRestore = "coachMark_trashRestore"           // E-3: 삭제대기함 스와이프 복구 안내
     case firstEmpty = "coachMark_firstEmpty"               // F: 첫 비우기 완료 안내
     case faceComparisonGuide = "coachMark_faceComparisonGuide"  // C-3: 얼굴 비교 화면 선택 안내
     case autoCleanupPreview = "coachMark_autoCleanupPreview"   // D-1: 자동정리 미리보기 안내
@@ -409,6 +410,11 @@ final class CoachMarkOverlayView: UIView {
                 height: diameter
             )
             let holePath = UIBezierPath(ovalIn: circleRect)
+            fullPath.append(holePath)
+        }
+        // E-3: 삭제대기함 셀 하이라이트 (rect, margin 0 — A/C-1 패턴)
+        if coachMarkType == .trashRestore && highlightFrame != .zero {
+            let holePath = UIBezierPath(rect: highlightFrame)
             fullPath.append(holePath)
         }
         // B, F: 구멍 없음 (dim 전체 영역)
@@ -947,11 +953,12 @@ final class CoachMarkOverlayView: UIView {
         cleanupA2()
         CoachMarkManager.shared.isA2TransitionActive = false
 
-        // D, D-1, E-1+E-2, F, C-3: 시퀀스 전용 리소스 정리
+        // D, D-1, E-1+E-2, E-3, F, C-3: 시퀀스 전용 리소스 정리
         cleanupAutoCleanup()
         cleanupD1()
         CoachMarkManager.shared.isD1SequenceActive = false
         cleanupDeleteGuide()
+        cleanupE3()
         cleanupFirstEmpty()
         cleanupFaceComparisonGuide()
 
@@ -1015,13 +1022,28 @@ final class CoachMarkOverlayView: UIView {
             confirmButton.isEnabled = false
             startD_ConfirmSequence()
         case .firstDeleteGuide:
-            // E-1+E-2: Step 1 [확인] → 손가락 탭 모션 → 탭 전환 + 순차 텍스트, Step 3 [확인] → dismiss
+            // E-1+E-2: Step 1 [확인] → 손가락 탭 모션 → 탭 전환 + 순차 텍스트, Step 3 [확인] → dismiss + E-3 트리거
             if systemFeedbackCurrentStep == 1 {
                 confirmButton.isEnabled = false
                 performTabTapMotionThenTransition()
+            } else if systemFeedbackCurrentStep == 3 {
+                // Step 3 [확인] → dismiss → E-3 트리거
+                // ⚠️ dismiss 전에 window 캡처 (dismiss 후 self는 superview에서 제거됨)
+                let window = self.window
+                dismiss()
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                    guard let window else { return }
+                    guard !CoachMarkType.trashRestore.hasBeenShown else { return }
+                    guard !CoachMarkManager.shared.isShowing else { return }
+                    guard !UIAccessibility.isVoiceOverRunning else { return }
+                    CoachMarkOverlayView.showTrashRestoreGuide(in: window)
+                }
             } else {
                 dismiss()
             }
+        case .trashRestore:
+            // E-3: 즉시 dismiss (markAsShown은 dismiss() 내부에서 자동 호출)
+            dismiss()
         case .firstEmpty:
             // F: 즉시 dismiss
             dismiss()

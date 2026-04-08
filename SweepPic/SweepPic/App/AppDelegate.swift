@@ -34,7 +34,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         // XCUITest 환경: 모든 코치마크 완료 처리 (UserDefaults 재설치로 초기화된 경우 대비)
         if CommandLine.arguments.contains("--skip-coachmarks") {
             [CoachMarkType.gridSwipeDelete, .viewerSwipeDelete, .similarPhoto,
-             .autoCleanup, .firstDeleteGuide, .firstEmpty, .faceComparisonGuide
+             .autoCleanup, .firstDeleteGuide, .trashRestore, .firstEmpty, .faceComparisonGuide
             ].forEach { $0.markAsShown() }
             Logger.app.debug("UITest: 모든 코치마크 완료 처리")
         }

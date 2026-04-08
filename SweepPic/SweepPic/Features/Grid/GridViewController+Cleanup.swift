@@ -678,6 +678,7 @@ extension GridViewController {
                         .similarPhoto,          // C
                         .autoCleanup,           // D
                         .firstDeleteGuide,      // E-1+E-2
+                        .trashRestore,          // E-3
                         .firstEmpty,            // F
                         .faceComparisonGuide,   // C-3
                     ]

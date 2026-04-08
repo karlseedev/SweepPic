@@ -346,6 +346,7 @@ extension GridViewController {
 
         // 플래그 리셋
         CoachMarkType.firstDeleteGuide.resetShown()
+        CoachMarkType.trashRestore.resetShown()  // E-3도 리셋해야 다시보기에서 재생됨
 
         // A 변형 오버레이 표시 → 1회 스와이프 → 자동 dismiss → 삭제 → E 시퀀스
         CoachMarkOverlayView.showReplaySwipeVariant(

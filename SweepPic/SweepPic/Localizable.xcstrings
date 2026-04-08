@@ -2177,6 +2177,40 @@
         }
       }
     },
+    "coachMark.e3.body" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Swipe a photo to\u2028restore it easily\nSwipe continuously to\u2028restore multiple photos"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "사진을 밀어서\u2028편리하게 복구할 수 있어요\n연속으로 밀어서\u2028여러 장 복구도 가능해요"
+          }
+        }
+      }
+    },
+    "coachMark.e3.keyword" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Swipe"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "밀어서"
+          }
+        }
+      }
+    },
     "coachMark.f.body" : {
       "extractionState" : "manual",
       "localizations" : {
