@@ -370,12 +370,17 @@ final class CoachMarkOverlayView: UIView {
                 // Step 3: 직사각형 (margin 0, C-1/A 패턴 — 셀 정확 크기)
                 let holePath = UIBezierPath(roundedRect: highlightFrame, cornerRadius: 0)
                 fullPath.append(holePath)
-            } else {
-                // Step 1,2,4: pill shape (margin 8pt, D/간편정리 패턴)
+            } else if d1CurrentStep == 1 {
+                // Step 1: pill shape (margin 8pt — 헤더 타이틀)
                 let margin: CGFloat = 8
                 let holeRect = highlightFrame.insetBy(dx: -margin, dy: -margin)
                 let radius = holeRect.height / 2
                 let holePath = UIBezierPath(roundedRect: holeRect, cornerRadius: radius)
+                fullPath.append(holePath)
+            } else {
+                // Step 2,4: pill shape (margin 0 — 버튼에 딱 맞게)
+                let radius = highlightFrame.height / 2
+                let holePath = UIBezierPath(roundedRect: highlightFrame, cornerRadius: radius)
                 fullPath.append(holePath)
             }
         }

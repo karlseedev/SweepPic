@@ -561,19 +561,55 @@ final class PreviewGridViewController: UIViewController {
 
     // MARK: - CoachMark D-1 Support
 
-    /// 코치마크 D-1 Step 1: 헤더 타이틀 프레임 (윈도우 좌표)
-    /// iOS 26: 시스템 네비바 / iOS 18 이하: 커스텀 헤더 타이틀 라벨
+    /// 코치마크 D-1 Step 1: 헤더 타이틀 텍스트 영역 프레임 (윈도우 좌표)
+    /// 텍스트의 실제 렌더링 크기 + 좌우 16pt / 상하 12pt 여백
     var headerTitleFrameForCoachMark: CGRect? {
         guard let window = view.window else { return nil }
+        // 텍스트 기준 여백 (pill margin 8pt와 별도)
+        let paddingH: CGFloat = 16  // 좌우
+        let paddingV: CGFloat = 12  // 상하
         if #available(iOS 26.0, *) {
+            // iOS 26: 시스템 네비바에서 타이틀 UILabel 탐색
             guard let navBar = navigationController?.navigationBar else { return nil }
-            // TODO: 네비바 전체 대신 타이틀 UILabel을 subview 탐색하여 정밀 포커싱
-            // 탐색 실패 시 네비바 전체를 fallback으로 사용
+            if let titleLabel = findTitleLabel(in: navBar) {
+                let textSize = titleLabel.intrinsicContentSize
+                let labelFrame = titleLabel.convert(titleLabel.bounds, to: window)
+                let textRect = CGRect(
+                    x: labelFrame.midX - textSize.width / 2 - paddingH,
+                    y: labelFrame.midY - textSize.height / 2 - paddingV,
+                    width: textSize.width + paddingH * 2,
+                    height: textSize.height + paddingV * 2
+                )
+                return textRect
+            }
+            // fallback: 네비바 전체
             return navBar.convert(navBar.bounds, to: window)
         } else {
+            // iOS 18 이하: 커스텀 헤더 타이틀 라벨의 텍스트 크기 + 여백
             guard let label = headerTitleLabel else { return nil }
-            return label.convert(label.bounds, to: window)
+            let textSize = label.intrinsicContentSize
+            let labelFrame = label.convert(label.bounds, to: window)
+            let textRect = CGRect(
+                x: labelFrame.midX - textSize.width / 2 - paddingH,
+                y: labelFrame.midY - textSize.height / 2 - paddingV,
+                width: textSize.width + paddingH * 2,
+                height: textSize.height + paddingV * 2
+            )
+            return textRect
         }
+    }
+
+    /// 네비바 subview에서 타이틀 UILabel 탐색 (iOS 26용)
+    private func findTitleLabel(in view: UIView) -> UILabel? {
+        for subview in view.subviews {
+            if let label = subview as? UILabel, label.text == title {
+                return label
+            }
+            if let found = findTitleLabel(in: subview) {
+                return found
+            }
+        }
+        return nil
     }
 
     /// 제외되지 않은 유효 사진 수 (버튼 텍스트, 삭제대기함 이동용)

@@ -34,8 +34,8 @@ private var d1HighlightTintViewKey: UInt8 = 0
 
 /// D-1 포커싱 구멍 형태
 private enum D1FocusShape {
-    case pill   // roundedRect, cornerRadius = height/2, margin 8pt
-    case rect   // roundedRect, cornerRadius = 0, margin 0pt
+    case pill(margin: CGFloat)  // roundedRect, cornerRadius = height/2
+    case rect                    // roundedRect, cornerRadius = 0, margin 0pt
 }
 
 // MARK: - Coach Mark D-1: Auto Cleanup Preview Guide
@@ -105,7 +105,7 @@ extension CoachMarkOverlayView {
             tintView = existing
         } else {
             tintView = UIView()
-            tintView.backgroundColor = UIColor.white.withAlphaComponent(0.1)
+            tintView.backgroundColor = UIColor.white.withAlphaComponent(0.2)
             tintView.isUserInteractionEnabled = false
             // dimLayer 위, 다른 콘텐츠 아래에 배치
             insertSubview(tintView, at: 1)
@@ -113,8 +113,7 @@ extension CoachMarkOverlayView {
         }
 
         switch shape {
-        case .pill:
-            let margin: CGFloat = 8
+        case .pill(let margin):
             let holeRect = frame.insetBy(dx: -margin, dy: -margin)
             tintView.frame = holeRect
             tintView.layer.cornerRadius = holeRect.height / 2
@@ -225,17 +224,24 @@ extension CoachMarkOverlayView {
         window.addSubview(overlay)
         CoachMarkManager.shared.currentOverlay = overlay
 
-        // 포커싱 구멍 흰색 tint (검정 배경에서 구멍 가시성 확보)
-        overlay.updateD1HighlightTint(for: step1Frame, shape: .pill)
-        overlay.hideD1HighlightTint()  // 축소 완료 후 표시
+        // 포커싱 구멍 흰색 tint — 큰 크기로 시작, 축소 모션과 동시에 줄어듦
+        let tintStartRect = startRect.insetBy(dx: -8, dy: -8)
+        overlay.updateD1HighlightTint(for: step1Frame, shape: .pill(margin: 8))
+        overlay.d1HighlightTintView?.frame = tintStartRect
+        overlay.d1HighlightTintView?.layer.cornerRadius = tintStartRect.height / 2
 
-        // alpha 페이드인 (0.3s) + pill 포커싱 축소 (0.9s) 동시
+        // alpha 페이드인 (0.3s) + pill 포커싱 축소 (0.9s) + tint 축소 (0.9s) 동시
         UIView.animate(withDuration: 0.3) {
             overlay.alpha = 1
         }
+        // tint view도 타겟 크기로 축소 (dimLayer CABasicAnimation과 동일 타이밍)
+        let tintEndRect = step1Frame.insetBy(dx: -margin, dy: -margin)
+        UIView.animate(withDuration: 0.9, delay: 0, options: .curveEaseInOut) {
+            overlay.d1HighlightTintView?.frame = tintEndRect
+            overlay.d1HighlightTintView?.layer.cornerRadius = tintEndRect.height / 2
+        }
         overlay.animateDFocus(to: step1Frame) {
             guard !overlay.shouldStopAnimation else { return }
-            overlay.showD1HighlightTint()
             // 포커싱 완료 → 0.5s 대기 → 텍스트 페이드인
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
                 guard !overlay.shouldStopAnimation else { return }
@@ -308,7 +314,6 @@ extension CoachMarkOverlayView {
         let mainText = String(localized: "coachMark.d1.step2.body")
         let noticeText = String(localized: "coachMark.d1.step2.notice")
         let keyword1 = String(localized: "coachMark.d1.step2.keyword1")
-        let keyword2 = String(localized: "coachMark.d1.step2.keyword2")
 
         let fullText = mainText + noticeText
 
@@ -321,12 +326,10 @@ extension CoachMarkOverlayView {
             string: fullText,
             attributes: [.font: Self.bodyFont, .foregroundColor: UIColor.white, .paragraphStyle: style]
         )
-        // 키워드 강조
-        for keyword in [keyword1, keyword2] {
-            if let range = fullText.range(of: keyword) {
-                let nsRange = NSRange(range, in: fullText)
-                attr.addAttributes([.font: Self.bodyBoldFont, .foregroundColor: Self.highlightYellow], range: nsRange)
-            }
+        // 키워드 강조 (4등급, 3등급만 — 2등급 이상은 강조 안 함)
+        if let range = fullText.range(of: keyword1) {
+            let nsRange = NSRange(range, in: fullText)
+            attr.addAttributes([.font: Self.bodyBoldFont, .foregroundColor: Self.highlightYellow], range: nsRange)
         }
         // 부가 텍스트 스타일 (C-2 ※ 패턴: 16pt regular, white 70%)
         if let range = fullText.range(of: noticeText) {
@@ -444,8 +447,7 @@ extension CoachMarkOverlayView {
     /// Step 4: 삭제대기함 이동 버튼 안내 (텍스트 위 배치)
     private func buildD1Step4Content() {
         let mainText = String(localized: "coachMark.d1.step4.body")
-        let keyword1 = String(localized: "coachMark.d1.step4.keyword1")
-        let keyword2 = String(localized: "coachMark.d1.step4.keyword2")
+        let keyword = String(localized: "coachMark.d1.step4.keyword1")
 
         let style = NSMutableParagraphStyle()
         style.alignment = .center
@@ -456,11 +458,10 @@ extension CoachMarkOverlayView {
             string: mainText,
             attributes: [.font: Self.bodyFont, .foregroundColor: UIColor.white, .paragraphStyle: style]
         )
-        for keyword in [keyword1, keyword2] {
-            if let range = mainText.range(of: keyword) {
-                let nsRange = NSRange(range, in: mainText)
-                attr.addAttributes([.font: Self.bodyBoldFont, .foregroundColor: Self.highlightYellow], range: nsRange)
-            }
+        // "삭제대기함 이동 버튼" 강조 ("선별" 강조 삭제)
+        if let range = mainText.range(of: keyword) {
+            let nsRange = NSRange(range, in: mainText)
+            attr.addAttributes([.font: Self.bodyBoldFont, .foregroundColor: Self.highlightYellow], range: nsRange)
         }
         messageLabel.attributedText = attr
         messageLabel.alpha = 0
@@ -521,8 +522,9 @@ extension CoachMarkOverlayView {
                 CoachMarkManager.shared.isD1SequenceActive = false
                 return
             }
-            // 확대 → 축소
-            self.hideD1HighlightTint()
+            // 확대 → 축소 (Step 2부터는 tint 불사용 — D-1-1 전용)
+            self.d1HighlightTintView?.removeFromSuperview()
+            self.d1HighlightTintView = nil
             self.animateD1Expand { [weak self] in
                 guard let self, !self.shouldStopAnimation else {
                     CoachMarkManager.shared.isD1SequenceActive = false
@@ -530,13 +532,11 @@ extension CoachMarkOverlayView {
                 }
                 let targetFrame = self.d1StepFrames[1]
                 self.highlightFrame = targetFrame
-                self.updateD1HighlightTint(for: targetFrame, shape: .pill)
-                self.animateD1Shrink(to: targetFrame, shape: .pill) { [weak self] in
+                self.animateD1Shrink(to: targetFrame, shape: .pill(margin: 0)) { [weak self] in
                     guard let self, !self.shouldStopAnimation else {
                         CoachMarkManager.shared.isD1SequenceActive = false
                         return
                     }
-                    self.showD1HighlightTint()
                     // 0.5s 대기 → 텍스트 페이드인
                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
                         guard let self, !self.shouldStopAnimation else {
@@ -576,7 +576,6 @@ extension CoachMarkOverlayView {
                 CoachMarkManager.shared.isD1SequenceActive = false
                 return
             }
-            self.hideD1HighlightTint()
             self.animateD1Expand { [weak self] in
                 guard let self, !self.shouldStopAnimation else {
                     CoachMarkManager.shared.isD1SequenceActive = false
@@ -584,8 +583,6 @@ extension CoachMarkOverlayView {
                 }
                 let targetFrame = self.d1StepFrames[2]
                 self.highlightFrame = targetFrame
-                // Step 3은 셀 스냅샷이 보이므로 tint 불필요 — rect shape로 업데이트만
-                self.updateD1HighlightTint(for: targetFrame, shape: .rect)
 
                 // 스냅샷 + 녹색 딤드 배치 (alpha 0)
                 if let snapshot = self.d1SnapshotView {
@@ -664,7 +661,6 @@ extension CoachMarkOverlayView {
             self.d1GreenView = nil
             self.fingerView.layer.removeAllAnimations()
 
-            self.hideD1HighlightTint()
             self.animateD1Expand { [weak self] in
                 guard let self, !self.shouldStopAnimation else {
                     CoachMarkManager.shared.isD1SequenceActive = false
@@ -672,13 +668,11 @@ extension CoachMarkOverlayView {
                 }
                 let targetFrame = self.d1StepFrames[3]
                 self.highlightFrame = targetFrame
-                self.updateD1HighlightTint(for: targetFrame, shape: .pill)
-                self.animateD1Shrink(to: targetFrame, shape: .pill) { [weak self] in
+                self.animateD1Shrink(to: targetFrame, shape: .pill(margin: 0)) { [weak self] in
                     guard let self, !self.shouldStopAnimation else {
                         CoachMarkManager.shared.isD1SequenceActive = false
                         return
                     }
-                    self.showD1HighlightTint()
                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
                         guard let self, !self.shouldStopAnimation else {
                             CoachMarkManager.shared.isD1SequenceActive = false
@@ -744,8 +738,7 @@ extension CoachMarkOverlayView {
         let endRadius: CGFloat
 
         switch shape {
-        case .pill:
-            let margin: CGFloat = 8
+        case .pill(let margin):
             let holeRect = targetFrame.insetBy(dx: -margin, dy: -margin)
             endRect = holeRect
             endRadius = holeRect.height / 2

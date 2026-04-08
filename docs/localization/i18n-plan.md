@@ -156,7 +156,13 @@ SmartAlbum(
 | `FaceAlignerError`, `FaceCropError` | 얼굴 처리 내부 Logger |
 | `SimilarityImageLoadError` | 분석 엔진 내부 처리 |
 
-로그 전용 에러는 `String(localized:)` 대신 영어 문자열로 직접 교체한다. 영어 로그가 Crashlytics/디버깅에 더 유용하다.
+로그 전용 에러는 `String(localized:)` 대신 영문+국문 2줄 병기로 변경한다. 영어 로그가 Crashlytics/디버깅에 유용하고, 국문 로그는 한국어 사용자 디버깅에 유용하다.
+
+```swift
+// 예시
+Logger.cleanup.error("Product load failed: StoreKit Configuration check required")
+Logger.cleanup.error("상품 로드 실패 — StoreKit Configuration 확인 필요")
+```
 
 ### 2.5 제외 대상
 
@@ -166,7 +172,7 @@ SmartAlbum(
 | BusinessInfoViewController | 전자상거래법 제10조, ko locale 전용 |
 | 주석 내 한글 | 코드 주석은 로컬라이제이션 대상 아님 |
 | 스마트 앨범 이름 12개 | PHAssetCollection.localizedTitle 위임 (2.3절) |
-| 로그 전용 에러 | 영문 전환, String Catalog 미등록 (2.4절) |
+| 로그 전용 에러 | 영문+국문 병기, String Catalog 미등록 (2.4절) |
 | 테스트 코드 한글 기대값 | 3.10절에서 별도 처리 |
 
 ### 2.6 서버 응답 문자열 처리
@@ -219,14 +225,14 @@ case .serverError(let code):
 
 ### 3.2 문자열 추출 (12 Phase)
 
-> i18n-strings.md 섹션 번호 기준. 전체 ~470키 (제외 대상 제거 후).
+> i18n-strings.md 섹션 번호 기준. 전체 ~484키 (제외 대상 제거 후, D-1 14키 포함).
 
 | Phase | 대상 | strings.md 섹션 | 키 수 | 확립하는 패턴 |
 |-------|------|----------------|------|-------------|
 | **1** | Permissions | §1 | ~6 | 기본 패턴 (파일럿) |
 | **2** | EmptyState + Albums + Shared Components | §2, §4 | ~32 | 컴포넌트 패턴, 스마트앨범 localizedTitle 전환 |
 | **3** | Grid + Viewer | §3, §13 | ~30 | 메뉴, Toast, Alert, 비디오 에러 |
-| **4** | CoachMark | §5 | ~39 | NSAttributedString + 키워드 강조 + fallback |
+| **4** | CoachMark | §5 | ~53 | NSAttributedString + 키워드 강조 + fallback (D-1 14키 포함) |
 | **5** | AutoCleanup | §10 | ~58 | 복수형, 날짜 포맷팅, 복합 보간, 에러 메시지 |
 | **6** | FaceScan + SimilarPhoto | §11, §12 | ~38 | Phase 5 패턴 반복 적용 |
 | **7** | Monetization (Gate/Gauge) | §6 | ~19 | 동적 값 삽입 + 접근성 |
@@ -295,6 +301,8 @@ Shared/Components/CoachMarkOverlayView+CoachMarkA2.swift
 Shared/Components/CoachMarkOverlayView+CoachMarkC.swift
 Shared/Components/CoachMarkOverlayView+CoachMarkC3.swift
 Shared/Components/CoachMarkOverlayView+CoachMarkD.swift
+Shared/Components/CoachMarkOverlayView+CoachMarkD1.swift    ← D-1: 자동정리 미리보기 4단계 안내 (14키)
+Features/AutoCleanup/Preview/PreviewGridViewController+CoachMarkD1.swift  ← D-1 트리거 (문자열 없음, 참고용)
 Shared/Components/CoachMarkOverlayView+E1E2.swift
 Shared/Components/CoachMarkOverlayView+E3.swift
 ※ 동시에 80pt 하드코딩 → 동적 높이 변경 (3.9절)

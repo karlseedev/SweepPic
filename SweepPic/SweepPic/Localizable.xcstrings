@@ -143,7 +143,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Cannot initialize image analysis"
+            "value": "Unable to initialize image analysis"
           }
         },
         "ko": {
@@ -177,7 +177,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "No previous cleanup history"
+            "value": "No previous cleanup session found"
           }
         },
         "ko": {
@@ -194,7 +194,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Error moving to Trash: %@"
+            "value": "An error occurred while moving to Trash: %@"
           }
         },
         "ko": {
@@ -279,7 +279,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Continue scanning"
+            "value": "Continuing scan"
           }
         },
         "ko": {
@@ -381,7 +381,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Searching Low-Quality Photos"
+            "value": "Scanning for Low-Quality Photos"
           }
         },
         "ko": {
@@ -415,7 +415,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Please wait for the current cleanup to finish"
+            "value": "Please wait until the current cleanup finishes"
           }
         },
         "ko": {
@@ -432,7 +432,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Please allow photo access in Settings"
+            "value": "Please allow photo library access in Settings"
           }
         },
         "ko": {
@@ -449,7 +449,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Please select 'Clean Up from Latest'"
+            "value": "Please select \"Clean Up from Latest\""
           }
         },
         "ko": {
@@ -670,7 +670,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Continue Cleanup"
+            "value": "Clean Up"
           }
         },
         "ko": {
@@ -687,7 +687,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Continue Cleanup (before %@)"
+            "value": "Clean Up from %@ and Earlier"
           }
         },
         "ko": {
@@ -721,7 +721,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Checking year list..."
+            "value": "Checking photo years..."
           }
         },
         "ko": {
@@ -738,7 +738,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Automatically finds and organizes\nblurry or out-of-focus photos.\nOrganized photos can be restored\nfrom Trash."
+            "value": "Automatically finds and cleans up\nblurry or out-of-focus photos.\nCleaned-up photos can be restored from Trash."
           }
         },
         "ko": {
@@ -772,7 +772,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "%1$lld Continue (before %2$@)"
+            "value": "%1$lld Continue (%2$@ and earlier)"
           }
         },
         "ko": {
@@ -840,7 +840,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "To use low-quality photo cleanup,\nplease empty Trash first.\n\n-No limit with Pro membership-"
+            "value": "To use Auto Cleanup,\nplease empty Trash first\n\n-No restriction with Pro-"
           }
         },
         "ko": {
@@ -993,7 +993,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "To use low-quality cleanup,\nplease empty your Trash first.\n\n-Unlocked with Pro membership-"
+            "value": "To use Auto Cleanup,\nplease empty Trash first\n\n-No restriction with Pro-"
           }
         },
         "ko": {
@@ -1027,13 +1027,13 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Swipe photos in the library to delete Swipe again to restore\nDeleted photos move to Trash"
+            "value": "Swipe photos in the library\u2028to delete\u2028Swipe again to restore\nDeleted photos move to Trash"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "사진을 밀어서 바로 정리하세요 다시 밀면 복원돼요\n정리한 사진은 삭제대기함으로 이동됩니다"
+            "value": "사진을 밀어서 바로 정리하세요\u2028다시 밀면 복원돼요\n정리한 사진은 삭제대기함으로 이동됩니다"
           }
         }
       }
@@ -1112,7 +1112,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "A photo will be temporarily deleted\nfor this demo\n(You can restore it from Trash)"
+            "value": "A photo will be temporarily deleted\u2028for this demo\n(You can restore it from Trash)"
           }
         },
         "ko": {
@@ -1146,13 +1146,13 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Swipe horizontally\non a photo to delete"
+            "value": "Swipe horizontally\u2028on a photo to delete"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "셀을 가로로 스와이프해서\n삭제해 보세요"
+            "value": "셀을 가로로 스와이프해서\u2028삭제해 보세요"
           }
         }
       }
@@ -1180,13 +1180,13 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Swipe and extend up/down\nto select multiple photos\nand delete them all at once"
+            "value": "Swipe and extend up/down\u2028to select multiple photos\u2028and delete them all at once"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "가로로 밀면서 좌우/상하까지 더 선택하면 여러 장을 한번에 정리해요"
+            "value": "가로로 밀면서 좌우/상하까지 더 선택하면\u2028여러 장을 한번에 정리해요"
           }
         }
       }
@@ -1248,13 +1248,13 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Swipe up to move a photo\nto Trash"
+            "value": "Swipe up to move a photo\u2028to Trash"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "사진을 위로 밀면 바로\n삭제대기함으로 이동해요"
+            "value": "사진을 위로 밀면 바로\u2028삭제대기함으로 이동해요"
           }
         }
       }
@@ -1282,13 +1282,13 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Photos with a white border support\nFace Comparison — compare faces\nacross photos and choose\nwhich to remove"
+            "value": "Photos with a white border support\u2028Face Comparison — compare faces\u2028across photos and choose\u2028which to remove"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "하얀색 테두리가 표시된 사진은\n여러 사진의 얼굴을 비교해서 삭제하는\n인물사진 비교정리가 가능한 사진이에요"
+            "value": "하얀색 테두리가 표시된 사진은\u2028여러 사진의 얼굴을 비교해서 삭제하는\u2028인물사진 비교정리가 가능한 사진이에요"
           }
         }
       }
@@ -1316,13 +1316,13 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Tap the + button\nto open Face Comparison\nSwipe left/right to see other people"
+            "value": "Tap the + button\u2028to open Face Comparison\u2028Swipe left/right to see other people"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "+버튼을 눌러 얼굴비교화면으로 이동하세요 인물이 여러 명이면 좌우로 넘겨볼 수 있어요"
+            "value": "+버튼을 눌러 얼굴비교화면으로 이동하세요\u2028인물이 여러 명이면 좌우로 넘겨볼 수 있어요"
           }
         }
       }
@@ -1333,13 +1333,13 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Auto scanning is available\nfrom the Clean Up menu"
+            "value": "Auto scanning is available\u2028from the Clean Up menu"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "간편정리 메뉴에서 편리하게 인물비교 자동 탐색이 가능해요"
+            "value": "간편정리 메뉴에서 편리하게\u2028인물비교 자동 탐색이 가능해요"
           }
         }
       }
@@ -1418,13 +1418,13 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "\nNote: Faces may not be detected\nor misclassified depending on\nangle or resolution"
+            "value": "\nNote: Faces may not be detected\u2028or misclassified depending on\u2028angle or resolution"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "\n※ 얼굴은 각도, 해상도에 따라 검출되지 않거나 다른 인물로 분류될 수 있습니다"
+            "value": "\n※ 얼굴은 각도, 해상도에 따라 검출되지 않거나\u2028다른 인물로 분류될 수 있습니다"
           }
         }
       }
@@ -1435,13 +1435,13 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Select the faces you don't like\nSwipe to check other people\nand remove their photos too"
+            "value": "Select the faces you don't like\nSwipe to check other people\u2028and remove their photos too"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "마음에 들지 않는 얼굴을 선택하세요\n옆으로 이동해서 다른 인물의 얼굴도 확인하고 삭제할 수 있어요"
+            "value": "마음에 들지 않는 얼굴을 선택하세요\n옆으로 이동해서 다른 인물의 얼굴도\u2028확인하고 삭제할 수 있어요"
           }
         }
       }
@@ -1469,13 +1469,13 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "This is the photo number\nin the current Face Comparison group.\nNumbers may differ per person\ndepending on face detection."
+            "value": "This is the photo number\u2028in the current Face Comparison group.\nNumbers may differ per person\u2028depending on face detection."
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "현재 인물사진 비교정리 그룹의 사진 구별 번호예요\n얼굴 검출 여부에 따라 인물별로 번호가 다르게 보일 수 있어요"
+            "value": "현재 인물사진 비교정리 그룹의\u2028사진 구별 번호예요\n얼굴 검출 여부에 따라\u2028인물별로 번호가 다르게 보일 수 있어요"
           }
         }
       }
@@ -1503,13 +1503,13 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Try Auto Low-Quality Cleanup —\nAI finds blurry and out-of-focus\nphotos automatically\n\nClean Up → Auto Low-Quality Cleanup"
+            "value": "Try Auto Low-Quality Cleanup —\u2028AI finds blurry and out-of-focus\u2028photos automatically\n\nClean Up → Auto Low-Quality Cleanup"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "흔들리거나 초점이 맞지 않은\n저품질 사진을 AI가 자동으로 찾아주는\n정리 기능을 사용해보세요\n\n간편정리 → 저품질사진 자동정리"
+            "value": "흔들리거나 초점이 맞지 않은\u2028저품질 사진을 AI가 자동으로 찾아주는\u2028정리 기능을 사용해보세요\n\n간편정리 → 저품질사진 자동정리"
           }
         }
       }
@@ -1551,10 +1551,16 @@
     "coachMark.d1.step1.body": {
       "extractionState": "manual",
       "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Photos have been rated by quality score\u2028and sorted into 5 levels\nReview the Lowest Quality photos first"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "사진의 품질 점수를 측정하여 1~5 등급으로 분류했어요\n가장 낮은 5등급 사진을 먼저 확인해 보세요"
+            "value": "사진의 품질 점수를 측정하여\u20281~5 등급으로 분류했어요\n가장 낮은 5등급 사진을 먼저 확인해 보세요"
           }
         }
       }
@@ -1562,6 +1568,12 @@
     "coachMark.d1.step1.keyword1": {
       "extractionState": "manual",
       "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "quality score"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -1573,6 +1585,12 @@
     "coachMark.d1.step1.keyword2": {
       "extractionState": "manual",
       "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "5 levels"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -1584,10 +1602,16 @@
     "coachMark.d1.step2.body": {
       "extractionState": "manual",
       "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "You can choose whether to include\u2028Lower/Low Quality photos\nHigh-quality photos won't appear"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "4등급, 3등급 사진의 정리 여부를 선택할 수 있어요\n2등급 이상 고품질 사진은 나오지 않아요"
+            "value": "4등급, 3등급 사진의 정리 여부를\u2028선택할 수 있어요\n2등급 이상 고품질 사진은 나오지 않아요"
           }
         }
       }
@@ -1595,6 +1619,12 @@
     "coachMark.d1.step2.fakeButton": {
       "extractionState": "manual",
       "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Show more: Lower Quality photos"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -1606,6 +1636,12 @@
     "coachMark.d1.step2.keyword1": {
       "extractionState": "manual",
       "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lower/Low Quality"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -1617,10 +1653,16 @@
     "coachMark.d1.step2.notice": {
       "extractionState": "manual",
       "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "\nThe \"show more\" button below only appears\u2028when Lower/Low Quality photos are found"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "\n아래 더보기 버튼은 3~4등급 사진이 탐색된 경우에만 보여요"
+            "value": "\n아래 더보기 버튼은 3~4등급 사진이\u2028탐색된 경우에만 보여요"
           }
         }
       }
@@ -1628,10 +1670,16 @@
     "coachMark.d1.step3.body": {
       "extractionState": "manual",
       "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tap a photo to view details,\u2028swipe to exclude it from cleanup"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "사진을 클릭해서 상세히 보거나 스와이프로 삭제 목록에서 제외할 수 있어요"
+            "value": "사진을 클릭해서 상세히 보거나\u2028스와이프로 삭제 목록에서 제외할 수 있어요"
           }
         }
       }
@@ -1639,6 +1687,12 @@
     "coachMark.d1.step3.keyword1": {
       "extractionState": "manual",
       "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tap"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -1650,6 +1704,12 @@
     "coachMark.d1.step3.keyword2": {
       "extractionState": "manual",
       "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "swipe"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -1661,6 +1721,12 @@
     "coachMark.d1.step3.keyword3": {
       "extractionState": "manual",
       "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "exclude"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -1672,10 +1738,16 @@
     "coachMark.d1.step3.notice": {
       "extractionState": "manual",
       "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "\nExcluded photos (shown in green)\u2028won't be moved to Trash"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "\n녹색으로 제외된 사진은 삭제대기함으로 이동되지 않아요"
+            "value": "\n녹색으로 제외된 사진은\u2028삭제대기함으로 이동되지 않아요"
           }
         }
       }
@@ -1683,10 +1755,16 @@
     "coachMark.d1.step4.body": {
       "extractionState": "manual",
       "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Once you've reviewed all photos,\u2028tap the Move to Trash button to delete them"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "사진을 모두 선별했다면 삭제대기함 이동 버튼을 눌러 삭제하세요"
+            "value": "사진을 모두 선별했다면\u2028삭제대기함 이동 버튼을 눌러 삭제하세요"
           }
         }
       }
@@ -1694,6 +1772,12 @@
     "coachMark.d1.step4.keyword1": {
       "extractionState": "manual",
       "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Move to Trash button"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -1708,13 +1792,13 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "The deleted photo has been\nmoved to Trash\nWant to check it in Trash?"
+            "value": "The deleted photo has been\u2028moved to Trash\nWant to check it in Trash?"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "방금 삭제된 사진은 삭제대기함으로 이동됐어요\n삭제대기함에서 확인해볼까요?"
+            "value": "방금 삭제된 사진은\u2028삭제대기함으로 이동됐어요\n삭제대기함에서 확인해볼까요?"
           }
         }
       }
@@ -1742,13 +1826,13 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Deleted photos from your library\nare temporarily stored in Trash"
+            "value": "Deleted photos from your library\u2028are temporarily stored in Trash"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "보관함에서 삭제된 사진은\n삭제대기함에 임시 보관돼요"
+            "value": "보관함에서 삭제된 사진은\u2028삭제대기함에 임시 보관돼요"
           }
         }
       }
@@ -1776,7 +1860,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Tap [Empty] to permanently\ndelete photos"
+            "value": "Tap [Empty] to permanently\u2028delete photos"
           }
         },
         "ko": {
@@ -1810,13 +1894,13 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Photos will be permanently deleted\nafter 30 days in the Photos app's\n\"Recently Deleted\" album."
+            "value": "Photos will be permanently deleted\u2028after 30 days in the Photos app's\u2028\"Recently Deleted\" album."
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "애플 사진앱의 '최근 삭제된 항목'에서\n30일 후 완전히 삭제됩니다."
+            "value": "애플 사진앱의 '최근 삭제된 항목'에서\u202830일 후 완전히 삭제됩니다."
           }
         }
       }
@@ -2526,7 +2610,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Continue Cleanup"
+            "value": "Clean Up"
           }
         },
         "ko": {
@@ -2543,7 +2627,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Continue Cleanup (before %@)"
+            "value": "Clean Up from %@ and Earlier"
           }
         },
         "ko": {
@@ -2628,7 +2712,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "%1$lld Continue (before %2$@)"
+            "value": "%1$lld (Continue: %2$@ and earlier)"
           }
         },
         "ko": {
@@ -3248,7 +3332,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Closing this screen will discard the analysis results."
+            "value": "Closing this screen will discard the results."
           }
         },
         "ko": {

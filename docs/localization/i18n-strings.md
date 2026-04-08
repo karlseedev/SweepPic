@@ -143,21 +143,21 @@
 | # | 한국어 (현재) | 영어 (제안) | 용도 | 확인 |
 |---|---|---|---|---|
 | 57 | 완전히 새로운 삭제 방법 | A Brand New Way to Delete | 타이틀 | |
-| 58 | 목록에서 사진을 밀어서 바로 정리하세요\n다시 밀면 복원돼요\n정리한 사진은 삭제대기함으로 이동됩니다 | Swipe photos in the library\nto delete\nSwipe again to restore\nDeleted photos move to Trash | 본문 | |
+| 58 | 사진을 밀어서 바로 정리하세요`\u2028`다시 밀면 복원돼요`\n`정리한 사진은 삭제대기함으로 이동됩니다 | Swipe photos in the library`\u2028`to delete`\u2028`Swipe again to restore`\n`Deleted photos move to Trash | 본문 | |
 | 59 | 정리 | delete | 키워드 (강조) | |
 | 60 | 복원 | restore | 키워드 (강조) | |
 | 61 | 삭제대기함 | Trash | 키워드 (강조) | |
 | 62 | 확인 | OK | 버튼 | |
-| 63 | 설명을 위해 사진을 임시로 삭제합니다\n(삭제대기함에서 복구 가능) | A photo will be temporarily deleted\nfor this demo\n(You can restore it from Trash) | A 변형 카드 | |
+| 63 | 설명을 위해 사진을 임시로 삭제합니다\n(삭제대기함에서 복구 가능) | A photo will be temporarily deleted`\u2028`for this demo`\n`(You can restore it from Trash) | A 변형 카드 | |
 | 64 | 임시로 삭제 | temporarily deleted | 키워드 (강조) | |
-| 65 | 사진을 위로 밀면 바로\n삭제대기함으로 이동해요 | Swipe up to move a photo\nto Trash | B 뷰어 카드 | |
+| 65 | 사진을 위로 밀면 바로`\u2028`삭제대기함으로 이동해요 | Swipe up to move a photo`\u2028`to Trash | B 뷰어 카드 | |
 | 66 | 삭제대기함 | Trash | 키워드 (강조) | |
 
 ### A-1
 
 | # | 한국어 (현재) | 영어 (제안) | 용도 | 확인 |
 |---|---|---|---|---|
-| 67 | 사진을 가로로 밀어서\n삭제해 보세요 | Swipe horizontally\non a photo to delete | 본문 | |
+| 67 | 셀을 가로로 스와이프해서`\u2028`삭제해 보세요 | Swipe horizontally`\u2028`on a photo to delete | 본문 | |
 | 68 | 가로로 밀어서 | Swipe horizontally | 키워드 (강조) | |
 
 ### A-2
@@ -165,7 +165,7 @@
 | # | 한국어 (현재) | 영어 (제안) | 용도 | 확인 |
 |---|---|---|---|---|
 | 69 | 한번에 쓱 | All at Once | 타이틀 | |
-| 70 | 가로로 밀면서 좌우/상하까지 더 선택하면\n여러 장을 한번에 정리해요 | Swipe and extend up/down\nto select multiple photos\nand delete them all at once | 본문 | |
+| 70 | 가로로 밀면서 좌우/상하까지 더 선택하면`\u2028`여러 장을 한번에 정리해요 | Swipe and extend up/down`\u2028`to select multiple photos`\u2028`and delete them all at once | 본문 | |
 | 71 | 여러 장 | multiple photos | 키워드 (강조) | |
 | 72 | 한번에 | all at once | 키워드 (강조) | |
 
@@ -173,22 +173,22 @@
 
 | # | 한국어 (현재) | 영어 (제안) | 용도 | 확인 |
 |---|---|---|---|---|
-| 73 | 하얀색 테두리가 표시된 사진은\n여러 사진의 얼굴을 비교해서 삭제하는\n인물사진 비교정리가 가능한 사진이에요 | Photos with a white border support\nFace Comparison — compare faces\nacross photos and choose\nwhich to remove | C-1 본문 | |
+| 73 | 하얀색 테두리가 표시된 사진은`\u2028`여러 사진의 얼굴을 비교해서 삭제하는`\u2028`인물사진 비교정리가 가능한 사진이에요 | Photos with a white border support`\u2028`Face Comparison — compare faces`\u2028`across photos and choose`\u2028`which to remove | C-1 본문 | |
 | 74a | 얼굴을 비교해서 삭제 | compare faces | C-1 키워드 1 | |
 | 74b | (위와 동일) | choose which to remove | C-1 키워드 2 | |
-| 75 | +버튼을 눌러 얼굴비교화면으로 이동하세요\n인물이 여러 명이면 좌우로 넘겨볼 수 있어요 | Tap the + button\nto open Face Comparison\nSwipe left/right to see other people | C-2 본문 | |
-| 76 | ※ 얼굴은 각도, 해상도에 따라 검출되지 않거나\n다른 인물로 분류될 수 있습니다 | Note: Faces may not be detected\nor misclassified depending on\nangle or resolution | C-2 부가 안내 | |
+| 75 | +버튼을 눌러 얼굴비교화면으로 이동하세요`\u2028`인물이 여러 명이면 좌우로 넘겨볼 수 있어요 | Tap the + button`\u2028`to open Face Comparison`\u2028`Swipe left/right to see other people | C-2 본문 | |
+| 76 | `\n`※ 얼굴은 각도, 해상도에 따라 검출되지 않거나`\u2028`다른 인물로 분류될 수 있습니다 | `\n`Note: Faces may not be detected`\u2028`or misclassified depending on`\u2028`angle or resolution | C-2 부가 안내 | |
 | 77 | +버튼 | + button | C-2 키워드 | |
 | 78 | 얼굴비교화면 | Face Comparison | C-2 키워드 | |
-| 78-1 | 간편정리 메뉴에서\n더욱 편리하게 자동 탐색이 가능해요\n\n간편정리 → 인물사진 비교정리 | Auto scanning is available\nfrom the Clean Up menu\n\nClean Up → Compare & Clean Portraits | C-2 후속 안내 본문 (키워드: "자동 탐색" / "Auto scanning") | |
+| 78-1 | 간편정리 메뉴에서 편리하게`\u2028`인물비교 자동 탐색이 가능해요`\n`간편정리 → 인물사진 비교정리 | Auto scanning is available`\u2028`from the Clean Up menu`\n`Clean Up → Compare & Clean Portraits | C-2 후속 안내 본문 (키워드: "자동 탐색" / "Auto scanning") | |
 
 ### C-3
 
 | # | 한국어 (현재) | 영어 (제안) | 용도 | 확인 |
 |---|---|---|---|---|
-| 79 | 마음에 들지 않는 얼굴을 선택하세요\n옆으로 이동해서 다른 인물의 얼굴도\n확인하고 삭제할 수 있어요 | Select the faces you don't like\nSwipe to check other people\nand remove their photos too | Step 1 본문 | |
+| 79 | 마음에 들지 않는 얼굴을 선택하세요`\n`옆으로 이동해서 다른 인물의 얼굴도`\u2028`확인하고 삭제할 수 있어요 | Select the faces you don't like`\n`Swipe to check other people`\u2028`and remove their photos too | Step 1 본문 | |
 | 80 | 얼굴을 선택 | Select the faces | Step 1 키워드 | |
-| 81 | 현재 인물사진 비교정리 그룹의\n사진 구별 번호예요\n얼굴 검출 여부에 따라\n인물별로 번호가 다르게 보일 수 있어요 | This is the photo number\nin the current Face Comparison group.\nNumbers may differ per person\ndepending on face detection. | Step 2 본문 | |
+| 81 | 현재 인물사진 비교정리 그룹의`\u2028`사진 구별 번호예요`\n`얼굴 검출 여부에 따라`\u2028`인물별로 번호가 다르게 보일 수 있어요 | This is the photo number`\u2028`in the current Face Comparison group.`\n`Numbers may differ per person`\u2028`depending on face detection. | Step 2 본문 | |
 | 82 | 사진 구별 번호 | photo number | Step 2 키워드 | |
 
 ### D
@@ -196,20 +196,39 @@
 | # | 한국어 (현재) | 영어 (제안) | 용도 | 확인 |
 |---|---|---|---|---|
 | 83 | 저품질사진 자동정리 | Auto Low-Quality Cleanup | 타이틀 | |
-| 84 | 흔들리거나 초점이 맞지 않은\n저품질 사진을 AI가 자동으로 찾아주는\n정리 기능을 사용해보세요\n\n간편정리 → 저품질사진 자동정리 | Try Auto Low-Quality Cleanup —\nAI finds blurry and out-of-focus\nphotos automatically\n\nClean Up → Auto Low-Quality Cleanup | 본문 | |
+| 84 | 흔들리거나 초점이 맞지 않은`\u2028`저품질 사진을 AI가 자동으로 찾아주는`\u2028`정리 기능을 사용해보세요`\n\n`간편정리 → 저품질사진 자동정리 | Try Auto Low-Quality Cleanup —`\u2028`AI finds blurry and out-of-focus`\u2028`photos automatically`\n\n`Clean Up → Auto Low-Quality Cleanup | 본문 | |
 | 85 | 저품질 사진을 AI가 자동 | AI finds | 키워드 (강조) | |
 | 86 | 간편정리 → 저품질사진 자동정리 | Clean Up → Auto Low-Quality Cleanup | 경로 안내 | |
 | 87 | 비우기 | Empty | E-1 페이크 버튼 라벨 | |
+
+### D-1
+
+| # | 한국어 (현재) | 영어 (제안) | 용도 | 확인 |
+|---|---|---|---|---|
+| 87-1 | 사진의 품질 점수를 측정하여`\u2028`1~5 등급으로 분류했어요`\n`가장 낮은 5등급 사진을 먼저 확인해 보세요 | Photos have been rated by quality score`\u2028`and sorted into 5 levels`\n`Review the Lowest Quality photos first | Step 1 본문 | |
+| 87-2 | 품질 점수 | quality score | Step 1 키워드1 (강조) | |
+| 87-3 | 1~5 등급 | 5 levels | Step 1 키워드2 (강조) | |
+| 87-4 | 4등급, 3등급 사진의 정리 여부를`\u2028`선택할 수 있어요`\n`2등급 이상 고품질 사진은 나오지 않아요 | You can choose whether to include`\u2028`Lower/Low Quality photos`\n`High-quality photos won't appear | Step 2 본문 | |
+| 87-5 | 4등급, 3등급 | Lower/Low Quality | Step 2 키워드 (강조) | |
+| 87-6 | `\n`아래 더보기 버튼은 3~4등급 사진이`\u2028`탐색된 경우에만 보여요 | `\n`The "show more" button below only appears`\u2028`when Lower/Low Quality photos are found | Step 2 주석 (작은 글씨) | |
+| 87-7 | 4등급 사진 더 보기 | Show more: Lower Quality photos | Step 2 임시 버튼 라벨 | |
+| 87-8 | 사진을 클릭해서 상세히 보거나`\u2028`스와이프로 삭제 목록에서 제외할 수 있어요 | Tap a photo to view details,`\u2028`swipe to exclude it from cleanup | Step 3 본문 | |
+| 87-9 | 클릭 | Tap | Step 3 키워드1 (강조) | |
+| 87-10 | 스와이프 | swipe | Step 3 키워드2 (강조) | |
+| 87-11 | 제외 | exclude | Step 3 키워드3 (강조) | |
+| 87-12 | `\n`녹색으로 제외된 사진은`\u2028`삭제대기함으로 이동되지 않아요 | `\n`Excluded photos (shown in green)`\u2028`won't be moved to Trash | Step 3 주석 (작은 글씨) | |
+| 87-13 | 사진을 모두 선별했다면`\u2028`삭제대기함 이동 버튼을 눌러 삭제하세요 | Once you've reviewed all photos,`\u2028`tap the Move to Trash button to delete them | Step 4 본문 | |
+| 87-14 | 삭제대기함 이동 버튼 | Move to Trash button | Step 4 키워드 (강조) | |
 
 ### E-1, E-2
 
 | # | 한국어 (현재) | 영어 (제안) | 용도 | 확인 |
 |---|---|---|---|---|
-| 88 | 방금 삭제된 사진은\n삭제대기함으로 이동됐어요\n삭제대기함에서 확인해볼까요? | The deleted photo has been\nmoved to Trash\nWant to check it in Trash? | E-1 본문 | |
+| 88 | 방금 삭제된 사진은`\u2028`삭제대기함으로 이동됐어요`\n`삭제대기함에서 확인해볼까요? | The deleted photo has been`\u2028`moved to Trash`\n`Want to check it in Trash? | E-1 본문 | |
 | 89 | 삭제대기함으로 이동 | moved to Trash | E-1 키워드 | |
-| 90 | 보관함에서 삭제된 사진은\n삭제대기함에 임시 보관돼요 | Deleted photos from your library\nare temporarily stored in Trash | E-2 Step 2 본문 | |
+| 90 | 보관함에서 삭제된 사진은`\u2028`삭제대기함에 임시 보관돼요 | Deleted photos from your library`\u2028`are temporarily stored in Trash | E-2 Step 2 본문 | |
 | 91 | 삭제대기함에 임시 보관 | temporarily stored in Trash | E-2 키워드 | |
-| 92 | [비우기]를 누르면 사진이 최종 삭제돼요 | Tap [Empty] to permanently\ndelete photos | E-2 Step 3 본문 | |
+| 92 | [비우기]를 누르면 사진이 최종 삭제돼요 | Tap [Empty] to permanently`\u2028`delete photos | E-2 Step 3 본문 | |
 | 93 | [비우기] | [Empty] | E-2 키워드 | |
 
 ### E-3
@@ -217,7 +236,7 @@
 | # | 한국어 (현재) | 영어 (제안) | 용도 | 확인 |
 |---|---|---|---|---|
 | 94 | 삭제 완료 | Deletion Complete | 타이틀 | |
-| 95 | 애플 사진앱의 '최근 삭제된 항목'에서\n30일 후 완전히 삭제됩니다. | Photos will be permanently deleted\nafter 30 days in the Photos app's\n"Recently Deleted" album. | 본문 | |
+| 95 | 애플 사진앱의 '최근 삭제된 항목'에서`\u2028`30일 후 완전히 삭제됩니다. | Photos will be permanently deleted`\u2028`after 30 days in the Photos app's`\u2028`"Recently Deleted" album. | 본문 | |
 
 ---
 
