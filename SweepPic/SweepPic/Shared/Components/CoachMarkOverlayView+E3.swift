@@ -415,6 +415,9 @@ extension CoachMarkOverlayView {
         highlightFrame = .zero
         updateDimPath()
 
+        // [확인] 버튼 활성화 (스와이프 완료 = 시연 끝)
+        confirmButton.isEnabled = true
+
         // 스냅샷 + 녹색 딤드 페이드아웃 (0.2초)
         UIView.animate(withDuration: 0.2, animations: {
             self.e3SnapshotView?.alpha = 0
@@ -480,7 +483,7 @@ extension CoachMarkOverlayView {
         // [확인] 버튼 — 기존 confirmButton 재사용 (E-1+E-2 끝난 후이므로 카드에 배치)
         confirmButton.setTitleColor(.black, for: .normal)
         confirmButton.backgroundColor = .white
-        confirmButton.isEnabled = true
+        confirmButton.isEnabled = false  // 스와이프 모션 완료 후 활성화
         confirmButton.alpha = 1
         confirmButton.translatesAutoresizingMaskIntoConstraints = false
         card.addSubview(confirmButton)
