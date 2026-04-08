@@ -107,27 +107,25 @@ extension CoachMarkOverlayView {
         }
     }
 
-    /// 삭제대기함 화면 중앙에서 가장 가까운 PhotoCell 탐색
-    /// A 코치마크의 findCenterCell() 패턴과 동일
+    /// 삭제대기함에서 화면 최상단에 가장 가까운 PhotoCell 탐색
+    /// 위쪽 셀을 선택해야 카드(셀 아래 배치)가 화면 안에 충분히 들어옴
     private func findCenterTrashCell(in window: UIWindow)
         -> (cell: PhotoCell, frame: CGRect, snapshot: UIView, assetID: String)?
     {
         guard let trashVC = findTrashViewController(from: window) else { return nil }
 
         let cv = trashVC.collectionView
-        let centerPoint = CGPoint(x: cv.bounds.midX, y: cv.bounds.midY)
         var bestCell: PhotoCell?
         var bestIndexPath: IndexPath?
-        var bestDistance: CGFloat = .greatestFiniteMagnitude
+        var bestMinY: CGFloat = .greatestFiniteMagnitude
 
-        // 화면 중앙에서 가장 가까운 실제 사진 셀 탐색
+        // visible 셀 중 Y좌표가 가장 작은(= 가장 위쪽) 실제 사진 셀 탐색
         for indexPath in cv.indexPathsForVisibleItems {
             // paddingCellCount 이전은 헤더/패딩 셀이므로 건너뜀
             guard indexPath.item >= trashVC.paddingCellCount else { continue }
             guard let cell = cv.cellForItem(at: indexPath) as? PhotoCell else { continue }
-            let distance = hypot(cell.center.x - centerPoint.x, cell.center.y - centerPoint.y)
-            if distance < bestDistance {
-                bestDistance = distance
+            if cell.center.y < bestMinY {
+                bestMinY = cell.center.y
                 bestCell = cell
                 bestIndexPath = indexPath
             }
