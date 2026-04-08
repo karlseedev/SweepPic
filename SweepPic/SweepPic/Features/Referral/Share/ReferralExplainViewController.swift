@@ -78,7 +78,7 @@ final class ReferralExplainViewController: UIViewController {
     private lazy var closeButton: UIButton = {
         let button = UIButton(type: .system)
         button.backgroundColor = UIColor.white.withAlphaComponent(0.12)
-        button.setTitle("닫기", for: .normal)
+        button.setTitle(String(localized: "common.close"), for: .normal)
         button.setTitleColor(.secondaryLabel, for: .normal)
         button.titleLabel?.font = .systemFont(ofSize: 17, weight: .regular)
         button.layer.cornerRadius = 25
@@ -96,7 +96,8 @@ final class ReferralExplainViewController: UIViewController {
     private lazy var titleLabel: UILabel = {
         let label = UILabel()
         label.translatesAutoresizingMaskIntoConstraints = false
-        let fullText = "친구 초대하고\n함께 무료 혜택 받기"
+        let fullText = String(localized: "referral.explain.title")
+        let keyword = String(localized: "referral.explain.titleKeyword")
         let attributed = NSMutableAttributedString(
             string: fullText,
             attributes: [
@@ -105,7 +106,7 @@ final class ReferralExplainViewController: UIViewController {
             ]
         )
         // "함께 무료 혜택 받기" 부분 포인트 노란색 적용
-        if let range = fullText.range(of: "함께 무료 혜택 받기") {
+        if let range = fullText.range(of: keyword) {
             attributed.addAttribute(.foregroundColor, value: highlightYellow, range: NSRange(range, in: fullText))
         }
         label.attributedText = attributed
@@ -118,8 +119,8 @@ final class ReferralExplainViewController: UIViewController {
     private lazy var myRewardRow: UIView = {
         return makeRewardRow(
             icon: "person.fill",
-            title: "초대한 사람",
-            detail: "초대 1회마다 Pro 14일 무료 혜택 제공"
+            title: String(localized: "referral.explain.inviterTitle"),
+            detail: String(localized: "referral.explain.inviterDetail")
         )
     }()
 
@@ -127,8 +128,8 @@ final class ReferralExplainViewController: UIViewController {
     private lazy var friendRewardRow: UIView = {
         return makeRewardRow(
             icon: "person.2.fill",
-            title: "초대받은 사람",
-            detail: "14일 Pro 무료 혜택 제공"
+            title: String(localized: "referral.explain.friendTitle"),
+            detail: String(localized: "referral.explain.friendDetail")
         )
     }()
 
@@ -136,7 +137,7 @@ final class ReferralExplainViewController: UIViewController {
     private lazy var inviteButton: UIButton = {
         let button = UIButton(type: .system)
         button.backgroundColor = .white
-        button.setTitle("초대하기", for: .normal)
+        button.setTitle(String(localized: "referral.explain.inviteButton"), for: .normal)
         button.setTitleColor(.black, for: .normal)
         button.titleLabel?.font = .systemFont(ofSize: 17, weight: .semibold)
         button.layer.cornerRadius = 25
@@ -161,7 +162,7 @@ final class ReferralExplainViewController: UIViewController {
     private lazy var subtitleLabel: UILabel = {
         let label = UILabel()
         label.translatesAutoresizingMaskIntoConstraints = false
-        label.text = "이미 Pro멤버십 이용 중이어도 14일 무료 연장"
+        label.text = String(localized: "referral.explain.proNote")
         label.font = .systemFont(ofSize: 13, weight: .regular)
         label.textColor = UIColor.white.withAlphaComponent(0.5)
         label.textAlignment = .center
@@ -354,7 +355,7 @@ final class ReferralExplainViewController: UIViewController {
             // 버튼 활성화, 에러 숨기기
             inviteButton.isEnabled = true
             inviteButton.alpha = 1.0
-            inviteButton.setTitle("초대하기", for: .normal)
+            inviteButton.setTitle(String(localized: "referral.explain.inviteButton"), for: .normal)
             loadingIndicator.stopAnimating()
             errorLabel.isHidden = true
 
@@ -370,7 +371,7 @@ final class ReferralExplainViewController: UIViewController {
             // 에러 메시지 표시 + 다시 시도 버튼
             inviteButton.isEnabled = true
             inviteButton.alpha = 1.0
-            inviteButton.setTitle("다시 시도", for: .normal)
+            inviteButton.setTitle(String(localized: "referral.explain.retry"), for: .normal)
             loadingIndicator.stopAnimating()
             errorLabel.text = message
             errorLabel.isHidden = false
@@ -429,12 +430,12 @@ final class ReferralExplainViewController: UIViewController {
             } catch let error as ReferralServiceError {
                 Logger.referral.error("ReferralExplain: 에러 — \(error.localizedDescription)")
                 await MainActor.run {
-                    viewState = .error(error.localizedDescription ?? "알 수 없는 에러입니다.")
+                    viewState = .error(error.localizedDescription)
                 }
             } catch {
                 Logger.referral.error("ReferralExplain: 에러 — \(error.localizedDescription)")
                 await MainActor.run {
-                    viewState = .error("알 수 없는 에러가 발생했습니다.")
+                    viewState = .error(String(localized: "referral.explain.unexpectedError"))
                 }
             }
         }
@@ -489,9 +490,9 @@ final class ReferralExplainViewController: UIViewController {
         let isRetry = denialCount >= 1
 
         let title = isRetry
-            ? "알림이 없으면 보상 받기가 어려워요"
-            : "친구가 등록하면 알려드릴까요?"
-        let message = "알림을 허용해야 친구가 등록했을 때\n바로 보상을 받을 수 있어요"
+            ? String(localized: "referral.explain.push.title")
+            : String(localized: "referral.explain.push.message")
+        let message = String(localized: "referral.explain.push.detail")
 
         let alert = UIAlertController(
             title: title,
@@ -501,7 +502,7 @@ final class ReferralExplainViewController: UIViewController {
 
         // [알림 받기] 액션
         // count는 여기서 올리지 않음 — 시스템 팝업 결과에 따라 처리
-        alert.addAction(UIAlertAction(title: "알림 받기", style: .default) { [weak self] _ in
+        alert.addAction(UIAlertAction(title: String(localized: "referral.explain.push.enable"), style: .default) { [weak self] _ in
             if isDenied {
                 // 이전에 시스템에서 거부 → 알림 꺼짐 안내 + 설정으로 이동
                 // 설정으로 이동 안내까지 했으면 더 이상 표시 안 함
@@ -515,7 +516,7 @@ final class ReferralExplainViewController: UIViewController {
         })
 
         // [닫기] 액션 — 거부 횟수 증가
-        let closeTitle = "닫기"
+        let closeTitle = String(localized: "common.close")
         alert.addAction(UIAlertAction(title: closeTitle, style: .cancel) { _ in
             ReferralStore.shared.pushDenialCount = denialCount + 1
             Logger.referral.debug("ReferralExplain: Push 프리프롬프트 거부 (\(denialCount + 1)회)")
@@ -551,20 +552,20 @@ final class ReferralExplainViewController: UIViewController {
     /// 알림 꺼짐 안내 팝업 (denied 상태에서 "알림 받기" 탭 시)
     private func showDeniedAlert() {
         let alert = UIAlertController(
-            title: "알림이 꺼져 있어요",
-            message: "설정에서 SweepPic 알림을 켜야\n친구 등록 시 혜택을 바로 받을 수 있어요",
+            title: String(localized: "referral.explain.push.offTitle"),
+            message: String(localized: "referral.explain.push.offMessage"),
             preferredStyle: .alert
         )
 
         // [설정으로 이동] → 앱 설정 페이지
-        alert.addAction(UIAlertAction(title: "설정으로 이동", style: .default) { _ in
+        alert.addAction(UIAlertAction(title: String(localized: "referral.explain.push.settings"), style: .default) { _ in
             if let settingsURL = URL(string: UIApplication.openSettingsURLString) {
                 UIApplication.shared.open(settingsURL)
             }
         })
 
         // [나중에]
-        alert.addAction(UIAlertAction(title: "나중에", style: .cancel))
+        alert.addAction(UIAlertAction(title: String(localized: "referral.explain.push.later"), style: .cancel))
 
         present(alert, animated: true)
     }

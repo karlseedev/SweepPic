@@ -164,7 +164,7 @@ final class ReferralRewardViewController: UIViewController {
     private lazy var closeButton: UIButton = {
         let button = UIButton(type: .system)
         button.backgroundColor = UIColor.white.withAlphaComponent(0.12)
-        button.setTitle("닫기", for: .normal)
+        button.setTitle(String(localized: "common.close"), for: .normal)
         button.setTitleColor(.secondaryLabel, for: .normal)
         button.titleLabel?.font = .systemFont(ofSize: 17, weight: .regular)
         button.layer.cornerRadius = 25
@@ -455,23 +455,23 @@ final class ReferralRewardViewController: UIViewController {
         case .hasRewards(let count):
             statusIconView.text = "🎉"
             statusIconView.isHidden = false
-            titleLabel.text = "초대 보상 도착!"
-            descriptionLabel.text = "초대한 사람이 SweepPic에 가입했어요!\n14일 무료 혜택을 받으세요"
-            countLabel.text = "수령 가능한 보상: \(count)건"
+            titleLabel.text = String(localized: "referral.reward.title.hasRewards")
+            descriptionLabel.text = String(localized: "referral.reward.description.hasRewards")
+            countLabel.text = String(localized: "referral.reward.availableCount \(count)")
             countLabel.isHidden = false
             actionButton.isHidden = false
-            actionButton.setTitle("보상 받기", for: .normal)
+            actionButton.setTitle(String(localized: "referral.reward.claim"), for: .normal)
             actionButton.backgroundColor = .white
             actionButton.setTitleColor(.black, for: .normal)
             closeButton.isHidden = false
 
         case .noRewards:
             statusIconView.isHidden = true
-            titleLabel.text = "수령 가능한 보상이 없습니다"
-            descriptionLabel.text = "친구를 초대하고\nPro 멤버십 14일 무료 혜택을 받으세요!"
+            titleLabel.text = String(localized: "referral.reward.title.noRewards")
+            descriptionLabel.text = String(localized: "referral.reward.description.noRewards")
             countLabel.isHidden = true
             actionButton.isHidden = false
-            actionButton.setTitle("친구 초대하기", for: .normal)
+            actionButton.setTitle(String(localized: "referral.reward.invite"), for: .normal)
             actionButton.backgroundColor = .white
             actionButton.setTitleColor(.black, for: .normal)
             closeButton.isHidden = false
@@ -485,12 +485,12 @@ final class ReferralRewardViewController: UIViewController {
         case .claimed:
             statusIconView.text = ""
             statusIconView.isHidden = true
-            titleLabel.text = "14일 무료 혜택이\n적용되었습니다!"
+            titleLabel.text = String(localized: "referral.reward.title.claimed")
             titleLabel.font = .systemFont(ofSize: 22, weight: .regular)
             descriptionLabel.text = ""
             countLabel.isHidden = true
             actionButton.isHidden = false
-            actionButton.setTitle("확인", for: .normal)
+            actionButton.setTitle(String(localized: "common.ok"), for: .normal)
             actionButton.backgroundColor = .white
             actionButton.setTitleColor(.black, for: .normal)
             closeButton.isHidden = true
@@ -499,7 +499,7 @@ final class ReferralRewardViewController: UIViewController {
             errorLabel.text = message
             errorLabel.isHidden = false
             actionButton.isHidden = false
-            actionButton.setTitle("다시 시도", for: .normal)
+            actionButton.setTitle(String(localized: "referral.reward.retry"), for: .normal)
             actionButton.backgroundColor = .white
             actionButton.setTitleColor(.black, for: .normal)
         }

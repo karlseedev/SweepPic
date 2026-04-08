@@ -87,7 +87,7 @@ final class ReferralCodeInputViewController: UIViewController {
     private lazy var closeButton: UIButton = {
         let button = UIButton(type: .system)
         button.backgroundColor = UIColor.white.withAlphaComponent(0.12)
-        button.setTitle("닫기", for: .normal)
+        button.setTitle(String(localized: "common.close"), for: .normal)
         button.setTitleColor(.secondaryLabel, for: .normal)
         button.titleLabel?.font = .systemFont(ofSize: 17, weight: .regular)
         button.layer.cornerRadius = 25
@@ -141,7 +141,7 @@ final class ReferralCodeInputViewController: UIViewController {
     private lazy var placeholderLabel: UILabel = {
         let label = UILabel()
         label.translatesAutoresizingMaskIntoConstraints = false
-        label.text = "초대 메시지를 붙여넣으세요"
+        label.text = String(localized: "referral.codeInput.placeholder")
         label.font = .monospacedSystemFont(ofSize: 14, weight: .regular)
         label.textColor = UIColor.white.withAlphaComponent(0.3)
         label.isUserInteractionEnabled = false
@@ -152,7 +152,7 @@ final class ReferralCodeInputViewController: UIViewController {
     private lazy var pasteButton: UIButton = {
         let button = UIButton(type: .system)
         button.backgroundColor = UIColor.white.withAlphaComponent(0.12)
-        button.setTitle("붙여넣기", for: .normal)
+        button.setTitle(String(localized: "referral.codeInput.paste"), for: .normal)
         button.setTitleColor(.white, for: .normal)
         button.titleLabel?.font = .systemFont(ofSize: 17, weight: .semibold)
         button.layer.cornerRadius = 25
@@ -348,12 +348,12 @@ final class ReferralCodeInputViewController: UIViewController {
             loadingIndicator.startAnimating()
 
         case .inputReady:
-            titleLabel.text = "초대 코드 입력"
-            descriptionLabel.text = "받은 초대 메시지 전체를 붙여넣으면\n자동으로 코드가 입력됩니다"
+            titleLabel.text = String(localized: "referral.codeInput.title")
+            descriptionLabel.text = String(localized: "referral.codeInput.description")
             codeTextView.isHidden = false
             pasteButton.isHidden = false
             actionButton.isHidden = false
-            actionButton.setTitle("적용하기", for: .normal)
+            actionButton.setTitle(String(localized: "referral.codeInput.apply"), for: .normal)
             actionButton.isEnabled = true
             actionButton.alpha = 1.0
 
@@ -364,10 +364,10 @@ final class ReferralCodeInputViewController: UIViewController {
             statusIconView.tintColor = highlightYellow
             statusIconView.isHidden = false
 
-            titleLabel.text = "혜택이 아직 적용되지 않았어요"
-            descriptionLabel.text = "아래 버튼을 눌러\n14일 프리미엄 혜택을 받으세요"
+            titleLabel.text = String(localized: "referral.codeInput.matchedTitle")
+            descriptionLabel.text = String(localized: "referral.codeInput.matchedDescription")
             actionButton.isHidden = false
-            actionButton.setTitle("혜택 받기", for: .normal)
+            actionButton.setTitle(String(localized: "referral.codeInput.claim"), for: .normal)
             actionButton.isEnabled = redeemURL != nil
             actionButton.alpha = redeemURL != nil ? 1.0 : 0.5
 
@@ -378,16 +378,16 @@ final class ReferralCodeInputViewController: UIViewController {
             statusIconView.tintColor = .systemGreen
             statusIconView.isHidden = false
 
-            titleLabel.text = "초대 코드 적용 완료"
-            descriptionLabel.text = "이미 초대 코드가 적용되어 있습니다."
+            titleLabel.text = String(localized: "referral.codeInput.redeemedTitle")
+            descriptionLabel.text = String(localized: "referral.codeInput.redeemedDescription")
 
         case .error(let message):
-            titleLabel.text = "오류"
+            titleLabel.text = String(localized: "referral.codeInput.errorTitle")
             descriptionLabel.text = ""
             errorLabel.text = message
             errorLabel.isHidden = false
             actionButton.isHidden = false
-            actionButton.setTitle("다시 시도", for: .normal)
+            actionButton.setTitle(String(localized: "referral.codeInput.retry"), for: .normal)
             actionButton.isEnabled = true
             actionButton.alpha = 1.0
         }

@@ -88,7 +88,9 @@ final class ReferralShareManager {
     // MARK: - Constants
 
     /// 공유 시트 미리보기 제목
-    private static let shareTitle = "SweepPic 초대"
+    private static var shareTitle: String {
+        String(localized: "referral.share.title")
+    }
 
     // MARK: - Share Message
 
@@ -98,20 +100,7 @@ final class ReferralShareManager {
     func buildShareMessage(link: ReferralLink) -> String {
         // 공유 메시지 5개 구성 요소
         // docs/bm/260316Reward.md §Phase 1 와이어프레임 기준
-        return """
-        편리한 사진 정리 앱 SweepPic을 추천합니다!
-        초대 링크로 가입하고 Pro멤버십 14일 무료 혜택을 받으세요!
-        (최초 등록 시 14+7일 무료 제공)
-
-        초대코드: \(link.referralCode)
-
-        1. 아래 링크를 눌러 앱 설치
-
-        2. 앱 설치 후 아래 링크를 한 번 더 누르면 무료 혜택 자동 적용
-        (적용이 안되면 본 메시지를 통째로 복사해서 SweepPic앱 > 설정 > 초대코드입력에 붙여넣기 해주세요)
-
-        \(link.shareURL.absoluteString)
-        """
+        return String(localized: "referral.share.body \(link.referralCode) \(link.shareURL.absoluteString)")
     }
 
     // MARK: - Share Sheet
@@ -133,6 +122,7 @@ final class ReferralShareManager {
             activityItems: [message],
             applicationActivities: nil
         )
+        activityVC.setValue(Self.shareTitle, forKey: "subject")
 
         // 공유 완료/취소 핸들러
         activityVC.completionWithItemsHandler = { activityType, completed, _, error in

@@ -29,7 +29,7 @@ final class ReferralMenuViewController {
     static func makeMenu(from presenter: UIViewController) -> UIMenu {
         // 친구 초대하기 (FR-041)
         let referralInviteAction = UIAction(
-            title: "친구 초대하기",
+            title: String(localized: "referral.menu.invite"),
             image: UIImage(systemName: "person.badge.plus")
         ) { _ in
             handleReferralInvite(from: presenter)
@@ -37,7 +37,7 @@ final class ReferralMenuViewController {
 
         // 초대 코드 입력 (FR-041)
         let referralCodeAction = UIAction(
-            title: "초대 코드 입력",
+            title: String(localized: "referral.menu.codeInput"),
             image: UIImage(systemName: "ticket")
         ) { _ in
             handleReferralCodeInput(from: presenter)
@@ -45,14 +45,14 @@ final class ReferralMenuViewController {
 
         // 초대 혜택 받기 (FR-041)
         let referralRewardAction = UIAction(
-            title: "초대 혜택 받기",
+            title: String(localized: "referral.menu.reward"),
             image: UIImage(systemName: "gift")
         ) { _ in
             handleReferralReward(from: presenter)
         }
 
         return UIMenu(
-            title: "친구 초대",
+            title: String(localized: "referral.menu.title"),
             image: UIImage(systemName: "person.2"),
             children: [
                 referralInviteAction,
