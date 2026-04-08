@@ -183,7 +183,21 @@ extension CoachMarkOverlayView {
         snapshot.addSubview(greenView)
         e3GreenView = greenView
 
-        // 딤 페이드인
+        // 포커싱 대기 중에 어두워졌다 밝아지는 현상 방지:
+        // 처음부터 큰 구멍(= 딤 거의 없음)으로 설정 → 페이드인 시 밝은 상태 유지
+        // 1.2초 후 animateE3Focus에서 구멍을 셀 크기로 닫으면서 자연스럽게 어두워짐
+        let preExpandSize = max(bounds.width, bounds.height) * 3.0
+        let preStartRect = CGRect(
+            x: frame.midX - preExpandSize / 2,
+            y: frame.midY - preExpandSize / 2,
+            width: preExpandSize,
+            height: preExpandSize
+        )
+        let preStartPath = UIBezierPath(rect: bounds)
+        preStartPath.append(UIBezierPath(rect: preStartRect))
+        dimLayer.path = preStartPath.cgPath
+
+        // 딤 페이드인 (구멍이 큰 상태 = 거의 투명하게 시작)
         UIView.animate(withDuration: 0.3) {
             self.alpha = 1.0
         }
