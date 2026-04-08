@@ -274,14 +274,13 @@ extension CoachMarkOverlayView {
         CATransaction.commit()
     }
 
-    /// tintLayer 생성 (dimLayer 위에 삽입)
+    /// tintLayer 생성 (dimLayer 위에 삽입, 화면 전체 커버)
     private func setupE3TintLayer(frame: CGRect) {
         guard e3TintLayer == nil else { return }
         let tint = CAShapeLayer()
-        // 흰색 20% — 어두운 배경에서 셀을 밝게 보이게 함
         tint.fillColor = UIColor.white.withAlphaComponent(0.1).cgColor
-        tint.path = UIBezierPath(rect: frame).cgPath
-        // dimLayer 바로 위에 삽입 (D-1 패턴)
+        // 화면 전체를 10% 흰색으로 덮음 (포커싱 전 주의 유도)
+        tint.path = UIBezierPath(rect: bounds).cgPath
         layer.insertSublayer(tint, above: dimLayer)
         e3TintLayer = tint
     }
