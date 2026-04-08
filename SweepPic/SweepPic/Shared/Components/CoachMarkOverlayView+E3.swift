@@ -177,8 +177,9 @@ extension CoachMarkOverlayView {
         e3SwipeDistance = frame.width
         e3ResolvedAssetID = assetID
 
-        // 스냅샷 frame 설정 후 오버레이에 추가
+        // 스냅샷 frame 설정 (초기 alpha 0 — 포커싱 후 페이드인)
         snapshot.frame = frame
+        snapshot.alpha = 0
         addSubview(snapshot)
         e3SnapshotView = snapshot
 
@@ -190,16 +191,18 @@ extension CoachMarkOverlayView {
         snapshot.addSubview(greenView)
         e3GreenView = greenView
 
-        // 스냅샷 alpha 0 (포커싱 후 페이드인)
-        snapshot.alpha = 0
-
-        // Phase 1: 딤 페이드인 + 포커싱 축소 (동시)
+        // 딤 페이드인
         UIView.animate(withDuration: 0.3) {
             self.alpha = 1.0
         }
+
+        // 카드를 먼저 표시 (글씨 → 사용자 인지 → 뒤에서 시연)
+        // addSubview 순서상 카드가 snapshot/fingerView보다 위에 위치함
+        buildE3Card()
+
+        // 카드 뒤에서: 포커싱 축소 → 스냅샷 → 스와이프
         animateE3Focus(to: frame) { [weak self] in
             guard let self, !self.shouldStopAnimation else { return }
-            // 0.2s 대기 후 스냅샷 페이드인 (Phase 2)
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) { [weak self] in
                 guard let self, !self.shouldStopAnimation else { return }
                 self.beginE3Phase2(frame: frame, in: window)
@@ -339,8 +342,14 @@ extension CoachMarkOverlayView {
         fingerView.alpha = 0
         fingerView.transform = CGAffineTransform(scaleX: 1.1, y: 1.1)
         fingerView.layer.shadowOpacity = 0
-        if fingerView.superview !== self { addSubview(fingerView) }
-        bringSubviewToFront(fingerView)
+        // 카드가 항상 최상단 — fingerView는 카드 바로 아래에 삽입
+        if fingerView.superview !== self {
+            if let card = e3CardView {
+                insertSubview(fingerView, belowSubview: card)
+            } else {
+                addSubview(fingerView)
+            }
+        }
 
         // 1) Touch Down (0.3초)
         UIView.animate(withDuration: 0.3, delay: 0, options: .curveEaseOut, animations: {
@@ -392,7 +401,7 @@ extension CoachMarkOverlayView {
         }
     }
 
-    /// Phase 4: 실제 복구 + 구멍 닫기 + 카드 표시
+    /// Phase 4: 실제 복구 + 구멍 닫기 (카드는 이미 표시 중)
     private func beginE3Phase4(in window: UIWindow) {
         guard !shouldStopAnimation else { return }
 
@@ -409,16 +418,11 @@ extension CoachMarkOverlayView {
         // 스냅샷 + 녹색 딤드 페이드아웃 (0.2초)
         UIView.animate(withDuration: 0.2, animations: {
             self.e3SnapshotView?.alpha = 0
-        }) { [weak self] _ in
-            guard let self, !self.shouldStopAnimation else { return }
-
-            // 스냅샷 메모리 해제
+        }) { _ in
+            // 스냅샷 메모리 해제 (카드는 이미 표시 중 — 추가 작업 없음)
             self.e3SnapshotView?.removeFromSuperview()
             self.e3SnapshotView = nil
             self.e3GreenView = nil
-
-            // 카드 팝업 페이드인 (0.25초)
-            self.buildE3Card()
         }
     }
 
