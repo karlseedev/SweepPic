@@ -20,6 +20,7 @@ private var e3GreenViewKey: UInt8 = 0
 private var e3SnapshotViewKey: UInt8 = 0
 private var e3SwipeDistanceKey: UInt8 = 0
 private var e3ResolvedAssetIDKey: UInt8 = 0
+private var e3TintLayerKey: UInt8 = 0
 
 // MARK: - E-3: Trash Restore Guide
 
@@ -56,6 +57,13 @@ extension CoachMarkOverlayView {
     private var e3ResolvedAssetID: String? {
         get { objc_getAssociatedObject(self, &e3ResolvedAssetIDKey) as? String }
         set { objc_setAssociatedObject(self, &e3ResolvedAssetIDKey, newValue, .OBJC_ASSOCIATION_RETAIN_NONATOMIC) }
+    }
+
+    /// 포커싱 구멍 위 흰색 반투명 틴트 레이어 (D-1 패턴 — dimLayer 바로 위)
+    /// E-3: 포커싱 중 opacity 1 유지 → 스냅샷 페이드인 시 0으로 페이드아웃
+    private var e3TintLayer: CAShapeLayer? {
+        get { objc_getAssociatedObject(self, &e3TintLayerKey) as? CAShapeLayer }
+        set { objc_setAssociatedObject(self, &e3TintLayerKey, newValue, .OBJC_ASSOCIATION_RETAIN_NONATOMIC) }
     }
 
     // MARK: - 녹색 커튼 색상 (PhotoCell.restoreOverlayColor와 동일)
@@ -199,13 +207,16 @@ extension CoachMarkOverlayView {
         }
     }
 
-    /// Phase 1: 포커싱 축소 애니메이션
-    /// D-1 animateD1Shrink(.rect) 패턴 + C-3 animateC3FocusCircle 타이밍
+    /// Phase 1: 포커싱 축소 애니메이션 (dimLayer + tintLayer 동기화)
+    /// D-1 animateDFocusWithTint 패턴 참고, 단 tint opacity 방향이 반대:
+    /// D-1: opacity 0→1 (포커싱 끝에서 등장)
+    /// E-3: opacity 1→1 (포커싱 내내 유지) → 스냅샷 페이드인 시 0으로 사라짐
     private func animateE3Focus(to targetFrame: CGRect, completion: @escaping () -> Void) {
         if UIAccessibility.isReduceMotionEnabled {
-            // Reduce Motion: 즉시 구멍 설정
+            // Reduce Motion: 즉시 구멍 + 틴트 설정
             highlightFrame = targetFrame
             updateDimPath()
+            setupE3TintLayer(frame: targetFrame)
             completion()
             return
         }
@@ -218,44 +229,92 @@ extension CoachMarkOverlayView {
             width: expandSize,
             height: expandSize
         )
-        let startPath = UIBezierPath(rect: bounds)
-        startPath.append(UIBezierPath(rect: startRect))
 
-        // 끝 구멍: 셀 크기 그대로 (margin 0, cornerRadius 0 — A/C-1 패턴)
-        let endPath = UIBezierPath(rect: bounds)
-        endPath.append(UIBezierPath(rect: targetFrame))
+        // dimLayer 경로
+        let dimStartPath = UIBezierPath(rect: bounds)
+        dimStartPath.append(UIBezierPath(rect: startRect))
+        let dimEndPath = UIBezierPath(rect: bounds)
+        dimEndPath.append(UIBezierPath(rect: targetFrame))
 
-        // dimLayer에 시작 path 설정 → 하이라이트 반영
+        // tintLayer 경로 (dimLayer 구멍과 동일한 rect만 채움)
+        let tintStartPath = UIBezierPath(rect: startRect)
+        let tintEndPath = UIBezierPath(rect: targetFrame)
+
+        // dimLayer 시작 path 설정
         highlightFrame = targetFrame
-        dimLayer.path = startPath.cgPath
+        dimLayer.path = dimStartPath.cgPath
 
+        // tintLayer 생성 + 시작 path 설정 (opacity = 1 — 처음부터 보임)
+        setupE3TintLayer(frame: targetFrame)
+        e3TintLayer?.path = tintStartPath.cgPath
+        e3TintLayer?.opacity = 1
+
+        // dimLayer + tintLayer 동시 축소 (같은 CATransaction)
         CATransaction.begin()
         CATransaction.setCompletionBlock { [weak self] in
             guard let self else { return }
-            // path 확정 + 애니메이션 제거
-            self.dimLayer.path = endPath.cgPath
+            self.dimLayer.path = dimEndPath.cgPath
             self.dimLayer.removeAnimation(forKey: "e3Focus")
+            self.e3TintLayer?.path = tintEndPath.cgPath
+            self.e3TintLayer?.removeAnimation(forKey: "e3Tint")
             completion()
         }
 
-        let anim = CABasicAnimation(keyPath: "path")
-        anim.fromValue = startPath.cgPath
-        anim.toValue = endPath.cgPath
-        anim.duration = 0.7  // C-3과 동일 (E-1+E-2 직후이므로 빠르게)
-        anim.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
-        anim.fillMode = .forwards
-        anim.isRemovedOnCompletion = false
-        dimLayer.add(anim, forKey: "e3Focus")
+        // dimLayer path 축소
+        let dimAnim = CABasicAnimation(keyPath: "path")
+        dimAnim.fromValue = dimStartPath.cgPath
+        dimAnim.toValue = dimEndPath.cgPath
+        dimAnim.duration = 0.7
+        dimAnim.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
+        dimAnim.fillMode = .forwards
+        dimAnim.isRemovedOnCompletion = false
+        dimLayer.add(dimAnim, forKey: "e3Focus")
+
+        // tintLayer path 축소 (dimLayer와 동기화)
+        let tintAnim = CABasicAnimation(keyPath: "path")
+        tintAnim.fromValue = tintStartPath.cgPath
+        tintAnim.toValue = tintEndPath.cgPath
+        tintAnim.duration = 0.7
+        tintAnim.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
+        tintAnim.fillMode = .forwards
+        tintAnim.isRemovedOnCompletion = false
+        e3TintLayer?.add(tintAnim, forKey: "e3Tint")
 
         CATransaction.commit()
     }
 
-    /// Phase 2: 스냅샷 페이드인 → Phase 3 스와이프 (showReplaySwipeVariant 패턴)
+    /// tintLayer 생성 (dimLayer 위에 삽입)
+    private func setupE3TintLayer(frame: CGRect) {
+        guard e3TintLayer == nil else { return }
+        let tint = CAShapeLayer()
+        // 흰색 20% — 어두운 배경에서 셀을 밝게 보이게 함
+        tint.fillColor = UIColor.white.withAlphaComponent(0.2).cgColor
+        tint.path = UIBezierPath(rect: frame).cgPath
+        // dimLayer 바로 위에 삽입 (D-1 패턴)
+        layer.insertSublayer(tint, above: dimLayer)
+        e3TintLayer = tint
+    }
+
+    /// Phase 2: 스냅샷 페이드인 + 틴트 페이드아웃 (동시) → Phase 3 스와이프
     private func beginE3Phase2(frame: CGRect, in window: UIWindow) {
+        // 스냅샷 페이드인 + 틴트 페이드아웃 동시 (0.2초)
+        // 틴트: opacity 1→0, UIView.animate 대신 CABasicAnimation 사용 (CAShapeLayer)
+        let tintFadeAnim = CABasicAnimation(keyPath: "opacity")
+        tintFadeAnim.fromValue = 1
+        tintFadeAnim.toValue = 0
+        tintFadeAnim.duration = 0.2
+        tintFadeAnim.fillMode = .forwards
+        tintFadeAnim.isRemovedOnCompletion = false
+        e3TintLayer?.add(tintFadeAnim, forKey: "e3TintFadeOut")
+        e3TintLayer?.opacity = 0
+
         UIView.animate(withDuration: 0.2, animations: {
             self.e3SnapshotView?.alpha = 1
         }) { [weak self] _ in
             guard let self, !self.shouldStopAnimation else { return }
+            // 틴트 레이어 완전 제거 (스냅샷이 덮고 있으므로 이후 불필요)
+            self.e3TintLayer?.removeFromSuperlayer()
+            self.e3TintLayer = nil
             // Phase 3: 스와이프 모션 시작
             self.performSingleRestoreSwipe(frame: frame) { [weak self] in
                 guard let self else { return }
@@ -461,5 +520,7 @@ extension CoachMarkOverlayView {
 
         e3GreenView = nil
         e3ResolvedAssetID = nil
+        e3TintLayer?.removeFromSuperlayer()
+        e3TintLayer = nil
     }
 }
