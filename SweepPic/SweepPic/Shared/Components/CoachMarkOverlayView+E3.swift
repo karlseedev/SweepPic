@@ -107,25 +107,33 @@ extension CoachMarkOverlayView {
         }
     }
 
-    /// 삭제대기함에서 화면 최상단에 가장 가까운 PhotoCell 탐색
-    /// 위쪽 셀을 선택해야 카드(셀 아래 배치)가 화면 안에 충분히 들어옴
+    /// 삭제대기함에서 상단 UI(내비게이션·게이지바) 아래에 완전히 보이는 셀 중 가장 위쪽 탐색
+    /// - 상단 UI 뒤에 가려진 셀은 제외 (window 좌표 기준 safeAreaInsets.top + 80pt 이상)
+    /// - 조건을 만족하는 셀이 없으면 nil (재시도 로직에서 처리)
     private func findCenterTrashCell(in window: UIWindow)
         -> (cell: PhotoCell, frame: CGRect, snapshot: UIView, assetID: String)?
     {
         guard let trashVC = findTrashViewController(from: window) else { return nil }
 
         let cv = trashVC.collectionView
+        // 상단 안전 기준선: 상태바(safeArea) + 내비/게이지 높이 여유 80pt
+        let topSafeY = window.safeAreaInsets.top + 80
+
         var bestCell: PhotoCell?
         var bestIndexPath: IndexPath?
         var bestMinY: CGFloat = .greatestFiniteMagnitude
 
-        // visible 셀 중 Y좌표가 가장 작은(= 가장 위쪽) 실제 사진 셀 탐색
         for indexPath in cv.indexPathsForVisibleItems {
-            // paddingCellCount 이전은 헤더/패딩 셀이므로 건너뜀
             guard indexPath.item >= trashVC.paddingCellCount else { continue }
             guard let cell = cv.cellForItem(at: indexPath) as? PhotoCell else { continue }
-            if cell.center.y < bestMinY {
-                bestMinY = cell.center.y
+            guard let cellSuperview = cell.superview else { continue }
+
+            // window 좌표로 변환해 상단 UI에 가려지는지 확인
+            let frameInWindow = cellSuperview.convert(cell.frame, to: window)
+            guard frameInWindow.minY >= topSafeY else { continue }
+
+            if frameInWindow.minY < bestMinY {
+                bestMinY = frameInWindow.minY
                 bestCell = cell
                 bestIndexPath = indexPath
             }
@@ -137,7 +145,7 @@ extension CoachMarkOverlayView {
         let actualIndex = indexPath.item - trashVC.paddingCellCount
         guard let assetID = trashVC.gridDataSource.assetID(at: actualIndex) else { return nil }
 
-        // 셀 frame을 window 좌표로 변환
+        // frame은 루프 내에서 이미 window 좌표로 계산됨 — 재변환
         guard let cellSuperview = cell.superview else { return nil }
         let frame = cellSuperview.convert(cell.frame, to: window)
 
