@@ -16,6 +16,26 @@
 
 import UIKit
 
+// MARK: - PaywallBadgeLabel
+
+private final class PaywallBadgeLabel: UILabel {
+    var contentInsets = UIEdgeInsets(top: 0, left: 8, bottom: 0, right: 8) {
+        didSet { invalidateIntrinsicContentSize() }
+    }
+
+    override func drawText(in rect: CGRect) {
+        super.drawText(in: rect.inset(by: contentInsets))
+    }
+
+    override var intrinsicContentSize: CGSize {
+        let size = super.intrinsicContentSize
+        return CGSize(
+            width: size.width + contentInsets.left + contentInsets.right,
+            height: size.height + contentInsets.top + contentInsets.bottom
+        )
+    }
+}
+
 // MARK: - PaywallPlanTabView
 
 /// 캡슐 배경 안에 캡슐 인디케이터가 슬라이딩하는 월간/연간 탭
@@ -70,8 +90,8 @@ final class PaywallPlanTabView: UIControl {
     private var tabLabels: [UILabel] = []
 
     /// 연간 탭 "인기" 배지
-    private let popularBadge: UILabel = {
-        let label = UILabel()
+    private let popularBadge: PaywallBadgeLabel = {
+        let label = PaywallBadgeLabel()
         label.text = String(localized: "monetization.paywall.tab.popular")
         label.font = .systemFont(ofSize: 10, weight: .bold)
         label.textColor = .black
@@ -80,6 +100,8 @@ final class PaywallPlanTabView: UIControl {
         label.layer.cornerRadius = 8
         label.clipsToBounds = true
         label.translatesAutoresizingMaskIntoConstraints = false
+        label.setContentHuggingPriority(.required, for: .horizontal)
+        label.setContentCompressionResistancePriority(.required, for: .horizontal)
         return label
     }()
 
@@ -160,8 +182,8 @@ final class PaywallPlanTabView: UIControl {
         addSubview(popularBadge)
         NSLayoutConstraint.activate([
             popularBadge.centerYAnchor.constraint(equalTo: backgroundCapsule.topAnchor),
-            popularBadge.trailingAnchor.constraint(equalTo: backgroundCapsule.trailingAnchor, constant: -4),
-            popularBadge.widthAnchor.constraint(equalToConstant: 32),
+            popularBadge.centerXAnchor.constraint(equalTo: backgroundCapsule.trailingAnchor, constant: -20),
+            popularBadge.widthAnchor.constraint(greaterThanOrEqualToConstant: 32),
             popularBadge.heightAnchor.constraint(equalToConstant: 16)
         ])
 

@@ -371,11 +371,11 @@ extension GridViewController {
         )
     }
 
-    // MARK: - E-3: First Empty Feedback Replay
+    // MARK: - F: First Empty Feedback Replay
 
-    /// E-3 코치마크 즉시 재생
-    func replayCoachMarkE3() {
-        Logger.coachMark.debug("E-3: 비우기 완료 안내 재생 시작")
+    /// F 코치마크 즉시 재생
+    func replayCoachMarkF() {
+        Logger.coachMark.debug("F: 비우기 완료 안내 재생 시작")
 
         guard let window = view.window else { return }
 

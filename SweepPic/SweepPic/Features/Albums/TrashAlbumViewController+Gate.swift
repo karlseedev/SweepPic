@@ -138,7 +138,7 @@ extension TrashAlbumViewController {
         let tooltipTag = 9903
 
         let tooltip = UILabel()
-        tooltip.text = "오늘의 무료 삭제 한도예요.\n탭해서 자세히 볼 수 있어요"
+        tooltip.text = String(localized: "monetization.gauge.tooltip")
         tooltip.font = .systemFont(ofSize: 16, weight: .semibold)
         tooltip.textColor = .red
         tooltip.backgroundColor = .clear

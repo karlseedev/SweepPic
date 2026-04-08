@@ -32,7 +32,7 @@ enum CoachMarkType: String {
     case similarPhoto = "coachMark_similarPhoto"       // C: 유사사진·얼굴 비교 (C-1 + C-2 통합 플래그)
     case autoCleanup = "coachMark_autoCleanup"              // D: 저품질 자동 정리 안내
     case firstDeleteGuide = "coachMark_firstDeleteGuide"  // E-1+E-2: 삭제 시스템 안내 (통합 시퀀스)
-    case firstEmpty = "coachMark_firstEmpty"               // E-3: 첫 비우기 완료 안내
+    case firstEmpty = "coachMark_firstEmpty"               // F: 첫 비우기 완료 안내
     case faceComparisonGuide = "coachMark_faceComparisonGuide"  // C-3: 얼굴 비교 화면 선택 안내
     case autoCleanupPreview = "coachMark_autoCleanupPreview"   // D-1: 자동정리 미리보기 안내
 
@@ -411,7 +411,7 @@ final class CoachMarkOverlayView: UIView {
             let holePath = UIBezierPath(ovalIn: circleRect)
             fullPath.append(holePath)
         }
-        // B, E-3: 구멍 없음 (dim 전체 영역)
+        // B, F: 구멍 없음 (dim 전체 영역)
         dimLayer.path = fullPath.cgPath
     }
 
@@ -947,7 +947,7 @@ final class CoachMarkOverlayView: UIView {
         cleanupA2()
         CoachMarkManager.shared.isA2TransitionActive = false
 
-        // D, D-1, E-1+E-2, E-3, C-3: 시퀀스 전용 리소스 정리
+        // D, D-1, E-1+E-2, F, C-3: 시퀀스 전용 리소스 정리
         cleanupAutoCleanup()
         cleanupD1()
         CoachMarkManager.shared.isD1SequenceActive = false
@@ -1023,7 +1023,7 @@ final class CoachMarkOverlayView: UIView {
                 dismiss()
             }
         case .firstEmpty:
-            // E-3: 즉시 dismiss
+            // F: 즉시 dismiss
             dismiss()
         case .faceComparisonGuide:
             // C-3: 재진입 방지 → Step 1/2 시퀀스 관리

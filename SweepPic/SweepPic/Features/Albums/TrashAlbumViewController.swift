@@ -679,7 +679,7 @@ final class TrashAlbumViewController: BaseGridViewController {
                         )
                     }
 
-                    // E-3: 첫 비우기 완료 안내 트리거
+                    // F: 첫 비우기 완료 안내 트리거
                     self?.showFirstEmptyFeedbackIfNeeded()
                 } catch {
                     // 취소 또는 오류 시 조용히 무시 — 한도 미차감
@@ -688,7 +688,7 @@ final class TrashAlbumViewController: BaseGridViewController {
         }
     }
 
-    /// 첫 비우기 완료 시 E-3 안내 표시
+    /// 첫 비우기 완료 시 F 안내 표시
     private func showFirstEmptyFeedbackIfNeeded() {
         guard !CoachMarkType.firstEmpty.hasBeenShown else { return }
         guard !CoachMarkManager.shared.isShowing else { return }

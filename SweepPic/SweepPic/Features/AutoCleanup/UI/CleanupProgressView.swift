@@ -341,7 +341,7 @@ final class CleanupProgressView: UIView {
     /// 날짜 포맷팅 (locale-aware)
     private func formatDate(_ date: Date) -> String {
         let formatter = DateFormatter()
-        formatter.setLocalizedDateFormatFromTemplate("yMMMM")
+        formatter.setLocalizedDateFormatFromTemplate("yMMM")
         return formatter.string(from: date)
     }
 

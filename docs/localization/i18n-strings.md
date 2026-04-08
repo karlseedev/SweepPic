@@ -1,4 +1,5 @@
 # SweepPic 전체 문자열 한→영 매핑 테이블
+수정 시 반영 파일 SweepPic/SweepPic/Localizable.xcstrings
 
 > 주인님 확인용. 영어 번역(안)을 검토 후 확정해주세요.
 > ✅ = 확인 완료, ❌ = 수정 필요
@@ -48,7 +49,7 @@
 | 13 | 삭제대기함이 비어 있습니다 | Trash is Empty | EmptyState 제목 | |
 | 14 | 삭제대기함 | Trash | 네비게이션 타이틀 | |
 | 15 | 비우기 | Empty | 네비게이션 바 버튼 | |
-| 16 | 오늘의 무료 삭제 한도예요.\n탭해서 자세히 볼 수 있어요 | Today's free deletion limit.\nTap for details. | 게이지 툴팁 | |
+| 16 | 오늘의 무료 삭제 한도예요.\n탭해서 자세히 볼 수 있어요 | Today's free limit for emptying Trash.\nTap for details. | 게이지 툴팁 | |
 | 17 | 복구 | Restore | 툴바 버튼 (선택 모드) | |
 | 18 | 항목 선택 | Select Items | 선택 개수 라벨 (초기) | |
 | 19 | 삭제 | Delete | 툴바 버튼 (선택 모드) | |
@@ -92,7 +93,7 @@
 | 27 | 인물사진 비교정리 할 사진을 찾지 못했습니다 | No photos found for Face Comparison | Toast | |
 | 28 | 간편정리 | Clean Up | 메뉴 버튼 타이틀 | |
 | 29 | 인물사진 비교정리 | Compare & Clean Portraits | 메뉴 항목 (타이틀 겸용) | |
-| 30 | 저품질사진 자동정리 | Auto Low-Quality Cleanup | 메뉴 항목 (타이틀 겸용) | |
+| 30 | 저품질 사진 자동정리 | Auto Low-Quality Photo Cleanup | 메뉴 항목 (타이틀 겸용) | |
 | 31 | 사진 선택 모드 | Select Mode | 메뉴 항목 | |
 | 32 | 삭제대기함 보기 | View Trash | alert 버튼 | |
 | 33 | 정리 실패 | Cleanup Failed | alert 제목 | |
@@ -143,12 +144,12 @@
 | # | 한국어 (현재) | 영어 (제안) | 용도 | 확인 |
 |---|---|---|---|---|
 | 57 | 완전히 새로운 삭제 방법 | A Brand New Way to Delete | 타이틀 | |
-| 58 | 사진을 밀어서 바로 정리하세요`\u2028`다시 밀면 복원돼요`\n`정리한 사진은 삭제대기함으로 이동됩니다 | Swipe photos in the library`\u2028`to delete`\u2028`Swipe again to restore`\n`Deleted photos move to Trash | 본문 | |
-| 59 | 정리 | delete | 키워드 (강조) | |
+| 58 | 사진을 가로로 밀어서 바로 정리하세요`\u2028`다시 밀면 복원돼요`\n`정리한 사진은 삭제대기함으로 이동됩니다 | Swipe horizontally to clean up photos`\u2028`Swipe again to restore`\n`Deleted photos move to Trash | 본문 | |
+| 59 | 정리 | Swipe horizontally | 키워드 (강조) | |
 | 60 | 복원 | restore | 키워드 (강조) | |
 | 61 | 삭제대기함 | Trash | 키워드 (강조) | |
 | 62 | 확인 | OK | 버튼 | |
-| 63 | 설명을 위해 사진을 임시로 삭제합니다\n(삭제대기함에서 복구 가능) | A photo will be temporarily deleted`\u2028`for this demo`\n`(You can restore it from Trash) | A 변형 카드 | |
+| 63 | 설명을 위해 사진을 임시로 삭제합니다\n(삭제대기함에서 복구 가능) | For this demo, a photo will be`\u2028`temporarily deleted`\n`(You can restore it from Trash) | A 변형 카드 | |
 | 64 | 임시로 삭제 | temporarily deleted | 키워드 (강조) | |
 | 65 | 사진을 위로 밀면 바로`\u2028`삭제대기함으로 이동해요 | Swipe up to move a photo`\u2028`to Trash | B 뷰어 카드 | |
 | 66 | 삭제대기함 | Trash | 키워드 (강조) | |
@@ -157,7 +158,7 @@
 
 | # | 한국어 (현재) | 영어 (제안) | 용도 | 확인 |
 |---|---|---|---|---|
-| 67 | 셀을 가로로 스와이프해서`\u2028`삭제해 보세요 | Swipe horizontally`\u2028`on a photo to delete | 본문 | |
+| 67 | 사진을 가로로 밀어서`\u2028`삭제해 보세요`\n`(삭제 후 바로 복구돼요) | Swipe horizontally`\u2028`on a photo to delete`\n`(it'll be restored right away) | 본문 | |
 | 68 | 가로로 밀어서 | Swipe horizontally | 키워드 (강조) | |
 
 ### A-2
@@ -173,10 +174,10 @@
 
 | # | 한국어 (현재) | 영어 (제안) | 용도 | 확인 |
 |---|---|---|---|---|
-| 73 | 하얀색 테두리가 표시된 사진은`\u2028`여러 사진의 얼굴을 비교해서 삭제하는`\u2028`인물사진 비교정리가 가능한 사진이에요 | Photos with a white border support`\u2028`Face Comparison — compare faces`\u2028`across photos and choose`\u2028`which to remove | C-1 본문 | |
-| 74a | 얼굴을 비교해서 삭제 | compare faces | C-1 키워드 1 | |
+| 73 | 하얀색 테두리가 표시된 사진은`\u2028`여러 사진의 얼굴을 비교해서 삭제하는`\u2028`인물사진 비교정리가 가능한 사진이에요 | Photos with a white border support`\u2028`Compare & Clean Portraits —`\n`Compare faces across multiple photos`\u2028`and choose which photos to remove | C-1 본문 | |
+| 74a | 얼굴을 비교해서 삭제 | Compare faces | C-1 키워드 1 | |
 | 74b | (위와 동일) | choose which to remove | C-1 키워드 2 | |
-| 75 | +버튼을 눌러 얼굴비교화면으로 이동하세요`\u2028`인물이 여러 명이면 좌우로 넘겨볼 수 있어요 | Tap the + button`\u2028`to open Face Comparison`\u2028`Swipe left/right to see other people | C-2 본문 | |
+| 75 | +버튼을 눌러 얼굴비교화면으로 이동하세요`\u2028`인물이 여러 명이면 좌우로 넘겨볼 수 있어요 | Tap the + button`\u2028`to open Face Comparison`\n`Swipe left/right to see other people | C-2 본문 | |
 | 76 | `\n`※ 얼굴은 각도, 해상도에 따라 검출되지 않거나`\u2028`다른 인물로 분류될 수 있습니다 | `\n`Note: Faces may not be detected`\u2028`or misclassified depending on`\u2028`angle or resolution | C-2 부가 안내 | |
 | 77 | +버튼 | + button | C-2 키워드 | |
 | 78 | 얼굴비교화면 | Face Comparison | C-2 키워드 | |
@@ -195,10 +196,11 @@
 
 | # | 한국어 (현재) | 영어 (제안) | 용도 | 확인 |
 |---|---|---|---|---|
-| 83 | 저품질사진 자동정리 | Auto Low-Quality Cleanup | 타이틀 | |
-| 84 | 흔들리거나 초점이 맞지 않은`\u2028`저품질 사진을 AI가 자동으로 찾아주는`\u2028`정리 기능을 사용해보세요`\n\n`간편정리 → 저품질사진 자동정리 | Try Auto Low-Quality Cleanup —`\u2028`AI finds blurry and out-of-focus`\u2028`photos automatically`\n\n`Clean Up → Auto Low-Quality Cleanup | 본문 | |
-| 85 | 저품질 사진을 AI가 자동 | AI finds | 키워드 (강조) | |
-| 86 | 간편정리 → 저품질사진 자동정리 | Clean Up → Auto Low-Quality Cleanup | 경로 안내 | |
+| 83 | 저품질사진 자동정리 | Auto Low-Quality Photo Cleanup | 타이틀 | |
+| 84 | 흔들리거나 초점이 맞지 않은`\u2028`저품질 사진을 AI가 자동으로 찾아주는`\u2028`정리 기능을 사용해보세요`\n\n`간편정리 → 저품질사진 자동정리 | AI automatically finds blurry`\u2028`and out-of-focus photos.`\u2028`Try Low-Quality Cleanup`\n\n`Clean Up →`\n`Auto Low-Quality Photo Cleanup | 본문 | |
+| 85 | 저품질 사진 | AI automatically | 키워드 1 (강조) | |
+| 85-1 | AI가 자동 | Low-Quality Cleanup | 키워드 2 (강조) | |
+| 86 | 간편정리 → 저품질사진 자동정리 | Clean Up →`\n`Auto Low-Quality Photo Cleanup | 경로 안내 | |
 | 87 | 비우기 | Empty | E-1 페이크 버튼 라벨 | |
 
 ### D-1
@@ -212,9 +214,9 @@
 | 87-5 | 4등급, 3등급 | Lower/Low Quality | Step 2 키워드 (강조) | |
 | 87-6 | `\n`아래 더보기 버튼은 3~4등급 사진이`\u2028`탐색된 경우에만 보여요 | `\n`The "show more" button below only appears`\u2028`when Lower/Low Quality photos are found | Step 2 주석 (작은 글씨) | |
 | 87-7 | 4등급 사진 더 보기 | Show more: Lower Quality photos | Step 2 임시 버튼 라벨 | |
-| 87-8 | 사진을 클릭해서 상세히 보거나`\u2028`스와이프로 삭제 목록에서 제외할 수 있어요 | Tap a photo to view details,`\u2028`swipe to exclude it from cleanup | Step 3 본문 | |
+| 87-8 | 사진을 클릭해서 상세히 보거나`\u2028`가로로 밀어서 삭제 목록에서 제외할 수 있어요 | Tap a photo to view details,`\u2028`swipe to exclude it from cleanup | Step 3 본문 | |
 | 87-9 | 클릭 | Tap | Step 3 키워드1 (강조) | |
-| 87-10 | 스와이프 | swipe | Step 3 키워드2 (강조) | |
+| 87-10 | 가로로 밀어서 | swipe | Step 3 키워드2 (강조) | |
 | 87-11 | 제외 | exclude | Step 3 키워드3 (강조) | |
 | 87-12 | `\n`녹색으로 제외된 사진은`\u2028`삭제대기함으로 이동되지 않아요 | `\n`Excluded photos (shown in green)`\u2028`won't be moved to Trash | Step 3 주석 (작은 글씨) | |
 | 87-13 | 사진을 모두 선별했다면`\u2028`삭제대기함 이동 버튼을 눌러 삭제하세요 | Once you've reviewed all photos,`\u2028`tap the Move to Trash button to delete them | Step 4 본문 | |
@@ -236,7 +238,8 @@
 | # | 한국어 (현재) | 영어 (제안) | 용도 | 확인 |
 |---|---|---|---|---|
 | 94 | 삭제 완료 | Deletion Complete | 타이틀 | |
-| 95 | 애플 사진앱의 '최근 삭제된 항목'에서`\u2028`30일 후 완전히 삭제됩니다. | Photos will be permanently deleted`\u2028`after 30 days in the Photos app's`\u2028`"Recently Deleted" album. | 본문 | |
+| 95 | 애플 사진앱의 '최근 삭제된 항목'에서`\u2028`30일 후 완전히 삭제됩니다 | Photos will be permanently deleted`\u2028`after 30 days in the Photos app's`\u2028`"Recently Deleted" album | 본문 | |
+| 95-1 | 애플 사진앱의 '최근 삭제된 항목' | the Photos app's`\u2028`"Recently Deleted" album | 키워드 (강조) | |
 
 ---
 
@@ -254,7 +257,7 @@
 | 101 | 오늘 광고 횟수를 모두 사용했습니다 | You've used all ad watches for today | 골든 모먼트 라벨 | |
 | 102 | 인터넷 연결이 필요합니다 | Internet connection required | 오프라인 라벨 | |
 | 103 | 광고를 불러올 수 없습니다 | Unable to load ad | 광고 로드 실패 | |
-| 104 | 초대 한 번마다 나도 친구도\nPro 멤버십 14일 무료 제공! | Invite a friend — you both get\n14 days of Pro free! | 초대 프로모 라벨 | |
+| 104 | 초대 한 번마다 나도 친구도\nPro 멤버십 14일 무료 제공! | Invite a friend and\nyou both get 14 days of Pro free! | 초대 프로모 라벨 | |
 | 105 | 친구 초대하기 | Invite Friends | 초대 버튼 | |
 | 106 | 이미 Pro멤버십 이용 중이어도 14일 무료 연장 | Already Pro? Get 14 extra days free! | 초대 부가 문구 | |
 | 107 | 네트워크 상태를 확인하고 다시 시도해주세요. | Please check your network connection and try again. | 광고 실패 alert 메시지 | |
@@ -279,14 +282,15 @@
 
 | # | 한국어 (현재) | 영어 (제안) | 용도 | 확인 |
 |---|---|---|---|---|
-| 115 | 무료 체험하고\n한 번에 비우세요 | Start Free Trial\nand Clean Up All at Once | 헤드라인 | |
-| 116 | Pro 멤버십으로 삭제 한도 없이, 광고 없이 | No limits, no ads with Pro | 서브헤드라인 | |
+| 115 | 무료 체험하고\n한 번에 비우세요 | Start Free Trial and\nClean Up All at Once | 헤드라인 | |
+| 116 | Pro 멤버십으로 삭제 한도 없이, 광고 없이 | No limits, No ads with Pro | 서브헤드라인 | |
 | 117 | 무료 체험 시작하기 | Start Free Trial | 구매 버튼 | |
 | 118 | 멤버십 복원 | Restore Purchases | 복원 버튼 | |
 | 119 | 리딤 코드 | Redeem Code | 리딤 버튼 | |
 | 120 | Apple로 보호됨 | Secured by Apple | 보호 라벨 (NSAttributedString) | |
 | 121 | 약관 | Terms | 약관 링크 (밑줄) | |
-| 122 | 무료체험(Pro) | Free Trial (Pro) | 비교표 Pro 헤더 | |
+| 122 | 무료체험 | Free Trial | 비교표 Pro 헤더 제목 | |
+| 122-1 | (Pro) | (Pro) | 비교표 Pro 헤더 배지 (한국어는 기존 크기, 그 외 로컬라이즈는 작은 폰트) | |
 | 123 | 일반 | Free | 비교표 Free 헤더 | |
 | 124 | 복원 완료 | Restored | alert 제목 | |
 | 125 | Pro멤버십이 복원되었습니다. | Your purchase has been restored. | alert 메시지 | |
@@ -301,7 +305,7 @@
 | 134 | 확인 | OK | alert 버튼 | |
 | 135 | 이용 약관 | Terms of Use | 약관 sheet 제목 | |
 | 136 | 복원 실패 | Restore Failed | alert 제목 | |
-| 137 | - 언제든 취소 가능 | Cancel anytime | 체험 취소 안내 | |
+| 137 | - 언제든 취소 가능 | - Cancel anytime | 체험 취소 안내 | |
 
 ### PaywallViewModel
 
@@ -320,10 +324,10 @@
 | 148 | 광고 | Ads | 비교표 feature | |
 | 149 | 있음 | Shown | 비교표 (무료) | |
 | 150 | 없음 | None | 비교표 (Pro) | |
-| 151 | 인물사진 비교정리 | Face Comparison | 비교표 feature | |
+| 151 | 인물사진 비교정리 | Face Compare | 비교표 feature | |
 | 152 | 광고포함 | With Ads | 비교표 (무료) | |
 | 153 | 광고없음 | Ad-Free | 비교표 (Pro) | |
-| 154 | 얼굴 인식 확대 | Face Zoom | 비교표 feature | |
+| 154 | 저품질 사진 자동정리 | Auto Cleanup | 비교표 feature | |
 | 155 | 상품 정보를 불러올 수 없습니다. 네트워크 연결을 확인해주세요. | Unable to load product info. Please check your network connection. | 에러 메시지 | |
 
 ### PaywallPlanTabView
@@ -345,7 +349,7 @@
 
 | # | 한국어 (현재) | 영어 (제안) | 용도 | 확인 |
 |---|---|---|---|---|
-| 488 | 무료 체험 기간이 끝나면 선택한 요금제로 자동 구독이 시작됩니다. 구독은 확인 시 Apple ID 계정으로 청구됩니다. 구독은 현재 기간 종료 최소 24시간 전에 해지하지 않으면 자동으로 갱신됩니다. 갱신 비용은 현재 기간 종료 24시간 이내에 청구됩니다. 구독은 구매 후 설정 > Apple ID > 구독에서 관리하고 해지할 수 있습니다. 이용약관 및 개인정보처리방침이 적용됩니다. | Your subscription will automatically begin at the selected plan rate when the free trial ends. Payment will be charged to your Apple ID account upon confirmation. Subscriptions automatically renew unless canceled at least 24 hours before the end of the current period. Renewal will be charged within 24 hours before the end of the current period. You can manage and cancel subscriptions in Settings > [Your Name] > Subscriptions after purchase. Terms of Use and Privacy Policy apply. | 이용약관 시트 법적 고지 본문 | |
+| 488 | 무료 체험 기간이 끝나면 선택한 요금제로 자동 구독이 시작됩니다. 구독은 확인 시 Apple ID 계정으로 청구됩니다. 구독은 현재 기간 종료 최소 24시간 전에 해지하지 않으면 자동으로 갱신됩니다. 갱신 비용은 현재 기간 종료 24시간 이내에 청구됩니다. 구독은 구매 후 설정 > [사용자 이름] > 구독에서 관리하고 해지할 수 있습니다. 이용약관 및 개인정보처리방침이 적용됩니다. | Your subscription will automatically begin at the selected plan rate when the free trial ends. Payment will be charged to your Apple ID account upon confirmation. Subscriptions automatically renew unless canceled at least 24 hours before the end of the current period. Renewal will be charged within 24 hours before the end of the current period. You can manage and cancel subscriptions in Settings > [Your Name] > Subscriptions after purchase. Terms of Use and Privacy Policy apply. | 이용약관 시트 법적 고지 본문 | |
 
 ---
 
@@ -367,14 +371,14 @@
 | 170 | 유사 사진 그룹에서 화질, 초점, 구도 등을 분석하여 가장 좋은 사진을 남기고 나머지를 삭제대기함으로 이동합니다. 바로 삭제되지 않으니 안심하세요. | It analyzes quality, focus, and composition in similar photo groups, keeps the best one, and moves the rest to Trash. Don't worry — nothing is permanently deleted. | A5 | |
 | 171 | 멤버십/결제 | Membership & Billing | 섹션 제목 | |
 | 172 | 무료로 사용할 수 있나요? | Can I use it for free? | Q6 | |
-| 173 | 네. 사진 정리(스와이프 삭제, 유사 사진 분석, 자동 정리, 복구)는 모두 무료입니다. 삭제대기함 비우기에만 일일 한도(10장)가 있으며, 광고를 보면 추가 삭제가 가능합니다. | Yes. Photo organizing (swipe delete, similarity analysis, auto cleanup, restore) is entirely free. Only emptying Trash has a daily limit (10 photos), and you can watch ads for more. | A6 | |
+| 173 | 네. 사진 정리(밀어서 삭제, 유사 사진 분석, 자동 정리, 복구)는 모두 무료입니다. 삭제대기함 비우기에만 일일 한도(10장)가 있으며, 광고를 보면 추가 삭제가 가능합니다. | Yes. Photo organizing (swipe delete, similarity analysis, auto cleanup, restore) is entirely free. Only emptying Trash has a daily limit (10 photos), and you can watch ads for more. | A6 | |
 | 174 | 멤버십 가입했는데 멤버십이 활성화되지 않아요 | I subscribed but my membership isn't active | Q7 | |
 | 175 | 전체 메뉴 > 멤버십 > "멤버십 복원"을 탭해주세요. 네트워크 연결 상태를 확인하고, 결제에 사용한 Apple ID로 로그인되어 있는지 확인해주세요. | Go to Menu > Membership > "Restore Purchases". Check your network connection and make sure you're signed in with the Apple ID used for the purchase. | A7 | |
 | 176 | 멤버십을 해지하고 싶어요 | I want to cancel my membership | Q8 | |
 | 177 | 설정 > [내 이름] > 구독 > SweepPic Pro > 구독 취소를 탭하세요. 앱을 삭제해도 자동으로 해지되지 않으니 반드시 위 경로에서 취소해주세요. | Go to Settings > [Your Name] > Subscriptions > SweepPic Pro > Cancel. Deleting the app does not cancel your subscription, so please use the path above. | A8 | |
 | 178 | 환불받을 수 있나요? | Can I get a refund? | Q9 | |
 | 179 | 환불은 Apple을 통해 처리됩니다. reportaproblem.apple.com에서 신청해주세요. | Refunds are handled by Apple. Please visit reportaproblem.apple.com. | A9 | |
-| 180 | 삭제 한도가 뭔가요? | What is the deletion limit? | Q10 | |
+| 180 | 삭제 한도가 뭔가요? | What is the limit for emptying Trash? | Q10 | |
 | 181 | 무료 사용자는 하루 {dailyFreeLimit}장까지 삭제대기함 비우기가 가능합니다. 광고를 보면 하루 최대 {maxDailyTotal}장까지 늘릴 수 있고, Pro멤버십 가입 시 무제한입니다. 한도는 매일 자정에 초기화됩니다. | Free users can empty up to {dailyFreeLimit} photos from Trash per day. Watching ads increases this to {maxDailyTotal}/day. Pro members have no limit. The limit resets daily at midnight. | A10 | |
 | 182 | 개인정보/보안 | Privacy & Security | 섹션 제목 | |
 | 183 | 얼굴 인식 데이터는 어떻게 처리되나요? | How is face recognition data handled? | Q11 | |
@@ -469,30 +473,30 @@
 
 | # | 한국어 (현재) | 영어 (제안) | 용도 | 확인 |
 |---|---|---|---|---|
-| 226 | 저품질 사진 정리 | Low-Quality Photo Cleanup | 시트 제목 | |
+| 226 | 저품질 사진 자동정리 | Auto Low-Quality Photo Cleanup | 시트 제목 | |
 | 227 | 흔들리거나 초점이 맞지 않은 사진들을\n자동으로 찾아 정리합니다.\n정리된 사진은 삭제대기함에서 복구할 수 있어요. | Automatically finds and cleans up\nblurry or out-of-focus photos.\nCleaned-up photos can be restored from Trash. | 시트 설명문 | |
 | 228 | 최신사진부터 정리 | Clean Up from Latest | 액션 버튼 | |
-| 229 | 이어서 정리 ({dateString} 이전) | Clean Up: Before {dateString} | 액션 버튼 | |
-| 230 | 이어서 정리 | Clean Up | 액션 버튼 (비활성) | |
+| 229 | 이어서 정리 ({dateString} 이전) | Continue Before {dateString} | 액션 버튼 | |
+| 230 | 이어서 정리 | Continue | 액션 버튼 (비활성) | |
 | 231 | 연도별 정리 | Clean Up by Year | 액션 버튼 | |
 | 232 | 취소 | Cancel | 액션 버튼 | |
 | 233 | 사진별 연도 목록 확인 중 | Checking photo years... | 로딩 메시지 | |
 | 234 | 연도 선택 | Select Year | 연도 시트 제목 | |
 | 235 | 정리할 연도를 선택하세요 | Choose a year to clean up | 연도 시트 메시지 | |
 | 236 | 뒤로 | Back | 액션 버튼 | |
-| 237 | {yearString}년 이어서 ({month} 이전) | {yearString} Continue ({month} and earlier) | 연도별 이어서 버튼 (yearString placeholder) | |
+| 237 | {yearString}년 이어서 ({month} 이전) | Continue {yearString} Before {month} | 연도별 이어서 버튼 (yearString placeholder) | |
 | 238 | {yearString}년 | {yearString} | 연도 버튼 (yearString placeholder) | |
 
 ### CleanupProgressView
 
 | # | 한국어 (현재) | 영어 (제안) | 용도 | 확인 |
 |---|---|---|---|---|
-| 239 | 저품질 사진 탐색 중 | Scanning for Low-Quality Photos | 메인 제목 | |
+| 239 | 저품질 사진 탐색 중 | Scanning for`\u2028`Low-Quality Photos | 메인 제목 | |
 | 240 | 최신 사진부터 | From latest | 서브 제목 | |
 | 241 | 이어서 탐색 | Continuing scan | 서브 제목 | |
 | 241-1 | {yearString}년 | {yearString} | 연도 서브 제목 (yearString placeholder) | |
 | 242 | 준비 중... | Preparing... | 날짜 라벨 초기 | |
-| 243 | {dateString} 사진 확인 중... | Checking photos from {dateString}... | 탐색 시점 라벨 | |
+| 243 | {dateString} 사진 확인 중 | Checking photos from {dateString} | 탐색 시점 라벨 | |
 | 244 | {found} / {max}장 발견 | {found} / {max} found | 발견 수 라벨 | |
 | 245 | 취소 | Cancel | 취소 버튼 | |
 | 246 | {scanned} / {max}장 검색 | {scanned} / {max} scanned | 검색 진행률 | |
@@ -519,20 +523,20 @@
 | 262 | 품질 5등급(최저) | Lowest Quality | 등급 텍스트 | |
 | 263 | 품질 4등급 이하 | Lower Quality & Below | 등급 텍스트 | |
 | 264 | 품질 3등급 이하 | Low Quality & Below | 등급 텍스트 | |
-| 265 | {gradeText} 사진 {count}장을\n삭제대기함으로 이동할까요? | Move {count} {gradeText} photos\nto Trash? | 정리 확인 alert (plural 처리 필요) | |
-| 266 | 이동하기 | Move | alert 버튼 | |
+| 265 | {gradeText} 사진 {count}장을\n삭제대기함으로 이동할까요? | Move {count} {gradeText} photos to Trash? | 정리 확인 alert (plural 처리 필요) | |
+| 266 | 삭제대기함 이동 | Move to Trash | alert 버튼 | |
 
 ### PreviewBottomView
 
 | # | 한국어 (현재) | 영어 (제안) | 용도 | 확인 |
 |---|---|---|---|---|
-| 267 | 5등급(최저) 사진 {count}장 삭제대기함 이동 | Move {count} Lowest Quality photos to Trash | 정리 버튼 (light) (plural 처리 필요) | |
-| 268 | 4등급 이하 사진 {count}장 삭제대기함 이동 | Move {count} Lower Quality & Below photos to Trash | 정리 버튼 (standard) (plural 처리 필요) | |
-| 269 | 3등급 이하 사진 {count}장 삭제대기함 이동 | Move {count} Low Quality & Below photos to Trash | 정리 버튼 (deep) (plural 처리 필요) | |
-| 270 | 4등급 사진 {N}장 덜 보기 | Show fewer: {N} Lower Quality photos | 축소 버튼 | |
-| 271 | 3등급 사진 {N}장 덜 보기 | Show fewer: {N} Low Quality photos | 축소 버튼 | |
-| 272 | 4등급 사진 {N}장 더 보기 | Show more: {N} Lower Quality photos | 확장 버튼 | |
-| 273 | 3등급 사진 {N}장 더 보기 | Show more: {N} Low Quality photos | 확장 버튼 | |
+| 267 | 5등급(최저) 사진 {count}장 삭제대기함 이동 | Move {count} Lowest Quality to Trash | 정리 버튼 (light) | |
+| 268 | 4등급 이하 사진 {count}장 삭제대기함 이동 | Move {count} Lower Quality & Below to Trash | 정리 버튼 (standard) | |
+| 269 | 3등급 이하 사진 {count}장 삭제대기함 이동 | Move {count} Low Quality & Below to Trash | 정리 버튼 (deep) | |
+| 270 | 4등급 사진 {N}장 덜 보기 | Show fewer: {N} Lower Quality | 축소 버튼 | |
+| 271 | 3등급 사진 {N}장 덜 보기 | Show fewer: {N} Low Quality | 축소 버튼 | |
+| 272 | 4등급 사진 {N}장 더 보기 | Show more: {N} Lower Quality | 확장 버튼 | |
+| 273 | 3등급 사진 {N}장 더 보기 | Show more: {N} Low Quality | 확장 버튼 | |
 
 ### CleanupError
 
@@ -577,14 +581,14 @@
 | 291 | 인물사진 비교정리 | Compare & Clean Portraits | 시트 제목 | |
 | 292 | 비슷한 사진에서 같은 인물을\n찾아 얼굴을 비교합니다.\n마음에 들지 않는 사진을\n골라 정리할 수 있어요. | Finds the same person across similar photos\nand compares their faces.\nChoose the ones you don't like\nand clean them up. | 시트 설명문 | |
 | 293 | 최신사진부터 정리 | Clean Up from Latest | 액션 버튼 | |
-| 294 | 이어서 정리 ({dateString} 이전) | Clean Up: Before {dateString} | 액션 버튼 | |
-| 295 | 이어서 정리 | Clean Up | 액션 버튼 (비활성) | |
+| 294 | 이어서 정리 ({dateString} 이전) | Continue Before {dateString} | 액션 버튼 | |
+| 295 | 이어서 정리 | Continue | 액션 버튼 (비활성) | |
 | 296 | 연도별 정리 | Clean Up by Year | 액션 버튼 | |
 | 297 | 취소 | Cancel | 액션 버튼 | |
 | 298 | 사진별 연도 목록 확인 중 | Checking photo years... | 로딩 메시지 | |
 | 299 | 연도 선택 | Select Year | 연도 시트 제목 | |
 | 300 | 정리할 연도를 선택하세요. | Choose a year to clean up. | 연도 시트 메시지 | |
-| 301 | {yearString}년 (이어서: {dateString} 이전) | {yearString} (Continue: {dateString} and earlier) | 연도별 이어서 버튼 (yearString placeholder) | |
+| 301 | {yearString}년 (이어서: {dateString} 이전) | Continue {yearString} Before {dateString} | 연도별 이어서 버튼 (yearString placeholder) | |
 | 302 | {yearString}년 | {yearString} | 연도 버튼 (yearString placeholder) | |
 
 ### FaceScanListViewController
@@ -673,12 +677,12 @@
 | 342 | 친구 초대하고\n함께 무료 혜택 받기 | Invite Friends,\nGet Rewards Together | 메인 제목 | |
 | 343 | 함께 무료 혜택 받기 | Get Rewards Together | 키워드 (강조) | |
 | 344 | 초대한 사람 | You | 보상 행 제목 | |
-| 345 | 초대 1회마다 Pro 14일 무료 혜택 제공 | 14 days of Pro free per invite | 보상 행 상세 | |
+| 345 | 초대 1회마다 Pro 멤버십 14일 무료 혜택 제공 | 14 days of free Pro membership per invite | 보상 행 상세 | |
 | 346 | 초대받은 사람 | Your Friend | 보상 행 제목 | |
-| 347 | 14일 Pro 무료 혜택 제공 | 14 days of Pro free | 보상 행 상세 | |
+| 347 | Pro 멤버십 14일 무료 혜택 제공 | 14 days of free Pro membership | 보상 행 상세 | |
 | 348 | 초대하기 | Invite | 초대 버튼 | |
 | 349 | 초대 링크를 생성하고 공유합니다 | Creates and shares an invite link | 접근성 힌트 | |
-| 350 | 이미 Pro멤버십 이용 중이어도 14일 무료 연장 | Even if you're already Pro, get 14 extra days free | 부가 문구 | |
+| 350 | 이미 Pro멤버십 이용 중이어도 14일 무료 연장 | Even if you're already Pro membership,\nget 14 extra days free | 부가 문구 | |
 | 351 | 다시 시도 | Try Again | 재시도 버튼 (에러) | |
 | 352 | 알 수 없는 에러입니다. | An unknown error occurred. | 에러 메시지 | |
 | 353 | 알림이 없으면 보상 받기가 어려워요 | Don't Miss Your Reward | Push 프리프롬프트 제목 | |
@@ -698,8 +702,8 @@
 | 362 | 초대 코드 입력 | Enter Referral Code | 제목 (입력 상태) | |
 | 363 | 받은 초대 메시지 전체를 붙여넣으면\n자동으로 코드가 입력됩니다 | Paste the entire invite message\nand the code will be detected automatically | 설명 (입력 상태) | |
 | 364 | 초대 메시지를 붙여넣으세요 | Paste invite message here | 텍스트뷰 placeholder | |
-| 365 | 붙여넣기 | Paste | 붙여넣기 버튼 | |
-| 366 | 적용하기 | Apply | 액션 버튼 (inputReady) | |
+| 365 | 자동 붙여넣기 | Auto Paste | 붙여넣기 버튼 | |
+| 366 | 코드 적용하기 | Apply Code | 액션 버튼 (inputReady) | |
 | 367 | 혜택이 아직 적용되지 않았어요 | Your reward hasn't been applied yet | 제목 (matched) | |
 | 368 | 아래 버튼을 눌러\n14일 프리미엄 혜택을 받으세요 | Tap below\nto claim 14 days of Pro free | 설명 (matched) | |
 | 369 | 혜택 받기 | Claim Your Reward | 액션 버튼 (matched) | |
@@ -813,14 +817,14 @@ Invite code: {referralCode}
 | 413 | 사진 {index} / {total} | Photo {index} of {total} | 그리드 항목 | PhotoCell.swift | |
 | 414 | , 삭제대기함에 있음 | , in Trash | 그리드 항목 추가 | PhotoCell.swift | |
 | 415 | 삭제대기함 비우기 안내 | Trash cleanup guide | 게이트 카드 | TrashGatePopup | |
-| 416 | 삭제 한도 게이지, {total}장 중 {remaining}장 남음 | Deletion limit, {remaining} of {total} remaining | 게이지 뷰 | UsageGaugeView | |
+| 416 | 삭제 한도 게이지, {total}장 중 {remaining}장 남음 | Trash emptying limit, {remaining} of {total} remaining | 게이지 뷰 | UsageGaugeView | |
 | 417 | 탭하면 한도 상세 정보를 볼 수 있습니다 | Tap for limit details | 게이지 힌트 | UsageGaugeView | |
 | 418 | 광고를 보고 사진 삭제하기 | Watch ad to delete photos | 광고 버튼 | TrashGatePopup | |
 | 419 | 광고를 시청한 후 사진을 삭제합니다 | Deletes photos after watching an ad | 광고 힌트 | TrashGatePopup | |
 | 420 | Pro멤버십 안내 화면으로 이동합니다 | Goes to Pro membership info | Pro 힌트 | TrashGatePopup | |
 | 421 | 팝업을 닫습니다 | Closes the popup | 닫기 힌트 | TrashGatePopup | |
 | 422 | 한도 상세 팝업을 닫습니다 | Closes the limit detail popup | 닫기 힌트 | UsageGaugeView | |
-| 453 | 광고를 보고 삭제 한도 10장 추가 | Watch ad to add 10 more deletions | watchAdButton accessibilityLabel | UsageGaugeView | |
+| 453 | 광고를 보고 삭제 한도 10장 추가 | Watch ad to empty 10 more photos | watchAdButton accessibilityLabel | UsageGaugeView | |
 | 423 | 초대 설명 화면으로 이동합니다 | Goes to invite explanation | 초대 힌트 | 여러 파일 | |
 | 424 | 닫기 | Close | 닫기 버튼 | 여러 파일 | |
 | 425 | 페이월 화면을 닫습니다 | Closes the paywall | 닫기 힌트 | PaywallVC | |
@@ -834,7 +838,7 @@ Invite code: {referralCode}
 | 433 | 탭하면 답변을 접습니다 | Tap to collapse answer | FAQ 힌트 (열림) | FAQViewController | |
 | 434 | 인물 {personIndex} 비교 | Compare person {personIndex} | 얼굴 버튼 | FaceButtonOverlay | |
 | 435 | 탭하여 이 인물의 사진들을 비교합니다 | Tap to compare this person's photos | 얼굴 버튼 힌트 | FaceButtonOverlay | |
-| 493 | Pro멤버십으로 삭제 한도 무제한 | Unlimited deletions with Pro membership | UsageGaugeView proButton accessibilityLabel (기존 #112 "Go Unlimited with Pro"와 별개의 접근성 전용 문자열) | UsageGaugeView | |
+| 493 | Pro멤버십으로 삭제 한도 무제한 | No limit on emptying Trash with Pro membership | UsageGaugeView proButton accessibilityLabel (기존 #112 "Go Unlimited with Pro"와 별개의 접근성 전용 문자열) | UsageGaugeView | |
 
 ---
 
@@ -924,10 +928,10 @@ Invite code: {referralCode}
 
 | 파일 | 현재 포맷 | 변경할 템플릿 |
 |---|---|---|
-| CleanupMethodSheet.swift:233 | "yyyy년 M월" | "yMMMM" |
+| CleanupMethodSheet.swift:233 | "yyyy년 M월" | "yMMM" |
 | CleanupMethodSheet.swift:242 | "M월" | "MMM" |
-| CleanupProgressView.swift:337 | "yyyy년 M월" | "yMMMM" |
-| FaceScanMethodSheet.swift:210 | "yyyy년 M월" | "yMMMM" |
+| CleanupProgressView.swift:337 | "yyyy년 M월" | "yMMM" |
+| FaceScanMethodSheet.swift:210 | "yyyy년 M월" | "yMMM" |
 
 ---
 

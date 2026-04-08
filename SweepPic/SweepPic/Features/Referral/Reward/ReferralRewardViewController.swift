@@ -243,11 +243,6 @@ final class ReferralRewardViewController: UIViewController {
         view.backgroundColor = UIColor.black.withAlphaComponent(0.4)
         _ = blurAnimator
 
-        // 배경 탭으로 닫기
-        let tapGesture = UITapGestureRecognizer(target: self, action: #selector(closeTapped))
-        tapGesture.delegate = self
-        view.addGestureRecognizer(tapGesture)
-
         // 배경 블러
         view.addSubview(backgroundBlurView)
         NSLayoutConstraint.activate([
@@ -492,7 +487,7 @@ final class ReferralRewardViewController: UIViewController {
             statusIconView.text = ""
             statusIconView.isHidden = true
             titleLabel.text = String(localized: "referral.reward.title.claimed")
-            titleLabel.font = .systemFont(ofSize: 22, weight: .regular)
+            titleLabel.font = .systemFont(ofSize: 18, weight: .regular)
             descriptionLabel.text = ""
             countLabel.isHidden = true
             actionButton.isHidden = false
@@ -562,7 +557,7 @@ final class ReferralRewardViewController: UIViewController {
         }
     }
 
-    /// 닫기 버튼 / 배경 탭
+    /// 닫기 버튼
     @objc private func closeTapped() {
         blurAnimator.stopAnimation(true)
         cardView.deactivateBlur()
@@ -585,19 +580,5 @@ final class ReferralRewardViewController: UIViewController {
                 self?.closeTapped()
             }
         }
-    }
-}
-
-// MARK: - UIGestureRecognizerDelegate
-
-extension ReferralRewardViewController: UIGestureRecognizerDelegate {
-
-    /// 카드 영역 외부만 탭 제스처 인식 (카드 내부 탭은 무시)
-    func gestureRecognizer(
-        _ gestureRecognizer: UIGestureRecognizer,
-        shouldReceive touch: UITouch
-    ) -> Bool {
-        let location = touch.location(in: view)
-        return !cardView.frame.contains(location)
     }
 }

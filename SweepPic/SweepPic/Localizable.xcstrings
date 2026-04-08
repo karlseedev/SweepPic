@@ -636,13 +636,13 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Checking photos from %@..."
+            "value" : "Checking photos from %@"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "%@ 사진 확인 중..."
+            "value" : "%@ 사진 확인 중"
           }
         }
       }
@@ -653,7 +653,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Scanning for Low-Quality Photos"
+            "value" : "Scanning for\u2028Low-Quality Photos"
           }
         },
         "ko" : {
@@ -942,7 +942,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Clean Up"
+            "value" : "Continue"
           }
         },
         "ko" : {
@@ -959,7 +959,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Clean Up: Before %@"
+            "value" : "Continue Before %@"
           }
         },
         "ko" : {
@@ -1027,13 +1027,13 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Low-Quality Photo Cleanup"
+            "value" : "Auto Low-Quality Photo Cleanup"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "저품질 사진 정리"
+            "value" : "저품질 사진 자동정리"
           }
         }
       }
@@ -1044,7 +1044,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "%1$@ Continue (%2$@ and earlier)"
+            "value" : "Continue %1$@ Before %2$@"
           }
         },
         "ko" : {
@@ -1129,13 +1129,13 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Auto Low-Quality Cleanup"
+            "value" : "Auto Low-Quality Photo Cleanup"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "저품질사진 자동정리"
+            "value" : "저품질 사진 자동정리"
           }
         }
       }
@@ -1299,13 +1299,13 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Swipe photos in the library to delete Swipe again to restore\nDeleted photos move to Trash"
+            "value" : "Swipe horizontally to clean up photos\u2028Swipe again to restore\nDeleted photos move to Trash"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "사진을 밀어서 바로 정리하세요 다시 밀면 복원돼요\n정리한 사진은 삭제대기함으로 이동됩니다"
+            "value" : "사진을 가로로 밀어서 바로 정리하세요\u2028다시 밀면 복원돼요\n정리한 사진은 삭제대기함으로 이동됩니다"
           }
         }
       }
@@ -1316,7 +1316,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "delete"
+            "value" : "Swipe horizontally"
           }
         },
         "ko" : {
@@ -1384,7 +1384,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "A photo will be temporarily deleted for this demo\n(You can restore it from Trash)"
+            "value" : "For this demo, a photo will be\u2028temporarily deleted\n(You can restore it from Trash)"
           }
         },
         "ko" : {
@@ -1418,13 +1418,13 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Swipe horizontally on a photo to delete"
+            "value" : "Swipe horizontally\u2028on a photo to delete\n(it'll be restored right away)"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "셀을 가로로 스와이프해서 삭제해 보세요"
+            "value" : "사진을 가로로 밀어서\u2028삭제해 보세요\n(삭제 후 바로 복구돼요)"
           }
         }
       }
@@ -1441,7 +1441,7 @@
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "가로로 스와이프"
+            "value" : "가로로 밀어서"
           }
         }
       }
@@ -1452,13 +1452,13 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Swipe and extend up/down to select multiple photos and delete them all at once"
+            "value" : "Swipe and extend up/down\u2028to select multiple photos\u2028and delete them all at once"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "가로로 밀면서 좌우/상하까지 더 선택하면 여러 장을 한번에 정리해요"
+            "value" : "가로로 밀면서 좌우/상하까지 더 선택하면\u2028여러 장을 한번에 정리해요"
           }
         }
       }
@@ -1520,13 +1520,13 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Swipe up to move a photo to Trash"
+            "value" : "Swipe up to move a photo\u2028to Trash"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "사진을 위로 밀면 바로 삭제대기함으로 이동해요"
+            "value" : "사진을 위로 밀면 바로\u2028삭제대기함으로 이동해요"
           }
         }
       }
@@ -1554,13 +1554,13 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Photos with a white border support Face Comparison — compare faces across photos and choose which to remove"
+            "value" : "Photos with a white border support\u2028Compare & Clean Portraits —\nCompare faces across multiple photos\u2028and choose which photos to remove"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "하얀색 테두리가 표시된 사진은 여러 사진의 얼굴을 비교해서 삭제하는 인물사진 비교정리가 가능한 사진이에요"
+            "value" : "하얀색 테두리가 표시된 사진은\u2028여러 사진의 얼굴을 비교해서 삭제하는\u2028인물사진 비교정리가 가능한 사진이에요"
           }
         }
       }
@@ -1571,7 +1571,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "compare faces"
+            "value" : "Compare faces"
           }
         },
         "ko" : {
@@ -1588,13 +1588,13 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Tap the + button to open Face Comparison Swipe left/right to see other people"
+            "value" : "Tap the + button\u2028to open Face Comparison\nSwipe left/right to see other people"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "+버튼을 눌러 얼굴비교화면으로 이동하세요 인물이 여러 명이면 좌우로 넘겨볼 수 있어요"
+            "value" : "+버튼을 눌러 얼굴비교화면으로 이동하세요\u2028인물이 여러 명이면 좌우로 넘겨볼 수 있어요"
           }
         }
       }
@@ -1605,13 +1605,13 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Auto scanning is available from the Clean Up menu"
+            "value" : "Auto scanning is available\u2028from the Clean Up menu"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "간편정리 메뉴에서 편리하게 인물비교 자동 탐색이 가능해요"
+            "value" : "간편정리 메뉴에서 편리하게\u2028인물비교 자동 탐색이 가능해요"
           }
         }
       }
@@ -1690,13 +1690,13 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "\nNote: Faces may not be detected or misclassified depending on angle or resolution"
+            "value" : "\nNote: Faces may not be detected\u2028or misclassified depending on\u2028angle or resolution"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "\n※ 얼굴은 각도, 해상도에 따라 검출되지 않거나 다른 인물로 분류될 수 있습니다"
+            "value" : "\n※ 얼굴은 각도, 해상도에 따라 검출되지 않거나\u2028다른 인물로 분류될 수 있습니다"
           }
         }
       }
@@ -1707,13 +1707,13 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Select the faces you don't like\nSwipe to check other people and remove their photos too"
+            "value" : "Select the faces you don't like\nSwipe to check other people\u2028and remove their photos too"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "마음에 들지 않는 얼굴을 선택하세요\n옆으로 이동해서 다른 인물의 얼굴도 확인하고 삭제할 수 있어요"
+            "value" : "마음에 들지 않는 얼굴을 선택하세요\n옆으로 이동해서 다른 인물의 얼굴도\u2028확인하고 삭제할 수 있어요"
           }
         }
       }
@@ -1741,13 +1741,13 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "This is the photo number in the current Face Comparison group.\nNumbers may differ per person depending on face detection."
+            "value" : "This is the photo number\u2028in the current Face Comparison group.\nNumbers may differ per person\u2028depending on face detection."
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "현재 인물사진 비교정리 그룹의 사진 구별 번호예요\n얼굴 검출 여부에 따라 인물별로 번호가 다르게 보일 수 있어요"
+            "value" : "현재 인물사진 비교정리 그룹의\u2028사진 구별 번호예요\n얼굴 검출 여부에 따라\u2028인물별로 번호가 다르게 보일 수 있어요"
           }
         }
       }
@@ -1775,13 +1775,13 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Try Auto Low-Quality Cleanup — AI finds blurry and out-of-focus photos automatically\n\nClean Up → Auto Low-Quality Cleanup"
+            "value" : "AI automatically finds blurry\u2028and out-of-focus photos.\u2028Try Low-Quality Cleanup\n\nClean Up →\nAuto Low-Quality Photo Cleanup"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "흔들리거나 초점이 맞지 않은 저품질 사진을 AI가 자동으로 찾아주는 정리 기능을 사용해보세요\n\n간편정리 → 저품질사진 자동정리"
+            "value" : "흔들리거나 초점이 맞지 않은\u2028저품질 사진을 AI가 자동으로 찾아주는\u2028정리 기능을 사용해보세요\n\n간편정리 → 저품질사진 자동정리"
           }
         }
       }
@@ -1792,13 +1792,30 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "AI finds"
+            "value" : "AI automatically"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "저품질 사진을 AI가 자동"
+            "value" : "저품질 사진"
+          }
+        }
+      }
+    },
+    "coachMark.d.keyword2" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Low-Quality Cleanup"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "AI가 자동"
           }
         }
       }
@@ -1809,7 +1826,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Clean Up → Auto Low-Quality Cleanup"
+            "value" : "Clean Up →\nAuto Low-Quality Photo Cleanup"
           }
         },
         "ko" : {
@@ -1826,13 +1843,13 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Photos have been rated by quality score and sorted into 5 levels\nReview the Lowest Quality photos first"
+            "value" : "Photos have been rated by quality score\u2028and sorted into 5 levels\nReview the Lowest Quality photos first"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "사진의 품질 점수를 측정하여 1~5 등급으로 분류했어요\n가장 낮은 5등급 사진을 먼저 확인해 보세요"
+            "value" : "사진의 품질 점수를 측정하여\u20281~5 등급으로 분류했어요\n가장 낮은 5등급 사진을 먼저 확인해 보세요"
           }
         }
       }
@@ -1877,13 +1894,13 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "You can choose whether to include Lower/Low Quality photos\nHigh-quality photos won't appear"
+            "value" : "You can choose whether to include\u2028Lower/Low Quality photos\nHigh-quality photos won't appear"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "4등급, 3등급 사진의 정리 여부를 선택할 수 있어요\n2등급 이상 고품질 사진은 나오지 않아요"
+            "value" : "4등급, 3등급 사진의 정리 여부를\u2028선택할 수 있어요\n2등급 이상 고품질 사진은 나오지 않아요"
           }
         }
       }
@@ -1928,13 +1945,13 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "\nThe \"show more\" button below only appears when Lower/Low Quality photos are found"
+            "value" : "\nThe \"show more\" button below only appears\u2028when Lower/Low Quality photos are found"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "\n아래 더보기 버튼은 3~4등급 사진이 탐색된 경우에만 보여요"
+            "value" : "\n아래 더보기 버튼은 3~4등급 사진이\u2028탐색된 경우에만 보여요"
           }
         }
       }
@@ -1945,13 +1962,13 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Tap a photo to view details, swipe to exclude it from cleanup"
+            "value" : "Tap a photo to view details,\u2028swipe to exclude it from cleanup"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "사진을 클릭해서 상세히 보거나 스와이프로 삭제 목록에서 제외할 수 있어요"
+            "value" : "사진을 클릭해서 상세히 보거나\u2028가로로 밀어서 삭제 목록에서 제외할 수 있어요"
           }
         }
       }
@@ -1985,7 +2002,7 @@
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "스와이프"
+            "value" : "가로로 밀어서"
           }
         }
       }
@@ -2013,13 +2030,13 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "\nExcluded photos (shown in green) won't be moved to Trash"
+            "value" : "\nExcluded photos (shown in green)\u2028won't be moved to Trash"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "\n녹색으로 제외된 사진은 삭제대기함으로 이동되지 않아요"
+            "value" : "\n녹색으로 제외된 사진은\u2028삭제대기함으로 이동되지 않아요"
           }
         }
       }
@@ -2030,13 +2047,13 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Once you've reviewed all photos, tap the Move to Trash button to delete them"
+            "value" : "Once you've reviewed all photos,\u2028tap the Move to Trash button to delete them"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "사진을 모두 선별했다면 삭제대기함 이동 버튼을 눌러 삭제하세요"
+            "value" : "사진을 모두 선별했다면\u2028삭제대기함 이동 버튼을 눌러 삭제하세요"
           }
         }
       }
@@ -2064,13 +2081,13 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "The deleted photo has been moved to Trash\nWant to check it in Trash?"
+            "value" : "The deleted photo has been\u2028moved to Trash\nWant to check it in Trash?"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "방금 삭제된 사진은 삭제대기함으로 이동됐어요\n삭제대기함에서 확인해볼까요?"
+            "value" : "방금 삭제된 사진은\u2028삭제대기함으로 이동됐어요\n삭제대기함에서 확인해볼까요?"
           }
         }
       }
@@ -2098,13 +2115,13 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Deleted photos from your library are temporarily stored in Trash"
+            "value" : "Deleted photos from your library\u2028are temporarily stored in Trash"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "보관함에서 삭제된 사진은 삭제대기함에 임시 보관돼요"
+            "value" : "보관함에서 삭제된 사진은\u2028삭제대기함에 임시 보관돼요"
           }
         }
       }
@@ -2132,7 +2149,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Tap [Empty] to permanently delete photos"
+            "value" : "Tap [Empty] to permanently\u2028delete photos"
           }
         },
         "ko" : {
@@ -2160,24 +2177,41 @@
         }
       }
     },
-    "coachMark.e3.body" : {
+    "coachMark.f.body" : {
       "extractionState" : "manual",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Photos will be permanently deleted after 30 days in the Photos app's \"Recently Deleted\" album."
+            "value" : "Photos will be permanently deleted\u2028after 30 days in the Photos app's\u2028\"Recently Deleted\" album"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "애플 사진앱의 '최근 삭제된 항목'에서 30일 후 완전히 삭제됩니다."
+            "value" : "애플 사진앱의 '최근 삭제된 항목'에서\u202830일 후 완전히 삭제됩니다"
           }
         }
       }
     },
-    "coachMark.e3.title" : {
+    "coachMark.f.keyword" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "the Photos app's\u2028\"Recently Deleted\" album"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "애플 사진앱의 '최근 삭제된 항목'"
+          }
+        }
+      }
+    },
+    "coachMark.f.title" : {
       "extractionState" : "manual",
       "localizations" : {
         "en" : {
@@ -3677,7 +3711,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Clean Up"
+            "value" : "Continue"
           }
         },
         "ko" : {
@@ -3694,7 +3728,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Clean Up: Before %@"
+            "value" : "Continue Before %@"
           }
         },
         "ko" : {
@@ -3779,7 +3813,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "%1$@ (Continue: %2$@ and earlier)"
+            "value" : "Continue %1$@ Before %2$@"
           }
         },
         "ko" : {
@@ -4416,7 +4450,7 @@
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "네. 사진 정리(스와이프 삭제, 유사 사진 분석, 자동 정리, 복구)는 모두 무료입니다. 삭제대기함 비우기에만 일일 한도(10장)가 있으며, 광고를 보면 추가 삭제가 가능합니다."
+            "value" : "네. 사진 정리(밀어서 삭제, 유사 사진 분석, 자동 정리, 복구)는 모두 무료입니다. 삭제대기함 비우기에만 일일 한도(10장)가 있으며, 광고를 보면 추가 삭제가 가능합니다."
           }
         }
       }
@@ -4665,7 +4699,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "What is the deletion limit?"
+            "value" : "What is the limit for emptying Trash?"
           }
         },
         "ko" : {
@@ -5039,7 +5073,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Invite a friend — you both get\n14 days of Pro free!"
+            "value" : "Invite a friend and\nyou both get 14 days of Pro free!"
           }
         },
         "ko" : {
@@ -5124,7 +5158,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Deletion limit, %2$lld of %1$lld remaining"
+            "value" : "Trash emptying limit, %2$lld of %1$lld remaining"
           }
         },
         "ko" : {
@@ -5141,7 +5175,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Unlimited deletions with Pro membership"
+            "value" : "No limit on emptying Trash with Pro membership"
           }
         },
         "ko" : {
@@ -5158,7 +5192,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Watch ad to add 10 more deletions"
+            "value" : "Watch ad to empty 10 more photos"
           }
         },
         "ko" : {
@@ -5199,6 +5233,23 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "오늘 광고 시청 횟수를 모두 사용했습니다"
+          }
+        }
+      }
+    },
+    "monetization.gauge.tooltip" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Today's free limit for emptying Trash.\nTap for details."
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "오늘의 무료 삭제 한도예요.\n탭해서 자세히 볼 수 있어요"
           }
         }
       }
@@ -5447,7 +5498,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Cancel anytime"
+            "value" : "- Cancel anytime"
           }
         },
         "ko" : {
@@ -5481,7 +5532,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Start Free Trial\nand Clean Up All at Once"
+            "value" : "Start Free Trial and\nClean Up All at Once"
           }
         },
         "ko" : {
@@ -5526,19 +5577,36 @@
         }
       }
     },
-    "monetization.paywall.proHeader" : {
+    "monetization.paywall.proHeader.badge" : {
       "extractionState" : "manual",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Free Trial (Pro)"
+            "value" : "(Pro)"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "무료체험(Pro)"
+            "value" : "(Pro)"
+          }
+        }
+      }
+    },
+    "monetization.paywall.proHeader.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Free Trial"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "무료체험"
           }
         }
       }
@@ -5736,7 +5804,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "No limits, no ads with Pro"
+            "value" : "No limits, No ads with Pro"
           }
         },
         "ko" : {
@@ -5827,7 +5895,7 @@
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "무료 체험 기간이 끝나면 선택한 요금제로 자동 구독이 시작됩니다. 구독은 확인 시 Apple ID 계정으로 청구됩니다. 구독은 현재 기간 종료 최소 24시간 전에 해지하지 않으면 자동으로 갱신됩니다. 갱신 비용은 현재 기간 종료 24시간 이내에 청구됩니다. 구독은 구매 후 설정 > Apple ID > 구독에서 관리하고 해지할 수 있습니다. 이용약관 및 개인정보처리방침이 적용됩니다."
+            "value" : "무료 체험 기간이 끝나면 선택한 요금제로 자동 구독이 시작됩니다. 구독은 확인 시 Apple ID 계정으로 청구됩니다. 구독은 현재 기간 종료 최소 24시간 전에 해지하지 않으면 자동으로 갱신됩니다. 갱신 비용은 현재 기간 종료 24시간 이내에 청구됩니다. 구독은 구매 후 설정 > [사용자 이름] > 구독에서 관리하고 해지할 수 있습니다. 이용약관 및 개인정보처리방침이 적용됩니다."
           }
         }
       }
@@ -5940,7 +6008,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Face Comparison"
+            "value" : "Face Compare"
           }
         },
         "ko" : {
@@ -5957,13 +6025,13 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Face Zoom"
+            "value" : "Auto Cleanup"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "얼굴 인식 확대"
+            "value" : "저품질 사진 자동정리"
           }
         }
       }
@@ -6471,13 +6539,13 @@
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "Show fewer:%1$@%2$lld Low Quality photo"
+                  "value" : "Show fewer:%1$@%2$lld Low Quality"
                 }
               },
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "Show fewer:%1$@%2$lld Low Quality photos"
+                  "value" : "Show fewer:%1$@%2$lld Low Quality"
                 }
               }
             }
@@ -6506,13 +6574,13 @@
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "Show fewer:%1$@%2$lld Lower Quality photo"
+                  "value" : "Show fewer:%1$@%2$lld Lower Quality"
                 }
               },
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "Show fewer:%1$@%2$lld Lower Quality photos"
+                  "value" : "Show fewer:%1$@%2$lld Lower Quality"
                 }
               }
             }
@@ -6541,13 +6609,13 @@
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "Show more:%1$@%2$lld Low Quality photo"
+                  "value" : "Show more:%1$@%2$lld Low Quality"
                 }
               },
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "Show more:%1$@%2$lld Low Quality photos"
+                  "value" : "Show more:%1$@%2$lld Low Quality"
                 }
               }
             }
@@ -6576,13 +6644,13 @@
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "Show more:%1$@%2$lld Lower Quality photo"
+                  "value" : "Show more:%1$@%2$lld Lower Quality"
                 }
               },
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "Show more:%1$@%2$lld Lower Quality photos"
+                  "value" : "Show more:%1$@%2$lld Lower Quality"
                 }
               }
             }
@@ -6611,13 +6679,13 @@
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "Move %lld Low Quality & Below photo to Trash"
+                  "value" : "Move %lld Low Quality & Below to Trash"
                 }
               },
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "Move %lld Low Quality & Below photos to Trash"
+                  "value" : "Move %lld Low Quality & Below to Trash"
                 }
               }
             }
@@ -6646,13 +6714,13 @@
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "Move %lld Lowest Quality photo to Trash"
+                  "value" : "Move %lld Lowest Quality to Trash"
                 }
               },
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "Move %lld Lowest Quality photos to Trash"
+                  "value" : "Move %lld Lowest Quality to Trash"
                 }
               }
             }
@@ -6681,13 +6749,13 @@
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "Move %lld Lower Quality & Below photo to Trash"
+                  "value" : "Move %lld Lower Quality & Below to Trash"
                 }
               },
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "Move %lld Lower Quality & Below photos to Trash"
+                  "value" : "Move %lld Lower Quality & Below to Trash"
                 }
               }
             }
@@ -6764,13 +6832,13 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Move"
+            "value" : "Move to Trash"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "이동하기"
+            "value" : "삭제대기함 이동"
           }
         }
       }
@@ -6784,13 +6852,13 @@
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "Move %2$lld %1$@ photo\nto Trash?"
+                  "value" : "Move %2$lld %1$@ photo to Trash?"
                 }
               },
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "Move %2$lld %1$@ photos\nto Trash?"
+                  "value" : "Move %2$lld %1$@ photos to Trash?"
                 }
               }
             }
@@ -7023,13 +7091,13 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Apply"
+            "value" : "Apply Code"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "적용하기"
+            "value" : "코드 적용하기"
           }
         }
       }
@@ -7210,13 +7278,13 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Paste"
+            "value" : "Auto Paste"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "붙여넣기"
+            "value" : "자동 붙여넣기"
           }
         }
       }
@@ -7312,13 +7380,13 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "14 days of Pro free"
+            "value" : "14 days of free Pro membership"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "14일 Pro 무료 혜택 제공"
+            "value" : "Pro 멤버십 14일 무료 혜택 제공"
           }
         }
       }
@@ -7363,13 +7431,13 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "14 days of Pro free per invite"
+            "value" : "14 days of free Pro membership per invite"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "초대 1회마다 Pro 14일 무료 혜택 제공"
+            "value" : "초대 1회마다 Pro 멤버십 14일 무료 혜택 제공"
           }
         }
       }
@@ -7397,7 +7465,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Even if you're already Pro, get 14 extra days free"
+            "value" : "Even if you're already Pro membership,\nget 14 extra days free"
           }
         },
         "ko" : {

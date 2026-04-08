@@ -165,8 +165,8 @@ final class ReferralCodeInputViewController: UIViewController {
     /// 메인 액션 버튼 (적용하기 / 혜택 받기)
     private lazy var actionButton: UIButton = {
         let button = UIButton(type: .system)
-        button.backgroundColor = UIColor.white.withAlphaComponent(0.12)
-        button.setTitleColor(.white, for: .normal)
+        button.backgroundColor = .white
+        button.setTitleColor(.black, for: .normal)
         button.titleLabel?.font = .systemFont(ofSize: 17, weight: .semibold)
         button.layer.cornerRadius = 25
         button.clipsToBounds = true
@@ -242,10 +242,6 @@ final class ReferralCodeInputViewController: UIViewController {
         view.backgroundColor = UIColor.black.withAlphaComponent(0.4)
         _ = blurAnimator
 
-        // 배경 탭 → 닫기
-        let tapGesture = UITapGestureRecognizer(target: self, action: #selector(backgroundTapped(_:)))
-        view.addGestureRecognizer(tapGesture)
-
         // 배경 블러
         view.addSubview(backgroundBlurView)
         NSLayoutConstraint.activate([
@@ -264,9 +260,9 @@ final class ReferralCodeInputViewController: UIViewController {
         stackView.addArrangedSubview(statusIconView)
         stackView.addArrangedSubview(titleLabel)
         stackView.addArrangedSubview(descriptionLabel)
+        stackView.addArrangedSubview(pasteButton)
         stackView.addArrangedSubview(codeTextView)
         stackView.addArrangedSubview(errorLabel)
-        stackView.addArrangedSubview(pasteButton)
         stackView.addArrangedSubview(actionButton)
         stackView.addArrangedSubview(closeButton)
 
@@ -354,6 +350,8 @@ final class ReferralCodeInputViewController: UIViewController {
             pasteButton.isHidden = false
             actionButton.isHidden = false
             actionButton.setTitle(String(localized: "referral.codeInput.apply"), for: .normal)
+            actionButton.backgroundColor = .white
+            actionButton.setTitleColor(.black, for: .normal)
             actionButton.isEnabled = true
             actionButton.alpha = 1.0
 
@@ -368,16 +366,12 @@ final class ReferralCodeInputViewController: UIViewController {
             descriptionLabel.text = String(localized: "referral.codeInput.matchedDescription")
             actionButton.isHidden = false
             actionButton.setTitle(String(localized: "referral.codeInput.claim"), for: .normal)
+            actionButton.backgroundColor = .white
+            actionButton.setTitleColor(.black, for: .normal)
             actionButton.isEnabled = redeemURL != nil
             actionButton.alpha = redeemURL != nil ? 1.0 : 0.5
 
         case .redeemed:
-            // 상태 아이콘 — 체크
-            let config = UIImage.SymbolConfiguration(pointSize: 32, weight: .medium)
-            statusIconView.image = UIImage(systemName: "checkmark.circle.fill", withConfiguration: config)
-            statusIconView.tintColor = .systemGreen
-            statusIconView.isHidden = false
-
             titleLabel.text = String(localized: "referral.codeInput.redeemedTitle")
             descriptionLabel.text = String(localized: "referral.codeInput.redeemedDescription")
 
@@ -388,6 +382,8 @@ final class ReferralCodeInputViewController: UIViewController {
             errorLabel.isHidden = false
             actionButton.isHidden = false
             actionButton.setTitle(String(localized: "referral.codeInput.retry"), for: .normal)
+            actionButton.backgroundColor = .white
+            actionButton.setTitleColor(.black, for: .normal)
             actionButton.isEnabled = true
             actionButton.alpha = 1.0
         }
@@ -542,15 +538,6 @@ final class ReferralCodeInputViewController: UIViewController {
     @objc private func closeTapped() {
         blurAnimator.stopAnimation(true)
         dismiss(animated: true)
-    }
-
-    /// 배경 탭 → 닫기 (카드 바깥 영역)
-    @objc private func backgroundTapped(_ gesture: UITapGestureRecognizer) {
-        let location = gesture.location(in: view)
-        if !cardView.frame.contains(location) {
-            blurAnimator.stopAnimation(true)
-            dismiss(animated: true)
-        }
     }
 
     /// 붙여넣기 버튼 탭

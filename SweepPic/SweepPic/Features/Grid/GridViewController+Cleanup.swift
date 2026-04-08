@@ -68,11 +68,11 @@ extension GridViewController {
                 PremiumMenuViewController.makeMenu(from: self),
                 ReferralMenuViewController.makeMenu(from: self),
                 CustomerServiceViewController.makeMenu(from: self),
+                self.makeCoachMarkReplayMenu(),
                 UIAction(title: String(localized: "cleanup.selectMode"),
                          image: UIImage(systemName: "checkmark.circle")) { [weak self] _ in
                     self?.selectButtonTapped()
                 },
-                self.makeCoachMarkReplayMenu(),
                 self.makeDebugResetMenu(),
                 self.makeDebugAdTestMenu(),
             ])
@@ -115,11 +115,11 @@ extension GridViewController {
             PremiumMenuViewController.makeMenu(from: self),
             ReferralMenuViewController.makeMenu(from: self),
             CustomerServiceViewController.makeMenu(from: self),
+            self.makeCoachMarkReplayMenu(),
             UIAction(title: String(localized: "cleanup.selectMode"),
                      image: UIImage(systemName: "checkmark.circle")) { [weak self] _ in
                 self?.selectButtonTapped()
             },
-            self.makeCoachMarkReplayMenu(),
             self.makeDebugResetMenu(),
             self.makeDebugAdTestMenu(),
         ]))
@@ -604,7 +604,7 @@ extension GridViewController {
                     self?.replayCoachMarkE1E2()
                 },
                 UIAction(title: String(localized: "menu.tutorialReplay.emptyComplete")) { [weak self] _ in
-                    self?.replayCoachMarkE3()
+                    self?.replayCoachMarkF()
                 },
             ]
         )
@@ -678,7 +678,7 @@ extension GridViewController {
                         .similarPhoto,          // C
                         .autoCleanup,           // D
                         .firstDeleteGuide,      // E-1+E-2
-                        .firstEmpty,            // E-3
+                        .firstEmpty,            // F
                         .faceComparisonGuide,   // C-3
                     ]
                     allTypes.forEach { $0.resetShown() }

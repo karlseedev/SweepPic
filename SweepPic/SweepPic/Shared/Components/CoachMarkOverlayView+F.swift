@@ -1,10 +1,10 @@
 //
-//  CoachMarkOverlayView+E3.swift
+//  CoachMarkOverlayView+F.swift
 //  SweepPic
 //
 //  Created by Claude Code on 2026-02-22.
 //
-//  E-3: 첫 비우기 완료 안내 (단독 카드 팝업)
+//  F: 첫 비우기 완료 안내 (단독 카드 팝업)
 //  - 트리거: performEmptyTrash() 첫 성공 완료 직후
 //  - 레이아웃: 딤 배경 + 중앙 카드 ("삭제 완료" + 본문 + [확인])
 //  - E-1+E-2와 독립 (절대 동시에 표시되지 않음)
@@ -12,25 +12,25 @@
 import UIKit
 import ObjectiveC
 
-// MARK: - Associated Object Keys (E-3 전용)
+// MARK: - Associated Object Keys (F 전용)
 
-private var e3CardViewKey: UInt8 = 0
+private var fCardViewKey: UInt8 = 0
 
-// MARK: - E-3: First Empty Feedback
+// MARK: - F: First Empty Feedback
 
 extension CoachMarkOverlayView {
 
     // MARK: - Stored Properties
 
-    /// E-3 전용 카드 뷰 참조 (E-1+E-2와 별개)
-    private var e3CardView: UIView? {
-        get { objc_getAssociatedObject(self, &e3CardViewKey) as? UIView }
-        set { objc_setAssociatedObject(self, &e3CardViewKey, newValue, .OBJC_ASSOCIATION_RETAIN_NONATOMIC) }
+    /// F 전용 카드 뷰 참조 (E-1+E-2와 별개)
+    private var fCardView: UIView? {
+        get { objc_getAssociatedObject(self, &fCardViewKey) as? UIView }
+        set { objc_setAssociatedObject(self, &fCardViewKey, newValue, .OBJC_ASSOCIATION_RETAIN_NONATOMIC) }
     }
 
     // MARK: - Show (진입점)
 
-    /// E-3: 첫 비우기 완료 안내 (단독 카드 팝업)
+    /// F: 첫 비우기 완료 안내 (단독 카드 팝업)
     /// - Parameter window: 표시할 윈도우
     static func showFirstEmptyFeedback(in window: UIWindow) {
         // VoiceOver 가드
@@ -56,7 +56,7 @@ extension CoachMarkOverlayView {
 
     // MARK: - Build Card
 
-    /// E-3 중앙 카드 구성: 삭제 완료 + 본문 + [확인]
+    /// F 중앙 카드 구성: 삭제 완료 + 본문 + [확인]
     private func buildFirstEmptyCard() {
         let card = UIView()
         card.layer.cornerRadius = 20
@@ -68,11 +68,11 @@ extension CoachMarkOverlayView {
         blur.autoresizingMask = [.flexibleWidth, .flexibleHeight]
         card.addSubview(blur)
         addSubview(card)
-        e3CardView = card
+        fCardView = card
 
         // 아이콘 + 타이틀
         let titleLabel = UILabel()
-        titleLabel.text = String(localized: "coachMark.e3.title")
+        titleLabel.text = String(localized: "coachMark.f.title")
         titleLabel.textColor = .white
         titleLabel.font = .systemFont(ofSize: 22, weight: .bold)
         titleLabel.textAlignment = .center
@@ -81,9 +81,21 @@ extension CoachMarkOverlayView {
 
         // 본문
         let bodyLabel = UILabel()
-        bodyLabel.text = String(localized: "coachMark.e3.body")
-        bodyLabel.textColor = .white
-        bodyLabel.font = CoachMarkOverlayView.bodyFont
+        let bodyText = String(localized: "coachMark.f.body")
+        let bodyAttributed = NSMutableAttributedString(
+            string: bodyText,
+            attributes: [
+                .font: CoachMarkOverlayView.bodyFont,
+                .foregroundColor: UIColor.white,
+            ]
+        )
+        if let range = bodyText.range(of: String(localized: "coachMark.f.keyword")) {
+            bodyAttributed.addAttributes([
+                .font: CoachMarkOverlayView.bodyBoldFont,
+                .foregroundColor: CoachMarkOverlayView.highlightYellow,
+            ], range: NSRange(range, in: bodyText))
+        }
+        bodyLabel.attributedText = bodyAttributed
         bodyLabel.textAlignment = .center
         bodyLabel.numberOfLines = 0
         bodyLabel.translatesAutoresizingMaskIntoConstraints = false
@@ -122,13 +134,13 @@ extension CoachMarkOverlayView {
         ])
     }
 
-    // MARK: - Cleanup (E-3 전용)
+    // MARK: - Cleanup (F 전용)
 
-    /// E-3 전용 리소스 정리 (dismiss 시 호출)
+    /// F 전용 리소스 정리 (dismiss 시 호출)
     func cleanupFirstEmpty() {
         guard coachMarkType == .firstEmpty else { return }
 
-        e3CardView?.removeFromSuperview()
-        e3CardView = nil
+        fCardView?.removeFromSuperview()
+        fCardView = nil
     }
 }

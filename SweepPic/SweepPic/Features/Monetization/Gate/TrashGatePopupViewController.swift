@@ -217,7 +217,7 @@ final class TrashGatePopupViewController: UIViewController {
         let label = UILabel()
         label.text = String(localized: "monetization.gate.referralNote")
         label.font = .systemFont(ofSize: 11, weight: .regular)
-        label.textColor = UIColor.white.withAlphaComponent(0.4)
+        label.textColor = UIColor.white.withAlphaComponent(0.6)
         label.textAlignment = .center
         label.translatesAutoresizingMaskIntoConstraints = false
         return label
@@ -325,7 +325,7 @@ final class TrashGatePopupViewController: UIViewController {
         // T032: 닫기 버튼과 초대 프로모 간격 (배경 색상 변경 시작점 여유 15pt 포함)
         stackView.setCustomSpacing(34, after: closeButton)
         stackView.setCustomSpacing(8, after: referralPromoLabel)
-        stackView.setCustomSpacing(4, after: referralButton)
+        stackView.setCustomSpacing(9, after: referralButton)
 
         // 버튼 높이 (다른 버튼과 동일)
         referralButton.heightAnchor.constraint(equalToConstant: 50).isActive = true
@@ -357,9 +357,6 @@ final class TrashGatePopupViewController: UIViewController {
         // T032: 초대 프로모 버튼 액션
         referralButton.addTarget(self, action: #selector(referralButtonTapped), for: .touchUpInside)
 
-        // 배경 탭 → 닫기
-        let dimTap = UITapGestureRecognizer(target: self, action: #selector(closeButtonTapped))
-        view.addGestureRecognizer(dimTap)
     }
 
     @objc private func adButtonTapped() {

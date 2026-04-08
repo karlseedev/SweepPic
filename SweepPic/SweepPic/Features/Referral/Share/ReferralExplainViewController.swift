@@ -166,6 +166,9 @@ final class ReferralExplainViewController: UIViewController {
         label.font = .systemFont(ofSize: 13, weight: .regular)
         label.textColor = UIColor.white.withAlphaComponent(0.5)
         label.textAlignment = .center
+        label.numberOfLines = 0
+        label.lineBreakMode = .byWordWrapping
+        label.setContentCompressionResistancePriority(.required, for: .vertical)
         return label
     }()
 
@@ -203,7 +206,6 @@ final class ReferralExplainViewController: UIViewController {
 
     init() {
         super.init(nibName: nil, bundle: nil)
-        // 모달 설정 — 기존 CelebrationVC 패턴
         modalPresentationStyle = .overFullScreen
         modalTransitionStyle = .crossDissolve
     }
@@ -225,10 +227,6 @@ final class ReferralExplainViewController: UIViewController {
     private func setupUI() {
         view.backgroundColor = UIColor.black.withAlphaComponent(0.4)
         _ = blurAnimator
-
-        // 배경 탭 → 닫기
-        let tapGesture = UITapGestureRecognizer(target: self, action: #selector(backgroundTapped(_:)))
-        view.addGestureRecognizer(tapGesture)
 
         // 배경 블러
         view.addSubview(backgroundBlurView)
@@ -278,6 +276,7 @@ final class ReferralExplainViewController: UIViewController {
             // 보상 행 너비
             myRewardRow.widthAnchor.constraint(equalTo: stackView.widthAnchor),
             friendRewardRow.widthAnchor.constraint(equalTo: stackView.widthAnchor),
+            subtitleLabel.widthAnchor.constraint(lessThanOrEqualTo: stackView.widthAnchor),
 
             // 로딩 인디케이터 — 버튼 중앙
             loadingIndicator.centerXAnchor.constraint(equalTo: inviteButton.centerXAnchor),
@@ -384,15 +383,6 @@ final class ReferralExplainViewController: UIViewController {
     @objc private func closeTapped() {
         blurAnimator.stopAnimation(true)
         dismiss(animated: true)
-    }
-
-    /// 블러 배경 탭 → 카드 바깥이면 닫기
-    @objc private func backgroundTapped(_ gesture: UITapGestureRecognizer) {
-        let point = gesture.location(in: view)
-        if !cardView.frame.contains(point) {
-            blurAnimator.stopAnimation(true)
-            dismiss(animated: true)
-        }
     }
 
     /// [초대하기] 버튼 탭 → 코드 생성 → 공유 시트

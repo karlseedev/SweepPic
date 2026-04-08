@@ -337,10 +337,11 @@ final class PaywallViewController: UIViewController {
         let headerRow = createComparisonRow(
             feature: "",
             freeValue: String(localized: "monetization.paywall.freeHeader"),
-            proValue: String(localized: "monetization.paywall.proHeader"),
+            proValue: String(localized: "monetization.paywall.proHeader.title"),
             isHeader: true
         )
         tableStack.addArrangedSubview(headerRow)
+        tableStack.setCustomSpacing(8, after: headerRow)
 
         // 데이터 행
         for row in viewModel.comparisonRows {
@@ -358,7 +359,7 @@ final class PaywallViewController: UIViewController {
             tableStack.topAnchor.constraint(equalTo: comparisonContainer.topAnchor, constant: 16),
             tableStack.leadingAnchor.constraint(equalTo: comparisonContainer.leadingAnchor, constant: 16),
             tableStack.trailingAnchor.constraint(equalTo: comparisonContainer.trailingAnchor, constant: -16),
-            tableStack.bottomAnchor.constraint(equalTo: comparisonContainer.bottomAnchor, constant: -16)
+            tableStack.bottomAnchor.constraint(equalTo: comparisonContainer.bottomAnchor, constant: -8)
         ])
     }
 
@@ -366,35 +367,46 @@ final class PaywallViewController: UIViewController {
     private func createComparisonRow(feature: String, freeValue: String, proValue: String, isHeader: Bool) -> UIView {
         let container = UIStackView()
         container.axis = .horizontal
-        container.distribution = .fillEqually
+        container.distribution = .fill
         container.alignment = .center
 
         let featureLabel = UILabel()
         featureLabel.text = feature
         featureLabel.font = isHeader ? .systemFont(ofSize: 13, weight: .semibold) : .systemFont(ofSize: 14, weight: .regular)
         featureLabel.textColor = isHeader ? .secondaryLabel : .label
+        featureLabel.numberOfLines = isHeader ? 2 : 1
 
         let freeLabel = UILabel()
         freeLabel.text = freeValue
         freeLabel.font = isHeader ? .systemFont(ofSize: 13, weight: .semibold) : .systemFont(ofSize: 14, weight: .regular)
         freeLabel.textColor = .white
         freeLabel.textAlignment = .center
+        freeLabel.numberOfLines = isHeader ? 2 : 1
 
         // 온보딩 포인트컬러 (#FFEA00)
         let highlightYellow = UIColor(red: 1.0, green: 0.918, blue: 0.0, alpha: 1.0)
 
         let proLabel = UILabel()
-        proLabel.text = proValue
         proLabel.font = isHeader ? .systemFont(ofSize: 16, weight: .bold) : .systemFont(ofSize: 17, weight: .semibold)
+        if isHeader {
+            proLabel.attributedText = makeProHeaderText(color: highlightYellow)
+        } else {
+            proLabel.text = proValue
+        }
         proLabel.textColor = highlightYellow
         proLabel.textAlignment = .center
+        proLabel.numberOfLines = isHeader ? 2 : 1
 
         container.addArrangedSubview(featureLabel)
         container.addArrangedSubview(freeLabel)
         container.addArrangedSubview(proLabel)
+        NSLayoutConstraint.activate([
+            freeLabel.widthAnchor.constraint(equalTo: proLabel.widthAnchor),
+            featureLabel.widthAnchor.constraint(equalTo: freeLabel.widthAnchor, multiplier: 1.12)
+        ])
 
         // 행 높이
-        container.heightAnchor.constraint(equalToConstant: isHeader ? 30 : 36).isActive = true
+        container.heightAnchor.constraint(equalToConstant: isHeader ? 34 : 36).isActive = true
 
         // 접근성: 행 단위로 읽히도록 설정 (FR-057)
         if !isHeader && !feature.isEmpty {
@@ -416,6 +428,36 @@ final class PaywallViewController: UIViewController {
         }
 
         return container
+    }
+
+    private func makeProHeaderText(color: UIColor) -> NSAttributedString {
+        let title = String(localized: "monetization.paywall.proHeader.title")
+        let badge = String(localized: "monetization.paywall.proHeader.badge")
+        let titleAttributes: [NSAttributedString.Key: Any] = [
+            .font: UIFont.systemFont(ofSize: 16, weight: .bold),
+            .foregroundColor: color
+        ]
+
+        if Bundle.main.preferredLocalizations.first?.hasPrefix("ko") == true {
+            return NSAttributedString(
+                string: title + badge,
+                attributes: titleAttributes
+            )
+        }
+
+        let text = NSMutableAttributedString()
+        text.append(NSAttributedString(
+            string: title + "\n",
+            attributes: titleAttributes
+        ))
+        text.append(NSAttributedString(
+            string: badge,
+            attributes: [
+                .font: UIFont.systemFont(ofSize: 12, weight: .semibold),
+                .foregroundColor: color
+            ]
+        ))
+        return text
     }
 
     // MARK: - Actions
@@ -552,6 +594,10 @@ final class PaywallViewController: UIViewController {
 
     /// 상품 로드 + UI 업데이트
     private func loadContent() {
+        // eligibility 비동기 체크 완료 시 무료 체험 라벨 즉시 갱신
+        viewModel.onEligibilityChecked = { [weak self] in
+            self?.updateTrialLabel()
+        }
         viewModel.loadProducts()
 
         if viewModel.isLoaded {

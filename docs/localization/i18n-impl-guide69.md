@@ -479,7 +479,8 @@ static var someMessage: String {
 | `monetization.paywall.redeemButton` | 리딤 코드 | Redeem Code | A |
 | `monetization.paywall.securedByApple` | Apple로 보호됨 | Secured by Apple | A (NSAttributedString 내부) |
 | `monetization.paywall.terms` | 약관 | Terms | A |
-| `monetization.paywall.proHeader` | 무료체험(Pro) | Free Trial (Pro) | A |
+| `monetization.paywall.proHeader.title` | 무료체험 | Free Trial | A |
+| `monetization.paywall.proHeader.badge` | (Pro) | (Pro) | A (한국어는 기존 크기, 그 외 로컬라이즈는 작은 폰트) |
 | `monetization.paywall.freeHeader` | 일반 | Free | A |
 | `monetization.paywall.restored.title` | 복원 완료 | Restored | A |
 | `monetization.paywall.restored.message` | Pro멤버십이 복원되었습니다. | Your purchase has been restored. | A |

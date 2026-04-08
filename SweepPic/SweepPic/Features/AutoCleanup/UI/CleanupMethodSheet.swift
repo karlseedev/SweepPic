@@ -226,7 +226,7 @@ final class CleanupMethodSheet {
         guard let date = date else { return "" }
 
         let formatter = DateFormatter()
-        formatter.setLocalizedDateFormatFromTemplate("yMMMM")
+        formatter.setLocalizedDateFormatFromTemplate("yMMM")
         return formatter.string(from: date)
     }
 

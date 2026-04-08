@@ -222,9 +222,13 @@ extension CoachMarkOverlayView {
             ]
         )
         // 키워드 볼드 + 노란색 강조 (fallback: range 미발견 시 무시)
-        let dKeyword = String(localized: "coachMark.d.keyword")
-        let highlightRange = (descText as NSString).range(of: dKeyword)
-        if highlightRange.location != NSNotFound {
+        let dKeywords = [
+            String(localized: "coachMark.d.keyword"),
+            String(localized: "coachMark.d.keyword2"),
+        ].filter { !$0.isEmpty }
+        for dKeyword in dKeywords {
+            let highlightRange = (descText as NSString).range(of: dKeyword)
+            guard highlightRange.location != NSNotFound else { continue }
             descAttr.addAttributes([
                 .font: Self.bodyBoldFont,
                 .foregroundColor: Self.highlightYellow,

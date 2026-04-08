@@ -49,12 +49,16 @@ final class PaywallViewModel {
 
     /// Intro Offer eligibility 비동기 체크
     /// 재구독자 등 미자격자에게는 "무료 체험" 텍스트를 숨김
+    /// 체크 완료 시 onEligibilityChecked 콜백 호출
+    var onEligibilityChecked: (() -> Void)?
+
     private func checkIntroOfferEligibility() {
         guard let product = yearlyProduct ?? monthlyProduct else { return }
         Task {
             let eligible = await product.subscription?.isEligibleForIntroOffer ?? false
             await MainActor.run {
                 self.isEligibleForIntroOffer = eligible
+                self.onEligibilityChecked?()
             }
         }
     }
@@ -118,7 +122,7 @@ final class PaywallViewModel {
     ///   cancelNote: " - 언제든 취소 가능"
     ///   priceText: "($2.99/월)"
     func freeTrialAndPrice(isYearly: Bool) -> (trialDays: String, cancelNote: String, price: String)? {
-        guard isEligibleForIntroOffer else { return nil }
+        // eligibility는 페이지 모드 전환용으로만 사용 (체험 라벨은 항상 표시)
         let product = isYearly ? yearlyProduct : monthlyProduct
         guard let product = product,
               let intro = product.subscription?.introductoryOffer,

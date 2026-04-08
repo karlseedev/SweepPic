@@ -359,7 +359,7 @@ final class UsageGaugeDetailPopup: UIViewController {
         let label = UILabel()
         label.text = String(localized: "monetization.gate.referralNote")
         label.font = .systemFont(ofSize: 11, weight: .regular)
-        label.textColor = UIColor.white.withAlphaComponent(0.4)
+        label.textColor = UIColor.white.withAlphaComponent(0.6)
         label.textAlignment = .center
         label.translatesAutoresizingMaskIntoConstraints = false
         return label
@@ -459,7 +459,7 @@ final class UsageGaugeDetailPopup: UIViewController {
         // T033: 닫기 버튼과 초대 프로모 간격
         stack.setCustomSpacing(34, after: closeButton)
         stack.setCustomSpacing(8, after: referralPromoLabel)
-        stack.setCustomSpacing(4, after: referralButton)
+        stack.setCustomSpacing(9, after: referralButton)
 
         referralButton.heightAnchor.constraint(equalToConstant: 50).isActive = true
 
@@ -478,9 +478,6 @@ final class UsageGaugeDetailPopup: UIViewController {
         // T033: 초대 프로모 버튼 액션
         referralButton.addTarget(self, action: #selector(referralTapped), for: .touchUpInside)
 
-        // 배경 탭 → 닫기
-        let dimTap = UITapGestureRecognizer(target: self, action: #selector(closeTapped))
-        view.addGestureRecognizer(dimTap)
     }
 
     /// 현재 한도 정보로 콘텐츠 구성
