@@ -6,7 +6,7 @@
 //
 //  E-3: 삭제대기함 스와이프 복구 안내
 //  - 트리거: E-1+E-2 Step 3 [확인] dismiss 후 0.3초
-//  - 흐름: 딤 배경 → 셀 포커싱 축소 → 스냅샷 + 녹색 커튼 → 스와이프 1회 → 실제 복구 → 카드
+//  - 흐름: 딤 배경 → 카드(글씨) 표시 → 1.2초 후 셀 포커싱 축소 → 스냅샷 + 녹색 커튼 → 스와이프 1회 → 실제 복구
 //  - 텍스트: "사진을 밀어서 편리하게 복구할 수 있어요 / 연속으로 밀어서 여러 장 복구도 가능해요"
 
 import UIKit
@@ -20,7 +20,6 @@ private var e3GreenViewKey: UInt8 = 0
 private var e3SnapshotViewKey: UInt8 = 0
 private var e3SwipeDistanceKey: UInt8 = 0
 private var e3ResolvedAssetIDKey: UInt8 = 0
-private var e3TintLayerKey: UInt8 = 0
 
 // MARK: - E-3: Trash Restore Guide
 
@@ -57,13 +56,6 @@ extension CoachMarkOverlayView {
     private var e3ResolvedAssetID: String? {
         get { objc_getAssociatedObject(self, &e3ResolvedAssetIDKey) as? String }
         set { objc_setAssociatedObject(self, &e3ResolvedAssetIDKey, newValue, .OBJC_ASSOCIATION_RETAIN_NONATOMIC) }
-    }
-
-    /// 포커싱 구멍 위 흰색 반투명 틴트 레이어 (D-1 패턴 — dimLayer 바로 위)
-    /// E-3: 포커싱 중 opacity 1 유지 → 스냅샷 페이드인 시 0으로 페이드아웃
-    private var e3TintLayer: CAShapeLayer? {
-        get { objc_getAssociatedObject(self, &e3TintLayerKey) as? CAShapeLayer }
-        set { objc_setAssociatedObject(self, &e3TintLayerKey, newValue, .OBJC_ASSOCIATION_RETAIN_NONATOMIC) }
     }
 
     // MARK: - 녹색 커튼 색상 (PhotoCell.restoreOverlayColor와 동일)
@@ -200,22 +192,7 @@ extension CoachMarkOverlayView {
         // addSubview 순서상 카드가 snapshot/fingerView보다 위에 위치함
         buildE3Card()
 
-        // 틴트를 카드와 동시에 셀 위에 페이드인 (1.2초 — 글씨 읽는 동안 배경에 등장)
-        // dim에 구멍이 없는 상태에서도 셀 위치를 살짝 밝혀 주의를 끔
-        setupE3TintLayer(frame: frame)
-        e3TintLayer?.opacity = 0
-        if !UIAccessibility.isReduceMotionEnabled {
-            let tintPreviewAnim = CABasicAnimation(keyPath: "opacity")
-            tintPreviewAnim.fromValue = 0
-            tintPreviewAnim.toValue = 1
-            tintPreviewAnim.duration = 1.2
-            tintPreviewAnim.fillMode = .forwards
-            tintPreviewAnim.isRemovedOnCompletion = false
-            e3TintLayer?.add(tintPreviewAnim, forKey: "e3TintPreview")
-        }
-        e3TintLayer?.opacity = 1  // CAAnimation 완료 후 확정값
-
-        // 1.2초 후 포커싱 시작 (틴트는 이미 셀 크기로 깔린 상태)
+        // 1.2초 후 포커싱 시작 (글씨 읽을 시간 확보)
         let delay: TimeInterval = UIAccessibility.isReduceMotionEnabled ? 0 : 1.2
         DispatchQueue.main.asyncAfter(deadline: .now() + delay) { [weak self] in
             guard let self, !self.shouldStopAnimation else { return }
@@ -229,12 +206,10 @@ extension CoachMarkOverlayView {
         }
     }
 
-    /// Phase 1: dimLayer 포커싱 축소 애니메이션
-    /// tintLayer는 이미 beginE3Animation에서 셀 크기로 설정+페이드인 완료 상태
-    /// → 여기서는 dimLayer(구멍)만 대형→셀크기로 축소
+    /// Phase 1: dimLayer 포커싱 축소 애니메이션 (대형→셀 크기)
     private func animateE3Focus(to targetFrame: CGRect, completion: @escaping () -> Void) {
         if UIAccessibility.isReduceMotionEnabled {
-            // Reduce Motion: 즉시 구멍 설정 (tintLayer는 이미 설정됨)
+            // Reduce Motion: 즉시 구멍 설정
             highlightFrame = targetFrame
             updateDimPath()
             completion()
@@ -274,37 +249,12 @@ extension CoachMarkOverlayView {
         CATransaction.commit()
     }
 
-    /// tintLayer 생성 (dimLayer 위에 삽입, 화면 전체 커버)
-    private func setupE3TintLayer(frame: CGRect) {
-        guard e3TintLayer == nil else { return }
-        let tint = CAShapeLayer()
-        tint.fillColor = UIColor.white.withAlphaComponent(0.1).cgColor
-        // 화면 전체를 10% 흰색으로 덮음 (포커싱 전 주의 유도)
-        tint.path = UIBezierPath(rect: bounds).cgPath
-        layer.insertSublayer(tint, above: dimLayer)
-        e3TintLayer = tint
-    }
-
-    /// Phase 2: 스냅샷 페이드인 + 틴트 페이드아웃 (동시) → Phase 3 스와이프
+    /// Phase 2: 스냅샷 페이드인 → Phase 3 스와이프
     private func beginE3Phase2(frame: CGRect, in window: UIWindow) {
-        // 스냅샷 페이드인 + 틴트 페이드아웃 동시 (0.2초)
-        // 틴트: opacity 1→0, UIView.animate 대신 CABasicAnimation 사용 (CAShapeLayer)
-        let tintFadeAnim = CABasicAnimation(keyPath: "opacity")
-        tintFadeAnim.fromValue = 1
-        tintFadeAnim.toValue = 0
-        tintFadeAnim.duration = 0.2
-        tintFadeAnim.fillMode = .forwards
-        tintFadeAnim.isRemovedOnCompletion = false
-        e3TintLayer?.add(tintFadeAnim, forKey: "e3TintFadeOut")
-        e3TintLayer?.opacity = 0
-
         UIView.animate(withDuration: 0.2, animations: {
             self.e3SnapshotView?.alpha = 1
         }) { [weak self] _ in
             guard let self, !self.shouldStopAnimation else { return }
-            // 틴트 레이어 완전 제거 (스냅샷이 덮고 있으므로 이후 불필요)
-            self.e3TintLayer?.removeFromSuperlayer()
-            self.e3TintLayer = nil
             // Phase 3: 스와이프 모션 시작
             self.performSingleRestoreSwipe(frame: frame) { [weak self] in
                 guard let self else { return }
@@ -467,7 +417,7 @@ extension CoachMarkOverlayView {
         bodyLabel.translatesAutoresizingMaskIntoConstraints = false
         card.addSubview(bodyLabel)
 
-        // [확인] 버튼 — 기존 confirmButton 재사용 (E-1+E-2 끝난 후이므로 카드에 배치)
+        // [확인] 버튼 — 기존 confirmButton 재사용
         confirmButton.setTitleColor(.black, for: .normal)
         confirmButton.backgroundColor = .white
         confirmButton.isEnabled = false  // 스와이프 모션 완료 후 활성화
@@ -514,7 +464,5 @@ extension CoachMarkOverlayView {
 
         e3GreenView = nil
         e3ResolvedAssetID = nil
-        e3TintLayer?.removeFromSuperlayer()
-        e3TintLayer = nil
     }
 }
