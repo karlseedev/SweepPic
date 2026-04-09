@@ -30,6 +30,9 @@ final class CelebrationViewController: UIViewController {
     /// 축하 결과 데이터
     private let result: CelebrationResult
 
+    /// "확인" 버튼으로 닫힌 뒤 실행할 콜백
+    private let onAcknowledge: (() -> Void)?
+
     // MARK: - UI Components
 
     /// 배경 블러 (딤드 위에 10% 강도 블러)
@@ -182,8 +185,9 @@ final class CelebrationViewController: UIViewController {
 
     /// 축하 화면 생성
     /// - Parameter result: 축하 결과 데이터 (이번/누적 통계)
-    init(result: CelebrationResult) {
+    init(result: CelebrationResult, onAcknowledge: (() -> Void)? = nil) {
         self.result = result
+        self.onAcknowledge = onAcknowledge
         super.init(nibName: nil, bundle: nil)
 
         // 모달 설정
@@ -297,7 +301,9 @@ final class CelebrationViewController: UIViewController {
     @objc private func confirmButtonTapped() {
         blurAnimator.stopAnimation(true)
         cardView.deactivateBlur()
-        dismiss(animated: true)
+        dismiss(animated: true) { [onAcknowledge] in
+            onAcknowledge?()
+        }
     }
 
     /// T034: 초대 버튼 탭 → ReferralExplainViewController 모달

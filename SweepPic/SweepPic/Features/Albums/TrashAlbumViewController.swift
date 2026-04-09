@@ -54,6 +54,9 @@ final class TrashAlbumViewController: BaseGridViewController {
     /// 초기 스크롤 완료 여부 (맨 아래로 스크롤)
     private var didInitialScroll: Bool = false
 
+    /// 첫 비우기 완료 안내(F) 표시 대기 상태
+    private var pendingFirstEmptyFeedback: Bool = false
+
     /// 뷰어 복귀 후 사용자가 스크롤했는지 여부
     /// - true이면 applyPendingViewerReturn()에서 강제 스크롤 skip
     private var didUserScrollAfterReturn: Bool = false
@@ -247,6 +250,9 @@ final class TrashAlbumViewController: BaseGridViewController {
 
         // 온보딩 중 스킵된 게이지 첫 툴팁 재시도
         retryGaugeFirstTooltipIfNeeded()
+
+        // F 표시가 다른 모달/온보딩 때문에 지연된 경우 재시도
+        showFirstEmptyFeedbackIfPossible()
     }
 
     // MARK: - Setup
@@ -664,9 +670,14 @@ final class TrashAlbumViewController: BaseGridViewController {
 
                     // [BM] 통계 저장 + 축하 화면 (FR-039, FR-040, T046)
                     await MainActor.run {
-                        self?.showCelebrationAfterDeletion(
+                        guard let self else { return }
+                        self.pendingFirstEmptyFeedback = !CoachMarkType.firstEmpty.hasBeenShown
+                        self.showCelebrationAfterDeletion(
                             deletedCount: count,
-                            freedBytes: freedBytes
+                            freedBytes: freedBytes,
+                            onAcknowledge: { [weak self] in
+                            self?.showFirstEmptyFeedbackIfPossible()
+                            }
                         )
                     }
 
@@ -678,9 +689,6 @@ final class TrashAlbumViewController: BaseGridViewController {
                             isProhibitedTiming: prohibited
                         )
                     }
-
-                    // F: 첫 비우기 완료 안내 트리거
-                    self?.showFirstEmptyFeedbackIfNeeded()
                 } catch {
                     // 취소 또는 오류 시 조용히 무시 — 한도 미차감
                 }
@@ -688,13 +696,20 @@ final class TrashAlbumViewController: BaseGridViewController {
         }
     }
 
-    /// 첫 비우기 완료 시 F 안내 표시
-    private func showFirstEmptyFeedbackIfNeeded() {
-        guard !CoachMarkType.firstEmpty.hasBeenShown else { return }
+    /// 첫 비우기 완료 안내(F) 표시 가능 시 즉시 표시
+    /// 축하 화면/다른 모달/온보딩이 남아있으면 pending 상태를 유지하고 다음 진입에서 재시도한다.
+    private func showFirstEmptyFeedbackIfPossible() {
+        guard pendingFirstEmptyFeedback else { return }
+        guard !CoachMarkType.firstEmpty.hasBeenShown else {
+            pendingFirstEmptyFeedback = false
+            return
+        }
+        guard presentedViewController == nil else { return }
         guard !CoachMarkManager.shared.isShowing else { return }
         guard !UIAccessibility.isVoiceOverRunning else { return }
         guard let window = view.window else { return }
 
+        pendingFirstEmptyFeedback = false
         CoachMarkOverlayView.showFirstEmptyFeedback(in: window)
     }
 

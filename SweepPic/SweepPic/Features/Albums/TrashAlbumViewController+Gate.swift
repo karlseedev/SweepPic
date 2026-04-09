@@ -232,7 +232,12 @@ extension TrashAlbumViewController {
     /// - Parameters:
     ///   - deletedCount: 이번에 삭제한 장수
     ///   - freedBytes: 이번에 확보한 용량 (bytes)
-    func showCelebrationAfterDeletion(deletedCount: Int, freedBytes: Int64) {
+    ///   - onAcknowledge: "확인"으로 축하 화면을 닫은 뒤 실행할 콜백
+    func showCelebrationAfterDeletion(
+        deletedCount: Int,
+        freedBytes: Int64,
+        onAcknowledge: (() -> Void)? = nil
+    ) {
         // 1. 통계 저장 (DeletionStatsStore)
         let updatedStats = DeletionStatsStore.shared.addStats(
             deletedCount: deletedCount,
@@ -248,7 +253,7 @@ extension TrashAlbumViewController {
         )
 
         // 3. 축하 화면 표시
-        let celebrationVC = CelebrationViewController(result: result)
+        let celebrationVC = CelebrationViewController(result: result, onAcknowledge: onAcknowledge)
         present(celebrationVC, animated: true)
 
         Logger.app.debug("TrashAlbumVC: 축하 화면 표시 — 이번 \(deletedCount)장, 누적 \(updatedStats.totalDeletedCount)장")
