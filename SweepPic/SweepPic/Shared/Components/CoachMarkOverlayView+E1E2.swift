@@ -32,7 +32,7 @@ private var step3LabelKey: UInt8 = 0
 private var fingerAnimationViewKey: UInt8 = 0
 private var cardViewKey: UInt8 = 0
 private var step2BottomConstraintKey: UInt8 = 0
-private var focusBorderLayerKey: UInt8 = 0
+private var e1TintLayerKey: UInt8 = 0
 
 // MARK: - E-1+E-2: Delete System Guide Sequence
 
@@ -85,10 +85,10 @@ extension CoachMarkOverlayView {
         set { objc_setAssociatedObject(self, &cardViewKey, newValue, .OBJC_ASSOCIATION_RETAIN_NONATOMIC) }
     }
 
-    /// 포커스 원 테두리 레이어 (흰색 원형 스트로크)
-    private var focusBorderLayer: CAShapeLayer? {
-        get { objc_getAssociatedObject(self, &focusBorderLayerKey) as? CAShapeLayer }
-        set { objc_setAssociatedObject(self, &focusBorderLayerKey, newValue, .OBJC_ASSOCIATION_RETAIN_NONATOMIC) }
+    /// 포커스 원 틴트 레이어 (흰색 20% 채움 — D-1 패턴, 후반부 페이드인)
+    private var e1TintLayer: CAShapeLayer? {
+        get { objc_getAssociatedObject(self, &e1TintLayerKey) as? CAShapeLayer }
+        set { objc_setAssociatedObject(self, &e1TintLayerKey, newValue, .OBJC_ASSOCIATION_RETAIN_NONATOMIC) }
     }
 
     /// Step 2 카드 하단 제약 (Step 3 확장 시 비활성화용)
@@ -314,7 +314,8 @@ extension CoachMarkOverlayView {
     // MARK: - Focus Circle Animation (포커스 원 축소)
 
     /// 포커스 원 축소 애니메이션: 화면 밖 큰 원 → 삭제대기함 탭 크기 (60%)
-    /// CABasicAnimation으로 dimLayer.path를 보간하여 부드러운 축소 효과
+    /// dimLayer + tintLayer(흰색 20% oval)를 같은 CATransaction에서 동기화 — D-1 패턴
+    /// tintLayer opacity: 0→0 (0~60%) → 0→1 (60~100%) 키프레임으로 후반부에 부드럽게 등장
     /// - Parameters:
     ///   - tabFrame: 삭제대기함 탭의 window 좌표 frame
     ///   - completion: 애니메이션 완료 후 콜백
@@ -340,55 +341,62 @@ extension CoachMarkOverlayView {
             height: startDiameter
         )
 
-        // 시작 경로 (큰 구멍 = 딤 거의 없음)
-        let startPath = UIBezierPath(rect: bounds)
-        startPath.append(UIBezierPath(ovalIn: startCircleRect))
+        // dimLayer 경로
+        let dimStartPath = UIBezierPath(rect: bounds)
+        dimStartPath.append(UIBezierPath(ovalIn: startCircleRect))
+        let dimEndPath = UIBezierPath(rect: bounds)
+        dimEndPath.append(UIBezierPath(ovalIn: finalCircleRect))
 
-        // 최종 경로 (작은 구멍 = 삭제대기함만 투명)
-        let endPath = UIBezierPath(rect: bounds)
-        endPath.append(UIBezierPath(ovalIn: finalCircleRect))
+        // tintLayer: 흰색 20% oval (dimLayer 위, D-1 패턴)
+        let tint = CAShapeLayer()
+        tint.fillColor = UIColor.white.withAlphaComponent(0.2).cgColor
+        tint.path = UIBezierPath(ovalIn: startCircleRect).cgPath
+        tint.opacity = 0
+        layer.insertSublayer(tint, above: dimLayer)
+        e1TintLayer = tint
 
-        // 테두리 레이어 (흰색 원형 스트로크, dimLayer 위에 배치)
-        let borderLayer = CAShapeLayer()
-        borderLayer.fillColor = UIColor.clear.cgColor
-        borderLayer.strokeColor = UIColor.white.cgColor
-        borderLayer.lineWidth = 2
-        borderLayer.path = UIBezierPath(ovalIn: startCircleRect).cgPath
-        layer.addSublayer(borderLayer)
-        focusBorderLayer = borderLayer
-
-        // CABasicAnimation으로 path 보간 (딤 + 테두리 동기화)
+        // dimLayer + tintLayer 동시 축소 (같은 CATransaction)
         CATransaction.begin()
         CATransaction.setCompletionBlock { [weak self] in
             guard let self else { return }
-            // 최종 상태 확정
             self.highlightFrame = tabFrame
-            self.dimLayer.path = endPath.cgPath
-            self.dimLayer.removeAnimation(forKey: "focusCircle")
-            borderLayer.path = UIBezierPath(ovalIn: finalCircleRect).cgPath
-            borderLayer.removeAnimation(forKey: "focusBorder")
+            self.dimLayer.path = dimEndPath.cgPath
+            self.dimLayer.removeAnimation(forKey: "e1FocusCircle")
+            tint.path = UIBezierPath(ovalIn: finalCircleRect).cgPath
+            tint.opacity = 1
+            tint.removeAnimation(forKey: "e1TintPath")
+            tint.removeAnimation(forKey: "e1TintOpacity")
             completion()
         }
 
-        // 딤 구멍 축소 애니메이션 (0.9s)
-        let dimAnimation = CABasicAnimation(keyPath: "path")
-        dimAnimation.fromValue = startPath.cgPath
-        dimAnimation.toValue = endPath.cgPath
-        dimAnimation.duration = 0.9
-        dimAnimation.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
-        dimAnimation.fillMode = .forwards
-        dimAnimation.isRemovedOnCompletion = false
-        dimLayer.add(dimAnimation, forKey: "focusCircle")
+        // dimLayer path 축소 (0.9s)
+        let dimAnim = CABasicAnimation(keyPath: "path")
+        dimAnim.fromValue = dimStartPath.cgPath
+        dimAnim.toValue = dimEndPath.cgPath
+        dimAnim.duration = 0.9
+        dimAnim.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
+        dimAnim.fillMode = .forwards
+        dimAnim.isRemovedOnCompletion = false
+        dimLayer.add(dimAnim, forKey: "e1FocusCircle")
 
-        // 테두리 원 축소 애니메이션 (딤과 동일 타이밍)
-        let borderAnimation = CABasicAnimation(keyPath: "path")
-        borderAnimation.fromValue = UIBezierPath(ovalIn: startCircleRect).cgPath
-        borderAnimation.toValue = UIBezierPath(ovalIn: finalCircleRect).cgPath
-        borderAnimation.duration = 0.9
-        borderAnimation.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
-        borderAnimation.fillMode = .forwards
-        borderAnimation.isRemovedOnCompletion = false
-        borderLayer.add(borderAnimation, forKey: "focusBorder")
+        // tintLayer path 축소 (dimLayer와 동기화)
+        let tintPathAnim = CABasicAnimation(keyPath: "path")
+        tintPathAnim.fromValue = UIBezierPath(ovalIn: startCircleRect).cgPath
+        tintPathAnim.toValue = UIBezierPath(ovalIn: finalCircleRect).cgPath
+        tintPathAnim.duration = 0.9
+        tintPathAnim.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
+        tintPathAnim.fillMode = .forwards
+        tintPathAnim.isRemovedOnCompletion = false
+        tint.add(tintPathAnim, forKey: "e1TintPath")
+
+        // tintLayer opacity: 0→0 (0~60%) → 0→1 (60~100%) — 후반부에만 부드럽게 등장
+        let tintOpacityAnim = CAKeyframeAnimation(keyPath: "opacity")
+        tintOpacityAnim.values = [0.0, 0.0, 1.0]
+        tintOpacityAnim.keyTimes = [0.0, 0.6, 1.0]
+        tintOpacityAnim.duration = 0.9
+        tintOpacityAnim.fillMode = .forwards
+        tintOpacityAnim.isRemovedOnCompletion = false
+        tint.add(tintOpacityAnim, forKey: "e1TintOpacity")
 
         CATransaction.commit()
     }
@@ -477,8 +485,8 @@ extension CoachMarkOverlayView {
 
         // 포커스 원 + 딤 제거 (E-2는 딤 없이 시작)
         highlightFrame = .zero
-        focusBorderLayer?.removeFromSuperlayer()
-        focusBorderLayer = nil
+        e1TintLayer?.removeFromSuperlayer()
+        e1TintLayer = nil
         dimLayer.fillColor = UIColor.clear.cgColor
         updateDimPath()
 
@@ -722,8 +730,8 @@ extension CoachMarkOverlayView {
         feedbackCardView?.removeFromSuperview()
         feedbackCardView = nil
         step2BottomConstraint = nil
-        focusBorderLayer?.removeFromSuperlayer()
-        focusBorderLayer = nil
+        e1TintLayer?.removeFromSuperlayer()
+        e1TintLayer = nil
     }
 
     // MARK: - Helpers
