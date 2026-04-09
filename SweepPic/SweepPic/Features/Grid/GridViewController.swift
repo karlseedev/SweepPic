@@ -707,7 +707,10 @@ final class GridViewController: BaseGridViewController {
 
         // iOS 26: 네비게이션 바 서브타이틀
         if let subtitleLabel = navSubtitleLabel {
-            subtitleLabel.text = subtitleText
+            subtitleLabel.attributedText = NavigationTitleTypography.attributedText(
+                subtitleText,
+                style: .subtitle
+            )
             subtitleLabel.isHidden = false
         }
     }

@@ -257,12 +257,9 @@ class BaseGridViewController: UIViewController {
     }
 
     /// 네비게이션 타이틀 텍스트 속성 (서브클래스에서 오버라이드하여 폰트/자간 변경 가능)
-    /// 기본값: 36pt light, kern -1.0
+    /// 기본값: 앱 언어별 메인 타이틀 스타일
     var navigationTitleAttributes: [NSAttributedString.Key: Any] {
-        [
-            .font: UIFont.systemFont(ofSize: 36, weight: .light),
-            .kern: -1.0
-        ]
+        NavigationTitleTypography.attributes(for: .largeTitle)
     }
 
     /// 플로팅 UI 사용 여부 (iOS 26+에서는 시스템 UI 사용)

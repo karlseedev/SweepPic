@@ -181,10 +181,10 @@ final class AlbumsViewController: UIViewController {
         // 커스텀 titleView로 좌측 정렬 타이틀 설정 (컨테이너로 전체 너비 확보)
         let titleContainer = UIView()
         let titleLabel = UILabel()
-        titleLabel.attributedText = NSAttributedString(string: String(localized: "tab.albums"), attributes: [
-            .font: UIFont.systemFont(ofSize: 36, weight: .light),
-            .kern: -1.0
-        ])
+        titleLabel.attributedText = NavigationTitleTypography.attributedText(
+            String(localized: "tab.albums"),
+            style: .largeTitle
+        )
         titleLabel.textColor = .label
         titleLabel.translatesAutoresizingMaskIntoConstraints = false
         titleContainer.addSubview(titleLabel)

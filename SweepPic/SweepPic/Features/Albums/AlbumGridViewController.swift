@@ -60,11 +60,9 @@ final class AlbumGridViewController: BaseGridViewController {
         albumTitle
     }
 
-    /// 앨범 상세 화면 타이틀: 20pt bold (메인 탭 36pt light와 별도 관리)
+    /// 앨범 상세 화면 타이틀: 20pt bold (메인 탭과 별도 관리)
     override var navigationTitleAttributes: [NSAttributedString.Key: Any] {
-        [
-            .font: UIFont.systemFont(ofSize: 20, weight: .bold),
-        ]
+        NavigationTitleTypography.attributes(for: .detailTitle)
     }
 
     /// 앨범 상세는 iOS 26+ 상단 보정 불필요

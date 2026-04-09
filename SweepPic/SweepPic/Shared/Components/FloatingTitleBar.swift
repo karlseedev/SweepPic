@@ -64,18 +64,17 @@ final class FloatingTitleBar: UIView {
         }
     }
 
-    /// 타이틀 스타일 적용 (자간 -0.5pt, 36pt ultraLight)
+    /// 타이틀 스타일 적용 (앱 언어별 메인 타이틀 자간)
     private static func styledTitle(_ text: String) -> NSAttributedString {
-        NSAttributedString(string: text, attributes: [
-            .font: UIFont.systemFont(ofSize: 36, weight: .light),
-            .kern: -1.0
-        ])
+        NavigationTitleTypography.attributedText(text, style: .largeTitle)
     }
 
     /// 서브타이틀 텍스트 (사진 개수 등)
     var subtitle: String? {
         didSet {
-            subtitleLabel.text = subtitle
+            subtitleLabel.attributedText = subtitle.map {
+                NavigationTitleTypography.attributedText($0, style: .subtitle)
+            }
             subtitleLabel.isHidden = (subtitle == nil || subtitle?.isEmpty == true)
         }
     }
