@@ -90,6 +90,7 @@ final class TrashGatePopupViewController: UIViewController {
         label.font = .systemFont(ofSize: 22, weight: .semibold)
         label.textColor = .white
         label.textAlignment = .center
+        label.numberOfLines = 0
         label.translatesAutoresizingMaskIntoConstraints = false
         return label
     }()

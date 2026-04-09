@@ -82,6 +82,7 @@ final class CelebrationViewController: UIViewController {
         label.font = .systemFont(ofSize: 16, weight: .regular)
         label.textColor = UIColor.white.withAlphaComponent(0.7)
         label.textAlignment = .center
+        label.numberOfLines = 0
         return label
     }()
 
@@ -92,6 +93,7 @@ final class CelebrationViewController: UIViewController {
         label.font = .systemFont(ofSize: 16, weight: .regular)
         label.textColor = UIColor.white.withAlphaComponent(0.7)
         label.textAlignment = .center
+        label.numberOfLines = 0
         return label
     }()
 

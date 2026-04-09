@@ -149,7 +149,7 @@
 | 60 | 복원 | restore | 키워드 (강조) | |
 | 61 | 삭제대기함 | Trash | 키워드 (강조) | |
 | 62 | 확인 | OK | 버튼 | |
-| 63 | 설명을 위해 사진을 임시로 삭제합니다\n(삭제대기함에서 복구 가능) | For this demo, a photo will be`\u2028`temporarily deleted`\n`(You can restore it from Trash) | A 변형 카드 | |
+| 63 | 설명을 위해 사진을 임시로 삭제합니다\n(삭제 후 바로 복구돼요) | For this demo, a photo will be`\u2028`temporarily deleted`\n`(it'll be restored right away) | A 변형 카드 | |
 | 64 | 임시로 삭제 | temporarily deleted | 키워드 (강조) | |
 | 65 | 사진을 위로 밀면 바로`\u2028`삭제대기함으로 이동해요 | Swipe up to move a photo`\u2028`to Trash | B 뷰어 카드 | |
 | 66 | 삭제대기함 | Trash | 키워드 (강조) | |
@@ -237,9 +237,16 @@
 
 | # | 한국어 (현재) | 영어 (제안) | 용도 | 확인 |
 |---|---|---|---|---|
-| 94 | 삭제 완료 | Deletion Complete | 타이틀 | |
-| 95 | 애플 사진앱의 '최근 삭제된 항목'에서`\u2028`30일 후 완전히 삭제됩니다 | Photos will be permanently deleted`\u2028`after 30 days in the Photos app's`\u2028`"Recently Deleted" album | 본문 | |
-| 95-1 | 애플 사진앱의 '최근 삭제된 항목' | the Photos app's`\u2028`"Recently Deleted" album | 키워드 (강조) | |
+| 94 | 사진을 밀어서`\u2028`편리하게 복구할 수 있어요`\n`연속으로 밀면 여러 장 복구도 가능해요 | Swipe a photo to`\u2028`restore it easily`\n`Swipe repeatedly to`\u2028`restore multiple photos | E-3 본문 | |
+| 95 | 사진을 밀어서 | Swipe a photo | E-3 키워드 (강조) | |
+
+### F
+
+| # | 한국어 (현재) | 영어 (제안) | 용도 | 확인 |
+|---|---|---|---|---|
+| 95-1 | 삭제 완료 | Deletion Complete | F 타이틀 | |
+| 95-2 | 애플 사진앱의 '최근 삭제된 항목'에서`\u2028`30일 후 완전히 삭제됩니다 | Photos will be permanently deleted`\u2028`after 30 days in the Photos app's`\u2028`"Recently Deleted" album | F 본문 | |
+| 95-3 | 애플 사진앱의 '최근 삭제된 항목' | the Photos app's`\u2028`"Recently Deleted" album | F 키워드 (강조) | |
 
 ---
 
@@ -249,9 +256,9 @@
 
 | # | 한국어 (현재) | 영어 (제안) | 용도 | 확인 |
 |---|---|---|---|---|
-| 96 | 무료 삭제 한도 초과 | Free Deletion Limit Reached | 제목 | |
-| 97 | 삭제할 사진 {trashCount}장 · 무료 삭제 가능 {remaining}장 | {trashCount} photos to delete · {remaining} free deletions left | info 라벨 | |
-| 98 | 광고 {adsNeeded}회 보고 {trashCount}장 전체 삭제 | Watch {adsNeeded} ads to delete all {trashCount} photos | 광고 버튼 | |
+| 96 | 무료 삭제 한도 부족 | Not Enough\nFree Deletions Left | 제목 | |
+| 97 | 삭제할 사진 {trashCount}장\n무료 삭제 가능 {remaining}장 | {trashCount} photos to delete\n{remaining} free deletions left | info 라벨 | |
+| 98 | 광고 {adsNeeded}회 보고 전체 삭제 | Watch {adsNeeded} Ads Delete All Photos | 광고 버튼 | |
 | 99 | Pro 멤버십으로 무제한 삭제 | Go Unlimited with Pro | Pro 버튼 | |
 | 100 | 닫기 | Close | 닫기 버튼 | |
 | 101 | 오늘 광고 횟수를 모두 사용했습니다 | You've used all ad watches for today | 골든 모먼트 라벨 | |
@@ -448,7 +455,8 @@
 |---|---|---|---|---|
 | 213 | 확인 | OK | 확인 버튼 | |
 | 214 | {count}장 삭제 완료 | {count} Photos Cleaned Up | 세션 라벨 (plural 처리 필요 - 1 Photo Cleaned Up / N Photos Cleaned Up) | |
-| 215 | SweepPic에서 총 {total}장 삭제 | {total} photos cleaned up with SweepPic | 총 삭제 라벨 | |
+| 215 | SweepPic에서 총 {total}장 삭제 | {total} photos cleaned up\nwith SweepPic | 총 삭제 라벨 | |
+| 215-1 | {size} 확보 | {size} of space freed | 확보 용량 라벨 | |
 | 216 | {freed} 확보 | {freed} freed | 확보 용량 라벨 | |
 
 ### ExitSurveyViewController

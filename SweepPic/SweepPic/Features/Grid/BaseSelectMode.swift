@@ -49,7 +49,7 @@ extension BaseGridViewController {
     @objc func restoreNavigationBarAfterSelectMode() {
         if #available(iOS 26.0, *) {
             navigationItem.rightBarButtonItem = UIBarButtonItem(
-                title: "선택",
+                title: String(localized: "common.select"),
                 style: .plain,
                 target: self,
                 action: #selector(selectButtonTapped)
@@ -189,7 +189,7 @@ extension BaseGridViewController {
         // Note: rightBarButtonItems (복수)를 사용하는 VC (예: Trash)와 충돌 방지
         navigationItem.rightBarButtonItems = nil
         navigationItem.rightBarButtonItem = UIBarButtonItem(
-            title: "취소",
+            title: String(localized: "common.cancel"),
             style: .plain,
             target: self,
             action: #selector(cancelSelectModeTapped)

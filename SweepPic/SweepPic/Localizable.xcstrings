@@ -1384,13 +1384,13 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "For this demo, a photo will be\u2028temporarily deleted\n(You can restore it from Trash)"
+            "value" : "For this demo, a photo will be\u2028temporarily deleted\n(it'll be restored right away)"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "설명을 위해 사진을 임시로 삭제합니다\n(삭제대기함에서 복구 가능)"
+            "value" : "설명을 위해 사진을 임시로 삭제합니다\n(삭제 후 바로 복구돼요)"
           }
         }
       }
@@ -2183,13 +2183,13 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Swipe a photo to\u2028restore it easily\nSwipe continuously to\u2028restore multiple photos"
+            "value" : "Swipe a photo to\u2028restore it easily\nSwipe repeatedly to\u2028restore multiple photos"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "사진을 밀어서\u2028편리하게 복구할 수 있어요\n연속으로 밀어서\u2028여러 장 복구도 가능해요"
+            "value" : "사진을 밀어서\u2028편리하게 복구할 수 있어요\n연속으로 밀면 여러 장 복구도 가능해요"
           }
         }
       }
@@ -2200,13 +2200,13 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Swipe"
+            "value" : "Swipe a photo"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "밀어서"
+            "value" : "사진을 밀어서"
           }
         }
       }
@@ -4153,7 +4153,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "%@ freed"
+            "value" : "%@ of space freed"
           }
         },
         "ko" : {
@@ -4208,13 +4208,13 @@
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld photo cleaned up with SweepPic"
+                  "value" : "%lld photo cleaned up\nwith SweepPic"
                 }
               },
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld photos cleaned up with SweepPic"
+                  "value" : "%lld photos cleaned up\nwith SweepPic"
                 }
               }
             }
@@ -4954,13 +4954,13 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Watch %1$lld ads to delete all %2$lld photos"
+            "value" : "Watch %1$lld Ads Delete All Photos"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "광고 %1$lld회 보고 %2$lld장 전체 삭제"
+            "value" : "광고 %1$lld회 보고 전체 삭제"
           }
         }
       }
@@ -5005,13 +5005,13 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "%1$lld photos to delete · %2$lld free deletions left"
+            "value" : "%1$lld photos to delete\n%2$lld free deletions left"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "삭제할 사진 %1$lld장 · 무료 삭제 가능 %2$lld장"
+            "value" : "삭제할 사진 %1$lld장\n무료 삭제 가능 %2$lld장"
           }
         }
       }
@@ -5141,13 +5141,13 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Free Deletion Limit Reached"
+            "value" : "Not Enough\nFree Deletions Left"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "무료 삭제 한도 초과"
+            "value" : "무료 삭제 한도 부족"
           }
         }
       }

@@ -91,6 +91,12 @@ extension CoachMarkOverlayView {
     /// 카운터 뱃지 2자리 너비
     private static let badgeWideWidth: CGFloat = 34
 
+    /// A2 메시지 상단 간격
+    private static let a2MessageTopSpacing: CGFloat = 24
+
+    /// A2 메시지와 버튼 사이 간격
+    private static let a2ButtonTopSpacing: CGFloat = 16
+
     // MARK: - Step 1 → Step 2 Transition
 
     /// Step 1 → Step 2 전환 애니메이션
@@ -213,17 +219,19 @@ extension CoachMarkOverlayView {
                     ], range: NSRange(range, in: fullText))
                 }
             }
+
+            self.messageLabel.attributedText = attr
+
             // 메시지를 3셀(Row 2) 아래로 재배치 (동적 높이)
             let labelWidth = self.bounds.width - 40
             let labelSize = self.messageLabel.sizeThatFits(CGSize(width: labelWidth, height: .greatestFiniteMagnitude))
             self.messageLabel.frame = CGRect(
                 x: 20,
-                y: row3UnionRect.maxY,
+                y: row3UnionRect.maxY + Self.a2MessageTopSpacing,
                 width: labelWidth,
                 height: ceil(labelSize.height)
             )
             self.messageLabel.alpha = 0
-            self.messageLabel.attributedText = attr
             UIView.animate(withDuration: 0.25) {
                 self.messageLabel.alpha = 1
             }
@@ -236,7 +244,7 @@ extension CoachMarkOverlayView {
             let buttonWidth: CGFloat = 120
             self.confirmButton.frame = CGRect(
                 x: (self.bounds.width - buttonWidth) / 2,
-                y: self.messageLabel.frame.maxY - 5,
+                y: self.messageLabel.frame.maxY + Self.a2ButtonTopSpacing,
                 width: buttonWidth,
                 height: self.confirmButton.frame.height
             )
