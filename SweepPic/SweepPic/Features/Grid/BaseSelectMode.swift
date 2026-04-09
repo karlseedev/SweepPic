@@ -62,6 +62,10 @@ extension BaseGridViewController {
         // 기본 구현: no-op
     }
 
+    /// Select 모드에 따른 뒤로가기 정책 갱신
+    /// 기본 구현: no-op
+    @objc func updateBackNavigationForSelectMode() {}
+
     /// Select 모드에서 선택 가능한 에셋인지 판단
     /// 기본값: 삭제대기함 에셋은 선택 불가 (Grid/Album 공통)
     @objc func canSelectAssetInSelectMode(_ assetID: String) -> Bool {
@@ -97,6 +101,9 @@ extension BaseGridViewController {
 
         // 선택 UI 갱신 (전체 리로드 대신 visible 셀만 업데이트)
         updateVisibleSelectionUI()
+
+        // 화면별 뒤로가기 정책 갱신
+        updateBackNavigationForSelectMode()
     }
 
     /// Select 모드 종료
@@ -128,6 +135,9 @@ extension BaseGridViewController {
 
         // 선택 UI 갱신 (전체 리로드 대신 visible 셀만 업데이트)
         updateVisibleSelectionUI()
+
+        // 화면별 뒤로가기 정책 복원
+        updateBackNavigationForSelectMode()
     }
 }
 

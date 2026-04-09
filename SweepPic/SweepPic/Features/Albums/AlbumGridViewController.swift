@@ -234,7 +234,7 @@ final class AlbumGridViewController: BaseGridViewController {
 
         // 뒤로가기 버튼 표시 + pop 액션 설정
         overlay.titleBar.setShowsBackButton(true) { [weak self] in
-            self?.navigationController?.popViewController(animated: true)
+            self?.handleBackNavigation()
         }
 
         // Select 버튼 표시 (Grid와 동일하게 선택 모드 지원)
@@ -268,7 +268,22 @@ final class AlbumGridViewController: BaseGridViewController {
 
     }
 
+    /// Select 모드 상태에 맞춰 앨범 상세의 뒤로가기 정책 갱신
+    override func updateBackNavigationForSelectMode() {
+        navigationItem.hidesBackButton = isSelectMode
+        navigationController?.interactivePopGestureRecognizer?.isEnabled = !isSelectMode
+    }
+
     // MARK: - Album 고유 기능
+
+    /// 선택 모드 중 뒤로가기는 화면 이탈 대신 선택 모드 해제로 처리
+    private func handleBackNavigation() {
+        if isSelectMode {
+            exitSelectMode()
+        } else {
+            navigationController?.popViewController(animated: true)
+        }
+    }
 
     /// 맨 아래로 스크롤 (최신 사진부터 보기)
     private func scrollToBottomIfNeeded() {
