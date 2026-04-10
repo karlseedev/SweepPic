@@ -84,7 +84,7 @@ extension FaceComparisonDelegate {
 /// 유사 사진 뷰어에서 +버튼 탭 시 표시됩니다.
 /// UIPageViewController를 사용하여 인물별 페이지를 스와이프로 전환할 수 있습니다.
 ///
-/// - Note: ComparisonGroup에서 최대 8장까지 표시됩니다.
+/// - Note: ComparisonGroup에서 최대 12장까지 표시됩니다.
 final class FaceComparisonViewController: UIViewController {
 
     // MARK: - Constants
@@ -147,7 +147,8 @@ final class FaceComparisonViewController: UIViewController {
     private let cacheMutator: (any SimilarityCacheMutating)?
 
     /// 동작 모드 (뷰어 또는 FaceScan)
-    private let mode: FaceComparisonMode
+    /// - Note: Extension(+SwipeHint)에서 모드별 분기에 사용하므로 internal
+    let mode: FaceComparisonMode
 
     /// 델리게이트
     weak var delegate: FaceComparisonDelegate?
@@ -520,6 +521,8 @@ final class FaceComparisonViewController: UIViewController {
         let initialPage = PersonPageViewController(personIndex: currentPersonIndex, dataSource: self)
         pageViewController.setViewControllers([initialPage], direction: .forward, animated: false)
 
+        // 스와이프 힌트 화살표 표시 (인물 2명 이상 + 조건 충족 시)
+        showSwipeHintIfNeeded()
     }
 
     // MARK: - UI Updates
@@ -1066,6 +1069,8 @@ extension FaceComparisonViewController: UIPageViewControllerDelegate {
         // 선택 상태 경량 갱신 (prefetch된 페이지의 stale 선택 상태 보정)
         currentPage.refreshSelectionStates()
 
+        // 스와이프 완료 → 힌트 화살표 숨기기 + 경험 기록
+        markSwipeExperienced()
     }
 }
 

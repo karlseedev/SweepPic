@@ -8,7 +8,7 @@
 //  Description:
 //  유사 사진 그룹 관련 모델을 정의합니다.
 //  - SimilarThumbnailGroup: 그리드 테두리/뷰어 +버튼용 그룹 (크기 제한 없음)
-//  - ComparisonGroup: 얼굴 비교 화면용 그룹 (최대 8장)
+//  - ComparisonGroup: 얼굴 비교 화면용 그룹 (최대 12장)
 //
 
 import Foundation
@@ -97,9 +97,9 @@ struct SimilarThumbnailGroup: Equatable, Hashable, Sendable {
 /// 얼굴 비교 화면에서 비교할 사진 집합
 ///
 /// +버튼 탭 시 생성되며, 현재 사진 기준 거리순으로
-/// 최대 8장까지 선택됩니다.
+/// 최대 12장까지 선택됩니다.
 ///
-/// - Note: 최대 8장으로 제한됩니다.
+/// - Note: 최대 12장으로 제한됩니다.
 struct ComparisonGroup: Equatable, Sendable {
 
     // MARK: - Properties
@@ -108,7 +108,7 @@ struct ComparisonGroup: Equatable, Sendable {
     let sourceGroupID: String
 
     /// 비교 대상 사진 ID 목록
-    /// - 최대 8장
+    /// - 최대 12장
     /// - 현재 사진 기준 거리순으로 선택됨
     let selectedAssetIDs: [String]
 
@@ -134,10 +134,10 @@ struct ComparisonGroup: Equatable, Sendable {
     ///
     /// - Parameters:
     ///   - sourceGroupID: 원본 ThumbnailGroup ID
-    ///   - selectedAssetIDs: 비교 대상 사진 ID 목록 (최대 8장)
+    ///   - selectedAssetIDs: 비교 대상 사진 ID 목록 (최대 12장)
     ///   - personIndex: 비교 대상 인물 번호
     nonisolated init(sourceGroupID: String, selectedAssetIDs: [String], personIndex: Int) {
-        // 최대 8장으로 제한
+        // 최대 12장으로 제한
         self.sourceGroupID = sourceGroupID
         self.selectedAssetIDs = Array(selectedAssetIDs.prefix(SimilarityConstants.maxComparisonGroupSize))
         self.personIndex = personIndex
@@ -147,7 +147,7 @@ struct ComparisonGroup: Equatable, Sendable {
 
     /// ThumbnailGroup과 현재 사진에서 ComparisonGroup을 생성합니다.
     ///
-    /// 현재 사진을 기준으로 거리순으로 최대 8장을 선택합니다.
+    /// 현재 사진을 기준으로 거리순으로 최대 12장을 선택합니다.
     /// 동일 거리일 경우 앞쪽(인덱스가 작은) 사진이 우선됩니다.
     ///
     /// - Parameters:
@@ -184,7 +184,7 @@ struct ComparisonGroup: Equatable, Sendable {
             }
             .map { $0.element }
 
-        // 최대 8장 선택 후 원래 순서대로 재정렬
+        // 최대 12장 선택 후 원래 순서대로 재정렬
         let selected = Array(sortedByDistance.prefix(SimilarityConstants.maxComparisonGroupSize))
         let orderedSelected = members.filter { selected.contains($0) }
 
