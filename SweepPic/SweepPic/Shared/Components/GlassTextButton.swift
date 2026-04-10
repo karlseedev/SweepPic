@@ -271,6 +271,14 @@ class GlassTextButton: UIButton {
         glassView.backgroundColor = color
     }
 
+    /// 눌림 애니메이션/변형을 즉시 원상복구
+    /// 버튼 역할이 바뀌는 순간 이전 interaction 상태가 남지 않도록 사용
+    func resetInteractionState() {
+        guard !glassViewSetupDeferred else { return }
+        glassView.layer.removeAllAnimations()
+        glassView.transform = .identity
+    }
+
     // MARK: - Glass Effect Lazy Setup (Phase 6)
 
     /// Glass 효과 생성 (보일 때 호출)
