@@ -57,13 +57,10 @@ final class AdManager: NSObject, AdManagerProtocol {
 
     static let shared = AdManager()
 
-    // MARK: - Ad Unit IDs (테스트용 — 출시 시 실제 ID로 교체)
+    // MARK: - Ad Unit IDs
 
-    /// 리워드 광고 테스트 ID
     static let rewardedAdUnitID = "ca-app-pub-3940256099942544/1712485313"
-    /// 전면 광고 테스트 ID
     static let interstitialAdUnitID = "ca-app-pub-3940256099942544/4411468910"
-    /// 배너 광고 테스트 ID
     static let bannerAdUnitID = "ca-app-pub-3940256099942544/2435281174"
 
     // MARK: - Properties
@@ -113,6 +110,13 @@ final class AdManager: NSObject, AdManagerProtocol {
 
         // 4+ 연령 등급 앱 → 전체이용가(G) 광고만 허용
         GADMobileAds.sharedInstance().requestConfiguration.maxAdContentRating = .general
+
+#if DEBUG
+        // Add physical device IDs from the Xcode console to force test ads in debug builds.
+        GADMobileAds.sharedInstance().requestConfiguration.testDeviceIdentifiers = [
+            // "YOUR_TEST_DEVICE_ID",
+        ]
+#endif
 
         GADMobileAds.sharedInstance().start { [weak self] status in
             Logger.app.debug("AdManager: SDK 초기화 완료 — \(status.adapterStatusesByClassName)")

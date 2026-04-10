@@ -517,6 +517,7 @@ final class FloatingTitleBar: UIView {
         rightButtonAction = nil
 
         // 액션 복원
+        selectButton.removeTarget(self, action: #selector(selectButtonTapped), for: .touchUpInside)
         selectButton.removeTarget(self, action: #selector(rightButtonTapped), for: .touchUpInside)
         selectButton.addTarget(self, action: #selector(selectButtonTapped), for: .touchUpInside)
     }
@@ -575,6 +576,11 @@ final class FloatingTitleBar: UIView {
 
         isSelectButtonHidden = false  // 프로퍼티를 통해 설정 (다른 탭에서 숨겼을 수 있음)
         rightButtonAction = firstAction
+
+        // Grid의 간편정리 버튼이 남긴 UIMenu 상태를 제거하지 않으면
+        // 휴지통의 "선택" 버튼이 탭 액션 대신 풀다운 메뉴로 동작할 수 있다.
+        selectButton.menu = nil
+        selectButton.showsMenuAsPrimaryAction = false
 
         // 액션 연결
         selectButton.removeTarget(self, action: #selector(selectButtonTapped), for: .touchUpInside)

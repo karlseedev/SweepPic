@@ -258,6 +258,7 @@
 |---|---|---|---|---|
 | 96 | 무료 삭제 한도 부족 | Not Enough\nFree Deletions Left | 제목 | |
 | 97 | 삭제할 사진 {trashCount}장\n무료 삭제 가능 {remaining}장 | {trashCount} photos to delete\n{remaining} free deletions left | info 라벨 | |
+| 97-1 | 광고 1회당 삭제 한도 {bonusPerAd}장 추가\n(일 최대 {maxDailyRewards}회) | Each ad adds {bonusPerAd} more deletions\n(up to {maxDailyRewards} ads a day) | info 보조 라벨 | |
 | 98 | 광고 {adsNeeded}회 보고 전체 삭제 | Watch {adsNeeded} Ads Delete All Photos | 광고 버튼 | |
 | 99 | Pro 멤버십으로 무제한 삭제 | Go Unlimited with Pro | Pro 버튼 | |
 | 100 | 닫기 | Close | 닫기 버튼 | |
@@ -274,7 +275,7 @@
 
 | # | 한국어 (현재) | 영어 (제안) | 용도 | 확인 |
 |---|---|---|---|---|
-| 109 | 무료 삭제 한도 | Free Deletion Limit | 타이틀 | |
+| 109 | 무료 삭제 한도 | Daily Free Deletions | 타이틀 | |
 | 110 | {remaining}/{total}장 남음 | {remaining}/{total} remaining | 카운트 라벨 | |
 | 111 | 광고 보고 +10장 추가 | Watch Ad for 10 More | 광고 버튼 | |
 | 112 | Pro 멤버십으로 무제한 삭제 | Go Unlimited with Pro | Pro 버튼 | |
@@ -325,16 +326,16 @@
 | 142 | {N}일 무료체험 | {N}-day free trial | 체험 기간 (일) | |
 | 143 | {N}개월 무료체험 | {N}-month free trial | 체험 기간 (월) | |
 | 144 | {N}년 무료체험 | {N}-year free trial | 체험 기간 (년) | |
-| 145 | 일일 삭제 | Daily Deletes | 비교표 feature | |
+| 145 | 삭제 한도 | Deletion Limit | 비교표 feature | |
 | 146 | 10장 | 10 photos | 비교표 (무료) | |
 | 147 | 무제한 | Unlimited | 비교표 (Pro) | |
-| 148 | 광고 | Ads | 비교표 feature | |
-| 149 | 있음 | Shown | 비교표 (무료) | |
-| 150 | 없음 | None | 비교표 (Pro) | |
+| 148 | 보상 광고 | Reward Ads | 비교표 feature | |
+| 149 | 필요 | Required | 비교표 (무료) | |
+| 150 | 불필요 | None | 비교표 (Pro) | |
 | 151 | 인물사진 비교정리 | Face Compare | 비교표 feature | |
 | 152 | 광고포함 | With Ads | 비교표 (무료) | |
 | 153 | 광고없음 | Ad-Free | 비교표 (Pro) | |
-| 154 | 저품질 사진 자동정리 | Auto Cleanup | 비교표 feature | |
+| 154 | 저품질 사진 정리 | Auto Cleanup | 비교표 feature | |
 | 155 | 상품 정보를 불러올 수 없습니다. 네트워크 연결을 확인해주세요. | Unable to load product info. Please check your network connection. | 에러 메시지 | |
 
 ### PaywallPlanTabView
@@ -639,7 +640,7 @@
 
 | # | 한국어 (현재) | 영어 (제안) | 용도 | 확인 |
 |---|---|---|---|---|
-| 320 | 인물사진 비교정리 - 인물 {N} | Face Compare - Person {N} | 네비게이션 타이틀 | |
+| 320 | 인물 {total}명 비교정리 - 인물 {current} | Face Compare - Person {current}/{total} | 네비게이션 타이틀 (최종 표시 기준, 강조 위치는 locale별 상이) | |
 | 321 | 취소 | Cancel | 취소 버튼 | |
 | 322 | 항목 선택 | Select Items | 선택 개수 라벨 | |
 | 323 | {count}개 선택됨 | {count} Selected | 선택 개수 라벨 (동적) (plural 처리 필요 - 1 Selected / N Selected) | |

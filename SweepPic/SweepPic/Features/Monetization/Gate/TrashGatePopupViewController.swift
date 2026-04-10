@@ -106,6 +106,17 @@ final class TrashGatePopupViewController: UIViewController {
         return label
     }()
 
+    /// 보조 안내 라벨 — 광고 1회당 추가 한도 안내
+    private let infoFootnoteLabel: UILabel = {
+        let label = UILabel()
+        label.font = .systemFont(ofSize: 13, weight: .regular)
+        label.textColor = UIColor.white.withAlphaComponent(0.6)
+        label.textAlignment = .center
+        label.numberOfLines = 0
+        label.translatesAutoresizingMaskIntoConstraints = false
+        return label
+    }()
+
     /// 광고 버튼 — 반투명 흰색 배경 + 흰색 텍스트
     private let adButton: UIButton = {
         let button = UIButton(type: .system)
@@ -293,7 +304,7 @@ final class TrashGatePopupViewController: UIViewController {
 
         // 카드 내부 스택뷰 — contentView에 추가 (블러 위)
         let stackView = UIStackView(arrangedSubviews: [
-            titleLabel, infoLabel,
+            titleLabel, infoLabel, infoFootnoteLabel,
             goldenMomentLabel, offlineLabel,
             adButton, proButton, closeButton,
             referralPromoLabel, referralButton, referralSubtitleLabel
@@ -302,6 +313,9 @@ final class TrashGatePopupViewController: UIViewController {
         stackView.spacing = 16
         stackView.alignment = .fill
         stackView.translatesAutoresizingMaskIntoConstraints = false
+
+        // 본문 2줄과 보조 안내 간격은 일반 줄간격보다 크게 유지
+        stackView.setCustomSpacing(10, after: infoLabel)
 
         // 버튼 영역 전 여유 간격
         stackView.setCustomSpacing(28, after: offlineLabel)
@@ -401,6 +415,11 @@ final class TrashGatePopupViewController: UIViewController {
     /// 데이터 기반 콘텐츠 구성
     private func configureContent() {
         infoLabel.text = String(localized: "monetization.gate.info \(trashCount) \(remainingFreeDeletes)")
+        infoFootnoteLabel.attributedText = makeInfoFootnoteText(
+            text: String(
+                localized: "monetization.gate.infoFootnote \(UsageLimit.rewardBonusPerAd) \(UsageLimit.maxDailyRewards)"
+            )
+        )
 
         let isRewardExhausted = remainingRewards <= 0
 
@@ -422,6 +441,27 @@ final class TrashGatePopupViewController: UIViewController {
         } else {
             adButton.isHidden = true
         }
+    }
+
+    private func makeInfoFootnoteText(text: String) -> NSAttributedString {
+        let attributed = NSMutableAttributedString(
+            string: text,
+            attributes: [
+                .font: UIFont.systemFont(ofSize: 13, weight: .regular),
+                .foregroundColor: UIColor.white.withAlphaComponent(0.6)
+            ]
+        )
+
+        let firstLine = text.components(separatedBy: "\n").first ?? text
+        attributed.addAttributes(
+            [
+                .font: UIFont.systemFont(ofSize: 13, weight: .semibold),
+                .foregroundColor: UIColor.white.withAlphaComponent(0.9)
+            ],
+            range: NSRange(location: 0, length: firstLine.count)
+        )
+
+        return attributed
     }
 
     /// 골든 모먼트 UI 구성 (FR-014)
@@ -535,12 +575,16 @@ final class TrashGatePopupViewController: UIViewController {
         cardView.accessibilityLabel = String(localized: "monetization.gate.a11y.card")
         cardView.isAccessibilityElement = false
         cardView.accessibilityElements = [
-            titleLabel, infoLabel, goldenMomentLabel,
+            titleLabel, infoLabel, infoFootnoteLabel, goldenMomentLabel,
             offlineLabel, adButton, proButton, closeButton,
             referralPromoLabel, referralButton, referralSubtitleLabel
         ]
         titleLabel.accessibilityTraits = .header
         infoLabel.accessibilityLabel = String(localized: "monetization.gate.a11y.info \(trashCount) \(remainingFreeDeletes)")
+        infoFootnoteLabel.accessibilityLabel = String(
+            localized: "monetization.gate.infoFootnote \(UsageLimit.rewardBonusPerAd) \(UsageLimit.maxDailyRewards)"
+        )
+            .replacingOccurrences(of: "\n", with: " ")
         adButton.accessibilityLabel = String(localized: "monetization.gate.a11y.adButton")
         adButton.accessibilityHint = String(localized: "monetization.gate.a11y.adHint")
         proButton.accessibilityLabel = String(localized: "monetization.gate.proButton")

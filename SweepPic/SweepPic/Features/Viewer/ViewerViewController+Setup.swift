@@ -51,11 +51,7 @@ extension ViewerViewController {
             setupBackButton()
         }
 
-        // 얼굴 감지 디버그 버튼 (DEBUG 빌드만)
-        #if DEBUG
-        setupFaceDebugButton()
-        setupAssetIDLabel()
-        #endif
+        // 뷰어 디버그 UI(fd 버튼, asset ID 라벨)는 일단 비노출 유지
 
     }
 

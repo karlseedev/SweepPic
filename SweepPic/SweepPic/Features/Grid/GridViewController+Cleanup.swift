@@ -73,8 +73,6 @@ extension GridViewController {
                          image: UIImage(systemName: "checkmark.circle")) { [weak self] _ in
                     self?.selectButtonTapped()
                 },
-                self.makeDebugResetMenu(),
-                self.makeDebugAdTestMenu(),
             ])
         )
 
@@ -120,8 +118,6 @@ extension GridViewController {
                      image: UIImage(systemName: "checkmark.circle")) { [weak self] _ in
                 self?.selectButtonTapped()
             },
-            self.makeDebugResetMenu(),
-            self.makeDebugAdTestMenu(),
         ]))
 
         // 버튼 활성화 상태 초기화

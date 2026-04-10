@@ -295,6 +295,8 @@ final class FaceComparisonTitleBar: UIView {
         label.font = .systemFont(ofSize: 17, weight: .semibold)
         label.textColor = .white
         label.textAlignment = .center
+        label.numberOfLines = 1
+        label.lineBreakMode = .byTruncatingTail
         label.translatesAutoresizingMaskIntoConstraints = false
         return label
     }()
@@ -352,8 +354,10 @@ final class FaceComparisonTitleBar: UIView {
             closeButton.heightAnchor.constraint(equalToConstant: 44),
 
             // titleLabel: 중앙 정렬
+            titleLabel.leadingAnchor.constraint(greaterThanOrEqualTo: closeButton.trailingAnchor, constant: 8),
             titleLabel.centerXAnchor.constraint(equalTo: contentView.centerXAnchor),
             titleLabel.centerYAnchor.constraint(equalTo: contentView.centerYAnchor),
+            titleLabel.trailingAnchor.constraint(lessThanOrEqualTo: cycleButton.leadingAnchor, constant: -8),
 
             // cycleButton: 우측 정렬, 44×44 (intrinsicContentSize)
             cycleButton.trailingAnchor.constraint(equalTo: contentView.trailingAnchor),
@@ -374,6 +378,10 @@ final class FaceComparisonTitleBar: UIView {
 
     func setTitle(_ title: String) {
         titleLabel.text = title
+    }
+
+    func setAttributedTitle(_ title: NSAttributedString) {
+        titleLabel.attributedText = title
     }
 
     /// 순환 버튼 활성화 상태 설정

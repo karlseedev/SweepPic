@@ -3371,13 +3371,30 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Apply changes?"
+            "value" : "Stop organizing and leave?"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "변경사항을 적용하시겠습니까?"
+            "value" : "정리를 그만두고 나가시겠어요?"
+          }
+        }
+      }
+    },
+    "faceComparison.leave" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Leave"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "나가기"
           }
         }
       }
@@ -3399,19 +3416,70 @@
         }
       }
     },
-    "faceComparison.title %lld" : {
+    "faceComparison.title.baseKorean %lld" : {
       "extractionState" : "manual",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Face Compare - Person %lld"
+            "value" : " - Person %lld"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "인물사진 비교정리 - 인물 %lld"
+            "value" : " 비교정리 - 인물 %lld"
+          }
+        }
+      }
+    },
+    "faceComparison.title.basePlain" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Face Compare - "
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Face Compare - "
+          }
+        }
+      }
+    },
+    "faceComparison.title.highlightEnglish %lld %lld" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Person %1$lld/%2$lld"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Person %1$lld/%2$lld"
+          }
+        }
+      }
+    },
+    "faceComparison.title.highlightKorean %lld" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld People"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "인물 %lld명"
           }
         }
       }
@@ -5016,6 +5084,23 @@
         }
       }
     },
+    "monetization.gate.infoFootnote %lld %lld" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Each ad adds %1$lld more deletions\n(up to %2$lld ads a day)"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "광고 1회당 삭제 한도 %1$lld장 추가\n(일 최대 %2$lld회)"
+          }
+        }
+      }
+    },
     "monetization.gate.inviteButton" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -5328,7 +5413,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Free Deletion Limit"
+            "value" : "Daily Free Deletions"
           }
         },
         "ko" : {
@@ -5980,7 +6065,7 @@
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "없음"
+            "value" : "불필요"
           }
         }
       }
@@ -5991,13 +6076,13 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Shown"
+            "value" : "Required"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "있음"
+            "value" : "필요"
           }
         }
       }
@@ -6008,13 +6093,13 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Ads"
+            "value" : "Reward Ads"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "광고"
+            "value" : "보상 광고"
           }
         }
       }
@@ -6025,13 +6110,13 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Daily Deletes"
+            "value" : "Deletion Limit"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "일일 삭제"
+            "value" : "삭제 한도"
           }
         }
       }
@@ -6065,7 +6150,7 @@
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "저품질 사진 자동정리"
+            "value" : "저품질 사진 정리"
           }
         }
       }

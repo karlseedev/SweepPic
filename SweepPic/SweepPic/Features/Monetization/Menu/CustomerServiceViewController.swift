@@ -5,13 +5,11 @@
 //  고객센터 서브메뉴 빌더 + 액션 핸들러 (FR-043, T048)
 //
 //  ellipsis 메뉴의 "고객센터 ▸" 서브메뉴를 생성하고,
-//  각 액션(피드백/FAQ/이용약관/처리방침/사업자정보)을 처리한다.
+//  각 액션(피드백/FAQ/이용약관/처리방침)을 처리한다.
 //
 //  - 피드백: MFMailComposeViewController (T051)
 //  - FAQ: FAQViewController push (T049)
 //  - 이용약관/처리방침: SFSafariViewController (T052)
-//  - 사업자 정보: BusinessInfoViewController push (T050)
-//
 
 import UIKit
 import MessageUI
@@ -42,11 +40,6 @@ final class CustomerServiceViewController: NSObject {
 
     /// 개인정보처리방침 URL (출시 전 실제 URL로 교체)
     private static let privacyURL = URL(string: "https://sweeppic.app/privacy")!
-
-    /// 사업자 정보는 한국어 locale에서만 노출
-    private static var shouldShowBusinessInfo: Bool {
-        Locale.preferredLanguages.first?.hasPrefix("ko") == true
-    }
 
     // MARK: - Shared Instance (MFMailComposeViewControllerDelegate 유지용)
 
@@ -87,21 +80,10 @@ final class CustomerServiceViewController: NSObject {
             handlePrivacy(from: presenter)
         }
 
-        var children = [feedbackAction, faqAction, termsAction, privacyAction]
-        if shouldShowBusinessInfo {
-            let businessInfoAction = UIAction(
-                title: "사업자 정보",
-                image: UIImage(systemName: "building.2")
-            ) { _ in
-                handleBusinessInfo(from: presenter)
-            }
-            children.append(businessInfoAction)
-        }
-
         return UIMenu(
             title: String(localized: "monetization.support.title"),
             image: UIImage(systemName: "questionmark.circle"),
-            children: children
+            children: [feedbackAction, faqAction, privacyAction, termsAction]
         )
     }
 
@@ -148,13 +130,6 @@ final class CustomerServiceViewController: NSObject {
         let safariVC = SFSafariViewController(url: privacyURL)
         presenter.present(safariVC, animated: true)
         Logger.app.debug("CustomerService: 개인정보처리방침 인앱 브라우저")
-    }
-
-    /// 사업자 정보 화면 push (T050)
-    private static func handleBusinessInfo(from presenter: UIViewController) {
-        let bizVC = BusinessInfoViewController()
-        presenter.navigationController?.pushViewController(bizVC, animated: true)
-        Logger.app.debug("CustomerService: 사업자 정보 화면 push")
     }
 
     // MARK: - Device Info

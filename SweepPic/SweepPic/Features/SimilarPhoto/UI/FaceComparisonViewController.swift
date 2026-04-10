@@ -95,6 +95,9 @@ final class FaceComparisonViewController: UIViewController {
     /// 하단 그라데이션 확장 높이
     private static let bottomBarGradientExtension: CGFloat = 15
 
+    /// 타이틀 강조 색상
+    private static let titleHighlightColor = UIColor(red: 1.0, green: 234.0 / 255.0, blue: 0, alpha: 1.0)
+
     // MARK: - Properties
 
     /// 비교 그룹 (현재 표시 중인 인물 기준)
@@ -243,6 +246,9 @@ final class FaceComparisonViewController: UIViewController {
     /// 커스텀 타이틀바 (iOS 16~25)
     private var customTitleBar: FaceComparisonTitleBar?
 
+    /// 시스템 네비게이션 타이틀 라벨 (iOS 26+)
+    private var navigationTitleLabel: UILabel?
+
     // MARK: - Initialization
 
     /// FaceComparisonViewController를 생성합니다.
@@ -378,6 +384,17 @@ final class FaceComparisonViewController: UIViewController {
     /// 시스템 네비게이션바 설정 (iOS 26+)
     @available(iOS 26.0, *)
     private func setupSystemNavigationBar() {
+        let titleLabel = navigationTitleLabel ?? {
+            let label = UILabel()
+            label.textAlignment = .center
+            label.numberOfLines = 1
+            label.lineBreakMode = .byTruncatingTail
+            label.adjustsFontSizeToFitWidth = true
+            label.minimumScaleFactor = 0.8
+            navigationTitleLabel = label
+            return label
+        }()
+        navigationItem.titleView = titleLabel
         updateNavigationTitle()
 
         // 왼쪽: 닫기 버튼
@@ -507,21 +524,103 @@ final class FaceComparisonViewController: UIViewController {
 
     // MARK: - UI Updates
 
+    /// 강조되지 않는 타이틀 부분
+    private var comparisonTitleBaseText: String {
+        let currentPersonNumber = currentPersonArrayIndex + 1
+        if usesKoreanTitleLayout {
+            return String(localized: "faceComparison.title.baseKorean \(currentPersonNumber)")
+        }
+        return String(localized: "faceComparison.title.basePlain")
+    }
+
+    /// 강조되는 타이틀 부분
+    private var comparisonTitleHighlightedText: String {
+        let totalPersonCount = max(validPersonIndices.count, 1)
+        let currentPersonNumber = currentPersonArrayIndex + 1
+        if usesKoreanTitleLayout {
+            return String(localized: "faceComparison.title.highlightKorean \(totalPersonCount)")
+        }
+        return String(localized: "faceComparison.title.highlightEnglish \(currentPersonNumber) \(totalPersonCount)")
+    }
+
+    /// 한국어 타이틀 레이아웃 사용 여부
+    private var usesKoreanTitleLayout: Bool {
+        let languageCode = Bundle.main.preferredLocalizations.first?
+            .split(separator: "-")
+            .first?
+            .lowercased() ?? "en"
+        return languageCode == "ko"
+    }
+
+    /// 현재 화면 타이틀
+    private var comparisonTitle: String {
+        if usesKoreanTitleLayout {
+            return comparisonTitleHighlightedText + comparisonTitleBaseText
+        }
+        return comparisonTitleBaseText + comparisonTitleHighlightedText
+    }
+
+    /// 현재 화면 강조 타이틀
+    private var comparisonAttributedTitle: NSAttributedString {
+        let attributed = NSMutableAttributedString()
+        let segments: [(text: String, attributes: [NSAttributedString.Key: Any])]
+        if usesKoreanTitleLayout {
+            segments = [
+                (
+                    text: comparisonTitleHighlightedText,
+                    attributes: [
+                        .font: UIFont.systemFont(ofSize: 17, weight: .heavy),
+                        .foregroundColor: Self.titleHighlightColor
+                    ]
+                ),
+                (
+                    text: comparisonTitleBaseText,
+                    attributes: [
+                        .font: UIFont.systemFont(ofSize: 17, weight: .regular),
+                        .foregroundColor: UIColor.white
+                    ]
+                )
+            ]
+        } else {
+            segments = [
+                (
+                    text: comparisonTitleBaseText,
+                    attributes: [
+                        .font: UIFont.systemFont(ofSize: 17, weight: .regular),
+                        .foregroundColor: UIColor.white
+                    ]
+                ),
+                (
+                    text: comparisonTitleHighlightedText,
+                    attributes: [
+                        .font: UIFont.systemFont(ofSize: 17, weight: .heavy),
+                        .foregroundColor: Self.titleHighlightColor
+                    ]
+                )
+            ]
+        }
+
+        for segment in segments {
+            attributed.append(NSAttributedString(string: segment.text, attributes: segment.attributes))
+        }
+        return attributed
+    }
+
     /// 타이틀바 업데이트
     private func updateTitleBar() {
-        let title = String(localized: "faceComparison.title \(currentPersonArrayIndex + 1)")
-
         if #available(iOS 26.0, *) {
-            self.title = title
+            self.title = comparisonTitle
+            navigationTitleLabel?.attributedText = comparisonAttributedTitle
+            navigationTitleLabel?.sizeToFit()
         } else {
-            customTitleBar?.setTitle(title)
+            customTitleBar?.setAttributedTitle(comparisonAttributedTitle)
         }
     }
 
     /// 네비게이션 타이틀 업데이트 (iOS 26+)
     @available(iOS 26.0, *)
     private func updateNavigationTitle() {
-        self.title = String(localized: "faceComparison.title \(currentPersonIndex)")
+        updateTitleBar()
     }
 
     /// 선택 개수 업데이트
@@ -606,32 +705,7 @@ final class FaceComparisonViewController: UIViewController {
 
     /// Cancel 버튼 탭
     @objc private func cancelButtonTapped() {
-        switch mode {
-        case .viewer:
-            // 뷰어 동작: 선택이 있으면 확인 팝업, 없으면 바로 닫기
-            if !selectedAssetIDs.isEmpty {
-                showViewerCancelAlert()
-            } else {
-                dismiss(animated: true) { [weak self] in
-                    guard let self = self else { return }
-                    self.delegate?.faceComparisonViewControllerDidClose(self)
-                }
-            }
-
-        case .faceScan(let initialSelected):
-            // FaceScan 모드: 변동사항 확인
-            let hasChanges = selectedAssetIDs != initialSelected
-            if hasChanges {
-                // 팝업: "변경사항을 적용하시겠습니까?"
-                showChangesAlert(initialSelected: initialSelected)
-            } else {
-                // 변동 없으면 그냥 닫기
-                dismiss(animated: true) { [weak self] in
-                    guard let self = self else { return }
-                    self.delegate?.faceComparisonViewControllerDidClose(self)
-                }
-            }
-        }
+        showCloseConfirmationAlert()
     }
 
     /// Delete 버튼 탭
@@ -696,43 +770,21 @@ final class FaceComparisonViewController: UIViewController {
         delegate?.faceComparisonViewController(self, didApplyChanges: currentSelected)
     }
 
-    /// .viewer 모드: "선택을 취소하시겠습니까?" 팝업
-    private func showViewerCancelAlert() {
+    /// 닫기 확인 팝업
+    /// 확인 시 현재 변경사항을 버리고 화면을 닫는다.
+    private func showCloseConfirmationAlert() {
         let alert = UIAlertController(
             title: nil,
             message: String(localized: "faceComparison.applyAlert"),
             preferredStyle: .alert
         )
         alert.addAction(UIAlertAction(title: String(localized: "common.cancel"), style: .cancel))
-        alert.addAction(UIAlertAction(title: String(localized: "common.ok"), style: .destructive) { [weak self] _ in
-            guard let self = self else { return }
-            self.selectedAssetIDs.removeAll()
-            self.dismiss(animated: true) {
-                self.delegate?.faceComparisonViewControllerDidClose(self)
-            }
-        })
-        present(alert, animated: true)
-    }
-
-    /// .faceScan 모드: "변경사항을 적용하시겠습니까?" 팝업
-    private func showChangesAlert(initialSelected: Set<String>) {
-        let alert = UIAlertController(
-            title: nil,
-            message: String(localized: "faceComparison.applyAlert"),
-            preferredStyle: .alert
-        )
-
-        alert.addAction(UIAlertAction(title: String(localized: "faceComparison.apply"), style: .default) { [weak self] _ in
-            self?.applyDiffAndDismiss(initialSelected: initialSelected)
-        })
-
-        alert.addAction(UIAlertAction(title: String(localized: "common.cancel"), style: .cancel) { [weak self] _ in
+        alert.addAction(UIAlertAction(title: String(localized: "faceComparison.leave"), style: .destructive) { [weak self] _ in
             guard let self = self else { return }
             self.dismiss(animated: true) {
                 self.delegate?.faceComparisonViewControllerDidClose(self)
             }
         })
-
         present(alert, animated: true)
     }
 
