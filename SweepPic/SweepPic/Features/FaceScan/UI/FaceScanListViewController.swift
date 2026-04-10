@@ -317,7 +317,7 @@ final class FaceScanListViewController: UIViewController, BarsVisibilityControll
         let titleLabel = UILabel()
         titleLabel.font = .systemFont(ofSize: 17, weight: .semibold)
         titleLabel.textColor = .white
-        titleLabel.textAlignment = .center
+        titleLabel.textAlignment = .left
         titleLabel.text = String(localized: "faceScan.list.title")
         titleLabel.translatesAutoresizingMaskIntoConstraints = false
         header.addSubview(titleLabel)
@@ -357,10 +357,9 @@ final class FaceScanListViewController: UIViewController, BarsVisibilityControll
                 equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 29
             ),
 
-            // 타이틀 (centerX는 공간 부족 시 양보 가능하도록 750)
-            { let c = titleLabel.centerXAnchor.constraint(equalTo: header.centerXAnchor); c.priority = .defaultHigh; return c }(),
+            // 타이틀 (좌측 정렬 — 닫기 버튼 우측에 배치)
+            titleLabel.leadingAnchor.constraint(equalTo: backButton.trailingAnchor, constant: 8),
             titleLabel.centerYAnchor.constraint(equalTo: backButton.centerYAnchor),
-            titleLabel.leadingAnchor.constraint(greaterThanOrEqualTo: backButton.trailingAnchor, constant: 8),
             titleLabel.trailingAnchor.constraint(lessThanOrEqualTo: nextButton.leadingAnchor, constant: -8),
 
             // "다음 분석" 우측 버튼

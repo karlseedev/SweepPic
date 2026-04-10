@@ -3575,13 +3575,13 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Next Scan"
+            "value" : "Continue"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "다음 분석"
+            "value" : "이어서 분석"
           }
         }
       }

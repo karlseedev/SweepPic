@@ -704,8 +704,16 @@ final class FaceComparisonViewController: UIViewController {
     // MARK: - Actions
 
     /// Cancel 버튼 탭
+    /// 선택된 항목이 없으면 바로 닫고, 있으면 확인 팝업을 표시한다.
     @objc private func cancelButtonTapped() {
-        showCloseConfirmationAlert()
+        if selectedAssetIDs.isEmpty {
+            dismiss(animated: true) { [weak self] in
+                guard let self = self else { return }
+                self.delegate?.faceComparisonViewControllerDidClose(self)
+            }
+        } else {
+            showCloseConfirmationAlert()
+        }
     }
 
     /// Delete 버튼 탭
