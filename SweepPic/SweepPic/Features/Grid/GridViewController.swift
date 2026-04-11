@@ -875,6 +875,16 @@ extension GridViewController {
             return
         }
 
+        // A-1 인터셉트: 사진 탭 시 뷰어 진입 차단 → A-1 즉시 표시
+        // (탭바/상단 버튼 인터셉트와 동일 패턴)
+        if CoachMarkType.gridSwipeDelete.hasBeenShown
+            && !CoachMarkType.firstDeleteGuide.hasBeenShown
+            && !CoachMarkManager.shared.isShowing {
+            cancelCoachMarkA1Timer()
+            showCoachMarkA1()
+            return
+        }
+
         // [Timing] 줌 전환 시작 전 랙 측정
         let t0 = CACurrentMediaTime()
 
