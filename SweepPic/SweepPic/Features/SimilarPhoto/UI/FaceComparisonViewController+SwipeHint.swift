@@ -22,8 +22,6 @@
 
 import UIKit
 import ObjectiveC
-import OSLog
-import AppCore
 
 // MARK: - Associated Object Keys
 
@@ -77,48 +75,27 @@ extension FaceComparisonViewController {
     /// 스와이프 힌트 화살표 표시 (조건 충족 시)
     /// setupInitialPageIfReady()에서 호출됩니다.
     func showSwipeHintIfNeeded() {
-        // ⚠️ 임시 초기화 (테스트 후 제거)
-        UserDefaults.standard.removeObject(forKey: SwipeHintDefaults.hasEverSwipedKey)
-        UserDefaults.standard.removeObject(forKey: SwipeHintDefaults.postSwipeHintCountKey)
-
-        // ⚠️ 임시 로그 (테스트 후 제거)
-        Logger.app.debug("[SwipeHint] showSwipeHintIfNeeded 호출됨, swipeHintLeft=\(self.swipeHintLeft == nil ? "nil" : "exists"), personCount=\(self.validPersonIndices.count), isFaceScan=\(self.mode.isFaceScan), hasEverSwiped=\(SwipeHintDefaults.hasEverSwiped), postCount=\(SwipeHintDefaults.postSwipeHintCount)")
-
         // 멱등성: 이미 표시 중이면 중복 생성하지 않음
-        guard swipeHintLeft == nil else {
-            Logger.app.debug("[SwipeHint] ❌ 이미 표시 중 → return")
-            return
-        }
+        guard swipeHintLeft == nil else { return }
 
         // 조건 1: 인물 2명 이상
-        guard validPersonIndices.count > 1 else {
-            Logger.app.debug("[SwipeHint] ❌ 인물 1명 → return")
-            return
-        }
+        guard validPersonIndices.count > 1 else { return }
 
         // 조건 2: viewer 모드에서는 C-3 코치마크 완료 후에만
         // (faceScan 모드에서는 C-3 게이트 없음)
         if !mode.isFaceScan {
-            guard CoachMarkType.faceComparisonGuide.hasBeenShown else {
-                Logger.app.debug("[SwipeHint] ❌ C-3 미완료 (viewer) → return")
-                return
-            }
+            guard CoachMarkType.faceComparisonGuide.hasBeenShown else { return }
         }
 
         // 조건 3-4: 스와이프 경험 기반 판단
         let hasEverSwiped = SwipeHintDefaults.hasEverSwiped
         if hasEverSwiped {
             // 스와이프 경험 후: 2회까지만 노출
-            guard SwipeHintDefaults.postSwipeHintCount < 2 else {
-                Logger.app.debug("[SwipeHint] ❌ 노출 횟수 소진 → return")
-                return
-            }
+            guard SwipeHintDefaults.postSwipeHintCount < 2 else { return }
             // count++는 실제 힌트 표시 직후 1회만
             SwipeHintDefaults.incrementPostSwipeHintCount()
         }
         // hasEverSwiped == false: 무조건 노출 (count 무시)
-
-        Logger.app.debug("[SwipeHint] ✅ 화살표 표시")
 
         // 화살표 생성 및 표시
         let left = makeHintArrow(systemName: "chevron.left.circle.fill")
@@ -189,21 +166,28 @@ extension FaceComparisonViewController {
         let image = UIImage(systemName: systemName, withConfiguration: config)
 
         let imageView = UIImageView(image: image)
-        imageView.tintColor = UIColor.white.withAlphaComponent(0.9)
+        imageView.tintColor = .white
         imageView.translatesAutoresizingMaskIntoConstraints = false
         imageView.isUserInteractionEnabled = false
+
+        // 연한 그림자
+        imageView.layer.shadowColor = UIColor.black.cgColor
+        imageView.layer.shadowOpacity = 0.3
+        imageView.layer.shadowOffset = .zero
+        imageView.layer.shadowRadius = 4
+
         return imageView
     }
 
-    /// 펄스 애니메이션 시작 (alpha 0.9 ↔ 0.5 반복)
+    /// 펄스 애니메이션 시작 (alpha 1.0 ↔ 0.6 반복)
     private func startPulseAnimation(for view: UIView) {
-        view.alpha = 0.9
+        view.alpha = 1.0
         UIView.animate(
             withDuration: 1.2,
             delay: 0,
             options: [.repeat, .autoreverse, .curveEaseInOut],
             animations: {
-                view.alpha = 0.5
+                view.alpha = 0.6
             }
         )
     }
