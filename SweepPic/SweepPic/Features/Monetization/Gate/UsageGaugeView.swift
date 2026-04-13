@@ -69,7 +69,7 @@ final class UsageGaugeView: UIView {
 
     /// 물음표 아이콘 — 탭하면 상세 팝업 (시각적 어포던스)
     private let helpIcon: UIImageView = {
-        let config = UIImage.SymbolConfiguration(pointSize: 14, weight: .medium)
+        let config = UIImage.SymbolConfiguration(pointSize: 14, weight: .regular)
         let image = UIImage(systemName: "questionmark.circle", withConfiguration: config)
         let iv = UIImageView(image: image)
         iv.tintColor = UIColor.white.withAlphaComponent(0.6)
