@@ -96,13 +96,8 @@ extension PreviewGridViewController {
     /// - 3장: item 1 (가운데)
     /// - 4장+: 가시 영역 내 중앙 Y 기준 가장 가까운 PhotoCell
     private func findCenterCellForD1(in window: UIWindow) -> (frame: CGRect, snapshot: UIView)? {
-        // light 단계에서는 section 0이 photos
-        let photosSection: Int
-        if currentStage == .light {
-            photosSection = 0
-        } else {
-            photosSection = 1  // standard에서는 section 1이 light 사진
-        }
+        // 모든 단계에서 section 1이 light 사진 (section 0은 매우 낮은 품질 배너)
+        let photosSection = 1
 
         guard case .photos(let candidates) = sectionType(for: photosSection) else { return nil }
         let count = candidates.count

@@ -479,11 +479,12 @@ final class PreviewGridViewController: UIViewController {
     // MARK: - Section Mapping
 
     /// 섹션 수 (currentStage에 따라 동적)
-    /// light: 사진만 (배너 없음), standard: 배너+사진 쌍으로 구성
+    /// light: 배너+사진 (매우 낮은 품질 배너는 항상 표시)
+    /// standard: 배너+사진+배너+사진
     private var numberOfSections: Int {
         switch currentStage {
         case .light:
-            return 1  // 사진만 (배너 없음)
+            return 2  // 배너(매우 낮은 품질), 사진
         case .standard:
             return 4  // 배너, 사진, 배너, 사진
         }
@@ -491,15 +492,10 @@ final class PreviewGridViewController: UIViewController {
 
     /// 섹션 인덱스에 대한 섹션 타입
     ///
-    /// light: 0=사진
+    /// light: 0=배너(매우 낮은 품질), 1=light사진
     /// standard: 0=배너(매우 낮은 품질), 1=light사진, 2=배너(약간 낮은 품질), 3=standard사진
     func sectionType(for sectionIndex: Int) -> SectionType {
-        // light 단계: 배너 없이 사진만
-        if currentStage == .light {
-            return .photos(previewResult.lightCandidates)
-        }
-
-        // standard: 배너 포함 전체 매핑
+        // 모든 단계에서 동일한 매핑 (매우 낮은 품질 배너는 항상 표시)
         switch sectionIndex {
         case 0:
             return .banner(scoreRange: String(localized: "preview.grade5"), count: previewResult.lightCount)
@@ -890,7 +886,7 @@ extension PreviewGridViewController: PreviewBottomViewDelegate {
         switch currentStage {
         case .standard:
             previousStage = .light
-            sectionsToDelete = IndexSet([0, 2, 3])  // light배너도 함께 제거
+            sectionsToDelete = IndexSet([2, 3])  // standard배너 + standard사진만 제거
         default:
             return
         }
@@ -928,7 +924,7 @@ extension PreviewGridViewController: PreviewBottomViewDelegate {
             let newSections: IndexSet
             switch nextStage {
             case .standard:
-                newSections = IndexSet([0, 2, 3])  // light배너 + standard배너 + standard사진
+                newSections = IndexSet([2, 3])  // standard배너 + standard사진
             default:
                 return
             }
