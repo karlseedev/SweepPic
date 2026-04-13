@@ -67,6 +67,17 @@ final class UsageGaugeView: UIView {
         return label
     }()
 
+    /// 물음표 아이콘 — 탭하면 상세 팝업 (시각적 어포던스)
+    private let helpIcon: UIImageView = {
+        let config = UIImage.SymbolConfiguration(pointSize: 14, weight: .medium)
+        let image = UIImage(systemName: "questionmark.circle", withConfiguration: config)
+        let iv = UIImageView(image: image)
+        iv.tintColor = UIColor.white.withAlphaComponent(0.6)
+        iv.translatesAutoresizingMaskIntoConstraints = false
+        iv.contentMode = .scaleAspectFit
+        return iv
+    }()
+
     /// 남은 장수 라벨: "N/M장 남음"
     private let countLabel: UILabel = {
         let label = UILabel()
@@ -142,6 +153,7 @@ final class UsageGaugeView: UIView {
         cardContent.addSubview(trackView)
         trackView.addSubview(fillView)
         cardContent.addSubview(titleLabel)
+        cardContent.addSubview(helpIcon)
         cardContent.addSubview(countLabel)
 
         // Glass 뷰: 전체 영역 채움
@@ -181,6 +193,12 @@ final class UsageGaugeView: UIView {
             titleLabel.topAnchor.constraint(equalTo: trackView.bottomAnchor, constant: 4),
             titleLabel.leadingAnchor.constraint(equalTo: cardContent.leadingAnchor, constant: hPadding),
             titleLabel.bottomAnchor.constraint(equalTo: cardContent.bottomAnchor, constant: -vPadding)
+        ])
+
+        // 물음표 아이콘 — 타이틀 라벨 오른쪽, 수직 중앙 정렬
+        NSLayoutConstraint.activate([
+            helpIcon.leadingAnchor.constraint(equalTo: titleLabel.trailingAnchor, constant: 4),
+            helpIcon.centerYAnchor.constraint(equalTo: titleLabel.centerYAnchor)
         ])
 
         // 카운트 라벨 (우측 하단)
