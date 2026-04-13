@@ -160,6 +160,11 @@ final class PreviewGridViewController: UIViewController {
         self.previewResult = previewResult
         super.init(nibName: nil, bundle: nil)
 
+        // 약간 낮은 품질 사진이 있으면 2단계(확장)로 시작
+        if previewResult.standardCount > 0 {
+            currentStage = .standard
+        }
+
         // 탭바 숨김 (push 시 하단 탭 제거)
         hidesBottomBarWhenPushed = true
     }
