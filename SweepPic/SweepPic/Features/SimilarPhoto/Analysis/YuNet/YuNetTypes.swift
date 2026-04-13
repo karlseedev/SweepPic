@@ -83,8 +83,8 @@ enum YuNetConfig {
     /// NMS IoU 임계값 (OpenCV 기본값)
     static let nmsThreshold: Float = 0.3
 
-    /// Score 임계값 (OpenCV 기본값)
-    static let scoreThreshold: Float = 0.6
+    /// Score 임계값 (0.6 → 0.75 상향: 사자/꽃 등 오판 방지)
+    static let scoreThreshold: Float = 0.75
 
     /// 최대 반환 얼굴 수 (SimilarityConstants.maxFacesPerPhoto 사용)
     static var topK: Int {

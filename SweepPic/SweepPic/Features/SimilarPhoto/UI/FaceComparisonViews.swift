@@ -236,7 +236,7 @@ final class FaceComparisonCell: UICollectionViewCell {
     ///   - score: YuNet 감지 신뢰도 (0~1)
     ///   - norm: SFace 임베딩 L2 norm
     func setQualityInfo(score: Float?, norm: Float?) {
-        let scoreText = score.map { String(format: "S %.2f (>0.6)", $0) } ?? "S -"
+        let scoreText = score.map { String(format: "S %.2f (>0.75)", $0) } ?? "S -"
         let normText = norm.map { String(format: "N %.1f (>7.0)", $0) } ?? "N -"
         qualityLabel.text = "\(scoreText)\n\(normText)"
         qualityBackground.isHidden = false
