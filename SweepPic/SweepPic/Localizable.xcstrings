@@ -3053,7 +3053,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "You cannot use your own code."
+            "value" : "You cannot use your own referral code."
           }
         },
         "ko" : {
@@ -3581,7 +3581,7 @@
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "이어서 분석"
+            "value" : "이어서 정리"
           }
         }
       }
@@ -6059,7 +6059,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "None"
+            "value" : "Ad-Free"
           }
         },
         "ko" : {
@@ -6076,13 +6076,13 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Required"
+            "value" : "Watch Ads"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "필요"
+            "value" : "광고시청"
           }
         }
       }
@@ -6093,13 +6093,13 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Reward Ads"
+            "value" : "Extra Deletions"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "보상 광고"
+            "value" : "삭제 한도 추가"
           }
         }
       }

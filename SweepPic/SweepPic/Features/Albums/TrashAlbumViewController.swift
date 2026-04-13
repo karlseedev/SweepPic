@@ -116,8 +116,8 @@ final class TrashAlbumViewController: BaseGridViewController {
         String(localized: "trash.title")
     }
 
-    /// 스와이프 제스처 활성화 (녹색 커튼 복구)
-    override var supportsSwipeDelete: Bool { true }
+    /// 스와이프 제스처 비활성화 (복구 기능 제거)
+    override var supportsSwipeDelete: Bool { false }
 
     /// 스와이프 동작: 복구 (녹색 커튼)
     override var swipeActionIsRestore: Bool { true }

@@ -1,5 +1,5 @@
 # SweepPic 전체 문자열 한→영 매핑 테이블
-수정 시 반영 파일 SweepPic/SweepPic/Localizable.xcstrings
+i18n-strings.md 및 SweepPic/SweepPic/Localizable.xcstrings
 
 > 주인님 확인용. 영어 번역(안)을 검토 후 확정해주세요.
 > ✅ = 확인 완료, ❌ = 수정 필요

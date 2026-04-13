@@ -71,6 +71,9 @@ extension CoachMarkOverlayView {
     /// E-3 삭제대기함 스와이프 복구 안내 표시
     /// - Parameter window: 표시할 윈도우
     static func showTrashRestoreGuide(in window: UIWindow) {
+        // TODO: E-3 임시 비활성화 — 다시 활성화할 때 이 return 제거
+        return
+
         let overlay = CoachMarkOverlayView(frame: window.bounds)
         overlay.coachMarkType = .trashRestore
         overlay.alpha = 0.01  // hitTest로 터치 즉시 차단, 시각적으론 보이지 않음

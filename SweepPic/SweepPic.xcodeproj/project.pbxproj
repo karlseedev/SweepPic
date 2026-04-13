@@ -323,6 +323,10 @@
 				DEVELOPMENT_TEAM = 7YD5497HFS;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = SweepPic/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = SweepPic;
+				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
+				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "SweepPic needs access to your photo library to browse and manage your photos.";
+				INFOPLIST_KEY_NSUserTrackingUsageDescription = "Allowing tracking helps reduce irrelevant ads. Your data is never sold to third parties.";
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchStoryboardName = LaunchScreen;
 				INFOPLIST_KEY_UIMainStoryboardFile = "";
@@ -333,7 +337,7 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.karl.SweepPic;
+				PRODUCT_BUNDLE_IDENTIFIER = com.karl.SweepPic.dev;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
@@ -357,6 +361,10 @@
 				DEVELOPMENT_TEAM = 7YD5497HFS;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = SweepPic/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = SweepPic;
+				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
+				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "SweepPic needs access to your photo library to browse and manage your photos.";
+				INFOPLIST_KEY_NSUserTrackingUsageDescription = "Allowing tracking helps reduce irrelevant ads. Your data is never sold to third parties.";
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchStoryboardName = LaunchScreen;
 				INFOPLIST_KEY_UIMainStoryboardFile = "";
