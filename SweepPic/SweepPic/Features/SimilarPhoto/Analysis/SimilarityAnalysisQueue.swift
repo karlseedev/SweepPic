@@ -289,22 +289,29 @@ final class SimilarityAnalysisQueue {
         let totalStartTime = CFAbsoluteTimeGetCurrent()
         let startMemory = getMemoryUsageMB()
 
-        // T014.1: 분석 준비
-        let photos = fetchPhotos(in: range, fetchResult: fetchResult)
+        // T014.1: 분석 준비 — confirmed 그룹 멤버를 분석 대상에서 제외
+        let allPhotos = fetchPhotos(in: range, fetchResult: fetchResult)
+        let confirmedAssetIDs = await cache.getConfirmedAssetIDs()
+        var photos = allPhotos.filter { !confirmedAssetIDs.contains($0.localIdentifier) }
 
         guard photos.count >= SimilarityConstants.minGroupSize else {
-            postAnalysisComplete(range: range, groupIDs: [], analyzedAssetIDs: [])
+            let ids = photos.map { $0.localIdentifier }
+            // confirmed가 아닌 사진만 비그룹으로 설정
+            for assetID in ids {
+                await cache.setState(.analyzed(inGroup: false, groupID: nil), for: assetID)
+            }
+            postAnalysisComplete(range: range, groupIDs: [], analyzedAssetIDs: ids)
             return []
         }
 
-        let assetIDs = photos.map { $0.localIdentifier }
+        var assetIDs = photos.map { $0.localIdentifier }
 
-        // 기존 그룹 정리 (재분석 시)
+        // 기존 그룹 정리 (재분석 시) — confirmed 그룹 멤버는 이미 제외됨
         await cache.prepareForReanalysis(assetIDs: Set(assetIDs))
 
         // T014.2: Feature Print 병렬 생성 + Vision 얼굴 유무 체크 (배치 처리)
         let fpStartTime = CFAbsoluteTimeGetCurrent()
-        let (featurePrints, hasFaces) = await matchingEngine.generateFeaturePrints(for: photos)
+        var (featurePrints, hasFaces) = await matchingEngine.generateFeaturePrints(for: photos)
         let fpTime = CFAbsoluteTimeGetCurrent() - fpStartTime
 
         // 취소 체크: FP 생성 후 (캐시/알림 스킵)
@@ -313,7 +320,7 @@ final class SimilarityAnalysisQueue {
             return []
         }
 
-        // T014.3 & T014.4: 인접 거리 계산 및 그룹 분리
+        // T014.3: 인접 거리 계산 및 그룹 분리
         let rawGroups = analyzer.formGroups(
             featurePrints: featurePrints,
             photoIDs: assetIDs,
@@ -330,12 +337,28 @@ final class SimilarityAnalysisQueue {
             return []
         }
 
-        // ── 테두리 조기 표시: 얼굴 있는 그룹만 예비 테두리 표시 ──
+        // T014.3b: 그룹 경계 확인 — 분석 범위 끝에 걸친 그룹만 확장
+        let (resolvedGroups, boundaryCompleted) = await resolveGroupBoundaries(
+            rawGroups: rawGroups,
+            photos: &photos,
+            assetIDs: &assetIDs,
+            featurePrints: &featurePrints,
+            hasFaces: &hasFaces,
+            range: range,
+            fetchResult: fetchResult
+        )
+
+        // 취소 체크: 경계 확인 후
+        guard !Task.isCancelled else {
+            Logger.similarPhoto.debug("Cancelled after boundary resolution - skipping cache/notification")
+            return []
+        }
+
+        // T014.4: 테두리 조기 표시 — 얼굴 있는 그룹만 예비 테두리 표시
         // Vision 얼굴 감지 결과(hasFaces)를 기반으로 얼굴 포함 그룹만 필터링
-        // 사물 그룹은 .analyzing 상태 유지 → YuNet 최종 분석에서 판단
-        // Vision이 못 잡은 작은 얼굴은 최종 분석 후 테두리 표시 (누락 없음, 지연만)
+        // 사물 그룹은 .analyzing 상태 유지 → YuNet 최종 분석에서 판��
         let facePresenceMap = Dictionary(uniqueKeysWithValues: zip(assetIDs, hasFaces))
-        let faceGroups = rawGroups.filter { groupIDs in
+        let faceGroups = resolvedGroups.filter { groupIDs in
             groupIDs.contains { facePresenceMap[$0] == true }
         }
         let preliminaryAssetIDs = Set(faceGroups.flatMap { $0 })
@@ -345,11 +368,10 @@ final class SimilarityAnalysisQueue {
             await cache.setState(.analyzed(inGroup: true, groupID: "preliminary"), for: assetID)
         }
         // 그룹에 속하지 않은 사진: 분석 완료 (그룹 없음)
-        let allGroupedAssetIDs = Set(rawGroups.flatMap { $0 })
+        let allGroupedAssetIDs = Set(resolvedGroups.flatMap { $0 })
         for assetID in assetIDs where !allGroupedAssetIDs.contains(assetID) {
             await cache.setState(.analyzed(inGroup: false, groupID: nil), for: assetID)
         }
-        // 사물 그룹(얼굴 없음): .analyzing 상태 유지 → YuNet에서 최종 판단
         // 알림 발송: 그리드가 비-그룹 사진 상태도 반영하도록
         postAnalysisComplete(
             range: range,
@@ -370,14 +392,14 @@ final class SimilarityAnalysisQueue {
         let faceStartTime = CFAbsoluteTimeGetCurrent()
         var totalFaceCount = 0
 
-        for groupAssetIDs in rawGroups {
-            // 취소 체크: rawGroups 루프 (캐시/알림 스킵)
+        for (groupIndex, groupAssetIDs) in resolvedGroups.enumerated() {
+            // 취소 체크: resolvedGroups 루프 (캐시/알림 스킵)
             guard !Task.isCancelled else {
                 Logger.similarPhoto.debug("Cancelled during group processing - skipping cache/notification")
                 return []
             }
 
-            // 그룹 내 사진 가져오기
+            // 그룹 내 사진 가져오기 (경계 확인으로 확장된 사진 포함)
             let groupPhotos = photos.filter { groupAssetIDs.contains($0.localIdentifier) }
 
             // 그룹 단위로 일관된 personIndex 할당 (YuNet 960 직접 감지 + SFace 임베딩)
@@ -387,8 +409,6 @@ final class SimilarityAnalysisQueue {
             )
 
             // 유효 슬롯 계산: 같은 personIndex가 2장 이상의 사진에서 나타나야 함
-            // 주의: 기존 로직은 "같은 personIndex를 가진 얼굴 총 개수"였으나,
-            //       이제는 "같은 personIndex가 나타나는 사진 수"로 변경
             var slotPhotoCount: [Int: Set<String>] = [:]
             for (assetID, faces) in photoFacesMap {
                 for face in faces {
@@ -400,33 +420,33 @@ final class SimilarityAnalysisQueue {
                 $0.value.count >= SimilarityConstants.minPhotosPerSlot
             }.keys)
 
-            // ========== 유효 슬롯 얼굴이 있는 사진만 그룹에 포함 (prd9algorithm.md §3.7) ==========
-            // 유효 슬롯에 해당하는 얼굴이 있는 사진만 그룹 멤버로 인정
+            // ========== 유효 슬롯 얼굴이 있는 사진만 그룹에 포함 ==========
             let validMembers = groupAssetIDs.filter { assetID in
                 guard let faces = photoFacesMap[assetID] else { return false }
                 return faces.contains { validSlots.contains($0.personIndex) }
             }
 
-            // 그룹 내 탈락 사진 상태 업데이트 (얼굴 없음 또는 유효 슬롯 미충족)
+            // 그룹 내 탈락 사진 상태 업데이트
             let excludedFromGroup = Set(groupAssetIDs).subtracting(validMembers)
             for assetID in excludedFromGroup {
                 await cache.setState(.analyzed(inGroup: false, groupID: nil), for: assetID)
-                // 탈락 사진의 얼굴 데이터도 캐시에 저장 (뷰어에서 활용 가능)
                 if let faces = photoFacesMap[assetID] {
                     await cache.setFaces(faces, for: assetID)
                 }
             }
-            // ==============================================================================
 
-            // T014.7: 캐시 저장 요청 (T010 호출)
-            // validMembers 전달 (유효 슬롯 얼굴 보유 사진만)
-            // 참고: addGroupIfValid 내부에서 조건 미충족 시 members를 inGroup:false로 정리함
+            // T014.7: 캐시 저장 요청
             if let groupID = await cache.addGroupIfValid(
                 members: validMembers,
                 validSlots: validSlots,
                 photoFaces: photoFacesMap
             ) {
                 validGroupIDs.append(groupID)
+
+                // 경계 확인이 양쪽 모두 완료된 그룹만 confirmed로 등록
+                if groupIndex < boundaryCompleted.count && boundaryCompleted[groupIndex] {
+                    await cache.confirmGroup(groupID: groupID)
+                }
             }
 
             // 성능 측정: 얼굴 수 누적
@@ -440,7 +460,7 @@ final class SimilarityAnalysisQueue {
         await cache.evictIfNeeded()
 
         // 그룹에 속하지 않은 사진들 상태 업데이트
-        let groupedAssetIDs = Set(rawGroups.flatMap { $0 })
+        let groupedAssetIDs = Set(resolvedGroups.flatMap { $0 })
         for assetID in assetIDs where !groupedAssetIDs.contains(assetID) {
             await cache.setState(.analyzed(inGroup: false, groupID: nil), for: assetID)
         }
@@ -537,6 +557,220 @@ final class SimilarityAnalysisQueue {
     }
 
     // MARK: - Private Methods - Photo Fetching
+
+    // MARK: - Group Boundary Resolution
+
+    /// 그룹 경계를 확인하여 확정합니다.
+    ///
+    /// rawGroup이 분석 범위 끝에 걸쳐있으면, 한 장씩 추가 확인하여
+    /// 진짜 끊기 지점(distance > threshold)을 찾습니다.
+    ///
+    /// - Parameters:
+    ///   - rawGroups: formGroups()에서 반환된 초기 그룹 배열
+    ///   - photos: 분석 범위 내 사진 배열
+    ///   - assetIDs: 분석 범위 내 사진 ID 배열
+    ///   - featurePrints: 분석 범위 내 Feature Print 배열
+    ///   - hasFaces: 분석 범위 내 얼굴 유무 배열
+    ///   - range: 원래 분석 범위 (fetchResult 인덱스 기준)
+    ///   - fetchResult: 전체 사진 fetch 결과
+    /// - Returns: (확장된 그룹, 확장된 사진, 확장된 ID, 확장된 FP, 확장된 hasFaces, 경계 완료 여부 배열)
+    private func resolveGroupBoundaries(
+        rawGroups: [[String]],
+        photos: inout [PHAsset],
+        assetIDs: inout [String],
+        featurePrints: inout [VNFeaturePrintObservation?],
+        hasFaces: inout [Bool],
+        range: ClosedRange<Int>,
+        fetchResult: PHFetchResult<PHAsset>
+    ) async -> (resolvedGroups: [[String]], boundaryCompleted: [Bool]) {
+        let trashedIDs = TrashStore.shared.trashedAssetIDs
+        let maxExpansion = SimilarityConstants.maxBoundaryExpansion
+        var resolvedGroups: [[String]] = []
+        var boundaryCompleted: [Bool] = []
+
+        for group in rawGroups {
+            guard !group.isEmpty else { continue }
+            var expandedGroup = group
+            // 양쪽 경계 확인 완료 여부 추적
+            var leftConfirmed = true
+            var rightConfirmed = true
+
+            // --- 왼쪽 경계 확인 ---
+            // 그룹의 첫 멤버가 분석 범위의 첫 사진과 일치하면 경계가 불확실
+            if group.first == assetIDs.first {
+                leftConfirmed = false
+                var expansionCount = 0
+                // range.lowerBound 이전부터 왼쪽으로 탐색
+                var searchIndex = range.lowerBound - 1
+                // 현재 그룹 왼쪽 끝의 FP (비교 대상)
+                var edgeFP: VNFeaturePrintObservation? = {
+                    if let idx = assetIDs.firstIndex(of: group.first!) {
+                        return featurePrints[idx]
+                    }
+                    return nil
+                }()
+
+                while searchIndex >= 0 && expansionCount < maxExpansion {
+                    // 취소 체크
+                    guard !Task.isCancelled else { break }
+
+                    let asset = fetchResult.object(at: searchIndex)
+                    searchIndex -= 1
+
+                    // 동영상/삭제대기함 건너뛰기 (fetchPhotos와 동일 규칙)
+                    guard asset.mediaType == .image,
+                          !trashedIDs.contains(asset.localIdentifier) else {
+                        continue
+                    }
+
+                    // 이미 확정된 그룹에 속한 사진이면 경계 확정
+                    let state = await cache.getState(for: asset.localIdentifier)
+                    if case .analyzed(true, let gid?) = state, gid != "preliminary" {
+                        let isConfirmed = await cache.isGroupConfirmed(groupID: gid)
+                        if isConfirmed {
+                            leftConfirmed = true
+                            break
+                        }
+                    }
+
+                    // FP 생성 + 얼굴 유무 확인
+                    do {
+                        let cgImage = try await imageLoader.loadImage(for: asset)
+                        let (fp, hasFace) = try await analyzer.generateFeaturePrintWithFaceCheck(for: cgImage)
+
+                        // 인접 거리 비교
+                        if let edgeFP = edgeFP {
+                            let distance = try analyzer.computeDistance(edgeFP, fp)
+                            if distance > SimilarityConstants.similarityThreshold {
+                                // 끊기 지점 발견 → 경계 확정
+                                leftConfirmed = true
+                                break
+                            }
+                        }
+
+                        // 유사 → 그룹에 추가
+                        expandedGroup.insert(asset.localIdentifier, at: 0)
+                        photos.insert(asset, at: 0)
+                        assetIDs.insert(asset.localIdentifier, at: 0)
+                        featurePrints.insert(fp, at: 0)
+                        hasFaces.insert(hasFace, at: 0)
+                        edgeFP = fp
+
+                        // 확장된 사진 상태 설정
+                        await cache.setState(.analyzing, for: asset.localIdentifier)
+                        await cache.removeFaces(for: asset.localIdentifier)
+
+                        expansionCount += 1
+                    } catch {
+                        // 이미지 로드/FP 생성 실패 → 끊기 지점으로 처리
+                        leftConfirmed = true
+                        Logger.similarPhoto.error("Boundary expansion left failed: \(error)")
+                        break
+                    }
+                }
+
+                // maxExpansion 도달 시 미확정
+                if expansionCount >= maxExpansion {
+                    leftConfirmed = false
+                    Logger.similarPhoto.notice("Left boundary expansion reached limit (\(maxExpansion))")
+                }
+                // fetchResult 시작에 도달 시 확정
+                if searchIndex < 0 && !leftConfirmed {
+                    leftConfirmed = true
+                }
+            }
+
+            // --- 오른쪽 경계 확인 ---
+            // 그룹의 마지막 멤버가 분석 범위의 마지막 사진과 일치하면 경계가 불확실
+            if group.last == assetIDs.last {
+                rightConfirmed = false
+                var expansionCount = 0
+                // range.upperBound 이후부터 오른쪽으로 탐색
+                var searchIndex = range.upperBound + 1
+                // 현재 그룹 오른쪽 끝의 FP (비교 대상)
+                var edgeFP: VNFeaturePrintObservation? = {
+                    if let idx = assetIDs.lastIndex(of: expandedGroup.last!) {
+                        return featurePrints[idx]
+                    }
+                    return nil
+                }()
+
+                while searchIndex < fetchResult.count && expansionCount < maxExpansion {
+                    // 취소 체크
+                    guard !Task.isCancelled else { break }
+
+                    let asset = fetchResult.object(at: searchIndex)
+                    searchIndex += 1
+
+                    // 동영상/삭제대기함 건너뛰기 (fetchPhotos와 동일 규칙)
+                    guard asset.mediaType == .image,
+                          !trashedIDs.contains(asset.localIdentifier) else {
+                        continue
+                    }
+
+                    // 이미 확정된 그룹에 속한 사진이면 경계 확정
+                    let state = await cache.getState(for: asset.localIdentifier)
+                    if case .analyzed(true, let gid?) = state, gid != "preliminary" {
+                        let isConfirmed = await cache.isGroupConfirmed(groupID: gid)
+                        if isConfirmed {
+                            rightConfirmed = true
+                            break
+                        }
+                    }
+
+                    // FP 생성 + 얼굴 유무 확인
+                    do {
+                        let cgImage = try await imageLoader.loadImage(for: asset)
+                        let (fp, hasFace) = try await analyzer.generateFeaturePrintWithFaceCheck(for: cgImage)
+
+                        // 인접 거리 비교
+                        if let edgeFP = edgeFP {
+                            let distance = try analyzer.computeDistance(edgeFP, fp)
+                            if distance > SimilarityConstants.similarityThreshold {
+                                // 끊기 지점 발견 → 경계 확정
+                                rightConfirmed = true
+                                break
+                            }
+                        }
+
+                        // 유사 → 그룹에 추가
+                        expandedGroup.append(asset.localIdentifier)
+                        photos.append(asset)
+                        assetIDs.append(asset.localIdentifier)
+                        featurePrints.append(fp)
+                        hasFaces.append(hasFace)
+                        edgeFP = fp
+
+                        // 확장된 사진 상태 설정
+                        await cache.setState(.analyzing, for: asset.localIdentifier)
+                        await cache.removeFaces(for: asset.localIdentifier)
+
+                        expansionCount += 1
+                    } catch {
+                        // 이미지 로드/FP 생성 실패 → 끊기 지점으로 처리
+                        rightConfirmed = true
+                        Logger.similarPhoto.error("Boundary expansion right failed: \(error)")
+                        break
+                    }
+                }
+
+                // maxExpansion 도달 시 미확정
+                if expansionCount >= maxExpansion {
+                    rightConfirmed = false
+                    Logger.similarPhoto.notice("Right boundary expansion reached limit (\(maxExpansion))")
+                }
+                // fetchResult 끝에 도달 시 확정
+                if searchIndex >= fetchResult.count && !rightConfirmed {
+                    rightConfirmed = true
+                }
+            }
+
+            resolvedGroups.append(expandedGroup)
+            boundaryCompleted.append(leftConfirmed && rightConfirmed)
+        }
+
+        return (resolvedGroups, boundaryCompleted)
+    }
 
     /// 범위 내 사진을 가져옵니다.
     ///

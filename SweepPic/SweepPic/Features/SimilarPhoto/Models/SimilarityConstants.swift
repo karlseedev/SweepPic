@@ -130,8 +130,17 @@ enum SimilarityConstants: Sendable {
     /// 스크롤 디바운싱 시간 (초)
     nonisolated static let scrollDebounceDelay: TimeInterval = 0.3
 
+    // MARK: - Boundary Resolution
+
+    /// 그룹 경계 확인 최대 한도 (한 방향당)
+    ///
+    /// 그룹이 분석 범위 끝에 걸쳐있을 때, 양쪽으로 끊기 지점을 찾기 위해
+    /// 한 장씩 추가 확인하는 최대 횟수입니다.
+    /// - 100장 × ~15ms/장 (FP 생성) = 최대 ~1.5초 (한 방향)
+    nonisolated static let maxBoundaryExpansion: Int = 100
+
     // MARK: - Face Cropping
 
-    /// 얼굴 크롭 여백 비율
+    /// 얼��� 크롭 여백 비율
     nonisolated static let faceCropPaddingRatio: CGFloat = 0.3
 }
