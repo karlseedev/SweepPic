@@ -49,6 +49,12 @@ struct CachedFace: Equatable, Hashable, Sendable {
     /// - nil: 기준 사진이거나 계산 실패
     let sfaceCost: Float?
 
+    /// SFace 임베딩 L2 norm (얼굴 품질 지표)
+    /// - 높을수록 고품질 (선명한 정면 얼굴)
+    /// - 범위: 약 7.0~11.3 (128차원 벡터)
+    /// - nil: Vision fallback 등 임베딩 없는 경우
+    let sfaceNorm: Float?
+
     // MARK: - Initialization
 
     /// CachedFace를 생성합니다.
@@ -58,12 +64,14 @@ struct CachedFace: Equatable, Hashable, Sendable {
     ///   - personIndex: 위치 기반 인물 번호 (>= 1)
     ///   - isValidSlot: 유효 슬롯 여부 (기본값: false)
     ///   - sfaceCost: SFace 코사인 유사도 기반 거리 (기본값: nil)
-    init(boundingBox: CGRect, personIndex: Int, isValidSlot: Bool = false, sfaceCost: Float? = nil) {
+    ///   - sfaceNorm: SFace 임베딩 L2 norm (기본값: nil)
+    init(boundingBox: CGRect, personIndex: Int, isValidSlot: Bool = false, sfaceCost: Float? = nil, sfaceNorm: Float? = nil) {
         precondition(personIndex >= 1, "Person index must be >= 1")
         self.boundingBox = boundingBox
         self.personIndex = personIndex
         self.isValidSlot = isValidSlot
         self.sfaceCost = sfaceCost
+        self.sfaceNorm = sfaceNorm
     }
 
     // MARK: - Computed Properties

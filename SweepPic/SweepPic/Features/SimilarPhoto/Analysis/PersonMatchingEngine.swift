@@ -393,7 +393,8 @@ final class PersonMatchingEngine {
                     cachedFaces.append(CachedFace(
                         boundingBox: slot.boundingBox,
                         personIndex: slot.id,
-                        isValidSlot: false
+                        isValidSlot: false,
+                        sfaceNorm: slot.norm
                     ))
                 }
                 result[assetID] = cachedFaces
@@ -511,7 +512,8 @@ final class PersonMatchingEngine {
                         boundingBox: candidate.boundingBox,
                         personIndex: candidate.slotID,
                         isValidSlot: false,
-                        sfaceCost: cost
+                        sfaceCost: cost,
+                        sfaceNorm: candidate.norm
                     ))
 
                     // Logger.similarPhoto.debug("[PersonMatch] \(shortID) HQ 확신: face[\(candidate.faceIdx)]→slot\(candidate.slotID) cost=\(String(format: "%.3f", cost)) norm=\(String(format: "%.1f", candidate.norm))")
@@ -528,7 +530,8 @@ final class PersonMatchingEngine {
                             boundingBox: candidate.boundingBox,
                             personIndex: candidate.slotID,
                             isValidSlot: false,
-                            sfaceCost: cost
+                            sfaceCost: cost,
+                            sfaceNorm: candidate.norm
                         ))
 
                         // Logger.similarPhoto.debug("[PersonMatch] \(shortID) HQ Grey: face[\(candidate.faceIdx)]→slot\(candidate.slotID) cost=\(String(format: "%.3f", cost)) pos=\(String(format: "%.3f", posNorm)) norm=\(String(format: "%.1f", candidate.norm))")
@@ -551,7 +554,8 @@ final class PersonMatchingEngine {
                                 boundingBox: candidate.boundingBox,
                                 personIndex: candidate.slotID,
                                 isValidSlot: false,
-                                sfaceCost: cost
+                                sfaceCost: cost,
+                                sfaceNorm: candidate.norm
                             ))
 
                             // Logger.similarPhoto.debug("[PersonMatch] \(shortID) HQ 확장Grey: face[\(candidate.faceIdx)]→slot\(candidate.slotID) cost=\(String(format: "%.3f", cost)) pos=\(String(format: "%.3f", posNorm)) norm=\(String(format: "%.1f", candidate.norm)) slotNorm=\(String(format: "%.1f", candidate.slotNorm))")
@@ -623,7 +627,8 @@ final class PersonMatchingEngine {
                         boundingBox: bestByPos.boundingBox,
                         personIndex: bestByPos.slotID,
                         isValidSlot: false,
-                        sfaceCost: cost
+                        sfaceCost: cost,
+                        sfaceNorm: bestByPos.norm
                     ))
 
                     // Logger.similarPhoto.debug("[PersonMatch] \(shortID) LQ 매칭: face[\(faceIdx)]→slot\(bestByPos.slotID) cost=\(String(format: "%.3f", cost)) pos=\(String(format: "%.3f", posNorm)) norm=\(String(format: "%.1f", bestByPos.norm))")
@@ -668,7 +673,8 @@ final class PersonMatchingEngine {
                 cachedFaces.append(CachedFace(
                     boundingBox: data.boundingBox,
                     personIndex: nextSlotID,
-                    isValidSlot: false
+                    isValidSlot: false,
+                    sfaceNorm: norm
                 ))
 
                 nextSlotID += 1
@@ -750,30 +756,54 @@ final class PersonMatchingEngine {
 
     // MARK: - PersonIndex 재배정
 
-    /// 전체 사진의 평균 얼굴 크기 기준으로 personIndex를 재배정합니다.
+    /// 전체 사진의 평균 얼굴 크기 + 품질 기준으로 personIndex를 재배정합니다.
     ///
-    /// 매칭 알고리즘(Step 2~7)이 완료된 후, 각 personIndex별 평균 boundingBox 면적을
-    /// 계산하여 큰 순서대로 1, 2, 3으로 재번호를 부여합니다.
+    /// 매칭 알고리즘(Step 2~7)이 완료된 후:
+    /// 1. 각 personIndex별 평균 sfaceNorm 계산 → 품질 그룹 분류
+    /// 2. 고품질 그룹 (norm ≥ threshold) 내에서 면적 내림차순 → 앞번호
+    /// 3. 저품질 그룹 (norm < threshold) 내에서 면적 내림차순 → 뒷번호
     ///
     /// - Parameter result: 매칭 결과 (assetID → [CachedFace])
     /// - Returns: personIndex가 재배정된 결과
     private func remapPersonIndicesByAverageArea(
         _ result: [String: [CachedFace]]
     ) -> [String: [CachedFace]] {
-        // 각 personIndex별 모든 사진에서의 면적 수집
+        // 각 personIndex별 면적 및 norm 수집
         var areasByPerson: [Int: [CGFloat]] = [:]
+        var normsByPerson: [Int: [Float]] = [:]
         for (_, faces) in result {
             for face in faces {
                 areasByPerson[face.personIndex, default: []].append(face.area)
+                if let norm = face.sfaceNorm {
+                    normsByPerson[face.personIndex, default: []].append(norm)
+                }
             }
         }
 
         guard !areasByPerson.isEmpty else { return result }
 
-        // 평균 면적 내림차순 정렬 → 새 번호 (1부터)
-        let sorted = areasByPerson
-            .map { (personIndex: $0.key, avgArea: $0.value.reduce(0, +) / CGFloat($0.value.count)) }
-            .sorted { $0.avgArea > $1.avgArea }
+        let qualityThreshold = SimilarityConstants.personIndexQualityNormThreshold
+
+        // 각 personIndex별 평균 면적과 평균 norm 계산
+        struct PersonStats {
+            let personIndex: Int
+            let avgArea: CGFloat
+            let avgNorm: Float  // norm 데이터 없으면 0
+        }
+
+        let stats = areasByPerson.map { entry -> PersonStats in
+            let avgArea = entry.value.reduce(0, +) / CGFloat(entry.value.count)
+            let norms = normsByPerson[entry.key] ?? []
+            let avgNorm = norms.isEmpty ? Float(0) : norms.reduce(0, +) / Float(norms.count)
+            return PersonStats(personIndex: entry.key, avgArea: avgArea, avgNorm: avgNorm)
+        }
+
+        // 1차: 면적 내림차순 정렬
+        // 2차: 저품질 (norm > 0 && norm < threshold)인 인물만 뒤로 밀기
+        let sortedByArea = stats.sorted { $0.avgArea > $1.avgArea }
+        let normal = sortedByArea.filter { $0.avgNorm >= qualityThreshold || $0.avgNorm == 0 }
+        let lowQuality = sortedByArea.filter { $0.avgNorm > 0 && $0.avgNorm < qualityThreshold }
+        let sorted = normal + lowQuality
 
         var remap: [Int: Int] = [:]
         for (i, entry) in sorted.enumerated() {
@@ -791,7 +821,8 @@ final class PersonMatchingEngine {
                     boundingBox: face.boundingBox,
                     personIndex: remap[face.personIndex] ?? face.personIndex,
                     isValidSlot: face.isValidSlot,
-                    sfaceCost: face.sfaceCost
+                    sfaceCost: face.sfaceCost,
+                    sfaceNorm: face.sfaceNorm
                 )
             }
         }

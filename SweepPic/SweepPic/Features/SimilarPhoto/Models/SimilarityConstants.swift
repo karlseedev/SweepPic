@@ -108,6 +108,11 @@ enum SimilarityConstants: Sendable {
     /// 사진당 최대 얼굴 수
     nonisolated static let maxFacesPerPhoto: Int = 5
 
+    /// 인물 번호 배정 시 품질 판단 임계값 (SFace norm 기준)
+    /// - 평균 norm이 이 값 미만인 인물은 면적이 크더라도 뒷번호로 밀림
+    /// - 범위: 7.0 (최소 감지) ~ 11.3 (이론적 최대)
+    nonisolated static let personIndexQualityNormThreshold: Float = 8.5
+
     // MARK: - Performance
 
     /// 분석 타임아웃 (초)
