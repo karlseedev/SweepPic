@@ -243,7 +243,7 @@ final class PersonMatchingEngine {
             // 스레드 전환 없이 확실하게 백그라운드에서 추론합니다.
             let inferenceResult: (
                 faceEmbeddings: [Int: [Float]],
-                faceData: [Int: (center: CGPoint, boundingBox: CGRect)],
+                faceData: [Int: (center: CGPoint, boundingBox: CGRect, score: Float)],
                 yunetMs: Double,
                 sfaceMs: Double,
                 faceCount: Int
@@ -277,7 +277,7 @@ final class PersonMatchingEngine {
 
                     // SFace 임베딩 추출 (순수 동기)
                     var faceEmbeddings: [Int: [Float]] = [:]
-                    var faceData: [Int: (center: CGPoint, boundingBox: CGRect)] = [:]
+                    var faceData: [Int: (center: CGPoint, boundingBox: CGRect, score: Float)] = [:]
 
                     let perfSfaceStart = CFAbsoluteTimeGetCurrent()
                     for (faceIdx, detection) in yunetDetections.enumerated() {
@@ -290,7 +290,7 @@ final class PersonMatchingEngine {
                             height: detection.boundingBox.size.height / imageHeight
                         )
                         let center = CGPoint(x: normalizedBox.midX, y: normalizedBox.midY)
-                        faceData[faceIdx] = (center: center, boundingBox: normalizedBox)
+                        faceData[faceIdx] = (center: center, boundingBox: normalizedBox, score: detection.score)
 
                         guard let alignedFace = try? FaceAligner.shared.align(
                             image: image,
@@ -368,6 +368,11 @@ final class PersonMatchingEngine {
                     return norm1 > norm2
                 }
 
+                // #if DEBUG: slotFaceIndices — 각 슬롯의 원래 faceIdx 추적 (yunetScore 전달용)
+                #if DEBUG
+                var slotFaceIndices: [Int] = []
+                #endif
+
                 for faceIdx in sortedIndices {
                     guard activeSlots.count < maxSlots else { break }
                     guard let embedding = faceEmbeddings[faceIdx] else { continue }
@@ -384,17 +389,27 @@ final class PersonMatchingEngine {
                         boundingBox: data.boundingBox
                     )
                     activeSlots.append(slot)
+                    #if DEBUG
+                    slotFaceIndices.append(faceIdx)
+                    #endif
                     nextSlotID += 1
                 }
 
                 // 부팅 결과 저장
                 var cachedFaces: [CachedFace] = []
-                for slot in activeSlots {
+                for (i, slot) in activeSlots.enumerated() {
                     cachedFaces.append(CachedFace(
                         boundingBox: slot.boundingBox,
                         personIndex: slot.id,
                         isValidSlot: false,
-                        sfaceNorm: slot.norm
+                        sfaceNorm: slot.norm,
+                        yunetScore: {
+                            #if DEBUG
+                            return faceData[slotFaceIndices[i]]?.score
+                            #else
+                            return nil
+                            #endif
+                        }()
                     ))
                 }
                 result[assetID] = cachedFaces
@@ -513,7 +528,8 @@ final class PersonMatchingEngine {
                         personIndex: candidate.slotID,
                         isValidSlot: false,
                         sfaceCost: cost,
-                        sfaceNorm: candidate.norm
+                        sfaceNorm: candidate.norm,
+                        yunetScore: faceData[candidate.faceIdx]?.score
                     ))
 
                     // Logger.similarPhoto.debug("[PersonMatch] \(shortID) HQ 확신: face[\(candidate.faceIdx)]→slot\(candidate.slotID) cost=\(String(format: "%.3f", cost)) norm=\(String(format: "%.1f", candidate.norm))")
@@ -531,7 +547,8 @@ final class PersonMatchingEngine {
                             personIndex: candidate.slotID,
                             isValidSlot: false,
                             sfaceCost: cost,
-                            sfaceNorm: candidate.norm
+                            sfaceNorm: candidate.norm,
+                            yunetScore: faceData[candidate.faceIdx]?.score
                         ))
 
                         // Logger.similarPhoto.debug("[PersonMatch] \(shortID) HQ Grey: face[\(candidate.faceIdx)]→slot\(candidate.slotID) cost=\(String(format: "%.3f", cost)) pos=\(String(format: "%.3f", posNorm)) norm=\(String(format: "%.1f", candidate.norm))")
@@ -555,7 +572,8 @@ final class PersonMatchingEngine {
                                 personIndex: candidate.slotID,
                                 isValidSlot: false,
                                 sfaceCost: cost,
-                                sfaceNorm: candidate.norm
+                                sfaceNorm: candidate.norm,
+                                yunetScore: faceData[candidate.faceIdx]?.score
                             ))
 
                             // Logger.similarPhoto.debug("[PersonMatch] \(shortID) HQ 확장Grey: face[\(candidate.faceIdx)]→slot\(candidate.slotID) cost=\(String(format: "%.3f", cost)) pos=\(String(format: "%.3f", posNorm)) norm=\(String(format: "%.1f", candidate.norm)) slotNorm=\(String(format: "%.1f", candidate.slotNorm))")
@@ -628,7 +646,8 @@ final class PersonMatchingEngine {
                         personIndex: bestByPos.slotID,
                         isValidSlot: false,
                         sfaceCost: cost,
-                        sfaceNorm: bestByPos.norm
+                        sfaceNorm: bestByPos.norm,
+                        yunetScore: faceData[bestByPos.faceIdx]?.score
                     ))
 
                     // Logger.similarPhoto.debug("[PersonMatch] \(shortID) LQ 매칭: face[\(faceIdx)]→slot\(bestByPos.slotID) cost=\(String(format: "%.3f", cost)) pos=\(String(format: "%.3f", posNorm)) norm=\(String(format: "%.1f", bestByPos.norm))")
@@ -674,7 +693,8 @@ final class PersonMatchingEngine {
                     boundingBox: data.boundingBox,
                     personIndex: nextSlotID,
                     isValidSlot: false,
-                    sfaceNorm: norm
+                    sfaceNorm: norm,
+                    yunetScore: faceData[faceIdx]?.score
                 ))
 
                 nextSlotID += 1
@@ -716,7 +736,8 @@ final class PersonMatchingEngine {
                     cachedFaces.append(CachedFace(
                         boundingBox: data.boundingBox,
                         personIndex: match.id,
-                        isValidSlot: false
+                        isValidSlot: false,
+                        yunetScore: faceData[faceIdx]?.score
                     ))
                     // 위치만 갱신 (임베딩 없으므로 norm=0)
                     updateSlotIfBetter(slotID: match.id, embedding: [], norm: 0, center: data.center, boundingBox: data.boundingBox)
@@ -822,7 +843,14 @@ final class PersonMatchingEngine {
                     personIndex: remap[face.personIndex] ?? face.personIndex,
                     isValidSlot: face.isValidSlot,
                     sfaceCost: face.sfaceCost,
-                    sfaceNorm: face.sfaceNorm
+                    sfaceNorm: face.sfaceNorm,
+                    yunetScore: {
+                        #if DEBUG
+                        return face.yunetScore
+                        #else
+                        return nil
+                        #endif
+                    }()
                 )
             }
         }

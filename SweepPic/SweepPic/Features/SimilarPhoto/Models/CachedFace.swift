@@ -55,6 +55,13 @@ struct CachedFace: Equatable, Hashable, Sendable {
     /// - nil: Vision fallback 등 임베딩 없는 경우
     let sfaceNorm: Float?
 
+    #if DEBUG
+    /// YuNet 감지 신뢰도 점수 (디버그 전용)
+    /// - 범위: 0~1 (scoreThreshold 0.6 이상만 감지됨)
+    /// - 제거 시: "yunetScore"로 검색하여 관련 #if DEBUG 블록 일괄 삭제
+    let yunetScore: Float?
+    #endif
+
     // MARK: - Initialization
 
     /// CachedFace를 생성합니다.
@@ -65,13 +72,17 @@ struct CachedFace: Equatable, Hashable, Sendable {
     ///   - isValidSlot: 유효 슬롯 여부 (기본값: false)
     ///   - sfaceCost: SFace 코사인 유사도 기반 거리 (기본값: nil)
     ///   - sfaceNorm: SFace 임베딩 L2 norm (기본값: nil)
-    init(boundingBox: CGRect, personIndex: Int, isValidSlot: Bool = false, sfaceCost: Float? = nil, sfaceNorm: Float? = nil) {
+    ///   - yunetScore: YuNet 감지 신뢰도 (DEBUG 전용, 기본값: nil)
+    init(boundingBox: CGRect, personIndex: Int, isValidSlot: Bool = false, sfaceCost: Float? = nil, sfaceNorm: Float? = nil, yunetScore: Float? = nil) {
         precondition(personIndex >= 1, "Person index must be >= 1")
         self.boundingBox = boundingBox
         self.personIndex = personIndex
         self.isValidSlot = isValidSlot
         self.sfaceCost = sfaceCost
         self.sfaceNorm = sfaceNorm
+        #if DEBUG
+        self.yunetScore = yunetScore
+        #endif
     }
 
     // MARK: - Computed Properties

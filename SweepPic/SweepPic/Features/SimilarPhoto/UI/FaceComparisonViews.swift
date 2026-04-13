@@ -99,6 +99,28 @@ final class FaceComparisonCell: UICollectionViewCell {
         return label
     }()
 
+    #if DEBUG
+    /// 품질 정보 배경 (하단 반투명 딤드)
+    private lazy var qualityBackground: UIView = {
+        let view = UIView()
+        view.backgroundColor = UIColor.black.withAlphaComponent(0.7)
+        view.isHidden = true
+        view.translatesAutoresizingMaskIntoConstraints = false
+        return view
+    }()
+
+    /// 품질 정보 라벨 ("S 0.92\nN 8.5")
+    private lazy var qualityLabel: UILabel = {
+        let label = UILabel()
+        label.font = .monospacedDigitSystemFont(ofSize: 11, weight: .medium)
+        label.textColor = .white
+        label.numberOfLines = 2
+        label.textAlignment = .left
+        label.translatesAutoresizingMaskIntoConstraints = false
+        return label
+    }()
+    #endif
+
     // MARK: - Initialization
 
     override init(frame: CGRect) {
@@ -139,6 +161,20 @@ final class FaceComparisonCell: UICollectionViewCell {
             debugLabel.widthAnchor.constraint(greaterThanOrEqualToConstant: 28),
             debugLabel.heightAnchor.constraint(equalToConstant: 22)
         ])
+
+        #if DEBUG
+        // 품질 정보 오버레이 (하단)
+        contentView.addSubview(qualityBackground)
+        qualityBackground.addSubview(qualityLabel)
+        NSLayoutConstraint.activate([
+            qualityBackground.leadingAnchor.constraint(equalTo: contentView.leadingAnchor),
+            qualityBackground.trailingAnchor.constraint(equalTo: contentView.trailingAnchor),
+            qualityBackground.bottomAnchor.constraint(equalTo: contentView.bottomAnchor),
+            qualityBackground.heightAnchor.constraint(equalToConstant: 32),
+            qualityLabel.leadingAnchor.constraint(equalTo: qualityBackground.leadingAnchor, constant: 6),
+            qualityLabel.centerYAnchor.constraint(equalTo: qualityBackground.centerYAnchor),
+        ])
+        #endif
     }
 
     // MARK: - Configuration
@@ -194,6 +230,19 @@ final class FaceComparisonCell: UICollectionViewCell {
         checkmarkView.isHidden = !selected
     }
 
+    #if DEBUG
+    /// 품질 정보 표시 (YuNet score + SFace norm)
+    /// - Parameters:
+    ///   - score: YuNet 감지 신뢰도 (0~1)
+    ///   - norm: SFace 임베딩 L2 norm
+    func setQualityInfo(score: Float?, norm: Float?) {
+        let scoreText = score.map { String(format: "S %.2f", $0) } ?? "S -"
+        let normText = norm.map { String(format: "N %.1f", $0) } ?? "N -"
+        qualityLabel.text = "\(scoreText)\n\(normText)"
+        qualityBackground.isHidden = false
+    }
+    #endif
+
     // MARK: - Frame Access
 
     /// Pic 라벨의 window 좌표 frame (C-3 포커스 애니메이션용)
@@ -212,6 +261,10 @@ final class FaceComparisonCell: UICollectionViewCell {
         setSelected(false)
         debugLabel.attributedText = nil
         debugLabel.isHidden = true
+        #if DEBUG
+        qualityLabel.text = nil
+        qualityBackground.isHidden = true
+        #endif
     }
 }
 
