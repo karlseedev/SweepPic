@@ -78,6 +78,26 @@ final class FaceScanGroupCell: UITableViewCell {
     /// 썸네일 이미지뷰 배열
     private var thumbnailViews: [UIImageView] = []
 
+    /// 사진 개수 pill 라벨 ("유사사진 N장")
+    private let photoCountLabel: UILabel = {
+        let label = UILabel()
+        label.translatesAutoresizingMaskIntoConstraints = false
+        label.font = .systemFont(ofSize: 13, weight: .medium)
+        label.textColor = .white
+        label.textAlignment = .center
+        return label
+    }()
+
+    /// 사진 개수 pill 배경 (둥근 좌우 캡슐, 블랙 70%)
+    private let photoCountBackground: UIView = {
+        let view = UIView()
+        view.translatesAutoresizingMaskIntoConstraints = false
+        view.backgroundColor = UIColor.black.withAlphaComponent(0.7)
+        view.layer.cornerRadius = 12
+        view.clipsToBounds = true
+        return view
+    }()
+
     /// dim 오버레이 (정리 완료 시)
     private let dimOverlay: UIView = {
         let view = UIView()
@@ -192,6 +212,18 @@ final class FaceScanGroupCell: UITableViewCell {
             dimOverlay.bottomAnchor.constraint(equalTo: contentView.bottomAnchor),
         ])
 
+        // 사진 개수 pill — 썸네일 그룹 좌측 상단
+        contentView.addSubview(photoCountBackground)
+        photoCountBackground.addSubview(photoCountLabel)
+        NSLayoutConstraint.activate([
+            photoCountBackground.leadingAnchor.constraint(equalTo: thumbnailScrollView.leadingAnchor, constant: 10),
+            photoCountBackground.topAnchor.constraint(equalTo: thumbnailScrollView.topAnchor, constant: 10),
+            photoCountBackground.heightAnchor.constraint(equalToConstant: 24),
+            photoCountLabel.leadingAnchor.constraint(equalTo: photoCountBackground.leadingAnchor, constant: 10),
+            photoCountLabel.trailingAnchor.constraint(equalTo: photoCountBackground.trailingAnchor, constant: -10),
+            photoCountLabel.centerYAnchor.constraint(equalTo: photoCountBackground.centerYAnchor),
+        ])
+
         // 정리 완료 라벨 — 썸네일 그룹 좌측 상단 (좌측 15, 상단 15 여백)
         contentView.addSubview(completionLabel)
         NSLayoutConstraint.activate([
@@ -222,9 +254,10 @@ final class FaceScanGroupCell: UITableViewCell {
         thumbnailScrollView.contentOffset = .zero
         thumbnailScrollView.contentSize = .zero
 
-        // dim 해제
+        // dim 해제 + pill 표시 복원
         dimOverlay.isHidden = true
         completionLabel.isHidden = true
+        photoCountBackground.isHidden = false
         topSeparator.isHidden = true
 
         currentGroupID = nil
@@ -251,6 +284,9 @@ final class FaceScanGroupCell: UITableViewCell {
         // 썸네일 로딩
         loadThumbnails(assetIDs: group.memberAssetIDs)
 
+        // 사진 개수 표시
+        photoCountLabel.text = String(localized: "faceScan.group.photoCount \(group.memberAssetIDs.count)")
+
         // dim 상태
         setDimmed(isDimmed)
     }
@@ -259,6 +295,8 @@ final class FaceScanGroupCell: UITableViewCell {
     func setDimmed(_ dimmed: Bool) {
         dimOverlay.isHidden = !dimmed
         completionLabel.isHidden = !dimmed
+        // 정리 완료 시 사진 개수 pill 숨김
+        photoCountBackground.isHidden = dimmed
     }
 
     /// 스크롤뷰 탭 시 부모 tableView의 didSelectRowAt 호출

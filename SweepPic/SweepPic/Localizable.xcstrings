@@ -3501,6 +3501,23 @@
         }
       }
     },
+    "faceScan.group.photoCount %lld" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld similar photos"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "유사사진 %lld장"
+          }
+        }
+      }
+    },
     "faceScan.list.closeAlert.finishedTitle" : {
       "extractionState" : "manual",
       "localizations" : {
