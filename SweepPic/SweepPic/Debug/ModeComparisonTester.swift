@@ -4,21 +4,19 @@
 //
 //  Created by Claude on 2026-01-30.
 //
-//  3모드 비교 테스터 (DEBUG 전용)
+//  2모드 비교 테스터 (DEBUG 전용)
 //
-//  3모드 (완화/기본/강화)를 동시에 평가하여 딱지로 구별하는 테스트.
+//  2모드 (매우 낮은 품질/약간 낮은 품질)를 동시에 평가하여 딱지로 구별하는 테스트.
 //  모든 모드는 OR 로직이며, 경로2의 AestheticsScore 임계값만 다름:
 //
-//  - 완화 (Light):    경로1 OR 경로2(< -0.3)  ← 경로2 엄격
-//  - 기본 (Standard): 경로1 OR 경로2(< 0.0)
-//  - 강화 (Deep):     경로1 OR 경로2(< 0.2)   ← 경로2 완화
+//  - 매우 낮은 품질 (Light):    경로1 OR 경로2(< -0.2)  ← 경로2 엄격
+//  - 약간 낮은 품질 (Standard): 경로1 OR 경로2(< 0.2)
 //
-//  계층: light ⊂ standard ⊂ deep
+//  계층: light ⊂ standard
 //
 //  배지 분류:
-//  - ⚪ 회색 (allModes):   3모드 전부 잡음 (light == true)
-//  - 🔵 파랑 (standardUp): 기본+강화만 잡음 (light == false, standard == true)
-//  - 🟡 노랑 (deepOnly):   강화만 잡음 (standard == false, deep == true)
+//  - ⚪ 회색 (allModes):   2모드 전부 잡음 (light == true)
+//  - 🔵 파랑 (standardUp): 약간 낮은 품질만 잡음 (light == false, standard == true)
 //
 
 #if DEBUG
@@ -30,35 +28,31 @@ import OSLog
 
 // MARK: - ModeCategory
 
-/// 3모드 비교 카테고리
+/// 2모드 비교 카테고리
 /// 어느 모드에서 저품질로 판정되었는지 분류
 enum ModeCategory: String, Codable {
-    /// 3모드 전부 잡음 (⚪ 회색)
+    /// 2모드 전부 잡음 (⚪ 회색)
     case allModes
-    /// 기본+강화만 잡음 (🔵 파랑)
+    /// 약간 낮은 품질만 잡음 (🔵 파랑)
     case standardUp
-    /// 강화만 잡음 (🟡 노랑)
-    case deepOnly
 }
 
 // MARK: - ModeComparisonResult
 
-/// 3모드 비교 테스트 결과
+/// 2모드 비교 테스트 결과
 @available(iOS 18.0, *)
 struct ModeComparisonResult {
     /// 총 검색된 사진 수
     let totalScanned: Int
-    /// 3모드 전부 (⚪)
+    /// 2모드 전부 (⚪)
     let allModesCount: Int
-    /// 기본+강화 (🔵)
+    /// 약간 낮은 품질만 (🔵)
     let standardUpCount: Int
-    /// 강화만 (🟡)
-    let deepOnlyCount: Int
     /// 삭제대기함 이동된 assetID 목록
     let trashedAssetIDs: [String]
     /// 총 삭제대기함 이동 수
     var totalTrashed: Int {
-        allModesCount + standardUpCount + deepOnlyCount
+        allModesCount + standardUpCount
     }
 }
 
@@ -133,14 +127,11 @@ final class ModeComparisonTester {
     /// 경로1: 동의용 임계값 (Weak/Conditional 신호에만 적용)
     private let path1AgreeThreshold: Float = 0.2
 
-    /// 경로2 임계값 - 완화 (엄격)
-    private let path2LightThreshold: Float = -0.3
+    /// 경로2 임계값 - 매우 낮은 품질 (엄격)
+    private let path2LightThreshold: Float = -0.2
 
-    /// 경로2 임계값 - 기본
-    private let path2StandardThreshold: Float = 0.0
-
-    /// 경로2 임계값 - 강화 (완화)
-    private let path2DeepThreshold: Float = 0.2
+    /// 경로2 임계값 - 약간 낮은 품질
+    private let path2StandardThreshold: Float = 0.2
 
     /// 최대 검색 수
     private let maxScanCount: Int = 3000
@@ -231,17 +222,17 @@ final class ModeComparisonTester {
     ///
     /// - Parameters:
     ///   - continueFromLast: true면 이어서 테스트 (마지막 날짜 이전부터)
-    ///   - onProgress: 진행 콜백 (scanned, allModes, standardUp, deepOnly)
+    ///   - onProgress: 진행 콜백 (scanned, allModes, standardUp)
     /// - Returns: 테스트 결과
     func runTest(
         continueFromLast: Bool = false,
-        onProgress: ((Int, Int, Int, Int) -> Void)? = nil
+        onProgress: ((Int, Int, Int) -> Void)? = nil
     ) async -> ModeComparisonResult {
         guard !isRunning else {
             Logger.cleanup.debug("이미 실행 중")
             return ModeComparisonResult(
                 totalScanned: 0, allModesCount: 0,
-                standardUpCount: 0, deepOnlyCount: 0,
+                standardUpCount: 0,
                 trashedAssetIDs: []
             )
         }
@@ -262,13 +253,12 @@ final class ModeComparisonTester {
             Logger.cleanup.debug("테스트 시작 (처음부터)")
         }
         Logger.cleanup.debug("- 경로1 동의 임계값: \(self.path1AgreeThreshold)")
-        Logger.cleanup.debug("- 경로2 완화: \(self.path2LightThreshold), 기본: \(self.path2StandardThreshold), 강화: \(self.path2DeepThreshold)")
+        Logger.cleanup.debug("- 경로2 매우 낮은 품질: \(self.path2LightThreshold), 약간 낮은 품질: \(self.path2StandardThreshold)")
         Logger.cleanup.debug("- 최대 검색 수: \(self.maxScanCount)")
 
         var totalScanned = 0
         var allModesCount = 0
         var standardUpCount = 0
-        var deepOnlyCount = 0
         var trashedAssetIDs: [String] = []
         var lastAssetDate: Date?
 
@@ -318,7 +308,7 @@ final class ModeComparisonTester {
                 let isExtremeRatio = aspectRatio > extremeAspectRatioThreshold || aspectRatio < (1.0 / extremeAspectRatioThreshold)
                 if isExtremeRatio {
                     Logger.cleanup.debug("극단적 비율 제외: \(asset.pixelWidth)×\(asset.pixelHeight) (ratio=\(String(format: "%.1f", aspectRatio)))")
-                    onProgress?(totalScanned, allModesCount, standardUpCount, deepOnlyCount)
+                    onProgress?(totalScanned, allModesCount, standardUpCount)
                     continue
                 }
 
@@ -347,7 +337,7 @@ final class ModeComparisonTester {
                     isTextScreenshot = false
                 }
 
-                // 5. 경로2 판정 (임계값만 다르게 3회, 동기 함수)
+                // 5. 경로2 판정 (임계값만 다르게 2회, 동기 함수)
                 let path2Light = evaluatePath2(
                     metrics: aestheticsMetrics,
                     isTextScreenshot: isTextScreenshot,
@@ -358,30 +348,21 @@ final class ModeComparisonTester {
                     isTextScreenshot: isTextScreenshot,
                     threshold: path2StandardThreshold
                 )
-                let path2Deep = evaluatePath2(
-                    metrics: aestheticsMetrics,
-                    isTextScreenshot: isTextScreenshot,
-                    threshold: path2DeepThreshold
-                )
 
-                // 6. 3모드 계산 (모두 OR, 경로2 임계값만 다름)
+                // 6. 2모드 계산 (모두 OR, 경로2 임계값만 다름)
                 let light    = path1Result || path2Light
                 let standard = path1Result || path2Std
-                let deep     = path1Result || path2Deep
 
                 // 7. 카테고리 분류
                 let category: ModeCategory?
                 if light {
-                    category = .allModes      // ⚪ 3모드 전부
+                    category = .allModes      // ⚪ 2모드 전부
                     allModesCount += 1
                 } else if standard {
-                    category = .standardUp    // 🔵 기본+강화
+                    category = .standardUp    // 🔵 약간 낮은 품질만
                     standardUpCount += 1
-                } else if deep {
-                    category = .deepOnly      // 🟡 강화만
-                    deepOnlyCount += 1
                 } else {
-                    category = nil            // 3모드 모두 정상 → 삭제대기함 안 감
+                    category = nil            // 2모드 모두 정상 → 삭제대기함 안 감
                 }
 
                 // 8. 삭제대기함 이동 + 카테고리 저장
@@ -395,7 +376,7 @@ final class ModeComparisonTester {
                 }
 
                 // 진행 콜백
-                onProgress?(totalScanned, allModesCount, standardUpCount, deepOnlyCount)
+                onProgress?(totalScanned, allModesCount, standardUpCount)
             }
 
             currentIndex = endIndex
@@ -420,15 +401,13 @@ final class ModeComparisonTester {
             totalScanned: totalScanned,
             allModesCount: allModesCount,
             standardUpCount: standardUpCount,
-            deepOnlyCount: deepOnlyCount,
             trashedAssetIDs: trashedAssetIDs
         )
 
         Logger.cleanup.debug("완료:")
         Logger.cleanup.debug("- 검색: \(totalScanned)장")
         Logger.cleanup.debug("- 전체(allModes): \(allModesCount)장")
-        Logger.cleanup.debug("- 기본이상(standardUp): \(standardUpCount)장")
-        Logger.cleanup.debug("- 강화만(deepOnly): \(deepOnlyCount)장")
+        Logger.cleanup.debug("- 약간 낮은 품질만(standardUp): \(standardUpCount)장")
 
         return result
     }

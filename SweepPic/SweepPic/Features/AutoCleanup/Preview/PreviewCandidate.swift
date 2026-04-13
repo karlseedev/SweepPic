@@ -5,7 +5,7 @@
 //  Created by Claude on 2026-02-12.
 //
 //  미리보기 분석 결과 1건 — 어느 단계에서 잡혔는지 + AestheticsScore
-//  단계 구분: light(완화) ⊂ standard(기본) ⊂ deep(강화)
+//  단계 구분: light(매우 낮은 품질) ⊂ standard(약간 낮은 품질)
 //
 
 import Photos
@@ -14,27 +14,23 @@ import Photos
 
 /// 단계 구분
 ///
-/// 3모드 임계값에 따라 어느 수준에서 잡혔는지 분류.
-/// light ⊂ standard ⊂ deep 계층 구조.
+/// 2모드 임계값에 따라 어느 수준에서 잡혔는지 분류.
+/// light ⊂ standard 계층 구조.
 enum PreviewStage: Int, Comparable, CaseIterable {
 
-    /// 완화 (확실한 저품질)
-    /// - 경로1 OR 경로2(< -0.3)
+    /// 매우 낮은 품질
+    /// - 경로1 OR 경로2(< -0.2)
     case light = 1
 
-    /// 기본
-    /// - 경로1 OR 경로2(< 0.0)
-    case standard = 2
-
-    /// 강화
+    /// 약간 낮은 품질
     /// - 경로1 OR 경로2(< 0.2)
-    case deep = 3
+    case standard = 2
 
     static func < (lhs: PreviewStage, rhs: PreviewStage) -> Bool {
         lhs.rawValue < rhs.rawValue
     }
 
-    /// 다음 단계 (deep이면 nil)
+    /// 다음 단계 (standard이면 nil)
     var next: PreviewStage? {
         return PreviewStage(rawValue: rawValue + 1)
     }

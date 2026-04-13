@@ -101,7 +101,7 @@ extension PreviewGridViewController {
         if currentStage == .light {
             photosSection = 0
         } else {
-            photosSection = 1  // standard/deep에서는 section 1이 light 사진
+            photosSection = 1  // standard에서는 section 1이 light 사진
         }
 
         guard case .photos(let candidates) = sectionType(for: photosSection) else { return nil }

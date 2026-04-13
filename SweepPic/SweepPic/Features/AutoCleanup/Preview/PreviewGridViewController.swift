@@ -474,30 +474,27 @@ final class PreviewGridViewController: UIViewController {
     // MARK: - Section Mapping
 
     /// 섹션 수 (currentStage에 따라 동적)
-    /// light: 사진만 (배너 없음), standard/deep: 배너+사진 쌍으로 구성
+    /// light: 사진만 (배너 없음), standard: 배너+사진 쌍으로 구성
     private var numberOfSections: Int {
         switch currentStage {
         case .light:
             return 1  // 사진만 (배너 없음)
         case .standard:
             return 4  // 배너, 사진, 배너, 사진
-        case .deep:
-            return 6  // 배너, 사진, 배너, 사진, 배너, 사진
         }
     }
 
     /// 섹션 인덱스에 대한 섹션 타입
     ///
     /// light: 0=사진
-    /// standard/deep: 0=배너(5등급), 1=light사진, 2=배너(4등급), 3=standard사진,
-    ///                4=배너(3등급), 5=deep사진
+    /// standard: 0=배너(매우 낮은 품질), 1=light사진, 2=배너(약간 낮은 품질), 3=standard사진
     func sectionType(for sectionIndex: Int) -> SectionType {
         // light 단계: 배너 없이 사진만
         if currentStage == .light {
             return .photos(previewResult.lightCandidates)
         }
 
-        // standard/deep: 배너 포함 전체 매핑
+        // standard: 배너 포함 전체 매핑
         switch sectionIndex {
         case 0:
             return .banner(scoreRange: String(localized: "preview.grade5"), count: previewResult.lightCount)
@@ -507,10 +504,6 @@ final class PreviewGridViewController: UIViewController {
             return .banner(scoreRange: String(localized: "preview.grade4"), count: previewResult.standardCount)
         case 3:
             return .photos(previewResult.standardCandidates)
-        case 4:
-            return .banner(scoreRange: String(localized: "preview.grade3"), count: previewResult.deepCount)
-        case 5:
-            return .photos(previewResult.deepCandidates)
         default:
             return .photos([])
         }
@@ -550,7 +543,6 @@ final class PreviewGridViewController: UIViewController {
         switch currentStage {
         case .light:    titleText = String(localized: "preview.header.light \(count)")
         case .standard: titleText = String(localized: "preview.header.standard \(count)")
-        case .deep:     titleText = String(localized: "preview.header.deep \(count)")
         }
 
         // iOS 26: 시스템 네비바 타이틀
@@ -624,14 +616,12 @@ final class PreviewGridViewController: UIViewController {
 
         // 확장 가능 여부: 다음 단계가 있고 + 추가분이 있고 + iOS 18 이상
         let canExpand: Bool
-        if currentStage >= .deep {
+        if currentStage >= .standard {
             canExpand = false
         } else if currentStage == .light && previewResult.standardCount == 0 {
             canExpand = false
-        } else if currentStage == .standard && previewResult.deepCount == 0 {
-            canExpand = false
         } else {
-            // iOS 16~17에서는 path2가 없어서 standard/deep이 빈 배열 → 확장 불가
+            // iOS 16~17에서는 path2가 없어서 standard가 빈 배열 → 확장 불가
             if #available(iOS 18.0, *) {
                 canExpand = true
             } else {
@@ -643,7 +633,6 @@ final class PreviewGridViewController: UIViewController {
             currentStage: currentStage,
             totalCount: totalCount,
             standardCount: previewResult.standardCount,
-            deepCount: previewResult.deepCount,
             canExpand: canExpand
         )
     }
@@ -677,9 +666,6 @@ final class PreviewGridViewController: UIViewController {
         if currentStage >= .standard {
             assets.append(contentsOf: previewResult.standardCandidates.map(\.asset))
         }
-        if currentStage >= .deep {
-            assets.append(contentsOf: previewResult.deepCandidates.map(\.asset))
-        }
         return assets
     }
 
@@ -692,7 +678,6 @@ final class PreviewGridViewController: UIViewController {
         switch currentStage {
         case .light:    gradeText = String(localized: "preview.grade.light")
         case .standard: gradeText = String(localized: "preview.grade.standard")
-        case .deep:     gradeText = String(localized: "preview.grade.deep")
         }
 
         let alert = UIAlertController(
@@ -728,7 +713,6 @@ final class PreviewGridViewController: UIViewController {
         switch analyticsMaxStage {
         case .light:    maxStage = .light
         case .standard: maxStage = .standard
-        case .deep:     maxStage = .deep
         }
 
         let data = PreviewCleanupEventData(
@@ -896,16 +880,12 @@ extension PreviewGridViewController: PreviewBottomViewDelegate {
 
         // 단계 축소 (expand의 역동작)
         // .standard → .light: 섹션 [0, 2, 3] 삭제 (light배너 + standard배너 + standard사진)
-        // .deep → .standard: 섹션 [4, 5] 삭제 (deep배너 + deep사진)
         let previousStage: PreviewStage
         let sectionsToDelete: IndexSet
         switch currentStage {
         case .standard:
             previousStage = .light
             sectionsToDelete = IndexSet([0, 2, 3])  // light배너도 함께 제거
-        case .deep:
-            previousStage = .standard
-            sectionsToDelete = IndexSet([4, 5])
         default:
             return
         }
@@ -944,8 +924,6 @@ extension PreviewGridViewController: PreviewBottomViewDelegate {
             switch nextStage {
             case .standard:
                 newSections = IndexSet([0, 2, 3])  // light배너 + standard배너 + standard사진
-            case .deep:
-                newSections = IndexSet([4, 5])      // deep배너 + deep사진
             default:
                 return
             }
@@ -958,8 +936,6 @@ extension PreviewGridViewController: PreviewBottomViewDelegate {
             switch nextStage {
             case .standard:
                 bannerSection = 2
-            case .deep:
-                bannerSection = 4
             default:
                 return
             }

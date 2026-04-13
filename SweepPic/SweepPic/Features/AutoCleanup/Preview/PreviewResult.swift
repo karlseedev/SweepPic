@@ -5,7 +5,7 @@
 //  Created by Claude on 2026-02-12.
 //
 //  분석 완료 결과 — PreviewGridVC에 전달
-//  3단계별 후보를 분리하여 보관 (light / standard 추가분 / deep 추가분)
+//  2단계별 후보를 분리하여 보관 (light / standard 추가분)
 //
 
 import Foundation
@@ -16,14 +16,11 @@ import Foundation
 /// 각 단계의 후보를 분리하여 보관하며, UI에서 단계적 확장 시 사용.
 struct PreviewResult {
 
-    /// 1단계 후보 (완화 — 확실한 저품질)
+    /// 1단계 후보 (매우 낮은 품질)
     let lightCandidates: [PreviewCandidate]
 
-    /// 2단계 추가분 (기본 - 완화 차이)
+    /// 2단계 추가분 (약간 낮은 품질)
     let standardCandidates: [PreviewCandidate]
-
-    /// 3단계 추가분 (강화 - 기본 차이)
-    let deepCandidates: [PreviewCandidate]
 
     /// 총 스캔된 사진 수
     let scannedCount: Int
@@ -42,11 +39,8 @@ struct PreviewResult {
     /// 2단계 추가분 개수
     var standardCount: Int { standardCandidates.count }
 
-    /// 3단계 추가분 개수
-    var deepCount: Int { deepCandidates.count }
-
     /// 전체 후보 수
-    var totalCount: Int { lightCount + standardCount + deepCount }
+    var totalCount: Int { lightCount + standardCount }
 
     // MARK: - Stage Query
 
@@ -65,11 +59,6 @@ struct PreviewResult {
             ids.append(contentsOf: standardCandidates.map { $0.assetID })
         }
 
-        // deep이면 추가
-        if stage >= .deep {
-            ids.append(contentsOf: deepCandidates.map { $0.assetID })
-        }
-
         return ids
     }
 
@@ -83,8 +72,6 @@ struct PreviewResult {
             return lightCount
         case .standard:
             return lightCount + standardCount
-        case .deep:
-            return totalCount
         }
     }
 
@@ -97,7 +84,6 @@ struct PreviewResult {
         return PreviewResult(
             lightCandidates: lightCandidates.filter { !assetIDs.contains($0.assetID) },
             standardCandidates: standardCandidates.filter { !assetIDs.contains($0.assetID) },
-            deepCandidates: deepCandidates.filter { !assetIDs.contains($0.assetID) },
             scannedCount: scannedCount,
             totalTimeSeconds: totalTimeSeconds,
             endReason: endReason

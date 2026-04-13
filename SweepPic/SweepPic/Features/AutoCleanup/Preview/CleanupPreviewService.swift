@@ -7,12 +7,12 @@
 //  미리보기 전용 분석 서비스
 //  - 기존 CleanupService와 독립 (즉시 이동 흐름 유지)
 //  - 분석만 수행, 삭제대기함 이동 없음
-//  - 3모드 (완화/기본/강화) 동시 평가하여 단계별 분류
-//  - 3모드 동시 평가 로직 독립 구현
+//  - 2모드 (매우 낮은 품질/약간 낮은 품질) 동시 평가하여 단계별 분류
+//  - 2모드 동시 평가 로직 독립 구현
 //
 //  iOS 분기:
-//  - iOS 18+: path1 + path2 → 3단계 결과
-//  - iOS 16~17: path1만 → light만, standard/deep 빈 배열
+//  - iOS 18+: path1 + path2 → 2단계 결과
+//  - iOS 16~17: path1만 → light만, standard 빈 배열
 //
 
 import Foundation
@@ -25,7 +25,7 @@ import OSLog
 
 /// 미리보기 전용 분석 서비스
 ///
-/// 사진을 분석하여 3단계(완화/기본/강화)로 분류합니다.
+/// 사진을 분석하여 2단계(매우 낮은 품질/약간 낮은 품질)로 분류합니다.
 /// 삭제대기함 이동 없이 결과만 반환하여 미리보기 그리드에 표시.
 final class CleanupPreviewService {
 
@@ -34,16 +34,11 @@ final class CleanupPreviewService {
     /// 경로1: 동의용 임계값 (Weak/Conditional 신호에만 적용)
     private let path1AgreeThreshold: Float = 0.2
 
-    /// 경로2 임계값 - 완화 (엄격)
-    private let path2LightThreshold: Float = -0.3
+    /// 경로2 임계값 - 매우 낮은 품질 (엄격)
+    private let path2LightThreshold: Float = -0.2
 
-    /// 경로2 임계값 - 기본
-    private let path2StandardThreshold: Float = 0.0
-
-    /// 경로2 임계값 - 강화 (완화)
-    /// - 0.3: 정상 사진 최소값(0.230) 근처까지 포함하여 적극적으로 검출
-    /// - 3등급(가장 완화)이므로 일부 오탐 허용, 사용자가 미리보기에서 확인
-    private let path2DeepThreshold: Float = 0.3
+    /// 경로2 임계값 - 약간 낮은 품질
+    private let path2StandardThreshold: Float = 0.2
 
     /// 최대 검색 수
     private let maxScanCount: Int = CleanupConstants.maxScanCount
@@ -150,12 +145,12 @@ final class CleanupPreviewService {
 
     // MARK: - Main API
 
-    /// 분석 실행 — 이동 없이 3단계 분류 결과만 반환
+    /// 분석 실행 — 이동 없이 2단계 분류 결과만 반환
     ///
     /// - Parameters:
     ///   - method: 정리 방식 (.fromLatest / .continueFromLast / .byYear)
     ///   - progressHandler: 진행 상황 콜백 (메인 스레드 아님)
-    /// - Returns: 3단계 분류된 PreviewResult
+    /// - Returns: 2단계 분류된 PreviewResult
     /// - Throws: 취소 시 CancellationError
     func analyze(
         method: CleanupMethod,
@@ -184,14 +179,12 @@ final class CleanupPreviewService {
         // 결과 수집
         var lightCandidates: [PreviewCandidate] = []
         var standardCandidates: [PreviewCandidate] = []
-        var deepCandidates: [PreviewCandidate] = []
         var totalScanned = 0
         var lastAssetDate: Date?
 
         // 등급별 Path 카운터 (분포 로그용)
         var lightPath1Count = 0, lightPath2Count = 0
         var stdPath1Count = 0, stdPath2Count = 0
-        var deepPath1Count = 0, deepPath2Count = 0
 
         // 배치 처리
         let batchSize = CleanupConstants.batchSize
@@ -272,7 +265,7 @@ final class CleanupPreviewService {
                     aestheticsScore: aestheticsScore
                 )
 
-                // 4. 경로2 판정 (임계값만 다르게 3회)
+                // 4. 경로2 판정 (임계값만 다르게 2회)
                 let path2Light = evaluatePath2(
                     score: aestheticsScore,
                     isUtility: isUtility,
@@ -285,16 +278,10 @@ final class CleanupPreviewService {
                     isTextScreenshot: isTextScreenshot,
                     threshold: path2StandardThreshold
                 )
-                let path2Deep = evaluatePath2(
-                    score: aestheticsScore,
-                    isUtility: isUtility,
-                    isTextScreenshot: isTextScreenshot,
-                    threshold: path2DeepThreshold
-                )
 
                 // 5. 경로2 단독 검출 시 SafeGuard 체크
                 //    경로1이 이미 검출했으면 SafeGuard 불필요 (경로1 내부에서 이미 처리됨)
-                let anyPath2 = path2Light || path2Std || path2Deep
+                let anyPath2 = path2Light || path2Std
                 var safeGuardDebug: SafeGuardDebugInfo? = nil
                 var path2SafeGuarded = false
 
@@ -353,19 +340,12 @@ final class CleanupPreviewService {
                     }
                 }
 
-                // 6. 3모드 계산
-                // Path1 Strong(극단 노출/심각 블러)만 5등급, Weak는 4등급부터
+                // 6. 2모드 계산
+                // Path1 Strong(극단 노출/심각 블러)만 매우 낮은 품질
                 let path1Strong = path1Result && oldResult.signals.hasStrongSignal
-
-                // Path1 Weak 합산 ≥ 2: acceptable이지만 신호가 있는 경계선 사진 (3등급용)
-                // oldResult.signals는 SafeGuard 적용 후 값이므로 별도 SafeGuard 불필요
-                let path1WeakLoose = !oldResult.verdict.isLowQuality
-                    && oldResult.signals.weakWeightSum >= 2
-                    && (aestheticsScore == nil || aestheticsScore! < path2DeepThreshold)
 
                 let light    = path1Strong || path2Light
                 let standard = path1Result || path2Std
-                let deep     = path1Result || path1WeakLoose || path2Deep
 
                 // 7. 단계별 분류 (추가분만 분리) + 등급별 Path 카운터
                 if light {
@@ -391,18 +371,6 @@ final class CleanupPreviewService {
                     ))
                     if path1Result { stdPath1Count += 1 }
                     if path2Std { stdPath2Count += 1 }
-
-                } else if deep {
-                    deepCandidates.append(PreviewCandidate(
-                        assetID: asset.localIdentifier,
-                        asset: asset,
-                        stage: .deep,
-                        score: aestheticsScore,
-                        qualityResult: oldResult,
-                        safeGuardDebug: safeGuardDebug
-                    ))
-                    if path1WeakLoose { deepPath1Count += 1 }
-                    if path2Deep { deepPath2Count += 1 }
                 }
 
                 // 프로그레스 보고
@@ -452,19 +420,16 @@ final class CleanupPreviewService {
         // 등급별 분포 로그
         let lightDup = lightPath1Count + lightPath2Count - lightCandidates.count
         let stdDup = stdPath1Count + stdPath2Count - standardCandidates.count
-        let deepDup = deepPath1Count + deepPath2Count - deepCandidates.count
         Logger.cleanup.notice("""
             [등급 분포] 총 스캔: \(totalScanned)장
-            5등급: \(lightCandidates.count)장 (Path1: \(lightPath1Count), Path2: \(lightPath2Count), 중복: \(lightDup))
-            4등급: \(standardCandidates.count)장 (Path1: \(stdPath1Count), Path2: \(stdPath2Count), 중복: \(stdDup))
-            3등급: \(deepCandidates.count)장 (Path1: \(deepPath1Count), Path2: \(deepPath2Count), 중복: \(deepDup))
+            매우 낮은 품질: \(lightCandidates.count)장 (Path1: \(lightPath1Count), Path2: \(lightPath2Count), 중복: \(lightDup))
+            약간 낮은 품질: \(standardCandidates.count)장 (Path1: \(stdPath1Count), Path2: \(stdPath2Count), 중복: \(stdDup))
             """)
 
         // 스캔은 최신→오래된 순이지만, 그리드 표시는 오래된→최신 (다른 그리드와 통일)
         let result = PreviewResult(
             lightCandidates: lightCandidates.reversed(),
             standardCandidates: standardCandidates.reversed(),
-            deepCandidates: deepCandidates.reversed(),
             scannedCount: totalScanned,
             totalTimeSeconds: elapsed,
             endReason: endReason

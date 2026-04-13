@@ -170,22 +170,19 @@ final class PreviewBottomView: UIView {
     /// - Parameters:
     ///   - currentStage: 현재 표시 단계
     ///   - totalCount: 현재 단계까지의 총 개수
-    ///   - standardCount: standard 단계 추가분 개수 (31~40점)
-    ///   - deepCount: deep 단계 추가분 개수 (41~50점)
-    ///   - canExpand: 더 확장 가능한지 (3단계면 false)
+    ///   - standardCount: standard 단계 추가분 개수 (약간 낮은 품질)
+    ///   - canExpand: 더 확장 가능한지 (standard이면 false)
     func configure(
         currentStage: PreviewStage,
         totalCount: Int,
         standardCount: Int,
-        deepCount: Int,
         canExpand: Bool
     ) {
-        // 메인 버튼: "N등급 이하 사진 N장 삭제대기함 이동" (상단 타이틀 등급과 동일)
+        // 메인 버튼: "N장 삭제대기함 이동"
         let primaryTitle: String
         switch currentStage {
         case .light:    primaryTitle = String(localized: "preview.bottom.primary.light \(totalCount)")
         case .standard: primaryTitle = String(localized: "preview.bottom.primary.standard \(totalCount)")
-        case .deep:     primaryTitle = String(localized: "preview.bottom.primary.deep \(totalCount)")
         }
         primaryButton.setButtonTitle(primaryTitle)
 
@@ -199,32 +196,26 @@ final class PreviewBottomView: UIView {
         // 둘 다 보이면 2줄, 하나만 보이면 1줄
         let useTwoLines = showCollapse && showExpand
 
-        // 축소 버튼 (2단계부터)
-        // standard: "4등급 사진 N장 덜 보기", deep: "3등급 사진 N장 덜 보기"
+        // 축소 버튼 (standard 단계에서만)
         if showCollapse {
             let separator = useTwoLines ? "\n" : " "
             let collapseTitle: String
             switch currentStage {
             case .standard:
                 collapseTitle = String(localized: "preview.bottom.collapse.standard \(separator) \(standardCount)")
-            case .deep:
-                collapseTitle = String(localized: "preview.bottom.collapse.deep \(separator) \(deepCount)")
             default:
                 collapseTitle = ""
             }
             collapseButton.setButtonTitle(collapseTitle)
         }
 
-        // 확장 버튼
-        // light: "4등급 사진 N장 더 보기", standard: "3등급 사진 N장 더 보기"
+        // 확장 버튼 (light 단계에서만)
         if showExpand {
             let separator = useTwoLines ? "\n" : " "
             let expandTitle: String
             switch currentStage {
             case .light:
                 expandTitle = String(localized: "preview.bottom.expand.standard \(separator) \(standardCount)")
-            case .standard:
-                expandTitle = String(localized: "preview.bottom.expand.deep \(separator) \(deepCount)")
             default:
                 expandTitle = ""
             }
