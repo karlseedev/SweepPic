@@ -619,12 +619,10 @@ final class FaceScanListViewController: UIViewController, BarsVisibilityControll
     private func presentComparison(for group: FaceScanGroup) {
         presentedGroupID = group.groupID
 
-        // ComparisonGroup 생성 (자체 그룹 데이터에서, 첫 번째 사진 기준)
+        // ComparisonGroup 생성 (그룹 전체 멤버 포함)
         let comparisonGroup = ComparisonGroup(
             sourceGroupID: group.groupID,
-            selectedAssetIDs: Array(group.memberAssetIDs.prefix(
-                SimilarityConstants.maxComparisonGroupSize
-            )),
+            selectedAssetIDs: group.memberAssetIDs,
             personIndex: group.validPersonIndices.sorted().first ?? 1
         )
 

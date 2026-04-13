@@ -130,11 +130,6 @@ enum SimilarityConstants: Sendable {
     /// 스크롤 디바운싱 시간 (초)
     nonisolated static let scrollDebounceDelay: TimeInterval = 0.3
 
-    // MARK: - Comparison Group
-
-    /// 비교 그룹 최대 크기 (뷰어 + FaceScan 공통)
-    nonisolated static let maxComparisonGroupSize: Int = 12
-
     // MARK: - Face Cropping
 
     /// 얼굴 크롭 여백 비율

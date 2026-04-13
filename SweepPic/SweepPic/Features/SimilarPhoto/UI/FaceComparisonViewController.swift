@@ -84,7 +84,7 @@ extension FaceComparisonDelegate {
 /// 유사 사진 뷰어에서 +버튼 탭 시 표시됩니다.
 /// UIPageViewController를 사용하여 인물별 페이지를 스와이프로 전환할 수 있습니다.
 ///
-/// - Note: ComparisonGroup에서 최대 12장까지 표시됩니다.
+/// - Note: ComparisonGroup의 전체 멤버를 표시합니다.
 final class FaceComparisonViewController: UIViewController {
 
     // MARK: - Constants
