@@ -595,13 +595,9 @@ final class SimilarityAnalysisQueue {
             var leftConfirmed = true
             var rightConfirmed = true
 
-            let needsLeftCheck = group.first == assetIDs.first
-            let needsRightCheck = group.last == assetIDs.last
-            Logger.similarPhoto.debug("[Boundary] group(\(expandedGroup.count)장) — left:\(needsLeftCheck ? "확인필요" : "확정") right:\(needsRightCheck ? "확인필요" : "확정")")
-
             // --- 왼쪽 경계 확인 ---
             // 그룹의 첫 멤버가 분석 범위의 첫 사진과 일치하면 경계가 불확실
-            if needsLeftCheck {
+            if group.first == assetIDs.first {
                 leftConfirmed = false
                 var expansionCount = 0
                 // range.lowerBound 이전부터 왼쪽으로 탐색
@@ -686,7 +682,7 @@ final class SimilarityAnalysisQueue {
 
             // --- 오른쪽 경계 확인 ---
             // 그룹의 마지막 멤버가 분석 범위의 마지막 사진과 일치하면 경계가 불확실
-            if needsRightCheck {
+            if group.last == assetIDs.last {
                 rightConfirmed = false
                 var expansionCount = 0
                 // range.upperBound 이후부터 오른쪽으로 탐색
@@ -769,14 +765,8 @@ final class SimilarityAnalysisQueue {
                 }
             }
 
-            let expanded = expandedGroup.count - group.count
-            let confirmed = leftConfirmed && rightConfirmed
-            if expanded > 0 || !confirmed {
-                Logger.similarPhoto.notice("[Boundary] 결과: \(group.count)→\(expandedGroup.count)장 (+\(expanded)), confirmed=\(confirmed)")
-            }
-
             resolvedGroups.append(expandedGroup)
-            boundaryCompleted.append(confirmed)
+            boundaryCompleted.append(leftConfirmed && rightConfirmed)
         }
 
         return (resolvedGroups, boundaryCompleted)
