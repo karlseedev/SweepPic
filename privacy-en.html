@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SweepPic - Privacy Policy</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, sans-serif; max-width: 720px; margin: 0 auto; padding: 24px; line-height: 1.7; color: #333; }
+        h1 { font-size: 24px; margin-bottom: 4px; }
+        h2 { font-size: 18px; margin-top: 32px; border-bottom: 1px solid #eee; padding-bottom: 8px; }
+        table { width: 100%; border-collapse: collapse; margin: 12px 0; }
+        th, td { border: 1px solid #ddd; padding: 8px 12px; text-align: left; font-size: 14px; }
+        th { background: #f5f5f5; }
+        p, li { font-size: 15px; }
+        .note { color: #666; font-size: 13px; }
+        .date { color: #888; font-size: 14px; margin-bottom: 24px; }
+    </style>
+</head>
+<body>
+    <h1>SweepPic Privacy Policy</h1>
+    <p class="date">Last updated: March 11, 2026 | Effective: March 11, 2026</p>
+
+    <h2>1. Overview</h2>
+    <p>SweepPic (the "App") is an iOS app specialized in photo organization. Photo data and face recognition results are processed only on the device and are never transmitted to external servers.</p>
+
+    <h2>2. Information We Collect</h2>
+    <p>The App automatically collects the following data for service improvement:</p>
+
+    <p><strong>a) TelemetryDeck (Analytics)</strong></p>
+    <p>TelemetryDeck applies identifier protection measures such as double hashing, so that original identifiers are not stored as-is.</p>
+    <table>
+        <tr><th>Item</th><th>Example</th></tr>
+        <tr><td>App usage events</td><td>View, delete, and analysis counts</td></tr>
+        <tr><td>Photo library size range</td><td>"1K-5K" (range only)</td></tr>
+    </table>
+    <p class="note">* IDFV is hashed internally by the SDK; the original identifier is not retained.</p>
+
+    <p><strong>b) Supabase (Self-hosted Analytics Server)</strong></p>
+    <table>
+        <tr><th>Item</th><th>Example</th></tr>
+        <tr><td>App usage events</td><td>View, delete, and analysis counts</td></tr>
+        <tr><td>Device identifier (IDFV)</td><td>Device-specific unique value</td></tr>
+        <tr><td>Device information</td><td>iPhone16,1 / iOS 18.3 / App v1.0</td></tr>
+        <tr><td>Subscription status</td><td>free or pro</td></tr>
+        <tr><td>Photo library size range</td><td>"1K-5K" (range only, not photo content)</td></tr>
+        <tr><td>Referral program user ID</td><td>App-internal UUID stored in Keychain</td></tr>
+        <tr><td>Invite code and status</td><td>Invite code entry, application status, reward status</td></tr>
+        <tr><td>Reward processing info</td><td>Reward ID, product ID, subscription status, StoreKit transaction ID</td></tr>
+        <tr><td>Push notification token</td><td>APNs device token</td></tr>
+    </table>
+    <p class="note">* Photo files, photo metadata, and face data are never collected.</p>
+
+    <h2>3. Purpose of Data Processing</h2>
+    <ul>
+        <li>Improving app features and diagnosing errors</li>
+        <li>Enhancing service quality through usage pattern analysis</li>
+        <li>Displaying advertisements (Google AdMob)</li>
+        <li>Verifying subscription status and providing paid features</li>
+        <li>Processing invite codes, referral rewards, and preventing abuse</li>
+        <li>Sending referral reward and app-related notifications</li>
+    </ul>
+
+    <h2>4. Data Retention Period</h2>
+    <ul>
+        <li>TelemetryDeck analytics data: Subject to TelemetryDeck's data retention policy</li>
+        <li>Supabase analytics events: Retained for 365 days from collection, then automatically deleted</li>
+        <li>Referral program user ID and referral/reward records: Retained as long as necessary for referral services, reward processing, abuse prevention, and customer support</li>
+        <li>Push notification tokens: Retained as long as necessary for notification delivery; updated or deleted upon permission revocation or token renewal</li>
+        <li>App data on device is deleted upon app removal. However, the referral program user ID stored in Keychain may persist after reinstallation per iOS policy</li>
+    </ul>
+
+    <h2>5. Data Processing Delegation and International Transfer</h2>
+    <p>The App uses the following external services for service delivery.</p>
+    <table>
+        <tr><th>Service Provider</th><th>Data Processed</th><th>Purpose</th></tr>
+        <tr><td>Apple Inc.</td><td>Subscription purchases, payments, refunds, and transaction information</td><td>Subscription billing and purchase restoration</td></tr>
+        <tr><td>TelemetryDeck GmbH</td><td>App usage events, analytics identifiers</td><td>Usage analytics</td></tr>
+        <tr><td>Supabase Inc.</td><td>Usage events, IDFV, device info, subscription status, referral user ID, invite/reward data, push tokens</td><td>Analytics, referral/reward services, notifications</td></tr>
+        <tr><td>Google LLC</td><td>Device and network information, ad-related identifiers</td><td>Ad delivery</td></tr>
+    </table>
+    <p class="note">* Google AdMob SDK may independently collect device and network information for ad delivery. Personalized ads are not served without ATT (App Tracking Transparency) consent.</p>
+
+    <h2>6. Your Rights</h2>
+    <p>You may exercise the following rights:</p>
+    <ul>
+        <li>Request to stop data processing: Contact <a href="mailto:karlseee4@gmail.com">karlseee4@gmail.com</a></li>
+        <li>Request to access/delete personal data: Contact <a href="mailto:karlseee4@gmail.com">karlseee4@gmail.com</a></li>
+        <li>Supabase data: Data identifiable by IDFV or referral user ID can be deleted</li>
+        <li>TelemetryDeck data: Direct lookup or deletion of individual user data may be limited due to identifier protection</li>
+        <li>Processing results will be communicated within 10 days of receiving a request</li>
+    </ul>
+
+    <h2>7. Face Recognition Technology</h2>
+    <p>The App uses Apple's Vision Framework to automatically detect and zoom into faces in photos.</p>
+    <ul>
+        <li>All processing is performed on-device only</li>
+        <li>Face data is neither stored nor transmitted externally</li>
+        <li>Not used for marketing, advertising, or data mining</li>
+    </ul>
+
+    <h2>8. Automated Decision-Making</h2>
+    <p>The App's "Auto Cleanup" feature uses AI to analyze photo quality (exposure, blur, etc.) and suggest candidates for deletion.</p>
+    <ul>
+        <li>No automatic deletion is performed; the final decision is always made by the user</li>
+        <li>Analysis results are processed on-device only</li>
+    </ul>
+
+    <h2>9. Behavioral Information</h2>
+    <p>The App does not independently collect behavioral information for ad personalization. However, ads are displayed through Google AdMob, and Google's SDK may process related information for ad delivery and measurement. Without ATT consent, cross-app tracking-based personalized ads are not served.</p>
+
+    <h2>10. Data Protection Officer</h2>
+    <ul>
+        <li>Name: Simon Karl</li>
+        <li>Contact: <a href="mailto:karlseee4@gmail.com">karlseee4@gmail.com</a></li>
+    </ul>
+
+    <h2>11. Changes to This Policy</h2>
+    <p>Any changes will be notified at least 7 days in advance through in-app notices and this page.</p>
+</body>
+</html>
