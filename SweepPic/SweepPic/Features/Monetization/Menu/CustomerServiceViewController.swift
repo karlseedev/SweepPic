@@ -35,11 +35,17 @@ final class CustomerServiceViewController: NSObject {
         String(localized: "monetization.support.emailSubject")
     }
 
-    /// 이용약관 URL (출시 전 실제 URL로 교체)
-    private static let termsURL = URL(string: "https://sweeppic.app/terms")!
+    /// 이용약관 URL — 기기 언어에 따라 한/영 분기
+    private static var termsURL: URL {
+        let lang = Locale.current.language.languageCode?.identifier == "ko" ? "ko" : "en"
+        return URL(string: "https://karlseedev.github.io/SweepPic/terms-\(lang).html")!
+    }
 
-    /// 개인정보처리방침 URL (출시 전 실제 URL로 교체)
-    private static let privacyURL = URL(string: "https://sweeppic.app/privacy")!
+    /// 개인정보처리방침 URL — 기기 언어에 따라 한/영 분기
+    private static var privacyURL: URL {
+        let lang = Locale.current.language.languageCode?.identifier == "ko" ? "ko" : "en"
+        return URL(string: "https://karlseedev.github.io/SweepPic/privacy-\(lang).html")!
+    }
 
     // MARK: - Shared Instance (MFMailComposeViewControllerDelegate 유지용)
 
