@@ -2,7 +2,7 @@
 //  ViewerViewController+CoachMark.swift
 //  SweepPic
 //
-//  코치마크 B: 뷰어 스와이프 삭제 안내
+//  코치마크 B: 뷰어에서 밀어서 삭제 안내
 //  - viewDidAppear + 페이지 스와이프 완료 시 조건 확인 후 오버레이 배치
 //  - 오버레이를 뷰어의 view에 추가하여 뒤로가기/삭제 버튼이 위에 보이도록 함
 //  - 동영상은 스킵, 이미지일 때만 표시
@@ -20,6 +20,9 @@ extension ViewerViewController {
     func showViewerSwipeDeleteCoachMarkIfNeeded() {
         // 이미 표시된 적 있으면 스킵
         guard !CoachMarkType.viewerSwipeDelete.hasBeenShown else { return }
+
+        // C 자동 pop 진행 중이면 B 스킵
+        guard !CoachMarkManager.shared.isAutoPopForC else { return }
 
         // C-2 대기 중이면 B 스킵 (C-2와 B 충돌 방지)
         guard !CoachMarkManager.shared.isWaitingForC2 else { return }

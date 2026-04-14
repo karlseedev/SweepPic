@@ -74,8 +74,8 @@ GracePeriodState
 
 ```
 SubscriptionState: Sendable
-├── tier: SubscriptionTier         // .free | .plus
-├── isActive: Bool                 // Plus 구독 활성 여부
+├── tier: SubscriptionTier         // .free | .pro
+├── isActive: Bool                 // Pro 구독 활성 여부
 ├── autoRenewEnabled: Bool         // 자동 갱신 활성 여부
 ├── hasPaymentIssue: Bool          // 결제 문제 (갱신 실패)
 ├── expirationDate: Date?          // 만료 예정일
@@ -83,22 +83,22 @@ SubscriptionState: Sendable
 
 enum SubscriptionTier: String, Codable
 ├── free
-└── plus
+└── pro
 ```
 
 **상태 전이**:
 ```
-[Free] ──구매──→ [Plus Active]
+[Free] ──구매──→ [Pro Active]
   ↑                    │
   │              환불/만료/미갱신
   │                    │
   └────────────────────┘
 
-[Plus Active] ──갱신 실패──→ [Plus (결제 문제)] ──16일 유예──→ [Free]
+[Pro Active] ──갱신 실패──→ [Pro (결제 문제)] ──16일 유예──→ [Free]
                                      │
                                 결제 수단 갱신
                                      │
-                              [Plus Active]로 복귀
+                              [Pro Active]로 복귀
 ```
 
 ---

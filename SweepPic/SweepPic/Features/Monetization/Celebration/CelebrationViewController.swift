@@ -30,14 +30,25 @@ final class CelebrationViewController: UIViewController {
     /// 축하 결과 데이터
     private let result: CelebrationResult
 
+    /// "확인" 버튼으로 닫힌 뒤 실행할 콜백
+    private let onAcknowledge: (() -> Void)?
+
     // MARK: - UI Components
 
-    /// 블러 배경
-    private lazy var blurView: UIVisualEffectView = {
-        let effect = UIBlurEffect(style: .systemUltraThinMaterialDark)
-        let view = UIVisualEffectView(effect: effect)
+    /// 배경 블러 (딤드 위에 10% 강도 블러)
+    private let backgroundBlurView: UIVisualEffectView = {
+        let view = UIVisualEffectView(effect: nil)
         view.translatesAutoresizingMaskIntoConstraints = false
         return view
+    }()
+
+    private lazy var blurAnimator: UIViewPropertyAnimator = {
+        let animator = UIViewPropertyAnimator(duration: 0, curve: .linear) { [weak self] in
+            self?.backgroundBlurView.effect = UIBlurEffect(style: .systemUltraThinMaterialDark)
+        }
+        animator.fractionComplete = 0.1
+        animator.pausesOnCompletion = true
+        return animator
     }()
 
     /// 카드 컨테이너 (블러 팝업 카드)
@@ -74,6 +85,7 @@ final class CelebrationViewController: UIViewController {
         label.font = .systemFont(ofSize: 16, weight: .regular)
         label.textColor = UIColor.white.withAlphaComponent(0.7)
         label.textAlignment = .center
+        label.numberOfLines = 0
         return label
     }()
 
@@ -84,6 +96,7 @@ final class CelebrationViewController: UIViewController {
         label.font = .systemFont(ofSize: 16, weight: .regular)
         label.textColor = UIColor.white.withAlphaComponent(0.7)
         label.textAlignment = .center
+        label.numberOfLines = 0
         return label
     }()
 
@@ -91,7 +104,7 @@ final class CelebrationViewController: UIViewController {
     private lazy var confirmButton: UIButton = {
         let button = UIButton(type: .system)
         button.backgroundColor = UIColor.white.withAlphaComponent(0.12)
-        button.setTitle("확인", for: .normal)
+        button.setTitle(String(localized: "common.ok"), for: .normal)
         button.setTitleColor(.white, for: .normal)
         button.titleLabel?.font = .systemFont(ofSize: 17, weight: .semibold)
         button.layer.cornerRadius = 25
@@ -101,12 +114,65 @@ final class CelebrationViewController: UIViewController {
         return button
     }()
 
+    // MARK: - Referral Promo (T034, US4)
+
+    /// 초대 프로모 하단 배경 — 카드 하단을 가로로 잘라 색상 차별화
+    private lazy var referralPromoBackground: UIView = {
+        let view = UIView()
+        view.backgroundColor = UIColor.black.withAlphaComponent(0.35)
+        view.translatesAutoresizingMaskIntoConstraints = false
+        return view
+    }()
+
+    /// 초대 프로모 안내 라벨
+    private lazy var referralLabel: UILabel = {
+        let label = UILabel()
+        label.translatesAutoresizingMaskIntoConstraints = false
+        label.text = String(localized: "monetization.gate.referralPromo")
+        label.font = .systemFont(ofSize: 14, weight: .medium)
+        label.textColor = UIColor.white.withAlphaComponent(0.8)
+        label.textAlignment = .center
+        label.numberOfLines = 0
+        return label
+    }()
+
+    /// 초대 부가 문구
+    private lazy var referralSubtitleLabel: UILabel = {
+        let label = UILabel()
+        label.text = String(localized: "monetization.gate.referralNote")
+        label.font = .systemFont(ofSize: 11, weight: .regular)
+        label.textColor = UIColor.white.withAlphaComponent(0.4)
+        label.textAlignment = .center
+        label.translatesAutoresizingMaskIntoConstraints = false
+        return label
+    }()
+
+    /// 초대 버튼 — 다른 버튼과 동일 높이 50pt, cornerRadius 25
+    private lazy var referralButton: UIButton = {
+        let button = UIButton(type: .system)
+        button.backgroundColor = UIColor.white.withAlphaComponent(0.8)
+        button.setTitle(String(localized: "monetization.gate.inviteButton"), for: .normal)
+        button.setTitleColor(.black, for: .normal)
+        button.titleLabel?.font = .systemFont(ofSize: 17, weight: .semibold)
+        button.layer.cornerRadius = 25
+        button.clipsToBounds = true
+        button.translatesAutoresizingMaskIntoConstraints = false
+        button.addTarget(self, action: #selector(referralButtonTapped), for: .touchUpInside)
+        button.accessibilityLabel = String(localized: "monetization.gate.inviteButton")
+        button.accessibilityHint = String(localized: "a11y.celebration.referralHint")
+        return button
+    }()
+
     /// 메인 스택 뷰
     private lazy var stackView: UIStackView = {
+        // T034: 확인 버튼 아래에 초대 프로모 추가
         let stack = UIStackView(arrangedSubviews: [
             sessionLabel,
             statsStackView,
-            confirmButton
+            confirmButton,
+            referralLabel,
+            referralButton,
+            referralSubtitleLabel
         ])
         stack.translatesAutoresizingMaskIntoConstraints = false
         stack.axis = .vertical
@@ -119,8 +185,9 @@ final class CelebrationViewController: UIViewController {
 
     /// 축하 화면 생성
     /// - Parameter result: 축하 결과 데이터 (이번/누적 통계)
-    init(result: CelebrationResult) {
+    init(result: CelebrationResult, onAcknowledge: (() -> Void)? = nil) {
         self.result = result
+        self.onAcknowledge = onAcknowledge
         super.init(nibName: nil, bundle: nil)
 
         // 모달 설정
@@ -143,20 +210,23 @@ final class CelebrationViewController: UIViewController {
     // MARK: - Setup
 
     private func setupUI() {
-        view.backgroundColor = .clear
+        view.backgroundColor = UIColor.white.withAlphaComponent(0.15)
 
-        // 블러 배경
-        view.addSubview(blurView)
+        // 배경 블러
+        view.addSubview(backgroundBlurView)
         NSLayoutConstraint.activate([
-            blurView.topAnchor.constraint(equalTo: view.topAnchor),
-            blurView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
-            blurView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
-            blurView.bottomAnchor.constraint(equalTo: view.bottomAnchor)
+            backgroundBlurView.topAnchor.constraint(equalTo: view.topAnchor),
+            backgroundBlurView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+            backgroundBlurView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+            backgroundBlurView.bottomAnchor.constraint(equalTo: view.bottomAnchor)
         ])
+        _ = blurAnimator
 
         // 카드 뷰
         view.addSubview(cardView)
         cardView.activateBlur()
+        // T034: 하단 배경 먼저 삽입 (스택뷰 뒤에 깔림)
+        cardView.contentView.addSubview(referralPromoBackground)
         cardView.contentView.addSubview(stackView)
 
         // 간격 조정
@@ -177,33 +247,50 @@ final class CelebrationViewController: UIViewController {
 
             // 버튼 크기 — 스택 전체 너비, 높이 50 (기존 팝업 통일)
             confirmButton.widthAnchor.constraint(equalTo: stackView.widthAnchor),
-            confirmButton.heightAnchor.constraint(equalToConstant: 50)
+            confirmButton.heightAnchor.constraint(equalToConstant: 50),
+
+            // T034: 초대 버튼 크기
+            referralButton.widthAnchor.constraint(equalTo: stackView.widthAnchor),
+            referralButton.heightAnchor.constraint(equalToConstant: 50)
+        ])
+
+        // T034: 확인 버튼과 초대 프로모 간격 (배경 시작점 18pt 여유 포함)
+        stackView.setCustomSpacing(34, after: confirmButton)
+        stackView.setCustomSpacing(8, after: referralLabel)
+        stackView.setCustomSpacing(4, after: referralButton)
+
+        // T034: 배경 뷰 — 프로모 라벨 위에서 카드 하단 끝까지
+        NSLayoutConstraint.activate([
+            referralPromoBackground.leadingAnchor.constraint(equalTo: cardView.contentView.leadingAnchor),
+            referralPromoBackground.trailingAnchor.constraint(equalTo: cardView.contentView.trailingAnchor),
+            referralPromoBackground.bottomAnchor.constraint(equalTo: cardView.contentView.bottomAnchor),
+            referralPromoBackground.topAnchor.constraint(equalTo: referralLabel.topAnchor, constant: -16)
         ])
 
         // 접근성 설정 (FR-057)
-        confirmButton.accessibilityLabel = "확인"
-        confirmButton.accessibilityHint = "축하 화면을 닫습니다"
+        confirmButton.accessibilityLabel = String(localized: "common.ok")
+        confirmButton.accessibilityHint = String(localized: "a11y.celebration.closeHint")
     }
 
     /// 데이터 표시
     private func configureData() {
         // 이번 삭제: "N장 삭제 완료!"
-        sessionLabel.text = "\(result.sessionDeletedCount)장 삭제 완료"
+        sessionLabel.text = String(localized: "monetization.celebration.sessionCount \(result.sessionDeletedCount)")
 
         // 누적 삭제: "총 M장 삭제"
         let totalFormatted = NumberFormatter.localizedString(
             from: NSNumber(value: result.totalDeletedCount), number: .decimal
         )
-        totalDeletedRow.text = "SweepPic에서 총 \(totalFormatted)장 삭제"
+        totalDeletedRow.text = String(localized: "monetization.celebration.totalCount \(result.totalDeletedCount)")
 
         // 누적 확보 용량: "X.XGB 확보"
         let freedFormatted = FileSizeCalculator.formatBytes(result.totalFreedBytes)
-        totalFreedRow.text = "\(freedFormatted) 확보"
+        totalFreedRow.text = String(localized: "monetization.celebration.freed \(freedFormatted)")
 
         // 접근성: 통계 라벨에 명시적 설명 (FR-057)
-        sessionLabel.accessibilityLabel = "\(result.sessionDeletedCount)장 삭제 완료"
-        totalDeletedRow.accessibilityLabel = "SweepPic에서 총 \(totalFormatted)장 삭제"
-        totalFreedRow.accessibilityLabel = "\(freedFormatted) 확보"
+        sessionLabel.accessibilityLabel = String(localized: "monetization.celebration.sessionCount \(result.sessionDeletedCount)")
+        totalDeletedRow.accessibilityLabel = String(localized: "monetization.celebration.totalCount \(result.totalDeletedCount)")
+        totalFreedRow.accessibilityLabel = String(localized: "monetization.celebration.freed \(freedFormatted)")
 
         Logger.app.debug("CelebrationVC: 이번 \(self.result.sessionDeletedCount)장, 누적 \(self.result.totalDeletedCount)장, 누적 \(self.result.totalFreedBytes)bytes")
     }
@@ -212,7 +299,39 @@ final class CelebrationViewController: UIViewController {
 
     /// "확인" 버튼 탭 → dismiss
     @objc private func confirmButtonTapped() {
+        blurAnimator.stopAnimation(true)
         cardView.deactivateBlur()
-        dismiss(animated: true)
+        dismiss(animated: true) { [onAcknowledge] in
+            onAcknowledge?()
+        }
+    }
+
+    /// T034: 초대 버튼 탭 → ReferralExplainViewController 모달
+    @objc private func referralButtonTapped() {
+        Logger.app.debug("CelebrationVC: 초대 버튼 탭")
+        blurAnimator.stopAnimation(true)
+        let presenter = presentingViewController
+        cardView.deactivateBlur()
+        dismiss(animated: true) {
+            guard let presenter = presenter else { return }
+            // 시스템 "최근 삭제" 팝업이 뒤에 떠 있을 수 있으므로
+            // 다른 모달이 dismiss될 때까지 대기 후 초대 화면 표시
+            self.presentReferralWhenReady(from: presenter)
+        }
+    }
+
+    /// presenter에 다른 모달이 없을 때 초대 화면 표시
+    /// 시스템 팝업(최근 삭제 안내)이 dismiss될 때까지 최대 3초 대기
+    private func presentReferralWhenReady(from presenter: UIViewController, attempts: Int = 0) {
+        if presenter.presentedViewController == nil {
+            let referralVC = ReferralExplainViewController()
+            presenter.present(referralVC, animated: true)
+        } else if attempts < 15 {
+            // 0.2초 간격, 최대 15회 = 3초 대기
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) { [weak presenter] in
+                guard let presenter = presenter else { return }
+                self.presentReferralWhenReady(from: presenter, attempts: attempts + 1)
+            }
+        }
     }
 }

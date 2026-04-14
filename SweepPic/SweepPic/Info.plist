@@ -2,22 +2,21 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-	<key>ITSAppUsesNonExemptEncryption</key>
-	<false/>
 	<key>CADisableMinimumFrameDurationOnPhone</key>
 	<true/>
-	<key>SUPABASE_URL</key>
-	<string>$(SUPABASE_URL)</string>
-	<key>SUPABASE_ANON_KEY</key>
-	<string>$(SUPABASE_ANON_KEY)</string>
-	<key>CFBundleDisplayName</key>
-	<string>SweepPic</string>
-	<key>NSPhotoLibraryUsageDescription</key>
-	<string>SweepPic needs access to your photo library to browse and manage your photos.</string>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLName</key>
+			<string>com.karl.SweepPic</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>sweeppic</string>
+			</array>
+		</dict>
+	</array>
 	<key>GADApplicationIdentifier</key>
 	<string>ca-app-pub-3940256099942544~1458002511</string>
-	<key>NSUserTrackingUsageDescription</key>
-	<string>허용하시면 관련 없는 광고가 줄어듭니다. 데이터는 외부에 판매하지 않습니다.</string>
 	<key>SKAdNetworkItems</key>
 	<array>
 		<dict>
@@ -77,6 +76,10 @@
 			<string>3rd42ekr43.skadnetwork</string>
 		</dict>
 	</array>
+	<key>SUPABASE_ANON_KEY</key>
+	<string>$(SUPABASE_ANON_KEY)</string>
+	<key>SUPABASE_URL</key>
+	<string>$(SUPABASE_URL)</string>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>

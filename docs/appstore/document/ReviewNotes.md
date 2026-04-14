@@ -29,9 +29,9 @@
 - 일일 영구 삭제 한도: 무료 10장. 신규 설치 후 3일간은 무제한(Grace Period).
 - 게이트 테스트: 삭제대기함에 11장 이상 담긴 상태에서 "비우기" 탭 → 게이트 시트 표시.
 - 리워드 광고 테스트: 게이트 시트 → "광고 보고 삭제" 탭 → 광고 시청 → 삭제 실행.
-- 구독 테스트: Sandbox 환경에서 SweepPic Plus 구매 가능 (별도 데모 계정 불필요).
+- 구독 테스트: Sandbox 환경에서 SweepPic Pro 구매 가능 (별도 데모 계정 불필요).
 - 구매 복원: 설정 > 구매 복원 탭으로 이전 구독 활성화 확인 가능.
-- 광고: Google AdMob (배너/리워드/전면). Plus 구독 시 광고 제거.
+- 광고: Google AdMob (배너/리워드/전면). Pro 구독 시 광고 제거.
 - 모든 사진 분석(얼굴 인식, 유사사진, 품질 분석)은 기기 내에서만 수행됩니다.
 ```
 
@@ -74,9 +74,9 @@
   after fresh install (Grace Period).
 - Gate test: Add 11+ photos to staging trash, tap "Empty" → gate sheet appears.
 - Rewarded ad test: Gate sheet → "Watch ad to delete" → watch ad → deletion executes.
-- Subscription test: SweepPic Plus available in Sandbox (no demo account needed).
+- Subscription test: SweepPic Pro available in Sandbox (no demo account needed).
 - Restore purchases: Settings > Restore Purchases to verify prior subscription.
-- Ads: Google AdMob (banner/rewarded/interstitial). Removed with Plus subscription.
+- Ads: Google AdMob (banner/rewarded/interstitial). Removed with Pro subscription.
 - All photo analysis (face detection, similar photos, quality analysis)
   is performed entirely on-device.
 ```

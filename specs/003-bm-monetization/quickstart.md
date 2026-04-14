@@ -43,8 +43,8 @@ Google Mobile Ads SDK:
 Xcode > File > New > StoreKit Configuration File:
 - `SweepPicProducts.storekit` 생성
 - 상품 추가:
-  - `plus_monthly` (Auto-Renewable, $2.99/월)
-  - `plus_yearly` (Auto-Renewable, $19.99/년)
+  - `pro_monthly` (Auto-Renewable, $2.99/월)
+  - `pro_yearly` (Auto-Renewable, $19.99/년)
 
 Scheme > Run > Options > StoreKit Configuration: `SweepPicProducts.storekit` 선택
 

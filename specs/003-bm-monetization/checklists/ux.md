@@ -15,14 +15,14 @@
 - [x] CHK037 - 게이지 "상세 팝업"(FR-011)의 레이아웃과 콘텐츠 구성이 정의되어 있는가? (한도 상태 + 광고 잔여 + 광고 보기 버튼의 배치) [Completeness, Spec §FR-011]
 - [x] CHK038 - Grace Period 배너의 시각적 명세(배경색, 아이콘, 텍스트 스타일)가 단계별(Day 0~1, Day 2, Day 3)로 정의되어 있는가? [Completeness, Spec §FR-024]
 - [x] CHK039 - 축하 화면의 레이아웃(삭제 수 표시 형식, 용량 단위 변환 규칙 KB/MB/GB, 누적 통계 위치)이 정의되어 있는가? [Completeness, Spec §FR-039]
-- [x] CHK040 - 페이월의 무료/Plus 비교표 내용(비교 항목, 비교 방식)이 구체적으로 정의되어 있는가? [Completeness, Spec §FR-035]
+- [x] CHK040 - 페이월의 무료/Pro 비교표 내용(비교 항목, 비교 방식)이 구체적으로 정의되어 있는가? [Completeness, Spec §FR-035]
 - [x] CHK041 - 페이월 하단의 법적 고지(자동 갱신, 해지 방법)의 정확한 문구가 정의되어 있는가? [Completeness, Spec §FR-037]
-- [x] CHK042 - "골든 모먼트"(리워드 소진 시 전환 유도)의 구체적 UI 변화가 정의되어 있는가? 게이트 팝업 내에서 Plus 버튼이 어떻게 강조되는지? [Completeness, Spec §FR-014]
+- [x] CHK042 - "골든 모먼트"(리워드 소진 시 전환 유도)의 구체적 UI 변화가 정의되어 있는가? 게이트 팝업 내에서 Pro 버튼이 어떻게 강조되는지? [Completeness, Spec §FR-014]
 
 ## Requirement Clarity
 
 - [x] CHK043 - "카운터 게이지 첫 표시 시 1회 툴팁"(Edge Case)의 툴팁 문구, 위치, 자동 dismiss 조건이 정의되어 있는가? [Clarity, Spec §Edge Cases]
-- [x] CHK044 - Grace Period 배너 "Plus로 계속 무제한 사용 →" 텍스트 링크와 Day 3 "[Plus로 무제한 계속하기]" 버튼의 시각적 차이가 명시되어 있는가? [Clarity, Spec §US-3]
+- [x] CHK044 - Grace Period 배너 "Pro로 계속 무제한 사용 →" 텍스트 링크와 Day 3 "[Pro로 무제한 계속하기]" 버튼의 시각적 차이가 명시되어 있는가? [Clarity, Spec §US-3]
 - [x] CHK045 - 갱신 실패 시 "⚠️ 뱃지"의 정확한 표시 위치(전체메뉴 아이콘 어디?)와 형태가 정의되어 있는가? [Clarity, Spec §FR-034]
 - [x] CHK046 - "비우기" 버튼 텍스트가 "항상 비우기"(FR-012)이지만, 게이트 팝업 내 버튼 텍스트는 달라야 하는데 이 관계가 명확한가? [Clarity, Spec §FR-012]
 - [x] CHK047 - 리딤 코드 시스템 시트 "실패/타임아웃(10초)"의 구분이 명확한가? 시스템 시트가 10초 내 응답 없으면 자동 dismiss인지, 별도 처리인지? [Clarity, Spec §US-4]
@@ -30,8 +30,8 @@
 ## Requirement Consistency
 
 - [x] CHK048 - iOS 16~25(FloatingUI)와 iOS 26+(시스템 네비바)에서 게이지/배너의 표시 위치가 일관되게 정의되어 있는가? [Consistency, Plan]
-- [x] CHK049 - 페이월 진입 경로(게이트 팝업 "Plus", 배너 탭, 메뉴 "구독 관리")에서 페이월 화면이 동일한지 다른지 정의되어 있는가? [Consistency, Gap]
-- [x] CHK050 - "구독 관리" 탭 시 무료 사용자는 페이월, Plus 사용자는 시스템 구독 관리 — 이 분기가 US-8과 US-4에서 일관되게 기술되어 있는가? [Consistency, Spec §US-4 vs §US-8]
+- [x] CHK049 - 페이월 진입 경로(게이트 팝업 "Pro", 배너 탭, 메뉴 "구독 관리")에서 페이월 화면이 동일한지 다른지 정의되어 있는가? [Consistency, Gap]
+- [x] CHK050 - "구독 관리" 탭 시 무료 사용자는 페이월, Pro 사용자는 시스템 구독 관리 — 이 분기가 US-8과 US-4에서 일관되게 기술되어 있는가? [Consistency, Spec §US-4 vs §US-8]
 
 ## Scenario Coverage
 

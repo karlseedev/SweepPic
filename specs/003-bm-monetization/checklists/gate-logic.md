@@ -9,13 +9,13 @@
 
 ## Requirement Completeness
 
-- [x] CHK001 - 게이트 판단의 모든 진입 조건이 명시되어 있는가? (Plus 구독, Grace Period, 한도 이내, 한도 초과 4가지 분기) [Completeness, Spec §US-1]
+- [x] CHK001 - 게이트 판단의 모든 진입 조건이 명시되어 있는가? (Pro 구독, Grace Period, 한도 이내, 한도 초과 4가지 분기) [Completeness, Spec §US-1]
 - [x] CHK002 - 게이트 판단 시 "삭제 대상 수"의 정의가 명확한가? trashedCount 전체인지, 선택된 항목인지? (emptyTrash는 전체, trashDeleteSelected는 선택분) [Clarity, Spec §FR-006]
 - [x] CHK003 - 리워드 광고 횟수 차감 시점에 대한 요구사항이 완전한가? (시스템 팝업 확인 후에만 차감, 취소 시 미차감) [Completeness, Spec §FR-013]
 - [x] CHK004 - "광고 N회 보고 X장 전체 삭제"에서 N 계산 공식이 명시되어 있는가? (필요 광고 수 = ceil((trashCount - remainingLimit) / rewardBonusPerAd)) [Clarity, Gap]
 - [x] CHK005 - 게이트 팝업에서 "닫기" 후 사용자가 삭제대기함 장수를 줄인 뒤 다시 "비우기"를 탭하는 시나리오가 명시되어 있는가? [Coverage, Gap]
 - [x] CHK006 - 일일 한도 리셋의 "이중 체크" 두 번째 방법(자정 시스템 알림)의 구체적 메커니즘이 정의되어 있는가? (NSCalendar notification? Timer? Background task?) [Clarity, Spec §FR-005]
-- [x] CHK007 - Grace Period 중 구독 구매 시 "즉시 종료" 후의 상태 전이가 완전히 정의되어 있는가? (배너 제거, 게이지 미표시, Plus 상태) [Completeness, Spec Edge Cases]
+- [x] CHK007 - Grace Period 중 구독 구매 시 "즉시 종료" 후의 상태 전이가 완전히 정의되어 있는가? (배너 제거, 게이지 미표시, Pro 상태) [Completeness, Spec Edge Cases]
 - [x] CHK008 - "생애 최초 no-fill 1회 무료"의 조건이 모든 광고 유형에 적용되는지 리워드에만 적용되는지 명시되어 있는가? [Clarity, Spec §FR-021]
 
 ## Requirement Clarity
@@ -30,7 +30,7 @@
 ## Requirement Consistency
 
 - [x] CHK015 - FR-006("항상 전체 비우기")과 US-1 시나리오 2("광고 2회 보고 15장 삭제")가 일관되는가? (15장이 전체 비우기인 상황이므로 일관됨 — 부분 삭제로 오독 가능성 확인) [Consistency, Spec §FR-006 vs §US-1]
-- [x] CHK016 - US-1 시나리오 3("Plus만 가능")과 FR-009("광고로 해결 가능 vs Plus만 가능")의 조건 분기가 일관되는가? [Consistency, Spec §US-1 vs §FR-009]
+- [x] CHK016 - US-1 시나리오 3("Pro만 가능")과 FR-009("광고로 해결 가능 vs Pro만 가능")의 조건 분기가 일관되는가? [Consistency, Spec §US-1 vs §FR-009]
 - [x] CHK017 - Grace Period 중 "게이트 없이 무제한"(FR-023)과 "카운터 없이"의 정의가 일관되는가? Grace Period 중에도 UsageLimit.recordDelete()를 호출하는지 안 하는지? [Consistency, Spec §FR-023]
 - [x] CHK018 - 게이트 삽입 지점 5개(plan.md)와 FR-008("한도 초과이면 게이트 시트 표시")의 범위가 일치하는가? (개별 삭제 vs 전체 비우기 모두 포함 여부) [Consistency, Plan vs Spec]
 

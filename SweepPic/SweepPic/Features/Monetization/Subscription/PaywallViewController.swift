@@ -6,7 +6,7 @@
 //
 //  구성:
 //  - 가치 헤드라인: "쌓인 사진, 한 번에 비우세요" (FR-035)
-//  - 무료/Plus 비교표 (FR-035)
+//  - 무료/Pro 비교표 (FR-035)
 //  - 연간 크게 / 월간 보조 (FR-036)
 //  - 하단 법적 고지: 자동 갱신, 해지 방법, 약관/처리방침 링크 (FR-037)
 //  - 구매 버튼 → SubscriptionStore.purchase()
@@ -76,7 +76,7 @@ final class PaywallViewController: UIViewController {
     /// 가치 헤드라인 (FR-035)
     private let headlineLabel: UILabel = {
         let label = UILabel()
-        label.text = "무료 체험하고\n한 번에 비우세요"
+        label.text = String(localized: "monetization.paywall.headline")
         label.font = .systemFont(ofSize: 28, weight: .bold)
         label.textColor = .label
         label.numberOfLines = 0
@@ -88,7 +88,7 @@ final class PaywallViewController: UIViewController {
     /// 서브헤드라인
     private let subheadlineLabel: UILabel = {
         let label = UILabel()
-        label.text = "Plus로 삭제 한도 없이, 광고 없이"
+        label.text = String(localized: "monetization.paywall.subheadline")
         label.font = .systemFont(ofSize: 16, weight: .regular)
         label.textColor = .secondaryLabel
         label.textAlignment = .center
@@ -126,7 +126,7 @@ final class PaywallViewController: UIViewController {
         let button = UIButton(type: .system)
         button.backgroundColor = .white
         button.setTitleColor(.black, for: .normal)
-        button.setTitle("무료 체험 시작하기", for: .normal)
+        button.setTitle(String(localized: "monetization.paywall.purchaseButton"), for: .normal)
         button.titleLabel?.font = .systemFont(ofSize: 17, weight: .semibold)
         button.clipsToBounds = true
         button.translatesAutoresizingMaskIntoConstraints = false
@@ -146,7 +146,7 @@ final class PaywallViewController: UIViewController {
     /// 복원 버튼
     private let restoreButton: UIButton = {
         let button = UIButton(type: .system)
-        button.setTitle("구독 복원", for: .normal)
+        button.setTitle(String(localized: "monetization.paywall.restoreButton"), for: .normal)
         button.setTitleColor(.secondaryLabel, for: .normal)
         button.titleLabel?.font = .systemFont(ofSize: 14, weight: .regular)
         button.translatesAutoresizingMaskIntoConstraints = false
@@ -156,7 +156,7 @@ final class PaywallViewController: UIViewController {
     /// 리딤 코드 버튼
     private let redeemButton: UIButton = {
         let button = UIButton(type: .system)
-        button.setTitle("리딤 코드", for: .normal)
+        button.setTitle(String(localized: "monetization.paywall.redeemButton"), for: .normal)
         button.setTitleColor(.secondaryLabel, for: .normal)
         button.titleLabel?.font = .systemFont(ofSize: 14, weight: .regular)
         button.translatesAutoresizingMaskIntoConstraints = false
@@ -175,14 +175,14 @@ final class PaywallViewController: UIViewController {
         // "Apple로 보호됨 " (일반) + "약관" (밑줄)
         let text = NSMutableAttributedString()
         text.append(NSAttributedString(
-            string: "Apple로 보호됨\n",
+            string: String(localized: "monetization.paywall.securedByApple") + "\n",
             attributes: [
                 .font: UIFont.systemFont(ofSize: 14, weight: .regular),
                 .foregroundColor: UIColor.white
             ]
         ))
         text.append(NSAttributedString(
-            string: "약관",
+            string: String(localized: "monetization.paywall.terms"),
             attributes: [
                 .font: UIFont.systemFont(ofSize: 14, weight: .regular),
                 .foregroundColor: UIColor.white.withAlphaComponent(0.6),
@@ -334,15 +334,21 @@ final class PaywallViewController: UIViewController {
         tableStack.translatesAutoresizingMaskIntoConstraints = false
 
         // 헤더 행
-        let headerRow = createComparisonRow(feature: "", freeValue: "일반", plusValue: "무료체험(Plus)", isHeader: true)
+        let headerRow = createComparisonRow(
+            feature: "",
+            freeValue: String(localized: "monetization.paywall.freeHeader"),
+            proValue: String(localized: "monetization.paywall.proHeader.title"),
+            isHeader: true
+        )
         tableStack.addArrangedSubview(headerRow)
+        tableStack.setCustomSpacing(8, after: headerRow)
 
         // 데이터 행
         for row in viewModel.comparisonRows {
             let rowView = createComparisonRow(
                 feature: row.feature,
                 freeValue: row.freeValue,
-                plusValue: row.plusValue,
+                proValue: row.proValue,
                 isHeader: false
             )
             tableStack.addArrangedSubview(rowView)
@@ -353,48 +359,59 @@ final class PaywallViewController: UIViewController {
             tableStack.topAnchor.constraint(equalTo: comparisonContainer.topAnchor, constant: 16),
             tableStack.leadingAnchor.constraint(equalTo: comparisonContainer.leadingAnchor, constant: 16),
             tableStack.trailingAnchor.constraint(equalTo: comparisonContainer.trailingAnchor, constant: -16),
-            tableStack.bottomAnchor.constraint(equalTo: comparisonContainer.bottomAnchor, constant: -16)
+            tableStack.bottomAnchor.constraint(equalTo: comparisonContainer.bottomAnchor, constant: -8)
         ])
     }
 
     /// 비교표 행 생성
-    private func createComparisonRow(feature: String, freeValue: String, plusValue: String, isHeader: Bool) -> UIView {
+    private func createComparisonRow(feature: String, freeValue: String, proValue: String, isHeader: Bool) -> UIView {
         let container = UIStackView()
         container.axis = .horizontal
-        container.distribution = .fillEqually
+        container.distribution = .fill
         container.alignment = .center
 
         let featureLabel = UILabel()
         featureLabel.text = feature
         featureLabel.font = isHeader ? .systemFont(ofSize: 13, weight: .semibold) : .systemFont(ofSize: 14, weight: .regular)
         featureLabel.textColor = isHeader ? .secondaryLabel : .label
+        featureLabel.numberOfLines = isHeader ? 2 : 1
 
         let freeLabel = UILabel()
         freeLabel.text = freeValue
         freeLabel.font = isHeader ? .systemFont(ofSize: 13, weight: .semibold) : .systemFont(ofSize: 14, weight: .regular)
         freeLabel.textColor = .white
         freeLabel.textAlignment = .center
+        freeLabel.numberOfLines = isHeader ? 2 : 1
 
         // 온보딩 포인트컬러 (#FFEA00)
         let highlightYellow = UIColor(red: 1.0, green: 0.918, blue: 0.0, alpha: 1.0)
 
-        let plusLabel = UILabel()
-        plusLabel.text = plusValue
-        plusLabel.font = isHeader ? .systemFont(ofSize: 16, weight: .bold) : .systemFont(ofSize: 17, weight: .semibold)
-        plusLabel.textColor = highlightYellow
-        plusLabel.textAlignment = .center
+        let proLabel = UILabel()
+        proLabel.font = isHeader ? .systemFont(ofSize: 16, weight: .bold) : .systemFont(ofSize: 17, weight: .semibold)
+        if isHeader {
+            proLabel.attributedText = makeProHeaderText(color: highlightYellow)
+        } else {
+            proLabel.text = proValue
+        }
+        proLabel.textColor = highlightYellow
+        proLabel.textAlignment = .center
+        proLabel.numberOfLines = isHeader ? 2 : 1
 
         container.addArrangedSubview(featureLabel)
         container.addArrangedSubview(freeLabel)
-        container.addArrangedSubview(plusLabel)
+        container.addArrangedSubview(proLabel)
+        NSLayoutConstraint.activate([
+            freeLabel.widthAnchor.constraint(equalTo: proLabel.widthAnchor),
+            featureLabel.widthAnchor.constraint(equalTo: freeLabel.widthAnchor, multiplier: 1.12)
+        ])
 
         // 행 높이
-        container.heightAnchor.constraint(equalToConstant: isHeader ? 30 : 36).isActive = true
+        container.heightAnchor.constraint(equalToConstant: isHeader ? 34 : 36).isActive = true
 
         // 접근성: 행 단위로 읽히도록 설정 (FR-057)
         if !isHeader && !feature.isEmpty {
             container.isAccessibilityElement = true
-            container.accessibilityLabel = "\(feature), 무료: \(freeValue), Plus: \(plusValue)"
+            container.accessibilityLabel = String(localized: "a11y.paywall.comparisonRow \(feature) \(freeValue) \(proValue)")
         }
 
         // 구분선 (헤더 아래)
@@ -411,6 +428,36 @@ final class PaywallViewController: UIViewController {
         }
 
         return container
+    }
+
+    private func makeProHeaderText(color: UIColor) -> NSAttributedString {
+        let title = String(localized: "monetization.paywall.proHeader.title")
+        let badge = String(localized: "monetization.paywall.proHeader.badge")
+        let titleAttributes: [NSAttributedString.Key: Any] = [
+            .font: UIFont.systemFont(ofSize: 16, weight: .bold),
+            .foregroundColor: color
+        ]
+
+        if Bundle.main.preferredLocalizations.first?.hasPrefix("ko") == true {
+            return NSAttributedString(
+                string: title + badge,
+                attributes: titleAttributes
+            )
+        }
+
+        let text = NSMutableAttributedString()
+        text.append(NSAttributedString(
+            string: title + "\n",
+            attributes: titleAttributes
+        ))
+        text.append(NSAttributedString(
+            string: badge,
+            attributes: [
+                .font: UIFont.systemFont(ofSize: 12, weight: .semibold),
+                .foregroundColor: color
+            ]
+        ))
+        return text
     }
 
     // MARK: - Actions
@@ -473,17 +520,23 @@ final class PaywallViewController: UIViewController {
                 let restored = try await viewModel.restorePurchases()
                 spinner.stopAnimating()
                 if restored {
-                    showAlert(title: "복원 완료", message: "Plus 구독이 복원되었습니다.") { [weak self] in
+                    showAlert(
+                        title: String(localized: "monetization.paywall.restored.title"),
+                        message: String(localized: "monetization.paywall.restored.message")
+                    ) { [weak self] in
                         self?.dismiss(animated: true) {
                             self?.onSubscribed?()
                         }
                     }
                 } else {
-                    showAlert(title: "복원 결과", message: "복원할 구독이 없습니다.")
+                    showAlert(
+                        title: String(localized: "monetization.paywall.restoreResult.title"),
+                        message: String(localized: "monetization.paywall.restoreResult.notFound")
+                    )
                 }
             } catch {
                 spinner.stopAnimating()
-                showAlert(title: "복원 실패", message: error.localizedDescription)
+                showAlert(title: String(localized: "monetization.paywall.restoreFailed"), message: error.localizedDescription)
             }
             isPurchasing = false
         }
@@ -507,7 +560,10 @@ final class PaywallViewController: UIViewController {
             Logger.app.debug("PaywallVC: 사용자 취소")
         case .pending:
             // Ask to Buy (FR-038)
-            showAlert(title: "승인 대기", message: "구매 요청이 전송되었습니다.\n보호자의 승인 후 활성화됩니다.")
+            showAlert(
+                title: String(localized: "monetization.paywall.askToBuy.title"),
+                message: String(localized: "monetization.paywall.askToBuy.message")
+            )
         @unknown default:
             break
         }
@@ -521,23 +577,27 @@ final class PaywallViewController: UIViewController {
         if let storeError = error as? StoreKitError {
             switch storeError {
             case .networkError:
-                message = "네트워크 연결을 확인해주세요."
+                message = String(localized: "monetization.paywall.networkError")
             case .userCancelled:
                 return // 취소는 무시
             default:
-                message = "결제를 완료할 수 없습니다.\n다시 시도해주세요."
+                message = String(localized: "monetization.paywall.purchaseError")
             }
         } else {
             message = error.localizedDescription
         }
 
-        showAlert(title: "결제 실패", message: message)
+        showAlert(title: String(localized: "monetization.paywall.purchaseFailed"), message: message)
     }
 
     // MARK: - Content Loading
 
     /// 상품 로드 + UI 업데이트
     private func loadContent() {
+        // eligibility 비동기 체크 완료 시 무료 체험 라벨 즉시 갱신
+        viewModel.onEligibilityChecked = { [weak self] in
+            self?.updateTrialLabel()
+        }
         viewModel.loadProducts()
 
         if viewModel.isLoaded {
@@ -638,14 +698,7 @@ final class PaywallViewController: UIViewController {
 
     /// 약관 탭 → 하단 시트로 법적 고지 표시 (FR-037)
     @objc private func termsTapped() {
-        let legalText = """
-        무료 체험 기간이 끝나면 선택한 요금제로 자동 구독이 시작됩니다. \
-        구독은 확인 시 Apple ID 계정으로 청구됩니다. \
-        구독은 현재 기간 종료 최소 24시간 전에 해지하지 않으면 자동으로 갱신됩니다. \
-        갱신 비용은 현재 기간 종료 24시간 이내에 청구됩니다. \
-        구독은 구매 후 설정 > Apple ID > 구독에서 관리하고 해지할 수 있습니다. \
-        이용약관 및 개인정보처리방침이 적용됩니다.
-        """
+        let legalText = String(localized: "monetization.paywall.termsSheet.body")
 
         let sheet = UIViewController()
         sheet.view.backgroundColor = .systemBackground
@@ -659,7 +712,7 @@ final class PaywallViewController: UIViewController {
 
         // 제목
         let titleLabel = UILabel()
-        titleLabel.text = "이용 약관"
+        titleLabel.text = String(localized: "monetization.paywall.termsSheet.title")
         titleLabel.font = .systemFont(ofSize: 18, weight: .bold)
         titleLabel.textColor = .label
         titleLabel.translatesAutoresizingMaskIntoConstraints = false
@@ -718,7 +771,7 @@ final class PaywallViewController: UIViewController {
 
     /// 상품 로드 실패 시 에러 안내 (StoreKit Configuration 미설정 등)
     private func showProductLoadError() {
-        purchaseButton.setTitle("상품 정보를 불러올 수 없습니다", for: .normal)
+        purchaseButton.setTitle(String(localized: "monetization.paywall.loadFailed"), for: .normal)
         purchaseButton.isEnabled = false
         purchaseButton.alpha = 0.5
         planTabView.isEnabled = false
@@ -728,7 +781,7 @@ final class PaywallViewController: UIViewController {
     /// 알림 표시
     private func showAlert(title: String, message: String, completion: (() -> Void)? = nil) {
         let alert = UIAlertController(title: title, message: message, preferredStyle: .alert)
-        alert.addAction(UIAlertAction(title: "확인", style: .default) { _ in
+        alert.addAction(UIAlertAction(title: String(localized: "common.ok"), style: .default) { _ in
             completion?()
         })
         present(alert, animated: true)
@@ -737,14 +790,14 @@ final class PaywallViewController: UIViewController {
     // MARK: - Accessibility
 
     private func setupAccessibility() {
-        closeButton.accessibilityLabel = "닫기"
-        closeButton.accessibilityHint = "페이월 화면을 닫습니다"
-        planTabView.accessibilityLabel = "구독 플랜 선택"
-        purchaseButton.accessibilityLabel = "무료 체험 시작하기"
-        restoreButton.accessibilityLabel = "구독 복원"
-        restoreButton.accessibilityHint = "이전에 구매한 구독을 복원합니다"
-        redeemButton.accessibilityLabel = "리딤 코드 입력"
-        redeemButton.accessibilityHint = "프로모션 코드를 입력합니다"
+        closeButton.accessibilityLabel = String(localized: "common.close")
+        closeButton.accessibilityHint = String(localized: "a11y.paywall.closeHint")
+        planTabView.accessibilityLabel = String(localized: "a11y.paywall.planSelection")
+        purchaseButton.accessibilityLabel = String(localized: "monetization.paywall.purchaseButton")
+        restoreButton.accessibilityLabel = String(localized: "monetization.paywall.restoreButton")
+        restoreButton.accessibilityHint = String(localized: "a11y.paywall.restoreHint")
+        redeemButton.accessibilityLabel = String(localized: "a11y.paywall.redeemLabel")
+        redeemButton.accessibilityHint = String(localized: "a11y.paywall.redeemHint")
     }
 }
 

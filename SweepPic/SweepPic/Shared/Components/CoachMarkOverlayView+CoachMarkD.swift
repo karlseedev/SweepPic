@@ -138,9 +138,9 @@ extension CoachMarkOverlayView {
 
         // --- 타이틀 ---
         let titleLabel = UILabel()
-        titleLabel.text = "저품질 사진 자동 정리"
+        titleLabel.text = String(localized: "cleanup.autoLowQuality")
         titleLabel.textColor = .white
-        titleLabel.font = .systemFont(ofSize: 24, weight: .light)
+        titleLabel.font = .systemFont(ofSize: 24, weight: .bold)
         titleLabel.textAlignment = .center
         titleLabel.numberOfLines = 0
         titleLabel.translatesAutoresizingMaskIntoConstraints = false
@@ -207,9 +207,9 @@ extension CoachMarkOverlayView {
             }
         }
 
-        // --- 설명 (AttributedString: "저품질 사진을 AI가 자동" 볼드+노란색) ---
+        // --- 설명 (AttributedString: 경로 + 강조) ---
         let descLabel = UILabel()
-        let descText = "흔들리거나 초점이 맞지 않은\n저품질 사진을 AI가 자동으로 찾아주는\n정리 기능을 사용해보세요"
+        let descText = String(localized: "coachMark.d.body")
         let descStyle = NSMutableParagraphStyle()
         descStyle.alignment = .center
         descStyle.lineSpacing = Self.bodyFont.pointSize * 0.2
@@ -221,13 +221,27 @@ extension CoachMarkOverlayView {
                 .paragraphStyle: descStyle
             ]
         )
-        // "저품질 사진을 AI가 자동" 볼드 + 노란색 강조
-        let highlightRange = (descText as NSString).range(of: "저품질 사진을 AI가 자동")
-        if highlightRange.location != NSNotFound {
+        // 키워드 볼드 + 노란색 강조 (fallback: range 미발견 시 무시)
+        let dKeywords = [
+            String(localized: "coachMark.d.keyword"),
+            String(localized: "coachMark.d.keyword2"),
+        ].filter { !$0.isEmpty }
+        for dKeyword in dKeywords {
+            let highlightRange = (descText as NSString).range(of: dKeyword)
+            guard highlightRange.location != NSNotFound else { continue }
             descAttr.addAttributes([
                 .font: Self.bodyBoldFont,
                 .foregroundColor: Self.highlightYellow,
             ], range: highlightRange)
+        }
+        // 경로 안내: 16pt regular, 화이트 70%
+        let dPathText = String(localized: "coachMark.d.path")
+        let pathRange = (descText as NSString).range(of: dPathText)
+        if pathRange.location != NSNotFound {
+            descAttr.addAttributes([
+                .font: UIFont.systemFont(ofSize: 16, weight: .regular),
+                .foregroundColor: UIColor.white.withAlphaComponent(0.7),
+            ], range: pathRange)
         }
         descLabel.attributedText = descAttr
         descLabel.numberOfLines = 0
@@ -298,10 +312,11 @@ extension CoachMarkOverlayView {
     /// D 포커스 축소 애니메이션 (C-2 animateC2FocusCircle과 동일 패턴)
     /// 화면 전체를 덮는 큰 pill에서 정리 버튼 모양의 작은 pill로 축소
     /// pill shape (roundedRect) 사용 → 버튼 형태 유지하며 축소
+    /// internal: C 간편정리 하이라이트에서도 재사용
     /// - Parameters:
     ///   - targetFrame: 정리 버튼 프레임 (윈도우 좌표)
     ///   - completion: 애니메이션 완료 후 콜백
-    private func animateDFocus(to targetFrame: CGRect, completion: @escaping () -> Void) {
+    func animateDFocus(to targetFrame: CGRect, completion: @escaping () -> Void) {
         // 최종 pill (버튼 + margin 8pt, cornerRadius = 높이/2)
         let margin: CGFloat = 8
         let holeRect = targetFrame.insetBy(dx: -margin, dy: -margin)

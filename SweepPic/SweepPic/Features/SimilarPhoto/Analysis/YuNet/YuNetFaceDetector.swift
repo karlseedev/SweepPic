@@ -88,7 +88,7 @@ final class YuNetFaceDetector {
 
         // Core ML 모델 로드 (Bundle에서 modelName으로 검색)
         let config = MLModelConfiguration()
-        config.computeUnits = .all  // CPU, GPU, ANE 모두 활용
+        config.computeUnits = .cpuAndNeuralEngine  // GPU는 UI/이미지용으로 남기고 ML은 CPU+ANE로 격리
 
         do {
             guard let modelURL = Bundle.main.url(

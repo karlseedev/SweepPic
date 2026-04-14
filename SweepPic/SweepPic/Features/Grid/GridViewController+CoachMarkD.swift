@@ -43,65 +43,91 @@ extension GridViewController {
 
     // MARK: - Pre-Scan Start (앱 시작 직후)
 
-    /// D 사전 스캔 시작 (D 미표시 상태에서만)
+    /// D 사전 스캔 시작 (D 미표시 + C 완료 후에만)
+    /// C 완료 가드 추가 — 동시 분석 방지 (버그 #4 대응)
     func startCoachMarkDPreScanIfNeeded() {
         guard !CoachMarkType.autoCleanup.hasBeenShown else { return }
+
+        // C 진행 중이면 D 사전 스캔 보류
+        guard !CoachMarkManager.shared.isAutoPopForC,
+              !CoachMarkManager.shared.pendingCleanupHighlight else { return }
+
+        // C 완료 또는 C 사전분석 0건일 때만 D 사전 스캔 시작
+        guard CoachMarkType.similarPhoto.hasBeenShown
+              || Self.cPreScanCompleteWithNoGroups else { return }
+
         CoachMarkDPreScanner.shared.startIfNeeded()
     }
 
-    // MARK: - Trigger 1: Auto (3초 타이머)
+    // MARK: - Trigger 1: Auto (즉시 체크, 3초 타이머 제거)
 
-    /// 트리거 1: 그리드 3초 체류 시 D 표시 타이머 시작
-    /// viewDidAppear에서 호출. 다른 화면 갔다 오면 타이머 리셋.
+    /// 트리거 1: 그리드 viewDidAppear에서 즉시 D 표시 조건 확인
+    /// 3초 타이머 제거 → 조건 충족 시 즉시 표시
     func startCoachMarkDTimerIfNeeded() {
         // D 이미 표시됨
         guard !CoachMarkType.autoCleanup.hasBeenShown else {
-            Logger.coachMark.debug("타이머 스킵: D 이미 표시됨")
+            Logger.coachMark.debug("D 스킵: D 이미 표시됨")
             return
         }
         // A 미완료
         guard CoachMarkType.gridSwipeDelete.hasBeenShown else {
-            Logger.coachMark.debug("타이머 스킵: A 미완료")
+            Logger.coachMark.debug("D 스킵: A 미완료")
             return
         }
         // E-1 미완료
         guard CoachMarkType.firstDeleteGuide.hasBeenShown else {
-            Logger.coachMark.debug("타이머 스킵: E-1 미완료")
+            Logger.coachMark.debug("D 스킵: E-1 미완료")
             return
         }
 
-        // 기존 타이머 무효화 (화면 복귀 시 리셋)
-        coachMarkDTimer?.invalidate()
+        // C 진행 중이면 D 표시 보류 (버그 #4)
+        guard !CoachMarkManager.shared.isAutoPopForC,
+              !CoachMarkManager.shared.pendingCleanupHighlight else {
+            Logger.coachMark.debug("D 스킵: C 진행 중 (isAutoPopForC or pendingCleanupHighlight)")
+            return
+        }
 
-        Logger.coachMark.debug("타이머 시작 (3초)")
+        // C 완료 또는 C 사전분석 0건일 때만 D 표시
+        guard CoachMarkType.similarPhoto.hasBeenShown
+              || Self.cPreScanCompleteWithNoGroups else {
+            Logger.coachMark.debug("D 스킵: C 미완료 + 사전분석 미완료")
+            return
+        }
 
-        // 3초 후 트리거
-        coachMarkDTimer = Timer.scheduledTimer(withTimeInterval: 3.0, repeats: false) { [weak self] _ in
-            guard let self else { return }
-
-            let scanner = CoachMarkDPreScanner.shared
-
-            // 스캔 완료 + 1장 이상 → 즉시 표시
-            if let result = scanner.result {
-                guard result.lowQualityAssets.count > 0 else {
-                    Logger.coachMark.debug("타이머 만료, 스캔 결과 0건 — D 표시 안 함")
-                    return
-                }
-                self.showCoachMarkD()
+        // C 체험 사용자: "떠났다 돌아오기" 필요 (연속 온보딩 방지)
+        if CoachMarkType.similarPhoto.hasBeenShown {
+            guard CoachMarkManager.shared.pendingDAfterCComplete else {
+                Logger.coachMark.debug("D 스킵: C 체험 사용자 — pendingDAfterCComplete 대기")
                 return
             }
+        }
+        // 0건 사용자는 이 guard를 타지 않으므로 바로 D 표시
 
-            // 스캔 미완료 → 완료 콜백 등록하여 대기
-            Logger.coachMark.debug("타이머 만료, 스캔 미완료 — 완료 대기")
-            scanner.onComplete = { [weak self] in
-                guard let self else { return }
-                let count = scanner.result?.lowQualityAssets.count ?? 0
-                guard count > 0 else {
-                    Logger.coachMark.debug("스캔 완료, 결과 0건 — D 표시 안 함")
-                    return
-                }
-                self.showCoachMarkD()
+        // 기존 타이머 무효화
+        coachMarkDTimer?.invalidate()
+
+        let scanner = CoachMarkDPreScanner.shared
+
+        // 스캔 완료 + 1장 이상 → 즉시 표시
+        if let result = scanner.result {
+            guard result.lowQualityAssets.count > 0 else {
+                Logger.coachMark.debug("D: 스캔 결과 0건 — D 표시 안 함")
+                return
             }
+            showCoachMarkD()
+            return
+        }
+
+        // 스캔 미완료 → 완료 콜백 등록하여 대기
+        Logger.coachMark.debug("D: 스캔 미완료 — 완료 대기")
+        scanner.onComplete = { [weak self] in
+            guard let self else { return }
+            let count = scanner.result?.lowQualityAssets.count ?? 0
+            guard count > 0 else {
+                Logger.coachMark.debug("스캔 완료, 결과 0건 — D 표시 안 함")
+                return
+            }
+            self.showCoachMarkD()
         }
     }
 
@@ -221,22 +247,22 @@ extension GridViewController {
 
     // MARK: - Cleanup Button Frame
 
-    /// 정리 버튼의 윈도우 좌표 프레임 반환 (재생 기능에서도 호출)
+    /// 간편정리 버튼의 윈도우 좌표 프레임 반환 (재생 기능에서도 호출)
     /// iOS 버전에 따라 FloatingTitleBar 또는 시스템 네비바에서 프레임 획득
     func getCleanupButtonFrame(in window: UIWindow) -> CGRect? {
         if #available(iOS 26.0, *) {
-            // iOS 26+: rightBarButtonItems = [menuItem, selectItem, cleanupItem]
+            // iOS 26+: rightBarButtonItems = [menuItem, cleanupMenuItem]
             guard let items = navigationItem.rightBarButtonItems,
-                  items.count >= 3,
-                  let itemView = items[2].value(forKey: "view") as? UIView
+                  items.count >= 2,
+                  let itemView = items[1].value(forKey: "view") as? UIView
             else { return nil }
             return itemView.convert(itemView.bounds, to: window)
         } else {
-            // iOS 16~25: FloatingTitleBar의 두 번째 오른쪽 버튼 (정리)
+            // iOS 16~25: FloatingTitleBar의 간편정리 메뉴 버튼 (selectButton 위치)
             guard let tabBarController = tabBarController as? TabBarController,
                   let overlay = tabBarController.floatingOverlay
             else { return nil }
-            return overlay.titleBar.secondRightButtonFrameInWindow()
+            return overlay.titleBar.rightMenuButtonFrameInWindow()
         }
     }
 }

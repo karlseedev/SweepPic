@@ -20,10 +20,10 @@ extension TrashAlbumViewController {
     // MARK: - Gauge Setup
 
     /// 게이지 뷰 설정 (viewDidLoad에서 호출)
-    /// Plus 시 미표시
+    /// Pro 시 미표시
     func setupGaugeView() {
-        // Plus 구독자는 게이지 미표시 (T032)
-        if SubscriptionStore.shared.isPlusUser { return }
+        // Pro 구독자는 게이지 미표시 (T032)
+        if SubscriptionStore.shared.isProUser { return }
 
         // 게이트 비활성 시 미표시
         guard FeatureFlags.isGateEnabled else { return }
@@ -97,7 +97,7 @@ extension TrashAlbumViewController {
                 }
             }
         }
-        detail.onPlusUpgrade = { [weak self] in
+        detail.onProUpgrade = { [weak self] in
             guard let self = self else { return }
             let paywall = PaywallViewController()
             paywall.analyticsSource = .gauge
@@ -109,9 +109,14 @@ extension TrashAlbumViewController {
 
     /// 게이지 첫 표시 시 1회 툴팁 표시
     /// "오늘의 무료 삭제 한도예요. 탭해서 자세히 볼 수 있어요"
+    /// 온보딩 진행 중이면 플래그를 찍지 않고 스킵 → viewDidAppear에서 재시도
     private func showGaugeFirstTooltipIfNeeded(for gauge: UIView) {
         let key = "GaugeFirstTooltipShown"
         guard !UserDefaults.standard.bool(forKey: key) else { return }
+
+        // 온보딩(코치마크) 진행 중이면 미표시 (플래그 미기록 → 다음 viewDidAppear에서 재시도)
+        guard !CoachMarkManager.shared.isShowing else { return }
+
         UserDefaults.standard.set(true, forKey: key)
 
         // 약간의 딜레이 후 툴팁 표시 (레이아웃 완료 대기)
@@ -121,12 +126,19 @@ extension TrashAlbumViewController {
         }
     }
 
+    /// 온보딩 중 스킵된 게이지 첫 툴팁 재시도 (viewDidAppear에서 호출)
+    /// UserDefaults 체크가 첫 가드이므로 이미 표시된 후에는 즉시 return
+    func retryGaugeFirstTooltipIfNeeded() {
+        guard let gauge = view.viewWithTag(ViewTag.gaugeView) else { return }
+        showGaugeFirstTooltipIfNeeded(for: gauge)
+    }
+
     /// 게이지 아래에 툴팁 말풍선 표시 (3초 후 자동 소멸)
     private func showGaugeTooltip() {
         let tooltipTag = 9903
 
         let tooltip = UILabel()
-        tooltip.text = "오늘의 무료 삭제 한도예요.\n탭해서 자세히 볼 수 있어요"
+        tooltip.text = String(localized: "monetization.gauge.tooltip")
         tooltip.font = .systemFont(ofSize: 16, weight: .semibold)
         tooltip.textColor = .red
         tooltip.backgroundColor = .clear
@@ -185,7 +197,7 @@ extension TrashAlbumViewController {
 
     // MARK: - Subscription State Observer
 
-    /// 구독 상태 변경 시 게이지 갱신 (Plus 전환 시 게이지 제거)
+    /// 구독 상태 변경 시 게이지 갱신 (Pro 전환 시 게이지 제거)
     /// setupGaugeView() 이후 호출
     func observeSubscriptionStateForGauge() {
         SubscriptionStore.shared.onStateChange { [weak self] _ in
@@ -220,7 +232,12 @@ extension TrashAlbumViewController {
     /// - Parameters:
     ///   - deletedCount: 이번에 삭제한 장수
     ///   - freedBytes: 이번에 확보한 용량 (bytes)
-    func showCelebrationAfterDeletion(deletedCount: Int, freedBytes: Int64) {
+    ///   - onAcknowledge: "확인"으로 축하 화면을 닫은 뒤 실행할 콜백
+    func showCelebrationAfterDeletion(
+        deletedCount: Int,
+        freedBytes: Int64,
+        onAcknowledge: (() -> Void)? = nil
+    ) {
         // 1. 통계 저장 (DeletionStatsStore)
         let updatedStats = DeletionStatsStore.shared.addStats(
             deletedCount: deletedCount,
@@ -236,7 +253,7 @@ extension TrashAlbumViewController {
         )
 
         // 3. 축하 화면 표시
-        let celebrationVC = CelebrationViewController(result: result)
+        let celebrationVC = CelebrationViewController(result: result, onAcknowledge: onAcknowledge)
         present(celebrationVC, animated: true)
 
         Logger.app.debug("TrashAlbumVC: 축하 화면 표시 — 이번 \(deletedCount)장, 누적 \(updatedStats.totalDeletedCount)장")
@@ -269,8 +286,6 @@ extension TrashAlbumViewController {
         static let gaugeView = 9901
     }
 }
-
-// MARK: - Debug Notification Name
 
 #if DEBUG
 extension Notification.Name {

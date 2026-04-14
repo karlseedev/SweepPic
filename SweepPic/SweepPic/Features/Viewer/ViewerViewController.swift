@@ -181,7 +181,7 @@ final class ViewerViewController: UIViewController {
 
     /// 이전 사진 버튼 (일반 모드 - 좌측 하단)
     lazy var previousPhotoButton: GlassTextButton = {
-        let button = GlassTextButton(title: "이전 사진", style: .plain, tintColor: .white)
+        let button = GlassTextButton(title: String(localized: "viewer.previous"), style: .plain, tintColor: .white)
         button.translatesAutoresizingMaskIntoConstraints = false
         button.addTarget(self, action: #selector(previousPhotoButtonTapped), for: .touchUpInside)
         button.accessibilityIdentifier = "viewer_previous_photo"
@@ -190,7 +190,7 @@ final class ViewerViewController: UIViewController {
 
     /// 삭제하기 버튼 (일반 모드 - 우측 하단)
     lazy var deleteButton: GlassTextButton = {
-        let button = GlassTextButton(title: "삭제하기", style: .plain, tintColor: .systemRed)
+        let button = GlassTextButton(title: String(localized: "viewer.delete"), style: .plain, tintColor: .systemRed)
         button.translatesAutoresizingMaskIntoConstraints = false
         button.addTarget(self, action: #selector(deleteButtonTapped), for: .touchUpInside)
         button.accessibilityIdentifier = "viewer_delete"
@@ -200,7 +200,7 @@ final class ViewerViewController: UIViewController {
     /// 복구 버튼 (삭제대기함 모드 - Liquid Glass 텍스트 버튼)
     /// iOS 26 스펙: 텍스트 "복구", tintColor #30D158 (녹색)
     lazy var restoreButton: GlassTextButton = {
-        let button = GlassTextButton(title: "복구하기", style: .plain, tintColor: .systemGreen)
+        let button = GlassTextButton(title: String(localized: "viewer.restore"), style: .plain, tintColor: .systemGreen)
         button.translatesAutoresizingMaskIntoConstraints = false
         button.addTarget(self, action: #selector(restoreButtonTapped), for: .touchUpInside)
         button.accessibilityIdentifier = "viewer_restore"
@@ -210,7 +210,7 @@ final class ViewerViewController: UIViewController {
     /// 최종 삭제 버튼 (삭제대기함 모드 - Liquid Glass 텍스트 버튼)
     /// iOS 26 스펙: 텍스트 "최종 삭제", tintColor #FF4245 (빨간색)
     lazy var permanentDeleteButton: GlassTextButton = {
-        let button = GlassTextButton(title: "최종 삭제", style: .plain, tintColor: .systemRed)
+        let button = GlassTextButton(title: String(localized: "viewer.erase"), style: .plain, tintColor: .systemRed)
         button.translatesAutoresizingMaskIntoConstraints = false
         button.addTarget(self, action: #selector(permanentDeleteButtonTapped), for: .touchUpInside)
         button.accessibilityIdentifier = "viewer_permanent_delete"
@@ -220,7 +220,7 @@ final class ViewerViewController: UIViewController {
     /// 제외 버튼 (정리 미리보기 모드 - Liquid Glass 텍스트 버튼)
     /// 정리 후보에서 개별 사진을 제외하는 버튼
     lazy var excludeButton: GlassTextButton = {
-        let button = GlassTextButton(title: "저품질 목록에서 제외", style: .plain, tintColor: .white)
+        let button = GlassTextButton(title: String(localized: "viewer.keepPhoto"), style: .plain, tintColor: .white)
         button.translatesAutoresizingMaskIntoConstraints = false
         button.addTarget(self, action: #selector(excludeButtonTapped), for: .touchUpInside)
         return button
@@ -402,6 +402,27 @@ final class ViewerViewController: UIViewController {
             }
         }
 
+        // C-3 완료 후 자동 pop: 뷰어를 즉시 닫고 그리드로 복귀
+        if CoachMarkManager.shared.isAutoPopForC {
+            Logger.coachMark.debug("뷰어 자동 pop (isAutoPopForC=true)")
+
+            // pop 애니메이션 중 그리드 터치 차단 (showCleanupHighlightIfPending에서 제거)
+            if let window = view.window {
+                let blocker = UIView(frame: window.bounds)
+                blocker.tag = 99878  // showCleanupHighlightIfPending에서 식별
+                window.addSubview(blocker)
+            }
+
+            if isPushed {
+                // iOS 26+: Navigation pop
+                navigationController?.popViewController(animated: true)
+            } else {
+                // iOS 16~25: Modal dismiss
+                dismiss(animated: true)
+            }
+            return  // B, C-2, 유사사진 오버레이 등 모두 스킵
+        }
+
         // T026: 유사 사진 오버레이 표시
         showSimilarPhotoOverlay()
 
@@ -409,7 +430,7 @@ final class ViewerViewController: UIViewController {
         LiquidGlassOptimizer.preload(in: view.window)
         LiquidGlassOptimizer.enterIdle(in: view.window)
 
-        // 코치마크 B: 뷰어 스와이프 삭제 안내
+        // 코치마크 B: 뷰어에서 밀어서 삭제 안내
         showViewerSwipeDeleteCoachMarkIfNeeded()
 
         // 코치마크 C-2: + 버튼 하이라이트 (C-1에서 자동 네비게이션 후)

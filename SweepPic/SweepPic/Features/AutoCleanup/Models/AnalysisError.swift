@@ -61,19 +61,19 @@ extension AnalysisError: LocalizedError {
     var errorDescription: String? {
         switch self {
         case .imageLoadFailed(let assetID):
-            return "이미지 로드 실패: \(assetID.prefix(8))..."
+            return "Image load failed: \(assetID.prefix(8))..."  // 이미지 로드 실패
         case .metalInitFailed:
-            return "Metal 초기화 실패"
+            return "Metal initialization failed"  // Metal 초기화 실패
         case .visionFailed(let message):
-            return "Vision API 실패: \(message)"
+            return "Vision API failed: \(message)"  // Vision API 실패
         case .aestheticsFailed:
-            return "AestheticsScore 분석 실패"
+            return "AestheticsScore analysis failed"  // AestheticsScore 분석 실패
         case .timeout:
-            return "분석 타임아웃 (5초 초과)"
+            return "Analysis timed out (over 5 seconds)"  // 분석 타임아웃
         case .iCloudOnly(let assetID):
-            return "iCloud 전용 이미지: \(assetID.prefix(8))..."
+            return "iCloud-only image: \(assetID.prefix(8))..."  // iCloud 전용 이미지
         case .videoFrameExtractionFailed(let assetID):
-            return "비디오 프레임 추출 실패: \(assetID.prefix(8))..."
+            return "Video frame extraction failed: \(assetID.prefix(8))..."  // 비디오 프레임 추출 실패
         }
     }
 }

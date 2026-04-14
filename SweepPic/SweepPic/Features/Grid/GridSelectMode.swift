@@ -29,7 +29,7 @@ extension GridViewController {
     /// iOS 26+ 툴바 설정: [flex] [선택개수] [flex] [Delete]
     override func setupSelectionToolbar() -> [UIBarButtonItem] {
         let countLabel = UILabel()
-        countLabel.text = "항목 선택"
+        countLabel.text = String(localized: "common.selectItems")
         countLabel.font = .systemFont(ofSize: 17)
         countLabel.textColor = .label
         countLabel.sizeToFit()
@@ -40,7 +40,7 @@ extension GridViewController {
         selectionCountBarItem = countItem
 
         let deleteItem = UIBarButtonItem(
-            title: "삭제",
+            title: String(localized: "common.delete"),
             style: .plain,
             target: self,
             action: #selector(gridDeleteSelectedTapped)
@@ -59,7 +59,9 @@ extension GridViewController {
     override func updateSelectionToolbar(count: Int) {
         if let countItem = selectionCountBarItem,
            let label = countItem.customView as? UILabel {
-            label.text = count > 0 ? "\(count)개 항목 선택됨" : "항목 선택"
+            label.text = count > 0
+                ? String(localized: "common.selectedCount \(count)")
+                : String(localized: "common.selectItems")
             label.sizeToFit()
         }
         toolbarItems?.last?.isEnabled = count > 0
@@ -152,7 +154,7 @@ extension AlbumGridViewController {
     /// iOS 26+ 툴바 설정: [flex] [선택개수] [flex] [Delete]
     override func setupSelectionToolbar() -> [UIBarButtonItem] {
         let countLabel = UILabel()
-        countLabel.text = "항목 선택"
+        countLabel.text = String(localized: "common.selectItems")
         countLabel.font = .systemFont(ofSize: 17)
         countLabel.textColor = .label
         countLabel.sizeToFit()
@@ -163,7 +165,7 @@ extension AlbumGridViewController {
         selectionCountBarItem = countItem
 
         let deleteItem = UIBarButtonItem(
-            title: "삭제",
+            title: String(localized: "common.delete"),
             style: .plain,
             target: self,
             action: #selector(albumDeleteSelectedTapped)
@@ -182,7 +184,9 @@ extension AlbumGridViewController {
     override func updateSelectionToolbar(count: Int) {
         if let countItem = selectionCountBarItem,
            let label = countItem.customView as? UILabel {
-            label.text = count > 0 ? "\(count)개 항목 선택됨" : "항목 선택"
+            label.text = count > 0
+                ? String(localized: "common.selectedCount \(count)")
+                : String(localized: "common.selectItems")
             label.sizeToFit()
         }
         toolbarItems?.last?.isEnabled = count > 0

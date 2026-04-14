@@ -56,19 +56,19 @@ extension CleanupError: LocalizedError {
     var errorDescription: String? {
         switch self {
         case .alreadyRunning:
-            return "정리가 이미 진행 중입니다"
+            return String(localized: "autoCleanup.error.alreadyRunning")
         case .trashNotEmpty:
             return CleanupConstants.trashNotEmptyMessage
         case .noPhotoAccess:
-            return "사진 라이브러리 접근 권한이 필요합니다"
+            return String(localized: "autoCleanup.error.noPhotoAccess")
         case .noPreviousSession:
-            return "이전 정리 이력이 없습니다"
+            return String(localized: "autoCleanup.error.noPreviousSession")
         case .analysisFailed(let message):
-            return "분석 중 오류가 발생했습니다: \(message)"
+            return String(localized: "autoCleanup.error.analysisFailed \(message)")
         case .metalInitFailed:
-            return "이미지 분석을 초기화할 수 없습니다"
+            return String(localized: "autoCleanup.error.metalInitFailed")
         case .trashMoveFailed(let message):
-            return "삭제대기함 이동 중 오류가 발생했습니다: \(message)"
+            return String(localized: "autoCleanup.error.trashMoveFailed \(message)")
         }
     }
 
@@ -76,17 +76,17 @@ extension CleanupError: LocalizedError {
     var recoverySuggestion: String? {
         switch self {
         case .alreadyRunning:
-            return "현재 정리가 완료될 때까지 기다려주세요"
+            return String(localized: "autoCleanup.recovery.alreadyRunning")
         case .trashNotEmpty:
-            return "삭제대기함을 비운 후 다시 시도해주세요"
+            return String(localized: "autoCleanup.recovery.trashNotEmpty")
         case .noPhotoAccess:
-            return "설정에서 사진 접근 권한을 허용해주세요"
+            return String(localized: "autoCleanup.recovery.noPhotoAccess")
         case .noPreviousSession:
-            return "'최신사진부터 정리'를 선택해주세요"
+            return String(localized: "autoCleanup.recovery.noPreviousSession")
         case .analysisFailed, .metalInitFailed:
-            return "앱을 재시작한 후 다시 시도해주세요"
+            return String(localized: "autoCleanup.recovery.restart")
         case .trashMoveFailed:
-            return "다시 시도해주세요"
+            return String(localized: "autoCleanup.recovery.retry")
         }
     }
 }

@@ -8,7 +8,7 @@
 //  역할:
 //  - GADMobileAds SDK 초기화
 //  - 리워드/전면/배너 광고 사전 로드 관리
-//  - Plus 상태에 따른 광고 표시 여부 판단
+//  - Pro 상태에 따른 광고 표시 여부 판단
 //
 
 import UIKit
@@ -57,13 +57,10 @@ final class AdManager: NSObject, AdManagerProtocol {
 
     static let shared = AdManager()
 
-    // MARK: - Ad Unit IDs (테스트용 — 출시 시 실제 ID로 교체)
+    // MARK: - Ad Unit IDs
 
-    /// 리워드 광고 테스트 ID
     static let rewardedAdUnitID = "ca-app-pub-3940256099942544/1712485313"
-    /// 전면 광고 테스트 ID
     static let interstitialAdUnitID = "ca-app-pub-3940256099942544/4411468910"
-    /// 배너 광고 테스트 ID
     static let bannerAdUnitID = "ca-app-pub-3940256099942544/2435281174"
 
     // MARK: - Properties
@@ -114,6 +111,13 @@ final class AdManager: NSObject, AdManagerProtocol {
         // 4+ 연령 등급 앱 → 전체이용가(G) 광고만 허용
         GADMobileAds.sharedInstance().requestConfiguration.maxAdContentRating = .general
 
+#if DEBUG
+        // Add physical device IDs from the Xcode console to force test ads in debug builds.
+        GADMobileAds.sharedInstance().requestConfiguration.testDeviceIdentifiers = [
+            // "YOUR_TEST_DEVICE_ID",
+        ]
+#endif
+
         GADMobileAds.sharedInstance().start { [weak self] status in
             Logger.app.debug("AdManager: SDK 초기화 완료 — \(status.adapterStatusesByClassName)")
             self?.isConfigured = true
@@ -132,13 +136,13 @@ final class AdManager: NSObject, AdManagerProtocol {
 
     // MARK: - Should Show Ads
 
-    /// Plus 구독자이면 광고 미표시
+    /// Pro 구독자이면 광고 미표시
     func shouldShowAds() -> Bool {
         // FeatureFlags 체크
         guard FeatureFlags.isAdEnabled else { return false }
 
-        // Plus 구독자이면 광고 미표시 (FR-027, T033)
-        if SubscriptionStore.shared.isPlusUser { return false }
+        // Pro 구독자이면 광고 미표시 (FR-027, T033)
+        if SubscriptionStore.shared.isProUser { return false }
 
         return true
     }

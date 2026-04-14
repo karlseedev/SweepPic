@@ -38,12 +38,12 @@ extension GridViewController {
 
     /// A 코치마크 즉시 재생
     func replayCoachMarkA() {
-        Logger.coachMark.debug("A: 그리드 스와이프 삭제 재생 시작")
+        Logger.coachMark.debug("A: 목록에서 밀어서 삭제 재생 시작")
 
         // 사진 0장 체크
         guard dataSourceDriver.count > 0 else {
             if let window = view.window {
-                ToastView.show("사진이 없습니다", in: window)
+                ToastView.show(String(localized: "emptyState.noPhotos.title"), in: window)
             }
             return
         }
@@ -67,11 +67,11 @@ extension GridViewController {
     /// 화면 중앙에서 가까운 이미지(비디오 제외) 셀을 찾아 뷰어로 이동
     /// viewDidAppear에서 B 가드 통과 → 자동 표시
     func replayCoachMarkB() {
-        Logger.coachMark.debug("B: 뷰어 스와이프 삭제 재생 시작")
+        Logger.coachMark.debug("B: 뷰어에서 밀어서 삭제 재생 시작")
 
         guard dataSourceDriver.count > 0 else {
             if let window = view.window {
-                ToastView.show("사진이 없습니다", in: window)
+                ToastView.show(String(localized: "emptyState.noPhotos.title"), in: window)
             }
             return
         }
@@ -79,7 +79,7 @@ extension GridViewController {
         // 중앙에서 가까운 이미지 셀 탐색 (비디오 제외)
         guard let indexPath = findNearestImageCell() else {
             if let window = view.window {
-                ToastView.show("표시할 이미지가 없습니다", in: window)
+                ToastView.show(String(localized: "grid.toast.noImageToDisplay"), in: window)
             }
             return
         }
@@ -160,7 +160,7 @@ extension GridViewController {
             CoachMarkType.similarPhoto.markAsShown()
             CoachMarkType.faceComparisonGuide.markAsShown()
             if let window = view.window {
-                ToastView.show("유사 사진을 찾지 못했습니다", in: window)
+                ToastView.show(String(localized: "grid.toast.noFaceComparisonPhotos"), in: window)
             }
             return
         }
@@ -168,8 +168,8 @@ extension GridViewController {
         // padding 보정
         let gridIndexPath = IndexPath(item: found.item + paddingCellCount, section: found.section)
 
-        // 셀로 스크롤
-        collectionView.scrollToItem(at: gridIndexPath, at: .centeredVertically, animated: true)
+        // 셀을 실제 가시 영역 기준 중앙으로 스크롤
+        scrollToCenteredItem(at: gridIndexPath, animated: true)
 
         // 스크롤 완료 대기 → 뱃지 표시 → C-1 직접 호출
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
@@ -216,7 +216,7 @@ extension GridViewController {
         stack.addArrangedSubview(spinner)
 
         let label = UILabel()
-        label.text = "기능이 실행되는\n사진을 찾고 있어요"
+        label.text = String(localized: "grid.searching")
         label.textColor = .white
         label.font = .systemFont(ofSize: 16, weight: .medium)
         label.textAlignment = .center
@@ -247,7 +247,7 @@ extension GridViewController {
                     CoachMarkType.similarPhoto.markAsShown()
                     CoachMarkType.faceComparisonGuide.markAsShown()
                     if let window = self.view.window {
-                        ToastView.show("유사 사진을 찾지 못했습니다", in: window)
+                        ToastView.show(String(localized: "grid.toast.noFaceComparisonPhotos"), in: window)
                     }
                 }
             }
@@ -285,6 +285,7 @@ extension GridViewController {
 
         // 플래그 리셋
         CoachMarkType.autoCleanup.resetShown()
+        CoachMarkType.autoCleanupPreview.resetShown()  // D-1도 함께 리셋
 
         // 정리 버튼 프레임 획득
         let cleanupFrame = getCleanupButtonFrame(in: window)
@@ -313,7 +314,7 @@ extension GridViewController {
 
         guard dataSourceDriver.count > 0 else {
             if let window = view.window {
-                ToastView.show("사진이 없습니다", in: window)
+                ToastView.show(String(localized: "emptyState.noPhotos.title"), in: window)
             }
             return
         }
@@ -321,7 +322,7 @@ extension GridViewController {
         // 중앙 셀 찾기
         guard let (cell, indexPath) = findCenterCell() else {
             if let window = view.window {
-                ToastView.show("사진이 없습니다", in: window)
+                ToastView.show(String(localized: "emptyState.noPhotos.title"), in: window)
             }
             return
         }
@@ -345,6 +346,7 @@ extension GridViewController {
 
         // 플래그 리셋
         CoachMarkType.firstDeleteGuide.resetShown()
+        CoachMarkType.trashRestore.resetShown()  // E-3도 리셋해야 다시보기에서 재생됨
 
         // A 변형 오버레이 표시 → 1회 스와이프 → 자동 dismiss → 삭제 → E 시퀀스
         CoachMarkOverlayView.showReplaySwipeVariant(
@@ -370,11 +372,11 @@ extension GridViewController {
         )
     }
 
-    // MARK: - E-3: First Empty Feedback Replay
+    // MARK: - F: First Empty Feedback Replay
 
-    /// E-3 코치마크 즉시 재생
-    func replayCoachMarkE3() {
-        Logger.coachMark.debug("E-3: 비우기 완료 안내 재생 시작")
+    /// F 코치마크 즉시 재생
+    func replayCoachMarkF() {
+        Logger.coachMark.debug("F: 비우기 완료 안내 재생 시작")
 
         guard let window = view.window else { return }
 

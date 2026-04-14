@@ -49,27 +49,32 @@ final class FloatingTitleBar: UIView {
 
     weak var delegate: FloatingTitleBarDelegate?
 
+    /// 상단 우측 버튼(간편정리, 메뉴) 탭 인터셉트 핸들러
+    /// true를 반환하면 버튼 동작 차단 (UIMenu 풀다운이 뜨지 않음)
+    /// hitTest에서 호출되므로 내부에서 대체 동작(예: A-1 표시)을 직접 수행
+    var rightButtonInterceptor: (() -> Bool)?
+
+
     /// 현재 타이틀 텍스트
     // ⚠️ 사진보관함 명칭 변경 시 동시 수정 필요:
     // - TabBarController.swift, GridViewController.swift, FloatingOverlayContainer.swift, FloatingTitleBar.swift (여기)
-    var title: String = "사진보관함" {
+    var title: String = "" {
         didSet {
             titleLabel.attributedText = Self.styledTitle(title)
         }
     }
 
-    /// 타이틀 스타일 적용 (자간 -0.5pt, 36pt ultraLight)
+    /// 타이틀 스타일 적용 (앱 언어별 메인 타이틀 자간)
     private static func styledTitle(_ text: String) -> NSAttributedString {
-        NSAttributedString(string: text, attributes: [
-            .font: UIFont.systemFont(ofSize: 36, weight: .light),
-            .kern: -1.0
-        ])
+        NavigationTitleTypography.attributedText(text, style: .largeTitle)
     }
 
     /// 서브타이틀 텍스트 (사진 개수 등)
     var subtitle: String? {
         didSet {
-            subtitleLabel.text = subtitle
+            subtitleLabel.attributedText = subtitle.map {
+                NavigationTitleTypography.attributedText($0, style: .subtitle)
+            }
             subtitleLabel.isHidden = (subtitle == nil || subtitle?.isEmpty == true)
         }
     }
@@ -198,7 +203,8 @@ final class FloatingTitleBar: UIView {
     /// Select 버튼 (Liquid Glass 스타일) - 가장 오른쪽
     /// iOS 26 스펙: 높이 44pt, fontSize 17pt
     private lazy var selectButton: GlassTextButton = {
-        let button = GlassTextButton(title: "선택", style: .plain, tintColor: .white)
+        // 초기 크기를 정리 버튼 기준으로 생성 — 보관함 첫 화면에서 Glass 배경 크기 보장
+        let button = GlassTextButton(title: String(localized: "cleanup.title"), style: .plain, tintColor: .white)
         button.addTarget(self, action: #selector(selectButtonTapped), for: .touchUpInside)
         button.translatesAutoresizingMaskIntoConstraints = false
         return button
@@ -385,15 +391,19 @@ final class FloatingTitleBar: UIView {
             return secondRightButton
         }
 
-        // Select 버튼 영역 체크
+        // Select(간편정리) 버튼 영역 체크
         let selectPoint = convert(point, to: selectButton)
         if selectButton.bounds.contains(selectPoint) && !selectButton.isHidden {
+            // A-1 / C 인터셉트: 버튼 동작 차단 → 대체 동작 수행
+            if rightButtonInterceptor?() == true { return self }
             return selectButton
         }
 
         // 메뉴 버튼 영역 체크 (최우측)
         let menuPoint = convert(point, to: menuButton)
         if menuButton.bounds.contains(menuPoint) && !menuButton.isHidden {
+            // A-1 인터셉트: 버튼 동작 차단 → 대체 동작 수행
+            if rightButtonInterceptor?() == true { return self }
             return menuButton
         }
 
@@ -467,6 +477,65 @@ final class FloatingTitleBar: UIView {
     /// 커스텀 오른쪽 버튼 액션
     private var rightButtonAction: (() -> Void)?
 
+    /// selectButton의 역할
+    /// 같은 인스턴스를 재사용하되 상태 전환은 반드시 이 enum 경로만 통과시킵니다.
+    private enum SelectButtonRole {
+        case select
+        case cancel(action: () -> Void)
+        case menu(title: String, menu: UIMenu)
+        case custom(title: String, textColor: UIColor, action: () -> Void)
+    }
+
+    /// selectButton의 target/menu/action 상태를 초기화
+    private func resetSelectButtonBindings() {
+        selectButton.removeTarget(self, action: #selector(selectButtonTapped), for: .touchUpInside)
+        selectButton.removeTarget(self, action: #selector(rightButtonTapped), for: .touchUpInside)
+        selectButton.menu = nil
+        selectButton.showsMenuAsPrimaryAction = false
+        rightButtonAction = nil
+    }
+
+    /// selectButton 레이아웃/Glass 상태 보정
+    /// title/menu/action이 바뀔 때마다 동일한 후처리를 강제합니다.
+    private func refreshSelectButtonLayout() {
+        selectButton.superview?.layoutIfNeeded()
+        selectButton.resetInteractionState()
+        LiquidGlassOptimizer.resumeAllMTKViews(in: selectButton)
+    }
+
+    /// selectButton 역할 적용의 단일 진입점
+    private func applySelectButtonRole(_ role: SelectButtonRole) {
+        resetSelectButtonBindings()
+        selectButton.isHidden = false
+
+        switch role {
+        case .select:
+            selectButton.setButtonTitle(String(localized: "common.select"))
+            selectButton.setTextColor(.white)
+            selectButton.addTarget(self, action: #selector(selectButtonTapped), for: .touchUpInside)
+
+        case .cancel(let action):
+            selectButton.setButtonTitle(String(localized: "common.cancel"))
+            selectButton.setTextColor(.white)
+            rightButtonAction = action
+            selectButton.addTarget(self, action: #selector(rightButtonTapped), for: .touchUpInside)
+
+        case .menu(let title, let menu):
+            selectButton.setButtonTitle(title)
+            selectButton.setTextColor(.white)
+            selectButton.menu = menu
+            selectButton.showsMenuAsPrimaryAction = true
+
+        case .custom(let title, let textColor, let action):
+            selectButton.setButtonTitle(title)
+            selectButton.setTextColor(textColor)
+            rightButtonAction = action
+            selectButton.addTarget(self, action: #selector(rightButtonTapped), for: .touchUpInside)
+        }
+
+        refreshSelectButtonLayout()
+    }
+
     /// 커스텀 오른쪽 버튼 설정 (Select 버튼 대체, 단일 버튼 모드)
     /// - Parameters:
     ///   - title: 버튼 타이틀
@@ -476,16 +545,8 @@ final class FloatingTitleBar: UIView {
         // 두 번째 버튼 숨기기 (단일 버튼 모드)
         hideSecondRightButton()
 
-        // GlassTextButton 텍스트 설정
-        selectButton.setButtonTitle(title)
-
-        selectButton.isHidden = false
-        rightButtonAction = action
-
-        // 기존 액션 제거 후 새 액션 연결
-        selectButton.removeTarget(self, action: #selector(selectButtonTapped), for: .touchUpInside)
-        selectButton.removeTarget(self, action: #selector(rightButtonTapped), for: .touchUpInside)
-        selectButton.addTarget(self, action: #selector(rightButtonTapped), for: .touchUpInside)
+        // backgroundColor 파라미터는 기존 API 호환용으로 유지
+        applySelectButtonRole(.custom(title: title, textColor: .white, action: action))
     }
 
     /// 오른쪽 버튼을 Select 버튼으로 복원 (캡슐 + 틴티드 스타일, 단일 버튼 모드)
@@ -493,20 +554,14 @@ final class FloatingTitleBar: UIView {
         // 두 번째 버튼 숨기기 (단일 버튼 모드)
         hideSecondRightButton()
 
-        // GlassTextButton 텍스트 설정
-        selectButton.setButtonTitle("선택")
-
-        rightButtonAction = nil
-
-        // 액션 복원
-        selectButton.removeTarget(self, action: #selector(rightButtonTapped), for: .touchUpInside)
-        selectButton.addTarget(self, action: #selector(selectButtonTapped), for: .touchUpInside)
+        applySelectButtonRole(.select)
     }
 
     /// Select 모드 진입 - Cancel 버튼으로 변경
     /// - Parameter cancelAction: Cancel 버튼 탭 시 실행할 클로저
     func enterSelectMode(cancelAction: @escaping () -> Void) {
-        setRightButton(title: "취소", backgroundColor: .systemBlue, action: cancelAction)
+        hideSecondRightButton()
+        applySelectButtonRole(.cancel(action: cancelAction))
         // 정리 버튼, 메뉴 버튼 숨기기 (iOS 26 시스템 UI와 동일하게)
         secondRightButton.isHidden = true
         secondRightIconButton.isHidden = true
@@ -552,16 +607,8 @@ final class FloatingTitleBar: UIView {
         secondAction: @escaping () -> Void
     ) {
         // 첫 번째 버튼 (Select 위치 - 가장 오른쪽)
-        selectButton.setButtonTitle(firstTitle)
-        selectButton.setTextColor(firstColor)
-
+        applySelectButtonRole(.custom(title: firstTitle, textColor: firstColor, action: firstAction))
         isSelectButtonHidden = false  // 프로퍼티를 통해 설정 (다른 탭에서 숨겼을 수 있음)
-        rightButtonAction = firstAction
-
-        // 액션 연결
-        selectButton.removeTarget(self, action: #selector(selectButtonTapped), for: .touchUpInside)
-        selectButton.removeTarget(self, action: #selector(rightButtonTapped), for: .touchUpInside)
-        selectButton.addTarget(self, action: #selector(rightButtonTapped), for: .touchUpInside)
 
         // 두 번째 버튼 (왼쪽에 추가) — 아이콘 또는 텍스트
         if let secondIcon {
@@ -652,5 +699,36 @@ final class FloatingTitleBar: UIView {
         // Select 버튼 trailing을 컨테이너 우측으로 복원
         selectButtonTrailingToMenu?.isActive = false
         selectButtonTrailingToContainer?.isActive = true
+    }
+
+    // MARK: - Right Menu Button (간편정리 등 텍스트+UIMenu 풀다운)
+
+    /// 오른쪽 메뉴 버튼 설정 (탭 시 UIMenu 풀다운)
+    /// selectButton 위치에 텍스트 + UIMenu를 배치합니다.
+    /// - Parameters:
+    ///   - title: 버튼 타이틀 (예: "간편정리")
+    ///   - menu: 탭 시 표시할 UIMenu
+    func setRightMenuButton(title: String, menu: UIMenu) {
+        // 두 번째 버튼 숨기기 (메뉴 버튼 단일 모드)
+        hideSecondRightButton()
+
+        applySelectButtonRole(.menu(title: title, menu: menu))
+        isSelectButtonHidden = false
+    }
+
+    /// 오른쪽 메뉴 버튼 활성화/비활성화 (간편정리 버튼용)
+    /// - Parameter enabled: 활성화 여부
+    func setRightMenuButtonEnabled(_ enabled: Bool) {
+        selectButton.isEnabled = enabled
+        selectButton.alpha = enabled ? 1.0 : 0.5
+    }
+
+    /// 오른쪽 메뉴 버튼(간편정리)의 window 좌표 frame 반환
+    /// 코치마크 D 하이라이트 위치 등에서 사용
+    /// 버튼이 숨겨져 있거나 window가 없으면 nil 반환
+    func rightMenuButtonFrameInWindow() -> CGRect? {
+        guard !selectButton.isHidden,
+              let window = selectButton.window else { return nil }
+        return selectButton.convert(selectButton.bounds, to: window)
     }
 }

@@ -47,15 +47,15 @@ enum SimilarityImageLoadError: Error, LocalizedError {
     var errorDescription: String? {
         switch self {
         case .loadFailed(let reason):
-            return "이미지 로딩 실패: \(reason)"
+            return "Image loading failed: \(reason)"  // 이미지 로딩 실패
         case .timeout:
-            return "이미지 로딩 타임아웃 (3초 초과)"
+            return "Image loading timed out (over 3 seconds)"  // 이미지 로딩 타임아웃
         case .invalidImage:
-            return "잘못된 이미지 형식"
+            return "Invalid image format"  // 잘못된 이미지 형식
         case .accessDenied:
-            return "사진 접근 권한이 없습니다"
+            return "Photo access permission is missing"  // 사진 접근 권한이 없습니다
         case .cancelled:
-            return "Task 취소로 이미지 요청 취소됨"
+            return "Image request canceled because the task was canceled"  // Task 취소로 이미지 요청 취소됨
         }
     }
 }
@@ -235,7 +235,7 @@ final class SimilarityImageLoader {
 
                     // 이미지 검증
                     guard let uiImage = image else {
-                        continuation.resume(throwing: SimilarityImageLoadError.loadFailed("이미지 nil"))
+                        continuation.resume(throwing: SimilarityImageLoadError.loadFailed("image is nil"))
                         return
                     }
 
@@ -337,7 +337,7 @@ final class SimilarityImageLoader {
                     }
 
                     guard let uiImage = image else {
-                        continuation.resume(throwing: SimilarityImageLoadError.loadFailed("이미지 nil"))
+                        continuation.resume(throwing: SimilarityImageLoadError.loadFailed("image is nil"))
                         return
                     }
 

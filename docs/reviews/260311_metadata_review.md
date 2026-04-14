@@ -16,7 +16,7 @@
 3. **Medium - 2.3.7(정확한 메타데이터) 관점의 과장/오해 가능성**
 - 문제: “지금 무료로 시작하세요”는 실제 무료 사용 범위가 제한적이므로 오해 소지가 있습니다.
 - 위치: [Metadata.md:32](/Users/karl/Project/Photos/iOS/docs/appstore/document/Metadata.md:32), [Metadata.md:59](/Users/karl/Project/Photos/iOS/docs/appstore/document/Metadata.md:59)
-- 권장: “기본 기능 무료, 추가 삭제는 광고 시청 또는 Plus 구독”처럼 즉시 명확화.
+- 권장: “기본 기능 무료, 추가 삭제는 광고 시청 또는 Pro 구독”처럼 즉시 명확화.
 
 4. **Medium - 제출 완성도 관점의 누락 가능성**
 - 문제: 이 문서엔 App Privacy 답변, ATT 필요 여부, 심사용 메모(광고/구독 동작 설명) 등이 없습니다.

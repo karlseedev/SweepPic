@@ -170,22 +170,19 @@ final class PreviewBottomView: UIView {
     /// - Parameters:
     ///   - currentStage: 현재 표시 단계
     ///   - totalCount: 현재 단계까지의 총 개수
-    ///   - standardCount: standard 단계 추가분 개수 (31~40점)
-    ///   - deepCount: deep 단계 추가분 개수 (41~50점)
-    ///   - canExpand: 더 확장 가능한지 (3단계면 false)
+    ///   - standardCount: standard 단계 추가분 개수 (약간 낮은 품질)
+    ///   - canExpand: 더 확장 가능한지 (standard이면 false)
     func configure(
         currentStage: PreviewStage,
         totalCount: Int,
         standardCount: Int,
-        deepCount: Int,
         canExpand: Bool
     ) {
-        // 메인 버튼: "N등급 이하 사진 N장 삭제대기함 이동" (상단 타이틀 등급과 동일)
+        // 메인 버튼: "N장 삭제대기함 이동"
         let primaryTitle: String
         switch currentStage {
-        case .light:    primaryTitle = "5등급 사진 \(totalCount)장 삭제대기함 이동"
-        case .standard: primaryTitle = "4등급 이하 사진 \(totalCount)장 삭제대기함 이동"
-        case .deep:     primaryTitle = "3등급 이하 사진 \(totalCount)장 삭제대기함 이동"
+        case .light:    primaryTitle = String(localized: "preview.bottom.primary.light \(totalCount)")
+        case .standard: primaryTitle = String(localized: "preview.bottom.primary.standard \(totalCount)")
         }
         primaryButton.setButtonTitle(primaryTitle)
 
@@ -199,32 +196,26 @@ final class PreviewBottomView: UIView {
         // 둘 다 보이면 2줄, 하나만 보이면 1줄
         let useTwoLines = showCollapse && showExpand
 
-        // 축소 버튼 (2단계부터)
-        // standard: "4등급 사진 N장 덜 보기", deep: "3등급 사진 N장 덜 보기"
+        // 축소 버튼 (standard 단계에서만)
         if showCollapse {
             let separator = useTwoLines ? "\n" : " "
             let collapseTitle: String
             switch currentStage {
             case .standard:
-                collapseTitle = "4등급 사진\(separator)\(standardCount)장 덜 보기"
-            case .deep:
-                collapseTitle = "3등급 사진\(separator)\(deepCount)장 덜 보기"
+                collapseTitle = String(localized: "preview.bottom.collapse.standard \(separator) \(standardCount)")
             default:
                 collapseTitle = ""
             }
             collapseButton.setButtonTitle(collapseTitle)
         }
 
-        // 확장 버튼
-        // light: "4등급 사진 N장 더 보기", standard: "3등급 사진 N장 더 보기"
+        // 확장 버튼 (light 단계에서만)
         if showExpand {
             let separator = useTwoLines ? "\n" : " "
             let expandTitle: String
             switch currentStage {
             case .light:
-                expandTitle = "4등급 사진\(separator)\(standardCount)장 더 보기"
-            case .standard:
-                expandTitle = "3등급 사진\(separator)\(deepCount)장 더 보기"
+                expandTitle = String(localized: "preview.bottom.expand.standard \(separator) \(standardCount)")
             default:
                 expandTitle = ""
             }
@@ -251,5 +242,26 @@ final class PreviewBottomView: UIView {
 
     @objc private func expandTapped() {
         delegate?.previewBottomViewDidTapExpand(self)
+    }
+
+    // MARK: - CoachMark D-1 Support
+
+    /// D-1 Step 2: secondaryStack 프레임 (윈도우 좌표)
+    /// secondaryStack이 숨겨져 있으면 nil 반환
+    func secondaryStackFrameInWindow() -> CGRect? {
+        guard let window = window else { return nil }
+        guard !secondaryStack.isHidden else { return nil }
+        return secondaryStack.convert(secondaryStack.bounds, to: window)
+    }
+
+    /// D-1 Step 4: primaryButton 프레임 (윈도우 좌표)
+    func primaryButtonFrameInWindow() -> CGRect? {
+        guard let window = window else { return nil }
+        return primaryButton.convert(primaryButton.bounds, to: window)
+    }
+
+    /// D-1 Step 2: expand 버튼 표시 여부
+    var isExpandButtonVisible: Bool {
+        !expandButton.isHidden
     }
 }

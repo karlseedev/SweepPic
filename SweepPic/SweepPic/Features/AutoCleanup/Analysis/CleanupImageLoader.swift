@@ -15,7 +15,7 @@ import Photos
 import UIKit
 
 /// AutoCleanup용 이미지 로딩 에러
-enum CleanupImageLoadError: Error, LocalizedError {
+enum CleanupImageLoadError: Error {
     /// 이미지 로딩 실패
     case loadFailed(String)
 
@@ -25,16 +25,6 @@ enum CleanupImageLoadError: Error, LocalizedError {
     /// 잘못된 이미지 형식
     case invalidImage
 
-    var errorDescription: String? {
-        switch self {
-        case .loadFailed(let reason):
-            return "이미지 로딩 실패: \(reason)"
-        case .timeout:
-            return "이미지 로딩 타임아웃"
-        case .invalidImage:
-            return "잘못된 이미지 형식"
-        }
-    }
 }
 
 /// AutoCleanup 전용 이미지 로더
@@ -170,7 +160,7 @@ final class CleanupImageLoader {
 
                 // 이미지 검증
                 guard let uiImage = image else {
-                    continuation.resume(throwing: CleanupImageLoadError.loadFailed("이미지 nil"))
+                    continuation.resume(throwing: CleanupImageLoadError.loadFailed("image is nil"))
                     return
                 }
 

@@ -241,6 +241,13 @@ extension PersonPageViewController: UICollectionViewDataSource {
         // 이미지 로드 전 placeholder 표시
         cell.configure(with: nil, isSelected: isSelected, assetID: assetID, debugText: numberText)
 
+        #if DEBUG
+        // 품질 정보 표시 (YuNet score + SFace norm)
+        if let face = dataSource.face(for: assetID, personIndex: personIndex) {
+            cell.setQualityInfo(score: face.yunetScore, norm: face.sfaceNorm)
+        }
+        #endif
+
         return cell
     }
 }

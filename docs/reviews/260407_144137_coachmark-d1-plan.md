@@ -1,0 +1,27 @@
+**결론**
+현재 계획은 방향은 맞지만, 그대로 구현하기엔 충분하지 않습니다. 특히 D-1 전환 상태 플래그, 완료 전 dismiss 처리, 실제 프로젝트 경로/로컬라이징/테스트 스킵 경로가 빠져 있어 “화면 표시 후 터치 차단되는 4단계 UIKit 코치마크” 목표를 안정적으로 달성하기 어렵습니다.
+
+**주요 피드백**
+- `[높음]` Step 3→4에서 `shouldStopAnimation = true`를 켜면 이후 전환 체인이 중단될 수 있습니다. 계획은 Step 3→4 시작 시 `shouldStopAnimation=true`로 스와이프 루프를 멈추고, 그 뒤 `animateD1Expand/Shrink`와 Step 4 페이드인을 계속 진행한다고 되어 있습니다. 하지만 기존 패턴은 completion마다 `!shouldStopAnimation`을 가드합니다. A2는 이 문제를 `isA2TransitionActive` 예외로 우회하고 있습니다. D-1도 별도 `d1SwipeLoopStopped` 같은 플래그를 쓰거나, `shouldStopAnimation`은 dismiss 전용으로 남겨야 합니다.  
+  [piped-yawning-umbrella.md](/Users/karl/.claude/plans/piped-yawning-umbrella.md):421, [CoachMarkOverlayView+CoachMarkA2.swift](/Users/karl/Project/Photos/iOS/SweepPic/SweepPic/Shared/Components/CoachMarkOverlayView+CoachMarkA2.swift):111, [CoachMarkOverlayView+CoachMarkA2.swift](/Users/karl/Project/Photos/iOS/SweepPic/SweepPic/Shared/Components/CoachMarkOverlayView+CoachMarkA2.swift):132
+
+- `[높음]` 완료 전에 `dismiss()`되면 D-1이 표시 완료로 기록될 위험이 있습니다. 공통 `dismiss()`는 `.similarPhoto` 외에는 무조건 `markAsShown()`을 호출합니다. 계획의 `viewWillDisappear` 정리도 `dismissCurrent()`를 호출하므로 전화/백그라운드/화면 이탈 중 4단계를 끝내지 않아도 `coachMark_autoCleanupPreview`가 완료 처리될 수 있습니다. D-1은 `d1DidComplete` 플래그 또는 `dismiss(markAsShown:)` 성격의 별도 경로가 필요합니다.  
+  [piped-yawning-umbrella.md](/Users/karl/.claude/plans/piped-yawning-umbrella.md):377, [piped-yawning-umbrella.md](/Users/karl/.claude/plans/piped-yawning-umbrella.md):430, [CoachMarkOverlayView.swift](/Users/karl/Project/Photos/iOS/SweepPic/SweepPic/Shared/Components/CoachMarkOverlayView.swift):896, [CoachMarkOverlayView.swift](/Users/karl/Project/Photos/iOS/SweepPic/SweepPic/Shared/Components/CoachMarkOverlayView.swift):905
+
+- `[높음]` “다른 클릭 차단” 요구사항에 비해 트리거가 약합니다. 계획은 `viewDidAppear` 후 0.5초 뒤 오버레이를 붙입니다. 그 0.5초 동안 사용자는 X, 더 보기, 삭제대기함 이동, 셀 탭을 누를 수 있습니다. 화면 전환 완료 후 바로 차단해야 한다면 `transitionCoordinator` completion 직후 투명 blocker/overlay를 붙이고, 프레임 안정화만 내부에서 기다리는 구조가 더 맞습니다. 또한 기존 D처럼 `topViewController`, `presentedViewController`, 스크롤/레이아웃 안정화 실패 시 재시도 로직도 필요합니다.  
+  [piped-yawning-umbrella.md](/Users/karl/.claude/plans/piped-yawning-umbrella.md):244, [piped-yawning-umbrella.md](/Users/karl/.claude/plans/piped-yawning-umbrella.md):247, [GridViewController+CoachMarkD.swift](/Users/karl/Project/Photos/iOS/SweepPic/SweepPic/Features/Grid/GridViewController+CoachMarkD.swift):171, [GridViewController+CoachMarkD.swift](/Users/karl/Project/Photos/iOS/SweepPic/SweepPic/Features/Grid/GridViewController+CoachMarkD.swift):183
+
+- `[중간]` 계획의 파일 경로가 실제 소스 루트와 다릅니다. 문서는 `SweepPic/Shared/...`, `SweepPic/Features/...`로 쓰고 있지만 실제 앱 소스는 `SweepPic/SweepPic/...`입니다. 이 프로젝트는 파일 시스템 동기화 그룹을 쓰므로 올바른 루트에 만들면 pbxproj 수동 편집은 대체로 필요 없지만, 잘못된 경로에 만들면 타겟에 들어가지 않습니다.  
+  [piped-yawning-umbrella.md](/Users/karl/.claude/plans/piped-yawning-umbrella.md):160, [piped-yawning-umbrella.md](/Users/karl/.claude/plans/piped-yawning-umbrella.md):237, [project.pbxproj](/Users/karl/Project/Photos/iOS/SweepPic/SweepPic.xcodeproj/project.pbxproj):140
+
+- `[중간]` iOS 26 헤더 타이틀 포커싱이 부정확합니다. 계획은 iOS 26에서 `navigationBar.bounds` 전체를 하이라이트합니다. Step 1 대상은 “헤더 타이틀”인데, 이 구현은 X 버튼과 네비바 전체까지 pill로 잡을 수 있습니다. iOS 26도 title rect를 별도로 계산하거나 `titleView`를 쓰는 설계가 필요합니다.  
+  [piped-yawning-umbrella.md](/Users/karl/.claude/plans/piped-yawning-umbrella.md):365, [PreviewGridViewController.swift](/Users/karl/Project/Photos/iOS/SweepPic/SweepPic/Features/AutoCleanup/Preview/PreviewGridViewController.swift):249, [PreviewGridViewController.swift](/Users/karl/Project/Photos/iOS/SweepPic/SweepPic/Features/AutoCleanup/Preview/PreviewGridViewController.swift):541
+
+- `[중간]` 로컬라이징과 테스트/디버그 상태 관리가 빠져 있습니다. 기존 코치마크 문구는 `Localizable.xcstrings` 키 기반인데 D-1 계획은 한국어 문자열을 코드에 직접 넣습니다. 새 `CoachMarkType.autoCleanupPreview`도 `--skip-coachmarks` 처리와 “온보딩 리셋” 목록에 추가해야 UI 테스트와 디버그 리셋에서 누락되지 않습니다.  
+  [piped-yawning-umbrella.md](/Users/karl/.claude/plans/piped-yawning-umbrella.md):122, [Localizable.xcstrings](/Users/karl/Project/Photos/iOS/SweepPic/SweepPic/Localizable.xcstrings):1060, [AppDelegate.swift](/Users/karl/Project/Photos/iOS/SweepPic/SweepPic/App/AppDelegate.swift):35, [GridViewController+Cleanup.swift](/Users/karl/Project/Photos/iOS/SweepPic/SweepPic/Features/Grid/GridViewController+Cleanup.swift):675
+
+- `[중간]` Step 3 셀 선택은 “보이는 PhotoCell + 가려지지 않는 영역” 기준이 더 명확해야 합니다. 현재 계획의 “중앙 Y 기준 가장 가까운 셀”은 헤더/하단 고정 뷰에 가려진 셀, 배너 섹션, 스크롤 직후 아직 materialize되지 않은 셀을 피하는 조건이 부족합니다. `layoutAttributes` fallback, `cellForItem` 실패 재시도, `collectionView.bounds.inset(by: adjustedVisibleInsets)` 안의 `PhotoCell` 필터가 필요합니다.  
+  [piped-yawning-umbrella.md](/Users/karl/.claude/plans/piped-yawning-umbrella.md):258, [PreviewGridViewController.swift](/Users/karl/Project/Photos/iOS/SweepPic/SweepPic/Features/AutoCleanup/Preview/PreviewGridViewController.swift):380, [PreviewGridViewController.swift](/Users/karl/Project/Photos/iOS/SweepPic/SweepPic/Features/AutoCleanup/Preview/PreviewGridViewController.swift):478
+
+**추가 보강 권장**
+모션/레이아웃 측면에서는 D-1 전용 `DispatchWorkItem` 또는 animator 참조를 두고 cleanup에서 취소하는 편이 안전합니다. 스냅샷/녹색 딤드도 `clipsToBounds`, `removeAllAnimations`, nil 해제를 명시해야 하고, `d1StepFrames: [CGRect]` associated object는 기존 A2처럼 `[NSValue]` 변환 패턴을 쓰는 쪽이 코드베이스와 맞습니다. 웹검색은 하지 않았습니다. 이번 검토는 외부 UIKit 자료보다 현재 프로젝트의 기존 코치마크 구현과의 정합성이 핵심이라 로컬 코드 기준으로 충분히 판단 가능했습니다.

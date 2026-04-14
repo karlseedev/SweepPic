@@ -34,12 +34,10 @@ enum PreviewFinalAction: String {
 /// 미리보기 최종 도달 단계
 /// - 기존 PreviewStage enum의 분석 전용 매핑
 enum PreviewMaxStage: String {
-    /// 완화 단계
+    /// 매우 낮은 품질 단계
     case light    = "light"
-    /// 기본 단계
+    /// 약간 낮은 품질 단계
     case standard = "standard"
-    /// 강화 단계
-    case deep     = "deep"
 }
 
 // MARK: - PreviewCleanupEventData

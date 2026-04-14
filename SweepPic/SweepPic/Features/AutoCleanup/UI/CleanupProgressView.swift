@@ -70,10 +70,13 @@ final class CleanupProgressView: UIView {
     private lazy var scannedCountLabel: UILabel = {
         let label = UILabel()
         label.translatesAutoresizingMaskIntoConstraints = false
+        let scannedFormatted = NumberFormatter.localizedString(
+            from: NSNumber(value: 0), number: .decimal
+        )
         let maxFormatted = NumberFormatter.localizedString(
             from: NSNumber(value: CleanupConstants.maxScanCount), number: .decimal
         )
-        label.text = "0 / \(maxFormatted)장 검색"
+        label.text = String(localized: "autoCleanup.progress.scanned \(scannedFormatted) \(maxFormatted)")
         label.font = .systemFont(ofSize: 13, weight: .regular)
         label.textColor = .secondaryLabel
         label.textAlignment = .center
@@ -84,7 +87,7 @@ final class CleanupProgressView: UIView {
     private lazy var dateLabel: UILabel = {
         let label = UILabel()
         label.translatesAutoresizingMaskIntoConstraints = false
-        label.text = "준비 중..."
+        label.text = String(localized: "autoCleanup.progress.preparing")
         label.font = .systemFont(ofSize: 13, weight: .regular)
         label.textColor = .secondaryLabel
         label.textAlignment = .center
@@ -93,7 +96,7 @@ final class CleanupProgressView: UIView {
 
     /// 취소 버튼 - GlassTextButton (Liquid Glass 스타일)
     private lazy var cancelButton: GlassTextButton = {
-        let button = GlassTextButton(title: "취소", style: .plain, tintColor: .systemRed)
+        let button = GlassTextButton(title: String(localized: "common.cancel"), style: .plain, tintColor: .systemRed)
         button.translatesAutoresizingMaskIntoConstraints = false
         button.addTarget(self, action: #selector(cancelButtonTapped), for: .touchUpInside)
         return button
@@ -174,7 +177,7 @@ final class CleanupProgressView: UIView {
 
     // MARK: - Banner Ad Setup
 
-    /// 배너 광고 설정 (Plus/Grace 시 미표시)
+    /// 배너 광고 설정 (Pro/Grace 시 미표시)
     /// rootViewController 필요 → show(in:) 시점에 호출
     private func setupBannerAd(rootViewController: UIViewController?) {
         Logger.app.debug("CleanupProgressView: setupBannerAd 호출 — shouldShowAds=\(AdManager.shared.shouldShowAds()), rootVC=\(String(describing: rootViewController)), SDK초기화=\(AdManager.shared.isConfigured)")
@@ -230,16 +233,16 @@ final class CleanupProgressView: UIView {
     func configure(method: CleanupMethod) {
         self.method = method
 
-        let mainTitle = "저품질 사진 탐색 중"
+        let mainTitle = String(localized: "autoCleanup.progress.title")
         let subTitle: String
 
         switch method {
         case .fromLatest:
-            subTitle = "최신 사진부터"
+            subTitle = String(localized: "autoCleanup.progress.fromLatest")
         case .continueFromLast:
-            subTitle = "이어서 탐색"
+            subTitle = String(localized: "autoCleanup.progress.continue")
         case .byYear(let year, _):
-            subTitle = "\(year)년"
+            subTitle = String(localized: "autoCleanup.progress.year \(String(year))")
         }
 
         let mainAttributes: [NSAttributedString.Key: Any] = [
@@ -282,11 +285,15 @@ final class CleanupProgressView: UIView {
         let maxScanFormatted = NumberFormatter.localizedString(
             from: NSNumber(value: progress.maxScanCount), number: .decimal
         )
-        scannedCountLabel.text = "\(scannedFormatted) / \(maxScanFormatted)장 검색"
+        scannedCountLabel.text = String(localized: "autoCleanup.progress.scanned \(scannedFormatted) \(maxScanFormatted)")
 
         // 탐색 시점 (모든 모드에서 동일한 형식)
         let dateString = formatDate(progress.currentDate)
-        dateLabel.text = dateString.isEmpty ? "" : "\(dateString) 사진 확인 중..."
+        if dateString.isEmpty {
+            dateLabel.text = ""
+        } else {
+            dateLabel.text = String(localized: "autoCleanup.progress.scanning \(dateString)")
+        }
     }
 
     /// 뷰 표시 (애니메이션)
@@ -331,10 +338,10 @@ final class CleanupProgressView: UIView {
 
     // MARK: - Private Methods
 
-    /// 날짜 포맷팅 (모든 모드에서 "yyyy년 M월" 형식 통일)
+    /// 날짜 포맷팅 (locale-aware)
     private func formatDate(_ date: Date) -> String {
         let formatter = DateFormatter()
-        formatter.dateFormat = "yyyy년 M월"
+        formatter.setLocalizedDateFormatFromTemplate("yMMM")
         return formatter.string(from: date)
     }
 
@@ -351,10 +358,13 @@ final class CleanupProgressView: UIView {
             .baselineOffset: 2
         ]
 
+        // 로컬라이즈된 접미사 (e.g. "50 found" / "50장 발견")
+        let suffix = String(localized: "autoCleanup.progress.foundSuffix \(max)")
+
         let result = NSMutableAttributedString()
         result.append(NSAttributedString(string: "\(found) ", attributes: bold))
         result.append(NSAttributedString(string: "/ ", attributes: regular))
-        result.append(NSAttributedString(string: "\(max)장 발견", attributes: bold))
+        result.append(NSAttributedString(string: suffix, attributes: bold))
         return result
     }
 

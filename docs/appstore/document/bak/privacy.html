@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SweepPic - 개인정보 처리방침</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, sans-serif; max-width: 720px; margin: 0 auto; padding: 24px; line-height: 1.7; color: #333; }
+        h1 { font-size: 24px; margin-bottom: 4px; }
+        h2 { font-size: 18px; margin-top: 32px; border-bottom: 1px solid #eee; padding-bottom: 8px; }
+        table { width: 100%; border-collapse: collapse; margin: 12px 0; }
+        th, td { border: 1px solid #ddd; padding: 8px 12px; text-align: left; font-size: 14px; }
+        th { background: #f5f5f5; }
+        p, li { font-size: 15px; }
+        .note { color: #666; font-size: 13px; }
+        .date { color: #888; font-size: 14px; margin-bottom: 24px; }
+    </style>
+</head>
+<body>
+    <h1>SweepPic 개인정보 처리방침</h1>
+    <p class="date">최종 수정일: 2026년 3월 11일 | 시행일: 2026년 3월 11일</p>
+
+    <h2>1. 개요</h2>
+    <p>SweepPic(이하 "앱")는 사진 정리에 특화된 iOS 앱입니다. 사진 데이터와 얼굴 인식 결과는 기기 내에서만 처리되며, 외부 서버로 전송되지 않습니다.</p>
+
+    <h2>2. 수집하는 개인정보 항목 및 수집 방법</h2>
+    <p>앱은 서비스 개선을 위해 다음 데이터를 자동으로 수집합니다:</p>
+
+    <p><strong>a) TelemetryDeck (익명 분석)</strong></p>
+    <p>TelemetryDeck은 이중 해싱으로 비가역적 익명화를 수행하여, 특정 사용자를 식별하는 것이 불가능합니다.</p>
+    <table>
+        <tr><th>항목</th><th>예시</th></tr>
+        <tr><td>앱 사용 이벤트</td><td>열람·삭제·분석 횟수</td></tr>
+        <tr><td>사진 규모 범위</td><td>"1K-5K" (개수 구간만)</td></tr>
+    </table>
+    <p class="note">※ IDFV는 SDK 내부에서 해싱 처리되어 원본 식별자가 보존되지 않습니다.</p>
+
+    <p><strong>b) Supabase (자체 분석 서버)</strong></p>
+    <table>
+        <tr><th>항목</th><th>예시</th></tr>
+        <tr><td>앱 사용 이벤트</td><td>열람·삭제·분석 횟수</td></tr>
+        <tr><td>기기 식별자 (IDFV)</td><td>기기별 고유값</td></tr>
+        <tr><td>기기 정보</td><td>iPhone16,1 / iOS 18.3 / 앱 v1.0</td></tr>
+        <tr><td>구독 상태</td><td>free 또는 pro</td></tr>
+        <tr><td>사진 규모 범위</td><td>"1K-5K" (개수 구간만, 사진 내용 아님)</td></tr>
+    </table>
+    <p class="note">※ 사진 파일, 사진 메타데이터, 얼굴 데이터는 수집하지 않습니다.</p>
+
+    <h2>3. 개인정보 처리 목적</h2>
+    <ul>
+        <li>앱 기능 개선 및 오류 진단</li>
+        <li>사용 패턴 분석을 통한 서비스 품질 향상</li>
+        <li>광고 표시 (Google AdMob)</li>
+    </ul>
+
+    <h2>4. 개인정보 보유 및 이용 기간</h2>
+    <ul>
+        <li>TelemetryDeck: 익명 데이터로 보관 (이중 해싱으로 개인 식별 불가)</li>
+        <li>Supabase: 365일 보관 후 자동 파기 (pg_cron 자동 삭제)</li>
+        <li>앱 삭제 시 기기 내 모든 데이터 즉시 삭제</li>
+    </ul>
+
+    <h2>5. 개인정보 제3자 제공</h2>
+    <table>
+        <tr><th>제공받는 자</th><th>제공 항목</th><th>목적</th></tr>
+        <tr><td>TelemetryDeck GmbH (독일)</td><td>익명화된 사용 이벤트 (이중 해싱, 개인 식별 불가)</td><td>분석 위탁</td></tr>
+        <tr><td>Supabase Inc. (미국)</td><td>사용 이벤트, IDFV, 기기 정보, 구독 상태, 사진 규모 범위</td><td>분석</td></tr>
+        <tr><td>Google LLC (미국)</td><td>광고 표시를 위한 기기·네트워크 정보 (SDK 자동 수집)</td><td>광고 제공</td></tr>
+    </table>
+    <p class="note">※ Google AdMob SDK는 광고 표시를 위해 기기 및 네트워크 정보를 독립적으로 수집할 수 있습니다. ATT(앱 추적 투명성) 동의 없이는 맞춤 광고를 제공하지 않습니다.</p>
+
+    <h2>6. 정보주체의 권리</h2>
+    <p>이용자는 다음 권리를 행사할 수 있습니다:</p>
+    <ul>
+        <li>개인정보 처리 정지 요청: <a href="mailto:karlseee4@gmail.com">karlseee4@gmail.com</a>으로 요청</li>
+        <li>개인정보 열람/삭제 요청: <a href="mailto:karlseee4@gmail.com">karlseee4@gmail.com</a>으로 요청</li>
+        <li>Supabase 데이터: IDFV 기반으로 해당 기기의 데이터를 삭제합니다</li>
+        <li>TelemetryDeck 데이터: 이중 해싱으로 특정 사용자 식별이 불가능하여 개별 삭제가 불가합니다</li>
+        <li>요청 접수 후 10일 이내 처리 결과를 통지합니다.</li>
+    </ul>
+
+    <h2>7. 얼굴 인식 기술 안내 (개인정보보호법 제23조)</h2>
+    <p>앱은 Apple Vision Framework를 사용하여 사진 내 얼굴을 자동으로 감지하고 확대하는 기능을 제공합니다.</p>
+    <ul>
+        <li>모든 처리는 기기 내에서만 수행됩니다</li>
+        <li>얼굴 데이터는 저장되거나 외부로 전송되지 않습니다</li>
+        <li>마케팅, 광고, 데이터마이닝에 사용하지 않습니다</li>
+    </ul>
+
+    <h2>8. 자동화된 의사결정 안내</h2>
+    <p>앱의 "자동 정리" 기능은 사진 품질(노출, 블러 등)을 AI로 분석하여 삭제 대상을 제안합니다.</p>
+    <ul>
+        <li>자동 삭제는 수행하지 않으며, 최종 결정은 사용자가 합니다</li>
+        <li>분석 결과는 기기 내에서만 처리됩니다</li>
+    </ul>
+
+    <h2>9. 행태정보 수집·이용·거부 안내</h2>
+    <p>앱은 광고 개인화를 위한 행태정보를 직접 수집하지 않습니다. Google AdMob을 통해 광고가 표시되며, ATT 동의 없이는 개인화된 광고를 제공하지 않습니다.</p>
+
+    <h2>10. 개인정보 보호책임자</h2>
+    <ul>
+        <li>성명: Simon Karl</li>
+        <li>연락처: <a href="mailto:karlseee4@gmail.com">karlseee4@gmail.com</a></li>
+    </ul>
+
+    <h2>11. 처리방침 변경 고지</h2>
+    <p>변경 시 앱 내 공지 및 본 페이지를 통해 7일 전 사전 고지합니다.</p>
+</body>
+</html>

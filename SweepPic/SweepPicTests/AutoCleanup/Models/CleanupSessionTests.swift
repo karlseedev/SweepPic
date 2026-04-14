@@ -271,13 +271,13 @@ final class CleanupSessionTests: XCTestCase {
 
         // When
         session.updateProgress(
-            scannedCount: 1000,
+            scannedCount: 2000,
             foundCount: 10,
             lastAssetDate: Date(),
             lastAssetID: nil
         )
 
-        // Then
+        // Then — maxScanCount = 2000
         XCTAssertTrue(session.hasReachedMaxScanned)
         XCTAssertTrue(session.shouldTerminate)
     }
@@ -301,8 +301,8 @@ final class CleanupSessionTests: XCTestCase {
         // Then
         XCTAssertTrue(session.isValid)
 
-        // When - 유효하지 않은 상태
-        session.scannedCount = 2000  // 최대 초과
+        // When - 유효하지 않은 상태 (maxScanCount = 2000, 초과해야 invalid)
+        session.scannedCount = 2001
 
         // Then
         XCTAssertFalse(session.isValid)

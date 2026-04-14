@@ -28,7 +28,7 @@ protocol PreviewGridViewControllerDelegate: AnyObject {
 // MARK: - SectionType
 
 /// 섹션 타입 (사진 그리드 또는 배너)
-private enum SectionType {
+enum SectionType {
     case photos([PreviewCandidate])
     case banner(scoreRange: String, count: Int)  // 품질지수 구간 + 개수
 }
@@ -44,13 +44,13 @@ final class PreviewGridViewController: UIViewController {
     // MARK: - Properties
 
     /// 분석 결과 (제외 시 새 인스턴스로 재할당)
-    private var previewResult: PreviewResult
+    var previewResult: PreviewResult
 
     /// 현재 표시 단계
-    private var currentStage: PreviewStage = .light
+    var currentStage: PreviewStage = .light
 
-    /// 뷰어에서 제외된 assetID (viewWillAppear에서 일괄 반영)
-    private var excludedAssetIDs: Set<String> = []
+    /// 스와이프/뷰어 제외 통합 관리. previewResult는 변경하지 않음 — 셀 외관만 그린 딤드로 표시.
+    var excludedAssetIDs: Set<String> = []
 
     /// delegate
     weak var delegate: PreviewGridViewControllerDelegate?
@@ -66,8 +66,8 @@ final class PreviewGridViewController: UIViewController {
     /// 뷰어 열람 횟수
     private var analyticsViewerOpenCount: Int = 0
 
-    /// 뷰어에서 제외한 횟수 (excludedAssetIDs는 applyExclusions 후 초기화되므로 별도 카운터)
-    private var analyticsExcludeCount: Int = 0
+    /// 뷰어/스와이프에서 제외한 총 횟수
+    var analyticsExcludeCount: Int = 0
 
     /// "제외하기" (단계 축소) 탭 횟수
     private var analyticsCollapseCount: Int = 0
@@ -98,8 +98,8 @@ final class PreviewGridViewController: UIViewController {
 
     // MARK: - UI Elements
 
-    /// 컬렉션뷰
-    private lazy var collectionView: UICollectionView = {
+    /// 컬렉션뷰 (extension에서 접근 가능)
+    lazy var collectionView: UICollectionView = {
         let cv = UICollectionView(frame: .zero, collectionViewLayout: createLayout())
         cv.backgroundColor = .systemBackground
         cv.dataSource = self
@@ -115,25 +115,55 @@ final class PreviewGridViewController: UIViewController {
         return cv
     }()
 
-    /// 하단 고정 버튼 영역
-    private let bottomView = PreviewBottomView()
+    /// 하단 고정 버튼 영역 (다중 스와이프 중 비활성화용)
+    let bottomView = PreviewBottomView()
 
     // MARK: - Constants
 
     /// 셀 간격
-    private let cellSpacing: CGFloat = 2.0
+    let cellSpacing: CGFloat = 2.0
 
     /// 열 수
-    private let columns: CGFloat = 3
+    let columns: CGFloat = 3
 
     /// 배너 높이
     private let bannerHeight: CGFloat = 44
+
+    // MARK: - Swipe Delete Properties
+
+    /// 스와이프 삭제 상태 (BaseGridViewController와 동일 구조체 재사용)
+    var swipeDeleteState = SwipeDeleteState()
+
+    /// 스와이프 대상 셀의 섹션 인덱스 (다중 섹션 대응 — section: 0 하드코딩 방지)
+    var swipeTargetSection: Int = 0
+
+    /// 자동 스크롤 타이머
+    var autoScrollTimer: Timer?
+
+    /// 자동 스크롤 구동 중인 제스처
+    weak var autoScrollGesture: UIGestureRecognizer?
+
+    /// 자동 스크롤 틱마다 호출할 핸들러 (다중 스와이프 범위 갱신용)
+    var autoScrollHandler: ((CGPoint) -> Void)?
+
+    /// 현재 자동 스크롤 속도 (pt/s)
+    var currentAutoScrollSpeed: CGFloat = 0
+
+    /// 자동 스크롤 상수
+    static let autoScrollMinSpeed: CGFloat = 200
+    static let autoScrollMaxSpeed: CGFloat = 1500
+    static let autoScrollEdgeHeight: CGFloat = 100
 
     // MARK: - Initialization
 
     init(previewResult: PreviewResult) {
         self.previewResult = previewResult
         super.init(nibName: nil, bundle: nil)
+
+        // 약간 낮은 품질 사진이 있으면 2단계(확장)로 시작
+        if previewResult.standardCount > 0 {
+            currentStage = .standard
+        }
 
         // 탭바 숨김 (push 시 하단 탭 제거)
         hidesBottomBarWhenPushed = true
@@ -148,6 +178,7 @@ final class PreviewGridViewController: UIViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
         setupUI()
+        setupSwipeDeleteGesture()  // 스와이프 삭제 제스처 등록
         updateHeader()
         updateBottomView()
 
@@ -161,9 +192,27 @@ final class PreviewGridViewController: UIViewController {
 
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
+        // 잔여 스와이프 상태 정리 (뷰어 pop 후 스와이프 상태가 남아있을 수 있음)
+        cancelActiveSwipeIfNeeded()
         // 뷰어에서 돌아올 때 제외된 사진 반영
         if !excludedAssetIDs.isEmpty {
             applyExclusions()
+        }
+    }
+
+    override func viewDidAppear(_ animated: Bool) {
+        super.viewDidAppear(animated)
+        // D-1: 자동정리 미리보기 코치마크 (최초 1회)
+        showCoachMarkD1IfNeeded()
+    }
+
+    override func viewWillDisappear(_ animated: Bool) {
+        super.viewWillDisappear(animated)
+        // D-1 시퀀스 강제 정리 (시스템 인터럽트/화면 이탈 대비)
+        if CoachMarkManager.shared.isD1SequenceActive {
+            CoachMarkManager.shared.isD1SequenceActive = false
+            CoachMarkManager.shared.currentOverlay?.shouldStopAnimation = true
+            CoachMarkManager.shared.dismissCurrent()
         }
     }
 
@@ -372,30 +421,39 @@ final class PreviewGridViewController: UIViewController {
     }
 
     /// 사진 섹션 레이아웃 (3열 정사각형)
+    /// - Note: .absolute + repeatingSubitem:count: + contentInsetsReference = .none 조합 사용.
+    ///   .fractionalWidth + subitems: + .automatic(기본값) 조합은
+    ///   contentInsetAdjustmentBehavior = .never와 결합 시 우측 비대칭 여백 발생.
+    ///   BaseGridViewController.createLayout()과 동일 패턴 적용.
     private func photosSection(environment: NSCollectionLayoutEnvironment) -> NSCollectionLayoutSection {
+        let columnCount = Int(columns)
         let totalSpacing = cellSpacing * (columns - 1)
         let availableWidth = environment.container.effectiveContentSize.width
         let cellWidth = floor((availableWidth - totalSpacing) / columns)
-        let fraction = cellWidth / availableWidth
 
-        // 아이템
+        // 아이템 — .absolute()로 컨테이너 비율 의존 제거
         let itemSize = NSCollectionLayoutSize(
-            widthDimension: .fractionalWidth(fraction),
-            heightDimension: .fractionalWidth(fraction)
+            widthDimension: .absolute(cellWidth),
+            heightDimension: .absolute(cellWidth)
         )
         let item = NSCollectionLayoutItem(layoutSize: itemSize)
 
-        // 그룹 (가로 3개)
+        // 그룹 — repeatingSubitem:count:로 균등 분배
         let groupSize = NSCollectionLayoutSize(
             widthDimension: .fractionalWidth(1.0),
-            heightDimension: .fractionalWidth(fraction)
+            heightDimension: .absolute(cellWidth)
         )
-        let group = NSCollectionLayoutGroup.horizontal(layoutSize: groupSize, subitems: [item])
+        let group = NSCollectionLayoutGroup.horizontal(
+            layoutSize: groupSize,
+            repeatingSubitem: item,
+            count: columnCount
+        )
         group.interItemSpacing = .fixed(cellSpacing)
 
-        // 섹션
+        // 섹션 — contentInsetsReference = .none으로 시스템 자동 inset 비활성화
         let section = NSCollectionLayoutSection(group: group)
         section.interGroupSpacing = cellSpacing
+        section.contentInsetsReference = .none
         return section
     }
 
@@ -421,43 +479,32 @@ final class PreviewGridViewController: UIViewController {
     // MARK: - Section Mapping
 
     /// 섹션 수 (currentStage에 따라 동적)
-    /// light: 사진만 (배너 없음), standard/deep: 배너+사진 쌍으로 구성
+    /// light: 배너+사진 (매우 낮은 품질 배너는 항상 표시)
+    /// standard: 배너+사진+배너+사진
     private var numberOfSections: Int {
         switch currentStage {
         case .light:
-            return 1  // 사진만 (배너 없음)
+            return 2  // 배너(매우 낮은 품질), 사진
         case .standard:
             return 4  // 배너, 사진, 배너, 사진
-        case .deep:
-            return 6  // 배너, 사진, 배너, 사진, 배너, 사진
         }
     }
 
     /// 섹션 인덱스에 대한 섹션 타입
     ///
-    /// light: 0=사진
-    /// standard/deep: 0=배너(5등급), 1=light사진, 2=배너(4등급), 3=standard사진,
-    ///                4=배너(3등급), 5=deep사진
-    private func sectionType(for sectionIndex: Int) -> SectionType {
-        // light 단계: 배너 없이 사진만
-        if currentStage == .light {
-            return .photos(previewResult.lightCandidates)
-        }
-
-        // standard/deep: 배너 포함 전체 매핑
+    /// light: 0=배너(매우 낮은 품질), 1=light사진
+    /// standard: 0=배너(매우 낮은 품질), 1=light사진, 2=배너(약간 낮은 품질), 3=standard사진
+    func sectionType(for sectionIndex: Int) -> SectionType {
+        // 모든 단계에서 동일한 매핑 (매우 낮은 품질 배너는 항상 표시)
         switch sectionIndex {
         case 0:
-            return .banner(scoreRange: "5등급", count: previewResult.lightCount)
+            return .banner(scoreRange: String(localized: "preview.grade5"), count: previewResult.lightCount)
         case 1:
             return .photos(previewResult.lightCandidates)
         case 2:
-            return .banner(scoreRange: "4등급", count: previewResult.standardCount)
+            return .banner(scoreRange: String(localized: "preview.grade4"), count: previewResult.standardCount)
         case 3:
             return .photos(previewResult.standardCandidates)
-        case 4:
-            return .banner(scoreRange: "3등급", count: previewResult.deepCount)
-        case 5:
-            return .photos(previewResult.deepCandidates)
         default:
             return .photos([])
         }
@@ -489,16 +536,11 @@ final class PreviewGridViewController: UIViewController {
     /// - light: "품질 5등급 사진 N장"
     /// - standard: "품질 4등급 이하 사진 N장"
     /// - deep: "품질 3등급 이하 사진 N장"
-    private func updateHeader() {
+    func updateHeader() {
         let count = previewResult.count(upToStage: currentStage)
 
-        // 단계별 등급 (숫자가 높을수록 저품질: 5등급=최저, 3등급=보통이하)
-        let titleText: String
-        switch currentStage {
-        case .light:    titleText = "품질 5등급 사진 \(count)장"
-        case .standard: titleText = "품질 4등급 이하 사진 \(count)장"
-        case .deep:     titleText = "품질 3등급 이하 사진 \(count)장"
-        }
+        // "낮은 품질 사진 N장" — 단계와 무관하게 고정, 숫자만 가변
+        let titleText = String(localized: "preview.header.standard \(count)")
 
         // iOS 26: 시스템 네비바 타이틀
         title = titleText
@@ -506,20 +548,77 @@ final class PreviewGridViewController: UIViewController {
         headerTitleLabel?.text = titleText
     }
 
+    // MARK: - CoachMark D-1 Support
+
+    /// 코치마크 D-1 Step 1: 헤더 타이틀 텍스트 영역 프레임 (윈도우 좌표)
+    /// 텍스트의 실제 렌더링 크기 + 좌우 16pt / 상하 12pt 여백
+    var headerTitleFrameForCoachMark: CGRect? {
+        guard let window = view.window else { return nil }
+        // 텍스트 기준 여백 (pill margin 8pt와 별도)
+        let paddingH: CGFloat = 16  // 좌우
+        let paddingV: CGFloat = 2   // 상하 (pill margin 8pt 포함 → 총 10pt)
+        if #available(iOS 26.0, *) {
+            // iOS 26: 시스템 네비바에서 타이틀 UILabel 탐색
+            guard let navBar = navigationController?.navigationBar else { return nil }
+            if let titleLabel = findTitleLabel(in: navBar) {
+                let textSize = titleLabel.intrinsicContentSize
+                let labelFrame = titleLabel.convert(titleLabel.bounds, to: window)
+                let textRect = CGRect(
+                    x: labelFrame.midX - textSize.width / 2 - paddingH,
+                    y: labelFrame.midY - textSize.height / 2 - paddingV,
+                    width: textSize.width + paddingH * 2,
+                    height: textSize.height + paddingV * 2
+                )
+                return textRect
+            }
+            // fallback: 네비바 전체
+            return navBar.convert(navBar.bounds, to: window)
+        } else {
+            // iOS 18 이하: 커스텀 헤더 타이틀 라벨의 텍스트 크기 + 여백
+            guard let label = headerTitleLabel else { return nil }
+            let textSize = label.intrinsicContentSize
+            let labelFrame = label.convert(label.bounds, to: window)
+            let textRect = CGRect(
+                x: labelFrame.midX - textSize.width / 2 - paddingH,
+                y: labelFrame.midY - textSize.height / 2 - paddingV,
+                width: textSize.width + paddingH * 2,
+                height: textSize.height + paddingV * 2
+            )
+            return textRect
+        }
+    }
+
+    /// 네비바 subview에서 타이틀 UILabel 탐색 (iOS 26용)
+    private func findTitleLabel(in view: UIView) -> UILabel? {
+        for subview in view.subviews {
+            if let label = subview as? UILabel, label.text == title {
+                return label
+            }
+            if let found = findTitleLabel(in: subview) {
+                return found
+            }
+        }
+        return nil
+    }
+
+    /// 제외되지 않은 유효 사진 수 (버튼 텍스트, 삭제대기함 이동용)
+    func effectiveCount(upToStage stage: PreviewStage) -> Int {
+        let allIDs = previewResult.assetIDs(upToStage: stage)
+        return allIDs.filter { !excludedAssetIDs.contains($0) }.count
+    }
+
     /// 하단 버튼 영역 업데이트
-    private func updateBottomView() {
-        let totalCount = previewResult.count(upToStage: currentStage)
+    func updateBottomView() {
+        let totalCount = effectiveCount(upToStage: currentStage)
 
         // 확장 가능 여부: 다음 단계가 있고 + 추가분이 있고 + iOS 18 이상
         let canExpand: Bool
-        if currentStage >= .deep {
+        if currentStage >= .standard {
             canExpand = false
         } else if currentStage == .light && previewResult.standardCount == 0 {
             canExpand = false
-        } else if currentStage == .standard && previewResult.deepCount == 0 {
-            canExpand = false
         } else {
-            // iOS 16~17에서는 path2가 없어서 standard/deep이 빈 배열 → 확장 불가
+            // iOS 16~17에서는 path2가 없어서 standard가 빈 배열 → 확장 불가
             if #available(iOS 18.0, *) {
                 canExpand = true
             } else {
@@ -531,7 +630,6 @@ final class PreviewGridViewController: UIViewController {
             currentStage: currentStage,
             totalCount: totalCount,
             standardCount: previewResult.standardCount,
-            deepCount: previewResult.deepCount,
             canExpand: canExpand
         )
     }
@@ -541,13 +639,13 @@ final class PreviewGridViewController: UIViewController {
     /// X 버튼 탭 — 실수 방지 확인 Alert
     @objc private func closeTapped() {
         let alert = UIAlertController(
-            title: "분석 결과를 닫으시겠습니까?",
-            message: "현재 화면을 닫으면 분석 결과가 사라집니다.",
+            title: String(localized: "preview.close.title"),
+            message: String(localized: "preview.close.message"),
             preferredStyle: .alert
         )
 
-        alert.addAction(UIAlertAction(title: "취소", style: .cancel))
-        alert.addAction(UIAlertAction(title: "닫기", style: .destructive) { [weak self] _ in
+        alert.addAction(UIAlertAction(title: String(localized: "common.cancel"), style: .cancel))
+        alert.addAction(UIAlertAction(title: String(localized: "preview.close.confirm"), style: .destructive) { [weak self] _ in
             // [Analytics] 이벤트 7-2: 닫기
             self?.sendPreviewAnalyticsEvent(finalAction: .close, movedCount: 0)
             self?.navigationController?.popViewController(animated: true)
@@ -565,9 +663,6 @@ final class PreviewGridViewController: UIViewController {
         if currentStage >= .standard {
             assets.append(contentsOf: previewResult.standardCandidates.map(\.asset))
         }
-        if currentStage >= .deep {
-            assets.append(contentsOf: previewResult.deepCandidates.map(\.asset))
-        }
         return assets
     }
 
@@ -578,19 +673,18 @@ final class PreviewGridViewController: UIViewController {
         // 현재 단계에 따른 등급 텍스트
         let gradeText: String
         switch currentStage {
-        case .light:    gradeText = "품질 5등급"
-        case .standard: gradeText = "품질 4등급 이하"
-        case .deep:     gradeText = "품질 3등급 이하"
+        case .light:    gradeText = String(localized: "preview.grade.light")
+        case .standard: gradeText = String(localized: "preview.grade.standard")
         }
 
         let alert = UIAlertController(
-            title: "\(gradeText) 사진 \(assetIDs.count)장을\n삭제대기함으로 이동할까요?",
+            title: String(localized: "preview.confirm.title \(gradeText) \(assetIDs.count)"),
             message: nil,
             preferredStyle: .alert
         )
 
-        alert.addAction(UIAlertAction(title: "취소", style: .cancel))
-        alert.addAction(UIAlertAction(title: "이동하기", style: .destructive) { [weak self] _ in
+        alert.addAction(UIAlertAction(title: String(localized: "common.cancel"), style: .cancel))
+        alert.addAction(UIAlertAction(title: String(localized: "preview.confirm.move"), style: .destructive) { [weak self] _ in
             guard let self = self else { return }
             // [Analytics] 이벤트 7-2: 삭제대기함 이동
             self.sendPreviewAnalyticsEvent(finalAction: .moveToTrash, movedCount: assetIDs.count)
@@ -616,7 +710,6 @@ final class PreviewGridViewController: UIViewController {
         switch analyticsMaxStage {
         case .light:    maxStage = .light
         case .standard: maxStage = .standard
-        case .deep:     maxStage = .deep
         }
 
         let data = PreviewCleanupEventData(
@@ -665,17 +758,19 @@ extension PreviewGridViewController: UICollectionViewDataSource {
             ) as! PhotoCell
 
             let candidate = candidates[indexPath.item]
+            let isExcluded = excludedAssetIDs.contains(candidate.assetID)
             cell.configure(
                 asset: candidate.asset,
-                isTrashed: false,
+                isTrashed: isExcluded,  // 제외=true → isTrashed와 시각 상태 일치
                 targetSize: thumbnailSize()
             )
 
-            // [DEBUG] 셀 위에 assetID 앞 6자 + 신호 요약 표시
-            // TODO: 스크린샷 촬영 후 복원할 것
-            // #if DEBUG
-            // configureDebugOverlay(on: cell, candidate: candidate)
-            // #endif
+            // 제외된 셀: configure(isTrashed:true)가 마룬+아이콘 표시 → 그린으로 override
+            if isExcluded {
+                cell.setRestoredPreview()                    // icon 숨김 + alpha=0
+                cell.prepareSwipeOverlay(style: .restore)    // green 색상
+                cell.setFullDimmed(isTrashed: false)         // alpha=0.6
+            }
 
             return cell
 
@@ -698,9 +793,15 @@ extension PreviewGridViewController: UICollectionViewDelegate {
     func collectionView(_ collectionView: UICollectionView, didSelectItemAt indexPath: IndexPath) {
         collectionView.deselectItem(at: indexPath, animated: true)
 
+        // 스와이프 진행 중이면 뷰어 열기 차단
+        guard !swipeDeleteState.angleCheckPassed && !swipeDeleteState.isMultiMode else { return }
+
         // 배너 셀은 무시
         guard case .photos(let candidates) = sectionType(for: indexPath.section),
               indexPath.item < candidates.count else { return }
+
+        // 제외된 셀(그린 딤드)은 탭해도 뷰어 안 열림
+        guard !excludedAssetIDs.contains(candidates[indexPath.item].assetID) else { return }
 
         // 탭한 사진의 flat 배열 내 인덱스 계산
         let allAssets = allVisibleAssets()
@@ -760,27 +861,28 @@ extension PreviewGridViewController: BarsVisibilityControlling {
 extension PreviewGridViewController: PreviewBottomViewDelegate {
 
     func previewBottomViewDidTapCleanup(_ view: PreviewBottomView) {
-        // 현재 단계까지의 모든 assetIDs
-        let assetIDs = previewResult.assetIDs(upToStage: currentStage)
+        // 현재 단계까지의 assetIDs 중 제외되지 않은 것만
+        let allIDs = previewResult.assetIDs(upToStage: currentStage)
+        let assetIDs = allIDs.filter { !excludedAssetIDs.contains($0) }
+        guard !assetIDs.isEmpty else { return }
         showCleanupConfirmation(assetIDs: assetIDs)
     }
 
     func previewBottomViewDidTapCollapse(_ view: PreviewBottomView) {
+        // 스와이프 진행 중이면 취소
+        cancelActiveSwipeIfNeeded()
+
         // [Analytics] 이벤트 7-2: "제외하기" (단계 축소) 카운트
         analyticsCollapseCount += 1
 
         // 단계 축소 (expand의 역동작)
         // .standard → .light: 섹션 [0, 2, 3] 삭제 (light배너 + standard배너 + standard사진)
-        // .deep → .standard: 섹션 [4, 5] 삭제 (deep배너 + deep사진)
         let previousStage: PreviewStage
         let sectionsToDelete: IndexSet
         switch currentStage {
         case .standard:
             previousStage = .light
-            sectionsToDelete = IndexSet([0, 2, 3])  // light배너도 함께 제거
-        case .deep:
-            previousStage = .standard
-            sectionsToDelete = IndexSet([4, 5])
+            sectionsToDelete = IndexSet([2, 3])  // standard배너 + standard사진만 제거
         default:
             return
         }
@@ -799,6 +901,9 @@ extension PreviewGridViewController: PreviewBottomViewDelegate {
     }
 
     func previewBottomViewDidTapExpand(_ view: PreviewBottomView) {
+        // 스와이프 진행 중이면 취소
+        cancelActiveSwipeIfNeeded()
+
         guard let nextStage = currentStage.next else { return }
 
         // [Analytics] 이벤트 7-2: "더 보기" 카운트 + 최대 도달 단계 갱신
@@ -815,9 +920,7 @@ extension PreviewGridViewController: PreviewBottomViewDelegate {
             let newSections: IndexSet
             switch nextStage {
             case .standard:
-                newSections = IndexSet([0, 2, 3])  // light배너 + standard배너 + standard사진
-            case .deep:
-                newSections = IndexSet([4, 5])      // deep배너 + deep사진
+                newSections = IndexSet([2, 3])  // standard배너 + standard사진
             default:
                 return
             }
@@ -830,8 +933,6 @@ extension PreviewGridViewController: PreviewBottomViewDelegate {
             switch nextStage {
             case .standard:
                 bannerSection = 2
-            case .deep:
-                bannerSection = 4
             default:
                 return
             }
@@ -852,17 +953,13 @@ extension PreviewGridViewController: PreviewBottomViewDelegate {
 
     /// 뷰어에서 제외된 사진들을 그리드에 반영
     /// viewWillAppear에서 호출 (뷰어 pop 후)
+    /// previewResult는 변경하지 않음 — excludedAssetIDs로만 관리하고 cellForItemAt에서 그린 딤드 적용
     private func applyExclusions() {
-        // previewResult에서 제외된 에셋 필터링
-        previewResult = previewResult.excluding(excludedAssetIDs)
-
-        // 적용 완료 — 제외 목록 초기화
-        excludedAssetIDs.removeAll()
-
-        // UI 갱신
-        collectionView.reloadData()
+        collectionView.reloadData()  // cellForItemAt에서 excludedAssetIDs 체크 → 그린 딤드
         updateBottomView()
         updateHeader()
+
+        // 전부 제외해도 그리드 유지 — 0장이면 버튼이 무반응, 사용자가 X로 나감
     }
 }
 

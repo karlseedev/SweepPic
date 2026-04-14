@@ -81,6 +81,6 @@ final class PreviewBannerCell: UICollectionViewCell {
     ///   - scoreRange: 품질 등급 구간 (예: "4등급")
     ///   - count: 해당 구간의 사진 수
     func configure(scoreRange: String, count: Int) {
-        label.text = "품질 \(scoreRange) 사진 \(count)장 ↓"
+        label.text = String(localized: "preview.banner \(scoreRange) \(count)")
     }
 }

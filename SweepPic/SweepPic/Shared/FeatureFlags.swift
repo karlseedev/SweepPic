@@ -97,7 +97,7 @@ enum FeatureFlags {
 
     /// 구독 기능 활성화 여부
     /// 페이월/구독 관리 UI 표시를 제어
-    /// false 시 페이월 진입 불가 + Plus 전환 불가
+    /// false 시 페이월 진입 불가 + Pro 전환 불가
     static var isSubscriptionEnabled: Bool = true
 
     // MARK: - Debug Helpers

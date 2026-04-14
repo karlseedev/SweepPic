@@ -298,7 +298,8 @@ extension GridViewController {
 
     /// 보이는 셀들의 뱃지 상태 업데이트
     /// - SimilarityCache를 Single Source of Truth로 사용하여 뱃지 표시 여부 결정
-    private func updateVisibleCellBorders() {
+    /// internal: C 사전분석에서 그룹 발견 시 뱃지 갱신 호출 필요
+    func updateVisibleCellBorders() {
         let visibleIndexPaths = collectionView.indexPathsForVisibleItems
         let padding = paddingCellCount
 
@@ -487,11 +488,10 @@ extension GridViewController {
         // 선택 모드 시 비활성화
         guard !isSelectMode else { return false }
 
-        // 선행 온보딩(A, E-1, B) 미완료 시 비활성화
+        // 선행 온보딩(A, E-1) 미완료 시 비활성화
         // C 온보딩이 자연스럽게 유사사진 기능을 안내하도록 순서 보장
         guard CoachMarkType.gridSwipeDelete.hasBeenShown else { return false }
         guard CoachMarkType.firstDeleteGuide.hasBeenShown else { return false }
-        guard CoachMarkType.viewerSwipeDelete.hasBeenShown else { return false }
 
         return true
     }

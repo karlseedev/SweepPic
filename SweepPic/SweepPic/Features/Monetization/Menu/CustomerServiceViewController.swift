@@ -5,19 +5,19 @@
 //  고객센터 서브메뉴 빌더 + 액션 핸들러 (FR-043, T048)
 //
 //  ellipsis 메뉴의 "고객센터 ▸" 서브메뉴를 생성하고,
-//  각 액션(피드백/FAQ/이용약관/처리방침/사업자정보)을 처리한다.
+//  각 액션(피드백/FAQ/이용약관/처리방침)을 처리한다.
 //
 //  - 피드백: MFMailComposeViewController (T051)
 //  - FAQ: FAQViewController push (T049)
 //  - 이용약관/처리방침: SFSafariViewController (T052)
-//  - 사업자 정보: BusinessInfoViewController push (T050)
-//
 
 import UIKit
 import MessageUI
 import SafariServices
 import AppCore
 import OSLog
+
+// ReferralStore user_id 접근용
 
 // MARK: - CustomerServiceViewController
 
@@ -31,7 +31,9 @@ final class CustomerServiceViewController: NSObject {
     private static let feedbackEmail = "support@sweeppic.app"
 
     /// 피드백 이메일 제목
-    private static let feedbackSubject = "[SweepPic] 피드백"
+    private static var feedbackSubject: String {
+        String(localized: "monetization.support.emailSubject")
+    }
 
     /// 이용약관 URL (출시 전 실제 URL로 교체)
     private static let termsURL = URL(string: "https://sweeppic.app/terms")!
@@ -51,44 +53,37 @@ final class CustomerServiceViewController: NSObject {
     /// - Returns: UIMenu 서브메뉴
     static func makeMenu(from presenter: UIViewController) -> UIMenu {
         let feedbackAction = UIAction(
-            title: "피드백 보내기",
+            title: String(localized: "monetization.support.email"),
             image: UIImage(systemName: "envelope")
         ) { _ in
             handleFeedback(from: presenter)
         }
 
         let faqAction = UIAction(
-            title: "자주 묻는 질문",
+            title: String(localized: "monetization.support.faq"),
             image: UIImage(systemName: "questionmark.circle")
         ) { _ in
             handleFAQ(from: presenter)
         }
 
         let termsAction = UIAction(
-            title: "이용약관",
+            title: String(localized: "monetization.support.terms"),
             image: UIImage(systemName: "doc.text")
         ) { _ in
             handleTerms(from: presenter)
         }
 
         let privacyAction = UIAction(
-            title: "개인정보처리방침",
+            title: String(localized: "monetization.support.privacy"),
             image: UIImage(systemName: "hand.raised")
         ) { _ in
             handlePrivacy(from: presenter)
         }
 
-        let businessInfoAction = UIAction(
-            title: "사업자 정보",
-            image: UIImage(systemName: "building.2")
-        ) { _ in
-            handleBusinessInfo(from: presenter)
-        }
-
         return UIMenu(
-            title: "고객센터",
+            title: String(localized: "monetization.support.title"),
             image: UIImage(systemName: "questionmark.circle"),
-            children: [feedbackAction, faqAction, termsAction, privacyAction, businessInfoAction]
+            children: [feedbackAction, faqAction, privacyAction, termsAction]
         )
     }
 
@@ -137,13 +132,6 @@ final class CustomerServiceViewController: NSObject {
         Logger.app.debug("CustomerService: 개인정보처리방침 인앱 브라우저")
     }
 
-    /// 사업자 정보 화면 push (T050)
-    private static func handleBusinessInfo(from presenter: UIViewController) {
-        let bizVC = BusinessInfoViewController()
-        presenter.navigationController?.pushViewController(bizVC, animated: true)
-        Logger.app.debug("CustomerService: 사업자 정보 화면 push")
-    }
-
     // MARK: - Device Info
 
     /// 기기 정보 문자열 생성 (FR-045: 자동 첨부)
@@ -155,14 +143,17 @@ final class CustomerServiceViewController: NSObject {
         let model = device.model
         let name = device.name
 
+        let userId = ReferralStore.shared.userId
+
         return """
 
 
         ---
-        앱 버전: \(appVersion) (\(buildNumber))
+        \(String(localized: "monetization.support.appVersion")) \(appVersion) (\(buildNumber))
         iOS: \(osVersion)
-        기기: \(model)
-        기기명: \(name)
+        \(String(localized: "monetization.support.device")) \(model)
+        \(String(localized: "monetization.support.deviceName")) \(name)
+        \(String(localized: "monetization.support.supportId")) \(userId)
         """
     }
 }

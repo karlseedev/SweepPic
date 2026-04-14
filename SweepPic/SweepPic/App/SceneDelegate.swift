@@ -66,6 +66,9 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         // 앱이 포그라운드에서 자정을 넘길 때 일일 한도 자동 리셋
         setupMidnightResetObserver()
 
+        // [Referral] T044: Push 알림 탭 시 보상 화면 표시 옵저버
+        setupPushNotificationObserver()
+
         Logger.app.debug("Scene connected, window configured")
     }
 
@@ -151,6 +154,9 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         permissionViewController = nil
 
         Logger.app.debug("Showing main interface (TabBarController)")
+
+        // [Referral] T031: 콜드 스타트 시 보상 팝업 체크
+        checkAndShowReferralRewardPopup()
 
         // 실측용 Inspector 활성화 (iOS 26 버튼 크기/모양 수집)
         #if DEBUG
@@ -268,8 +274,12 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         ReviewService.shared.resetProhibitedFlags()
 
         // [BM] T041: ATT 프리프롬프트 표시 (FR-041)
-        // ATT 프리프롬프트 표시 (설치 2시간 경과 + Plus 미구독 + ATT .notDetermined + skipCount < 2)
+        // ATT 프리프롬프트 표시 (설치 2시간 경과 + Pro 미구독 + ATT .notDetermined + skipCount < 2)
         checkAndShowATTPrompt()
+
+        // [BM] US11: 구독 해지 감지 → Exit Survey 표시
+        // PremiumMenuViewController에서 시스템 구독 관리 이동 시 설정한 플래그 확인
+        checkAndShowExitSurvey()
     }
 
     /// Scene이 비활성화될 때 호출
@@ -323,6 +333,14 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
                 }
             }()
             AnalyticsService.shared.trackPermissionResult(result: result, timing: .settingsChange)
+        }
+
+        // [Referral] T044: 포그라운드 복귀 시 device token 서버 갱신 (FR-026)
+        PushNotificationService.shared.refreshTokenIfNeeded()
+
+        // [Referral] T044: 배지 초기화 (FR-028)
+        Task { @MainActor in
+            PushNotificationService.shared.clearBadge()
         }
 
         // T060: 외부 삭제 처리 - PhotoKit에서 삭제된 사진을 TrashState에서 제거
@@ -476,7 +494,7 @@ extension SceneDelegate {
 extension SceneDelegate {
 
     /// [BM] T041: ATT 프리프롬프트 표시 체크 (FR-041)
-    /// 설치 2시간 경과 + Plus 미구독 + ATT .notDetermined + skipCount < 2 → ATTPromptVC present
+    /// 설치 2시간 경과 + Pro 미구독 + ATT .notDetermined + skipCount < 2 → ATTPromptVC present
     func checkAndShowATTPrompt() {
         guard ATTStateManager.shared.shouldShowPrompt else { return }
 
@@ -498,6 +516,191 @@ extension SceneDelegate {
         attVC.modalPresentationStyle = .overFullScreen
         attVC.modalTransitionStyle = .crossDissolve
         rootVC.present(attVC, animated: true)
+    }
+}
+
+// MARK: - Exit Survey (US11)
+
+extension SceneDelegate {
+
+    /// 구독 해지 감지 → Exit Survey 표시
+    /// PremiumMenuViewController에서 시스템 구독 관리 이동 시 설정한
+    /// pendingCancelCheck 플래그를 확인하고, autoRenewEnabled 변화를 감지한다.
+    func checkAndShowExitSurvey() {
+        // 플래그 확인
+        guard UserDefaults.standard.bool(forKey: "pendingCancelCheck") else { return }
+        let wasAutoRenewing = UserDefaults.standard.bool(forKey: "wasAutoRenewing")
+
+        Task { @MainActor in
+            // 구독 상태 갱신 (await로 완료 보장)
+            await SubscriptionStore.shared.refreshSubscriptionStatus()
+
+            let currentState = SubscriptionStore.shared.state
+
+            // 해지 감지: 이전에 자동갱신 활성 → 현재 비활성 + 구독 아직 유효
+            guard wasAutoRenewing,
+                  !currentState.autoRenewEnabled,
+                  currentState.isActive else {
+                // 해지 미감지 → 플래그 초기화
+                UserDefaults.standard.set(false, forKey: "pendingCancelCheck")
+                Logger.app.debug("SceneDelegate: Exit Survey 미표시 — 해지 미감지 (wasAutoRenew=\(wasAutoRenewing), current=\(currentState.autoRenewEnabled), active=\(currentState.isActive))")
+                return
+            }
+
+            // 다른 모달이 표시 중이면 플래그 유지 (다음 active에서 재시도)
+            guard let rootVC = self.window?.rootViewController,
+                  rootVC.presentedViewController == nil else {
+                Logger.app.debug("SceneDelegate: Exit Survey 미표시 — 다른 모달 표시 중 (플래그 유지)")
+                return
+            }
+
+            // Exit Survey 표시 → 플래그 초기화
+            UserDefaults.standard.set(false, forKey: "pendingCancelCheck")
+            let exitSurveyVC = ExitSurveyViewController()
+            exitSurveyVC.modalPresentationStyle = .pageSheet
+            rootVC.present(exitSurveyVC, animated: true)
+            Logger.app.debug("SceneDelegate: Exit Survey 표시")
+        }
+    }
+}
+
+// MARK: - Referral Reward Popup (T031)
+
+extension SceneDelegate {
+
+    /// 콜드 스타트 시 대기 중인 보상이 있으면 팝업을 표시한다.
+    ///
+    /// 조건:
+    /// - 메인 화면(TabBarController)이 표시된 상태
+    /// - 다른 모달이 표시 중이 아닐 때
+    /// - pending 보상이 1건 이상 존재
+    ///
+    /// 포그라운드 복귀 시에는 팝업 미표시 (콜드 스타트 전용)
+    func checkAndShowReferralRewardPopup() {
+        let userId = ReferralStore.shared.userId
+
+        Task {
+            do {
+                let response = try await ReferralService.shared.getPendingRewards(userId: userId)
+
+                // 보상 없으면 무시
+                guard !response.rewards.isEmpty else { return }
+
+                await MainActor.run {
+                    // 루트가 TabBarController인지 확인
+                    guard let rootVC = self.window?.rootViewController,
+                          rootVC is TabBarController else {
+                        Logger.referral.debug("SceneDelegate: 보상 팝업 미표시 — 메인 화면 아님")
+                        return
+                    }
+
+                    // 다른 모달이 표시 중이면 미표시
+                    guard rootVC.presentedViewController == nil else {
+                        Logger.referral.debug("SceneDelegate: 보상 팝업 미표시 — 다른 모달 표시 중")
+                        return
+                    }
+
+                    // 보상 팝업 표시
+                    let rewardVC = ReferralRewardViewController()
+                    rootVC.present(rewardVC, animated: true)
+
+                    Logger.referral.debug(
+                        "SceneDelegate: 보상 팝업 표시 — \(response.rewards.count)건"
+                    )
+                }
+            } catch {
+                // 네트워크 오류 등 — 무시 (다음 실행 시 재시도)
+                Logger.referral.error(
+                    "SceneDelegate: 보상 조회 실패 — \(error.localizedDescription)"
+                )
+            }
+        }
+    }
+}
+
+// MARK: - Referral Deep Link (T037)
+
+extension SceneDelegate {
+
+    /// Universal Link 처리 (scene(_:continue:))
+    /// 앱이 설치된 상태에서 https://sweeppic.link/r/{code} 링크 탭 시 호출
+    func scene(_ scene: UIScene, continue userActivity: NSUserActivity) {
+        // Universal Link인지 확인
+        guard userActivity.activityType == NSUserActivityTypeBrowsingWeb,
+              let url = userActivity.webpageURL else {
+            Logger.referral.debug("SceneDelegate: Universal Link 아님 — 무시")
+            return
+        }
+
+        Logger.referral.debug("SceneDelegate: Universal Link 수신 — \(url.absoluteString.prefix(80))")
+
+        // ReferralDeepLinkHandler로 위임
+        handleDeepLink(url: url)
+    }
+
+    /// Custom URL Scheme 처리 (scene(_:openURLContexts:))
+    /// sweeppic://referral/{code} URL로 앱이 열렸을 때 호출
+    func scene(_ scene: UIScene, openURLContexts URLContexts: Set<UIOpenURLContext>) {
+        guard let url = URLContexts.first?.url else { return }
+
+        Logger.referral.debug("SceneDelegate: Custom URL Scheme 수신 — \(url.absoluteString.prefix(80))")
+
+        // ReferralDeepLinkHandler로 위임
+        handleDeepLink(url: url)
+    }
+
+    /// 딥링크 URL을 ReferralDeepLinkHandler로 전달
+    private func handleDeepLink(url: URL) {
+        // 초대 코드가 포함된 URL인지 먼저 확인
+        guard ReferralDeepLinkHandler.shared.extractReferralCode(from: url) != nil else {
+            Logger.referral.debug("SceneDelegate: 초대 코드 없는 URL — 무시")
+            return
+        }
+
+        // 루트 뷰컨트롤러가 TabBarController인지 확인
+        guard let rootVC = window?.rootViewController,
+              rootVC is TabBarController else {
+            Logger.referral.debug("SceneDelegate: 메인 화면 아님 — 딥링크 무시")
+            return
+        }
+
+        // 최상위 뷰컨트롤러에서 처리 (모달이 표시 중이면 모달 위에서)
+        let presenter = rootVC.presentedViewController ?? rootVC
+        ReferralDeepLinkHandler.shared.handleReferralURL(url, from: presenter)
+    }
+}
+
+// MARK: - Push Notification Observer (T044)
+
+extension SceneDelegate {
+
+    /// Push 알림 탭 시 보상 화면을 표시하는 옵저버를 등록한다.
+    /// AppDelegate의 UNUserNotificationCenterDelegate에서 NotificationCenter로 전달받는다.
+    func setupPushNotificationObserver() {
+        NotificationCenter.default.addObserver(
+            forName: .referralRewardPushTapped,
+            object: nil,
+            queue: .main
+        ) { [weak self] notification in
+            Logger.referral.debug("SceneDelegate: Push 탭 알림 수신 — 보상 화면 표시")
+
+            guard let self = self,
+                  let rootVC = self.window?.rootViewController,
+                  rootVC is TabBarController else {
+                return
+            }
+
+            // 다른 모달이 표시 중이면 dismiss 후 보상 화면 표시
+            if let presented = rootVC.presentedViewController {
+                presented.dismiss(animated: false) {
+                    let rewardVC = ReferralRewardViewController()
+                    rootVC.present(rewardVC, animated: true)
+                }
+            } else {
+                let rewardVC = ReferralRewardViewController()
+                rootVC.present(rewardVC, animated: true)
+            }
+        }
     }
 }
 

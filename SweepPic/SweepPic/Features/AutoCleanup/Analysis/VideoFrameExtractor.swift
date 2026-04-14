@@ -17,12 +17,15 @@ import Photos
 import AVFoundation
 
 /// 프레임 추출 에러
-enum VideoFrameExtractError: Error, LocalizedError {
+enum VideoFrameExtractError: Error {
     /// 동영상 URL 획득 실패
     case urlNotAvailable
 
     /// iCloud 전용 (로컬 파일 없음)
     case iCloudOnly
+
+    /// 동영상이 아님
+    case notVideo
 
     /// 프레임 추출 실패
     case extractionFailed(String)
@@ -30,18 +33,9 @@ enum VideoFrameExtractError: Error, LocalizedError {
     /// 동영상 길이가 너무 짧음 (프레임 추출 불가)
     case tooShort
 
-    var errorDescription: String? {
-        switch self {
-        case .urlNotAvailable:
-            return "동영상 URL을 가져올 수 없습니다"
-        case .iCloudOnly:
-            return "iCloud 전용 동영상입니다"
-        case .extractionFailed(let reason):
-            return "프레임 추출 실패: \(reason)"
-        case .tooShort:
-            return "동영상이 너무 짧습니다"
-        }
-    }
+    /// 모든 프레임 추출 실패
+    case allFramesFailed
+
 }
 
 /// 동영상 프레임 추출기
@@ -85,7 +79,7 @@ final class VideoFrameExtractor {
     func extractFrames(from asset: PHAsset) async throws -> [CGImage] {
         // 동영상 타입 확인
         guard asset.mediaType == .video else {
-            throw VideoFrameExtractError.extractionFailed("동영상이 아닙니다")
+            throw VideoFrameExtractError.notVideo
         }
 
         // AVAsset 획득
@@ -156,10 +150,9 @@ final class VideoFrameExtractor {
 
         // 최소 1개 프레임 필요
         guard !frames.isEmpty else {
-            throw VideoFrameExtractError.extractionFailed("모든 프레임 추출 실패")
+            throw VideoFrameExtractError.allFramesFailed
         }
 
         return frames
     }
 }
-

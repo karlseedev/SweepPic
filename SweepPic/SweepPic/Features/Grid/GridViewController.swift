@@ -232,7 +232,7 @@ final class GridViewController: BaseGridViewController {
 
     /// 빈 상태 설정
     override var emptyStateConfig: (icon: String, title: String, subtitle: String?) {
-        ("photo.on.rectangle", "사진이 없습니다", "사진을 촬영하거나 가져오세요")
+        ("photo.on.rectangle", String(localized: "emptyState.noPhotos.title"), String(localized: "grid.empty.subtitle"))
     }
 
     /// 네비게이션 타이틀
@@ -241,7 +241,7 @@ final class GridViewController: BaseGridViewController {
     /// - FloatingOverlayContainer.swift: titleBar.title
     /// - FloatingTitleBar.swift: title 기본값
     override var navigationTitle: String {
-        "사진보관함"
+        String(localized: "tab.photos")
     }
 
     /// 줌 완료 후 호출 (고해상도 썸네일 재요청)
@@ -285,6 +285,7 @@ final class GridViewController: BaseGridViewController {
 
         // 구독 상태 변경 시 메뉴 뱃지 업데이트 (결제 문제 아이콘)
         observeSubscriptionStateForBadge()
+
     }
 
     /// 추가 제스처 설정 (setupGestures에서 호출됨)
@@ -339,6 +340,10 @@ final class GridViewController: BaseGridViewController {
                 let applyStart = CFAbsoluteTimeGetCurrent()
                 #endif
                 self?.applyPendingViewerReturn()
+
+                // C 자동 pop 후 간편정리 하이라이트 표시 (iOS 26+ Navigation 경로)
+                self?.showCleanupHighlightIfPending()
+
                 #if DEBUG
                 let applyEnd = CFAbsoluteTimeGetCurrent()
                 Logger.performance.debug("[ScrollDiag] coordinator→applyPendingViewerReturn: \(String(format: "%.1f", (applyEnd - applyStart) * 1000))ms")
@@ -366,13 +371,13 @@ final class GridViewController: BaseGridViewController {
         // - GridViewController.swift: title, setTitle() (여기)
         // - FloatingOverlayContainer.swift: titleBar.title
         // - FloatingTitleBar.swift: title 기본값
-        overlay.titleBar.setTitle("사진보관함")
+        overlay.titleBar.setTitle(String(localized: "tab.photos"))
         updateItemCountSubtitle()
 
         // 뒤로가기 버튼 숨김
         overlay.titleBar.setShowsBackButton(false)
 
-        // [Select] [정리] 두 개 버튼으로 설정 (auto-cleanup)
+        // [간편정리] [전체메뉴] 두 개 버튼으로 설정
         setupFloatingCleanupButton()
     }
 
@@ -385,10 +390,20 @@ final class GridViewController: BaseGridViewController {
         if CoachMarkManager.shared.isA1Active {
             CoachMarkManager.shared.isA1Active = false
             CoachMarkManager.shared.currentOverlay?.dismiss()
+            collectionView.isScrollEnabled = true  // A-1 스크롤 차단 해제
+            disableA1NavigationButtonIntercept()
         }
 
         // D 타이머 취소 (화면 이탈 시)
         cancelCoachMarkDTimer()
+
+        // Phase 4: C 완료 + D 미표시 → 그리드를 떠날 때 D 대기 플래그 설정
+        if CoachMarkType.similarPhoto.hasBeenShown
+           && !CoachMarkType.autoCleanup.hasBeenShown
+           && !CoachMarkManager.shared.pendingDAfterCComplete {
+            CoachMarkManager.shared.pendingDAfterCComplete = true
+            Logger.coachMark.debug("viewWillDisappear: pendingDAfterCComplete = true")
+        }
 
         // 코치마크가 표시 중이면 dismiss (화면 이탈 시)
         CoachMarkManager.shared.dismissCurrent()
@@ -432,10 +447,16 @@ final class GridViewController: BaseGridViewController {
         // C-1 트리거 락 리셋 (뷰어에서 돌아올 때 재트리거 허용)
         hasTriggeredC1 = false
 
+        // C: 사전 분석 시작 (A + E-1 완료 후)
+        startCoachMarkCPreScanIfNeeded()
+
+        // C: 간편정리 버튼 인터셉트 활성화 (A + E-1 완료 + C 미완료 시)
+        enableCCleanupButtonIntercept()
+
         // D: 사전 스캔 시작 (앱 시작 직후 가능한 빨리)
         startCoachMarkDPreScanIfNeeded()
 
-        // D: 그리드 3초 체류 타이머 시작
+        // D: 그리드 체류 시 D 표시 (3초 타이머 제거 → 즉시 체크)
         startCoachMarkDTimerIfNeeded()
 
         // A-1: 스와이프 삭제 실습 유도 (A 완료 + E-1 미완료 시 5초 후 표시)
@@ -676,10 +697,7 @@ final class GridViewController: BaseGridViewController {
     /// 사진 개수 서브타이틀 업데이트
     private func updateItemCountSubtitle() {
         let count = dataSourceDriver.count
-        let formatter = NumberFormatter()
-        formatter.numberStyle = .decimal
-        let formatted = formatter.string(from: NSNumber(value: count)) ?? "\(count)"
-        let subtitleText = "\(formatted)개의 항목"
+        let subtitleText = String(localized: "common.itemCount \(count)")
 
         // iOS 18: FloatingTitleBar 서브타이틀
         if let tabBarController = tabBarController as? TabBarController,
@@ -689,7 +707,10 @@ final class GridViewController: BaseGridViewController {
 
         // iOS 26: 네비게이션 바 서브타이틀
         if let subtitleLabel = navSubtitleLabel {
-            subtitleLabel.text = subtitleText
+            subtitleLabel.attributedText = NavigationTitleTypography.attributedText(
+                subtitleText,
+                style: .subtitle
+            )
             subtitleLabel.isHidden = false
         }
     }
@@ -851,6 +872,16 @@ extension GridViewController {
         // Select 모드일 때는 선택 토글 (T039)
         if isSelectMode {
             toggleSelection(at: indexPath)
+            return
+        }
+
+        // A-1 인터셉트: 사진 탭 시 뷰어 진입 차단 → A-1 즉시 표시
+        // (탭바/상단 버튼 인터셉트와 동일 패턴)
+        if CoachMarkType.gridSwipeDelete.hasBeenShown
+            && !CoachMarkType.firstDeleteGuide.hasBeenShown
+            && !CoachMarkManager.shared.isShowing {
+            cancelCoachMarkA1Timer()
+            showCoachMarkA1()
             return
         }
 
@@ -1029,7 +1060,7 @@ extension GridViewController: ViewerViewControllerDelegate {
         // [SimilarPhoto] 그룹 무효화 처리 (T022)
         handleSimilarPhotoAssetDeleted(assetID: assetID)
 
-        // E-1+E-2: 뷰어 삭제에서는 트리거하지 않음 (그리드 스와이프 삭제에서만 트리거)
+        // E-1+E-2: 뷰어 삭제에서는 트리거하지 않음 (목록에서 밀어서 삭제할 때만 트리거)
     }
 
     /// 사진 복구 요청 (삭제대기함에서 복원)
@@ -1096,6 +1127,9 @@ extension GridViewController: ViewerViewControllerDelegate {
         #if DEBUG
         Logger.performance.debug("[ScrollDiag] viewerDidClose→applyPendingViewerReturn: \(String(format: "%.1f", (CFAbsoluteTimeGetCurrent() - t) * 1000))ms")
         #endif
+
+        // C 자동 pop 후 간편정리 하이라이트 표시 (iOS 16~25 Modal 경로)
+        showCleanupHighlightIfPending()
     }
 
     /// 뷰어 닫힘 후 대기 중인 작업 처리 (전환 완료 후 호출)

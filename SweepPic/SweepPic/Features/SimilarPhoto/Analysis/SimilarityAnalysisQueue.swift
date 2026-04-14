@@ -59,6 +59,9 @@ final class SimilarityAnalysisQueue {
     /// 결과 캐시
     private let cache: SimilarityCache
 
+    /// 인물 매칭 엔진 (generateFeaturePrints + assignPersonIndicesForGroup)
+    private let matchingEngine: PersonMatchingEngine
+
     // FaceDetector(Vision) 제거됨 — YuNet 960이 직접 감지
 
     // MARK: - Queue State
@@ -160,6 +163,7 @@ final class SimilarityAnalysisQueue {
         self.imageLoader = imageLoader
         self.analyzer = analyzer
         self.cache = cache
+        self.matchingEngine = PersonMatchingEngine(imageLoader: imageLoader, analyzer: analyzer)
         self.semaphore = AsyncSemaphore(value: SimilarityConstants.maxConcurrentAnalysis)
 
         setupThermalStateObserver()
@@ -228,7 +232,17 @@ final class SimilarityAnalysisQueue {
         guard source == .grid else { return }
 
         // [Analytics] 이벤트 5-1: 유사 분석 취소
-        AnalyticsService.shared.countSimilarAnalysisCancelled()
+        // 격리 인스턴스(FaceScan 등)에서는 analytics 생략
+        if self === SimilarityAnalysisQueue.shared {
+            AnalyticsService.shared.countSimilarAnalysisCancelled()
+        }
+
+        // #if DEBUG: shared 인스턴스 취소 기록 (Stage 2 recorder)
+        #if DEBUG
+        if self === SimilarityAnalysisQueue.shared {
+            GridAnalysisSessionRecorder.shared.recordCancellation(source: source.rawValue)
+        }
+        #endif
 
         serialQueue.sync {
             // 큐에서 해당 소스 요청 제거
@@ -261,26 +275,43 @@ final class SimilarityAnalysisQueue {
         source: AnalysisSource,
         fetchResult: PHFetchResult<PHAsset>
     ) async -> [String] {
+        // #if DEBUG: shared 인스턴스 분석 기록 (Stage 2 recorder)
+        #if DEBUG
+        let debugRequestID = UUID().uuidString
+        if self === SimilarityAnalysisQueue.shared {
+            GridAnalysisSessionRecorder.shared.recordRequest(
+                id: debugRequestID, source: source.rawValue, range: range
+            )
+        }
+        #endif
+
         // 성능 측정 시작
         let totalStartTime = CFAbsoluteTimeGetCurrent()
         let startMemory = getMemoryUsageMB()
 
-        // T014.1: 분석 준비
-        let photos = fetchPhotos(in: range, fetchResult: fetchResult)
+        // T014.1: 분석 준비 — confirmed 그룹 멤버를 분석 대상에서 제외
+        let allPhotos = fetchPhotos(in: range, fetchResult: fetchResult)
+        let confirmedAssetIDs = await cache.getConfirmedAssetIDs()
+        var photos = allPhotos.filter { !confirmedAssetIDs.contains($0.localIdentifier) }
 
         guard photos.count >= SimilarityConstants.minGroupSize else {
-            postAnalysisComplete(range: range, groupIDs: [], analyzedAssetIDs: [])
+            let ids = photos.map { $0.localIdentifier }
+            // confirmed가 아닌 사진만 비그룹으로 설정
+            for assetID in ids {
+                await cache.setState(.analyzed(inGroup: false, groupID: nil), for: assetID)
+            }
+            postAnalysisComplete(range: range, groupIDs: [], analyzedAssetIDs: ids)
             return []
         }
 
-        let assetIDs = photos.map { $0.localIdentifier }
+        var assetIDs = photos.map { $0.localIdentifier }
 
-        // 기존 그룹 정리 (재분석 시)
+        // 기존 그룹 정리 (재분석 시) — confirmed 그룹 멤버는 이미 제외됨
         await cache.prepareForReanalysis(assetIDs: Set(assetIDs))
 
         // T014.2: Feature Print 병렬 생성 + Vision 얼굴 유무 체크 (배치 처리)
         let fpStartTime = CFAbsoluteTimeGetCurrent()
-        let (featurePrints, hasFaces) = await generateFeaturePrints(for: photos)
+        var (featurePrints, hasFaces) = await matchingEngine.generateFeaturePrints(for: photos)
         let fpTime = CFAbsoluteTimeGetCurrent() - fpStartTime
 
         // 취소 체크: FP 생성 후 (캐시/알림 스킵)
@@ -289,7 +320,7 @@ final class SimilarityAnalysisQueue {
             return []
         }
 
-        // T014.3 & T014.4: 인접 거리 계산 및 그룹 분리
+        // T014.3: 인접 거리 계산 및 그룹 분리
         let rawGroups = analyzer.formGroups(
             featurePrints: featurePrints,
             photoIDs: assetIDs,
@@ -306,12 +337,28 @@ final class SimilarityAnalysisQueue {
             return []
         }
 
-        // ── 테두리 조기 표시: 얼굴 있는 그룹만 예비 테두리 표시 ──
+        // T014.3b: 그룹 경계 확인 — 분석 범위 끝에 걸친 그룹만 확장
+        let (resolvedGroups, boundaryCompleted) = await resolveGroupBoundaries(
+            rawGroups: rawGroups,
+            photos: &photos,
+            assetIDs: &assetIDs,
+            featurePrints: &featurePrints,
+            hasFaces: &hasFaces,
+            range: range,
+            fetchResult: fetchResult
+        )
+
+        // 취소 체크: 경계 확인 후
+        guard !Task.isCancelled else {
+            Logger.similarPhoto.debug("Cancelled after boundary resolution - skipping cache/notification")
+            return []
+        }
+
+        // T014.4: 테두리 조기 표시 — 얼굴 있는 그룹만 예비 테두리 표시
         // Vision 얼굴 감지 결과(hasFaces)를 기반으로 얼굴 포함 그룹만 필터링
-        // 사물 그룹은 .analyzing 상태 유지 → YuNet 최종 분석에서 판단
-        // Vision이 못 잡은 작은 얼굴은 최종 분석 후 테두리 표시 (누락 없음, 지연만)
+        // 사물 그룹은 .analyzing 상태 유지 → YuNet 최종 분석에서 판��
         let facePresenceMap = Dictionary(uniqueKeysWithValues: zip(assetIDs, hasFaces))
-        let faceGroups = rawGroups.filter { groupIDs in
+        let faceGroups = resolvedGroups.filter { groupIDs in
             groupIDs.contains { facePresenceMap[$0] == true }
         }
         let preliminaryAssetIDs = Set(faceGroups.flatMap { $0 })
@@ -321,11 +368,10 @@ final class SimilarityAnalysisQueue {
             await cache.setState(.analyzed(inGroup: true, groupID: "preliminary"), for: assetID)
         }
         // 그룹에 속하지 않은 사진: 분석 완료 (그룹 없음)
-        let allGroupedAssetIDs = Set(rawGroups.flatMap { $0 })
+        let allGroupedAssetIDs = Set(resolvedGroups.flatMap { $0 })
         for assetID in assetIDs where !allGroupedAssetIDs.contains(assetID) {
             await cache.setState(.analyzed(inGroup: false, groupID: nil), for: assetID)
         }
-        // 사물 그룹(얼굴 없음): .analyzing 상태 유지 → YuNet에서 최종 판단
         // 알림 발송: 그리드가 비-그룹 사진 상태도 반영하도록
         postAnalysisComplete(
             range: range,
@@ -346,25 +392,23 @@ final class SimilarityAnalysisQueue {
         let faceStartTime = CFAbsoluteTimeGetCurrent()
         var totalFaceCount = 0
 
-        for groupAssetIDs in rawGroups {
-            // 취소 체크: rawGroups 루프 (캐시/알림 스킵)
+        for (groupIndex, groupAssetIDs) in resolvedGroups.enumerated() {
+            // 취소 체크: resolvedGroups 루프 (캐시/알림 스킵)
             guard !Task.isCancelled else {
                 Logger.similarPhoto.debug("Cancelled during group processing - skipping cache/notification")
                 return []
             }
 
-            // 그룹 내 사진 가져오기
+            // 그룹 내 사진 가져오기 (경계 확인으로 확장된 사진 포함)
             let groupPhotos = photos.filter { groupAssetIDs.contains($0.localIdentifier) }
 
             // 그룹 단위로 일관된 personIndex 할당 (YuNet 960 직접 감지 + SFace 임베딩)
-            let photoFacesMap = await assignPersonIndicesForGroup(
+            let photoFacesMap = await matchingEngine.assignPersonIndicesForGroup(
                 assetIDs: groupAssetIDs,
                 photos: groupPhotos
             )
 
             // 유효 슬롯 계산: 같은 personIndex가 2장 이상의 사진에서 나타나야 함
-            // 주의: 기존 로직은 "같은 personIndex를 가진 얼굴 총 개수"였으나,
-            //       이제는 "같은 personIndex가 나타나는 사진 수"로 변경
             var slotPhotoCount: [Int: Set<String>] = [:]
             for (assetID, faces) in photoFacesMap {
                 for face in faces {
@@ -376,33 +420,33 @@ final class SimilarityAnalysisQueue {
                 $0.value.count >= SimilarityConstants.minPhotosPerSlot
             }.keys)
 
-            // ========== 유효 슬롯 얼굴이 있는 사진만 그룹에 포함 (prd9algorithm.md §3.7) ==========
-            // 유효 슬롯에 해당하는 얼굴이 있는 사진만 그룹 멤버로 인정
+            // ========== 유효 슬롯 얼굴이 있는 사진만 그룹에 포함 ==========
             let validMembers = groupAssetIDs.filter { assetID in
                 guard let faces = photoFacesMap[assetID] else { return false }
                 return faces.contains { validSlots.contains($0.personIndex) }
             }
 
-            // 그룹 내 탈락 사진 상태 업데이트 (얼굴 없음 또는 유효 슬롯 미충족)
+            // 그룹 내 탈락 사진 상태 업데이트
             let excludedFromGroup = Set(groupAssetIDs).subtracting(validMembers)
             for assetID in excludedFromGroup {
                 await cache.setState(.analyzed(inGroup: false, groupID: nil), for: assetID)
-                // 탈락 사진의 얼굴 데이터도 캐시에 저장 (뷰어에서 활용 가능)
                 if let faces = photoFacesMap[assetID] {
                     await cache.setFaces(faces, for: assetID)
                 }
             }
-            // ==============================================================================
 
-            // T014.7: 캐시 저장 요청 (T010 호출)
-            // validMembers 전달 (유효 슬롯 얼굴 보유 사진만)
-            // 참고: addGroupIfValid 내부에서 조건 미충족 시 members를 inGroup:false로 정리함
+            // T014.7: 캐시 저장 요청
             if let groupID = await cache.addGroupIfValid(
                 members: validMembers,
                 validSlots: validSlots,
                 photoFaces: photoFacesMap
             ) {
                 validGroupIDs.append(groupID)
+
+                // 경계 확인이 양쪽 모두 완료된 그룹만 confirmed로 등록
+                if groupIndex < boundaryCompleted.count && boundaryCompleted[groupIndex] {
+                    await cache.confirmGroup(groupID: groupID)
+                }
             }
 
             // 성능 측정: 얼굴 수 누적
@@ -416,7 +460,7 @@ final class SimilarityAnalysisQueue {
         await cache.evictIfNeeded()
 
         // 그룹에 속하지 않은 사진들 상태 업데이트
-        let groupedAssetIDs = Set(rawGroups.flatMap { $0 })
+        let groupedAssetIDs = Set(resolvedGroups.flatMap { $0 })
         for assetID in assetIDs where !groupedAssetIDs.contains(assetID) {
             await cache.setState(.analyzed(inGroup: false, groupID: nil), for: assetID)
         }
@@ -468,11 +512,23 @@ final class SimilarityAnalysisQueue {
         }
 
         // [Analytics] 이벤트 5-1: 유사 분석 완료
+        // 격리 인스턴스(FaceScan 등)에서는 analytics 생략
         let analysisDuration = CFAbsoluteTimeGetCurrent() - totalStartTime
-        AnalyticsService.shared.countSimilarAnalysisCompleted(groups: validGroupIDs.count, duration: analysisDuration)
+        if self === SimilarityAnalysisQueue.shared {
+            AnalyticsService.shared.countSimilarAnalysisCompleted(groups: validGroupIDs.count, duration: analysisDuration)
+        }
 
         // T014.8: UI 알림 발송
         postAnalysisComplete(range: range, groupIDs: validGroupIDs, analyzedAssetIDs: assetIDs)
+
+        // #if DEBUG: shared 인스턴스 완료 기록 (Stage 2 recorder)
+        #if DEBUG
+        if self === SimilarityAnalysisQueue.shared {
+            GridAnalysisSessionRecorder.shared.recordCompletion(
+                id: debugRequestID, groupIDs: validGroupIDs
+            )
+        }
+        #endif
 
         return validGroupIDs
     }
@@ -500,89 +556,232 @@ final class SimilarityAnalysisQueue {
         }
     }
 
-    // MARK: - Private Methods - Feature Print Generation
+    // MARK: - Private Methods - Photo Fetching
 
-    /// 사진들의 Feature Print + 얼굴 유무를 병렬로 생성합니다.
+    // MARK: - Group Boundary Resolution
+
+    /// 그룹 경계를 확인하여 확정합니다.
     ///
-    /// Vision의 VNGenerateImageFeaturePrintRequest와 VNDetectFaceRectanglesRequest를
-    /// 같은 VNImageRequestHandler에서 배치 실행하여 추가 비용을 최소화합니다.
-    /// 얼굴 유무(hasFaces)는 예비 테두리 표시 판단에만 사용됩니다.
+    /// rawGroup이 분석 범위 끝에 걸쳐있으면, 한 장씩 추가 확인하여
+    /// 진짜 끊기 지점(distance > threshold)을 찾습니다.
     ///
-    /// - Parameter photos: 분석할 PHAsset 배열
-    /// - Returns: (featurePrints: FP 배열, hasFaces: 얼굴 유무 배열)
-    private func generateFeaturePrints(for photos: [PHAsset]) async -> (featurePrints: [VNFeaturePrintObservation?], hasFaces: [Bool]) {
-        let currentLimit = isThermalThrottled
-            ? SimilarityConstants.maxConcurrentAnalysisThermal
-            : SimilarityConstants.maxConcurrentAnalysis
+    /// - Parameters:
+    ///   - rawGroups: formGroups()에서 반환된 초기 그룹 배열
+    ///   - photos: 분석 범위 내 사진 배열
+    ///   - assetIDs: 분석 범위 내 사진 ID 배열
+    ///   - featurePrints: 분석 범위 내 Feature Print 배열
+    ///   - hasFaces: 분석 범위 내 얼굴 유무 배열
+    ///   - range: 원래 분석 범위 (fetchResult 인덱스 기준)
+    ///   - fetchResult: 전체 사진 fetch 결과
+    /// - Returns: (확장된 그룹, 확장된 사진, 확장된 ID, 확장된 FP, 확장된 hasFaces, 경계 완료 여부 배열)
+    private func resolveGroupBoundaries(
+        rawGroups: [[String]],
+        photos: inout [PHAsset],
+        assetIDs: inout [String],
+        featurePrints: inout [VNFeaturePrintObservation?],
+        hasFaces: inout [Bool],
+        range: ClosedRange<Int>,
+        fetchResult: PHFetchResult<PHAsset>
+    ) async -> (resolvedGroups: [[String]], boundaryCompleted: [Bool]) {
+        let trashedIDs = TrashStore.shared.trashedAssetIDs
+        let maxExpansion = SimilarityConstants.maxBoundaryExpansion
+        var resolvedGroups: [[String]] = []
+        var boundaryCompleted: [Bool] = []
 
-        let semaphore = AsyncSemaphore(value: currentLimit)
+        for group in rawGroups {
+            guard !group.isEmpty else { continue }
+            var expandedGroup = group
+            // 양쪽 경계 확인 완료 여부 추적
+            var leftConfirmed = true
+            var rightConfirmed = true
 
-        // withThrowingTaskGroup 사용: child task에서 CancellationError throw 가능
-        // 외부 시그니처는 non-throws 유지 (CancellationError를 내부에서 흡수)
-        do {
-            return try await withThrowingTaskGroup(of: (Int, VNFeaturePrintObservation?, Bool).self) { group in
-                for (index, photo) in photos.enumerated() {
-                    group.addTask {
-                        // child task 내부에서도 취소 체크
-                        try Task.checkCancellation()
+            // --- 왼쪽 경계 확인 ---
+            // 그룹의 첫 멤버가 분석 범위의 첫 사진과 일치하면 경계가 불확실
+            if group.first == assetIDs.first {
+                leftConfirmed = false
+                var expansionCount = 0
+                // range.lowerBound 이전부터 왼쪽으로 탐색
+                var searchIndex = range.lowerBound - 1
+                // 현재 그룹 왼쪽 끝의 FP (비교 대상)
+                var edgeFP: VNFeaturePrintObservation? = {
+                    if let idx = assetIDs.firstIndex(of: group.first!) {
+                        return featurePrints[idx]
+                    }
+                    return nil
+                }()
 
-                        await semaphore.wait()
-                        defer { semaphore.signal() }
+                while searchIndex >= 0 && expansionCount < maxExpansion {
+                    // 취소 체크
+                    guard !Task.isCancelled else { break }
 
-                        // 세마포어 획득 후 재확인
-                        try Task.checkCancellation()
+                    let asset = fetchResult.object(at: searchIndex)
+                    searchIndex -= 1
 
-                        do {
-                            let image = try await self.imageLoader.loadImage(for: photo)
-                            // 배치 처리: FeaturePrint + 얼굴 유무를 같은 핸들러에서 실행
-                            let (fp, hasFace) = try await self.analyzer.generateFeaturePrintWithFaceCheck(for: image)
-                            return (index, fp, hasFace)
-                        } catch is CancellationError {
-                            throw CancellationError()  // 상위로 전파
-                        } catch SimilarityImageLoadError.cancelled {
-                            throw CancellationError()  // 취소를 CancellationError로 변환
-                        } catch {
-                            // 다른 에러만 nil/false로 처리
-                            return (index, nil, false)
+                    // 동영상/삭제대기함 건너뛰기 (fetchPhotos와 동일 규칙)
+                    guard asset.mediaType == .image,
+                          !trashedIDs.contains(asset.localIdentifier) else {
+                        continue
+                    }
+
+                    // 이미 확정된 그룹에 속한 사진이면 경계 확정
+                    let state = await cache.getState(for: asset.localIdentifier)
+                    if case .analyzed(true, let gid?) = state, gid != "preliminary" {
+                        let isConfirmed = await cache.isGroupConfirmed(groupID: gid)
+                        if isConfirmed {
+                            leftConfirmed = true
+                            break
                         }
                     }
-                }
 
-                // 결과 수집
-                var fpResults = [VNFeaturePrintObservation?](repeating: nil, count: photos.count)
-                var faceResults = [Bool](repeating: false, count: photos.count)
-                for try await (index, fp, hasFace) in group {
-                    // 취소 감지 시 나머지 작업 취소
-                    if Task.isCancelled {
-                        group.cancelAll()
+                    // FP 생성 + 얼굴 유무 확인
+                    do {
+                        let cgImage = try await imageLoader.loadImage(for: asset)
+                        let (fp, hasFace) = try await analyzer.generateFeaturePrintWithFaceCheck(for: cgImage)
+
+                        // 인접 거리 비교
+                        if let edgeFP = edgeFP {
+                            let distance = try analyzer.computeDistance(edgeFP, fp)
+                            if distance > SimilarityConstants.similarityThreshold {
+                                // 끊기 지점 발견 → 경계 확정
+                                leftConfirmed = true
+                                break
+                            }
+                        }
+
+                        // 유사 → 그룹에 추가
+                        expandedGroup.insert(asset.localIdentifier, at: 0)
+                        photos.insert(asset, at: 0)
+                        assetIDs.insert(asset.localIdentifier, at: 0)
+                        featurePrints.insert(fp, at: 0)
+                        hasFaces.insert(hasFace, at: 0)
+                        edgeFP = fp
+
+                        // 확장된 사진 상태 설정
+                        await cache.setState(.analyzing, for: asset.localIdentifier)
+                        await cache.removeFaces(for: asset.localIdentifier)
+
+                        expansionCount += 1
+                    } catch {
+                        // 이미지 로드/FP 생성 실패 → 끊기 지점으로 처리
+                        leftConfirmed = true
+                        Logger.similarPhoto.error("Boundary expansion left failed: \(error)")
                         break
                     }
-                    fpResults[index] = fp
-                    faceResults[index] = hasFace
                 }
-                return (fpResults, faceResults)
-            }
-        } catch is CancellationError {
-            // 취소 시 부분 결과 전부 버리고 빈 배열 반환 (캐시 오염 방지)
-            Logger.similarPhoto.debug("generateFeaturePrints cancelled - returning empty")
-            return ([], [])
-        } catch {
-            Logger.similarPhoto.error("generateFeaturePrints error: \(error)")
-            return ([], [])
-        }
-    }
 
-    // MARK: - Private Methods - Photo Fetching
+                // maxExpansion 도달 시 미확정
+                if expansionCount >= maxExpansion {
+                    leftConfirmed = false
+                    Logger.similarPhoto.notice("Left boundary expansion reached limit (\(maxExpansion))")
+                }
+                // fetchResult 시작에 도달 시 확정
+                if searchIndex < 0 && !leftConfirmed {
+                    leftConfirmed = true
+                }
+            }
+
+            // --- 오른쪽 경계 확인 ---
+            // 그룹의 마지막 멤버가 분석 범위의 마지막 사진과 일치하면 경계가 불확실
+            if group.last == assetIDs.last {
+                rightConfirmed = false
+                var expansionCount = 0
+                // range.upperBound 이후부터 오른쪽으로 탐색
+                var searchIndex = range.upperBound + 1
+                // 현재 그룹 오른쪽 끝의 FP (비교 대상)
+                var edgeFP: VNFeaturePrintObservation? = {
+                    if let idx = assetIDs.lastIndex(of: expandedGroup.last!) {
+                        return featurePrints[idx]
+                    }
+                    return nil
+                }()
+
+                while searchIndex < fetchResult.count && expansionCount < maxExpansion {
+                    // 취소 체크
+                    guard !Task.isCancelled else { break }
+
+                    let asset = fetchResult.object(at: searchIndex)
+                    searchIndex += 1
+
+                    // 동영상/삭제대기함 건너뛰기 (fetchPhotos와 동일 규칙)
+                    guard asset.mediaType == .image,
+                          !trashedIDs.contains(asset.localIdentifier) else {
+                        continue
+                    }
+
+                    // 이미 확정된 그룹에 속한 사진이면 경계 확정
+                    let state = await cache.getState(for: asset.localIdentifier)
+                    if case .analyzed(true, let gid?) = state, gid != "preliminary" {
+                        let isConfirmed = await cache.isGroupConfirmed(groupID: gid)
+                        if isConfirmed {
+                            rightConfirmed = true
+                            break
+                        }
+                    }
+
+                    // FP 생성 + 얼굴 유무 확인
+                    do {
+                        let cgImage = try await imageLoader.loadImage(for: asset)
+                        let (fp, hasFace) = try await analyzer.generateFeaturePrintWithFaceCheck(for: cgImage)
+
+                        // 인접 거리 비교
+                        if let edgeFP = edgeFP {
+                            let distance = try analyzer.computeDistance(edgeFP, fp)
+                            if distance > SimilarityConstants.similarityThreshold {
+                                // 끊기 지점 발견 → 경계 확정
+                                rightConfirmed = true
+                                break
+                            }
+                        }
+
+                        // 유사 → 그룹에 추가
+                        expandedGroup.append(asset.localIdentifier)
+                        photos.append(asset)
+                        assetIDs.append(asset.localIdentifier)
+                        featurePrints.append(fp)
+                        hasFaces.append(hasFace)
+                        edgeFP = fp
+
+                        // 확장된 사진 상태 설정
+                        await cache.setState(.analyzing, for: asset.localIdentifier)
+                        await cache.removeFaces(for: asset.localIdentifier)
+
+                        expansionCount += 1
+                    } catch {
+                        // 이미지 로드/FP 생성 실패 → 끊기 지점으로 처리
+                        rightConfirmed = true
+                        Logger.similarPhoto.error("Boundary expansion right failed: \(error)")
+                        break
+                    }
+                }
+
+                // maxExpansion 도달 시 미확정
+                if expansionCount >= maxExpansion {
+                    rightConfirmed = false
+                    Logger.similarPhoto.notice("Right boundary expansion reached limit (\(maxExpansion))")
+                }
+                // fetchResult 끝에 도달 시 확정
+                if searchIndex >= fetchResult.count && !rightConfirmed {
+                    rightConfirmed = true
+                }
+            }
+
+            resolvedGroups.append(expandedGroup)
+            boundaryCompleted.append(leftConfirmed && rightConfirmed)
+        }
+
+        return (resolvedGroups, boundaryCompleted)
+    }
 
     /// 범위 내 사진을 가져옵니다.
     ///
-    /// 삭제대기함에 있는 사진은 분석 대상에서 제외합니다. (FR-033, FR-037)
-    /// 삭제된 사진이 그룹에 포함되면 3장 미만 무효화 로직이 제대로 동작하지 않기 때문입니다.
+    /// 삭제대기함 사진 및 동영상은 분석 대상에서 제외합니다. (FR-033, FR-037)
+    /// - 삭제된 사진이 그룹에 포함되면 3장 미만 무효화 로직이 제대로 동작하지 않기 때문입니다.
+    /// - 동영상은 첫 프레임만 반환되어 무의미한 Feature Print/얼굴 감지가 발생하므로 제외합니다.
     ///
     /// - Parameters:
     ///   - range: 인덱스 범위
     ///   - fetchResult: 사진 fetch 결과
-    /// - Returns: PHAsset 배열 (삭제대기함 사진 제외)
+    /// - Returns: PHAsset 배열 (삭제대기함 사진 및 동영상 제외)
     private func fetchPhotos(in range: ClosedRange<Int>, fetchResult: PHFetchResult<PHAsset>) -> [PHAsset] {
         let trashedIDs = TrashStore.shared.trashedAssetIDs
         var photos: [PHAsset] = []
@@ -590,588 +789,14 @@ final class SimilarityAnalysisQueue {
 
         for i in clampedRange {
             let asset = fetchResult.object(at: i)
-            // 삭제대기함에 있는 사진은 분석 대상에서 제외
-            if !trashedIDs.contains(asset.localIdentifier) {
+            // 삭제대기함 사진 및 동영상은 분석 대상에서 제외
+            if !trashedIDs.contains(asset.localIdentifier)
+                && asset.mediaType == .image {
                 photos.append(asset)
             }
         }
 
         return photos
-    }
-
-    // MARK: - Private Methods - Face Processing
-
-    /// 동적 인물 슬롯 (기준 임베딩 + 메타데이터)
-    ///
-    /// Keep Best 정책: 더 높은 norm의 임베딩으로 갱신
-    /// 위치 갱신 정책: 매칭 시 최근 위치로 갱신 (저품질 경로 정확도 향상)
-    private struct PersonSlot {
-        let id: Int                // 슬롯 ID (1-based)
-        var embedding: [Float]     // 128차원 SFace 임베딩
-        var norm: Float            // 임베딩 norm (품질 지표)
-        var center: CGPoint        // 최근 매칭 위치 (갱신됨)
-        var boundingBox: CGRect    // 최근 매칭 바운딩박스 (갱신됨)
-    }
-
-    /// 임베딩 품질 임계값 (norm 기준)
-    /// norm < 7인 얼굴은 저품질로 판정하여 신규 슬롯 생성 금지
-    private let minEmbeddingNorm: Float = 7.0
-
-    /// 매칭 후보 (전역 정렬용)
-    private struct MatchCandidate {
-        let faceIdx: Int
-        let slotID: Int
-        let cost: Float           // Dist_fp
-        let posDistNorm: CGFloat  // Dist_pos / √2
-        let boundingBox: CGRect
-        let center: CGPoint       // 얼굴 중심 (슬롯 위치 갱신용)
-        let embedding: [Float]    // Keep Best용 임베딩
-        let norm: Float           // 얼굴 임베딩 품질
-        let slotNorm: Float       // 슬롯 임베딩 품질 (고품질 확장 판정용)
-    }
-
-    /// 그룹 단위로 일관된 인물 번호를 부여합니다.
-    ///
-    /// YuNet 960으로 얼굴 감지 + SFace 임베딩 생성 후,
-    /// 전역 후보 정렬 기반 근사 매칭 알고리즘을 사용합니다.
-    /// - 동적 인물 풀: 첫 사진에서 부팅, 이후 신규 인물 등록
-    /// - Grey Zone 전략: 확신/모호/거절 구간으로 나누어 위치 조건 적용
-    /// - 캐시 미저장 정책: FP 실패 또는 매칭 실패 얼굴은 CachedFace에 저장하지 않음
-    ///
-    /// - Parameters:
-    ///   - assetIDs: 그룹 멤버 순서 (분석 순서)
-    ///   - photos: PHAsset 배열 (이미지 로딩용)
-    /// - Returns: 일관된 personIndex가 부여된 CachedFace 맵
-    private func assignPersonIndicesForGroup(
-        assetIDs: [String],
-        photos: [PHAsset]
-    ) async -> [String: [CachedFace]] {
-
-        // assetID → PHAsset 매핑
-        let photoMap = Dictionary(uniqueKeysWithValues: photos.map { ($0.localIdentifier, $0) })
-
-        // 결과 저장
-        var result: [String: [CachedFace]] = [:]
-
-        // 동적 인물 풀 (사진 처리하며 성장)
-        var activeSlots: [PersonSlot] = []
-        var nextSlotID: Int = 1
-
-        // 상수
-        let greyZoneThreshold = SimilarityConstants.greyZoneThreshold
-        let rejectThreshold = SimilarityConstants.personMatchThreshold
-        let greyZonePosLimit = SimilarityConstants.greyZonePositionLimit
-        let maxSlots = SimilarityConstants.maxPersonSlots
-        let sqrt2: CGFloat = sqrt(2.0)
-
-        // 고품질 확장: 양쪽 norm 모두 높으면 거절 임계값 완화
-        let highQualityNormLimit: Float = 8.0       // 양쪽 norm ≥ 8.0이면 고품질 쌍
-        let extendedRejectThreshold: Float = 0.75   // 고품질 쌍의 완화된 거절 임계값
-
-        // 성능 측정 변수
-        let perfGroupStart = CFAbsoluteTimeGetCurrent()
-        var perfLoadTotal: Double = 0
-        var perfYunetTotal: Double = 0
-        var perfSfaceTotal: Double = 0
-        var perfMatchTotal: Double = 0
-        var perfFaceCount: Int = 0
-        var prevLoadEndTime: CFAbsoluteTime = perfGroupStart  // idle gap 측정용
-
-        // 각 사진 처리
-        for assetID in assetIDs {
-            // 취소 체크: 사진 처리 루프
-            guard !Task.isCancelled else {
-                Logger.similarPhoto.debug("Cancelled during person assignment - skipping cache/notification")
-                return result
-            }
-
-            let shortID = String(assetID.prefix(8))
-
-            // 사진 메타데이터 (로그용)
-            let photo = photoMap[assetID]
-            let photoMeta = photo.map { "\($0.pixelWidth)x\($0.pixelHeight)" } ?? "?"
-
-            // 이미지 로드 (인물 매칭용 고해상도) — 진단 정보 포함
-            let perfLoadStart = CFAbsoluteTimeGetCurrent()
-            let perfGapMs = (perfLoadStart - prevLoadEndTime) * 1000  // 이전 Load 완료 후 경과 시간
-            var cgImage: CGImage? = nil
-            var degradedMs: Double? = nil
-            if let photo = photo {
-                if let result = try? await imageLoader.loadImageWithDiag(
-                    for: photo,
-                    maxSize: SimilarityConstants.personMatchImageMaxSize
-                ) {
-                    cgImage = result.cgImage
-                    degradedMs = result.degradedMs
-                }
-            }
-            let perfLoadMs = (CFAbsoluteTimeGetCurrent() - perfLoadStart) * 1000
-            perfLoadTotal += perfLoadMs
-            prevLoadEndTime = CFAbsoluteTimeGetCurrent()
-
-            // === Step 1: YuNet으로 얼굴 감지 + SFace 임베딩 생성 ===
-            var faceEmbeddings: [Int: [Float]] = [:]
-            var faceData: [Int: (center: CGPoint, boundingBox: CGRect)] = [:]
-
-            guard let image = cgImage,
-                  let yunet = YuNetFaceDetector.shared,
-                  let sface = SFaceRecognizer.shared else {
-                // 모델 또는 이미지 로드 실패 시 빈 결과 (얼굴 없는 것으로 처리)
-                result[assetID] = []
-                continue
-            }
-
-            // YuNet으로 얼굴 감지 (landmark 포함)
-            let perfYunetStart = CFAbsoluteTimeGetCurrent()
-            let yunetDetections: [YuNetDetection]
-            do {
-                yunetDetections = try yunet.detect(in: image)
-            } catch {
-                result[assetID] = []
-                continue
-            }
-            let perfYunetMs = (CFAbsoluteTimeGetCurrent() - perfYunetStart) * 1000
-            perfYunetTotal += perfYunetMs
-
-            let perfSfaceStart = CFAbsoluteTimeGetCurrent()
-            for (faceIdx, detection) in yunetDetections.enumerated() {
-                // normalized 좌표로 변환 (Vision 좌표계: 원점이 왼쪽 아래)
-                // YuNet은 일반 이미지 좌표계 (원점이 왼쪽 위)이므로 y좌표 뒤집기 필요
-                let imageWidth = CGFloat(image.width)
-                let imageHeight = CGFloat(image.height)
-                let normalizedBox = CGRect(
-                    x: detection.boundingBox.origin.x / imageWidth,
-                    y: 1.0 - (detection.boundingBox.origin.y + detection.boundingBox.size.height) / imageHeight,
-                    width: detection.boundingBox.size.width / imageWidth,
-                    height: detection.boundingBox.size.height / imageHeight
-                )
-                let center = CGPoint(x: normalizedBox.midX, y: normalizedBox.midY)
-                faceData[faceIdx] = (center: center, boundingBox: normalizedBox)
-
-                // FaceAligner로 정렬 (픽셀 좌표 landmark 사용)
-                guard let alignedFace = try? FaceAligner.shared.align(
-                    image: image,
-                    landmarks: detection.landmarks
-                ) else {
-                    continue
-                }
-
-                // SFace로 임베딩 추출
-                do {
-                    let embedding = try sface.extractEmbedding(from: alignedFace)
-                    faceEmbeddings[faceIdx] = embedding
-                } catch {
-                    // [Analytics] 얼굴 임베딩 추출 실패
-                    AnalyticsService.shared.countError(.embedding as AnalyticsError.Face)
-                    continue
-                }
-            }
-
-            let perfSfaceMs = (CFAbsoluteTimeGetCurrent() - perfSfaceStart) * 1000
-            perfSfaceTotal += perfSfaceMs
-            perfFaceCount += faceEmbeddings.count
-
-            // per-photo 성능 로그 (프리로드 비교용, 진단 정보 포함)
-            let degStr = degradedMs.map { String(format: "deg:%.0fms", $0) } ?? "deg:none"
-            let perfLog = "photo \(shortID): Load:\(String(format: "%.0f", perfLoadMs))ms(\(degStr) gap:\(String(format: "%.0f", perfGapMs))ms) YuNet:\(String(format: "%.0f", perfYunetMs))ms SFace:\(String(format: "%.0f", perfSfaceMs))ms faces:\(yunetDetections.count) (\(photoMeta))"
-            // Logger.similarPhoto.debug("[Perf] \(perfLog)")  // 분석완료로 비활성화
-
-            // Load 500ms 이상: SLOW 태그로 중복 출력 (검색 편의)
-            if perfLoadMs >= 500 {
-                Logger.similarPhoto.warning("[SLOW] \(perfLog)")
-            }
-
-            let perfMatchStart = CFAbsoluteTimeGetCurrent()
-
-            // === Step 2: 부팅 (ActiveSlots 비어있을 때) ===
-            // 부팅 시에는 저품질 포함 모든 얼굴로 슬롯 생성 (모든 인물이 슬롯 보유)
-            if activeSlots.isEmpty {
-                // 위치 정렬된 순서로 슬롯 생성 (YuNet 결과 기반)
-                let sortedIndices = faceData.keys.sorted { idx1, idx2 in
-                    guard let data1 = faceData[idx1], let data2 = faceData[idx2] else { return false }
-                    let xDiff = abs(data1.boundingBox.origin.x - data2.boundingBox.origin.x)
-                    if xDiff > 0.05 {
-                        return data1.boundingBox.origin.x < data2.boundingBox.origin.x
-                    } else {
-                        return data1.boundingBox.origin.y > data2.boundingBox.origin.y
-                    }
-                }
-
-                for faceIdx in sortedIndices {
-                    guard activeSlots.count < maxSlots else { break }
-                    guard let embedding = faceEmbeddings[faceIdx] else { continue }
-                    guard let data = faceData[faceIdx] else { continue }
-
-                    // norm 계산
-                    let norm = sqrt(embedding.reduce(0) { $0 + $1 * $1 })
-
-                    let slot = PersonSlot(
-                        id: nextSlotID,
-                        embedding: embedding,
-                        norm: norm,
-                        center: data.center,
-                        boundingBox: data.boundingBox
-                    )
-                    activeSlots.append(slot)
-                    nextSlotID += 1
-                }
-
-                // 부팅 결과 저장
-                var cachedFaces: [CachedFace] = []
-                for slot in activeSlots {
-                    cachedFaces.append(CachedFace(
-                        boundingBox: slot.boundingBox,
-                        personIndex: slot.id,
-                        isValidSlot: false
-                    ))
-                }
-                result[assetID] = cachedFaces
-                continue
-            }
-
-            // === Step 3: 비용 산출 (코사인 유사도 → 거리 변환) ===
-            var allCandidates: [MatchCandidate] = []
-
-            // 각 얼굴의 norm 미리 계산 (결정성 보장: 키 정렬)
-            var faceNorms: [Int: Float] = [:]
-            for faceIdx in faceEmbeddings.keys.sorted() {
-                guard let embedding = faceEmbeddings[faceIdx] else { continue }
-                faceNorms[faceIdx] = sqrt(embedding.reduce(0) { $0 + $1 * $1 })
-            }
-
-            for faceIdx in faceEmbeddings.keys.sorted() {
-                guard let faceEmbedding = faceEmbeddings[faceIdx],
-                      let data = faceData[faceIdx] else { continue }
-                let faceNorm = faceNorms[faceIdx] ?? 0
-
-                // 모든 슬롯과 비용 계산 (코사인 유사도를 거리로 변환: cost = 1 - similarity)
-                var slotCosts: [(slot: PersonSlot, cost: Float, posDist: CGFloat)] = []
-
-                for slot in activeSlots {
-                    let similarity = sface.cosineSimilarity(faceEmbedding, slot.embedding)
-                    let cost = 1.0 - similarity  // 유사도를 거리로 변환 (낮을수록 동일인)
-                    let posDist = hypot(data.center.x - slot.center.x, data.center.y - slot.center.y)
-                    slotCosts.append((slot: slot, cost: cost, posDist: posDist))
-                }
-
-                // Top-K 필터링: 슬롯 수 > 5개면 상위 3개만 (근사 최적화)
-                // 고품질: cost 기준, 저품질: 위치 기준 (GPT 리뷰 반영)
-                let candidates: ArraySlice<(slot: PersonSlot, cost: Float, posDist: CGFloat)>
-                let isLowQuality = faceNorm < minEmbeddingNorm
-
-                if activeSlots.count > 5 {
-                    if isLowQuality {
-                        // 저품질: 위치 기준 Top-K (가장 가까운 슬롯이 후보에 포함되도록)
-                        candidates = slotCosts.sorted { $0.posDist < $1.posDist }.prefix(3)
-                    } else {
-                        // 고품질: cost 기준 Top-K
-                        candidates = slotCosts.sorted { $0.cost < $1.cost }.prefix(3)
-                    }
-                } else {
-                    candidates = slotCosts[...]
-                }
-
-                for item in candidates {
-                    let posDistNorm = min(item.posDist / sqrt2, 1.0)
-                    allCandidates.append(MatchCandidate(
-                        faceIdx: faceIdx,
-                        slotID: item.slot.id,
-                        cost: item.cost,
-                        posDistNorm: posDistNorm,
-                        boundingBox: data.boundingBox,
-                        center: data.center,
-                        embedding: faceEmbedding,
-                        norm: faceNorm,
-                        slotNorm: item.slot.norm
-                    ))
-                }
-            }
-
-            // === Step 4: 전역 정렬 (Cost 오름차순, tie-breaker: faceIdx, slotID) ===
-            // 결정성 보장: cost 동일 시 faceIdx → slotID 순으로 정렬
-            allCandidates.sort {
-                if $0.cost != $1.cost { return $0.cost < $1.cost }
-                if $0.faceIdx != $1.faceIdx { return $0.faceIdx < $1.faceIdx }
-                return $0.slotID < $1.slotID
-            }
-
-            // === Step 5: 조건부 매칭 (고품질: SFace 우선, 저품질: 위치 우선) ===
-            var usedFaces: Set<Int> = []
-            var usedSlots: Set<Int> = []
-            var cachedFaces: [CachedFace] = []
-
-            /// Keep Best: 매칭된 얼굴의 norm이 슬롯보다 높으면 슬롯 임베딩 갱신
-            /// 위치 갱신: 모든 매칭에서 슬롯 위치를 최근 얼굴 위치로 갱신
-            func updateSlotIfBetter(slotID: Int, embedding: [Float], norm: Float, center: CGPoint, boundingBox: CGRect) {
-                if let idx = activeSlots.firstIndex(where: { $0.id == slotID }) {
-                    // 위치 갱신 (항상 적용 - 저품질 경로 정확도 향상)
-                    activeSlots[idx].center = center
-                    activeSlots[idx].boundingBox = boundingBox
-
-                    // Keep Best: norm이 더 높으면 임베딩도 갱신
-                    if norm > activeSlots[idx].norm {
-                        activeSlots[idx].embedding = embedding
-                        activeSlots[idx].norm = norm
-                    }
-                }
-            }
-
-            // 저품질 위치 매칭용 상수
-            let lowQualityPosLimit: CGFloat = 0.25  // 저품질은 위치 조건 완화 (25%)
-            let lowQualityCostLimit: Float = min(rejectThreshold + 0.15, 1.0)  // cost 상한선 (1.0 초과 방지)
-
-            // Step 5A: 고품질 얼굴 매칭 (SFace 우선)
-            let highQualityCandidates = allCandidates.filter { $0.norm >= minEmbeddingNorm }
-            let lowQualityCandidates = allCandidates.filter { $0.norm < minEmbeddingNorm }
-
-            for candidate in highQualityCandidates {
-                guard !usedFaces.contains(candidate.faceIdx) else { continue }
-                guard !usedSlots.contains(candidate.slotID) else { continue }
-
-                let cost = candidate.cost
-                let posNorm = candidate.posDistNorm
-
-                // 구간 판정
-                if cost < greyZoneThreshold {
-                    // 확신 구간: 즉시 매칭
-                    usedFaces.insert(candidate.faceIdx)
-                    usedSlots.insert(candidate.slotID)
-                    cachedFaces.append(CachedFace(
-                        boundingBox: candidate.boundingBox,
-                        personIndex: candidate.slotID,
-                        isValidSlot: false,
-                        sfaceCost: cost
-                    ))
-
-                    // Logger.similarPhoto.debug("[PersonMatch] \(shortID) HQ 확신: face[\(candidate.faceIdx)]→slot\(candidate.slotID) cost=\(String(format: "%.3f", cost)) norm=\(String(format: "%.1f", candidate.norm))")
-
-                    // Keep Best + 위치 갱신
-                    updateSlotIfBetter(slotID: candidate.slotID, embedding: candidate.embedding, norm: candidate.norm, center: candidate.center, boundingBox: candidate.boundingBox)
-
-                } else if cost < rejectThreshold {
-                    // 모호 구간: 위치 조건 확인
-                    if posNorm < greyZonePosLimit {
-                        usedFaces.insert(candidate.faceIdx)
-                        usedSlots.insert(candidate.slotID)
-                        cachedFaces.append(CachedFace(
-                            boundingBox: candidate.boundingBox,
-                            personIndex: candidate.slotID,
-                            isValidSlot: false,
-                            sfaceCost: cost
-                        ))
-
-                        // Logger.similarPhoto.debug("[PersonMatch] \(shortID) HQ Grey: face[\(candidate.faceIdx)]→slot\(candidate.slotID) cost=\(String(format: "%.3f", cost)) pos=\(String(format: "%.3f", posNorm)) norm=\(String(format: "%.1f", candidate.norm))")
-
-                        // Keep Best + 위치 갱신
-                        updateSlotIfBetter(slotID: candidate.slotID, embedding: candidate.embedding, norm: candidate.norm, center: candidate.center, boundingBox: candidate.boundingBox)
-                    } else {
-                        // Logger.similarPhoto.debug("[PersonMatch] \(shortID) HQ Grey거부: face[\(candidate.faceIdx)]↛slot\(candidate.slotID) cost=\(String(format: "%.3f", cost)) pos=\(String(format: "%.3f", posNorm))≥\(String(format: "%.2f", greyZonePosLimit)) norm=\(String(format: "%.1f", candidate.norm))")
-                    }
-                } else {
-                    // 고품질 확장: 양쪽 norm ≥ 8.0이면 거절 임계값을 0.75로 완화
-                    // (고개 돌림 등 각도 차이로 cost가 높아도 같은 인물일 가능성)
-                    let bothHighQuality = candidate.norm >= highQualityNormLimit && candidate.slotNorm >= highQualityNormLimit
-                    if bothHighQuality && cost < extendedRejectThreshold {
-                        // 고품질 확장 Grey Zone: 위치 조건 확인
-                        if posNorm < greyZonePosLimit {
-                            usedFaces.insert(candidate.faceIdx)
-                            usedSlots.insert(candidate.slotID)
-                            cachedFaces.append(CachedFace(
-                                boundingBox: candidate.boundingBox,
-                                personIndex: candidate.slotID,
-                                isValidSlot: false,
-                                sfaceCost: cost
-                            ))
-
-                            // Logger.similarPhoto.debug("[PersonMatch] \(shortID) HQ 확장Grey: face[\(candidate.faceIdx)]→slot\(candidate.slotID) cost=\(String(format: "%.3f", cost)) pos=\(String(format: "%.3f", posNorm)) norm=\(String(format: "%.1f", candidate.norm)) slotNorm=\(String(format: "%.1f", candidate.slotNorm))")
-
-                            updateSlotIfBetter(slotID: candidate.slotID, embedding: candidate.embedding, norm: candidate.norm, center: candidate.center, boundingBox: candidate.boundingBox)
-                        } else {
-                            // Logger.similarPhoto.debug("[PersonMatch] \(shortID) HQ 확장Grey거부: face[\(candidate.faceIdx)]↛slot\(candidate.slotID) cost=\(String(format: "%.3f", cost)) pos=\(String(format: "%.3f", posNorm))≥\(String(format: "%.2f", greyZonePosLimit)) norm=\(String(format: "%.1f", candidate.norm)) slotNorm=\(String(format: "%.1f", candidate.slotNorm))")
-                        }
-                    } else {
-                        // Logger.similarPhoto.debug("[PersonMatch] \(shortID) HQ 거절: face[\(candidate.faceIdx)]↛slot\(candidate.slotID) cost=\(String(format: "%.3f", cost))≥\(String(format: "%.3f", rejectThreshold)) norm=\(String(format: "%.1f", candidate.norm)) slotNorm=\(String(format: "%.1f", candidate.slotNorm))")
-                    }
-                }
-            }
-
-            // Step 5B: 저품질 얼굴 매칭 (위치 우선 + SFace 교차검증)
-            // 혼합 점수 계산 함수 (6-1: posNorm 포화 대응)
-            // w1=0.7 (cost 가중치), w2=0.3 (posNorm 가중치)
-            // posNorm이 1.0으로 포화되는 경우가 많으므로 cost 가중치를 높임
-            func mixedScore(cost: Float, posNorm: CGFloat) -> CGFloat {
-                let w1: CGFloat = 0.7  // cost 가중치 (권장: 0.7~0.8)
-                let w2: CGFloat = 0.3  // posNorm 가중치
-                return w1 * CGFloat(cost) + w2 * posNorm
-            }
-
-            // 저품질 얼굴별로 그룹화하여 가장 가까운 슬롯에 매칭 시도
-            var lowQualityByFace: [Int: [MatchCandidate]] = [:]
-            for candidate in lowQualityCandidates {
-                guard !usedFaces.contains(candidate.faceIdx) else { continue }
-                lowQualityByFace[candidate.faceIdx, default: []].append(candidate)
-            }
-
-            // 결정성 보장 + 매칭 품질: mixedScore가 낮은 face부터 처리 (6-1)
-            // mixedScore = 0.7*cost + 0.3*posNorm (posNorm 포화 시 cost로 변별)
-            let sortedFaceIds = lowQualityByFace.keys.sorted { faceA, faceB in
-                let bestA = lowQualityByFace[faceA]?
-                    .filter { !usedSlots.contains($0.slotID) }
-                    .min(by: { mixedScore(cost: $0.cost, posNorm: $0.posDistNorm)
-                             < mixedScore(cost: $1.cost, posNorm: $1.posDistNorm) })
-                let bestB = lowQualityByFace[faceB]?
-                    .filter { !usedSlots.contains($0.slotID) }
-                    .min(by: { mixedScore(cost: $0.cost, posNorm: $0.posDistNorm)
-                             < mixedScore(cost: $1.cost, posNorm: $1.posDistNorm) })
-                // mixedScore로 비교, 같으면 faceIdx로 tie-break (결정성)
-                let scoreA = bestA.map { mixedScore(cost: $0.cost, posNorm: $0.posDistNorm) } ?? 1.0
-                let scoreB = bestB.map { mixedScore(cost: $0.cost, posNorm: $0.posDistNorm) } ?? 1.0
-                if scoreA != scoreB { return scoreA < scoreB }
-                return faceA < faceB
-            }
-
-            for faceIdx in sortedFaceIds {
-                guard let candidates = lowQualityByFace[faceIdx],
-                      !usedFaces.contains(faceIdx) else { continue }
-
-                // 위치 기준으로 정렬 (가장 가까운 슬롯 우선)
-                let sortedByPos = candidates
-                    .filter { !usedSlots.contains($0.slotID) }
-                    .sorted { $0.posDistNorm < $1.posDistNorm }
-
-                guard let bestByPos = sortedByPos.first else { continue }
-
-                let cost = bestByPos.cost
-                let posNorm = bestByPos.posDistNorm
-
-                // 교차 검증: 위치가 가깝고(25%) SFace cost가 상한선(0.80) 이하면 매칭
-                if posNorm <= lowQualityPosLimit && cost < lowQualityCostLimit {
-                    usedFaces.insert(faceIdx)
-                    usedSlots.insert(bestByPos.slotID)
-                    cachedFaces.append(CachedFace(
-                        boundingBox: bestByPos.boundingBox,
-                        personIndex: bestByPos.slotID,
-                        isValidSlot: false,
-                        sfaceCost: cost
-                    ))
-
-                    // Logger.similarPhoto.debug("[PersonMatch] \(shortID) LQ 매칭: face[\(faceIdx)]→slot\(bestByPos.slotID) cost=\(String(format: "%.3f", cost)) pos=\(String(format: "%.3f", posNorm)) norm=\(String(format: "%.1f", bestByPos.norm))")
-
-                    // 위치만 갱신 (저품질 임베딩으로 슬롯 임베딩 갱신 X, norm 0 전달)
-                    updateSlotIfBetter(slotID: bestByPos.slotID, embedding: [], norm: 0, center: bestByPos.center, boundingBox: bestByPos.boundingBox)
-                } else {
-                    // Logger.similarPhoto.debug("[PersonMatch] \(shortID) LQ 거부: face[\(faceIdx)]↛slot\(bestByPos.slotID) cost=\(String(format: "%.3f", cost)) pos=\(String(format: "%.3f", posNorm)) norm=\(String(format: "%.1f", bestByPos.norm)) (limit: pos≤\(String(format: "%.2f", lowQualityPosLimit)) cost<\(String(format: "%.2f", lowQualityCostLimit)))")
-                }
-            }
-
-            // === Step 6: 신규 슬롯 등록 (저품질 필터 적용) ===
-            // 결정성 보장: faceIdx 정렬 순서로 처리
-            for faceIdx in faceEmbeddings.keys.sorted() {
-                guard let embedding = faceEmbeddings[faceIdx],
-                      !usedFaces.contains(faceIdx) else { continue }
-                guard activeSlots.count < maxSlots else {
-                    continue
-                }
-                guard let data = faceData[faceIdx] else { continue }
-
-                // norm 계산
-                let norm = faceNorms[faceIdx] ?? sqrt(embedding.reduce(0) { $0 + $1 * $1 })
-
-                // 저품질 얼굴은 신규 슬롯 생성 금지
-                if norm < minEmbeddingNorm {
-                    // Logger.similarPhoto.debug("[PersonMatch] \(shortID) 슬롯거부: face[\(faceIdx)] norm=\(String(format: "%.1f", norm))<\(String(format: "%.1f", self.minEmbeddingNorm))")
-                    continue
-                }
-
-                // 신규 슬롯 생성
-                let slot = PersonSlot(
-                    id: nextSlotID,
-                    embedding: embedding,
-                    norm: norm,
-                    center: data.center,
-                    boundingBox: data.boundingBox
-                )
-                activeSlots.append(slot)
-
-                usedFaces.insert(faceIdx)
-                cachedFaces.append(CachedFace(
-                    boundingBox: data.boundingBox,
-                    personIndex: nextSlotID,
-                    isValidSlot: false
-                ))
-
-                nextSlotID += 1
-            }
-
-            // === Step 7: Vision Fallback 얼굴 위치 기반 매칭 ===
-            // 임베딩 없는 얼굴 (Vision fallback)은 위치만으로 기존 슬롯과 매칭 시도
-            // 조건: posNorm < 0.10 (매우 엄격), 신규 슬롯 생성 안 함
-            let visionFallbackPosLimit: CGFloat = 0.10
-
-            // 결정성 보장: faceIdx 정렬 순서로 처리
-            for faceIdx in faceData.keys.sorted() {
-                guard let data = faceData[faceIdx] else { continue }
-                // 이미 매칭된 얼굴 스킵
-                guard !usedFaces.contains(faceIdx) else { continue }
-                // 임베딩 있는 얼굴 스킵 (이미 위에서 처리됨)
-                guard faceEmbeddings[faceIdx] == nil else { continue }
-
-                // 가장 가까운 슬롯 찾기
-                var bestSlot: (id: Int, posNorm: CGFloat)? = nil
-                for slot in activeSlots {
-                    guard !usedSlots.contains(slot.id) else { continue }
-
-                    let dx = data.center.x - slot.center.x
-                    let dy = data.center.y - slot.center.y
-                    let posNorm = sqrt(dx * dx + dy * dy) / sqrt2
-
-                    if posNorm < visionFallbackPosLimit {
-                        if bestSlot == nil || posNorm < bestSlot!.posNorm {
-                            bestSlot = (id: slot.id, posNorm: posNorm)
-                        }
-                    }
-                }
-
-                // 매칭 성공
-                if let match = bestSlot {
-                    usedFaces.insert(faceIdx)
-                    usedSlots.insert(match.id)
-                    cachedFaces.append(CachedFace(
-                        boundingBox: data.boundingBox,
-                        personIndex: match.id,
-                        isValidSlot: false
-                    ))
-                    // 위치만 갱신 (임베딩 없으므로 norm=0)
-                    updateSlotIfBetter(slotID: match.id, embedding: [], norm: 0, center: data.center, boundingBox: data.boundingBox)
-                }
-            }
-
-            // === 사진별 매칭 요약 로그 ===
-            let totalFaces = faceData.count
-            let matchedCount = usedFaces.count
-            let unmatchedFaces = faceData.keys.sorted().filter { !usedFaces.contains($0) }
-            if !unmatchedFaces.isEmpty {
-                let unmatchedInfo = unmatchedFaces.map { idx -> String in
-                    let norm = faceNorms[idx] ?? 0
-                    return "face[\(idx)](norm=\(String(format: "%.1f", norm)))"
-                }.joined(separator: ", ")
-                _ = unmatchedInfo  // 주석 처리된 디버그 로그에서 사용 — 로그 복원 시 제거
-                // Logger.similarPhoto.debug("[PersonMatch] \(shortID): \(totalFaces)개 감지, \(matchedCount)개 매칭, 미매칭: \(unmatchedInfo)")
-            }
-            _ = (totalFaces, matchedCount)  // 주석 처리된 디버그 로그에서 사용 — 로그 복원 시 제거
-
-            perfMatchTotal += (CFAbsoluteTimeGetCurrent() - perfMatchStart) * 1000
-
-            result[assetID] = cachedFaces
-        }
-
-        // 성능 측정 요약 로그 (얼굴이 있는 그룹만 유의미)
-        let perfGroupTotal = (CFAbsoluteTimeGetCurrent() - perfGroupStart) * 1000
-        if perfFaceCount > 0 {
-            Logger.similarPhoto.debug("[Perf] assignPerson: \(assetIDs.count)장, \(perfFaceCount)faces — Load:\(String(format: "%.0f", perfLoadTotal))ms YuNet:\(String(format: "%.0f", perfYunetTotal))ms SFace:\(String(format: "%.0f", perfSfaceTotal))ms Match:\(String(format: "%.0f", perfMatchTotal))ms Total:\(String(format: "%.0f", perfGroupTotal))ms")
-        }
-
-        return result
     }
 
     // MARK: - Private Methods - UI
@@ -1182,6 +807,8 @@ final class SimilarityAnalysisQueue {
         groupIDs: [String],
         analyzedAssetIDs: [String]
     ) {
+        // 격리 인스턴스(FaceScan 등)에서는 글로벌 notification 억제
+        guard self === SimilarityAnalysisQueue.shared else { return }
         DispatchQueue.main.async {
             NotificationCenter.default.post(
                 name: .similarPhotoAnalysisComplete,
@@ -1245,4 +872,179 @@ final class SimilarityAnalysisQueue {
     deinit {
         NotificationCenter.default.removeObserver(self)
     }
+
+    // MARK: - Debug Helpers
+
+    #if DEBUG
+
+    // MARK: - 그룹 진단: 파이프라인 추적 (로그 3)
+
+    /// 특정 멤버들이 격리 분석에서 어느 단계에서 탈락하는지 추적합니다.
+    ///
+    /// 파이프라인 단계:
+    /// 1. fetchPhotos → 분석 대상 사진 추출
+    /// 2. generateFeaturePrints → FP 생성
+    /// 3. formGroups → rawGroups 형성 (인접 FP 거리)
+    /// 4. assignPersonIndicesForGroup → 얼굴 감지 + 인물 매칭
+    /// 5. validSlots 계산 → 슬롯별 사진 수 검증
+    /// 6. validMembers 필터 → 유효 슬롯 얼굴 보유 사진만
+    ///
+    /// - Parameters:
+    ///   - targetMembers: 진단 대상 그룹의 멤버 assetID 집합
+    ///   - range: 분석 범위 (Grid fetchResult 기준)
+    ///   - fetchResult: Grid fetchResult (ascending)
+    /// - Returns: 파이프라인 각 단계의 상세 추적 결과
+    struct PipelineTrace {
+        /// 분석 범위
+        let range: ClosedRange<Int>
+        /// 분석 투입 사진 수
+        let analyzedPhotoCount: Int
+        /// rawGroups 총 수 (formGroups 결과)
+        let rawGroupCount: Int
+        /// 타깃 멤버를 포함하는 rawGroup (없으면 nil)
+        let targetRawGroup: [String]?
+        /// 멤버별 얼굴 감지 수
+        let faceCountPerMember: [String: Int]
+        /// personIndex별 등장 사진 수
+        let slotPhotoCount: [Int: Int]
+        /// 유효 슬롯 (minPhotosPerSlot 이상)
+        let validSlots: Set<Int>
+        /// 유효 멤버 (유효 슬롯 얼굴 보유)
+        let validMembers: [String]
+        /// 탈락 멤버
+        let excludedMembers: [String]
+        /// 판정 결과
+        let result: String
+        /// 판정 사유
+        let rejectionReason: String?
+    }
+
+    func debugPipelineTrace(
+        targetMembers: Set<String>,
+        range: ClosedRange<Int>,
+        fetchResult: PHFetchResult<PHAsset>
+    ) async -> PipelineTrace {
+        // Step 1: 사진 추출
+        let photos = fetchPhotos(in: range, fetchResult: fetchResult)
+        let photoIDs = photos.map(\.localIdentifier)
+
+        // Step 2: FP 생성
+        let (featurePrints, _) = await matchingEngine.generateFeaturePrints(for: photos)
+
+        // Step 3: rawGroups 형성
+        let rawGroups = analyzer.formGroups(
+            featurePrints: featurePrints,
+            photoIDs: photoIDs,
+            threshold: SimilarityConstants.similarityThreshold
+        )
+
+        // 타깃 멤버를 포함하는 rawGroup 찾기
+        var targetRawGroup: [String]? = nil
+        for group in rawGroups {
+            let groupSet = Set(group)
+            if !groupSet.isDisjoint(with: targetMembers) {
+                targetRawGroup = group
+                break
+            }
+        }
+
+        // rawGroup에 없으면 여기서 탈락
+        guard let rawGroup = targetRawGroup else {
+            return PipelineTrace(
+                range: range,
+                analyzedPhotoCount: photos.count,
+                rawGroupCount: rawGroups.count,
+                targetRawGroup: nil,
+                faceCountPerMember: [:],
+                slotPhotoCount: [:],
+                validSlots: [],
+                validMembers: [],
+                excludedMembers: Array(targetMembers),
+                result: "rejected",
+                rejectionReason: "notInRawGroups — FP 인접 거리에서 그룹 미형성"
+            )
+        }
+
+        // Step 4: 얼굴 감지 + 인물 매칭
+        let groupPhotos = photos.filter { rawGroup.contains($0.localIdentifier) }
+        let photoFacesMap = await matchingEngine.assignPersonIndicesForGroup(
+            assetIDs: rawGroup,
+            photos: groupPhotos
+        )
+
+        // 멤버별 얼굴 수
+        let faceCountPerMember = rawGroup.reduce(into: [String: Int]()) { dict, id in
+            dict[id] = photoFacesMap[id]?.count ?? 0
+        }
+
+        // Step 5: 슬롯 계산
+        var slotPhotoCountMap: [Int: Set<String>] = [:]
+        for (assetID, faces) in photoFacesMap {
+            for face in faces {
+                slotPhotoCountMap[face.personIndex, default: []].insert(assetID)
+            }
+        }
+
+        let validSlots = Set(slotPhotoCountMap.filter {
+            $0.value.count >= SimilarityConstants.minPhotosPerSlot
+        }.keys)
+        let slotCounts = slotPhotoCountMap.mapValues { $0.count }
+
+        // validSlots 미달 탈락
+        guard validSlots.count >= SimilarityConstants.minValidSlots else {
+            return PipelineTrace(
+                range: range,
+                analyzedPhotoCount: photos.count,
+                rawGroupCount: rawGroups.count,
+                targetRawGroup: rawGroup,
+                faceCountPerMember: faceCountPerMember,
+                slotPhotoCount: slotCounts,
+                validSlots: validSlots,
+                validMembers: [],
+                excludedMembers: rawGroup,
+                result: "rejected",
+                rejectionReason: "noValidSlots — 유효 슬롯 \(validSlots.count)개 < 최소 \(SimilarityConstants.minValidSlots)개"
+            )
+        }
+
+        // Step 6: 유효 멤버 필터
+        let validMembers = rawGroup.filter { assetID in
+            guard let faces = photoFacesMap[assetID] else { return false }
+            return faces.contains { validSlots.contains($0.personIndex) }
+        }
+        let excludedMembers = rawGroup.filter { !validMembers.contains($0) }
+
+        // 멤버 수 미달 탈락
+        guard validMembers.count >= SimilarityConstants.minGroupSize else {
+            return PipelineTrace(
+                range: range,
+                analyzedPhotoCount: photos.count,
+                rawGroupCount: rawGroups.count,
+                targetRawGroup: rawGroup,
+                faceCountPerMember: faceCountPerMember,
+                slotPhotoCount: slotCounts,
+                validSlots: validSlots,
+                validMembers: validMembers,
+                excludedMembers: excludedMembers,
+                result: "rejected",
+                rejectionReason: "validMembersTooSmall — 유효 멤버 \(validMembers.count)장 < 최소 \(SimilarityConstants.minGroupSize)장"
+            )
+        }
+
+        // 통과
+        return PipelineTrace(
+            range: range,
+            analyzedPhotoCount: photos.count,
+            rawGroupCount: rawGroups.count,
+            targetRawGroup: rawGroup,
+            faceCountPerMember: faceCountPerMember,
+            slotPhotoCount: slotCounts,
+            validSlots: validSlots,
+            validMembers: validMembers,
+            excludedMembers: excludedMembers,
+            result: "accepted",
+            rejectionReason: nil
+        )
+    }
+    #endif
 }

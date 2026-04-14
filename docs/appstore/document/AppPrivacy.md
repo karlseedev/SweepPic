@@ -146,7 +146,7 @@
 ## 참고사항
 
 - **ATT 거부 시**: AdMob은 contextual 광고만 표시, IDFA 미수집 → Tracking 데이터 없음
-- **Plus 구독자**: 광고 미표시, AdMob SDK 비활성 → 광고 관련 데이터 수집 감소
+- **Pro 구독자**: 광고 미표시, AdMob SDK 비활성 → 광고 관련 데이터 수집 감소
 - **Grace Period 중**: 광고 미표시 (첫 3일)
 - **옵트아웃**: TelemetryDeck 분석 옵트아웃 지원 (UserDefaults)
 - **데이터 보관**: Supabase 365일 후 자동 파기 (pg_cron)

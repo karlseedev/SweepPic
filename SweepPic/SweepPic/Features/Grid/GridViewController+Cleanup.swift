@@ -35,41 +35,49 @@ extension GridViewController {
         } else {
             setupFloatingCleanupButton()
         }
+
+        // 선택모드 복귀 후 버튼 재생성 시 C 인터셉트 재설정
+        enableCCleanupButtonIntercept()
     }
 
-    /// iOS 26+ 시스템 네비바에 정리 버튼 추가
+    /// iOS 26+ 시스템 네비바에 간편정리 + 전체메뉴 버튼 추가
     @available(iOS 26.0, *)
     private func setupSystemCleanupButton() {
-        let cleanupItem = UIBarButtonItem(
-            image: UIImage(systemName: "wand.and.stars"),
-            style: .plain,
-            target: self,
-            action: #selector(cleanupButtonTapped)
-        )
-        cleanupItem.tintColor = .systemBlue
-        let selectItem = UIBarButtonItem(
-            title: "선택",
-            style: .plain,
-            target: self,
-            action: #selector(selectButtonTapped)
-        )
-        // 전체 메뉴 버튼 (최우측, 탭 시 풀다운 메뉴)
-        // 표준 UIBarButtonItem 사용 — iOS 26 Liquid Glass 스타일 자동 적용
-        // T053: "프리미엄 ▸" / "고객센터 ▸" 서브메뉴로 재구성 (FR-043)
-        let menuItem = UIBarButtonItem(
-            image: UIImage(systemName: "ellipsis"),
+        // 간편정리 버튼 — 탭 시 UIMenu 풀다운 (인물사진 비교정리 / 저품질사진 자동정리)
+        let cleanupMenuItem = UIBarButtonItem(
+            title: String(localized: "cleanup.title"),
+            image: nil,
+            primaryAction: nil,
             menu: UIMenu(children: [
-                UIAction(title: "자동정리", image: UIImage(systemName: "wand.and.stars")) { _ in },
-                PremiumMenuViewController.makeMenu(from: self),
-                CustomerServiceViewController.makeMenu(from: self),
-                self.makeCoachMarkReplayMenu(),
-                self.makeDebugResetMenu(),
-                self.makeDebugAdTestMenu(),
+                UIAction(title: String(localized: "cleanup.faceComparison"),
+                         image: UIImage(systemName: "person.2.crop.square.stack")) { [weak self] _ in
+                    self?.faceScanButtonTapped()
+                },
+                UIAction(title: String(localized: "cleanup.autoLowQuality"),
+                         image: UIImage(systemName: "wand.and.stars")) { [weak self] _ in
+                    self?.cleanupButtonTapped()
+                },
             ])
         )
 
-        // [정리] [선택] [메뉴] 순서 (배열 첫 번째가 최우측)
-        navigationItem.rightBarButtonItems = [menuItem, selectItem, cleanupItem]
+        // 전체메뉴 버튼 (최우측, 탭 시 풀다운 메뉴)
+        // 표준 UIBarButtonItem 사용 — iOS 26 Liquid Glass 스타일 자동 적용
+        let menuItem = UIBarButtonItem(
+            image: UIImage(systemName: "ellipsis"),
+            menu: UIMenu(children: [
+                PremiumMenuViewController.makeMenu(from: self),
+                ReferralMenuViewController.makeMenu(from: self),
+                CustomerServiceViewController.makeMenu(from: self),
+                self.makeCoachMarkReplayMenu(),
+                UIAction(title: String(localized: "cleanup.selectMode"),
+                         image: UIImage(systemName: "checkmark.circle")) { [weak self] _ in
+                    self?.selectButtonTapped()
+                },
+            ])
+        )
+
+        // [간편정리] [전체메뉴] 순서 (배열 첫 번째가 최우측)
+        navigationItem.rightBarButtonItems = [menuItem, cleanupMenuItem]
 
         // 버튼 활성화 상태 초기화
         updateCleanupButtonState()
@@ -78,35 +86,38 @@ extension GridViewController {
         updatePaymentIssueBadge()
     }
 
-    /// iOS 16~25 FloatingUI에 정리 버튼 추가
+    /// iOS 16~25 FloatingUI에 간편정리 + 전체메뉴 버튼 추가
     func setupFloatingCleanupButton() {
         guard let tabBarController = tabBarController as? TabBarController,
               let overlay = tabBarController.floatingOverlay else {
             return
         }
 
-        // 기존 Select 버튼 대신 [Select] [정리] 두 개 버튼으로 변경
-        overlay.titleBar.setTwoRightButtons(
-            firstTitle: "선택",
-            firstColor: .white,
-            firstAction: { [weak self] in
-                self?.selectButtonTapped()
-            },
-            secondIcon: "wand.and.stars",
-            secondAction: { [weak self] in
-                self?.cleanupButtonTapped()
-            }
+        // 간편정리 메뉴 버튼 — 탭 시 UIMenu 풀다운
+        overlay.titleBar.setRightMenuButton(
+            title: String(localized: "cleanup.title"),
+            menu: UIMenu(children: [
+                UIAction(title: String(localized: "cleanup.faceComparison"),
+                         image: UIImage(systemName: "person.2.crop.square.stack")) { [weak self] _ in
+                    self?.faceScanButtonTapped()
+                },
+                UIAction(title: String(localized: "cleanup.autoLowQuality"),
+                         image: UIImage(systemName: "wand.and.stars")) { [weak self] _ in
+                    self?.cleanupButtonTapped()
+                },
+            ])
         )
 
-        // 메뉴 버튼 (최우측, 풀다운 메뉴)
-        // T053: "프리미엄 ▸" / "고객센터 ▸" 서브메뉴로 재구성 (FR-043)
+        // 전체메뉴 버튼 (최우측, 풀다운 메뉴)
         overlay.titleBar.showMenuButton(menu: UIMenu(children: [
-            UIAction(title: "자동정리", image: UIImage(systemName: "wand.and.stars")) { _ in },
             PremiumMenuViewController.makeMenu(from: self),
+            ReferralMenuViewController.makeMenu(from: self),
             CustomerServiceViewController.makeMenu(from: self),
             self.makeCoachMarkReplayMenu(),
-            self.makeDebugResetMenu(),
-            self.makeDebugAdTestMenu(),
+            UIAction(title: String(localized: "cleanup.selectMode"),
+                     image: UIImage(systemName: "checkmark.circle")) { [weak self] _ in
+                self?.selectButtonTapped()
+            },
         ]))
 
         // 버튼 활성화 상태 초기화
@@ -190,29 +201,25 @@ extension GridViewController {
         }
     }
 
-    /// 정리 버튼 활성화 상태 업데이트
+    /// 간편정리 버튼 활성화 상태 업데이트
     ///
-    /// 사진이 있을 때만 버튼 활성화
+    /// 사진이 있을 때만 간편정리 버튼 활성화 (전체메뉴는 항상 활성)
     func updateCleanupButtonState() {
         let hasPhotos = gridDataSource.assetCount > 0
 
         if #available(iOS 26.0, *) {
-            // 시스템 네비바: [메뉴, 선택, 정리] 순서
-            if let items = navigationItem.rightBarButtonItems, items.count >= 3 {
-                // items[0] = 메뉴 (항상 활성화)
-                items[1].isEnabled = hasPhotos  // 선택
-                items[2].isEnabled = hasPhotos  // 정리
+            // 시스템 네비바: [전체메뉴, 간편정리] 순서
+            if let items = navigationItem.rightBarButtonItems, items.count >= 2 {
+                // items[0] = 전체메뉴 (항상 활성화)
+                items[1].isEnabled = hasPhotos  // 간편정리
             }
         } else {
-            // FloatingUI
+            // FloatingUI: 간편정리 메뉴 버튼만 활성화/비활성화
             guard let tabBarController = tabBarController as? TabBarController,
                   let overlay = tabBarController.floatingOverlay else {
                 return
             }
-            overlay.titleBar.setTwoRightButtonsEnabled(
-                firstEnabled: hasPhotos,
-                secondEnabled: hasPhotos
-            )
+            overlay.titleBar.setRightMenuButtonEnabled(hasPhotos)
         }
     }
 
@@ -255,8 +262,8 @@ extension GridViewController {
         // [Analytics] 정리 흐름 추적 시작
         cleanupTracker = CleanupFlowTracker()
 
-        // 1. 삭제대기함 비어있는지 확인
-        if !CleanupService.shared.isTrashEmpty() {
+        // 1. 삭제대기함 비어있는지 확인 (Pro 멤버십은 제한 해제)
+        if !SubscriptionStore.shared.isProUser && !CleanupService.shared.isTrashEmpty() {
             cleanupTracker?.trashWarningShown = true
             showTrashNotEmptyAlert()
             return
@@ -271,19 +278,19 @@ extension GridViewController {
     /// 삭제대기함 비어있지 않음 알림 표시
     private func showTrashNotEmptyAlert() {
         let alert = UIAlertController(
-            title: "저품질 사진 자동 정리",
-            message: "저품질 사진 정리 기능을 사용하려면\n삭제대기함을 먼저 비워주세요\n\n-구독 시 제한 해제-",
+            title: String(localized: "cleanup.autoLowQuality"),
+            message: String(localized: "cleanup.trashNotEmpty.message"),
             preferredStyle: .alert
         )
 
-        alert.addAction(UIAlertAction(title: "삭제대기함 보기", style: .default) { [weak self] _ in
+        alert.addAction(UIAlertAction(title: String(localized: "cleanup.viewTrash"), style: .default) { [weak self] _ in
             // [Analytics] 삭제대기함 경고에서 이탈 (삭제대기함 보기)
             self?.cleanupTracker?.reachedStage = .trashWarningExit
             self?.sendCleanupTrackerAndClear()
             self?.navigateToTrash()
         })
 
-        alert.addAction(UIAlertAction(title: "취소", style: .cancel) { [weak self] _ in
+        alert.addAction(UIAlertAction(title: String(localized: "common.cancel"), style: .cancel) { [weak self] _ in
             // [Analytics] 삭제대기함 경고에서 이탈 (취소)
             self?.cleanupTracker?.reachedStage = .trashWarningExit
             self?.sendCleanupTrackerAndClear()
@@ -303,12 +310,12 @@ extension GridViewController {
     /// 정리 에러 표시
     private func showCleanupError(_ error: CleanupError) {
         let alert = UIAlertController(
-            title: "정리 실패",
+            title: String(localized: "cleanup.failed"),
             message: error.localizedDescription,
             preferredStyle: .alert
         )
 
-        alert.addAction(UIAlertAction(title: "확인", style: .default))
+        alert.addAction(UIAlertAction(title: String(localized: "common.ok"), style: .default))
 
         present(alert, animated: true)
     }
@@ -551,17 +558,17 @@ extension GridViewController {
     private func showNoPreviewResultAlert(method: CleanupMethod) {
         let message: String
         if case .byYear(let year, _) = method {
-            message = "\(year)년에서 정리할 저품질 사진을 찾지 못했습니다."
+            message = String(localized: "cleanup.noLowQualityInYear \(String(year))")
         } else {
-            message = "정리할 저품질 사진을 찾지 못했습니다."
+            message = String(localized: "cleanup.noLowQuality")
         }
 
         let alert = UIAlertController(
-            title: "정리할 사진 없음",
+            title: String(localized: "cleanup.noPhotos"),
             message: message,
             preferredStyle: .alert
         )
-        alert.addAction(UIAlertAction(title: "확인", style: .default))
+        alert.addAction(UIAlertAction(title: String(localized: "common.ok"), style: .default))
         present(alert, animated: true)
     }
 }
@@ -574,26 +581,26 @@ extension GridViewController {
     /// 각 항목 탭 시 CoachMarkReplay 확장의 재생 함수를 호출
     func makeCoachMarkReplayMenu() -> UIMenu {
         UIMenu(
-            title: "설명 다시 보기",
+            title: String(localized: "menu.tutorialReplay"),
             image: UIImage(systemName: "arrow.counterclockwise"),
             children: [
-                UIAction(title: "그리드 스와이프 삭제") { [weak self] _ in
+                UIAction(title: String(localized: "menu.tutorialReplay.gridSwipe")) { [weak self] _ in
                     self?.replayCoachMarkA()
                 },
-                UIAction(title: "뷰어 스와이프 삭제") { [weak self] _ in
+                UIAction(title: String(localized: "menu.tutorialReplay.viewerSwipe")) { [weak self] _ in
                     self?.replayCoachMarkB()
                 },
-                UIAction(title: "유사 사진 얼굴 비교") { [weak self] _ in
+                UIAction(title: String(localized: "cleanup.faceComparison")) { [weak self] _ in
                     self?.replayCoachMarkC()
                 },
-                UIAction(title: "저품질 사진 정리") { [weak self] _ in
+                UIAction(title: String(localized: "cleanup.autoLowQuality")) { [weak self] _ in
                     self?.replayCoachMarkD()
                 },
-                UIAction(title: "삭제 시스템 안내") { [weak self] _ in
+                UIAction(title: String(localized: "menu.tutorialReplay.trashSystem")) { [weak self] _ in
                     self?.replayCoachMarkE1E2()
                 },
-                UIAction(title: "비우기 완료 안내") { [weak self] _ in
-                    self?.replayCoachMarkE3()
+                UIAction(title: String(localized: "menu.tutorialReplay.emptyComplete")) { [weak self] _ in
+                    self?.replayCoachMarkF()
                 },
             ]
         )
@@ -603,7 +610,7 @@ extension GridViewController {
     func makeDebugResetMenu() -> UIMenu {
         let remaining = UsageLimitStore.shared.remainingFreeDeletes
         let total = UsageLimitStore.shared.totalDailyCapacity
-        let isPlusUser = SubscriptionStore.shared.isPlusUser
+        let isProUser = SubscriptionStore.shared.isProUser
 
         return UIMenu(
             title: "(테스트)리셋",
@@ -618,7 +625,7 @@ extension GridViewController {
                     #endif
                     self?.setupCleanupButton()
                 },
-                UIAction(title: isPlusUser ? "구독 리셋 (현재 Plus)" : "구독 리셋 (현재 Free)") { [weak self] _ in
+                UIAction(title: isProUser ? "구독 리셋 (현재 Pro)" : "구독 리셋 (현재 Free)") { [weak self] _ in
                     #if DEBUG
                     SubscriptionStore.shared.debugResetToFree()
                     Logger.app.debug("GridVC+Cleanup: 디버그 구독 → Free 리셋")
@@ -626,10 +633,10 @@ extension GridViewController {
                     #endif
                     self?.setupCleanupButton()
                 },
-                UIAction(title: "구독 강제 Plus") { [weak self] _ in
+                UIAction(title: "구독 강제 Pro") { [weak self] _ in
                     #if DEBUG
-                    SubscriptionStore.shared.debugSetPlus()
-                    Logger.app.debug("GridVC+Cleanup: 디버그 구독 → Plus 설정")
+                    SubscriptionStore.shared.debugSetPro()
+                    Logger.app.debug("GridVC+Cleanup: 디버그 구독 → Pro 설정")
                     NotificationCenter.default.post(name: .debugMonetizationStateChanged, object: nil)
                     #endif
                     self?.setupCleanupButton()
@@ -641,6 +648,46 @@ extension GridViewController {
                     NotificationCenter.default.post(name: .debugMonetizationStateChanged, object: nil)
                     #endif
                     self?.setupCleanupButton()
+                },
+                UIAction(title: "해지 시뮬레이션 (Exit Survey 테스트)") { [weak self] _ in
+                    #if DEBUG
+                    // Pro + autoRenewEnabled: false 상태로 설정 (오버라이드 ON → refresh 스킵)
+                    SubscriptionStore.shared.debugSimulateCancellation()
+                    // 해지 감지 플래그 설정
+                    UserDefaults.standard.set(true, forKey: "pendingCancelCheck")
+                    UserDefaults.standard.set(true, forKey: "wasAutoRenewing")
+                    Logger.app.debug("GridVC+Cleanup: 해지 시뮬레이션 — 백그라운드→포그라운드 복귀 시 Exit Survey 표시")
+                    NotificationCenter.default.post(name: .debugMonetizationStateChanged, object: nil)
+                    #endif
+                    self?.setupCleanupButton()
+                    // 토스트로 안내
+                    if let window = self?.view.window {
+                        ToastView.show("앱을 백그라운드로 보냈다가 복귀하세요", in: window)
+                    }
+                },
+                UIAction(title: "온보딩 리셋") { [weak self] _ in
+                    #if DEBUG
+                    // 모든 CoachMarkType 리셋 — 신규 설치 상태로 초기화
+                    let allTypes: [CoachMarkType] = [
+                        .gridSwipeDelete,       // A
+                        .viewerSwipeDelete,     // B
+                        .similarPhoto,          // C
+                        .autoCleanup,           // D
+                        .firstDeleteGuide,      // E-1+E-2
+                        .trashRestore,          // E-3
+                        .firstEmpty,            // F
+                        .faceComparisonGuide,   // C-3
+                    ]
+                    allTypes.forEach { $0.resetShown() }
+                    // C 사전분석 + D 사전스캔 리셋
+                    self?.debugResetCPreScan()
+                    CoachMarkDPreScanner.shared.debugReset()
+                    // CoachMarkManager 플래그 리셋
+                    CoachMarkManager.shared.isAutoPopForC = false
+                    CoachMarkManager.shared.pendingCleanupHighlight = false
+                    CoachMarkManager.shared.pendingDAfterCComplete = false
+                    Logger.coachMark.notice("디버그: 온보딩 전체 초기화 완료 (\(allTypes.count)개 + 사전분석)")
+                    #endif
                 },
             ]
         )
@@ -703,4 +750,3 @@ extension GridViewController: PreviewGridViewControllerDelegate {
         }
     }
 }
-

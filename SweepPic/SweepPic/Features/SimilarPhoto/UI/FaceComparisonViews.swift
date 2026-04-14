@@ -67,7 +67,7 @@ final class FaceComparisonCell: UICollectionViewCell {
     /// 선택 오버레이
     private lazy var selectionOverlay: UIView = {
         let view = UIView()
-        view.backgroundColor = UIColor.systemBlue.withAlphaComponent(0.3)
+        view.backgroundColor = UIColor(red: 0.5, green: 0, blue: 0, alpha: 0.6)  // Maroon #800000 (메인 그리드 삭제 대기와 동일)
         view.isHidden = true
         view.translatesAutoresizingMaskIntoConstraints = false
         return view
@@ -77,7 +77,7 @@ final class FaceComparisonCell: UICollectionViewCell {
     private lazy var checkmarkView: UIImageView = {
         let iv = UIImageView()
         iv.image = UIImage(systemName: "checkmark.circle.fill")
-        iv.tintColor = .systemBlue
+        iv.tintColor = UIColor(red: 0.5, green: 0, blue: 0, alpha: 1)  // Maroon #800000
         iv.backgroundColor = .white
         iv.layer.cornerRadius = 12
         iv.clipsToBounds = true
@@ -98,6 +98,28 @@ final class FaceComparisonCell: UICollectionViewCell {
         label.translatesAutoresizingMaskIntoConstraints = false
         return label
     }()
+
+    #if DEBUG
+    /// 품질 정보 배경 (하단 반투명 딤드)
+    private lazy var qualityBackground: UIView = {
+        let view = UIView()
+        view.backgroundColor = UIColor.black.withAlphaComponent(0.7)
+        view.isHidden = true
+        view.translatesAutoresizingMaskIntoConstraints = false
+        return view
+    }()
+
+    /// 품질 정보 라벨 ("S 0.92\nN 8.5")
+    private lazy var qualityLabel: UILabel = {
+        let label = UILabel()
+        label.font = .monospacedDigitSystemFont(ofSize: 11, weight: .medium)
+        label.textColor = .white
+        label.numberOfLines = 2
+        label.textAlignment = .left
+        label.translatesAutoresizingMaskIntoConstraints = false
+        return label
+    }()
+    #endif
 
     // MARK: - Initialization
 
@@ -139,6 +161,20 @@ final class FaceComparisonCell: UICollectionViewCell {
             debugLabel.widthAnchor.constraint(greaterThanOrEqualToConstant: 28),
             debugLabel.heightAnchor.constraint(equalToConstant: 22)
         ])
+
+        #if DEBUG
+        // 품질 정보 오버레이 (하단)
+        contentView.addSubview(qualityBackground)
+        qualityBackground.addSubview(qualityLabel)
+        NSLayoutConstraint.activate([
+            qualityBackground.leadingAnchor.constraint(equalTo: contentView.leadingAnchor),
+            qualityBackground.trailingAnchor.constraint(equalTo: contentView.trailingAnchor),
+            qualityBackground.bottomAnchor.constraint(equalTo: contentView.bottomAnchor),
+            qualityBackground.heightAnchor.constraint(equalToConstant: 32),
+            qualityLabel.leadingAnchor.constraint(equalTo: qualityBackground.leadingAnchor, constant: 6),
+            qualityLabel.centerYAnchor.constraint(equalTo: qualityBackground.centerYAnchor),
+        ])
+        #endif
     }
 
     // MARK: - Configuration
@@ -194,6 +230,19 @@ final class FaceComparisonCell: UICollectionViewCell {
         checkmarkView.isHidden = !selected
     }
 
+    #if DEBUG
+    /// 품질 정보 표시 (YuNet score + SFace norm)
+    /// - Parameters:
+    ///   - score: YuNet 감지 신뢰도 (0~1)
+    ///   - norm: SFace 임베딩 L2 norm
+    func setQualityInfo(score: Float?, norm: Float?) {
+        let scoreText = score.map { String(format: "S %.2f (>0.75)", $0) } ?? "S -"
+        let normText = norm.map { String(format: "N %.1f (>7.0)", $0) } ?? "N -"
+        qualityLabel.text = "\(scoreText)\n\(normText)"
+        qualityBackground.isHidden = false
+    }
+    #endif
+
     // MARK: - Frame Access
 
     /// Pic 라벨의 window 좌표 frame (C-3 포커스 애니메이션용)
@@ -212,6 +261,10 @@ final class FaceComparisonCell: UICollectionViewCell {
         setSelected(false)
         debugLabel.attributedText = nil
         debugLabel.isHidden = true
+        #if DEBUG
+        qualityLabel.text = nil
+        qualityBackground.isHidden = true
+        #endif
     }
 }
 
@@ -295,6 +348,8 @@ final class FaceComparisonTitleBar: UIView {
         label.font = .systemFont(ofSize: 17, weight: .semibold)
         label.textColor = .white
         label.textAlignment = .center
+        label.numberOfLines = 1
+        label.lineBreakMode = .byTruncatingTail
         label.translatesAutoresizingMaskIntoConstraints = false
         return label
     }()
@@ -352,8 +407,10 @@ final class FaceComparisonTitleBar: UIView {
             closeButton.heightAnchor.constraint(equalToConstant: 44),
 
             // titleLabel: 중앙 정렬
+            titleLabel.leadingAnchor.constraint(greaterThanOrEqualTo: closeButton.trailingAnchor, constant: 8),
             titleLabel.centerXAnchor.constraint(equalTo: contentView.centerXAnchor),
             titleLabel.centerYAnchor.constraint(equalTo: contentView.centerYAnchor),
+            titleLabel.trailingAnchor.constraint(lessThanOrEqualTo: cycleButton.leadingAnchor, constant: -8),
 
             // cycleButton: 우측 정렬, 44×44 (intrinsicContentSize)
             cycleButton.trailingAnchor.constraint(equalTo: contentView.trailingAnchor),
@@ -374,6 +431,10 @@ final class FaceComparisonTitleBar: UIView {
 
     func setTitle(_ title: String) {
         titleLabel.text = title
+    }
+
+    func setAttributedTitle(_ title: NSAttributedString) {
+        titleLabel.attributedText = title
     }
 
     /// 순환 버튼 활성화 상태 설정

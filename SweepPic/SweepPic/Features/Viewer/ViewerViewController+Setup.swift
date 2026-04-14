@@ -51,11 +51,7 @@ extension ViewerViewController {
             setupBackButton()
         }
 
-        // 얼굴 감지 디버그 버튼 (DEBUG 빌드만)
-        #if DEBUG
-        setupFaceDebugButton()
-        setupAssetIDLabel()
-        #endif
+        // 뷰어 디버그 UI(fd 버튼, asset ID 라벨)는 일단 비노출 유지
 
     }
 
@@ -118,19 +114,19 @@ extension ViewerViewController {
         setupSimilarPhotoTitleLabel()
     }
 
-    /// "유사사진정리 가능" 커스텀 타이틀 라벨 설정
+    /// "인물사진 비교정리 가능" 커스텀 타이틀 라벨 설정
     /// iOS 16~25: setupTopGradientAndTitle()에서 딤드와 함께 호출 → view.addSubview
     /// iOS 26: navigationItem.titleView에 설정 → 네비바 버튼과 자동 수평 정렬
     func setupSimilarPhotoTitleLabel() {
         let titleLabel = UILabel()
-        // "유사사진정리"(레귤러/흰색) + " 가능"(볼드/밝은 노란색)
+        // "인물사진 비교정리"(레귤러/흰색) + " 가능"(볼드/밝은 노란색)
         let attr = NSMutableAttributedString()
         attr.append(NSAttributedString(
-            string: "유사사진정리 ",
+            string: String(localized: "viewer.faceCompare.title"),
             attributes: [.font: UIFont.systemFont(ofSize: 17, weight: .regular), .foregroundColor: UIColor.white]
         ))
         attr.append(NSAttributedString(
-            string: "가능",
+            string: String(localized: "viewer.faceCompare.available"),
             attributes: [.font: UIFont.systemFont(ofSize: 17, weight: .heavy), .foregroundColor: UIColor(red: 1.0, green: 234.0/255.0, blue: 0, alpha: 1.0)]
         ))
         titleLabel.attributedText = attr

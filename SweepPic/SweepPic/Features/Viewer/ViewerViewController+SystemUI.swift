@@ -93,7 +93,7 @@ extension ViewerViewController {
         let flexSpace = UIBarButtonItem(systemItem: .flexibleSpace)
 
         let previousItem = UIBarButtonItem(
-            title: "이전 사진",
+            title: String(localized: "viewer.previous"),
             primaryAction: UIAction { [weak self] _ in
                 self?.previousPhotoButtonTapped()
             }
@@ -102,7 +102,7 @@ extension ViewerViewController {
         toolbarPreviousItem = previousItem
 
         let deleteItem = UIBarButtonItem(
-            title: "삭제하기",
+            title: String(localized: "viewer.delete"),
             primaryAction: UIAction { [weak self] _ in
                 self?.deleteButtonTapped()
             }
@@ -121,7 +121,7 @@ extension ViewerViewController {
 
         // 복구 버튼
         let restoreItem = UIBarButtonItem(
-            title: "복구하기",
+            title: String(localized: "viewer.restore"),
             primaryAction: UIAction { [weak self] _ in
                 self?.restoreButtonTapped()
             }
@@ -131,7 +131,7 @@ extension ViewerViewController {
 
         // 최종 삭제 버튼
         let permanentDeleteItem = UIBarButtonItem(
-            title: "최종 삭제",
+            title: String(localized: "viewer.erase"),
             primaryAction: UIAction { [weak self] _ in
                 self?.permanentDeleteButtonTapped()
             }
@@ -148,7 +148,7 @@ extension ViewerViewController {
         let flexSpace = UIBarButtonItem(systemItem: .flexibleSpace)
 
         let excludeItem = UIBarButtonItem(
-            title: "저품질 목록에서 제외",
+            title: String(localized: "viewer.keepPhoto"),
             primaryAction: UIAction { [weak self] _ in
                 self?.excludeButtonTapped()
             }
@@ -173,7 +173,7 @@ extension ViewerViewController {
         if isTrashed {
             // 삭제대기함 사진: 이전 사진 + 복구
             let restoreItem = UIBarButtonItem(
-                title: "복구하기",
+                title: String(localized: "viewer.restore"),
                 primaryAction: UIAction { [weak self] _ in
                     self?.restoreButtonTapped()
                 }

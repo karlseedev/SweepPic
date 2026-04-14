@@ -6,7 +6,7 @@
 //  삭제대기함 상단에 표시
 //
 //  탭 시 상세 팝업 (한도 상태 + 광고 잔여 + "광고 보기" 버튼)
-//  Plus 시 미표시
+//  Pro 시 미표시
 //  accessibilityLabel 설정 (FR-057)
 //
 
@@ -60,11 +60,22 @@ final class UsageGaugeView: UIView {
     /// 타이틀 라벨: "오늘 삭제한도"
     private let titleLabel: UILabel = {
         let label = UILabel()
-        label.text = "무료 삭제 한도"
+        label.text = String(localized: "monetization.gauge.title")
         label.font = .systemFont(ofSize: 16, weight: .semibold)
         label.textColor = .white
         label.translatesAutoresizingMaskIntoConstraints = false
         return label
+    }()
+
+    /// 물음표 아이콘 — 탭하면 상세 팝업 (시각적 어포던스)
+    private let helpIcon: UIImageView = {
+        let config = UIImage.SymbolConfiguration(pointSize: 14, weight: .regular)
+        let image = UIImage(systemName: "questionmark.circle", withConfiguration: config)
+        let iv = UIImageView(image: image)
+        iv.tintColor = UIColor.white.withAlphaComponent(0.6)
+        iv.translatesAutoresizingMaskIntoConstraints = false
+        iv.contentMode = .scaleAspectFit
+        return iv
     }()
 
     /// 남은 장수 라벨: "N/M장 남음"
@@ -142,6 +153,7 @@ final class UsageGaugeView: UIView {
         cardContent.addSubview(trackView)
         trackView.addSubview(fillView)
         cardContent.addSubview(titleLabel)
+        cardContent.addSubview(helpIcon)
         cardContent.addSubview(countLabel)
 
         // Glass 뷰: 전체 영역 채움
@@ -183,6 +195,12 @@ final class UsageGaugeView: UIView {
             titleLabel.bottomAnchor.constraint(equalTo: cardContent.bottomAnchor, constant: -vPadding)
         ])
 
+        // 물음표 아이콘 — 타이틀 라벨 오른쪽, 수직 중앙 정렬
+        NSLayoutConstraint.activate([
+            helpIcon.leadingAnchor.constraint(equalTo: titleLabel.trailingAnchor, constant: 4),
+            helpIcon.centerYAnchor.constraint(equalTo: titleLabel.centerYAnchor)
+        ])
+
         // 카운트 라벨 (우측 하단)
         NSLayoutConstraint.activate([
             countLabel.topAnchor.constraint(equalTo: trackView.bottomAnchor, constant: 4),
@@ -219,7 +237,7 @@ final class UsageGaugeView: UIView {
         fillView.backgroundColor = .white
 
         // 라벨 업데이트
-        countLabel.text = "\(remaining)/\(total)장 남음"
+        countLabel.text = String(localized: "monetization.gauge.remaining \(remaining) \(total)")
 
         // 프로그레스 바 업데이트 (layoutIfNeeded 후 트랙 너비 기반)
         setNeedsLayout()
@@ -233,8 +251,8 @@ final class UsageGaugeView: UIView {
         }
 
         // 접근성 업데이트 (FR-057)
-        accessibilityLabel = "삭제 한도 게이지, \(total)장 중 \(remaining)장 남음"
-        accessibilityHint = "탭하면 한도 상세 정보를 볼 수 있습니다"
+        accessibilityLabel = String(localized: "monetization.gauge.a11y.label \(total) \(remaining)")
+        accessibilityHint = String(localized: "monetization.gauge.a11y.hint")
         isAccessibilityElement = true
     }
 }
@@ -251,17 +269,9 @@ final class UsageGaugeDetailPopup: UIViewController {
     var onWatchAd: (() -> Void)?
 
     /// "Plus로 무제한" 탭 시
-    var onPlusUpgrade: (() -> Void)?
+    var onProUpgrade: (() -> Void)?
 
     // MARK: - UI
-
-    /// 딤 배경 (터치 차단용, 투명)
-    private let dimView: UIView = {
-        let view = UIView()
-        view.backgroundColor = .clear
-        view.translatesAutoresizingMaskIntoConstraints = false
-        return view
-    }()
 
     /// 블러 팝업 카드 (게이트와 동일)
     private let cardView = BlurPopupCardView()
@@ -269,7 +279,7 @@ final class UsageGaugeDetailPopup: UIViewController {
     /// 제목 라벨 — 흰색 텍스트
     private let titleLabel: UILabel = {
         let label = UILabel()
-        label.text = "오늘의 삭제 한도"
+        label.text = String(localized: "monetization.gauge.title")
         label.font = .systemFont(ofSize: 22, weight: .semibold)
         label.textColor = .white
         label.textAlignment = .center
@@ -291,7 +301,7 @@ final class UsageGaugeDetailPopup: UIViewController {
     /// 광고 보기 버튼 — 반투명 흰색 배경 + 흰색 텍스트
     private let watchAdButton: UIButton = {
         let button = UIButton(type: .system)
-        button.setTitle("광고 보고 +10장 추가", for: .normal)
+        button.setTitle(String(localized: "monetization.gauge.watchAd"), for: .normal)
         button.backgroundColor = UIColor.white.withAlphaComponent(0.12)
         button.setTitleColor(.white, for: .normal)
         button.titleLabel?.font = .systemFont(ofSize: 17, weight: .semibold)
@@ -301,10 +311,10 @@ final class UsageGaugeDetailPopup: UIViewController {
         return button
     }()
 
-    /// Plus 구독 버튼 — 반투명 흰색 배경 + 흰색 텍스트
-    private let plusButton: UIButton = {
+    /// Pro 구독 버튼 — 반투명 흰색 배경 + 흰색 텍스트
+    private let proButton: UIButton = {
         let button = UIButton(type: .system)
-        button.setTitle("Plus로 무제한", for: .normal)
+        button.setTitle(String(localized: "monetization.gauge.proButton"), for: .normal)
         button.backgroundColor = UIColor.white.withAlphaComponent(0.12)
         button.setTitleColor(.white, for: .normal)
         button.titleLabel?.font = .systemFont(ofSize: 17, weight: .semibold)
@@ -317,7 +327,7 @@ final class UsageGaugeDetailPopup: UIViewController {
     /// 닫기 버튼 — 반투명 흰색 배경 + 회색 텍스트
     private let closeButton: UIButton = {
         let button = UIButton(type: .system)
-        button.setTitle("닫기", for: .normal)
+        button.setTitle(String(localized: "common.close"), for: .normal)
         button.backgroundColor = UIColor.white.withAlphaComponent(0.12)
         button.setTitleColor(.secondaryLabel, for: .normal)
         button.titleLabel?.font = .systemFont(ofSize: 17, weight: .regular)
@@ -325,6 +335,52 @@ final class UsageGaugeDetailPopup: UIViewController {
         button.clipsToBounds = true
         button.translatesAutoresizingMaskIntoConstraints = false
         return button
+    }()
+
+    // MARK: - Referral Promo (T033, US4)
+
+    /// 초대 프로모 하단 배경 — 카드 하단을 가로로 잘라 색상 차별화
+    private let referralPromoBackground: UIView = {
+        let view = UIView()
+        view.backgroundColor = UIColor.black.withAlphaComponent(0.35)
+        view.translatesAutoresizingMaskIntoConstraints = false
+        return view
+    }()
+
+    /// 초대 프로모 안내 라벨
+    private let referralPromoLabel: UILabel = {
+        let label = UILabel()
+        label.text = String(localized: "monetization.gate.referralPromo")
+        label.font = .systemFont(ofSize: 14, weight: .medium)
+        label.textColor = UIColor.white.withAlphaComponent(0.8)
+        label.textAlignment = .center
+        label.numberOfLines = 0
+        label.translatesAutoresizingMaskIntoConstraints = false
+        return label
+    }()
+
+    /// 초대하기 버튼 — 다른 버튼과 동일 높이 50pt
+    private let referralButton: UIButton = {
+        let button = UIButton(type: .system)
+        button.backgroundColor = UIColor.white.withAlphaComponent(0.8)
+        button.setTitle(String(localized: "monetization.gate.inviteButton"), for: .normal)
+        button.setTitleColor(.black, for: .normal)
+        button.titleLabel?.font = .systemFont(ofSize: 17, weight: .semibold)
+        button.layer.cornerRadius = 25
+        button.clipsToBounds = true
+        button.translatesAutoresizingMaskIntoConstraints = false
+        return button
+    }()
+
+    /// 초대 부가 문구
+    private let referralSubtitleLabel: UILabel = {
+        let label = UILabel()
+        label.text = String(localized: "monetization.gate.referralNote")
+        label.font = .systemFont(ofSize: 11, weight: .regular)
+        label.textColor = UIColor.white.withAlphaComponent(0.6)
+        label.textAlignment = .center
+        label.translatesAutoresizingMaskIntoConstraints = false
+        return label
     }()
 
     // MARK: - Init
@@ -340,12 +396,30 @@ final class UsageGaugeDetailPopup: UIViewController {
         fatalError("init(coder:) has not been implemented")
     }
 
+    /// 배경 블러 (딤드 위에 20% 강도 블러)
+    private let backgroundBlurView: UIVisualEffectView = {
+        let view = UIVisualEffectView(effect: nil)
+        view.translatesAutoresizingMaskIntoConstraints = false
+        return view
+    }()
+
+    /// 블러 강도 제어용 애니메이터 (fractionComplete로 0.0~1.0 조절)
+    private lazy var blurAnimator: UIViewPropertyAnimator = {
+        let animator = UIViewPropertyAnimator(duration: 0, curve: .linear) { [weak self] in
+            self?.backgroundBlurView.effect = UIBlurEffect(style: .systemUltraThinMaterialDark)
+        }
+        animator.fractionComplete = 0.1
+        animator.pausesOnCompletion = true
+        return animator
+    }()
+
     // MARK: - Lifecycle
 
     override func viewDidLoad() {
         super.viewDidLoad()
         view.backgroundColor = UIColor.black.withAlphaComponent(0.4)
         setupUI()
+        _ = blurAnimator // 블러 20% 적용
         cardView.activateBlur()
         configureContent()
     }
@@ -353,13 +427,13 @@ final class UsageGaugeDetailPopup: UIViewController {
     // MARK: - Setup
 
     private func setupUI() {
-        // 딤 배경 (전체 화면)
-        view.addSubview(dimView)
+        // 배경 블러 — 딤드 위에 연한 블러 추가
+        view.addSubview(backgroundBlurView)
         NSLayoutConstraint.activate([
-            dimView.topAnchor.constraint(equalTo: view.topAnchor),
-            dimView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
-            dimView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
-            dimView.bottomAnchor.constraint(equalTo: view.bottomAnchor)
+            backgroundBlurView.topAnchor.constraint(equalTo: view.topAnchor),
+            backgroundBlurView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+            backgroundBlurView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+            backgroundBlurView.bottomAnchor.constraint(equalTo: view.bottomAnchor)
         ])
 
         // 블러 카드 — 게이트와 동일 레이아웃
@@ -371,8 +445,14 @@ final class UsageGaugeDetailPopup: UIViewController {
             cardView.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -24)
         ])
 
+        // T033: 카드 하단 배경 — contentView에 먼저 삽입
+        cardView.contentView.addSubview(referralPromoBackground)
+
         // 카드 내부 스택뷰 — contentView에 추가 (블러 위)
-        let stack = UIStackView(arrangedSubviews: [titleLabel, statusLabel, watchAdButton, plusButton, closeButton])
+        let stack = UIStackView(arrangedSubviews: [
+            titleLabel, statusLabel, watchAdButton, proButton, closeButton,
+            referralPromoLabel, referralButton, referralSubtitleLabel
+        ])
         stack.axis = .vertical
         stack.spacing = 16
         stack.alignment = .fill
@@ -381,7 +461,7 @@ final class UsageGaugeDetailPopup: UIViewController {
         // 버튼 영역 전 여유 간격
         stack.setCustomSpacing(28, after: statusLabel)
         stack.setCustomSpacing(10, after: watchAdButton)
-        stack.setCustomSpacing(10, after: plusButton)
+        stack.setCustomSpacing(10, after: proButton)
 
         cardView.contentView.addSubview(stack)
         NSLayoutConstraint.activate([
@@ -390,17 +470,32 @@ final class UsageGaugeDetailPopup: UIViewController {
             stack.trailingAnchor.constraint(equalTo: cardView.contentView.trailingAnchor, constant: -28),
             stack.bottomAnchor.constraint(equalTo: cardView.contentView.bottomAnchor, constant: -32),
             watchAdButton.heightAnchor.constraint(equalToConstant: 50),
-            plusButton.heightAnchor.constraint(equalToConstant: 50),
+            proButton.heightAnchor.constraint(equalToConstant: 50),
             closeButton.heightAnchor.constraint(equalToConstant: 50)
+        ])
+
+        // T033: 닫기 버튼과 초대 프로모 간격
+        stack.setCustomSpacing(34, after: closeButton)
+        stack.setCustomSpacing(8, after: referralPromoLabel)
+        stack.setCustomSpacing(9, after: referralButton)
+
+        referralButton.heightAnchor.constraint(equalToConstant: 50).isActive = true
+
+        // T033: 배경 뷰 — 프로모 라벨 위에서 카드 하단 끝까지
+        NSLayoutConstraint.activate([
+            referralPromoBackground.leadingAnchor.constraint(equalTo: cardView.contentView.leadingAnchor),
+            referralPromoBackground.trailingAnchor.constraint(equalTo: cardView.contentView.trailingAnchor),
+            referralPromoBackground.bottomAnchor.constraint(equalTo: cardView.contentView.bottomAnchor),
+            referralPromoBackground.topAnchor.constraint(equalTo: referralPromoLabel.topAnchor, constant: -16)
         ])
 
         // 액션
         watchAdButton.addTarget(self, action: #selector(watchAdTapped), for: .touchUpInside)
-        plusButton.addTarget(self, action: #selector(plusTapped), for: .touchUpInside)
+        proButton.addTarget(self, action: #selector(plusTapped), for: .touchUpInside)
         closeButton.addTarget(self, action: #selector(closeTapped), for: .touchUpInside)
+        // T033: 초대 프로모 버튼 액션
+        referralButton.addTarget(self, action: #selector(referralTapped), for: .touchUpInside)
 
-        let dimTap = UITapGestureRecognizer(target: self, action: #selector(closeTapped))
-        dimView.addGestureRecognizer(dimTap)
     }
 
     /// 현재 한도 정보로 콘텐츠 구성
@@ -409,36 +504,57 @@ final class UsageGaugeDetailPopup: UIViewController {
         let total = UsageLimitStore.shared.totalDailyCapacity
         let rewardsLeft = UsageLimitStore.shared.remainingRewards
 
-        var text = "\(remaining)/\(total)장 남음"
+        var text = String(localized: "monetization.gauge.remaining \(remaining) \(total)")
         if rewardsLeft > 0 {
-            text += "\n광고 시청 가능: \(rewardsLeft)회 (회당 +10장)"
+            text += "\n" + String(localized: "monetization.gauge.adsLeft \(rewardsLeft)")
         } else {
-            text += "\n오늘 광고 시청 횟수를 모두 사용했습니다"
+            text += "\n" + String(localized: "monetization.gauge.noAdsLeft")
             watchAdButton.isHidden = true
         }
         statusLabel.text = text
 
         // 접근성 (FR-057)
         statusLabel.accessibilityLabel = text
-        watchAdButton.accessibilityLabel = "광고를 보고 삭제 한도 10장 추가"
-        plusButton.accessibilityLabel = "Plus 구독으로 삭제 한도 무제한"
-        closeButton.accessibilityLabel = "닫기"
-        closeButton.accessibilityHint = "한도 상세 팝업을 닫습니다"
+        watchAdButton.accessibilityLabel = String(localized: "monetization.gauge.a11y.watchAd")
+        proButton.accessibilityLabel = String(localized: "monetization.gauge.a11y.proButton")
+        closeButton.accessibilityLabel = String(localized: "common.close")
+        closeButton.accessibilityHint = String(localized: "monetization.gauge.a11y.closeHint")
+        // T033: 초대 프로모 접근성
+        referralPromoLabel.accessibilityLabel = String(localized: "monetization.gate.referralPromo")
+            .replacingOccurrences(of: "\n", with: " ")
+        referralButton.accessibilityLabel = String(localized: "monetization.gate.inviteButton")
+        referralButton.accessibilityHint = String(localized: "monetization.gate.a11y.referralHint")
+        referralSubtitleLabel.accessibilityLabel = String(localized: "monetization.gate.referralNote")
     }
 
     @objc private func watchAdTapped() {
+        blurAnimator.stopAnimation(true)
         dismiss(animated: true) { [weak self] in
             self?.onWatchAd?()
         }
     }
 
     @objc private func plusTapped() {
+        blurAnimator.stopAnimation(true)
         dismiss(animated: true) { [weak self] in
-            self?.onPlusUpgrade?()
+            self?.onProUpgrade?()
         }
     }
 
     @objc private func closeTapped() {
+        blurAnimator.stopAnimation(true)
         dismiss(animated: true)
+    }
+
+    /// T033: 초대 프로모 버튼 탭 → ReferralExplainViewController 모달
+    @objc private func referralTapped() {
+        Logger.app.debug("UsageGaugeDetailPopup: 초대 프로모 버튼 탭")
+        blurAnimator.stopAnimation(true)
+        let presenter = presentingViewController
+        dismiss(animated: true) {
+            guard let presenter = presenter else { return }
+            let referralVC = ReferralExplainViewController()
+            presenter.present(referralVC, animated: true)
+        }
     }
 }

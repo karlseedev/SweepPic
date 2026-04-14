@@ -7,7 +7,7 @@
 //
 //  역할:
 //  - GADBannerView 래핑 (Adaptive Banner)
-//  - Plus 시 자동 미표시
+//  - Pro 시 자동 미표시
 //  - 부모 뷰에 embed하여 사용
 //  - 광고 로드 실패 시 높이 0으로 숨김 (FR-017)
 //
@@ -40,9 +40,9 @@ final class BannerAdViewController: UIViewController {
         super.viewDidLoad()
         view.backgroundColor = .clear
 
-        // Plus 구독자 시 배너 미표시
+        // Pro 구독자 시 배너 미표시
         guard AdManager.shared.shouldShowAds() else {
-            Logger.app.debug("BannerAdViewController: 광고 미표시 조건 (Plus)")
+            Logger.app.debug("BannerAdViewController: 광고 미표시 조건 (Pro)")
             return
         }
 
@@ -103,7 +103,7 @@ final class BannerAdViewController: UIViewController {
     ///   - parent: 부모 ViewController
     ///   - containerView: 배너가 삽입될 컨테이너 뷰
     func embed(in parent: UIViewController, containerView: UIView) {
-        // Plus/Grace 체크 — 불필요하면 embed 자체 스킵
+        // Pro/Grace 체크 — 불필요하면 embed 자체 스킵
         guard AdManager.shared.shouldShowAds() else { return }
 
         parent.addChild(self)

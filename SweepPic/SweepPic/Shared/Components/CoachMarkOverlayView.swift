@@ -27,13 +27,15 @@ import OSLog
 
 /// 코치마크 종류
 enum CoachMarkType: String {
-    case gridSwipeDelete = "coachMark_gridSwipe"       // A: 그리드 스와이프 삭제
-    case viewerSwipeDelete = "coachMark_viewerSwipe"   // B: 뷰어 스와이프 삭제
+    case gridSwipeDelete = "coachMark_gridSwipe"       // A: 목록에서 밀어서 삭제
+    case viewerSwipeDelete = "coachMark_viewerSwipe"   // B: 뷰어에서 밀어서 삭제
     case similarPhoto = "coachMark_similarPhoto"       // C: 유사사진·얼굴 비교 (C-1 + C-2 통합 플래그)
     case autoCleanup = "coachMark_autoCleanup"              // D: 저품질 자동 정리 안내
     case firstDeleteGuide = "coachMark_firstDeleteGuide"  // E-1+E-2: 삭제 시스템 안내 (통합 시퀀스)
-    case firstEmpty = "coachMark_firstEmpty"               // E-3: 첫 비우기 완료 안내
+    case trashRestore = "coachMark_trashRestore"           // E-3: 삭제대기함 스와이프 복구 안내
+    case firstEmpty = "coachMark_firstEmpty"               // F: 첫 비우기 완료 안내
     case faceComparisonGuide = "coachMark_faceComparisonGuide"  // C-3: 얼굴 비교 화면 선택 안내
+    case autoCleanupPreview = "coachMark_autoCleanupPreview"   // D-1: 자동정리 미리보기 안내
 
     /// UserDefaults 키
     var shownKey: String { rawValue }
@@ -99,6 +101,24 @@ final class CoachMarkManager {
     /// A Step 1→2 전환 중 (true 동안 dismissCurrent() 차단)
     var isA2TransitionActive: Bool = false
 
+    // MARK: - D-1 전용 상태
+
+    /// D-1 4단계 시퀀스 전환 중 (true 동안 dismissCurrent() 차단)
+    var isD1SequenceActive: Bool = false
+
+    // MARK: - C 자동 pop + 간편정리 하이라이트 상태
+
+    /// C-3 완료 후 자동 pop 진행 중 (true 동안 B 표시 차단, 뷰어 자동 pop)
+    var isAutoPopForC: Bool = false
+
+    /// 자동 pop 완료 후 간편정리 하이라이트 표시 대기 중
+    var pendingCleanupHighlight: Bool = false
+
+    // MARK: - D 표시 조건
+
+    /// C 완료 후 그리드를 떠났다 돌아올 때 D 표시 (viewWillDisappear에서 설정)
+    var pendingDAfterCComplete: Bool = false
+
     /// 현재 코치마크 dismiss
     /// ⚠️ C-1 → C-2 전환 중, E-1+E-2 시퀀스 진행 중, C-3 전환 중, A-1 진행 중에는 dismiss 차단 (오버레이 보호)
     func dismissCurrent() {
@@ -120,6 +140,10 @@ final class CoachMarkManager {
         }
         if isA2TransitionActive {
             Logger.coachMark.debug("dismissCurrent BLOCKED — isA2TransitionActive=true")
+            return
+        }
+        if isD1SequenceActive {
+            Logger.coachMark.debug("dismissCurrent BLOCKED — isD1SequenceActive=true")
             return
         }
         Logger.coachMark.debug("dismissCurrent — overlay=\(self.currentOverlay != nil)")
@@ -246,7 +270,12 @@ final class CoachMarkOverlayView: UIView {
         style.alignment = .center
         style.paragraphSpacing = 8  // 2줄↔3줄 사이 추가 간격
         // \u{2028} = 같은 단락 내 줄바꿈, \n = 단락 구분 (paragraphSpacing 적용)
-        let fullText = "사진을 밀어서 바로 정리하세요\u{2028}다시 밀면 복원돼요\n정리한 사진은 삭제대기함으로 이동됩니다"
+        let fullText = String(localized: "coachMark.a.body")
+        let keywords = [
+            String(localized: "coachMark.a.keyword.delete"),
+            String(localized: "coachMark.a.keyword.restore"),
+            String(localized: "coachMark.a.keyword.trash"),
+        ]
         let attr = NSMutableAttributedString(
             string: fullText,
             attributes: [
@@ -255,10 +284,11 @@ final class CoachMarkOverlayView: UIView {
                 .paragraphStyle: style
             ]
         )
-        // 키워드 볼드 + 노란색 강조
-        for keyword in ["정리", "복원", "삭제대기함"] {
-            let range = (fullText as NSString).range(of: keyword)
-            attr.addAttributes([.font: CoachMarkOverlayView.bodyBoldFont, .foregroundColor: CoachMarkOverlayView.highlightYellow], range: range)
+        // 키워드 볼드 + 노란색 강조 (fallback: range 미발견 시 무시)
+        for keyword in keywords {
+            if let range = fullText.range(of: keyword) {
+                attr.addAttributes([.font: CoachMarkOverlayView.bodyBoldFont, .foregroundColor: CoachMarkOverlayView.highlightYellow], range: NSRange(range, in: fullText))
+            }
         }
         label.attributedText = attr
         label.numberOfLines = 0
@@ -268,7 +298,7 @@ final class CoachMarkOverlayView: UIView {
     /// 확인 버튼 (C 확장에서 enable/disable/페이드 사용)
     let confirmButton: UIButton = {
         let button = UIButton(type: .system)
-        button.setTitle("확인", for: .normal)
+        button.setTitle(String(localized: "common.ok"), for: .normal)
         button.setTitleColor(.black, for: .normal)
         button.titleLabel?.font = .systemFont(ofSize: 17, weight: .semibold)
         button.backgroundColor = .white
@@ -280,7 +310,7 @@ final class CoachMarkOverlayView: UIView {
     /// A 전용: 스냅샷 위 타이틀 라벨 (pill 테두리)
     let titleLabel: UILabel = {
         let label = UILabel()
-        label.text = "새로운 삭제 방법"
+        label.text = String(localized: "coachMark.a.title")
         label.textColor = .white
         label.font = .systemFont(ofSize: 24, weight: .light)
         label.textAlignment = .center
@@ -335,6 +365,26 @@ final class CoachMarkOverlayView: UIView {
             let holePath = UIBezierPath(rect: highlightFrame)
             fullPath.append(holePath)
         }
+        // D-1: 자동정리 미리보기 안내 (Step별 shape 분기)
+        if coachMarkType == .autoCleanupPreview && highlightFrame != .zero {
+            if d1CurrentStep == 3 {
+                // Step 3: 직사각형 (margin 0, C-1/A 패턴 — 셀 정확 크기)
+                let holePath = UIBezierPath(roundedRect: highlightFrame, cornerRadius: 0)
+                fullPath.append(holePath)
+            } else if d1CurrentStep == 1 {
+                // Step 1: pill shape (margin 8pt — 헤더 타이틀)
+                let margin: CGFloat = 8
+                let holeRect = highlightFrame.insetBy(dx: -margin, dy: -margin)
+                let radius = holeRect.height / 2
+                let holePath = UIBezierPath(roundedRect: holeRect, cornerRadius: radius)
+                fullPath.append(holePath)
+            } else {
+                // Step 2,4: pill shape (margin 0 — 버튼에 딱 맞게)
+                let radius = highlightFrame.height / 2
+                let holePath = UIBezierPath(roundedRect: highlightFrame, cornerRadius: radius)
+                fullPath.append(holePath)
+            }
+        }
         // D: 정리 버튼 하이라이트 (pill shape, margin 8pt)
         // highlightFrame이 .zero가 아닐 때만 (트리거 1: 자동, 트리거 2는 구멍 없음)
         if coachMarkType == .autoCleanup && highlightFrame != .zero {
@@ -362,7 +412,12 @@ final class CoachMarkOverlayView: UIView {
             let holePath = UIBezierPath(ovalIn: circleRect)
             fullPath.append(holePath)
         }
-        // B, E-3: 구멍 없음 (dim 전체 영역)
+        // E-3: 삭제대기함 셀 하이라이트 (rect, margin 0 — A/C-1 패턴)
+        if coachMarkType == .trashRestore && highlightFrame != .zero {
+            let holePath = UIBezierPath(rect: highlightFrame)
+            fullPath.append(holePath)
+        }
+        // B, F: 구멍 없음 (dim 전체 영역)
         dimLayer.path = fullPath.cgPath
     }
 
@@ -442,12 +497,14 @@ final class CoachMarkOverlayView: UIView {
         overlay.titleLabel.clipsToBounds = true
         overlay.addSubview(overlay.titleLabel)
 
-        // 텍스트 라벨 (3줄: 정리 + 복원 + 삭제대기함)
+        // 텍스트 라벨 (동적 높이 — 언어별 텍스트 길이 대응)
+        let labelWidth = overlay.bounds.width - 40
+        let labelSize = overlay.messageLabel.sizeThatFits(CGSize(width: labelWidth, height: .greatestFiniteMagnitude))
         overlay.messageLabel.frame = CGRect(
             x: 20,
             y: highlightFrame.maxY + 24,
-            width: overlay.bounds.width - 40,
-            height: 80
+            width: labelWidth,
+            height: ceil(labelSize.height)
         )
         overlay.addSubview(overlay.messageLabel)
 
@@ -636,7 +693,8 @@ final class CoachMarkOverlayView: UIView {
         let label = UILabel()
         label.numberOfLines = 0
         label.translatesAutoresizingMaskIntoConstraints = false
-        let text = "설명을 위해 사진을 임시로 삭제합니다\n(삭제대기함에서 복구 가능)"
+        let text = String(localized: "coachMark.a.variant.body")
+        let keyword = String(localized: "coachMark.a.variant.keyword")
         let attributed = NSMutableAttributedString(
             string: text,
             attributes: [
@@ -649,8 +707,8 @@ final class CoachMarkOverlayView: UIView {
                 }(),
             ]
         )
-        // "임시로 삭제" 볼드 + 노란색 강조
-        if let range = text.range(of: "임시로 삭제") {
+        // 키워드 볼드 + 노란색 강조 (fallback: range 미발견 시 무시)
+        if let range = text.range(of: keyword) {
             let nsRange = NSRange(range, in: text)
             attributed.addAttributes([
                 .font: Self.bodyBoldFont,
@@ -712,7 +770,7 @@ final class CoachMarkOverlayView: UIView {
 
     // MARK: - Show B (Viewer Swipe Delete)
 
-    /// 코치마크 B: 뷰어 스와이프 삭제 표시
+    /// 코치마크 B: 뷰어에서 밀어서 삭제 표시
     /// - 검정 배경 + 살짝 딤, 스냅샷+손가락 애니메이션 유지
     /// - 텍스트+확인 버튼은 E 스타일 blur 카드 팝업 (중앙 아래 배치)
     /// - containerView에 추가하여 뷰어의 상하단 버튼이 위에 보이도록 함
@@ -811,7 +869,8 @@ final class CoachMarkOverlayView: UIView {
         let label = UILabel()
         label.numberOfLines = 0
         label.translatesAutoresizingMaskIntoConstraints = false
-        let text = "사진을 위로 밀면 바로\n삭제대기함으로 이동해요"
+        let text = String(localized: "coachMark.b.body")
+        let keyword = String(localized: "coachMark.b.keyword")
         let attributed = NSMutableAttributedString(
             string: text,
             attributes: [
@@ -824,8 +883,8 @@ final class CoachMarkOverlayView: UIView {
                 }(),
             ]
         )
-        // "삭제대기함" 볼드 + 노란색 강조
-        if let range = text.range(of: "삭제대기함") {
+        // 키워드 볼드 + 노란색 강조 (fallback: range 미발견 시 무시)
+        if let range = text.range(of: keyword) {
             let nsRange = NSRange(range, in: text)
             attributed.addAttributes([
                 .font: Self.bodyBoldFont,
@@ -879,7 +938,8 @@ final class CoachMarkOverlayView: UIView {
 
         // C 타입은 markAsShown을 별도 관리 (present 성공 후 호출)
         // C-3은 dismiss 시 자동 markAsShown (화면 전환 없음)
-        if coachMarkType != .similarPhoto {
+        // D-1은 Step 4 [확인] 완료 시에만 markAsShown (중간 이탈 시 다음에 다시 표시)
+        if coachMarkType != .similarPhoto && coachMarkType != .autoCleanupPreview {
             coachMarkType.markAsShown()
         }
 
@@ -893,9 +953,12 @@ final class CoachMarkOverlayView: UIView {
         cleanupA2()
         CoachMarkManager.shared.isA2TransitionActive = false
 
-        // D, E-1+E-2, E-3, C-3: 시퀀스 전용 리소스 정리
+        // D, D-1, E-1+E-2, E-3, F, C-3: 시퀀스 전용 리소스 정리
         cleanupAutoCleanup()
+        cleanupD1()
+        CoachMarkManager.shared.isD1SequenceActive = false
         cleanupDeleteGuide()
+        cleanupE3()
         cleanupFirstEmpty()
         cleanupFaceComparisonGuide()
 
@@ -959,20 +1022,39 @@ final class CoachMarkOverlayView: UIView {
             confirmButton.isEnabled = false
             startD_ConfirmSequence()
         case .firstDeleteGuide:
-            // E-1+E-2: Step 1 [확인] → 손가락 탭 모션 → 탭 전환 + 순차 텍스트, Step 3 [확인] → dismiss
+            // E-1+E-2: Step 1 [확인] → 손가락 탭 모션 → 탭 전환 + 순차 텍스트, Step 3 [확인] → dismiss + E-3 트리거
             if systemFeedbackCurrentStep == 1 {
                 confirmButton.isEnabled = false
                 performTabTapMotionThenTransition()
+            } else if systemFeedbackCurrentStep == 3 {
+                // Step 3 [확인] → dismiss → E-3 트리거
+                // ⚠️ dismiss 전에 window 캡처 (dismiss 후 self는 superview에서 제거됨)
+                let window = self.window
+                dismiss()
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                    guard let window else { return }
+                    guard !CoachMarkType.trashRestore.hasBeenShown else { return }
+                    guard !CoachMarkManager.shared.isShowing else { return }
+                    guard !UIAccessibility.isVoiceOverRunning else { return }
+                    CoachMarkOverlayView.showTrashRestoreGuide(in: window)
+                }
             } else {
                 dismiss()
             }
+        case .trashRestore:
+            // E-3: 즉시 dismiss (markAsShown은 dismiss() 내부에서 자동 호출)
+            dismiss()
         case .firstEmpty:
-            // E-3: 즉시 dismiss
+            // F: 즉시 dismiss
             dismiss()
         case .faceComparisonGuide:
             // C-3: 재진입 방지 → Step 1/2 시퀀스 관리
             confirmButton.isEnabled = false
             startC3ConfirmSequence()
+        case .autoCleanupPreview:
+            // D-1: 재진입 방지 → 4단계 시퀀스 관리
+            confirmButton.isEnabled = false
+            handleD1ConfirmTapped()
         }
     }
 

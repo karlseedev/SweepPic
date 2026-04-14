@@ -63,6 +63,15 @@ extension CoachMarkOverlayView {
         onSelect: @escaping () -> Void,
         onDeselect: @escaping () -> Void
     ) {
+        // 버그 #3 대응: 기존 C-1/C-2 오버레이가 남아있으면 제거
+        // FaceComparison present 시 새 C-3 오버레이를 생성하므로
+        // 이전 오버레이를 명시적으로 제거해야 그리드 복귀 시 잔존 방지
+        if let existing = CoachMarkManager.shared.currentOverlay {
+            existing.shouldStopAnimation = true
+            existing.removeFromSuperview()
+            CoachMarkManager.shared.currentOverlay = nil
+        }
+
         let overlay = CoachMarkOverlayView(frame: window.bounds)
         overlay.coachMarkType = .faceComparisonGuide
         overlay.highlightFrame = cellFrame
@@ -114,7 +123,7 @@ extension CoachMarkOverlayView {
     private func showC3Step1Content() {
         // 안내 텍스트 (하이라이트 셀 아래, 행간 1.2배)
         // \n = 단락 구분 (paragraphSpacing 적용), \u{2028} = 같은 단락 내 줄바꿈
-        let mainText = "마음에 들지 않는 얼굴을 선택하세요\n옆으로 이동해서 다른 인물의 얼굴도\u{2028}확인하고 삭제할 수 있어요"
+        let mainText = String(localized: "coachMark.c3.step1.body")
         let style = NSMutableParagraphStyle()
         style.alignment = .center
         style.lineSpacing = CoachMarkOverlayView.bodyFont.pointSize * 0.2
@@ -127,8 +136,8 @@ extension CoachMarkOverlayView {
                 .paragraphStyle: style
             ]
         )
-        // "얼굴을 선택" 키워드 강조
-        if let range = mainText.range(of: "얼굴을 선택") {
+        // "얼굴을 선택" 키워드 강조 (fallback: range 미발견 시 무시)
+        if let range = mainText.range(of: String(localized: "coachMark.c3.step1.keyword")) {
             let nsRange = NSRange(range, in: mainText)
             attr.addAttributes([
                 .font: CoachMarkOverlayView.bodyBoldFont,
@@ -237,8 +246,10 @@ extension CoachMarkOverlayView {
                 self.c3Step = 2
             }
         } else {
-            // Step 2 [확인] → dismiss (markAsShown은 dismiss()에서 자동)
+            // Step 2 [확인] → auto pop 플래그 설정 + dismiss
             CoachMarkManager.shared.isC3TransitionActive = false
+            CoachMarkManager.shared.isAutoPopForC = true
+            CoachMarkManager.shared.pendingCleanupHighlight = true
             dismiss()
         }
     }
@@ -252,7 +263,7 @@ extension CoachMarkOverlayView {
         let circleBottom = picFrame.midY + focusDiameter / 2
 
         // 안내 텍스트 (\n = 단락 구분 → paragraphSpacing 적용, \u{2028} = 같은 단락 내 줄바꿈)
-        let mainText = "현재 유사사진 정리그룹의 사진 구별 번호예요\n얼굴 검출 여부에 따라\u{2028}인물별로 번호가 다르게 보일 수 있어요"
+        let mainText = String(localized: "coachMark.c3.step2.body")
         let style = NSMutableParagraphStyle()
         style.alignment = .center
         style.lineSpacing = CoachMarkOverlayView.bodyFont.pointSize * 0.2
@@ -265,8 +276,8 @@ extension CoachMarkOverlayView {
                 .paragraphStyle: style
             ]
         )
-        // "사진 구별 번호" 키워드 강조
-        if let range = mainText.range(of: "사진 구별 번호") {
+        // "사진 구별 번호" 키워드 강조 (fallback: range 미발견 시 무시)
+        if let range = mainText.range(of: String(localized: "coachMark.c3.step2.keyword")) {
             let nsRange = NSRange(range, in: mainText)
             attr.addAttributes([
                 .font: CoachMarkOverlayView.bodyBoldFont,

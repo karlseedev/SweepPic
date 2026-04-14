@@ -323,7 +323,7 @@ final class VideoPageViewController: UIViewController {
 
                 guard let playerItem = playerItem else {
                     self.hasRequestedVideo = false
-                    self.showError("동영상을 로드할 수 없습니다")
+                    self.showError(String(localized: "viewer.videoLoadFailed"))
                     return
                 }
 
@@ -397,7 +397,7 @@ final class VideoPageViewController: UIViewController {
                 // [Analytics] 동영상 재생 실패
                 AnalyticsService.shared.countError(.viewerOriginal as AnalyticsError.PhotoLoad)
                 DispatchQueue.main.async {
-                    self.showError(item.error?.localizedDescription ?? "재생 실패")
+                    self.showError(item.error?.localizedDescription ?? String(localized: "viewer.playbackFailed"))
                 }
             }
         }

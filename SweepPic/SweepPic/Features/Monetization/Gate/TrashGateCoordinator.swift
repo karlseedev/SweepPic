@@ -7,7 +7,7 @@
 //  TrashGateCoordinatorProtocol 준수 (contracts/protocols.md)
 //
 //  판단 흐름:
-//  1. Plus 구독자? → 바로 실행
+//  1. Pro 구독자? → 바로 실행
 //  2. 첫 페이월 표시 (1회만, Apple Free Trial 안내)
 //  3. 삭제 대상 ≤ 남은 한도? → 바로 실행 + recordDelete
 //  4. 한도 초과 → 게이트 팝업 표시
@@ -84,9 +84,9 @@ final class TrashGateCoordinator: TrashGateCoordinatorProtocol {
             return
         }
 
-        // 1. Plus 구독자 → 게이트 즉시 스킵 (T032)
-        if SubscriptionStore.shared.isPlusUser {
-            Logger.app.debug("TrashGateCoordinator: Plus 구독자 — 바로 실행")
+        // 1. Pro 구독자 → 게이트 즉시 스킵 (T032)
+        if SubscriptionStore.shared.isProUser {
+            Logger.app.debug("TrashGateCoordinator: Pro 구독자 — 바로 실행")
             onApproved()
             return
         }
@@ -97,7 +97,7 @@ final class TrashGateCoordinator: TrashGateCoordinatorProtocol {
             Self.hasSeenFirstPaywall = true
             showFirstPaywall(from: viewController) { [weak self] subscribed in
                 if subscribed {
-                    // Plus 구독 완료 → 바로 삭제 실행
+                    // Pro 구독 완료 → 바로 삭제 실행
                     onApproved()
                 } else {
                     // 건너뛰기 → 게이트 평가 계속 (한도 체크 → 게이트 팝업)
@@ -143,11 +143,11 @@ final class TrashGateCoordinator: TrashGateCoordinatorProtocol {
             self?.handleAdWatchFlow(from: viewController, trashCount: trashCount, adsNeeded: adsNeeded, onApproved: onApproved)
         }
 
-        popup.onPlusUpgrade = { [weak viewController] in
-            // [BM] T057: 게이트 선택 — Plus (FR-056)
-            AnalyticsService.shared.trackGateSelection(choice: .plus)
-            // Plus 업그레이드 → 페이월 표시 (T032)
-            Logger.app.debug("TrashGateCoordinator: Plus 업그레이드 선택 → 페이월")
+        popup.onProUpgrade = { [weak viewController] in
+            // [BM] T057: 게이트 선택 — Pro (FR-056)
+            AnalyticsService.shared.trackGateSelection(choice: .pro)
+            // Pro 업그레이드 → 페이월 표시 (T032)
+            Logger.app.debug("TrashGateCoordinator: Pro 업그레이드 선택 → 페이월")
             guard let vc = viewController else { return }
             let paywall = PaywallViewController()
             paywall.analyticsSource = .gate
@@ -228,9 +228,9 @@ final class TrashGateCoordinator: TrashGateCoordinatorProtocol {
             self?.handleAdWatchFlow(from: viewController, trashCount: trashCount, adsNeeded: adsNeeded, onApproved: onApproved)
         }
 
-        popup.onPlusUpgrade = { [weak viewController] in
-            AnalyticsService.shared.trackGateSelection(choice: .plus)
-            Logger.app.debug("TrashGateCoordinator: Plus 업그레이드 선택 → 페이월")
+        popup.onProUpgrade = { [weak viewController] in
+            AnalyticsService.shared.trackGateSelection(choice: .pro)
+            Logger.app.debug("TrashGateCoordinator: Pro 업그레이드 선택 → 페이월")
             guard let vc = viewController else { return }
             let paywall = PaywallViewController()
             paywall.analyticsSource = .gate
@@ -338,13 +338,13 @@ final class TrashGateCoordinator: TrashGateCoordinatorProtocol {
 
         // 재시도/취소 팝업 표시
         let alert = UIAlertController(
-            title: "광고를 불러올 수 없습니다",
-            message: "네트워크 상태를 확인하고 다시 시도해주세요.",
+            title: String(localized: "monetization.gate.adLoadFailed"),
+            message: String(localized: "monetization.gate.networkError"),
             preferredStyle: .alert
         )
 
         // 재시도 — 같은 광고 다시 시도
-        alert.addAction(UIAlertAction(title: "다시 시도", style: .default) { [weak self, weak viewController] _ in
+        alert.addAction(UIAlertAction(title: String(localized: "monetization.gate.retry"), style: .default) { [weak self, weak viewController] _ in
             guard let self = self, let viewController = viewController else { return }
             self.handleAdWatchFlow(
                 from: viewController,
@@ -356,7 +356,7 @@ final class TrashGateCoordinator: TrashGateCoordinatorProtocol {
         })
 
         // 취소 — 광고 흐름 중단
-        alert.addAction(UIAlertAction(title: "취소", style: .cancel))
+        alert.addAction(UIAlertAction(title: String(localized: "common.cancel"), style: .cancel))
 
         viewController.present(alert, animated: true)
     }

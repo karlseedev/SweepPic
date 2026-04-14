@@ -45,7 +45,7 @@ public protocol GracePeriodServiceProtocol {
 
 ```swift
 protocol SubscriptionStoreProtocol: AnyObject {
-    var isPlusUser: Bool { get }
+    var isProUser: Bool { get }
     var state: SubscriptionState { get }
 
     func purchase(_ product: Product) async throws -> Product.PurchaseResult
@@ -79,7 +79,7 @@ protocol TrashGateCoordinatorProtocol {
 ```swift
 protocol AdManagerProtocol: AnyObject {
     func configure()
-    func shouldShowAds() -> Bool  // Plus/Grace 체크
+    func shouldShowAds() -> Bool  // Pro/Grace 체크
 
     // 리워드
     var isRewardedAdReady: Bool { get }

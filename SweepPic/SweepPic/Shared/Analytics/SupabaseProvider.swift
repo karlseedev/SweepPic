@@ -62,7 +62,7 @@ final class SupabaseProvider {
     private let maxPendingCount = 200
 
     /// 구독 tier 제공 클로저 (lazy 평가 — makeBody 시점에 호출)
-    /// - "free" 또는 "plus" 반환
+    /// - "free" 또는 "pro" 반환
     /// - nil이면 기본값 "free"
     private let subscriptionTierProvider: (() -> String)?
 

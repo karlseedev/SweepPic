@@ -4,8 +4,9 @@
 //
 //  프리미엄 서브메뉴 빌더 + 액션 핸들러 (FR-043, FR-044, T047)
 //
-//  ellipsis 메뉴의 "프리미엄 ▸" 서브메뉴를 생성하고,
-//  각 액션(구독 관리 / 구독 복원 / 리딤 코드)을 처리한다.
+//  ellipsis 메뉴의 "멤버십 ▸" 서브메뉴를 생성하고,
+//  각 액션(멤버십 관리 / 멤버십 복원 / 리딤 코드)을 처리한다.
+//  친구 초대 관련 항목은 ReferralMenuViewController로 분리됨.
 //
 //  구독 상태와 무관하게 메뉴 구조는 동일 (FR-044),
 //  내부에서 상태에 따라 분기 처리한다.
@@ -24,46 +25,56 @@ final class PremiumMenuViewController {
 
     // MARK: - Menu Builder
 
-    /// "프리미엄 ▸" 서브메뉴 생성
+    /// "멤버십 ▸" 서브메뉴 생성
     /// - Parameter presenter: 메뉴 액션에서 VC를 present/push할 UIViewController
     /// - Returns: UIMenu 서브메뉴
     static func makeMenu(from presenter: UIViewController) -> UIMenu {
         let subscribeAction = UIAction(
-            title: "구독 관리",
+            title: String(localized: "monetization.menu.manage"),
             image: UIImage(systemName: "creditcard")
         ) { _ in
             handleSubscriptionManagement(from: presenter)
         }
 
         let restoreAction = UIAction(
-            title: "구독 복원",
+            title: String(localized: "monetization.menu.restore"),
             image: UIImage(systemName: "arrow.clockwise")
         ) { _ in
             handleRestorePurchases(from: presenter)
         }
 
         let redeemAction = UIAction(
-            title: "리딤 코드",
+            title: String(localized: "monetization.menu.redeem"),
             image: UIImage(systemName: "giftcard")
         ) { _ in
             handleRedeemCode(from: presenter)
         }
 
         return UIMenu(
-            title: "프리미엄",
+            title: String(localized: "monetization.menu.title"),
             image: UIImage(systemName: "star.fill"),
-            children: [subscribeAction, restoreAction, redeemAction]
+            children: [
+                subscribeAction, restoreAction, redeemAction,
+            ]
         )
     }
 
     // MARK: - Actions
 
-    /// 구독 관리 — 무료: 페이월 표시 / Plus: 시스템 구독 관리 화면
+    /// 구독 관리 — 무료: 페이월 표시 / Pro: 시스템 구독 관리 화면
+    /// - Note: Pro 사용자가 시스템 구독 관리로 이동할 때
+    ///   pendingCancelCheck 플래그를 설정해 해지 감지를 준비한다.
+    ///   SceneDelegate.sceneDidBecomeActive에서 이 플래그를 확인한다.
     private static func handleSubscriptionManagement(from presenter: UIViewController) {
-        if SubscriptionStore.shared.isPlusUser {
-            // Plus 사용자 → 시스템 구독 관리 화면
+        if SubscriptionStore.shared.isProUser {
+            // Pro 사용자 → 해지 감지 플래그 설정 + 시스템 구독 관리 화면
+            UserDefaults.standard.set(true, forKey: "pendingCancelCheck")
+            UserDefaults.standard.set(
+                SubscriptionStore.shared.state.autoRenewEnabled,
+                forKey: "wasAutoRenewing"
+            )
             openSystemSubscriptionSettings()
-            Logger.app.debug("PremiumMenu: Plus 사용자 → 시스템 구독 관리")
+            Logger.app.debug("PremiumMenu: Pro 사용자 → 시스템 구독 관리 (해지 감지 플래그 설정)")
         } else {
             // 무료 사용자 → 페이월 표시
             let paywallVC = PaywallViewController()
@@ -74,14 +85,14 @@ final class PremiumMenuViewController {
         }
     }
 
-    /// 구독 복원 — 이미 Plus: 토스트 / 아닐 때: restorePurchases 실행
+    /// 구독 복원 — 이미 Pro: 토스트 / 아닐 때: restorePurchases 실행
     private static func handleRestorePurchases(from presenter: UIViewController) {
-        if SubscriptionStore.shared.isPlusUser {
-            // 이미 Plus → 토스트
+        if SubscriptionStore.shared.isProUser {
+            // 이미 Pro → 토스트
             if let window = presenter.view.window {
-                ToastView.show("이미 구독 중입니다", in: window)
+                ToastView.show(String(localized: "monetization.menu.alreadyPro"), in: window)
             }
-            Logger.app.debug("PremiumMenu: 이미 Plus 사용자 → 토스트")
+            Logger.app.debug("PremiumMenu: 이미 Pro 사용자 → 토스트")
             return
         }
 
@@ -92,17 +103,17 @@ final class PremiumMenuViewController {
                 await MainActor.run {
                     if let window = presenter.view.window {
                         if restored {
-                            ToastView.show("구독이 복원되었습니다", in: window)
+                            ToastView.show(String(localized: "monetization.menu.restored"), in: window)
                         } else {
-                            ToastView.show("복원할 구독이 없습니다", in: window)
+                            ToastView.show(String(localized: "monetization.menu.notFound"), in: window)
                         }
                     }
                 }
-                Logger.app.debug("PremiumMenu: 복원 결과 — isPlusUser=\(restored)")
+                Logger.app.debug("PremiumMenu: 복원 결과 — isProUser=\(restored)")
             } catch {
                 await MainActor.run {
                     if let window = presenter.view.window {
-                        ToastView.show("복원 실패: 네트워크를 확인해주세요", in: window)
+                        ToastView.show(String(localized: "monetization.menu.restoreFailed"), in: window)
                     }
                 }
                 Logger.app.error("PremiumMenu: 복원 실패 — \(error.localizedDescription)")
@@ -122,4 +133,5 @@ final class PremiumMenuViewController {
             UIApplication.shared.open(url)
         }
     }
+
 }

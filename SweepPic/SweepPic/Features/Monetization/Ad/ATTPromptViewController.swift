@@ -4,7 +4,7 @@
 //
 //  ATT(App Tracking Transparency) 프리프롬프트 화면 (FR-041, FR-042)
 //
-//  설치 후 2시간 경과 + Plus 미구독 시 표시
+//  설치 후 2시간 경과 + Pro 미구독 시 표시
 //  - "계속" → 시스템 ATT 팝업 호출 → dismiss
 //  - "건너뛰기" → skipCount 증가 → dismiss
 //  - 총 2회 기회 (skipCount < 2), 이후 영구 미표시
@@ -22,7 +22,7 @@ import OSLog
 // MARK: - ATTPromptViewController
 
 /// ATT 프리프롬프트 전체 화면
-/// 설치 후 2시간 경과 + Plus 미구독 시 표시 (FR-041)
+/// 설치 후 2시간 경과 + Pro 미구독 시 표시 (FR-041)
 final class ATTPromptViewController: UIViewController {
 
     // MARK: - Callbacks
@@ -58,7 +58,7 @@ final class ATTPromptViewController: UIViewController {
     private lazy var titleLabel: UILabel = {
         let label = UILabel()
         label.translatesAutoresizingMaskIntoConstraints = false
-        label.text = "광고 맞춤 설정"
+        label.text = String(localized: "monetization.att.title")
         label.font = .systemFont(ofSize: 22, weight: .bold)
         label.textColor = .label
         label.textAlignment = .center
@@ -70,7 +70,7 @@ final class ATTPromptViewController: UIViewController {
     private lazy var descriptionLabel: UILabel = {
         let label = UILabel()
         label.translatesAutoresizingMaskIntoConstraints = false
-        label.text = "활동 추적을 허용하면\n관련없는 스팸성 광고를 줄여드립니다"
+        label.text = String(localized: "monetization.att.description")
         label.font = .systemFont(ofSize: 16, weight: .regular)
         label.textColor = .secondaryLabel
         label.textAlignment = .center
@@ -91,8 +91,11 @@ final class ATTPromptViewController: UIViewController {
                 .paragraphStyle: paragraphStyle
             ]
         )
-        // "활동 추적을 허용" 노란색 강조
-        if let range1 = fullText.range(of: "활동 추적을 허용") {
+        // 키워드 노란색 강조
+        let keyword = String(localized: "monetization.att.keyword")
+        let fallbackKeyword = fullText.components(separatedBy: "\n").first ?? fullText
+        let highlightKeyword = fullText.range(of: keyword) == nil ? fallbackKeyword : keyword
+        if let range1 = fullText.range(of: highlightKeyword) {
             attributed.addAttribute(.foregroundColor, value: highlightYellow, range: NSRange(range1, in: fullText))
         }
         label.attributedText = attributed
@@ -104,7 +107,7 @@ final class ATTPromptViewController: UIViewController {
     private lazy var continueButton: UIButton = {
         let button = UIButton(type: .system)
         button.backgroundColor = UIColor.white.withAlphaComponent(0.12)
-        button.setTitle("계속", for: .normal)
+        button.setTitle(String(localized: "monetization.att.continue"), for: .normal)
         button.setTitleColor(.white, for: .normal)
         button.titleLabel?.font = .systemFont(ofSize: 17, weight: .semibold)
         button.layer.cornerRadius = 25
@@ -118,7 +121,7 @@ final class ATTPromptViewController: UIViewController {
     private lazy var skipButton: UIButton = {
         let button = UIButton(type: .system)
         button.backgroundColor = UIColor.white.withAlphaComponent(0.12)
-        button.setTitle("건너뛰기", for: .normal)
+        button.setTitle(String(localized: "monetization.att.skip"), for: .normal)
         button.setTitleColor(.secondaryLabel, for: .normal)
         button.titleLabel?.font = .systemFont(ofSize: 17, weight: .regular)
         button.layer.cornerRadius = 25
@@ -202,9 +205,9 @@ final class ATTPromptViewController: UIViewController {
         ])
 
         // 접근성 설정 (FR-057)
-        iconImageView.accessibilityLabel = "광고 맞춤 설정 아이콘"
-        continueButton.accessibilityLabel = "계속하여 추적 허용 여부 선택"
-        skipButton.accessibilityLabel = "건너뛰기"
+        iconImageView.accessibilityLabel = String(localized: "a11y.att.icon")
+        continueButton.accessibilityLabel = String(localized: "a11y.att.continue")
+        skipButton.accessibilityLabel = String(localized: "monetization.att.skip")
     }
 
     // MARK: - Actions

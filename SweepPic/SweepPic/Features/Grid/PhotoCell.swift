@@ -200,7 +200,8 @@ final class PhotoCell: UICollectionViewCell {
         view.backgroundColor = UIColor(red: 0.5, green: 0, blue: 0, alpha: 1)
         view.alpha = 0
         view.isHidden = true
-        view.translatesAutoresizingMaskIntoConstraints = false
+        // translatesAutoresizingMaskIntoConstraints = true (기본값)
+        // frame 기반 레이아웃 — CABackdropLayer가 position/bounds 변경을 추적하도록
         return view
     }()
 
@@ -312,6 +313,13 @@ final class PhotoCell: UICollectionViewCell {
         }
     }
 
+    /// 터치 다운/업 시 즉시 축소 피드백 (시스템이 자동 설정)
+    override var isHighlighted: Bool {
+        didSet {
+            updateTransform()
+        }
+    }
+
     // MARK: - PRD7: Swipe Delete Animation Properties
 
     /// 스와이프 오버레이 스타일 (삭제: 마룬, 복구: 녹색)
@@ -399,6 +407,7 @@ final class PhotoCell: UICollectionViewCell {
         isSelectedForDeletion = false
 
         // UI 초기화
+        dimmedOverlayView.frame = contentView.bounds
         dimmedOverlayView.isHidden = true
         dimmedOverlayView.alpha = 0
         dimmedOverlayView.backgroundColor = Self.defaultOverlayColor  // 녹색 잔존 방지
@@ -424,6 +433,11 @@ final class PhotoCell: UICollectionViewCell {
 
         // 그라데이션 레이어 크기 업데이트
         gradientLayer?.frame = videoGradientView.bounds
+
+        // 딤드 오버레이 frame 동기화 (스와이프 커튼 중이 아닐 때만)
+        if dimmedMaskLayer == nil {
+            dimmedOverlayView.frame = contentView.bounds
+        }
     }
 
     // MARK: - Setup
@@ -439,14 +453,8 @@ final class PhotoCell: UICollectionViewCell {
             imageView.bottomAnchor.constraint(equalTo: contentView.bottomAnchor)
         ])
 
-        // 딤드 오버레이
+        // 딤드 오버레이 (frame 기반 — Auto Layout 제거, CABackdropLayer 호환)
         contentView.addSubview(dimmedOverlayView)
-        NSLayoutConstraint.activate([
-            dimmedOverlayView.topAnchor.constraint(equalTo: contentView.topAnchor),
-            dimmedOverlayView.leadingAnchor.constraint(equalTo: contentView.leadingAnchor),
-            dimmedOverlayView.trailingAnchor.constraint(equalTo: contentView.trailingAnchor),
-            dimmedOverlayView.bottomAnchor.constraint(equalTo: contentView.bottomAnchor)
-        ])
 
         // 비디오 그라데이션 배경
         contentView.addSubview(videoGradientView)
@@ -807,10 +815,17 @@ final class PhotoCell: UICollectionViewCell {
     /// 선택 UI 업데이트 (T039)
     private func updateSelectionUI() {
         selectionCheckmarkView.isHidden = !isSelectedForDeletion
+        updateTransform()
+    }
 
-        // 선택 시 살짝 축소 효과 (iOS 사진 앱 스타일)
-        UIView.animate(withDuration: 0.15) {
-            self.transform = self.isSelectedForDeletion
+    /// 축소 transform 업데이트 (터치 하이라이트 또는 선택 시 0.95배 축소)
+    /// - isHighlighted: 터치 다운 즉시 true, 떼면 false (시스템 관리)
+    /// - isSelectedForDeletion: 선택 모드에서 선택된 셀 (앱 관리)
+    /// - 둘 중 하나라도 true면 축소 유지
+    private func updateTransform() {
+        let shouldShrink = isHighlighted || isSelectedForDeletion
+        UIView.animate(withDuration: 0.1) {
+            self.transform = shouldShrink
                 ? CGAffineTransform(scaleX: 0.95, y: 0.95)
                 : .identity
         }
@@ -867,10 +882,10 @@ extension PhotoCell {
     /// 접근성 설정 업데이트
     func updateAccessibility(index: Int, total: Int, isTrashed: Bool) {
         isAccessibilityElement = true
-        accessibilityLabel = "사진 \(index + 1) / \(total)"
+        accessibilityLabel = String(localized: "a11y.photo.label \(index + 1) \(total)")
 
         if isTrashed {
-            accessibilityLabel? += ", 삭제대기함에 있음"
+            accessibilityLabel? += String(localized: "a11y.photo.inTrash")
         }
 
         accessibilityTraits = [.image]
@@ -894,16 +909,11 @@ extension PhotoCell {
         currentSwipeProgress = max(0, min(1, progress))
         currentSwipeDirection = direction
 
-        // 마스크 레이어 초기화 (최초 호출 시)
-        if dimmedMaskLayer == nil {
-            setupDimmedMaskLayer()
-        }
-
         // 딤드 오버레이 표시
         dimmedOverlayView.isHidden = false
         dimmedOverlayView.alpha = Self.dimmedOverlayAlpha
 
-        // 마스크 업데이트
+        // frame 기반 커튼 업데이트 (mask 대신 — CABackdropLayer 호환)
         updateDimmedMask(progress: currentSwipeProgress, direction: direction, isTrashed: isTrashed)
     }
 
@@ -921,7 +931,8 @@ extension PhotoCell {
             guard self.reuseGeneration == gen else { return }
 
             if toTrashed {
-                // 삭제 확정: 전체 딤드
+                // 삭제 확정: 전체 딤드 (frame을 전체로 확장 + mask 제거)
+                self.dimmedOverlayView.frame = self.contentView.bounds
                 self.dimmedMaskLayer?.removeFromSuperlayer()
                 self.dimmedMaskLayer = nil
                 self.dimmedOverlayView.alpha = Self.dimmedOverlayAlpha
@@ -978,13 +989,24 @@ extension PhotoCell {
             guard self.reuseGeneration == gen else { return }
 
             if self.isTrashed {
-                // 원래 삭제 상태: 전체 딤드로 복귀
+                // 원래 삭제 상태: 전체 딤드로 복귀 (frame 확장 + alpha 복원)
+                self.dimmedOverlayView.frame = self.contentView.bounds
                 self.dimmedMaskLayer?.removeFromSuperlayer()
                 self.dimmedMaskLayer = nil
                 self.dimmedOverlayView.alpha = Self.dimmedOverlayAlpha
             } else {
-                // 원래 정상 상태: 딤드 제거
-                self.dimmedOverlayView.alpha = 0
+                // 원래 정상 상태: 커튼이 걷히는 방향으로 frame 축소
+                let bounds = self.contentView.bounds
+                let zeroRect: CGRect
+                switch self.currentSwipeDirection {
+                case .right:
+                    // 오른쪽 스와이프였으면 → 왼쪽으로 걷힘 (x=0, width→0)
+                    zeroRect = CGRect(x: 0, y: 0, width: 0, height: bounds.height)
+                case .left:
+                    // 왼쪽 스와이프였으면 → 오른쪽으로 걷힘 (x=width, width→0)
+                    zeroRect = CGRect(x: bounds.width, y: 0, width: 0, height: bounds.height)
+                }
+                self.dimmedOverlayView.frame = zeroRect
             }
         } completion: { [weak self] _ in
             guard let self = self else { return }
@@ -1020,7 +1042,8 @@ extension PhotoCell {
         dimmedMaskLayer = nil
         dimmedOverlayView.layer.mask = nil
 
-        // 전체 딤드 표시
+        // frame 복원 (커튼 상태에서 전체로) + 전체 딤드 표시
+        dimmedOverlayView.frame = contentView.bounds
         dimmedOverlayView.isHidden = false
         dimmedOverlayView.alpha = Self.dimmedOverlayAlpha
     }
@@ -1033,7 +1056,8 @@ extension PhotoCell {
         dimmedMaskLayer = nil
         dimmedOverlayView.layer.mask = nil
 
-        // 원래 상태로 복귀
+        // frame 복원 + 원래 상태로 복귀
+        dimmedOverlayView.frame = contentView.bounds
         dimmedOverlayView.isHidden = !isTrashed
         dimmedOverlayView.alpha = isTrashed ? Self.dimmedOverlayAlpha : 0
         trashIconView.isHidden = !isTrashed
@@ -1054,6 +1078,8 @@ extension PhotoCell {
         dimmedMaskLayer = nil
         dimmedOverlayView.layer.mask = nil
 
+        // frame 복원 + 복원 미리보기
+        dimmedOverlayView.frame = contentView.bounds
         dimmedOverlayView.isHidden = false  // cancel 시 alpha 애니메이션 가능하게
         dimmedOverlayView.alpha = 0
         trashIconView.isHidden = true
@@ -1071,66 +1097,43 @@ extension PhotoCell {
     ///   - direction: 스와이프 방향
     ///   - isTrashed: 셀의 현재 삭제대기함 상태 (마스크 방향 결정)
     func animateCurtainToTarget(direction: SwipeDirection, isTrashed: Bool) {
-        guard let mask = dimmedMaskLayer else {
-            // 마스크 없으면 즉시 적용
-            if !isTrashed {
-                setFullDimmed(isTrashed: isTrashed)
-            } else {
-                setRestoredPreview()
-            }
-            return
-        }
-
         let gen = self.reuseGeneration
-        let bounds = dimmedOverlayView.bounds
+        let bounds = contentView.bounds
         let width = bounds.width
         let height = bounds.height
 
-        // progress=1.0일 때의 타겟 rect 계산 (updateDimmedMask와 동일 로직)
-        let targetRect: CGRect
+        // 타겟 frame 계산 (updateDimmedMask의 progress=1.0과 동일)
+        let targetFrame: CGRect
         if isTrashed {
-            // 복원: 빨간색 완전히 밀어냄 (마스크 → 빈 영역)
+            // 복원: overlay를 밀어냄 (width → 0)
             switch direction {
             case .right:
-                targetRect = CGRect(x: width, y: 0, width: 0, height: height)
+                targetFrame = CGRect(x: width, y: 0, width: 0, height: height)
             case .left:
-                targetRect = CGRect(x: 0, y: 0, width: 0, height: height)
+                targetFrame = CGRect(x: 0, y: 0, width: 0, height: height)
             }
         } else {
-            // 삭제: 빨간색 완전히 채움 (마스크 → 전체 bounds)
-            targetRect = bounds
+            // 삭제: overlay를 전체로 확장
+            targetFrame = bounds
         }
 
-        let targetPath = UIBezierPath(rect: targetRect).cgPath
-
-        // 마스크 path 애니메이션 (0.12초)
-        let anim = CABasicAnimation(keyPath: "path")
-        anim.toValue = targetPath
-        anim.duration = 0.12
-        anim.timingFunction = CAMediaTimingFunction(name: .easeOut)
-
-        CATransaction.begin()
-        CATransaction.setCompletionBlock { [weak self] in
+        // frame 애니메이션 (0.12초, mask path 애니메이션 대체)
+        UIView.animate(withDuration: 0.12, delay: 0, options: .curveEaseOut) { [weak self] in
             guard let self = self else { return }
-            // 셀이 재사용되었으면 스킵
+            guard self.reuseGeneration == gen else { return }
+            self.dimmedOverlayView.frame = targetFrame
+        } completion: { [weak self] _ in
+            guard let self = self else { return }
             guard self.reuseGeneration == gen else { return }
 
-            // 애니메이션 완료 → 마스크 제거 + 최종 상태 설정
-            self.dimmedMaskLayer?.removeFromSuperlayer()
-            self.dimmedMaskLayer = nil
-            self.dimmedOverlayView.layer.mask = nil
-
             if isTrashed {
-                // 복원 완료: 빨간색 제거
+                // 복원 완료: 딤드 제거
+                self.dimmedOverlayView.frame = self.contentView.bounds
                 self.dimmedOverlayView.isHidden = false
                 self.dimmedOverlayView.alpha = 0
                 self.trashIconView.isHidden = true
             }
-            // 삭제 완료: alpha/isHidden 이미 올바른 상태 (setDimmedProgress에서 설정됨)
         }
-        mask.path = targetPath
-        mask.add(anim, forKey: "curtainTarget")
-        CATransaction.commit()
     }
 
     // MARK: - Private Animation Helpers
@@ -1149,9 +1152,8 @@ extension PhotoCell {
     ///   - direction: 스와이프 방향
     ///   - isTrashed: 현재 삭제대기함 상태
     private func updateDimmedMask(progress: CGFloat, direction: SwipeDirection, isTrashed: Bool) {
-        guard let mask = dimmedMaskLayer else { return }
-
-        let bounds = dimmedOverlayView.bounds
+        // contentView.bounds 기준 (dimmedOverlayView.bounds는 frame 변경 시 같이 바뀌므로 부적합)
+        let bounds = contentView.bounds
         let width = bounds.width
         let height = bounds.height
 
@@ -1182,10 +1184,10 @@ extension PhotoCell {
             }
         }
 
-        // 마스크 적용 (애니메이션 없이 즉시)
+        // frame 직접 변경 (position+bounds → CABackdropLayer가 dirty region 추적)
         CATransaction.begin()
         CATransaction.setDisableActions(true)
-        mask.path = UIBezierPath(rect: rect).cgPath
+        dimmedOverlayView.frame = rect
         CATransaction.commit()
     }
 

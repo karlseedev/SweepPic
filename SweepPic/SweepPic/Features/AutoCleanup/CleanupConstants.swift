@@ -190,7 +190,9 @@ enum CleanupConstants {
     // MARK: - UI 메시지
 
     /// 삭제대기함 비어있지 않음 메시지
-    static let trashNotEmptyMessage = "저품질 사진 정리 기능을 사용하려면\n삭제대기함을 먼저 비워주세요\n\n-구독 시 제한 해제-"
+    static var trashNotEmptyMessage: String {
+        String(localized: "autoCleanup.trashNotEmpty")
+    }
 
     /// 결과 메시지 생성
     ///
@@ -209,30 +211,30 @@ enum CleanupConstants {
         switch (endReason, foundCount) {
         // 1. 50장 발견
         case (.maxFound, _):
-            return "50장의 정리할 사진을 찾았습니다.\n더 찾으려면 '이어서 정리'를 사용하세요."
+            return String(localized: "autoCleanup.result.maxFound")
 
         // 2. 2,000장 검색 + N장 발견
         case (.maxScanned, let n) where n > 0:
-            return "2,000장을 검색하여 \(n)장을 찾았습니다.\n더 찾으려면 '이어서 정리'를 사용하세요."
+            return String(localized: "autoCleanup.result.maxScannedWithFound \(n)")
 
         // 3. 2,000장 검색 + 0장 발견
         case (.maxScanned, 0):
-            return "2,000장을 검색했지만 정리할 사진이 없습니다.\n더 검색하려면 '이어서 정리'를 사용하세요."
+            return String(localized: "autoCleanup.result.maxScannedNone")
 
         // 4, 5. 범위 끝 + N장 발견
         case (.endOfRange, let n) where n > 0:
             if case .byYear(let year, _) = method {
-                return "\(year)년의 마지막 사진까지 검색하여 \(n)장을 찾았습니다."
+                return String(localized: "autoCleanup.result.endOfRangeYearWithFound \(String(year)) \(n)")
             } else {
-                return "보관함의 마지막 사진까지 검색하여 \(n)장을 찾았습니다."
+                return String(localized: "autoCleanup.result.endOfRangeWithFound \(n)")
             }
 
         // 6, 7. 범위 끝 + 0장 발견
         case (.endOfRange, 0):
             if case .byYear(let year, _) = method {
-                return "\(year)년의 마지막 사진까지 검색했지만 정리할 사진이 없습니다."
+                return String(localized: "autoCleanup.result.endOfRangeYearNone \(String(year))")
             } else {
-                return "보관함의 마지막 사진까지 검색했지만 정리할 사진이 없습니다."
+                return String(localized: "autoCleanup.result.endOfRangeNone")
             }
 
         // 취소 (메시지 없음)

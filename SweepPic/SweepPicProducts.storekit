@@ -17,7 +17,7 @@
       "localizations" : [
 
       ],
-      "name" : "Plus",
+      "name" : "Pro",
       "subscriptions" : [
         {
           "adHocOffers" : [
@@ -40,18 +40,18 @@
           "localizations" : [
             {
               "description" : "사진 무제한 삭제 + 광고 제거",
-              "displayName" : "Plus 연간",
+              "displayName" : "Pro 연간",
               "locale" : "ko"
             },
             {
               "description" : "Unlimited photo deletion + No ads",
-              "displayName" : "Plus Yearly",
+              "displayName" : "Pro Yearly",
               "locale" : "en_US"
             }
           ],
-          "productID" : "plus_yearly",
+          "productID" : "pro_yearly",
           "recurringSubscriptionPeriod" : "P1Y",
-          "referenceName" : "Plus Yearly",
+          "referenceName" : "Pro Yearly",
           "subscriptionGroupID" : "21437700",
           "type" : "RecurringSubscription"
         },
@@ -76,18 +76,18 @@
           "localizations" : [
             {
               "description" : "사진 무제한 삭제 + 광고 제거",
-              "displayName" : "Plus 월간",
+              "displayName" : "Pro 월간",
               "locale" : "ko"
             },
             {
               "description" : "Unlimited photo deletion + No ads",
-              "displayName" : "Plus Monthly",
+              "displayName" : "Pro Monthly",
               "locale" : "en_US"
             }
           ],
-          "productID" : "plus_monthly",
+          "productID" : "pro_monthly",
           "recurringSubscriptionPeriod" : "P1M",
-          "referenceName" : "Plus Monthly",
+          "referenceName" : "Pro Monthly",
           "subscriptionGroupID" : "21437700",
           "type" : "RecurringSubscription"
         }

@@ -1,0 +1,173 @@
+//
+//  FaceScanProgressBar.swift
+//  SweepPic
+//
+//  인물사진 비교정리 — 미니 진행바
+//  그룹 목록 화면 상단에 고정되어 스캔 진행 상황을 표시합니다.
+//
+//  스타일: CleanupProgressView 패턴 참조 (경량화)
+//  - 프로그레스 바: .systemBlue / .systemGray5
+//  - 라벨: 13pt regular, .secondaryLabel
+//  - 완료 시 fade out
+//
+
+import UIKit
+
+// MARK: - FaceScanProgressBar
+
+/// 인물사진 비교정리 미니 진행바
+///
+/// 상단에 고정되어 "N그룹 발견 · N / 1,000장 검색" 형식으로 진행 상황을 표시합니다.
+/// 분석 완료 시 "분석 완료 · N그룹 발견"으로 변경 후 2~3초 뒤 fade out.
+final class FaceScanProgressBar: UIView {
+
+    // MARK: - Constants
+
+    /// 전체 높이
+    static let barHeight: CGFloat = 48
+
+    // MARK: - UI Components
+
+    /// 프로그레스 바
+    private lazy var progressView: UIProgressView = {
+        let pv = UIProgressView(progressViewStyle: .default)
+        pv.translatesAutoresizingMaskIntoConstraints = false
+        pv.tintColor = .white
+        pv.trackTintColor = .systemGray5
+        pv.progress = 0
+        return pv
+    }()
+
+    /// 진행 상황 라벨
+    private lazy var statusLabel: UILabel = {
+        let label = UILabel()
+        label.translatesAutoresizingMaskIntoConstraints = false
+        label.font = .systemFont(ofSize: 13, weight: .regular)
+        label.textColor = .secondaryLabel
+        label.textAlignment = .center
+        return label
+    }()
+
+    // MARK: - Init
+
+    override init(frame: CGRect) {
+        super.init(frame: frame)
+        setupUI()
+    }
+
+    required init?(coder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+
+    // MARK: - Setup
+
+    private func setupUI() {
+        // 오버레이 시 테이블 콘텐츠가 비치지 않도록 배경색 설정
+        backgroundColor = .systemBackground
+
+        // 프로그레스 바
+        addSubview(progressView)
+        NSLayoutConstraint.activate([
+            progressView.topAnchor.constraint(equalTo: topAnchor, constant: 8),
+            progressView.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 20),
+            progressView.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -20),
+        ])
+
+        // 라벨
+        addSubview(statusLabel)
+        NSLayoutConstraint.activate([
+            statusLabel.topAnchor.constraint(equalTo: progressView.bottomAnchor, constant: 6),
+            statusLabel.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 20),
+            statusLabel.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -20),
+            statusLabel.bottomAnchor.constraint(lessThanOrEqualTo: bottomAnchor, constant: -8),
+        ])
+    }
+
+    // MARK: - State Tracking
+
+    /// 이전 분석 상태 (Phase 전환 감지용)
+    private var lastState: AnalysisState = .preparing
+
+    // MARK: - Update
+
+    /// 진행 상황 업데이트 (state별 텍스트 분기)
+    func update(with progress: FaceScanProgress) {
+        // Phase 전환 시 게이지 리셋 (preparing 100% → analyzing 0% 역방향 애니메이션 방지)
+        if lastState == .preparing && progress.state == .analyzing {
+            progressView.setProgress(0, animated: false)
+        }
+        lastState = progress.state
+
+        progressView.setProgress(progress.progress, animated: true)
+
+        switch progress.state {
+        case .preparing:
+            // Phase A: "분석 준비 중" (bold, white) 단독 표시
+            statusLabel.attributedText = NSAttributedString(
+                string: String(localized: "faceScan.progress.preparing"),
+                attributes: [
+                    .font: UIFont.systemFont(ofSize: 13, weight: .bold),
+                    .foregroundColor: UIColor.white,
+                ]
+            )
+
+        case .analyzing:
+            // Phase C: "분석 중" (bold, white) + " · N그룹 발견 · N / N장 검색" (regular, secondaryLabel)
+            let attrStr = NSMutableAttributedString(
+                string: String(localized: "faceScan.progress.scanning"),
+                attributes: [
+                    .font: UIFont.systemFont(ofSize: 13, weight: .bold),
+                    .foregroundColor: UIColor.white,
+                ]
+            )
+            attrStr.append(NSAttributedString(
+                string: " · \(progress.progressText)",
+                attributes: [
+                    .font: UIFont.systemFont(ofSize: 13, weight: .regular),
+                    .foregroundColor: UIColor.secondaryLabel,
+                ]
+            ))
+            statusLabel.attributedText = attrStr
+        }
+    }
+
+    /// 진행바 초기화 ("다음 분석" 시 호출)
+    func reset() {
+        lastState = .preparing
+        progressView.setProgress(0, animated: false)
+        statusLabel.attributedText = NSAttributedString(
+            string: String(localized: "faceScan.progress.preparing"),
+            attributes: [
+                .font: UIFont.systemFont(ofSize: 13, weight: .bold),
+                .foregroundColor: UIColor.white,
+            ]
+        )
+    }
+
+    /// 분석 완료 처리 — 완료 문구 표시 (fade out은 부모 VC가 contentInset과 동시 처리)
+    func showCompletion(groupCount: Int, scannedCount: Int) {
+        // 프로그레스 바 완료
+        progressView.setProgress(1.0, animated: true)
+
+        // 완료 문구 — "분석 완료" (bold, white) + 나머지 (regular, secondaryLabel)
+        let detailText = groupCount > 0
+            ? String(localized: "faceScan.progress.completeWithGroups \(groupCount) \(scannedCount)")
+            : String(localized: "faceScan.progress.completeNoGroups \(scannedCount)")
+
+        let attrStr = NSMutableAttributedString(
+            string: String(localized: "faceScan.progress.complete"),
+            attributes: [
+                .font: UIFont.systemFont(ofSize: 13, weight: .bold),
+                .foregroundColor: UIColor.white,
+            ]
+        )
+        attrStr.append(NSAttributedString(
+            string: detailText,
+            attributes: [
+                .font: UIFont.systemFont(ofSize: 13, weight: .regular),
+                .foregroundColor: UIColor.secondaryLabel,
+            ]
+        ))
+        statusLabel.attributedText = attrStr
+    }
+}

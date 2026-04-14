@@ -30,11 +30,11 @@ public enum TrashStoreError: Error, LocalizedError {
     public var errorDescription: String? {
         switch self {
         case .diskSpaceFull:
-            return "디스크 공간이 부족합니다"
+            return "Not enough disk space"  // 디스크 공간이 부족합니다
         case .fileSystemError(let error):
-            return "파일 저장 실패: \(error.localizedDescription)"
+            return "Failed to save file: \(error.localizedDescription)"  // 파일 저장 실패
         case .encodingFailed(let error):
-            return "데이터 인코딩 실패: \(error.localizedDescription)"
+            return "Data encoding failed: \(error.localizedDescription)"  // 데이터 인코딩 실패
         }
     }
 }

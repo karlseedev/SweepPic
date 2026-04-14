@@ -115,7 +115,7 @@ final class MetadataFilterTests: XCTestCase {
         let allCases = SkipReason.allCases
 
         // Then
-        XCTAssertEqual(allCases.count, 9)
+        XCTAssertEqual(allCases.count, 11)
         XCTAssertTrue(allCases.contains(.favorite))
         XCTAssertTrue(allCases.contains(.edited))
         XCTAssertTrue(allCases.contains(.hidden))
@@ -125,6 +125,8 @@ final class MetadataFilterTests: XCTestCase {
         XCTAssertTrue(allCases.contains(.analysisError))
         XCTAssertTrue(allCases.contains(.longVideo))
         XCTAssertTrue(allCases.contains(.utilityImage))
+        XCTAssertTrue(allCases.contains(.textScreenshot))
+        XCTAssertTrue(allCases.contains(.whiteBackground))
     }
 
     // MARK: - Filter Method Tests

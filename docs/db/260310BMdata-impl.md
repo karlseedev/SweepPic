@@ -1,5 +1,12 @@
 # BM 수익화 Analytics 데이터 수집 총괄 계획
 
+> **✅ 전체 완료 (2026-03-27 확인)**
+> - Phase A (Supabase 서버: subscription_tier + RLS 20종): 완료
+> - Phase B (코드 구현: tierProvider 주입, CancelReason, source 파라미터, 게이지 analytics): 완료
+> - Phase E (IDFV device_id 수집 + 배너 analytics): 완료
+> - Phase C (영구보존 문서 3종 업데이트: Archi.md, Spec.md, API.md): 완료
+> - Phase D (최종 통합 테스트): 완료
+
 ## Context
 
 BM 수익화(specs/003-bm-monetization) 구현 중. Supabase를 **Claude의 메인 분석 데이터셋**으로 사용한다. Claude가 직접 Supabase를 쿼리하여 데이터 분석을 수행하므로, Claude가 분석해야 할 모든 데이터는 Supabase에 있어야 한다. ASC/AdMob은 Claude가 접근 불가하므로 보조 역할.
@@ -75,7 +82,7 @@ CREATE INDEX IF NOT EXISTS idx_events_device_id ON events(device_id);
 
 **subscription_tier:**
 - 기존 행: NULL (BM 이전 데이터)
-- 새 이벤트: `free` 또는 `plus`
+- 새 이벤트: `free` 또는 `pro`
 - `Prefer: missing=default` 헤더 → 미전송 시 NULL (호환성 유지)
 - ⚠️ 앱 시작 직후 초기 이벤트(app.launched 등)는 SubscriptionStore.refreshSubscriptionStatus() 완료 전이라 `free`로 기록될 수 있음. BM 이벤트는 사용자 인터랙션 이후 발생하므로 영향 없음.
 
@@ -124,7 +131,7 @@ CREATE POLICY "anon_insert" ON events FOR INSERT TO anon
 | # | 이벤트명 (코드) | params | 전송 시점 | 구현 상태 |
 |---|----------------|--------|----------|----------|
 | 12 | `bm.gateShown` | `trashCount`, `remainingLimit` | 게이트 팝업 표시 시 | ✅ 구현됨 |
-| 13 | `bm.gateSelection` | `choice` (ad/plus/dismiss) | 게이트에서 버튼 탭 | ✅ 구현됨 |
+| 13 | `bm.gateSelection` | `choice` (ad/pro/dismiss) | 게이트에서 버튼 탭 | ✅ 구현됨 |
 | 14 | `bm.adWatched` | `type` (rewarded/interstitial/banner), `source` (gate/gauge/auto/analysis) | 광고 시청/노출 완료 | ⚠️ banner 누락 |
 | 15 | `bm.paywallShown` | `source` (gate/menu/banner/gauge) | 페이월 화면 표시 | ✅ 구현됨 |
 | 16 | `bm.subscriptionCompleted` | `productID` | 구독 구매 완료 | ✅ 구현됨 |
@@ -136,7 +143,7 @@ CREATE POLICY "anon_insert" ON events FOR INSERT TO anon
 ### 2.4 기존 코드의 Enum 값
 
 ```swift
-enum GateChoice: String { case ad, plus, dismiss }
+enum GateChoice: String { case ad, pro, dismiss }
 enum AdType: String { case rewarded, interstitial, banner }  // ← banner 추가 (Phase E)
 enum PaywallSource: String { case gate, menu, banner, gauge }
 ```
@@ -247,7 +254,7 @@ configureSupabase()에서 주입:
 ```swift
 supabaseProvider = SupabaseProvider(
     baseURL: url, anonKey: key,
-    subscriptionTierProvider: { SubscriptionStore.shared.isPlusUser ? "plus" : "free" }
+    subscriptionTierProvider: { SubscriptionStore.shared.isProUser ? "pro" : "free" }
 )
 ```
 
@@ -375,7 +382,7 @@ enum CancelReason: String {
 | §3.1 총괄표 | BM 9종 행 추가 (#12~20) |
 | §3.4 이벤트 상세 | §3.4.9 BM 수익화 신규 섹션 (9개 이벤트 상세) |
 | §3.5 전송 여부 | BM 9종 모두 Supabase O / TD O |
-| §4.1 메타데이터 | subscription_tier (free/plus) + device_id (IDFV) 추가 |
+| §4.1 메타데이터 | subscription_tier (free/pro) + device_id (IDFV) 추가 |
 | §5 변경 이력 | BM 9종 + subscription_tier + device_id 기재 |
 
 ### 260225db-API.md

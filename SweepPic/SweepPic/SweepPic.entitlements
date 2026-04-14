@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!--
+	⚠️ 유료 Apple Developer Program 가입 후 아래 주석 해제 필요
+	    (plan.md 상단 표 참조)
+
+	Associated Domains: Universal Link (sweeppic.link) — Phase 7~8
+	<key>com.apple.developer.associated-domains</key>
+	<array>
+		<string>applinks:sweeppic.link</string>
+	</array>
+
+	Push Notifications: 초대자에게 보상 도착 알림 — Phase 8
+	<key>aps-environment</key>
+	<string>development</string>
+	-->
+</dict>
+</plist>

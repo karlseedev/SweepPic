@@ -38,13 +38,13 @@ enum SimilarityAnalysisError: Error, LocalizedError {
     var errorDescription: String? {
         switch self {
         case .featurePrintGenerationFailed(let reason):
-            return "Feature Print 생성 실패: \(reason)"
+            return "Feature Print generation failed: \(reason)"  // Feature Print 생성 실패
         case .distanceCalculationFailed(let reason):
-            return "거리 계산 실패: \(reason)"
+            return "Distance calculation failed: \(reason)"  // 거리 계산 실패
         case .incompatibleFeaturePrints:
-            return "비교 불가능한 Feature Print"
+            return "Incompatible Feature Prints"  // 비교 불가능한 Feature Print
         case .cancelled:
-            return "분석이 취소되었습니다"
+            return "Analysis was canceled"  // 분석이 취소되었습니다
         }
     }
 }
@@ -112,7 +112,7 @@ final class SimilarityAnalyzer {
 
         // 결과 추출
         guard let result = request.results?.first else {
-            throw SimilarityAnalysisError.featurePrintGenerationFailed("결과 없음")
+            throw SimilarityAnalysisError.featurePrintGenerationFailed("no result")
         }
 
         return result
@@ -169,7 +169,7 @@ final class SimilarityAnalyzer {
 
         // FeaturePrint 결과
         guard let fpResult = fpRequest.results?.first else {
-            throw SimilarityAnalysisError.featurePrintGenerationFailed("결과 없음")
+            throw SimilarityAnalysisError.featurePrintGenerationFailed("no result")
         }
 
         // 얼굴 유무 (1개 이상 감지되면 true)

@@ -22,10 +22,14 @@
 
 import Foundation
 import UIKit
+import OSLog
+import AppCore
+import OSLog
+import AppCore
 
-// MARK: - SimilarityCacheProtocol
+// MARK: - SimilarityCacheProtocol (읽기 전용)
 
-/// SimilarityCache 의존성 주입을 위한 프로토콜
+/// SimilarityCache 읽기 전용 프로토콜
 ///
 /// FaceComparisonViewController에서 테스트 가능성을 위해 사용됩니다.
 /// Actor 기반이므로 호출 시 await가 필요합니다.
@@ -38,7 +42,15 @@ protocol SimilarityCacheProtocol: Actor {
 
     /// 그룹 멤버 목록을 조회합니다.
     func getGroupMembers(groupID: String) -> [String]
+}
 
+// MARK: - SimilarityCacheMutating (쓰기)
+
+/// SimilarityCache 쓰기 프로토콜
+///
+/// 그룹 멤버 제거 등 캐시 변경 작업을 위한 프로토콜입니다.
+/// SimilarityCache만 채택하며, .viewer 모드에서 사용됩니다.
+protocol SimilarityCacheMutating: SimilarityCacheProtocol {
     /// 그룹에서 멤버를 제거합니다.
     @discardableResult
     func removeMemberFromGroup(_ assetID: String, groupID: String) -> Bool
@@ -52,7 +64,7 @@ protocol SimilarityCacheProtocol: Actor {
 /// 최대 500장까지 캐시하며, 초과 시 LRU 정책으로 오래된 항목부터 제거합니다.
 ///
 /// - Important: Actor 기반이므로 모든 메서드 호출 시 `await` 키워드가 필요합니다.
-actor SimilarityCache: SimilarityCacheProtocol {
+actor SimilarityCache: SimilarityCacheMutating {
 
     // MARK: - Singleton
 
@@ -75,6 +87,11 @@ actor SimilarityCache: SimilarityCacheProtocol {
 
     /// LRU 추적 (가장 최근 접근된 assetID가 배열 끝에 위치)
     private var accessOrder: [String] = []
+
+    /// 경계 확인이 완료된 확정 그룹 ID 집합
+    /// - 양쪽 끊기 지점을 찾은 그룹만 등록
+    /// - prepareForReanalysis 등에서 보호됨
+    private var confirmedGroupIDs: Set<String> = []
 
     /// 최대 캐시 크기
     private let maxSize: Int
@@ -145,6 +162,55 @@ actor SimilarityCache: SimilarityCacheProtocol {
     /// - Returns: isValidSlot이 true인 얼굴만 포함된 배열
     func getValidSlotFaces(for assetID: String) -> [CachedFace] {
         return getFaces(for: assetID).filter { $0.isValidSlot }
+    }
+
+    // MARK: - Confirmed Group Management
+
+    /// 그룹을 확정(confirmed)으로 등록합니다.
+    ///
+    /// 경계 확인이 양쪽 모두 완료된 그룹만 호출해야 합니다.
+    /// confirmed 그룹의 멤버는 이후 분석에서 자동으로 제외됩니다.
+    ///
+    /// - Parameter groupID: 확정할 그룹 ID
+    func confirmGroup(groupID: String) {
+        confirmedGroupIDs.insert(groupID)
+    }
+
+    /// 그룹이 확정(confirmed) 상태인지 확인합니다.
+    ///
+    /// - Parameter groupID: 확인할 그룹 ID
+    /// - Returns: confirmed이면 true
+    func isGroupConfirmed(groupID: String) -> Bool {
+        return confirmedGroupIDs.contains(groupID)
+    }
+
+    /// 모든 confirmed 그룹의 멤버 assetID 집합을 반환합니다.
+    ///
+    /// formGroupsForRange()에서 분석 대상에서 제외하기 위해 사용합니다.
+    /// - Returns: confirmed 그룹 멤버 assetID 집합
+    func getConfirmedAssetIDs() -> Set<String> {
+        var result = Set<String>()
+        for groupID in confirmedGroupIDs {
+            if let group = groups[groupID] {
+                result.formUnion(group.memberAssetIDs)
+            }
+        }
+        return result
+    }
+
+    /// 모든 confirmedGroupIDs를 초기화합니다.
+    ///
+    /// PHPhotoLibrary 변경 시 호출하여 그룹 재분석을 허용합니다.
+    func clearConfirmedGroups() {
+        confirmedGroupIDs.removeAll()
+    }
+
+    /// 특정 assetID의 기존 얼굴 데이터만 제거합니다 (stale 데이터 방지).
+    ///
+    /// prepareForReanalysis 대신 경계 확인으로 추가된 사진에 사용합니다.
+    /// - Parameter assetID: 제거할 사진 ID
+    func removeFaces(for assetID: String) {
+        assetFaces.removeValue(forKey: assetID)
     }
 
     // MARK: - Group Management
@@ -239,32 +305,45 @@ actor SimilarityCache: SimilarityCacheProtocol {
             return nil
         }
 
-        // T015 병합 처리: 겹치는 기존 그룹과 병합
-        let (mergedMembers, mergedSlots) = mergeOverlappingGroups(newMembers: members, newSlots: validSlots)
+        // 중복 그룹 감지: 멤버 중 이미 confirmed 그룹에 속한 사진이 있는지 확인
+        // 1장이라도 겹치면 기존 그룹 ID 반환 (중복 생성 방지)
+        for assetID in members {
+            if case .analyzed(true, let existingGroupID?) = getState(for: assetID),
+               confirmedGroupIDs.contains(existingGroupID) {
+                // 이미 confirmed 그룹에 속함 → 해당 그룹 ID 반환
+                // 멤버들의 얼굴 데이터는 캐시에 저장 (뷰어에서 활용 가능)
+                for id in members {
+                    if let faces = photoFaces[id] {
+                        setFaces(faces, for: id)
+                    }
+                    setState(.analyzed(inGroup: true, groupID: existingGroupID), for: id)
+                }
+                return existingGroupID
+            }
+        }
 
-        // 그룹 저장
+        // 새 그룹 저장
         let groupID = UUID().uuidString
-        let group = SimilarThumbnailGroup(groupID: groupID, memberAssetIDs: mergedMembers)
+        let group = SimilarThumbnailGroup(groupID: groupID, memberAssetIDs: members)
         groups[groupID] = group
-        groupValidPersonIndices[groupID] = mergedSlots
+        groupValidPersonIndices[groupID] = validSlots
 
         // 멤버들 상태 및 얼굴 정보 업데이트
-        for assetID in mergedMembers {
+        for assetID in members {
             setState(.analyzed(inGroup: true, groupID: groupID), for: assetID)
 
             // CachedFace의 isValidSlot 플래그 갱신
             if let faces = photoFaces[assetID] {
                 let updatedFaces = faces.map { face in
                     var updated = face
-                    updated.isValidSlot = mergedSlots.contains(face.personIndex)
+                    updated.isValidSlot = validSlots.contains(face.personIndex)
                     return updated
                 }
                 setFaces(updatedFaces, for: assetID)
             } else if let existingFaces = assetFaces[assetID] {
-                // 기존 캐시된 얼굴의 isValidSlot 갱신
                 let updatedFaces = existingFaces.map { face in
                     var updated = face
-                    updated.isValidSlot = mergedSlots.contains(face.personIndex)
+                    updated.isValidSlot = validSlots.contains(face.personIndex)
                     return updated
                 }
                 setFaces(updatedFaces, for: assetID)
@@ -285,9 +364,10 @@ actor SimilarityCache: SimilarityCacheProtocol {
     func invalidateGroup(groupID: String) {
         guard let group = groups[groupID] else { return }
 
-        // 그룹 삭제
+        // 그룹 삭제 + confirmed 해제
         groups.removeValue(forKey: groupID)
         groupValidPersonIndices.removeValue(forKey: groupID)
+        confirmedGroupIDs.remove(groupID)
 
         // 각 멤버 처리
         for assetID in group.memberAssetIDs {
@@ -429,56 +509,6 @@ actor SimilarityCache: SimilarityCacheProtocol {
         }
     }
 
-    // MARK: - Group Merging (T015)
-
-    /// 겹치는 기존 그룹과 병합합니다.
-    ///
-    /// 연속 범위 분석이므로 동일 사진이 여러 그룹에 속하지 않도록 보장합니다.
-    /// 새 분석 범위가 기존 그룹과 겹칠 경우 그룹을 병합합니다.
-    ///
-    /// - Parameters:
-    ///   - newMembers: 새 그룹 멤버
-    ///   - newSlots: 새 그룹 유효 슬롯
-    /// - Returns: 병합된 (멤버 목록, 유효 슬롯)
-    private func mergeOverlappingGroups(
-        newMembers: [String],
-        newSlots: Set<Int>
-    ) -> ([String], Set<Int>) {
-        let newMemberSet = Set(newMembers)
-        var overlappingGroupIDs: [String] = []
-
-        // 겹치는 기존 그룹 찾기
-        for (groupID, group) in groups {
-            let overlap = newMemberSet.intersection(group.memberAssetIDs)
-            if !overlap.isEmpty {
-                overlappingGroupIDs.append(groupID)
-            }
-        }
-
-        // 겹치는 그룹이 없으면 그대로 반환
-        if overlappingGroupIDs.isEmpty {
-            return (newMembers, newSlots)
-        }
-
-        // 모든 멤버 수집
-        var mergedMemberSet = newMemberSet
-        let mergedSlots = newSlots
-
-        for groupID in overlappingGroupIDs {
-            if let group = groups[groupID] {
-                mergedMemberSet.formUnion(group.memberAssetIDs)
-            }
-
-            // 기존 그룹 무효화
-            invalidateGroup(groupID: groupID)
-        }
-
-        // 병합된 결과에서 유효 슬롯 재계산 필요
-        // (호출자가 다시 계산하므로 여기서는 기존 값 반환)
-
-        return (Array(mergedMemberSet), mergedSlots)
-    }
-
     /// 특정 사진이 속한 다른 유효 그룹을 찾습니다.
     ///
     /// - Parameters:
@@ -572,6 +602,7 @@ actor SimilarityCache: SimilarityCacheProtocol {
         assetFaces.removeAll()
         groupValidPersonIndices.removeAll()
         accessOrder.removeAll()
+        confirmedGroupIDs.removeAll()
     }
 
     // MARK: - Replay Support
@@ -600,6 +631,16 @@ actor SimilarityCache: SimilarityCacheProtocol {
         - Max Size: \(maxSize)
         """
     }
+
+    // MARK: - Debug Helpers
+
+    #if DEBUG
+    /// 현재 캐시의 모든 유효 그룹을 반환합니다 (검증 하네스용).
+    /// preliminary 상태 제외, isValid(멤버 3장 이상)인 그룹만 반환합니다.
+    func debugAllGroups() -> [SimilarThumbnailGroup] {
+        return groups.values.filter { $0.isValid }
+    }
+    #endif
 
     deinit {
         if let observer = memoryWarningObserver {

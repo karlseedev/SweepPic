@@ -29,12 +29,28 @@ import Vision
 import AppCore
 import BlurUIKit
 
+// MARK: - FaceComparisonMode
+
+/// 얼굴 비교 화면 동작 모드
+enum FaceComparisonMode {
+    /// 기존 뷰어에서 호출 (즉시 삭제)
+    case viewer
+    /// FaceScan에서 호출 (diff 기반 삭제/복원, 재진입 지원)
+    case faceScan(initialSelected: Set<String>)
+
+    /// FaceScan 모드 여부
+    var isFaceScan: Bool {
+        if case .faceScan = self { return true }
+        return false
+    }
+}
+
 // MARK: - FaceComparisonDelegate
 
 /// 얼굴 비교 화면 델리게이트
 /// 삭제/닫기 이벤트를 전달합니다.
 protocol FaceComparisonDelegate: AnyObject {
-    /// 사진 삭제 완료 시 호출
+    /// 사진 삭제 완료 시 호출 (뷰어 모드)
     func faceComparisonViewController(
         _ viewController: FaceComparisonViewController,
         didDeletePhotos deletedAssetIDs: [String]
@@ -42,6 +58,23 @@ protocol FaceComparisonDelegate: AnyObject {
 
     /// 화면 닫기 시 호출
     func faceComparisonViewControllerDidClose(_ viewController: FaceComparisonViewController)
+
+    /// diff 적용 완료 시 호출 (FaceScan 모드)
+    /// - Parameter finalSelectedAssetIDs: 최종 선택(삭제) 상태
+    func faceComparisonViewController(
+        _ viewController: FaceComparisonViewController,
+        didApplyChanges finalSelectedAssetIDs: Set<String>
+    )
+}
+
+// MARK: - FaceComparisonDelegate 기본 구현
+
+extension FaceComparisonDelegate {
+    /// 기존 뷰어 delegate는 didApplyChanges를 구현하지 않아도 됨
+    func faceComparisonViewController(
+        _ viewController: FaceComparisonViewController,
+        didApplyChanges finalSelectedAssetIDs: Set<String>
+    ) {}
 }
 
 // MARK: - FaceComparisonViewController
@@ -51,7 +84,7 @@ protocol FaceComparisonDelegate: AnyObject {
 /// 유사 사진 뷰어에서 +버튼 탭 시 표시됩니다.
 /// UIPageViewController를 사용하여 인물별 페이지를 스와이프로 전환할 수 있습니다.
 ///
-/// - Note: ComparisonGroup에서 최대 8장까지 표시됩니다.
+/// - Note: ComparisonGroup의 전체 멤버를 표시합니다.
 final class FaceComparisonViewController: UIViewController {
 
     // MARK: - Constants
@@ -61,6 +94,9 @@ final class FaceComparisonViewController: UIViewController {
 
     /// 하단 그라데이션 확장 높이
     private static let bottomBarGradientExtension: CGFloat = 15
+
+    /// 타이틀 강조 색상
+    private static let titleHighlightColor = UIColor(red: 1.0, green: 234.0 / 255.0, blue: 0, alpha: 1.0)
 
     // MARK: - Properties
 
@@ -104,8 +140,15 @@ final class FaceComparisonViewController: UIViewController {
     /// 삭제대기함 스토어
     private let trashStore: TrashStoreProtocol
 
-    /// 유사 사진 캐시
+    /// 유사 사진 캐시 (읽기 전용)
     private let cache: any SimilarityCacheProtocol
+
+    /// 캐시 쓰기 (그룹 멤버 제거 등, .viewer 모드에서만 사용)
+    private let cacheMutator: (any SimilarityCacheMutating)?
+
+    /// 동작 모드 (뷰어 또는 FaceScan)
+    /// - Note: Extension(+SwipeHint)에서 모드별 분기에 사용하므로 internal
+    let mode: FaceComparisonMode
 
     /// 델리게이트
     weak var delegate: FaceComparisonDelegate?
@@ -174,7 +217,7 @@ final class FaceComparisonViewController: UIViewController {
 
     /// Cancel 버튼 - GlassTextButton (Liquid Glass 스타일)
     private lazy var cancelButton: GlassTextButton = {
-        let button = GlassTextButton(title: "취소", style: .plain, tintColor: .systemBlue)
+        let button = GlassTextButton(title: String(localized: "common.cancel"), style: .plain, tintColor: .systemBlue)
         button.addTarget(self, action: #selector(cancelButtonTapped), for: .touchUpInside)
         button.translatesAutoresizingMaskIntoConstraints = false
         button.accessibilityIdentifier = "comparison_cancel"
@@ -184,7 +227,7 @@ final class FaceComparisonViewController: UIViewController {
     /// 선택 개수 라벨
     private lazy var selectionCountLabel: UILabel = {
         let label = UILabel()
-        label.text = "항목 선택"
+        label.text = String(localized: "common.selectItems")
         label.textColor = .white
         label.font = .systemFont(ofSize: 17, weight: .regular)
         label.textAlignment = .center
@@ -194,7 +237,7 @@ final class FaceComparisonViewController: UIViewController {
 
     /// Delete 버튼 - GlassTextButton (Liquid Glass 스타일)
     private lazy var deleteButton: GlassTextButton = {
-        let button = GlassTextButton(title: "삭제", style: .plain, tintColor: .systemRed)
+        let button = GlassTextButton(title: String(localized: "common.delete"), style: .plain, tintColor: .systemRed)
         button.addTarget(self, action: #selector(deleteButtonTapped), for: .touchUpInside)
         button.translatesAutoresizingMaskIntoConstraints = false
         button.accessibilityIdentifier = "comparison_delete"
@@ -204,18 +247,37 @@ final class FaceComparisonViewController: UIViewController {
     /// 커스텀 타이틀바 (iOS 16~25)
     private var customTitleBar: FaceComparisonTitleBar?
 
+    /// 시스템 네비게이션 타이틀 라벨 (iOS 26+)
+    private var navigationTitleLabel: UILabel?
+
     // MARK: - Initialization
 
     /// FaceComparisonViewController를 생성합니다.
+    ///
+    /// - Parameters:
+    ///   - comparisonGroup: 비교 그룹
+    ///   - mode: 동작 모드 (.viewer: 기존 뷰어, .faceScan: diff 기반)
+    ///   - trashStore: 삭제대기함 스토어
+    ///   - cache: 유사 사진 캐시 (FaceScan: FaceScanCache 주입)
+    ///   - cacheMutator: 캐시 쓰기 (nil이면 그룹 멤버 제거 안 함, FaceScan 모드용)
     init(
         comparisonGroup: ComparisonGroup,
+        mode: FaceComparisonMode = .viewer,
         trashStore: TrashStoreProtocol = TrashStore.shared,
-        cache: any SimilarityCacheProtocol = SimilarityCache.shared
+        cache: any SimilarityCacheProtocol = SimilarityCache.shared,
+        cacheMutator: (any SimilarityCacheMutating)? = SimilarityCache.shared
     ) {
         self.comparisonGroup = comparisonGroup
+        self.mode = mode
         self.trashStore = trashStore
         self.cache = cache
+        self.cacheMutator = cacheMutator
         super.init(nibName: nil, bundle: nil)
+
+        // FaceScan 모드: 초기 선택 상태 설정
+        if case .faceScan(let initialSelected) = mode {
+            self.selectedAssetIDs = initialSelected
+        }
 
         modalPresentationStyle = .fullScreen
         modalTransitionStyle = .coverVertical
@@ -323,6 +385,17 @@ final class FaceComparisonViewController: UIViewController {
     /// 시스템 네비게이션바 설정 (iOS 26+)
     @available(iOS 26.0, *)
     private func setupSystemNavigationBar() {
+        let titleLabel = navigationTitleLabel ?? {
+            let label = UILabel()
+            label.textAlignment = .center
+            label.numberOfLines = 1
+            label.lineBreakMode = .byTruncatingTail
+            label.adjustsFontSizeToFitWidth = true
+            label.minimumScaleFactor = 0.8
+            navigationTitleLabel = label
+            return label
+        }()
+        navigationItem.titleView = titleLabel
         updateNavigationTitle()
 
         // 왼쪽: 닫기 버튼
@@ -448,25 +521,109 @@ final class FaceComparisonViewController: UIViewController {
         let initialPage = PersonPageViewController(personIndex: currentPersonIndex, dataSource: self)
         pageViewController.setViewControllers([initialPage], direction: .forward, animated: false)
 
+        // 스와이프 힌트 화살표 표시 (인물 2명 이상 + 조건 충족 시)
+        showSwipeHintIfNeeded()
     }
 
     // MARK: - UI Updates
 
+    /// 강조되지 않는 타이틀 부분
+    private var comparisonTitleBaseText: String {
+        let currentPersonNumber = currentPersonArrayIndex + 1
+        if usesKoreanTitleLayout {
+            return String(localized: "faceComparison.title.baseKorean \(currentPersonNumber)")
+        }
+        return String(localized: "faceComparison.title.basePlain")
+    }
+
+    /// 강조되는 타이틀 부분
+    private var comparisonTitleHighlightedText: String {
+        let totalPersonCount = max(validPersonIndices.count, 1)
+        let currentPersonNumber = currentPersonArrayIndex + 1
+        if usesKoreanTitleLayout {
+            return String(localized: "faceComparison.title.highlightKorean \(totalPersonCount)")
+        }
+        return String(localized: "faceComparison.title.highlightEnglish \(currentPersonNumber) \(totalPersonCount)")
+    }
+
+    /// 한국어 타이틀 레이아웃 사용 여부
+    private var usesKoreanTitleLayout: Bool {
+        let languageCode = Bundle.main.preferredLocalizations.first?
+            .split(separator: "-")
+            .first?
+            .lowercased() ?? "en"
+        return languageCode == "ko"
+    }
+
+    /// 현재 화면 타이틀
+    private var comparisonTitle: String {
+        if usesKoreanTitleLayout {
+            return comparisonTitleHighlightedText + comparisonTitleBaseText
+        }
+        return comparisonTitleBaseText + comparisonTitleHighlightedText
+    }
+
+    /// 현재 화면 강조 타이틀
+    private var comparisonAttributedTitle: NSAttributedString {
+        let attributed = NSMutableAttributedString()
+        let segments: [(text: String, attributes: [NSAttributedString.Key: Any])]
+        if usesKoreanTitleLayout {
+            segments = [
+                (
+                    text: comparisonTitleHighlightedText,
+                    attributes: [
+                        .font: UIFont.systemFont(ofSize: 17, weight: .heavy),
+                        .foregroundColor: Self.titleHighlightColor
+                    ]
+                ),
+                (
+                    text: comparisonTitleBaseText,
+                    attributes: [
+                        .font: UIFont.systemFont(ofSize: 17, weight: .regular),
+                        .foregroundColor: UIColor.white
+                    ]
+                )
+            ]
+        } else {
+            segments = [
+                (
+                    text: comparisonTitleBaseText,
+                    attributes: [
+                        .font: UIFont.systemFont(ofSize: 17, weight: .regular),
+                        .foregroundColor: UIColor.white
+                    ]
+                ),
+                (
+                    text: comparisonTitleHighlightedText,
+                    attributes: [
+                        .font: UIFont.systemFont(ofSize: 17, weight: .heavy),
+                        .foregroundColor: Self.titleHighlightColor
+                    ]
+                )
+            ]
+        }
+
+        for segment in segments {
+            attributed.append(NSAttributedString(string: segment.text, attributes: segment.attributes))
+        }
+        return attributed
+    }
+
     /// 타이틀바 업데이트
     private func updateTitleBar() {
-        let title = "유사사진정리 - 인물 \(currentPersonArrayIndex + 1)"
-
         if #available(iOS 26.0, *) {
-            self.title = title
+            self.title = comparisonTitle
+            navigationTitleLabel?.attributedText = comparisonAttributedTitle
+            navigationTitleLabel?.sizeToFit()
         } else {
-            customTitleBar?.setTitle(title)
+            customTitleBar?.setAttributedTitle(comparisonAttributedTitle)
         }
     }
 
     /// 네비게이션 타이틀 업데이트 (iOS 26+)
     @available(iOS 26.0, *)
     private func updateNavigationTitle() {
-        self.title = "유사사진정리 - 인물\(currentPersonIndex)"
+        updateTitleBar()
     }
 
     /// 선택 개수 업데이트
@@ -474,9 +631,9 @@ final class FaceComparisonViewController: UIViewController {
         let count = selectedAssetIDs.count
 
         if count > 0 {
-            selectionCountLabel.text = "\(count)개 선택됨"
+            selectionCountLabel.text = String(localized: "common.selectedCount \(count)")
         } else {
-            selectionCountLabel.text = "항목 선택"
+            selectionCountLabel.text = String(localized: "common.selectItems")
         }
     }
 
@@ -511,6 +668,19 @@ final class FaceComparisonViewController: UIViewController {
                     firstCell.setSelected(false)
                 }
             )
+
+            // C-3 오버레이가 올라갔으므로 터치 차단 해제 (오버레이가 대신 차단)
+            self.view.isUserInteractionEnabled = true
+
+            // C-3 dismiss 후 auto pop 처리
+            // isAutoPopForC가 true이면 FaceComparison을 자동 dismiss하여 뷰어로 복귀
+            CoachMarkManager.shared.currentOverlay?.onDismiss = { [weak self] in
+                guard CoachMarkManager.shared.isAutoPopForC else { return }
+                // FaceComparison dismiss → 뷰어로 복귀
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                    self?.dismiss(animated: true)
+                }
+            }
         }
     }
 
@@ -537,37 +707,96 @@ final class FaceComparisonViewController: UIViewController {
     // MARK: - Actions
 
     /// Cancel 버튼 탭
+    /// 선택된 항목이 없으면 바로 닫고, 있으면 확인 팝업을 표시한다.
     @objc private func cancelButtonTapped() {
-        selectedAssetIDs.removeAll()
-
-        dismiss(animated: true) { [weak self] in
-            guard let self = self else { return }
-            self.delegate?.faceComparisonViewControllerDidClose(self)
+        if selectedAssetIDs.isEmpty {
+            dismiss(animated: true) { [weak self] in
+                guard let self = self else { return }
+                self.delegate?.faceComparisonViewControllerDidClose(self)
+            }
+        } else {
+            showCloseConfirmationAlert()
         }
     }
 
     /// Delete 버튼 탭
     @objc private func deleteButtonTapped() {
-        guard !selectedAssetIDs.isEmpty else {
-            let alert = UIAlertController(title: nil, message: "사진을 먼저 선택하세요", preferredStyle: .alert)
-            alert.addAction(UIAlertAction(title: "확인", style: .default))
+        guard !selectedAssetIDs.isEmpty || mode.isFaceScan else {
+            let alert = UIAlertController(
+                title: nil,
+                message: String(localized: "faceComparison.selectFirst"),
+                preferredStyle: .alert
+            )
+            alert.addAction(UIAlertAction(title: String(localized: "common.ok"), style: .default))
             present(alert, animated: true)
             return
         }
 
-        let deletedIDs = Array(selectedAssetIDs)
+        switch mode {
+        case .viewer:
+            // 기존 뷰어 동작: 즉시 삭제
+            let deletedIDs = Array(selectedAssetIDs)
+            trashStore.moveToTrash(assetIDs: deletedIDs)
 
-        trashStore.moveToTrash(assetIDs: deletedIDs)
-
-        Task { @MainActor in
-            for assetID in deletedIDs {
-                _ = await cache.removeMemberFromGroup(assetID, groupID: comparisonGroup.sourceGroupID)
+            Task { @MainActor in
+                for assetID in deletedIDs {
+                    _ = await cacheMutator?.removeMemberFromGroup(assetID, groupID: comparisonGroup.sourceGroupID)
+                }
+                selectedAssetIDs.removeAll()
+                delegate?.faceComparisonViewController(self, didDeletePhotos: deletedIDs)
             }
 
-            selectedAssetIDs.removeAll()
-
-            delegate?.faceComparisonViewController(self, didDeletePhotos: deletedIDs)
+        case .faceScan(let initialSelected):
+            // FaceScan 모드: diff 적용
+            applyDiffAndDismiss(initialSelected: initialSelected)
         }
+    }
+
+    // MARK: - FaceScan Diff 처리
+
+    /// diff를 적용하고 dismiss합니다.
+    /// - Parameter initialSelected: 진입 시점의 선택 상태
+    private func applyDiffAndDismiss(initialSelected: Set<String>) {
+        let currentSelected = selectedAssetIDs
+
+        // 새로 삭제할 것 = 현재 선택 - 진입 시 선택
+        let toDelete = currentSelected.subtracting(initialSelected)
+        // 복원할 것 = 진입 시 선택 - 현재 선택
+        let toRestore = initialSelected.subtracting(currentSelected)
+
+        // 새로 삭제
+        if !toDelete.isEmpty {
+            trashStore.moveToTrash(assetIDs: Array(toDelete))
+        }
+
+        // 복원 (방어: 실제 trash에 있는지 확인)
+        if !toRestore.isEmpty {
+            let actuallyTrashed = toRestore.filter { trashStore.isTrashed($0) }
+            if !actuallyTrashed.isEmpty {
+                trashStore.restore(assetIDs: Array(actuallyTrashed))
+            }
+        }
+
+        // delegate에 최종 상태 전달
+        delegate?.faceComparisonViewController(self, didApplyChanges: currentSelected)
+    }
+
+    /// 닫기 확인 팝업
+    /// 확인 시 현재 변경사항을 버리고 화면을 닫는다.
+    private func showCloseConfirmationAlert() {
+        let alert = UIAlertController(
+            title: nil,
+            message: String(localized: "faceComparison.applyAlert"),
+            preferredStyle: .alert
+        )
+        alert.addAction(UIAlertAction(title: String(localized: "common.cancel"), style: .cancel))
+        alert.addAction(UIAlertAction(title: String(localized: "faceComparison.leave"), style: .destructive) { [weak self] _ in
+            guard let self = self else { return }
+            self.dismiss(animated: true) {
+                self.delegate?.faceComparisonViewControllerDidClose(self)
+            }
+        })
+        present(alert, animated: true)
     }
 
     /// 순환 버튼 탭
@@ -635,6 +864,7 @@ final class FaceComparisonViewController: UIViewController {
             print("[Debug] ExtendedFallbackTester 비활성화됨 (Vision 제거)")
         }
     }
+
 }
 
 // MARK: - FaceComparisonBottomBar
@@ -694,14 +924,42 @@ extension FaceComparisonViewController: FaceComparisonDataSource {
 
         let boundingBox = face.boundingBox
 
+        // --- targetSize 적정화: 셀 크기에 필요한 만큼만 요청 ---
+        // 셀 픽셀 크기 (2열 그리드 근사값)
+        let cellPixels = UIScreen.main.bounds.width / 2 * UIScreen.main.scale
+
+        // 원본 이미지의 실제 픽셀 치수
+        let originalW = CGFloat(asset.pixelWidth)
+        let originalH = CGFloat(asset.pixelHeight)
+        let originalLongSide = max(originalW, originalH)
+
+        // 원본에서의 얼굴 실제 픽셀 크기 (종횡비 반영)
+        let facePixelW = boundingBox.width * originalW
+        let facePixelH = boundingBox.height * originalH
+        let maxFaceDim = max(facePixelW, facePixelH)
+        let paddedFaceDim = maxFaceDim * (1 + 2 * FaceCropper.paddingRatio)  // ×1.6
+
+        // 통합 제약: 얼굴 크롭 충분 + clampToBounds 시 짧은 변 보장
+        let shortSide = min(originalW, originalH)
+        let effectiveDim = min(paddedFaceDim, shortSide)
+        let requiredLongSide = cellPixels * originalLongSide / effectiveDim * 1.2  // 20% 품질 여유
+
+        // 범위 제한: 최소 960px, 최대 원본
+        let clampedLongSide = min(originalLongSide, max(960, requiredLongSide))
+
+        // 원본 종횡비 유지 직사각형으로 요청 (정사각형 targetSize 모호함 제거)
+        let sizeScale = clampedLongSide / originalLongSide
+        let targetSize = CGSize(width: originalW * sizeScale, height: originalH * sizeScale)
+
         let options = PHImageRequestOptions()
         options.deliveryMode = .highQualityFormat
         options.resizeMode = .exact
         options.isSynchronous = false
+        options.isNetworkAccessAllowed = true  // iCloud 사진 지원
 
         imageManager.requestImage(
             for: asset,
-            targetSize: CGSize(width: asset.pixelWidth, height: asset.pixelHeight),
+            targetSize: targetSize,
             contentMode: .aspectFit,
             options: options
         ) { image, _ in
@@ -811,6 +1069,8 @@ extension FaceComparisonViewController: UIPageViewControllerDelegate {
         // 선택 상태 경량 갱신 (prefetch된 페이지의 stale 선택 상태 보정)
         currentPage.refreshSelectionStates()
 
+        // 스와이프 완료 → 힌트 화살표 숨기기 + 경험 기록
+        markSwipeExperienced()
     }
 }
 
@@ -825,6 +1085,7 @@ extension FaceComparisonViewController: FaceComparisonTitleBarDelegate {
     func faceComparisonTitleBarDidTapClose(_ titleBar: FaceComparisonTitleBar) {
         cancelButtonTapped()
     }
+
 }
 
 // MARK: - LiquidGlass 최적화 (UIScrollViewDelegate)

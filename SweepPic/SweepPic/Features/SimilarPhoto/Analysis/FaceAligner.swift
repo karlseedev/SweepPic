@@ -37,11 +37,11 @@ enum FaceAlignerError: Error, LocalizedError {
     var errorDescription: String? {
         switch self {
         case .transformCalculationFailed(let reason):
-            return "변환 행렬 계산 실패: \(reason)"
+            return "Transform matrix calculation failed: \(reason)"  // 변환 행렬 계산 실패
         case .imageCreationFailed(let reason):
-            return "이미지 생성 실패: \(reason)"
+            return "Image creation failed: \(reason)"  // 이미지 생성 실패
         case .invalidLandmarks(let reason):
-            return "잘못된 랜드마크: \(reason)"
+            return "Invalid landmarks: \(reason)"  // 잘못된 랜드마크
         }
     }
 }
@@ -87,7 +87,7 @@ final class FaceAligner {
     func align(image: CGImage, landmarks: [CGPoint]) throws -> CGImage {
         // 랜드마크 검증
         guard landmarks.count == 5 else {
-            throw FaceAlignerError.invalidLandmarks("5개의 랜드마크가 필요합니다 (현재: \(landmarks.count))")
+            throw FaceAlignerError.invalidLandmarks("5 landmarks are required (current: \(landmarks.count))")
         }
 
         // 1. 소스 랜드마크를 Float 배열로 변환
@@ -142,7 +142,7 @@ final class FaceAligner {
     ) throws -> CGAffineTransform {
         let n = src.count
         guard n == dst.count, n >= 3 else {
-            throw FaceAlignerError.transformCalculationFailed("최소 3개의 점이 필요합니다")
+            throw FaceAlignerError.transformCalculationFailed("at least 3 points are required")
         }
 
         // 1. 중심점 계산
@@ -156,7 +156,7 @@ final class FaceAligner {
         // 3. 소스 분산 계산 (스케일 정규화용)
         let srcVar = variance(srcCentered)
         guard srcVar > 1e-6 else {
-            throw FaceAlignerError.transformCalculationFailed("소스 점들이 너무 밀집되어 있습니다")
+            throw FaceAlignerError.transformCalculationFailed("source points are too close together")
         }
 
         // 4. 공분산 행렬 H = src^T * dst
@@ -241,7 +241,7 @@ final class FaceAligner {
             space: CGColorSpaceCreateDeviceRGB(),
             bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
         ) else {
-            throw FaceAlignerError.imageCreationFailed("입력 CGContext 생성 실패")
+            throw FaceAlignerError.imageCreationFailed("failed to create input CGContext")
         }
         srcContext.draw(image, in: CGRect(x: 0, y: 0, width: srcWidth, height: srcHeight))
 
@@ -312,11 +312,11 @@ final class FaceAligner {
             space: CGColorSpaceCreateDeviceRGB(),
             bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
         ) else {
-            throw FaceAlignerError.imageCreationFailed("출력 CGContext 생성 실패")
+            throw FaceAlignerError.imageCreationFailed("failed to create output CGContext")
         }
 
         guard let alignedImage = dstContext.makeImage() else {
-            throw FaceAlignerError.imageCreationFailed("정렬된 이미지 생성 실패")
+            throw FaceAlignerError.imageCreationFailed("failed to create aligned image")
         }
 
         return alignedImage

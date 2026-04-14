@@ -50,7 +50,19 @@ class TabBarController: UITabBarController {
         return true
     }
 
+    // MARK: - Onboarding Touch Catcher
+
+    /// 온보딩 첫 터치 감지용 투명 컨트롤
+    /// 온보딩 A 미완료 시 window 위에 설치하여
+    /// 사용자의 첫 터치(탭/스크롤/스와이프 등)를 가로채고 온보딩 A를 즉시 표시
+    private var onboardingTouchCatcher: UIControl?
+
     // MARK: - Lifecycle
+
+    override func viewDidAppear(_ animated: Bool) {
+        super.viewDidAppear(animated)
+        installOnboardingTouchCatcherIfNeeded()
+    }
 
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -97,7 +109,7 @@ class TabBarController: UITabBarController {
         let photosVC = GridViewController()
         let photosNavController = UINavigationController(rootViewController: photosVC)
         photosNavController.tabBarItem = UITabBarItem(
-            title: "보관함",
+            title: String(localized: "tab.photos"),
             image: UIImage(systemName: "photo.on.rectangle"),
             selectedImage: UIImage(systemName: "photo.on.rectangle.fill")
         )
@@ -112,7 +124,7 @@ class TabBarController: UITabBarController {
         let albumsVC = AlbumsViewController()
         let albumsNavController = UINavigationController(rootViewController: albumsVC)
         albumsNavController.tabBarItem = UITabBarItem(
-            title: "앨범",
+            title: String(localized: "tab.albums"),
             image: UIImage(systemName: "rectangle.stack"),
             selectedImage: UIImage(systemName: "rectangle.stack.fill")
         )
@@ -126,7 +138,7 @@ class TabBarController: UITabBarController {
         let trashVC = TrashAlbumViewController()
         let trashNavController = UINavigationController(rootViewController: trashVC)
         trashNavController.tabBarItem = UITabBarItem(
-            title: "삭제대기함",
+            title: String(localized: "tab.trash"),
             image: UIImage(systemName: "xmark.bin"),
             selectedImage: UIImage(systemName: "xmark.bin.fill")
         )
@@ -161,6 +173,13 @@ class TabBarController: UITabBarController {
 
         self.floatingOverlay = overlay
 
+        // A-1 인터셉트: 상단 버튼(간편정리, 메뉴) 탭 시 A-1 조건이면 차단 → A-1 표시
+        overlay.titleBar.rightButtonInterceptor = { [weak self] in
+            guard let self, self.shouldInterceptForCoachMarkA1() else { return false }
+            self.showCoachMarkA1OnGrid()
+            return true
+        }
+
     }
 
     /// 시스템 바 가시성 설정
@@ -192,7 +211,7 @@ class TabBarController: UITabBarController {
         // Photos 탭에 Select 버튼 추가
         if let photosVC = photosNav?.viewControllers.first as? GridViewController {
             let selectButton = UIBarButtonItem(
-                title: "선택",
+                title: String(localized: "common.select"),
                 style: .plain,
                 target: self,
                 action: #selector(systemSelectButtonTapped)
@@ -256,10 +275,69 @@ class TabBarController: UITabBarController {
         }
     }
 
+    // MARK: - Onboarding Touch Catcher Methods
+
+    /// 온보딩 A 미완료 시 터치 캐처를 window 위에 설치
+    /// UIControl의 .touchDown은 손가락이 닿는 순간 발동하므로
+    /// 탭, 스크롤 시작, 스와이프 시작, 롱프레스 등 모든 종류의 터치를 잡음
+    private func installOnboardingTouchCatcherIfNeeded() {
+        // 이미 온보딩 A를 본 사용자에게는 설치하지 않음
+        guard !CoachMarkType.gridSwipeDelete.hasBeenShown else { return }
+        // 중복 설치 방지
+        guard onboardingTouchCatcher == nil else { return }
+        guard let window = view.window else { return }
+
+        let catcher = UIControl(frame: window.bounds)
+        catcher.backgroundColor = .clear
+        catcher.addTarget(self, action: #selector(onboardingFirstTouchCaught), for: .touchDown)
+        window.addSubview(catcher)
+        onboardingTouchCatcher = catcher
+    }
+
+    /// 사용자의 첫 터치 감지 → 터치 차단 + 온보딩 A 표시
+    @objc private func onboardingFirstTouchCaught() {
+        // 터치 캐처 제거 (이후 터치는 정상 전달)
+        onboardingTouchCatcher?.removeFromSuperview()
+        onboardingTouchCatcher = nil
+
+        // 보관함(Photos) 탭으로 전환 (다른 탭이었을 경우 대비)
+        selectedIndex = 0
+
+        // GridViewController에서 온보딩 A 즉시 표시
+        if let gridVC = photosNav?.viewControllers.first as? GridViewController {
+            gridVC.showGridSwipeDeleteCoachMark()
+        }
+    }
+
+    // MARK: - Coach Mark A-1 Intercept
+
+    /// A-1 온보딩 인터셉트 조건 확인
+    /// A 완료 + E-1 미완료 + 다른 코치마크 미표시 시 true 반환
+    /// 탭바 전환, 상단 버튼 등에서 동작 차단 판단용
+    private func shouldInterceptForCoachMarkA1() -> Bool {
+        guard CoachMarkType.gridSwipeDelete.hasBeenShown else { return false }
+        guard !CoachMarkType.firstDeleteGuide.hasBeenShown else { return false }
+        guard !CoachMarkManager.shared.isShowing else { return false }
+        return true
+    }
+
+    /// A-1 온보딩 즉시 표시 (탭바/상단 버튼 인터셉트 시 호출)
+    /// 기존 3초 타이머를 취소하고 GridViewController에서 A-1을 바로 띄움
+    private func showCoachMarkA1OnGrid() {
+        guard let gridVC = photosNav?.viewControllers.first as? GridViewController else { return }
+        gridVC.cancelCoachMarkA1Timer()
+        gridVC.showCoachMarkA1()
+    }
+
     // MARK: - Actions
 
     /// 시스템 네비바의 Select 버튼 탭 (iOS 26+)
     @objc private func systemSelectButtonTapped() {
+        // A-1 인터셉트: 선택 모드 진입 차단 → A-1 먼저 표시
+        if shouldInterceptForCoachMarkA1() {
+            showCoachMarkA1OnGrid()
+            return
+        }
         // GridViewController에 Select 모드 진입 알림
         if let photosVC = photosNav?.viewControllers.first as? GridViewController {
             photosVC.enterSelectMode()
@@ -370,6 +448,17 @@ class TabBarController: UITabBarController {
 // MARK: - UITabBarControllerDelegate
 
 extension TabBarController: UITabBarControllerDelegate {
+
+    /// iOS 26+: 탭 전환 허용 여부 판단
+    /// A-1 인터셉트 조건이면 탭 전환을 차단하고 A-1 표시
+    func tabBarController(_ tabBarController: UITabBarController, shouldSelect viewController: UIViewController) -> Bool {
+        if shouldInterceptForCoachMarkA1() {
+            showCoachMarkA1OnGrid()
+            return false
+        }
+        return true
+    }
+
     func tabBarController(_ tabBarController: UITabBarController, didSelect viewController: UIViewController) {
         // 플로팅 오버레이 탭 동기화
         if let index = viewControllers?.firstIndex(of: viewController) {
@@ -394,11 +483,22 @@ extension TabBarController: FloatingOverlayContainerDelegate {
     }
 
     func floatingOverlay(_ container: FloatingOverlayContainer, didSelectTabAt index: Int) {
+        // A-1 인터셉트: 탭 전환 차단 → 시각 상태 되돌리기 → A-1 표시
+        if shouldInterceptForCoachMarkA1() {
+            container.selectedTabIndex = selectedIndex
+            showCoachMarkA1OnGrid()
+            return
+        }
         // 탭 전환
         selectedIndex = index
     }
 
     func floatingOverlayDidTapSelect(_ container: FloatingOverlayContainer) {
+        // A-1 인터셉트: 선택 모드 진입 차단 → A-1 먼저 표시
+        if shouldInterceptForCoachMarkA1() {
+            showCoachMarkA1OnGrid()
+            return
+        }
         // 현재 탭의 Select 모드 지원 VC에 진입 요청
         currentSelectModeTarget()?.enterSelectMode()
     }

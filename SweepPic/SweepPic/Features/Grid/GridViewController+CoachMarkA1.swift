@@ -65,6 +65,9 @@ extension GridViewController {
 
         Logger.coachMark.debug("A1 타이머 시작 (3초)")
 
+        // iOS 26+ 상단 버튼 인터셉트 설정 (3초 대기 중에도 버튼 탭 → A-1 즉시 표시)
+        enableA1NavigationButtonIntercept()
+
         // 3초 후 A-1 표시
         coachMarkA1Timer = Timer.scheduledTimer(
             withTimeInterval: 3.0, repeats: false
@@ -75,8 +78,8 @@ extension GridViewController {
 
     // MARK: - Show
 
-    /// A-1 오버레이 표시
-    private func showCoachMarkA1() {
+    /// A-1 오버레이 표시 (외부에서도 호출 가능 — 탭바/상단 버튼 인터셉트 시)
+    func showCoachMarkA1() {
         // 재가드 (5초 사이에 상태 변경 가능)
         guard CoachMarkType.gridSwipeDelete.hasBeenShown else {
             Logger.coachMark.debug("A1 표시 스킵: A 미완료")
@@ -116,6 +119,9 @@ extension GridViewController {
 
         Logger.coachMark.debug("A1 표시 — cellFrame=\(String(describing: cellFrame))")
 
+        // A-1 활성 중 스크롤 차단 (스와이프 삭제만 허용)
+        collectionView.isScrollEnabled = false
+
         // A-1 오버레이 표시 (스냅샷 없음, 확인 버튼 없음)
         CoachMarkOverlayView.showA1(
             highlightFrame: cellFrame,
@@ -129,6 +135,28 @@ extension GridViewController {
     func cancelCoachMarkA1Timer() {
         coachMarkA1Timer?.invalidate()
         coachMarkA1Timer = nil
+        // 타이머만 취소된 경우에도 상단 버튼 인터셉트 해제
+        disableA1NavigationButtonIntercept()
+    }
+
+    // MARK: - iOS 26+ Navigation Button Intercept
+
+    /// iOS 26+ 상단 버튼(간편정리, 메뉴)에 A-1 인터셉트 설정
+    /// primaryAction을 설정하여 탭 시 메뉴 대신 A-1 표시
+    func enableA1NavigationButtonIntercept() {
+        guard #available(iOS 26.0, *) else { return }
+        let a1Action = UIAction { [weak self] _ in
+            self?.cancelCoachMarkA1Timer()
+            self?.showCoachMarkA1()
+        }
+        navigationItem.rightBarButtonItems?.forEach { $0.primaryAction = a1Action }
+    }
+
+    /// iOS 26+ 상단 버튼의 A-1 인터셉트 해제
+    /// primaryAction을 nil로 복원하여 탭 시 원래 메뉴가 동작
+    func disableA1NavigationButtonIntercept() {
+        guard #available(iOS 26.0, *) else { return }
+        navigationItem.rightBarButtonItems?.forEach { $0.primaryAction = nil }
     }
 
     // MARK: - Cell Finding

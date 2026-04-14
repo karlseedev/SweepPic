@@ -123,7 +123,7 @@ final class FloatingTabBar: UIView {
     /// Photos 탭 버튼
     private lazy var photosButton: UIButton = {
         let button = createTabButton(
-            title: "보관함",
+            title: String(localized: "tab.photos"),
             image: UIImage(systemName: "photo.on.rectangle"),
             selectedImage: UIImage(systemName: "photo.on.rectangle.fill"),
             tag: 0
@@ -134,7 +134,7 @@ final class FloatingTabBar: UIView {
     /// Albums 탭 버튼
     private lazy var albumsButton: UIButton = {
         let button = createTabButton(
-            title: "앨범",
+            title: String(localized: "tab.albums"),
             image: UIImage(systemName: "rectangle.stack"),
             selectedImage: UIImage(systemName: "rectangle.stack.fill"),
             tag: 1
@@ -145,7 +145,7 @@ final class FloatingTabBar: UIView {
     /// Trash 탭 버튼
     private lazy var trashButton: UIButton = {
         let button = createTabButton(
-            title: "삭제대기함",
+            title: String(localized: "tab.trash"),
             image: UIImage(systemName: "trash"),
             selectedImage: UIImage(systemName: "trash.fill"),
             tag: 2
@@ -195,7 +195,7 @@ final class FloatingTabBar: UIView {
         config.baseForegroundColor = .systemRed
         config.preferredSymbolConfigurationForImage = UIImage.SymbolConfiguration(pointSize: 20, weight: .medium)
         let button = UIButton(configuration: config)
-        button.accessibilityLabel = "삭제하기"
+        button.accessibilityLabel = String(localized: "common.delete")
         button.addTarget(self, action: #selector(emptyTrashButtonTapped), for: .touchUpInside)
         button.translatesAutoresizingMaskIntoConstraints = false
         return button
@@ -206,7 +206,7 @@ final class FloatingTabBar: UIView {
     /// 선택 개수 라벨 (순수 텍스트)
     private lazy var selectionCountLabel: UILabel = {
         let label = UILabel()
-        label.text = "항목 선택"
+        label.text = String(localized: "common.selectItems")
         label.textColor = .white
         label.font = .systemFont(ofSize: 17, weight: .regular)
         label.textAlignment = .center
@@ -216,7 +216,7 @@ final class FloatingTabBar: UIView {
     /// Delete 버튼 (Liquid Glass 스타일)
     /// iOS 26 스펙: 높이 44pt, fontSize 17pt
     private lazy var deleteButton: GlassTextButton = {
-        let button = GlassTextButton(title: "삭제", style: .plain, tintColor: .systemRed)
+        let button = GlassTextButton(title: String(localized: "common.delete"), style: .plain, tintColor: .systemRed)
         button.addTarget(self, action: #selector(deleteButtonTapped), for: .touchUpInside)
         return button
     }()
@@ -244,7 +244,7 @@ final class FloatingTabBar: UIView {
     /// Trash Restore 버튼 (Liquid Glass 스타일)
     /// iOS 26 스펙: 높이 44pt, fontSize 17pt
     private lazy var trashRestoreButton: GlassTextButton = {
-        let button = GlassTextButton(title: "복구", style: .plain, tintColor: .systemBlue)
+        let button = GlassTextButton(title: String(localized: "common.restore"), style: .plain, tintColor: .systemBlue)
         button.addTarget(self, action: #selector(trashRestoreButtonTapped), for: .touchUpInside)
         return button
     }()
@@ -252,7 +252,7 @@ final class FloatingTabBar: UIView {
     /// Trash 선택 개수 라벨
     private lazy var trashSelectionCountLabel: UILabel = {
         let label = UILabel()
-        label.text = "항목 선택"
+        label.text = String(localized: "common.selectItems")
         label.textColor = .white
         label.font = .systemFont(ofSize: 17, weight: .regular)
         label.textAlignment = .center
@@ -262,7 +262,7 @@ final class FloatingTabBar: UIView {
     /// Trash Delete 버튼 (Liquid Glass 스타일, 최종 삭제)
     /// iOS 26 스펙: 높이 44pt, fontSize 17pt
     private lazy var trashDeleteButton: GlassTextButton = {
-        let button = GlassTextButton(title: "삭제", style: .plain, tintColor: .systemRed)
+        let button = GlassTextButton(title: String(localized: "common.delete"), style: .plain, tintColor: .systemRed)
         button.addTarget(self, action: #selector(trashDeleteButtonTapped), for: .touchUpInside)
         return button
     }()
@@ -577,7 +577,7 @@ final class FloatingTabBar: UIView {
     /// - Parameter animated: 애니메이션 여부
     func enterSelectMode(animated: Bool = true) {
         isSelectMode = true
-        selectionCountLabel.text = "항목 선택"
+        selectionCountLabel.text = String(localized: "common.selectItems")
         deleteButton.isEnabled = false
 
         if animated {
@@ -625,7 +625,7 @@ final class FloatingTabBar: UIView {
     /// - Parameter count: 선택된 사진 개수
     func updateSelectionCount(_ count: Int) {
         // 0개: "항목 선택", 1개 이상: "N개 항목 선택됨"
-        selectionCountLabel.text = count > 0 ? "\(count)개 항목 선택됨" : "항목 선택"
+        selectionCountLabel.text = count > 0 ? String(localized: "common.selectedCount \(count)") : String(localized: "common.selectItems")
         deleteButton.isEnabled = count > 0
     }
 
@@ -635,7 +635,7 @@ final class FloatingTabBar: UIView {
     /// - Parameter animated: 애니메이션 여부
     func enterTrashSelectMode(animated: Bool = true) {
         isTrashSelectMode = true
-        trashSelectionCountLabel.text = "항목 선택"
+        trashSelectionCountLabel.text = String(localized: "common.selectItems")
         trashRestoreButton.isEnabled = false
         trashDeleteButton.isEnabled = false
 
@@ -684,7 +684,7 @@ final class FloatingTabBar: UIView {
     /// - Parameter count: 선택된 사진 개수
     func updateTrashSelectionCount(_ count: Int) {
         // 0개: "항목 선택", 1개 이상: "N개 항목 선택됨"
-        trashSelectionCountLabel.text = count > 0 ? "\(count)개 항목 선택됨" : "항목 선택"
+        trashSelectionCountLabel.text = count > 0 ? String(localized: "common.selectedCount \(count)") : String(localized: "common.selectItems")
         trashRestoreButton.isEnabled = count > 0
         trashDeleteButton.isEnabled = count > 0
     }

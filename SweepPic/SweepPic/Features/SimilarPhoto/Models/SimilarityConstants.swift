@@ -108,6 +108,11 @@ enum SimilarityConstants: Sendable {
     /// 사진당 최대 얼굴 수
     nonisolated static let maxFacesPerPhoto: Int = 5
 
+    /// 인물 번호 배정 시 품질 판단 임계값 (SFace norm 기준)
+    /// - 평균 norm이 이 값 미만인 인물은 면적이 크더라도 뒷번호로 밀림
+    /// - 범위: 7.0 (최소 감지) ~ 11.3 (이론적 최대)
+    nonisolated static let personIndexQualityNormThreshold: Float = 8.5
+
     // MARK: - Performance
 
     /// 분석 타임아웃 (초)
@@ -130,13 +135,17 @@ enum SimilarityConstants: Sendable {
     /// 스크롤 디바운싱 시간 (초)
     nonisolated static let scrollDebounceDelay: TimeInterval = 0.3
 
-    // MARK: - Comparison Group
+    // MARK: - Boundary Resolution
 
-    /// 비교 그룹 최대 크기
-    nonisolated static let maxComparisonGroupSize: Int = 8
+    /// 그룹 경계 확인 최대 한도 (한 방향당)
+    ///
+    /// 그룹이 분석 범위 끝에 걸쳐있을 때, 양쪽으로 끊기 지점을 찾기 위해
+    /// 한 장씩 추가 확인하는 최대 횟수입니다.
+    /// - 100장 × ~15ms/장 (FP 생성) = 최대 ~1.5초 (한 방향)
+    nonisolated static let maxBoundaryExpansion: Int = 100
 
     // MARK: - Face Cropping
 
-    /// 얼굴 크롭 여백 비율
+    /// 얼��� 크롭 여백 비율
     nonisolated static let faceCropPaddingRatio: CGFloat = 0.3
 }

@@ -53,18 +53,16 @@ final class AlbumGridViewController: BaseGridViewController {
     override var supportsSwipeDelete: Bool { true }
 
     override var emptyStateConfig: (icon: String, title: String, subtitle: String?) {
-        ("photo.on.rectangle", "사진이 없습니다", "이 앨범에 사진이 없습니다")
+        ("photo.on.rectangle", String(localized: "albums.detail.empty.title"), String(localized: "albums.detail.empty.subtitle"))
     }
 
     override var navigationTitle: String {
         albumTitle
     }
 
-    /// 앨범 상세 화면 타이틀: 20pt bold (메인 탭 36pt light와 별도 관리)
+    /// 앨범 상세 화면 타이틀: 20pt bold (메인 탭과 별도 관리)
     override var navigationTitleAttributes: [NSAttributedString.Key: Any] {
-        [
-            .font: UIFont.systemFont(ofSize: 20, weight: .bold),
-        ]
+        NavigationTitleTypography.attributes(for: .detailTitle)
     }
 
     /// 앨범 상세는 iOS 26+ 상단 보정 불필요
@@ -234,7 +232,7 @@ final class AlbumGridViewController: BaseGridViewController {
 
         // 뒤로가기 버튼 표시 + pop 액션 설정
         overlay.titleBar.setShowsBackButton(true) { [weak self] in
-            self?.navigationController?.popViewController(animated: true)
+            self?.handleBackNavigation()
         }
 
         // Select 버튼 표시 (Grid와 동일하게 선택 모드 지원)
@@ -255,7 +253,7 @@ final class AlbumGridViewController: BaseGridViewController {
         guard !isSelectMode else { return }
 
         let selectButton = UIBarButtonItem(
-            title: "선택",
+            title: String(localized: "common.select"),
             style: .plain,
             target: self,
             action: #selector(selectButtonTapped)
@@ -268,7 +266,37 @@ final class AlbumGridViewController: BaseGridViewController {
 
     }
 
+    /// Select 모드 상태에 맞춰 앨범 상세의 뒤로가기 정책 갱신
+    override func updateBackNavigationForSelectMode() {
+        if #available(iOS 26.0, *), isSelectMode {
+            navigationItem.leftBarButtonItem = UIBarButtonItem(
+                image: UIImage(systemName: "chevron.left"),
+                style: .plain,
+                target: self,
+                action: #selector(selectModeBackButtonTapped)
+            )
+        } else {
+            navigationItem.leftBarButtonItem = nil
+        }
+
+        navigationController?.interactivePopGestureRecognizer?.isEnabled = !isSelectMode
+    }
+
     // MARK: - Album 고유 기능
+
+    /// 선택 모드 중 뒤로가기는 선택 모드 해제 후 화면 이탈로 처리
+    private func handleBackNavigation() {
+        if isSelectMode {
+            exitSelectMode()
+        }
+
+        navigationController?.popViewController(animated: true)
+    }
+
+    /// iOS 26 선택 모드 전용 뒤로가기 버튼
+    @objc private func selectModeBackButtonTapped() {
+        handleBackNavigation()
+    }
 
     /// 맨 아래로 스크롤 (최신 사진부터 보기)
     private func scrollToBottomIfNeeded() {

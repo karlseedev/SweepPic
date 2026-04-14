@@ -54,6 +54,9 @@ final class TrashAlbumViewController: BaseGridViewController {
     /// 초기 스크롤 완료 여부 (맨 아래로 스크롤)
     private var didInitialScroll: Bool = false
 
+    /// 첫 비우기 완료 안내(F) 표시 대기 상태
+    private var pendingFirstEmptyFeedback: Bool = false
+
     /// 뷰어 복귀 후 사용자가 스크롤했는지 여부
     /// - true이면 applyPendingViewerReturn()에서 강제 스크롤 skip
     private var didUserScrollAfterReturn: Bool = false
@@ -101,7 +104,7 @@ final class TrashAlbumViewController: BaseGridViewController {
 
     /// 빈 상태 설정
     override var emptyStateConfig: (icon: String, title: String, subtitle: String?) {
-        ("xmark.bin", "삭제대기함이 비어 있습니다", nil)
+        ("xmark.bin", String(localized: "emptyState.emptyTrash.title"), nil)
     }
 
     /// 네비게이션 타이틀
@@ -110,11 +113,11 @@ final class TrashAlbumViewController: BaseGridViewController {
     /// - LiquidGlassTabBar.swift: tabButtons title
     /// - configureFloatingOverlayForTrash의 setTitle()
     override var navigationTitle: String {
-        "삭제대기함"
+        String(localized: "trash.title")
     }
 
-    /// 스와이프 제스처 활성화 (녹색 커튼 복구)
-    override var supportsSwipeDelete: Bool { true }
+    /// 스와이프 제스처 비활성화 (복구 기능 제거)
+    override var supportsSwipeDelete: Bool { false }
 
     /// 스와이프 동작: 복구 (녹색 커튼)
     override var swipeActionIsRestore: Bool { true }
@@ -244,6 +247,12 @@ final class TrashAlbumViewController: BaseGridViewController {
         // [LiquidGlass 최적화] 블러 뷰 사전 생성 + idle pause
         LiquidGlassOptimizer.preload(in: view.window)
         LiquidGlassOptimizer.enterIdle(in: view.window)
+
+        // 온보딩 중 스킵된 게이지 첫 툴팁 재시도
+        retryGaugeFirstTooltipIfNeeded()
+
+        // F 표시가 다른 모달/온보딩 때문에 지연된 경우 재시도
+        showFirstEmptyFeedbackIfPossible()
     }
 
     // MARK: - Setup
@@ -267,7 +276,7 @@ final class TrashAlbumViewController: BaseGridViewController {
 
         // Select 버튼
         let selectButton = UIBarButtonItem(
-            title: "선택",
+            title: String(localized: "common.select"),
             style: .plain,
             target: self,
             action: #selector(selectButtonTapped)
@@ -276,7 +285,7 @@ final class TrashAlbumViewController: BaseGridViewController {
 
         // "비우기" 버튼
         let emptyButton = UIBarButtonItem(
-            title: "비우기",
+            title: String(localized: "trash.emptyAction"),
             style: .plain,
             target: self,
             action: #selector(emptyTrashButtonTapped)
@@ -312,12 +321,12 @@ final class TrashAlbumViewController: BaseGridViewController {
         // [Select] [비우기] 두 버튼 표시
         let isEmpty = _trashDataSource.isEmpty
         overlay.titleBar.setTwoRightButtons(
-            firstTitle: "선택",
+            firstTitle: String(localized: "common.select"),
             firstColor: .white,
             firstAction: { [weak self] in
                 self?.enterSelectMode()
             },
-            secondTitle: "비우기",
+            secondTitle: String(localized: "trash.emptyAction"),
             secondColor: .systemRed,
             secondAction: { [weak self] in
                 self?.emptyTrashButtonTapped()
@@ -602,7 +611,7 @@ final class TrashAlbumViewController: BaseGridViewController {
         let formatter = NumberFormatter()
         formatter.numberStyle = .decimal
         let formatted = formatter.string(from: NSNumber(value: count)) ?? "\(count)"
-        let subtitleText = "\(formatted)개의 항목"
+        let subtitleText = String(localized: "trash.itemCount \(count)")
 
         // iOS 18: FloatingTitleBar 서브타이틀
         if let tabBarController = tabBarController as? TabBarController,
@@ -612,7 +621,10 @@ final class TrashAlbumViewController: BaseGridViewController {
 
         // iOS 26: 네비게이션 바 서브타이틀
         if let subtitleLabel = navSubtitleLabel {
-            subtitleLabel.text = subtitleText
+            subtitleLabel.attributedText = NavigationTitleTypography.attributedText(
+                subtitleText,
+                style: .subtitle
+            )
             subtitleLabel.isHidden = false
         }
     }
@@ -661,9 +673,14 @@ final class TrashAlbumViewController: BaseGridViewController {
 
                     // [BM] 통계 저장 + 축하 화면 (FR-039, FR-040, T046)
                     await MainActor.run {
-                        self?.showCelebrationAfterDeletion(
+                        guard let self else { return }
+                        self.pendingFirstEmptyFeedback = !CoachMarkType.firstEmpty.hasBeenShown
+                        self.showCelebrationAfterDeletion(
                             deletedCount: count,
-                            freedBytes: freedBytes
+                            freedBytes: freedBytes,
+                            onAcknowledge: { [weak self] in
+                            self?.showFirstEmptyFeedbackIfPossible()
+                            }
                         )
                     }
 
@@ -675,9 +692,6 @@ final class TrashAlbumViewController: BaseGridViewController {
                             isProhibitedTiming: prohibited
                         )
                     }
-
-                    // E-3: 첫 비우기 완료 안내 트리거
-                    self?.showFirstEmptyFeedbackIfNeeded()
                 } catch {
                     // 취소 또는 오류 시 조용히 무시 — 한도 미차감
                 }
@@ -685,13 +699,20 @@ final class TrashAlbumViewController: BaseGridViewController {
         }
     }
 
-    /// 첫 비우기 완료 시 E-3 안내 표시
-    private func showFirstEmptyFeedbackIfNeeded() {
-        guard !CoachMarkType.firstEmpty.hasBeenShown else { return }
+    /// 첫 비우기 완료 안내(F) 표시 가능 시 즉시 표시
+    /// 축하 화면/다른 모달/온보딩이 남아있으면 pending 상태를 유지하고 다음 진입에서 재시도한다.
+    private func showFirstEmptyFeedbackIfPossible() {
+        guard pendingFirstEmptyFeedback else { return }
+        guard !CoachMarkType.firstEmpty.hasBeenShown else {
+            pendingFirstEmptyFeedback = false
+            return
+        }
+        guard presentedViewController == nil else { return }
         guard !CoachMarkManager.shared.isShowing else { return }
         guard !UIAccessibility.isVoiceOverRunning else { return }
         guard let window = view.window else { return }
 
+        pendingFirstEmptyFeedback = false
         CoachMarkOverlayView.showFirstEmptyFeedback(in: window)
     }
 

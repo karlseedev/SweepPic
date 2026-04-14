@@ -1,4 +1,4 @@
-검토 결과, 문서 목표(“그리드 스와이프 삭제를 직관적으로 학습”) 자체는 타당하지만 현재 계획만으로는 **실제 노출 안정성/정책 일치성에서 핵심 누락**이 있습니다.
+검토 결과, 문서 목표(“목록에서 밀어서 삭제를 직관적으로 학습”) 자체는 타당하지만 현재 계획만으로는 **실제 노출 안정성/정책 일치성에서 핵심 누락**이 있습니다.
 
 1. `[높음]` 1회 스케줄 구조라 표시 실패 시 영구 미노출될 수 있습니다.  
 `docs/260211onboarding-ani.md:313`~`docs/260211onboarding-ani.md:322`에서 `hasScheduledCoachMark = true`를 먼저 세팅하고 2초 후 표시하는데, 표시 시점 조건 실패(스크롤 중/화면 이탈) 시 재시도 규칙이 없습니다. `finishInitialDisplay`는 1회성(`SweepPic/SweepPic/Features/Grid/GridScroll.swift:361`~`SweepPic/SweepPic/Features/Grid/GridScroll.swift:364`)이라 다시 스케줄되지 않습니다.

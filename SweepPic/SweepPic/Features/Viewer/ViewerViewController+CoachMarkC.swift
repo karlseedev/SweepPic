@@ -181,6 +181,8 @@ extension ViewerViewController {
 
             if let faceCompVC {
                 // present 성공 → C 완료 마킹 + C-3 자동 재생
+                // C-3 오버레이(0.3초 후)가 올라가기 전까지 얼굴 그리드 터치 차단
+                faceCompVC.view.isUserInteractionEnabled = false
                 CoachMarkType.similarPhoto.markAsShown()
                 faceCompVC.showFaceComparisonGuide()
             }

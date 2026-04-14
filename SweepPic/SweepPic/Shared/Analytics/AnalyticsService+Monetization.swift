@@ -13,7 +13,7 @@ import Foundation
 /// 게이트 팝업에서 사용자 선택
 enum GateChoice: String {
     case ad      = "ad"       // 광고 시청
-    case plus    = "plus"     // Plus 업그레이드
+    case pro     = "pro"      // Pro 업그레이드
     case dismiss = "dismiss"  // 닫기
 }
 
@@ -26,7 +26,7 @@ enum AdType: String {
 
 /// 페이월 진입 경로
 enum PaywallSource: String {
-    case gate   = "gate"    // 게이트 팝업에서 Plus 선택
+    case gate   = "gate"    // 게이트 팝업에서 Pro 선택
     case menu   = "menu"    // 프리미엄 메뉴에서 구독 관리
     case banner = "banner"  // 배너 탭
     case gauge  = "gauge"   // 게이지 상세 팝업
@@ -61,7 +61,7 @@ extension AnalyticsService {
     }
 
     /// 게이트 팝업에서 사용자 선택
-    /// - Parameter choice: 선택 항목 (ad/plus/dismiss)
+    /// - Parameter choice: 선택 항목 (ad/pro/dismiss)
     func trackGateSelection(choice: GateChoice) {
         guard !shouldSkip() else { return }
         sendEvent("bm.gateSelection", parameters: [
@@ -95,7 +95,7 @@ extension AnalyticsService {
     }
 
     /// 구독 완료
-    /// - Parameter productID: 구독 상품 ID (plus_monthly/plus_yearly)
+    /// - Parameter productID: 구독 상품 ID (pro_monthly/pro_yearly)
     func trackSubscriptionCompleted(productID: String) {
         guard !shouldSkip() else { return }
         sendEvent("bm.subscriptionCompleted", parameters: [

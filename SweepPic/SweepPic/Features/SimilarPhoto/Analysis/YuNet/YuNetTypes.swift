@@ -55,13 +55,13 @@ enum YuNetError: Error, LocalizedError {
     var errorDescription: String? {
         switch self {
         case .modelLoadFailed(let reason):
-            return "YuNet 모델 로드 실패: \(reason)"
+            return "YuNet model load failed: \(reason)"  // YuNet 모델 로드 실패
         case .preprocessingFailed(let reason):
-            return "전처리 실패: \(reason)"
+            return "Preprocessing failed: \(reason)"  // 전처리 실패
         case .invalidImageFormat(let reason):
-            return "잘못된 이미지 포맷: \(reason)"
+            return "Invalid image format: \(reason)"  // 잘못된 이미지 포맷
         case .inferenceFailed(let reason):
-            return "추론 실패: \(reason)"
+            return "Inference failed: \(reason)"  // 추론 실패
         }
     }
 }
@@ -83,8 +83,8 @@ enum YuNetConfig {
     /// NMS IoU 임계값 (OpenCV 기본값)
     static let nmsThreshold: Float = 0.3
 
-    /// Score 임계값 (OpenCV 기본값)
-    static let scoreThreshold: Float = 0.6
+    /// Score 임계값 (0.6 → 0.75 상향: 사자/꽃 등 오판 방지)
+    static let scoreThreshold: Float = 0.75
 
     /// 최대 반환 얼굴 수 (SimilarityConstants.maxFacesPerPhoto 사용)
     static var topK: Int {

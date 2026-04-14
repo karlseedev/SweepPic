@@ -114,6 +114,7 @@ class BaseGridViewController: UIViewController {
         cv.dataSource = self
         cv.prefetchDataSource = self
         cv.alwaysBounceVertical = true
+        cv.delaysContentTouches = false  // 터치 즉시 셀 하이라이트 (축소 피드백)
         cv.accessibilityIdentifier = "photo_grid"
         // Edge-to-edge 설정 (플로팅 UI 사용 시 수동으로 contentInset 설정)
         cv.contentInsetAdjustmentBehavior = .never
@@ -256,12 +257,9 @@ class BaseGridViewController: UIViewController {
     }
 
     /// 네비게이션 타이틀 텍스트 속성 (서브클래스에서 오버라이드하여 폰트/자간 변경 가능)
-    /// 기본값: 36pt light, kern -1.0
+    /// 기본값: 앱 언어별 메인 타이틀 스타일
     var navigationTitleAttributes: [NSAttributedString.Key: Any] {
-        [
-            .font: UIFont.systemFont(ofSize: 36, weight: .light),
-            .kern: -1.0
-        ]
+        NavigationTitleTypography.attributes(for: .largeTitle)
     }
 
     /// 플로팅 UI 사용 여부 (iOS 26+에서는 시스템 UI 사용)
@@ -414,6 +412,39 @@ class BaseGridViewController: UIViewController {
 
         // 중앙에 위치하도록 스크롤
         collectionView.scrollToItem(at: indexPath, at: .centeredVertically, animated: false)
+    }
+
+    /// 실제 가시 영역 기준으로 셀을 수직 중앙에 스크롤
+    /// adjustedContentInset을 반영하여 FloatingUI/SafeArea 영역을 제외한 중앙 계산
+    /// - Parameters:
+    ///   - indexPath: 대상 셀의 indexPath (padding 포함)
+    ///   - animated: 애니메이션 여부
+    func scrollToCenteredItem(at indexPath: IndexPath, animated: Bool) {
+        // layoutAttributes 조회 (nil이면 layoutIfNeeded 후 재시도)
+        var attributes = collectionView.layoutAttributesForItem(at: indexPath)
+        if attributes == nil {
+            collectionView.layoutIfNeeded()
+            attributes = collectionView.layoutAttributesForItem(at: indexPath)
+        }
+
+        guard let attrs = attributes else {
+            // fallback: 기존 scrollToItem 사용 (부정확하지만 스크롤은 됨)
+            collectionView.scrollToItem(at: indexPath, at: .centeredVertically, animated: animated)
+            return
+        }
+
+        let cellCenterY = attrs.frame.midY
+        let insetTop = collectionView.adjustedContentInset.top
+        let insetBottom = collectionView.adjustedContentInset.bottom
+        let visibleHeight = collectionView.bounds.height - insetTop - insetBottom
+        let targetOffsetY = cellCenterY - insetTop - visibleHeight / 2
+
+        // 스크롤 범위 클램핑
+        let minOffset = -insetTop
+        let maxOffset = max(minOffset, collectionView.contentSize.height - collectionView.bounds.height + insetBottom)
+        let clampedY = max(minOffset, min(targetOffsetY, maxOffset))
+
+        collectionView.setContentOffset(CGPoint(x: 0, y: clampedY), animated: animated)
     }
 
     // MARK: - Setup
@@ -763,6 +794,9 @@ extension BaseGridViewController: UICollectionViewDelegate {
         // 빈 셀 무시
         guard indexPath.item >= paddingCellCount else { return }
 
+        // A-1 활성 중이면 뷰어 진입 차단 (스와이프 삭제만 허용)
+        if CoachMarkManager.shared.isA1Active { return }
+
         // Select 모드일 때는 선택 토글 처리
         if isSelectMode {
             toggleSelectionForSelectMode(at: indexPath)
@@ -832,6 +866,7 @@ extension BaseGridViewController {
     func setupSwipeDeleteGestures() {
         // 스와이프 삭제 제스처
         let swipe = UIPanGestureRecognizer(target: self, action: #selector(handleSwipeDelete(_:)))
+        swipe.maximumNumberOfTouches = 1  // 두 손가락 시 centroid로 엉뚱한 셀 삭제 방지
         swipe.delegate = self
         collectionView.addGestureRecognizer(swipe)
         swipeDeleteState.swipeGesture = swipe
@@ -1084,7 +1119,7 @@ extension BaseGridViewController {
             return
         }
 
-        // [Analytics] 이벤트 4-1: 그리드 스와이프 삭제/복구
+        // [Analytics] 이벤트 4-1: 목록에서 밀어서 삭제/복구
         let analyticsSource: DeleteSource = self is AlbumGridViewController ? .album : .library
 
         cell.confirmDimmedAnimation(toTrashed: toTrashed) { [weak self] in
@@ -1110,6 +1145,8 @@ extension BaseGridViewController {
                             let overlay = CoachMarkManager.shared.currentOverlay
                             CoachMarkManager.shared.currentOverlay = nil  // isShowing = false
                             overlay?.dismiss()  // 시각적 페이드아웃 (백그라운드)
+                            self?.collectionView.isScrollEnabled = true  // A-1 스크롤 차단 해제
+                            (self as? GridViewController)?.disableA1NavigationButtonIntercept()
                             Logger.coachMark.debug("스와이프 삭제 성공 → A-1 dismiss → E-1 트리거")
                         }
                         self?.showDeleteSystemGuideIfNeeded(cell: cell)

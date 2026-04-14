@@ -53,8 +53,8 @@ final class AlbumsViewController: UIViewController {
         let view = EmptyStateView()
         view.configure(
             icon: "rectangle.stack",
-            title: "앨범이 없습니다",
-            subtitle: "앨범을 생성하세요"
+            title: String(localized: "albums.empty.title"),
+            subtitle: String(localized: "albums.empty.subtitle")
         )
         view.isHidden = true
         view.translatesAutoresizingMaskIntoConstraints = false
@@ -181,10 +181,10 @@ final class AlbumsViewController: UIViewController {
         // 커스텀 titleView로 좌측 정렬 타이틀 설정 (컨테이너로 전체 너비 확보)
         let titleContainer = UIView()
         let titleLabel = UILabel()
-        titleLabel.attributedText = NSAttributedString(string: "앨범", attributes: [
-            .font: UIFont.systemFont(ofSize: 36, weight: .light),
-            .kern: -1.0
-        ])
+        titleLabel.attributedText = NavigationTitleTypography.attributedText(
+            String(localized: "tab.albums"),
+            style: .largeTitle
+        )
         titleLabel.textColor = .label
         titleLabel.translatesAutoresizingMaskIntoConstraints = false
         titleContainer.addSubview(titleLabel)
@@ -236,7 +236,7 @@ final class AlbumsViewController: UIViewController {
         // - TabBarController.swift: tabBarItem.title
         // - AlbumsViewController.swift: title, setTitle() (여기)
         // - FloatingOverlayContainer.swift: titleBar.title
-        overlay.titleBar.setTitle("앨범")
+        overlay.titleBar.setTitle(String(localized: "tab.albums"))
         overlay.titleBar.setSubtitle(nil)
         overlay.titleBar.isTitleCenteredVertically = false  // 앨범 상세에서 돌아올 때 상단 정렬 복원
 
@@ -297,7 +297,7 @@ final class AlbumsViewController: UIViewController {
 
             // 섹션 헤더 (스마트 앨범, 사용자 앨범 섹션)
             let albumSection = AlbumSection(rawValue: sectionIndex)
-            if albumSection?.headerTitle != nil {
+            if albumSection?.hasHeader == true {
                 let headerSize = NSCollectionLayoutSize(
                     widthDimension: .fractionalWidth(1.0),
                     heightDimension: .absolute(Self.headerHeight)
@@ -535,7 +535,12 @@ extension AlbumsViewController: UICollectionViewDataSource {
         }
 
         if let albumSection = AlbumSection(rawValue: indexPath.section) {
-            headerView.configure(title: albumSection.headerTitle)
+            let title: String?
+            switch albumSection {
+            case .smartAlbums: title = String(localized: "albums.section.mediaTypes")
+            case .userAlbums: title = String(localized: "albums.section.myAlbums")
+            }
+            headerView.configure(title: title)
         }
 
         return headerView

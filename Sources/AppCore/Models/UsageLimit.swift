@@ -21,7 +21,7 @@ public struct UsageLimit: Codable, Sendable {
     /// 오늘 기본 한도 내에서 삭제한 장수
     public var dailyDeleteCount: Int
 
-    /// 오늘 리워드 광고 시청 횟수 (최대 2)
+    /// 오늘 리워드 광고 시청 횟수 (최대 4)
     public var dailyRewardCount: Int
 
     /// 마지막 리셋 날짜 (yyyy-MM-dd, 서버 시간 기준)
@@ -45,10 +45,10 @@ public struct UsageLimit: Codable, Sendable {
     public static let rewardBonusPerAd: Int = 10
 
     /// 일일 최대 리워드 광고 시청 횟수
-    public static let maxDailyRewards: Int = 2
+    public static let maxDailyRewards: Int = 4
 
     /// 일일 최대 삭제 가능 장수 (기본 + 리워드 최대)
-    /// = dailyFreeLimit + (rewardBonusPerAd × maxDailyRewards) = 30
+    /// = dailyFreeLimit + (rewardBonusPerAd × maxDailyRewards) = 50
     public static let maxDailyTotal: Int = dailyFreeLimit + (rewardBonusPerAd * maxDailyRewards)
 
     // MARK: - Computed Properties
@@ -93,7 +93,7 @@ public struct UsageLimit: Codable, Sendable {
 
         // 남은 리워드 횟수 내에서 가능한지
         if needed > remainingRewards {
-            return -1 // 광고로도 부족 (Plus만 가능)
+            return -1 // 광고로도 부족 (Pro만 가능)
         }
 
         return needed

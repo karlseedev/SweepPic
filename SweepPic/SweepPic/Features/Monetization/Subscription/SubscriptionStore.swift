@@ -9,7 +9,7 @@
 //  - 앱 시작 시 구독 상태 확인 (Transaction.currentEntitlements)
 //  - 실시간 상태 변경 감지 (Transaction.updates AsyncSequence)
 //  - 구매 / 복원 / 리딤 코드 처리
-//  - 환불 → Plus 즉시 해제 (FR-033)
+//  - 환불 → Pro 즉시 해제 (FR-033)
 //  - 오프라인: expirationDate 기반 (FR-053)
 //  - 구독 완료 시 상태 즉시 갱신
 //
@@ -23,7 +23,7 @@ import OSLog
 
 /// 구독 관리 프로토콜 (contracts/protocols.md)
 protocol SubscriptionStoreProtocol: AnyObject {
-    var isPlusUser: Bool { get }
+    var isProUser: Bool { get }
     var state: SubscriptionState { get }
 
     func purchase(_ product: Product) async throws -> Product.PurchaseResult
@@ -53,9 +53,9 @@ final class SubscriptionStore: SubscriptionStoreProtocol {
         }
     }
 
-    /// Plus 구독자 여부 (간편 접근)
-    var isPlusUser: Bool {
-        state.isActive && state.tier == .plus
+    /// Pro 구독자 여부 (간편 접근)
+    var isProUser: Bool {
+        state.isActive && state.tier == .pro
     }
 
     /// 상태 변경 핸들러 목록
@@ -69,6 +69,10 @@ final class SubscriptionStore: SubscriptionStoreProtocol {
 
     /// 구독 설정 완료 여부
     private(set) var isConfigured = false
+
+    /// 구독 상태 확인 완료 여부 (refreshSubscriptionStatus 완료 후 true)
+    /// ATT 프롬프트 등 구독 상태에 의존하는 로직이 레이스 컨디션 없이 동작하도록 사용
+    private(set) var isStatusResolved = false
 
     #if DEBUG
     /// 디버그 오버라이드 활성 여부 — true이면 refreshSubscriptionStatus()가 상태를 덮어쓰지 않음
@@ -89,11 +93,12 @@ final class SubscriptionStore: SubscriptionStoreProtocol {
 
             // 현재 구독 상태 확인 (FR-028)
             await refreshSubscriptionStatus()
+            isStatusResolved = true
 
             // 실시간 상태 변경 감지 시작 (FR-029)
             startTransactionListener()
 
-            Logger.app.debug("SubscriptionStore: 설정 완료 — isPlusUser=\(self.isPlusUser)")
+            Logger.app.debug("SubscriptionStore: 설정 완료 — isProUser=\(self.isProUser)")
         }
     }
 
@@ -127,12 +132,12 @@ final class SubscriptionStore: SubscriptionStoreProtocol {
 
     /// 월간 상품 (편의 접근)
     var monthlyProduct: Product? {
-        products.first { $0.id == SubscriptionProductID.plusMonthly }
+        products.first { $0.id == SubscriptionProductID.proMonthly }
     }
 
     /// 연간 상품 (편의 접근)
     var yearlyProduct: Product? {
-        products.first { $0.id == SubscriptionProductID.plusYearly }
+        products.first { $0.id == SubscriptionProductID.proYearly }
     }
 
     // MARK: - Purchase
@@ -178,12 +183,12 @@ final class SubscriptionStore: SubscriptionStoreProtocol {
     // MARK: - Restore
 
     /// 구매 복원 (AppStore.sync 호출)
-    /// - Returns: 복원 후 Plus 활성 여부
+    /// - Returns: 복원 후 Pro 활성 여부
     func restorePurchases() async throws -> Bool {
         try await AppStore.sync()
         await refreshSubscriptionStatus()
-        Logger.app.debug("SubscriptionStore: 복원 완료 — isPlusUser=\(self.isPlusUser)")
-        return isPlusUser
+        Logger.app.debug("SubscriptionStore: 복원 완료 — isProUser=\(self.isProUser)")
+        return isProUser
     }
 
     // MARK: - Redemption Code
@@ -268,7 +273,7 @@ final class SubscriptionStore: SubscriptionStoreProtocol {
             let paymentIssue = await checkPaymentIssue(for: transaction)
 
             newState = SubscriptionState(
-                tier: .plus,
+                tier: .pro,
                 isActive: true,
                 autoRenewEnabled: autoRenew,
                 hasPaymentIssue: paymentIssue,
@@ -280,7 +285,7 @@ final class SubscriptionStore: SubscriptionStoreProtocol {
         // 오프라인 폴백 (FR-053): 활성 구독 없지만 만료일이 아직 지나지 않은 경우
         // ⚠️ 환불(revocationDate)된 트랜잭션은 currentEntitlements에서 이미 제외됨
         //    → foundActiveSubscription=false이면 환불/만료된 것이므로 폴백 적용 전 확인
-        if !foundActiveSubscription, state.tier == .plus {
+        if !foundActiveSubscription, state.tier == .pro {
             // entitlements가 비어있으면 환불/만료 확정 → Free로 전환
             // 네트워크 문제로 entitlements 순회 자체가 안 된 경우만 폴백
             if let cached = state.expirationDate, cached > Date() {
@@ -296,33 +301,29 @@ final class SubscriptionStore: SubscriptionStoreProtocol {
     // MARK: - Auto Renew / Payment Issue Check
 
     /// 자동 갱신 상태 확인
+    /// - Note: transaction.subscriptionStatus는 iOS 15+ (backDeployed)로
+    ///   해당 트랜잭션의 구독 상태를 정확히 반환한다.
+    ///   기존 Product.SubscriptionInfo.status(for:)에 productID를 넘기던 버그를 수정.
     private func checkAutoRenewStatus(for transaction: Transaction) async -> Bool {
-        guard let statuses = try? await Product.SubscriptionInfo.status(
-            for: transaction.productID
-        ) else {
-            return true // 확인 실패 시 기본값
+        guard let status = transaction.subscriptionStatus else {
+            return true // 비구독 상품이거나 상태 없음 → 기본값
         }
 
-        for status in statuses {
-            if case .verified(let renewalInfo) = status.renewalInfo {
-                return renewalInfo.willAutoRenew
-            }
+        if case .verified(let renewalInfo) = status.renewalInfo {
+            return renewalInfo.willAutoRenew
         }
         return true
     }
 
     /// 결제 문제 확인 (갱신 실패)
+    /// - Note: transaction.subscriptionStatus 사용으로 정확한 상태 조회
     private func checkPaymentIssue(for transaction: Transaction) async -> Bool {
-        guard let statuses = try? await Product.SubscriptionInfo.status(
-            for: transaction.productID
-        ) else {
+        guard let status = transaction.subscriptionStatus else {
             return false
         }
 
-        for status in statuses {
-            if status.state == .inBillingRetryPeriod || status.state == .inGracePeriod {
-                return true
-            }
+        if status.state == .inBillingRetryPeriod || status.state == .inGracePeriod {
+            return true
         }
         return false
     }
@@ -350,23 +351,37 @@ final class SubscriptionStore: SubscriptionStoreProtocol {
         Logger.app.debug("SubscriptionStore: DEBUG Free 리셋")
     }
 
-    /// 디버그용: 구독 상태를 Plus로 강제 설정
-    func debugSetPlus() {
+    /// 디버그용: 구독 상태를 Pro로 강제 설정
+    func debugSetPro() {
         debugOverrideActive = true
         state = SubscriptionState(
-            tier: .plus,
+            tier: .pro,
             isActive: true,
             autoRenewEnabled: true,
             expirationDate: Date().addingTimeInterval(365 * 24 * 3600)
         )
-        Logger.app.debug("SubscriptionStore: DEBUG Plus 설정 (오버라이드 ON)")
+        Logger.app.debug("SubscriptionStore: DEBUG Pro 설정 (오버라이드 ON)")
+    }
+
+    /// 디버그용: 해지 시뮬레이션 (Exit Survey 테스트)
+    /// Pro 상태 + autoRenewEnabled: false로 설정. 오버라이드 ON으로 refresh 스킵.
+    /// UserDefaults 플래그는 호출측에서 별도 설정.
+    func debugSimulateCancellation() {
+        debugOverrideActive = true
+        state = SubscriptionState(
+            tier: .pro,
+            isActive: true,
+            autoRenewEnabled: false,
+            expirationDate: Date().addingTimeInterval(365 * 24 * 3600)
+        )
+        Logger.app.debug("SubscriptionStore: DEBUG 해지 시뮬레이션 (autoRenew=false, 오버라이드 ON)")
     }
 
     /// 디버그용: 결제 문제 시뮬레이션 (갱신 실패 뱃지 테스트)
     func debugSetPaymentIssue() {
         debugOverrideActive = true
         state = SubscriptionState(
-            tier: .plus,
+            tier: .pro,
             isActive: true,
             autoRenewEnabled: false,
             hasPaymentIssue: true,
@@ -375,6 +390,72 @@ final class SubscriptionStore: SubscriptionStoreProtocol {
         Logger.app.debug("SubscriptionStore: DEBUG 결제 문제 시뮬레이션 (오버라이드 ON)")
     }
     #endif
+
+    // MARK: - Referral Subscription Status (T028)
+
+    /// 초대 리워드용 구독 상태 문자열 반환
+    ///
+    /// claim-reward API에 전달하는 subscription_status 값:
+    /// - "none": 한 번도 구독한 적 없는 비구독자
+    /// - "monthly": pro_monthly 활성 구독
+    /// - "yearly": pro_yearly 활성 구독
+    /// - "expired_monthly": monthly 구독 만료 (과거 구독 이력 있음)
+    /// - "expired_yearly": yearly 구독 만료 (과거 구독 이력 있음)
+    ///
+    /// - Returns: 구독 상태 문자열
+    func referralSubscriptionStatus() async -> String {
+        // 활성 구독자인 경우 — 현재 구독 상품 확인
+        if isProUser {
+            // Transaction.currentEntitlements에서 현재 활성 상품 확인
+            for await result in Transaction.currentEntitlements {
+                guard case .verified(let transaction) = result else { continue }
+                if transaction.productID == SubscriptionProductID.proYearly {
+                    return "yearly"
+                }
+                if transaction.productID == SubscriptionProductID.proMonthly {
+                    return "monthly"
+                }
+            }
+            // 활성이지만 상품 특정 불가 → monthly 기본값
+            return "monthly"
+        }
+
+        // 비구독자 — 과거 구독 이력 확인
+        // Transaction.all에서 구독 이력을 순회하여 과거 구독 여부 판단
+        var hadMonthly = false
+        var hadYearly = false
+
+        for await result in Transaction.all {
+            guard case .verified(let transaction) = result else { continue }
+            if transaction.productID == SubscriptionProductID.proYearly {
+                hadYearly = true
+            }
+            if transaction.productID == SubscriptionProductID.proMonthly {
+                hadMonthly = true
+            }
+        }
+
+        // 과거 구독 이력이 있으면 expired 상태
+        if hadYearly { return "expired_yearly" }
+        if hadMonthly { return "expired_monthly" }
+
+        // 한 번도 구독한 적 없음
+        return "none"
+    }
+
+    /// 초대 리워드용 현재 상품 ID 반환
+    /// claim-reward API의 product_id 파라미터에 사용
+    ///
+    /// - Returns: 현재 활성 상품 ID 또는 기본값 "pro_monthly"
+    func referralProductId() async -> String {
+        for await result in Transaction.currentEntitlements {
+            guard case .verified(let transaction) = result else { continue }
+            if SubscriptionProductID.all.contains(transaction.productID) {
+                return transaction.productID
+            }
+        }
+        return SubscriptionProductID.proMonthly
+    }
 
     // MARK: - Deinit
 

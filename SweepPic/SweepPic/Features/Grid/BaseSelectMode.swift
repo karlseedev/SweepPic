@@ -49,7 +49,7 @@ extension BaseGridViewController {
     @objc func restoreNavigationBarAfterSelectMode() {
         if #available(iOS 26.0, *) {
             navigationItem.rightBarButtonItem = UIBarButtonItem(
-                title: "선택",
+                title: String(localized: "common.select"),
                 style: .plain,
                 target: self,
                 action: #selector(selectButtonTapped)
@@ -61,6 +61,10 @@ extension BaseGridViewController {
     @objc func handleSelectModeDeleteAction() {
         // 기본 구현: no-op
     }
+
+    /// Select 모드에 따른 뒤로가기 정책 갱신
+    /// 기본 구현: no-op
+    @objc func updateBackNavigationForSelectMode() {}
 
     /// Select 모드에서 선택 가능한 에셋인지 판단
     /// 기본값: 삭제대기함 에셋은 선택 불가 (Grid/Album 공통)
@@ -97,6 +101,9 @@ extension BaseGridViewController {
 
         // 선택 UI 갱신 (전체 리로드 대신 visible 셀만 업데이트)
         updateVisibleSelectionUI()
+
+        // 화면별 뒤로가기 정책 갱신
+        updateBackNavigationForSelectMode()
     }
 
     /// Select 모드 종료
@@ -128,6 +135,9 @@ extension BaseGridViewController {
 
         // 선택 UI 갱신 (전체 리로드 대신 visible 셀만 업데이트)
         updateVisibleSelectionUI()
+
+        // 화면별 뒤로가기 정책 복원
+        updateBackNavigationForSelectMode()
     }
 }
 
@@ -189,7 +199,7 @@ extension BaseGridViewController {
         // Note: rightBarButtonItems (복수)를 사용하는 VC (예: Trash)와 충돌 방지
         navigationItem.rightBarButtonItems = nil
         navigationItem.rightBarButtonItem = UIBarButtonItem(
-            title: "취소",
+            title: String(localized: "common.cancel"),
             style: .plain,
             target: self,
             action: #selector(cancelSelectModeTapped)
@@ -292,6 +302,9 @@ extension BaseGridViewController {
     /// .changed: 드래그 연속 선택 (기존 로직 재사용)
     /// .ended/.cancelled: 드래그 종료 + 일반 드래그 선택 재활성화
     @objc private func handleLongPressSelect(_ gesture: UILongPressGestureRecognizer) {
+        // A-1 활성 중이면 롱프레스 차단 (Select 모드 진입 방지)
+        if CoachMarkManager.shared.isA1Active { return }
+
         switch gesture.state {
         case .began:
             handleLongPressBegan(gesture)
@@ -319,8 +332,11 @@ extension BaseGridViewController {
     /// 꾹 누르기 .began 처리
     /// 선택 모드 진입 → 첫 셀 SelectionManager에 저장 → 드래그 상태 초기화 → 햅틱
     private func handleLongPressBegan(_ gesture: UILongPressGestureRecognizer) {
-        // 이미 선택 모드면 무시 (빠른 탭은 0.5초 미만이라 여기 도달 안 함)
-        guard !isSelectMode else { return }
+        // 이미 선택 모드면 해당 셀 토글 후 드래그 선택 시작
+        if isSelectMode {
+            handleLongPressInSelectMode(gesture)
+            return
+        }
 
         let location = gesture.location(in: collectionView)
         guard let indexPath = collectionView.indexPathForItem(at: location),
@@ -359,6 +375,44 @@ extension BaseGridViewController {
         }
 
         // 6. 햅틱
+        HapticFeedback.light()
+    }
+
+    /// 선택 모드에서 꾹 누르기 처리 (토글 + 드래그 선택 시작)
+    private func handleLongPressInSelectMode(_ gesture: UILongPressGestureRecognizer) {
+        let location = gesture.location(in: collectionView)
+        guard let indexPath = collectionView.indexPathForItem(at: location),
+              indexPath.item >= paddingCellCount else { return }
+
+        let assetIndex = indexPath.item - paddingCellCount
+        guard let asset = gridDataSource.asset(at: assetIndex) else { return }
+        let assetID = asset.localIdentifier
+
+        guard canSelectAssetInSelectMode(assetID) else { return }
+
+        // 1. dragSelectGesture 일시 비활성화 (long press 드래그와 충돌 방지)
+        dragSelectGesture?.isEnabled = false
+
+        // 2. 드래그 선택 상태 초기화
+        isLongPressDragActive = true
+        dragSelectStartIndex = indexPath.item
+        dragSelectCurrentIndex = indexPath.item
+        dragSelectAffectedIndices = [indexPath.item]
+
+        // 3. 셀 선택 토글
+        let isSelected = selectionManager.toggle(assetID)
+        dragSelectIsSelecting = isSelected  // 토글 결과에 따라 드래그 방향 결정
+        if let cell = collectionView.cellForItem(at: indexPath) as? PhotoCell {
+            cell.isSelectedForDeletion = isSelected
+        }
+
+        // 4. 자동 스크롤 콜백 설정
+        autoScrollGesture = gesture
+        autoScrollHandler = { [weak self] loc in
+            self?.handleDragSelectChanged(at: loc)
+        }
+
+        // 5. 햅틱
         HapticFeedback.light()
     }
 }

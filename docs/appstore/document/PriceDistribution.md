@@ -21,15 +21,15 @@
 
 ---
 
-## 3. 인앱 구독 (SweepPic Plus)
+## 3. 인앱 구독 (SweepPic Pro)
 
 ### 구독 그룹
 
 | 항목 | 설정값 |
 |------|-------|
-| Subscription Group Name | SweepPic Plus |
-| Product ID (월간) | `plus_monthly` |
-| Product ID (연간) | `plus_yearly` |
+| Subscription Group Name | SweepPic Pro |
+| Product ID (월간) | `pro_monthly` |
+| Product ID (연간) | `pro_yearly` |
 
 ### 구독 가격 (런칭 할인가)
 
@@ -49,9 +49,9 @@
 | Billing Grace Period | 16일 |
 | 무료 체험 (Free Trial) | 사용 안 함 (자체 Grace Period 3일로 대체) |
 
-### Plus 혜택 비교
+### Pro 혜택 비교
 
-| 기능 | 무료 | Plus |
+| 기능 | 무료 | Pro |
 |------|:----:|:----:|
 | 일일 영구 삭제 | 10장 | 무제한 |
 | 광고 | 있음 | 없음 |

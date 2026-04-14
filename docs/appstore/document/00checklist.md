@@ -32,7 +32,7 @@
 - [ ] 스크린샷 (iPhone 6.9" + iPad 13") — 앱 완성 후
 - [ ] 심사 연락처 입력 (이름/이메일/전화번호)
 - [ ] 한국 컴플라이언스 (이메일 + BRN) → 사업자등록 후 → `KoreaCompliance.md`
-- [ ] 인앱 구독 상품 등록 (plus_monthly, plus_yearly)
+- [ ] 인앱 구독 상품 등록 (pro_monthly, pro_yearly)
 
 ## Gate 3: 심사 리젝 방지
 
