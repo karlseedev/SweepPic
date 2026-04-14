@@ -539,12 +539,8 @@ final class PreviewGridViewController: UIViewController {
     func updateHeader() {
         let count = previewResult.count(upToStage: currentStage)
 
-        // 단계별 등급 (숫자가 높을수록 저품질: 5등급=최저, 3등급=보통이하)
-        let titleText: String
-        switch currentStage {
-        case .light:    titleText = String(localized: "preview.header.light \(count)")
-        case .standard: titleText = String(localized: "preview.header.standard \(count)")
-        }
+        // "낮은 품질 사진 N장" — 단계와 무관하게 고정, 숫자만 가변
+        let titleText = String(localized: "preview.header.standard \(count)")
 
         // iOS 26: 시스템 네비바 타이틀
         title = titleText

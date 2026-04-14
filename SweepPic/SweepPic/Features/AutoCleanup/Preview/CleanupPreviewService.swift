@@ -35,10 +35,10 @@ final class CleanupPreviewService {
     private let path1AgreeThreshold: Float = 0.2
 
     /// 경로2 임계값 - 매우 낮은 품질 (엄격)
-    private let path2LightThreshold: Float = -0.2
+    private let path2LightThreshold: Float = -0.3
 
     /// 경로2 임계값 - 약간 낮은 품질
-    private let path2StandardThreshold: Float = 0.2
+    private let path2StandardThreshold: Float = 0.1
 
     /// 최대 검색 수
     private let maxScanCount: Int = CleanupConstants.maxScanCount

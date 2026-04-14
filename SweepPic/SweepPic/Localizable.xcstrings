@@ -6977,41 +6977,6 @@
         }
       }
     },
-    "preview.header.light %lld": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "variations": {
-            "plural": {
-              "one": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "%lld Very Low Quality Photo"
-                }
-              },
-              "other": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "%lld Very Low Quality Photos"
-                }
-              }
-            }
-          }
-        },
-        "ko": {
-          "variations": {
-            "plural": {
-              "other": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "매우 낮은 품질 사진 %lld장"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
     "preview.header.standard %lld": {
       "extractionState": "manual",
       "localizations": {

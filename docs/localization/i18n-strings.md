@@ -11,7 +11,7 @@ i18n-strings.md 및 SweepPic/SweepPic/Localizable.xcstrings
 4. **닫기 버튼**: 모달/팝업은 "Close", 네비게이션은 "Back"으로 구분
 5. **"cell" 금지**: 개발 용어 "cell" 대신 사진/항목 등 사용자 용어 사용
 6. **"invite" 통일**: referral 맥락에서 사용자 대면 문자열은 "invite" 통일
-7. **등급 표현**: 한국어는 숫자 등급 유지 + 5등급에 "(최저)" 표기. 영어는 Lowest Quality / Lower Quality & Below / Low Quality & Below
+7. **등급 표현**: 한국어는 "매우 낮은 품질 / 약간 낮은 품질 / 낮은 품질(합산)". 영어는 Very Low Quality / Lower Quality / Low Quality(합산)
 8. **"Restore Purchases"**: 구매 복원은 Apple StoreKit 표준 "Restore Purchases" 사용
 9. **"Pro"**: 멤버십 명칭은 "Pro"로 통일 ("Premium" 사용 금지)
 10. **"Open Settings"**: 설정 이동 버튼은 "Open Settings"로 통일
@@ -522,16 +522,13 @@ i18n-strings.md 및 SweepPic/SweepPic/Localizable.xcstrings
 
 | # | 한국어 (현재) | 영어 (제안) | 용도 | 확인 |
 |---|---|---|---|---|
-| 255 | 품질 5등급(최저) 사진 {count}장 | {count} Lowest Quality Photos | 헤더 (light) (plural 처리 필요) | |
-| 256 | 품질 4등급 이하 사진 {count}장 | {count} Lower Quality & Below Photos | 헤더 (standard) (plural 처리 필요) | |
-| 257 | 품질 3등급 이하 사진 {count}장 | {count} Low Quality & Below Photos | 헤더 (deep) (plural 처리 필요) | |
+| 256 | 낮은 품질 사진 {count}장 | {count} Low Quality Photos | 헤더 (단계 무관 고정) (plural 처리 필요) | |
 | 258 | 분석 결과를 닫으시겠습니까? | Close analysis results? | alert 제목 | |
 | 259 | 현재 화면을 닫으면 분석 결과가 사라집니다. | Closing this screen will discard the results. | alert 메시지 | |
 | 260 | 취소 | Cancel | alert 버튼 | |
 | 261 | 닫기 | Close | alert 버튼 | |
-| 262 | 품질 5등급(최저) | Lowest Quality | 등급 텍스트 | |
-| 263 | 품질 4등급 이하 | Lower Quality & Below | 등급 텍스트 | |
-| 264 | 품질 3등급 이하 | Low Quality & Below | 등급 텍스트 | |
+| 262 | 매우 낮은 품질 | Very Low Quality | 등급 텍스트 (1단계) | |
+| 263 | 낮은 품질 | Low Quality | 등급 텍스트 (1+2단계 합산) | |
 | 265 | {gradeText} 사진 {count}장을\n삭제대기함으로 이동할까요? | Move {count} {gradeText} photos to Trash? | 정리 확인 alert (plural 처리 필요) | |
 | 266 | 삭제대기함 이동 | Move to Trash | alert 버튼 | |
 
@@ -539,13 +536,10 @@ i18n-strings.md 및 SweepPic/SweepPic/Localizable.xcstrings
 
 | # | 한국어 (현재) | 영어 (제안) | 용도 | 확인 |
 |---|---|---|---|---|
-| 267 | 5등급(최저) 사진 {count}장 삭제대기함 이동 | Move {count} Lowest Quality to Trash | 정리 버튼 (light) | |
-| 268 | 4등급 이하 사진 {count}장 삭제대기함 이동 | Move {count} Lower Quality & Below to Trash | 정리 버튼 (standard) | |
-| 269 | 3등급 이하 사진 {count}장 삭제대기함 이동 | Move {count} Low Quality & Below to Trash | 정리 버튼 (deep) | |
-| 270 | 4등급 사진 {N}장 덜 보기 | Show fewer: {N} Lower Quality | 축소 버튼 | |
-| 271 | 3등급 사진 {N}장 덜 보기 | Show fewer: {N} Low Quality | 축소 버튼 | |
-| 272 | 4등급 사진 {N}장 더 보기 | Show more: {N} Lower Quality | 확장 버튼 | |
-| 273 | 3등급 사진 {N}장 더 보기 | Show more: {N} Low Quality | 확장 버튼 | |
+| 267 | 매우 낮은 품질 사진 {count}장 삭제대기함 이동 | Move {count} Very Low Quality to Trash | 정리 버튼 (1단계) | |
+| 268 | 낮은 품질 사진 {count}장 삭제대기함 이동 | Move {count} Low Quality to Trash | 정리 버튼 (1+2단계 합산) | |
+| 270 | 약간 낮은 품질 {N}장 덜 보기 | Show fewer: {N} Lower Quality | 축소 버튼 | |
+| 272 | 약간 낮은 품질 {N}장 더 보기 | Show more: {N} Lower Quality | 확장 버튼 | |
 
 ### CleanupError
 
